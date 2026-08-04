@@ -1,0 +1,40 @@
+{
+  "name": "@globalnews-ai/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GlobalNews AI - Next.js frontend application",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "jest"
+  },
+  "dependencies": {
+    "next": "^14.2.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.383.0",
+    "@globalnews-ai/shared": "*",
+    "maplibre-gl": "^4.1.2",
+    "world-atlas": "^2.0.2",
+    "topojson-client": "^3.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.11.30",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "@types/topojson-client": "^3.1.4",
+    "@types/geojson": "^7946.0.14",
+        "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.3",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.2.5",
+    "tailwindcss": "^3.4.3",
+    "postcss": "^8.4.38",
+    "autoprefixer": "^10.4.19",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2"
+  }
+}

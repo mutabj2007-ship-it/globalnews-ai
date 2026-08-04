@@ -1,0 +1,33 @@
+{
+  "name": "globalnews-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GlobalNews AI - Enterprise monorepo (frontend, backend, shared)",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "predev:backend": "npm run build:shared",
+    "dev:backend": "npm run start:dev --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "prebuild:backend": "npm run build:shared",
+    "build:backend": "npm run build --workspace=backend",
+    "build": "npm run build:shared && npm run build:frontend && npm run build:backend",
+    "build:shared": "npm run build --workspace=shared",
+    "lint": "npm run lint --workspace=frontend && npm run lint --workspace=backend",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "test:backend": "npm run test --workspace=backend",
+    "test:frontend": "npm run test --workspace=frontend",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "license": "UNLICENSED"
+}

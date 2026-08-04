@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.next
+**/.next
+coverage
+.git
+.github
+docs
+*.md
+.env
+.env.local
+.env.*.local
+!.env.example
