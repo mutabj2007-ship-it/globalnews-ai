@@ -10,6 +10,7 @@ import type {
 import { SafeImage } from '@/components/ui/SafeImage';
 
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
+import { calculateCoverageQuality } from '@/lib/coverageQuality';
 import { CategoryFilterBar, type CategoryFilterValue } from '@/components/map/CategoryFilterBar';
 type FreshnessStatus = 'FRESH' | 'RECENT' | 'AGING' | 'LIMITED';
 
@@ -91,6 +92,7 @@ export function CountryPanel({
   onCategoryChange,
 }: CountryPanelProps): JSX.Element {
   const router = useRouter();
+  const coverageQuality = calculateCoverageQuality(response?.articles ?? []);
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5 sm:p-6">
@@ -138,6 +140,49 @@ export function CountryPanel({
           <p className="mb-3 font-mono text-xs text-ink-tertiary">
             {response.totalResults} stor{response.totalResults === 1 ? 'y' : 'ies'} currently loaded
           </p>
+          <div className="mb-4 rounded-xl border border-border bg-void p-4">
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <p className="font-mono text-[10px] uppercase tracking-wider text-signal-bright">
+        Coverage Quality
+      </p>
+
+      <p className="mt-1 text-sm font-medium text-ink-primary">
+        {coverageQuality.label}
+      </p>
+    </div>
+
+    <span className="rounded-full border border-border-strong px-2.5 py-1 font-mono text-[10px] text-ink-secondary">
+      {coverageQuality.score}/100
+    </span>
+  </div>
+
+  <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
+    {coverageQuality.description}
+  </p>
+
+  <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3">
+    <div>
+      <p className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+        Publishers
+      </p>
+      <p className="mt-1 text-sm font-medium text-ink-primary">
+        {coverageQuality.publisherCount}
+      </p>
+    </div>
+
+    <div>
+      <p className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+        Latest
+      </p>
+      <p className="mt-1 text-sm font-medium text-ink-primary">
+        {coverageQuality.latestPublishedAt
+          ? formatRelativeTime(coverageQuality.latestPublishedAt)
+          : '—'}
+      </p>
+    </div>
+  </div>
+</div>
 {response.articles.length > 0 && (() => {
   const articles = response.articles;
   const latestArticle = findLatestArticle(articles);
