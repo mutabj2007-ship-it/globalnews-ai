@@ -8,6 +8,7 @@ import {
   type NewsFeedTier,
 } from '@globalnews-ai/shared';
 import { NewsService } from '../news.service';
+import { scoreArticleConfidence } from '../analysis/article-confidence.util';
 import { deduplicateArticles } from './deduplicate-articles.util';
 import { scoreCountryRelevance } from './country-relevance.util';
 
@@ -72,7 +73,7 @@ const searchResponse = await this.newsService.search(
   fetchLimit,
 );
 
- const relevantArticles = searchResponse.articles
+const relevantArticles = searchResponse.articles
   .map((article) => ({
     article,
     relevance: scoreCountryRelevance(article, country),
@@ -95,7 +96,13 @@ const searchResponse = await this.newsService.search(
 
     return rightPublishedAt - leftPublishedAt;
   })
-  .map(({ article }) => article);
+  .map(({ article, relevance }) => ({
+    ...article,
+    confidence: scoreArticleConfidence(
+      article,
+      relevance.score,
+    ).confidence,
+  }));
   const uniqueRelevantArticles =
   deduplicateArticles(relevantArticles);
 

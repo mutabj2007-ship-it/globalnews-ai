@@ -45,6 +45,7 @@ export interface NewsArticle {
   sourcesCount: number;
   /** ISO-8601 timestamp. */
   publishedAt: string;
+  confidence?: number;
 }
 
 /**
