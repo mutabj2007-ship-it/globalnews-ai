@@ -8,6 +8,7 @@ import {
   type NewsFeedTier,
 } from '@globalnews-ai/shared';
 import { NewsService } from '../news.service';
+import { deduplicateArticles } from './deduplicate-articles.util';
 import { scoreCountryRelevance } from './country-relevance.util';
 
 interface CacheEntry {
@@ -95,12 +96,14 @@ const searchResponse = await this.newsService.search(
     return rightPublishedAt - leftPublishedAt;
   })
   .map(({ article }) => article);
+  const uniqueRelevantArticles =
+  deduplicateArticles(relevantArticles);
 
 const articles = category
-  ? relevantArticles.filter(
+  ? uniqueRelevantArticles.filter(
       (article) => article.category === category,
     )
-  : relevantArticles;
+  : uniqueRelevantArticles;
 
     const bounded = articles.slice(0, resolvedLimit);
 
