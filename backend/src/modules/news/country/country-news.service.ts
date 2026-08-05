@@ -71,10 +71,30 @@ const searchResponse = await this.newsService.search(
   fetchLimit,
 );
 
-    const relevantArticles = searchResponse.articles.filter((article) => {
-  const relevance = scoreCountryRelevance(article, country);
-  return relevance.isRelevant;
-});
+ const relevantArticles = searchResponse.articles
+  .map((article) => ({
+    article,
+    relevance: scoreCountryRelevance(article, country),
+  }))
+  .filter(({ relevance }) => relevance.isRelevant)
+  .sort((left, right) => {
+    const scoreDifference =
+      right.relevance.score - left.relevance.score;
+
+    if (scoreDifference !== 0) {
+      return scoreDifference;
+    }
+
+    const rightPublishedAt = Date.parse(
+      right.article.publishedAt,
+    );
+    const leftPublishedAt = Date.parse(
+      left.article.publishedAt,
+    );
+
+    return rightPublishedAt - leftPublishedAt;
+  })
+  .map(({ article }) => article);
 
 const articles = category
   ? relevantArticles.filter(
