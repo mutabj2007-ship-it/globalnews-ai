@@ -93,6 +93,28 @@ export function CountryPanel({
 }: CountryPanelProps): JSX.Element {
   const router = useRouter();
   const coverageQuality = calculateCoverageQuality(response?.articles ?? []);
+  const qualityStyles = {
+  none: {
+    label: 'text-ink-secondary',
+    badge: 'border-border-strong text-ink-secondary',
+    bar: 'bg-ink-tertiary',
+  },
+  limited: {
+    label: 'text-amber-300',
+    badge: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+    bar: 'bg-amber-400',
+  },
+  developing: {
+    label: 'text-blue-300',
+    badge: 'border-blue-500/40 bg-blue-500/10 text-blue-300',
+    bar: 'bg-blue-400',
+  },
+  strong: {
+    label: 'text-emerald-300',
+    badge: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+    bar: 'bg-emerald-400',
+  },
+}[coverageQuality.level];
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5 sm:p-6">
@@ -147,19 +169,49 @@ export function CountryPanel({
         Coverage Quality
       </p>
 
-      <p className="mt-1 text-sm font-medium text-ink-primary">
-        {coverageQuality.label}
-      </p>
+      <p className={`mt-1 text-sm font-medium ${qualityStyles.label}`}>
+  {coverageQuality.label}
+</p>
     </div>
 
-    <span className="rounded-full border border-border-strong px-2.5 py-1 font-mono text-[10px] text-ink-secondary">
-      {coverageQuality.score}/100
-    </span>
+    <span
+  className={`rounded-full border px-2.5 py-1 font-mono text-[10px] ${qualityStyles.badge}`}
+>
+  {coverageQuality.score}/100
+</span>
   </div>
 
   <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
     {coverageQuality.description}
   </p>
+  <div className="mt-3">
+  <div className="mb-1.5 flex items-center justify-between gap-3">
+    <span className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+      Coverage strength
+    </span>
+
+    <span className="font-mono text-[10px] text-ink-secondary">
+      {coverageQuality.score}%
+    </span>
+  </div>
+
+  <div
+    className="h-1.5 overflow-hidden rounded-full bg-surface"
+    role="progressbar"
+    aria-label={`${country.name} coverage quality`}
+    aria-valuemin={0}
+    aria-valuemax={100}
+    aria-valuenow={coverageQuality.score}
+  >
+    <div
+  className={`h-full rounded-full transition-[width] duration-500 ${qualityStyles.bar}`}
+  style={{ width: `${coverageQuality.score}%` }}
+/>
+<p className="mt-2 font-mono text-[9px] leading-relaxed text-ink-tertiary">
+  Based on article volume, publisher diversity and reporting freshness.
+</p>
+  </div>
+</div>
 
   <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3">
     <div>

@@ -8,6 +8,7 @@ import {
   type NewsFeedTier,
 } from '@globalnews-ai/shared';
 import { NewsService } from '../news.service';
+import { scoreCountryRelevance } from './country-relevance.util';
 
 interface CacheEntry {
   value: CountryNewsResponse;
@@ -63,16 +64,23 @@ export class CountryNewsService {
       return cached;
     }
 
-    const searchResponse = await this.newsService.search(
-      country.name,
-      resolvedLimit * 2,
-    );
+    const fetchLimit = Math.max(resolvedLimit * 2, 20);
 
-    const articles = category
-      ? searchResponse.articles.filter(
-          (article) => article.category === category,
-        )
-      : searchResponse.articles;
+const searchResponse = await this.newsService.search(
+  country.name,
+  fetchLimit,
+);
+
+    const relevantArticles = searchResponse.articles.filter((article) => {
+  const relevance = scoreCountryRelevance(article, country);
+  return relevance.isRelevant;
+});
+
+const articles = category
+  ? relevantArticles.filter(
+      (article) => article.category === category,
+    )
+  : relevantArticles;
 
     const bounded = articles.slice(0, resolvedLimit);
 

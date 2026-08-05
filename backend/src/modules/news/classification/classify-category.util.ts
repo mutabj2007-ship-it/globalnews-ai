@@ -1,23 +1,24 @@
 import type { NewsCategory } from '@globalnews-ai/shared';
 
 /**
- * Deterministic, keyword-based fallback classifier.
+ * Deterministic fallback classifier for providers that do not supply a
+ * useful category.
  *
- * Some providers (GNews's `/search` and `/top-headlines` without a
- * category filter) don't tell us which category an article belongs to.
- * Rather than defaulting every such article to "world", this makes a
- * best-effort guess from the article's own text.
- *
- * This is intentionally a single pure function with no provider
- * knowledge, so it can be swapped for a real AI classifier later by
- * changing only this file — every provider that calls it keeps working
- * unchanged.
+ * The classifier scores every supported category using the article title
+ * and summary. Scoring all categories is more reliable than returning the
+ * first keyword match because one article can contain terms from several
+ * subject areas.
  */
 
-const KEYWORD_MAP: Array<[NewsCategory, string[]]> = [
-  [
-    'politics',
-    [
+interface CategoryRule {
+  category: NewsCategory;
+  keywords: string[];
+}
+
+const CATEGORY_RULES: CategoryRule[] = [
+  {
+    category: 'politics',
+    keywords: [
       'election',
       'senate',
       'congress',
@@ -25,22 +26,48 @@ const KEYWORD_MAP: Array<[NewsCategory, string[]]> = [
       'president',
       'prime minister',
       'minister',
+      'government',
+      'administration',
       'campaign',
       'ballot',
       'referendum',
       'lawmaker',
       'legislation',
+      'policy',
+      'diplomatic',
+      'diplomacy',
+      'peace talks',
+      'peace effort',
+      'peace agreement',
+      'negotiation',
+      'negotiations',
+      'ceasefire',
+      'sanction',
+      'sanctions',
+      'ambassador',
+      'brokered',
+      'united nations',
+      'security council',
+      'armed forces',
+      'paramilitary',
+      'civil war',
+      'proxy war',
+      'military',
+      'army',
+      'drone strike',
+      'conflict',
     ],
-  ],
-  [
-    'business',
-    [
+  },
+  {
+    category: 'business',
+    keywords: [
       'stock',
       'market',
       'economy',
       'economic',
       'inflation',
       'trade deal',
+      'trade agreement',
       'bank',
       'finance',
       'financial',
@@ -50,32 +77,44 @@ const KEYWORD_MAP: Array<[NewsCategory, string[]]> = [
       'acquisition',
       'startup funding',
       'shares',
+      'investment',
+      'investor',
+      'oil price',
+      'currency',
+      'recession',
+      'employment',
+      'unemployment',
     ],
-  ],
-  [
-    'technology',
-    [
+  },
+  {
+    category: 'technology',
+    keywords: [
       'technology',
-      ' tech ',
       'software',
-      ' app ',
+      'application',
       'artificial intelligence',
-      ' ai ',
+      'machine learning',
+      'openai',
       'chip',
       'semiconductor',
-      'startup',
       'cybersecurity',
+      'cyber attack',
       'computer',
       'smartphone',
       'robot',
+      'digital platform',
+      'data center',
+      'cloud computing',
+      'social media',
     ],
-  ],
-  [
-    'science',
-    [
+  },
+  {
+    category: 'science',
+    keywords: [
       'research',
       'study finds',
       'scientist',
+      'scientists',
       'space',
       'nasa',
       'climate',
@@ -84,27 +123,44 @@ const KEYWORD_MAP: Array<[NewsCategory, string[]]> = [
       'biology',
       'astronomy',
       'researchers',
+      'laboratory',
+      'experiment',
+      'species',
+      'environmental study',
     ],
-  ],
-  [
-    'health',
-    [
+  },
+  {
+    category: 'health',
+    keywords: [
       'health',
       'medical',
       'disease',
       'virus',
       'hospital',
       'doctor',
+      'doctors',
       'vaccine',
       'covid',
       'mental health',
       'wellness',
       'outbreak',
+      'humanitarian',
+      'red cross',
+      'aid workers',
+      'food shortage',
+      'famine',
+      'malnutrition',
+      'cholera',
+      'medicine',
+      'patients',
+      'public health',
+      'humanitarian needs',
+      'humanitarian crisis',
     ],
-  ],
-  [
-    'sports',
-    [
+  },
+  {
+    category: 'sports',
+    keywords: [
       'match',
       'tournament',
       'championship',
@@ -114,14 +170,20 @@ const KEYWORD_MAP: Array<[NewsCategory, string[]]> = [
       'basketball',
       'olympic',
       'coach',
-      ' score ',
       'athlete',
       'world cup',
+      'tennis',
+      'cricket',
+      'formula one',
+      'grand prix',
+      'goal',
+      'season',
+      'player',
     ],
-  ],
-  [
-    'entertainment',
-    [
+  },
+  {
+    category: 'entertainment',
+    keywords: [
       'movie',
       'film',
       'celebrity',
@@ -134,8 +196,12 @@ const KEYWORD_MAP: Array<[NewsCategory, string[]]> = [
       'hollywood',
       'concert',
       'streaming series',
+      'television',
+      'singer',
+      'director',
+      'festival',
     ],
-  ],
+  },
 ];
 
 export interface ClassifiableArticle {
@@ -143,27 +209,58 @@ export interface ClassifiableArticle {
   summary?: string;
 }
 
+function normalizeText(value: string): string {
+  return ` ${value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()} `;
+}
+
+function countKeywordMatches(text: string, keywords: string[]): number {
+  return keywords.reduce((score, keyword) => {
+    const normalizedKeyword = normalizeText(keyword).trim();
+
+    if (!normalizedKeyword) {
+      return score;
+    }
+
+    return text.includes(` ${normalizedKeyword} `) ? score + 1 : score;
+  }, 0);
+}
+
 /**
- * Classifies an article into a NewsCategory.
+ * Classifies an article into one primary NewsCategory.
  *
- * If `categoryHint` is provided (e.g. the category a provider was
- * explicitly asked for), it's trusted as-is. Otherwise this scans the
- * title and summary for keywords and falls back to "world" if nothing
- * matches.
+ * Explicit category hints remain authoritative because they represent a
+ * provider request made for that exact category. Otherwise all categories
+ * are scored against the article title and summary.
  */
 export function classifyCategory(
   article: ClassifiableArticle,
   categoryHint?: NewsCategory,
 ): NewsCategory {
-  if (categoryHint) return categoryHint;
+  if (categoryHint) {
+    return categoryHint;
+  }
 
-  const haystack = ` ${article.title} ${article.summary ?? ''} `.toLowerCase();
+  const title = normalizeText(article.title);
+  const summary = normalizeText(article.summary ?? '');
 
-  for (const [category, keywords] of KEYWORD_MAP) {
-    if (keywords.some((keyword) => haystack.includes(keyword))) {
-      return category;
+  let bestCategory: NewsCategory = 'world';
+  let bestScore = 0;
+
+  for (const rule of CATEGORY_RULES) {
+    // Title matches are more important than summary matches.
+    const titleScore = countKeywordMatches(title, rule.keywords) * 2;
+    const summaryScore = countKeywordMatches(summary, rule.keywords);
+    const totalScore = titleScore + summaryScore;
+
+    if (totalScore > bestScore) {
+      bestCategory = rule.category;
+      bestScore = totalScore;
     }
   }
 
-  return 'world';
+  return bestCategory;
 }
