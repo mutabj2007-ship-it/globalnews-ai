@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { NewsArticle, ProviderHealthStatus } from '@globalnews-ai/shared';
 import { NewsService } from './news.service';
-import { ALL_NEWS_PROVIDERS, NEWS_PROVIDERS } from './providers/provider.tokens';
+import {
+  ALL_NEWS_PROVIDERS,
+  NEWS_PROVIDERS,
+} from './providers/provider.tokens';
 import type { NewsProvider } from './interfaces';
 import { ArticlePersistenceService } from './persistence/article-persistence.service';
 
@@ -85,13 +88,39 @@ class FakeFailingProvider implements NewsProvider {
   }
 }
 
+class FakeEmptyProvider implements NewsProvider {
+  readonly id = 'fake-empty';
+  readonly displayName = 'Fake Empty Provider';
+  readonly isMock = false;
+
+  async search(): Promise<NewsArticle[]> {
+    return [];
+  }
+
+  async topHeadlines(): Promise<NewsArticle[]> {
+    return [];
+  }
+
+  async category(): Promise<NewsArticle[]> {
+    return [];
+  }
+
+  async health(): Promise<ProviderHealthStatus> {
+    return {
+      providerId: this.id,
+      displayName: this.displayName,
+      status: 'ok',
+      checkedAt: new Date().toISOString(),
+    };
+  }
+}
+
 class FakeDuplicateProvider implements NewsProvider {
   readonly id = 'fake-duplicate';
   readonly displayName = 'Fake Duplicate Provider';
   readonly isMock = false;
 
   async search(): Promise<NewsArticle[]> {
-    // Same id as FakeHealthyProvider's article to exercise dedupe logic.
     return [makeArticle({ id: 'healthy-1' })];
   }
 
@@ -143,11 +172,16 @@ class FakeMockProvider implements NewsProvider {
 describe('NewsService', () => {
   const articlePersistence = {
     persistMany: jest.fn().mockResolvedValue(undefined),
+    findRecent: jest.fn().mockResolvedValue([]),
   };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+beforeEach(() => {
+  articlePersistence.persistMany.mockReset();
+  articlePersistence.findRecent.mockReset();
+
+  articlePersistence.persistMany.mockResolvedValue(undefined);
+  articlePersistence.findRecent.mockResolvedValue([]);
+});
 
   async function buildService(
     providers: NewsProvider[],
@@ -156,8 +190,14 @@ describe('NewsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NewsService,
-        { provide: NEWS_PROVIDERS, useValue: providers },
-        { provide: ALL_NEWS_PROVIDERS, useValue: allProviders },
+        {
+          provide: NEWS_PROVIDERS,
+          useValue: providers,
+        },
+        {
+          provide: ALL_NEWS_PROVIDERS,
+          useValue: allProviders,
+        },
         {
           provide: ArticlePersistenceService,
           useValue: articlePersistence,
@@ -177,7 +217,15 @@ describe('NewsService', () => {
     expect(articlePersistence.persistMany).not.toHaveBeenCalled();
   });
 
-  it('persists the final articles returned by search', async () => {
+  it('does not use database fallback while mock/demo mode has results', async () => {
+    const service = await buildService([new FakeMockProvider()]);
+
+    await service.search('anything');
+
+    expect(articlePersistence.findRecent).not.toHaveBeenCalled();
+  });
+
+  it('persists the final live articles returned by search', async () => {
     const service = await buildService([new FakeHealthyProvider()]);
 
     const response = await service.search('anything');
@@ -188,7 +236,7 @@ describe('NewsService', () => {
     );
   });
 
-  it('persists only deduplicated articles', async () => {
+  it('persists only deduplicated live articles', async () => {
     const service = await buildService([
       new FakeHealthyProvider(),
       new FakeDuplicateProvider(),
@@ -207,6 +255,7 @@ describe('NewsService', () => {
 
   it('aggregates results across all healthy providers', async () => {
     const service = await buildService([new FakeHealthyProvider()]);
+
     const response = await service.search('anything');
 
     expect(response.articles).toHaveLength(1);
@@ -233,20 +282,19 @@ describe('NewsService', () => {
 
     const response = await service.search('anything');
 
-    const ids = response.articles.map((article) => article.id);
-    expect(ids).toEqual(['healthy-1']);
+    expect(
+      response.articles.map((article) => article.id),
+    ).toEqual(['healthy-1']);
   });
 
-  it('preserves provider editorial order for topHeadlines instead of resorting by recency', async () => {
+  it('preserves provider editorial order for topHeadlines', async () => {
     const service = await buildService([new FakeHealthyProvider()]);
+
     const response = await service.topHeadlines();
 
-    // healthy-1 has an earlier publishedAt than healthy-2, but the
-    // provider intentionally returns healthy-1 first as its top pick.
-    expect(response.articles.map((article) => article.id)).toEqual([
-      'healthy-1',
-      'healthy-2',
-    ]);
+    expect(
+      response.articles.map((article) => article.id),
+    ).toEqual(['healthy-1', 'healthy-2']);
   });
 
   it('reports a down status for providers whose health check throws', async () => {
@@ -284,27 +332,177 @@ describe('NewsService', () => {
     ).toEqual(['fake-failing', 'fake-healthy']);
   });
 
-  it('reports dataMode "live" when a non-mock provider answers', async () => {
+  it('reports dataMode live when a non-mock provider answers', async () => {
     const service = await buildService([new FakeHealthyProvider()]);
+
     const response = await service.search('anything');
 
     expect(response.dataMode).toBe('live');
   });
 
-  it('reports dataMode "mock" when only the mock provider answers', async () => {
+  it('reports dataMode mock when only the mock provider answers', async () => {
     const service = await buildService([new FakeMockProvider()]);
+
     const response = await service.search('anything');
 
     expect(response.dataMode).toBe('mock');
   });
 
-  it("falls back to the configured provider's mode when nothing responds", async () => {
-    const service = await buildService([new FakeFailingProvider()]);
+  it('uses cached database articles when a real provider fails', async () => {
+    const cachedArticle = makeArticle({
+      id: 'cached-1',
+      title: 'Previously retrieved real reporting',
+    });
+
+    articlePersistence.findRecent.mockResolvedValueOnce([
+      cachedArticle,
+    ]);
+
+    const service = await buildService([
+      new FakeFailingProvider(),
+    ]);
+
+    const response = await service.search('Ceuta', 5);
+
+    expect(articlePersistence.findRecent).toHaveBeenCalledWith({
+      query: 'Ceuta',
+      limit: 5,
+      maxAgeMinutes: 1440,
+    });
+
+    expect(response.articles).toEqual([cachedArticle]);
+    expect(response.totalResults).toBe(1);
+    expect(response.providers).toEqual([]);
+    expect(response.dataMode).toBe('cached');
+    expect(response.query).toBe('Ceuta');
+  });
+
+  it('uses cached database articles when a real provider returns no results', async () => {
+    const cachedArticle = makeArticle({
+      id: 'cached-empty-provider',
+    });
+
+    articlePersistence.findRecent.mockResolvedValueOnce([
+      cachedArticle,
+    ]);
+
+    const service = await buildService([
+      new FakeEmptyProvider(),
+    ]);
+
+    const response = await service.search('Ceuta');
+
+    expect(response.dataMode).toBe('cached');
+    expect(response.articles).toEqual([cachedArticle]);
+  });
+
+  it('does not pretend there is cached data when database fallback is empty', async () => {
+    articlePersistence.findRecent.mockResolvedValueOnce([]);
+
+    const service = await buildService([
+      new FakeFailingProvider(),
+    ]);
+
     const response = await service.search('anything');
 
-    // FakeFailingProvider is configured (isMock: false) even though it
-    // always throws, so the response should still say "live".
     expect(response.articles).toEqual([]);
     expect(response.dataMode).toBe('live');
+  });
+
+  it('does not use database fallback when only mock provider is configured', async () => {
+    class EmptyMockProvider implements NewsProvider {
+      readonly id = 'empty-mock';
+      readonly displayName = 'Empty Mock Provider';
+      readonly isMock = true;
+
+      async search(): Promise<NewsArticle[]> {
+        return [];
+      }
+
+      async topHeadlines(): Promise<NewsArticle[]> {
+        return [];
+      }
+
+      async category(): Promise<NewsArticle[]> {
+        return [];
+      }
+
+      async health(): Promise<ProviderHealthStatus> {
+        return {
+          providerId: this.id,
+          displayName: this.displayName,
+          status: 'ok',
+          checkedAt: new Date().toISOString(),
+        };
+      }
+    }
+
+    articlePersistence.findRecent.mockResolvedValueOnce([
+      makeArticle({ id: 'should-not-be-used' }),
+    ]);
+
+    const service = await buildService([
+      new EmptyMockProvider(),
+    ]);
+
+    const response = await service.search('anything');
+
+    expect(response.dataMode).toBe('mock');
+    expect(response.articles).toEqual([]);
+    expect(articlePersistence.findRecent).not.toHaveBeenCalled();
+  });
+
+  it('uses cached articles for top headlines when live provider fails', async () => {
+    const cachedArticle = makeArticle({
+      id: 'cached-headline',
+    });
+
+    articlePersistence.findRecent.mockResolvedValueOnce([
+      cachedArticle,
+    ]);
+
+    const service = await buildService([
+      new FakeFailingProvider(),
+    ]);
+
+    const response = await service.topHeadlines(3);
+
+    expect(articlePersistence.findRecent).toHaveBeenCalledWith({
+      limit: 3,
+      maxAgeMinutes: 1440,
+    });
+
+    expect(response.dataMode).toBe('cached');
+    expect(response.articles).toEqual([cachedArticle]);
+  });
+
+  it('uses category-scoped cached articles when category provider fails', async () => {
+    const cachedArticle = makeArticle({
+      id: 'cached-tech',
+      category: 'technology',
+    });
+
+    articlePersistence.findRecent.mockResolvedValueOnce([
+      cachedArticle,
+    ]);
+
+    const service = await buildService([
+      new FakeFailingProvider(),
+    ]);
+
+    const response = await service.byCategory(
+      'technology',
+      4,
+    );
+
+    expect(articlePersistence.findRecent).toHaveBeenCalledWith({
+      category: 'technology',
+      limit: 4,
+      maxAgeMinutes: 1440,
+    });
+
+    expect(response.dataMode).toBe('cached');
+    expect(response.category).toBe('technology');
+    expect(response.articles).toEqual([cachedArticle]);
   });
 });

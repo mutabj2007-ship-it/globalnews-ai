@@ -49,11 +49,15 @@ export interface NewsArticle {
 }
 
 /**
- * Whether a response was served by a real, live provider or by
- * MockNewsProvider. The frontend uses this to label results honestly —
- * "live" and "mock" must never both be implied for the same response.
+ * Describes where the news in a response came from:
+ *
+ * - "live": returned directly by an active real news provider.
+ * - "cached": previously fetched real reporting served from PostgreSQL.
+ * - "mock": sample/demo content returned by MockNewsProvider.
+ *
+ * Cached real reporting must never be presented as live or mock content.
  */
-export type NewsDataMode = 'live' | 'mock';
+export type NewsDataMode = 'live' | 'cached' | 'mock';
 
 /** Standard envelope returned by every news-fetching endpoint. */
 export interface NewsResponse {

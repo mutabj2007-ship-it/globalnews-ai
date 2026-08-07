@@ -3,11 +3,15 @@ import type { NewsDataMode } from '@globalnews-ai/shared';
 interface LiveStatusStripProps {
   /** Whether the last homepage data fetch reached the backend successfully. */
   isLive: boolean;
-  /** Whether the backend served live provider data or mock/demo data. */
+
+  /** The provenance of the news returned by the backend. */
   dataMode: NewsDataMode | null;
 }
 
-export function LiveStatusStrip({ isLive, dataMode }: LiveStatusStripProps): JSX.Element {
+export function LiveStatusStrip({
+  isLive,
+  dataMode,
+}: LiveStatusStripProps): JSX.Element {
   const lastUpdated = new Date().toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
@@ -15,10 +19,17 @@ export function LiveStatusStrip({ isLive, dataMode }: LiveStatusStripProps): JSX
     hour12: false,
   });
 
-  // Exactly one of these three states is ever shown — live and demo
-  // labels must never appear together.
   const isReallyLive = isLive && dataMode === 'live';
-  const badgeText = !isLive ? 'RECONNECTING' : dataMode === 'live' ? 'LIVE \u00b7 Powered by GNews' : 'DEMO MODE \u00b7 Sample content only';
+
+  const badgeText = !isLive
+    ? 'RECONNECTING'
+    : dataMode === 'live'
+      ? 'LIVE · Powered by GNews'
+      : dataMode === 'cached'
+        ? 'CACHED · Previously retrieved reporting'
+        : dataMode === 'mock'
+          ? 'DEMO MODE · Sample content only'
+          : 'DATA STATUS UNKNOWN';
 
   return (
     <div className="border-b border-border bg-surface">
@@ -33,12 +44,14 @@ export function LiveStatusStrip({ isLive, dataMode }: LiveStatusStripProps): JSX
               {isReallyLive && (
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
               )}
+
               <span
                 className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
                   isReallyLive ? 'bg-rose-500' : 'bg-ink-tertiary'
                 }`}
               />
             </span>
+
             <span
               className={`font-mono text-[11px] font-semibold uppercase tracking-widest ${
                 isReallyLive ? 'text-rose-400' : 'text-ink-tertiary'
@@ -47,6 +60,7 @@ export function LiveStatusStrip({ isLive, dataMode }: LiveStatusStripProps): JSX
               {badgeText}
             </span>
           </span>
+
           <span className="text-xs text-ink-secondary sm:text-sm">
             Monitoring trusted global sources
           </span>

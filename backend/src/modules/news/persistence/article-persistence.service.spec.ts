@@ -3,11 +3,13 @@ import { ArticlePersistenceService } from './article-persistence.service';
 
 describe('ArticlePersistenceService', () => {
   const articleUpsert = jest.fn();
+  const articleFindMany = jest.fn();
   const transaction = jest.fn();
 
   const prisma = {
     article: {
       upsert: articleUpsert,
+      findMany: articleFindMany,
     },
     $transaction: transaction,
   };
@@ -18,6 +20,7 @@ describe('ArticlePersistenceService', () => {
     jest.clearAllMocks();
 
     articleUpsert.mockImplementation((args) => args);
+    articleFindMany.mockResolvedValue([]);
     transaction.mockResolvedValue([]);
 
     service = new ArticlePersistenceService(prisma as never);
@@ -36,6 +39,24 @@ describe('ArticlePersistenceService', () => {
       category: 'world',
       sourcesCount: 1,
       publishedAt: '2026-08-07T08:00:00.000Z',
+      ...overrides,
+    };
+  }
+
+  function makeDatabaseRow(
+    overrides: Record<string, unknown> = {},
+  ) {
+    return {
+      id: 'article-1',
+      title: 'Stored headline',
+      summary: 'Stored summary',
+      url: 'https://example.com/stored',
+      imageUrl: 'https://example.com/image.jpg',
+      sourceId: 'stored-provider',
+      sourceName: 'Stored Provider',
+      category: 'world',
+      publishedAt: new Date('2026-08-07T10:00:00.000Z'),
+      confidenceScore: 87,
       ...overrides,
     };
   }
@@ -64,7 +85,7 @@ describe('ArticlePersistenceService', () => {
     expect(transaction).toHaveBeenCalledTimes(1);
   });
 
-  it('maps optional values safely', async () => {
+  it('maps optional values safely when persisting', async () => {
     const article = makeArticle({
       imageUrl: undefined,
       confidence: undefined,
@@ -86,7 +107,7 @@ describe('ArticlePersistenceService', () => {
     );
   });
 
-  it('converts publishedAt to a Date', async () => {
+  it('converts publishedAt to a Date when persisting', async () => {
     const article = makeArticle({
       publishedAt: '2026-08-07T08:00:00.000Z',
     });
@@ -96,7 +117,9 @@ describe('ArticlePersistenceService', () => {
     expect(articleUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
-          publishedAt: new Date('2026-08-07T08:00:00.000Z'),
+          publishedAt: new Date(
+            '2026-08-07T08:00:00.000Z',
+          ),
         }),
       }),
     );
@@ -110,5 +133,115 @@ describe('ArticlePersistenceService', () => {
     await expect(
       service.persistMany([makeArticle()]),
     ).resolves.toBeUndefined();
+  });
+
+  it('reads recent articles using the default 24-hour freshness window', async () => {
+    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+
+    articleFindMany.mockResolvedValueOnce([
+      makeDatabaseRow(),
+    ]);
+
+    const result = await service.findRecent();
+
+    expect(articleFindMany).toHaveBeenCalledTimes(1);
+
+    expect(articleFindMany).toHaveBeenCalledWith({
+      where: {
+        publishedAt: {
+          gte: new Date('2026-08-06T12:00:00.000Z'),
+        },
+      },
+      orderBy: {
+        publishedAt: 'desc',
+      },
+      take: 20,
+    });
+
+    expect(result).toEqual([
+      {
+        id: 'article-1',
+        title: 'Stored headline',
+        summary: 'Stored summary',
+        url: 'https://example.com/stored',
+        imageUrl: 'https://example.com/image.jpg',
+        sourceId: 'stored-provider',
+        sourceName: 'Stored Provider',
+        category: 'world',
+        sourcesCount: 1,
+        publishedAt: '2026-08-07T10:00:00.000Z',
+        confidence: 87,
+      },
+    ]);
+
+    nowSpy.mockRestore();
+  });
+
+  it('filters recent articles by category', async () => {
+    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+
+    articleFindMany.mockResolvedValueOnce([]);
+
+    await service.findRecent({
+      category: 'technology',
+      limit: 5,
+      maxAgeMinutes: 60,
+    });
+
+    expect(articleFindMany).toHaveBeenCalledWith({
+      where: {
+        publishedAt: {
+          gte: new Date('2026-08-07T11:00:00.000Z'),
+        },
+        category: 'technology',
+      },
+      orderBy: {
+        publishedAt: 'desc',
+      },
+      take: 5,
+    });
+
+    nowSpy.mockRestore();
+  });
+
+  it('caps database read limits at 100', async () => {
+    articleFindMany.mockResolvedValueOnce([]);
+
+    await service.findRecent({
+      limit: 500,
+    });
+
+    expect(articleFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 100,
+      }),
+    );
+  });
+
+  it('maps nullable database values safely', async () => {
+    articleFindMany.mockResolvedValueOnce([
+      makeDatabaseRow({
+        imageUrl: null,
+        confidenceScore: null,
+      }),
+    ]);
+
+    const result = await service.findRecent();
+
+    expect(result[0].imageUrl).toBeUndefined();
+    expect(result[0].confidence).toBeUndefined();
+    expect(result[0].sourcesCount).toBe(1);
+  });
+
+  it('returns an empty array when database reading fails', async () => {
+    articleFindMany.mockRejectedValueOnce(
+      new Error('Simulated database read failure'),
+    );
+
+    await expect(
+      service.findRecent(),
+    ).resolves.toEqual([]);
   });
 });

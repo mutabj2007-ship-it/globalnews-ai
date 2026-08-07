@@ -1,20 +1,36 @@
-import { Radio, Info } from 'lucide-react';
+import { Database, Info, Radio } from 'lucide-react';
 import type { NewsDataMode } from '@globalnews-ai/shared';
 
 interface DataModeLabelProps {
-  /** null means "unknown" (e.g. backend unreachable) — rendered like mock, never like live. */
+  /** null means the backend/data state is currently unknown. */
   dataMode: NewsDataMode | null;
   className?: string;
 }
 
 /**
- * Editorial-integrity disclosure. Live and demo labels must never be
- * shown at the same time for the same content, so this always renders
- * exactly one state based on the actual response that produced the
- * content next to it.
+ * Editorial-integrity disclosure.
+ *
+ * Exactly one data state is displayed:
+ * - live: current reporting from a real provider
+ * - cached: previously retrieved real reporting from our database
+ * - mock: sample/demo content
+ * - null: backend/data state unknown
  */
-export function DataModeLabel({ dataMode, className = '' }: DataModeLabelProps): JSX.Element {
+export function DataModeLabel({
+  dataMode,
+  className = '',
+}: DataModeLabelProps): JSX.Element {
   const isLive = dataMode === 'live';
+  const isCached = dataMode === 'cached';
+
+  const label =
+    dataMode === 'live'
+      ? 'LIVE · Powered by GNews'
+      : dataMode === 'cached'
+        ? 'CACHED · Previously retrieved reporting'
+        : dataMode === 'mock'
+          ? 'DEMO MODE · Sample content only'
+          : 'DATA STATUS UNKNOWN';
 
   return (
     <span
@@ -26,10 +42,13 @@ export function DataModeLabel({ dataMode, className = '' }: DataModeLabelProps):
     >
       {isLive ? (
         <Radio size={12} strokeWidth={2} className="shrink-0" />
+      ) : isCached ? (
+        <Database size={12} strokeWidth={2} className="shrink-0" />
       ) : (
         <Info size={12} strokeWidth={2} className="shrink-0" />
       )}
-      {isLive ? 'LIVE \u00b7 Powered by GNews' : 'DEMO MODE \u00b7 Sample content only'}
+
+      {label}
     </span>
   );
 }

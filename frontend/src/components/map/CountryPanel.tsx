@@ -125,13 +125,15 @@ export function CountryPanel({
             {country.iso3} {' · '} {country.region}
           </p>
         </div>
-    {response && response.providers.length > 0 && (
+{response && (
   <span className="inline-flex items-center rounded-full border border-brand/50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-brand">
     {response.dataMode === 'mock'
       ? 'DEMO MODE · SAMPLE CONTENT ONLY'
-      : response.feedTier === 'delayed'
-        ? `DELAYED FEED · POWERED BY ${response.providerDisplayName}`
-        : `LIVE · POWERED BY ${response.providerDisplayName}`}
+      : response.dataMode === 'cached'
+        ? 'CACHED · PREVIOUSLY RETRIEVED REPORTING'
+        : response.feedTier === 'delayed'
+          ? `DELAYED FEED · POWERED BY ${response.providerDisplayName}`
+          : `LIVE · POWERED BY ${response.providerDisplayName}`}
   </span>
 )}
           </div>

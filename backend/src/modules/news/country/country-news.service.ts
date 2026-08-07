@@ -130,6 +130,12 @@ export class CountryNewsService {
         providerDisplayName: 'Mock',
       };
     }
+    if (dataMode === 'cached') {
+  return {
+    feedTier: 'delayed',
+    providerDisplayName: 'Stored reporting',
+  };
+}
 
     const activeProviderId = providerIds[0];
 
