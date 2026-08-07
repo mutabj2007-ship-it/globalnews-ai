@@ -7,36 +7,25 @@ import { GNewsProvider } from './providers/gnews.provider';
 import { ALL_NEWS_PROVIDERS, NEWS_PROVIDERS } from './providers/provider.tokens';
 import { CountryNewsController } from './country/country-news.controller';
 import { CountryNewsService } from './country/country-news.service';
+import { ArticlePersistenceService } from './persistence/article-persistence.service';
 import type { NewsProvider } from './interfaces';
 
 /**
- * Provider selection (Sprint 4.1):
+ * Provider selection:
  *
- * Exactly one provider is ever active for reads at a time, chosen once
- * at startup based on whether GNEWS_API_KEY is configured:
- *   - key present  -> GNewsProvider serves search/topHeadlines/category
- *   - key missing  -> MockNewsProvider serves them instead
+ * Exactly one provider is active for reads at a time.
+ * If GNEWS_API_KEY exists, GNews is used.
+ * Otherwise the mock provider is used.
  *
- * This is deliberate, not a limitation: mixing mock and real articles
- * in the same response would misrepresent mock data as live reporting.
- * Both providers are still registered under ALL_NEWS_PROVIDERS, so
- * /news/providers/health always reports GNews's status (e.g. "not
- * configured") even while it's inactive.
- *
- * To add another real provider (Reuters, AP News, BBC, NewsAPI, GDELT,
- * Google News, ...):
- *   1. Create `providers/<name>-news.provider.ts` implementing NewsProvider.
- *   2. Add it to the `providers` array below.
- *   3. Add it to both factories below (ALL_NEWS_PROVIDERS always; decide
- *      its priority relative to GNews/Mock in the NEWS_PROVIDERS factory).
- *
- * NewsService and NewsController never need to change.
+ * ALL_NEWS_PROVIDERS still contains every registered provider so that
+ * provider health can be reported independently of the active provider.
  */
 @Module({
   controllers: [NewsController, CountryNewsController],
   providers: [
     NewsService,
     CountryNewsService,
+    ArticlePersistenceService,
     MockNewsProvider,
     GNewsProvider,
     {

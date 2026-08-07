@@ -3,6 +3,7 @@ import type { NewsArticle, ProviderHealthStatus } from '@globalnews-ai/shared';
 import { NewsService } from './news.service';
 import { ALL_NEWS_PROVIDERS, NEWS_PROVIDERS } from './providers/provider.tokens';
 import type { NewsProvider } from './interfaces';
+import { ArticlePersistenceService } from './persistence/article-persistence.service';
 
 function makeArticle(overrides: Partial<NewsArticle>): NewsArticle {
   return {
@@ -127,7 +128,42 @@ class FakeMockProvider implements NewsProvider {
 }
 
 describe('NewsService', () => {
-  async function buildService(
+  const articlePersistence = {
+    persistMany: jest.fn().mockResolvedValue(undefined),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('persists the final articles returned by search', async () => {
+    const service = await buildService([new FakeHealthyProvider()]);
+
+    const response = await service.search('anything');
+
+    expect(articlePersistence.persistMany).toHaveBeenCalledTimes(1);
+    expect(articlePersistence.persistMany).toHaveBeenCalledWith(
+      response.articles,
+    );
+  });
+
+  it('persists only deduplicated articles', async () => {
+    const service = await buildService([
+      new FakeHealthyProvider(),
+      new FakeDuplicateProvider(),
+    ]);
+
+    await service.search('anything');
+
+    expect(articlePersistence.persistMany).toHaveBeenCalledTimes(1);
+
+    const persistedArticles = articlePersistence.persistMany.mock.calls[0][0];
+
+    expect(persistedArticles).toHaveLength(1);
+    expect(persistedArticles[0].id).toBe('healthy-1');
+  });
+
+    async function buildService(
     providers: NewsProvider[],
     allProviders: NewsProvider[] = providers,
   ): Promise<NewsService> {
@@ -136,6 +172,10 @@ describe('NewsService', () => {
         NewsService,
         { provide: NEWS_PROVIDERS, useValue: providers },
         { provide: ALL_NEWS_PROVIDERS, useValue: allProviders },
+        {
+          provide: ArticlePersistenceService,
+          useValue: articlePersistence,
+        },
       ],
     }).compile();
 

@@ -7,49 +7,83 @@ import type {
 } from '@globalnews-ai/shared';
 import type { NewsProvider } from './interfaces';
 import { ALL_NEWS_PROVIDERS, NEWS_PROVIDERS } from './providers/provider.tokens';
+import { ArticlePersistenceService } from './persistence/article-persistence.service';
 
 /**
- * NewsService is the only piece of the news module that talks to
- * providers, and it only ever does so through the NewsProvider
- * interface. It has no knowledge of Reuters, AP News, BBC, NewsAPI,
- * GDELT, GNews, Google News, or the mock provider — just arrays of
- * NewsProvider implementations injected via tokens.
+ * NewsService is the provider-agnostic orchestration layer for news.
  *
- * A single slow or failing provider never breaks a request: each
- * provider call is isolated with Promise.allSettled, and failures are
- * logged and excluded from the response rather than thrown.
+ * Provider failures are isolated so that one unavailable provider does
+ * not break an entire request.
+ *
+ * Final deduplicated/capped articles are persisted after the response
+ * has been assembled.
  */
 @Injectable()
 export class NewsService {
   private readonly logger = new Logger(NewsService.name);
 
   constructor(
-    /** Providers currently active for reads (search/topHeadlines/category). */
-    @Inject(NEWS_PROVIDERS) private readonly providers: NewsProvider[],
-    /** Every registered provider, active or not — used only for health reporting. */
-    @Inject(ALL_NEWS_PROVIDERS) private readonly allProviders: NewsProvider[],
+    @Inject(NEWS_PROVIDERS)
+    private readonly providers: NewsProvider[],
+
+    @Inject(ALL_NEWS_PROVIDERS)
+    private readonly allProviders: NewsProvider[],
+
+    private readonly articlePersistence: ArticlePersistenceService,
   ) {}
 
   async search(query: string, limit?: number): Promise<NewsResponse> {
     const results = await this.callAllProviders((provider) =>
       provider.search(query, { limit }),
     );
-    return this.buildResponse(results, limit, { query }, { sortByRecency: true });
+
+    const response = this.buildResponse(
+      results,
+      limit,
+      { query },
+      { sortByRecency: true },
+    );
+
+    await this.articlePersistence.persistMany(response.articles);
+
+    return response;
   }
 
   async topHeadlines(limit?: number): Promise<NewsResponse> {
-    const results = await this.callAllProviders((provider) => provider.topHeadlines({ limit }));
-    // Preserve each provider's own editorial ranking rather than forcing
-    // a recency sort — that's what makes it "top headlines" and not
-    // just "latest headlines".
-    return this.buildResponse(results, limit, {}, { sortByRecency: false });
+    const results = await this.callAllProviders((provider) =>
+      provider.topHeadlines({ limit }),
+    );
+
+    const response = this.buildResponse(
+      results,
+      limit,
+      {},
+      { sortByRecency: false },
+    );
+
+    await this.articlePersistence.persistMany(response.articles);
+
+    return response;
   }
 
-  async byCategory(category: NewsCategory, limit?: number): Promise<NewsResponse> {
+  async byCategory(
+    category: NewsCategory,
+    limit?: number,
+  ): Promise<NewsResponse> {
     const results = await this.callAllProviders((provider) =>
       provider.category(category, { limit }),
     );
-    return this.buildResponse(results, limit, { category }, { sortByRecency: true });
+
+    const response = this.buildResponse(
+      results,
+      limit,
+      { category },
+      { sortByRecency: true },
+    );
+
+    await this.articlePersistence.persistMany(response.articles);
+
+    return response;
   }
 
   async providersHealth(): Promise<ProviderHealthStatus[]> {
@@ -58,12 +92,17 @@ export class NewsService {
         try {
           return await provider.health();
         } catch (error) {
-          this.logger.warn(`Health check failed for provider "${provider.id}"`, error as Error);
+          this.logger.warn(
+            `Health check failed for provider "${provider.id}"`,
+            error as Error,
+          );
+
           return {
             providerId: provider.id,
             displayName: provider.displayName,
             status: 'down' as const,
-            message: error instanceof Error ? error.message : 'Unknown error',
+            message:
+              error instanceof Error ? error.message : 'Unknown error',
             checkedAt: new Date().toISOString(),
           };
         }
@@ -71,10 +110,6 @@ export class NewsService {
     );
   }
 
-  /**
-   * Calls every registered provider with the given operation, isolating
-   * failures per-provider so one bad provider never fails the request.
-   */
   private async callAllProviders(
     operation: (provider: NewsProvider) => Promise<NewsArticle[]>,
   ): Promise<Array<{ providerId: string; articles: NewsArticle[] }>> {
@@ -85,10 +120,14 @@ export class NewsService {
       })),
     );
 
-    const fulfilled: Array<{ providerId: string; articles: NewsArticle[] }> = [];
+    const fulfilled: Array<{
+      providerId: string;
+      articles: NewsArticle[];
+    }> = [];
 
     settled.forEach((result, index) => {
       const provider = this.providers[index];
+
       if (result.status === 'fulfilled') {
         fulfilled.push(result.value);
       } else {
@@ -102,19 +141,23 @@ export class NewsService {
     return fulfilled;
   }
 
-  /** Merges, dedupes, optionally sorts, and packages provider results into a NewsResponse. */
   private buildResponse(
     results: Array<{ providerId: string; articles: NewsArticle[] }>,
     limit: number | undefined,
     extra: Partial<Pick<NewsResponse, 'query' | 'category'>> = {},
-    { sortByRecency }: { sortByRecency: boolean } = { sortByRecency: true },
+    { sortByRecency }: { sortByRecency: boolean } = {
+      sortByRecency: true,
+    },
   ): NewsResponse {
     const seen = new Set<string>();
     const merged: NewsArticle[] = [];
 
     for (const { articles } of results) {
       for (const article of articles) {
-        if (seen.has(article.id)) continue;
+        if (seen.has(article.id)) {
+          continue;
+        }
+
         seen.add(article.id);
         merged.push(article);
       }
@@ -122,7 +165,9 @@ export class NewsService {
 
     if (sortByRecency) {
       merged.sort(
-        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+        (a, b) =>
+          new Date(b.publishedAt).getTime() -
+          new Date(a.publishedAt).getTime(),
       );
     }
 
@@ -132,29 +177,29 @@ export class NewsService {
       articles: capped,
       totalResults: capped.length,
       providers: results.map((result) => result.providerId),
-      dataMode: this.resolveDataMode(results.map((result) => result.providerId)),
+      dataMode: this.resolveDataMode(
+        results.map((result) => result.providerId),
+      ),
       generatedAt: new Date().toISOString(),
       ...extra,
     };
   }
 
-  /**
-   * "live" if any provider that actually answered this request is a
-   * real (non-mock) provider; "mock" otherwise. If no provider
-   * answered at all (e.g. GNews errored out), this falls back to
-   * whichever provider is currently configured as active, so the
-   * label still reflects the system's real mode rather than
-   * defaulting to a misleading guess.
-   */
-  private resolveDataMode(successfulProviderIds: string[]): NewsResponse['dataMode'] {
+  private resolveDataMode(
+    successfulProviderIds: string[],
+  ): NewsResponse['dataMode'] {
     const successfulProviders = this.providers.filter((provider) =>
       successfulProviderIds.includes(provider.id),
     );
 
     if (successfulProviders.length > 0) {
-      return successfulProviders.some((provider) => !provider.isMock) ? 'live' : 'mock';
+      return successfulProviders.some((provider) => !provider.isMock)
+        ? 'live'
+        : 'mock';
     }
 
-    return this.providers.every((provider) => provider.isMock) ? 'mock' : 'live';
+    return this.providers.every((provider) => provider.isMock)
+      ? 'mock'
+      : 'live';
   }
 }
