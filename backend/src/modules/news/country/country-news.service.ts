@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   resolveCountryByAnyIdentifier,
@@ -39,23 +39,9 @@ export class CountryNewsService {
     const country = resolveCountryByAnyIdentifier(countryIdentifier);
 
     if (!country) {
-      this.logger.debug(
-        `Could not resolve country identifier "${countryIdentifier}"`,
-      );
+      this.logger.debug(`Could not resolve country identifier "${countryIdentifier}"`);
 
-      return {
-        countryCode:
-          countryIdentifier.trim().toUpperCase().slice(0, 3) || 'N/A',
-        countryName: this.toDisplayName(countryIdentifier),
-        articles: [],
-        totalResults: 0,
-        providers: [],
-        dataMode: 'mock',
-        feedTier: 'delayed',
-        providerDisplayName: 'Unavailable',
-        category,
-        generatedAt: new Date().toISOString(),
-      };
+      throw new BadRequestException(`Unknown country identifier: "${countryIdentifier}"`);
     }
 
     const cacheKey = `${country.iso3}:${category ?? 'all'}:${resolvedLimit}`;
@@ -68,49 +54,47 @@ export class CountryNewsService {
 
     const fetchLimit = Math.max(resolvedLimit * 2, 20);
 
-const searchResponse = await this.newsService.search(
-  country.name,
-  fetchLimit,
-);
+    const searchResponse = await this.newsService.search(country.name, fetchLimit);
 
-const relevantArticles = searchResponse.articles
-  .map((article) => ({
-    article,
-    relevance: scoreCountryRelevance(article, country),
-  }))
-  .filter(({ relevance }) => relevance.isRelevant)
-  .sort((left, right) => {
-    const scoreDifference =
-      right.relevance.score - left.relevance.score;
+    // Score every result for country relevance and freshness-adjusted
+    // confidence. Relevance is a *ranking/confidence signal*, not a hard
+    // inclusion gate: a targeted per-country search can legitimately return
+    // articles that discuss the country without repeating its exact
+    // name/ISO code, and dropping those outright would silently empty out
+    // otherwise-correct results.
+    const scoredArticles = searchResponse.articles
+      .map((article) => ({
+        article,
+        relevance: scoreCountryRelevance(article, country),
+      }))
+      .sort((left, right) => {
+        const scoreDifference = right.relevance.score - left.relevance.score;
 
-    if (scoreDifference !== 0) {
-      return scoreDifference;
-    }
+        if (scoreDifference !== 0) {
+          return scoreDifference;
+        }
 
-    const rightPublishedAt = Date.parse(
-      right.article.publishedAt,
-    );
-    const leftPublishedAt = Date.parse(
-      left.article.publishedAt,
-    );
+        const rightPublishedAt = Date.parse(right.article.publishedAt);
+        const leftPublishedAt = Date.parse(left.article.publishedAt);
 
-    return rightPublishedAt - leftPublishedAt;
-  })
-  .map(({ article, relevance }) => ({
-    ...article,
-    confidence: scoreArticleConfidence(
-      article,
-      relevance.score,
-    ).confidence,
-  }));
-  const uniqueRelevantArticles =
-  deduplicateArticles(relevantArticles);
+        return rightPublishedAt - leftPublishedAt;
+      })
+      .map(({ article, relevance }) => ({
+        ...article,
+        confidence: scoreArticleConfidence(article, relevance.score).confidence,
+      }));
 
-const articles = category
-  ? uniqueRelevantArticles.filter(
-      (article) => article.category === category,
-    )
-  : uniqueRelevantArticles;
+    // Filter by the requested category first, then deduplicate only within
+    // that already-scoped set. Deduplicating across the full, unfiltered
+    // result set first would let articles from *other* categories in the
+    // same provider response affect which article survives for this
+    // category — letting two category-specific requests bleed into each
+    // other despite each having its own cache key.
+    const categoryFilteredArticles = category
+      ? scoredArticles.filter((article) => article.category === category)
+      : scoredArticles;
+
+    const articles = deduplicateArticles(categoryFilteredArticles);
 
     const bounded = articles.slice(0, resolvedLimit);
 
@@ -150,15 +134,12 @@ const articles = category
     const activeProviderId = providerIds[0];
 
     if (activeProviderId === 'gnews') {
-      const configuredTier =
-        this.config.get<string>('GNEWS_FEED_TIER');
+      const configuredTier = this.config.get<string>('GNEWS_FEED_TIER');
 
-      const feedTier: NewsFeedTier =
-        configuredTier === 'live' ? 'live' : 'delayed';
+      const feedTier: NewsFeedTier = configuredTier === 'live' ? 'live' : 'delayed';
 
       const providerDisplayName =
-        this.config.get<string>('GNEWS_PROVIDER_DISPLAY_NAME') ||
-        'GNews Free';
+        this.config.get<string>('GNEWS_PROVIDER_DISPLAY_NAME') || 'GNews Free';
 
       return {
         feedTier,
@@ -168,26 +149,15 @@ const articles = category
 
     return {
       feedTier: 'live',
-      providerDisplayName: activeProviderId
-        ? this.titleCase(activeProviderId)
-        : 'Live provider',
+      providerDisplayName: activeProviderId ? this.titleCase(activeProviderId) : 'Live provider',
     };
-  }
-
-  private toDisplayName(raw: string): string {
-    const trimmed = raw.trim();
-    return trimmed ? this.titleCase(trimmed) : 'Unknown region';
   }
 
   private titleCase(value: string): string {
     return value
       .split(/[\s-]+/)
       .filter(Boolean)
-      .map(
-        (word) =>
-          word.charAt(0).toUpperCase() +
-          word.slice(1).toLowerCase(),
-      )
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
   }
 
@@ -197,14 +167,10 @@ const articles = category
   }
 
   private getCacheTtlSeconds(): number {
-    const raw = this.config.get<string>(
-      'COUNTRY_NEWS_CACHE_TTL_SECONDS',
-    );
+    const raw = this.config.get<string>('COUNTRY_NEWS_CACHE_TTL_SECONDS');
     const parsed = raw ? parseInt(raw, 10) : NaN;
 
-    return Number.isFinite(parsed) && parsed >= 0
-      ? parsed
-      : DEFAULT_CACHE_TTL_SECONDS;
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_CACHE_TTL_SECONDS;
   }
 
   private getCached(key: string): CountryNewsResponse | null {
@@ -220,10 +186,7 @@ const articles = category
     return entry.value;
   }
 
-  private setCached(
-    key: string,
-    value: CountryNewsResponse,
-  ): void {
+  private setCached(key: string, value: CountryNewsResponse): void {
     const ttlSeconds = this.getCacheTtlSeconds();
 
     if (ttlSeconds <= 0) return;

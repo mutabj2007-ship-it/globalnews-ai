@@ -78,57 +78,12 @@ const EVENT_KEYWORDS = [
 ];
 
 const TOPIC_KEYWORDS: Record<string, string[]> = {
-  politics: [
-    'government',
-    'president',
-    'minister',
-    'parliament',
-    'policy',
-    'election',
-  ],
-  conflict: [
-    'army',
-    'military',
-    'war',
-    'airstrike',
-    'ceasefire',
-    'rebels',
-    'conflict',
-  ],
-  economy: [
-    'economy',
-    'economic',
-    'inflation',
-    'employment',
-    'gdp',
-    'trade',
-    'recession',
-  ],
-  markets: [
-    'market',
-    'stocks',
-    'shares',
-    'investors',
-    'bonds',
-    'index',
-  ],
-  energy: [
-    'oil',
-    'crude',
-    'fuel',
-    'gas',
-    'opec',
-    'pipeline',
-    'refinery',
-  ],
-  health: [
-    'health',
-    'hospital',
-    'disease',
-    'vaccine',
-    'outbreak',
-    'patients',
-  ],
+  politics: ['government', 'president', 'minister', 'parliament', 'policy', 'election'],
+  conflict: ['army', 'military', 'war', 'airstrike', 'ceasefire', 'rebels', 'conflict'],
+  economy: ['economy', 'economic', 'inflation', 'employment', 'gdp', 'trade', 'recession'],
+  markets: ['market', 'stocks', 'shares', 'investors', 'bonds', 'index'],
+  energy: ['oil', 'crude', 'fuel', 'gas', 'opec', 'pipeline', 'refinery'],
+  health: ['health', 'hospital', 'disease', 'vaccine', 'outbreak', 'patients'],
   technology: [
     'technology',
     'artificial intelligence',
@@ -137,14 +92,7 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
     'semiconductor',
     'cybersecurity',
   ],
-  humanitarian: [
-    'humanitarian',
-    'refugees',
-    'displaced',
-    'famine',
-    'aid',
-    'malnutrition',
-  ],
+  humanitarian: ['humanitarian', 'refugees', 'displaced', 'famine', 'aid', 'malnutrition'],
 };
 
 const CURRENCY_PATTERNS: Array<{
@@ -167,20 +115,11 @@ const CURRENCY_PATTERNS: Array<{
   },
   {
     code: 'GBP',
-    patterns: [
-      /\bGBP\b/g,
-      /\bpound sterling\b/gi,
-      /\bBritish pounds?\b/gi,
-      /£/g,
-    ],
+    patterns: [/\bGBP\b/g, /\bpound sterling\b/gi, /\bBritish pounds?\b/gi, /£/g],
   },
   {
     code: 'RWF',
-    patterns: [
-      /\bRWF\b/g,
-      /\bRwandan francs?\b/gi,
-      /\bRwanda francs?\b/gi,
-    ],
+    patterns: [/\bRWF\b/g, /\bRwandan francs?\b/gi, /\bRwanda francs?\b/gi],
   },
   {
     code: 'KES',
@@ -240,28 +179,18 @@ function escapeRegExp(value: string): string {
 
 function deduplicate(values: string[]): string[] {
   return Array.from(
-    new Set(
-      values
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0),
-    ),
+    new Set(values.map((value) => value.trim()).filter((value) => value.length > 0)),
   );
 }
 
-function buildArticleText(
-  article: Pick<NewsArticle, 'title' | 'summary'>,
-): string {
+function buildArticleText(article: Pick<NewsArticle, 'title' | 'summary'>): string {
   return [article.title, article.summary]
-    .filter(
-      (value): value is string =>
-        typeof value === 'string' && value.trim().length > 0,
-    )
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
     .join(' ');
 }
 
 function containsPhrase(text: string, phrase: string): boolean {
-  const isShortAcronym =
-    phrase.length <= 4 && phrase === phrase.toUpperCase();
+  const isShortAcronym = phrase.length <= 4 && phrase === phrase.toUpperCase();
 
   const pattern = new RegExp(
     `(?<![A-Za-z0-9])${escapeRegExp(phrase)}(?![A-Za-z0-9])`,
@@ -275,17 +204,11 @@ function extractCountries(text: string): string[] {
   const matches: Array<{ name: string; length: number }> = [];
 
   for (const country of COUNTRIES) {
-    const candidateNames = [
-      country.name,
-      country.iso2,
-      country.iso3,
-    ]
+    const candidateNames = [country.name, country.iso2, country.iso3]
       .filter(Boolean)
       .sort((a, b) => b.length - a.length);
 
-    const matched = candidateNames.some((candidate) =>
-      containsPhrase(text, candidate),
-    );
+    const matched = candidateNames.some((candidate) => containsPhrase(text, candidate));
 
     if (matched) {
       matches.push({
@@ -295,20 +218,11 @@ function extractCountries(text: string): string[] {
     }
   }
 
-  return deduplicate(
-    matches
-      .sort((a, b) => b.length - a.length)
-      .map((match) => match.name),
-  );
+  return deduplicate(matches.sort((a, b) => b.length - a.length).map((match) => match.name));
 }
 
-function extractNamedItems(
-  text: string,
-  items: string[],
-): string[] {
-  return deduplicate(
-    items.filter((item) => containsPhrase(text, item)),
-  );
+function extractNamedItems(text: string, items: string[]): string[] {
+  return deduplicate(items.filter((item) => containsPhrase(text, item)));
 }
 
 function extractCurrencies(text: string): string[] {
@@ -328,11 +242,7 @@ function extractCurrencies(text: string): string[] {
 }
 
 function extractEvents(text: string): string[] {
-  return deduplicate(
-    EVENT_KEYWORDS.filter((event) =>
-      containsPhrase(text, event),
-    ),
-  );
+  return deduplicate(EVENT_KEYWORDS.filter((event) => containsPhrase(text, event)));
 }
 
 function extractTopics(text: string): string[] {
@@ -342,9 +252,7 @@ function extractTopics(text: string): string[] {
     .map(([topic, keywords]) => ({
       topic,
       score: keywords.reduce(
-        (total, keyword) =>
-          total +
-          (normalizedText.includes(keyword.toLowerCase()) ? 1 : 0),
+        (total, keyword) => total + (normalizedText.includes(keyword.toLowerCase()) ? 1 : 0),
         0,
       ),
     }))
@@ -361,10 +269,7 @@ function extractTitledPeople(text: string): string[] {
 
   const nameToken = `[A-Z][a-zA-ZÀ-ÖØ-öø-ÿ'’.-]+`;
 
-  const pattern = new RegExp(
-    `(?:${titles})\\s+(${nameToken}(?:\\s+${nameToken}){1,2})`,
-    'g',
-  );
+  const pattern = new RegExp(`(?:${titles})\\s+(${nameToken}(?:\\s+${nameToken}){1,2})`, 'g');
 
   const people: string[] = [];
   let match: RegExpExecArray | null;
@@ -377,12 +282,9 @@ function extractTitledPeople(text: string): string[] {
 }
 
 function extractSuffixedLocations(text: string): string[] {
-  const suffixes = LOCATION_SUFFIXES
-    .map(escapeRegExp)
-    .join('|');
+  const suffixes = LOCATION_SUFFIXES.map(escapeRegExp).join('|');
 
-  const locationToken =
-    `[A-Z][a-zA-ZÀ-ÖØ-öø-ÿ'’.-]+`;
+  const locationToken = `[A-Z][a-zA-ZÀ-ÖØ-öø-ÿ'’.-]+`;
 
   const pattern = new RegExp(
     `\\b(${locationToken}(?:\\s+${locationToken}){0,2}\\s+(?:${suffixes}))\\b`,
@@ -418,14 +320,8 @@ export function extractArticleEntities(
   }
 
   const countries = extractCountries(text);
-  const organizations = extractNamedItems(
-    text,
-    ORGANIZATION_NAMES,
-  );
-  const companies = extractNamedItems(
-    text,
-    COMPANY_NAMES,
-  );
+  const organizations = extractNamedItems(text, ORGANIZATION_NAMES);
+  const companies = extractNamedItems(text, COMPANY_NAMES);
   const events = extractEvents(text);
   const currencies = extractCurrencies(text);
   const topics = extractTopics(text);

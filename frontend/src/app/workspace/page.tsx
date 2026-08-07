@@ -158,8 +158,8 @@ function StatusBadge({ status }: { status: ModuleStatus }): JSX.Element {
     status === 'Foundation ready'
       ? 'Status: Foundation ready'
       : status === 'In development'
-      ? 'Status: In development'
-      : 'Status: Planned';
+        ? 'Status: In development'
+        : 'Status: Planned';
 
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-200">
@@ -223,12 +223,12 @@ export default function HomePage(): JSX.Element {
               Understand the world, not just the headlines.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg">
-              Ask about a country, conflict, election, economy, market, crisis, or developing
-              event. GlobalNews AI will organize the evidence into summaries, timelines,
-              comparisons, uncertainties, and sources.
+              Ask about a country, conflict, election, economy, market, crisis, or developing event.
+              GlobalNews AI will organize the evidence into summaries, timelines, comparisons,
+              uncertainties, and sources.
             </p>
 
-           <div className="mx-auto mt-10 flex w-full max-w-2xl flex-col gap-3 sm:flex-row">
+            <div className="mx-auto mt-10 flex w-full max-w-2xl flex-col gap-3 sm:flex-row">
               <label htmlFor="intelligence-query" className="sr-only">
                 Ask what is happening anywhere in the world
               </label>
@@ -240,12 +240,12 @@ export default function HomePage(): JSX.Element {
                 className="w-full flex-1 rounded-lg border border-white/15 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
               />
               <button
-  type="button"
+                type="button"
                 className="rounded-lg bg-sky-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
               >
                 Analyze
               </button>
-          </div>
+            </div>
 
             <ul className="mx-auto mt-6 flex flex-wrap justify-center gap-2">
               {suggestedQuestions.map((question) => (
@@ -281,12 +281,10 @@ export default function HomePage(): JSX.Element {
         <section className="px-6 py-20">
           <div className="mx-auto max-w-6xl">
             <div className="max-w-2xl">
-              <h2 className="text-2xl font-bold text-white sm:text-3xl">
-                Intelligence modules
-              </h2>
+              <h2 className="text-2xl font-bold text-white sm:text-3xl">Intelligence modules</h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                Modules are the brain. The interface is the face. Each module is a capability
-                the engine applies behind the scenes when you ask a question.
+                Modules are the brain. The interface is the face. Each module is a capability the
+                engine applies behind the scenes when you ask a question.
               </p>
             </div>
 
@@ -343,9 +341,7 @@ export default function HomePage(): JSX.Element {
                   className="rounded-xl border border-white/10 bg-slate-900/60 p-6"
                 >
                   <h3 className="text-base font-semibold text-white">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                    {item.description}
-                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-400">{item.description}</p>
                 </div>
               ))}
             </div>

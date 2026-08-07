@@ -3,8 +3,7 @@ import { extractArticleEntities } from './article-entities.util';
 describe('extractArticleEntities', () => {
   it('extracts countries, organizations, events and topics from a conflict article', () => {
     const result = extractArticleEntities({
-      title:
-        'Sudan conflict intensifies as United Nations calls for a ceasefire',
+      title: 'Sudan conflict intensifies as United Nations calls for a ceasefire',
       summary:
         'The military conflict has displaced families across Sudan and created a humanitarian crisis.',
     });
@@ -12,31 +11,20 @@ describe('extractArticleEntities', () => {
     expect(result.countries).toContain('Sudan');
     expect(result.organizations).toContain('United Nations');
     expect(result.events).toEqual(
-      expect.arrayContaining([
-        'conflict',
-        'ceasefire',
-        'humanitarian crisis',
-      ]),
+      expect.arrayContaining(['conflict', 'ceasefire', 'humanitarian crisis']),
     );
-    expect(result.topics).toEqual(
-      expect.arrayContaining(['conflict', 'humanitarian']),
-    );
+    expect(result.topics).toEqual(expect.arrayContaining(['conflict', 'humanitarian']));
   });
 
   it('extracts multiple countries without duplicating them', () => {
     const result = extractArticleEntities({
       title: 'Kenya and Uganda sign a regional trade agreement',
-      summary:
-        'Kenya said the agreement with Uganda would improve trade across East Africa.',
+      summary: 'Kenya said the agreement with Uganda would improve trade across East Africa.',
     });
 
-    expect(result.countries).toEqual(
-      expect.arrayContaining(['Kenya', 'Uganda']),
-    );
+    expect(result.countries).toEqual(expect.arrayContaining(['Kenya', 'Uganda']));
 
-    expect(
-      result.countries.filter((country) => country === 'Kenya'),
-    ).toHaveLength(1);
+    expect(result.countries.filter((country) => country === 'Kenya')).toHaveLength(1);
   });
 
   it('extracts organizations and companies separately', () => {
@@ -48,35 +36,26 @@ describe('extractArticleEntities', () => {
 
     expect(result.organizations).toContain('OPEC');
 
-    expect(result.companies).toEqual(
-      expect.arrayContaining(['Shell', 'BP']),
-    );
+    expect(result.companies).toEqual(expect.arrayContaining(['Shell', 'BP']));
 
-    expect(result.topics).toEqual(
-      expect.arrayContaining(['energy', 'markets']),
-    );
+    expect(result.topics).toEqual(expect.arrayContaining(['energy', 'markets']));
   });
 
   it('extracts explicit currencies without treating the yen symbol ambiguously', () => {
     const result = extractArticleEntities({
       title: 'Euro rises while the US dollar weakens',
-      summary:
-        'Analysts compared EUR, USD and the Chinese yuan during market trading.',
+      summary: 'Analysts compared EUR, USD and the Chinese yuan during market trading.',
     });
 
-    expect(result.currencies).toEqual(
-      expect.arrayContaining(['EUR', 'USD', 'CNY']),
-    );
+    expect(result.currencies).toEqual(expect.arrayContaining(['EUR', 'USD', 'CNY']));
 
     expect(result.currencies).not.toContain('JPY');
   });
 
   it('extracts Rwanda-related intelligence entities', () => {
     const result = extractArticleEntities({
-      title:
-        'Rwanda election preparations continue across Kigali City',
-      summary:
-        'The election process and government planning remain under review.',
+      title: 'Rwanda election preparations continue across Kigali City',
+      summary: 'The election process and government planning remain under review.',
     });
 
     expect(result.countries).toContain('Rwanda');
@@ -87,10 +66,8 @@ describe('extractArticleEntities', () => {
 
   it('extracts a titled person but avoids classifying organizations as people', () => {
     const result = extractArticleEntities({
-      title:
-        'President Paul Kagame addresses the African Union summit',
-      summary:
-        'The speech focused on regional trade and economic cooperation.',
+      title: 'President Paul Kagame addresses the African Union summit',
+      summary: 'The speech focused on regional trade and economic cooperation.',
     });
 
     expect(result.people).toContain('Paul Kagame');
