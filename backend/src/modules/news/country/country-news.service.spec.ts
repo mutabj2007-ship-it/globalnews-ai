@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import type { NewsArticle, NewsResponse } from '@globalnews-ai/shared';
 import { CountryNewsService } from './country-news.service';
+import { ConfigService } from '@nestjs/config';
 
 function makeArticle(overrides: Partial<NewsArticle>): NewsArticle {
   return {
@@ -17,7 +18,10 @@ function makeArticle(overrides: Partial<NewsArticle>): NewsArticle {
   };
 }
 
-function makeSearchResponse(articles: NewsArticle[], dataMode: 'live' | 'mock' = 'mock'): NewsResponse {
+function makeSearchResponse(
+  articles: NewsArticle[],
+  dataMode: 'live' | 'mock' = 'mock',
+): NewsResponse {
   return {
     articles,
     totalResults: articles.length,
@@ -27,13 +31,17 @@ function makeSearchResponse(articles: NewsArticle[], dataMode: 'live' | 'mock' =
   };
 }
 
-function makeConfig(overrides: Record<string, string | undefined> = {}) {
-  return { get: (key: string) => overrides[key] } as any;
+function makeConfig(overrides: Record<string, string | undefined> = {}): ConfigService {
+  return {
+    get: (key: string) => overrides[key],
+  } as ConfigService;
 }
 
 describe('CountryNewsService', () => {
   it('resolves a known ISO3 country code and searches by its name', async () => {
-    const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])) };
+    const newsService = {
+      search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])),
+    };
     const service = new CountryNewsService(newsService as never, makeConfig());
 
     const response = await service.getCountryNews('ESP');
@@ -69,7 +77,9 @@ describe('CountryNewsService', () => {
   });
 
   it('propagates the underlying dataMode (live vs mock) unchanged', async () => {
-    const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })], 'live')) };
+    const newsService = {
+      search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })], 'live')),
+    };
     const service = new CountryNewsService(newsService as never, makeConfig());
 
     const response = await service.getCountryNews('ESP');
@@ -92,7 +102,9 @@ describe('CountryNewsService', () => {
   });
 
   it('caches a response and does not call the news service again for the same request', async () => {
-    const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])) };
+    const newsService = {
+      search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])),
+    };
     const service = new CountryNewsService(
       newsService as never,
       makeConfig({ COUNTRY_NEWS_CACHE_TTL_SECONDS: '300' }),
@@ -106,12 +118,14 @@ describe('CountryNewsService', () => {
 
   it('does not cache identical requests differing only by category together', async () => {
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse([
-          makeArticle({ id: 'a1', category: 'business' }),
-          makeArticle({ id: 'a2', category: 'technology' }),
-        ]),
-      ),
+      search: jest
+        .fn()
+        .mockResolvedValue(
+          makeSearchResponse([
+            makeArticle({ id: 'a1', category: 'business' }),
+            makeArticle({ id: 'a2', category: 'technology' }),
+          ]),
+        ),
     };
     const service = new CountryNewsService(newsService as never, makeConfig());
 
@@ -123,7 +137,9 @@ describe('CountryNewsService', () => {
   });
 
   it('does not cache when COUNTRY_NEWS_CACHE_TTL_SECONDS is 0', async () => {
-    const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])) };
+    const newsService = {
+      search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])),
+    };
     const service = new CountryNewsService(
       newsService as never,
       makeConfig({ COUNTRY_NEWS_CACHE_TTL_SECONDS: '0' }),
@@ -136,7 +152,9 @@ describe('CountryNewsService', () => {
   });
 
   it('propagates provider failure errors rather than swallowing them silently', async () => {
-    const newsService = { search: jest.fn().mockRejectedValue(new Error('GNews rate limit exceeded.')) };
+    const newsService = {
+      search: jest.fn().mockRejectedValue(new Error('GNews rate limit exceeded.')),
+    };
     const service = new CountryNewsService(newsService as never, makeConfig());
 
     await expect(service.getCountryNews('ESP')).rejects.toThrow('GNews rate limit exceeded.');
