@@ -35,8 +35,9 @@ export class ArticlePersistenceService {
               summary: article.summary,
               imageUrl: article.imageUrl ?? null,
               sourceId: article.sourceId,
-              sourceName: article.sourceName,
-              category: article.category,
+sourceName: article.sourceName,
+sourcesCount: article.sourcesCount,
+category: article.category,
               publishedAt: new Date(article.publishedAt),
               confidenceScore:
                 article.confidence !== undefined
@@ -50,8 +51,9 @@ export class ArticlePersistenceService {
               url: article.url,
               imageUrl: article.imageUrl ?? null,
               sourceId: article.sourceId,
-              sourceName: article.sourceName,
-              category: article.category,
+sourceName: article.sourceName,
+sourcesCount: article.sourcesCount,
+category: article.category,
               publishedAt: new Date(article.publishedAt),
               confidenceScore:
                 article.confidence !== undefined
@@ -134,7 +136,7 @@ export class ArticlePersistenceService {
         sourceId: row.sourceId,
         sourceName: row.sourceName,
         category: row.category as NewsCategory,
-        sourcesCount: 1,
+        sourcesCount: row.sourcesCount,
         publishedAt: row.publishedAt.toISOString(),
         confidence:
           row.confidenceScore ?? undefined,

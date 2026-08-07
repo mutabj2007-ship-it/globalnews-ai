@@ -17,7 +17,9 @@ describe('ArticlePersistenceService', () => {
   let service: ArticlePersistenceService;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    articleUpsert.mockReset();
+    articleFindMany.mockReset();
+    transaction.mockReset();
 
     articleUpsert.mockImplementation((args) => args);
     articleFindMany.mockResolvedValue([]);
@@ -54,8 +56,11 @@ describe('ArticlePersistenceService', () => {
       imageUrl: 'https://example.com/image.jpg',
       sourceId: 'stored-provider',
       sourceName: 'Stored Provider',
+      sourcesCount: 1,
       category: 'world',
-      publishedAt: new Date('2026-08-07T10:00:00.000Z'),
+      publishedAt: new Date(
+        '2026-08-07T10:00:00.000Z',
+      ),
       confidenceScore: 87,
       ...overrides,
     };
@@ -83,6 +88,25 @@ describe('ArticlePersistenceService', () => {
     );
 
     expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('persists sourcesCount in both create and update data', async () => {
+    const article = makeArticle({
+      sourcesCount: 5,
+    });
+
+    await service.persistMany([article]);
+
+    expect(articleUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          sourcesCount: 5,
+        }),
+        update: expect.objectContaining({
+          sourcesCount: 5,
+        }),
+      }),
+    );
   });
 
   it('maps optional values safely when persisting', async () => {
@@ -136,8 +160,13 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('reads recent articles using the default 24-hour freshness window', async () => {
-    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    const now = new Date(
+      '2026-08-07T12:00:00.000Z',
+    ).getTime();
+
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(now);
 
     articleFindMany.mockResolvedValueOnce([
       makeDatabaseRow(),
@@ -150,7 +179,9 @@ describe('ArticlePersistenceService', () => {
     expect(articleFindMany).toHaveBeenCalledWith({
       where: {
         publishedAt: {
-          gte: new Date('2026-08-06T12:00:00.000Z'),
+          gte: new Date(
+            '2026-08-06T12:00:00.000Z',
+          ),
         },
       },
       orderBy: {
@@ -178,9 +209,27 @@ describe('ArticlePersistenceService', () => {
     nowSpy.mockRestore();
   });
 
+  it('restores the stored sourcesCount when reading cached articles', async () => {
+    articleFindMany.mockResolvedValueOnce([
+      makeDatabaseRow({
+        sourcesCount: 5,
+      }),
+    ]);
+
+    const result = await service.findRecent();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].sourcesCount).toBe(5);
+  });
+
   it('filters recent articles by category', async () => {
-    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    const now = new Date(
+      '2026-08-07T12:00:00.000Z',
+    ).getTime();
+
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(now);
 
     articleFindMany.mockResolvedValueOnce([]);
 
@@ -193,7 +242,9 @@ describe('ArticlePersistenceService', () => {
     expect(articleFindMany).toHaveBeenCalledWith({
       where: {
         publishedAt: {
-          gte: new Date('2026-08-07T11:00:00.000Z'),
+          gte: new Date(
+            '2026-08-07T11:00:00.000Z',
+          ),
         },
         category: 'technology',
       },

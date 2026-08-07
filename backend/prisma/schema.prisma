@@ -15,6 +15,7 @@ model Article {
   imageUrl    String?
   sourceId    String
   sourceName  String
+  sourcesCount Int @default(1)
   category    String
   publishedAt DateTime
   fetchedAt   DateTime @default(now())
