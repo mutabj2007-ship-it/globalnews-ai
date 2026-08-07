@@ -1,17 +1,22 @@
 import { Controller, Get } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service';
 
-/**
- * Basic liveness endpoint used by Docker healthchecks, load balancers,
- * and CI smoke tests. This is infrastructure plumbing, not a product
- * feature, and belongs in the project foundation.
- */
 @Controller('health')
 export class HealthController {
+  constructor(private readonly prisma: PrismaService) {}
+
   @Get()
-  check(): { status: string; timestamp: string } {
+  async check(): Promise<{
+    status: string;
+    timestamp: string;
+    database: string;
+  }> {
+    await this.prisma.$queryRaw`SELECT 1`;
+
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
+      database: 'ok',
     };
   }
 }

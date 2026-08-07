@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Article {
+  id          String   @id
+  title       String
+  summary     String
+  url         String   @unique
+  imageUrl    String?
+  sourceId    String
+  sourceName  String
+  category    String
+  publishedAt DateTime
+  fetchedAt   DateTime @default(now())
+
+  countryCode String?
+  countryName String?
+
+  relevanceScore  Int?
+  confidenceScore Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([publishedAt])
+  @@index([sourceId])
+  @@index([category])
+  @@index([countryCode])
+}

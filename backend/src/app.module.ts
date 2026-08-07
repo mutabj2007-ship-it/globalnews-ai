@@ -2,19 +2,18 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PrismaModule } from './database/prisma.module';
 import { HealthModule } from './health/health.module';
-import { NewsModule } from './modules/news/news.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
+import { NewsModule } from './modules/news/news.module';
 
 @Module({
   imports: [
-    // Loads environment variables from .env and makes them available
-    // application-wide via the ConfigService. Further feature configuration
-    // (database, auth, etc.) will be added in later sprints.
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
+    PrismaModule,
     HealthModule,
     NewsModule,
     AnalysisModule,
