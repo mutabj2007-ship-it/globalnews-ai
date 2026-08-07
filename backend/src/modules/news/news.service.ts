@@ -15,8 +15,8 @@ import { ArticlePersistenceService } from './persistence/article-persistence.ser
  * Provider failures are isolated so that one unavailable provider does
  * not break an entire request.
  *
- * Final deduplicated/capped articles are persisted after the response
- * has been assembled.
+ * Final deduplicated/capped live articles are persisted after the
+ * response has been assembled.
  */
 @Injectable()
 export class NewsService {
@@ -32,7 +32,10 @@ export class NewsService {
     private readonly articlePersistence: ArticlePersistenceService,
   ) {}
 
-  async search(query: string, limit?: number): Promise<NewsResponse> {
+  async search(
+    query: string,
+    limit?: number,
+  ): Promise<NewsResponse> {
     const results = await this.callAllProviders((provider) =>
       provider.search(query, { limit }),
     );
@@ -44,12 +47,16 @@ export class NewsService {
       { sortByRecency: true },
     );
 
-    await this.articlePersistence.persistMany(response.articles);
+    if (response.dataMode === 'live') {
+      await this.articlePersistence.persistMany(response.articles);
+    }
 
     return response;
   }
 
-  async topHeadlines(limit?: number): Promise<NewsResponse> {
+  async topHeadlines(
+    limit?: number,
+  ): Promise<NewsResponse> {
     const results = await this.callAllProviders((provider) =>
       provider.topHeadlines({ limit }),
     );
@@ -61,7 +68,9 @@ export class NewsService {
       { sortByRecency: false },
     );
 
-    await this.articlePersistence.persistMany(response.articles);
+    if (response.dataMode === 'live') {
+      await this.articlePersistence.persistMany(response.articles);
+    }
 
     return response;
   }
@@ -81,7 +90,9 @@ export class NewsService {
       { sortByRecency: true },
     );
 
-    await this.articlePersistence.persistMany(response.articles);
+    if (response.dataMode === 'live') {
+      await this.articlePersistence.persistMany(response.articles);
+    }
 
     return response;
   }

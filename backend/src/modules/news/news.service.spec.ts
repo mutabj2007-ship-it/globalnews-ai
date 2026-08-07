@@ -5,7 +5,9 @@ import { ALL_NEWS_PROVIDERS, NEWS_PROVIDERS } from './providers/provider.tokens'
 import type { NewsProvider } from './interfaces';
 import { ArticlePersistenceService } from './persistence/article-persistence.service';
 
-function makeArticle(overrides: Partial<NewsArticle>): NewsArticle {
+function makeArticle(
+  overrides: Partial<NewsArticle> = {},
+): NewsArticle {
   return {
     id: 'article-1',
     title: 'Test headline',
@@ -26,13 +28,24 @@ class FakeHealthyProvider implements NewsProvider {
   readonly isMock = false;
 
   async search(): Promise<NewsArticle[]> {
-    return [makeArticle({ id: 'healthy-1', publishedAt: '2024-01-01T00:00:00.000Z' })];
+    return [
+      makeArticle({
+        id: 'healthy-1',
+        publishedAt: '2024-01-01T00:00:00.000Z',
+      }),
+    ];
   }
 
   async topHeadlines(): Promise<NewsArticle[]> {
     return [
-      makeArticle({ id: 'healthy-1', publishedAt: '2024-01-01T00:00:00.000Z' }),
-      makeArticle({ id: 'healthy-2', publishedAt: '2024-01-02T00:00:00.000Z' }),
+      makeArticle({
+        id: 'healthy-1',
+        publishedAt: '2024-01-01T00:00:00.000Z',
+      }),
+      makeArticle({
+        id: 'healthy-2',
+        publishedAt: '2024-01-02T00:00:00.000Z',
+      }),
     ];
   }
 
@@ -136,6 +149,34 @@ describe('NewsService', () => {
     jest.clearAllMocks();
   });
 
+  async function buildService(
+    providers: NewsProvider[],
+    allProviders: NewsProvider[] = providers,
+  ): Promise<NewsService> {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        NewsService,
+        { provide: NEWS_PROVIDERS, useValue: providers },
+        { provide: ALL_NEWS_PROVIDERS, useValue: allProviders },
+        {
+          provide: ArticlePersistenceService,
+          useValue: articlePersistence,
+        },
+      ],
+    }).compile();
+
+    return module.get<NewsService>(NewsService);
+  }
+
+  it('does not persist mock news as real evidence', async () => {
+    const service = await buildService([new FakeMockProvider()]);
+
+    const response = await service.search('anything');
+
+    expect(response.dataMode).toBe('mock');
+    expect(articlePersistence.persistMany).not.toHaveBeenCalled();
+  });
+
   it('persists the final articles returned by search', async () => {
     const service = await buildService([new FakeHealthyProvider()]);
 
@@ -157,30 +198,12 @@ describe('NewsService', () => {
 
     expect(articlePersistence.persistMany).toHaveBeenCalledTimes(1);
 
-    const persistedArticles = articlePersistence.persistMany.mock.calls[0][0];
+    const persistedArticles =
+      articlePersistence.persistMany.mock.calls[0][0];
 
     expect(persistedArticles).toHaveLength(1);
     expect(persistedArticles[0].id).toBe('healthy-1');
   });
-
-    async function buildService(
-    providers: NewsProvider[],
-    allProviders: NewsProvider[] = providers,
-  ): Promise<NewsService> {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        NewsService,
-        { provide: NEWS_PROVIDERS, useValue: providers },
-        { provide: ALL_NEWS_PROVIDERS, useValue: allProviders },
-        {
-          provide: ArticlePersistenceService,
-          useValue: articlePersistence,
-        },
-      ],
-    }).compile();
-
-    return module.get<NewsService>(NewsService);
-  }
 
   it('aggregates results across all healthy providers', async () => {
     const service = await buildService([new FakeHealthyProvider()]);
@@ -191,7 +214,11 @@ describe('NewsService', () => {
   });
 
   it('excludes failing providers instead of throwing', async () => {
-    const service = await buildService([new FakeHealthyProvider(), new FakeFailingProvider()]);
+    const service = await buildService([
+      new FakeHealthyProvider(),
+      new FakeFailingProvider(),
+    ]);
+
     const response = await service.search('anything');
 
     expect(response.articles).toHaveLength(1);
@@ -199,7 +226,11 @@ describe('NewsService', () => {
   });
 
   it('dedupes articles with the same id across providers', async () => {
-    const service = await buildService([new FakeHealthyProvider(), new FakeDuplicateProvider()]);
+    const service = await buildService([
+      new FakeHealthyProvider(),
+      new FakeDuplicateProvider(),
+    ]);
+
     const response = await service.search('anything');
 
     const ids = response.articles.map((article) => article.id);
@@ -212,51 +243,67 @@ describe('NewsService', () => {
 
     // healthy-1 has an earlier publishedAt than healthy-2, but the
     // provider intentionally returns healthy-1 first as its top pick.
-    expect(response.articles.map((a) => a.id)).toEqual(['healthy-1', 'healthy-2']);
+    expect(response.articles.map((article) => article.id)).toEqual([
+      'healthy-1',
+      'healthy-2',
+    ]);
   });
 
   it('reports a down status for providers whose health check throws', async () => {
-    const service = await buildService([new FakeHealthyProvider(), new FakeFailingProvider()]);
+    const service = await buildService([
+      new FakeHealthyProvider(),
+      new FakeFailingProvider(),
+    ]);
+
     const statuses = await service.providersHealth();
 
-    const failing = statuses.find((status) => status.providerId === 'fake-failing');
+    const failing = statuses.find(
+      (status) => status.providerId === 'fake-failing',
+    );
+
     expect(failing?.status).toBe('down');
   });
 
   it('reports health for an inactive provider without letting it contribute articles', async () => {
-    // Mirrors GNews-vs-Mock: an "inactive" provider (present in
-    // ALL_NEWS_PROVIDERS for health visibility, but absent from
-    // NEWS_PROVIDERS) must never appear in a read response, even
-    // though its status is still reported via providersHealth().
     const active = new FakeHealthyProvider();
     const inactive = new FakeFailingProvider();
-    const service = await buildService([active], [active, inactive]);
+
+    const service = await buildService(
+      [active],
+      [active, inactive],
+    );
 
     const searchResponse = await service.search('anything');
+
     expect(searchResponse.providers).toEqual(['fake-healthy']);
 
     const statuses = await service.providersHealth();
-    expect(statuses.map((s) => s.providerId).sort()).toEqual(['fake-failing', 'fake-healthy']);
+
+    expect(
+      statuses.map((status) => status.providerId).sort(),
+    ).toEqual(['fake-failing', 'fake-healthy']);
   });
 
   it('reports dataMode "live" when a non-mock provider answers', async () => {
     const service = await buildService([new FakeHealthyProvider()]);
     const response = await service.search('anything');
+
     expect(response.dataMode).toBe('live');
   });
 
   it('reports dataMode "mock" when only the mock provider answers', async () => {
     const service = await buildService([new FakeMockProvider()]);
     const response = await service.search('anything');
+
     expect(response.dataMode).toBe('mock');
   });
 
-  it('falls back to the configured provider\'s mode when nothing responds', async () => {
+  it("falls back to the configured provider's mode when nothing responds", async () => {
     const service = await buildService([new FakeFailingProvider()]);
     const response = await service.search('anything');
+
     // FakeFailingProvider is configured (isMock: false) even though it
-    // always throws, so the response should still say "live", not
-    // silently claim "mock".
+    // always throws, so the response should still say "live".
     expect(response.articles).toEqual([]);
     expect(response.dataMode).toBe('live');
   });
