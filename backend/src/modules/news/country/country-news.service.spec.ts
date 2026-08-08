@@ -303,10 +303,14 @@ describe('CountryNewsService', () => {
     expect(newsService.search).toHaveBeenCalledTimes(2);
   });
 
-  it('propagates provider failure errors rather than swallowing them silently', async () => {
+  it('rethrows the provider error when database fallback has no stored articles', async () => {
+    const providerError = new Error(
+      'GNews rate limit exceeded.',
+    );
+
     const newsService = {
       search: jest.fn().mockRejectedValue(
-        new Error('GNews rate limit exceeded.'),
+        providerError,
       ),
     };
 
@@ -314,16 +318,89 @@ describe('CountryNewsService', () => {
 
     await expect(
       service.getCountryNews('ESP'),
-    ).rejects.toThrow(
-      'GNews rate limit exceeded.',
-    );
+    ).rejects.toBe(providerError);
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).toHaveBeenCalledWith({
+      countryCode: 'ESP',
+      category: undefined,
+      limit: 8,
+      maxAgeMinutes: 1440,
+      relevantOnly: true,
+    });
 
     expect(
       articlePersistence.persistCountryRelations,
     ).not.toHaveBeenCalled();
+  });
+
+  it('returns stored country articles when the provider throws an error', async () => {
+    const storedArticle = makeArticle({
+      id: 'stored-provider-failure-1',
+      title: 'Stored Spain reporting',
+      summary:
+        'Previously fetched reporting remains available during a provider outage.',
+      sourceId: 'stored-provider',
+      sourceName: 'Stored Provider',
+      category: 'world',
+      confidence: 91,
+    });
+
+    const newsService = {
+      search: jest.fn().mockRejectedValue(
+        new Error('GNews service unavailable.'),
+      ),
+    };
+
+    articlePersistence.findRecentByCountry
+      .mockResolvedValueOnce([
+        storedArticle,
+      ]);
+
+    const service = buildService(newsService);
+
+    const response = await service.getCountryNews(
+      'ESP',
+      undefined,
+      5,
+    );
+
+    expect(newsService.search).toHaveBeenCalledTimes(1);
 
     expect(
       articlePersistence.findRecentByCountry,
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).toHaveBeenCalledWith({
+      countryCode: 'ESP',
+      category: undefined,
+      limit: 5,
+      maxAgeMinutes: 1440,
+      relevantOnly: true,
+    });
+
+    expect(response.countryCode).toBe('ESP');
+    expect(response.countryName).toBe('Spain');
+    expect(response.articles).toEqual([
+      storedArticle,
+    ]);
+    expect(response.totalResults).toBe(1);
+    expect(response.providers).toEqual([]);
+    expect(response.dataMode).toBe('cached');
+    expect(response.feedTier).toBe('delayed');
+    expect(response.providerDisplayName).toBe(
+      'Stored reporting',
+    );
+
+    expect(
+      articlePersistence.persistCountryRelations,
     ).not.toHaveBeenCalled();
   });
 

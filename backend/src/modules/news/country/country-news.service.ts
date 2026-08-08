@@ -63,10 +63,50 @@ export class CountryNewsService {
 
     const fetchLimit = Math.max(resolvedLimit * 2, 20);
 
-    const searchResponse = await this.newsService.search(
-      country.name,
-      fetchLimit,
-    );
+    let searchResponse;
+
+    try {
+      searchResponse = await this.newsService.search(
+        country.name,
+        fetchLimit,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Live country news provider failed for ${country.iso3}; attempting database fallback`,
+        error instanceof Error ? error : undefined,
+      );
+
+      const storedArticles =
+        await this.articlePersistence.findRecentByCountry({
+          countryCode: country.iso3,
+          category,
+          limit: resolvedLimit,
+          maxAgeMinutes:
+            DATABASE_FALLBACK_MAX_AGE_MINUTES,
+          relevantOnly: true,
+        });
+
+      if (storedArticles.length > 0) {
+        const response: CountryNewsResponse = {
+          countryCode: country.iso3,
+          countryName: country.name,
+          articles: storedArticles,
+          totalResults: storedArticles.length,
+          providers: [],
+          dataMode: 'cached',
+          feedTier: 'delayed',
+          providerDisplayName: 'Stored reporting',
+          category,
+          generatedAt: new Date().toISOString(),
+        };
+
+        this.setCached(cacheKey, response);
+
+        return response;
+      }
+
+      throw error;
+    }
 
     const scoredEntries = searchResponse.articles
       .map((article) => ({
@@ -255,7 +295,7 @@ export class CountryNewsService {
   }
 
   private getCacheTtlSeconds(): number {
-    const raw = this.config.get(
+    const raw = this.config.get<string>(
       'COUNTRY_NEWS_CACHE_TTL_SECONDS',
     );
 
