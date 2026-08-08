@@ -150,6 +150,7 @@ describe('CountryNewsService', () => {
 
     expect(response.articles).toEqual([]);
     expect(response.totalResults).toBe(0);
+    expect(response.fallbackReason).toBeUndefined();
 
     expect(
       articlePersistence.findRecentByCountry,
@@ -171,6 +172,7 @@ describe('CountryNewsService', () => {
     const response = await service.getCountryNews('ESP');
 
     expect(response.dataMode).toBe('live');
+    expect(response.fallbackReason).toBeUndefined();
   });
 
   it('propagates cached dataMode unchanged', async () => {
@@ -188,6 +190,7 @@ describe('CountryNewsService', () => {
     const response = await service.getCountryNews('ESP');
 
     expect(response.dataMode).toBe('cached');
+    expect(response.fallbackReason).toBeUndefined();
   });
 
   it('filters results by category without re-querying the provider twice', async () => {
@@ -388,15 +391,21 @@ describe('CountryNewsService', () => {
 
     expect(response.countryCode).toBe('ESP');
     expect(response.countryName).toBe('Spain');
+
     expect(response.articles).toEqual([
       storedArticle,
     ]);
+
     expect(response.totalResults).toBe(1);
     expect(response.providers).toEqual([]);
     expect(response.dataMode).toBe('cached');
     expect(response.feedTier).toBe('delayed');
     expect(response.providerDisplayName).toBe(
       'Stored reporting',
+    );
+
+    expect(response.fallbackReason).toBe(
+      'provider-error',
     );
 
     expect(
@@ -506,6 +515,7 @@ describe('CountryNewsService', () => {
     );
 
     expect(response.dataMode).toBe('mock');
+    expect(response.fallbackReason).toBeUndefined();
 
     expect(
       articlePersistence.persistCountryRelations,
@@ -534,6 +544,7 @@ describe('CountryNewsService', () => {
     );
 
     expect(response.dataMode).toBe('cached');
+    expect(response.fallbackReason).toBeUndefined();
 
     expect(
       articlePersistence.persistCountryRelations,
@@ -596,6 +607,10 @@ describe('CountryNewsService', () => {
     expect(response.providerDisplayName).toBe(
       'Stored reporting',
     );
+
+    expect(response.fallbackReason).toBe(
+      'no-live-results',
+    );
   });
 
   it('uses the requested category when reading stored country articles', async () => {
@@ -636,6 +651,11 @@ describe('CountryNewsService', () => {
 
     expect(response.dataMode).toBe('cached');
     expect(response.category).toBe('technology');
+
+    expect(response.fallbackReason).toBe(
+      'no-live-results',
+    );
+
     expect(response.articles).toEqual([
       storedArticle,
     ]);

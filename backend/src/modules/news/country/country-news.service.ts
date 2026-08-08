@@ -96,6 +96,7 @@ export class CountryNewsService {
           dataMode: 'cached',
           feedTier: 'delayed',
           providerDisplayName: 'Stored reporting',
+          fallbackReason: 'provider-error',
           category,
           generatedAt: new Date().toISOString(),
         };
@@ -187,6 +188,7 @@ export class CountryNewsService {
           dataMode: 'cached',
           feedTier: 'delayed',
           providerDisplayName: 'Stored reporting',
+          fallbackReason: 'no-live-results',
           category,
           generatedAt: new Date().toISOString(),
         };

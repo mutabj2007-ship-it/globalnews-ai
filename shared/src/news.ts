@@ -41,10 +41,13 @@ export interface NewsArticle {
   sourceName: string;
   category: NewsCategory;
   tag?: NewsTag;
+
   /** Number of distinct outlets reporting on this story, per the provider. */
   sourcesCount: number;
+
   /** ISO-8601 timestamp. */
   publishedAt: string;
+
   confidence?: number;
 }
 
@@ -63,17 +66,24 @@ export type NewsDataMode = 'live' | 'cached' | 'mock';
 export interface NewsResponse {
   articles: NewsArticle[];
   totalResults: number;
+
   /** IDs of providers that successfully contributed results. */
   providers: string[];
-  /** Whether this response came from a live provider or mock data. */
+
+  /** Whether this response came from live, cached, or mock data. */
   dataMode: NewsDataMode;
+
   /** ISO-8601 timestamp of when this response was assembled. */
   generatedAt: string;
+
   query?: string;
   category?: NewsCategory;
 }
 
-export type ProviderHealthState = 'ok' | 'degraded' | 'down';
+export type ProviderHealthState =
+  | 'ok'
+  | 'degraded'
+  | 'down';
 
 export interface ProviderHealthStatus {
   providerId: string;
@@ -83,8 +93,24 @@ export interface ProviderHealthStatus {
   checkedAt: string;
 }
 
-/** Whether the active provider serving a country's coverage is a free/delayed feed or a live one. */
+/**
+ * Whether the active provider serving a country's coverage
+ * is a delayed/free feed or a live one.
+ */
 export type NewsFeedTier = 'delayed' | 'live';
+
+/**
+ * Explains why country news was served from stored reporting
+ * instead of the current provider response.
+ *
+ * - "no-live-results": provider request succeeded but produced
+ *   no usable country articles.
+ * - "provider-error": provider request failed, so stored reporting
+ *   was used to keep country coverage available.
+ */
+export type CountryNewsFallbackReason =
+  | 'no-live-results'
+  | 'provider-error';
 
 /** Response envelope for GET /news/country/:countryCode. */
 export interface CountryNewsResponse {
@@ -96,6 +122,13 @@ export interface CountryNewsResponse {
   dataMode: NewsDataMode;
   feedTier: NewsFeedTier;
   providerDisplayName: string;
+
+  /**
+   * Present when PostgreSQL country reporting is being used
+   * as a fallback for the current provider request.
+   */
+  fallbackReason?: CountryNewsFallbackReason;
+
   category?: NewsCategory;
   generatedAt: string;
 }
