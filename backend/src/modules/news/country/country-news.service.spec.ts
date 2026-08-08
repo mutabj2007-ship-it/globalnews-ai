@@ -151,6 +151,9 @@ describe('CountryNewsService', () => {
     expect(response.articles).toEqual([]);
     expect(response.totalResults).toBe(0);
     expect(response.fallbackReason).toBeUndefined();
+    expect(
+      response.newestArticlePublishedAt,
+    ).toBeUndefined();
 
     expect(
       articlePersistence.findRecentByCountry,
@@ -173,6 +176,9 @@ describe('CountryNewsService', () => {
 
     expect(response.dataMode).toBe('live');
     expect(response.fallbackReason).toBeUndefined();
+    expect(
+      response.newestArticlePublishedAt,
+    ).toBeUndefined();
   });
 
   it('propagates cached dataMode unchanged', async () => {
@@ -191,6 +197,9 @@ describe('CountryNewsService', () => {
 
     expect(response.dataMode).toBe('cached');
     expect(response.fallbackReason).toBeUndefined();
+    expect(
+      response.newestArticlePublishedAt,
+    ).toBeUndefined();
   });
 
   it('filters results by category without re-querying the provider twice', async () => {
@@ -343,15 +352,26 @@ describe('CountryNewsService', () => {
   });
 
   it('returns stored country articles when the provider throws an error', async () => {
-    const storedArticle = makeArticle({
+    const olderStoredArticle = makeArticle({
       id: 'stored-provider-failure-1',
-      title: 'Stored Spain reporting',
+      title: 'Older stored Spain reporting',
       summary:
         'Previously fetched reporting remains available during a provider outage.',
       sourceId: 'stored-provider',
       sourceName: 'Stored Provider',
       category: 'world',
       confidence: 91,
+      publishedAt: '2026-08-08T07:00:00.000Z',
+    });
+
+    const newerStoredArticle = makeArticle({
+      id: 'stored-provider-failure-2',
+      title: 'Newer stored Spain reporting',
+      sourceId: 'stored-provider',
+      sourceName: 'Stored Provider',
+      category: 'world',
+      confidence: 89,
+      publishedAt: '2026-08-08T09:30:00.000Z',
     });
 
     const newsService = {
@@ -362,7 +382,8 @@ describe('CountryNewsService', () => {
 
     articlePersistence.findRecentByCountry
       .mockResolvedValueOnce([
-        storedArticle,
+        olderStoredArticle,
+        newerStoredArticle,
       ]);
 
     const service = buildService(newsService);
@@ -393,10 +414,11 @@ describe('CountryNewsService', () => {
     expect(response.countryName).toBe('Spain');
 
     expect(response.articles).toEqual([
-      storedArticle,
+      olderStoredArticle,
+      newerStoredArticle,
     ]);
 
-    expect(response.totalResults).toBe(1);
+    expect(response.totalResults).toBe(2);
     expect(response.providers).toEqual([]);
     expect(response.dataMode).toBe('cached');
     expect(response.feedTier).toBe('delayed');
@@ -407,6 +429,10 @@ describe('CountryNewsService', () => {
     expect(response.fallbackReason).toBe(
       'provider-error',
     );
+
+    expect(
+      response.newestArticlePublishedAt,
+    ).toBe('2026-08-08T09:30:00.000Z');
 
     expect(
       articlePersistence.persistCountryRelations,
@@ -516,6 +542,9 @@ describe('CountryNewsService', () => {
 
     expect(response.dataMode).toBe('mock');
     expect(response.fallbackReason).toBeUndefined();
+    expect(
+      response.newestArticlePublishedAt,
+    ).toBeUndefined();
 
     expect(
       articlePersistence.persistCountryRelations,
@@ -545,6 +574,9 @@ describe('CountryNewsService', () => {
 
     expect(response.dataMode).toBe('cached');
     expect(response.fallbackReason).toBeUndefined();
+    expect(
+      response.newestArticlePublishedAt,
+    ).toBeUndefined();
 
     expect(
       articlePersistence.persistCountryRelations,
@@ -552,15 +584,26 @@ describe('CountryNewsService', () => {
   });
 
   it('returns stored country articles when the provider returns no articles', async () => {
-    const storedArticle = makeArticle({
+    const olderStoredArticle = makeArticle({
       id: 'stored-spain-1',
-      title: 'Stored Spain headline',
+      title: 'Older stored Spain headline',
       summary:
         'Previously fetched reporting about Spain.',
       sourceId: 'stored-provider',
       sourceName: 'Stored Provider',
       category: 'world',
       confidence: 88,
+      publishedAt: '2026-08-08T06:15:00.000Z',
+    });
+
+    const newerStoredArticle = makeArticle({
+      id: 'stored-spain-2',
+      title: 'Newer stored Spain headline',
+      sourceId: 'stored-provider',
+      sourceName: 'Stored Provider',
+      category: 'world',
+      confidence: 90,
+      publishedAt: '2026-08-08T10:00:00.000Z',
     });
 
     const newsService = {
@@ -571,7 +614,8 @@ describe('CountryNewsService', () => {
 
     articlePersistence.findRecentByCountry
       .mockResolvedValueOnce([
-        storedArticle,
+        olderStoredArticle,
+        newerStoredArticle,
       ]);
 
     const service = buildService(newsService);
@@ -597,10 +641,11 @@ describe('CountryNewsService', () => {
     });
 
     expect(response.articles).toEqual([
-      storedArticle,
+      olderStoredArticle,
+      newerStoredArticle,
     ]);
 
-    expect(response.totalResults).toBe(1);
+    expect(response.totalResults).toBe(2);
     expect(response.dataMode).toBe('cached');
     expect(response.providers).toEqual([]);
     expect(response.feedTier).toBe('delayed');
@@ -611,6 +656,10 @@ describe('CountryNewsService', () => {
     expect(response.fallbackReason).toBe(
       'no-live-results',
     );
+
+    expect(
+      response.newestArticlePublishedAt,
+    ).toBe('2026-08-08T10:00:00.000Z');
   });
 
   it('uses the requested category when reading stored country articles', async () => {
@@ -618,6 +667,7 @@ describe('CountryNewsService', () => {
       id: 'stored-tech-1',
       title: 'Stored Spain technology headline',
       category: 'technology',
+      publishedAt: '2026-08-08T08:45:00.000Z',
     });
 
     const newsService = {
@@ -655,6 +705,10 @@ describe('CountryNewsService', () => {
     expect(response.fallbackReason).toBe(
       'no-live-results',
     );
+
+    expect(
+      response.newestArticlePublishedAt,
+    ).toBe('2026-08-08T08:45:00.000Z');
 
     expect(response.articles).toEqual([
       storedArticle,

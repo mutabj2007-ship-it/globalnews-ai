@@ -129,6 +129,14 @@ export interface CountryNewsResponse {
    */
   fallbackReason?: CountryNewsFallbackReason;
 
+  /**
+   * ISO-8601 publication timestamp of the newest article
+   * in stored country reporting.
+   *
+   * This describes article freshness, not database fetch age.
+   */
+  newestArticlePublishedAt?: string;
+
   category?: NewsCategory;
   generatedAt: string;
 }

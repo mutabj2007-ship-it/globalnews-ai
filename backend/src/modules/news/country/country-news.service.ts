@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   resolveCountryByAnyIdentifier,
   type CountryNewsResponse,
+  type NewsArticle,
   type NewsCategory,
   type NewsDataMode,
   type NewsFeedTier,
@@ -58,6 +59,7 @@ export class CountryNewsService {
       this.logger.debug(
         `Serving cached country news for ${country.iso3}`,
       );
+
       return cached;
     }
 
@@ -97,6 +99,10 @@ export class CountryNewsService {
           feedTier: 'delayed',
           providerDisplayName: 'Stored reporting',
           fallbackReason: 'provider-error',
+          newestArticlePublishedAt:
+            this.getNewestArticlePublishedAt(
+              storedArticles,
+            ),
           category,
           generatedAt: new Date().toISOString(),
         };
@@ -189,6 +195,10 @@ export class CountryNewsService {
           feedTier: 'delayed',
           providerDisplayName: 'Stored reporting',
           fallbackReason: 'no-live-results',
+          newestArticlePublishedAt:
+            this.getNewestArticlePublishedAt(
+              storedArticles,
+            ),
           category,
           generatedAt: new Date().toISOString(),
         };
@@ -221,6 +231,33 @@ export class CountryNewsService {
     this.setCached(cacheKey, response);
 
     return response;
+  }
+
+  private getNewestArticlePublishedAt(
+    articles: NewsArticle[],
+  ): string | undefined {
+    let newestTimestamp = Number.NEGATIVE_INFINITY;
+
+    for (const article of articles) {
+      const timestamp = Date.parse(
+        article.publishedAt,
+      );
+
+      if (
+        Number.isFinite(timestamp) &&
+        timestamp > newestTimestamp
+      ) {
+        newestTimestamp = timestamp;
+      }
+    }
+
+    if (!Number.isFinite(newestTimestamp)) {
+      return undefined;
+    }
+
+    return new Date(
+      newestTimestamp,
+    ).toISOString();
   }
 
   private describeFeed(
@@ -321,6 +358,7 @@ export class CountryNewsService {
 
     if (Date.now() > entry.expiresAt) {
       this.cache.delete(key);
+
       return null;
     }
 
