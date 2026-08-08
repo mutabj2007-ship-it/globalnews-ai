@@ -194,7 +194,9 @@ export class CountryNewsService {
           dataMode: 'cached',
           feedTier: 'delayed',
           providerDisplayName: 'Stored reporting',
-          fallbackReason: 'no-live-results',
+          fallbackReason:
+            searchResponse.fallbackReason ??
+            'no-live-results',
           newestArticlePublishedAt:
             this.getNewestArticlePublishedAt(
               storedArticles,
@@ -224,6 +226,18 @@ export class CountryNewsService {
       dataMode: searchResponse.dataMode,
       feedTier,
       providerDisplayName,
+      ...(searchResponse.dataMode === 'cached'
+  ? {
+      fallbackReason:
+        searchResponse.fallbackReason,
+      newestArticlePublishedAt:
+        searchResponse.fallbackReason
+          ? this.getNewestArticlePublishedAt(
+              bounded,
+            )
+          : undefined,
+    }
+  : {}),
       category,
       generatedAt: new Date().toISOString(),
     };

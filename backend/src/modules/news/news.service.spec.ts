@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import type { NewsArticle, ProviderHealthStatus } from '@globalnews-ai/shared';
+import type {
+  NewsArticle,
+  ProviderHealthStatus,
+} from '@globalnews-ai/shared';
 import { NewsService } from './news.service';
 import {
   ALL_NEWS_PROVIDERS,
@@ -53,7 +56,11 @@ class FakeHealthyProvider implements NewsProvider {
   }
 
   async category(): Promise<NewsArticle[]> {
-    return [makeArticle({ id: 'healthy-1' })];
+    return [
+      makeArticle({
+        id: 'healthy-1',
+      }),
+    ];
   }
 
   async health(): Promise<ProviderHealthStatus> {
@@ -121,7 +128,11 @@ class FakeDuplicateProvider implements NewsProvider {
   readonly isMock = false;
 
   async search(): Promise<NewsArticle[]> {
-    return [makeArticle({ id: 'healthy-1' })];
+    return [
+      makeArticle({
+        id: 'healthy-1',
+      }),
+    ];
   }
 
   async topHeadlines(): Promise<NewsArticle[]> {
@@ -148,15 +159,27 @@ class FakeMockProvider implements NewsProvider {
   readonly isMock = true;
 
   async search(): Promise<NewsArticle[]> {
-    return [makeArticle({ id: 'mock-1' })];
+    return [
+      makeArticle({
+        id: 'mock-1',
+      }),
+    ];
   }
 
   async topHeadlines(): Promise<NewsArticle[]> {
-    return [makeArticle({ id: 'mock-1' })];
+    return [
+      makeArticle({
+        id: 'mock-1',
+      }),
+    ];
   }
 
   async category(): Promise<NewsArticle[]> {
-    return [makeArticle({ id: 'mock-1' })];
+    return [
+      makeArticle({
+        id: 'mock-1',
+      }),
+    ];
   }
 
   async health(): Promise<ProviderHealthStatus> {
@@ -175,63 +198,85 @@ describe('NewsService', () => {
     findRecent: jest.fn().mockResolvedValue([]),
   };
 
-beforeEach(() => {
-  articlePersistence.persistMany.mockReset();
-  articlePersistence.findRecent.mockReset();
+  beforeEach(() => {
+    articlePersistence.persistMany.mockReset();
+    articlePersistence.findRecent.mockReset();
 
-  articlePersistence.persistMany.mockResolvedValue(undefined);
-  articlePersistence.findRecent.mockResolvedValue([]);
-});
+    articlePersistence.persistMany.mockResolvedValue(
+      undefined,
+    );
+
+    articlePersistence.findRecent.mockResolvedValue(
+      [],
+    );
+  });
 
   async function buildService(
     providers: NewsProvider[],
     allProviders: NewsProvider[] = providers,
   ): Promise<NewsService> {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        NewsService,
-        {
-          provide: NEWS_PROVIDERS,
-          useValue: providers,
-        },
-        {
-          provide: ALL_NEWS_PROVIDERS,
-          useValue: allProviders,
-        },
-        {
-          provide: ArticlePersistenceService,
-          useValue: articlePersistence,
-        },
-      ],
-    }).compile();
+    const module: TestingModule =
+      await Test.createTestingModule({
+        providers: [
+          NewsService,
+          {
+            provide: NEWS_PROVIDERS,
+            useValue: providers,
+          },
+          {
+            provide: ALL_NEWS_PROVIDERS,
+            useValue: allProviders,
+          },
+          {
+            provide: ArticlePersistenceService,
+            useValue: articlePersistence,
+          },
+        ],
+      }).compile();
 
     return module.get<NewsService>(NewsService);
   }
 
   it('does not persist mock news as real evidence', async () => {
-    const service = await buildService([new FakeMockProvider()]);
+    const service = await buildService([
+      new FakeMockProvider(),
+    ]);
 
     const response = await service.search('anything');
 
     expect(response.dataMode).toBe('mock');
-    expect(articlePersistence.persistMany).not.toHaveBeenCalled();
+
+    expect(
+      articlePersistence.persistMany,
+    ).not.toHaveBeenCalled();
   });
 
   it('does not use database fallback while mock/demo mode has results', async () => {
-    const service = await buildService([new FakeMockProvider()]);
+    const service = await buildService([
+      new FakeMockProvider(),
+    ]);
 
     await service.search('anything');
 
-    expect(articlePersistence.findRecent).not.toHaveBeenCalled();
+    expect(
+      articlePersistence.findRecent,
+    ).not.toHaveBeenCalled();
   });
 
   it('persists the final live articles returned by search', async () => {
-    const service = await buildService([new FakeHealthyProvider()]);
+    const service = await buildService([
+      new FakeHealthyProvider(),
+    ]);
 
     const response = await service.search('anything');
 
-    expect(articlePersistence.persistMany).toHaveBeenCalledTimes(1);
-    expect(articlePersistence.persistMany).toHaveBeenCalledWith(
+    expect(
+      articlePersistence.persistMany,
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      articlePersistence.persistMany,
+    ).toHaveBeenCalledWith(
       response.articles,
     );
   });
@@ -244,22 +289,31 @@ beforeEach(() => {
 
     await service.search('anything');
 
-    expect(articlePersistence.persistMany).toHaveBeenCalledTimes(1);
+    expect(
+      articlePersistence.persistMany,
+    ).toHaveBeenCalledTimes(1);
 
     const persistedArticles =
       articlePersistence.persistMany.mock.calls[0][0];
 
     expect(persistedArticles).toHaveLength(1);
-    expect(persistedArticles[0].id).toBe('healthy-1');
+    expect(persistedArticles[0].id).toBe(
+      'healthy-1',
+    );
   });
 
   it('aggregates results across all healthy providers', async () => {
-    const service = await buildService([new FakeHealthyProvider()]);
+    const service = await buildService([
+      new FakeHealthyProvider(),
+    ]);
 
     const response = await service.search('anything');
 
     expect(response.articles).toHaveLength(1);
-    expect(response.providers).toEqual(['fake-healthy']);
+
+    expect(response.providers).toEqual([
+      'fake-healthy',
+    ]);
   });
 
   it('excludes failing providers instead of throwing', async () => {
@@ -271,7 +325,10 @@ beforeEach(() => {
     const response = await service.search('anything');
 
     expect(response.articles).toHaveLength(1);
-    expect(response.providers).toEqual(['fake-healthy']);
+
+    expect(response.providers).toEqual([
+      'fake-healthy',
+    ]);
   });
 
   it('dedupes articles with the same id across providers', async () => {
@@ -283,18 +340,30 @@ beforeEach(() => {
     const response = await service.search('anything');
 
     expect(
-      response.articles.map((article) => article.id),
-    ).toEqual(['healthy-1']);
+      response.articles.map(
+        (article) => article.id,
+      ),
+    ).toEqual([
+      'healthy-1',
+    ]);
   });
 
   it('preserves provider editorial order for topHeadlines', async () => {
-    const service = await buildService([new FakeHealthyProvider()]);
+    const service = await buildService([
+      new FakeHealthyProvider(),
+    ]);
 
-    const response = await service.topHeadlines();
+    const response =
+      await service.topHeadlines();
 
     expect(
-      response.articles.map((article) => article.id),
-    ).toEqual(['healthy-1', 'healthy-2']);
+      response.articles.map(
+        (article) => article.id,
+      ),
+    ).toEqual([
+      'healthy-1',
+      'healthy-2',
+    ]);
   });
 
   it('reports a down status for providers whose health check throws', async () => {
@@ -303,10 +372,12 @@ beforeEach(() => {
       new FakeFailingProvider(),
     ]);
 
-    const statuses = await service.providersHealth();
+    const statuses =
+      await service.providersHealth();
 
     const failing = statuses.find(
-      (status) => status.providerId === 'fake-failing',
+      (status) =>
+        status.providerId === 'fake-failing',
     );
 
     expect(failing?.status).toBe('down');
@@ -321,37 +392,56 @@ beforeEach(() => {
       [active, inactive],
     );
 
-    const searchResponse = await service.search('anything');
+    const searchResponse =
+      await service.search('anything');
 
-    expect(searchResponse.providers).toEqual(['fake-healthy']);
+    expect(searchResponse.providers).toEqual([
+      'fake-healthy',
+    ]);
 
-    const statuses = await service.providersHealth();
+    const statuses =
+      await service.providersHealth();
 
     expect(
-      statuses.map((status) => status.providerId).sort(),
-    ).toEqual(['fake-failing', 'fake-healthy']);
+      statuses
+        .map(
+          (status) =>
+            status.providerId,
+        )
+        .sort(),
+    ).toEqual([
+      'fake-failing',
+      'fake-healthy',
+    ]);
   });
 
   it('reports dataMode live when a non-mock provider answers', async () => {
-    const service = await buildService([new FakeHealthyProvider()]);
+    const service = await buildService([
+      new FakeHealthyProvider(),
+    ]);
 
     const response = await service.search('anything');
 
     expect(response.dataMode).toBe('live');
+    expect(response.fallbackReason).toBeUndefined();
   });
 
   it('reports dataMode mock when only the mock provider answers', async () => {
-    const service = await buildService([new FakeMockProvider()]);
+    const service = await buildService([
+      new FakeMockProvider(),
+    ]);
 
     const response = await service.search('anything');
 
     expect(response.dataMode).toBe('mock');
+    expect(response.fallbackReason).toBeUndefined();
   });
 
-  it('uses cached database articles when a real provider fails', async () => {
+  it('uses cached database articles with provider-error provenance when a real provider fails', async () => {
     const cachedArticle = makeArticle({
       id: 'cached-1',
-      title: 'Previously retrieved real reporting',
+      title:
+        'Previously retrieved real reporting',
     });
 
     articlePersistence.findRecent.mockResolvedValueOnce([
@@ -362,22 +452,33 @@ beforeEach(() => {
       new FakeFailingProvider(),
     ]);
 
-    const response = await service.search('Ceuta', 5);
+    const response =
+      await service.search('Ceuta', 5);
 
-    expect(articlePersistence.findRecent).toHaveBeenCalledWith({
+    expect(
+      articlePersistence.findRecent,
+    ).toHaveBeenCalledWith({
       query: 'Ceuta',
       limit: 5,
       maxAgeMinutes: 1440,
     });
 
-    expect(response.articles).toEqual([cachedArticle]);
+    expect(response.articles).toEqual([
+      cachedArticle,
+    ]);
+
     expect(response.totalResults).toBe(1);
     expect(response.providers).toEqual([]);
     expect(response.dataMode).toBe('cached');
+
+    expect(response.fallbackReason).toBe(
+      'provider-error',
+    );
+
     expect(response.query).toBe('Ceuta');
   });
 
-  it('uses cached database articles when a real provider returns no results', async () => {
+  it('uses cached database articles with no-live-results provenance when a real provider returns no results', async () => {
     const cachedArticle = makeArticle({
       id: 'cached-empty-provider',
     });
@@ -390,40 +491,74 @@ beforeEach(() => {
       new FakeEmptyProvider(),
     ]);
 
-    const response = await service.search('Ceuta');
+    const response =
+      await service.search('Ceuta');
 
+    expect(
+      articlePersistence.findRecent,
+    ).toHaveBeenCalledWith({
+      query: 'Ceuta',
+      limit: undefined,
+      maxAgeMinutes: 1440,
+    });
+
+    expect(response.articles).toEqual([
+      cachedArticle,
+    ]);
+
+    expect(response.totalResults).toBe(1);
+    expect(response.providers).toEqual([]);
     expect(response.dataMode).toBe('cached');
-    expect(response.articles).toEqual([cachedArticle]);
+
+    expect(response.fallbackReason).toBe(
+      'no-live-results',
+    );
+
+    expect(response.query).toBe('Ceuta');
   });
 
   it('does not pretend there is cached data when database fallback is empty', async () => {
-    articlePersistence.findRecent.mockResolvedValueOnce([]);
+    articlePersistence.findRecent.mockResolvedValueOnce(
+      [],
+    );
 
     const service = await buildService([
       new FakeFailingProvider(),
     ]);
 
-    const response = await service.search('anything');
+    const response =
+      await service.search('anything');
 
     expect(response.articles).toEqual([]);
     expect(response.dataMode).toBe('live');
+
+    expect(
+      response.fallbackReason,
+    ).toBeUndefined();
   });
 
   it('does not use database fallback when only mock provider is configured', async () => {
-    class EmptyMockProvider implements NewsProvider {
+    class EmptyMockProvider
+      implements NewsProvider
+    {
       readonly id = 'empty-mock';
-      readonly displayName = 'Empty Mock Provider';
+      readonly displayName =
+        'Empty Mock Provider';
       readonly isMock = true;
 
       async search(): Promise<NewsArticle[]> {
         return [];
       }
 
-      async topHeadlines(): Promise<NewsArticle[]> {
+      async topHeadlines(): Promise<
+        NewsArticle[]
+      > {
         return [];
       }
 
-      async category(): Promise<NewsArticle[]> {
+      async category(): Promise<
+        NewsArticle[]
+      > {
         return [];
       }
 
@@ -432,27 +567,38 @@ beforeEach(() => {
           providerId: this.id,
           displayName: this.displayName,
           status: 'ok',
-          checkedAt: new Date().toISOString(),
+          checkedAt:
+            new Date().toISOString(),
         };
       }
     }
 
     articlePersistence.findRecent.mockResolvedValueOnce([
-      makeArticle({ id: 'should-not-be-used' }),
+      makeArticle({
+        id: 'should-not-be-used',
+      }),
     ]);
 
     const service = await buildService([
       new EmptyMockProvider(),
     ]);
 
-    const response = await service.search('anything');
+    const response =
+      await service.search('anything');
 
     expect(response.dataMode).toBe('mock');
     expect(response.articles).toEqual([]);
-    expect(articlePersistence.findRecent).not.toHaveBeenCalled();
+
+    expect(
+      response.fallbackReason,
+    ).toBeUndefined();
+
+    expect(
+      articlePersistence.findRecent,
+    ).not.toHaveBeenCalled();
   });
 
-  it('uses cached articles for top headlines when live provider fails', async () => {
+  it('uses cached articles for top headlines with provider-error provenance when live provider fails', async () => {
     const cachedArticle = makeArticle({
       id: 'cached-headline',
     });
@@ -465,18 +611,28 @@ beforeEach(() => {
       new FakeFailingProvider(),
     ]);
 
-    const response = await service.topHeadlines(3);
+    const response =
+      await service.topHeadlines(3);
 
-    expect(articlePersistence.findRecent).toHaveBeenCalledWith({
+    expect(
+      articlePersistence.findRecent,
+    ).toHaveBeenCalledWith({
       limit: 3,
       maxAgeMinutes: 1440,
     });
 
     expect(response.dataMode).toBe('cached');
-    expect(response.articles).toEqual([cachedArticle]);
+
+    expect(response.fallbackReason).toBe(
+      'provider-error',
+    );
+
+    expect(response.articles).toEqual([
+      cachedArticle,
+    ]);
   });
 
-  it('uses category-scoped cached articles when category provider fails', async () => {
+  it('uses category-scoped cached articles with provider-error provenance when category provider fails', async () => {
     const cachedArticle = makeArticle({
       id: 'cached-tech',
       category: 'technology',
@@ -490,19 +646,32 @@ beforeEach(() => {
       new FakeFailingProvider(),
     ]);
 
-    const response = await service.byCategory(
-      'technology',
-      4,
-    );
+    const response =
+      await service.byCategory(
+        'technology',
+        4,
+      );
 
-    expect(articlePersistence.findRecent).toHaveBeenCalledWith({
+    expect(
+      articlePersistence.findRecent,
+    ).toHaveBeenCalledWith({
       category: 'technology',
       limit: 4,
       maxAgeMinutes: 1440,
     });
 
     expect(response.dataMode).toBe('cached');
-    expect(response.category).toBe('technology');
-    expect(response.articles).toEqual([cachedArticle]);
+
+    expect(response.fallbackReason).toBe(
+      'provider-error',
+    );
+
+    expect(response.category).toBe(
+      'technology',
+    );
+
+    expect(response.articles).toEqual([
+      cachedArticle,
+    ]);
   });
 });

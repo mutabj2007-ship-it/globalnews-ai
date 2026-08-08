@@ -60,7 +60,24 @@ export interface NewsArticle {
  *
  * Cached real reporting must never be presented as live or mock content.
  */
-export type NewsDataMode = 'live' | 'cached' | 'mock';
+export type NewsDataMode =
+  | 'live'
+  | 'cached'
+  | 'mock';
+
+/**
+ * Explains why stored reporting was used instead of
+ * the current provider response.
+ *
+ * - "no-live-results": provider request completed but produced
+ *   no usable current articles.
+ *
+ * - "provider-error": one or more configured real providers failed,
+ *   so previously stored reporting was used instead.
+ */
+export type NewsFallbackReason =
+  | 'no-live-results'
+  | 'provider-error';
 
 /** Standard envelope returned by every news-fetching endpoint. */
 export interface NewsResponse {
@@ -72,6 +89,14 @@ export interface NewsResponse {
 
   /** Whether this response came from live, cached, or mock data. */
   dataMode: NewsDataMode;
+
+  /**
+   * Present when stored reporting is returned as a fallback.
+   *
+   * This preserves whether fallback happened because the provider
+   * failed or because it returned no usable live articles.
+   */
+  fallbackReason?: NewsFallbackReason;
 
   /** ISO-8601 timestamp of when this response was assembled. */
   generatedAt: string;
@@ -97,20 +122,16 @@ export interface ProviderHealthStatus {
  * Whether the active provider serving a country's coverage
  * is a delayed/free feed or a live one.
  */
-export type NewsFeedTier = 'delayed' | 'live';
+export type NewsFeedTier =
+  | 'delayed'
+  | 'live';
 
 /**
- * Explains why country news was served from stored reporting
- * instead of the current provider response.
- *
- * - "no-live-results": provider request succeeded but produced
- *   no usable country articles.
- * - "provider-error": provider request failed, so stored reporting
- *   was used to keep country coverage available.
+ * Backward-compatible country-news name for the shared
+ * fallback provenance type.
  */
 export type CountryNewsFallbackReason =
-  | 'no-live-results'
-  | 'provider-error';
+  NewsFallbackReason;
 
 /** Response envelope for GET /news/country/:countryCode. */
 export interface CountryNewsResponse {
@@ -127,7 +148,7 @@ export interface CountryNewsResponse {
    * Present when PostgreSQL country reporting is being used
    * as a fallback for the current provider request.
    */
-  fallbackReason?: CountryNewsFallbackReason;
+  fallbackReason?: NewsFallbackReason;
 
   /**
    * ISO-8601 publication timestamp of the newest article

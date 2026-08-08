@@ -201,7 +201,51 @@ describe('CountryNewsService', () => {
       response.newestArticlePublishedAt,
     ).toBeUndefined();
   });
+  it('preserves fallback provenance returned by NewsService', async () => {
+    const cachedArticle = makeArticle({
+      id: 'cached-provider-error',
+      title: 'Stored Spain reporting from NewsService',
+      publishedAt: '2026-08-08T09:15:00.000Z',
+    });
 
+    const newsService = {
+      search: jest.fn().mockResolvedValue({
+        ...makeSearchResponse(
+          [cachedArticle],
+          'cached',
+        ),
+        fallbackReason: 'provider-error',
+      }),
+    };
+
+    const service = buildService(newsService);
+
+    const response = await service.getCountryNews('ESP');
+
+    expect(newsService.search).toHaveBeenCalledTimes(1);
+
+    expect(response.dataMode).toBe('cached');
+    expect(response.fallbackReason).toBe(
+      'provider-error',
+    );
+
+    expect(
+      response.newestArticlePublishedAt,
+    ).toBe('2026-08-08T09:15:00.000Z');
+
+    expect(response.articles).toHaveLength(1);
+    expect(response.articles[0].id).toBe(
+      'cached-provider-error',
+    );
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      articlePersistence.persistCountryRelations,
+    ).not.toHaveBeenCalled();
+  });
   it('filters results by category without re-querying the provider twice', async () => {
     const articles = [
       makeArticle({

@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   NewsArticle,
   NewsCategory,
+  NewsFallbackReason,
   NewsResponse,
   ProviderHealthStatus,
 } from '@globalnews-ai/shared';
@@ -14,9 +15,19 @@ import { ArticlePersistenceService } from './persistence/article-persistence.ser
 
 const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
 
+interface ProviderCallResult {
+  results: Array<{
+    providerId: string;
+    articles: NewsArticle[];
+  }>;
+  failedProviderIds: string[];
+}
+
 @Injectable()
 export class NewsService {
-  private readonly logger = new Logger(NewsService.name);
+  private readonly logger = new Logger(
+    NewsService.name,
+  );
 
   constructor(
     @Inject(NEWS_PROVIDERS)
@@ -32,20 +43,28 @@ export class NewsService {
     query: string,
     limit?: number,
   ): Promise<NewsResponse> {
-    const results = await this.callAllProviders((provider) =>
-      provider.search(query, { limit }),
-    );
+    const providerCall =
+      await this.callAllProviders(
+        (provider) =>
+          provider.search(query, {
+            limit,
+          }),
+      );
 
     const response = this.buildResponse(
-      results,
+      providerCall.results,
       limit,
       { query },
-      { sortByRecency: true },
+      {
+        sortByRecency: true,
+      },
     );
 
     if (response.articles.length > 0) {
       if (response.dataMode === 'live') {
-        await this.articlePersistence.persistMany(response.articles);
+        await this.articlePersistence.persistMany(
+          response.articles,
+        );
       }
 
       return response;
@@ -55,11 +74,13 @@ export class NewsService {
       return response;
     }
 
-    const cachedArticles = await this.articlePersistence.findRecent({
-      query,
-      limit,
-      maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
-    });
+    const cachedArticles =
+      await this.articlePersistence.findRecent({
+        query,
+        limit,
+        maxAgeMinutes:
+          DATABASE_FALLBACK_MAX_AGE_MINUTES,
+      });
 
     if (cachedArticles.length === 0) {
       return response;
@@ -68,27 +89,40 @@ export class NewsService {
     return this.buildCachedResponse(
       cachedArticles,
       limit,
-      { query },
+      {
+        query,
+      },
+      this.resolveFallbackReason(
+        providerCall.failedProviderIds,
+      ),
     );
   }
 
   async topHeadlines(
     limit?: number,
   ): Promise<NewsResponse> {
-    const results = await this.callAllProviders((provider) =>
-      provider.topHeadlines({ limit }),
-    );
+    const providerCall =
+      await this.callAllProviders(
+        (provider) =>
+          provider.topHeadlines({
+            limit,
+          }),
+      );
 
     const response = this.buildResponse(
-      results,
+      providerCall.results,
       limit,
       {},
-      { sortByRecency: false },
+      {
+        sortByRecency: false,
+      },
     );
 
     if (response.articles.length > 0) {
       if (response.dataMode === 'live') {
-        await this.articlePersistence.persistMany(response.articles);
+        await this.articlePersistence.persistMany(
+          response.articles,
+        );
       }
 
       return response;
@@ -98,10 +132,12 @@ export class NewsService {
       return response;
     }
 
-    const cachedArticles = await this.articlePersistence.findRecent({
-      limit,
-      maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
-    });
+    const cachedArticles =
+      await this.articlePersistence.findRecent({
+        limit,
+        maxAgeMinutes:
+          DATABASE_FALLBACK_MAX_AGE_MINUTES,
+      });
 
     if (cachedArticles.length === 0) {
       return response;
@@ -110,6 +146,10 @@ export class NewsService {
     return this.buildCachedResponse(
       cachedArticles,
       limit,
+      {},
+      this.resolveFallbackReason(
+        providerCall.failedProviderIds,
+      ),
     );
   }
 
@@ -117,20 +157,30 @@ export class NewsService {
     category: NewsCategory,
     limit?: number,
   ): Promise<NewsResponse> {
-    const results = await this.callAllProviders((provider) =>
-      provider.category(category, { limit }),
-    );
+    const providerCall =
+      await this.callAllProviders(
+        (provider) =>
+          provider.category(category, {
+            limit,
+          }),
+      );
 
     const response = this.buildResponse(
-      results,
+      providerCall.results,
       limit,
-      { category },
-      { sortByRecency: true },
+      {
+        category,
+      },
+      {
+        sortByRecency: true,
+      },
     );
 
     if (response.articles.length > 0) {
       if (response.dataMode === 'live') {
-        await this.articlePersistence.persistMany(response.articles);
+        await this.articlePersistence.persistMany(
+          response.articles,
+        );
       }
 
       return response;
@@ -140,11 +190,13 @@ export class NewsService {
       return response;
     }
 
-    const cachedArticles = await this.articlePersistence.findRecent({
-      category,
-      limit,
-      maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
-    });
+    const cachedArticles =
+      await this.articlePersistence.findRecent({
+        category,
+        limit,
+        maxAgeMinutes:
+          DATABASE_FALLBACK_MAX_AGE_MINUTES,
+      });
 
     if (cachedArticles.length === 0) {
       return response;
@@ -153,70 +205,95 @@ export class NewsService {
     return this.buildCachedResponse(
       cachedArticles,
       limit,
-      { category },
+      {
+        category,
+      },
+      this.resolveFallbackReason(
+        providerCall.failedProviderIds,
+      ),
     );
   }
 
-  async providersHealth(): Promise<ProviderHealthStatus[]> {
+  async providersHealth(): Promise<
+    ProviderHealthStatus[]
+  > {
     return Promise.all(
-      this.allProviders.map(async (provider) => {
-        try {
-          return await provider.health();
-        } catch (error) {
-          this.logger.warn(
-            `Health check failed for provider "${provider.id}"`,
-            error as Error,
-          );
-
-          return {
-            providerId: provider.id,
-            displayName: provider.displayName,
-            status: 'down' as const,
-            message:
+      this.allProviders.map(
+        async (provider) => {
+          try {
+            return await provider.health();
+          } catch (error) {
+            this.logger.warn(
+              `Health check failed for provider "${provider.id}"`,
               error instanceof Error
-                ? error.message
-                : 'Unknown error',
-            checkedAt: new Date().toISOString(),
-          };
-        }
-      }),
+                ? error
+                : undefined,
+            );
+
+            return {
+              providerId: provider.id,
+              displayName:
+                provider.displayName,
+              status: 'down' as const,
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'Unknown error',
+              checkedAt:
+                new Date().toISOString(),
+            };
+          }
+        },
+      ),
     );
   }
 
   private async callAllProviders(
-    operation: (provider: NewsProvider) => Promise<NewsArticle[]>,
-  ): Promise<
-    Array<{
-      providerId: string;
-      articles: NewsArticle[];
-    }>
-  > {
-    const settled = await Promise.allSettled(
-      this.providers.map(async (provider) => ({
-        providerId: provider.id,
-        articles: await operation(provider),
-      })),
-    );
+    operation: (
+      provider: NewsProvider,
+    ) => Promise<NewsArticle[]>,
+  ): Promise<ProviderCallResult> {
+    const settled =
+      await Promise.allSettled(
+        this.providers.map(
+          async (provider) => ({
+            providerId: provider.id,
+            articles:
+              await operation(provider),
+          }),
+        ),
+      );
 
-    const fulfilled: Array<{
-      providerId: string;
-      articles: NewsArticle[];
-    }> = [];
+    const results: ProviderCallResult['results'] =
+      [];
+
+    const failedProviderIds: string[] = [];
 
     settled.forEach((result, index) => {
-      const provider = this.providers[index];
+      const provider =
+        this.providers[index];
 
       if (result.status === 'fulfilled') {
-        fulfilled.push(result.value);
-      } else {
-        this.logger.warn(
-          `Provider "${provider.id}" failed to respond`,
-          result.reason as Error,
-        );
+        results.push(result.value);
+        return;
       }
+
+      failedProviderIds.push(
+        provider.id,
+      );
+
+      this.logger.warn(
+        `Provider "${provider.id}" failed to respond`,
+        result.reason instanceof Error
+          ? result.reason
+          : undefined,
+      );
     });
 
-    return fulfilled;
+    return {
+      results,
+      failedProviderIds,
+    };
   }
 
   private buildResponse(
@@ -226,13 +303,21 @@ export class NewsService {
     }>,
     limit: number | undefined,
     extra: Partial<
-      Pick<NewsResponse, 'query' | 'category'>
+      Pick<
+        NewsResponse,
+        'query' | 'category'
+      >
     > = {},
-    { sortByRecency }: { sortByRecency: boolean } = {
+    {
+      sortByRecency,
+    }: {
+      sortByRecency: boolean;
+    } = {
       sortByRecency: true,
     },
   ): NewsResponse {
     const seen = new Set<string>();
+
     const merged: NewsArticle[] = [];
 
     for (const { articles } of results) {
@@ -249,8 +334,12 @@ export class NewsService {
     if (sortByRecency) {
       merged.sort(
         (a, b) =>
-          new Date(b.publishedAt).getTime() -
-          new Date(a.publishedAt).getTime(),
+          new Date(
+            b.publishedAt,
+          ).getTime() -
+          new Date(
+            a.publishedAt,
+          ).getTime(),
       );
     }
 
@@ -262,12 +351,17 @@ export class NewsService {
       articles: capped,
       totalResults: capped.length,
       providers: results.map(
-        (result) => result.providerId,
+        (result) =>
+          result.providerId,
       ),
       dataMode: this.resolveDataMode(
-        results.map((result) => result.providerId),
+        results.map(
+          (result) =>
+            result.providerId,
+        ),
       ),
-      generatedAt: new Date().toISOString(),
+      generatedAt:
+        new Date().toISOString(),
       ...extra,
     };
   }
@@ -276,8 +370,12 @@ export class NewsService {
     articles: NewsArticle[],
     limit: number | undefined,
     extra: Partial<
-      Pick<NewsResponse, 'query' | 'category'>
+      Pick<
+        NewsResponse,
+        'query' | 'category'
+      >
     > = {},
+    fallbackReason?: NewsFallbackReason,
   ): NewsResponse {
     const capped = limit
       ? articles.slice(0, limit)
@@ -288,35 +386,62 @@ export class NewsService {
       totalResults: capped.length,
       providers: [],
       dataMode: 'cached',
-      generatedAt: new Date().toISOString(),
+      fallbackReason,
+      generatedAt:
+        new Date().toISOString(),
       ...extra,
     };
   }
 
+  private resolveFallbackReason(
+    failedProviderIds: string[],
+  ): NewsFallbackReason {
+    const failedRealProvider =
+      this.providers.some(
+        (provider) =>
+          !provider.isMock &&
+          failedProviderIds.includes(
+            provider.id,
+          ),
+      );
+
+    return failedRealProvider
+      ? 'provider-error'
+      : 'no-live-results';
+  }
+
   private hasRealProviderConfigured(): boolean {
     return this.providers.some(
-      (provider) => !provider.isMock,
+      (provider) =>
+        !provider.isMock,
     );
   }
 
   private resolveDataMode(
     successfulProviderIds: string[],
   ): NewsResponse['dataMode'] {
-    const successfulProviders = this.providers.filter(
-      (provider) =>
-        successfulProviderIds.includes(provider.id),
-    );
+    const successfulProviders =
+      this.providers.filter(
+        (provider) =>
+          successfulProviderIds.includes(
+            provider.id,
+          ),
+      );
 
-    if (successfulProviders.length > 0) {
+    if (
+      successfulProviders.length > 0
+    ) {
       return successfulProviders.some(
-        (provider) => !provider.isMock,
+        (provider) =>
+          !provider.isMock,
       )
         ? 'live'
         : 'mock';
     }
 
     return this.providers.every(
-      (provider) => provider.isMock,
+      (provider) =>
+        provider.isMock,
     )
       ? 'mock'
       : 'live';
