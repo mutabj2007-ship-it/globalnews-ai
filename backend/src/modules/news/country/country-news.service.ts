@@ -20,6 +20,7 @@ interface CacheEntry {
 
 const DEFAULT_LIMIT = 8;
 const DEFAULT_CACHE_TTL_SECONDS = 300;
+const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
 
 @Injectable()
 export class CountryNewsService {
@@ -124,6 +125,37 @@ export class CountryNewsService {
     );
 
     const bounded = articles.slice(0, resolvedLimit);
+
+    if (bounded.length === 0) {
+      const storedArticles =
+        await this.articlePersistence.findRecentByCountry({
+          countryCode: country.iso3,
+          category,
+          limit: resolvedLimit,
+          maxAgeMinutes:
+            DATABASE_FALLBACK_MAX_AGE_MINUTES,
+          relevantOnly: true,
+        });
+
+      if (storedArticles.length > 0) {
+        const response: CountryNewsResponse = {
+          countryCode: country.iso3,
+          countryName: country.name,
+          articles: storedArticles,
+          totalResults: storedArticles.length,
+          providers: [],
+          dataMode: 'cached',
+          feedTier: 'delayed',
+          providerDisplayName: 'Stored reporting',
+          category,
+          generatedAt: new Date().toISOString(),
+        };
+
+        this.setCached(cacheKey, response);
+
+        return response;
+      }
+    }
 
     const { feedTier, providerDisplayName } =
       this.describeFeed(

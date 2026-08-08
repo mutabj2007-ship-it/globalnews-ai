@@ -52,12 +52,19 @@ function makeConfig(
 describe('CountryNewsService', () => {
   const articlePersistence = {
     persistCountryRelations: jest.fn(),
+    findRecentByCountry: jest.fn(),
   };
 
   beforeEach(() => {
     articlePersistence.persistCountryRelations.mockReset();
+    articlePersistence.findRecentByCountry.mockReset();
+
     articlePersistence.persistCountryRelations.mockResolvedValue(
       undefined,
+    );
+
+    articlePersistence.findRecentByCountry.mockResolvedValue(
+      [],
     );
   });
 
@@ -124,6 +131,10 @@ describe('CountryNewsService', () => {
     expect(
       articlePersistence.persistCountryRelations,
     ).not.toHaveBeenCalled();
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).not.toHaveBeenCalled();
   });
 
   it('returns an empty article list without error when there are no results', async () => {
@@ -139,6 +150,10 @@ describe('CountryNewsService', () => {
 
     expect(response.articles).toEqual([]);
     expect(response.totalResults).toBe(0);
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).toHaveBeenCalledTimes(1);
   });
 
   it('propagates live dataMode unchanged', async () => {
@@ -306,6 +321,10 @@ describe('CountryNewsService', () => {
     expect(
       articlePersistence.persistCountryRelations,
     ).not.toHaveBeenCalled();
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).not.toHaveBeenCalled();
   });
 
   it('persists article-country relations for live results', async () => {
@@ -442,5 +461,106 @@ describe('CountryNewsService', () => {
     expect(
       articlePersistence.persistCountryRelations,
     ).not.toHaveBeenCalled();
+  });
+
+  it('returns stored country articles when the provider returns no articles', async () => {
+    const storedArticle = makeArticle({
+      id: 'stored-spain-1',
+      title: 'Stored Spain headline',
+      summary:
+        'Previously fetched reporting about Spain.',
+      sourceId: 'stored-provider',
+      sourceName: 'Stored Provider',
+      category: 'world',
+      confidence: 88,
+    });
+
+    const newsService = {
+      search: jest.fn().mockResolvedValue(
+        makeSearchResponse([], 'live'),
+      ),
+    };
+
+    articlePersistence.findRecentByCountry
+      .mockResolvedValueOnce([
+        storedArticle,
+      ]);
+
+    const service = buildService(newsService);
+
+    const response = await service.getCountryNews(
+      'ESP',
+      undefined,
+      5,
+    );
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).toHaveBeenCalledWith({
+      countryCode: 'ESP',
+      category: undefined,
+      limit: 5,
+      maxAgeMinutes: 1440,
+      relevantOnly: true,
+    });
+
+    expect(response.articles).toEqual([
+      storedArticle,
+    ]);
+
+    expect(response.totalResults).toBe(1);
+    expect(response.dataMode).toBe('cached');
+    expect(response.providers).toEqual([]);
+    expect(response.feedTier).toBe('delayed');
+    expect(response.providerDisplayName).toBe(
+      'Stored reporting',
+    );
+  });
+
+  it('uses the requested category when reading stored country articles', async () => {
+    const storedArticle = makeArticle({
+      id: 'stored-tech-1',
+      title: 'Stored Spain technology headline',
+      category: 'technology',
+    });
+
+    const newsService = {
+      search: jest.fn().mockResolvedValue(
+        makeSearchResponse([], 'live'),
+      ),
+    };
+
+    articlePersistence.findRecentByCountry
+      .mockResolvedValueOnce([
+        storedArticle,
+      ]);
+
+    const service = buildService(newsService);
+
+    const response = await service.getCountryNews(
+      'ESP',
+      'technology',
+      5,
+    );
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        countryCode: 'ESP',
+        category: 'technology',
+        limit: 5,
+      }),
+    );
+
+    expect(response.dataMode).toBe('cached');
+    expect(response.category).toBe('technology');
+    expect(response.articles).toEqual([
+      storedArticle,
+    ]);
   });
 });

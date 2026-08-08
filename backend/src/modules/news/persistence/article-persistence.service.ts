@@ -19,7 +19,13 @@ interface ArticleCountryRelationInput {
   relevanceScore: number;
   isRelevant: boolean;
 }
-
+interface FindRecentByCountryOptions {
+  countryCode: string;
+  limit?: number;
+  maxAgeMinutes?: number;
+  category?: NewsCategory;
+  relevantOnly?: boolean;
+}
 @Injectable()
 export class ArticlePersistenceService {
   private readonly logger = new Logger(
@@ -128,7 +134,99 @@ export class ArticlePersistenceService {
       );
     }
   }
+async findRecentByCountry(
+  options: FindRecentByCountryOptions,
+): Promise<NewsArticle[]> {
+  const {
+    countryCode,
+    limit = 20,
+    maxAgeMinutes = 1440,
+    category,
+    relevantOnly = true,
+  } = options;
 
+  const safeLimit = Math.max(
+    1,
+    Math.min(limit, 100),
+  );
+
+  const safeMaxAgeMinutes = Math.max(
+    1,
+    maxAgeMinutes,
+  );
+
+  const normalizedCountryCode =
+    countryCode.trim().toUpperCase();
+
+  if (!normalizedCountryCode) {
+    return [];
+  }
+
+  const cutoff = new Date(
+    Date.now() -
+      safeMaxAgeMinutes * 60 * 1000,
+  );
+
+  try {
+    const rows =
+      await this.prisma.articleCountry.findMany({
+        where: {
+          countryCode: normalizedCountryCode,
+          ...(relevantOnly
+            ? { isRelevant: true }
+            : {}),
+          article: {
+            publishedAt: {
+              gte: cutoff,
+            },
+            ...(category
+              ? { category }
+              : {}),
+          },
+        },
+        include: {
+          article: true,
+        },
+        orderBy: [
+          {
+            relevanceScore: 'desc',
+          },
+          {
+            article: {
+              publishedAt: 'desc',
+            },
+          },
+        ],
+        take: safeLimit,
+      });
+
+    return rows.map((row) => ({
+      id: row.article.id,
+      title: row.article.title,
+      summary: row.article.summary,
+      url: row.article.url,
+      imageUrl:
+        row.article.imageUrl ?? undefined,
+      sourceId: row.article.sourceId,
+      sourceName: row.article.sourceName,
+      category:
+        row.article.category as NewsCategory,
+      sourcesCount:
+        row.article.sourcesCount,
+      publishedAt:
+        row.article.publishedAt.toISOString(),
+      confidence:
+        row.article.confidenceScore ?? undefined,
+    }));
+  } catch (error) {
+    this.logger.warn(
+      `Failed to read recent articles for country "${normalizedCountryCode}" from database`,
+      error instanceof Error ? error : undefined,
+    );
+
+    return [];
+  }
+}
   async findRecent(
     options: FindRecentArticlesOptions = {},
   ): Promise<NewsArticle[]> {

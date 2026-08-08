@@ -4,6 +4,7 @@ import { ArticlePersistenceService } from './article-persistence.service';
 describe('ArticlePersistenceService', () => {
   const articleUpsert = jest.fn();
   const articleCountryUpsert = jest.fn();
+  const articleCountryFindMany = jest.fn();
   const articleFindMany = jest.fn();
   const transaction = jest.fn();
 
@@ -14,6 +15,7 @@ describe('ArticlePersistenceService', () => {
     },
     articleCountry: {
       upsert: articleCountryUpsert,
+      findMany: articleCountryFindMany,
     },
     $transaction: transaction,
   };
@@ -23,11 +25,13 @@ describe('ArticlePersistenceService', () => {
   beforeEach(() => {
     articleUpsert.mockReset();
     articleCountryUpsert.mockReset();
+    articleCountryFindMany.mockReset();
     articleFindMany.mockReset();
     transaction.mockReset();
 
     articleUpsert.mockImplementation((args) => args);
     articleCountryUpsert.mockImplementation((args) => args);
+    articleCountryFindMany.mockResolvedValue([]);
     articleFindMany.mockResolvedValue([]);
     transaction.mockResolvedValue([]);
 
@@ -68,6 +72,27 @@ describe('ArticlePersistenceService', () => {
         '2026-08-07T10:00:00.000Z',
       ),
       confidenceScore: 87,
+      ...overrides,
+    };
+  }
+
+  function makeCountryDatabaseRow(
+    overrides: Record<string, unknown> = {},
+  ) {
+    return {
+      id: 'relation-1',
+      articleId: 'article-1',
+      countryCode: 'ESP',
+      countryName: 'Spain',
+      relevanceScore: 82,
+      isRelevant: true,
+      createdAt: new Date(
+        '2026-08-07T10:00:00.000Z',
+      ),
+      updatedAt: new Date(
+        '2026-08-07T10:00:00.000Z',
+      ),
+      article: makeDatabaseRow(),
       ...overrides,
     };
   }
@@ -272,6 +297,181 @@ describe('ArticlePersistenceService', () => {
         },
       ]),
     ).resolves.toBeUndefined();
+  });
+
+  it('reads recent relevant articles for a country', async () => {
+    const now = new Date(
+      '2026-08-07T12:00:00.000Z',
+    ).getTime();
+
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(now);
+
+    articleCountryFindMany.mockResolvedValueOnce([
+      makeCountryDatabaseRow(),
+    ]);
+
+    const result = await service.findRecentByCountry({
+      countryCode: 'ESP',
+    });
+
+    expect(articleCountryFindMany).toHaveBeenCalledTimes(1);
+
+    expect(articleCountryFindMany).toHaveBeenCalledWith({
+      where: {
+        countryCode: 'ESP',
+        isRelevant: true,
+        article: {
+          publishedAt: {
+            gte: new Date(
+              '2026-08-06T12:00:00.000Z',
+            ),
+          },
+        },
+      },
+      include: {
+        article: true,
+      },
+      orderBy: [
+        {
+          relevanceScore: 'desc',
+        },
+        {
+          article: {
+            publishedAt: 'desc',
+          },
+        },
+      ],
+      take: 20,
+    });
+
+    expect(result).toEqual([
+      {
+        id: 'article-1',
+        title: 'Stored headline',
+        summary: 'Stored summary',
+        url: 'https://example.com/stored',
+        imageUrl: 'https://example.com/image.jpg',
+        sourceId: 'stored-provider',
+        sourceName: 'Stored Provider',
+        category: 'world',
+        sourcesCount: 1,
+        publishedAt: '2026-08-07T10:00:00.000Z',
+        confidence: 87,
+      },
+    ]);
+
+    nowSpy.mockRestore();
+  });
+
+  it('normalizes country code to uppercase when reading country articles', async () => {
+    articleCountryFindMany.mockResolvedValueOnce([]);
+
+    await service.findRecentByCountry({
+      countryCode: 'esp',
+    });
+
+    expect(articleCountryFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          countryCode: 'ESP',
+        }),
+      }),
+    );
+  });
+
+  it('filters country articles by category', async () => {
+    articleCountryFindMany.mockResolvedValueOnce([]);
+
+    await service.findRecentByCountry({
+      countryCode: 'ESP',
+      category: 'technology',
+    });
+
+    expect(articleCountryFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          article: expect.objectContaining({
+            category: 'technology',
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('includes non-relevant country relations when relevantOnly is false', async () => {
+    articleCountryFindMany.mockResolvedValueOnce([]);
+
+    await service.findRecentByCountry({
+      countryCode: 'ESP',
+      relevantOnly: false,
+    });
+
+    const call =
+      articleCountryFindMany.mock.calls[0][0];
+
+    expect(call.where.countryCode).toBe('ESP');
+    expect(call.where.isRelevant).toBeUndefined();
+  });
+
+  it('caps country article read limits at 100', async () => {
+    articleCountryFindMany.mockResolvedValueOnce([]);
+
+    await service.findRecentByCountry({
+      countryCode: 'ESP',
+      limit: 500,
+    });
+
+    expect(articleCountryFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 100,
+      }),
+    );
+  });
+
+  it('returns an empty array for an empty country code', async () => {
+    const result = await service.findRecentByCountry({
+      countryCode: '   ',
+    });
+
+    expect(result).toEqual([]);
+    expect(articleCountryFindMany).not.toHaveBeenCalled();
+  });
+
+  it('maps nullable country article values safely', async () => {
+    articleCountryFindMany.mockResolvedValueOnce([
+      makeCountryDatabaseRow({
+        article: makeDatabaseRow({
+          imageUrl: null,
+          confidenceScore: null,
+          sourcesCount: 5,
+        }),
+      }),
+    ]);
+
+    const result = await service.findRecentByCountry({
+      countryCode: 'ESP',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].imageUrl).toBeUndefined();
+    expect(result[0].confidence).toBeUndefined();
+    expect(result[0].sourcesCount).toBe(5);
+  });
+
+  it('returns an empty array when country database reading fails', async () => {
+    articleCountryFindMany.mockRejectedValueOnce(
+      new Error(
+        'Simulated country database read failure',
+      ),
+    );
+
+    await expect(
+      service.findRecentByCountry({
+        countryCode: 'ESP',
+      }),
+    ).resolves.toEqual([]);
   });
 
   it('reads recent articles using the default 24-hour freshness window', async () => {
