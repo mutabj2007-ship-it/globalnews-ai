@@ -12,13 +12,25 @@ interface FindRecentArticlesOptions {
   query?: string;
 }
 
+interface ArticleCountryRelationInput {
+  articleId: string;
+  countryCode: string;
+  countryName: string;
+  relevanceScore: number;
+  isRelevant: boolean;
+}
+
 @Injectable()
 export class ArticlePersistenceService {
-  private readonly logger = new Logger(ArticlePersistenceService.name);
+  private readonly logger = new Logger(
+    ArticlePersistenceService.name,
+  );
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async persistMany(articles: NewsArticle[]): Promise<void> {
+  async persistMany(
+    articles: NewsArticle[],
+  ): Promise<void> {
     if (articles.length === 0) {
       return;
     }
@@ -35,10 +47,12 @@ export class ArticlePersistenceService {
               summary: article.summary,
               imageUrl: article.imageUrl ?? null,
               sourceId: article.sourceId,
-sourceName: article.sourceName,
-sourcesCount: article.sourcesCount,
-category: article.category,
-              publishedAt: new Date(article.publishedAt),
+              sourceName: article.sourceName,
+              sourcesCount: article.sourcesCount,
+              category: article.category,
+              publishedAt: new Date(
+                article.publishedAt,
+              ),
               confidenceScore:
                 article.confidence !== undefined
                   ? Math.round(article.confidence)
@@ -51,10 +65,12 @@ category: article.category,
               url: article.url,
               imageUrl: article.imageUrl ?? null,
               sourceId: article.sourceId,
-sourceName: article.sourceName,
-sourcesCount: article.sourcesCount,
-category: article.category,
-              publishedAt: new Date(article.publishedAt),
+              sourceName: article.sourceName,
+              sourcesCount: article.sourcesCount,
+              category: article.category,
+              publishedAt: new Date(
+                article.publishedAt,
+              ),
               confidenceScore:
                 article.confidence !== undefined
                   ? Math.round(article.confidence)
@@ -71,6 +87,48 @@ category: article.category,
     }
   }
 
+  async persistCountryRelations(
+    relations: ArticleCountryRelationInput[],
+  ): Promise<void> {
+    if (relations.length === 0) {
+      return;
+    }
+
+    try {
+      await this.prisma.$transaction(
+        relations.map((relation) =>
+          this.prisma.articleCountry.upsert({
+            where: {
+              articleId_countryCode: {
+                articleId: relation.articleId,
+                countryCode: relation.countryCode,
+              },
+            },
+            update: {
+              countryName: relation.countryName,
+              relevanceScore:
+                relation.relevanceScore,
+              isRelevant: relation.isRelevant,
+            },
+            create: {
+              articleId: relation.articleId,
+              countryCode: relation.countryCode,
+              countryName: relation.countryName,
+              relevanceScore:
+                relation.relevanceScore,
+              isRelevant: relation.isRelevant,
+            },
+          }),
+        ),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to persist ${relations.length} article-country relation(s); continuing without country persistence`,
+        error instanceof Error ? error : undefined,
+      );
+    }
+  }
+
   async findRecent(
     options: FindRecentArticlesOptions = {},
   ): Promise<NewsArticle[]> {
@@ -81,63 +139,78 @@ category: article.category,
       query,
     } = options;
 
-    const safeLimit = Math.max(1, Math.min(limit, 100));
-    const safeMaxAgeMinutes = Math.max(1, maxAgeMinutes);
+    const safeLimit = Math.max(
+      1,
+      Math.min(limit, 100),
+    );
+
+    const safeMaxAgeMinutes = Math.max(
+      1,
+      maxAgeMinutes,
+    );
+
     const normalizedQuery = query?.trim();
 
     const cutoff = new Date(
-      Date.now() - safeMaxAgeMinutes * 60 * 1000,
+      Date.now() -
+        safeMaxAgeMinutes * 60 * 1000,
     );
 
     try {
-      const rows = await this.prisma.article.findMany({
-        where: {
-          publishedAt: {
-            gte: cutoff,
+      const rows =
+        await this.prisma.article.findMany({
+          where: {
+            publishedAt: {
+              gte: cutoff,
+            },
+            ...(category
+              ? { category }
+              : {}),
+            ...(normalizedQuery
+              ? {
+                  OR: [
+                    {
+                      title: {
+                        contains: normalizedQuery,
+                        mode: 'insensitive',
+                      },
+                    },
+                    {
+                      summary: {
+                        contains: normalizedQuery,
+                        mode: 'insensitive',
+                      },
+                    },
+                    {
+                      sourceName: {
+                        contains: normalizedQuery,
+                        mode: 'insensitive',
+                      },
+                    },
+                  ],
+                }
+              : {}),
           },
-          ...(category ? { category } : {}),
-          ...(normalizedQuery
-            ? {
-                OR: [
-                  {
-                    title: {
-                      contains: normalizedQuery,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    summary: {
-                      contains: normalizedQuery,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    sourceName: {
-                      contains: normalizedQuery,
-                      mode: 'insensitive',
-                    },
-                  },
-                ],
-              }
-            : {}),
-        },
-        orderBy: {
-          publishedAt: 'desc',
-        },
-        take: safeLimit,
-      });
+          orderBy: {
+            publishedAt: 'desc',
+          },
+          take: safeLimit,
+        });
 
       return rows.map((row) => ({
         id: row.id,
         title: row.title,
         summary: row.summary,
         url: row.url,
-        imageUrl: row.imageUrl ?? undefined,
+        imageUrl:
+          row.imageUrl ?? undefined,
         sourceId: row.sourceId,
         sourceName: row.sourceName,
-        category: row.category as NewsCategory,
+        category:
+          row.category as NewsCategory,
         sourcesCount: row.sourcesCount,
-        publishedAt: row.publishedAt.toISOString(),
+        publishedAt:
+          row.publishedAt.toISOString(),
         confidence:
           row.confidenceScore ?? undefined,
       }));

@@ -3,6 +3,7 @@ import { ArticlePersistenceService } from './article-persistence.service';
 
 describe('ArticlePersistenceService', () => {
   const articleUpsert = jest.fn();
+  const articleCountryUpsert = jest.fn();
   const articleFindMany = jest.fn();
   const transaction = jest.fn();
 
@@ -11,6 +12,9 @@ describe('ArticlePersistenceService', () => {
       upsert: articleUpsert,
       findMany: articleFindMany,
     },
+    articleCountry: {
+      upsert: articleCountryUpsert,
+    },
     $transaction: transaction,
   };
 
@@ -18,10 +22,12 @@ describe('ArticlePersistenceService', () => {
 
   beforeEach(() => {
     articleUpsert.mockReset();
+    articleCountryUpsert.mockReset();
     articleFindMany.mockReset();
     transaction.mockReset();
 
     articleUpsert.mockImplementation((args) => args);
+    articleCountryUpsert.mockImplementation((args) => args);
     articleFindMany.mockResolvedValue([]);
     transaction.mockResolvedValue([]);
 
@@ -156,6 +162,115 @@ describe('ArticlePersistenceService', () => {
 
     await expect(
       service.persistMany([makeArticle()]),
+    ).resolves.toBeUndefined();
+  });
+
+  it('does nothing when there are no country relations', async () => {
+    await service.persistCountryRelations([]);
+
+    expect(articleCountryUpsert).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('upserts article-country relations by articleId and countryCode', async () => {
+    await service.persistCountryRelations([
+      {
+        articleId: 'article-1',
+        countryCode: 'ESP',
+        countryName: 'Spain',
+        relevanceScore: 82,
+        isRelevant: true,
+      },
+    ]);
+
+    expect(articleCountryUpsert).toHaveBeenCalledTimes(1);
+
+    expect(articleCountryUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          articleId_countryCode: {
+            articleId: 'article-1',
+            countryCode: 'ESP',
+          },
+        },
+      }),
+    );
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('persists article-country relevance data in create and update', async () => {
+    await service.persistCountryRelations([
+      {
+        articleId: 'article-1',
+        countryCode: 'RWA',
+        countryName: 'Rwanda',
+        relevanceScore: 91,
+        isRelevant: true,
+      },
+    ]);
+
+    expect(articleCountryUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          articleId: 'article-1',
+          countryCode: 'RWA',
+          countryName: 'Rwanda',
+          relevanceScore: 91,
+          isRelevant: true,
+        }),
+        update: expect.objectContaining({
+          countryName: 'Rwanda',
+          relevanceScore: 91,
+          isRelevant: true,
+        }),
+      }),
+    );
+  });
+
+  it('supports updating an existing article-country relation', async () => {
+    await service.persistCountryRelations([
+      {
+        articleId: 'article-1',
+        countryCode: 'COD',
+        countryName: 'Democratic Republic of the Congo',
+        relevanceScore: 45,
+        isRelevant: true,
+      },
+    ]);
+
+    expect(articleCountryUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          articleId_countryCode: {
+            articleId: 'article-1',
+            countryCode: 'COD',
+          },
+        },
+        update: {
+          countryName: 'Democratic Republic of the Congo',
+          relevanceScore: 45,
+          isRelevant: true,
+        },
+      }),
+    );
+  });
+
+  it('does not throw when country relation persistence fails', async () => {
+    transaction.mockRejectedValueOnce(
+      new Error('Simulated country relation database failure'),
+    );
+
+    await expect(
+      service.persistCountryRelations([
+        {
+          articleId: 'article-1',
+          countryCode: 'ESP',
+          countryName: 'Spain',
+          relevanceScore: 70,
+          isRelevant: true,
+        },
+      ]),
     ).resolves.toBeUndefined();
   });
 
