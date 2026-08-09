@@ -517,7 +517,7 @@ describe('NewsService', () => {
     expect(response.query).toBe('Ceuta');
   });
 
-  it('does not pretend there is cached data when database fallback is empty', async () => {
+  it('reports dataMode unavailable (not live) when every real provider fails and database fallback is empty', async () => {
     articlePersistence.findRecent.mockResolvedValueOnce(
       [],
     );
@@ -530,6 +530,80 @@ describe('NewsService', () => {
       await service.search('anything');
 
     expect(response.articles).toEqual([]);
+    expect(response.providers).toEqual([]);
+    expect(response.dataMode).toBe(
+      'unavailable',
+    );
+
+    expect(response.fallbackReason).toBe(
+      'provider-error',
+    );
+  });
+
+  it('reports dataMode unavailable for topHeadlines when every real provider fails and database fallback is empty', async () => {
+    articlePersistence.findRecent.mockResolvedValueOnce(
+      [],
+    );
+
+    const service = await buildService([
+      new FakeFailingProvider(),
+    ]);
+
+    const response =
+      await service.topHeadlines();
+
+    expect(response.articles).toEqual([]);
+    expect(response.providers).toEqual([]);
+    expect(response.dataMode).toBe(
+      'unavailable',
+    );
+
+    expect(response.fallbackReason).toBe(
+      'provider-error',
+    );
+  });
+
+  it('reports dataMode unavailable for byCategory when every real provider fails and database fallback is empty', async () => {
+    articlePersistence.findRecent.mockResolvedValueOnce(
+      [],
+    );
+
+    const service = await buildService([
+      new FakeFailingProvider(),
+    ]);
+
+    const response =
+      await service.byCategory(
+        'technology',
+      );
+
+    expect(response.articles).toEqual([]);
+    expect(response.providers).toEqual([]);
+    expect(response.dataMode).toBe(
+      'unavailable',
+    );
+
+    expect(response.fallbackReason).toBe(
+      'provider-error',
+    );
+  });
+
+  it('does NOT report unavailable when a real provider succeeds with zero articles (distinct from total provider failure)', async () => {
+    articlePersistence.findRecent.mockResolvedValueOnce(
+      [],
+    );
+
+    const service = await buildService([
+      new FakeEmptyProvider(),
+    ]);
+
+    const response =
+      await service.search('anything');
+
+    expect(response.articles).toEqual([]);
+    expect(response.providers).toEqual([
+      'fake-empty',
+    ]);
     expect(response.dataMode).toBe('live');
 
     expect(

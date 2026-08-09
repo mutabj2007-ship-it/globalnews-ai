@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   resolveCountryByAnyIdentifier,
+  resolveCountryByCity,
   type AnalysisApiResponse,
   type AnalysisRetrievalContext,
   type CountryMeta,
@@ -48,6 +49,21 @@ const MAX_COUNTRY_CANDIDATE_WORDS = 6;
  */
 const COUNTRY_CONTEXT_PATTERN =
   /\b(?:in|from|about|across|inside|within)\s+(.+)$/i;
+
+/**
+ * Matches standalone ALL-CAPS 2-3 letter tokens (e.g. "USA", "UK",
+ * "UAE") anywhere in a query, with no preceding preposition required.
+ *
+ * This is deliberately restricted to ISO-style codes, not country
+ * *names*. Ordinary English prose essentially never spells a common
+ * word in full caps mid-sentence, so an exact, case-sensitive match
+ * against a real ISO alpha-2/alpha-3 code is a strong, low-ambiguity
+ * signal on its own. Country names get no equivalent ungated
+ * treatment: several real country names (Georgia, Turkey, Chad,
+ * Jordan) are also common nouns/proper nouns in unrelated contexts,
+ * so those stay behind the preposition-gated scan below.
+ */
+const ALL_CAPS_CODE_TOKEN_PATTERN = /\b[A-Z]{2,3}\b/g;
 
 @Injectable()
 export class AnalysisService {
@@ -268,6 +284,27 @@ export class AnalysisService {
     }
 
     /**
+     * Allow a natural-language query that embeds an explicit ISO-style
+     * code with no preposition, e.g. "is USA under pressure of war?".
+     * See ALL_CAPS_CODE_TOKEN_PATTERN for why this is safe to leave
+     * ungated while country names are not.
+     */
+    const codeMatches = normalized.match(
+      ALL_CAPS_CODE_TOKEN_PATTERN,
+    );
+
+    if (codeMatches) {
+      for (const code of codeMatches) {
+        const country =
+          resolveCountryByAnyIdentifier(code);
+
+        if (country) {
+          return country;
+        }
+      }
+    }
+
+    /**
      * For natural-language questions, require explicit geographic
      * context such as "in Spain" or "from Rwanda".
      */
@@ -322,7 +359,8 @@ export class AnalysisService {
       const country =
         resolveCountryByAnyIdentifier(
           candidate,
-        );
+        ) ??
+        resolveCountryByCity(candidate);
 
       if (country) {
         return country;

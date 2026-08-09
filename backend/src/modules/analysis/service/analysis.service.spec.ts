@@ -580,6 +580,275 @@ describe('AnalysisService', () => {
     ).not.toHaveBeenCalled();
   });
 
+  it('resolves an embedded ISO alpha-3 code with no preposition, e.g. "is USA under pressure of war?"', async () => {
+    const articles = [
+      makeArticle({
+        id: 'usa-1',
+        title: 'United States headline',
+      }),
+    ];
+
+    const newsService = {
+      search: jest.fn(),
+    };
+
+    const countryNewsService = {
+      getCountryNews:
+        jest.fn().mockResolvedValue(
+          makeCountryResponse(
+            'USA',
+            'United States',
+            articles,
+          ),
+        ),
+    };
+
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest
+        .fn()
+        .mockResolvedValue(
+          validCandidateFor(articles),
+        ),
+    };
+
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(
+      'is USA under pressure of war?',
+    );
+
+    expect(
+      countryNewsService.getCountryNews,
+    ).toHaveBeenCalledWith(
+      'USA',
+      undefined,
+      20,
+    );
+
+    expect(
+      newsService.search,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('does not resolve a lowercase embedded code with no preposition', async () => {
+    const articles = [
+      makeArticle({ id: 'general-2' }),
+    ];
+
+    const newsService = {
+      search: jest
+        .fn()
+        .mockResolvedValue(
+          makeSearchResponse(articles),
+        ),
+    };
+
+    const countryNewsService = {
+      getCountryNews: jest.fn(),
+    };
+
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest
+        .fn()
+        .mockResolvedValue(
+          validCandidateFor(articles),
+        ),
+    };
+
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(
+      'the us released a report today',
+    );
+
+    expect(
+      countryNewsService.getCountryNews,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      newsService.search,
+    ).toHaveBeenCalledWith(
+      'the us released a report today',
+      20,
+    );
+  });
+
+  it('does not resolve an ambiguous bare country name with no preposition (e.g. "Chad")', async () => {
+    const articles = [
+      makeArticle({ id: 'general-3' }),
+    ];
+
+    const newsService = {
+      search: jest
+        .fn()
+        .mockResolvedValue(
+          makeSearchResponse(articles),
+        ),
+    };
+
+    const countryNewsService = {
+      getCountryNews: jest.fn(),
+    };
+
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest
+        .fn()
+        .mockResolvedValue(
+          validCandidateFor(articles),
+        ),
+    };
+
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(
+      'Chad missed the bus this morning',
+    );
+
+    expect(
+      countryNewsService.getCountryNews,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      newsService.search,
+    ).toHaveBeenCalledWith(
+      'Chad missed the bus this morning',
+      20,
+    );
+  });
+
+  it('resolves a curated city to its country, e.g. "What is happening in Kigali?"', async () => {
+    const articles = [
+      makeArticle({
+        id: 'kigali-1',
+        title: 'Rwanda headline',
+      }),
+    ];
+
+    const newsService = {
+      search: jest.fn(),
+    };
+
+    const countryNewsService = {
+      getCountryNews:
+        jest.fn().mockResolvedValue(
+          makeCountryResponse(
+            'RWA',
+            'Rwanda',
+            articles,
+          ),
+        ),
+    };
+
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest
+        .fn()
+        .mockResolvedValue(
+          validCandidateFor(articles),
+        ),
+    };
+
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(
+      "What's happening in Kigali?",
+    );
+
+    expect(
+      countryNewsService.getCountryNews,
+    ).toHaveBeenCalledWith(
+      'RWA',
+      undefined,
+      20,
+    );
+
+    expect(
+      newsService.search,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('does not resolve an uncurated city even with a preposition', async () => {
+    const articles = [
+      makeArticle({ id: 'general-4' }),
+    ];
+
+    const newsService = {
+      search: jest
+        .fn()
+        .mockResolvedValue(
+          makeSearchResponse(articles),
+        ),
+    };
+
+    const countryNewsService = {
+      getCountryNews: jest.fn(),
+    };
+
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest
+        .fn()
+        .mockResolvedValue(
+          validCandidateFor(articles),
+        ),
+    };
+
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(
+      "What's happening in Anytown?",
+    );
+
+    expect(
+      countryNewsService.getCountryNews,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      newsService.search,
+    ).toHaveBeenCalledWith(
+      "What's happening in Anytown?",
+      20,
+    );
+  });
+
   it('uses generic NewsService search for a non-country question', async () => {
     const articles = [
       makeArticle({
@@ -849,6 +1118,58 @@ describe('AnalysisService', () => {
           fallbackReason: 'provider-error',
         }),
       );
+    });
+
+    it('preserves dataMode=unavailable and fallbackReason for generic retrieval when no provider succeeded and no cache existed', async () => {
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValue(
+            makeSearchResponse([], {
+              dataMode: 'unavailable',
+              providers: [],
+              fallbackReason:
+                'provider-error',
+            }),
+          ),
+      };
+
+      const countryNewsService =
+        makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response =
+        await service.analyzeNews(
+          'unavailable query',
+        );
+
+      expect(
+        response.retrievalContext,
+      ).toEqual(
+        expect.objectContaining({
+          dataMode: 'unavailable',
+          providers: [],
+          fallbackReason: 'provider-error',
+          articlesRetrieved: 0,
+        }),
+      );
+
+      expect(
+        provider.analyzeNews,
+      ).not.toHaveBeenCalled();
     });
 
     it('preserves country code/name, live dataMode, and provider info for country-aware live retrieval', async () => {

@@ -276,6 +276,58 @@ const BY_ISO3 = new Map(COUNTRIES.map((c) => [c.iso3, c]));
 const BY_ISO2 = new Map(COUNTRIES.map((c) => [c.iso2, c]));
 const BY_NUMERIC = new Map(COUNTRIES.map((c) => [c.isoNumeric, c]));
 
+/**
+ * Curated, exact-match city -> country lookup for cities commonly asked
+ * about by name without an enclosing country reference (e.g. "What's
+ * happening in Kigali?"). Keys are lowercase city names; values are ISO
+ * alpha-3 codes.
+ *
+ * This intentionally mirrors COUNTRY_ALIASES: a small, deliberately
+ * bounded, exact-match table grown incrementally as confirmed cases
+ * appear — not a geocoder and not a comprehensive world-city database.
+ * Only cities whose country mapping is unambiguous belong here.
+ */
+const CITY_TO_ISO3: Record<string, string> = {
+  kigali: 'RWA',
+  nairobi: 'KEN',
+  warsaw: 'POL',
+  madrid: 'ESP',
+  london: 'GBR',
+  paris: 'FRA',
+  washington: 'USA',
+  'washington dc': 'USA',
+  kyiv: 'UKR',
+  kiev: 'UKR',
+  beijing: 'CHN',
+  tokyo: 'JPN',
+  'new delhi': 'IND',
+  delhi: 'IND',
+  ottawa: 'CAN',
+  canberra: 'AUS',
+  brussels: 'BEL',
+  berlin: 'DEU',
+  rome: 'ITA',
+  moscow: 'RUS',
+  pretoria: 'ZAF',
+  cairo: 'EGY',
+  lagos: 'NGA',
+  'addis ababa': 'ETH',
+};
+
+/**
+ * Resolves a country from a curated, exact-match city name (e.g.
+ * "Kigali" -> Rwanda). Case-insensitive, whitespace-tolerant. Returns
+ * undefined for any city not in the curated list — this deliberately
+ * does not attempt partial or fuzzy matching.
+ */
+export function resolveCountryByCity(input: string): CountryMeta | undefined {
+  const lower = input.trim().toLowerCase();
+  if (!lower) return undefined;
+
+  const iso3 = CITY_TO_ISO3[lower];
+  return iso3 ? BY_ISO3.get(iso3) : undefined;
+}
+
 /** Case-insensitive lookup by ISO alpha-3 code (e.g. "esp" -> Spain). */
 export function findCountryByIso3(code: string): CountryMeta | undefined {
   return BY_ISO3.get(code.trim().toUpperCase());

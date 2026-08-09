@@ -1,4 +1,4 @@
-import { Radio, Archive, FlaskConical } from 'lucide-react';
+import { Radio, Archive, FlaskConical, CircleOff } from 'lucide-react';
 import type { AnalysisRetrievalContext } from '@globalnews-ai/shared';
 import { formatRelativeTime, formatUtcClock } from '@/lib/formatRelativeTime';
 
@@ -9,14 +9,23 @@ interface RetrievalContextStatusProps {
 
 const BADGE_STYLES: Record<AnalysisRetrievalContext['dataMode'], string> = {
   live: 'border-signal/50 bg-signal/10 text-signal-bright',
+  unavailable: 'border-border-strong bg-surface text-ink-tertiary',
   cached: 'border-border-strong bg-surface text-ink-tertiary',
   mock: 'border-border-strong bg-surface text-ink-tertiary',
 };
 
 const BADGE_LABEL: Record<AnalysisRetrievalContext['dataMode'], string> = {
   live: 'Live reporting',
+  unavailable: 'Live data unavailable',
   cached: 'Stored reporting',
   mock: 'Demo reporting',
+};
+
+const BADGE_ICON: Record<AnalysisRetrievalContext['dataMode'], typeof Radio> = {
+  live: Radio,
+  unavailable: CircleOff,
+  cached: Archive,
+  mock: FlaskConical,
 };
 
 /**
@@ -29,6 +38,12 @@ const BADGE_LABEL: Record<AnalysisRetrievalContext['dataMode'], string> = {
  * that reflects when the AI ran, not how current the underlying
  * articles are. newestArticlePublishedAt is the correct freshness
  * signal for cached/stored evidence.
+ *
+ * dataMode "unavailable" means no real provider succeeded AND no
+ * stored reporting existed either — there is genuinely nothing to
+ * show, which is a different message from "cached" (something is
+ * being shown, just not live) and must never be styled/labeled like
+ * "live" (see RetrievalContextStatus.spec / news.ts NewsDataMode).
  */
 export function RetrievalContextStatus({
   retrievalContext,
@@ -37,7 +52,7 @@ export function RetrievalContextStatus({
   const { dataMode, fallbackReason, newestArticlePublishedAt, countryName } =
     retrievalContext;
 
-  const Icon = dataMode === 'live' ? Radio : dataMode === 'cached' ? Archive : FlaskConical;
+  const Icon = BADGE_ICON[dataMode];
 
   const label = countryName
     ? `${BADGE_LABEL[dataMode]} \u00b7 ${countryName}`
@@ -50,7 +65,11 @@ export function RetrievalContextStatus({
         : fallbackReason === 'no-live-results'
           ? 'The live provider returned no usable results, so stored reporting was used.'
           : undefined
-      : undefined;
+      : dataMode === 'unavailable'
+        ? fallbackReason === 'provider-error'
+          ? 'The live news provider could not be reached, and no stored reporting was available for this question.'
+          : 'Live retrieval found nothing usable, and no stored reporting was available for this question.'
+        : undefined;
 
   const freshnessLine = newestArticlePublishedAt
     ? `Newest stored article: ${formatRelativeTime(newestArticlePublishedAt)} \u00b7 ${formatUtcClock(newestArticlePublishedAt)}`

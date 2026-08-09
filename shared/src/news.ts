@@ -54,26 +54,43 @@ export interface NewsArticle {
 /**
  * Describes where the news in a response came from:
  *
- * - "live": returned directly by an active real news provider.
- * - "cached": previously fetched real reporting served from PostgreSQL.
+ * - "live": a real news provider was queried and successfully answered —
+ *   this covers both a normal result set AND a real provider that ran
+ *   cleanly but legitimately found zero matching articles. Both are
+ *   "live" because a real provider genuinely contributed an answer;
+ *   `articles.length === 0` is what tells the difference, not `dataMode`.
+ * - "unavailable": live retrieval was attempted, but no configured real
+ *   provider succeeded (all failed/errored), and no usable stored
+ *   reporting existed to fall back to either. There is no evidence to
+ *   show — this must never be presented as "live" or "cached".
+ * - "cached": previously fetched real reporting served from PostgreSQL,
+ *   used because live retrieval failed or came back empty.
  * - "mock": sample/demo content returned by MockNewsProvider.
  *
- * Cached real reporting must never be presented as live or mock content.
+ * Cached real reporting must never be presented as live or mock content,
+ * and "unavailable" must never be presented as if any reporting exists.
  */
 export type NewsDataMode =
   | 'live'
+  | 'unavailable'
   | 'cached'
   | 'mock';
 
 /**
- * Explains why stored reporting was used instead of
- * the current provider response.
+ * Explains why stored reporting was used instead of the current provider
+ * response, OR why nothing could be shown at all.
  *
  * - "no-live-results": provider request completed but produced
  *   no usable current articles.
  *
- * - "provider-error": one or more configured real providers failed,
- *   so previously stored reporting was used instead.
+ * - "provider-error": one or more configured real providers failed.
+ *   Used both when previously stored reporting was used instead
+ *   (dataMode "cached") and when no stored reporting existed either
+ *   (dataMode "unavailable").
+ *
+ * Present when dataMode is "cached" or "unavailable" — never when
+ * dataMode is "live" (a successful zero-result "live" response has
+ * nothing to explain away) or "mock".
  */
 export type NewsFallbackReason =
   | 'no-live-results'
@@ -91,7 +108,8 @@ export interface NewsResponse {
   dataMode: NewsDataMode;
 
   /**
-   * Present when stored reporting is returned as a fallback.
+   * Present when dataMode is "cached" (stored reporting was returned as
+   * a fallback) or "unavailable" (nothing could be returned at all).
    *
    * This preserves whether fallback happened because the provider
    * failed or because it returned no usable live articles.
@@ -145,8 +163,10 @@ export interface CountryNewsResponse {
   providerDisplayName: string;
 
   /**
-   * Present when PostgreSQL country reporting is being used
-   * as a fallback for the current provider request.
+   * Present when dataMode is "cached" (PostgreSQL country reporting is
+   * being used as a fallback for the current provider request) or
+   * "unavailable" (no live provider succeeded and no stored country
+   * reporting existed either).
    */
   fallbackReason?: NewsFallbackReason;
 

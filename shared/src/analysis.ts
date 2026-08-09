@@ -102,10 +102,10 @@ export interface AnalysisRetrievalContext {
   /** Whether the underlying articles were live, cached, or mock. */
   dataMode: NewsDataMode;
 
-  /** IDs of providers that contributed articles (empty for cached retrieval). */
+  /** IDs of providers that contributed articles (empty for cached/unavailable retrieval). */
   providers: string[];
 
-  /** Present only when dataMode === 'cached'. */
+  /** Present only when dataMode is 'cached' or 'unavailable'. */
   fallbackReason?: NewsFallbackReason;
 
   /**

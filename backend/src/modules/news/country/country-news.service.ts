@@ -226,7 +226,8 @@ export class CountryNewsService {
       dataMode: searchResponse.dataMode,
       feedTier,
       providerDisplayName,
-      ...(searchResponse.dataMode === 'cached'
+      ...(searchResponse.dataMode === 'cached' ||
+      searchResponse.dataMode === 'unavailable'
   ? {
       fallbackReason:
         searchResponse.fallbackReason,
@@ -292,6 +293,13 @@ export class CountryNewsService {
       return {
         feedTier: 'delayed',
         providerDisplayName: 'Stored reporting',
+      };
+    }
+
+    if (dataMode === 'unavailable') {
+      return {
+        feedTier: 'delayed',
+        providerDisplayName: 'Unavailable',
       };
     }
 

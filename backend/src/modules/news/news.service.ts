@@ -53,6 +53,7 @@ export class NewsService {
 
     const response = this.buildResponse(
       providerCall.results,
+      providerCall.failedProviderIds,
       limit,
       { query },
       {
@@ -111,6 +112,7 @@ export class NewsService {
 
     const response = this.buildResponse(
       providerCall.results,
+      providerCall.failedProviderIds,
       limit,
       {},
       {
@@ -167,6 +169,7 @@ export class NewsService {
 
     const response = this.buildResponse(
       providerCall.results,
+      providerCall.failedProviderIds,
       limit,
       {
         category,
@@ -301,6 +304,7 @@ export class NewsService {
       providerId: string;
       articles: NewsArticle[];
     }>,
+    failedProviderIds: string[],
     limit: number | undefined,
     extra: Partial<
       Pick<
@@ -347,19 +351,25 @@ export class NewsService {
       ? merged.slice(0, limit)
       : merged;
 
+    const successfulProviderIds = results.map(
+      (result) => result.providerId,
+    );
+
+    const dataMode = this.resolveDataMode(
+      successfulProviderIds,
+    );
+
     return {
       articles: capped,
       totalResults: capped.length,
-      providers: results.map(
-        (result) =>
-          result.providerId,
-      ),
-      dataMode: this.resolveDataMode(
-        results.map(
-          (result) =>
-            result.providerId,
-        ),
-      ),
+      providers: successfulProviderIds,
+      dataMode,
+      fallbackReason:
+        dataMode === 'unavailable'
+          ? this.resolveFallbackReason(
+              failedProviderIds,
+            )
+          : undefined,
       generatedAt:
         new Date().toISOString(),
       ...extra,
@@ -417,6 +427,17 @@ export class NewsService {
     );
   }
 
+  /**
+   * Determines dataMode from what actually happened on this call, not
+   * from which providers are merely configured.
+   *
+   * A provider that resolved (even with zero articles) counts as
+   * "successful" here — callAllProviders only excludes providers whose
+   * promise rejected. That's what lets a real provider's legitimate
+   * zero-result answer ("live", 0 articles) stay distinguishable from
+   * every real provider failing outright ("unavailable", 0 articles):
+   * the former has a non-empty `providers` list, the latter doesn't.
+   */
   private resolveDataMode(
     successfulProviderIds: string[],
   ): NewsResponse['dataMode'] {
@@ -439,11 +460,18 @@ export class NewsService {
         : 'mock';
     }
 
-    return this.providers.every(
-      (provider) =>
-        provider.isMock,
-    )
-      ? 'mock'
-      : 'live';
+    if (
+      this.providers.length > 0 &&
+      this.providers.every(
+        (provider) => provider.isMock,
+      )
+    ) {
+      return 'mock';
+    }
+
+    // Nobody succeeded, and a real provider was in play (or none is
+    // configured at all). Never claim "live" when nothing actually
+    // came back — see resolveFallbackReason for why.
+    return 'unavailable';
   }
 }

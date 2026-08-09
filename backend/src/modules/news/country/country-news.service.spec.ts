@@ -25,7 +25,7 @@ function makeArticle(
 
 function makeSearchResponse(
   articles: NewsArticle[],
-  dataMode: 'live' | 'cached' | 'mock' = 'mock',
+  dataMode: 'live' | 'unavailable' | 'cached' | 'mock' = 'mock',
 ): NewsResponse {
   return {
     articles,
@@ -201,6 +201,51 @@ describe('CountryNewsService', () => {
       response.newestArticlePublishedAt,
     ).toBeUndefined();
   });
+  it('propagates unavailable dataMode with delayed feedTier and provider-error reason when every live provider fails and no stored country reporting exists', async () => {
+    const newsService = {
+      search: jest.fn().mockResolvedValue({
+        ...makeSearchResponse([], 'unavailable'),
+        fallbackReason: 'provider-error',
+      }),
+    };
+
+    const service = buildService(newsService);
+
+    const response = await service.getCountryNews('ESP');
+
+    expect(response.articles).toEqual([]);
+    expect(response.dataMode).toBe('unavailable');
+    expect(response.feedTier).toBe('delayed');
+    expect(response.providerDisplayName).toBe(
+      'Unavailable',
+    );
+    expect(response.fallbackReason).toBe(
+      'provider-error',
+    );
+
+    expect(
+      articlePersistence.findRecentByCountry,
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT report unavailable when the underlying provider succeeded with zero articles', async () => {
+    const newsService = {
+      search: jest
+        .fn()
+        .mockResolvedValue(
+          makeSearchResponse([], 'live'),
+        ),
+    };
+
+    const service = buildService(newsService);
+
+    const response = await service.getCountryNews('ESP');
+
+    expect(response.articles).toEqual([]);
+    expect(response.dataMode).toBe('live');
+    expect(response.fallbackReason).toBeUndefined();
+  });
+
   it('preserves fallback provenance returned by NewsService', async () => {
     const cachedArticle = makeArticle({
       id: 'cached-provider-error',
