@@ -2,8 +2,11 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   resolveCountryByAnyIdentifier,
   type AnalysisApiResponse,
+  type AnalysisRetrievalContext,
   type CountryMeta,
+  type CountryNewsResponse,
   type NewsArticle,
+  type NewsResponse,
 } from '@globalnews-ai/shared';
 import { NewsService } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
@@ -89,6 +92,7 @@ export class AnalysisService {
     const country = this.detectCountry(query);
 
     let articles: NewsArticle[];
+    let retrievalContext: AnalysisRetrievalContext;
 
     if (country) {
       this.logger.debug(
@@ -103,6 +107,9 @@ export class AnalysisService {
         );
 
       articles = countryResponse.articles;
+      retrievalContext = this.toRetrievalContext(
+        countryResponse,
+      );
     } else {
       const searchResponse =
         await this.newsService.search(
@@ -111,6 +118,9 @@ export class AnalysisService {
         );
 
       articles = searchResponse.articles;
+      retrievalContext = this.toRetrievalContext(
+        searchResponse,
+      );
     }
 
     if (articles.length === 0) {
@@ -120,6 +130,7 @@ export class AnalysisService {
         articles: [],
         analysisError:
           'No related articles were found for this question.',
+        retrievalContext,
       };
 
       // Empty results are still cached briefly to avoid hammering the
@@ -161,6 +172,7 @@ export class AnalysisService {
         query,
         analysis,
         articles: deduped,
+        retrievalContext,
       };
     } catch (error) {
       this.logger.warn(
@@ -176,6 +188,7 @@ export class AnalysisService {
         articles: deduped,
         analysisError:
           this.describeError(error),
+        retrievalContext,
       };
     }
 
@@ -186,6 +199,43 @@ export class AnalysisService {
     );
 
     return response;
+  }
+
+  /**
+   * Builds the retrieval provenance object from whichever response
+   * envelope was used (generic NewsResponse or country-aware
+   * CountryNewsResponse). Only fields that actually exist on the
+   * source envelope are populated — nothing is inferred or invented
+   * for retrieval paths that don't reliably expose it (e.g. generic
+   * NewsResponse has no newestArticlePublishedAt).
+   */
+  private toRetrievalContext(
+    source: NewsResponse | CountryNewsResponse,
+  ): AnalysisRetrievalContext {
+    const isCountryResponse =
+      'countryCode' in source;
+
+    return {
+      dataMode: source.dataMode,
+      providers: source.providers,
+      fallbackReason: source.fallbackReason,
+      newestArticlePublishedAt:
+        isCountryResponse
+          ? source.newestArticlePublishedAt
+          : undefined,
+      countryCode: isCountryResponse
+        ? source.countryCode
+        : undefined,
+      countryName: isCountryResponse
+        ? source.countryName
+        : undefined,
+      providerDisplayName:
+        isCountryResponse
+          ? source.providerDisplayName
+          : undefined,
+      articlesRetrieved:
+        source.articles.length,
+    };
   }
 
   private detectCountry(

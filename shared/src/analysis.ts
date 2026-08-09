@@ -1,4 +1,8 @@
-import type { NewsArticle } from './news';
+import type {
+  NewsArticle,
+  NewsDataMode,
+  NewsFallbackReason,
+} from './news';
 
 /**
  * Whether an analysis was produced by a real AI provider or by
@@ -84,6 +88,46 @@ export interface NewsAnalysisResult {
 }
 
 /**
+ * Provenance of the article retrieval that fed an analysis, independent
+ * of NewsAnalysisResult.generatedAt. Always present once retrieval has
+ * been attempted — including when zero articles were found or the AI
+ * provider failed afterward — so the frontend can explain where the
+ * evidence came from even when `analysis` is null.
+ *
+ * generatedAt on the analysis reflects when the AI ran, not when the
+ * underlying articles were published. This type carries the article
+ * freshness/provenance signal instead, so the two are never conflated.
+ */
+export interface AnalysisRetrievalContext {
+  /** Whether the underlying articles were live, cached, or mock. */
+  dataMode: NewsDataMode;
+
+  /** IDs of providers that contributed articles (empty for cached retrieval). */
+  providers: string[];
+
+  /** Present only when dataMode === 'cached'. */
+  fallbackReason?: NewsFallbackReason;
+
+  /**
+   * ISO-8601 publication timestamp of the newest retrieved article.
+   * Only reliably available on the country-aware retrieval path today.
+   * Describes evidence freshness — never a substitute for
+   * NewsAnalysisResult.generatedAt.
+   */
+  newestArticlePublishedAt?: string;
+
+  /** Present only when country-aware retrieval (CountryNewsService) was used. */
+  countryCode?: string;
+  countryName?: string;
+
+  /** Present only when country-aware retrieval was used. */
+  providerDisplayName?: string;
+
+  /** Number of articles this retrieval produced (0 is valid and meaningful). */
+  articlesRetrieved: number;
+}
+
+/**
  * Envelope returned by POST /analysis/news. `analysis` is null when
  * analysis could not be produced (no articles found, AI provider
  * failure, invalid model response, etc.) — in that case `articles` may
@@ -95,4 +139,5 @@ export interface AnalysisApiResponse {
   analysis: NewsAnalysisResult | null;
   articles: NewsArticle[];
   analysisError?: string;
+  retrievalContext: AnalysisRetrievalContext;
 }
