@@ -27,4 +27,16 @@ async function bootstrap(): Promise<void> {
   console.log(`GlobalNews AI backend is running on: http://localhost:${port}`);
 }
 
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  // Milestone #30: makes the fail-closed startup path (see
+  // AnalysisStartupValidator) explicit rather than relying on Node's
+  // default unhandled-rejection behavior. error.message here is safe to
+  // log as-is — the validator's thrown errors never include the
+  // OPENAI_API_KEY value itself, only the fact that it's unusable.
+  // eslint-disable-next-line no-console
+  console.error(
+    'GlobalNews AI backend failed to start:',
+    error instanceof Error ? error.message : error,
+  );
+  process.exit(1);
+});

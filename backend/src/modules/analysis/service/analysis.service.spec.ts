@@ -70,6 +70,11 @@ function makeConfigService(
     cacheTtlSeconds: 300,
     openAiApiKey: undefined,
     openAiModel: 'gpt-4o-mini',
+    // Milestone #30 defaults — 'development' matches today's existing
+    // (pre-M30) behavior for every test that doesn't care about it.
+    executionMode: 'development' as const,
+    retryAttempts: 2,
+    retryBaseDelayMs: 300,
     ...overrides,
   };
 
@@ -295,6 +300,294 @@ describe('AnalysisService', () => {
     expect(
       response.analysisError,
     ).toBeUndefined();
+  });
+
+  describe('Milestone #30: provenance', () => {
+    it('exposes truthful provenance for a live-AI success', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'openai',
+        displayName: 'OpenAI',
+        isMock: false,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ executionMode: 'production', openAiModel: 'gpt-4o-mini' }),
+      );
+
+      const response = await service.analyzeNews('test query');
+
+      expect(response.provenance).toEqual({
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        executionMode: 'production',
+        analysisMode: 'live-ai',
+        status: 'success',
+        cached: false,
+        latencyMs: expect.any(Number),
+      });
+    });
+
+    it('exposes truthful provenance for a mock-AI success, with no model reported', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('test query');
+
+      expect(response.provenance).toEqual({
+        provider: 'mock-analysis',
+        model: undefined,
+        executionMode: 'development',
+        analysisMode: 'mock-ai',
+        status: 'success',
+        cached: false,
+        latencyMs: expect.any(Number),
+      });
+    });
+
+    it('classifies a provider failure using the error\'s own failureReason when present', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      // Deliberately a plain object shape (not an import of
+      // OpenAiAnalysisError) — AnalysisService classifies failures via
+      // duck-typing (isClassifiedProviderError), not by importing a
+      // concrete provider's error class, to stay provider-agnostic.
+      const classifiedError = Object.assign(new Error('rate limited'), {
+        failureReason: 'provider-rate-limited',
+        retryable: true,
+      });
+
+      const provider: AnalysisProvider = {
+        id: 'openai',
+        displayName: 'OpenAI',
+        isMock: false,
+        analyzeNews: jest.fn().mockRejectedValue(classifiedError),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('test query');
+
+      expect(response.analysis).toBeNull();
+      expect(response.articles).toHaveLength(1);
+      expect(response.provenance).toMatchObject({
+        status: 'failed',
+        failureReason: 'provider-rate-limited',
+        cached: false,
+      });
+      expect(response.provenance.latencyMs).toEqual(expect.any(Number));
+    });
+
+    it('falls back to provider-unavailable when a provider throws an unclassified error', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'openai',
+        displayName: 'OpenAI',
+        isMock: false,
+        analyzeNews: jest.fn().mockRejectedValue(new Error('something unexpected')),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('test query');
+
+      expect(response.provenance).toMatchObject({
+        status: 'failed',
+        failureReason: 'provider-unavailable',
+      });
+    });
+
+    it('exposes validation-rejected provenance when the provider returns a fundamentally invalid candidate', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        // Missing required "headline" — validateAnalysisResult throws.
+        analyzeNews: jest.fn().mockResolvedValue({ ...validCandidateFor(articles), headline: '' }),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('test query');
+
+      expect(response.analysis).toBeNull();
+      // Retrieved articles must survive even a validation rejection.
+      expect(response.articles).toHaveLength(1);
+      expect(response.provenance).toMatchObject({
+        status: 'validation-rejected',
+        failureReason: 'validation-rejected',
+      });
+    });
+
+    it('exposes not-attempted provenance with no failureReason when there are zero articles', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('nonexistent query');
+
+      expect(provider.analyzeNews).not.toHaveBeenCalled();
+      expect(response.provenance).toMatchObject({
+        status: 'not-attempted',
+        analysisMode: 'mock-ai',
+      });
+      expect(response.provenance.failureReason).toBeUndefined();
+    });
+
+    it('marks provenance.cached=true only on the cache-hit response, not the original', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const first = await service.analyzeNews('test query');
+      const second = await service.analyzeNews('test query');
+
+      expect(first.provenance.cached).toBe(false);
+      expect(second.provenance.cached).toBe(true);
+      // Everything else about provenance is preserved from the original generation.
+      expect(second.provenance.status).toBe('success');
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not replay a failed response for the full success cache TTL', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const analyzeNewsMock = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce(validCandidateFor(articles));
+
+      const provider: AnalysisProvider = {
+        id: 'openai',
+        displayName: 'OpenAI',
+        isMock: false,
+        analyzeNews: analyzeNewsMock,
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        // A long success TTL, so if a failure ever got cached at the
+        // SAME TTL, this test would still find it cached 20s later —
+        // proving the failure got the shorter TTL is the point here.
+        makeConfigService({ cacheTtlSeconds: 300 }),
+      );
+
+      let now = 1_000_000;
+      const dateSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+
+      const first = await service.analyzeNews('test query');
+      expect(first.analysis).toBeNull();
+      expect(first.provenance.status).toBe('failed');
+
+      // Still within the short failure TTL: served from cache.
+      now += 5_000;
+      const second = await service.analyzeNews('test query');
+      expect(second.provenance.cached).toBe(true);
+      expect(analyzeNewsMock).toHaveBeenCalledTimes(1);
+
+      // Past a short failure TTL but still well within the 300s success
+      // TTL: must NOT be served from the stale cached failure.
+      now += 20_000;
+      const third = await service.analyzeNews('test query');
+      expect(third.provenance.cached).toBe(false);
+      expect(third.analysis).not.toBeNull();
+      expect(analyzeNewsMock).toHaveBeenCalledTimes(2);
+
+      dateSpy.mockRestore();
+    });
   });
 
   it('caches a successful response and does not call the news service again for the same query', async () => {

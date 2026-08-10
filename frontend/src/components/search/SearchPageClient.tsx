@@ -6,6 +6,7 @@ import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { analyzeNews, AnalysisApiError } from '@/lib/api/analysisApi';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { AnalysisResultView } from '@/components/search/AnalysisResultView';
+import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { SourceArticleCard } from '@/components/search/SourceArticleCard';
 import { RetrievalContextStatus } from '@/components/search/RetrievalContextStatus';
 import { SourceEntitiesPanel } from '@/components/search/SourceEntitiesPanel';
@@ -78,12 +79,28 @@ export function SearchPageClient(): JSX.Element {
           <SourceEntitiesPanel sourceEntities={response.sourceEntities} />
 
           {response.analysis ? (
-            <AnalysisResultView analysis={response.analysis} />
+            <AnalysisResultView analysis={response.analysis} provenance={response.provenance} />
           ) : (
+            /**
+             * Milestone #30 — branches on `response.provenance.status`,
+             * not merely on `analysis === null`, so "nothing to analyze"
+             * (not-attempted, zero retrieved articles),
+             * "AI broke while analyzing" (failed, articles may still be
+             * shown below), and "AI produced something but it didn't
+             * validate" (validation-rejected) never look identical to
+             * the user. The badge alone already carries most of that
+             * distinction (see AnalysisModeBadge); the paragraph below
+             * adds the specific reason from analysisError when present.
+             */
             <div className="rounded-2xl border border-border bg-surface p-6">
+              <div className="mb-3">
+                <AnalysisModeBadge provenance={response.provenance} />
+              </div>
               <p className="text-sm text-ink-secondary">
                 {response.analysisError ??
-                  'AI analysis is temporarily unavailable, but the underlying articles are shown below.'}
+                  (response.provenance.status === 'not-attempted'
+                    ? 'No related articles were found for this question.'
+                    : 'AI analysis is temporarily unavailable, but the underlying articles are shown below.')}
               </p>
             </div>
           )}

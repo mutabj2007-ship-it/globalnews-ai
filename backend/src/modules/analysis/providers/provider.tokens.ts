@@ -11,10 +11,27 @@ import type { AnalysisProvider } from '../interfaces';
 export const ANALYSIS_PROVIDER = Symbol('ANALYSIS_PROVIDER');
 
 /**
+ * Milestone #30 — the single shared definition of "is this API key
+ * actually usable", so provider selection, the fail-closed startup
+ * validator, and OpenAiAnalysisProvider's own defensive guard can never
+ * disagree with one another. Deliberately NOT a plain truthiness check:
+ * a whitespace-only value (e.g. `" "`) is truthy in JavaScript but is
+ * not a usable key, and must not be silently treated as "configured"
+ * by either provider selection or startup validation.
+ */
+export function isUsableOpenAiApiKey(value: string | undefined): boolean {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+/**
  * Pure selection logic, extracted from the NestJS factory so it can be
  * unit-tested without a DI container.
  *
- * live when OPENAI_API_KEY is configured, mock otherwise. This is a
+ * live when OPENAI_API_KEY is configured (and actually usable — see
+ * isUsableOpenAiApiKey), mock otherwise. This selection is boot-time
+ * deterministic: it runs once when the DI container is built, and does
+ * not re-evaluate for the lifetime of the process — changing which
+ * provider is active requires an application restart. This is also a
  * deliberate mode switch (like GNews vs. Mock in the news module), not
  * a runtime fallback: if the key is present but the OpenAI call fails,
  * that surfaces as an error, not a silent drop into mock mode — mixing
@@ -26,5 +43,5 @@ export function resolveActiveAnalysisProvider(
   mockProvider: AnalysisProvider,
   openAiProvider: AnalysisProvider,
 ): AnalysisProvider {
-  return openAiApiKey ? openAiProvider : mockProvider;
+  return isUsableOpenAiApiKey(openAiApiKey) ? openAiProvider : mockProvider;
 }

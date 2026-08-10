@@ -200,6 +200,103 @@ export interface SourceEntities {
 }
 
 /**
+ * Milestone #30 — deploy-mode flag. Whether the backend was started
+ * with production AI expected (AI_EXECUTION_MODE=production, see
+ * AnalysisStartupValidator) or in development mode, where mock
+ * analysis is permitted when no provider key is configured.
+ */
+export type AnalysisExecutionMode = 'production' | 'development';
+
+/**
+ * Milestone #30 — the outcome of this specific request's attempt (or
+ * non-attempt) to produce an analysis. Always reflects what actually
+ * happened on THIS request, independent of `analysisMode` (which
+ * reflects which provider the deployment is running, not whether it
+ * was called this time).
+ *
+ * - "success": a validated NewsAnalysisResult was produced.
+ * - "failed": the provider was called but failed (auth, timeout,
+ *   network, rate limit, malformed output) — see failureReason.
+ * - "validation-rejected": the provider returned a candidate, but it
+ *   was fundamentally invalid and validateAnalysisResult() rejected
+ *   it outright (not the same as individual ungrounded entries being
+ *   silently dropped, which is not a rejection).
+ * - "not-attempted": no AI call was made at all, because retrieval
+ *   produced zero articles to analyze.
+ */
+export type AnalysisProvenanceStatus =
+  | 'success'
+  | 'failed'
+  | 'validation-rejected'
+  | 'not-attempted';
+
+/**
+ * Milestone #30 — machine-readable reason for a "failed" (or, for
+ * "validation-rejected", the matching) provenance status. Deliberately
+ * coarse-grained and provider-agnostic (no raw provider error text, no
+ * HTTP status codes) so this can be surfaced to the frontend/logs
+ * without ever risking a leaked secret or a raw upstream error message.
+ */
+export type AnalysisFailureReason =
+  | 'provider-not-configured'
+  | 'provider-auth'
+  | 'provider-timeout'
+  | 'provider-unavailable'
+  | 'provider-rate-limited'
+  | 'malformed-output'
+  | 'validation-rejected';
+
+/** Milestone #30 — OpenAI (or a future provider's) reported token usage, when available. */
+export interface AnalysisTokenUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
+/**
+ * Milestone #30 — truthful, always-present provenance for an analysis
+ * attempt. Unlike `NewsAnalysisResult.analysisMode` (only present when
+ * `analysis` is non-null), this exists on every AnalysisApiResponse —
+ * success, failure, validation rejection, or not-attempted — so the
+ * frontend never has to infer what happened from the mere presence or
+ * absence of `analysis`. Never includes a secret value or a raw
+ * upstream provider error string.
+ */
+export interface AnalysisProvenance {
+  /** The active AnalysisProvider's stable id, e.g. "openai", "mock-analysis". */
+  provider: string;
+
+  /** Model identifier actually used, when known. Absent for mock analysis. */
+  model?: string;
+
+  /** Deploy-mode flag this backend process was started with. */
+  executionMode: AnalysisExecutionMode;
+
+  /**
+   * Which provider family produced (or would have produced) this
+   * result: live-ai vs mock-ai. Reflects the boot-time-selected
+   * provider, independent of whether a call was attempted this
+   * request (see `status` for that).
+   */
+  analysisMode: AnalysisMode;
+
+  /** What happened on this specific request. */
+  status: AnalysisProvenanceStatus;
+
+  /** Present only when status is "failed" or "validation-rejected". */
+  failureReason?: AnalysisFailureReason;
+
+  /** Wall-clock duration of the provider call attempt, in milliseconds. Absent when status is "not-attempted". */
+  latencyMs?: number;
+
+  /** True when this response (or the analysis/error it carries) was served from AnalysisService's in-memory cache rather than freshly computed. */
+  cached: boolean;
+
+  /** Present only for a successful live-AI call when the provider reported usage. */
+  tokenUsage?: AnalysisTokenUsage;
+}
+
+/**
  * Envelope returned by POST /analysis/news. `analysis` is null when
  * analysis could not be produced (no articles found, AI provider
  * failure, invalid model response, etc.) — in that case `articles` may
@@ -224,4 +321,11 @@ export interface AnalysisApiResponse {
   analysisError?: string;
   retrievalContext: AnalysisRetrievalContext;
   sourceEntities: SourceEntities;
+
+  /**
+   * Milestone #30 — always present, on every response shape (success,
+   * failure, validation rejection, not-attempted, cached or fresh).
+   * See AnalysisProvenance.
+   */
+  provenance: AnalysisProvenance;
 }

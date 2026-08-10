@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
-import type { NewsAnalysisResult } from '@globalnews-ai/shared';
+import type { AnalysisProvenance, NewsAnalysisResult } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 
 interface AnalysisResultViewProps {
   analysis: NewsAnalysisResult;
+  /** Milestone #30 — the badge now needs the full provenance, not just analysis.analysisMode. */
+  provenance: AnalysisProvenance;
 }
 
 const CONFIDENCE_STYLES: Record<NewsAnalysisResult['confidence']['level'], string> = {
@@ -21,7 +23,7 @@ function SectionHeading({ children }: { children: ReactNode }): JSX.Element {
   );
 }
 
-export function AnalysisResultView({ analysis }: AnalysisResultViewProps): JSX.Element {
+export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewProps): JSX.Element {
   const entityGroups: Array<{ label: string; values: string[] }> = [
     { label: 'Countries', values: analysis.entities.countries },
     { label: 'Locations', values: analysis.entities.locations },
@@ -35,7 +37,7 @@ export function AnalysisResultView({ analysis }: AnalysisResultViewProps): JSX.E
       {/* Headline + summary */}
       <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <AnalysisModeBadge mode={analysis.analysisMode} />
+          <AnalysisModeBadge provenance={provenance} />
           <span className="font-mono text-[11px] text-ink-tertiary">
             Generated {formatRelativeTime(analysis.generatedAt)}
           </span>
@@ -156,7 +158,22 @@ export function AnalysisResultView({ analysis }: AnalysisResultViewProps): JSX.E
       {/* Entities / topics */}
       {entityGroups.length > 0 && (
         <section>
-          <SectionHeading>Entities &amp; topics</SectionHeading>
+          <SectionHeading>
+            Entities &amp; topics
+            {/*
+              Milestone #30 §G/H — these entities come straight from
+              NewsAnalysisResult.entities: AI-interpreted free text, not
+              grounded against sourceArticleIds the way keyFacts/
+              agreements/differences/timeline are (see
+              validate-analysis-result.ts). Deliberately NOT merged with
+              the deterministic, source-derived SourceEntitiesPanel
+              (Milestone #29) — this label exists so the two are never
+              mistaken for one another.
+            */}
+            <span className="ml-2 font-mono text-[10px] normal-case tracking-normal text-ink-tertiary">
+              (AI-interpreted, unverified)
+            </span>
+          </SectionHeading>
           <div className="flex flex-col gap-3">
             {entityGroups.map((group) => (
               <div key={group.label} className="flex flex-wrap items-center gap-2">

@@ -6,6 +6,9 @@ import {
   resolveCountryByCity,
   resolveGeoTypo,
   type AnalysisApiResponse,
+  type AnalysisFailureReason,
+  type AnalysisProvenance,
+  type AnalysisProvenanceStatus,
   type AnalysisRetrievalContext,
   type CountryNewsResponse,
   type GeoFuzzyMatch,
@@ -17,13 +20,36 @@ import { NewsService } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
 import type { AnalysisProvider } from '../interfaces';
 import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
-import { AnalysisConfigService } from '../config/analysis-config.service';
+import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
 import { buildSourceEntities } from './build-source-entities.util';
 import {
   validateAnalysisResult,
   AnalysisValidationError,
 } from '../validation/validate-analysis-result';
+
+/**
+ * Milestone #30 — duck-typed check for a provider error that already
+ * carries a machine-readable failureReason (e.g. OpenAiAnalysisError).
+ * Deliberately NOT an `instanceof OpenAiAnalysisProvider`-specific check:
+ * AnalysisService must stay provider-agnostic (see provider.tokens.ts),
+ * so any current or future AnalysisProvider can opt into precise
+ * failure classification just by throwing an error shaped this way,
+ * without AnalysisService importing a concrete provider class. Providers
+ * that don't (e.g. an unexpected throw from MockAnalysisProvider) fall
+ * back to the generic 'provider-unavailable' reason below.
+ */
+interface ClassifiedProviderError {
+  failureReason: AnalysisFailureReason;
+}
+
+function isClassifiedProviderError(error: unknown): error is ClassifiedProviderError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    typeof (error as { failureReason?: unknown }).failureReason === 'string'
+  );
+}
 
 interface CacheEntry {
   value: AnalysisApiResponse;
@@ -69,6 +95,18 @@ const COUNTRY_CONTEXT_PATTERN =
  * so those stay behind the preposition-gated scan below.
  */
 const ALL_CAPS_CODE_TOKEN_PATTERN = /\b[A-Z]{2,3}\b/g;
+
+/**
+ * Milestone #30 §F.8 — how long a non-success response (failed,
+ * validation-rejected, or not-attempted) may be cached, capped well
+ * below the normal success TTL so a transient provider blip or a
+ * momentarily-empty retrieval isn't replayed as "the answer" for as
+ * long as a genuine success would be. Always the smaller of this and
+ * the configured success TTL, so a deployment with an even shorter
+ * ANALYSIS_CACHE_TTL_SECONDS never gets a failure TTL longer than its
+ * own success TTL.
+ */
+const FAILURE_CACHE_TTL_SECONDS = 15;
 
 @Injectable()
 export class AnalysisService {
@@ -132,11 +170,20 @@ export class AnalysisService {
        * is repeated. The nested `analysis.query` (set at generation
        * time from the normalized query used for analysis) is
        * intentionally left as-is.
+       *
+       * Milestone #30: provenance.cached is likewise overridden to
+       * `true` here — the stored entry was truthfully `cached: false`
+       * when it was first generated, but THIS response is a cache hit,
+       * so that must be reflected for the current caller. Everything
+       * else in provenance (provider, status, failureReason, latencyMs,
+       * tokenUsage) describes the original generation and is preserved
+       * as-is.
        */
       return {
         ...cached,
         query: originalQuery,
         normalizedQuery,
+        provenance: { ...cached.provenance, cached: true },
       };
     }
 
@@ -197,14 +244,23 @@ export class AnalysisService {
           'No related articles were found for this question.',
         retrievalContext,
         sourceEntities: buildSourceEntities([]),
+        // Milestone #30: no AI call was ever attempted — there was
+        // nothing to analyze — so this is 'not-attempted', not 'failed'.
+        // Distinguishing the two lets the frontend tell "we found
+        // nothing to analyze" apart from "we found articles but AI
+        // analysis broke".
+        provenance: this.buildProvenance(config, 'not-attempted'),
       };
 
-      // Empty results are still cached briefly to avoid hammering the
-      // news provider with the exact same fruitless query repeatedly.
+      // Empty results are still cached, but only briefly (see
+      // FAILURE_CACHE_TTL_SECONDS) to avoid hammering the news provider
+      // with the exact same fruitless query repeatedly, without
+      // replaying a stale "nothing found" for as long as a genuine
+      // success would be cached.
       this.setCached(
         cacheKey,
         empty,
-        config.cacheTtlSeconds,
+        this.cacheTtlFor(empty, config),
       );
 
       return empty;
@@ -229,12 +285,21 @@ export class AnalysisService {
 
     let response: AnalysisApiResponse;
 
+    // Milestone #30: timed around the whole provider call so latencyMs
+    // is captured uniformly for every provider — including any internal
+    // retries an OpenAiAnalysisProvider performs — without requiring
+    // providers to self-report timing (see AnalysisProvider's return
+    // type comment in interfaces/).
+    const providerCallStartedAt = Date.now();
+
     try {
       const candidate =
         await this.provider.analyzeNews({
           query: normalizedQuery,
           articles: deduped,
         });
+
+      const latencyMs = Date.now() - providerCallStartedAt;
 
       const analysis = validateAnalysisResult(
         candidate,
@@ -254,14 +319,24 @@ export class AnalysisService {
         articles: deduped,
         retrievalContext,
         sourceEntities,
+        provenance: this.buildProvenance(
+          config,
+          'success',
+          { latencyMs },
+        ),
       };
     } catch (error) {
+      const latencyMs = Date.now() - providerCallStartedAt;
+
       this.logger.warn(
         `Analysis provider "${this.provider.id}" failed for query "${originalQuery}"`,
         error instanceof Error
           ? error
           : undefined,
       );
+
+      const { status, failureReason } =
+        this.classifyFailure(error);
 
       response = {
         query: originalQuery,
@@ -272,16 +347,116 @@ export class AnalysisService {
           this.describeError(error),
         retrievalContext,
         sourceEntities,
+        provenance: this.buildProvenance(
+          config,
+          status,
+          { failureReason, latencyMs },
+        ),
       };
     }
 
     this.setCached(
       cacheKey,
       response,
-      config.cacheTtlSeconds,
+      this.cacheTtlFor(response, config),
     );
 
     return response;
+  }
+
+  /**
+   * Milestone #30 — builds the always-present AnalysisProvenance block
+   * shared by every response shape (success, failure,
+   * validation-rejected, not-attempted). `provider`/`model`/
+   * `executionMode`/`analysisMode` reflect the boot-time-selected
+   * provider and are the same on every call; `cached` always starts
+   * `false` here — the one place that ever flips it to `true` is the
+   * cache-hit branch above, which does so explicitly on the stored
+   * value rather than by calling this method again.
+   */
+  private buildProvenance(
+    config: AnalysisConfig,
+    status: AnalysisProvenanceStatus,
+    extra: Partial<
+      Pick<
+        AnalysisProvenance,
+        'failureReason' | 'latencyMs' | 'tokenUsage'
+      >
+    > = {},
+  ): AnalysisProvenance {
+    return {
+      provider: this.provider.id,
+      model: this.provider.isMock
+        ? undefined
+        : config.openAiModel,
+      executionMode: config.executionMode,
+      analysisMode: this.provider.isMock
+        ? 'mock-ai'
+        : 'live-ai',
+      status,
+      cached: false,
+      ...extra,
+    };
+  }
+
+  /**
+   * Milestone #30 — classifies a caught error from the try block above
+   * into a typed provenance status/failureReason pair. A validation
+   * rejection (the candidate was fundamentally malformed) is always
+   * `validation-rejected`; anything else is a provider failure,
+   * classified via the candidate's own failureReason when it provides
+   * one (see isClassifiedProviderError) or a generic
+   * 'provider-unavailable' otherwise.
+   */
+  private classifyFailure(
+    error: unknown,
+  ): {
+    status: Extract<
+      AnalysisProvenanceStatus,
+      'failed' | 'validation-rejected'
+    >;
+    failureReason: AnalysisFailureReason;
+  } {
+    if (error instanceof AnalysisValidationError) {
+      return {
+        status: 'validation-rejected',
+        failureReason: 'validation-rejected',
+      };
+    }
+
+    if (isClassifiedProviderError(error)) {
+      return {
+        status: 'failed',
+        failureReason: error.failureReason,
+      };
+    }
+
+    return {
+      status: 'failed',
+      failureReason: 'provider-unavailable',
+    };
+  }
+
+  /**
+   * Milestone #30 §F.8 — a successful response keeps the normal
+   * configured TTL; anything else (failed, validation-rejected,
+   * not-attempted) is capped at FAILURE_CACHE_TTL_SECONDS so it can't
+   * be replayed as "the answer" for as long as a genuine success would
+   * be. Never longer than the configured success TTL either, in case an
+   * operator has already set that even lower.
+   */
+  private cacheTtlFor(
+    response: AnalysisApiResponse,
+    config: AnalysisConfig,
+  ): number {
+    if (response.provenance.status === 'success') {
+      return config.cacheTtlSeconds;
+    }
+
+    return Math.min(
+      config.cacheTtlSeconds,
+      FAILURE_CACHE_TTL_SECONDS,
+    );
   }
 
   /**

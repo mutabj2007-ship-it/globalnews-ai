@@ -7,6 +7,7 @@ import { MockAnalysisProvider } from './providers/mock-analysis.provider';
 import { OpenAiAnalysisProvider } from './providers/openai-analysis.provider';
 import { ANALYSIS_PROVIDER, resolveActiveAnalysisProvider } from './providers/provider.tokens';
 import { AnalysisConfigService } from './config/analysis-config.service';
+import { AnalysisStartupValidator } from './startup/analysis-startup-validator';
 import type { AnalysisProvider } from './interfaces';
 
 /**
@@ -24,6 +25,10 @@ import type { AnalysisProvider } from './interfaces';
     AnalysisConfigService,
     MockAnalysisProvider,
     OpenAiAnalysisProvider,
+    // Milestone #30: fail-closed startup guard. Registered as a plain
+    // provider so Nest's OnApplicationBootstrap lifecycle invokes it
+    // automatically — nothing else needs to reference it directly.
+    AnalysisStartupValidator,
     {
       provide: ANALYSIS_PROVIDER,
       useFactory: (
