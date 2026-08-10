@@ -157,6 +157,49 @@ export interface AnalysisRetrievalContext {
 }
 
 /**
+ * Milestone #29 — one canonical organization identity, deterministically
+ * resolved from the retrieved articles' own text (see
+ * organization-alias-resolver.util.ts and build-source-entities.util.ts
+ * on the backend). Never touched by the AI provider and never merged
+ * with NewsAnalysisResult.entities (AnalysisEntities), which is
+ * AI-generated and ungrounded — this type and that one are deliberately
+ * kept structurally separate so source-derived and AI-generated
+ * entities can never be confused for one another.
+ */
+export interface ResolvedOrganizationMention {
+  /** Canonical organization name, e.g. "United Nations". */
+  canonical: string;
+  /**
+   * Every distinct surface form actually found across the source
+   * articles that resolved to this canonical entity (e.g. ["United
+   * Nations", "UN"]). Always has at least one entry — this is what
+   * keeps the original wording recoverable; `canonical` is a display
+   * convenience, never a replacement of what a source actually said.
+   */
+  matchedFrom: string[];
+  /**
+   * IDs of articles — always a subset of this same response's
+   * `articles` — that mentioned this organization in any surface form.
+   * An organization can never cite an article that isn't present in
+   * `articles` (e.g. one removed by de-duplication or the analyzed-
+   * article cap).
+   */
+  articleIds: string[];
+}
+
+/**
+ * Milestone #29 — entities extracted and resolved deterministically
+ * from the retrieved articles themselves, independent of whether AI
+ * analysis succeeded. Always present on AnalysisApiResponse, the same
+ * way retrievalContext always is, so that source-derived evidence
+ * survives an AI-provider failure. Distinct from and never merged with
+ * NewsAnalysisResult.entities (AnalysisEntities).
+ */
+export interface SourceEntities {
+  organizations: ResolvedOrganizationMention[];
+}
+
+/**
  * Envelope returned by POST /analysis/news. `analysis` is null when
  * analysis could not be produced (no articles found, AI provider
  * failure, invalid model response, etc.) — in that case `articles` may
@@ -180,4 +223,5 @@ export interface AnalysisApiResponse {
   articles: NewsArticle[];
   analysisError?: string;
   retrievalContext: AnalysisRetrievalContext;
+  sourceEntities: SourceEntities;
 }

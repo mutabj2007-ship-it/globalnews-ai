@@ -102,4 +102,78 @@ describe('extractArticleEntities', () => {
       }),
     ).not.toThrow();
   });
+
+  describe('Milestone #29: organization alias resolution', () => {
+    it('collapses "UN" and "United Nations" mentioned in the same article into one canonical entry', () => {
+      const result = extractArticleEntities({
+        title: 'UN Security Council meets as United Nations calls for ceasefire',
+        summary: 'The UN and United Nations officials confirmed talks are ongoing.',
+      });
+
+      expect(result.organizations).toEqual(['United Nations']);
+      expect(result.organizations.filter((org) => org === 'United Nations')).toHaveLength(1);
+
+      expect(result.organizationMatches).toEqual([
+        {
+          canonical: 'United Nations',
+          matchedFrom: expect.arrayContaining(['UN', 'United Nations']),
+        },
+      ]);
+    });
+
+    it('resolves "WHO" to its canonical name and preserves the original acronym in matchedFrom', () => {
+      const result = extractArticleEntities({
+        title: 'WHO warns of outbreak risk',
+        summary: 'The organization urged governments to prepare.',
+      });
+
+      expect(result.organizations).toEqual(['World Health Organization']);
+      expect(result.organizationMatches).toEqual([
+        { canonical: 'World Health Organization', matchedFrom: ['WHO'] },
+      ]);
+    });
+
+    it('keeps distinct organizations separate rather than merging them', () => {
+      const result = extractArticleEntities({
+        title: 'NATO and OPEC issue separate statements',
+        summary: 'NATO addressed security while OPEC discussed oil output.',
+      });
+
+      expect(result.organizations).toEqual(expect.arrayContaining(['NATO', 'OPEC']));
+      expect(result.organizations).toHaveLength(2);
+    });
+
+    it('does not resolve a near-miss/typo of a real organization (no fuzzy matching)', () => {
+      const result = extractArticleEntities({
+        title: 'Untied Nations officials to visit the region',
+        summary: 'Local authorities welcomed the delegation.',
+      });
+
+      expect(result.organizations).not.toContain('United Nations');
+    });
+
+    it('does not treat a mentioned country as an organization', () => {
+      const result = extractArticleEntities({
+        title: 'DRC and DR Congo officials meet regional partners',
+        summary: 'The Democratic Republic of the Congo delegation discussed trade.',
+      });
+
+      expect(result.organizations).toEqual([]);
+      expect(result.organizationMatches).toBeUndefined();
+      // The country is still captured where it always was: `countries`,
+      // via the existing geographic extraction, unaffected by this change.
+      expect(result.countries).toContain('DR Congo');
+    });
+
+    it('omits organizationMatches entirely (not an empty array) when there are no organizations', () => {
+      const result = extractArticleEntities({
+        title: 'Kenya and Uganda sign a regional trade agreement',
+        summary: 'Kenya said the agreement with Uganda would improve trade across East Africa.',
+      });
+
+      expect(result.organizations).toEqual([]);
+      expect(result.organizationMatches).toBeUndefined();
+      expect(Object.prototype.hasOwnProperty.call(result, 'organizationMatches')).toBe(false);
+    });
+  });
 });

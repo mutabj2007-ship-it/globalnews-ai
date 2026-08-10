@@ -1,4 +1,21 @@
 import { COUNTRIES, type NewsArticle } from '@globalnews-ai/shared';
+import {
+  ORGANIZATION_CANDIDATE_PHRASES,
+  resolveOrganizationAlias,
+} from './organization-alias-resolver.util';
+
+/**
+ * Milestone #29: provenance for one resolved organization within a
+ * single article — the canonical identity plus every distinct surface
+ * form actually found in that article's text that resolved to it (e.g.
+ * a canonical "United Nations" with matchedFrom ["United Nations",
+ * "UN"] when the article used both). Never a silent substitution: the
+ * original wording is always recoverable from matchedFrom.
+ */
+export interface OrganizationMatch {
+  canonical: string;
+  matchedFrom: string[];
+}
 
 export interface ArticleEntities {
   countries: string[];
@@ -9,28 +26,15 @@ export interface ArticleEntities {
   companies: string[];
   currencies: string[];
   topics: string[];
+  /**
+   * Present only when `organizations` is non-empty — omitted (not an
+   * empty array) otherwise, so an article with no organizations keeps
+   * exactly the same shape it always has. One entry per canonical
+   * organization in `organizations`, in the same order.
+   */
+  organizationMatches?: OrganizationMatch[];
 }
 
-const ORGANIZATION_NAMES = [
-  'African Union',
-  'Arab League',
-  'East African Community',
-  'European Central Bank',
-  'European Union',
-  'Federal Reserve',
-  'International Criminal Court',
-  'International Monetary Fund',
-  'NATO',
-  'OPEC',
-  'Red Cross',
-  'United Nations',
-  'UN',
-  'UNICEF',
-  'World Bank',
-  'World Food Programme',
-  'World Health Organization',
-  'WHO',
-];
 
 const COMPANY_NAMES = [
   'Airbus',
@@ -225,6 +229,50 @@ function extractNamedItems(text: string, items: string[]): string[] {
   return deduplicate(items.filter((item) => containsPhrase(text, item)));
 }
 
+/**
+ * Milestone #29: like extractNamedItems, but resolves each matched
+ * candidate phrase through the organization alias resolver first, so
+ * "UN" and "United Nations" appearing in the same article collapse to
+ * one canonical "United Nations" entry instead of two unrelated
+ * strings. Candidate phrases are tried in a stable order
+ * (ORGANIZATION_CANDIDATE_PHRASES); the surface forms actually found
+ * are preserved per canonical organization via organizationMatches,
+ * never silently discarded.
+ */
+function extractOrganizations(text: string): {
+  organizations: string[];
+  organizationMatches?: OrganizationMatch[];
+} {
+  const canonicalOrder: string[] = [];
+  const surfaceFormsByCanonical = new Map<string, Set<string>>();
+
+  for (const candidate of ORGANIZATION_CANDIDATE_PHRASES) {
+    if (!containsPhrase(text, candidate)) continue;
+
+    const resolved = resolveOrganizationAlias(candidate);
+    if (!resolved) continue;
+
+    if (!surfaceFormsByCanonical.has(resolved.canonical)) {
+      surfaceFormsByCanonical.set(resolved.canonical, new Set());
+      canonicalOrder.push(resolved.canonical);
+    }
+
+    surfaceFormsByCanonical.get(resolved.canonical)!.add(resolved.matchedFrom);
+  }
+
+  if (canonicalOrder.length === 0) {
+    return { organizations: [] };
+  }
+
+  const organizationMatches: OrganizationMatch[] = canonicalOrder.map((canonical) => ({
+    canonical,
+    matchedFrom: Array.from(surfaceFormsByCanonical.get(canonical)!),
+  }));
+
+  return { organizations: canonicalOrder, organizationMatches };
+}
+
+
 function extractCurrencies(text: string): string[] {
   const found: string[] = [];
 
@@ -320,7 +368,7 @@ export function extractArticleEntities(
   }
 
   const countries = extractCountries(text);
-  const organizations = extractNamedItems(text, ORGANIZATION_NAMES);
+  const { organizations, organizationMatches } = extractOrganizations(text);
   const companies = extractNamedItems(text, COMPANY_NAMES);
   const events = extractEvents(text);
   const currencies = extractCurrencies(text);
@@ -337,5 +385,6 @@ export function extractArticleEntities(
     companies,
     currencies,
     topics,
+    ...(organizationMatches ? { organizationMatches } : {}),
   };
 }

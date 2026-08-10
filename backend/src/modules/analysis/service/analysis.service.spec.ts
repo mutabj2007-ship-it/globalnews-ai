@@ -1966,4 +1966,347 @@ describe('AnalysisService', () => {
       );
     });
   });
+
+  describe('sourceEntities (Milestone #29)', () => {
+    it('exposes a resolved organization grounded against response.articles for a successful analysis', async () => {
+      const articles = [
+        makeArticle({
+          id: 'un-1',
+          title: 'UN Security Council meets as United Nations calls for ceasefire',
+          summary: 'The UN and United Nations officials confirmed talks are ongoing.',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews(
+        'What is the UN saying about the ceasefire?',
+      );
+
+      expect(response.sourceEntities.organizations).toHaveLength(1);
+      const [org] = response.sourceEntities.organizations;
+      expect(org.canonical).toBe('United Nations');
+      expect(org.matchedFrom).toEqual(expect.arrayContaining(['UN', 'United Nations']));
+
+      // Grounding invariant: every cited article ID must exist in
+      // this same response's `articles` array.
+      const responseArticleIds = new Set(response.articles.map((a) => a.id));
+      for (const articleId of org.articleIds) {
+        expect(responseArticleIds.has(articleId)).toBe(true);
+      }
+      expect(org.articleIds).toEqual(['un-1']);
+    });
+
+    it('does not merge unrelated organizations, and keeps AnalysisEntities and sourceEntities separate', async () => {
+      const articles = [
+        makeArticle({
+          id: 'org-1',
+          title: 'NATO and OPEC issue separate statements',
+          summary: 'NATO addressed security while OPEC discussed oil output.',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      // The AI's own AnalysisEntities is free-form and unrelated to
+      // sourceEntities — asserting it here to prove the two are never
+      // merged: an org the AI claims that isn't in the resolver's
+      // curated set must not leak into sourceEntities.
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          entities: {
+            countries: [],
+            locations: [],
+            people: [],
+            organizations: ['Some AI-Only Org The Resolver Does Not Know'],
+            topics: [],
+          },
+        }),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('NATO and OPEC statements');
+
+      const canonicals = response.sourceEntities.organizations.map((o) => o.canonical);
+      expect(canonicals).toEqual(expect.arrayContaining(['NATO', 'OPEC']));
+      expect(canonicals).not.toContain('Some AI-Only Org The Resolver Does Not Know');
+      expect(response.analysis?.entities.organizations).toContain(
+        'Some AI-Only Org The Resolver Does Not Know',
+      );
+    });
+
+    it('produces an empty sourceEntities result when there are no articles', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+      };
+
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('nothing relevant here');
+
+      expect(response.analysis).toBeNull();
+      expect(response.sourceEntities).toEqual({ organizations: [] });
+    });
+
+    it('still exposes grounded sourceEntities when the AI provider fails', async () => {
+      const articles = [
+        makeArticle({
+          id: 'un-fail-1',
+          title: 'United Nations convenes emergency session',
+          summary: 'The UN gathered delegates from member states.',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockRejectedValue(new Error('provider exploded')),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('UN emergency session');
+
+      expect(response.analysis).toBeNull();
+      expect(response.analysisError).toBeDefined();
+
+      // The AI failed, but source-derived, deterministic evidence must
+      // still be present and grounded — it never depended on the AI.
+      expect(response.sourceEntities.organizations).toHaveLength(1);
+      expect(response.sourceEntities.organizations[0].canonical).toBe('United Nations');
+      const responseArticleIds = new Set(response.articles.map((a) => a.id));
+      expect(responseArticleIds.has(response.sourceEntities.organizations[0].articleIds[0])).toBe(
+        true,
+      );
+    });
+
+    it('a duplicate article removed by clusterDuplicateArticles cannot contribute organization evidence', async () => {
+      const sharedUrl = 'https://example.com/un-story';
+      const publishedAt = new Date().toISOString();
+
+      const articles = [
+        makeArticle({
+          id: 'un-original',
+          url: sharedUrl,
+          publishedAt,
+          title: 'United Nations calls for ceasefire',
+          summary: 'The UN urged all parties to de-escalate.',
+        }),
+        makeArticle({
+          id: 'un-duplicate',
+          url: sharedUrl, // identical URL -> treated as a duplicate and dropped
+          publishedAt,
+          title: 'United Nations calls for ceasefire (wire copy)',
+          summary: 'Syndicated coverage of the same UN statement.',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles.slice(0, 1))),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('UN ceasefire statement');
+
+      // Only the representative article survives de-duplication.
+      expect(response.articles.map((a) => a.id)).toEqual(['un-original']);
+
+      const org = response.sourceEntities.organizations.find((o) => o.canonical === 'United Nations');
+      expect(org).toBeDefined();
+      expect(org?.articleIds).toEqual(['un-original']);
+      expect(org?.articleIds).not.toContain('un-duplicate');
+    });
+
+    it('an article removed by the maxArticles cap cannot contribute organization evidence', async () => {
+      const articles = [
+        makeArticle({
+          id: 'keep-1',
+          title: 'NATO holds summit',
+          summary: 'NATO leaders discussed the alliance.',
+        }),
+        makeArticle({
+          id: 'drop-1',
+          url: 'https://example.com/who-story',
+          title: 'WHO issues health advisory',
+          summary: 'The WHO warned of a new outbreak.',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles.slice(0, 1))),
+      };
+
+      // maxArticles: 1 forces the cap to drop the second (WHO) article
+      // even though it was never a duplicate.
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 1 }),
+      );
+
+      const response = await service.analyzeNews('NATO summit and WHO advisory');
+
+      expect(response.articles.map((a) => a.id)).toEqual(['keep-1']);
+
+      const canonicals = response.sourceEntities.organizations.map((o) => o.canonical);
+      expect(canonicals).toContain('NATO');
+      expect(canonicals).not.toContain('World Health Organization');
+    });
+
+    it('a cache hit preserves the current caller\'s query/normalizedQuery while reusing sourceEntities (Milestone #27 behavior unaffected)', async () => {
+      const articles = [
+        makeArticle({
+          id: 'cache-un-1',
+          title: 'United Nations statement',
+          summary: 'The UN issued a statement.',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const first = await service.analyzeNews('UN Cache Query');
+      const second = await service.analyzeNews('un cache query');
+
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+
+      expect(second.query).toBe('un cache query');
+      expect(second.normalizedQuery).toBe('un cache query');
+      expect(second.sourceEntities).toEqual(first.sourceEntities);
+      expect(second.sourceEntities.organizations[0]?.canonical).toBe('United Nations');
+    });
+
+    it('does not affect Milestone #28 geographic fuzzy resolution', async () => {
+      const articles = [makeArticle({ id: 'kigalli-still-works' })];
+
+      const countryNewsService = {
+        getCountryNews: jest
+          .fn()
+          .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' })),
+      };
+
+      const newsService = { search: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews("What's happening in Kigalli?");
+
+      expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('RWA', undefined, 20, 'kigali');
+      expect(response.retrievalContext.matchedFrom).toBe('kigalli');
+      expect(response.retrievalContext.canonicalLocation).toBe('kigali');
+      expect(response.sourceEntities).toEqual({ organizations: [] });
+    });
+  });
 });

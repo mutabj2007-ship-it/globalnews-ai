@@ -8,6 +8,7 @@ import { LoadingStages } from '@/components/search/LoadingStages';
 import { AnalysisResultView } from '@/components/search/AnalysisResultView';
 import { SourceArticleCard } from '@/components/search/SourceArticleCard';
 import { RetrievalContextStatus } from '@/components/search/RetrievalContextStatus';
+import { SourceEntitiesPanel } from '@/components/search/SourceEntitiesPanel';
 
 export function SearchPageClient(): JSX.Element {
   const searchParams = useSearchParams();
@@ -74,6 +75,7 @@ export function SearchPageClient(): JSX.Element {
       {!isLoading && !fetchError && response && (
         <div className="flex flex-col gap-10">
           <RetrievalContextStatus retrievalContext={response.retrievalContext} />
+          <SourceEntitiesPanel sourceEntities={response.sourceEntities} />
 
           {response.analysis ? (
             <AnalysisResultView analysis={response.analysis} />

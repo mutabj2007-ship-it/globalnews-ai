@@ -19,6 +19,7 @@ import type { AnalysisProvider } from '../interfaces';
 import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
 import { AnalysisConfigService } from '../config/analysis-config.service';
 import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
+import { buildSourceEntities } from './build-source-entities.util';
 import {
   validateAnalysisResult,
   AnalysisValidationError,
@@ -195,6 +196,7 @@ export class AnalysisService {
         analysisError:
           'No related articles were found for this question.',
         retrievalContext,
+        sourceEntities: buildSourceEntities([]),
       };
 
       // Empty results are still cached briefly to avoid hammering the
@@ -211,6 +213,19 @@ export class AnalysisService {
     const deduped = clusterDuplicateArticles(
       articles,
     ).slice(0, config.maxArticles);
+
+    /**
+     * Milestone #29: built once from `deduped` — the exact same final
+     * article array used as the AI provider's input, AnalysisApiResponse.articles,
+     * and validateAnalysisResult's sourceArticleIds grounding below.
+     * This is what guarantees every sourceEntities.organizations[].articleIds
+     * value refers to an article actually present in this response's
+     * `articles` field: buildSourceEntities never sees, and therefore
+     * can never cite, an article removed by de-duplication or the
+     * maxArticles cap. Deterministic — computed from article text only,
+     * independent of whether the AI provider call below succeeds.
+     */
+    const sourceEntities = buildSourceEntities(deduped);
 
     let response: AnalysisApiResponse;
 
@@ -238,6 +253,7 @@ export class AnalysisService {
         analysis,
         articles: deduped,
         retrievalContext,
+        sourceEntities,
       };
     } catch (error) {
       this.logger.warn(
@@ -255,6 +271,7 @@ export class AnalysisService {
         analysisError:
           this.describeError(error),
         retrievalContext,
+        sourceEntities,
       };
     }
 
