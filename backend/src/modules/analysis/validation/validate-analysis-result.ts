@@ -7,13 +7,19 @@ import type {
   ConfidenceLevel,
   DifferenceItem,
   DifferencePosition,
+  EvidenceBasis,
+  EvidenceBreadth,
   NewsArticle,
   NewsAnalysisResult,
   SourcedClaim,
   TimelineEvent,
   UncertaintyItem,
 } from '@globalnews-ai/shared';
-import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
+import {
+  buildEvidenceReferences,
+  buildNormalizedEvidenceTextMap,
+  normalizeExcerptText,
+} from '../prompt/build-analysis-prompt.util';
 
 export class AnalysisValidationError extends Error {
   constructor(message: string) {
@@ -71,9 +77,73 @@ function resolveEvidenceIds(candidate: unknown, evidenceMap: Map<string, string>
   return resolved;
 }
 
-function validateSourcedClaims(
+/**
+ * Milestone #32 — deterministic, backend-only fact about citation
+ * breadth for one already-grounded entry. Computed strictly from the
+ * entry's own resolved (real, deduplicated) sourceArticleIds — never
+ * from anything the provider emits. This is a count, not a semantic
+ * support judgment; see EvidenceBreadth's doc comment in shared/.
+ */
+function computeEvidenceBreadth(sourceArticleIds: string[]): EvidenceBreadth {
+  return {
+    sourceCount: sourceArticleIds.length,
+    singleSource: sourceArticleIds.length === 1,
+  };
+}
+
+/**
+ * Milestone #32 — the sole trust boundary for evidence-basis excerpts,
+ * mirroring resolveEvidenceIds()'s role for citations. Accepts the
+ * candidate ONLY if every one of the five CTO-authorized conditions
+ * holds; otherwise returns undefined so the caller omits the field
+ * entirely. Never invents, downgrades, or substitutes a synthetic
+ * value — an unverifiable evidence basis is the same as no evidence
+ * basis, exactly as an unresolvable evidenceId is the same as no
+ * citation under M31.
+ */
+function resolveEvidenceBasis(
   candidate: unknown,
   evidenceMap: Map<string, string>,
+  evidenceTextMap: Map<string, string>,
+  resolvedSourceArticleIds: string[],
+): EvidenceBasis | undefined {
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return undefined;
+  const obj = candidate as Record<string, unknown>;
+
+  // Condition 4: excerpt must be non-empty after normalization.
+  if (!isNonEmptyString(obj.excerpt)) return undefined;
+  const normalizedExcerpt = normalizeExcerptText(obj.excerpt);
+  if (normalizedExcerpt.length === 0) return undefined;
+
+  // Condition 1: evidenceId must be a valid M31 alias for this request.
+  if (!isNonEmptyString(obj.evidenceId)) return undefined;
+  const articleId = evidenceMap.get(obj.evidenceId);
+  // Condition 2: it must resolve to a real canonical article ID.
+  if (!articleId) return undefined;
+
+  // Condition 3: that article ID must be among THIS entry's own
+  // successfully grounded sourceArticleIds — an evidence basis cannot
+  // borrow grounding from an article the entry didn't itself cite.
+  if (!resolvedSourceArticleIds.includes(articleId)) return undefined;
+
+  // Condition 5: the normalized excerpt must be a deterministic
+  // substring of the exact normalized/truncated evidence text supplied
+  // to the model for that evidenceId — never additional article
+  // content the model never saw.
+  const evidenceText = evidenceTextMap.get(obj.evidenceId);
+  if (!evidenceText || !evidenceText.includes(normalizedExcerpt)) return undefined;
+
+  return { articleId, excerpt: obj.excerpt };
+}
+
+interface EvidenceContext {
+  evidenceMap: Map<string, string>;
+  evidenceTextMap: Map<string, string>;
+}
+
+function validateSourcedClaims(
+  candidate: unknown,
+  ctx: EvidenceContext,
   field: string,
 ): SourcedClaim[] {
   if (!Array.isArray(candidate)) {
@@ -84,16 +154,27 @@ function validateSourcedClaims(
   for (const entry of candidate) {
     const obj = requireObject(entry, field);
     if (!isNonEmptyString(obj.claim)) continue;
-    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, evidenceMap);
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, ctx.evidenceMap);
     // A key fact with zero valid supporting sources is not a
     // grounded fact — drop it rather than let it appear as one.
     if (sourceArticleIds.length === 0) continue;
-    result.push({ claim: obj.claim, sourceArticleIds });
+    const evidenceBasis = resolveEvidenceBasis(
+      obj.evidenceBasis,
+      ctx.evidenceMap,
+      ctx.evidenceTextMap,
+      sourceArticleIds,
+    );
+    result.push({
+      claim: obj.claim,
+      sourceArticleIds,
+      evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
+      ...(evidenceBasis ? { evidenceBasis } : {}),
+    });
   }
   return result;
 }
 
-function validateAgreements(candidate: unknown, evidenceMap: Map<string, string>): AgreementPoint[] {
+function validateAgreements(candidate: unknown, ctx: EvidenceContext): AgreementPoint[] {
   if (!Array.isArray(candidate)) {
     throw new AnalysisValidationError('Expected "agreements" to be an array.');
   }
@@ -101,27 +182,49 @@ function validateAgreements(candidate: unknown, evidenceMap: Map<string, string>
   for (const entry of candidate) {
     const obj = requireObject(entry, 'agreements[]');
     if (!isNonEmptyString(obj.point)) continue;
-    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, evidenceMap);
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, ctx.evidenceMap);
     if (sourceArticleIds.length === 0) continue;
-    result.push({ point: obj.point, sourceArticleIds });
+    const evidenceBasis = resolveEvidenceBasis(
+      obj.evidenceBasis,
+      ctx.evidenceMap,
+      ctx.evidenceTextMap,
+      sourceArticleIds,
+    );
+    result.push({
+      point: obj.point,
+      sourceArticleIds,
+      evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
+      ...(evidenceBasis ? { evidenceBasis } : {}),
+    });
   }
   return result;
 }
 
-function validatePositions(candidate: unknown, evidenceMap: Map<string, string>): DifferencePosition[] {
+function validatePositions(candidate: unknown, ctx: EvidenceContext): DifferencePosition[] {
   if (!Array.isArray(candidate)) return [];
   const result: DifferencePosition[] = [];
   for (const entry of candidate) {
     const obj = requireObject(entry, 'differences[].positions[]');
     if (!isNonEmptyString(obj.description)) continue;
-    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, evidenceMap);
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, ctx.evidenceMap);
     if (sourceArticleIds.length === 0) continue;
-    result.push({ description: obj.description, sourceArticleIds });
+    const evidenceBasis = resolveEvidenceBasis(
+      obj.evidenceBasis,
+      ctx.evidenceMap,
+      ctx.evidenceTextMap,
+      sourceArticleIds,
+    );
+    result.push({
+      description: obj.description,
+      sourceArticleIds,
+      evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
+      ...(evidenceBasis ? { evidenceBasis } : {}),
+    });
   }
   return result;
 }
 
-function validateDifferences(candidate: unknown, evidenceMap: Map<string, string>): DifferenceItem[] {
+function validateDifferences(candidate: unknown, ctx: EvidenceContext): DifferenceItem[] {
   if (!Array.isArray(candidate)) {
     throw new AnalysisValidationError('Expected "differences" to be an array.');
   }
@@ -129,14 +232,14 @@ function validateDifferences(candidate: unknown, evidenceMap: Map<string, string
   for (const entry of candidate) {
     const obj = requireObject(entry, 'differences[]');
     if (!isNonEmptyString(obj.topic)) continue;
-    const positions = validatePositions(obj.positions, evidenceMap);
+    const positions = validatePositions(obj.positions, ctx);
     if (positions.length === 0) continue;
     result.push({ topic: obj.topic, positions });
   }
   return result;
 }
 
-function validateTimeline(candidate: unknown, evidenceMap: Map<string, string>): TimelineEvent[] {
+function validateTimeline(candidate: unknown, ctx: EvidenceContext): TimelineEvent[] {
   if (!Array.isArray(candidate)) {
     throw new AnalysisValidationError('Expected "timeline" to be an array.');
   }
@@ -146,9 +249,21 @@ function validateTimeline(candidate: unknown, evidenceMap: Map<string, string>):
     if (!isNonEmptyString(obj.event)) continue;
     const timestamp = isNonEmptyString(obj.timestamp) ? obj.timestamp : undefined;
     if (!timestamp || Number.isNaN(new Date(timestamp).getTime())) continue;
-    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, evidenceMap);
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, ctx.evidenceMap);
     if (sourceArticleIds.length === 0) continue;
-    result.push({ timestamp, event: obj.event, sourceArticleIds });
+    const evidenceBasis = resolveEvidenceBasis(
+      obj.evidenceBasis,
+      ctx.evidenceMap,
+      ctx.evidenceTextMap,
+      sourceArticleIds,
+    );
+    result.push({
+      timestamp,
+      event: obj.event,
+      sourceArticleIds,
+      evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
+      ...(evidenceBasis ? { evidenceBasis } : {}),
+    });
   }
   return result;
 }
@@ -225,16 +340,51 @@ function validateEntities(candidate: unknown): AnalysisEntities {
  * assignment (buildEvidenceReferences) used to build the AI prompt for
  * this same array — see build-analysis-prompt.util.ts. No S-label is
  * ever stored on the returned NewsAnalysisResult.
+ *
+ * Milestone #32 — context.maxArticleChars must be the exact same
+ * truncation length used to build the prompt this candidate is a
+ * response to (AnalysisConfig.maxArticleChars, threaded in by
+ * AnalysisService), so evidenceBasis excerpts are checked against
+ * precisely what the model was shown — never a longer, untruncated
+ * version of the article the model never saw. evidenceBreadth/
+ * evidenceBasis are computed only for already-M31-grounded entries in
+ * keyFacts/agreements/differences[].positions/timeline; uncertainties
+ * is unchanged (out of M32 scope — see Milestone #32 authorization §2).
  */
+
+/**
+ * Milestone #32 — fallback truncation length used only when a caller
+ * doesn't supply context.maxArticleChars, so pre-existing call sites
+ * (and any future caller that hasn't been updated) keep compiling and
+ * running rather than breaking outright. Mirrors
+ * AnalysisConfigService's own DEFAULTS.maxArticleChars — kept as a
+ * literal here rather than importing AnalysisConfigService, since this
+ * module must stay a pure function with no NestJS/config dependency.
+ * AnalysisService itself always passes the real configured value
+ * explicitly (see analysis.service.ts), so this default is a
+ * backward-compatibility safety net, not the normal path.
+ */
+const DEFAULT_MAX_ARTICLE_CHARS = 1200;
+
 export function validateAnalysisResult(
   candidate: unknown,
-  context: { query: string; articles: NewsArticle[]; analysisMode: AnalysisMode },
+  context: {
+    query: string;
+    articles: NewsArticle[];
+    analysisMode: AnalysisMode;
+    maxArticleChars?: number;
+  },
 ): NewsAnalysisResult {
   const obj = requireObject(candidate, 'analysis');
 
   const evidenceMap = new Map(
     buildEvidenceReferences(context.articles).map((ref) => [ref.evidenceId, ref.articleId]),
   );
+  const evidenceTextMap = buildNormalizedEvidenceTextMap(
+    context.articles,
+    context.maxArticleChars ?? DEFAULT_MAX_ARTICLE_CHARS,
+  );
+  const evidenceCtx: EvidenceContext = { evidenceMap, evidenceTextMap };
 
   if (!isNonEmptyString(obj.headline)) {
     throw new AnalysisValidationError('Missing or empty "headline".');
@@ -243,12 +393,12 @@ export function validateAnalysisResult(
     throw new AnalysisValidationError('Missing or empty "summary".');
   }
 
-  const keyFacts = validateSourcedClaims(obj.keyFacts, evidenceMap, 'keyFacts');
-  const agreements = validateAgreements(obj.agreements, evidenceMap);
-  const differences = validateDifferences(obj.differences, evidenceMap);
+  const keyFacts = validateSourcedClaims(obj.keyFacts, evidenceCtx, 'keyFacts');
+  const agreements = validateAgreements(obj.agreements, evidenceCtx);
+  const differences = validateDifferences(obj.differences, evidenceCtx);
   const unknowns = isStringArray(obj.unknowns) ? obj.unknowns.filter(isNonEmptyString) : [];
   const uncertainties = validateUncertainties(obj.uncertainties, evidenceMap);
-  const timeline = validateTimeline(obj.timeline, evidenceMap);
+  const timeline = validateTimeline(obj.timeline, evidenceCtx);
   const confidence = validateConfidence(obj.confidence);
   const entities = validateEntities(obj.entities);
 

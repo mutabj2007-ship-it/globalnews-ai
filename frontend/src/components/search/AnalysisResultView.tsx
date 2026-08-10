@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { AnalysisProvenance, NewsAnalysisResult } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { AnalysisCitation } from '@/components/search/AnalysisCitation';
+import { EvidenceSufficiencyNote } from '@/components/search/EvidenceSufficiencyNote';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 
 interface AnalysisResultViewProps {
@@ -73,6 +74,10 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
               >
                 {fact.claim}
                 <AnalysisCitation sourceArticleIds={fact.sourceArticleIds} sources={analysis.sources} />
+                <EvidenceSufficiencyNote
+                  evidenceBreadth={fact.evidenceBreadth}
+                  evidenceBasis={fact.evidenceBasis}
+                />
               </li>
             ))}
           </ul>
@@ -91,6 +96,10 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
               >
                 {agreement.point}
                 <AnalysisCitation sourceArticleIds={agreement.sourceArticleIds} sources={analysis.sources} />
+                <EvidenceSufficiencyNote
+                  evidenceBreadth={agreement.evidenceBreadth}
+                  evidenceBasis={agreement.evidenceBasis}
+                />
               </li>
             ))}
           </ul>
@@ -113,6 +122,10 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
                     >
                       {position.description}
                       <AnalysisCitation sourceArticleIds={position.sourceArticleIds} sources={analysis.sources} />
+                      <EvidenceSufficiencyNote
+                        evidenceBreadth={position.evidenceBreadth}
+                        evidenceBasis={position.evidenceBasis}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -170,6 +183,10 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
                 <span className="text-sm text-ink-primary">
                   {event.event}
                   <AnalysisCitation sourceArticleIds={event.sourceArticleIds} sources={analysis.sources} />
+                  <EvidenceSufficiencyNote
+                    evidenceBreadth={event.evidenceBreadth}
+                    evidenceBasis={event.evidenceBasis}
+                  />
                 </span>
               </li>
             ))}

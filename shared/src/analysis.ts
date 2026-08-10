@@ -13,19 +13,68 @@ export type AnalysisMode = 'live-ai' | 'mock-ai';
 
 export type ConfidenceLevel = 'low' | 'medium' | 'high';
 
+/**
+ * Milestone #32 — deterministic fact about citation breadth for one
+ * grounded entry, computed entirely by the backend from that entry's
+ * own already-M31-resolved `sourceArticleIds` (never provider-emitted —
+ * see validate-analysis-result.ts). This is a count, not a claim: it
+ * says nothing about whether the cited evidence semantically supports
+ * the specific strength of the generated text. Never conflate this
+ * with EvidenceBasis, which is about excerpt provenance, or with any
+ * notion of confirmation/truth.
+ */
+export interface EvidenceBreadth {
+  /** Number of distinct canonical grounded source article IDs. */
+  sourceCount: number;
+  /** True iff sourceCount === 1. */
+  singleSource: boolean;
+}
+
+/**
+ * Milestone #32 — a specific excerpt the model identified as its basis
+ * for one grounded entry, backend-validated to actually exist within
+ * the exact (prompt-truncated) evidence text supplied to the model for
+ * the cited evidence reference — see validate-analysis-result.ts and
+ * build-analysis-prompt.util.ts. `articleId` is always a real,
+ * canonical NewsArticle.id resolved the same way M31 resolves
+ * sourceArticleIds — the model-facing request-local evidenceId
+ * (S1/S2/...) this excerpt was originally attributed to is never
+ * retained here or anywhere downstream of validation.
+ *
+ * This proves EXCERPT PROVENANCE only: that the text was actually
+ * present in what the model was shown for that source. It does NOT
+ * prove that the excerpt logically entails the claim's specific
+ * wording or strength, and it is never a substitute for independent
+ * verification. Present only when validation succeeds; never a
+ * synthetic/manufactured fallback value (see EvidenceBreadth for the
+ * separate, purely-quantitative signal).
+ */
+export interface EvidenceBasis {
+  articleId: string;
+  excerpt: string;
+}
+
 export interface SourcedClaim {
   claim: string;
   sourceArticleIds: string[];
+  /** Milestone #32 — additive; absent on results generated before this milestone. */
+  evidenceBreadth?: EvidenceBreadth;
+  /** Milestone #32 — additive; present only when backend-validated. */
+  evidenceBasis?: EvidenceBasis;
 }
 
 export interface AgreementPoint {
   point: string;
   sourceArticleIds: string[];
+  evidenceBreadth?: EvidenceBreadth;
+  evidenceBasis?: EvidenceBasis;
 }
 
 export interface DifferencePosition {
   description: string;
   sourceArticleIds: string[];
+  evidenceBreadth?: EvidenceBreadth;
+  evidenceBasis?: EvidenceBasis;
 }
 
 export interface DifferenceItem {
@@ -38,6 +87,8 @@ export interface TimelineEvent {
   timestamp: string;
   event: string;
   sourceArticleIds: string[];
+  evidenceBreadth?: EvidenceBreadth;
+  evidenceBasis?: EvidenceBasis;
 }
 
 /**

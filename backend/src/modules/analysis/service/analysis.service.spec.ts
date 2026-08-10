@@ -2756,4 +2756,161 @@ describe('AnalysisService', () => {
       expect(serialized).not.toMatch(/"S1"/);
     });
   });
+
+  describe('evidence basis & breadth (Milestone #32)', () => {
+    it('threads config.maxArticleChars into validation so evidenceBasis excerpts are checked against exactly what the provider was shown', async () => {
+      const longSummary = `${'padding '.repeat(200)}a unique tail phrase past the cutoff`;
+      const articles = [makeArticle({ id: 'real-article-id', title: 'Story A', summary: longSummary })];
+
+      const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          keyFacts: [
+            {
+              claim: articles[0].title,
+              evidenceIds: ['S1'],
+              evidenceBasis: { evidenceId: 'S1', excerpt: 'a unique tail phrase past the cutoff' },
+            },
+          ],
+        }),
+      };
+
+      // A small maxArticleChars means the excerpt (which sits past the
+      // cutoff) is NOT part of what the provider was actually shown.
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticleChars: 30 }),
+      );
+
+      const response = await service.analyzeNews('evidence basis truncation test');
+
+      expect(response.analysis?.keyFacts[0].sourceArticleIds).toEqual(['real-article-id']);
+      expect(response.analysis?.keyFacts[0].evidenceBasis).toBeUndefined();
+    });
+
+    it('accepts a valid evidenceBasis end-to-end when the excerpt is within the configured truncation length', async () => {
+      const articles = [
+        makeArticle({ id: 'real-article-id', title: 'Story A', summary: 'A short summary of the event.' }),
+      ];
+
+      const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          keyFacts: [
+            {
+              claim: articles[0].title,
+              evidenceIds: ['S1'],
+              evidenceBasis: { evidenceId: 'S1', excerpt: 'short summary of the event' },
+            },
+          ],
+        }),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('evidence basis success test');
+
+      expect(response.analysis?.keyFacts[0].evidenceBasis).toEqual({
+        articleId: 'real-article-id',
+        excerpt: 'short summary of the event',
+      });
+      expect(response.analysis?.keyFacts[0].evidenceBreadth).toEqual({
+        sourceCount: 1,
+        singleSource: true,
+      });
+    });
+
+    it('a cached response never carries a request-local evidenceId in evidenceBasis either — only real article IDs', async () => {
+      const articles = [
+        makeArticle({ id: 'cache-evidence-article', title: 'Story A', summary: 'A short summary here.' }),
+      ];
+
+      const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          keyFacts: [
+            {
+              claim: articles[0].title,
+              evidenceIds: ['S1'],
+              evidenceBasis: { evidenceId: 'S1', excerpt: 'short summary here' },
+            },
+          ],
+        }),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('cache evidence basis test');
+      const cached = await service.analyzeNews('cache evidence basis test');
+
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+      expect(cached.analysis?.keyFacts[0].evidenceBasis?.articleId).toBe('cache-evidence-article');
+      const serialized = JSON.stringify(cached);
+      expect(serialized).not.toMatch(/"S1"/);
+    });
+
+    it('M30 provenance is unaffected by evidence-basis validation success or failure', async () => {
+      const articles = [makeArticle({ id: 'real-article-id', title: 'Story A', summary: 'x' })];
+      const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          keyFacts: [
+            {
+              claim: articles[0].title,
+              evidenceIds: ['S1'],
+              evidenceBasis: { evidenceId: 'S1', excerpt: 'text not present anywhere' },
+            },
+          ],
+        }),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('provenance unaffected test');
+
+      expect(response.provenance.status).toBe('success');
+      expect(response.analysis?.keyFacts[0].evidenceBasis).toBeUndefined();
+    });
+  });
 });

@@ -34,6 +34,40 @@ export function buildEvidenceReferences(articles: NewsArticle[]): EvidenceRefere
   }));
 }
 
+/**
+ * Milestone #32 — the single, deterministic normalization applied on
+ * BOTH sides of an evidence-basis excerpt comparison (the model's
+ * claimed excerpt, and the exact truncated evidence text the model was
+ * shown for that evidenceId — see normalizeArticlesForPrompt). Kept
+ * deliberately conservative and exact-substring-only, per CTO
+ * authorization: no fuzzy/Levenshtein/embedding matching.
+ *
+ * Policy (documented, not silently loosened):
+ * 1. Unicode NFKC normalization (e.g. so a precomposed vs. decomposed
+ *    accented character compares equal).
+ * 2. Typographic quotes/dashes normalized to their ASCII equivalents
+ *    (curly quotes, en/em dashes) — models frequently "smarten"
+ *    punctuation when quoting, and the source text may use either form.
+ * 3. All whitespace runs (including newlines/tabs) collapsed to a
+ *    single space, then trimmed.
+ * 4. Case-INsensitive comparison (lowercased) — chosen because the
+ *    model may reproduce a sentence-initial capital differently than
+ *    the source's mid-sentence casing after our own title+summary
+ *    concatenation; this is a deliberate, documented policy choice,
+ *    not progressive loosening. Case sensitivity is NOT relaxed for
+ *    anything else (no fuzzy matching of any kind).
+ */
+export function normalizeExcerptText(value: string): string {
+  return value
+    .normalize('NFKC')
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
+    .replace(/[\u201C\u201D\u201F\u2033]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 export interface NormalizedArticleForPrompt {
   evidenceId: string;
   title: string;
@@ -64,6 +98,33 @@ export function normalizeArticlesForPrompt(
       publishedAt: article.publishedAt,
     };
   });
+}
+
+/**
+ * Milestone #32 — the exact truncated evidence text keyed by
+ * evidenceId, i.e. precisely what normalizeArticlesForPrompt computed
+ * as `summary` (the truncated `title. summary` combination actually
+ * shown to the model for that evidenceId), run through
+ * normalizeExcerptText() once so callers can do a plain substring
+ * check against the model's normalized excerpt.
+ *
+ * This is the SOLE source of truth for "what evidence text did the
+ * model actually see" — it must be built with the same `articles`
+ * array and the same `maxArticleChars` value used to build the actual
+ * prompt (see AnalysisConfig.maxArticleChars / buildAnalysisMessages),
+ * or the comparison would validate against text the model was never
+ * shown.
+ */
+export function buildNormalizedEvidenceTextMap(
+  articles: NewsArticle[],
+  maxChars: number,
+): Map<string, string> {
+  return new Map(
+    normalizeArticlesForPrompt(articles, maxChars).map((a) => [
+      a.evidenceId,
+      normalizeExcerptText(a.summary),
+    ]),
+  );
 }
 
 const SYSTEM_PROMPT = `You are a careful news analyst working for GlobalNews AI.
@@ -101,6 +162,14 @@ Strict rules:
   smoothing them into a single narrative.
 - If you are not confident about something, list it in "unknowns" and/or
   "uncertainties" instead of guessing.
+- For keyFacts, agreements, differences (each position), and timeline
+  entries, you may optionally include "evidenceBasis": an object with
+  "evidenceId" (one of the exact evidenceId values you already cited for
+  that entry) and "excerpt" (a short excerpt, a sentence or less, copied
+  verbatim from that evidence's own text above — do not paraphrase, do
+  not combine wording from multiple articles, do not invent text). Omit
+  "evidenceBasis" entirely if you cannot quote a genuine short excerpt
+  that directly appears in the cited evidence's text.
 - Output must be valid JSON matching the provided schema exactly. Do not
   include commentary outside the JSON.`;
 
@@ -150,13 +219,35 @@ export function buildAnalysisMessages(
  * translation happens entirely in the validator, never here.
  */
 export function buildAnalysisJsonSchema(): Record<string, unknown> {
+  /**
+   * Milestone #32 — model-facing evidence-basis shape. Nullable +
+   * listed in `required` per OpenAI strict-mode structured-output
+   * convention for an optional field (the schema itself cannot express
+   * "may be omitted" under `strict: true`/`additionalProperties: false`
+   * — the model must emit `null` instead of leaving it out). Uses the
+   * SAME request-local "evidenceId" field name as the rest of this
+   * schema; validate-analysis-result.ts is the only place this ever
+   * gets resolved to a real articleId, exactly like every other
+   * evidenceIds field here.
+   */
+  const evidenceBasisSchema = {
+    type: ['object', 'null'],
+    properties: {
+      evidenceId: { type: 'string' },
+      excerpt: { type: 'string' },
+    },
+    required: ['evidenceId', 'excerpt'],
+    additionalProperties: false,
+  };
+
   const sourcedClaim = {
     type: 'object',
     properties: {
       claim: { type: 'string' },
       evidenceIds: { type: 'array', items: { type: 'string' } },
+      evidenceBasis: evidenceBasisSchema,
     },
-    required: ['claim', 'evidenceIds'],
+    required: ['claim', 'evidenceIds', 'evidenceBasis'],
     additionalProperties: false,
   };
 
@@ -165,8 +256,9 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
     properties: {
       description: { type: 'string' },
       evidenceIds: { type: 'array', items: { type: 'string' } },
+      evidenceBasis: evidenceBasisSchema,
     },
-    required: ['description', 'evidenceIds'],
+    required: ['description', 'evidenceIds', 'evidenceBasis'],
     additionalProperties: false,
   };
 
@@ -197,8 +289,9 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
             properties: {
               point: { type: 'string' },
               evidenceIds: { type: 'array', items: { type: 'string' } },
+              evidenceBasis: evidenceBasisSchema,
             },
-            required: ['point', 'evidenceIds'],
+            required: ['point', 'evidenceIds', 'evidenceBasis'],
             additionalProperties: false,
           },
         },
@@ -224,8 +317,9 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
               timestamp: { type: 'string' },
               event: { type: 'string' },
               evidenceIds: { type: 'array', items: { type: 'string' } },
+              evidenceBasis: evidenceBasisSchema,
             },
-            required: ['timestamp', 'event', 'evidenceIds'],
+            required: ['timestamp', 'event', 'evidenceIds', 'evidenceBasis'],
             additionalProperties: false,
           },
         },

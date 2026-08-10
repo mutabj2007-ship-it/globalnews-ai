@@ -20,6 +20,9 @@ const context = (articles: NewsArticle[]) => ({
   query: 'test query',
   articles,
   analysisMode: 'live-ai' as const,
+  // Milestone #32: generous default so existing (pre-M32) fixtures'
+  // article summaries are never truncated by this test helper.
+  maxArticleChars: 1200,
 });
 
 /**
@@ -366,5 +369,292 @@ describe('validateAnalysisResult', () => {
     expect(result.uncertainties).toEqual([
       { description: 'Hallucinated uncertainty', sourceArticleIds: [] },
     ]);
+  });
+
+  describe('evidenceBreadth (Milestone #32)', () => {
+    it('computes sourceCount=1 / singleSource=true for a single-source key fact', () => {
+      const articles = [makeArticle({ id: 'real-article' })];
+      const result = validateAnalysisResult(validCandidate('S1'), context(articles));
+      expect(result.keyFacts[0].evidenceBreadth).toEqual({ sourceCount: 1, singleSource: true });
+    });
+
+    it('computes sourceCount=2 / singleSource=false for a multi-source key fact', () => {
+      const articles = [makeArticle({ id: 'a1' }), makeArticle({ id: 'a2' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [{ claim: 'Multi-sourced', evidenceIds: ['S1', 'S2'] }],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBreadth).toEqual({ sourceCount: 2, singleSource: false });
+    });
+
+    it('does not let a duplicate evidenceId inflate breadth beyond distinct resolved articles', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [{ claim: 'Duplicated citation', evidenceIds: ['S1', 'S1'] }],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBreadth).toEqual({ sourceCount: 1, singleSource: true });
+    });
+
+    it('is a deterministic backend computation independent of anything the provider claims', () => {
+      // Even though nothing in the candidate mentions "evidenceBreadth"
+      // at all, the validator computes it purely from resolved
+      // sourceArticleIds — the field can never be supplied/overridden
+      // by the provider.
+      const articles = [makeArticle({ id: 'a1' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: 'x', evidenceIds: ['S1'], evidenceBreadth: { sourceCount: 999, singleSource: false } },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBreadth).toEqual({ sourceCount: 1, singleSource: true });
+    });
+  });
+
+  describe('evidenceBasis (Milestone #32)', () => {
+    it('accepts a valid evidence basis whose excerpt appears verbatim in the cited evidence text', () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Officials discuss evacuation', summary: 'Local officials are discussing a possible evacuation of the district.' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          {
+            claim: 'Officials discussed a possible evacuation',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S1', excerpt: 'discussing a possible evacuation' },
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBasis).toEqual({
+        articleId: 'a1',
+        excerpt: 'discussing a possible evacuation',
+      });
+    });
+
+    it('accepts an excerpt that differs only by whitespace/typographic-quote normalization', () => {
+      const articles = [
+        makeArticle({ id: 'a1', title: 'Report', summary: 'The mayor said   "recovery efforts are ongoing".' }),
+      ];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          {
+            claim: 'Recovery is ongoing',
+            evidenceIds: ['S1'],
+            // Curly quotes + collapsed whitespace vs. the source's straight quotes.
+            evidenceBasis: { evidenceId: 'S1', excerpt: '\u201Crecovery efforts are ongoing\u201D' },
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBasis?.articleId).toBe('a1');
+    });
+
+    it('omits evidenceBasis when the excerpt does not exist in the supplied evidence text', () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Report', summary: 'A calm situation.' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          {
+            claim: 'x',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S1', excerpt: 'a chaotic and dangerous situation' },
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
+      // The entry itself is still kept — a failed evidence basis never
+      // drops an otherwise-grounded entry.
+      expect(result.keyFacts).toHaveLength(1);
+    });
+
+    it('omits evidenceBasis when evidenceId is malformed/unknown', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          {
+            claim: 'x',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S99', excerpt: articles[0].title },
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
+    });
+
+    it('omits evidenceBasis when the evidenceId belongs to another article, not among this entry\'s own citations', () => {
+      const articles = [
+        makeArticle({ id: 'a1', title: 'Story A', summary: 'Summary A.' }),
+        makeArticle({ id: 'a2', title: 'Story B', summary: 'Summary B.' }),
+      ];
+      const candidate = {
+        ...validCandidate('S1'),
+        // Cites only S1 (a1) but claims its evidence basis is from S2 (a2).
+        keyFacts: [
+          {
+            claim: 'x',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S2', excerpt: 'Story B' },
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
+    });
+
+    it('omits evidenceBasis for a deduped/capped-out slot the same way S2 already resolves to nothing', () => {
+      // Only one article supplied to this call (simulating an article
+      // that was removed by dedup/maxArticles upstream) — S2 has no
+      // entry in the evidence map at all.
+      const articles = [makeArticle({ id: 'a1' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: 'x', evidenceIds: ['S1'], evidenceBasis: { evidenceId: 'S2', excerpt: 'anything' } },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
+    });
+
+    it('omits evidenceBasis when the excerpt is empty', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: 'x', evidenceIds: ['S1'], evidenceBasis: { evidenceId: 'S1', excerpt: '   ' } },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
+    });
+
+    it('treats a missing evidenceBasis as a valid, backward-compatible result', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const result = validateAnalysisResult(validCandidate('S1'), context(articles));
+      expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
+      expect(result.keyFacts[0].sourceArticleIds).toEqual(['a1']);
+    });
+
+    it('never validates an excerpt against untruncated article content the model was never shown', () => {
+      const longSummary = 'Short lead. ' + 'Padding sentence repeated many times to exceed the truncation limit. '.repeat(50) + 'A UNIQUE TAIL PHRASE THAT ONLY EXISTS PAST THE TRUNCATION BOUNDARY.';
+      const articles = [makeArticle({ id: 'a1', title: 'T', summary: longSummary })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          {
+            claim: 'x',
+            evidenceIds: ['S1'],
+            evidenceBasis: {
+              evidenceId: 'S1',
+              excerpt: 'a unique tail phrase that only exists past the truncation boundary',
+            },
+          },
+        ],
+      };
+      // maxArticleChars deliberately small enough to truncate before the tail phrase.
+      const result = validateAnalysisResult(candidate, { ...context(articles), maxArticleChars: 50 });
+      expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
+    });
+
+    it('resolves evidence basis for agreements', () => {
+      const articles = [makeArticle({ id: 'a1', title: 'T', summary: 'Widely reported detail here.' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        agreements: [
+          {
+            point: 'Multiple outlets agree',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S1', excerpt: 'Widely reported detail' },
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.agreements[0].evidenceBasis?.articleId).toBe('a1');
+      expect(result.agreements[0].evidenceBreadth).toEqual({ sourceCount: 1, singleSource: true });
+    });
+
+    it('resolves evidence basis for a difference position', () => {
+      const articles = [makeArticle({ id: 'a1', title: 'T', summary: 'Officials dispute the death toll figures.' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        differences: [
+          {
+            topic: 'Death toll',
+            positions: [
+              {
+                description: 'One outlet disputes the figures',
+                evidenceIds: ['S1'],
+                evidenceBasis: { evidenceId: 'S1', excerpt: 'dispute the death toll figures' },
+              },
+            ],
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.differences[0].positions[0].evidenceBasis?.articleId).toBe('a1');
+      expect(result.differences[0].positions[0].evidenceBreadth).toEqual({
+        sourceCount: 1,
+        singleSource: true,
+      });
+    });
+
+    it('resolves evidence basis for a timeline event', () => {
+      const articles = [makeArticle({ id: 'a1', title: 'T', summary: 'The evacuation began at dawn on Tuesday.' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        timeline: [
+          {
+            timestamp: new Date().toISOString(),
+            event: 'Evacuation began',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S1', excerpt: 'evacuation began at dawn' },
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.timeline[0].evidenceBasis?.articleId).toBe('a1');
+      expect(result.timeline[0].evidenceBreadth).toEqual({ sourceCount: 1, singleSource: true });
+    });
+
+    it('does not add evidenceBreadth/evidenceBasis fields to uncertainties (out of Milestone #32 scope)', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        uncertainties: [{ description: 'General gap', evidenceIds: ['S1'] }],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.uncertainties![0]).toEqual({
+        description: 'General gap',
+        sourceArticleIds: ['a1'],
+      });
+      expect('evidenceBreadth' in result.uncertainties![0]).toBe(false);
+      expect('evidenceBasis' in result.uncertainties![0]).toBe(false);
+    });
+
+    it('a failed evidence-basis validation never escalates to validation-rejected or drops the entry', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          {
+            claim: 'Still a valid, grounded claim',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S1', excerpt: 'text that is not present anywhere' },
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.keyFacts).toHaveLength(1);
+      expect(result.keyFacts[0].sourceArticleIds).toEqual(['a1']);
+      expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
+    });
   });
 });

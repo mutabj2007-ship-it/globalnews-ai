@@ -34,6 +34,7 @@ describe('MockAnalysisProvider', () => {
       query: 'test',
       articles,
       analysisMode: 'mock-ai',
+      maxArticleChars: 1200,
     });
 
     expect(validated.analysisMode).toBe('mock-ai');
@@ -42,6 +43,29 @@ describe('MockAnalysisProvider', () => {
     const validIds = new Set(articles.map((a) => a.id));
     for (const fact of validated.keyFacts) {
       expect(fact.sourceArticleIds.every((id) => validIds.has(id))).toBe(true);
+    }
+  });
+
+  it('Milestone #32: produces schema-valid, backend-verifiable evidenceBreadth/evidenceBasis', async () => {
+    const articles = [
+      makeArticle({ id: 'a1', title: 'Story A' }),
+      makeArticle({ id: 'a2', title: 'Story B' }),
+    ];
+    const candidate = await provider.analyzeNews({ query: 'test', articles });
+    const validated = validateAnalysisResult(candidate, {
+      query: 'test',
+      articles,
+      analysisMode: 'mock-ai',
+      maxArticleChars: 1200,
+    });
+
+    for (const fact of validated.keyFacts) {
+      expect(fact.evidenceBreadth).toEqual({ sourceCount: 1, singleSource: true });
+      // The mock provider's excerpt is the article's own title, so it
+      // must independently validate against the supplied evidence text
+      // exactly like a live provider's would — no special trust.
+      expect(fact.evidenceBasis).toBeDefined();
+      expect(fact.evidenceBasis?.articleId).toBe(fact.sourceArticleIds[0]);
     }
   });
 

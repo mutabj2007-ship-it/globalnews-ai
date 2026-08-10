@@ -42,9 +42,19 @@ export class MockAnalysisProvider implements AnalysisProvider {
         'This is a demonstration analysis generated without a live AI provider. ' +
         `It summarizes ${articles.length} article(s) currently available for this question. ` +
         'Configure OPENAI_API_KEY to enable real analysis.',
+      // Milestone #32: excerpted verbatim from the article's own
+      // title so it deterministically exists within the truncated
+      // evidence text the validator checks against — this provider's
+      // evidenceBasis is demo/test data only; it carries no special
+      // trust and is validated exactly like a live provider's would
+      // be (see validate-analysis-result.ts resolveEvidenceBasis()).
       keyFacts: top.map((article) => ({
         claim: article.title,
         evidenceIds: [evidenceIdFor(article)],
+        evidenceBasis: {
+          evidenceId: evidenceIdFor(article),
+          excerpt: article.title,
+        },
       })),
       agreements:
         top.length > 1

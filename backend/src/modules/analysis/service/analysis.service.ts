@@ -309,6 +309,12 @@ export class AnalysisService {
           analysisMode: this.provider.isMock
             ? 'mock-ai'
             : 'live-ai',
+          // Milestone #32: must be the exact same truncation length
+          // used to build this provider's prompt (see
+          // build-analysis-prompt.util.ts / buildAnalysisMessages),
+          // so evidenceBasis excerpts validate against precisely what
+          // the model was shown.
+          maxArticleChars: config.maxArticleChars,
         },
       );
 
