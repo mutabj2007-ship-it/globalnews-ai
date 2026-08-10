@@ -397,6 +397,148 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledTimes(2);
   });
 
+  it('shares one cache entry across normalized-equivalent requests, while each response exposes its own request\'s query', async () => {
+    // Reproduces the exact Milestone 27 acceptance-test scenario:
+    // "what;s happening in kigali?" then "What's happening in Kigali?"
+    const articles = [
+      makeArticle({
+        id: 'kigali-cache-contract-1',
+        title: 'Rwanda headline',
+      }),
+    ];
+
+    const newsService = {
+      search: jest.fn(),
+    };
+
+    const countryNewsService = {
+      getCountryNews:
+        jest.fn().mockResolvedValue(
+          makeCountryResponse(
+            'RWA',
+            'Rwanda',
+            articles,
+            { city: 'kigali' },
+          ),
+        ),
+    };
+
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest
+        .fn()
+        .mockResolvedValue(
+          validCandidateFor(articles),
+        ),
+    };
+
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    const first = await service.analyzeNews(
+      'what;s happening in kigali?',
+    );
+
+    const second = await service.analyzeNews(
+      "What's happening in Kigali?",
+    );
+
+    // Both variants normalize to the same text, so they share one
+    // cache entry and retrieval/AI analysis only ran once.
+    expect(
+      countryNewsService.getCountryNews,
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      provider.analyzeNews,
+    ).toHaveBeenCalledTimes(1);
+
+    // Both variants normalize to the same *cache key* (lowercased),
+    // so retrieval/AI is shared — but normalizeQuery itself does not
+    // change case, so each response's normalizedQuery still reflects
+    // that request's own casing/punctuation-repair, not a forced
+    // canonical form.
+    expect(first.normalizedQuery).toBe(
+      "what's happening in kigali?",
+    );
+    expect(second.normalizedQuery).toBe(
+      "What's happening in Kigali?",
+    );
+    // own literal input, never the other caller's — this is the bug:
+    // the cache must not leak the first caller's raw query onto a
+    // later cache-hit response.
+    expect(first.query).toBe(
+      'what;s happening in kigali?',
+    );
+    expect(second.query).toBe(
+      "What's happening in Kigali?",
+    );
+
+    // The shared underlying analysis/articles/retrievalContext are
+    // still identical across both responses (only the envelope's
+    // query fields differ).
+    expect(second.articles).toEqual(first.articles);
+    expect(second.analysis).toEqual(first.analysis);
+    expect(second.retrievalContext).toEqual(
+      first.retrievalContext,
+    );
+  });
+
+  it('caches a typo\'d and correctly-punctuated variant of the same question together', async () => {
+    const articles = [
+      makeArticle({ id: 'normalize-cache-1' }),
+    ];
+
+    const newsService = {
+      search: jest
+        .fn()
+        .mockResolvedValue(
+          makeSearchResponse(articles),
+        ),
+    };
+
+    const countryNewsService =
+      makeCountryNewsService();
+
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest
+        .fn()
+        .mockResolvedValue(
+          validCandidateFor(articles),
+        ),
+    };
+
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(
+      "What;s the latest on markets?",
+    );
+
+    await service.analyzeNews(
+      "What's the latest on markets?",
+    );
+
+    // Both variants normalize to the same text, so they share one
+    // cache entry and the provider is only hit once.
+    expect(
+      newsService.search,
+    ).toHaveBeenCalledTimes(1);
+  });
+
   it('uses country-aware retrieval for a Spain question', async () => {
     const articles = [
       makeArticle({
@@ -449,6 +591,7 @@ describe('AnalysisService', () => {
       'ESP',
       undefined,
       20,
+      undefined,
     );
 
     expect(
@@ -515,6 +658,7 @@ describe('AnalysisService', () => {
       'RWA',
       undefined,
       20,
+      undefined,
     );
 
     expect(
@@ -573,6 +717,7 @@ describe('AnalysisService', () => {
       'GBR',
       undefined,
       20,
+      undefined,
     );
 
     expect(
@@ -631,6 +776,7 @@ describe('AnalysisService', () => {
       'USA',
       undefined,
       20,
+      undefined,
     );
 
     expect(
@@ -759,6 +905,7 @@ describe('AnalysisService', () => {
             'RWA',
             'Rwanda',
             articles,
+            { city: 'kigali' },
           ),
         ),
     };
@@ -781,7 +928,7 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
+    const response = await service.analyzeNews(
       "What's happening in Kigali?",
     );
 
@@ -791,11 +938,95 @@ describe('AnalysisService', () => {
       'RWA',
       undefined,
       20,
+      'kigali',
     );
 
     expect(
       newsService.search,
     ).not.toHaveBeenCalled();
+
+    // City intent is preserved through to the retrieval context so the
+    // frontend can display "Kigali, Rwanda" rather than just "Rwanda".
+    expect(
+      response.retrievalContext.city,
+    ).toBe('kigali');
+
+    expect(
+      response.retrievalContext.countryName,
+    ).toBe('Rwanda');
+  });
+
+  it('resolves a curated city even with a typo\'d contraction, e.g. "what;s happening in kigali?"', async () => {
+    const articles = [
+      makeArticle({
+        id: 'kigali-typo-1',
+        title: 'Rwanda headline',
+      }),
+    ];
+
+    const newsService = {
+      search: jest.fn(),
+    };
+
+    const countryNewsService = {
+      getCountryNews:
+        jest.fn().mockResolvedValue(
+          makeCountryResponse(
+            'RWA',
+            'Rwanda',
+            articles,
+            { city: 'kigali' },
+          ),
+        ),
+    };
+
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest
+        .fn()
+        .mockResolvedValue(
+          validCandidateFor(articles),
+        ),
+    };
+
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    const response = await service.analyzeNews(
+      'what;s happening in kigali?',
+    );
+
+    // The typo'd punctuation is repaired by normalization before
+    // country/city detection ever runs, so this resolves identically
+    // to the correctly-punctuated "What's happening in Kigali?" query.
+    expect(
+      countryNewsService.getCountryNews,
+    ).toHaveBeenCalledWith(
+      'RWA',
+      undefined,
+      20,
+      'kigali',
+    );
+
+    expect(
+      newsService.search,
+    ).not.toHaveBeenCalled();
+
+    // The user's literal, unmodified input is still what's echoed
+    // back for display — normalization never rewrites what they typed.
+    expect(response.query).toBe(
+      'what;s happening in kigali?',
+    );
+
+    expect(response.normalizedQuery).toBe(
+      "what's happening in kigali?",
+    );
   });
 
   it('does not resolve an uncurated city even with a preposition', async () => {
@@ -1314,6 +1545,76 @@ describe('AnalysisService', () => {
         providerDisplayName:
           'Stored reporting',
         articlesRetrieved: 1,
+      });
+    });
+
+    it('preserves city alongside country code/name for a curated-city query', async () => {
+      const articles = [
+        makeArticle({
+          id: 'kigali-retrieval-1',
+          title: 'Kigali headline',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn(),
+      };
+
+      const countryNewsService = {
+        getCountryNews: jest
+          .fn()
+          .mockResolvedValue(
+            makeCountryResponse(
+              'RWA',
+              'Rwanda',
+              articles,
+              {
+                dataMode: 'live',
+                providers: ['gnews'],
+                feedTier: 'live',
+                providerDisplayName:
+                  'GNews Free',
+                city: 'kigali',
+              },
+            ),
+          ),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest
+          .fn()
+          .mockResolvedValue(
+            validCandidateFor(articles),
+          ),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response =
+        await service.analyzeNews(
+          'What is happening in Kigali today?',
+        );
+
+      expect(
+        response.retrievalContext,
+      ).toEqual({
+        dataMode: 'live',
+        providers: ['gnews'],
+        fallbackReason: undefined,
+        newestArticlePublishedAt: undefined,
+        countryCode: 'RWA',
+        countryName: 'Rwanda',
+        providerDisplayName: 'GNews Free',
+        articlesRetrieved: 1,
+        city: 'kigali',
       });
     });
 

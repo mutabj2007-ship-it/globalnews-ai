@@ -45,17 +45,29 @@ const BADGE_ICON: Record<AnalysisRetrievalContext['dataMode'], typeof Radio> = {
  * being shown, just not live) and must never be styled/labeled like
  * "live" (see RetrievalContextStatus.spec / news.ts NewsDataMode).
  */
+/** "kigali" -> "Kigali", "new delhi" -> "New Delhi". Display-only formatting of the stored lowercase city key. */
+function formatCityForDisplay(city: string): string {
+  return city.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export function RetrievalContextStatus({
   retrievalContext,
   className = '',
 }: RetrievalContextStatusProps): JSX.Element {
-  const { dataMode, fallbackReason, newestArticlePublishedAt, countryName } =
+  const { dataMode, fallbackReason, newestArticlePublishedAt, countryName, city } =
     retrievalContext;
 
   const Icon = BADGE_ICON[dataMode];
 
-  const label = countryName
-    ? `${BADGE_LABEL[dataMode]} \u00b7 ${countryName}`
+  // When a curated city drove retrieval, prefer "Kigali, Rwanda" over
+  // just "Rwanda" so the badge reflects the actual retrieval intent.
+  const locationLabel =
+    city && countryName
+      ? `${formatCityForDisplay(city)}, ${countryName}`
+      : countryName;
+
+  const label = locationLabel
+    ? `${BADGE_LABEL[dataMode]} \u00b7 ${locationLabel}`
     : BADGE_LABEL[dataMode];
 
   const explanation =

@@ -1,11 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  normalizeQuery,
+  resolveLocationContext,
   resolveCountryByAnyIdentifier,
-  resolveCountryByCity,
   type AnalysisApiResponse,
   type AnalysisRetrievalContext,
-  type CountryMeta,
   type CountryNewsResponse,
+  type LocationContext,
   type NewsArticle,
   type NewsResponse,
 } from '@globalnews-ai/shared';
@@ -90,29 +91,63 @@ export class AnalysisService {
   ) {}
 
   async analyzeNews(
-    query: string,
+    rawQuery: string,
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
-    const cacheKey = query.trim().toLowerCase();
+
+    /**
+     * originalQuery is preserved verbatim for display (AnalysisApiResponse.query)
+     * — never silently rewritten. normalizedQuery drives caching,
+     * country/city detection, the non-country retrieval fallback, and
+     * the text handed to the AI provider. See query-normalization.ts
+     * for exactly what normalization does (and deliberately does not
+     * do — no fuzzy/spelling correction, ever).
+     */
+    const { originalQuery, normalizedQuery } =
+      normalizeQuery(rawQuery);
+
+    const cacheKey = normalizedQuery.toLowerCase();
 
     const cached = this.getCached(cacheKey);
 
     if (cached) {
       this.logger.debug(
-        `Serving cached analysis for "${query}"`,
+        `Serving cached analysis for "${originalQuery}"`,
       );
 
-      return cached;
+      /**
+       * The cached response's `query`/`normalizedQuery` reflect
+       * whichever request first populated this cache entry.
+       * Retrieval/AI results are safely shared across
+       * normalized-equivalent requests (that's the point of keying
+       * the cache on normalizedQuery), but the response envelope must
+       * always reflect *this* request's own raw and normalized query
+       * — never a previous caller's. Overriding these two fields here
+       * is a plain object spread; it does not touch `analysis`,
+       * `articles`, or `retrievalContext`, so no retrieval or AI work
+       * is repeated. The nested `analysis.query` (set at generation
+       * time from the normalized query used for analysis) is
+       * intentionally left as-is.
+       */
+      return {
+        ...cached,
+        query: originalQuery,
+        normalizedQuery,
+      };
     }
 
-    const country = this.detectCountry(query);
+    const location = this.detectLocation(normalizedQuery);
 
     let articles: NewsArticle[];
     let retrievalContext: AnalysisRetrievalContext;
 
-    if (country) {
+    if (location) {
+      const { country, city } = location;
+
       this.logger.debug(
-        `Detected country-aware analysis query for ${country.name} (${country.iso3})`,
+        city
+          ? `Detected city-aware analysis query for ${city} (${country.name}, ${country.iso3})`
+          : `Detected country-aware analysis query for ${country.name} (${country.iso3})`,
       );
 
       const countryResponse =
@@ -120,6 +155,7 @@ export class AnalysisService {
           country.iso3,
           undefined,
           SEARCH_POOL_SIZE,
+          city,
         );
 
       articles = countryResponse.articles;
@@ -129,7 +165,7 @@ export class AnalysisService {
     } else {
       const searchResponse =
         await this.newsService.search(
-          query,
+          normalizedQuery,
           SEARCH_POOL_SIZE,
         );
 
@@ -141,7 +177,8 @@ export class AnalysisService {
 
     if (articles.length === 0) {
       const empty: AnalysisApiResponse = {
-        query,
+        query: originalQuery,
+        normalizedQuery,
         analysis: null,
         articles: [],
         analysisError:
@@ -169,14 +206,14 @@ export class AnalysisService {
     try {
       const candidate =
         await this.provider.analyzeNews({
-          query,
+          query: normalizedQuery,
           articles: deduped,
         });
 
       const analysis = validateAnalysisResult(
         candidate,
         {
-          query,
+          query: normalizedQuery,
           articles: deduped,
           analysisMode: this.provider.isMock
             ? 'mock-ai'
@@ -185,21 +222,23 @@ export class AnalysisService {
       );
 
       response = {
-        query,
+        query: originalQuery,
+        normalizedQuery,
         analysis,
         articles: deduped,
         retrievalContext,
       };
     } catch (error) {
       this.logger.warn(
-        `Analysis provider "${this.provider.id}" failed for query "${query}"`,
+        `Analysis provider "${this.provider.id}" failed for query "${originalQuery}"`,
         error instanceof Error
           ? error
           : undefined,
       );
 
       response = {
-        query,
+        query: originalQuery,
+        normalizedQuery,
         analysis: null,
         articles: deduped,
         analysisError:
@@ -251,12 +290,28 @@ export class AnalysisService {
           : undefined,
       articlesRetrieved:
         source.articles.length,
+      city: isCountryResponse
+        ? source.city
+        : undefined,
     };
   }
 
-  private detectCountry(
+  /**
+   * Resolves a country, and — when the match came from a curated city
+   * rather than the country name itself — the matched city, from a
+   * free-text query.
+   *
+   * This preserves the exact matching order the previous
+   * country-only detectCountry() used: a direct
+   * name/code/alias match, then an ungated ISO-style code scan, then
+   * a preposition-gated word-shrinking scan. City resolution is only
+   * ever attempted at the same single point it always was (the
+   * word-shrinking scan, via resolveLocationContext), so no existing
+   * country-only match changes.
+   */
+  private detectLocation(
     query: string,
-  ): CountryMeta | undefined {
+  ): LocationContext | undefined {
     const normalized = query
       .trim()
       .replace(/[?!.,;:]+$/g, '');
@@ -280,7 +335,7 @@ export class AnalysisService {
       );
 
     if (direct) {
-      return direct;
+      return { country: direct };
     }
 
     /**
@@ -299,7 +354,7 @@ export class AnalysisService {
           resolveCountryByAnyIdentifier(code);
 
         if (country) {
-          return country;
+          return { country };
         }
       }
     }
@@ -343,7 +398,8 @@ export class AnalysisService {
      * "the United States"
      * ...
      *
-     * and similarly handles aliases such as "DR Congo".
+     * and similarly handles aliases such as "DR Congo", and curated
+     * cities such as "Kigali" (see resolveLocationContext).
      */
     for (
       let length = maxWords;
@@ -356,14 +412,11 @@ export class AnalysisService {
         .replace(/^(?:the)\s+/i, '')
         .trim();
 
-      const country =
-        resolveCountryByAnyIdentifier(
-          candidate,
-        ) ??
-        resolveCountryByCity(candidate);
+      const location =
+        resolveLocationContext(candidate);
 
-      if (country) {
-        return country;
+      if (location) {
+        return location;
       }
     }
 

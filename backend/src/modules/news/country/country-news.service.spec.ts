@@ -53,17 +53,23 @@ describe('CountryNewsService', () => {
   const articlePersistence = {
     persistCountryRelations: jest.fn(),
     findRecentByCountry: jest.fn(),
+    findRecent: jest.fn(),
   };
 
   beforeEach(() => {
     articlePersistence.persistCountryRelations.mockReset();
     articlePersistence.findRecentByCountry.mockReset();
+    articlePersistence.findRecent.mockReset();
 
     articlePersistence.persistCountryRelations.mockResolvedValue(
       undefined,
     );
 
     articlePersistence.findRecentByCountry.mockResolvedValue(
+      [],
+    );
+
+    articlePersistence.findRecent.mockResolvedValue(
       [],
     );
   });
@@ -802,5 +808,338 @@ describe('CountryNewsService', () => {
     expect(response.articles).toEqual([
       storedArticle,
     ]);
+  });
+
+  describe('city-aware retrieval (Milestone 27)', () => {
+    it('combines the city with the country name in the live search term', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse([]),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      await service.getCountryNews(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
+
+      expect(newsService.search).toHaveBeenCalledWith(
+        'kigali Rwanda',
+        expect.any(Number),
+      );
+    });
+
+    it('does not include a city in the search term when none was provided', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse([]),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      await service.getCountryNews('RWA');
+
+      expect(newsService.search).toHaveBeenCalledWith(
+        'Rwanda',
+        expect.any(Number),
+      );
+    });
+
+    it('does not cache a city query together with a plain country query for the same country', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse([
+            makeArticle({ id: 'a1' }),
+          ]),
+        ),
+      };
+
+      const service = buildService(
+        newsService,
+        makeConfig({
+          COUNTRY_NEWS_CACHE_TTL_SECONDS: '300',
+        }),
+      );
+
+      await service.getCountryNews(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
+
+      await service.getCountryNews('RWA');
+
+      expect(newsService.search).toHaveBeenCalledTimes(2);
+    });
+
+    it('surfaces city in the response envelope when provided, and omits it otherwise', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse([
+            makeArticle({ id: 'a1' }),
+          ]),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const cityResponse = await service.getCountryNews(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
+
+      expect(cityResponse.city).toBe('kigali');
+
+      const countryOnlyResponse =
+        await service.getCountryNews('RWA');
+
+      expect(countryOnlyResponse.city).toBeUndefined();
+    });
+
+    it('ranks a city-mentioning article above a higher-scored non-city article', async () => {
+      // This article scores higher on plain country-relevance (title +
+      // summary both reference Rwanda and several context terms), but
+      // never mentions Kigali.
+      const highScoreCountryWide = makeArticle({
+        id: 'country-wide-high-score',
+        title:
+          'Rwanda government and parliament announce new economy policy',
+        summary:
+          'Rwanda officials, the president, and the military discussed the economy, war, and peace efforts nationally.',
+      });
+
+      // This article scores lower on plain country-relevance (title
+      // only, no context terms) but does mention Kigali specifically.
+      const lowScoreCityMatch = makeArticle({
+        id: 'city-match-low-score',
+        title: 'Kigali hosts regional summit',
+        summary: 'Delegates gathered in Rwanda this week.',
+      });
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [highScoreCountryWide, lowScoreCityMatch],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
+
+      expect(response.articles.map((a) => a.id)).toEqual([
+        'city-match-low-score',
+        'country-wide-high-score',
+      ]);
+    });
+
+    it('backfills remaining slots with country-wide articles when too few mention the city', async () => {
+      const cityArticle = makeArticle({
+        id: 'kigali-only',
+        title: 'Kigali transit project breaks ground',
+        summary: 'The project is based in Rwanda.',
+      });
+
+      const countryWideArticle = makeArticle({
+        id: 'rwanda-only',
+        title: 'Rwanda economy grows this quarter',
+        summary: 'Officials cite steady government policy.',
+      });
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [countryWideArticle, cityArticle],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
+
+      // Both articles are returned (city article first), even though
+      // only one mentions the city — country-wide coverage still
+      // fills the remaining slots rather than being dropped.
+      expect(response.articles).toHaveLength(2);
+      expect(response.articles[0].id).toBe('kigali-only');
+      expect(response.articles[1].id).toBe('rwanda-only');
+    });
+
+    it('uses findRecent to surface city-specific stored articles ahead of country-wide stored articles when the live provider fails', async () => {
+      const providerError = new Error(
+        'GNews service unavailable.',
+      );
+
+      const newsService = {
+        search: jest.fn().mockRejectedValue(providerError),
+      };
+
+      const cityStoredArticle = makeArticle({
+        id: 'stored-kigali-1',
+        title: 'Kigali city council approves new budget',
+        summary: 'The Rwanda capital city council voted today.',
+        publishedAt: '2026-08-08T09:00:00.000Z',
+      });
+
+      const countryStoredArticle = makeArticle({
+        id: 'stored-rwanda-1',
+        title: 'Rwanda government reshuffles cabinet',
+        summary: 'The president announced new appointments.',
+        publishedAt: '2026-08-08T07:00:00.000Z',
+      });
+
+      articlePersistence.findRecent.mockResolvedValueOnce([
+        cityStoredArticle,
+      ]);
+
+      articlePersistence.findRecentByCountry.mockResolvedValueOnce(
+        [countryStoredArticle],
+      );
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
+
+      expect(articlePersistence.findRecent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: 'kigali',
+          category: undefined,
+          maxAgeMinutes: 1440,
+        }),
+      );
+
+      expect(response.dataMode).toBe('cached');
+      expect(response.city).toBe('kigali');
+      expect(response.articles.map((a) => a.id)).toEqual([
+        'stored-kigali-1',
+        'stored-rwanda-1',
+      ]);
+    });
+
+    it('excludes a stored city-name match that is not actually about the country', async () => {
+      const providerError = new Error(
+        'GNews service unavailable.',
+      );
+
+      const newsService = {
+        search: jest.fn().mockRejectedValue(providerError),
+      };
+
+      // Mentions "Kigali" (matches the free-text findRecent query) but
+      // has nothing to do with Rwanda or any country context — e.g. a
+      // business named after the city in an unrelated market.
+      const unrelatedCityNameMatch = makeArticle({
+        id: 'unrelated-kigali-cafe',
+        title: 'Kigali Coffee Co. opens new location',
+        summary: 'The cafe chain expanded to a third city.',
+        publishedAt: '2026-08-08T09:00:00.000Z',
+      });
+
+      const countryStoredArticle = makeArticle({
+        id: 'stored-rwanda-2',
+        title: 'Rwanda parliament debates new budget',
+        summary: 'Lawmakers discussed the national economy.',
+        publishedAt: '2026-08-08T07:00:00.000Z',
+      });
+
+      articlePersistence.findRecent.mockResolvedValueOnce([
+        unrelatedCityNameMatch,
+      ]);
+
+      articlePersistence.findRecentByCountry.mockResolvedValueOnce(
+        [countryStoredArticle],
+      );
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
+
+      const ids = response.articles.map((a) => a.id);
+      expect(ids).not.toContain('unrelated-kigali-cafe');
+      expect(ids).toContain('stored-rwanda-2');
+    });
+
+    it('uses findRecent to surface city-specific stored articles when live results are empty', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse([], 'live'),
+        ),
+      };
+
+      const cityStoredArticle = makeArticle({
+        id: 'stored-kigali-empty-live',
+        title: 'Kigali marks anniversary with Rwanda ceremony',
+        summary: 'The capital city held a national event.',
+        publishedAt: '2026-08-08T09:00:00.000Z',
+      });
+
+      articlePersistence.findRecent.mockResolvedValueOnce([
+        cityStoredArticle,
+      ]);
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
+
+      expect(response.dataMode).toBe('cached');
+      expect(response.articles.map((a) => a.id)).toEqual([
+        'stored-kigali-empty-live',
+      ]);
+    });
+
+    it('does not call findRecent when no city was provided', async () => {
+      const newsService = {
+        search: jest.fn().mockRejectedValue(
+          new Error('GNews service unavailable.'),
+        ),
+      };
+
+      articlePersistence.findRecentByCountry.mockResolvedValueOnce([
+        makeArticle({ id: 'stored-country-only' }),
+      ]);
+
+      const service = buildService(newsService);
+
+      await service.getCountryNews('RWA');
+
+      expect(articlePersistence.findRecent).not.toHaveBeenCalled();
+    });
   });
 });

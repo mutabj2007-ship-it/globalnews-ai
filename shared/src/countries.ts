@@ -391,3 +391,50 @@ export function resolveCountryByAnyIdentifier(input: string): CountryMeta | unde
 }
 
 export const ALL_ISO3_CODES: string[] = COUNTRIES.map((c) => c.iso3);
+
+/**
+ * The result of resolving a free-text query candidate to a country,
+ * optionally with a curated city that drove the match.
+ *
+ * This is deliberately a separate, query-scoped type rather than a
+ * field bolted onto CountryMeta: CountryMeta is precise, static ISO
+ * 3166-1 reference data (see the module doc comment above) shared by
+ * lookup functions that have nothing to do with any particular user
+ * query. LocationContext, by contrast, is a per-query resolution
+ * result — the same shape of distinction already drawn elsewhere in
+ * this codebase between static article/country data and query-scoped
+ * retrieval provenance.
+ */
+export interface LocationContext {
+  country: CountryMeta;
+  /**
+   * Present only when `input` matched a curated city (see
+   * CITY_TO_ISO3 / resolveCountryByCity above), not merely a country
+   * name/alias/code. Lowercase canonical form of the matched text.
+   */
+  city?: string;
+}
+
+/**
+ * Resolves a country, and — when the match came from a curated city
+ * name rather than the country itself — the matched city, from a
+ * single free-text candidate.
+ *
+ * A direct country identifier (name/alias/ISO code) match is tried
+ * first, with the curated city table as a fallback — this mirrors the
+ * existing precedence callers already use
+ * (`resolveCountryByAnyIdentifier(candidate) ?? resolveCountryByCity(candidate)`),
+ * so behavior for any existing candidate is unchanged. In practice no
+ * curated city key collides with a country name/alias/code today, so
+ * this ordering is a safety-preserving default rather than an active
+ * disambiguation.
+ */
+export function resolveLocationContext(input: string): LocationContext | undefined {
+  const country = resolveCountryByAnyIdentifier(input);
+  if (country) {
+    return { country };
+  }
+
+  const cityMatch = resolveCountryByCity(input);
+  return cityMatch ? { country: cityMatch, city: input.trim().toLowerCase() } : undefined;
+}

@@ -180,4 +180,13 @@ export interface CountryNewsResponse {
 
   category?: NewsCategory;
   generatedAt: string;
+
+  /**
+   * Present only when this retrieval was driven by a curated city
+   * match (see LocationContext / resolveLocationContext in
+   * countries.ts), not merely by the country itself. Lowercase
+   * canonical form, e.g. "kigali". Absent for a plain country-level
+   * query such as "Rwanda" or "RWA".
+   */
+  city?: string;
 }

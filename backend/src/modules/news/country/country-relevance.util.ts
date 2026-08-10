@@ -141,6 +141,30 @@ function isLikelySurnameOnlyMention(
   return !geographicPrefixes.has(precedingWord);
 }
 
+/**
+ * Whether an article's title or summary mentions a given city, as a
+ * whole phrase (case-insensitive, punctuation-tolerant).
+ *
+ * This is deliberately a separate boolean signal rather than folded
+ * into scoreCountryRelevance's own 0-100 additive scale: that scale
+ * already saturates at 100 from country-name/context-term matches
+ * alone, so adding more points to the same capped scale would let
+ * city-relevant and merely country-relevant articles tie at the
+ * ceiling and defeat city-first ranking. Callers should treat this as
+ * a higher-priority sort key layered on top of the existing country
+ * relevance score, not as a replacement for it.
+ */
+export function articleMentionsCity(
+  article: Pick<NewsArticle, 'title' | 'summary'>,
+  city: string,
+): boolean {
+  const title = article.title ?? '';
+  const summary = article.summary ?? '';
+  const fullText = `${title} ${summary}`;
+
+  return containsWholePhrase(fullText, city);
+}
+
 export function scoreCountryRelevance(
   article: Pick<NewsArticle, 'title' | 'summary'>,
   country: CountryMeta,

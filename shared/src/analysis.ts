@@ -125,6 +125,15 @@ export interface AnalysisRetrievalContext {
 
   /** Number of articles this retrieval produced (0 is valid and meaningful). */
   articlesRetrieved: number;
+
+  /**
+   * Present only when country-aware retrieval (CountryNewsService) was
+   * used AND the query resolved via a curated city (see
+   * LocationContext in countries.ts) rather than the country name
+   * itself. Lowercase canonical form, e.g. "kigali" — pair with
+   * countryName for display (e.g. "Kigali, Rwanda").
+   */
+  city?: string;
 }
 
 /**
@@ -135,7 +144,18 @@ export interface AnalysisRetrievalContext {
  * explanation instead of crashing.
  */
 export interface AnalysisApiResponse {
+  /** The user's original, verbatim question — never rewritten. */
   query: string;
+
+  /**
+   * The deterministically-normalized form of `query` used internally
+   * for retrieval and caching (see normalizeQuery in
+   * query-normalization.ts). Equal to `query` when no normalization
+   * was applied. Never used to silently replace what's shown to the
+   * user — display should always prefer `query`.
+   */
+  normalizedQuery: string;
+
   analysis: NewsAnalysisResult | null;
   articles: NewsArticle[];
   analysisError?: string;
