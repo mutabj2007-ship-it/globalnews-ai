@@ -54,8 +54,15 @@ export function RetrievalContextStatus({
   retrievalContext,
   className = '',
 }: RetrievalContextStatusProps): JSX.Element {
-  const { dataMode, fallbackReason, newestArticlePublishedAt, countryName, city } =
-    retrievalContext;
+  const {
+    dataMode,
+    fallbackReason,
+    newestArticlePublishedAt,
+    countryName,
+    city,
+    matchedFrom,
+    canonicalLocation,
+  } = retrievalContext;
 
   const Icon = BADGE_ICON[dataMode];
 
@@ -87,6 +94,17 @@ export function RetrievalContextStatus({
     ? `Newest stored article: ${formatRelativeTime(newestArticlePublishedAt)} \u00b7 ${formatUtcClock(newestArticlePublishedAt)}`
     : undefined;
 
+  // Milestone #28: when this query's country/city came from fuzzy
+  // geographic typo resolution rather than an exact match, say so
+  // explicitly instead of silently presenting results as if the user
+  // had typed the corrected spelling — the page's own question heading
+  // elsewhere always shows the user's original text untouched; this is
+  // additional, opt-in disclosure of what retrieval actually used.
+  const correctionLine =
+    matchedFrom && canonicalLocation
+      ? `Interpreted "${formatCityForDisplay(matchedFrom)}" as ${formatCityForDisplay(canonicalLocation)}`
+      : undefined;
+
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       <span
@@ -95,6 +113,10 @@ export function RetrievalContextStatus({
         <Icon size={12} strokeWidth={2} className="shrink-0" />
         {label}
       </span>
+
+      {correctionLine && (
+        <p className="text-xs leading-relaxed text-ink-tertiary">{correctionLine}</p>
+      )}
 
       {explanation && (
         <p className="text-xs leading-relaxed text-ink-tertiary">{explanation}</p>

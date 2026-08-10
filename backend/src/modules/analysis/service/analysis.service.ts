@@ -3,9 +3,12 @@ import {
   normalizeQuery,
   resolveLocationContext,
   resolveCountryByAnyIdentifier,
+  resolveCountryByCity,
+  resolveGeoTypo,
   type AnalysisApiResponse,
   type AnalysisRetrievalContext,
   type CountryNewsResponse,
+  type GeoFuzzyMatch,
   type LocationContext,
   type NewsArticle,
   type NewsResponse,
@@ -142,7 +145,14 @@ export class AnalysisService {
     let retrievalContext: AnalysisRetrievalContext;
 
     if (location) {
-      const { country, city } = location;
+      const { country, city, geoMatch } = location;
+
+      if (geoMatch) {
+        this.logger.debug(
+          `Resolved geographic typo "${geoMatch.matchedFrom}" -> "${geoMatch.canonicalLocation}" ` +
+            `(${geoMatch.matchKind}, confidence ${geoMatch.matchConfidence}) for ${country.name} (${country.iso3})`,
+        );
+      }
 
       this.logger.debug(
         city
@@ -161,6 +171,7 @@ export class AnalysisService {
       articles = countryResponse.articles;
       retrievalContext = this.toRetrievalContext(
         countryResponse,
+        geoMatch,
       );
     } else {
       const searchResponse =
@@ -263,9 +274,16 @@ export class AnalysisService {
    * source envelope are populated — nothing is inferred or invented
    * for retrieval paths that don't reliably expose it (e.g. generic
    * NewsResponse has no newestArticlePublishedAt).
+   *
+   * geoMatch is passed separately (rather than read off `source`)
+   * because it comes from the LocationContext produced by
+   * detectLocation(), not from the NewsResponse/CountryNewsResponse
+   * envelope — CountryNewsService has no notion of "was this fuzzy",
+   * and doesn't need one; the correction happens one layer up, here.
    */
   private toRetrievalContext(
     source: NewsResponse | CountryNewsResponse,
+    geoMatch?: GeoFuzzyMatch,
   ): AnalysisRetrievalContext {
     const isCountryResponse =
       'countryCode' in source;
@@ -293,6 +311,9 @@ export class AnalysisService {
       city: isCountryResponse
         ? source.city
         : undefined,
+      matchedFrom: geoMatch?.matchedFrom,
+      canonicalLocation: geoMatch?.canonicalLocation,
+      matchConfidence: geoMatch?.matchConfidence,
     };
   }
 
@@ -360,6 +381,24 @@ export class AnalysisService {
     }
 
     /**
+     * Milestone #28: every exact path above (direct identifier match,
+     * ISO-code scan) has now failed for the whole query. Before
+     * requiring explicit prepositional context, give the same bare
+     * whole-query shape one fuzzy attempt — this mirrors `direct`
+     * above exactly, just typo-tolerant, e.g. a bare "Rwnada" gets the
+     * same treatment a bare "Rwanda" already would. resolveGeoTypo
+     * itself is a no-op for multi-word input, so this is harmless to
+     * call unconditionally. This is the ONLY fuzzy attempt for a query
+     * with no geographic preposition — no other fallback exists below
+     * for that shape.
+     */
+    const bareFuzzy = this.detectLocationFuzzy(normalized);
+
+    if (bareFuzzy) {
+      return bareFuzzy;
+    }
+
+    /**
      * For natural-language questions, require explicit geographic
      * context such as "in Spain" or "from Rwanda".
      */
@@ -420,7 +459,68 @@ export class AnalysisService {
       }
     }
 
+    /**
+     * Milestone #28: every exact candidate length in the word-shrinking
+     * scan above has now failed too. As a last resort, try fuzzy
+     * resolution against only the single-word candidate (the first
+     * word of the geographic-context phrase, e.g. "kigalli" from "in
+     * Kigalli") — this is deliberately narrower than the exact scan
+     * above (which tries up to MAX_COUNTRY_CANDIDATE_WORDS words) since
+     * fuzzy matching against curated multi-word entities is out of
+     * scope for this milestone (see geo-fuzzy-resolver.ts).
+     */
+    const firstWord = words[0];
+
+    if (firstWord) {
+      const fuzzy = this.detectLocationFuzzy(firstWord);
+
+      if (fuzzy) {
+        return fuzzy;
+      }
+    }
+
     return undefined;
+  }
+
+  /**
+   * Attempts fuzzy geographic typo resolution for a single word, only
+   * ever called after every exact matching path available to the
+   * caller has already failed (see the two call sites above). Returns
+   * undefined whenever resolveGeoTypo itself does — too short, no
+   * eligible curated target close enough, or an ambiguous tie between
+   * two or more curated targets (see geo-fuzzy-resolver.ts) — in which
+   * case callers fall back to ordinary non-geographic retrieval.
+   */
+  private detectLocationFuzzy(
+    word: string,
+  ): LocationContext | undefined {
+    const match = resolveGeoTypo(word);
+
+    if (!match) {
+      return undefined;
+    }
+
+    const country =
+      match.matchKind === 'city'
+        ? resolveCountryByCity(match.canonicalLocation)
+        : resolveCountryByAnyIdentifier(
+            match.canonicalLocation,
+          );
+
+    // Defensive only: canonicalLocation always comes from the curated
+    // COUNTRIES/city list, so this should be unreachable in practice.
+    if (!country) {
+      return undefined;
+    }
+
+    return {
+      country,
+      city:
+        match.matchKind === 'city'
+          ? match.canonicalLocation
+          : undefined,
+      geoMatch: match,
+    };
   }
 
   private describeError(

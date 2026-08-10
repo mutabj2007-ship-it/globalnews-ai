@@ -1080,6 +1080,287 @@ describe('AnalysisService', () => {
     );
   });
 
+  describe('Milestone #28: fuzzy geographic typo resolution', () => {
+    it('resolves a misspelled curated city, e.g. "What is happening in Kigalli?"', async () => {
+      const articles = [
+        makeArticle({
+          id: 'kigalli-fuzzy-1',
+          title: 'Rwanda headline',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn(),
+      };
+
+      const countryNewsService = {
+        getCountryNews:
+          jest.fn().mockResolvedValue(
+            makeCountryResponse(
+              'RWA',
+              'Rwanda',
+              articles,
+              { city: 'kigali' },
+            ),
+          ),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest
+          .fn()
+          .mockResolvedValue(
+            validCandidateFor(articles),
+          ),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews(
+        "What's happening in Kigalli?",
+      );
+
+      // Retrieval must use the CANONICAL spelling ("kigali"), never
+      // the raw typo ("kigalli") — this is what makes retrieval
+      // actually find anything.
+      expect(
+        countryNewsService.getCountryNews,
+      ).toHaveBeenCalledWith(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
+
+      expect(
+        newsService.search,
+      ).not.toHaveBeenCalled();
+
+      // The user's original question is preserved verbatim — the
+      // typo is never silently rewritten in what's echoed back.
+      expect(response.query).toBe(
+        "What's happening in Kigalli?",
+      );
+
+      expect(response.normalizedQuery).toBe(
+        "What's happening in Kigalli?",
+      );
+
+      // Provenance: the retrieval context discloses that this came
+      // from fuzzy resolution, and what it was resolved from/to.
+      expect(response.retrievalContext.matchedFrom).toBe('kigalli');
+      expect(response.retrievalContext.canonicalLocation).toBe('kigali');
+      expect(response.retrievalContext.matchConfidence).toBeGreaterThanOrEqual(80);
+      expect(response.retrievalContext.city).toBe('kigali');
+      expect(response.retrievalContext.countryName).toBe('Rwanda');
+    });
+
+    it('resolves a misspelled bare country name with no preposition, e.g. "Rwnada"', async () => {
+      const articles = [
+        makeArticle({ id: 'rwanda-fuzzy-1' }),
+      ];
+
+      const newsService = {
+        search: jest.fn(),
+      };
+
+      const countryNewsService = {
+        getCountryNews:
+          jest.fn().mockResolvedValue(
+            makeCountryResponse('RWA', 'Rwanda', articles),
+          ),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest
+          .fn()
+          .mockResolvedValue(
+            validCandidateFor(articles),
+          ),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Rwnada');
+
+      expect(
+        countryNewsService.getCountryNews,
+      ).toHaveBeenCalledWith(
+        'RWA',
+        undefined,
+        20,
+        undefined,
+      );
+
+      expect(response.query).toBe('Rwnada');
+      expect(response.retrievalContext.matchedFrom).toBe('rwnada');
+      expect(response.retrievalContext.canonicalLocation).toBe('rwanda');
+    });
+
+    it('does not populate matchedFrom/canonicalLocation/matchConfidence for an exact match', async () => {
+      const articles = [makeArticle({ id: 'exact-1' })];
+
+      const newsService = { search: jest.fn() };
+
+      const countryNewsService = {
+        getCountryNews:
+          jest.fn().mockResolvedValue(
+            makeCountryResponse('RWA', 'Rwanda', articles),
+          ),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Rwanda');
+
+      expect(response.retrievalContext.matchedFrom).toBeUndefined();
+      expect(response.retrievalContext.canonicalLocation).toBeUndefined();
+      expect(response.retrievalContext.matchConfidence).toBeUndefined();
+    });
+
+    it('exact matches remain preferred: "Chad" and "Jordan" never go through fuzzy resolution', async () => {
+      for (const [query, iso3, name] of [
+        ['Chad', 'TCD', 'Chad'],
+        ['Jordan', 'JOR', 'Jordan'],
+      ] as const) {
+        const articles = [makeArticle({ id: `${iso3}-exact` })];
+
+        const newsService = { search: jest.fn() };
+
+        const countryNewsService = {
+          getCountryNews:
+            jest.fn().mockResolvedValue(
+              makeCountryResponse(iso3, name, articles),
+            ),
+        };
+
+        const provider: AnalysisProvider = {
+          id: 'mock-analysis',
+          displayName: 'Mock',
+          isMock: true,
+          analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+        };
+
+        const service = new AnalysisService(
+          newsService as never,
+          countryNewsService as never,
+          provider,
+          makeConfigService(),
+        );
+
+        const response = await service.analyzeNews(query);
+
+        expect(countryNewsService.getCountryNews).toHaveBeenCalledWith(
+          iso3,
+          undefined,
+          20,
+          undefined,
+        );
+
+        // No fuzzy provenance — this resolved exactly, first try.
+        expect(response.retrievalContext.matchedFrom).toBeUndefined();
+        expect(response.retrievalContext.canonicalLocation).toBeUndefined();
+      }
+    });
+
+    it('does not resolve an ambiguous fuzzy candidate ("ambia" — equidistant from Zambia and Gambia)', async () => {
+      const articles = [makeArticle({ id: 'general-ambia' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews("What's happening in ambia?");
+
+      // Ambiguous fuzzy candidate fails closed: no country-aware
+      // retrieval is attempted, and the query falls back to ordinary
+      // generic search — the same behavior as any unresolved location.
+      expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
+      expect(newsService.search).toHaveBeenCalledWith(
+        "What's happening in ambia?",
+        20,
+      );
+    });
+
+    it('does not resolve a near-miss of a protected short country name ("Chad")', async () => {
+      const articles = [makeArticle({ id: 'general-chad-nearmiss' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      // "Chax" is a single-letter edit of "Chad", but "Chad" is only
+      // 4 characters — below the fuzzy target minimum length — so this
+      // must never resolve to Chad.
+      await service.analyzeNews("What's happening in Chax?");
+
+      expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
+      expect(newsService.search).toHaveBeenCalledWith(
+        "What's happening in Chax?",
+        20,
+      );
+    });
+  });
+
   it('uses generic NewsService search for a non-country question', async () => {
     const articles = [
       makeArticle({

@@ -1,3 +1,4 @@
+import type { GeoFuzzyMatch } from './geo-fuzzy-resolver';
 
 /**
  * Country reference metadata: ISO 3166-1 alpha-2/alpha-3/numeric codes,
@@ -328,6 +329,17 @@ export function resolveCountryByCity(input: string): CountryMeta | undefined {
   return iso3 ? BY_ISO3.get(iso3) : undefined;
 }
 
+/**
+ * Lowercase keys of the curated city -> country table (see CITY_TO_ISO3
+ * above), for callers outside this module that need to enumerate known
+ * cities without reaching into a private map — e.g. building a fuzzy
+ * geographic candidate pool in geo-fuzzy-resolver.ts. Read-only: callers
+ * must not mutate the returned array.
+ */
+export function getCuratedCityNames(): string[] {
+  return Object.keys(CITY_TO_ISO3);
+}
+
 /** Case-insensitive lookup by ISO alpha-3 code (e.g. "esp" -> Spain). */
 export function findCountryByIso3(code: string): CountryMeta | undefined {
   return BY_ISO3.get(code.trim().toUpperCase());
@@ -413,6 +425,15 @@ export interface LocationContext {
    * name/alias/code. Lowercase canonical form of the matched text.
    */
   city?: string;
+  /**
+   * Present only when this LocationContext was produced by fuzzy
+   * geographic typo resolution (see geo-fuzzy-resolver.ts) rather than
+   * an exact match above. resolveLocationContext itself never sets
+   * this — it is populated by callers (see AnalysisService#detectLocation)
+   * that fall back to fuzzy resolution after resolveLocationContext
+   * returns undefined for every exact candidate.
+   */
+  geoMatch?: GeoFuzzyMatch;
 }
 
 /**

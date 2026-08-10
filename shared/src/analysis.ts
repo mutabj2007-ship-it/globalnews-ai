@@ -134,6 +134,26 @@ export interface AnalysisRetrievalContext {
    * countryName for display (e.g. "Kigali, Rwanda").
    */
   city?: string;
+
+  /**
+   * Present only when country/city resolution for this query came from
+   * fuzzy geographic typo resolution (see geo-fuzzy-resolver.ts) rather
+   * than an exact match. matchedFrom is the raw lowercase word the user
+   * actually typed (e.g. "kigalli"); canonicalLocation is the curated
+   * entity it was resolved to (e.g. "kigali"), which is also what
+   * countryName/city above already reflect for retrieval purposes.
+   * matchConfidence is a 0-100 provenance score, not a second decision
+   * tier — a fuzzy match is only ever surfaced here once it has already
+   * cleared the resolver's single confidence/ambiguity gate.
+   *
+   * These exist so the frontend can disclose the correction (e.g.
+   * `Interpreted "Kigalli" as Kigali`) instead of silently presenting
+   * results as if the user had typed the canonical spelling — the
+   * user's own `query` (see AnalysisApiResponse) is never altered.
+   */
+  matchedFrom?: string;
+  canonicalLocation?: string;
+  matchConfidence?: number;
 }
 
 /**
