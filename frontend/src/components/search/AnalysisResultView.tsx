@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { AnalysisProvenance, NewsAnalysisResult } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
+import { AnalysisCitation } from '@/components/search/AnalysisCitation';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 
 interface AnalysisResultViewProps {
@@ -71,9 +72,7 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
                 className="rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-ink-primary"
               >
                 {fact.claim}
-                <span className="ml-2 font-mono text-[10px] text-ink-tertiary">
-                  [{fact.sourceArticleIds.length} source{fact.sourceArticleIds.length === 1 ? '' : 's'}]
-                </span>
+                <AnalysisCitation sourceArticleIds={fact.sourceArticleIds} sources={analysis.sources} />
               </li>
             ))}
           </ul>
@@ -91,6 +90,7 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
                 className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm leading-relaxed text-ink-primary"
               >
                 {agreement.point}
+                <AnalysisCitation sourceArticleIds={agreement.sourceArticleIds} sources={analysis.sources} />
               </li>
             ))}
           </ul>
@@ -112,6 +112,7 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
                       className="rounded-lg bg-surface-hover p-3 text-sm leading-relaxed text-ink-secondary"
                     >
                       {position.description}
+                      <AnalysisCitation sourceArticleIds={position.sourceArticleIds} sources={analysis.sources} />
                     </li>
                   ))}
                 </ul>
@@ -138,6 +139,24 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
         </section>
       )}
 
+      {/* Uncertainty / insufficient evidence */}
+      {analysis.uncertainties && analysis.uncertainties.length > 0 && (
+        <section>
+          <SectionHeading>Insufficient evidence</SectionHeading>
+          <ul className="flex flex-col gap-2">
+            {analysis.uncertainties.map((uncertainty, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm leading-relaxed text-ink-secondary"
+              >
+                {uncertainty.description}
+                <AnalysisCitation sourceArticleIds={uncertainty.sourceArticleIds} sources={analysis.sources} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Timeline */}
       {analysis.timeline.length > 0 && (
         <section>
@@ -148,7 +167,10 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
                 <span className="font-mono text-xs text-ink-tertiary">
                   {formatRelativeTime(event.timestamp)}
                 </span>
-                <span className="text-sm text-ink-primary">{event.event}</span>
+                <span className="text-sm text-ink-primary">
+                  {event.event}
+                  <AnalysisCitation sourceArticleIds={event.sourceArticleIds} sources={analysis.sources} />
+                </span>
               </li>
             ))}
           </ol>

@@ -11,7 +11,9 @@ import type {
   NewsAnalysisResult,
   SourcedClaim,
   TimelineEvent,
+  UncertaintyItem,
 } from '@globalnews-ai/shared';
+import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
 
 export class AnalysisValidationError extends Error {
   constructor(message: string) {
@@ -40,18 +42,40 @@ function requireObject(value: unknown, field: string): Record<string, unknown> {
 }
 
 /**
- * Keeps only the sourceArticleIds that actually correspond to an
- * article we sent to the model. This is the core grounding rule from
- * Sprint 5.1: an AI statement citing a nonexistent or hallucinated
- * article ID is not evidence of anything, so those IDs are dropped
- * rather than trusted.
+ * Milestone #31 — the single trust boundary for citations. Resolves a
+ * candidate's model-supplied "evidenceIds" (request-local S1/S2/...
+ * aliases — see build-analysis-prompt.util.ts) against the exact
+ * evidence map built from the same bounded article set this request
+ * actually supplied to the provider, and returns ONLY the real,
+ * canonical article IDs those aliases stand for.
+ *
+ * This is the sole point where an S-label ever becomes a trusted
+ * article ID — nothing downstream of this function ever sees or stores
+ * an S-label. Unknown, fabricated, malformed, out-of-scope (e.g. a real
+ * article ID, a URL, or any string that isn't a currently-valid alias
+ * for THIS request), or duplicate evidenceIds are silently dropped
+ * rather than trusted, mirroring the pre-M31 groundedIds() behavior for
+ * real article IDs. An entry with zero valid evidenceIds after
+ * resolution is not grounded and is dropped by the caller, exactly as
+ * before.
  */
-function groundedIds(candidate: unknown, validIds: Set<string>): string[] {
+function resolveEvidenceIds(candidate: unknown, evidenceMap: Map<string, string>): string[] {
   if (!isStringArray(candidate)) return [];
-  return candidate.filter((id) => validIds.has(id));
+  const resolved: string[] = [];
+  for (const evidenceId of candidate) {
+    const articleId = evidenceMap.get(evidenceId);
+    if (articleId && !resolved.includes(articleId)) {
+      resolved.push(articleId);
+    }
+  }
+  return resolved;
 }
 
-function validateSourcedClaims(candidate: unknown, validIds: Set<string>, field: string): SourcedClaim[] {
+function validateSourcedClaims(
+  candidate: unknown,
+  evidenceMap: Map<string, string>,
+  field: string,
+): SourcedClaim[] {
   if (!Array.isArray(candidate)) {
     throw new AnalysisValidationError(`Expected "${field}" to be an array.`);
   }
@@ -60,7 +84,7 @@ function validateSourcedClaims(candidate: unknown, validIds: Set<string>, field:
   for (const entry of candidate) {
     const obj = requireObject(entry, field);
     if (!isNonEmptyString(obj.claim)) continue;
-    const sourceArticleIds = groundedIds(obj.sourceArticleIds, validIds);
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, evidenceMap);
     // A key fact with zero valid supporting sources is not a
     // grounded fact — drop it rather than let it appear as one.
     if (sourceArticleIds.length === 0) continue;
@@ -69,7 +93,7 @@ function validateSourcedClaims(candidate: unknown, validIds: Set<string>, field:
   return result;
 }
 
-function validateAgreements(candidate: unknown, validIds: Set<string>): AgreementPoint[] {
+function validateAgreements(candidate: unknown, evidenceMap: Map<string, string>): AgreementPoint[] {
   if (!Array.isArray(candidate)) {
     throw new AnalysisValidationError('Expected "agreements" to be an array.');
   }
@@ -77,27 +101,27 @@ function validateAgreements(candidate: unknown, validIds: Set<string>): Agreemen
   for (const entry of candidate) {
     const obj = requireObject(entry, 'agreements[]');
     if (!isNonEmptyString(obj.point)) continue;
-    const sourceArticleIds = groundedIds(obj.sourceArticleIds, validIds);
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, evidenceMap);
     if (sourceArticleIds.length === 0) continue;
     result.push({ point: obj.point, sourceArticleIds });
   }
   return result;
 }
 
-function validatePositions(candidate: unknown, validIds: Set<string>): DifferencePosition[] {
+function validatePositions(candidate: unknown, evidenceMap: Map<string, string>): DifferencePosition[] {
   if (!Array.isArray(candidate)) return [];
   const result: DifferencePosition[] = [];
   for (const entry of candidate) {
     const obj = requireObject(entry, 'differences[].positions[]');
     if (!isNonEmptyString(obj.description)) continue;
-    const sourceArticleIds = groundedIds(obj.sourceArticleIds, validIds);
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, evidenceMap);
     if (sourceArticleIds.length === 0) continue;
     result.push({ description: obj.description, sourceArticleIds });
   }
   return result;
 }
 
-function validateDifferences(candidate: unknown, validIds: Set<string>): DifferenceItem[] {
+function validateDifferences(candidate: unknown, evidenceMap: Map<string, string>): DifferenceItem[] {
   if (!Array.isArray(candidate)) {
     throw new AnalysisValidationError('Expected "differences" to be an array.');
   }
@@ -105,14 +129,14 @@ function validateDifferences(candidate: unknown, validIds: Set<string>): Differe
   for (const entry of candidate) {
     const obj = requireObject(entry, 'differences[]');
     if (!isNonEmptyString(obj.topic)) continue;
-    const positions = validatePositions(obj.positions, validIds);
+    const positions = validatePositions(obj.positions, evidenceMap);
     if (positions.length === 0) continue;
     result.push({ topic: obj.topic, positions });
   }
   return result;
 }
 
-function validateTimeline(candidate: unknown, validIds: Set<string>): TimelineEvent[] {
+function validateTimeline(candidate: unknown, evidenceMap: Map<string, string>): TimelineEvent[] {
   if (!Array.isArray(candidate)) {
     throw new AnalysisValidationError('Expected "timeline" to be an array.');
   }
@@ -122,9 +146,29 @@ function validateTimeline(candidate: unknown, validIds: Set<string>): TimelineEv
     if (!isNonEmptyString(obj.event)) continue;
     const timestamp = isNonEmptyString(obj.timestamp) ? obj.timestamp : undefined;
     if (!timestamp || Number.isNaN(new Date(timestamp).getTime())) continue;
-    const sourceArticleIds = groundedIds(obj.sourceArticleIds, validIds);
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, evidenceMap);
     if (sourceArticleIds.length === 0) continue;
     result.push({ timestamp, event: obj.event, sourceArticleIds });
+  }
+  return result;
+}
+
+/**
+ * Milestone #31 — grounded insufficient-evidence items. Unlike the
+ * other sections, a zero-length sourceArticleIds is allowed to survive
+ * (a general uncertainty not tied to any specific supplied article is
+ * still meaningful — e.g. "no outlet reports the cause"), so this is
+ * NOT dropped merely for having no resolved evidence, only for having
+ * no description.
+ */
+function validateUncertainties(candidate: unknown, evidenceMap: Map<string, string>): UncertaintyItem[] {
+  if (!Array.isArray(candidate)) return [];
+  const result: UncertaintyItem[] = [];
+  for (const entry of candidate) {
+    const obj = requireObject(entry, 'uncertainties[]');
+    if (!isNonEmptyString(obj.description)) continue;
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, evidenceMap);
+    result.push({ description: obj.description, sourceArticleIds });
   }
   return result;
 }
@@ -162,18 +206,35 @@ function validateEntities(candidate: unknown): AnalysisEntities {
  * Validates and sanitizes a candidate analysis object from any
  * AnalysisProvider. Throws AnalysisValidationError for fundamentally
  * broken shapes (missing required strings, invalid confidence enum,
- * non-array sections). Ungrounded individual entries (claims/agreements
- * /positions/timeline events whose sourceArticleIds don't correspond to
- * a real supplied article) are silently dropped rather than causing a
- * full rejection, since a partially-grounded analysis is still useful
- * and "drop the unsupported bit" is exactly what grounding requires.
+ * non-array sections) — this is the ONLY condition that produces
+ * AnalysisService's "validation-rejected" provenance status (Milestone
+ * #30). Ungrounded individual entries (claims/agreements/positions/
+ * timeline events whose evidenceIds don't resolve to a real supplied
+ * article) are silently dropped rather than causing a full rejection,
+ * since a partially-grounded analysis is still useful and "drop the
+ * unsupported bit" is exactly what grounding requires — even when every
+ * entry in every section ends up dropped and the result is a
+ * successful analysis with empty grounded sections. Milestone #31 does
+ * not change or broaden this: citation failures never escalate to
+ * validation-rejected on their own (see CTO Decision 1).
+ *
+ * Milestone #31 — every sourceArticleIds value returned here is a REAL
+ * NewsArticle.id, resolved from the model's request-local evidenceIds
+ * (S1/S2/...) via resolveEvidenceIds(). The evidence map is built fresh
+ * from context.articles on every call using the same deterministic
+ * assignment (buildEvidenceReferences) used to build the AI prompt for
+ * this same array — see build-analysis-prompt.util.ts. No S-label is
+ * ever stored on the returned NewsAnalysisResult.
  */
 export function validateAnalysisResult(
   candidate: unknown,
   context: { query: string; articles: NewsArticle[]; analysisMode: AnalysisMode },
 ): NewsAnalysisResult {
   const obj = requireObject(candidate, 'analysis');
-  const validIds = new Set(context.articles.map((article) => article.id));
+
+  const evidenceMap = new Map(
+    buildEvidenceReferences(context.articles).map((ref) => [ref.evidenceId, ref.articleId]),
+  );
 
   if (!isNonEmptyString(obj.headline)) {
     throw new AnalysisValidationError('Missing or empty "headline".');
@@ -182,11 +243,12 @@ export function validateAnalysisResult(
     throw new AnalysisValidationError('Missing or empty "summary".');
   }
 
-  const keyFacts = validateSourcedClaims(obj.keyFacts, validIds, 'keyFacts');
-  const agreements = validateAgreements(obj.agreements, validIds);
-  const differences = validateDifferences(obj.differences, validIds);
+  const keyFacts = validateSourcedClaims(obj.keyFacts, evidenceMap, 'keyFacts');
+  const agreements = validateAgreements(obj.agreements, evidenceMap);
+  const differences = validateDifferences(obj.differences, evidenceMap);
   const unknowns = isStringArray(obj.unknowns) ? obj.unknowns.filter(isNonEmptyString) : [];
-  const timeline = validateTimeline(obj.timeline, validIds);
+  const uncertainties = validateUncertainties(obj.uncertainties, evidenceMap);
+  const timeline = validateTimeline(obj.timeline, evidenceMap);
   const confidence = validateConfidence(obj.confidence);
   const entities = validateEntities(obj.entities);
 
@@ -206,6 +268,7 @@ export function validateAnalysisResult(
     agreements,
     differences,
     unknowns,
+    uncertainties,
     timeline,
     confidence,
     entities,

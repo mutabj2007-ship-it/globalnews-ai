@@ -83,6 +83,16 @@ function makeConfigService(
   } as unknown as AnalysisConfigService;
 }
 
+/**
+ * Milestone #31: cites the request-local evidenceId "S1" for the first
+ * article, rather than a real article ID. This is correct as long as
+ * `articles[0]` is also the first entry of whatever final bounded
+ * array AnalysisService actually resolves (`deduped`) — true for every
+ * existing test here, since none of them reorder or remove the first
+ * article ahead of the one this helper cites (see
+ * build-analysis-prompt.util.ts's buildEvidenceReferences for the
+ * S{index+1} assignment this relies on).
+ */
 function validCandidateFor(
   articles: NewsArticle[],
 ) {
@@ -92,14 +102,15 @@ function validCandidateFor(
     keyFacts: [
       {
         claim: articles[0].title,
-        sourceArticleIds: [
-          articles[0].id,
+        evidenceIds: [
+          'S1',
         ],
       },
     ],
     agreements: [],
     differences: [],
     unknowns: [],
+    uncertainties: [],
     timeline: [],
     confidence: {
       level: 'medium',
@@ -2600,6 +2611,149 @@ describe('AnalysisService', () => {
       expect(response.retrievalContext.matchedFrom).toBe('kigalli');
       expect(response.retrievalContext.canonicalLocation).toBe('kigali');
       expect(response.sourceEntities).toEqual({ organizations: [] });
+    });
+  });
+
+  describe('evidence citations (Milestone #31)', () => {
+    it('resolves a live provider evidenceId (S1) to the real article ID end-to-end', async () => {
+      const articles = [makeArticle({ id: 'real-article-id', title: 'Story A' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('evidence resolution test');
+
+      expect(response.analysis?.keyFacts).toHaveLength(1);
+      expect(response.analysis?.keyFacts[0].sourceArticleIds).toEqual(['real-article-id']);
+    });
+
+    it('a duplicate article removed by clusterDuplicateArticles has no evidenceId, so citing its would-be slot resolves nothing', async () => {
+      const sharedUrl = 'https://example.com/duplicate-story';
+      const publishedAt = new Date().toISOString();
+
+      const articles = [
+        makeArticle({ id: 'kept-article', url: sharedUrl, publishedAt, title: 'Original report' }),
+        makeArticle({
+          id: 'removed-duplicate',
+          url: sharedUrl, // identical URL -> deduplicated away before evidence IDs are assigned
+          publishedAt,
+          title: 'Original report (wire copy)',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      // The provider (hypothetically hallucinating) cites S2, which would
+      // have been the duplicate's slot had it survived deduplication.
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          keyFacts: [{ claim: 'Cites the deduplicated slot', evidenceIds: ['S2'] }],
+        }),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('duplicate evidence test');
+
+      expect(response.articles.map((a) => a.id)).toEqual(['kept-article']);
+      // S2 does not exist in this request's (post-dedup) evidence set,
+      // so the citation is dropped rather than trusted.
+      expect(response.analysis?.keyFacts).toEqual([]);
+    });
+
+    it('an article removed by the maxArticles cap has no evidenceId, so citing its would-be slot resolves nothing', async () => {
+      const articles = [
+        makeArticle({ id: 'kept-article', title: 'Kept story' }),
+        makeArticle({ id: 'capped-article', url: 'https://example.com/capped', title: 'Capped story' }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          keyFacts: [{ claim: 'Cites the capped slot', evidenceIds: ['S2'] }],
+        }),
+      };
+
+      // maxArticles: 1 forces the cap to drop the second article before
+      // evidence IDs are ever assigned.
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 1 }),
+      );
+
+      const response = await service.analyzeNews('capped evidence test');
+
+      expect(response.articles.map((a) => a.id)).toEqual(['kept-article']);
+      expect(response.analysis?.keyFacts).toEqual([]);
+    });
+
+    it('a cached response never carries a request-local evidenceId — only real article IDs', async () => {
+      const articles = [makeArticle({ id: 'cache-evidence-article' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('cache evidence test');
+      const cached = await service.analyzeNews('cache evidence test');
+
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+      expect(cached.analysis?.keyFacts[0].sourceArticleIds).toEqual(['cache-evidence-article']);
+      const serialized = JSON.stringify(cached);
+      expect(serialized).not.toMatch(/"S1"/);
     });
   });
 });

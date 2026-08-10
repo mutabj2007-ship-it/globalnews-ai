@@ -52,4 +52,39 @@ describe('MockAnalysisProvider', () => {
     };
     expect(candidate.unknowns.some((u) => /mock/i.test(u))).toBe(true);
   });
+
+  it('Milestone #31: cites sources using request-local evidenceIds (S1/S2/...), never real article IDs', async () => {
+    const articles = [
+      makeArticle({ id: 'a1', title: 'Story A' }),
+      makeArticle({ id: 'a2', title: 'Story B' }),
+    ];
+    const candidate = (await provider.analyzeNews({ query: 'test', articles })) as {
+      keyFacts: Array<{ evidenceIds: string[] }>;
+    };
+    for (const fact of candidate.keyFacts) {
+      for (const evidenceId of fact.evidenceIds) {
+        expect(evidenceId).toMatch(/^S[12]$/);
+      }
+    }
+  });
+
+  it('Milestone #31: validated output never contains an S-label, only real article IDs', async () => {
+    const articles = [
+      makeArticle({ id: 'a1', title: 'Story A' }),
+      makeArticle({ id: 'a2', title: 'Story B' }),
+    ];
+    const candidate = await provider.analyzeNews({ query: 'test', articles });
+    const validated = validateAnalysisResult(candidate, {
+      query: 'test',
+      articles,
+      analysisMode: 'mock-ai',
+    });
+    const realIds = new Set(articles.map((a) => a.id));
+    for (const fact of validated.keyFacts) {
+      for (const id of fact.sourceArticleIds) {
+        expect(realIds.has(id)).toBe(true);
+        expect(id).not.toMatch(/^S\d+$/);
+      }
+    }
+  });
 });

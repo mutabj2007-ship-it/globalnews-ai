@@ -40,6 +40,20 @@ export interface TimelineEvent {
   sourceArticleIds: string[];
 }
 
+/**
+ * Milestone #31 — a case where the supplied evidence does not establish
+ * a conclusion (e.g. "reports conflict", "this remains unconfirmed").
+ * `sourceArticleIds` names the articles the uncertainty concerns, if
+ * any — it may be empty when the gap is general rather than tied to a
+ * specific supplied article. Additive alongside `unknowns` (free-text,
+ * unchanged) rather than a replacement for it — see
+ * NewsAnalysisResult.unknowns.
+ */
+export interface UncertaintyItem {
+  description: string;
+  sourceArticleIds: string[];
+}
+
 export interface ConfidenceInfo {
   level: ConfidenceLevel;
   /** 0-100. */
@@ -85,6 +99,16 @@ export interface NewsAnalysisResult {
   /** ISO-8601 timestamp. */
   generatedAt: string;
   analysisMode: AnalysisMode;
+
+  /**
+   * Milestone #31 — grounded insufficient-evidence / disagreement-adjacent
+   * items, each optionally tied to specific supplied articles via
+   * sourceArticleIds. Additive: `unknowns` (free-text, ungrounded) is
+   * preserved unchanged for backward compatibility. Always present as an
+   * array (possibly empty) on a validated result; optional only so older
+   * callers/tests that don't set it still satisfy the type.
+   */
+  uncertainties?: UncertaintyItem[];
 }
 
 /**

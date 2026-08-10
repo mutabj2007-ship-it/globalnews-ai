@@ -1,15 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import type { NewsArticle } from '@globalnews-ai/shared';
 import type { AnalysisProvider, AnalysisProviderInput } from '../interfaces';
+import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
 
 /**
  * Produces a clearly-labeled demonstration analysis without calling any
  * external AI service. It's grounded in the real articles it's given
- * (real titles, real IDs, real source names) so it exercises the same
- * validation and rendering path as the live provider — it just never
- * claims to be real AI output. AnalysisService/the frontend are
- * responsible for surfacing analysisMode so this is never presented as
- * live analysis.
+ * (real titles, real source names) so it exercises the same validation
+ * and rendering path as the live provider — it just never claims to be
+ * real AI output.
+ *
+ * Milestone #31: like the live OpenAI provider, this must cite sources
+ * using request-local evidenceIds (S1/S2/...) rather than real article
+ * IDs — AnalysisService's validator only trusts evidenceIds that
+ * resolve against the evidence map it builds itself from the same
+ * input array (see build-analysis-prompt.util.ts /
+ * validate-analysis-result.ts). Computing the same
+ * buildEvidenceReferences() over the same `articles` array the caller
+ * passed in guarantees this provider's S-labels agree with the
+ * validator's, without either side needing to share any other state.
  */
 @Injectable()
 export class MockAnalysisProvider implements AnalysisProvider {
@@ -18,8 +27,13 @@ export class MockAnalysisProvider implements AnalysisProvider {
   readonly isMock = true;
 
   async analyzeNews({ query, articles }: AnalysisProviderInput): Promise<unknown> {
+    const evidenceByArticleId = new Map(
+      buildEvidenceReferences(articles).map((ref) => [ref.articleId, ref.evidenceId]),
+    );
+    const evidenceIdFor = (article: NewsArticle): string => evidenceByArticleId.get(article.id) as string;
+
     const top = articles.slice(0, 3);
-    const ids = (list: NewsArticle[]) => list.map((a) => a.id);
+    const evidenceIds = (list: NewsArticle[]) => list.map(evidenceIdFor);
 
     return {
       query,
@@ -30,14 +44,14 @@ export class MockAnalysisProvider implements AnalysisProvider {
         'Configure OPENAI_API_KEY to enable real analysis.',
       keyFacts: top.map((article) => ({
         claim: article.title,
-        sourceArticleIds: [article.id],
+        evidenceIds: [evidenceIdFor(article)],
       })),
       agreements:
         top.length > 1
           ? [
               {
                 point: `Multiple outlets are covering "${top[0].title}".`,
-                sourceArticleIds: ids(top),
+                evidenceIds: evidenceIds(top),
               },
             ]
           : [],
@@ -45,10 +59,17 @@ export class MockAnalysisProvider implements AnalysisProvider {
       unknowns: [
         'This is mock analysis \u2014 no live AI reasoning has been performed on these articles.',
       ],
+      uncertainties: [
+        {
+          description:
+            'This is mock analysis \u2014 no live evidence assessment has been performed.',
+          evidenceIds: [],
+        },
+      ],
       timeline: top.map((article) => ({
         timestamp: article.publishedAt,
         event: article.title,
-        sourceArticleIds: [article.id],
+        evidenceIds: [evidenceIdFor(article)],
       })),
       confidence: {
         level: 'low' as const,
