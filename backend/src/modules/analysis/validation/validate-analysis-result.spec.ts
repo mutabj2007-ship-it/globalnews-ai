@@ -39,7 +39,11 @@ function validCandidate(evidenceId: string) {
     unknowns: ['Some open question'],
     uncertainties: [],
     timeline: [
-      { timestamp: new Date().toISOString(), event: 'Something occurred', evidenceIds: [evidenceId] },
+      {
+        timestamp: new Date().toISOString(),
+        event: 'Something occurred',
+        evidenceIds: [evidenceId],
+      },
     ],
     confidence: { level: 'medium', score: 60, explanation: 'Reasonable evidence.' },
     entities: { countries: [], locations: [], people: [], organizations: [], topics: [] },
@@ -253,7 +257,15 @@ describe('validateAnalysisResult', () => {
     // sources always come from the articles we actually sent it.
     const candidate = {
       ...validCandidate('S1'),
-      sources: [{ articleId: 'fabricated', publisher: 'Fake', title: 'x', url: 'https://fake.example.com', publishedAt: 'x' }],
+      sources: [
+        {
+          articleId: 'fabricated',
+          publisher: 'Fake',
+          title: 'x',
+          url: 'https://fake.example.com',
+          publishedAt: 'x',
+        },
+      ],
     };
     const result = validateAnalysisResult(candidate, context(articles));
     expect(result.sources).toEqual([
@@ -284,7 +296,9 @@ describe('validateAnalysisResult', () => {
       const articles = [makeArticle({ id: 'real-article' })];
       const candidate = {
         ...validCandidate('S1'),
-        uncertainties: [{ description: 'No outlet reports the underlying cause.', evidenceIds: [] }],
+        uncertainties: [
+          { description: 'No outlet reports the underlying cause.', evidenceIds: [] },
+        ],
       };
       const result = validateAnalysisResult(candidate, context(articles));
       expect(result.uncertainties).toEqual([
@@ -316,7 +330,7 @@ describe('validateAnalysisResult', () => {
 
     it('defaults to an empty array when uncertainties is absent or malformed', () => {
       const articles = [makeArticle({ id: 'real-article' })];
-      const { uncertainties: _omit, ...rest } = validCandidate('S1');
+      const rest = { ...validCandidate('S1'), uncertainties: undefined };
       const result = validateAnalysisResult(rest, context(articles));
       expect(result.uncertainties).toEqual([]);
     });
@@ -334,7 +348,9 @@ describe('validateAnalysisResult', () => {
       ],
       unknowns: [],
       uncertainties: [{ description: 'Hallucinated uncertainty', evidenceIds: ['S99'] }],
-      timeline: [{ timestamp: new Date().toISOString(), event: 'Hallucinated event', evidenceIds: ['S99'] }],
+      timeline: [
+        { timestamp: new Date().toISOString(), event: 'Hallucinated event', evidenceIds: ['S99'] },
+      ],
       confidence: { level: 'low', score: 10, explanation: 'x' },
       entities: { countries: [], locations: [], people: [], organizations: [], topics: [] },
     };
