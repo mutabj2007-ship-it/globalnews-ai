@@ -1,13 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { resolveFrontendOrigin } from './security/cors-startup-validator';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS for the Next.js frontend during local development.
+  // Milestone #34: origin resolution is shared with CorsStartupValidator
+  // via resolveFrontendOrigin() — fails closed (throws) in production
+  // when FRONTEND_ORIGIN is missing/empty/whitespace-only, rather than
+  // silently falling back to the development localhost origin.
   app.enableCors({
-    origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:3000',
+    origin: resolveFrontendOrigin(process.env.NODE_ENV, process.env.FRONTEND_ORIGIN),
   });
 
   // Validates and transforms all incoming request DTOs (query params,
@@ -28,11 +32,12 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error: unknown) => {
-  // Milestone #30: makes the fail-closed startup path (see
-  // AnalysisStartupValidator) explicit rather than relying on Node's
-  // default unhandled-rejection behavior. error.message here is safe to
-  // log as-is — the validator's thrown errors never include the
-  // OPENAI_API_KEY value itself, only the fact that it's unusable.
+  // Milestone #30/#33/#34: makes the fail-closed startup paths (see
+  // AnalysisStartupValidator, NewsStartupValidator, resolveFrontendOrigin)
+  // explicit rather than relying on Node's default unhandled-rejection
+  // behavior. error.message here is safe to log as-is — none of these
+  // fail-closed errors ever include the underlying secret/config value
+  // itself, only the fact that it's unusable.
   // eslint-disable-next-line no-console
   console.error(
     'GlobalNews AI backend failed to start:',
