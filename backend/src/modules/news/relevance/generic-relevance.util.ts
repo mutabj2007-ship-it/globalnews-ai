@@ -62,6 +62,111 @@ function containsWholePhrase(text: string, phrase: string): boolean {
   return countWholePhraseOccurrences(text, phrase) > 0;
 }
 
+/**
+ * Milestone #39 — Bounded Relational Inflection Equivalence.
+ *
+ * RELATIONAL-ONLY: called exclusively from scoreRelationalRelevance()
+ * below. scoreGenericRelevance() (Milestone #36) does not call this and
+ * its exact-match semantics are completely unchanged — verified by
+ * regression tests.
+ *
+ * WHY THIS CANNOT BECOME GENERAL STEMMING: this function never reduces
+ * a word to a "canonical stem" that gets stored, compared elsewhere, or
+ * treated as authoritative. It generates a small, bounded SET of
+ * candidate phrase variants (at most 2: the original phrase, plus one
+ * approved structural variant on the LAST word only) and checks each
+ * one with the exact same containsWholePhrase() used everywhere else
+ * in this file — completely unmodified. The original exact phrase is
+ * always included and always checked first; this is "exact match OR
+ * one approved variant match," never a replacement for exact matching.
+ *
+ * SCOPE — deliberately narrowed to a single, structurally safe surface
+ * shape: "...e" <-> "...es" (price/prices, rate/rates, change/changes
+ * — your primary required examples), NOT a general "add/remove
+ * trailing s" rule. This narrowing is load-bearing, not cosmetic — see
+ * the safety property below. No -y/-ies rule, no irregular-plural
+ * dictionary (person/people, child/children, man/men, mouse/mice) —
+ * these remain unsupported, intentionally and permanently for this
+ * milestone.
+ *
+ * SAFETY PROPERTY (corrected — an earlier, broader "-s"/"+s" rule was
+ * found to be unsafe in real review and is NOT what this is):
+ * A general "strip any trailing s" rule is unsafe because the result
+ * can be a real, different English word with a different meaning —
+ * concretely, "news" stripped of its trailing "s" produces "new", a
+ * common, unrelated word; an article containing "new" but never "news"
+ * would then have been wrongly treated as matching the concept "news".
+ * The same failure mode applies to "means" -> "mean". A malformed
+ * NON-word candidate (e.g. a hypothetical "busines") is genuinely safe
+ * because it essentially never appears in real text — but a candidate
+ * that IS a real word is not automatically safe just because it came
+ * from a stripped form, and that distinction is exactly what the
+ * earlier, broader rule missed.
+ *
+ * The "...e" <-> "...es" restriction structurally prevents this class
+ * of failure, not just in the specific news/means cases but for the
+ * whole failure class: the backward (plural -> singular) direction
+ * only fires when the word ends in "es" specifically — "news" ends in
+ * "ws", not "es" (fails the check, no variant generated at all);
+ * "means" ends in "ns", not "es" (same). The forward (singular ->
+ * plural) direction only fires when the word already ends in "e" —
+ * "new" and "mean" don't, so neither ever generates a "+s" variant
+ * either. Words this narrowing correctly leaves unsupported as a
+ * result (job/jobs, worker/workers, business/businesses,
+ * analysis/analyses, gas/gases, economy/economies) are ACCEPTED false
+ * negatives — false negatives are preferable to false positives.
+ *
+ * Multiword phrases: only the LAST word is varied (per your required
+ * examples — "house prices"/"house price", "interest rates"/"interest
+ * rate", "climate changes"/"climate change" all differ in exactly one
+ * trailing token, and all fit the "...e"/"...es" shape). Every other
+ * word in the phrase must still match exactly. This deliberately does
+ * NOT attempt "job losses" ~ "jobs were lost" — that requires
+ * reordering and a part-of-speech change (noun "losses" -> verb
+ * "lost"), not a same-position suffix variant, and is correctly out of
+ * scope (see doc comment on scoreRelationalRelevance).
+ */
+function generatePhraseVariants(phrase: string): string[] {
+  const words = phrase.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+
+  const lastWord = words[words.length - 1];
+  const precedingWords = words.slice(0, -1);
+  const MIN_BASE_LENGTH = 3;
+
+  const variants = new Set<string>([phrase]);
+
+  // "...e" -> "...es": price -> prices, rate -> rates, change -> changes.
+  // Only fires when the word ALREADY ends in "e" — "new" and "mean" do
+  // not, so this never generates "news"/"means" from them.
+  if (/e$/i.test(lastWord)) {
+    variants.add([...precedingWords, `${lastWord}s`].join(' '));
+  }
+
+  // "...es" -> "...e": prices -> price, rates -> rate, changes -> change.
+  // Only fires when the word ends in "es" SPECIFICALLY (the character
+  // immediately before the final "s" must be "e") — this is what
+  // structurally excludes "news" (ends in "ws") and "means" (ends in
+  // "ns") from ever generating a stripped candidate at all, not merely
+  // relying on the candidate being unlikely to match real text.
+  if (/es$/i.test(lastWord) && lastWord.length - 1 >= MIN_BASE_LENGTH) {
+    variants.add([...precedingWords, lastWord.slice(0, -1)].join(' '));
+  }
+
+  return Array.from(variants);
+}
+
+/**
+ * Milestone #39 — checks the original exact phrase first, then each
+ * approved bounded variant from generatePhraseVariants(). Whole-phrase/
+ * whole-word boundary protection is entirely inherited from
+ * containsWholePhrase() — this function adds no new matching logic of
+ * its own, only additional candidate strings to check with it.
+ */
+function containsWholePhraseWithInflection(text: string, phrase: string): boolean {
+  return generatePhraseVariants(phrase).some((variant) => containsWholePhrase(text, variant));
+}
+
 function wordCount(value: string): number {
   return value.trim().split(/\s+/).filter(Boolean).length;
 }
@@ -170,14 +275,19 @@ function detectConnectors(localContext: string): string[] {
  * required to co-occur in one local context, is itself the
  * corroboration for relational retrieval.
  *
- * KNOWN LIMITATION (deliberately NOT addressed in M38 — see the
- * approved M38 design/scope): this remains exact deterministic
- * whole-phrase matching with NO synonym expansion, no stemming, and no
- * singular/plural normalization. "house price" does NOT match a
- * derived Y of "house prices"; "jobs" does NOT match "employment";
- * "maize production" does NOT match "agriculture". These are accepted,
- * disclosed lexical gaps — concept-equivalence handling is explicitly
- * deferred to a separate, future milestone, not fixed here.
+ * KNOWN LIMITATION (Milestone #38, narrowed by Milestone #39 — see
+ * that function's own doc comment above for exactly what's covered):
+ * matching remains deterministic with NO synonym expansion and NO
+ * general stemming. Milestone #39 added a small, bounded regular "+s"
+ * inflection variant (price/prices, rate/rates, change/changes), so
+ * "house price" NOW matches a derived Y of "house prices" — but
+ * "jobs" still does NOT match "employment", "maize production" still
+ * does NOT match "agriculture", "Middle East conflict" still does NOT
+ * match "Iran conflict", and irregular plurals (person/people,
+ * child/children, man/men, mouse/mice) remain unsupported. These
+ * remain accepted, disclosed lexical/semantic gaps — concept-synonym
+ * and semantic equivalence handling is explicitly deferred to a
+ * separate, future milestone, not addressed here.
  */
 export function scoreRelationalRelevance(
   article: Pick<NewsArticle, 'title' | 'summary'>,
@@ -195,25 +305,34 @@ export function scoreRelationalRelevance(
     return { isRelevant: false, reasons: ['empty or invalid X/Y concept'] };
   }
 
-  // Stage 1 — base presence, unchanged from M37, not weakened.
+  // Stage 1 — base presence. M37's exact-match requirement is not
+  // weakened; Milestone #39 only widens WHAT counts as "present" to
+  // also include one approved bounded inflectional variant (see
+  // containsWholePhraseWithInflection's doc comment) — it never makes
+  // presence easier to satisfy in any other way.
   const xPresentAnywhere =
-    containsWholePhrase(title, normalizedX) || containsWholePhrase(summary, normalizedX);
+    containsWholePhraseWithInflection(title, normalizedX) ||
+    containsWholePhraseWithInflection(summary, normalizedX);
   if (!xPresentAnywhere) {
     return { isRelevant: false, reasons: ['X absent'] };
   }
 
   const yPresentAnywhere =
-    containsWholePhrase(title, normalizedY) || containsWholePhrase(summary, normalizedY);
+    containsWholePhraseWithInflection(title, normalizedY) ||
+    containsWholePhraseWithInflection(summary, normalizedY);
   if (!yPresentAnywhere) {
     return { isRelevant: false, reasons: ['Y absent'] };
   }
 
   const baseReasons = ['X present in title or summary', 'Y present in title or summary'];
 
-  // Stage 2 — relational context (Milestone #38). Both concepts
+  // Stage 2 — relational context (Milestone #38, WHERE requirement
+  // unchanged by Milestone #39 — only WHAT counts as a match at each
+  // location is widened, exactly as in Stage 1 above). Both concepts
   // together in the title is the strongest, simplest case.
   const bothInTitle =
-    containsWholePhrase(title, normalizedX) && containsWholePhrase(title, normalizedY);
+    containsWholePhraseWithInflection(title, normalizedX) &&
+    containsWholePhraseWithInflection(title, normalizedY);
 
   if (bothInTitle) {
     return {
@@ -230,10 +349,14 @@ export function scoreRelationalRelevance(
   // sentence — scattered mentions across different sentences (e.g.
   // "Climate change continues. Separately, agricultural exports
   // rise.") do not qualify, even though both concepts are present
-  // somewhere in the article per Stage 1.
+  // somewhere in the article per Stage 1. This WHERE requirement is
+  // completely unchanged by Milestone #39: an inflectional match in
+  // one sentence and the other concept's match in a different sentence
+  // still does not satisfy this condition.
   const connectingSentence = splitIntoSentences(summary).find(
     (sentence) =>
-      containsWholePhrase(sentence, normalizedX) && containsWholePhrase(sentence, normalizedY),
+      containsWholePhraseWithInflection(sentence, normalizedX) &&
+      containsWholePhraseWithInflection(sentence, normalizedY),
   );
 
   if (connectingSentence) {

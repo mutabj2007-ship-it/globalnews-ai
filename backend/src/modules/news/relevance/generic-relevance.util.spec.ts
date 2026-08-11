@@ -458,7 +458,7 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
       expect(result.reasons.some((r) => causalLanguage.test(r))).toBe(false);
     });
 
-    it('known limitation (documented, not fixed): singular/plural mismatch still fails Stage 1', () => {
+    it('(Milestone #39 changes the REASON, not the outcome) singular/plural mismatch across DIFFERENT sentences: still REJECT, but now via Stage 2 scattered-context rather than Stage 1 absence', () => {
       const result = scoreRelationalRelevance(
         article({
           title: 'High interest rates are here to stay',
@@ -467,12 +467,314 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
         'interest rates',
         'house prices',
       );
-      // "house price" (singular, as written by the article) does not
-      // whole-phrase-match a derived Y of "house prices" (plural) —
-      // an accepted, disclosed lexical gap, explicitly not addressed
-      // in Milestone #38 per its own non-goals.
+      // Milestone #39: "house price" (singular) now DOES satisfy
+      // presence for a derived Y of "house prices" via the approved
+      // +s inflection variant — Stage 1 passes for both concepts. But
+      // Stage 2 (Milestone #38, unchanged) still requires both in the
+      // SAME title or SAME summary sentence: "interest rates" is only
+      // in the title, "house price" is only in a summary sentence that
+      // doesn't also contain "interest rate(s)" — so this still
+      // correctly rejects, now for the scattered-context reason.
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain(
+        'both concepts present in the article, but never co-located in the title or a single summary sentence (scattered/disconnected mentions)',
+      );
+    });
+  });
+
+  describe('bounded relational inflection equivalence (Milestone #39)', () => {
+    it('A. query "house prices" matches article "house price" -> MATCH/KEEP', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Interest rates and house price trends both covered in this report' }),
+        'interest rates',
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('B. query "house price" matches article "house prices" -> MATCH/KEEP', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Interest rates and house prices trends both covered in this report' }),
+        'interest rates',
+        'house price',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('C. "interest rates" matches "interest rate" -> MATCH/KEEP', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Interest rate increases affected house prices this quarter' }),
+        'interest rates',
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('D. "climate changes" matches "climate change" -> MATCH/KEEP', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Climate change is affecting agriculture nationwide' }),
+        'climate changes',
+        'agriculture',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('E. exact phrase still matches normally (no inflection needed)', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Oil prices rise sharply as Iran conflict disrupts shipping' }),
+        'Iran conflict',
+        'oil prices',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('F. "house" does NOT match "warehouse" (whole-word boundary protected)', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Warehouse prices and interest rates both rose this year' }),
+        'interest rates',
+        'house',
+      );
       expect(result.isRelevant).toBe(false);
       expect(result.reasons).toContain('Y absent');
+    });
+
+    it('G. "AI" does NOT match "chair"', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'A new chair and interest rates were both discussed' }),
+        'interest rates',
+        'AI',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('Y absent');
+    });
+
+    it('H. "employment" does NOT match "unemployment"', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Unemployment and interest rates both rose this quarter' }),
+        'interest rates',
+        'employment',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('Y absent');
+    });
+
+    it('I. "oil prices" does NOT match "oil-pricing"', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Oil-pricing pressure increased amid Iran conflict tensions' }),
+        'Iran conflict',
+        'oil prices',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('Y absent');
+    });
+
+    it('J. "employment" does NOT match "jobs" (semantic equivalence deliberately unsupported)', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'AI is changing jobs across the economy' }),
+        'AI',
+        'employment',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('Y absent');
+    });
+
+    it('K. "agriculture" does NOT match "farm output" (semantic equivalence deliberately unsupported)', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Climate change is reducing farm output nationwide' }),
+        'climate change',
+        'agriculture',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('Y absent');
+    });
+
+    it('L. "Iran conflict" does NOT match "Middle East conflict" (entity equivalence deliberately unsupported)', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Middle East conflict lifts oil prices' }),
+        'Iran conflict',
+        'oil prices',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('X absent');
+    });
+
+    it('M. irregular plural remains unsupported: "person" vs "people" -> NO MATCH', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'People and interest rates were both discussed at the summit' }),
+        'interest rates',
+        'person',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('Y absent');
+    });
+
+    it('N. M38 local-context rejection remains: X and Y in different sentences (with inflection) -> REJECT', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          summary:
+            'Interest rate increases continued. Separately, the house price market improved.',
+        }),
+        'interest rates',
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain(
+        'both concepts present in the article, but never co-located in the title or a single summary sentence (scattered/disconnected mentions)',
+      );
+    });
+
+    it('O. same-sentence inflectional equivalents -> KEEP', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'Markets update',
+          summary: 'Rising interest rate pressure is beginning to weigh on house prices nationwide.',
+        }),
+        'interest rates',
+        'house price',
+      );
+      expect(result.isRelevant).toBe(true);
+      expect(result.reasons).toContain('both concepts present together in the same summary sentence');
+    });
+
+    it('P. same-title inflectional equivalents -> KEEP', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Rising interest rate hits house prices across the country' }),
+        'interest rates',
+        'house price',
+      );
+      expect(result.isRelevant).toBe(true);
+      expect(result.reasons).toContain('both concepts present together in the title');
+    });
+
+    it('Q. connector words remain informational only — same-sentence match with no connector still KEEPs', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'Update',
+          summary: 'Interest rate and house prices both featured prominently in today\'s report.',
+        }),
+        'interest rates',
+        'house price',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('R. no causal claim introduced in reasons, even with an inflectional match', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Rising interest rate hits house prices across the country' }),
+        'interest rates',
+        'house price',
+      );
+      const causalLanguage = /\bcause[sd]?\b|\bresulted from\b/i;
+      expect(result.reasons.some((r) => causalLanguage.test(r))).toBe(false);
+    });
+
+    it('"job losses" does NOT automatically match "jobs were lost" (syntactic rewrite, not simple inflection)', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Report: jobs were lost amid rising interest rates' }),
+        'interest rates',
+        'job losses',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('Y absent');
+    });
+
+    it('"gas" (does not end in "e" or "es") generates no variant at all, but exact match still works', () => {
+      // Under the narrowed "...e"/"...es"-only rule, "gas" doesn't end
+      // in "e" (no forward variant) and doesn't end in "es" specifically
+      // — it ends in "as" — (no backward variant either), so no
+      // stripped/appended candidate is generated for it at all. Exact
+      // matching (the phrase itself, always included) still works.
+      const result = scoreRelationalRelevance(
+        article({ title: 'Gas prices and interest rates both rose sharply' }),
+        'interest rates',
+        'gas',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    describe('Milestone #39 safety correction — false-positive regression suite', () => {
+      it('SAFETY: query concept "news" does NOT match article containing only "new" (both are real, distinct, unrelated words)', () => {
+        // This is the exact false-positive the CTO's safety review
+        // identified in an earlier, broader "-s" stripping rule: "news"
+        // stripped of its trailing "s" produces "new", a real common
+        // word. The narrowed "...es"-only backward rule structurally
+        // prevents this — "news" ends in "ws", not "es", so no
+        // candidate is ever generated for it at all.
+        const result = scoreRelationalRelevance(
+          article({ title: 'Interest rates: what is new this quarter' }),
+          'interest rates',
+          'news',
+        );
+        expect(result.isRelevant).toBe(false);
+        expect(result.reasons).toContain('Y absent');
+      });
+
+      it('SAFETY: query concept "means" does NOT match article containing only "mean"', () => {
+        const result = scoreRelationalRelevance(
+          article({ title: 'What interest rates mean for markets' }),
+          'interest rates',
+          'means',
+        );
+        expect(result.isRelevant).toBe(false);
+        expect(result.reasons).toContain('Y absent');
+      });
+
+      it('SAFETY: "new" as a query concept does NOT match article containing only "news" (reverse direction)', () => {
+        const result = scoreRelationalRelevance(
+          article({ title: 'Interest rates news roundup for this quarter' }),
+          'interest rates',
+          'new',
+        );
+        expect(result.isRelevant).toBe(false);
+        expect(result.reasons).toContain('Y absent');
+      });
+
+      it('SAFETY: query concept "business" never generates a stripped "busines" candidate', () => {
+        const result = scoreRelationalRelevance(
+          article({
+            title: 'Interest rates rise this week',
+            summary: 'No mention anywhere in this text of that other word at all.',
+          }),
+          'interest rates',
+          'business',
+        );
+        expect(result.isRelevant).toBe(false);
+        expect(result.reasons).toContain('Y absent');
+      });
+
+      it('SAFETY: query concept "analysis" never generates a stripped "analysi" candidate', () => {
+        const result = scoreRelationalRelevance(
+          article({ title: 'Interest rates rise again this week' }),
+          'interest rates',
+          'analysis',
+        );
+        expect(result.isRelevant).toBe(false);
+        expect(result.reasons).toContain('Y absent');
+      });
+
+      it('re-confirms the required positive cases still pass under the narrowed rule: price/prices, rate/rates, change/changes', () => {
+        expect(
+          scoreRelationalRelevance(
+            article({ title: 'Interest rates and house price trends both covered' }),
+            'interest rates',
+            'house prices',
+          ).isRelevant,
+        ).toBe(true);
+        expect(
+          scoreRelationalRelevance(
+            article({ title: 'Interest rate increases affected house prices this quarter' }),
+            'interest rates',
+            'house prices',
+          ).isRelevant,
+        ).toBe(true);
+        expect(
+          scoreRelationalRelevance(
+            article({ title: 'Climate change is affecting agriculture nationwide' }),
+            'climate changes',
+            'agriculture',
+          ).isRelevant,
+        ).toBe(true);
+      });
     });
   });
 });
