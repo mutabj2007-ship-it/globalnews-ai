@@ -1379,7 +1379,7 @@ describe('AnalysisService', () => {
     expect(
       newsService.search,
     ).toHaveBeenCalledWith(
-      "What's happening in Anytown?",
+      "Anytown",
       20,
     );
   });
