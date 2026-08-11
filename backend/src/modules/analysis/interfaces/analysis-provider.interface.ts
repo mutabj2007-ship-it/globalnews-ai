@@ -1,9 +1,36 @@
 import type { NewsArticle } from '@globalnews-ai/shared';
 
+/**
+ * Milestone #40 (authoritative-context correction) — the exact,
+ * deterministic X/Y pair AnalysisService already derived via
+ * deriveRelationalSearchQueries() for the current request, when the
+ * question matched Milestone #37's relational pattern set. This is the
+ * single source of truth for relational direction semantics: neither
+ * this interface, any provider, nor the prompt layer parses or
+ * re-derives X/Y from the question text — they only ever receive and
+ * forward this exact object. Absent for any non-relational request
+ * (ordinary M35/M36 generic queries, country/city retrieval).
+ */
+export interface AnalysisRelationalContext {
+  x: string;
+  y: string;
+}
+
 export interface AnalysisProviderInput {
   query: string;
   /** Already deduped/clustered and bounded to a reasonable count. */
   articles: NewsArticle[];
+  /**
+   * Milestone #40 (authoritative-context correction) — present only
+   * when this request's query matched Milestone #37's relational
+   * pattern set. A provider MAY use this to attempt relational
+   * evidence-direction classification (see build-analysis-prompt.util.ts);
+   * it must never be treated as license to fabricate assessments when
+   * absent — validateAnalysisResult() independently and unconditionally
+   * enforces that relationalEvidenceAssessments stay empty whenever
+   * this field is absent, regardless of what any provider emits.
+   */
+  relationalContext?: AnalysisRelationalContext;
 }
 
 /**

@@ -657,4 +657,88 @@ describe('validateAnalysisResult', () => {
       expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
     });
   });
+
+  describe('Milestone #40 fail-closed applicability (authoritative-context correction)', () => {
+    it('when relationalContextPresent is omitted (default), a provider-emitted relationalEvidenceAssessments array is forced empty', () => {
+      const articles = [
+        makeArticle({ id: 'a1', title: 'Report', summary: 'Climate change is reducing maize yields. Agricultural emissions contribute to climate change.' }),
+      ];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: 'x', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
+        ],
+        relationalEvidenceAssessments: [
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+        ],
+      };
+      // context(articles) does not set relationalContextPresent -> defaults to falsy.
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.relationalEvidenceAssessments).toEqual([]);
+      expect(result.keyFacts[0].relationalSupport).toBeUndefined();
+      // The ordinary M31 grounding is completely unaffected.
+      expect(result.keyFacts[0].sourceArticleIds).toEqual(['a1']);
+    });
+
+    it('when relationalContextPresent is explicitly false, behaves identically to omitted', () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Report', summary: 'Climate change is reducing maize yields.' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        relationalEvidenceAssessments: [
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, { ...context(articles), relationalContextPresent: false });
+      expect(result.relationalEvidenceAssessments).toEqual([]);
+    });
+
+    it('when relationalContextPresent is true, valid relational assessments are processed normally (Case 9 regression through full validateAnalysisResult)', () => {
+      const articles = [
+        makeArticle({
+          id: 'real-article-1',
+          title: 'Report',
+          summary: 'Climate change is reducing maize yields. Agricultural emissions contribute to climate change.',
+        }),
+      ];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: 'Climate change reduces maize yields', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
+          { claim: 'Agriculture contributes to climate change', evidenceIds: ['S1'], relationshipAssessmentIds: ['R2'] },
+        ],
+        relationalEvidenceAssessments: [
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+          { assessmentId: 'R2', evidenceId: 'S1', excerpt: 'Agricultural emissions contribute to climate change', direction: 'reverse-direction' },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, { ...context(articles), relationalContextPresent: true });
+
+      expect(result.relationalEvidenceAssessments).toHaveLength(2);
+      expect(result.keyFacts[0].relationalSupport?.direction).toBe('requested-direction');
+      expect(result.keyFacts[1].relationalSupport?.direction).toBe('reverse-direction');
+      // Claim referencing R2 never inherits R1, even though both share an article.
+      expect(result.keyFacts[1].relationalSupport?.assessments).toHaveLength(1);
+    });
+
+    it('when relationalContextPresent is true but the provider emits nothing relational, ordinary M31 behavior is unaffected', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const result = validateAnalysisResult(validCandidate('S1'), { ...context(articles), relationalContextPresent: true });
+      expect(result.relationalEvidenceAssessments).toEqual([]);
+      expect(result.keyFacts[0].relationalSupport).toBeUndefined();
+      expect(result.keyFacts[0].sourceArticleIds).toEqual(['a1']);
+    });
+
+    it('duplicate assessmentId fail-closed behavior still applies when relationalContextPresent is true', () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Report', summary: 'Climate change is reducing maize yields.' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        relationalEvidenceAssessments: [
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'reverse-direction' },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, { ...context(articles), relationalContextPresent: true });
+      expect(result.relationalEvidenceAssessments).toEqual([]);
+    });
+  });
 });

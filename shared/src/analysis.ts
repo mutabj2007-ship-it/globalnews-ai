@@ -54,6 +54,78 @@ export interface EvidenceBasis {
   excerpt: string;
 }
 
+/**
+ * Milestone #40 — the six base semantic labels a single evidence
+ * excerpt can carry with respect to a requested "X affecting/affects
+ * Y" relationship. Applies to ONE evidence assessment at a time — a
+ * single excerpt is never 'mixed'; see RelationalSupportDirection for
+ * the separate, backend-derived aggregate state.
+ *
+ * Establishes only "this excerpt is evidence relevant to the
+ * relationship between X and Y in this sense" — never "X caused Y".
+ * The backend cannot verify that a model-chosen direction is
+ * semantically correct, only that the excerpt is real, verified text
+ * from a real supplied article — see resolve-relational-evidence-
+ * assessment.util.ts.
+ */
+export type RelationalEvidenceDirection =
+  | 'requested-direction'
+  | 'reverse-direction'
+  | 'bidirectional'
+  | 'association-only'
+  | 'unclear'
+  | 'non-substantive';
+
+/**
+ * Milestone #40 — a claim's aggregate relational-support state, backend-
+ * derived from the set of validated RelationalEvidenceAssessments the
+ * claim actually referenced (never from article co-membership alone).
+ * 'mixed' is the ONLY value not possible on a single assessment — it
+ * exists solely to represent disagreement across multiple assessments
+ * supporting one claim (see RelationalSupport).
+ */
+export type RelationalSupportDirection = RelationalEvidenceDirection | 'mixed';
+
+/**
+ * Milestone #40 — one backend-validated evidence excerpt and its
+ * semantic direction. `articleId` is always the real, canonical
+ * article ID — never a request-local evidenceId. `excerpt` is
+ * independently verified (Milestone #32-style substring check) against
+ * the exact text supplied to the model for that article. Never implies
+ * causal proof — see RelationalEvidenceDirection's doc comment.
+ */
+export interface RelationalEvidenceAssessment {
+  articleId: string;
+  excerpt: string;
+  direction: RelationalEvidenceDirection;
+}
+
+/**
+ * Milestone #40 — additive, optional field on a claim/agreement/
+ * position/timeline entry. Present only when the entry explicitly
+ * referenced one or more backend-validated relational evidence
+ * assessments (never inferred from merely sharing an article with an
+ * unrelated assessment — see the M40 design's Case 9 regression).
+ *
+ * `direction` is the aggregate across every assessment in
+ * `assessments`: if all agree, that shared direction; if they
+ * disagree, 'mixed'. Only 'requested-direction' and 'bidirectional'
+ * count as direct support for the user's requested relationship —
+ * 'mixed', 'reverse-direction', 'association-only', 'unclear', and
+ * 'non-substantive' all mean this entry is NOT treated as supporting
+ * evidence for the requested direction, even though the evidence
+ * itself remains visible in `assessments` (reverse/contradicting
+ * evidence is never discarded).
+ *
+ * No request-local assessmentId or evidenceId ever appears here or
+ * anywhere downstream — both are purely internal validation-time
+ * lookup keys, exactly like M31's evidenceId.
+ */
+export interface RelationalSupport {
+  direction: RelationalSupportDirection;
+  assessments: RelationalEvidenceAssessment[];
+}
+
 export interface SourcedClaim {
   claim: string;
   sourceArticleIds: string[];
@@ -61,6 +133,8 @@ export interface SourcedClaim {
   evidenceBreadth?: EvidenceBreadth;
   /** Milestone #32 — additive; present only when backend-validated. */
   evidenceBasis?: EvidenceBasis;
+  /** Milestone #40 — additive; present only when backend-validated. See RelationalSupport doc comment. */
+  relationalSupport?: RelationalSupport;
 }
 
 export interface AgreementPoint {
@@ -68,6 +142,7 @@ export interface AgreementPoint {
   sourceArticleIds: string[];
   evidenceBreadth?: EvidenceBreadth;
   evidenceBasis?: EvidenceBasis;
+  relationalSupport?: RelationalSupport;
 }
 
 export interface DifferencePosition {
@@ -75,6 +150,7 @@ export interface DifferencePosition {
   sourceArticleIds: string[];
   evidenceBreadth?: EvidenceBreadth;
   evidenceBasis?: EvidenceBasis;
+  relationalSupport?: RelationalSupport;
 }
 
 export interface DifferenceItem {
@@ -89,6 +165,7 @@ export interface TimelineEvent {
   sourceArticleIds: string[];
   evidenceBreadth?: EvidenceBreadth;
   evidenceBasis?: EvidenceBasis;
+  relationalSupport?: RelationalSupport;
 }
 
 /**
@@ -160,6 +237,21 @@ export interface NewsAnalysisResult {
    * callers/tests that don't set it still satisfy the type.
    */
   uncertainties?: UncertaintyItem[];
+
+  /**
+   * Milestone #40 — every backend-validated relational evidence
+   * assessment for this analysis, regardless of whether any claim
+   * ended up referencing it. Reverse-direction, association-only,
+   * unclear, and non-substantive assessments are always included here
+   * — this array is never filtered down to only "supporting" evidence,
+   * so contradicting/counter evidence remains visible even when no
+   * claim cites it. Empty when the query wasn't relational, the
+   * provider emitted nothing valid, or analysisMode is 'mock-ai'
+   * (MockAnalysisProvider never fabricates semantic assessments).
+   * Optional only so pre-M40 callers/tests still satisfy the type;
+   * always an array (possibly empty) on a freshly validated result.
+   */
+  relationalEvidenceAssessments?: RelationalEvidenceAssessment[];
 }
 
 /**

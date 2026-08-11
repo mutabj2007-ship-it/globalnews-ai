@@ -127,7 +127,7 @@ export function buildNormalizedEvidenceTextMap(
   );
 }
 
-const SYSTEM_PROMPT = `You are a careful news analyst working for GlobalNews AI.
+const BASE_SYSTEM_PROMPT = `You are a careful news analyst working for GlobalNews AI.
 
 You will be given a user's question and a numbered list of news articles,
 each with a request-local evidence ID (S1, S2, S3, ...). These evidence
@@ -170,8 +170,90 @@ Strict rules:
   not combine wording from multiple articles, do not invent text). Omit
   "evidenceBasis" entirely if you cannot quote a genuine short excerpt
   that directly appears in the cited evidence's text.
+`;
+
+/**
+ * Milestone #40 (authoritative-context correction) — the exact,
+ * deterministic X/Y pair the model must use for relational direction
+ * classification, when the current request matched Milestone #37's
+ * relational pattern set. This is the SAME object AnalysisService
+ * already builds from deriveRelationalSearchQueries()'s output
+ * (relationalQuery.x/relationalQuery.y) — this module does not parse,
+ * derive, or reinterpret X/Y itself; it only renders whatever it's
+ * given into the prompt. There is exactly one source of truth for
+ * what X and Y are: deriveRelationalSearchQueries().
+ */
+export interface RelationalPromptContext {
+  x: string;
+  y: string;
+}
+
+/**
+ * Milestone #40 (authoritative-context correction) — appended to
+ * BASE_SYSTEM_PROMPT to produce the final system prompt. Two mutually
+ * exclusive branches:
+ *
+ * - relationalContext present: explicitly states the EXACT X and Y
+ *   values (verbatim, never reinterpreted) and defines
+ *   requested-direction/reverse-direction strictly in terms of that
+ *   pair — the model is never asked to independently infer X/Y from
+ *   the question text, closing the "two independent interpretations"
+ *   gap the CTO identified.
+ * - relationalContext absent: explicitly tells the model this is NOT
+ *   an M40 relational request and relationalEvidenceAssessments must
+ *   stay empty — this is a prompt-level instruction only; the actual
+ *   safety guarantee is enforced independently and unconditionally by
+ *   validateAnalysisResult() (see Step 8's fail-closed rule), which
+ *   never trusts prompt obedience alone.
+ */
+export function buildRelationalPromptSection(
+  relationalContext: RelationalPromptContext | undefined,
+): string {
+  if (!relationalContext) {
+    return `- This is NOT a Milestone #40 relational request — the question did
+  not match a supported relational pattern. Do not populate
+  "relationalEvidenceAssessments"; leave it as an empty array, and leave
+  every entry's "relationshipAssessmentIds" as null. Do not attempt to
+  classify any relationship direction for this request.
 - Output must be valid JSON matching the provided schema exactly. Do not
   include commentary outside the JSON.`;
+  }
+
+  const { x, y } = relationalContext;
+  return `- RELATIONAL CONTEXT: X = "${x}", Y = "${y}". These are the EXACT,
+  authoritative concepts for this request — do not infer, replace, or
+  reinterpret them using synonyms or your own reading of the question;
+  use exactly these two values. Populate "relationalEvidenceAssessments"
+  with specific excerpts you found in the evidence above that bear on the
+  relationship between X and Y. Each entry needs a unique "assessmentId"
+  you invent for this response only (e.g. "R1", "R2", ...), the
+  "evidenceId" of the article the excerpt is from, the "excerpt" itself
+  (copied verbatim, a sentence or less, exactly like evidenceBasis above —
+  never invented or combined from multiple articles), and a "direction":
+  "requested-direction" if the excerpt supports or discusses the
+  relationship in the order X affecting Y (i.e. "${x}" affecting "${y}"),
+  "reverse-direction" if the excerpt supports it in the opposite order
+  (i.e. "${y}" affecting "${x}"), "bidirectional" if the excerpt supports
+  both directions at once, "association-only" if the excerpt merely
+  discusses both X and Y without describing a relationship between them,
+  "unclear" if you genuinely cannot tell, or "non-substantive" if the
+  shared wording is incidental (e.g. part of an organization's name
+  rather than substantive content). A single article may reasonably
+  produce more than one assessment if it discusses the relationship in
+  more than one place or more than one way — this is expected, not an
+  error. Then, on any keyFacts, agreements, differences positions, or
+  timeline entry whose claim text is actually supported by one or more of
+  these assessments, include "relationshipAssessmentIds": the
+  assessmentId(s) that specific entry relies on. Never mark an entry as
+  relying on an assessment that isn't about an article that entry itself
+  already cited in "evidenceIds". If you found no genuine relational
+  evidence, leave "relationalEvidenceAssessments" as an empty array and
+  every entry's "relationshipAssessmentIds" as null. Never state or imply
+  that a relationship is causally proven — you are only reporting what
+  the evidence says, not establishing that one thing caused another.
+- Output must be valid JSON matching the provided schema exactly. Do not
+  include commentary outside the JSON.`;
+}
 
 export function buildAnalysisUserPrompt(
   query: string,
@@ -197,10 +279,11 @@ export function buildAnalysisMessages(
   query: string,
   articles: NewsArticle[],
   maxChars: number,
+  relationalContext?: RelationalPromptContext,
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
-    system: SYSTEM_PROMPT,
+    system: BASE_SYSTEM_PROMPT + buildRelationalPromptSection(relationalContext),
     user: buildAnalysisUserPrompt(query, normalized),
   };
 }
@@ -240,14 +323,61 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
     additionalProperties: false,
   };
 
+  /**
+   * Milestone #40 — model-facing relational-evidence-assessment shape.
+   * `assessmentId` is a request-local, model-facing label (e.g. "R1",
+   * distinct from and never confused with the request-local "S1"-style
+   * evidenceId aliases) — it exists only to let a claim reference which
+   * specific assessment(s) it relies on within THIS same response; it
+   * is never trusted as a stable ID and never survives validation. Uses
+   * the same request-local "evidenceId" field as everywhere else in
+   * this schema — resolve-relational-evidence-assessment.util.ts is the
+   * only place either ID is ever resolved/discarded.
+   */
+  const relationalEvidenceAssessmentSchema = {
+    type: 'object',
+    properties: {
+      assessmentId: { type: 'string' },
+      evidenceId: { type: 'string' },
+      excerpt: { type: 'string' },
+      direction: {
+        type: 'string',
+        enum: [
+          'requested-direction',
+          'reverse-direction',
+          'bidirectional',
+          'association-only',
+          'unclear',
+          'non-substantive',
+        ],
+      },
+    },
+    required: ['assessmentId', 'evidenceId', 'excerpt', 'direction'],
+    additionalProperties: false,
+  };
+
+  /**
+   * Milestone #40 — nullable array of request-local assessmentId
+   * strings a claim/agreement/position/timeline entry relies on. Null
+   * (not an empty array) when the entry has no relational grounding —
+   * an empty array vs. null both mean "none" at validation time, but
+   * null is the natural "not applicable" value here, consistent with
+   * evidenceBasisSchema's own nullable-object convention above.
+   */
+  const relationshipAssessmentIdsSchema = {
+    type: ['array', 'null'],
+    items: { type: 'string' },
+  };
+
   const sourcedClaim = {
     type: 'object',
     properties: {
       claim: { type: 'string' },
       evidenceIds: { type: 'array', items: { type: 'string' } },
       evidenceBasis: evidenceBasisSchema,
+      relationshipAssessmentIds: relationshipAssessmentIdsSchema,
     },
-    required: ['claim', 'evidenceIds', 'evidenceBasis'],
+    required: ['claim', 'evidenceIds', 'evidenceBasis', 'relationshipAssessmentIds'],
     additionalProperties: false,
   };
 
@@ -257,8 +387,9 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
       description: { type: 'string' },
       evidenceIds: { type: 'array', items: { type: 'string' } },
       evidenceBasis: evidenceBasisSchema,
+      relationshipAssessmentIds: relationshipAssessmentIdsSchema,
     },
-    required: ['description', 'evidenceIds', 'evidenceBasis'],
+    required: ['description', 'evidenceIds', 'evidenceBasis', 'relationshipAssessmentIds'],
     additionalProperties: false,
   };
 
@@ -290,8 +421,9 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
               point: { type: 'string' },
               evidenceIds: { type: 'array', items: { type: 'string' } },
               evidenceBasis: evidenceBasisSchema,
+              relationshipAssessmentIds: relationshipAssessmentIdsSchema,
             },
-            required: ['point', 'evidenceIds', 'evidenceBasis'],
+            required: ['point', 'evidenceIds', 'evidenceBasis', 'relationshipAssessmentIds'],
             additionalProperties: false,
           },
         },
@@ -309,6 +441,10 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         },
         unknowns: { type: 'array', items: { type: 'string' } },
         uncertainties: { type: 'array', items: uncertaintySchema },
+        relationalEvidenceAssessments: {
+          type: 'array',
+          items: relationalEvidenceAssessmentSchema,
+        },
         timeline: {
           type: 'array',
           items: {
@@ -318,8 +454,9 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
               event: { type: 'string' },
               evidenceIds: { type: 'array', items: { type: 'string' } },
               evidenceBasis: evidenceBasisSchema,
+              relationshipAssessmentIds: relationshipAssessmentIdsSchema,
             },
-            required: ['timestamp', 'event', 'evidenceIds', 'evidenceBasis'],
+            required: ['timestamp', 'event', 'evidenceIds', 'evidenceBasis', 'relationshipAssessmentIds'],
             additionalProperties: false,
           },
         },
@@ -355,6 +492,7 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         'differences',
         'unknowns',
         'uncertainties',
+        'relationalEvidenceAssessments',
         'timeline',
         'confidence',
         'entities',

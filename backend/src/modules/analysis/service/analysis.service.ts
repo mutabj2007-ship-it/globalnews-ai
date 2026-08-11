@@ -193,6 +193,12 @@ export class AnalysisService {
 
     let articles: NewsArticle[];
     let retrievalContext: AnalysisRetrievalContext;
+    // Milestone #40 (authoritative-context correction): set ONLY when
+    // the M37 relational branch below matches — undefined for country/
+    // city retrieval and for ordinary M35/M36 generic queries. This is
+    // the exact same relationalQuery.x/y AnalysisService already
+    // computes for retrieval — no second parser, no reinterpretation.
+    let relationalContext: { x: string; y: string } | undefined;
 
     if (location) {
       const { country, city, geoMatch } = location;
@@ -240,6 +246,13 @@ export class AnalysisService {
           `Detected relational query: X="${relationalQuery.x}" Y="${relationalQuery.y}" ` +
             `(provider query: "${relationalQuery.providerQuery}")`,
         );
+
+        // Milestone #40 (authoritative-context correction): capture the
+        // EXACT M37-derived x/y here — this is what will be forwarded
+        // to the AI provider later, so its relational classification
+        // uses the same authoritative pair retrieval already used,
+        // never an independent re-derivation from the question text.
+        relationalContext = { x: relationalQuery.x, y: relationalQuery.y };
 
         // Milestone #37: exactly ONE provider search — no reversed
         // duplicate query. The relational relevance mode (X and Y kept
@@ -359,6 +372,10 @@ export class AnalysisService {
         await this.provider.analyzeNews({
           query: normalizedQuery,
           articles: deduped,
+          // Milestone #40 (authoritative-context correction): undefined
+          // for country/city retrieval and ordinary M35/M36 generic
+          // queries — only set when the M37 relational branch matched.
+          relationalContext,
         });
 
       const latencyMs = Date.now() - providerCallStartedAt;
@@ -377,6 +394,12 @@ export class AnalysisService {
           // so evidenceBasis excerpts validate against precisely what
           // the model was shown.
           maxArticleChars: config.maxArticleChars,
+          // Milestone #40 (authoritative-context correction): fail-closed
+          // applicability signal — when undefined, the validator forces
+          // relationalEvidenceAssessments to [] and no claim receives
+          // relationalSupport, regardless of what the provider emits.
+          // This never relies on prompt obedience alone.
+          relationalContextPresent: relationalContext !== undefined,
         },
       );
 

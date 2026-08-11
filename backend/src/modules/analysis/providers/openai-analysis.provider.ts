@@ -86,7 +86,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
 
   constructor(private readonly analysisConfig: AnalysisConfigService) {}
 
-  async analyzeNews({ query, articles }: AnalysisProviderInput): Promise<unknown> {
+  async analyzeNews({ query, articles, relationalContext }: AnalysisProviderInput): Promise<unknown> {
     const config = this.analysisConfig.get();
 
     if (!isUsableOpenAiApiKey(config.openAiApiKey)) {
@@ -97,7 +97,17 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       );
     }
 
-    const { system, user } = buildAnalysisMessages(query, articles, config.maxArticleChars);
+    // Milestone #40 (authoritative-context correction): relationalContext,
+    // when present, is forwarded unchanged — this provider never derives
+    // or reinterprets X/Y itself, only renders whatever AnalysisService
+    // supplied (which is itself exactly what deriveRelationalSearchQueries()
+    // produced — see analysis.service.ts).
+    const { system, user } = buildAnalysisMessages(
+      query,
+      articles,
+      config.maxArticleChars,
+      relationalContext,
+    );
     const maxAttempts = config.retryAttempts + 1;
     const startedAt = Date.now();
 

@@ -11,6 +11,7 @@ import type {
   EvidenceBreadth,
   NewsArticle,
   NewsAnalysisResult,
+  RelationalEvidenceAssessment,
   SourcedClaim,
   TimelineEvent,
   UncertaintyItem,
@@ -20,6 +21,10 @@ import {
   buildNormalizedEvidenceTextMap,
   normalizeExcerptText,
 } from '../prompt/build-analysis-prompt.util';
+import {
+  resolveRelationalEvidenceAssessments,
+  resolveRelationalSupport,
+} from './resolve-relational-evidence-assessment.util';
 
 export class AnalysisValidationError extends Error {
   constructor(message: string) {
@@ -139,6 +144,8 @@ function resolveEvidenceBasis(
 interface EvidenceContext {
   evidenceMap: Map<string, string>;
   evidenceTextMap: Map<string, string>;
+  /** Milestone #40 — trusted, request-local assessmentId -> validated assessment map. Never exposed downstream; see resolveRelationalSupport. */
+  assessmentsById: Map<string, RelationalEvidenceAssessment>;
 }
 
 function validateSourcedClaims(
@@ -164,11 +171,17 @@ function validateSourcedClaims(
       ctx.evidenceTextMap,
       sourceArticleIds,
     );
+    const relationalSupport = resolveRelationalSupport(
+      obj.relationshipAssessmentIds,
+      ctx.assessmentsById,
+      sourceArticleIds,
+    );
     result.push({
       claim: obj.claim,
       sourceArticleIds,
       evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
       ...(evidenceBasis ? { evidenceBasis } : {}),
+      ...(relationalSupport ? { relationalSupport } : {}),
     });
   }
   return result;
@@ -190,11 +203,17 @@ function validateAgreements(candidate: unknown, ctx: EvidenceContext): Agreement
       ctx.evidenceTextMap,
       sourceArticleIds,
     );
+    const relationalSupport = resolveRelationalSupport(
+      obj.relationshipAssessmentIds,
+      ctx.assessmentsById,
+      sourceArticleIds,
+    );
     result.push({
       point: obj.point,
       sourceArticleIds,
       evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
       ...(evidenceBasis ? { evidenceBasis } : {}),
+      ...(relationalSupport ? { relationalSupport } : {}),
     });
   }
   return result;
@@ -214,11 +233,17 @@ function validatePositions(candidate: unknown, ctx: EvidenceContext): Difference
       ctx.evidenceTextMap,
       sourceArticleIds,
     );
+    const relationalSupport = resolveRelationalSupport(
+      obj.relationshipAssessmentIds,
+      ctx.assessmentsById,
+      sourceArticleIds,
+    );
     result.push({
       description: obj.description,
       sourceArticleIds,
       evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
       ...(evidenceBasis ? { evidenceBasis } : {}),
+      ...(relationalSupport ? { relationalSupport } : {}),
     });
   }
   return result;
@@ -257,12 +282,18 @@ function validateTimeline(candidate: unknown, ctx: EvidenceContext): TimelineEve
       ctx.evidenceTextMap,
       sourceArticleIds,
     );
+    const relationalSupport = resolveRelationalSupport(
+      obj.relationshipAssessmentIds,
+      ctx.assessmentsById,
+      sourceArticleIds,
+    );
     result.push({
       timestamp,
       event: obj.event,
       sourceArticleIds,
       evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
       ...(evidenceBasis ? { evidenceBasis } : {}),
+      ...(relationalSupport ? { relationalSupport } : {}),
     });
   }
   return result;
@@ -373,6 +404,19 @@ export function validateAnalysisResult(
     articles: NewsArticle[];
     analysisMode: AnalysisMode;
     maxArticleChars?: number;
+    /**
+     * Milestone #40 (authoritative-context correction) — fail-closed
+     * applicability signal. Optional and defaults to `false` (matches
+     * the pre-existing-caller default of "not applicable") so any
+     * caller that hasn't been updated to pass this still compiles and
+     * behaves safely: relational assessments off by default, never on
+     * by default. When `false`, relational assessments are forced
+     * empty and no claim receives relationalSupport, REGARDLESS of what
+     * the candidate/provider emits — this never relies on the model
+     * having honored the prompt's "this is not a relational request"
+     * instruction.
+     */
+    relationalContextPresent?: boolean;
   },
 ): NewsAnalysisResult {
   const obj = requireObject(candidate, 'analysis');
@@ -384,7 +428,31 @@ export function validateAnalysisResult(
     context.articles,
     context.maxArticleChars ?? DEFAULT_MAX_ARTICLE_CHARS,
   );
-  const evidenceCtx: EvidenceContext = { evidenceMap, evidenceTextMap };
+
+  // Milestone #40 (authoritative-context correction) — fail-closed
+  // applicability gate: when the current request did NOT match M37's
+  // relational pattern set, the candidate's relationalEvidenceAssessments
+  // are never even passed to the resolver — an empty array is used
+  // instead. This protects against a malformed or disobedient provider
+  // emitting relational assessments for a non-relational request; it
+  // does not depend on the model having followed the "this is not a
+  // relational request" prompt instruction (see build-analysis-prompt.util.ts).
+  const relationalAssessmentsCandidate = context.relationalContextPresent
+    ? obj.relationalEvidenceAssessments
+    : [];
+
+  // Milestone #40 — Steps A/B/C: validate every candidate relational
+  // evidence assessment and build the trusted assessmentId map BEFORE
+  // any claim/agreement/position/timeline entry is validated, since
+  // those entries need it (Steps E/F/G/H) to resolve their own
+  // relationalSupport.
+  const { assessmentsById, allValidatedAssessments } = resolveRelationalEvidenceAssessments(
+    relationalAssessmentsCandidate,
+    evidenceMap,
+    evidenceTextMap,
+  );
+
+  const evidenceCtx: EvidenceContext = { evidenceMap, evidenceTextMap, assessmentsById };
 
   if (!isNonEmptyString(obj.headline)) {
     throw new AnalysisValidationError('Missing or empty "headline".');
@@ -425,5 +493,11 @@ export function validateAnalysisResult(
     sources,
     generatedAt: new Date().toISOString(),
     analysisMode: context.analysisMode,
+    // Milestone #40 — every validated assessment, regardless of
+    // whether any claim ended up referencing it. Reverse/association/
+    // unclear/non-substantive evidence remains visible here even when
+    // no claim cites it — never filtered down to "supporting" evidence
+    // only (see RelationalSupport's doc comment in shared/).
+    relationalEvidenceAssessments: allValidatedAssessments,
   };
 }
