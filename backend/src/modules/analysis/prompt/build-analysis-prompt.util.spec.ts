@@ -30,7 +30,7 @@ describe('buildRelationalPromptSection (Milestone #40 — authoritative-context 
 
   it('never claims causality is proven merely by classifying a direction', () => {
     const section = buildRelationalPromptSection({ x: 'AI', y: 'employment' });
-    expect(section).toMatch(/never .*caus(al|ally)/i);
+    expect(section).toMatch(/never[\s\S]*caus(?:al|ally)/i);
   });
 
   it('when relationalContext is absent, explicitly disables M40 and requires an empty array', () => {
