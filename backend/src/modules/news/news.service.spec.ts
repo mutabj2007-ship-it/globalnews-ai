@@ -95,6 +95,40 @@ class FakeFailingProvider implements NewsProvider {
   }
 }
 
+/**
+ * Milestone #36 — returns a fixed, caller-supplied set of articles
+ * regardless of the query string, so tests can construct specific
+ * relevant/irrelevant candidates for the generic relevance gate.
+ */
+class FakeQueryProvider implements NewsProvider {
+  readonly id = 'fake-query';
+  readonly displayName = 'Fake Query Provider';
+  readonly isMock = false;
+
+  constructor(private readonly articles: NewsArticle[]) {}
+
+  async search(): Promise<NewsArticle[]> {
+    return this.articles;
+  }
+
+  async topHeadlines(): Promise<NewsArticle[]> {
+    return this.articles;
+  }
+
+  async category(): Promise<NewsArticle[]> {
+    return this.articles;
+  }
+
+  async health(): Promise<ProviderHealthStatus> {
+    return {
+      providerId: this.id,
+      displayName: this.displayName,
+      status: 'ok',
+      checkedAt: new Date().toISOString(),
+    };
+  }
+}
+
 class FakeEmptyProvider implements NewsProvider {
   readonly id = 'fake-empty';
   readonly displayName = 'Fake Empty Provider';
@@ -747,5 +781,165 @@ describe('NewsService', () => {
     expect(response.articles).toEqual([
       cachedArticle,
     ]);
+  });
+
+  describe('generic relevance gate (Milestone #36)', () => {
+    const relevantArticle = makeArticle({
+      id: 'relevant-1',
+      title: 'Sens. Schiff and Klobuchar unveil new cybersecurity bill',
+      summary: 'The bipartisan cybersecurity bill aims to protect infrastructure.',
+      publishedAt: '2024-01-02T00:00:00.000Z',
+    });
+
+    const irrelevantArticle = makeArticle({
+      id: 'irrelevant-1',
+      title: 'Dark Energy May Explain the Expansion of the Universe',
+      summary: 'Scientists discuss cosmology and the nature of the cosmos.',
+      publishedAt: '2024-01-03T00:00:00.000Z',
+    });
+
+    it('filters live generic results when applyGenericRelevanceGate is true, keeping only relevant articles', async () => {
+      const service = await buildService([
+        new FakeQueryProvider([irrelevantArticle, relevantArticle]),
+      ]);
+
+      const response = await service.search('cybersecurity', 20, {
+        applyGenericRelevanceGate: true,
+      });
+
+      expect(response.articles.map((a) => a.id)).toEqual(['relevant-1']);
+      expect(response.totalResults).toBe(1);
+    });
+
+    it('does NOT filter when applyGenericRelevanceGate is omitted (default false) — preserves pre-M36 behavior for every existing caller', async () => {
+      const service = await buildService([
+        new FakeQueryProvider([irrelevantArticle, relevantArticle]),
+      ]);
+
+      const response = await service.search('cybersecurity', 20);
+
+      expect(response.articles.map((a) => a.id).sort()).toEqual(
+        ['irrelevant-1', 'relevant-1'].sort(),
+      );
+    });
+
+    it('does NOT filter when applyGenericRelevanceGate is explicitly false', async () => {
+      const service = await buildService([
+        new FakeQueryProvider([irrelevantArticle, relevantArticle]),
+      ]);
+
+      const response = await service.search('cybersecurity', 20, {
+        applyGenericRelevanceGate: false,
+      });
+
+      expect(response.articles).toHaveLength(2);
+    });
+
+    it('does not persist a relevance-rejected article as accepted generic evidence', async () => {
+      const service = await buildService([
+        new FakeQueryProvider([irrelevantArticle, relevantArticle]),
+      ]);
+
+      await service.search('cybersecurity', 20, {
+        applyGenericRelevanceGate: true,
+      });
+
+      expect(articlePersistence.persistMany).toHaveBeenCalledWith([
+        relevantArticle,
+      ]);
+    });
+
+    it('accepted results retain the existing recency ordering', async () => {
+      const older = makeArticle({
+        id: 'cyber-older',
+        title: 'Cybersecurity report released',
+        summary: 'Details of the cybersecurity report.',
+        publishedAt: '2024-01-01T00:00:00.000Z',
+      });
+      const newer = makeArticle({
+        id: 'cyber-newer',
+        title: 'New cybersecurity guidance issued',
+        summary: 'Updated cybersecurity guidance for agencies.',
+        publishedAt: '2024-01-05T00:00:00.000Z',
+      });
+
+      const service = await buildService([
+        new FakeQueryProvider([older, newer]),
+      ]);
+
+      const response = await service.search('cybersecurity', 20, {
+        applyGenericRelevanceGate: true,
+      });
+
+      expect(response.articles.map((a) => a.id)).toEqual([
+        'cyber-newer',
+        'cyber-older',
+      ]);
+    });
+
+    it('when every live candidate is rejected, falls through to the existing honest zero-results/degraded behavior (no fabricated replacement)', async () => {
+      const service = await buildService([
+        new FakeQueryProvider([irrelevantArticle]),
+      ]);
+
+      const response = await service.search('cybersecurity', 20, {
+        applyGenericRelevanceGate: true,
+      });
+
+      expect(response.articles).toEqual([]);
+      expect(articlePersistence.persistMany).not.toHaveBeenCalled();
+    });
+
+    it('applies the SAME gate to the stored/persisted database fallback, so live and stored generic results share one trust rule', async () => {
+      articlePersistence.findRecent.mockResolvedValue([
+        irrelevantArticle,
+        relevantArticle,
+      ]);
+
+      const service = await buildService([
+        new FakeEmptyProvider(),
+      ]);
+
+      const response = await service.search('cybersecurity', 20, {
+        applyGenericRelevanceGate: true,
+      });
+
+      expect(response.articles.map((a) => a.id)).toEqual(['relevant-1']);
+      expect(response.dataMode).toBe('cached');
+    });
+
+    it('a stored fallback whose only candidates are all rejected falls through to the honest empty response, not a fabricated one', async () => {
+      articlePersistence.findRecent.mockResolvedValue([irrelevantArticle]);
+
+      const service = await buildService([
+        new FakeEmptyProvider(),
+      ]);
+
+      const response = await service.search('cybersecurity', 20, {
+        applyGenericRelevanceGate: true,
+      });
+
+      expect(response.articles).toEqual([]);
+    });
+
+    it('does not filter topHeadlines results (gate is search()-only, per approved scope)', async () => {
+      const service = await buildService([
+        new FakeQueryProvider([irrelevantArticle]),
+      ]);
+
+      const response = await service.topHeadlines(10);
+
+      expect(response.articles.map((a) => a.id)).toEqual(['irrelevant-1']);
+    });
+
+    it('does not filter byCategory results (gate is search()-only, per approved scope)', async () => {
+      const service = await buildService([
+        new FakeQueryProvider([irrelevantArticle]),
+      ]);
+
+      const response = await service.byCategory('science', 10);
+
+      expect(response.articles.map((a) => a.id)).toEqual(['irrelevant-1']);
+    });
   });
 });

@@ -12,6 +12,7 @@ import {
   NEWS_PROVIDERS,
 } from './providers/provider.tokens';
 import { ArticlePersistenceService } from './persistence/article-persistence.service';
+import { scoreGenericRelevance } from './relevance/generic-relevance.util';
 
 const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
 
@@ -42,7 +43,17 @@ export class NewsService {
   async search(
     query: string,
     limit?: number,
+    options?: { applyGenericRelevanceGate?: boolean },
   ): Promise<NewsResponse> {
+    // Milestone #36: opt-in only. CountryNewsService's country/city
+    // retrieval and the public GET /news/search endpoint both call this
+    // same method WITHOUT this option, so their behavior is completely
+    // unchanged by this milestone — the relevance gate below is never
+    // reached for them. Only AnalysisService's generic-search branch
+    // passes { applyGenericRelevanceGate: true }.
+    const applyGenericRelevanceGate =
+      options?.applyGenericRelevanceGate ?? false;
+
     const providerCall =
       await this.callAllProviders(
         (provider) =>
@@ -51,7 +62,7 @@ export class NewsService {
           }),
       );
 
-    const response = this.buildResponse(
+    const rawResponse = this.buildResponse(
       providerCall.results,
       providerCall.failedProviderIds,
       limit,
@@ -60,6 +71,15 @@ export class NewsService {
         sortByRecency: true,
       },
     );
+
+    // Milestone #36: filtering happens here — before the persistence
+    // check just below — so a relevance-rejected article is never
+    // persisted as accepted generic evidence (per the approved design's
+    // "provider candidates -> relevance filtering -> accepted generic
+    // result handling/persistence" ordering).
+    const response = applyGenericRelevanceGate
+      ? this.applyGenericRelevanceGate(rawResponse, query)
+      : rawResponse;
 
     if (response.articles.length > 0) {
       if (response.dataMode === 'live') {
@@ -83,12 +103,22 @@ export class NewsService {
           DATABASE_FALLBACK_MAX_AGE_MINUTES,
       });
 
-    if (cachedArticles.length === 0) {
+    // Milestone #36: the SAME gate applies to stored/persisted fallback
+    // results — live and stored generic results must not have
+    // inconsistent trust rules.
+    const relevantCachedArticles = applyGenericRelevanceGate
+      ? cachedArticles.filter(
+          (article) =>
+            scoreGenericRelevance(article, query).isRelevant,
+        )
+      : cachedArticles;
+
+    if (relevantCachedArticles.length === 0) {
       return response;
     }
 
     return this.buildCachedResponse(
-      cachedArticles,
+      relevantCachedArticles,
       limit,
       {
         query,
@@ -373,6 +403,32 @@ export class NewsService {
       generatedAt:
         new Date().toISOString(),
       ...extra,
+    };
+  }
+
+  /**
+   * Milestone #36 — filters a NewsResponse's articles through
+   * scoreGenericRelevance(), recomputing totalResults to match. Only
+   * ever called from search() when applyGenericRelevanceGate is
+   * explicitly requested. Every other field (dataMode, providers,
+   * fallbackReason, generatedAt, query/category) is preserved
+   * unchanged — dataMode continues to describe what the RETRIEVAL did
+   * (e.g. "live" because a real provider responded), independent of
+   * how many of its results survive relevance filtering.
+   */
+  private applyGenericRelevanceGate(
+    response: NewsResponse,
+    query: string,
+  ): NewsResponse {
+    const filtered = response.articles.filter(
+      (article) =>
+        scoreGenericRelevance(article, query).isRelevant,
+    );
+
+    return {
+      ...response,
+      articles: filtered,
+      totalResults: filtered.length,
     };
   }
 

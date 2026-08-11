@@ -1136,6 +1136,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       'the us released a report today',
       20,
+      { applyGenericRelevanceGate: true },
     );
   });
 
@@ -1187,6 +1188,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       'Chad missed the bus this morning',
       20,
+      { applyGenericRelevanceGate: true },
     );
   });
 
@@ -1381,6 +1383,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       "Anytown",
       20,
+      { applyGenericRelevanceGate: true },
     );
   });
 
@@ -1627,7 +1630,9 @@ describe('AnalysisService', () => {
       // term is now the derived phrase ("ambia"), not the raw
       // sentence — see derive-generic-news-query.util.ts.
       expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
-      expect(newsService.search).toHaveBeenCalledWith('ambia', 20);
+      expect(newsService.search).toHaveBeenCalledWith('ambia', 20, {
+        applyGenericRelevanceGate: true,
+      });
     });
 
     it('does not resolve a near-miss of a protected short country name ("Chad")', async () => {
@@ -1662,7 +1667,9 @@ describe('AnalysisService', () => {
       // called); the generic-search term is now the derived phrase
       // ("Chax"), not the raw sentence.
       expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
-      expect(newsService.search).toHaveBeenCalledWith('Chax', 20);
+      expect(newsService.search).toHaveBeenCalledWith('Chax', 20, {
+        applyGenericRelevanceGate: true,
+      });
     });
   });
 
@@ -1714,6 +1721,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       'Tell me about markets today',
       20,
+      { applyGenericRelevanceGate: true },
     );
 
     expect(
@@ -1771,6 +1779,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       'Tell me about technology and markets today',
       20,
+      { applyGenericRelevanceGate: true },
     );
 
     expect(
@@ -2942,7 +2951,9 @@ describe('AnalysisService', () => {
 
       // Milestone #35: the provider search term is the derived phrase,
       // not the raw sentence — see derive-generic-news-query.util.ts.
-      expect(newsService.search).toHaveBeenCalledWith('OpenAI', 20);
+      expect(newsService.search).toHaveBeenCalledWith('OpenAI', 20, {
+        applyGenericRelevanceGate: true,
+      });
       expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
     });
 
@@ -2972,7 +2983,9 @@ describe('AnalysisService', () => {
 
       expect(response.query).toBe("What's happening with NATO?");
       expect(response.normalizedQuery).toBe("What's happening with NATO?");
-      expect(newsService.search).toHaveBeenCalledWith('NATO', 20);
+      expect(newsService.search).toHaveBeenCalledWith('NATO', 20, {
+        applyGenericRelevanceGate: true,
+      });
     });
 
     it('country routing remains completely unaffected: a resolvable country query never reaches the generic-search phrase derivation', async () => {

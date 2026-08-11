@@ -239,6 +239,12 @@ export class AnalysisService {
         await this.newsService.search(
           genericSearchQuery,
           SEARCH_POOL_SIZE,
+          // Milestone #36: opt-in relevance gate — only this call site
+          // (AnalysisService's generic-search branch) enables it.
+          // CountryNewsService and the public /news/search endpoint
+          // call NewsService.search() without this option, so their
+          // behavior is completely unchanged (see news.service.ts).
+          { applyGenericRelevanceGate: true },
         );
 
       articles = searchResponse.articles;
