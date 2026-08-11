@@ -23,6 +23,7 @@ import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
 import { buildSourceEntities } from './build-source-entities.util';
+import { deriveGenericNewsQuery } from '../query/derive-generic-news-query.util';
 import {
   validateAnalysisResult,
   AnalysisValidationError,
@@ -222,9 +223,21 @@ export class AnalysisService {
         geoMatch,
       );
     } else {
+      // Milestone #35: only reached after detectLocation() has already
+      // returned undefined — country/city routing above is completely
+      // unaffected by this. Derives a concise provider search phrase
+      // from the natural-language query (e.g. "What's happening with
+      // NATO?" -> "NATO") rather than sending the whole sentence to
+      // the news provider's free-text search. normalizedQuery itself
+      // (used for the AI prompt, caching key, and response.query)
+      // remains completely untouched — only the provider search term
+      // changes.
+      const genericSearchQuery =
+        deriveGenericNewsQuery(normalizedQuery);
+
       const searchResponse =
         await this.newsService.search(
-          normalizedQuery,
+          genericSearchQuery,
           SEARCH_POOL_SIZE,
         );
 

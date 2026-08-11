@@ -1620,13 +1620,14 @@ describe('AnalysisService', () => {
       await service.analyzeNews("What's happening in ambia?");
 
       // Ambiguous fuzzy candidate fails closed: no country-aware
-      // retrieval is attempted, and the query falls back to ordinary
-      // generic search — the same behavior as any unresolved location.
+      // retrieval is attempted (countryNewsService.getCountryNews is
+      // never called — country routing itself is completely
+      // unaffected by Milestone #35), and the query falls back to
+      // ordinary generic search. Milestone #35: the generic-search
+      // term is now the derived phrase ("ambia"), not the raw
+      // sentence — see derive-generic-news-query.util.ts.
       expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
-      expect(newsService.search).toHaveBeenCalledWith(
-        "What's happening in ambia?",
-        20,
-      );
+      expect(newsService.search).toHaveBeenCalledWith('ambia', 20);
     });
 
     it('does not resolve a near-miss of a protected short country name ("Chad")', async () => {
@@ -1657,11 +1658,11 @@ describe('AnalysisService', () => {
       // must never resolve to Chad.
       await service.analyzeNews("What's happening in Chax?");
 
+      // Milestone #35: country routing is unaffected (still never
+      // called); the generic-search term is now the derived phrase
+      // ("Chax"), not the raw sentence.
       expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
-      expect(newsService.search).toHaveBeenCalledWith(
-        "What's happening in Chax?",
-        20,
-      );
+      expect(newsService.search).toHaveBeenCalledWith('Chax', 20);
     });
   });
 
@@ -2911,6 +2912,127 @@ describe('AnalysisService', () => {
 
       expect(response.provenance.status).toBe('success');
       expect(response.analysis?.keyFacts[0].evidenceBasis).toBeUndefined();
+    });
+  });
+
+  describe('generic query normalization (Milestone #35)', () => {
+    it('derives a concise search phrase for a natural-language non-country query', async () => {
+      const articles = [makeArticle({ id: 'nato-1', title: 'NATO summit coverage' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews("What's going on with OpenAI?");
+
+      // Milestone #35: the provider search term is the derived phrase,
+      // not the raw sentence — see derive-generic-news-query.util.ts.
+      expect(newsService.search).toHaveBeenCalledWith('OpenAI', 20);
+      expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
+    });
+
+    it('does not alter what is sent to the AI provider or echoed back as the query/normalizedQuery — only the provider search term changes', async () => {
+      const articles = [makeArticle({ id: 'nato-2' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews("What's happening with NATO?");
+
+      expect(response.query).toBe("What's happening with NATO?");
+      expect(response.normalizedQuery).toBe("What's happening with NATO?");
+      expect(newsService.search).toHaveBeenCalledWith('NATO', 20);
+    });
+
+    it('country routing remains completely unaffected: a resolvable country query never reaches the generic-search phrase derivation', async () => {
+      const articles = [makeArticle({ id: 'spain-1' })];
+
+      const newsService = { search: jest.fn() };
+      const countryNewsService = makeCountryNewsService();
+      countryNewsService.getCountryNews = jest.fn().mockResolvedValue(
+        makeCountryResponse('ESP', 'Spain', articles),
+      );
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('Spain');
+
+      expect(countryNewsService.getCountryNews).toHaveBeenCalled();
+      // The generic-search path (and therefore query derivation) is
+      // never reached for a resolvable country query.
+      expect(newsService.search).not.toHaveBeenCalled();
+    });
+
+    it('a query already resolving through a typo-tolerant geographic match still never reaches generic-search phrase derivation', async () => {
+      const articles = [makeArticle({ id: 'kigali-typo-2' })];
+
+      const newsService = { search: jest.fn() };
+      const countryNewsService = makeCountryNewsService();
+      countryNewsService.getCountryNews = jest.fn().mockResolvedValue(
+        makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' }),
+      );
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews("What's happening in Kigalli?");
+
+      expect(countryNewsService.getCountryNews).toHaveBeenCalled();
+      expect(newsService.search).not.toHaveBeenCalled();
     });
   });
 });
