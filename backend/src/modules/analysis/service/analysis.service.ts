@@ -24,6 +24,7 @@ import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-c
 import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
 import { buildSourceEntities } from './build-source-entities.util';
 import { deriveGenericNewsQuery } from '../query/derive-generic-news-query.util';
+import { deriveRelationalSearchQueries } from '../query/derive-relational-search-queries.util';
 import {
   validateAnalysisResult,
   AnalysisValidationError,
@@ -223,34 +224,76 @@ export class AnalysisService {
         geoMatch,
       );
     } else {
-      // Milestone #35: only reached after detectLocation() has already
-      // returned undefined — country/city routing above is completely
-      // unaffected by this. Derives a concise provider search phrase
-      // from the natural-language query (e.g. "What's happening with
-      // NATO?" -> "NATO") rather than sending the whole sentence to
-      // the news provider's free-text search. normalizedQuery itself
-      // (used for the AI prompt, caching key, and response.query)
-      // remains completely untouched — only the provider search term
-      // changes.
-      const genericSearchQuery =
-        deriveGenericNewsQuery(normalizedQuery);
+      // Milestone #37: attempt deterministic relational decomposition
+      // FIRST — only ever reached after detectLocation() has already
+      // returned undefined, so country/city routing above is
+      // completely unaffected. An unmatched (non-relational) query
+      // falls through unchanged to M35's deriveGenericNewsQuery() below
+      // — this branch never runs for "What's happening with NATO?",
+      // "What's happening in the Middle East?", "cybersecurity", etc.,
+      // since none of those match the closed relational pattern set.
+      const relationalQuery =
+        deriveRelationalSearchQueries(normalizedQuery);
 
-      const searchResponse =
-        await this.newsService.search(
-          genericSearchQuery,
-          SEARCH_POOL_SIZE,
-          // Milestone #36: opt-in relevance gate — only this call site
-          // (AnalysisService's generic-search branch) enables it.
-          // CountryNewsService and the public /news/search endpoint
-          // call NewsService.search() without this option, so their
-          // behavior is completely unchanged (see news.service.ts).
-          { applyGenericRelevanceGate: true },
+      if (relationalQuery) {
+        this.logger.debug(
+          `Detected relational query: X="${relationalQuery.x}" Y="${relationalQuery.y}" ` +
+            `(provider query: "${relationalQuery.providerQuery}")`,
         );
 
-      articles = searchResponse.articles;
-      retrievalContext = this.toRetrievalContext(
-        searchResponse,
-      );
+        // Milestone #37: exactly ONE provider search — no reversed
+        // duplicate query. The relational relevance mode (X and Y kept
+        // separate, never the concatenated providerQuery) is what
+        // NewsService applies at its existing pre-persistence filtering
+        // point, identically for live and DB-fallback results — see
+        // news.service.ts's RelevanceMode union. This establishes ONLY
+        // joint topical relevance ("the article discusses X and Y"),
+        // never causality — see scoreRelationalRelevance's doc comment.
+        const searchResponse =
+          await this.newsService.search(
+            relationalQuery.providerQuery,
+            SEARCH_POOL_SIZE,
+            {
+              type: 'relational',
+              x: relationalQuery.x,
+              y: relationalQuery.y,
+            },
+          );
+
+        articles = searchResponse.articles;
+        retrievalContext = this.toRetrievalContext(
+          searchResponse,
+        );
+      } else {
+        // Milestone #35: only reached after detectLocation() has already
+        // returned undefined — country/city routing above is completely
+        // unaffected by this. Derives a concise provider search phrase
+        // from the natural-language query (e.g. "What's happening with
+        // NATO?" -> "NATO") rather than sending the whole sentence to
+        // the news provider's free-text search. normalizedQuery itself
+        // (used for the AI prompt, caching key, and response.query)
+        // remains completely untouched — only the provider search term
+        // changes.
+        const genericSearchQuery =
+          deriveGenericNewsQuery(normalizedQuery);
+
+        const searchResponse =
+          await this.newsService.search(
+            genericSearchQuery,
+            SEARCH_POOL_SIZE,
+            // Milestone #36: opt-in relevance gate — only this call site
+            // (AnalysisService's ordinary generic-search branch) enables
+            // it. CountryNewsService and the public /news/search endpoint
+            // call NewsService.search() without this mode, so their
+            // behavior is completely unchanged (see news.service.ts).
+            { type: 'generic' },
+          );
+
+        articles = searchResponse.articles;
+        retrievalContext = this.toRetrievalContext(
+          searchResponse,
+        );
+      }
     }
 
     if (articles.length === 0) {

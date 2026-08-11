@@ -4,8 +4,8 @@ import type { NewsArticle } from '@globalnews-ai/shared';
  * Milestone #36 — Generic Retrieval Relevance Gate.
  *
  * This is an EVIDENCE-ADMISSION safeguard for AnalysisService's generic
- * (non-country) retrieval path only — see news.service.ts's optional
- * applyGenericRelevanceGate parameter on search(). It does NOT claim to
+ * (non-country) retrieval path only — see news.service.ts's RelevanceMode
+ * union on search() (relevanceMode: { type: 'generic' }). It does NOT claim to
  * solve semantic word-sense ambiguity: a single-word query like "energy"
  * may still admit an article genuinely and repeatedly discussing "dark
  * energy" (cosmology) rather than the energy sector, because both senses
@@ -64,6 +64,58 @@ function containsWholePhrase(text: string, phrase: string): boolean {
 
 function wordCount(value: string): number {
   return value.trim().split(/\s+/).filter(Boolean).length;
+}
+
+/**
+ * Milestone #37 — Relational Query Decomposition.
+ *
+ * Establishes JOINT TOPICAL RELEVANCE only: both X and Y appear as whole
+ * phrases somewhere in the SAME article's title or summary. This does
+ * NOT establish, score, or imply causality — an article satisfying this
+ * check may report "X caused Y", "X may affect Y", or merely discuss X
+ * and Y in unrelated sentences within the same piece. No causal language
+ * is inspected or scored anywhere in this function; causal-claim safety
+ * is an explicitly separate, not-yet-built concern (deferred per the
+ * approved M37 design).
+ *
+ * Deliberately does NOT apply scoreGenericRelevance's single-word
+ * corroboration-count model to X or Y independently — the presence of
+ * TWO distinct, independently-required concepts in one article is
+ * itself the corroboration for relational retrieval (see the M37 design
+ * discussion: requiring standalone corroboration for each concept was
+ * tested against a realistic case and produced false negatives on
+ * genuinely relevant articles that use a synonym in one of the two
+ * mentions). This is intentionally a different, weaker-per-concept but
+ * jointly-stronger admission rule than the single-word tier of
+ * scoreGenericRelevance() — which remains completely unmodified and is
+ * never called from this function.
+ */
+export function scoreRelationalRelevance(
+  article: Pick<NewsArticle, 'title' | 'summary'>,
+  x: string,
+  y: string,
+): { isRelevant: boolean; reasons: string[] } {
+  const title = article.title ?? '';
+  const summary = article.summary ?? '';
+
+  const normalizedX = normalize(x);
+  const normalizedY = normalize(y);
+
+  // Never admit an empty/invalid concept accidentally.
+  if (!normalizedX || !normalizedY) {
+    return { isRelevant: false, reasons: ['empty or invalid X/Y concept'] };
+  }
+
+  const xPresent = containsWholePhrase(title, normalizedX) || containsWholePhrase(summary, normalizedX);
+  const yPresent = containsWholePhrase(title, normalizedY) || containsWholePhrase(summary, normalizedY);
+
+  const reasons: string[] = [];
+  if (xPresent) reasons.push('X present in title or summary');
+  if (yPresent) reasons.push('Y present in title or summary');
+  if (!xPresent) reasons.push('X absent');
+  if (!yPresent) reasons.push('Y absent');
+
+  return { isRelevant: xPresent && yPresent, reasons };
 }
 
 /**

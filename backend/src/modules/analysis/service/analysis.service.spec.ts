@@ -1136,7 +1136,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       'the us released a report today',
       20,
-      { applyGenericRelevanceGate: true },
+      { type: 'generic' },
     );
   });
 
@@ -1188,7 +1188,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       'Chad missed the bus this morning',
       20,
-      { applyGenericRelevanceGate: true },
+      { type: 'generic' },
     );
   });
 
@@ -1383,7 +1383,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       "Anytown",
       20,
-      { applyGenericRelevanceGate: true },
+      { type: 'generic' },
     );
   });
 
@@ -1631,7 +1631,7 @@ describe('AnalysisService', () => {
       // sentence — see derive-generic-news-query.util.ts.
       expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
       expect(newsService.search).toHaveBeenCalledWith('ambia', 20, {
-        applyGenericRelevanceGate: true,
+        type: 'generic',
       });
     });
 
@@ -1668,7 +1668,7 @@ describe('AnalysisService', () => {
       // ("Chax"), not the raw sentence.
       expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
       expect(newsService.search).toHaveBeenCalledWith('Chax', 20, {
-        applyGenericRelevanceGate: true,
+        type: 'generic',
       });
     });
   });
@@ -1721,7 +1721,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       'Tell me about markets today',
       20,
-      { applyGenericRelevanceGate: true },
+      { type: 'generic' },
     );
 
     expect(
@@ -1779,7 +1779,7 @@ describe('AnalysisService', () => {
     ).toHaveBeenCalledWith(
       'Tell me about technology and markets today',
       20,
-      { applyGenericRelevanceGate: true },
+      { type: 'generic' },
     );
 
     expect(
@@ -2952,7 +2952,7 @@ describe('AnalysisService', () => {
       // Milestone #35: the provider search term is the derived phrase,
       // not the raw sentence — see derive-generic-news-query.util.ts.
       expect(newsService.search).toHaveBeenCalledWith('OpenAI', 20, {
-        applyGenericRelevanceGate: true,
+        type: 'generic',
       });
       expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
     });
@@ -2984,7 +2984,7 @@ describe('AnalysisService', () => {
       expect(response.query).toBe("What's happening with NATO?");
       expect(response.normalizedQuery).toBe("What's happening with NATO?");
       expect(newsService.search).toHaveBeenCalledWith('NATO', 20, {
-        applyGenericRelevanceGate: true,
+        type: 'generic',
       });
     });
 
@@ -3027,6 +3027,256 @@ describe('AnalysisService', () => {
       countryNewsService.getCountryNews = jest.fn().mockResolvedValue(
         makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' }),
       );
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews("What's happening in Kigalli?");
+
+      expect(countryNewsService.getCountryNews).toHaveBeenCalled();
+      expect(newsService.search).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('relational query decomposition (Milestone #37)', () => {
+    it('a matched relational query makes exactly ONE NewsService.search call, with provider query = `${x} ${y}` and the relational relevance mode carrying the exact x/y', async () => {
+      const articles = [
+        makeArticle({
+          id: 'iran-oil-1',
+          title: 'Oil prices rise sharply as Iran conflict disrupts shipping',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('How is the Iran conflict affecting oil prices?');
+
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+      expect(newsService.search).toHaveBeenCalledWith(
+        'Iran conflict oil prices',
+        20,
+        { type: 'relational', x: 'Iran conflict', y: 'oil prices' },
+      );
+      expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
+    });
+
+    it('the AI still receives the user\'s ORIGINAL question, not the decomposed x/y or provider query', async () => {
+      const articles = [makeArticle({ id: 'iran-oil-2' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews(
+        'How is the Iran conflict affecting oil prices?',
+      );
+
+      expect(response.query).toBe('How is the Iran conflict affecting oil prices?');
+      expect(response.normalizedQuery).toBe('How is the Iran conflict affecting oil prices?');
+    });
+
+    it('an unmatched relational-looking query falls back safely to the existing M35/M36 generic path', async () => {
+      const articles = [makeArticle({ id: 'general-relational-fallback' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      // Does not match any of the 4 closed relational patterns.
+      await service.analyzeNews('Tell me everything about the situation');
+
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+      expect(newsService.search).toHaveBeenCalledWith(
+        'Tell me everything about the situation',
+        20,
+        { type: 'generic' },
+      );
+    });
+
+    it('regression: "What\'s happening in cybersecurity?" is unaffected by the new relational branch', async () => {
+      const articles = [makeArticle({ id: 'cyber-regression' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews("What's happening in cybersecurity?");
+
+      expect(newsService.search).toHaveBeenCalledWith('cybersecurity', 20, {
+        type: 'generic',
+      });
+    });
+
+    it('regression: "What\'s going on with OpenAI?" is unaffected by the new relational branch', async () => {
+      const articles = [makeArticle({ id: 'openai-regression' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews("What's going on with OpenAI?");
+
+      expect(newsService.search).toHaveBeenCalledWith('OpenAI', 20, {
+        type: 'generic',
+      });
+    });
+
+    it('regression: "What\'s happening in the Middle East?" is unaffected by the new relational branch', async () => {
+      const articles = [makeArticle({ id: 'middle-east-regression' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews("What's happening in the Middle East?");
+
+      expect(newsService.search).toHaveBeenCalledWith('Middle East', 20, {
+        type: 'generic',
+      });
+    });
+
+    it('regression: country query "Ukraine" is unaffected by the new relational branch', async () => {
+      const articles = [makeArticle({ id: 'ukraine-regression' })];
+
+      const newsService = { search: jest.fn() };
+      const countryNewsService = makeCountryNewsService();
+      countryNewsService.getCountryNews = jest
+        .fn()
+        .mockResolvedValue(makeCountryResponse('UKR', 'Ukraine', articles));
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('Ukraine');
+
+      expect(countryNewsService.getCountryNews).toHaveBeenCalled();
+      expect(newsService.search).not.toHaveBeenCalled();
+    });
+
+    it('regression: city/typo query "What\'s happening in Kigalli?" is unaffected by the new relational branch', async () => {
+      const articles = [makeArticle({ id: 'kigali-regression' })];
+
+      const newsService = { search: jest.fn() };
+      const countryNewsService = makeCountryNewsService();
+      countryNewsService.getCountryNews = jest
+        .fn()
+        .mockResolvedValue(
+          makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' }),
+        );
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',

@@ -12,9 +12,52 @@ import {
   NEWS_PROVIDERS,
 } from './providers/provider.tokens';
 import { ArticlePersistenceService } from './persistence/article-persistence.service';
-import { scoreGenericRelevance } from './relevance/generic-relevance.util';
+import { scoreGenericRelevance, scoreRelationalRelevance } from './relevance/generic-relevance.util';
 
 const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
+
+/**
+ * Milestone #36/#37 — discriminated union, so a search() caller can
+ * never request both generic and relational relevance filtering at
+ * once. This is a TYPE-LEVEL guarantee, not a documented convention: it
+ * is structurally impossible to construct a RelevanceMode value that is
+ * simultaneously 'generic' and 'relational', and every branch below
+ * exhaustively switches on `mode.type`, so there is no runtime path
+ * where two filtering strategies could apply to the same call.
+ *
+ * - 'none' (the default when the parameter is omitted): no filtering —
+ *   CountryNewsService's country/city retrieval and the public
+ *   GET /news/search endpoint both call search() this way, so their
+ *   behavior is completely unaffected by M36 or M37.
+ * - 'generic': Milestone #36's evidence-admission gate
+ *   (scoreGenericRelevance), used by AnalysisService's ordinary
+ *   (non-relational) generic-search branch.
+ * - 'relational': Milestone #37's joint-topical-relevance gate
+ *   (scoreRelationalRelevance), used by AnalysisService's relational
+ *   branch. Establishes ONLY "the article discusses X and Y" — never
+ *   causality. See scoreRelationalRelevance's own doc comment.
+ */
+export type RelevanceMode =
+  | { type: 'none' }
+  | { type: 'generic' }
+  | { type: 'relational'; x: string; y: string };
+
+/**
+ * The subset of RelevanceMode that actually triggers filtering —
+ * excludes 'none'. Both scoreByMode() and applyRelevanceMode() are
+ * typed to accept only this narrower type, not the full RelevanceMode
+ * union: this makes it a compile-time guarantee (not just a runtime
+ * convention) that neither is ever reachable with mode.type === 'none'
+ * — the type checker itself would reject such a call. Both actual call
+ * sites in search() already only invoke these methods from inside a
+ * `relevanceMode.type === 'none' ? ... : ...` ternary's else-branch,
+ * where TypeScript's own discriminated-union narrowing already proves
+ * `relevanceMode` excludes 'none' at that point, so this type is always
+ * satisfiable by the real call sites without any cast.
+ */
+type ActiveRelevanceMode = Exclude<RelevanceMode, { type: 'none' }>;
+
+const NO_RELEVANCE_FILTERING: RelevanceMode = { type: 'none' };
 
 interface ProviderCallResult {
   results: Array<{
@@ -43,17 +86,13 @@ export class NewsService {
   async search(
     query: string,
     limit?: number,
-    options?: { applyGenericRelevanceGate?: boolean },
+    relevanceMode: RelevanceMode = NO_RELEVANCE_FILTERING,
   ): Promise<NewsResponse> {
-    // Milestone #36: opt-in only. CountryNewsService's country/city
+    // Milestone #36/#37: opt-in only, via the discriminated
+    // RelevanceMode union above. CountryNewsService's country/city
     // retrieval and the public GET /news/search endpoint both call this
-    // same method WITHOUT this option, so their behavior is completely
-    // unchanged by this milestone — the relevance gate below is never
-    // reached for them. Only AnalysisService's generic-search branch
-    // passes { applyGenericRelevanceGate: true }.
-    const applyGenericRelevanceGate =
-      options?.applyGenericRelevanceGate ?? false;
-
+    // same method with the default 'none' mode, so their behavior is
+    // completely unchanged by either milestone.
     const providerCall =
       await this.callAllProviders(
         (provider) =>
@@ -72,14 +111,16 @@ export class NewsService {
       },
     );
 
-    // Milestone #36: filtering happens here — before the persistence
-    // check just below — so a relevance-rejected article is never
-    // persisted as accepted generic evidence (per the approved design's
-    // "provider candidates -> relevance filtering -> accepted generic
-    // result handling/persistence" ordering).
-    const response = applyGenericRelevanceGate
-      ? this.applyGenericRelevanceGate(rawResponse, query)
-      : rawResponse;
+    // Milestone #36/#37: filtering happens here — before the
+    // persistence check just below — so a relevance-rejected article is
+    // never persisted as accepted generic OR relational evidence (per
+    // the approved design's "provider candidates -> relevance filtering
+    // -> accepted result handling/persistence" ordering, which applies
+    // identically to both modes).
+    const response =
+      relevanceMode.type === 'none'
+        ? rawResponse
+        : this.applyRelevanceMode(rawResponse, query, relevanceMode);
 
     if (response.articles.length > 0) {
       if (response.dataMode === 'live') {
@@ -103,15 +144,16 @@ export class NewsService {
           DATABASE_FALLBACK_MAX_AGE_MINUTES,
       });
 
-    // Milestone #36: the SAME gate applies to stored/persisted fallback
-    // results — live and stored generic results must not have
-    // inconsistent trust rules.
-    const relevantCachedArticles = applyGenericRelevanceGate
-      ? cachedArticles.filter(
-          (article) =>
-            scoreGenericRelevance(article, query).isRelevant,
-        )
-      : cachedArticles;
+    // Milestone #36/#37: the SAME gate (whichever mode is active)
+    // applies to stored/persisted fallback results — live and stored
+    // generic/relational results must not have inconsistent trust
+    // rules.
+    const relevantCachedArticles =
+      relevanceMode.type === 'none'
+        ? cachedArticles
+        : cachedArticles.filter((article) =>
+            this.scoreByMode(article, query, relevanceMode).isRelevant,
+          );
 
     if (relevantCachedArticles.length === 0) {
       return response;
@@ -407,22 +449,41 @@ export class NewsService {
   }
 
   /**
-   * Milestone #36 — filters a NewsResponse's articles through
-   * scoreGenericRelevance(), recomputing totalResults to match. Only
-   * ever called from search() when applyGenericRelevanceGate is
-   * explicitly requested. Every other field (dataMode, providers,
-   * fallbackReason, generatedAt, query/category) is preserved
-   * unchanged — dataMode continues to describe what the RETRIEVAL did
-   * (e.g. "live" because a real provider responded), independent of
-   * how many of its results survive relevance filtering.
+   * Milestone #36/#37 — dispatches to the correct scorer based on the
+   * active RelevanceMode. Never called with mode.type === 'none' (both
+   * call sites above check that first) — kept as a private helper
+   * rather than inlined so the two filtering points (live response,
+   * cached-articles array) can never drift apart in which scorer they
+   * use for a given mode.
    */
-  private applyGenericRelevanceGate(
+  private scoreByMode(
+    article: NewsArticle,
+    query: string,
+    relevanceMode: ActiveRelevanceMode,
+  ): { isRelevant: boolean } {
+    if (relevanceMode.type === 'generic') {
+      return scoreGenericRelevance(article, query);
+    }
+
+    return scoreRelationalRelevance(article, relevanceMode.x, relevanceMode.y);
+  }
+
+  /**
+   * Milestone #36/#37 — filters a NewsResponse's articles via
+   * scoreByMode(), recomputing totalResults to match. Only ever called
+   * from search() when relevanceMode.type !== 'none'. Every other field
+   * (dataMode, providers, fallbackReason, generatedAt, query/category)
+   * is preserved unchanged — dataMode continues to describe what the
+   * RETRIEVAL did (e.g. "live" because a real provider responded),
+   * independent of how many of its results survive relevance filtering.
+   */
+  private applyRelevanceMode(
     response: NewsResponse,
     query: string,
+    relevanceMode: ActiveRelevanceMode,
   ): NewsResponse {
     const filtered = response.articles.filter(
-      (article) =>
-        scoreGenericRelevance(article, query).isRelevant,
+      (article) => this.scoreByMode(article, query, relevanceMode).isRelevant,
     );
 
     return {

@@ -1,5 +1,5 @@
 import type { NewsArticle } from '@globalnews-ai/shared';
-import { scoreGenericRelevance } from './generic-relevance.util';
+import { scoreGenericRelevance, scoreRelationalRelevance } from './generic-relevance.util';
 
 function article(overrides: Partial<Pick<NewsArticle, 'title' | 'summary' | 'category'>>) {
   return {
@@ -180,5 +180,151 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
     );
     expect(titleOnly.corroborationCount).toBe(1);
     expect(titleOnly.isRelevant).toBe(false);
+  });
+});
+
+describe('scoreRelationalRelevance (Milestone #37)', () => {
+  it('1. X + Y both in title -> KEEP', () => {
+    const result = scoreRelationalRelevance(
+      article({ title: 'Oil prices rise sharply as Iran conflict disrupts shipping' }),
+      'Iran conflict',
+      'oil prices',
+    );
+    expect(result.isRelevant).toBe(true);
+  });
+
+  it('2. X in title, Y in summary -> KEEP', () => {
+    const result = scoreRelationalRelevance(
+      article({
+        title: 'Iran conflict enters critical phase',
+        summary: 'Analysts say oil prices could be affected in coming weeks.',
+      }),
+      'Iran conflict',
+      'oil prices',
+    );
+    expect(result.isRelevant).toBe(true);
+  });
+
+  it('3. X in summary, Y in title -> KEEP', () => {
+    const result = scoreRelationalRelevance(
+      article({
+        title: 'Oil prices climb amid market jitters',
+        summary: 'The Iran conflict remains a major factor for traders.',
+      }),
+      'Iran conflict',
+      'oil prices',
+    );
+    expect(result.isRelevant).toBe(true);
+  });
+
+  it('4. both X and Y only in summary -> KEEP', () => {
+    const result = scoreRelationalRelevance(
+      article({
+        title: 'Weekly markets roundup',
+        summary: 'The Iran conflict continues to weigh on oil prices this week.',
+      }),
+      'Iran conflict',
+      'oil prices',
+    );
+    expect(result.isRelevant).toBe(true);
+  });
+
+  it('5. X only, Y absent -> REJECT', () => {
+    const result = scoreRelationalRelevance(
+      article({ title: 'Iran conflict enters another week' }),
+      'Iran conflict',
+      'oil prices',
+    );
+    expect(result.isRelevant).toBe(false);
+    expect(result.reasons).toContain('Y absent');
+  });
+
+  it('6. Y only, X absent -> REJECT', () => {
+    const result = scoreRelationalRelevance(
+      article({ title: 'Oil prices rise after inventory report' }),
+      'Iran conflict',
+      'oil prices',
+    );
+    expect(result.isRelevant).toBe(false);
+    expect(result.reasons).toContain('X absent');
+  });
+
+  it('7. neither present -> REJECT', () => {
+    const result = scoreRelationalRelevance(
+      article({ title: 'Local election results announced' }),
+      'Iran conflict',
+      'oil prices',
+    );
+    expect(result.isRelevant).toBe(false);
+  });
+
+  it('8. single-word concepts (AI + employment): one presence each is sufficient -> KEEP, no standalone corroboration-count applied', () => {
+    const result = scoreRelationalRelevance(
+      article({
+        title: 'Report: AI to disrupt future job market',
+        summary: 'Analysts say artificial intelligence will change how people work, though employment overall may grow.',
+      }),
+      'AI',
+      'employment',
+    );
+    expect(result.isRelevant).toBe(true);
+  });
+
+  it('9. climate change + agriculture, separated elsewhere in the article -> KEEP', () => {
+    const result = scoreRelationalRelevance(
+      article({
+        title: 'Farmers adapt to shifting weather patterns',
+        summary: 'Experts warn that climate change is reshaping how agriculture is practiced worldwide.',
+      }),
+      'climate change',
+      'agriculture',
+    );
+    expect(result.isRelevant).toBe(true);
+  });
+
+  it('10. article discusses X and Y separately with no causal link stated -> KEEP for retrieval (joint topical relevance only, not causality)', () => {
+    const result = scoreRelationalRelevance(
+      article({
+        title: 'Iran conflict continues',
+        summary: 'Separately, oil prices were unchanged this week.',
+      }),
+      'Iran conflict',
+      'oil prices',
+    );
+    // M37 establishes ONLY that both concepts are discussed in the same
+    // article — it makes no causal claim, and this test exists
+    // specifically to prove the gate does not attempt one.
+    expect(result.isRelevant).toBe(true);
+  });
+
+  it('11. empty X cannot accidentally pass', () => {
+    const result = scoreRelationalRelevance(
+      article({ title: 'Iran conflict and oil prices both mentioned here' }),
+      '   ',
+      'oil prices',
+    );
+    expect(result.isRelevant).toBe(false);
+  });
+
+  it('11b. empty Y cannot accidentally pass', () => {
+    const result = scoreRelationalRelevance(
+      article({ title: 'Iran conflict and oil prices both mentioned here' }),
+      'Iran conflict',
+      '   ',
+    );
+    expect(result.isRelevant).toBe(false);
+  });
+
+  it('does not apply scoreGenericRelevance\'s single-word corroboration-count model to X or Y independently', () => {
+    // A single title-only mention of each single-word concept is
+    // sufficient here — under scoreGenericRelevance's OWN single-word
+    // rule this would be corroborationCount=1 and REJECTED; relational
+    // mode intentionally does not require that, per the M37 design.
+    const result = scoreRelationalRelevance(
+      article({ title: 'AI reshapes employment trends, report finds' }),
+      'AI',
+      'employment',
+    );
+    expect(result.isRelevant).toBe(true);
   });
 });

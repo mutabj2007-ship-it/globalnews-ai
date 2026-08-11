@@ -3,7 +3,7 @@ import type {
   NewsArticle,
   ProviderHealthStatus,
 } from '@globalnews-ai/shared';
-import { NewsService } from './news.service';
+import { NewsService, type RelevanceMode } from './news.service';
 import {
   ALL_NEWS_PROVIDERS,
   NEWS_PROVIDERS,
@@ -798,20 +798,18 @@ describe('NewsService', () => {
       publishedAt: '2024-01-03T00:00:00.000Z',
     });
 
-    it('filters live generic results when applyGenericRelevanceGate is true, keeping only relevant articles', async () => {
+    it("filters live generic results when relevanceMode is 'generic', keeping only relevant articles", async () => {
       const service = await buildService([
         new FakeQueryProvider([irrelevantArticle, relevantArticle]),
       ]);
 
-      const response = await service.search('cybersecurity', 20, {
-        applyGenericRelevanceGate: true,
-      });
+      const response = await service.search('cybersecurity', 20, { type: 'generic' });
 
       expect(response.articles.map((a) => a.id)).toEqual(['relevant-1']);
       expect(response.totalResults).toBe(1);
     });
 
-    it('does NOT filter when applyGenericRelevanceGate is omitted (default false) — preserves pre-M36 behavior for every existing caller', async () => {
+    it("does NOT filter when relevanceMode is omitted (default 'none') — preserves pre-M36 behavior for every existing caller", async () => {
       const service = await buildService([
         new FakeQueryProvider([irrelevantArticle, relevantArticle]),
       ]);
@@ -823,14 +821,12 @@ describe('NewsService', () => {
       );
     });
 
-    it('does NOT filter when applyGenericRelevanceGate is explicitly false', async () => {
+    it("does NOT filter when relevanceMode is explicitly 'none'", async () => {
       const service = await buildService([
         new FakeQueryProvider([irrelevantArticle, relevantArticle]),
       ]);
 
-      const response = await service.search('cybersecurity', 20, {
-        applyGenericRelevanceGate: false,
-      });
+      const response = await service.search('cybersecurity', 20, { type: 'none' });
 
       expect(response.articles).toHaveLength(2);
     });
@@ -840,9 +836,7 @@ describe('NewsService', () => {
         new FakeQueryProvider([irrelevantArticle, relevantArticle]),
       ]);
 
-      await service.search('cybersecurity', 20, {
-        applyGenericRelevanceGate: true,
-      });
+      await service.search('cybersecurity', 20, { type: 'generic' });
 
       expect(articlePersistence.persistMany).toHaveBeenCalledWith([
         relevantArticle,
@@ -867,9 +861,7 @@ describe('NewsService', () => {
         new FakeQueryProvider([older, newer]),
       ]);
 
-      const response = await service.search('cybersecurity', 20, {
-        applyGenericRelevanceGate: true,
-      });
+      const response = await service.search('cybersecurity', 20, { type: 'generic' });
 
       expect(response.articles.map((a) => a.id)).toEqual([
         'cyber-newer',
@@ -882,9 +874,7 @@ describe('NewsService', () => {
         new FakeQueryProvider([irrelevantArticle]),
       ]);
 
-      const response = await service.search('cybersecurity', 20, {
-        applyGenericRelevanceGate: true,
-      });
+      const response = await service.search('cybersecurity', 20, { type: 'generic' });
 
       expect(response.articles).toEqual([]);
       expect(articlePersistence.persistMany).not.toHaveBeenCalled();
@@ -900,9 +890,7 @@ describe('NewsService', () => {
         new FakeEmptyProvider(),
       ]);
 
-      const response = await service.search('cybersecurity', 20, {
-        applyGenericRelevanceGate: true,
-      });
+      const response = await service.search('cybersecurity', 20, { type: 'generic' });
 
       expect(response.articles.map((a) => a.id)).toEqual(['relevant-1']);
       expect(response.dataMode).toBe('cached');
@@ -915,9 +903,7 @@ describe('NewsService', () => {
         new FakeEmptyProvider(),
       ]);
 
-      const response = await service.search('cybersecurity', 20, {
-        applyGenericRelevanceGate: true,
-      });
+      const response = await service.search('cybersecurity', 20, { type: 'generic' });
 
       expect(response.articles).toEqual([]);
     });
@@ -940,6 +926,151 @@ describe('NewsService', () => {
       const response = await service.byCategory('science', 10);
 
       expect(response.articles.map((a) => a.id)).toEqual(['irrelevant-1']);
+    });
+  });
+
+  describe("relational relevance mode (Milestone #37)", () => {
+    const jointArticle = makeArticle({
+      id: 'joint-1',
+      title: 'Oil prices rise sharply as Iran conflict disrupts shipping',
+      summary: 'Markets reacted as tensions escalated.',
+      publishedAt: '2024-02-02T00:00:00.000Z',
+    });
+
+    const xOnlyArticle = makeArticle({
+      id: 'x-only-1',
+      title: 'Iran conflict enters another week',
+      summary: 'The situation remains tense.',
+      publishedAt: '2024-02-03T00:00:00.000Z',
+    });
+
+    const yOnlyArticle = makeArticle({
+      id: 'y-only-1',
+      title: 'Oil prices rise after inventory report',
+      summary: 'Analysts weigh in on the market move.',
+      publishedAt: '2024-02-01T00:00:00.000Z',
+    });
+
+    it("filters live relational results, keeping only articles where BOTH x and y are present", async () => {
+      const service = await buildService([
+        new FakeQueryProvider([jointArticle, xOnlyArticle, yOnlyArticle]),
+      ]);
+
+      const response = await service.search('Iran conflict oil prices', 20, {
+        type: 'relational',
+        x: 'Iran conflict',
+        y: 'oil prices',
+      });
+
+      expect(response.articles.map((a) => a.id)).toEqual(['joint-1']);
+    });
+
+    it("does not persist an x-only or y-only article as accepted relational evidence", async () => {
+      const service = await buildService([
+        new FakeQueryProvider([jointArticle, xOnlyArticle, yOnlyArticle]),
+      ]);
+
+      await service.search('Iran conflict oil prices', 20, {
+        type: 'relational',
+        x: 'Iran conflict',
+        y: 'oil prices',
+      });
+
+      expect(articlePersistence.persistMany).toHaveBeenCalledWith([jointArticle]);
+    });
+
+    it("applies the SAME relational gate to the stored/persisted database fallback, so live and stored relational results share one trust rule", async () => {
+      articlePersistence.findRecent.mockResolvedValue([
+        jointArticle,
+        xOnlyArticle,
+        yOnlyArticle,
+      ]);
+
+      const service = await buildService([new FakeEmptyProvider()]);
+
+      const response = await service.search('Iran conflict oil prices', 20, {
+        type: 'relational',
+        x: 'Iran conflict',
+        y: 'oil prices',
+      });
+
+      expect(response.articles.map((a) => a.id)).toEqual(['joint-1']);
+      expect(response.dataMode).toBe('cached');
+    });
+
+    it("a relational query must not retrieve unvalidated cached articles simply because the live provider failed", async () => {
+      // Only x-only/y-only candidates are available in the stored
+      // fallback — neither individually satisfies the relational gate,
+      // so a query must never bypass validation just because live
+      // retrieval failed.
+      articlePersistence.findRecent.mockResolvedValue([
+        xOnlyArticle,
+        yOnlyArticle,
+      ]);
+
+      const service = await buildService([new FakeEmptyProvider()]);
+
+      const response = await service.search('Iran conflict oil prices', 20, {
+        type: 'relational',
+        x: 'Iran conflict',
+        y: 'oil prices',
+      });
+
+      expect(response.articles).toEqual([]);
+    });
+
+    it("when every relational candidate is rejected, falls through to the existing honest zero-results/degraded behavior", async () => {
+      const service = await buildService([
+        new FakeQueryProvider([xOnlyArticle, yOnlyArticle]),
+      ]);
+
+      const response = await service.search('Iran conflict oil prices', 20, {
+        type: 'relational',
+        x: 'Iran conflict',
+        y: 'oil prices',
+      });
+
+      expect(response.articles).toEqual([]);
+      expect(articlePersistence.persistMany).not.toHaveBeenCalled();
+    });
+
+    it("ordinary M36 generic mode is unaffected by the existence of relational mode", async () => {
+      const service = await buildService([
+        new FakeQueryProvider([jointArticle]),
+      ]);
+
+      // jointArticle's title contains "Iran conflict" and "oil prices"
+      // but NOT the single word "cybersecurity" at all — proves generic
+      // mode still uses scoreGenericRelevance, not scoreRelationalRelevance.
+      const response = await service.search('cybersecurity', 20, {
+        type: 'generic',
+      });
+
+      expect(response.articles).toEqual([]);
+    });
+
+    it("relevance modes cannot both be active — the type system makes 'generic' and 'relational' mutually exclusive by construction", () => {
+      // This is a compile-time guarantee, not a runtime one: a
+      // RelevanceMode value can only ever be one of 'none' | 'generic' |
+      // 'relational' — there is no way to construct a value satisfying
+      // more than one variant at once. Demonstrating this here as a
+      // type-level assertion; TypeScript itself rejects any attempt to
+      // pass e.g. { type: 'generic', x: '...', y: '...' } since 'x'/'y'
+      // are not valid properties of the 'generic' variant.
+      const mode: RelevanceMode = { type: 'relational', x: 'a', y: 'b' };
+      expect(mode.type).toBe('relational');
+    });
+
+    it("does not filter topHeadlines or byCategory results (relational gate is search()-only)", async () => {
+      const service = await buildService([
+        new FakeQueryProvider([xOnlyArticle]),
+      ]);
+
+      const topResponse = await service.topHeadlines(10);
+      expect(topResponse.articles.map((a) => a.id)).toEqual(['x-only-1']);
+
+      const categoryResponse = await service.byCategory('world', 10);
+      expect(categoryResponse.articles.map((a) => a.id)).toEqual(['x-only-1']);
     });
   });
 });
