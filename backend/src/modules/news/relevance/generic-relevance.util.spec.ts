@@ -183,7 +183,7 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
   });
 });
 
-describe('scoreRelationalRelevance (Milestone #37)', () => {
+describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 relational context)', () => {
   it('1. X + Y both in title -> KEEP', () => {
     const result = scoreRelationalRelevance(
       article({ title: 'Oil prices rise sharply as Iran conflict disrupts shipping' }),
@@ -193,7 +193,7 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
     expect(result.isRelevant).toBe(true);
   });
 
-  it('2. X in title, Y in summary -> KEEP', () => {
+  it('2. (Milestone #38 strengthening) X in title, Y ONLY in a different summary sentence -> now REJECT (was KEEP under M37)', () => {
     const result = scoreRelationalRelevance(
       article({
         title: 'Iran conflict enters critical phase',
@@ -202,10 +202,17 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
       'Iran conflict',
       'oil prices',
     );
-    expect(result.isRelevant).toBe(true);
+    // Milestone #38: title alone only has X, and the summary sentence
+    // containing Y does not also contain X — neither Stage 2 condition
+    // (both-in-title, both-in-one-summary-sentence) is satisfied, even
+    // though Stage 1 base presence passes for both concepts.
+    expect(result.isRelevant).toBe(false);
+    expect(result.reasons).toContain(
+      'both concepts present in the article, but never co-located in the title or a single summary sentence (scattered/disconnected mentions)',
+    );
   });
 
-  it('3. X in summary, Y in title -> KEEP', () => {
+  it('3. (Milestone #38 strengthening) X in summary, Y ONLY in title -> now REJECT (was KEEP under M37)', () => {
     const result = scoreRelationalRelevance(
       article({
         title: 'Oil prices climb amid market jitters',
@@ -214,10 +221,10 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
       'Iran conflict',
       'oil prices',
     );
-    expect(result.isRelevant).toBe(true);
+    expect(result.isRelevant).toBe(false);
   });
 
-  it('4. both X and Y only in summary -> KEEP', () => {
+  it('4. both X and Y in the SAME summary sentence -> KEEP', () => {
     const result = scoreRelationalRelevance(
       article({
         title: 'Weekly markets roundup',
@@ -227,9 +234,10 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
       'oil prices',
     );
     expect(result.isRelevant).toBe(true);
+    expect(result.reasons).toContain('both concepts present together in the same summary sentence');
   });
 
-  it('5. X only, Y absent -> REJECT', () => {
+  it('5. X only, Y absent -> REJECT (Stage 1 base presence, unchanged)', () => {
     const result = scoreRelationalRelevance(
       article({ title: 'Iran conflict enters another week' }),
       'Iran conflict',
@@ -239,7 +247,7 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
     expect(result.reasons).toContain('Y absent');
   });
 
-  it('6. Y only, X absent -> REJECT', () => {
+  it('6. Y only, X absent -> REJECT (Stage 1 base presence, unchanged)', () => {
     const result = scoreRelationalRelevance(
       article({ title: 'Oil prices rise after inventory report' }),
       'Iran conflict',
@@ -258,7 +266,7 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
     expect(result.isRelevant).toBe(false);
   });
 
-  it('8. single-word concepts (AI + employment): one presence each is sufficient -> KEEP, no standalone corroboration-count applied', () => {
+  it('8. (Milestone #38 strengthening) single-word concepts (AI + employment), X in title only, Y in a different summary sentence -> now REJECT (was KEEP under M37)', () => {
     const result = scoreRelationalRelevance(
       article({
         title: 'Report: AI to disrupt future job market',
@@ -267,10 +275,13 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
       'AI',
       'employment',
     );
-    expect(result.isRelevant).toBe(true);
+    // Milestone #38: "AI" is present only in the title; "employment" is
+    // present only in a summary sentence that does not itself contain
+    // "AI" — scattered mentions, no longer sufficient.
+    expect(result.isRelevant).toBe(false);
   });
 
-  it('9. climate change + agriculture, separated elsewhere in the article -> KEEP', () => {
+  it('9. climate change + agriculture, both present together in ONE summary sentence -> KEEP', () => {
     const result = scoreRelationalRelevance(
       article({
         title: 'Farmers adapt to shifting weather patterns',
@@ -282,7 +293,7 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
     expect(result.isRelevant).toBe(true);
   });
 
-  it('10. article discusses X and Y separately with no causal link stated -> KEEP for retrieval (joint topical relevance only, not causality)', () => {
+  it('10. (Milestone #38 strengthening) "Climate change continues. Separately, agricultural exports rise." shape -> now REJECT (was KEEP under M37)', () => {
     const result = scoreRelationalRelevance(
       article({
         title: 'Iran conflict continues',
@@ -291,10 +302,12 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
       'Iran conflict',
       'oil prices',
     );
-    // M37 establishes ONLY that both concepts are discussed in the same
-    // article — it makes no causal claim, and this test exists
-    // specifically to prove the gate does not attempt one.
-    expect(result.isRelevant).toBe(true);
+    // Milestone #38 intentionally reverses the M37-era decision for
+    // this exact shape: both concepts are present, but in different,
+    // unrelated sentences — Stage 2 relational context is not
+    // satisfied, so this is now correctly rejected as scattered
+    // mentions rather than kept as "joint topical relevance."
+    expect(result.isRelevant).toBe(false);
   });
 
   it('11. empty X cannot accidentally pass', () => {
@@ -315,16 +328,151 @@ describe('scoreRelationalRelevance (Milestone #37)', () => {
     expect(result.isRelevant).toBe(false);
   });
 
-  it('does not apply scoreGenericRelevance\'s single-word corroboration-count model to X or Y independently', () => {
-    // A single title-only mention of each single-word concept is
-    // sufficient here — under scoreGenericRelevance's OWN single-word
-    // rule this would be corroborationCount=1 and REJECTED; relational
-    // mode intentionally does not require that, per the M37 design.
+  it('does not apply scoreGenericRelevance\'s single-word corroboration-count model to X or Y independently — both-in-title is still sufficient on its own', () => {
+    // Both single-word concepts appear together in the title — under
+    // scoreGenericRelevance's OWN single-word rule this would need a
+    // second corroborating signal (corroborationCount>=2); relational
+    // mode does not require that, since both-in-title already
+    // satisfies Milestone #38's Stage 2 relational-context requirement
+    // directly.
     const result = scoreRelationalRelevance(
       article({ title: 'AI reshapes employment trends, report finds' }),
       'AI',
       'employment',
     );
     expect(result.isRelevant).toBe(true);
+  });
+
+  describe('Milestone #38 required cases', () => {
+    it('A. X + Y strongly connected in title -> KEEP', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'AI adoption reshapes employment across the industry' }),
+        'AI',
+        'employment',
+      );
+      expect(result.isRelevant).toBe(true);
+      expect(result.reasons).toContain('both concepts present together in the title');
+    });
+
+    it('B. X + Y in same relevant summary sentence -> KEEP', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'Markets update',
+          summary: 'Rising interest rates are beginning to weigh on house prices nationwide.',
+        }),
+        'interest rates',
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(true);
+      expect(result.reasons).toContain('both concepts present together in the same summary sentence');
+    });
+
+    it('C. X only -> REJECT', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'Interest rates rise again this quarter' }),
+        'interest rates',
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('Y absent');
+    });
+
+    it('D. Y only -> REJECT', () => {
+      const result = scoreRelationalRelevance(
+        article({ title: 'House prices climb in most regions' }),
+        'interest rates',
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('X absent');
+    });
+
+    it('E. X and Y in separate unrelated sentences -> REJECT', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'Weekly roundup',
+          summary: 'Interest rates rose again this week. In unrelated news, house prices in the region held steady last month.',
+        }),
+        'interest rates',
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('F. "Climate change continues. Separately, agricultural exports rise." -> REJECT', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'Weekly briefing',
+          summary: 'Climate change continues. Separately, agricultural exports rise.',
+        }),
+        'climate change',
+        'agriculture',
+      );
+      // Note: this article's summary never contains the literal word
+      // "agriculture" (it says "agricultural exports"), so Stage 1
+      // (Y absent) already rejects this case — a real, disclosed
+      // lexical limitation (see the function's own doc comment), not
+      // something Milestone #38 fixes. The scattered-sentence Stage 2
+      // rejection is independently verified by test 10 above, using
+      // concepts that DO satisfy Stage 1 exactly.
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('G. non-causal connector wording ("amid") satisfying the existing lexical concept contract -> KEEP', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'Markets react',
+          summary: 'Oil prices remain volatile amid Iran conflict uncertainty.',
+        }),
+        'Iran conflict',
+        'oil prices',
+      );
+      expect(result.isRelevant).toBe(true);
+      // Connector detection is informational only — verifying it's
+      // present in `reasons`, but the KEEP decision itself came from
+      // Stage 2 (same-sentence co-occurrence), not from the connector.
+      expect(result.reasons.some((r) => r.includes('amid'))).toBe(true);
+    });
+
+    it('connector words are never required for KEEP — same-sentence co-occurrence with NO connector still passes', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'Update',
+          summary: 'Interest rates and house prices both featured prominently in today\'s report.',
+        }),
+        'interest rates',
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('causal-safety: no returned reason ever asserts or implies causation, only presence/co-location/connector-presence', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'Oil prices remain volatile amid Iran conflict uncertainty',
+        }),
+        'Iran conflict',
+        'oil prices',
+      );
+      const causalLanguage = /\bcause[sd]?\b|\bresulted from\b/i;
+      expect(result.reasons.some((r) => causalLanguage.test(r))).toBe(false);
+    });
+
+    it('known limitation (documented, not fixed): singular/plural mismatch still fails Stage 1', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'High interest rates are here to stay',
+          summary: "But that's only part of the house price story.",
+        }),
+        'interest rates',
+        'house prices',
+      );
+      // "house price" (singular, as written by the article) does not
+      // whole-phrase-match a derived Y of "house prices" (plural) —
+      // an accepted, disclosed lexical gap, explicitly not addressed
+      // in Milestone #38 per its own non-goals.
+      expect(result.isRelevant).toBe(false);
+      expect(result.reasons).toContain('Y absent');
+    });
   });
 });

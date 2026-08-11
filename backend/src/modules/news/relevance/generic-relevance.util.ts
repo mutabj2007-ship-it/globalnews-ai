@@ -67,28 +67,117 @@ function wordCount(value: string): number {
 }
 
 /**
- * Milestone #37 — Relational Query Decomposition.
+ * Milestone #38 — splits text into sentences on '.', '!', or '?'
+ * followed by whitespace (or end of string). Deliberately simple:
+ * no NLP/sentence-tokenizer library, consistent with this module's
+ * no-NLP discipline. Good enough for the local-context check below —
+ * it doesn't need to be a linguistically perfect sentence boundary,
+ * only a conservative proxy for "these two mentions are part of the
+ * same statement" vs. "these are unrelated statements stapled
+ * together in one article."
+ */
+function splitIntoSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Milestone #38 — non-causal relational connector words/phrases. This
+ * is your own approved enumeration, used ONLY as informational
+ * evidence in the returned `reasons` — see scoreRelationalRelevance's
+ * causal-safety doc comment below. Presence is never required for
+ * KEEP and never gates the isRelevant decision.
+ */
+const RELATIONAL_CONNECTORS = [
+  'affect', 'affects', 'affecting',
+  'impact', 'impacts', 'impacting',
+  'drive', 'drives', 'driving',
+  'lift', 'lifts', 'lifting',
+  'lower', 'lowers', 'lowering',
+  'raise', 'raises', 'raising',
+  'reduce', 'reduces', 'reducing',
+  'increase', 'increases', 'increasing',
+  'decrease', 'decreases', 'decreasing',
+  'hit', 'hits', 'hitting',
+  'hurt', 'hurts', 'hurting',
+  'boost', 'boosts', 'boosting',
+  'pressure', 'pressures', 'pressuring',
+  'lead to', 'leads to', 'leading to',
+  'because',
+  'due to',
+  'amid',
+  'as',
+  'after',
+  'linked to',
+  'associated with',
+];
+
+/**
+ * Milestone #38 — informational only. Returns a single reasons-array
+ * entry naming which connector(s) were found in the given local
+ * context (a title or a single qualifying summary sentence), or an
+ * empty array if none were found. This NEVER affects isRelevant.
+ */
+function detectConnectors(localContext: string): string[] {
+  const found = RELATIONAL_CONNECTORS.filter((connector) =>
+    containsWholePhrase(localContext, connector),
+  );
+  return found.length > 0
+    ? [`non-causal relational connector(s) present: ${found.join(', ')}`]
+    : [];
+}
+
+/**
+ * Milestone #37/#38 — Relational Query Decomposition & Evidence
+ * Qualification.
  *
- * Establishes JOINT TOPICAL RELEVANCE only: both X and Y appear as whole
- * phrases somewhere in the SAME article's title or summary. This does
- * NOT establish, score, or imply causality — an article satisfying this
- * check may report "X caused Y", "X may affect Y", or merely discuss X
- * and Y in unrelated sentences within the same piece. No causal language
- * is inspected or scored anywhere in this function; causal-claim safety
- * is an explicitly separate, not-yet-built concern (deferred per the
- * approved M37 design).
+ * CAUSAL-SAFETY BOUNDARY (read this first): this function establishes
+ * ONLY "this article contains evidence relevant to the relationship
+ * between X and Y." It NEVER establishes, encodes, or implies "X
+ * causes Y", "X caused Y", or "Y resulted from Y". The connector words
+ * checked below (affect, impact, amid, linked to, etc.) exist solely
+ * to make the returned `reasons` more informative for debugging/
+ * future evidence-layer use — their presence is never required for
+ * admission and never appears anywhere in the isRelevant decision
+ * itself. Causal interpretation belongs to a later, separate,
+ * not-yet-built evidence/AI reasoning layer — this function does not
+ * approach that boundary at all.
+ *
+ * TWO-STAGE ADMISSION (Milestone #38 strengthens what was, under
+ * Milestone #37, a single flat check):
+ *
+ * Stage 1 — BASE PRESENCE (unchanged from M37): X must be present as a
+ * whole phrase somewhere in the article (title or summary), and
+ * separately so must Y. If either is absent, REJECT immediately — this
+ * requirement is not weakened by anything below.
+ *
+ * Stage 2 — RELATIONAL CONTEXT (new in M38): passing Stage 1 is no
+ * longer sufficient by itself. Both concepts must ALSO appear together
+ * in the SAME local context — either both within the title, or both
+ * within one single summary sentence (see splitIntoSentences above).
+ * An article where X appears in one sentence and Y appears in a
+ * different, unrelated sentence — the scattered/disconnected-mentions
+ * case real-browser M37 testing exposed as too permissive — now fails
+ * Stage 2 and is REJECTED, even though it would have passed M37's
+ * original article-wide co-occurrence check.
  *
  * Deliberately does NOT apply scoreGenericRelevance's single-word
- * corroboration-count model to X or Y independently — the presence of
- * TWO distinct, independently-required concepts in one article is
- * itself the corroboration for relational retrieval (see the M37 design
- * discussion: requiring standalone corroboration for each concept was
- * tested against a realistic case and produced false negatives on
- * genuinely relevant articles that use a synonym in one of the two
- * mentions). This is intentionally a different, weaker-per-concept but
- * jointly-stronger admission rule than the single-word tier of
- * scoreGenericRelevance() — which remains completely unmodified and is
- * never called from this function.
+ * corroboration-count model to X or Y independently — unchanged
+ * reasoning from M37 (see prior design discussion): the presence of
+ * TWO distinct, independently-required concepts, now additionally
+ * required to co-occur in one local context, is itself the
+ * corroboration for relational retrieval.
+ *
+ * KNOWN LIMITATION (deliberately NOT addressed in M38 — see the
+ * approved M38 design/scope): this remains exact deterministic
+ * whole-phrase matching with NO synonym expansion, no stemming, and no
+ * singular/plural normalization. "house price" does NOT match a
+ * derived Y of "house prices"; "jobs" does NOT match "employment";
+ * "maize production" does NOT match "agriculture". These are accepted,
+ * disclosed lexical gaps — concept-equivalence handling is explicitly
+ * deferred to a separate, future milestone, not fixed here.
  */
 export function scoreRelationalRelevance(
   article: Pick<NewsArticle, 'title' | 'summary'>,
@@ -106,16 +195,65 @@ export function scoreRelationalRelevance(
     return { isRelevant: false, reasons: ['empty or invalid X/Y concept'] };
   }
 
-  const xPresent = containsWholePhrase(title, normalizedX) || containsWholePhrase(summary, normalizedX);
-  const yPresent = containsWholePhrase(title, normalizedY) || containsWholePhrase(summary, normalizedY);
+  // Stage 1 — base presence, unchanged from M37, not weakened.
+  const xPresentAnywhere =
+    containsWholePhrase(title, normalizedX) || containsWholePhrase(summary, normalizedX);
+  if (!xPresentAnywhere) {
+    return { isRelevant: false, reasons: ['X absent'] };
+  }
 
-  const reasons: string[] = [];
-  if (xPresent) reasons.push('X present in title or summary');
-  if (yPresent) reasons.push('Y present in title or summary');
-  if (!xPresent) reasons.push('X absent');
-  if (!yPresent) reasons.push('Y absent');
+  const yPresentAnywhere =
+    containsWholePhrase(title, normalizedY) || containsWholePhrase(summary, normalizedY);
+  if (!yPresentAnywhere) {
+    return { isRelevant: false, reasons: ['Y absent'] };
+  }
 
-  return { isRelevant: xPresent && yPresent, reasons };
+  const baseReasons = ['X present in title or summary', 'Y present in title or summary'];
+
+  // Stage 2 — relational context (Milestone #38). Both concepts
+  // together in the title is the strongest, simplest case.
+  const bothInTitle =
+    containsWholePhrase(title, normalizedX) && containsWholePhrase(title, normalizedY);
+
+  if (bothInTitle) {
+    return {
+      isRelevant: true,
+      reasons: [
+        ...baseReasons,
+        'both concepts present together in the title',
+        ...detectConnectors(title),
+      ],
+    };
+  }
+
+  // Otherwise, both concepts must co-occur within the SAME summary
+  // sentence — scattered mentions across different sentences (e.g.
+  // "Climate change continues. Separately, agricultural exports
+  // rise.") do not qualify, even though both concepts are present
+  // somewhere in the article per Stage 1.
+  const connectingSentence = splitIntoSentences(summary).find(
+    (sentence) =>
+      containsWholePhrase(sentence, normalizedX) && containsWholePhrase(sentence, normalizedY),
+  );
+
+  if (connectingSentence) {
+    return {
+      isRelevant: true,
+      reasons: [
+        ...baseReasons,
+        'both concepts present together in the same summary sentence',
+        ...detectConnectors(connectingSentence),
+      ],
+    };
+  }
+
+  return {
+    isRelevant: false,
+    reasons: [
+      ...baseReasons,
+      'both concepts present in the article, but never co-located in the title or a single summary sentence (scattered/disconnected mentions)',
+    ],
+  };
 }
 
 /**
