@@ -1,5 +1,4 @@
 import type {
-  NewsArticle,
   RelationalEvidenceAssessment,
   RelationalEvidenceDirection,
   RelationalSupport,
