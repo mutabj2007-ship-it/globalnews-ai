@@ -8,6 +8,7 @@ function makeConfigService(overrides: {
   timeoutMs?: number;
   retryAttempts?: number;
   retryBaseDelayMs?: number;
+  maxCompletionTokens?: number;
 } = {}): AnalysisConfigService {
   return {
     get: () => ({
@@ -20,6 +21,7 @@ function makeConfigService(overrides: {
       executionMode: 'development' as const,
       retryAttempts: 2,
       retryBaseDelayMs: 5, // kept tiny so retry tests stay fast
+      maxCompletionTokens: 2000,
       ...overrides,
     }),
   } as unknown as AnalysisConfigService;
@@ -268,5 +270,73 @@ describe('OpenAiAnalysisProvider', () => {
       expect(error).toBeInstanceOf(OpenAiAnalysisError);
       expect((error as Error).message).not.toContain('sk-super-secret-marker');
     }
+  });
+
+  describe('Milestone #45 — completion token bound', () => {
+    function requestBody(): Record<string, unknown> {
+      const [, init] = fetchMock.mock.calls[0] as [string, { body: string }];
+      return JSON.parse(init.body);
+    }
+
+    it('B1. the outgoing request contains the configured completion limit under max_completion_tokens (NOT the deprecated max_tokens)', async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, validCompletionBody()));
+      const provider = new OpenAiAnalysisProvider(makeConfigService({ maxCompletionTokens: 777 }));
+
+      await provider.analyzeNews(makeInput());
+
+      const body = requestBody();
+      expect(body.max_completion_tokens).toBe(777);
+      expect(body).not.toHaveProperty('max_tokens');
+    });
+
+    it('a different configured value is reflected exactly (proves it is read from config, not hard-coded)', async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, validCompletionBody()));
+      const provider = new OpenAiAnalysisProvider(makeConfigService({ maxCompletionTokens: 42 }));
+
+      await provider.analyzeNews(makeInput());
+
+      expect(requestBody().max_completion_tokens).toBe(42);
+    });
+
+    it('B2. the configured model is unchanged by this milestone', async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, validCompletionBody()));
+      const provider = new OpenAiAnalysisProvider(makeConfigService());
+
+      await provider.analyzeNews(makeInput());
+
+      expect(requestBody().model).toBe('gpt-4o-mini');
+    });
+
+    it('B3. the structured response_format (json_schema) is unchanged by this milestone', async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, validCompletionBody()));
+      const provider = new OpenAiAnalysisProvider(makeConfigService());
+
+      await provider.analyzeNews(makeInput());
+
+      const body = requestBody();
+      expect((body.response_format as { type: string }).type).toBe('json_schema');
+      expect(body.response_format).toHaveProperty('json_schema');
+    });
+
+    it('B4. temperature is unchanged by this milestone', async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, validCompletionBody()));
+      const provider = new OpenAiAnalysisProvider(makeConfigService());
+
+      await provider.analyzeNews(makeInput());
+
+      expect(requestBody().temperature).toBe(0.2);
+    });
+
+    it('B5. the API key appears only in the Authorization header, never in the request body or the returned result', async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, validCompletionBody()));
+      const provider = new OpenAiAnalysisProvider(makeConfigService({ openAiApiKey: 'sk-marker-b5' }));
+
+      const result = await provider.analyzeNews(makeInput());
+
+      const [, init] = fetchMock.mock.calls[0] as [string, { headers: Record<string, string>; body: string }];
+      expect(init.headers.Authorization).toBe('Bearer sk-marker-b5');
+      expect(init.body).not.toContain('sk-marker-b5');
+      expect(JSON.stringify(result)).not.toContain('sk-marker-b5');
+    });
   });
 });

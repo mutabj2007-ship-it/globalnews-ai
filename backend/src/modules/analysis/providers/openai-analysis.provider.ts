@@ -189,6 +189,13 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
             json_schema: buildAnalysisJsonSchema(),
           },
           temperature: 0.2,
+          // Milestone #45 — `max_completion_tokens`, NOT the deprecated
+          // `max_tokens` (OpenAI deprecated `max_tokens` in favor of
+          // `max_completion_tokens` across all Chat Completions models,
+          // including gpt-4o-mini). Bounds worst-case completion length;
+          // never affects the API key, which remains Authorization-header
+          // only.
+          max_completion_tokens: config.maxCompletionTokens,
         }),
         signal: controller.signal,
       });

@@ -75,6 +75,7 @@ function makeConfigService(
     executionMode: 'development' as const,
     retryAttempts: 2,
     retryBaseDelayMs: 300,
+    maxCompletionTokens: 2000,
     ...overrides,
   };
 
@@ -3543,6 +3544,315 @@ describe('AnalysisService', () => {
           relationalContext: { x: 'Iran conflict', y: 'oil prices' },
         }),
       );
+    });
+  });
+
+  describe('Milestone #45 — backend in-flight request collapse', () => {
+    function deferred<T>() {
+      let resolve!: (value: T) => void;
+      let reject!: (error: unknown) => void;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+
+    it('C1/C2. two simultaneous identical uncached questions: provider called exactly ONCE, both callers resolve successfully with the same result', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const pending = deferred<unknown>();
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockReturnValue(pending.promise),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const call1 = service.analyzeNews('same question here');
+      const call2 = service.analyzeNews('same question here');
+
+      pending.resolve(validCandidateFor(articles));
+
+      const [result1, result2] = await Promise.all([call1, call2]);
+
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+      expect(result1.analysis).toEqual(result2.analysis);
+    });
+
+    it('CORRECTION: two concurrent normalized-equivalent but RAW-DIFFERENT queries share one provider execution, yet each caller receives its OWN query/normalizedQuery in the response envelope', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const pending = deferred<unknown>();
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockReturnValue(pending.promise),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const rawQueryA = 'How is Iran conflict affecting oil prices?';
+      const rawQueryB = '  HOW IS IRAN CONFLICT AFFECTING OIL PRICES?  ';
+
+      const callA = service.analyzeNews(rawQueryA);
+      const callB = service.analyzeNews(rawQueryB);
+
+      pending.resolve(validCandidateFor(articles));
+
+      const [responseA, responseB] = await Promise.all([callA, callB]);
+
+      // 1/8. provider invocation count === 1
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+      // 2/8. retrieval is not duplicated beyond existing architecture
+      // semantics — one shared operation means one retrieval, exactly
+      // like the existing C1/C2 case.
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+      // 3/8. Caller A's response.query is Caller A's own raw query.
+      expect(responseA.query).toBe(rawQueryA);
+      // 4/8. Caller B's response.query is Caller B's own raw query —
+      // NEVER inherited from Caller A, even though they shared one
+      // underlying operation.
+      expect(responseB.query).toBe(rawQueryB);
+      // 5/8. each response carries the CORRECT normalizedQuery for
+      // ITS OWN caller — normalizeQuery() trims/collapses whitespace
+      // but deliberately never lowercases (only the internal cacheKey
+      // does, via .toLowerCase()), so Caller A's and Caller B's
+      // normalizedQuery are legitimately DIFFERENT strings here
+      // (differing in case) even though both correctly map to the same
+      // cacheKey and therefore share one operation. Asserting equality
+      // between A and B would be wrong; asserting each against its own
+      // raw input is the actually-correct, caller-specific check.
+      expect(responseA.normalizedQuery).toBe(rawQueryA);
+      expect(responseB.normalizedQuery).toBe(rawQueryB.trim());
+      // 6/8. the analysis result itself remains shared/equivalent.
+      expect(responseA.analysis).toEqual(responseB.analysis);
+      // 7/8. TrustState semantics are unchanged — both callers see the
+      // exact same (shared, unrecalculated) trustState.
+      expect(responseA.analysis?.trustState).toEqual(responseB.analysis?.trustState);
+      // 8/8. no second AI/provider execution occurred (re-asserted
+      // explicitly, distinct from #1, for clarity of intent).
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+
+      // The in-flight joiner must NOT be mislabeled as served from the
+      // completed TTL cache — it awaited a genuinely fresh, still-in-
+      // progress generation, not a stored cache entry.
+      expect(responseA.provenance.cached).toBe(false);
+      expect(responseB.provenance.cached).toBe(false);
+    });
+
+    it('C3. equivalent normalized questions (casing/whitespace) deduplicate according to the existing cache normalization', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const pending = deferred<unknown>();
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockReturnValue(pending.promise),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const call1 = service.analyzeNews('  Same Question Here  ');
+      const call2 = service.analyzeNews('same question here');
+
+      pending.resolve(validCandidateFor(articles));
+      await Promise.all([call1, call2]);
+
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+    });
+
+    it('C4. different questions do NOT deduplicate', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await Promise.all([
+        service.analyzeNews('first distinct question'),
+        service.analyzeNews('second distinct question'),
+      ]);
+
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(2);
+    });
+
+    it('C5. after successful settlement the in-flight entry is cleared — a later independent request calls the provider again (respecting the completed cache, see C8)', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      // cacheTtlSeconds: 0 so the completed cache never masks this
+      // specifically-in-flight-lifecycle assertion.
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ cacheTtlSeconds: 0 }),
+      );
+
+      await service.analyzeNews('settles then repeats');
+      await service.analyzeNews('settles then repeats');
+
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(2);
+    });
+
+    it('C6/C7. after a FAILED shared operation the in-flight entry is cleared, and a later request can invoke the provider again', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const pending = deferred<unknown>();
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest
+          .fn()
+          .mockReturnValueOnce(pending.promise)
+          .mockResolvedValueOnce(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ cacheTtlSeconds: 0 }),
+      );
+
+      const call1 = service.analyzeNews('fails then retried');
+      const call2 = service.analyzeNews('fails then retried');
+
+      pending.reject(new Error('simulated provider failure'));
+
+      const [response1, response2] = await Promise.all([call1, call2]);
+
+      // Both concurrent callers see the SAME truthful failure response
+      // (never a mock fallback, never a thrown exception out of
+      // analyzeNews — AnalysisService always resolves to a response
+      // object with provenance describing the failure).
+      expect(response1.analysis).toBeNull();
+      expect(response2.analysis).toBeNull();
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+
+      // C7: a later, independent request is not poisoned by the earlier
+      // failure — it invokes the provider again normally.
+      const response3 = await service.analyzeNews('fails then retried');
+      expect(response3.analysis).not.toBeNull();
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(2);
+    });
+
+    it('C8. the existing completed-result cache still prevents provider invocation exactly as before', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ cacheTtlSeconds: 300 }),
+      );
+
+      await service.analyzeNews('cached question');
+      const second = await service.analyzeNews('cached question');
+
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+      expect(second.provenance.cached).toBe(true);
+    });
+
+    it('C9. cache TTL behavior is unaffected by the in-flight dedup addition', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ cacheTtlSeconds: 0 }),
+      );
+
+      await service.analyzeNews('zero ttl question');
+      await service.analyzeNews('zero ttl question');
+
+      // cacheTtlSeconds: 0 means each SEQUENTIAL (settled-between) call
+      // is a fresh operation — unchanged from pre-M45 behavior.
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(2);
     });
   });
 });

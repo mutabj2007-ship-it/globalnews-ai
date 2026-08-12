@@ -58,4 +58,27 @@ describe('AnalysisConfigService', () => {
       expect(service.get().executionMode).toBe('development');
     });
   });
+
+  describe('maxCompletionTokens (Milestone #45)', () => {
+    it('A1. default is positive and deterministic', () => {
+      const service = makeService({});
+      const first = service.get().maxCompletionTokens;
+      const second = service.get().maxCompletionTokens;
+      expect(first).toBeGreaterThan(0);
+      expect(first).toBe(second);
+      expect(first).toBe(2000);
+    });
+
+    it('A2. a valid ANALYSIS_MAX_COMPLETION_TOKENS override is honored', () => {
+      const service = makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: '500' });
+      expect(service.get().maxCompletionTokens).toBe(500);
+    });
+
+    it('A3. zero, negative, and non-numeric values fall back to the default (existing safe parsing behavior, unchanged)', () => {
+      expect(makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: '0' }).get().maxCompletionTokens).toBe(2000);
+      expect(makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: '-100' }).get().maxCompletionTokens).toBe(2000);
+      expect(makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: 'not-a-number' }).get().maxCompletionTokens).toBe(2000);
+      expect(makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: undefined }).get().maxCompletionTokens).toBe(2000);
+    });
+  });
 });

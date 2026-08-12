@@ -39,6 +39,20 @@ export interface AnalysisConfig {
   executionMode: AnalysisExecutionMode;
 
   /**
+   * Milestone #45 — hard upper bound on OpenAI completion length, in
+   * tokens. Sent as `max_completion_tokens` on every OpenAI request —
+   * NOT the deprecated `max_tokens` field (OpenAI deprecated `max_tokens`
+   * in favor of `max_completion_tokens` across all Chat Completions
+   * models, including this repository's configured gpt-4o-mini; `max_tokens`
+   * additionally does not work at all on newer reasoning models). Exists
+   * so a pathological/verbose model response cannot consume unbounded
+   * completion tokens — the structured JSON response_format already
+   * bounds the *shape* of the output, this bounds its *length*.
+   * Read from ANALYSIS_MAX_COMPLETION_TOKENS.
+   */
+  maxCompletionTokens: number;
+
+  /**
    * Milestone #30 — number of retry attempts for a transient OpenAI
    * failure (429 / 5xx / network error), NOT counting the first attempt.
    *
@@ -64,6 +78,18 @@ const DEFAULTS = {
   openAiModel: 'gpt-4o-mini',
   retryAttempts: 2,
   retryBaseDelayMs: 300,
+  /**
+   * Milestone #45 — conservative but not unnecessarily small: the
+   * structured NewsAnalysisResult schema can have several textual
+   * sections (keyFacts, agreements, differences, timeline,
+   * uncertainties, relationalEvidenceAssessments, entities) each with
+   * genuine prose plus JSON structural overhead — 2000 tokens is
+   * generous enough for a complete, thorough response at this
+   * schema's realistic size without being unbounded. This is a
+   * reasoned MVP default, not a repository-mandated value — open to
+   * revision if real usage shows it's too tight or too loose.
+   */
+  maxCompletionTokens: 2000,
 };
 
 /**
@@ -110,6 +136,11 @@ export class AnalysisConfigService {
 
       openAiModel:
         this.config.get<string>('OPENAI_MODEL') || DEFAULTS.openAiModel,
+
+      maxCompletionTokens: this.readPositiveInt(
+        'ANALYSIS_MAX_COMPLETION_TOKENS',
+        DEFAULTS.maxCompletionTokens,
+      ),
 
       executionMode: this.readExecutionMode(),
 

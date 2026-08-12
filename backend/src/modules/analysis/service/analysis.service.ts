@@ -125,6 +125,22 @@ export class AnalysisService {
    */
   private readonly cache = new Map<string, CacheEntry>();
 
+  /**
+   * Milestone #45 — process-local, in-memory in-flight-request
+   * collapse: two concurrent callers for the same normalized,
+   * currently-uncached question share ONE provider execution instead
+   * of each independently triggering a real OpenAI call. Keyed by the
+   * EXACT SAME `cacheKey` (normalizedQuery.toLowerCase()) already used
+   * for the completed-result cache below — no competing normalization.
+   * An entry exists only while its operation is genuinely pending and
+   * is removed immediately on settlement (success OR failure, via
+   * `.finally()`) — this is deliberately NOT a second cache; a later,
+   * non-overlapping request for the same question always starts a
+   * fresh operation. Mirrors the identical pattern already proven on
+   * the frontend (see analysisApi.ts's inFlightAnalysisRequests).
+   */
+  private readonly inFlightAnalyses = new Map<string, Promise<AnalysisApiResponse>>();
+
   constructor(
     private readonly newsService: NewsService,
     private readonly countryNewsService: CountryNewsService,
@@ -189,6 +205,48 @@ export class AnalysisService {
         provenance: { ...cached.provenance, cached: true },
       };
     }
+
+    // Milestone #45 — in-flight collapse: a second concurrent caller
+    // for this same normalized, currently-uncached question joins the
+    // SAME pending operation rather than starting a new one. This runs
+    // strictly AFTER the completed-cache check above (so a cache hit
+    // never even reaches here) and BEFORE any retrieval/provider work
+    // begins for a genuinely new operation.
+    const existingInFlightAnalysis = this.inFlightAnalyses.get(cacheKey);
+    if (existingInFlightAnalysis) {
+      this.logger.debug(
+        `Joining in-flight analysis for "${originalQuery}"`,
+      );
+
+      // Milestone #45 correction — derive THIS caller's own response
+      // envelope from the shared result, exactly mirroring the
+      // completed-cache path's own override pattern above:
+      // query/normalizedQuery must always reflect the CURRENT caller's
+      // own request, never a different concurrent caller's, even when
+      // both are normalized-equivalent (e.g. differ only in
+      // casing/whitespace) and therefore correctly share ONE
+      // underlying provider execution. Nothing expensive is repeated —
+      // this only awaits the already-shared operation and overrides
+      // two display fields on the result.
+      //
+      // provenance.cached is deliberately left exactly as the shared
+      // result already has it (false) — NOT overridden to true, unlike
+      // the completed-cache path above. This request was never served
+      // from the completed TTL cache; it awaited a genuinely fresh,
+      // still-in-progress generation that happened to be shared with
+      // another concurrent caller. Labeling it `cached: true` would
+      // misrepresent what actually happened — `buildProvenance()`
+      // already sets `cached: false` for every freshly-generated
+      // result, which remains the truthful value here.
+      const sharedResult = await existingInFlightAnalysis;
+      return {
+        ...sharedResult,
+        query: originalQuery,
+        normalizedQuery,
+      };
+    }
+
+    const inFlightOperation: Promise<AnalysisApiResponse> = (async (): Promise<AnalysisApiResponse> => {
 
     const location = this.detectLocation(normalizedQuery);
 
@@ -481,6 +539,23 @@ export class AnalysisService {
     );
 
     return response;
+    })();
+
+    // Milestone #45 — registered only once the operation object exists,
+    // and removed unconditionally on settlement (try/finally-equivalent
+    // via .finally()) regardless of success or failure. The identity
+    // check guards the same theoretical race already handled this way
+    // elsewhere in this codebase (see analysisApi.ts's frontend dedup):
+    // a stale cleanup from an old operation can never delete a newer
+    // one that has since been registered for the same key.
+    const settledInFlightOperation = inFlightOperation.finally(() => {
+      if (this.inFlightAnalyses.get(cacheKey) === settledInFlightOperation) {
+        this.inFlightAnalyses.delete(cacheKey);
+      }
+    });
+
+    this.inFlightAnalyses.set(cacheKey, settledInFlightOperation);
+    return settledInFlightOperation;
   }
 
   /**
