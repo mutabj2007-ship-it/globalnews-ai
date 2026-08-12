@@ -5,6 +5,28 @@ import type {
 } from './news';
 
 /**
+ * Milestone #47 — closed set of UI/response languages GlobalNews AI's
+ * architecture supports. Represents requested/resolved UI and analysis
+ * response language ONLY — never an arbitrary evidence/source language
+ * (see NewsArticle.sourceLanguage, which is deliberately a plain
+ * string, not this type, since retrieved evidence can be in any
+ * language the news provider itself supports, a much larger set than
+ * GlobalNews AI's own UI languages).
+ *
+ * PRODUCTION STATUS AS OF MILESTONE #47: only 'en' and 'pl' are
+ * actually implemented and tested end-to-end (native English retrieval
+ * for 'en'; staged Top-Headlines-then-Search-fallback retrieval for
+ * 'pl' — see resolve-retrieval-language.util.ts). 'sw', 'fr', 'es',
+ * 'ar', 'rw' are part of the planned architecture (this type already
+ * includes them, and the retrieval-strategy resolver already has a
+ * defined behavior for each) but are NOT activated in the frontend
+ * language selector and have not been end-to-end tested — do not
+ * present them as production-supported until their own acceptance
+ * criteria are actually implemented.
+ */
+export type LanguageCode = 'en' | 'pl' | 'sw' | 'fr' | 'es' | 'ar' | 'rw';
+
+/**
  * Whether an analysis was produced by a real AI provider or by
  * MockAnalysisProvider. Mirrors NewsDataMode's live/mock distinction —
  * mock analysis must never be presented as real AI output.
@@ -684,6 +706,23 @@ export interface AnalysisProvenance {
 export interface AnalysisApiResponse {
   /** The user's original, verbatim question — never rewritten. */
   query: string;
+
+  /**
+   * Milestone #47 — the UI/response language the caller requested.
+   * Absent request field defaults to 'en' for full backward
+   * compatibility with existing callers that never send it. This is
+   * NOT an evidence/source-language field — see SourceLanguage-related
+   * fields on NewsArticle for that separate concept.
+   */
+  requestedLanguage: LanguageCode;
+
+  /**
+   * Milestone #47 — the language the analysis was ACTUALLY produced
+   * in. Always present, always truthful — this is what the AI
+   * provider was instructed to respond in for this specific request,
+   * never an aspirational or requested-but-unfulfilled value.
+   */
+  responseLanguage: LanguageCode;
 
   /**
    * The deterministically-normalized form of `query` used internally

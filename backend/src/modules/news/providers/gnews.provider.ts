@@ -32,6 +32,8 @@ interface GNewsApiArticle {
   image?: string;
   publishedAt?: string;
   source?: { name?: string; url?: string };
+  /** Milestone #47 — GNews's own reported language of this article, e.g. "en", "pl", "de". */
+  lang?: string;
 }
 
 interface GNewsApiResponse {
@@ -76,30 +78,62 @@ export class GNewsProvider implements NewsProvider {
 
   constructor(private readonly config: ConfigService) {}
 
+  /**
+   * Milestone #47 — `lang` now comes from `options?.lang`, defaulting
+   * to 'en' when absent so every existing caller that never passes it
+   * keeps its exact prior behavior. Never call this with an
+   * unsupported Search-endpoint language (pl/sw/rw are NOT supported
+   * by GNews's real /search endpoint, verified from current official
+   * documentation) — resolve-retrieval-language.util.ts is responsible
+   * for never emitting one; this method does not itself validate the
+   * value, matching this file's existing "provider is a thin mapping
+   * layer" design.
+   */
   async search(query: string, options?: NewsSearchOptions): Promise<NewsArticle[]> {
     const apiKey = this.requireApiKey();
     const url = this.buildUrl('/search', apiKey, {
       q: query,
+      lang: options?.lang ?? 'en',
       max: String(this.clampLimit(options?.limit)),
     });
     const payload = await this.request(url);
     return this.normalize(payload);
   }
 
+  /**
+   * Milestone #47 — extended to accept an optional `q` (GNews's real
+   * /top-headlines endpoint supports keyword filtering, confirmed from
+   * current official documentation — this was not previously exposed
+   * by this repository's wrapper) and `lang` (no forced default here,
+   * unlike search() — GNews's own documented default for an omitted
+   * `lang` on this endpoint is "no language filter", a meaningfully
+   * different, valid state from forcing English).
+   */
   async topHeadlines(options?: NewsSearchOptions): Promise<NewsArticle[]> {
     const apiKey = this.requireApiKey();
     const url = this.buildUrl('/top-headlines', apiKey, {
+      lang: options?.lang,
+      q: options?.q,
       max: String(this.clampLimit(options?.limit)),
     });
     const payload = await this.request(url);
     return this.normalize(payload);
   }
 
+  /**
+   * Milestone #47: explicitly passes `lang: options?.lang ?? 'en'` to
+   * preserve this method's exact pre-Milestone-#47 default behavior —
+   * category() is not part of the M47 Polish/language retrieval flow,
+   * so its observable behavior must remain completely unchanged now
+   * that buildUrl() no longer injects a blanket 'en' default itself
+   * (see buildUrl's own updated doc comment).
+   */
   async category(category: NewsCategory, options?: NewsSearchOptions): Promise<NewsArticle[]> {
     const apiKey = this.requireApiKey();
     const gnewsCategory = CATEGORY_MAP[category] ?? 'general';
     const url = this.buildUrl('/top-headlines', apiKey, {
       category: gnewsCategory,
+      lang: options?.lang ?? 'en',
       max: String(this.clampLimit(options?.limit)),
     });
     const payload = await this.request(url);
@@ -150,10 +184,22 @@ export class GNewsProvider implements NewsProvider {
     return apiKey;
   }
 
-  private buildUrl(path: string, apiKey: string, params: Record<string, string>): string {
+  /**
+   * Milestone #47 — no longer injects a blanket `lang=en` default
+   * itself; each call site now explicitly decides its own `lang`
+   * value (or omits it entirely for topHeadlines(), which has a
+   * meaningfully different "no language filter" default per GNews's
+   * own documentation) via the `params` object. `params` values may
+   * now be `undefined` (never included in the URL) as well as falsy
+   * strings (also excluded, unchanged from before).
+   */
+  private buildUrl(
+    path: string,
+    apiKey: string,
+    params: Record<string, string | undefined>,
+  ): string {
     const url = new URL(GNEWS_BASE_URL + path);
     url.searchParams.set('token', apiKey);
-    url.searchParams.set('lang', 'en');
     for (const [key, value] of Object.entries(params)) {
       if (value) url.searchParams.set(key, value);
     }
@@ -230,7 +276,24 @@ export class GNewsProvider implements NewsProvider {
       category: classifyCategory({ title: raw.title, summary: raw.description }, categoryHint),
       sourcesCount: 1,
       publishedAt: raw.publishedAt ?? new Date().toISOString(),
+      // Milestone #47 — verbatim (trimmed, lowercased) mapping of
+      // GNews's own reported `lang` field. Never fabricated: absent or
+      // empty upstream value maps to undefined, never a guessed or
+      // defaulted code.
+      sourceLanguage: this.mapSourceLanguage(raw.lang),
     };
+  }
+
+  /**
+   * Milestone #47 — trim + lowercase only; never validates against any
+   * closed set (sourceLanguage is deliberately a plain string, not
+   * LanguageCode — see NewsArticle.sourceLanguage's own doc comment).
+   * Returns undefined for an absent or whitespace-only value, never a
+   * fabricated default.
+   */
+  private mapSourceLanguage(rawLang: string | undefined): string | undefined {
+    const trimmed = rawLang?.trim().toLowerCase();
+    return trimmed && trimmed.length > 0 ? trimmed : undefined;
   }
 
   /** Deterministic id derived from the article URL, so re-fetching the same story dedupes cleanly. */

@@ -48,6 +48,20 @@ export interface NewsArticle {
   /** ISO-8601 timestamp. */
   publishedAt: string;
 
+  /**
+   * Milestone #47 — the provider-reported language of this article's
+   * content, e.g. "en", "pl", "de", "fr" — verbatim, trimmed, and
+   * lowercased from the upstream provider's own `lang` field. Deliberately
+   * a plain string, NOT LanguageCode: retrieved evidence can be in any
+   * language the news provider supports, a far larger set than
+   * GlobalNews AI's own closed UI-language list, and coercing an
+   * unrecognized value into a false LanguageCode member would be
+   * dishonest. Undefined when the provider didn't report a language for
+   * this article — never fabricated or inferred. TrustState does not
+   * consume this field.
+   */
+  sourceLanguage?: string;
+
   confidence?: number;
 }
 

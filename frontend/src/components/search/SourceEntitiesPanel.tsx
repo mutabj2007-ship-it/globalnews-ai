@@ -1,8 +1,11 @@
-import type { SourceEntities } from '@globalnews-ai/shared';
+import type { LanguageCode, SourceEntities } from '@globalnews-ai/shared';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 interface SourceEntitiesPanelProps {
   sourceEntities: SourceEntities | undefined;
   className?: string;
+  /** Milestone #47 — defaults to 'en', so every pre-M47 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
 /**
@@ -16,10 +19,17 @@ interface SourceEntitiesPanelProps {
  * Deliberately does not read from analysis.entities (AnalysisEntities)
  * — that's the AI's own, ungrounded output, and is rendered separately
  * inside AnalysisResultView. The two are never combined into one list.
+ *
+ * Milestone #47 (Defect 1 correction) — `language` defaults to 'en';
+ * English output is byte-for-byte unchanged from before this
+ * milestone. org.canonical / alternateSurfaceForms are real,
+ * backend-resolved organization names extracted from source text —
+ * NEVER translated, only the surrounding English prose changes.
  */
 export function SourceEntitiesPanel({
   sourceEntities,
   className = '',
+  language = 'en',
 }: SourceEntitiesPanelProps): JSX.Element | null {
   const organizations = sourceEntities?.organizations ?? [];
 
@@ -27,10 +37,12 @@ export function SourceEntitiesPanel({
     return null;
   }
 
+  const t = getDictionary(language).sourceEntitiesPanel;
+
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       <span className="font-mono text-[11px] uppercase tracking-wide text-ink-tertiary">
-        Organizations identified in source material
+        {t.organizationsIdentified}
       </span>
       <div className="flex flex-wrap items-center gap-2">
         {organizations.map((org) => {
@@ -44,7 +56,7 @@ export function SourceEntitiesPanel({
 
           const title =
             alternateSurfaceForms.length > 0
-              ? `Also referred to as "${alternateSurfaceForms.join('", "')}" in the source material`
+              ? `${t.alsoReferredToAsPrefix} "${alternateSurfaceForms.join('", "')}" ${t.alsoReferredToAsSuffix}`
               : undefined;
 
           return (
@@ -56,7 +68,7 @@ export function SourceEntitiesPanel({
               {org.canonical}
               {alternateSurfaceForms.length > 0 && (
                 <span className="ml-1.5 text-ink-tertiary">
-                  (also &ldquo;{alternateSurfaceForms[0]}&rdquo;)
+                  ({t.also} &ldquo;{alternateSurfaceForms[0]}&rdquo;)
                 </span>
               )}
             </span>

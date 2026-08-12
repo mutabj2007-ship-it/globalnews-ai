@@ -8,6 +8,27 @@ import type { NewsArticle, NewsCategory, ProviderHealthStatus } from '@globalnew
 export interface NewsSearchOptions {
   /** Maximum number of articles to return. Providers should clamp internally. */
   limit?: number;
+
+  /**
+   * Milestone #47 — 2-letter provider language code (e.g. "en", "fr",
+   * "pl") to filter results by. Optional and provider-defined: passing
+   * a code a given provider/endpoint doesn't support is the caller's
+   * responsibility to avoid (see resolve-retrieval-language.util.ts,
+   * which never emits an unsupported combination for the endpoint it
+   * targets). Absent means "no language filter" (provider default).
+   */
+  lang?: string;
+
+  /**
+   * Milestone #47 — free-text keyword query, used ONLY by
+   * topHeadlines(). search() already takes its query as its own
+   * positional parameter; this exists so topHeadlines() can also
+   * accept a keyword filter (GNews's real /top-headlines endpoint
+   * supports this) without changing that method's existing signature
+   * shape. Absent means an unfiltered top-headlines request, unchanged
+   * from pre-Milestone-#47 behavior.
+   */
+  q?: string;
 }
 
 /**

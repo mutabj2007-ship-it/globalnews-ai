@@ -1,4 +1,4 @@
-import type { NewsArticle } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 
 /**
  * Milestone #31 — a request-local, AI-facing alias for one article in
@@ -280,13 +280,58 @@ export function buildAnalysisMessages(
   articles: NewsArticle[],
   maxChars: number,
   relationalContext?: RelationalPromptContext,
+  responseLanguage: LanguageCode = 'en',
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
-    system: BASE_SYSTEM_PROMPT + buildRelationalPromptSection(relationalContext),
+    system:
+      BASE_SYSTEM_PROMPT +
+      buildRelationalPromptSection(relationalContext) +
+      buildResponseLanguageInstruction(responseLanguage),
     user: buildAnalysisUserPrompt(query, normalized),
   };
 }
+
+/**
+ * Milestone #47 — the ONLY prompt change required to support a
+ * non-English response, reusing the SAME single existing analysis
+ * call (zero additional OpenAI calls). Maps a LanguageCode to a stable
+ * English language name — never hard-codes "Polish" specifically, so
+ * every LanguageCode already has defined behavior here even though
+ * only 'en'/'pl' are wired into AnalysisService as of this milestone.
+ *
+ * Deliberately instructs the model to translate ONLY prose fields and
+ * explicitly NOT touch structured/machine-readable fields (article
+ * IDs, evidenceId values, citation identifiers, enum values) — this is
+ * a prompt-level reinforcement of what the EXISTING, unmodified
+ * validation pipeline (validate-analysis-result.ts) already enforces
+ * structurally regardless of what the model actually does: a
+ * fabricated or altered ID/enum would already be rejected by that
+ * unchanged machinery, so this instruction is a quality aid, not the
+ * sole safety mechanism.
+ *
+ * Returns an empty string for 'en' — the base system prompt's existing
+ * behavior is already English, so no additional instruction is needed
+ * and none is added, preserving byte-for-byte prior prompt behavior
+ * for every English request.
+ */
+export function buildResponseLanguageInstruction(language: LanguageCode): string {
+  if (language === 'en') return '';
+
+  const languageName = RESPONSE_LANGUAGE_NAMES[language];
+
+  return `\n\nRespond in ${languageName}. All prose fields (headline, summary, claim text, agreement/difference descriptions, uncertainty text, explanations, entity labels, etc.) must be written in ${languageName}. Do NOT translate, alter, or localize: article IDs, evidenceId values, citation identifiers, or any enum/machine-readable field value (e.g. direction, sufficiency, confidence level tokens) — those must remain exactly as specified by the schema.`;
+}
+
+const RESPONSE_LANGUAGE_NAMES: Record<LanguageCode, string> = {
+  en: 'English',
+  pl: 'Polish',
+  sw: 'Swahili',
+  fr: 'French',
+  es: 'Spanish',
+  ar: 'Arabic',
+  rw: 'Kinyarwanda',
+};
 
 /**
  * JSON schema handed to the OpenAI provider's structured-output mode.

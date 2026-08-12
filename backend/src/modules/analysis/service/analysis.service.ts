@@ -12,6 +12,7 @@ import {
   type AnalysisRetrievalContext,
   type CountryNewsResponse,
   type GeoFuzzyMatch,
+  type LanguageCode,
   type LocationContext,
   type NewsArticle,
   type NewsResponse,
@@ -29,6 +30,8 @@ import {
   deriveFallbackNewsQuery,
 } from '../query/derive-generic-news-query.util';
 import { deriveRelationalSearchQueries } from '../query/derive-relational-search-queries.util';
+import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
+import { scoreGenericRelevance } from '../../news/relevance/generic-relevance.util';
 import {
   validateAnalysisResult,
   AnalysisValidationError,
@@ -113,6 +116,31 @@ const ALL_CAPS_CODE_TOKEN_PATTERN = /\b[A-Z]{2,3}\b/g;
  */
 const FAILURE_CACHE_TTL_SECONDS = 15;
 
+/**
+ * Milestone #47 (backend no-evidence response-language correction) —
+ * the zero-evidence `analysisError` sentence is GlobalNews AI's own
+ * presentation prose (not a raw exception message, not source-derived
+ * content), so it must honor `requestedLanguage` exactly like the
+ * OpenAI response-language instruction does. Reuses the SAME
+ * `Record<LanguageCode, string>` lookup pattern already established by
+ * RESPONSE_LANGUAGE_NAMES in build-analysis-prompt.util.ts — the same
+ * architecture, not a second one — scoped locally here since this
+ * exact sentence is only ever produced by this one branch of this one
+ * service. Only en/pl have real translations; every other LanguageCode
+ * falls back to the English sentence (defensive default, matching the
+ * frontend dictionary's own "unimplemented language falls back to en"
+ * discipline — never a claim that e.g. Swahili has a real translation
+ * here).
+ */
+const NO_EVIDENCE_MESSAGE: Partial<Record<LanguageCode, string>> = {
+  en: 'No related articles were found for this question.',
+  pl: 'Nie znaleziono powiązanych artykułów dla tego pytania.',
+};
+
+function resolveNoEvidenceMessage(language: LanguageCode): string {
+  return NO_EVIDENCE_MESSAGE[language] ?? NO_EVIDENCE_MESSAGE.en!;
+}
+
 @Injectable()
 export class AnalysisService {
   private readonly logger = new Logger(AnalysisService.name);
@@ -151,7 +179,19 @@ export class AnalysisService {
     private readonly analysisConfig: AnalysisConfigService,
   ) {}
 
-  async analyzeNews(rawQuery: string): Promise<AnalysisApiResponse> {
+  /**
+   * Milestone #47 — `requestedLanguage` defaults to 'en', so every
+   * existing caller that never passes it (including any caller that
+   * still only supplies `rawQuery`) is completely unaffected and
+   * behaves byte-for-byte as before this milestone. This is the SAME
+   * language value threaded through to the AI provider's response-
+   * language prompt instruction and echoed back verbatim as
+   * responseLanguage — see this method's return construction.
+   */
+  async analyzeNews(
+    rawQuery: string,
+    requestedLanguage: LanguageCode = 'en',
+  ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
 
     /**
@@ -164,7 +204,14 @@ export class AnalysisService {
      */
     const { originalQuery, normalizedQuery } = normalizeQuery(rawQuery);
 
-    const cacheKey = normalizedQuery.toLowerCase();
+    // Milestone #47: the cache key now includes requestedLanguage — a
+    // Polish and an English request for the same underlying text (rare,
+    // but possible for a bare entity name like "NATO") must never share
+    // a cached response, since the two produce genuinely different
+    // AnalysisApiResponse.responseLanguage/analysis prose. The in-flight
+    // dedup map below reuses this SAME cacheKey, so it automatically
+    // respects language too, with no separate change needed there.
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -321,6 +368,65 @@ export class AnalysisService {
 
             articles = searchResponse.articles;
             retrievalContext = this.toRetrievalContext(searchResponse);
+          } else if (requestedLanguage === 'pl') {
+            // Milestone #47 — staged Polish retrieval architecture.
+            // Reached only when detectLocation() AND
+            // deriveRelationalSearchQueries() have both already
+            // returned nothing — the SAME structural guarantee the
+            // English generic branch below relies on. A genuine Polish
+            // sentence never matches the English-pattern relational
+            // regexes above, so this branch is naturally, structurally
+            // reached for Polish generic questions without any extra
+            // guard needed.
+            //
+            // CALL 1: GNews /top-headlines (verified to support both
+            // lang=pl and a q keyword filter, per current official
+            // GNews documentation — see resolve-retrieval-language.util.ts's
+            // own doc comment). Relevance is applied HERE, directly,
+            // using the SAME unmodified scoreGenericRelevance() the
+            // English generic branch's NewsService.search() call uses
+            // internally — this is reuse of the existing relevance
+            // firewall, not a new or weaker one.
+            const polishTopic = derivePolishRetrievalQuery(normalizedQuery);
+
+            const primaryResponse = await this.newsService.topHeadlines(SEARCH_POOL_SIZE, {
+              lang: 'pl',
+              q: polishTopic,
+            });
+
+            const relevantPrimaryArticles = primaryResponse.articles.filter(
+              (article) => scoreGenericRelevance(article, polishTopic).isRelevant,
+            );
+
+            if (relevantPrimaryArticles.length > 0) {
+              articles = relevantPrimaryArticles;
+              retrievalContext = this.toRetrievalContext(primaryResponse);
+            } else {
+              // CALL 2 (bounded, exactly one): GNews /search, English —
+              // reusing the SAME concise topic already extracted from
+              // the Polish question (e.g. "NATO"), since translating
+              // the rest of the sentence is explicitly out of scope for
+              // this milestone (no OpenAI translation call, no
+              // dictionary). This is a genuine, disclosed recall
+              // limitation, not hidden — see the M47 delivery report.
+              //
+              // CRITICAL: this call NEVER chains into M46's own
+              // deriveFallbackNewsQuery()-based second attempt (that
+              // logic lives only in the English branch above/below and
+              // is never invoked here) — this structurally guarantees
+              // exactly 2 total provider calls for this path, never 3.
+              this.logger.debug(
+                `Polish primary retrieval for "${polishTopic}" (topHeadlines lang=pl) returned zero relevant articles — ` +
+                  `attempting one bounded English Search fallback for "${polishTopic}"`,
+              );
+
+              const fallbackResponse = await this.newsService.search(polishTopic, SEARCH_POOL_SIZE, {
+                type: 'generic',
+              });
+
+              articles = fallbackResponse.articles;
+              retrievalContext = this.toRetrievalContext(fallbackResponse);
+            }
           } else {
             // Milestone #35: only reached after detectLocation() has already
             // returned undefined — country/city routing above is completely
@@ -374,9 +480,17 @@ export class AnalysisService {
           const empty: AnalysisApiResponse = {
             query: originalQuery,
             normalizedQuery,
+            requestedLanguage,
+            // Milestone #47: no AI call was made, so 'responseLanguage'
+            // reflects what WOULD have been used, matching the honest
+            // "always present, always truthful" contract — no analysis
+            // was actually produced in any language here (analysis is
+            // null), but this keeps the field's type non-optional
+            // without inventing a fake distinct value.
+            responseLanguage: requestedLanguage,
             analysis: null,
             articles: [],
-            analysisError: 'No related articles were found for this question.',
+            analysisError: resolveNoEvidenceMessage(requestedLanguage),
             retrievalContext,
             sourceEntities: buildSourceEntities([]),
             // Milestone #43: computed over the (empty) original retrieved
@@ -443,6 +557,12 @@ export class AnalysisService {
             // for country/city retrieval and ordinary M35/M36 generic
             // queries — only set when the M37 relational branch matched.
             relationalContext,
+            // Milestone #47: the single, existing analysis call now also
+            // carries the requested response language — zero additional
+            // OpenAI calls. 'en' (the default) produces a byte-identical
+            // prompt to pre-Milestone-#47 behavior — see
+            // buildResponseLanguageInstruction()'s own doc comment.
+            responseLanguage: requestedLanguage,
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;
@@ -479,6 +599,12 @@ export class AnalysisService {
           response = {
             query: originalQuery,
             normalizedQuery,
+            requestedLanguage,
+            // Milestone #47: this IS the language actually used for
+            // this specific successful analysis — the same value passed
+            // to the provider above, echoed back truthfully, never
+            // independently re-derived.
+            responseLanguage: requestedLanguage,
             analysis,
             articles: deduped,
             retrievalContext,
@@ -499,6 +625,8 @@ export class AnalysisService {
           response = {
             query: originalQuery,
             normalizedQuery,
+            requestedLanguage,
+            responseLanguage: requestedLanguage,
             analysis: null,
             articles: deduped,
             analysisError: this.describeError(error),

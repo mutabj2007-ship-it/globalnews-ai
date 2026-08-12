@@ -3557,4 +3557,336 @@ describe('AnalysisService', () => {
       }
     });
   });
+
+  describe('Milestone #47 — language contract and Polish staged retrieval', () => {
+    it('1. no requestedLanguage argument -> defaults to English (requestedLanguage=en, responseLanguage=en)', async () => {
+      const articles = [makeArticle({ id: 'a1', title: 'NATO defense ministers meet' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+        topHeadlines: jest.fn(),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews(
+        'What are the most important developments in NATO right now?',
+      );
+
+      expect(response.requestedLanguage).toBe('en');
+      expect(response.responseLanguage).toBe('en');
+      expect(newsService.topHeadlines).not.toHaveBeenCalled();
+    });
+
+    it('2. requestedLanguage="en" explicit behaves identically to the default', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+        topHeadlines: jest.fn(),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Tell me about oil prices', 'en');
+
+      expect(response.requestedLanguage).toBe('en');
+      expect(response.responseLanguage).toBe('en');
+    });
+
+    it('3. Polish primary retrieval success: exactly ONE provider call (topHeadlines only), lang=pl, q=derived topic', async () => {
+      const natoArticle = makeArticle({
+        id: 'nato-pl-1',
+        title: 'NATO ministrowie obrony spotykają się',
+        summary: 'NATO ogłosiło nowe zobowiązania obronne.',
+      });
+      const newsService = {
+        search: jest.fn(),
+        topHeadlines: jest.fn().mockResolvedValue(makeSearchResponse([natoArticle])),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor([natoArticle])),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Co dzieje się teraz w NATO?', 'pl');
+
+      expect(newsService.search).not.toHaveBeenCalled();
+      expect(newsService.topHeadlines).toHaveBeenCalledTimes(1);
+      expect(newsService.topHeadlines).toHaveBeenCalledWith(
+        expect.any(Number),
+        expect.objectContaining({ lang: 'pl', q: 'NATO' }),
+      );
+      expect(response.requestedLanguage).toBe('pl');
+      expect(response.responseLanguage).toBe('pl');
+      expect(response.articles[0]?.id).toBe('nato-pl-1');
+    });
+
+    it('4. Polish primary zero relevant -> exactly ONE bounded English Search fallback (total 2 provider calls), never a third call', async () => {
+      const irrelevantPlArticle = makeArticle({
+        id: 'irrelevant-pl',
+        title: 'Something completely unrelated',
+        summary: 'Nothing about the topic at all here.',
+      });
+      const fallbackArticle = makeArticle({
+        id: 'en-fallback-1',
+        title: 'NATO defense ministers meet to discuss regional security',
+      });
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([fallbackArticle])),
+        topHeadlines: jest.fn().mockResolvedValue(makeSearchResponse([irrelevantPlArticle])),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor([fallbackArticle])),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Co dzieje się teraz w NATO?', 'pl');
+
+      expect(newsService.topHeadlines).toHaveBeenCalledTimes(1);
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+      expect(newsService.search).toHaveBeenCalledWith('NATO', expect.any(Number), { type: 'generic' });
+      expect(response.responseLanguage).toBe('pl');
+      expect(response.articles[0]?.id).toBe('en-fallback-1');
+    });
+
+    it('5. Polish both stages zero relevant: exactly 2 provider calls total, NEVER 3, no OpenAI call, no fabricated evidence', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+        topHeadlines: jest.fn().mockResolvedValue(makeSearchResponse([])),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Co dzieje się teraz w NATO?', 'pl');
+
+      expect(newsService.topHeadlines).toHaveBeenCalledTimes(1);
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+      expect(provider.analyzeNews).not.toHaveBeenCalled();
+      expect(response.analysis).toBeNull();
+      expect(response.responseLanguage).toBe('pl');
+    });
+
+    it('6. cache key includes language — identical query text for English vs. Polish never collides', async () => {
+      const enArticle = makeArticle({ id: 'en-1', title: 'NATO defense ministers meet' });
+      const plArticle = makeArticle({
+        id: 'pl-1',
+        title: 'NATO ministrowie obrony',
+        summary: 'NATO ogłosiło nowe zobowiązania.',
+      });
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([enArticle])),
+        topHeadlines: jest.fn().mockResolvedValue(makeSearchResponse([plArticle])),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest
+          .fn()
+          .mockImplementation((input: { articles: NewsArticle[] }) => validCandidateFor(input.articles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ cacheTtlSeconds: 300 }),
+      );
+
+      const respEn = await service.analyzeNews('NATO', 'en');
+      const respPl = await service.analyzeNews('NATO', 'pl');
+
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+      expect(newsService.topHeadlines).toHaveBeenCalledTimes(1);
+      expect(respEn.articles[0]?.id).toBe('en-1');
+      expect(respPl.articles[0]?.id).toBe('pl-1');
+    });
+
+    it('7. requestedLanguage does not affect English relational-pattern matching — a genuine English relational query still routes to the relational branch regardless of requestedLanguage', async () => {
+      const articles = [makeArticle({ id: 'iran-1', title: 'Oil prices rise as Iran conflict disrupts shipping' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+        topHeadlines: jest.fn(),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('How is the Iran conflict affecting oil prices?', 'pl');
+
+      expect(newsService.search).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Number),
+        expect.objectContaining({ type: 'relational' }),
+      );
+    });
+
+    it('8. Polish diacritics preserved through the full retrieval flow (q sent to topHeadlines matches the derived topic exactly)', async () => {
+      const article = makeArticle({
+        id: 'warsaw-1',
+        title: 'Warszawa ogłasza nowy program inwestycyjny',
+        summary: 'Warszawa planuje zwiększyć wydatki na infrastrukturę miejską.',
+      });
+      const newsService = {
+        search: jest.fn(),
+        topHeadlines: jest.fn().mockResolvedValue(makeSearchResponse([article])),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor([article])),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('Co dzieje się teraz w Warszawie?', 'pl');
+
+      expect(newsService.topHeadlines).toHaveBeenCalledWith(
+        expect.any(Number),
+        expect.objectContaining({ q: 'Warszawa' }),
+      );
+    });
+
+    it('9. (backend no-evidence response-language correction) zero-evidence analysisError honors requestedLanguage="en"', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+        topHeadlines: jest.fn(),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('What is happening in some obscure topic?', 'en');
+
+      expect(response.analysisError).toBe('No related articles were found for this question.');
+      expect(provider.analyzeNews).not.toHaveBeenCalled();
+    });
+
+    it('10. (backend no-evidence response-language correction) zero-evidence analysisError honors requestedLanguage="pl" — the exact real-browser-reported defect', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+        topHeadlines: jest.fn().mockResolvedValue(makeSearchResponse([])),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Co się dzieje obecnie w Iranie?', 'pl');
+
+      expect(response.analysisError).toBe('Nie znaleziono powiązanych artykułów dla tego pytania.');
+      expect(response.analysisError).not.toContain('artykułówdla');
+      expect(response.responseLanguage).toBe('pl');
+      expect(provider.analyzeNews).not.toHaveBeenCalled();
+    });
+
+    it('11. an unimplemented language for the no-evidence message falls back to the English sentence, never an empty/undefined value', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+        topHeadlines: jest.fn(),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Something obscure', 'sw');
+
+      expect(response.analysisError).toBe('No related articles were found for this question.');
+    });
+  });
 });

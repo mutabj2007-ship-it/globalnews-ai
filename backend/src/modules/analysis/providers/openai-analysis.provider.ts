@@ -86,7 +86,12 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
 
   constructor(private readonly analysisConfig: AnalysisConfigService) {}
 
-  async analyzeNews({ query, articles, relationalContext }: AnalysisProviderInput): Promise<unknown> {
+  async analyzeNews({
+    query,
+    articles,
+    relationalContext,
+    responseLanguage,
+  }: AnalysisProviderInput): Promise<unknown> {
     const config = this.analysisConfig.get();
 
     if (!isUsableOpenAiApiKey(config.openAiApiKey)) {
@@ -107,6 +112,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       articles,
       config.maxArticleChars,
       relationalContext,
+      responseLanguage,
     );
     const maxAttempts = config.retryAttempts + 1;
     const startedAt = Date.now();

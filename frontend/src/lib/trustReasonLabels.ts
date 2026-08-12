@@ -1,4 +1,4 @@
-import type { TrustReason } from '@globalnews-ai/shared';
+import type { LanguageCode, TrustReason } from '@globalnews-ai/shared';
 
 /**
  * Milestone #44 — frontend-only, language-neutral-contract-preserving
@@ -26,8 +26,44 @@ export const TRUST_REASON_LABELS: Record<TrustReason, string> = {
   'mock-execution': 'This is demo analysis — real evidence was not assessed.',
 };
 
-export function trustReasonLabel(reason: TrustReason): string {
-  return TRUST_REASON_LABELS[reason];
+/**
+ * Milestone #47 — Polish translation, same exhaustive-by-construction
+ * guarantee as the English map above. Never consulted unless the
+ * caller explicitly requests 'pl' — trustReasonLabel() defaults to
+ * English exactly as before this milestone.
+ */
+export const TRUST_REASON_LABELS_PL: Record<TrustReason, string> = {
+  'no-grounded-evidence': 'Nie znaleziono uzasadnionych dowodów dla tego pytania.',
+  'single-distinct-article': 'Oparte na jednym pobranym artykule.',
+  'multiple-distinct-articles': 'Oparte na wielu pobranych artykułach.',
+  'relational-support-adequate': 'Wiele odrębnych artykułów potwierdza tę zależność.',
+  'relational-support-limited': 'Tylko ograniczone źródła potwierdzają tę zależność.',
+  'requested-direction-unsupported': 'Dowody nie potwierdzają zależności w zadanym kierunku.',
+  'reverse-evidence-present': 'Część doniesień opisuje odwrotną zależność.',
+  'mixed-evidence-present': 'Doniesienia na temat tej zależności są niejednoznaczne lub sporne.',
+  'uncertainties-reported': 'W doniesieniach pozostają pewne niejasności.',
+  'differences-reported': 'Źródła przedstawiają to z różnym naciskiem lub szczegółowością.',
+  'mock-execution': 'To jest analiza demonstracyjna — rzeczywiste dowody nie zostały ocenione.',
+};
+
+const LABELS_BY_LANGUAGE: Partial<Record<LanguageCode, Record<TrustReason, string>>> = {
+  en: TRUST_REASON_LABELS,
+  pl: TRUST_REASON_LABELS_PL,
+};
+
+/**
+ * Milestone #47 — `language` defaults to 'en', so every existing
+ * caller that never passes it (all pre-Milestone-#47 call sites)
+ * behaves byte-for-byte as before. A language without a real map above
+ * (anything beyond en/pl, consistent with ACTIVE_LANGUAGES) falls back
+ * to English rather than showing an undefined/missing string — this is
+ * a defensive default, never a claim that e.g. Swahili labels exist.
+ * The TrustReason code itself is NEVER translated or altered — only
+ * this presentation-layer lookup changes.
+ */
+export function trustReasonLabel(reason: TrustReason, language: LanguageCode = 'en'): string {
+  const table = LABELS_BY_LANGUAGE[language] ?? TRUST_REASON_LABELS;
+  return table[reason];
 }
 
 /**
@@ -36,7 +72,9 @@ export function trustReasonLabel(reason: TrustReason): string {
  * TrustLevel or which codes the backend considers applicable — it only
  * decides which single already-backend-supplied reason is shown first;
  * every reason remains available via the full expandable list. Exact
- * CTO-approved conservative ordering.
+ * CTO-approved conservative ordering. Language-independent — the SAME
+ * ordering applies regardless of presentation language, since it
+ * operates on TrustReason codes, not their translated text.
  */
 const PRESENTATION_PRIORITY: TrustReason[] = [
   'mock-execution',

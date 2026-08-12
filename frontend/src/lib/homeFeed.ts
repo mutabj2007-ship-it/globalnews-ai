@@ -1,4 +1,4 @@
-import type { NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
 import { fetchTopHeadlines } from '@/lib/api/newsApi';
 
 export interface HomeFeed {
@@ -30,10 +30,17 @@ const EMPTY_FEED: HomeFeed = {
  * If the backend is unreachable (e.g. not started yet in local dev), this
  * degrades to an empty feed instead of throwing, so the homepage still
  * renders with its existing empty-state messaging.
+ *
+ * Milestone #47 (homepage feed language correction) — `language` is new
+ * and optional. Omitted (backward compatible): identical behavior to
+ * before. When supplied (from page.tsx's server-side cookie read), the
+ * SAME single request now also requests that language from the
+ * provider, so the homepage feed itself is language-contained instead
+ * of ignoring the user's selection.
  */
-export async function getHomeFeed(): Promise<HomeFeed> {
+export async function getHomeFeed(language?: LanguageCode): Promise<HomeFeed> {
   try {
-    const response = await fetchTopHeadlines(12);
+    const response = await fetchTopHeadlines(12, language);
     const headlines = response.articles;
 
     const featured = headlines[0] ?? null;

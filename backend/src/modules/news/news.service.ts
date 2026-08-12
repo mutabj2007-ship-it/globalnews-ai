@@ -171,14 +171,29 @@ export class NewsService {
     );
   }
 
+  /**
+   * Milestone #47 — `options` is new (previously topHeadlines() took
+   * only `limit`). Backward compatible: every existing caller that
+   * passes no second argument, or omits `lang`/`q`, gets exactly the
+   * same provider call as before. Does NOT itself apply relevance
+   * filtering (unlike search()) — AnalysisService's Milestone #47
+   * Polish branch applies scoreGenericRelevance() directly to this
+   * method's results, reusing the same unmodified relevance function
+   * search() uses internally, without retrofitting this method's own
+   * DB-fallback/persistence logic (below, unchanged) with the
+   * relevanceMode plumbing search() has.
+   */
   async topHeadlines(
     limit?: number,
+    options?: { lang?: string; q?: string },
   ): Promise<NewsResponse> {
     const providerCall =
       await this.callAllProviders(
         (provider) =>
           provider.topHeadlines({
             limit,
+            lang: options?.lang,
+            q: options?.q,
           }),
       );
 

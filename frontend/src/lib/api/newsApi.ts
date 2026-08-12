@@ -1,4 +1,4 @@
-import type { NewsResponse } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsResponse } from '@globalnews-ai/shared';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const REQUEST_TIMEOUT_MS = 10000;
@@ -43,8 +43,20 @@ async function getJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function fetchTopHeadlines(limit = 12): Promise<NewsResponse> {
-  return getJson<NewsResponse>(`/news/top-headlines?limit=${limit}`);
+/**
+ * Milestone #47 (homepage feed language correction) — `lang` is new
+ * and optional. Omitted (every pre-existing caller): identical request
+ * to before, fully backward compatible. When supplied, threads through
+ * to GET /news/top-headlines?limit=...&lang=... — the backend's own
+ * TopHeadlinesQueryDto validates it against the same closed
+ * LanguageCode set the analysis DTO already uses; this function itself
+ * does no validation, matching this file's existing "thin API client"
+ * design.
+ */
+export function fetchTopHeadlines(limit = 12, lang?: LanguageCode): Promise<NewsResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (lang) params.set('lang', lang);
+  return getJson<NewsResponse>(`/news/top-headlines?${params.toString()}`);
 }
 
 export function searchNews(query: string, limit = 8): Promise<NewsResponse> {

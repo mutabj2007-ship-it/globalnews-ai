@@ -1,4 +1,4 @@
-import type { NewsArticle } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 
 /**
  * Milestone #40 (authoritative-context correction) — the exact,
@@ -31,6 +31,14 @@ export interface AnalysisProviderInput {
    * this field is absent, regardless of what any provider emits.
    */
   relationalContext?: AnalysisRelationalContext;
+
+  /**
+   * Milestone #47 — the language the provider must produce its
+   * response in. Absent (or 'en') means English — the existing,
+   * unmodified prompt behavior — so every pre-Milestone-#47 caller
+   * that never sets this field is completely unaffected.
+   */
+  responseLanguage?: LanguageCode;
 }
 
 /**

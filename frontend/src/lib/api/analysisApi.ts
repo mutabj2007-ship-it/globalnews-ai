@@ -1,4 +1,4 @@
-import type { AnalysisApiResponse } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 // Longer than the news API timeout: the backend's own AI call timeout
@@ -59,16 +59,25 @@ const inFlightAnalysisRequests = new Map<string, Promise<AnalysisApiResponse>>()
  * fetch — see inFlightAnalysisRequests above. Every other aspect of
  * this function's behavior (AnalysisApiError shapes, HTTP 429 handling,
  * timeout behavior) is byte-for-byte unchanged from before this hotfix.
+ *
+ * Milestone #47 — `requestedLanguage` defaults to 'en', so every
+ * existing caller that never passes it keeps its exact prior behavior.
+ * Now part of the in-flight dedup key too: the same query text
+ * requested in two different languages must never share one in-flight
+ * request or resolve to the wrong language's response.
  */
-export function analyzeNews(query: string): Promise<AnalysisApiResponse> {
-  const key = query.trim();
+export function analyzeNews(
+  query: string,
+  requestedLanguage: LanguageCode = 'en',
+): Promise<AnalysisApiResponse> {
+  const key = `${requestedLanguage}:${query.trim()}`;
 
   const existing = inFlightAnalysisRequests.get(key);
   if (existing) {
     return existing;
   }
 
-  const request = performAnalyzeNews(query).finally(() => {
+  const request = performAnalyzeNews(query, requestedLanguage).finally(() => {
     // Only delete this key's entry if it still points at THIS promise.
     // Guards against a theoretical race where an older, already-
     // resolved request's cleanup could otherwise delete a NEWER
@@ -85,7 +94,10 @@ export function analyzeNews(query: string): Promise<AnalysisApiResponse> {
   return request;
 }
 
-async function performAnalyzeNews(query: string): Promise<AnalysisApiResponse> {
+async function performAnalyzeNews(
+  query: string,
+  requestedLanguage: LanguageCode,
+): Promise<AnalysisApiResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -94,7 +106,7 @@ async function performAnalyzeNews(query: string): Promise<AnalysisApiResponse> {
     response = await fetch(`${API_BASE_URL}/analysis/news`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, requestedLanguage }),
       cache: 'no-store',
       signal: controller.signal,
     });

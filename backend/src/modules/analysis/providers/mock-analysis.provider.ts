@@ -1,7 +1,50 @@
 import { Injectable } from '@nestjs/common';
-import type { NewsArticle } from '@globalnews-ai/shared';
 import type { AnalysisProvider, AnalysisProviderInput } from '../interfaces';
+import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
+
+/**
+ * Milestone #47 — the small, closed set of demonstration-prose strings
+ * this provider needs, for exactly the two implemented UI languages.
+ * NOT a general translation table and NOT reused for source
+ * titles/names/quotations — those always come from the real `articles`
+ * input, verbatim, in whatever language they actually are, regardless
+ * of `responseLanguage`. Unimplemented languages (sw/fr/es/ar/rw) fall
+ * back to English demonstration prose — a defensive default, never a
+ * claim that those languages have real mock translations.
+ */
+const MOCK_STRINGS: Record<'en' | 'pl', {
+  summaryIntro: string;
+  summaryMiddle: (count: number) => string;
+  summaryOutro: string;
+  agreementPoint: (title: string) => string;
+  unknown: string;
+  uncertainty: string;
+  confidenceExplanation: string;
+}> = {
+  en: {
+    summaryIntro: 'This is a demonstration analysis generated without a live AI provider.',
+    summaryMiddle: (count) => `It summarizes ${count} article(s) currently available for this question.`,
+    summaryOutro: 'Configure OPENAI_API_KEY to enable real analysis.',
+    agreementPoint: (title) => `Multiple outlets are covering "${title}".`,
+    unknown: 'This is mock analysis \u2014 no live AI reasoning has been performed on these articles.',
+    uncertainty: 'This is mock analysis \u2014 no live evidence assessment has been performed.',
+    confidenceExplanation: 'Mock analysis mode does not perform real evidence assessment.',
+  },
+  pl: {
+    summaryIntro: 'To jest analiza demonstracyjna wygenerowana bez użycia rzeczywistego dostawcy AI.',
+    summaryMiddle: (count) => `Podsumowuje ${count} artykuł(y/ów) obecnie dostępnych dla tego pytania.`,
+    summaryOutro: 'Skonfiguruj OPENAI_API_KEY, aby włączyć rzeczywistą analizę.',
+    agreementPoint: (title) => `Wiele redakcji relacjonuje temat: "${title}".`,
+    unknown: 'To jest analiza demonstracyjna \u2014 nie przeprowadzono rzeczywistego wnioskowania AI na tych artykułach.',
+    uncertainty: 'To jest analiza demonstracyjna \u2014 nie przeprowadzono rzeczywistej oceny dowodów.',
+    confidenceExplanation: 'Tryb analizy demonstracyjnej nie przeprowadza rzeczywistej oceny dowodów.',
+  },
+};
+
+function resolveMockStrings(language: LanguageCode | undefined): (typeof MOCK_STRINGS)['en'] {
+  return language === 'pl' ? MOCK_STRINGS.pl : MOCK_STRINGS.en;
+}
 
 /**
  * Produces a clearly-labeled demonstration analysis without calling any
@@ -19,6 +62,18 @@ import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
  * buildEvidenceReferences() over the same `articles` array the caller
  * passed in guarantees this provider's S-labels agree with the
  * validator's, without either side needing to share any other state.
+ *
+ * Milestone #47 (runtime correction) — demonstration PROSE (summary,
+ * agreement point, unknowns, uncertainty text, confidence explanation)
+ * now respects `responseLanguage` for 'pl', matching the live
+ * provider's own response-language behavior. Deliberately does NOT
+ * touch `headline` (always `top[0]?.title`, the real article's own
+ * title, verbatim) or `entities.organizations` (real `sourceName`
+ * values) — those must never be presented as translated, since they
+ * are not; only the mock provider's OWN invented demonstration
+ * sentences are ever localized. Remains fully deterministic — no
+ * randomness, no external call — and continues to satisfy the
+ * unmodified validator exactly as before.
  */
 @Injectable()
 export class MockAnalysisProvider implements AnalysisProvider {
@@ -26,7 +81,9 @@ export class MockAnalysisProvider implements AnalysisProvider {
   readonly displayName = 'GlobalNews Mock Analysis';
   readonly isMock = true;
 
-  async analyzeNews({ query, articles }: AnalysisProviderInput): Promise<unknown> {
+  async analyzeNews({ query, articles, responseLanguage }: AnalysisProviderInput): Promise<unknown> {
+    const strings = resolveMockStrings(responseLanguage);
+
     const evidenceByArticleId = new Map(
       buildEvidenceReferences(articles).map((ref) => [ref.articleId, ref.evidenceId]),
     );
@@ -38,10 +95,7 @@ export class MockAnalysisProvider implements AnalysisProvider {
     return {
       query,
       headline: top[0]?.title ?? `Coverage of "${query}"`,
-      summary:
-        'This is a demonstration analysis generated without a live AI provider. ' +
-        `It summarizes ${articles.length} article(s) currently available for this question. ` +
-        'Configure OPENAI_API_KEY to enable real analysis.',
+      summary: `${strings.summaryIntro} ${strings.summaryMiddle(articles.length)} ${strings.summaryOutro}`,
       // Milestone #32: excerpted verbatim from the article's own
       // title so it deterministically exists within the truncated
       // evidence text the validator checks against — this provider's
@@ -60,19 +114,16 @@ export class MockAnalysisProvider implements AnalysisProvider {
         top.length > 1
           ? [
               {
-                point: `Multiple outlets are covering "${top[0].title}".`,
+                point: strings.agreementPoint(top[0].title),
                 evidenceIds: evidenceIds(top),
               },
             ]
           : [],
       differences: [],
-      unknowns: [
-        'This is mock analysis \u2014 no live AI reasoning has been performed on these articles.',
-      ],
+      unknowns: [strings.unknown],
       uncertainties: [
         {
-          description:
-            'This is mock analysis \u2014 no live evidence assessment has been performed.',
+          description: strings.uncertainty,
           evidenceIds: [],
         },
       ],
@@ -84,7 +135,7 @@ export class MockAnalysisProvider implements AnalysisProvider {
       confidence: {
         level: 'low' as const,
         score: 20,
-        explanation: 'Mock analysis mode does not perform real evidence assessment.',
+        explanation: strings.confidenceExplanation,
       },
       entities: {
         countries: [],

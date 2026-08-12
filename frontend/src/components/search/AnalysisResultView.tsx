@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import type { AnalysisProvenance, NewsAnalysisResult, SourceDiversity } from '@globalnews-ai/shared';
+import type { AnalysisProvenance, LanguageCode, NewsAnalysisResult, SourceDiversity } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { AnalysisCitation } from '@/components/search/AnalysisCitation';
 import { EvidenceSufficiencyNote } from '@/components/search/EvidenceSufficiencyNote';
 import { TrustBadge } from '@/components/search/TrustBadge';
 import { SourceDiversitySummary } from '@/components/search/SourceDiversitySummary';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 interface AnalysisResultViewProps {
   analysis: NewsAnalysisResult;
@@ -18,6 +19,8 @@ interface AnalysisResultViewProps {
    * directly off `analysis` below — no redundant props for those).
    */
   sourceDiversity?: SourceDiversity;
+  /** Milestone #47 — defaults to 'en', so every pre-M47 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
 function SectionHeading({ children }: { children: ReactNode }): JSX.Element {
@@ -28,13 +31,26 @@ function SectionHeading({ children }: { children: ReactNode }): JSX.Element {
   );
 }
 
-export function AnalysisResultView({ analysis, provenance, sourceDiversity }: AnalysisResultViewProps): JSX.Element {
+export function AnalysisResultView({
+  analysis,
+  provenance,
+  sourceDiversity,
+  language = 'en',
+}: AnalysisResultViewProps): JSX.Element {
+  // Milestone #47 (runtime correction) — single dictionary lookup for
+  // this component's OWN presentation strings only. Never applied to
+  // analysis.headline/summary/keyFacts[].claim/etc. (real, already-
+  // language-appropriate model output) or to article-derived data
+  // (source names, titles, URLs) — those are rendered verbatim
+  // elsewhere in this file, completely untouched by this dictionary.
+  const t = getDictionary(language).analysisResultView;
+
   const entityGroups: Array<{ label: string; values: string[] }> = [
-    { label: 'Countries', values: analysis.entities.countries },
-    { label: 'Locations', values: analysis.entities.locations },
-    { label: 'People', values: analysis.entities.people },
-    { label: 'Organizations', values: analysis.entities.organizations },
-    { label: 'Topics', values: analysis.entities.topics },
+    { label: t.countries, values: analysis.entities.countries },
+    { label: t.locations, values: analysis.entities.locations },
+    { label: t.people, values: analysis.entities.people },
+    { label: t.organizations, values: analysis.entities.organizations },
+    { label: t.topics, values: analysis.entities.topics },
   ].filter((group) => group.values.length > 0);
 
   return (
@@ -42,9 +58,9 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       {/* Headline + summary */}
       <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <AnalysisModeBadge provenance={provenance} />
+          <AnalysisModeBadge provenance={provenance} language={language} />
           <span className="font-mono text-[11px] text-ink-tertiary">
-            Generated {formatRelativeTime(analysis.generatedAt)}
+            {t.generatedPrefix} {formatRelativeTime(analysis.generatedAt, language)}
           </span>
         </div>
         <h2 className="mb-3 text-balance font-display text-2xl font-medium leading-tight text-ink-primary sm:text-3xl">
@@ -62,11 +78,16 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
         analysis.confidence is demoted to a small, explicitly-labeled
         "AI self-assessment" details block further below — it must never
         visually outrank this component.
+
+        Milestone #47: `language` threaded through for presentation-only
+        localization — see TrustBadge.tsx/SourceDiversitySummary.tsx's
+        own doc comments. No trust/diversity computation change.
       */}
-      <TrustBadge trustState={analysis.trustState} />
+      <TrustBadge trustState={analysis.trustState} language={language} />
       <SourceDiversitySummary
         sourceDiversity={sourceDiversity}
         isMock={provenance.analysisMode === 'mock-ai'}
+        language={language}
       />
 
       {/*
@@ -77,18 +98,18 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       */}
       {analysis.relationalComposition && (
         <div className="rounded-2xl border border-border bg-surface p-5">
-          <SectionHeading>Relationship evidence</SectionHeading>
+          <SectionHeading>{t.relationshipEvidence}</SectionHeading>
           <p className="text-sm leading-relaxed text-ink-primary">
             {analysis.relationalComposition.summary}
           </p>
           <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary sm:grid-cols-4">
-            <dt>Supporting</dt>
+            <dt>{t.supporting}</dt>
             <dd>{analysis.relationalComposition.supportingClaims.length}</dd>
-            <dt>Reverse</dt>
+            <dt>{t.reverse}</dt>
             <dd>{analysis.relationalComposition.reverseClaims.length}</dd>
-            <dt>Association-only</dt>
+            <dt>{t.associationOnly}</dt>
             <dd>{analysis.relationalComposition.associationOnlyClaims.length}</dd>
-            <dt>Mixed</dt>
+            <dt>{t.mixed}</dt>
             <dd>{analysis.relationalComposition.mixedClaims.length}</dd>
           </dl>
         </div>
@@ -103,15 +124,15 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       */}
       <details className="rounded-2xl border border-border-strong bg-surface p-4">
         <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
-          AI self-assessment (not the evidence trust rating)
+          {t.aiSelfAssessment}
         </summary>
         <div className="mt-3">
           <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
-            AI self-assessment: {analysis.confidence.level} ({analysis.confidence.score}/100)
+            {t.aiSelfAssessmentPrefix}: {analysis.confidence.level} ({analysis.confidence.score}/100)
           </p>
           <p className="text-xs leading-relaxed text-ink-tertiary">{analysis.confidence.explanation}</p>
           <p className="mt-2 text-[11px] italic leading-relaxed text-ink-tertiary">
-            This is the AI model&rsquo;s own confidence estimate and is not the authoritative evidence trust rating above.
+            {t.aiSelfAssessmentDisclaimer}
           </p>
         </div>
       </details>
@@ -119,7 +140,7 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       {/* Key facts */}
       {analysis.keyFacts.length > 0 && (
         <section>
-          <SectionHeading>Key facts</SectionHeading>
+          <SectionHeading>{t.keyFacts}</SectionHeading>
           <ul className="flex flex-col gap-3">
             {analysis.keyFacts.map((fact, index) => (
               <li
@@ -131,6 +152,7 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
                 <EvidenceSufficiencyNote
                   evidenceBreadth={fact.evidenceBreadth}
                   evidenceBasis={fact.evidenceBasis}
+                language={language}
                 />
               </li>
             ))}
@@ -141,7 +163,7 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       {/* Agreements */}
       {analysis.agreements.length > 0 && (
         <section>
-          <SectionHeading>Where sources agree</SectionHeading>
+          <SectionHeading>{t.whereSourcesAgree}</SectionHeading>
           <ul className="flex flex-col gap-3">
             {analysis.agreements.map((agreement, index) => (
               <li
@@ -153,6 +175,7 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
                 <EvidenceSufficiencyNote
                   evidenceBreadth={agreement.evidenceBreadth}
                   evidenceBasis={agreement.evidenceBasis}
+                language={language}
                 />
               </li>
             ))}
@@ -163,7 +186,7 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       {/* Differences */}
       {analysis.differences.length > 0 && (
         <section>
-          <SectionHeading>Where reporting differs</SectionHeading>
+          <SectionHeading>{t.whereReportingDiffers}</SectionHeading>
           <div className="flex flex-col gap-4">
             {analysis.differences.map((difference, index) => (
               <div key={index} className="rounded-xl border border-border bg-surface p-4">
@@ -179,7 +202,8 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
                       <EvidenceSufficiencyNote
                         evidenceBreadth={position.evidenceBreadth}
                         evidenceBasis={position.evidenceBasis}
-                      />
+                      language={language}
+                />
                     </li>
                   ))}
                 </ul>
@@ -192,7 +216,7 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       {/* Unknowns */}
       {analysis.unknowns.length > 0 && (
         <section>
-          <SectionHeading>What remains unknown</SectionHeading>
+          <SectionHeading>{t.whatRemainsUnknown}</SectionHeading>
           <ul className="flex flex-col gap-2">
             {analysis.unknowns.map((unknown, index) => (
               <li
@@ -209,7 +233,7 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       {/* Uncertainty / insufficient evidence */}
       {analysis.uncertainties && analysis.uncertainties.length > 0 && (
         <section>
-          <SectionHeading>Insufficient evidence</SectionHeading>
+          <SectionHeading>{t.insufficientEvidence}</SectionHeading>
           <ul className="flex flex-col gap-2">
             {analysis.uncertainties.map((uncertainty, index) => (
               <li
@@ -227,12 +251,12 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       {/* Timeline */}
       {analysis.timeline.length > 0 && (
         <section>
-          <SectionHeading>Timeline</SectionHeading>
+          <SectionHeading>{t.timeline}</SectionHeading>
           <ol className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface">
             {analysis.timeline.map((event, index) => (
               <li key={index} className="grid grid-cols-1 gap-1 p-4 sm:grid-cols-[140px_1fr] sm:gap-4">
                 <span className="font-mono text-xs text-ink-tertiary">
-                  {formatRelativeTime(event.timestamp)}
+                  {formatRelativeTime(event.timestamp, language)}
                 </span>
                 <span className="text-sm text-ink-primary">
                   {event.event}
@@ -240,7 +264,8 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
                   <EvidenceSufficiencyNote
                     evidenceBreadth={event.evidenceBreadth}
                     evidenceBasis={event.evidenceBasis}
-                  />
+                  language={language}
+                />
                 </span>
               </li>
             ))}
@@ -252,7 +277,7 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
       {entityGroups.length > 0 && (
         <section>
           <SectionHeading>
-            Entities &amp; topics
+            {t.entitiesAndTopics}
             {/*
               Milestone #30 §G/H — these entities come straight from
               NewsAnalysisResult.entities: AI-interpreted free text, not
@@ -264,7 +289,7 @@ export function AnalysisResultView({ analysis, provenance, sourceDiversity }: An
               mistaken for one another.
             */}
             <span className="ml-2 font-mono text-[10px] normal-case tracking-normal text-ink-tertiary">
-              (AI-interpreted, unverified)
+              {t.aiInterpretedUnverified}
             </span>
           </SectionHeading>
           <div className="flex flex-col gap-3">

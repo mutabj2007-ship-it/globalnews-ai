@@ -111,4 +111,100 @@ describe('MockAnalysisProvider', () => {
       }
     }
   });
+
+  describe('Milestone #47 (runtime correction) — mock analysis response language', () => {
+    it('English (default, no responseLanguage) demonstration prose remains in English, unchanged from pre-Milestone-#47 behavior', async () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Story A' })];
+      const candidate = (await provider.analyzeNews({ query: 'test', articles })) as {
+        summary: string;
+        unknowns: string[];
+        uncertainties: Array<{ description: string }>;
+        confidence: { explanation: string };
+      };
+      expect(candidate.summary).toContain('This is a demonstration analysis');
+      expect(candidate.unknowns[0]).toContain('mock analysis');
+      expect(candidate.uncertainties[0].description).toContain('mock analysis');
+      expect(candidate.confidence.explanation).toContain('Mock analysis mode');
+    });
+
+    it('explicit responseLanguage="en" behaves identically to the default', async () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Story A' })];
+      const withDefault = await provider.analyzeNews({ query: 'test', articles });
+      const withExplicitEn = await provider.analyzeNews({ query: 'test', articles, responseLanguage: 'en' });
+      expect(withDefault).toEqual(withExplicitEn);
+    });
+
+    it('responseLanguage="pl" produces Polish demonstration prose', async () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Story A' })];
+      const candidate = (await provider.analyzeNews({
+        query: 'test',
+        articles,
+        responseLanguage: 'pl',
+      })) as {
+        summary: string;
+        unknowns: string[];
+        uncertainties: Array<{ description: string }>;
+        confidence: { explanation: string };
+      };
+      expect(candidate.summary).toContain('analiza demonstracyjna');
+      expect(candidate.unknowns[0]).toContain('analiza demonstracyjna');
+      expect(candidate.uncertainties[0].description).toContain('analiza demonstracyjna');
+      expect(candidate.confidence.explanation).toContain('demonstracyjnej');
+    });
+
+    it('Polish mock output still passes the SAME unmodified validator, deterministically', async () => {
+      const articles = [
+        makeArticle({ id: 'a1', title: 'Story A' }),
+        makeArticle({ id: 'a2', title: 'Story B' }),
+      ];
+      const candidate = await provider.analyzeNews({ query: 'test', articles, responseLanguage: 'pl' });
+      const validated = validateAnalysisResult(candidate, {
+        query: 'test',
+        articles,
+        analysisMode: 'mock-ai',
+        maxArticleChars: 1200,
+      });
+      expect(validated.analysisMode).toBe('mock-ai');
+      expect(validated.keyFacts.length).toBeGreaterThan(0);
+    });
+
+    it('headline is NEVER translated — always the real article\'s own title, verbatim, regardless of responseLanguage', async () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Real English Headline Text' })];
+      const candidateEn = (await provider.analyzeNews({ query: 'test', articles })) as { headline: string };
+      const candidatePl = (await provider.analyzeNews({
+        query: 'test',
+        articles,
+        responseLanguage: 'pl',
+      })) as { headline: string };
+      expect(candidateEn.headline).toBe('Real English Headline Text');
+      expect(candidatePl.headline).toBe('Real English Headline Text');
+    });
+
+    it('source names in entities.organizations are NEVER translated, regardless of responseLanguage', async () => {
+      const articles = [makeArticle({ id: 'a1', sourceName: 'Reuters' })];
+      const candidatePl = (await provider.analyzeNews({
+        query: 'test',
+        articles,
+        responseLanguage: 'pl',
+      })) as { entities: { organizations: string[] } };
+      expect(candidatePl.entities.organizations).toContain('Reuters');
+    });
+
+    it('an unimplemented mock language (e.g. "sw") falls back to English demonstration prose, not an error or empty string', async () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Story A' })];
+      const candidate = (await provider.analyzeNews({
+        query: 'test',
+        articles,
+        responseLanguage: 'sw',
+      })) as { summary: string };
+      expect(candidate.summary).toContain('This is a demonstration analysis');
+    });
+
+    it('remains fully deterministic for the same input and language', async () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Story A' })];
+      const a = await provider.analyzeNews({ query: 'test', articles, responseLanguage: 'pl' });
+      const b = await provider.analyzeNews({ query: 'test', articles, responseLanguage: 'pl' });
+      expect(a).toEqual(b);
+    });
+  });
 });

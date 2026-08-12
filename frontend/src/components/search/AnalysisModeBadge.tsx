@@ -7,11 +7,14 @@ import {
   CircleSlash,
   Clock3,
 } from 'lucide-react';
-import type { AnalysisProvenance } from '@globalnews-ai/shared';
+import type { AnalysisProvenance, LanguageCode } from '@globalnews-ai/shared';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 interface AnalysisModeBadgeProps {
   provenance: AnalysisProvenance;
   className?: string;
+  /** Milestone #47 — defaults to 'en', so every pre-M47 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
 interface BadgeVisual {
@@ -30,17 +33,24 @@ interface BadgeVisual {
  * `status` / `failureReason` drive which state is shown.
  * `analysisMode` only matters for a successful response, where it
  * distinguishes live AI from mock/demo analysis.
+ *
+ * Milestone #47 (Defect 1 correction) — `language` defaults to 'en';
+ * English output is byte-for-byte unchanged from before this
+ * milestone. Presentation-only localization — never re-derives which
+ * state is shown, only which pre-written label string represents it.
  */
-function resolveBadgeVisual(provenance: AnalysisProvenance): BadgeVisual {
+function resolveBadgeVisual(provenance: AnalysisProvenance, language: LanguageCode): BadgeVisual {
+  const t = getDictionary(language).analysisModeBadge;
+
   if (provenance.status === 'success') {
     return provenance.analysisMode === 'live-ai'
       ? {
-          label: 'LIVE AI ANALYSIS · Powered by OpenAI',
+          label: t.liveAiAnalysis,
           icon: Sparkles,
           className: 'border-signal/50 bg-signal/10 text-signal-bright',
         }
       : {
-          label: 'DEMO AI ANALYSIS',
+          label: t.demoAiAnalysis,
           icon: FlaskConical,
           className: 'border-border-strong bg-surface text-ink-tertiary',
         };
@@ -48,7 +58,7 @@ function resolveBadgeVisual(provenance: AnalysisProvenance): BadgeVisual {
 
   if (provenance.status === 'validation-rejected') {
     return {
-      label: 'AI ANALYSIS REJECTED · Failed validation',
+      label: t.analysisRejected,
       icon: ShieldAlert,
       className: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
     };
@@ -56,7 +66,7 @@ function resolveBadgeVisual(provenance: AnalysisProvenance): BadgeVisual {
 
   if (provenance.status === 'not-attempted') {
     return {
-      label: 'AI ANALYSIS NOT ATTEMPTED',
+      label: t.notAttempted,
       icon: CircleSlash,
       className: 'border-border-strong bg-surface text-ink-tertiary',
     };
@@ -72,12 +82,12 @@ function resolveBadgeVisual(provenance: AnalysisProvenance): BadgeVisual {
 
   return isUnavailable
     ? {
-        label: 'AI UNAVAILABLE',
+        label: t.unavailable,
         icon: CircleSlash,
         className: 'border-border-strong bg-surface text-ink-tertiary',
       }
     : {
-        label: 'AI ANALYSIS FAILED',
+        label: t.failed,
         icon: AlertTriangle,
         className: 'border-red-500/40 bg-red-500/10 text-red-400',
       };
@@ -86,9 +96,11 @@ function resolveBadgeVisual(provenance: AnalysisProvenance): BadgeVisual {
 export function AnalysisModeBadge({
   provenance,
   className = '',
+  language = 'en',
 }: AnalysisModeBadgeProps): JSX.Element {
-  const visual = resolveBadgeVisual(provenance);
+  const visual = resolveBadgeVisual(provenance, language);
   const Icon = visual.icon;
+  const t = getDictionary(language).analysisModeBadge;
 
   return (
     <span
@@ -101,7 +113,7 @@ export function AnalysisModeBadge({
       {provenance.cached && (
         <span className="inline-flex items-center gap-1 opacity-80">
           <Clock3 size={11} strokeWidth={2} aria-hidden="true" />
-          Cached
+          {t.cached}
         </span>
       )}
     </span>
