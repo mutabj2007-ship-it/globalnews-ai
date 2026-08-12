@@ -1329,9 +1329,12 @@ describe('AnalysisService', () => {
 
     await service.analyzeNews('Tell me about markets today');
 
-    expect(newsService.search).toHaveBeenCalledWith('Tell me about markets today', 20, {
-      type: 'generic',
-    });
+    // Milestone #46 (CI correction): the derived provider search term
+    // is "markets today" — deriveGenericNewsQuery() correctly strips
+    // the "Tell me about" prefix (added in an earlier M46 round). This
+    // was a stale test expectation from before that pattern existed;
+    // the ACTUAL, CORRECT M46 behavior is confirmed here, not reverted.
+    expect(newsService.search).toHaveBeenCalledWith('markets today', 20, { type: 'generic' });
 
     expect(newsService.search).toHaveBeenCalledTimes(1);
 
@@ -1369,11 +1372,12 @@ describe('AnalysisService', () => {
 
     await service.analyzeNews('Tell me about technology and markets today');
 
-    expect(newsService.search).toHaveBeenCalledWith(
-      'Tell me about technology and markets today',
-      20,
-      { type: 'generic' },
-    );
+    // Milestone #46 (CI correction): same stale-expectation fix as the
+    // "markets today" case above — "Tell me about" is correctly
+    // stripped, confirmed as the actual, correct M46 behavior.
+    expect(newsService.search).toHaveBeenCalledWith('technology and markets today', 20, {
+      type: 'generic',
+    });
 
     expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
   });

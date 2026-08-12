@@ -49,6 +49,20 @@ const SUBJECT_EXTRACTION_PATTERNS: RegExp[] = [
   /^tell\s+me\s+about\s+(.+)$/i,
   // Milestone #46 — "Give me the latest on/about/regarding X"
   /^give\s+me\s+the\s+latest\s+(?:on|about|regarding)\s+(.+)$/i,
+  // Milestone #46 (CI correction) — the SHORT form of the pattern
+  // above, WITHOUT a leading "What are/is the": "[Most important/
+  // Latest/Key/...] developments/updates/news/happenings in/with/on/
+  // about/for/regarding X [right now/today/currently]?" — e.g. "Latest
+  // developments in semiconductor exports", "Latest developments in
+  // NATO", "Most important developments in oil prices". Confirmed via
+  // real-machine CI failure that this shorter, equally natural
+  // phrasing (no "What are the" prefix) was not covered by the longer
+  // pattern above, which requires that prefix. Deliberately reuses the
+  // exact same adjective/noun/preposition/trailing-time-phrase
+  // vocabulary as the longer pattern for consistency — this is not a
+  // new, separately-tuned pattern, just the same shape without the
+  // leading question-word clause.
+  /^(?:most\s+important\s+|latest\s+|key\s+|major\s+|biggest\s+|current\s+|top\s+|recent\s+)+(?:developments|updates|news|happenings)\s+(?:in|with|on|about|for|regarding)\s+(.+?)(?:\s+right\s+now|\s+today|\s+currently)?$/i,
 ];
 
 /** Strips exactly one leading "the " from an extracted subject (mirrors the same idiom already used in AnalysisService#detectLocation's word-shrinking scan — a separate local instance, not a shared call). */

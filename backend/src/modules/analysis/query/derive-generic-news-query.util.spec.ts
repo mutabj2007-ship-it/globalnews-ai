@@ -116,6 +116,43 @@ describe('deriveGenericNewsQuery (Milestone #35)', () => {
     });
   });
 
+  describe('Milestone #46 (CI correction) — short-form "[adjective] developments/updates/news/happenings in X" without a leading "What are/is the"', () => {
+    it('real-machine CI failure case: "Latest developments in semiconductor exports" -> "semiconductor exports"', () => {
+      expect(deriveGenericNewsQuery('Latest developments in semiconductor exports')).toBe(
+        'semiconductor exports',
+      );
+    });
+
+    it('"Latest developments in NATO" -> "NATO"', () => {
+      expect(deriveGenericNewsQuery('Latest developments in NATO')).toBe('NATO');
+    });
+
+    it('"Latest developments in oil prices" -> "oil prices"', () => {
+      expect(deriveGenericNewsQuery('Latest developments in oil prices')).toBe('oil prices');
+    });
+
+    it('"Most important developments in X" short form is also supported by the same mechanism', () => {
+      expect(deriveGenericNewsQuery('Most important developments in NATO')).toBe('NATO');
+    });
+
+    it('the corresponding long form (with "What are the") continues to work, unaffected', () => {
+      expect(
+        deriveGenericNewsQuery('What are the latest developments in semiconductor exports?'),
+      ).toBe('semiconductor exports');
+      expect(
+        deriveGenericNewsQuery('What are the most important developments in NATO right now?'),
+      ).toBe('NATO');
+    });
+
+    it('requires at least one adjective — a bare "Developments in X" (no adjective at all) is NOT matched by this pattern and falls through unchanged (conservative, avoids over-broadening)', () => {
+      expect(deriveGenericNewsQuery('Developments in NATO')).toBe('Developments in NATO');
+    });
+
+    it('does not conflict with or change the existing "latest X news" pattern', () => {
+      expect(deriveGenericNewsQuery('latest semiconductor news')).toBe('semiconductor');
+    });
+  });
+
   describe('deriveFallbackNewsQuery (Milestone #46 — bounded fallback derivation)', () => {
     it('strips the closed stopword set from an already-derived (unmatched-sentence) primary query', () => {
       expect(deriveFallbackNewsQuery('What is the impact of new tariffs on global trade')).toBe(
