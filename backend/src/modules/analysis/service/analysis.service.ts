@@ -22,6 +22,7 @@ import type { AnalysisProvider } from '../interfaces';
 import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
+import { computeSourceDiversity } from '../duplicates/compute-source-diversity.util';
 import { buildSourceEntities } from './build-source-entities.util';
 import { deriveGenericNewsQuery } from '../query/derive-generic-news-query.util';
 import { deriveRelationalSearchQueries } from '../query/derive-relational-search-queries.util';
@@ -319,6 +320,9 @@ export class AnalysisService {
           'No related articles were found for this question.',
         retrievalContext,
         sourceEntities: buildSourceEntities([]),
+        // Milestone #43: computed over the (empty) original retrieved
+        // pool — all-zero fields, never fabricated.
+        sourceDiversity: computeSourceDiversity(articles),
         // Milestone #30: no AI call was ever attempted — there was
         // nothing to analyze — so this is 'not-attempted', not 'failed'.
         // Distinguishing the two lets the frontend tell "we found
@@ -344,6 +348,17 @@ export class AnalysisService {
     const deduped = clusterDuplicateArticles(
       articles,
     ).slice(0, config.maxArticles);
+
+    /**
+     * Milestone #43: computed over `articles` — the ORIGINAL retrieved
+     * pool, BEFORE clusterDuplicateArticles()/the maxArticles cap above
+     * — never over `deduped`. This is deliberate: `deduped` has already
+     * had duplicates collapsed, so computing diversity from it would
+     * make duplicate-concentration invisible by construction. Computed
+     * once here and reused in both the success and failure response
+     * branches below so it never risks disagreeing with itself.
+     */
+    const sourceDiversity = computeSourceDiversity(articles);
 
     /**
      * Milestone #29: built once from `deduped` — the exact same final
@@ -421,6 +436,7 @@ export class AnalysisService {
         articles: deduped,
         retrievalContext,
         sourceEntities,
+        sourceDiversity,
         provenance: this.buildProvenance(
           config,
           'success',
@@ -449,6 +465,7 @@ export class AnalysisService {
           this.describeError(error),
         retrievalContext,
         sourceEntities,
+        sourceDiversity,
         provenance: this.buildProvenance(
           config,
           status,

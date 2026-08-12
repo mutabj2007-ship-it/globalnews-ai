@@ -706,4 +706,67 @@ export interface AnalysisApiResponse {
    * See AnalysisProvenance.
    */
   provenance: AnalysisProvenance;
+
+  /**
+   * Milestone #43 — structural diversity metadata describing the
+   * ORIGINAL retrieved article pool for this request, computed BEFORE
+   * duplicate clustering, the maxArticles cap, provider execution,
+   * model citation selection, or validation. Deliberately lives here,
+   * not on NewsAnalysisResult — it describes pre-validation retrieval
+   * data, not the validated analysis contract.
+   *
+   * DOES NOT redefine, replace, or feed into: TrustState.
+   * distinctSourceArticleCount (Milestone #42, counts only validated,
+   * model-cited article IDs from a narrower, later-stage population),
+   * relationalComposition.evidenceSufficiency (Milestone #41), TrustLevel,
+   * TrustReason, or analysis.confidence. This field has no effect on
+   * trust scoring in Milestone #43 — see SourceDiversity's own doc
+   * comment for what it can and cannot prove.
+   *
+   * Optional: at least 3 distinct code paths in AnalysisService
+   * construct an AnalysisApiResponse (an early empty-articles return,
+   * and 2 further branches inside the main success/failure flow) —
+   * unlike NewsAnalysisResult (which has exactly one constructor,
+   * validateAnalysisResult()), this field's presence has not been
+   * proven safe to make required across every one of those paths.
+   */
+  sourceDiversity?: SourceDiversity;
+}
+
+/**
+ * Milestone #43 — structural evidence source-diversity metadata for the
+ * ORIGINAL retrieved article pool (before clustering/capping/citation —
+ * see AnalysisApiResponse.sourceDiversity's own doc comment for the
+ * exact population and non-authority statement).
+ *
+ * WHAT THIS CANNOT PROVE: genuine editorial independence, true
+ * syndication/wire-copy origin (no attribution metadata exists in this
+ * repository), or publisher organizational relationships. A higher
+ * `knownDomainCount` or `distinctSourceNameCount` means more distinct
+ * hostnames/provider-supplied names were observed — nothing more.
+ * "Duplicate-like" clustering (reused unchanged from
+ * cluster-articles.util.ts) is a deterministic title/URL heuristic, not
+ * proof of common origin.
+ */
+export interface SourceDiversity {
+  /** Total articles in the original retrieved pool, before clustering or the maxArticles cap. */
+  retrievedArticleCount: number;
+  /** Total number of clusters found (clusterArticlesWithMembership's own grouping — same algorithm as clusterDuplicateArticles(), unchanged). */
+  reportingClusterCount: number;
+  /** Number of those clusters with 2+ members — i.e., clusters where a duplicate-like repeat was actually detected. */
+  duplicateLikeClusterCount: number;
+  /** Size of the single largest cluster. 0 when retrievedArticleCount is 0. */
+  largestClusterSize: number;
+  /** Distinct normalized hostnames (lowercase, leading "www." stripped, no other subdomain collapsing) among articles with a parseable URL. */
+  knownDomainCount: number;
+  /** Count of articles whose URL could not be parsed into a hostname at all — never counted as their own distinct domain. */
+  unknownDomainArticleCount: number;
+  /**
+   * Distinct non-empty (post-trim-check) raw provider-supplied
+   * sourceName values. Empty/missing/whitespace-only values are
+   * excluded entirely and never increase this count. Non-empty values
+   * are never lowercased, normalized, aliased, or merged — this is raw
+   * provider metadata, not verified publisher identity.
+   */
+  distinctSourceNameCount: number;
 }
