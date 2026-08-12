@@ -36,6 +36,19 @@ const SUBJECT_EXTRACTION_PATTERNS: RegExp[] = [
   /^(?:latest|recent)\s+(.+?)\s+news$/i,
   // "news on/about/regarding X"
   /^news\s+(?:on|about|regarding)\s+(.+)$/i,
+  // Milestone #46 — "What are/is the [most important/latest/key/...]
+  // developments/updates/news/happenings in/with/on/about/for/regarding
+  // X [right now/today/currently]?" — the exact real-runtime failure
+  // shape ("What are the most important developments in NATO right
+  // now?") did not match any pattern above, so the entire sentence was
+  // sent to the provider verbatim. Non-greedy capture + an optional
+  // trailing time-phrase group correctly strips "right now"/"today"/
+  // "currently" from the end without needing them to be present.
+  /^what\s+(?:are|is)\s+the\s+(?:most\s+important\s+|latest\s+|key\s+|major\s+|biggest\s+|current\s+|top\s+|recent\s+)*(?:developments|updates|news|happenings)\s+(?:in|with|on|about|for|regarding)\s+(.+?)(?:\s+right\s+now|\s+today|\s+currently)?$/i,
+  // Milestone #46 — "Tell me about X"
+  /^tell\s+me\s+about\s+(.+)$/i,
+  // Milestone #46 — "Give me the latest on/about/regarding X"
+  /^give\s+me\s+the\s+latest\s+(?:on|about|regarding)\s+(.+)$/i,
 ];
 
 /** Strips exactly one leading "the " from an extracted subject (mirrors the same idiom already used in AnalysisService#detectLocation's word-shrinking scan — a separate local instance, not a shared call). */
@@ -44,7 +57,10 @@ function stripLeadingThe(value: string): string {
 }
 
 function stripTrailingPunctuation(value: string): string {
-  return value.trim().replace(/[?!.,;:]+$/g, '').trim();
+  return value
+    .trim()
+    .replace(/[?!.,;:]+$/g, '')
+    .trim();
 }
 
 function wordCount(value: string): number {
@@ -91,4 +107,105 @@ export function deriveGenericNewsQuery(normalizedQuery: string): string {
   }
 
   return base;
+}
+
+/**
+ * Milestone #46 — small, closed stopword list used ONLY by
+ * deriveFallbackNewsQuery() below, never by the primary subject-
+ * extraction patterns above and never applied to the raw user
+ * sentence. Deliberately narrow: common function/question words and
+ * the generic "news framing" vocabulary itself (developments, updates,
+ * news, latest, etc.) that carry no topical meaning of their own once
+ * a query has already failed to match a more specific pattern above.
+ */
+const FALLBACK_STOPWORDS = new Set([
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'of',
+  'in',
+  'on',
+  'at',
+  'to',
+  'for',
+  'with',
+  'about',
+  'regarding',
+  'right',
+  'now',
+  'today',
+  'currently',
+  'this',
+  'that',
+  'these',
+  'those',
+  'and',
+  'or',
+  'but',
+  'most',
+  'important',
+  'latest',
+  'recent',
+  'current',
+  'key',
+  'major',
+  'top',
+  'new',
+  'happening',
+  'happenings',
+  'developments',
+  'development',
+  'updates',
+  'update',
+  'news',
+  'what',
+  'how',
+  'why',
+  'when',
+  'where',
+  'who',
+  'going',
+  'tell',
+  'me',
+  'give',
+  'us',
+]);
+
+/**
+ * Milestone #46 — Bounded Fallback Retrieval.
+ *
+ * Used ONLY by AnalysisService's generic branch, and ONLY as a single,
+ * capped second attempt when the PRIMARY deriveGenericNewsQuery()
+ * result yields zero relevant articles from the provider (post
+ * relevance-gate) — never called speculatively, never chained into a
+ * second fallback of its own, never a multi-query fan-out. See
+ * AnalysisService's generic branch for the exact trigger condition.
+ *
+ * Deterministic, zero AI calls: strips the small closed stopword set
+ * above from the ALREADY-derived primary query (never the raw user
+ * sentence — this is a second, narrower pass over what
+ * deriveGenericNewsQuery() already produced), leaving only the
+ * remaining significant terms as the fallback provider search phrase.
+ *
+ * Returns undefined — never an empty string, and never the identical
+ * query again — when stripping would remove every word, or would strip
+ * nothing at all (which would just re-run an identical, already-failed
+ * search). AnalysisService is expected to skip the fallback attempt
+ * entirely when this returns undefined.
+ */
+export function deriveFallbackNewsQuery(primaryDerivedQuery: string): string | undefined {
+  const words = primaryDerivedQuery.trim().split(/\s+/).filter(Boolean);
+  const significant = words.filter((word) => !FALLBACK_STOPWORDS.has(word.toLowerCase()));
+
+  if (significant.length === 0) return undefined;
+  if (significant.length === words.length) return undefined;
+
+  return significant.join(' ');
 }

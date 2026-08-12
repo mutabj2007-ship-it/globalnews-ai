@@ -1,15 +1,9 @@
-import type {
-  CountryNewsResponse,
-  NewsArticle,
-  NewsResponse,
-} from '@globalnews-ai/shared';
+import type { CountryNewsResponse, NewsArticle, NewsResponse } from '@globalnews-ai/shared';
 import { AnalysisService } from './analysis.service';
 import type { AnalysisProvider } from '../interfaces';
 import { AnalysisConfigService } from '../config/analysis-config.service';
 
-function makeArticle(
-  overrides: Partial<NewsArticle> = {},
-): NewsArticle {
+function makeArticle(overrides: Partial<NewsArticle> = {}): NewsArticle {
   return {
     id: 'id',
     title: 'title',
@@ -59,9 +53,7 @@ function makeCountryResponse(
 }
 
 function makeConfigService(
-  overrides: Partial<
-    ReturnType<AnalysisConfigService['get']>
-  > = {},
+  overrides: Partial<ReturnType<AnalysisConfigService['get']>> = {},
 ): AnalysisConfigService {
   const config = {
     maxArticles: 8,
@@ -94,18 +86,14 @@ function makeConfigService(
  * build-analysis-prompt.util.ts's buildEvidenceReferences for the
  * S{index+1} assignment this relies on).
  */
-function validCandidateFor(
-  articles: NewsArticle[],
-) {
+function validCandidateFor(articles: NewsArticle[]) {
   return {
     headline: 'Headline',
     summary: 'Summary',
     keyFacts: [
       {
         claim: articles[0].title,
-        evidenceIds: [
-          'S1',
-        ],
+        evidenceIds: ['S1'],
       },
     ],
     agreements: [],
@@ -131,28 +119,16 @@ function validCandidateFor(
 describe('AnalysisService', () => {
   function makeCountryNewsService() {
     return {
-      getCountryNews:
-        jest.fn().mockResolvedValue(
-          makeCountryResponse(
-            'ESP',
-            'Spain',
-            [],
-          ),
-        ),
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('ESP', 'Spain', [])),
     };
   }
 
   it('returns a clear analysisError and empty articles when no news results are found', async () => {
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse([]),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([])),
     };
 
-    const countryNewsService =
-      makeCountryNewsService();
+    const countryNewsService = makeCountryNewsService();
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
@@ -168,27 +144,18 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    const response =
-      await service.analyzeNews(
-        'nonexistent query',
-      );
+    const response = await service.analyzeNews('nonexistent query');
 
     expect(response.articles).toEqual([]);
     expect(response.analysis).toBeNull();
 
-    expect(
-      response.analysisError,
-    ).toMatch(/no related articles/i);
+    expect(response.analysisError).toMatch(/no related articles/i);
 
-    expect(
-      provider.analyzeNews,
-    ).not.toHaveBeenCalled();
+    expect(provider.analyzeNews).not.toHaveBeenCalled();
 
     // retrievalContext must still be present when retrieval
     // succeeded but returned zero articles.
-    expect(
-      response.retrievalContext,
-    ).toEqual(
+    expect(response.retrievalContext).toEqual(
       expect.objectContaining({
         dataMode: 'mock',
         articlesRetrieved: 0,
@@ -204,27 +171,16 @@ describe('AnalysisService', () => {
     ];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
-    const countryNewsService =
-      makeCountryNewsService();
+    const countryNewsService = makeCountryNewsService();
 
     const provider: AnalysisProvider = {
       id: 'openai',
       displayName: 'OpenAI',
       isMock: false,
-      analyzeNews: jest
-        .fn()
-        .mockRejectedValue(
-          new Error(
-            'OpenAI rate limit exceeded.',
-          ),
-        ),
+      analyzeNews: jest.fn().mockRejectedValue(new Error('OpenAI rate limit exceeded.')),
     };
 
     const service = new AnalysisService(
@@ -234,25 +190,16 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    const response =
-      await service.analyzeNews(
-        'test query',
-      );
+    const response = await service.analyzeNews('test query');
 
     expect(response.analysis).toBeNull();
-    expect(response.articles).toHaveLength(
-      1,
-    );
+    expect(response.articles).toHaveLength(1);
 
-    expect(
-      response.analysisError,
-    ).toMatch(/temporarily unavailable/i);
+    expect(response.analysisError).toMatch(/temporarily unavailable/i);
 
     // retrievalContext must still be present when the AI provider
     // fails after articles were successfully retrieved.
-    expect(
-      response.retrievalContext,
-    ).toEqual(
+    expect(response.retrievalContext).toEqual(
       expect.objectContaining({
         dataMode: 'mock',
         articlesRetrieved: 1,
@@ -268,25 +215,16 @@ describe('AnalysisService', () => {
     ];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
-    const countryNewsService =
-      makeCountryNewsService();
+    const countryNewsService = makeCountryNewsService();
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -296,22 +234,13 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    const response =
-      await service.analyzeNews(
-        'test query',
-      );
+    const response = await service.analyzeNews('test query');
 
-    expect(
-      response.analysis,
-    ).not.toBeNull();
+    expect(response.analysis).not.toBeNull();
 
-    expect(
-      response.analysis?.analysisMode,
-    ).toBe('mock-ai');
+    expect(response.analysis?.analysisMode).toBe('mock-ai');
 
-    expect(
-      response.analysisError,
-    ).toBeUndefined();
+    expect(response.analysisError).toBeUndefined();
   });
 
   describe('Milestone #30: provenance', () => {
@@ -383,7 +312,7 @@ describe('AnalysisService', () => {
       });
     });
 
-    it('classifies a provider failure using the error\'s own failureReason when present', async () => {
+    it("classifies a provider failure using the error's own failureReason when present", async () => {
       const articles = [makeArticle({ id: 'a1' })];
       const newsService = {
         search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
@@ -610,25 +539,16 @@ describe('AnalysisService', () => {
     ];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
-    const countryNewsService =
-      makeCountryNewsService();
+    const countryNewsService = makeCountryNewsService();
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -638,17 +558,11 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      'Same Query',
-    );
+    await service.analyzeNews('Same Query');
 
-    await service.analyzeNews(
-      'same query',
-    );
+    await service.analyzeNews('same query');
 
-    expect(
-      newsService.search,
-    ).toHaveBeenCalledTimes(1);
+    expect(newsService.search).toHaveBeenCalledTimes(1);
   });
 
   it('does not cache when cacheTtlSeconds is 0', async () => {
@@ -659,25 +573,16 @@ describe('AnalysisService', () => {
     ];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
-    const countryNewsService =
-      makeCountryNewsService();
+    const countryNewsService = makeCountryNewsService();
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -689,20 +594,14 @@ describe('AnalysisService', () => {
       }),
     );
 
-    await service.analyzeNews(
-      'test query',
-    );
+    await service.analyzeNews('test query');
 
-    await service.analyzeNews(
-      'test query',
-    );
+    await service.analyzeNews('test query');
 
-    expect(
-      newsService.search,
-    ).toHaveBeenCalledTimes(2);
+    expect(newsService.search).toHaveBeenCalledTimes(2);
   });
 
-  it('shares one cache entry across normalized-equivalent requests, while each response exposes its own request\'s query', async () => {
+  it("shares one cache entry across normalized-equivalent requests, while each response exposes its own request's query", async () => {
     // Reproduces the exact Milestone 27 acceptance-test scenario:
     // "what;s happening in kigali?" then "What's happening in Kigali?"
     const articles = [
@@ -717,26 +616,16 @@ describe('AnalysisService', () => {
     };
 
     const countryNewsService = {
-      getCountryNews:
-        jest.fn().mockResolvedValue(
-          makeCountryResponse(
-            'RWA',
-            'Rwanda',
-            articles,
-            { city: 'kigali' },
-          ),
-        ),
+      getCountryNews: jest
+        .fn()
+        .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' })),
     };
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -746,80 +635,51 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    const first = await service.analyzeNews(
-      'what;s happening in kigali?',
-    );
+    const first = await service.analyzeNews('what;s happening in kigali?');
 
-    const second = await service.analyzeNews(
-      "What's happening in Kigali?",
-    );
+    const second = await service.analyzeNews("What's happening in Kigali?");
 
     // Both variants normalize to the same text, so they share one
     // cache entry and retrieval/AI analysis only ran once.
-    expect(
-      countryNewsService.getCountryNews,
-    ).toHaveBeenCalledTimes(1);
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledTimes(1);
 
-    expect(
-      provider.analyzeNews,
-    ).toHaveBeenCalledTimes(1);
+    expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
 
     // Both variants normalize to the same *cache key* (lowercased),
     // so retrieval/AI is shared — but normalizeQuery itself does not
     // change case, so each response's normalizedQuery still reflects
     // that request's own casing/punctuation-repair, not a forced
     // canonical form.
-    expect(first.normalizedQuery).toBe(
-      "what's happening in kigali?",
-    );
-    expect(second.normalizedQuery).toBe(
-      "What's happening in Kigali?",
-    );
+    expect(first.normalizedQuery).toBe("what's happening in kigali?");
+    expect(second.normalizedQuery).toBe("What's happening in Kigali?");
     // own literal input, never the other caller's — this is the bug:
     // the cache must not leak the first caller's raw query onto a
     // later cache-hit response.
-    expect(first.query).toBe(
-      'what;s happening in kigali?',
-    );
-    expect(second.query).toBe(
-      "What's happening in Kigali?",
-    );
+    expect(first.query).toBe('what;s happening in kigali?');
+    expect(second.query).toBe("What's happening in Kigali?");
 
     // The shared underlying analysis/articles/retrievalContext are
     // still identical across both responses (only the envelope's
     // query fields differ).
     expect(second.articles).toEqual(first.articles);
     expect(second.analysis).toEqual(first.analysis);
-    expect(second.retrievalContext).toEqual(
-      first.retrievalContext,
-    );
+    expect(second.retrievalContext).toEqual(first.retrievalContext);
   });
 
-  it('caches a typo\'d and correctly-punctuated variant of the same question together', async () => {
-    const articles = [
-      makeArticle({ id: 'normalize-cache-1' }),
-    ];
+  it("caches a typo'd and correctly-punctuated variant of the same question together", async () => {
+    const articles = [makeArticle({ id: 'normalize-cache-1' })];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
-    const countryNewsService =
-      makeCountryNewsService();
+    const countryNewsService = makeCountryNewsService();
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -829,19 +689,13 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      "What;s the latest on markets?",
-    );
+    await service.analyzeNews('What;s the latest on markets?');
 
-    await service.analyzeNews(
-      "What's the latest on markets?",
-    );
+    await service.analyzeNews("What's the latest on markets?");
 
     // Both variants normalize to the same text, so they share one
     // cache entry and the provider is only hit once.
-    expect(
-      newsService.search,
-    ).toHaveBeenCalledTimes(1);
+    expect(newsService.search).toHaveBeenCalledTimes(1);
   });
 
   it('uses country-aware retrieval for a Spain question', async () => {
@@ -857,25 +711,14 @@ describe('AnalysisService', () => {
     };
 
     const countryNewsService = {
-      getCountryNews:
-        jest.fn().mockResolvedValue(
-          makeCountryResponse(
-            'ESP',
-            'Spain',
-            articles,
-          ),
-        ),
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('ESP', 'Spain', articles)),
     };
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -885,31 +728,15 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    const response =
-      await service.analyzeNews(
-        'What is happening in Spain today?',
-      );
+    const response = await service.analyzeNews('What is happening in Spain today?');
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).toHaveBeenCalledWith(
-      'ESP',
-      undefined,
-      20,
-      undefined,
-    );
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('ESP', undefined, 20, undefined);
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).toHaveBeenCalledTimes(1);
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledTimes(1);
 
-    expect(
-      newsService.search,
-    ).not.toHaveBeenCalled();
+    expect(newsService.search).not.toHaveBeenCalled();
 
-    expect(
-      response.articles,
-    ).toEqual(articles);
+    expect(response.articles).toEqual(articles);
   });
 
   it('uses country-aware retrieval for a Rwanda question', async () => {
@@ -925,25 +752,14 @@ describe('AnalysisService', () => {
     };
 
     const countryNewsService = {
-      getCountryNews:
-        jest.fn().mockResolvedValue(
-          makeCountryResponse(
-            'RWA',
-            'Rwanda',
-            articles,
-          ),
-        ),
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles)),
     };
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -953,22 +769,11 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      'Latest news from Rwanda',
-    );
+    await service.analyzeNews('Latest news from Rwanda');
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).toHaveBeenCalledWith(
-      'RWA',
-      undefined,
-      20,
-      undefined,
-    );
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('RWA', undefined, 20, undefined);
 
-    expect(
-      newsService.search,
-    ).not.toHaveBeenCalled();
+    expect(newsService.search).not.toHaveBeenCalled();
   });
 
   it('resolves a supported country alias such as Britain', async () => {
@@ -984,25 +789,16 @@ describe('AnalysisService', () => {
     };
 
     const countryNewsService = {
-      getCountryNews:
-        jest.fn().mockResolvedValue(
-          makeCountryResponse(
-            'GBR',
-            'United Kingdom',
-            articles,
-          ),
-        ),
+      getCountryNews: jest
+        .fn()
+        .mockResolvedValue(makeCountryResponse('GBR', 'United Kingdom', articles)),
     };
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -1012,22 +808,11 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      'What is happening in Britain today?',
-    );
+    await service.analyzeNews('What is happening in Britain today?');
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).toHaveBeenCalledWith(
-      'GBR',
-      undefined,
-      20,
-      undefined,
-    );
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('GBR', undefined, 20, undefined);
 
-    expect(
-      newsService.search,
-    ).not.toHaveBeenCalled();
+    expect(newsService.search).not.toHaveBeenCalled();
   });
 
   it('resolves an embedded ISO alpha-3 code with no preposition, e.g. "is USA under pressure of war?"', async () => {
@@ -1043,25 +828,16 @@ describe('AnalysisService', () => {
     };
 
     const countryNewsService = {
-      getCountryNews:
-        jest.fn().mockResolvedValue(
-          makeCountryResponse(
-            'USA',
-            'United States',
-            articles,
-          ),
-        ),
+      getCountryNews: jest
+        .fn()
+        .mockResolvedValue(makeCountryResponse('USA', 'United States', articles)),
     };
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -1071,35 +847,18 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      'is USA under pressure of war?',
-    );
+    await service.analyzeNews('is USA under pressure of war?');
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).toHaveBeenCalledWith(
-      'USA',
-      undefined,
-      20,
-      undefined,
-    );
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('USA', undefined, 20, undefined);
 
-    expect(
-      newsService.search,
-    ).not.toHaveBeenCalled();
+    expect(newsService.search).not.toHaveBeenCalled();
   });
 
   it('does not resolve a lowercase embedded code with no preposition', async () => {
-    const articles = [
-      makeArticle({ id: 'general-2' }),
-    ];
+    const articles = [makeArticle({ id: 'general-2' })];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
     const countryNewsService = {
@@ -1110,11 +869,7 @@ describe('AnalysisService', () => {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -1124,34 +879,20 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      'the us released a report today',
-    );
+    await service.analyzeNews('the us released a report today');
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).not.toHaveBeenCalled();
+    expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
 
-    expect(
-      newsService.search,
-    ).toHaveBeenCalledWith(
-      'the us released a report today',
-      20,
-      { type: 'generic' },
-    );
+    expect(newsService.search).toHaveBeenCalledWith('the us released a report today', 20, {
+      type: 'generic',
+    });
   });
 
   it('does not resolve an ambiguous bare country name with no preposition (e.g. "Chad")', async () => {
-    const articles = [
-      makeArticle({ id: 'general-3' }),
-    ];
+    const articles = [makeArticle({ id: 'general-3' })];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
     const countryNewsService = {
@@ -1162,11 +903,7 @@ describe('AnalysisService', () => {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -1176,21 +913,13 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      'Chad missed the bus this morning',
-    );
+    await service.analyzeNews('Chad missed the bus this morning');
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).not.toHaveBeenCalled();
+    expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
 
-    expect(
-      newsService.search,
-    ).toHaveBeenCalledWith(
-      'Chad missed the bus this morning',
-      20,
-      { type: 'generic' },
-    );
+    expect(newsService.search).toHaveBeenCalledWith('Chad missed the bus this morning', 20, {
+      type: 'generic',
+    });
   });
 
   it('resolves a curated city to its country, e.g. "What is happening in Kigali?"', async () => {
@@ -1206,26 +935,16 @@ describe('AnalysisService', () => {
     };
 
     const countryNewsService = {
-      getCountryNews:
-        jest.fn().mockResolvedValue(
-          makeCountryResponse(
-            'RWA',
-            'Rwanda',
-            articles,
-            { city: 'kigali' },
-          ),
-        ),
+      getCountryNews: jest
+        .fn()
+        .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' })),
     };
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -1235,32 +954,17 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    const response = await service.analyzeNews(
-      "What's happening in Kigali?",
-    );
+    const response = await service.analyzeNews("What's happening in Kigali?");
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).toHaveBeenCalledWith(
-      'RWA',
-      undefined,
-      20,
-      'kigali',
-    );
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('RWA', undefined, 20, 'kigali');
 
-    expect(
-      newsService.search,
-    ).not.toHaveBeenCalled();
+    expect(newsService.search).not.toHaveBeenCalled();
 
     // City intent is preserved through to the retrieval context so the
     // frontend can display "Kigali, Rwanda" rather than just "Rwanda".
-    expect(
-      response.retrievalContext.city,
-    ).toBe('kigali');
+    expect(response.retrievalContext.city).toBe('kigali');
 
-    expect(
-      response.retrievalContext.countryName,
-    ).toBe('Rwanda');
+    expect(response.retrievalContext.countryName).toBe('Rwanda');
   });
 
   it('resolves a curated city even with a typo\'d contraction, e.g. "what;s happening in kigali?"', async () => {
@@ -1276,26 +980,16 @@ describe('AnalysisService', () => {
     };
 
     const countryNewsService = {
-      getCountryNews:
-        jest.fn().mockResolvedValue(
-          makeCountryResponse(
-            'RWA',
-            'Rwanda',
-            articles,
-            { city: 'kigali' },
-          ),
-        ),
+      getCountryNews: jest
+        .fn()
+        .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' })),
     };
 
     const provider: AnalysisProvider = {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -1305,48 +999,27 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    const response = await service.analyzeNews(
-      'what;s happening in kigali?',
-    );
+    const response = await service.analyzeNews('what;s happening in kigali?');
 
     // The typo'd punctuation is repaired by normalization before
     // country/city detection ever runs, so this resolves identically
     // to the correctly-punctuated "What's happening in Kigali?" query.
-    expect(
-      countryNewsService.getCountryNews,
-    ).toHaveBeenCalledWith(
-      'RWA',
-      undefined,
-      20,
-      'kigali',
-    );
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('RWA', undefined, 20, 'kigali');
 
-    expect(
-      newsService.search,
-    ).not.toHaveBeenCalled();
+    expect(newsService.search).not.toHaveBeenCalled();
 
     // The user's literal, unmodified input is still what's echoed
     // back for display — normalization never rewrites what they typed.
-    expect(response.query).toBe(
-      'what;s happening in kigali?',
-    );
+    expect(response.query).toBe('what;s happening in kigali?');
 
-    expect(response.normalizedQuery).toBe(
-      "what's happening in kigali?",
-    );
+    expect(response.normalizedQuery).toBe("what's happening in kigali?");
   });
 
   it('does not resolve an uncurated city even with a preposition', async () => {
-    const articles = [
-      makeArticle({ id: 'general-4' }),
-    ];
+    const articles = [makeArticle({ id: 'general-4' })];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
     const countryNewsService = {
@@ -1357,11 +1030,7 @@ describe('AnalysisService', () => {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -1371,21 +1040,11 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      "What's happening in Anytown?",
-    );
+    await service.analyzeNews("What's happening in Anytown?");
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).not.toHaveBeenCalled();
+    expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
 
-    expect(
-      newsService.search,
-    ).toHaveBeenCalledWith(
-      "Anytown",
-      20,
-      { type: 'generic' },
-    );
+    expect(newsService.search).toHaveBeenCalledWith('Anytown', 20, { type: 'generic' });
   });
 
   describe('Milestone #28: fuzzy geographic typo resolution', () => {
@@ -1402,26 +1061,16 @@ describe('AnalysisService', () => {
       };
 
       const countryNewsService = {
-        getCountryNews:
-          jest.fn().mockResolvedValue(
-            makeCountryResponse(
-              'RWA',
-              'Rwanda',
-              articles,
-              { city: 'kigali' },
-            ),
-          ),
+        getCountryNews: jest
+          .fn()
+          .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' })),
       };
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
         displayName: 'Mock',
         isMock: true,
-        analyzeNews: jest
-          .fn()
-          .mockResolvedValue(
-            validCandidateFor(articles),
-          ),
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
       };
 
       const service = new AnalysisService(
@@ -1431,35 +1080,25 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response = await service.analyzeNews(
-        "What's happening in Kigalli?",
-      );
+      const response = await service.analyzeNews("What's happening in Kigalli?");
 
       // Retrieval must use the CANONICAL spelling ("kigali"), never
       // the raw typo ("kigalli") — this is what makes retrieval
       // actually find anything.
-      expect(
-        countryNewsService.getCountryNews,
-      ).toHaveBeenCalledWith(
+      expect(countryNewsService.getCountryNews).toHaveBeenCalledWith(
         'RWA',
         undefined,
         20,
         'kigali',
       );
 
-      expect(
-        newsService.search,
-      ).not.toHaveBeenCalled();
+      expect(newsService.search).not.toHaveBeenCalled();
 
       // The user's original question is preserved verbatim — the
       // typo is never silently rewritten in what's echoed back.
-      expect(response.query).toBe(
-        "What's happening in Kigalli?",
-      );
+      expect(response.query).toBe("What's happening in Kigalli?");
 
-      expect(response.normalizedQuery).toBe(
-        "What's happening in Kigalli?",
-      );
+      expect(response.normalizedQuery).toBe("What's happening in Kigalli?");
 
       // Provenance: the retrieval context discloses that this came
       // from fuzzy resolution, and what it was resolved from/to.
@@ -1471,30 +1110,21 @@ describe('AnalysisService', () => {
     });
 
     it('resolves a misspelled bare country name with no preposition, e.g. "Rwnada"', async () => {
-      const articles = [
-        makeArticle({ id: 'rwanda-fuzzy-1' }),
-      ];
+      const articles = [makeArticle({ id: 'rwanda-fuzzy-1' })];
 
       const newsService = {
         search: jest.fn(),
       };
 
       const countryNewsService = {
-        getCountryNews:
-          jest.fn().mockResolvedValue(
-            makeCountryResponse('RWA', 'Rwanda', articles),
-          ),
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles)),
       };
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
         displayName: 'Mock',
         isMock: true,
-        analyzeNews: jest
-          .fn()
-          .mockResolvedValue(
-            validCandidateFor(articles),
-          ),
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
       };
 
       const service = new AnalysisService(
@@ -1506,9 +1136,7 @@ describe('AnalysisService', () => {
 
       const response = await service.analyzeNews('Rwnada');
 
-      expect(
-        countryNewsService.getCountryNews,
-      ).toHaveBeenCalledWith(
+      expect(countryNewsService.getCountryNews).toHaveBeenCalledWith(
         'RWA',
         undefined,
         20,
@@ -1526,10 +1154,7 @@ describe('AnalysisService', () => {
       const newsService = { search: jest.fn() };
 
       const countryNewsService = {
-        getCountryNews:
-          jest.fn().mockResolvedValue(
-            makeCountryResponse('RWA', 'Rwanda', articles),
-          ),
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles)),
       };
 
       const provider: AnalysisProvider = {
@@ -1563,10 +1188,7 @@ describe('AnalysisService', () => {
         const newsService = { search: jest.fn() };
 
         const countryNewsService = {
-          getCountryNews:
-            jest.fn().mockResolvedValue(
-              makeCountryResponse(iso3, name, articles),
-            ),
+          getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse(iso3, name, articles)),
         };
 
         const provider: AnalysisProvider = {
@@ -1684,11 +1306,7 @@ describe('AnalysisService', () => {
     ];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
     const countryNewsService = {
@@ -1699,11 +1317,7 @@ describe('AnalysisService', () => {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -1713,25 +1327,15 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      'Tell me about markets today',
-    );
+    await service.analyzeNews('Tell me about markets today');
 
-    expect(
-      newsService.search,
-    ).toHaveBeenCalledWith(
-      'Tell me about markets today',
-      20,
-      { type: 'generic' },
-    );
+    expect(newsService.search).toHaveBeenCalledWith('Tell me about markets today', 20, {
+      type: 'generic',
+    });
 
-    expect(
-      newsService.search,
-    ).toHaveBeenCalledTimes(1);
+    expect(newsService.search).toHaveBeenCalledTimes(1);
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).not.toHaveBeenCalled();
+    expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
   });
 
   it('does not mistake ordinary text for a country query', async () => {
@@ -1742,11 +1346,7 @@ describe('AnalysisService', () => {
     ];
 
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse(articles),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
     const countryNewsService = {
@@ -1757,11 +1357,7 @@ describe('AnalysisService', () => {
       id: 'mock-analysis',
       displayName: 'Mock',
       isMock: true,
-      analyzeNews: jest
-        .fn()
-        .mockResolvedValue(
-          validCandidateFor(articles),
-        ),
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
     };
 
     const service = new AnalysisService(
@@ -1771,52 +1367,37 @@ describe('AnalysisService', () => {
       makeConfigService(),
     );
 
-    await service.analyzeNews(
-      'Tell me about technology and markets today',
-    );
+    await service.analyzeNews('Tell me about technology and markets today');
 
-    expect(
-      newsService.search,
-    ).toHaveBeenCalledWith(
+    expect(newsService.search).toHaveBeenCalledWith(
       'Tell me about technology and markets today',
       20,
       { type: 'generic' },
     );
 
-    expect(
-      countryNewsService.getCountryNews,
-    ).not.toHaveBeenCalled();
+    expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
   });
 
   describe('retrievalContext', () => {
     it('preserves dataMode=live and provider info for generic live retrieval', async () => {
-      const articles = [
-        makeArticle({ id: 'live-1' }),
-      ];
+      const articles = [makeArticle({ id: 'live-1' })];
 
       const newsService = {
-        search: jest
-          .fn()
-          .mockResolvedValue(
-            makeSearchResponse(articles, {
-              dataMode: 'live',
-              providers: ['newsapi'],
-            }),
-          ),
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(articles, {
+            dataMode: 'live',
+            providers: ['newsapi'],
+          }),
+        ),
       };
 
-      const countryNewsService =
-        makeCountryNewsService();
+      const countryNewsService = makeCountryNewsService();
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
         displayName: 'Mock',
         isMock: true,
-        analyzeNews: jest
-          .fn()
-          .mockResolvedValue(
-            validCandidateFor(articles),
-          ),
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
       };
 
       const service = new AnalysisService(
@@ -1826,14 +1407,9 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response =
-        await service.analyzeNews(
-          'live query',
-        );
+      const response = await service.analyzeNews('live query');
 
-      expect(
-        response.retrievalContext,
-      ).toEqual({
+      expect(response.retrievalContext).toEqual({
         dataMode: 'live',
         providers: ['newsapi'],
         fallbackReason: undefined,
@@ -1846,33 +1422,24 @@ describe('AnalysisService', () => {
     });
 
     it('preserves dataMode=mock for generic mock retrieval', async () => {
-      const articles = [
-        makeArticle({ id: 'mock-1' }),
-      ];
+      const articles = [makeArticle({ id: 'mock-1' })];
 
       const newsService = {
-        search: jest
-          .fn()
-          .mockResolvedValue(
-            makeSearchResponse(articles, {
-              dataMode: 'mock',
-              providers: ['mock-wire'],
-            }),
-          ),
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(articles, {
+            dataMode: 'mock',
+            providers: ['mock-wire'],
+          }),
+        ),
       };
 
-      const countryNewsService =
-        makeCountryNewsService();
+      const countryNewsService = makeCountryNewsService();
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
         displayName: 'Mock',
         isMock: true,
-        analyzeNews: jest
-          .fn()
-          .mockResolvedValue(
-            validCandidateFor(articles),
-          ),
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
       };
 
       const service = new AnalysisService(
@@ -1882,46 +1449,31 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response =
-        await service.analyzeNews(
-          'mock query',
-        );
+      const response = await service.analyzeNews('mock query');
 
-      expect(
-        response.retrievalContext.dataMode,
-      ).toBe('mock');
+      expect(response.retrievalContext.dataMode).toBe('mock');
     });
 
     it('preserves dataMode=cached and fallbackReason for generic cached retrieval', async () => {
-      const articles = [
-        makeArticle({ id: 'cached-1' }),
-      ];
+      const articles = [makeArticle({ id: 'cached-1' })];
 
       const newsService = {
-        search: jest
-          .fn()
-          .mockResolvedValue(
-            makeSearchResponse(articles, {
-              dataMode: 'cached',
-              providers: [],
-              fallbackReason:
-                'provider-error',
-            }),
-          ),
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(articles, {
+            dataMode: 'cached',
+            providers: [],
+            fallbackReason: 'provider-error',
+          }),
+        ),
       };
 
-      const countryNewsService =
-        makeCountryNewsService();
+      const countryNewsService = makeCountryNewsService();
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
         displayName: 'Mock',
         isMock: true,
-        analyzeNews: jest
-          .fn()
-          .mockResolvedValue(
-            validCandidateFor(articles),
-          ),
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
       };
 
       const service = new AnalysisService(
@@ -1931,14 +1483,9 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response =
-        await service.analyzeNews(
-          'cached query',
-        );
+      const response = await service.analyzeNews('cached query');
 
-      expect(
-        response.retrievalContext,
-      ).toEqual(
+      expect(response.retrievalContext).toEqual(
         expect.objectContaining({
           dataMode: 'cached',
           providers: [],
@@ -1949,20 +1496,16 @@ describe('AnalysisService', () => {
 
     it('preserves dataMode=unavailable and fallbackReason for generic retrieval when no provider succeeded and no cache existed', async () => {
       const newsService = {
-        search: jest
-          .fn()
-          .mockResolvedValue(
-            makeSearchResponse([], {
-              dataMode: 'unavailable',
-              providers: [],
-              fallbackReason:
-                'provider-error',
-            }),
-          ),
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse([], {
+            dataMode: 'unavailable',
+            providers: [],
+            fallbackReason: 'provider-error',
+          }),
+        ),
       };
 
-      const countryNewsService =
-        makeCountryNewsService();
+      const countryNewsService = makeCountryNewsService();
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
@@ -1978,14 +1521,9 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response =
-        await service.analyzeNews(
-          'unavailable query',
-        );
+      const response = await service.analyzeNews('unavailable query');
 
-      expect(
-        response.retrievalContext,
-      ).toEqual(
+      expect(response.retrievalContext).toEqual(
         expect.objectContaining({
           dataMode: 'unavailable',
           providers: [],
@@ -1994,9 +1532,7 @@ describe('AnalysisService', () => {
         }),
       );
 
-      expect(
-        provider.analyzeNews,
-      ).not.toHaveBeenCalled();
+      expect(provider.analyzeNews).not.toHaveBeenCalled();
     });
 
     it('preserves country code/name, live dataMode, and provider info for country-aware live retrieval', async () => {
@@ -2012,33 +1548,21 @@ describe('AnalysisService', () => {
       };
 
       const countryNewsService = {
-        getCountryNews: jest
-          .fn()
-          .mockResolvedValue(
-            makeCountryResponse(
-              'ESP',
-              'Spain',
-              articles,
-              {
-                dataMode: 'live',
-                providers: ['gnews'],
-                feedTier: 'live',
-                providerDisplayName:
-                  'GNews Free',
-              },
-            ),
-          ),
+        getCountryNews: jest.fn().mockResolvedValue(
+          makeCountryResponse('ESP', 'Spain', articles, {
+            dataMode: 'live',
+            providers: ['gnews'],
+            feedTier: 'live',
+            providerDisplayName: 'GNews Free',
+          }),
+        ),
       };
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
         displayName: 'Mock',
         isMock: true,
-        analyzeNews: jest
-          .fn()
-          .mockResolvedValue(
-            validCandidateFor(articles),
-          ),
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
       };
 
       const service = new AnalysisService(
@@ -2048,14 +1572,9 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response =
-        await service.analyzeNews(
-          'What is happening in Spain today?',
-        );
+      const response = await service.analyzeNews('What is happening in Spain today?');
 
-      expect(
-        response.retrievalContext,
-      ).toEqual({
+      expect(response.retrievalContext).toEqual({
         dataMode: 'live',
         providers: ['gnews'],
         fallbackReason: undefined,
@@ -2068,8 +1587,7 @@ describe('AnalysisService', () => {
     });
 
     it('preserves cached dataMode, fallbackReason, and newestArticlePublishedAt for country-aware cached retrieval', async () => {
-      const newestTimestamp =
-        '2026-08-08T20:58:00.000Z';
+      const newestTimestamp = '2026-08-08T20:58:00.000Z';
 
       const articles = [
         makeArticle({
@@ -2084,36 +1602,22 @@ describe('AnalysisService', () => {
       };
 
       const countryNewsService = {
-        getCountryNews: jest
-          .fn()
-          .mockResolvedValue(
-            makeCountryResponse(
-              'RWA',
-              'Rwanda',
-              articles,
-              {
-                dataMode: 'cached',
-                providers: [],
-                fallbackReason:
-                  'no-live-results',
-                providerDisplayName:
-                  'Stored reporting',
-                newestArticlePublishedAt:
-                  newestTimestamp,
-              },
-            ),
-          ),
+        getCountryNews: jest.fn().mockResolvedValue(
+          makeCountryResponse('RWA', 'Rwanda', articles, {
+            dataMode: 'cached',
+            providers: [],
+            fallbackReason: 'no-live-results',
+            providerDisplayName: 'Stored reporting',
+            newestArticlePublishedAt: newestTimestamp,
+          }),
+        ),
       };
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
         displayName: 'Mock',
         isMock: true,
-        analyzeNews: jest
-          .fn()
-          .mockResolvedValue(
-            validCandidateFor(articles),
-          ),
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
       };
 
       const service = new AnalysisService(
@@ -2123,23 +1627,16 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response =
-        await service.analyzeNews(
-          'Latest news from Rwanda',
-        );
+      const response = await service.analyzeNews('Latest news from Rwanda');
 
-      expect(
-        response.retrievalContext,
-      ).toEqual({
+      expect(response.retrievalContext).toEqual({
         dataMode: 'cached',
         providers: [],
         fallbackReason: 'no-live-results',
-        newestArticlePublishedAt:
-          newestTimestamp,
+        newestArticlePublishedAt: newestTimestamp,
         countryCode: 'RWA',
         countryName: 'Rwanda',
-        providerDisplayName:
-          'Stored reporting',
+        providerDisplayName: 'Stored reporting',
         articlesRetrieved: 1,
       });
     });
@@ -2157,34 +1654,22 @@ describe('AnalysisService', () => {
       };
 
       const countryNewsService = {
-        getCountryNews: jest
-          .fn()
-          .mockResolvedValue(
-            makeCountryResponse(
-              'RWA',
-              'Rwanda',
-              articles,
-              {
-                dataMode: 'live',
-                providers: ['gnews'],
-                feedTier: 'live',
-                providerDisplayName:
-                  'GNews Free',
-                city: 'kigali',
-              },
-            ),
-          ),
+        getCountryNews: jest.fn().mockResolvedValue(
+          makeCountryResponse('RWA', 'Rwanda', articles, {
+            dataMode: 'live',
+            providers: ['gnews'],
+            feedTier: 'live',
+            providerDisplayName: 'GNews Free',
+            city: 'kigali',
+          }),
+        ),
       };
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
         displayName: 'Mock',
         isMock: true,
-        analyzeNews: jest
-          .fn()
-          .mockResolvedValue(
-            validCandidateFor(articles),
-          ),
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
       };
 
       const service = new AnalysisService(
@@ -2194,14 +1679,9 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response =
-        await service.analyzeNews(
-          'What is happening in Kigali today?',
-        );
+      const response = await service.analyzeNews('What is happening in Kigali today?');
 
-      expect(
-        response.retrievalContext,
-      ).toEqual({
+      expect(response.retrievalContext).toEqual({
         dataMode: 'live',
         providers: ['gnews'],
         fallbackReason: undefined,
@@ -2215,33 +1695,24 @@ describe('AnalysisService', () => {
     });
 
     it('preserves the same retrievalContext on a cached AnalysisService response', async () => {
-      const articles = [
-        makeArticle({ id: 'cache-hit-1' }),
-      ];
+      const articles = [makeArticle({ id: 'cache-hit-1' })];
 
       const newsService = {
-        search: jest
-          .fn()
-          .mockResolvedValue(
-            makeSearchResponse(articles, {
-              dataMode: 'live',
-              providers: ['newsapi'],
-            }),
-          ),
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(articles, {
+            dataMode: 'live',
+            providers: ['newsapi'],
+          }),
+        ),
       };
 
-      const countryNewsService =
-        makeCountryNewsService();
+      const countryNewsService = makeCountryNewsService();
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
         displayName: 'Mock',
         isMock: true,
-        analyzeNews: jest
-          .fn()
-          .mockResolvedValue(
-            validCandidateFor(articles),
-          ),
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
       };
 
       const service = new AnalysisService(
@@ -2251,29 +1722,15 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const first =
-        await service.analyzeNews(
-          'Cache Hit Query',
-        );
+      const first = await service.analyzeNews('Cache Hit Query');
 
-      const second =
-        await service.analyzeNews(
-          'cache hit query',
-        );
+      const second = await service.analyzeNews('cache hit query');
 
-      expect(
-        newsService.search,
-      ).toHaveBeenCalledTimes(1);
+      expect(newsService.search).toHaveBeenCalledTimes(1);
 
-      expect(
-        second.retrievalContext,
-      ).toEqual(
-        first.retrievalContext,
-      );
+      expect(second.retrievalContext).toEqual(first.retrievalContext);
 
-      expect(
-        second.retrievalContext,
-      ).toEqual(
+      expect(second.retrievalContext).toEqual(
         expect.objectContaining({
           dataMode: 'live',
           providers: ['newsapi'],
@@ -2312,9 +1769,7 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response = await service.analyzeNews(
-        'What is the UN saying about the ceasefire?',
-      );
+      const response = await service.analyzeNews('What is the UN saying about the ceasefire?');
 
       expect(response.sourceEntities.organizations).toHaveLength(1);
       const [org] = response.sourceEntities.organizations;
@@ -2499,7 +1954,9 @@ describe('AnalysisService', () => {
       // Only the representative article survives de-duplication.
       expect(response.articles.map((a) => a.id)).toEqual(['un-original']);
 
-      const org = response.sourceEntities.organizations.find((o) => o.canonical === 'United Nations');
+      const org = response.sourceEntities.organizations.find(
+        (o) => o.canonical === 'United Nations',
+      );
       expect(org).toBeDefined();
       expect(org?.articleIds).toEqual(['un-original']);
       expect(org?.articleIds).not.toContain('un-duplicate');
@@ -2551,7 +2008,7 @@ describe('AnalysisService', () => {
       expect(canonicals).not.toContain('World Health Organization');
     });
 
-    it('a cache hit preserves the current caller\'s query/normalizedQuery while reusing sourceEntities (Milestone #27 behavior unaffected)', async () => {
+    it("a cache hit preserves the current caller's query/normalizedQuery while reusing sourceEntities (Milestone #27 behavior unaffected)", async () => {
       const articles = [
         makeArticle({
           id: 'cache-un-1',
@@ -2618,7 +2075,12 @@ describe('AnalysisService', () => {
 
       const response = await service.analyzeNews("What's happening in Kigalli?");
 
-      expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('RWA', undefined, 20, 'kigali');
+      expect(countryNewsService.getCountryNews).toHaveBeenCalledWith(
+        'RWA',
+        undefined,
+        20,
+        'kigali',
+      );
       expect(response.retrievalContext.matchedFrom).toBe('kigalli');
       expect(response.retrievalContext.canonicalLocation).toBe('kigali');
       expect(response.sourceEntities).toEqual({ organizations: [] });
@@ -2703,7 +2165,11 @@ describe('AnalysisService', () => {
     it('an article removed by the maxArticles cap has no evidenceId, so citing its would-be slot resolves nothing', async () => {
       const articles = [
         makeArticle({ id: 'kept-article', title: 'Kept story' }),
-        makeArticle({ id: 'capped-article', url: 'https://example.com/capped', title: 'Capped story' }),
+        makeArticle({
+          id: 'capped-article',
+          url: 'https://example.com/capped',
+          title: 'Capped story',
+        }),
       ];
 
       const newsService = {
@@ -2771,7 +2237,9 @@ describe('AnalysisService', () => {
   describe('evidence basis & breadth (Milestone #32)', () => {
     it('threads config.maxArticleChars into validation so evidenceBasis excerpts are checked against exactly what the provider was shown', async () => {
       const longSummary = `${'padding '.repeat(200)}a unique tail phrase past the cutoff`;
-      const articles = [makeArticle({ id: 'real-article-id', title: 'Story A', summary: longSummary })];
+      const articles = [
+        makeArticle({ id: 'real-article-id', title: 'Story A', summary: longSummary }),
+      ];
 
       const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
       const countryNewsService = { getCountryNews: jest.fn() };
@@ -2809,7 +2277,11 @@ describe('AnalysisService', () => {
 
     it('accepts a valid evidenceBasis end-to-end when the excerpt is within the configured truncation length', async () => {
       const articles = [
-        makeArticle({ id: 'real-article-id', title: 'Story A', summary: 'A short summary of the event.' }),
+        makeArticle({
+          id: 'real-article-id',
+          title: 'Story A',
+          summary: 'A short summary of the event.',
+        }),
       ];
 
       const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
@@ -2852,7 +2324,11 @@ describe('AnalysisService', () => {
 
     it('a cached response never carries a request-local evidenceId in evidenceBasis either — only real article IDs', async () => {
       const articles = [
-        makeArticle({ id: 'cache-evidence-article', title: 'Story A', summary: 'A short summary here.' }),
+        makeArticle({
+          id: 'cache-evidence-article',
+          title: 'Story A',
+          summary: 'A short summary here.',
+        }),
       ];
 
       const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
@@ -2994,9 +2470,9 @@ describe('AnalysisService', () => {
 
       const newsService = { search: jest.fn() };
       const countryNewsService = makeCountryNewsService();
-      countryNewsService.getCountryNews = jest.fn().mockResolvedValue(
-        makeCountryResponse('ESP', 'Spain', articles),
-      );
+      countryNewsService.getCountryNews = jest
+        .fn()
+        .mockResolvedValue(makeCountryResponse('ESP', 'Spain', articles));
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
@@ -3025,9 +2501,9 @@ describe('AnalysisService', () => {
 
       const newsService = { search: jest.fn() };
       const countryNewsService = makeCountryNewsService();
-      countryNewsService.getCountryNews = jest.fn().mockResolvedValue(
-        makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' }),
-      );
+      countryNewsService.getCountryNews = jest
+        .fn()
+        .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' }));
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
@@ -3081,15 +2557,15 @@ describe('AnalysisService', () => {
       await service.analyzeNews('How is the Iran conflict affecting oil prices?');
 
       expect(newsService.search).toHaveBeenCalledTimes(1);
-      expect(newsService.search).toHaveBeenCalledWith(
-        'Iran conflict oil prices',
-        20,
-        { type: 'relational', x: 'Iran conflict', y: 'oil prices' },
-      );
+      expect(newsService.search).toHaveBeenCalledWith('Iran conflict oil prices', 20, {
+        type: 'relational',
+        x: 'Iran conflict',
+        y: 'oil prices',
+      });
       expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
     });
 
-    it('the AI still receives the user\'s ORIGINAL question, not the decomposed x/y or provider query', async () => {
+    it("the AI still receives the user's ORIGINAL question, not the decomposed x/y or provider query", async () => {
       const articles = [makeArticle({ id: 'iran-oil-2' })];
 
       const newsService = {
@@ -3111,9 +2587,7 @@ describe('AnalysisService', () => {
         makeConfigService(),
       );
 
-      const response = await service.analyzeNews(
-        'How is the Iran conflict affecting oil prices?',
-      );
+      const response = await service.analyzeNews('How is the Iran conflict affecting oil prices?');
 
       expect(response.query).toBe('How is the Iran conflict affecting oil prices?');
       expect(response.normalizedQuery).toBe('How is the Iran conflict affecting oil prices?');
@@ -3275,9 +2749,7 @@ describe('AnalysisService', () => {
       const countryNewsService = makeCountryNewsService();
       countryNewsService.getCountryNews = jest
         .fn()
-        .mockResolvedValue(
-          makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' }),
-        );
+        .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles, { city: 'kigali' }));
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
@@ -3306,7 +2778,8 @@ describe('AnalysisService', () => {
         makeArticle({
           id: 'real-article-1',
           title: 'Oil prices rise sharply as Iran conflict disrupts shipping',
-          summary: 'Oil prices climbed as the Iran conflict continued to disrupt regional shipping lanes.',
+          summary:
+            'Oil prices climbed as the Iran conflict continued to disrupt regional shipping lanes.',
         }),
       ];
 
@@ -3332,7 +2805,8 @@ describe('AnalysisService', () => {
             {
               assessmentId: 'R1',
               evidenceId: 'S1',
-              excerpt: 'Oil prices climbed as the Iran conflict continued to disrupt regional shipping lanes',
+              excerpt:
+                'Oil prices climbed as the Iran conflict continued to disrupt regional shipping lanes',
               direction: 'requested-direction',
             },
           ],
@@ -3361,7 +2835,8 @@ describe('AnalysisService', () => {
         makeArticle({
           id: 'real-article-2',
           title: 'Oil prices remain volatile amid Iran conflict uncertainty',
-          summary: 'Analysts say oil prices continue to influence how the Iran conflict is perceived in energy markets.',
+          summary:
+            'Analysts say oil prices continue to influence how the Iran conflict is perceived in energy markets.',
         }),
       ];
 
@@ -3470,7 +2945,9 @@ describe('AnalysisService', () => {
     });
 
     it('E. a non-relational query cannot have relationalComposition manufactured by a provider that emits relational-shaped fields anyway', async () => {
-      const articles = [makeArticle({ id: 'x-article', title: 'Test', summary: 'Test summary text here.' })];
+      const articles = [
+        makeArticle({ id: 'x-article', title: 'Test', summary: 'Test summary text here.' }),
+      ];
 
       const newsService = {
         search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
@@ -3487,11 +2964,14 @@ describe('AnalysisService', () => {
         isMock: true,
         analyzeNews: jest.fn().mockResolvedValue({
           ...validCandidateFor(articles),
-          keyFacts: [
-            { claim: 'x', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
-          ],
+          keyFacts: [{ claim: 'x', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] }],
           relationalEvidenceAssessments: [
-            { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Test summary text here', direction: 'requested-direction' },
+            {
+              assessmentId: 'R1',
+              evidenceId: 'S1',
+              excerpt: 'Test summary text here',
+              direction: 'requested-direction',
+            },
           ],
         }),
       };
@@ -3853,6 +3333,224 @@ describe('AnalysisService', () => {
       // cacheTtlSeconds: 0 means each SEQUENTIAL (settled-between) call
       // is a fresh operation — unchanged from pre-M45 behavior.
       expect(provider.analyzeNews).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Milestone #46 — generic retrieval bounded fallback', () => {
+    it('the exact real-runtime NATO failure query now correctly derives to "NATO" as the primary provider search term', async () => {
+      const articles = [
+        makeArticle({
+          id: 'nato-1',
+          title: 'NATO defense ministers meet to discuss Ukraine support package',
+          summary: 'Officials gathered in Brussels to finalize a new round of military aid.',
+        }),
+      ];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('What are the most important developments in NATO right now?');
+
+      expect(newsService.search).toHaveBeenCalledWith('NATO', expect.any(Number), {
+        type: 'generic',
+      });
+    });
+
+    it('UN generic query derives correctly and performs exactly ONE primary provider search when it returns results', async () => {
+      const articles = [
+        makeArticle({
+          id: 'un-1',
+          title: 'UN Security Council to vote on new sanctions resolution',
+          summary: 'The measure targets funding channels linked to ongoing regional conflict.',
+        }),
+      ];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('What are the latest developments in the UN?');
+
+      expect(newsService.search).toHaveBeenCalledWith('UN', expect.any(Number), {
+        type: 'generic',
+      });
+      // successful primary retrieval performs exactly one provider search
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+    });
+
+    it('generic multi-word topical query still resolves to a concise search term', async () => {
+      const articles = [
+        makeArticle({ id: 'sc-1', title: 'Semiconductor exports face new restrictions' }),
+      ];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('Latest developments in semiconductor exports');
+
+      expect(newsService.search).toHaveBeenCalledWith('semiconductor exports', expect.any(Number), {
+        type: 'generic',
+      });
+    });
+
+    it('fallback occurs ONLY after the primary search returns zero relevant articles — exactly one additional provider search, provider call count capped at 2', async () => {
+      const fallbackArticles = [
+        makeArticle({ id: 'fallback-1', title: 'Global tariffs reshape trade routes' }),
+      ];
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(makeSearchResponse([])) // primary: zero results
+          .mockResolvedValueOnce(makeSearchResponse(fallbackArticles)), // fallback: succeeds
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(fallbackArticles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews(
+        'What is the impact of new tariffs on global trade?',
+      );
+
+      // provider call count remains bounded: exactly 2 GNews searches
+      // (primary + one fallback), zero additional OpenAI calls.
+      expect(newsService.search).toHaveBeenCalledTimes(2);
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+      expect(response.articles.length).toBeGreaterThan(0);
+    });
+
+    it('successful primary retrieval performs exactly ONE provider search — no fallback attempted when primary already returned articles', async () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('Tell me about oil prices');
+
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+    });
+
+    it('a nonsense query with zero results even after the bounded fallback still returns no fabricated evidence', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])), // both attempts return zero
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('asdkfj qpwoeiru zxcvbnm nonsense query');
+
+      expect(response.analysis).toBeNull();
+      expect(response.articles).toEqual([]);
+      expect(provider.analyzeNews).not.toHaveBeenCalled();
+      // at most 2 provider searches attempted, never more (fallback is
+      // only skipped here because deriveFallbackNewsQuery has nothing
+      // meaningful to strip from an already-short nonsense phrase — the
+      // important invariant is the search count never exceeds 2).
+      expect(newsService.search.mock.calls.length).toBeLessThanOrEqual(2);
+    });
+
+    it('the fallback query is DIFFERENT from the primary query (never re-runs an identical search)', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('What is the impact of new tariffs on global trade?');
+
+      const calls = (newsService.search as jest.Mock).mock.calls;
+      if (calls.length === 2) {
+        expect(calls[0][0]).not.toBe(calls[1][0]);
+      }
     });
   });
 });

@@ -1,4 +1,4 @@
-import { deriveGenericNewsQuery } from './derive-generic-news-query.util';
+import { deriveGenericNewsQuery, deriveFallbackNewsQuery } from './derive-generic-news-query.util';
 
 describe('deriveGenericNewsQuery (Milestone #35)', () => {
   it('"What\'s happening in the Middle East?" -> "Middle East"', () => {
@@ -65,5 +65,76 @@ describe('deriveGenericNewsQuery (Milestone #35)', () => {
   it('is a pure, deterministic function — same input always produces the same output', () => {
     const input = "What's happening with NATO?";
     expect(deriveGenericNewsQuery(input)).toBe(deriveGenericNewsQuery(input));
+  });
+
+  describe('Milestone #46 — expanded subject-extraction patterns', () => {
+    it('the exact real-runtime NATO failure query now derives to "NATO"', () => {
+      expect(
+        deriveGenericNewsQuery('What are the most important developments in NATO right now?'),
+      ).toBe('NATO');
+    });
+
+    it('handles "What are the latest developments in the X" (strips leading "the" from the captured subject)', () => {
+      expect(deriveGenericNewsQuery('What are the latest developments in the UN?')).toBe('UN');
+    });
+
+    it('handles the pattern with no trailing time-phrase', () => {
+      expect(deriveGenericNewsQuery('What are the key updates on semiconductor exports')).toBe(
+        'semiconductor exports',
+      );
+    });
+
+    it('handles "today" as the trailing time-phrase', () => {
+      expect(
+        deriveGenericNewsQuery('What are the major happenings with AI regulation today?'),
+      ).toBe('AI regulation');
+    });
+
+    it('handles "currently" as the trailing time-phrase', () => {
+      expect(deriveGenericNewsQuery('What is the current news on oil prices currently?')).toBe(
+        'oil prices',
+      );
+    });
+
+    it('"Tell me about X"', () => {
+      expect(deriveGenericNewsQuery('Tell me about oil prices')).toBe('oil prices');
+    });
+
+    it('"Give me the latest on X"', () => {
+      expect(deriveGenericNewsQuery('Give me the latest on the Middle East')).toBe('Middle East');
+    });
+
+    it('does not falsely match "What is the capital of France?" (no developments/updates/news/happenings verb present)', () => {
+      expect(deriveGenericNewsQuery('What is the capital of France?')).toBe(
+        'What is the capital of France',
+      );
+    });
+
+    it('remains a no-op for an already-concise entity query', () => {
+      expect(deriveGenericNewsQuery('NATO')).toBe('NATO');
+      expect(deriveGenericNewsQuery('UN')).toBe('UN');
+    });
+  });
+
+  describe('deriveFallbackNewsQuery (Milestone #46 — bounded fallback derivation)', () => {
+    it('strips the closed stopword set from an already-derived (unmatched-sentence) primary query', () => {
+      expect(deriveFallbackNewsQuery('What is the impact of new tariffs on global trade')).toBe(
+        'impact tariffs global trade',
+      );
+    });
+
+    it('returns undefined when nothing would be stripped (avoids re-running an identical, already-failed search)', () => {
+      expect(deriveFallbackNewsQuery('NATO')).toBeUndefined();
+      expect(deriveFallbackNewsQuery('semiconductor exports')).toBeUndefined();
+    });
+
+    it('returns undefined when stripping would remove every word', () => {
+      expect(deriveFallbackNewsQuery('what is the')).toBeUndefined();
+    });
+
+    it('is a pure, deterministic function', () => {
+      const input = 'What is the impact of new tariffs on global trade';
+      expect(deriveFallbackNewsQuery(input)).toBe(deriveFallbackNewsQuery(input));
+    });
   });
 });

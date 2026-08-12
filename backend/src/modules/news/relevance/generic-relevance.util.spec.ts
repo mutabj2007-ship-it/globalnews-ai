@@ -25,7 +25,10 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
 
   it('2. single-word title-only match -> REJECT', () => {
     const result = scoreGenericRelevance(
-      article({ title: 'Dark Energy May Explain the Expansion of the Universe', summary: 'Scientists discuss cosmology.' }),
+      article({
+        title: 'Dark Energy May Explain the Expansion of the Universe',
+        summary: 'Scientists discuss cosmology.',
+      }),
       'energy',
     );
     expect(result.isRelevant).toBe(false);
@@ -34,7 +37,10 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
 
   it('3. single-word summary-only match -> REJECT', () => {
     const result = scoreGenericRelevance(
-      article({ title: 'Afghanistan crisis deepens', summary: 'The climate of instability continues to worsen.' }),
+      article({
+        title: 'Afghanistan crisis deepens',
+        summary: 'The climate of instability continues to worsen.',
+      }),
       'climate',
     );
     expect(result.isRelevant).toBe(false);
@@ -45,7 +51,8 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
     const result = scoreGenericRelevance(
       article({
         title: 'Global outlook',
-        summary: 'Energy prices are rising. Analysts expect energy costs to remain high through the year.',
+        summary:
+          'Energy prices are rising. Analysts expect energy costs to remain high through the year.',
       }),
       'energy',
     );
@@ -70,7 +77,11 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
 
   it('6. category only -> REJECT', () => {
     const result = scoreGenericRelevance(
-      article({ title: 'Weekly roundup', summary: 'A summary of the week in review.', category: 'technology' }),
+      article({
+        title: 'Weekly roundup',
+        summary: 'A summary of the week in review.',
+        category: 'technology',
+      }),
       'technology',
     );
     expect(result.isRelevant).toBe(false);
@@ -81,7 +92,8 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
     const result = scoreGenericRelevance(
       article({
         title: 'Afghanistan crisis deepens as winter approaches',
-        summary: 'Aid workers describe the harsh climate as one of many challenges facing displaced families.',
+        summary:
+          'Aid workers describe the harsh climate as one of many challenges facing displaced families.',
       }),
       'climate',
     );
@@ -92,7 +104,8 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
     const result = scoreGenericRelevance(
       article({
         title: 'Kerala will push organic farming in a big way: Agriculture Minister',
-        summary: 'The state agriculture department announced new subsidies for organic agriculture.',
+        summary:
+          'The state agriculture department announced new subsidies for organic agriculture.',
       }),
       'agriculture',
     );
@@ -168,7 +181,10 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
   });
 
   it('15. never admits an empty/invalid search phrase accidentally', () => {
-    const result = scoreGenericRelevance(article({ title: 'Anything', summary: 'Anything at all' }), '   ');
+    const result = scoreGenericRelevance(
+      article({ title: 'Anything', summary: 'Anything at all' }),
+      '   ',
+    );
     expect(result.isRelevant).toBe(false);
   });
 
@@ -180,6 +196,423 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
     );
     expect(titleOnly.corroborationCount).toBe(1);
     expect(titleOnly.isRelevant).toBe(false);
+  });
+
+  describe('Milestone #46 — generic recall correction (multi-word inflection reuse)', () => {
+    it('MULTI-WORD KEEP: "US expands semiconductor exports controls to allies" (exact phrase, unaffected positive control)', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'US expands semiconductor exports controls to allies',
+          summary: 'The policy broadens restrictions beyond direct rivals.',
+        }),
+        'semiconductor exports',
+      );
+      expect(result.isRelevant).toBe(true);
+      expect(result.reasons).toContain('whole-phrase match');
+    });
+
+    it('MULTI-WORD KEEP (new, via M39 reuse): a generic query matching the "...e"/"...es" inflection pattern now passes, e.g. "house price" article for query "house prices"', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'Rising interest rates weigh on house price trends nationwide',
+          summary: 'Analysts expect continued softening through the year.',
+        }),
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(true);
+      expect(result.reasons).toContain('whole-phrase match');
+    });
+
+    it('SUPERSEDED BY MILESTONE #46 PHASE 2: "US tightens semiconductor export controls" for query "semiconductor exports" was REJECTED after Phase 1 (this exact test originally documented that as a known limitation) — Phase 2\'s bounded regular "+s" plural rule now correctly accepts it. Kept here, updated, as a historical marker of the Phase 1 -> Phase 2 transition; see the "Milestone #46 Phase 2" describe block below for the primary test of this behavior.', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'US tightens semiconductor export controls',
+          summary: 'The move targets advanced chip manufacturing equipment.',
+        }),
+        'semiconductor exports',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('MULTI-WORD REJECT (unchanged, out of scope per M46 semiconductor boundary): genuine paraphrase is still not accepted', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'New chip export restrictions target advanced semiconductors',
+          summary: "The rules aim to slow rival nations' technological progress.",
+        }),
+        'semiconductor exports',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('MULTI-WORD REJECT (unchanged, out of scope): non-adjacent token insertion is still not accepted', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'Washington expands controls on semiconductor technology exports',
+          summary: 'The expanded rules cover a wider range of chip-related goods.',
+        }),
+        'semiconductor exports',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it("ORGANIZATION KEEP tests — single-word gate is UNCHANGED by this correction (still requires corroboration >= 2); these remain REJECTED, exactly as before, per the M46 investigation's Part B finding (no safe correction implemented)", () => {
+      const cases: Array<{ title: string; summary: string; query: string }> = [
+        {
+          title: 'NATO defense ministers meet to discuss regional security',
+          summary: 'Officials convened to review current commitments.',
+          query: 'NATO',
+        },
+        {
+          title: 'UN Security Council meets over regional crisis',
+          summary: 'World leaders gathered Tuesday to address the situation.',
+          query: 'UN',
+        },
+        {
+          title: 'WHO declares new health emergency',
+          summary: 'The declaration triggers additional funding.',
+          query: 'WHO',
+        },
+        {
+          title: 'IMF approves new loan package',
+          summary: 'The funding comes with conditions on reform.',
+          query: 'IMF',
+        },
+        {
+          title: 'OPEC agrees to extend production cuts',
+          summary: 'The decision aims to stabilize prices.',
+          query: 'OPEC',
+        },
+        {
+          title: 'EU proposes new regulations on AI',
+          summary: 'The draft rules would apply across the bloc.',
+          query: 'EU',
+        },
+      ];
+      for (const { title, summary, query } of cases) {
+        const result = scoreGenericRelevance(article({ title, summary }), query);
+        // Documenting the UNCHANGED (not newly broken, not newly fixed)
+        // single-word behavior — see the M46 correction report for why
+        // no safe general fix was implemented for this path.
+        expect(result.isRelevant).toBe(false);
+        expect(result.corroborationCount).toBe(1);
+      }
+    });
+
+    it('PRECISION REGRESSION: ambiguous "energy" with only a weak single-title signal remains correctly rejected', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'Dark energy dominates the cosmos', summary: 'No further discussion.' }),
+        'energy',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('PRECISION REGRESSION: "UN" does not match mid-word occurrences ("undersea", "unusual")', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'Scientists study unusual undersea volcanic activity',
+          summary: 'The unprecedented discovery surprised researchers.',
+        }),
+        'UN',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.corroborationCount).toBe(0);
+    });
+
+    it('PRECISION REGRESSION: "EU" does not match mid-word occurrences ("European", "eureka")', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'European museum unveils new sculpture exhibit',
+          summary: 'The eureka moment came after years of restoration work.',
+        }),
+        'EU',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.corroborationCount).toBe(0);
+    });
+
+    it('Part B/C investigation, confirmed: title+summary co-occurrence (each mentioning the term once) already passes via the EXISTING, unmodified corroboration model — no code change needed for this case', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'UN Security Council meets over regional crisis',
+          summary: 'UN officials confirmed the session would continue into Wednesday.',
+        }),
+        'UN',
+      );
+      expect(result.isRelevant).toBe(true);
+      expect(result.reasons).toContain('title match');
+      expect(result.reasons).toContain('summary match');
+    });
+
+    it('Part B/C investigation, confirmed: the genuinely hard title-ONLY case remains rejected — no safe non-double-counting signal exists in currently-validated article structure (see M46 Phase 2 report)', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'NATO defense ministers meet to discuss regional security',
+          summary: 'Officials convened to review current commitments.',
+        }),
+        'NATO',
+      );
+      expect(result.isRelevant).toBe(false);
+      expect(result.corroborationCount).toBe(1);
+    });
+  });
+
+  describe('Milestone #46 (final safety correction) — GENERIC-ONLY regular "+s" plural equivalence, M39 relational matcher fully restored', () => {
+    it('TARGET: "US tightens semiconductor export controls" KEEPs for query "semiconductor exports"', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'US tightens semiconductor export controls',
+          summary: 'The move targets advanced chip manufacturing equipment.',
+        }),
+        'semiconductor exports',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('TARGET: market/markets', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'Emerging markets rally on renewed investor confidence' }),
+        'emerging market',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('TARGET: tariff/tariffs', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'New import tariffs take effect on steel goods' }),
+        'import tariff',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('existing M39 house price/prices still KEEPs (via the restored, unmodified generatePhraseVariants)', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'Rising interest rates weigh on house price trends nationwide' }),
+        'house prices',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('exact-phrase positive control remains unaffected', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'US expands semiconductor exports controls to allies' }),
+        'semiconductor exports',
+      );
+      expect(result.isRelevant).toBe(true);
+    });
+
+    it('WITHDRAWN TARGET, now correctly EXCLUDED: job/jobs (stem "job" = 3 characters, below the generic-only 5-character floor) — accepted, intentional limitation, not a bug', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'Manufacturing jobs report shows modest gains this quarter' }),
+        'manufacturing job',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('ACCEPTED EXCLUSION: term/terms (stem "term" = 4 characters, below the 5-character floor)', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'Contract terms remain under negotiation this week' }),
+        'contract term',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('SAFETY: means/mean remains NON-EQUIVALENT in the generic path too (stem "mean" = 4 characters, below the 5-character floor)', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'What higher rates mean for the broader economy' }),
+        'higher means',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('ADVERSARIAL SAFETY (generic path): news/new', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'Global markets await interest rate decision new update' }),
+        'markets news',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('ADVERSARIAL SAFETY (generic path): gas/ga', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'A ga symbol appeared during the broadcast today' }),
+        'broadcast gas',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('ADVERSARIAL SAFETY (generic path): analysis/analysi', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'The analysi tool malfunctioned during live testing' }),
+        'live analysis',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('ADVERSARIAL SAFETY (generic path): status/statu', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'A statu was erected downtown this week' }),
+        'downtown status',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('ADVERSARIAL SAFETY (generic path): crisis/crisi', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'The crisi center opened its doors today' }),
+        'today crisis',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('ADVERSARIAL SAFETY (generic path): business/busines', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'The busines district expanded significantly' }),
+        'significantly business',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('ADVERSARIAL SAFETY (generic path): US/U', () => {
+      const result = scoreGenericRelevance(
+        article({ title: 'A single U flag was visible today' }),
+        'today US',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+  });
+
+  describe('Milestone #46 relational firewall — M39 fully restored, byte-for-byte behavior', () => {
+    it('RESTORED: means/mean is NON-EQUIVALENT again in the relational path (this is the exact case the final safety correction exists to protect)', () => {
+      const result = scoreRelationalRelevance(
+        article({
+          title: 'What interest rates mean for markets this year',
+          summary: 'Analysts weigh in on the outlook.',
+        }),
+        'markets',
+        'means',
+      );
+      expect(result.isRelevant).toBe(false);
+    });
+
+    it('full relational adversarial set remains blocked: news/new', () => {
+      expect(
+        scoreRelationalRelevance(
+          article({
+            title: 'Interest rates: what is new this quarter',
+            summary: 'Markets react to the announcement.',
+          }),
+          'markets',
+          'news',
+        ).isRelevant,
+      ).toBe(false);
+    });
+
+    it('full relational adversarial set remains blocked: gas/ga', () => {
+      expect(
+        scoreRelationalRelevance(
+          article({
+            title: 'Markets react to policy announcement',
+            summary: 'A ga symbol appeared on the display panel.',
+          }),
+          'markets',
+          'gas',
+        ).isRelevant,
+      ).toBe(false);
+    });
+
+    it('full relational adversarial set remains blocked: analysis/analysi, status/statu, crisis/crisi, business/busines, US/U', () => {
+      expect(
+        scoreRelationalRelevance(
+          article({
+            title: 'Markets react to policy announcement',
+            summary: 'The analysi tool malfunctioned during testing.',
+          }),
+          'markets',
+          'analysis',
+        ).isRelevant,
+      ).toBe(false);
+      expect(
+        scoreRelationalRelevance(
+          article({
+            title: 'Markets react to policy announcement',
+            summary: 'A statu was erected in the town square.',
+          }),
+          'markets',
+          'status',
+        ).isRelevant,
+      ).toBe(false);
+      expect(
+        scoreRelationalRelevance(
+          article({
+            title: 'Markets react to policy announcement',
+            summary: 'The crisi center opened downtown.',
+          }),
+          'markets',
+          'crisis',
+        ).isRelevant,
+      ).toBe(false);
+      expect(
+        scoreRelationalRelevance(
+          article({
+            title: 'Markets react to policy announcement',
+            summary: 'The busines district expanded.',
+          }),
+          'markets',
+          'business',
+        ).isRelevant,
+      ).toBe(false);
+      expect(
+        scoreRelationalRelevance(
+          article({
+            title: 'Markets react to policy announcement',
+            summary: 'A single U flag was visible.',
+          }),
+          'markets',
+          'US',
+        ).isRelevant,
+      ).toBe(false);
+    });
+
+    it('original M39 relational KEEP cases remain unchanged: house price/prices', () => {
+      expect(
+        scoreRelationalRelevance(
+          article({ title: 'Interest rates and house price trends both covered' }),
+          'interest rates',
+          'house prices',
+        ).isRelevant,
+      ).toBe(true);
+    });
+
+    it('M37/M38 Iran conflict / oil prices relational regression unaffected', () => {
+      expect(
+        scoreRelationalRelevance(
+          article({ title: 'Oil prices rise sharply as Iran conflict disrupts shipping' }),
+          'Iran conflict',
+          'oil prices',
+        ).isRelevant,
+      ).toBe(true);
+    });
+
+    it('"job losses" still does NOT match "jobs were lost" (unaffected by this correction)', () => {
+      expect(
+        scoreRelationalRelevance(
+          article({ title: 'Report: jobs were lost amid rising interest rates' }),
+          'interest rates',
+          'job losses',
+        ).isRelevant,
+      ).toBe(false);
+    });
+
+    it('"gas" exact match still KEEPs (no variant generated, but exact matching is untouched)', () => {
+      expect(
+        scoreRelationalRelevance(
+          article({ title: 'Gas prices and interest rates both rose sharply' }),
+          'interest rates',
+          'gas',
+        ).isRelevant,
+      ).toBe(true);
+    });
   });
 });
 
@@ -270,7 +703,8 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
     const result = scoreRelationalRelevance(
       article({
         title: 'Report: AI to disrupt future job market',
-        summary: 'Analysts say artificial intelligence will change how people work, though employment overall may grow.',
+        summary:
+          'Analysts say artificial intelligence will change how people work, though employment overall may grow.',
       }),
       'AI',
       'employment',
@@ -285,7 +719,8 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
     const result = scoreRelationalRelevance(
       article({
         title: 'Farmers adapt to shifting weather patterns',
-        summary: 'Experts warn that climate change is reshaping how agriculture is practiced worldwide.',
+        summary:
+          'Experts warn that climate change is reshaping how agriculture is practiced worldwide.',
       }),
       'climate change',
       'agriculture',
@@ -328,7 +763,7 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
     expect(result.isRelevant).toBe(false);
   });
 
-  it('does not apply scoreGenericRelevance\'s single-word corroboration-count model to X or Y independently — both-in-title is still sufficient on its own', () => {
+  it("does not apply scoreGenericRelevance's single-word corroboration-count model to X or Y independently — both-in-title is still sufficient on its own", () => {
     // Both single-word concepts appear together in the title — under
     // scoreGenericRelevance's OWN single-word rule this would need a
     // second corroborating signal (corroborationCount>=2); relational
@@ -364,7 +799,9 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
         'house prices',
       );
       expect(result.isRelevant).toBe(true);
-      expect(result.reasons).toContain('both concepts present together in the same summary sentence');
+      expect(result.reasons).toContain(
+        'both concepts present together in the same summary sentence',
+      );
     });
 
     it('C. X only -> REJECT', () => {
@@ -391,7 +828,8 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
       const result = scoreRelationalRelevance(
         article({
           title: 'Weekly roundup',
-          summary: 'Interest rates rose again this week. In unrelated news, house prices in the region held steady last month.',
+          summary:
+            'Interest rates rose again this week. In unrelated news, house prices in the region held steady last month.',
         }),
         'interest rates',
         'house prices',
@@ -438,7 +876,7 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
       const result = scoreRelationalRelevance(
         article({
           title: 'Update',
-          summary: 'Interest rates and house prices both featured prominently in today\'s report.',
+          summary: "Interest rates and house prices both featured prominently in today's report.",
         }),
         'interest rates',
         'house prices',
@@ -627,13 +1065,16 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
       const result = scoreRelationalRelevance(
         article({
           title: 'Markets update',
-          summary: 'Rising interest rate pressure is beginning to weigh on house prices nationwide.',
+          summary:
+            'Rising interest rate pressure is beginning to weigh on house prices nationwide.',
         }),
         'interest rates',
         'house price',
       );
       expect(result.isRelevant).toBe(true);
-      expect(result.reasons).toContain('both concepts present together in the same summary sentence');
+      expect(result.reasons).toContain(
+        'both concepts present together in the same summary sentence',
+      );
     });
 
     it('P. same-title inflectional equivalents -> KEEP', () => {
@@ -650,7 +1091,7 @@ describe('scoreRelationalRelevance (Milestone #37 base presence / Milestone #38 
       const result = scoreRelationalRelevance(
         article({
           title: 'Update',
-          summary: 'Interest rate and house prices both featured prominently in today\'s report.',
+          summary: "Interest rate and house prices both featured prominently in today's report.",
         }),
         'interest rates',
         'house price',

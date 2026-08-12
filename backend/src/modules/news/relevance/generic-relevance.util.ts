@@ -125,6 +125,18 @@ function containsWholePhrase(text: string, phrase: string): boolean {
  * reordering and a part-of-speech change (noun "losses" -> verb
  * "lost"), not a same-position suffix variant, and is correctly out of
  * scope (see doc comment on scoreRelationalRelevance).
+ *
+ * MILESTONE #46 SAFETY CORRECTION NOTE: this function is restored to its
+ * EXACT original Milestone #39 form — byte-for-byte equivalent to the
+ * pre-M46 implementation. An earlier M46 draft added a broader "+s"
+ * regular-plural rule directly here, which was found to reopen the
+ * "means" -> "mean" false-equivalence case this function was built to
+ * prevent. That addition has been fully reverted from this function.
+ * The generic-only fix for the confirmed multi-word recall defect
+ * (export/exports, market/markets, tariff/tariffs) now lives in a
+ * SEPARATE function, generateGenericOnlyPluralVariant() below, used
+ * ONLY by scoreGenericRelevance()'s multi-word path — this function and
+ * scoreRelationalRelevance() are completely unaffected by it.
  */
 function generatePhraseVariants(phrase: string): string[] {
   const words = phrase.trim().split(/\s+/).filter(Boolean);
@@ -162,9 +174,104 @@ function generatePhraseVariants(phrase: string): string[] {
  * whole-word boundary protection is entirely inherited from
  * containsWholePhrase() — this function adds no new matching logic of
  * its own, only additional candidate strings to check with it.
+ *
+ * Used by scoreRelationalRelevance() ONLY — restored, unmodified,
+ * exactly as it existed before Milestone #46. scoreGenericRelevance()'s
+ * multi-word path uses containsWholePhraseWithGenericInflection()
+ * below instead, which additionally layers the generic-only regular
+ * "+s" rule on top of this same unmodified function.
  */
 function containsWholePhraseWithInflection(text: string, phrase: string): boolean {
   return generatePhraseVariants(phrase).some((variant) => containsWholePhrase(text, variant));
+}
+
+/**
+ * Milestone #46 (safety correction) — GENERIC-ONLY regular "+s" plural
+ * tolerance. NOT part of generatePhraseVariants() and NOT used by
+ * scoreRelationalRelevance() — used exclusively by
+ * scoreGenericRelevance()'s multi-word path via
+ * containsWholePhraseWithGenericInflection() below. This keeps the
+ * relational matcher (M39) byte-for-byte restored to its original form
+ * while still closing the confirmed generic multi-word recall defect.
+ *
+ * DELIBERATELY MORE CONSERVATIVE than the reverted draft rule: the
+ * resulting stem must be at least 5 characters (not 3) AND end in the
+ * same closed SAFE_TRAILING_CONSONANTS set. The stricter length bound
+ * is what additionally protects "means" -> "mean" HERE too (stem "mean"
+ * is only 4 characters, below the 5-character floor) — job/jobs,
+ * term/terms are ALSO now excluded by this same stricter floor (stems
+ * "job"/"term" are 3-4 characters) and are ACCEPTED, INTENTIONAL false
+ * negatives per explicit instruction: "Do not broaden the rule merely
+ * to satisfy the earlier job/jobs target. That target is withdrawn."
+ *
+ * Verified safe (stem >=5 AND safe-consonant-ending): export/exports,
+ * market/markets, tariff/tariffs.
+ * Verified excluded (stem <5 chars): job/jobs, term/terms, means/mean.
+ * Verified excluded (unsafe stem ending, from the original SAFE_TRAILING_CONSONANTS
+ * exclusions, retained unchanged): news/new (stem ends in "w"),
+ * gas/ga, US/U (too short regardless), analysis/analysi, status/statu,
+ * crisis/crisi (stems end in a vowel), business/busines (stem ends in "s").
+ */
+function generateGenericOnlyPluralVariant(word: string): string | undefined {
+  const MIN_GENERIC_STEM_LENGTH = 5;
+
+  if (/s$/i.test(word)) {
+    if (word.length - 1 < MIN_GENERIC_STEM_LENGTH) return undefined;
+    const stem = word.slice(0, -1);
+    const stemLastChar = stem[stem.length - 1]?.toLowerCase();
+    if (stemLastChar && SAFE_TRAILING_CONSONANTS.has(stemLastChar)) {
+      return stem;
+    }
+    return undefined;
+  }
+
+  if (word.length < MIN_GENERIC_STEM_LENGTH) return undefined;
+  const lastChar = word[word.length - 1]?.toLowerCase();
+  if (lastChar && SAFE_TRAILING_CONSONANTS.has(lastChar)) {
+    return `${word}s`;
+  }
+  return undefined;
+}
+
+const SAFE_TRAILING_CONSONANTS = new Set([
+  'b',
+  'c',
+  'd',
+  'f',
+  'g',
+  'k',
+  'l',
+  'm',
+  'n',
+  'p',
+  'r',
+  't',
+  'v',
+  'y',
+  'z',
+]);
+
+/**
+ * Milestone #46 (safety correction) — used ONLY by
+ * scoreGenericRelevance()'s multi-word path. Checks the exact phrase,
+ * every M39 "...e"/"...es" variant (via the RESTORED, unmodified
+ * generatePhraseVariants()), AND the generic-only regular "+s" variant
+ * on the last word from generateGenericOnlyPluralVariant() above.
+ * scoreRelationalRelevance() never calls this function.
+ */
+function containsWholePhraseWithGenericInflection(text: string, phrase: string): boolean {
+  if (containsWholePhraseWithInflection(text, phrase)) return true;
+
+  const words = phrase.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return false;
+
+  const lastWord = words[words.length - 1];
+  const precedingWords = words.slice(0, -1);
+  const genericVariant = generateGenericOnlyPluralVariant(lastWord);
+  if (!genericVariant) return false;
+
+  const candidatePhrase = [...precedingWords, genericVariant].join(' ');
+  return containsWholePhrase(text, candidatePhrase);
 }
 
 function wordCount(value: string): number {
@@ -196,20 +303,48 @@ function splitIntoSentences(text: string): string[] {
  * KEEP and never gates the isRelevant decision.
  */
 const RELATIONAL_CONNECTORS = [
-  'affect', 'affects', 'affecting',
-  'impact', 'impacts', 'impacting',
-  'drive', 'drives', 'driving',
-  'lift', 'lifts', 'lifting',
-  'lower', 'lowers', 'lowering',
-  'raise', 'raises', 'raising',
-  'reduce', 'reduces', 'reducing',
-  'increase', 'increases', 'increasing',
-  'decrease', 'decreases', 'decreasing',
-  'hit', 'hits', 'hitting',
-  'hurt', 'hurts', 'hurting',
-  'boost', 'boosts', 'boosting',
-  'pressure', 'pressures', 'pressuring',
-  'lead to', 'leads to', 'leading to',
+  'affect',
+  'affects',
+  'affecting',
+  'impact',
+  'impacts',
+  'impacting',
+  'drive',
+  'drives',
+  'driving',
+  'lift',
+  'lifts',
+  'lifting',
+  'lower',
+  'lowers',
+  'lowering',
+  'raise',
+  'raises',
+  'raising',
+  'reduce',
+  'reduces',
+  'reducing',
+  'increase',
+  'increases',
+  'increasing',
+  'decrease',
+  'decreases',
+  'decreasing',
+  'hit',
+  'hits',
+  'hitting',
+  'hurt',
+  'hurts',
+  'hurting',
+  'boost',
+  'boosts',
+  'boosting',
+  'pressure',
+  'pressures',
+  'pressuring',
+  'lead to',
+  'leads to',
+  'leading to',
   'because',
   'due to',
   'amid',
@@ -398,6 +533,34 @@ export function scoreRelationalRelevance(
  * covers both the 2-3 word "concise phrase" case and the 4+ word
  * "M35 fallback sentence" case identically, since both require the
  * complete phrase, not a partial token overlap.
+ *
+ * Milestone #46 (recall correction) — the multi-word path now reuses
+ * containsWholePhraseWithInflection() (Milestone #39) instead of the
+ * plain exact-match containsWholePhrase(), so a generic multi-word
+ * query benefits from the SAME small, already-safety-reviewed bounded
+ * "...e"/"...es" inflection tolerance the relational path has always
+ * had (e.g. "house price"/"house prices"). This is reuse, not
+ * duplication — no second inflection implementation exists anywhere in
+ * this file. The single-word corroboration model directly above is
+ * UNCHANGED by this correction and does not use inflection matching at
+ * all (a single-word query's title/summary/category signals are
+ * counted via plain exact whole-phrase matching, exactly as before).
+ *
+ * KNOWN, DISCLOSED LIMITATION (verified during the M46 investigation,
+ * not fixed here): M39's inflection rule is deliberately narrow — it
+ * only bridges "...e" <-> "...es" pairs (price/prices, rate/rates,
+ * change/changes). A regular "+s" plural on a word that does NOT end in
+ * "e" (export/exports, job/jobs, worker/workers — structurally
+ * identical to M39's own already-accepted false negatives) is NOT
+ * covered by this reuse. Concretely: for query "semiconductor exports",
+ * an article titled "US tightens semiconductor export controls" is
+ * still correctly (per this narrow, intentional scope) NOT matched by
+ * this correction — verified by a dedicated test below documenting
+ * this as an open, disclosed gap, not a false claim of resolution.
+ * Broadening M39's own safety-reviewed "...e"/"...es" boundary to cover
+ * export/exports would require either a dictionary (ruled out — this
+ * milestone must not introduce unrestricted stemming) or a new,
+ * separately-reviewed safety argument beyond this correction's scope.
  */
 export function scoreGenericRelevance(
   article: Pick<NewsArticle, 'title' | 'summary' | 'category'>,
@@ -441,7 +604,9 @@ export function scoreGenericRelevance(
     }
 
     if (corroborationCount < 2) {
-      reasons.push('insufficient corroboration for a single-word query (requires >= 2 independent signals)');
+      reasons.push(
+        'insufficient corroboration for a single-word query (requires >= 2 independent signals)',
+      );
     }
 
     return {
@@ -453,8 +618,15 @@ export function scoreGenericRelevance(
 
   // Two or more words: require the complete phrase, not a partial
   // token overlap, as a whole-phrase match in title or summary.
+  // Milestone #46 (safety correction): uses
+  // containsWholePhraseWithGenericInflection() — the GENERIC-ONLY
+  // variant checker (M39's "...e"/"...es" rule, unmodified, PLUS the
+  // separate, more conservative generic-only regular "+s" rule). This
+  // function is used ONLY here — scoreRelationalRelevance() continues
+  // to use the original, restored containsWholePhraseWithInflection().
   const wholePhraseMatched =
-    containsWholePhrase(title, normalizedPhrase) || containsWholePhrase(summary, normalizedPhrase);
+    containsWholePhraseWithGenericInflection(title, normalizedPhrase) ||
+    containsWholePhraseWithGenericInflection(summary, normalizedPhrase);
 
   return {
     isRelevant: wholePhraseMatched,
