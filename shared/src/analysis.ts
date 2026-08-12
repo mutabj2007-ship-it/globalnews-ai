@@ -252,6 +252,100 @@ export interface NewsAnalysisResult {
    * always an array (possibly empty) on a freshly validated result.
    */
   relationalEvidenceAssessments?: RelationalEvidenceAssessment[];
+
+  /**
+   * Milestone #41 — the trusted, deterministically backend-derived
+   * relational answer, present ONLY when relationalContextPresent was
+   * true for this request (see AnalysisService/validateAnalysisResult).
+   * Undefined for every non-relational request (ordinary M35/M36
+   * generic queries, country/city retrieval) — see
+   * build-relational-composition.util.ts.
+   *
+   * AUTHORITY: when present, `relationalComposition.summary` is the
+   * authoritative answer to the user's relational question — `headline`
+   * and `summary` above remain legacy orientation prose only, validated
+   * merely for non-emptiness, and must NOT be presented as if they
+   * resolve a relational question. Enforcing this at render time is
+   * REQUIRED FUTURE WORK for the frontend milestone that consumes this
+   * field — it is not automatically enforced by this field's mere
+   * existence.
+   *
+   * Every field here is derived entirely by the backend from already-
+   * validated relationalSupport data on keyFacts/agreements/
+   * differences.positions/timeline entries — there is no model-facing
+   * schema for this structure at all, and no model-written prose
+   * anywhere in it (`summary` is selected from a fixed backend template
+   * set — see build-relational-composition.util.ts).
+   */
+  relationalComposition?: RelationalComposition;
+}
+
+/**
+ * Milestone #41 — does at least one FINAL VALIDATED claim/agreement/
+ * position/timeline entry have an aggregate relationalSupport.direction
+ * of 'requested-direction' or 'bidirectional'? A 'mixed' aggregate
+ * NEVER contributes, even if its underlying assessments include a
+ * requested-direction one (M40's own aggregation already collapsed
+ * that disagreement into 'mixed' — this field does not reach back
+ * into individual assessments to reverse that).
+ *
+ * This says only "does any legitimate supporting evidence exist" — see
+ * EvidenceSufficiency for whether that evidence is adequate to answer
+ * the question with reasonable confidence.
+ */
+export type DirectionalEligibility = 'supported' | 'unsupported';
+
+/**
+ * Milestone #41 — corroboration strength, measured by DISTINCT
+ * validated article IDs backing 'requested-direction'/'bidirectional'
+ * claims (never by claim count — two claims citing the same article are
+ * one supporting article, not two). "Distinct articles" proves exactly
+ * that: distinct article IDs. It does NOT prove editorial/publisher
+ * independence, which this repository has no mechanism to establish.
+ *
+ * - 'insufficient': zero distinct supporting articles.
+ * - 'limited': exactly one distinct supporting article, OR contradicted
+ *   by reverse-direction/mixed evidence regardless of article count.
+ * - 'adequate': two or more distinct supporting articles, with no
+ *   reverse-direction or mixed evidence present.
+ */
+export type EvidenceSufficiency = 'adequate' | 'limited' | 'insufficient';
+
+/**
+ * Milestone #41 — a reference into the FINAL VALIDATED result's own
+ * arrays, generated EXCLUSIVELY by the backend while iterating those
+ * arrays after validation completes. There is no candidate/model-facing
+ * equivalent of this type anywhere — no candidate index is ever read,
+ * and no candidate-to-validated translation ever occurs. This makes
+ * index-shift and duplicate-reference attacks structurally
+ * inapplicable, not merely mitigated.
+ */
+export interface ClaimReference {
+  section: 'keyFacts' | 'agreements' | 'differences' | 'timeline';
+  index: number;
+}
+
+/**
+ * Milestone #41 — the trusted relational composition. See
+ * NewsAnalysisResult.relationalComposition's doc comment for the
+ * authority statement, and build-relational-composition.util.ts for
+ * the full derivation algorithm.
+ */
+export interface RelationalComposition {
+  directionalEligibility: DirectionalEligibility;
+  evidenceSufficiency: EvidenceSufficiency;
+  /** Selected from a fixed backend template set — never model prose. */
+  summary: string;
+  /** Aggregate direction requested-direction | bidirectional. */
+  supportingClaims: ClaimReference[];
+  /** Aggregate direction reverse-direction — never discarded. */
+  reverseClaims: ClaimReference[];
+  /** Aggregate direction association-only — never discarded. */
+  associationOnlyClaims: ClaimReference[];
+  /** Aggregate direction mixed — never discarded, never eligible. */
+  mixedClaims: ClaimReference[];
+  /** Aggregate direction unclear or non-substantive — never discarded. */
+  unclearOrNonSubstantiveClaims: ClaimReference[];
 }
 
 /**

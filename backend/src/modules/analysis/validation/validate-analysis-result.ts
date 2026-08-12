@@ -25,6 +25,7 @@ import {
   resolveRelationalEvidenceAssessments,
   resolveRelationalSupport,
 } from './resolve-relational-evidence-assessment.util';
+import { buildRelationalComposition } from './build-relational-composition.util';
 
 export class AnalysisValidationError extends Error {
   constructor(message: string) {
@@ -417,6 +418,19 @@ export function validateAnalysisResult(
      * instruction.
      */
     relationalContextPresent?: boolean;
+    /**
+     * Milestone #41 — the actual authoritative x/y pair, when this
+     * request was relational. OPTIONAL and independent from
+     * relationalContextPresent above (which continues to gate M40's
+     * relationalEvidenceAssessments/relationalSupport fail-closed
+     * behavior, unchanged). When absent — including when
+     * relationalContextPresent is true but this specific field wasn't
+     * supplied — relationalComposition is omitted entirely; this
+     * function never invents or re-derives x/y itself (that would
+     * duplicate deriveRelationalSearchQueries(), which is explicitly
+     * out of scope here — see build-relational-composition.util.ts).
+     */
+    relationalContext?: { x: string; y: string };
   },
 ): NewsAnalysisResult {
   const obj = requireObject(candidate, 'analysis');
@@ -478,6 +492,23 @@ export function validateAnalysisResult(
     publishedAt: article.publishedAt,
   }));
 
+  // Milestone #41 — built from the FINAL VALIDATED keyFacts/agreements/
+  // differences/timeline arrays computed just above (never from the
+  // candidate) — undefined whenever relationalContext wasn't supplied,
+  // exactly mirroring how relationalEvidenceAssessments/relationalSupport
+  // are gated by relationalContextPresent above (a separate, independent
+  // signal — see that field's own doc comment).
+  const relationalComposition = context.relationalContext
+    ? buildRelationalComposition(
+        context.relationalContext.x,
+        context.relationalContext.y,
+        keyFacts,
+        agreements,
+        differences,
+        timeline,
+      )
+    : undefined;
+
   return {
     query: context.query,
     headline: obj.headline,
@@ -499,5 +530,7 @@ export function validateAnalysisResult(
     // no claim cites it — never filtered down to "supporting" evidence
     // only (see RelationalSupport's doc comment in shared/).
     relationalEvidenceAssessments: allValidatedAssessments,
+    // Milestone #41 — undefined for every non-relational request.
+    ...(relationalComposition ? { relationalComposition } : {}),
   };
 }

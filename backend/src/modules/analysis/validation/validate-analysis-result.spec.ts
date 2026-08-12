@@ -741,4 +741,124 @@ describe('validateAnalysisResult', () => {
       expect(result.relationalEvidenceAssessments).toEqual([]);
     });
   });
+
+  describe('Milestone #41 relational composition', () => {
+    it('8. non-relational validation (no relationalContext supplied) -> relationalComposition undefined', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const result = validateAnalysisResult(validCandidate('S1'), context(articles));
+      expect(result.relationalComposition).toBeUndefined();
+    });
+
+    it('8b. relationalContextPresent true but relationalContext (x/y) not supplied -> relationalComposition still undefined', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const result = validateAnalysisResult(validCandidate('S1'), { ...context(articles), relationalContextPresent: true });
+      expect(result.relationalComposition).toBeUndefined();
+    });
+
+    it('9. relational request with zero relationalSupport data -> relationalComposition unsupported + insufficient', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const result = validateAnalysisResult(validCandidate('S1'), {
+        ...context(articles),
+        relationalContextPresent: true,
+        relationalContext: { x: 'climate change', y: 'agriculture' },
+      });
+      expect(result.relationalComposition?.directionalEligibility).toBe('unsupported');
+      expect(result.relationalComposition?.evidenceSufficiency).toBe('insufficient');
+    });
+
+    it('11. malformed/dropped candidate claims cannot shift an untrusted reference — ClaimReference always corresponds to the FINAL VALIDATED array', () => {
+      const articles = [
+        makeArticle({ id: 'real-article-1', title: 'Report', summary: 'Climate change is reducing maize yields.' }),
+      ];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: '', evidenceIds: ['S1'] }, // malformed (empty claim) -> dropped during validation
+          {
+            claim: 'Climate change reduces maize yields',
+            evidenceIds: ['S1'],
+            relationshipAssessmentIds: ['R1'],
+          },
+        ],
+        relationalEvidenceAssessments: [
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, {
+        ...context(articles),
+        relationalContextPresent: true,
+        relationalContext: { x: 'climate change', y: 'agriculture' },
+      });
+
+      // Only the surviving claim reaches validated keyFacts (the empty
+      // one was dropped) — validated index 0 IS the surviving claim.
+      expect(result.keyFacts).toHaveLength(1);
+      expect(result.keyFacts[0].claim).toBe('Climate change reduces maize yields');
+      // The ClaimReference correctly points at validated index 0 —
+      // never accidentally computed from the candidate's original
+      // index 1, because no candidate index is ever read at all.
+      expect(result.relationalComposition?.supportingClaims).toEqual([{ section: 'keyFacts', index: 0 }]);
+    });
+
+    it('12. M40 Case 9 remains unchanged, and relationalComposition correctly reflects both directions from the same article', () => {
+      const articles = [
+        makeArticle({
+          id: 'real-article-1',
+          title: 'Report',
+          summary: 'Climate change is reducing maize yields. Agricultural emissions contribute to climate change.',
+        }),
+      ];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: 'Climate change reduces maize yields', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
+          { claim: 'Agriculture contributes to climate change', evidenceIds: ['S1'], relationshipAssessmentIds: ['R2'] },
+        ],
+        relationalEvidenceAssessments: [
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+          { assessmentId: 'R2', evidenceId: 'S1', excerpt: 'Agricultural emissions contribute to climate change', direction: 'reverse-direction' },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, {
+        ...context(articles),
+        relationalContextPresent: true,
+        relationalContext: { x: 'climate change', y: 'agriculture' },
+      });
+
+      // Case 9 itself, unchanged:
+      expect(result.keyFacts[0].relationalSupport?.direction).toBe('requested-direction');
+      expect(result.keyFacts[1].relationalSupport?.direction).toBe('reverse-direction');
+
+      // Composition correctly reflects both, from the SAME article,
+      // without conflating them:
+      expect(result.relationalComposition?.supportingClaims).toEqual([{ section: 'keyFacts', index: 0 }]);
+      expect(result.relationalComposition?.reverseClaims).toEqual([{ section: 'keyFacts', index: 1 }]);
+      // Only 1 distinct supporting article (real-article-1) -> limited, not adequate.
+      expect(result.relationalComposition?.evidenceSufficiency).toBe('limited');
+    });
+
+    it('13. M40 duplicate-assessmentId fail-closed behavior remains unchanged, and relationalComposition correctly reflects the resulting empty state', () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Report', summary: 'Climate change is reducing maize yields.' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: 'x', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
+        ],
+        relationalEvidenceAssessments: [
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'reverse-direction' },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, {
+        ...context(articles),
+        relationalContextPresent: true,
+        relationalContext: { x: 'climate change', y: 'agriculture' },
+      });
+
+      expect(result.relationalEvidenceAssessments).toEqual([]);
+      expect(result.keyFacts[0].relationalSupport).toBeUndefined();
+      expect(result.relationalComposition?.directionalEligibility).toBe('unsupported');
+      expect(result.relationalComposition?.evidenceSufficiency).toBe('insufficient');
+    });
+  });
 });

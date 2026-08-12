@@ -400,6 +400,17 @@ export class AnalysisService {
           // relationalSupport, regardless of what the provider emits.
           // This never relies on prompt obedience alone.
           relationalContextPresent: relationalContext !== undefined,
+          // Milestone #41 (production wiring): the SAME relationalContext
+          // object already produced by the M37 relational branch above
+          // and already forwarded to the AI provider for M40 — never a
+          // second, independently-derived x/y pair. Both fields above
+          // and here originate from this one local `relationalContext`
+          // variable, so they cannot disagree at this call site. When
+          // `relationalContext` is undefined (non-relational query),
+          // this is undefined too, and validateAnalysisResult leaves
+          // relationalComposition unset — no placeholder x/y is ever
+          // synthesized.
+          relationalContext,
         },
       );
 

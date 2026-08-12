@@ -3298,4 +3298,251 @@ describe('AnalysisService', () => {
       expect(newsService.search).not.toHaveBeenCalled();
     });
   });
+
+  describe('Milestone #41 production wiring: relationalContext reaches validateAnalysisResult', () => {
+    it('A. relational query: the exact M37-derived x/y reaches the validated relationalComposition summary', async () => {
+      const articles = [
+        makeArticle({
+          id: 'real-article-1',
+          title: 'Oil prices rise sharply as Iran conflict disrupts shipping',
+          summary: 'Oil prices climbed as the Iran conflict continued to disrupt regional shipping lanes.',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          keyFacts: [
+            {
+              claim: 'Iran conflict is disrupting shipping and lifting oil prices',
+              evidenceIds: ['S1'],
+              relationshipAssessmentIds: ['R1'],
+            },
+          ],
+          relationalEvidenceAssessments: [
+            {
+              assessmentId: 'R1',
+              evidenceId: 'S1',
+              excerpt: 'Oil prices climbed as the Iran conflict continued to disrupt regional shipping lanes',
+              direction: 'requested-direction',
+            },
+          ],
+        }),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('How is the Iran conflict affecting oil prices?');
+
+      // Real production wiring: AnalysisService's own M37-derived x/y
+      // ("Iran conflict" / "oil prices") is what reaches the validated
+      // relationalComposition — not re-derived, not synthesized here.
+      expect(response.analysis?.relationalComposition?.directionalEligibility).toBe('supported');
+      expect(response.analysis?.relationalComposition?.summary).toContain('"Iran conflict"');
+      expect(response.analysis?.relationalComposition?.summary).toContain('"oil prices"');
+    });
+
+    it('B. reversed relational query: the reversed authoritative pair is used, never silently reverted to the forward orientation', async () => {
+      const articles = [
+        makeArticle({
+          id: 'real-article-2',
+          title: 'Oil prices remain volatile amid Iran conflict uncertainty',
+          summary: 'Analysts say oil prices continue to influence how the Iran conflict is perceived in energy markets.',
+        }),
+      ];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          keyFacts: [
+            {
+              claim: 'Oil price volatility is shaping perceptions of the Iran conflict',
+              evidenceIds: ['S1'],
+              relationshipAssessmentIds: ['R1'],
+            },
+          ],
+          relationalEvidenceAssessments: [
+            {
+              assessmentId: 'R1',
+              evidenceId: 'S1',
+              excerpt: 'oil prices continue to influence how the Iran conflict is perceived',
+              direction: 'requested-direction',
+            },
+          ],
+        }),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      // Reversed phrasing: x="oil prices", y="Iran conflict" (per
+      // deriveRelationalSearchQueries's own "How is X affecting Y"
+      // extraction), the opposite orientation from test A.
+      const response = await service.analyzeNews('How is oil prices affecting Iran conflict?');
+
+      expect(response.analysis?.relationalComposition?.summary).toContain('"oil prices"');
+      expect(response.analysis?.relationalComposition?.summary).toContain('"Iran conflict"');
+      // Specifically proves the ORDER reversed vs test A: the requested
+      // direction here is oil prices -> Iran conflict, not the reverse.
+      expect(response.analysis?.relationalComposition?.summary).toMatch(
+        /from\s+"oil prices"\s+to\s+"Iran conflict"/,
+      );
+    });
+
+    it('C. generic (non-relational) query: no relationalComposition is created', async () => {
+      const articles = [makeArticle({ id: 'generic-article' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews("What's happening in cybersecurity?");
+
+      expect(response.analysis?.relationalComposition).toBeUndefined();
+    });
+
+    it('D. country query: no relationalComposition is created', async () => {
+      const articles = [makeArticle({ id: 'country-article' })];
+      const newsService = { search: jest.fn() };
+      const countryNewsService = makeCountryNewsService();
+      countryNewsService.getCountryNews = jest
+        .fn()
+        .mockResolvedValue(makeCountryResponse('UKR', 'Ukraine', articles));
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Ukraine');
+
+      expect(response.analysis?.relationalComposition).toBeUndefined();
+    });
+
+    it('E. a non-relational query cannot have relationalComposition manufactured by a provider that emits relational-shaped fields anyway', async () => {
+      const articles = [makeArticle({ id: 'x-article', title: 'Test', summary: 'Test summary text here.' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      // The provider misbehaves and returns relational-shaped output
+      // even though AnalysisService's own routing never identified this
+      // query as relational (relationalContext stays undefined at the
+      // AnalysisService level for this query text).
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue({
+          ...validCandidateFor(articles),
+          keyFacts: [
+            { claim: 'x', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
+          ],
+          relationalEvidenceAssessments: [
+            { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Test summary text here', direction: 'requested-direction' },
+          ],
+        }),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      // Plain non-relational, non-country generic query text.
+      const response = await service.analyzeNews('Tell me about markets today');
+
+      // Only AnalysisService's own M37 routing may ever set
+      // relationalContext — a provider cannot manufacture it merely by
+      // emitting relational-shaped candidate fields. The M40 fail-closed
+      // gate (relationalContextPresent) forces relationalEvidenceAssessments
+      // empty, and M41's relationalComposition is never built at all.
+      expect(response.analysis?.relationalEvidenceAssessments).toEqual([]);
+      expect(response.analysis?.relationalComposition).toBeUndefined();
+    });
+
+    it('F. preserves the existing M40 assertion that provider.analyzeNews receives relationalContext for a matched relational query (unchanged, not weakened)', async () => {
+      const articles = [makeArticle({ id: 'iran-oil-3' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('How is the Iran conflict affecting oil prices?');
+
+      expect(provider.analyzeNews).toHaveBeenCalledWith(
+        expect.objectContaining({
+          relationalContext: { x: 'Iran conflict', y: 'oil prices' },
+        }),
+      );
+    });
+  });
 });
