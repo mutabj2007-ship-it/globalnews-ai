@@ -1,21 +1,24 @@
 import type { ReactNode } from 'react';
-import type { AnalysisProvenance, NewsAnalysisResult } from '@globalnews-ai/shared';
+import type { AnalysisProvenance, NewsAnalysisResult, SourceDiversity } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { AnalysisCitation } from '@/components/search/AnalysisCitation';
 import { EvidenceSufficiencyNote } from '@/components/search/EvidenceSufficiencyNote';
+import { TrustBadge } from '@/components/search/TrustBadge';
+import { SourceDiversitySummary } from '@/components/search/SourceDiversitySummary';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 
 interface AnalysisResultViewProps {
   analysis: NewsAnalysisResult;
   /** Milestone #30 — the badge now needs the full provenance, not just analysis.analysisMode. */
   provenance: AnalysisProvenance;
+  /**
+   * Milestone #44 — a sibling of `analysis` on AnalysisApiResponse, not
+   * a field of NewsAnalysisResult, so it must be threaded in as its own
+   * prop (unlike trustState/relationalComposition, which are read
+   * directly off `analysis` below — no redundant props for those).
+   */
+  sourceDiversity?: SourceDiversity;
 }
-
-const CONFIDENCE_STYLES: Record<NewsAnalysisResult['confidence']['level'], string> = {
-  low: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
-  medium: 'border-signal/40 bg-signal/10 text-signal-bright',
-  high: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400',
-};
 
 function SectionHeading({ children }: { children: ReactNode }): JSX.Element {
   return (
@@ -25,7 +28,7 @@ function SectionHeading({ children }: { children: ReactNode }): JSX.Element {
   );
 }
 
-export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewProps): JSX.Element {
+export function AnalysisResultView({ analysis, provenance, sourceDiversity }: AnalysisResultViewProps): JSX.Element {
   const entityGroups: Array<{ label: string; values: string[] }> = [
     { label: 'Countries', values: analysis.entities.countries },
     { label: 'Locations', values: analysis.entities.locations },
@@ -52,15 +55,66 @@ export function AnalysisResultView({ analysis, provenance }: AnalysisResultViewP
         </p>
       </div>
 
-      {/* Confidence */}
-      <div
-        className={`rounded-2xl border p-5 ${CONFIDENCE_STYLES[analysis.confidence.level]}`}
-      >
-        <div className="mb-1 flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-widest">
-          Confidence: {analysis.confidence.level} ({analysis.confidence.score}/100)
+      {/*
+        Milestone #44 — TrustBadge (driven by analysis.trustState, the
+        Milestone #42 authoritative backend trust signal) now occupies
+        the prominent position analysis.confidence previously held here.
+        analysis.confidence is demoted to a small, explicitly-labeled
+        "AI self-assessment" details block further below — it must never
+        visually outrank this component.
+      */}
+      <TrustBadge trustState={analysis.trustState} />
+      <SourceDiversitySummary
+        sourceDiversity={sourceDiversity}
+        isMock={provenance.analysisMode === 'mock-ai'}
+      />
+
+      {/*
+        Milestone #44 — renders relationalComposition's own backend-
+        authored summary VERBATIM. No frontend re-derivation of
+        direction, sufficiency, or causality — the counts shown are
+        simple array lengths from already-backend-computed buckets.
+      */}
+      {analysis.relationalComposition && (
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <SectionHeading>Relationship evidence</SectionHeading>
+          <p className="text-sm leading-relaxed text-ink-primary">
+            {analysis.relationalComposition.summary}
+          </p>
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary sm:grid-cols-4">
+            <dt>Supporting</dt>
+            <dd>{analysis.relationalComposition.supportingClaims.length}</dd>
+            <dt>Reverse</dt>
+            <dd>{analysis.relationalComposition.reverseClaims.length}</dd>
+            <dt>Association-only</dt>
+            <dd>{analysis.relationalComposition.associationOnlyClaims.length}</dd>
+            <dt>Mixed</dt>
+            <dd>{analysis.relationalComposition.mixedClaims.length}</dd>
+          </dl>
         </div>
-        <p className="text-sm leading-relaxed opacity-90">{analysis.confidence.explanation}</p>
-      </div>
+      )}
+
+      {/*
+        Milestone #44 — analysis.confidence demoted from its former
+        prominent position to a small, explicitly-labeled, collapsed-
+        by-default secondary section. This is the AI provider's own
+        self-reported estimate (Milestone #42: never authoritative,
+        never cross-checked) — never styled to compete with TrustBadge.
+      */}
+      <details className="rounded-2xl border border-border-strong bg-surface p-4">
+        <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+          AI self-assessment (not the evidence trust rating)
+        </summary>
+        <div className="mt-3">
+          <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+            AI self-assessment: {analysis.confidence.level} ({analysis.confidence.score}/100)
+          </p>
+          <p className="text-xs leading-relaxed text-ink-tertiary">{analysis.confidence.explanation}</p>
+          <p className="mt-2 text-[11px] italic leading-relaxed text-ink-tertiary">
+            This is the AI model&rsquo;s own confidence estimate and is not the authoritative evidence trust rating above.
+          </p>
+        </div>
+      </details>
 
       {/* Key facts */}
       {analysis.keyFacts.length > 0 && (

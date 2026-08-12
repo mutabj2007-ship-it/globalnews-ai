@@ -79,7 +79,11 @@ export function SearchPageClient(): JSX.Element {
           <SourceEntitiesPanel sourceEntities={response.sourceEntities} />
 
           {response.analysis ? (
-            <AnalysisResultView analysis={response.analysis} provenance={response.provenance} />
+            <AnalysisResultView
+              analysis={response.analysis}
+              provenance={response.provenance}
+              sourceDiversity={response.sourceDiversity}
+            />
           ) : (
             /**
              * Milestone #30 — branches on `response.provenance.status`,
