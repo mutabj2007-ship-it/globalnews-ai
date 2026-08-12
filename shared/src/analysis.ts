@@ -182,11 +182,114 @@ export interface UncertaintyItem {
   sourceArticleIds: string[];
 }
 
+/**
+ * Milestone #42 — MODEL SELF-ASSESSMENT METADATA ONLY. This is what the
+ * AI provider itself reported about its own confidence — validated only
+ * for shape (enum membership, numeric clamp to 0-100), never cross-
+ * checked against grounding, corroboration, contradiction, or any other
+ * deterministic signal. It is NOT the authoritative trust signal for
+ * this analysis — see NewsAnalysisResult.trustState, which is derived
+ * entirely independently by the backend and does not read this field at
+ * all. Retained unmodified for backward compatibility; a future
+ * frontend milestone is required to stop presenting this prominently as
+ * if it were the authoritative trust level (see TrustState's own doc
+ * comment for the full authority hierarchy).
+ */
 export interface ConfidenceInfo {
   level: ConfidenceLevel;
   /** 0-100. */
   score: number;
   explanation: string;
+}
+
+/**
+ * Milestone #42 — the closed, language-neutral set of reasons a
+ * TrustState can cite. These are stable structured codes, never English
+ * prose — a future frontend localization layer maps each code to
+ * human-readable text in the user's language. The backend remains the
+ * sole authority on WHICH codes apply; it never generates or trusts
+ * free-text explanations for trust derivation.
+ */
+export type TrustReason =
+  | 'no-grounded-evidence'
+  | 'single-distinct-article'
+  | 'multiple-distinct-articles'
+  | 'relational-support-adequate'
+  | 'relational-support-limited'
+  | 'requested-direction-unsupported'
+  | 'reverse-evidence-present'
+  | 'mixed-evidence-present'
+  | 'uncertainties-reported'
+  | 'differences-reported'
+  | 'mock-execution';
+
+export type TrustLevel = 'high' | 'moderate' | 'limited' | 'insufficient';
+
+/**
+ * Milestone #42 — AUTHORITATIVE BACKEND ANSWER-LEVEL TRUST STATE.
+ *
+ * AUTHORITY HIERARCHY (highest to lowest):
+ * 1. TrustState (this) — authoritative backend answer-level trust.
+ * 2. RelationalComposition — authoritative backend relational conclusion
+ *    (Milestone #41); TrustState CONSUMES this, never re-derives it.
+ * 3. evidenceBasis / evidenceBreadth / validated claims (Milestone #32) —
+ *    supporting evidence structures.
+ * 4. uncertainties / differences — bounded caveat/information structures.
+ * 5. ConfidenceInfo (analysis.confidence) — model self-assessment
+ *    metadata only, NEVER an input to this derivation.
+ * 6. NewsArticle.confidence — retrieval/ranking signal only, unrelated
+ *    to answer trust.
+ * 7. AnalysisRetrievalContext.matchConfidence — geographic/query-
+ *    resolution signal only, unrelated to answer trust.
+ *
+ * Derived entirely deterministically, entirely backend-side, from
+ * already-validated structures plus the already-authoritative
+ * analysisMode supplied to validateAnalysisResult() — see
+ * derive-trust-state.util.ts. Never reads or is influenced by
+ * `analysis.confidence`, provider prose, or any other model-self-
+ * reported value.
+ *
+ * `reasons` are stable, language-neutral TrustReason codes — never
+ * backend-authored English prose — a future frontend localization layer
+ * is responsible for turning these into human-readable text.
+ *
+ * MOCK HARD OVERRIDE: whenever the analysis was produced in mock
+ * execution mode, `level` is always 'insufficient' and `reasons` is
+ * always exactly `['mock-execution']`, regardless of how many mock
+ * articles/claims exist — see derive-trust-state.util.ts.
+ *
+ * NON-RELATIONAL 'high' IS NOT ACHIEVABLE in this milestone — ordinary
+ * (non-relational) analyses have no structural per-conclusion
+ * corroboration mechanism analogous to Milestone #41's relational one,
+ * so `distinctSourceArticleCount` alone can never justify 'high'. This
+ * is an intentional, disclosed limitation, not an oversight — see
+ * derive-trust-state.util.ts's own doc comment.
+ */
+export interface TrustState {
+  level: TrustLevel;
+  reasons: TrustReason[];
+  /**
+   * Distinct validated article IDs represented across grounded
+   * keyFacts/agreements/differences.positions/timeline. A breadth
+   * measure of the analysis as a whole — NOT a claim that all of them
+   * corroborate the same specific conclusion, and NOT a claim of
+   * editorial/publisher independence.
+   */
+  distinctSourceArticleCount: number;
+  /**
+   * Relational-path only. True iff at least one claim's aggregate
+   * relationalSupport.direction is 'reverse-direction' or 'mixed' —
+   * both are structurally validated disagreement signals (Milestone
+   * #40), never inferred from prose. association-only/unclear/
+   * non-substantive evidence alone never sets this true.
+   */
+  relationalContradictionPresent?: boolean;
+  /** = differences.length. Informational only — never implies contradiction or downgrades level. */
+  differenceTopicCount: number;
+  /** = uncertainties.length. Informational only — never implies severity or downgrades level. */
+  uncertaintyCount: number;
+  /** Present only when relationalComposition exists — mirrors relationalComposition.evidenceSufficiency exactly. */
+  relationalEvidenceSufficiency?: EvidenceSufficiency;
 }
 
 export interface AnalysisEntities {
@@ -227,6 +330,20 @@ export interface NewsAnalysisResult {
   /** ISO-8601 timestamp. */
   generatedAt: string;
   analysisMode: AnalysisMode;
+
+  /**
+   * Milestone #42 — the authoritative backend trust signal. Always
+   * present on a validated result (required, not optional) — see
+   * derive-trust-state.util.ts's own doc comment for why this is safe:
+   * validateAnalysisResult() is the sole constructor of
+   * NewsAnalysisResult, and no persistent cache/storage of full
+   * analysis results exists (only the in-memory, process-local
+   * AnalysisService cache, cleared on every restart). See TrustState's
+   * own doc comment for the full authority hierarchy — `confidence`
+   * above is model self-reported metadata only and is never consulted
+   * when deriving this field.
+   */
+  trustState: TrustState;
 
   /**
    * Milestone #31 — grounded insufficient-evidence / disagreement-adjacent

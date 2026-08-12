@@ -861,4 +861,72 @@ describe('validateAnalysisResult', () => {
       expect(result.relationalComposition?.evidenceSufficiency).toBe('insufficient');
     });
   });
+
+  describe('Milestone #42 authoritative trust state', () => {
+    it('every successful validateAnalysisResult() result contains trustState (required field)', () => {
+      const articles = [makeArticle({ id: 'a1' })];
+      const result = validateAnalysisResult(validCandidate('S1'), context(articles));
+      expect(result.trustState).toBeDefined();
+      expect(typeof result.trustState.level).toBe('string');
+      expect(Array.isArray(result.trustState.reasons)).toBe(true);
+    });
+
+    it('MODEL OVERCONFIDENCE (Case 1/13): confidence.level="high"/score=95 does NOT influence trustState — a single-article analysis still yields "limited"', () => {
+      const articles = [makeArticle({ id: 'a1', title: 'Report' })];
+      const candidate = {
+        ...validCandidate('S1'),
+        confidence: { level: 'high', score: 95, explanation: 'Extremely confident.' },
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      // The model's own self-reported confidence is preserved unchanged...
+      expect(result.confidence).toEqual({ level: 'high', score: 95, explanation: 'Extremely confident.' });
+      // ...but trustState is derived entirely independently and disagrees.
+      expect(result.trustState.level).toBe('limited');
+      expect(result.trustState.reasons).toContain('single-distinct-article');
+    });
+
+    it('mock mode hard override applies end-to-end through the real validator, even with a multi-article, high-confidence-claiming candidate', () => {
+      const articles = [
+        makeArticle({ id: 'a1', title: 'First' }),
+        makeArticle({ id: 'a2', title: 'Second' }),
+      ];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: 'x', evidenceIds: ['S1'] },
+          { claim: 'y', evidenceIds: ['S2'] },
+        ],
+        confidence: { level: 'high', score: 90, explanation: 'x' },
+      };
+      const result = validateAnalysisResult(candidate, { ...context(articles), analysisMode: 'mock-ai' });
+      expect(result.trustState.level).toBe('insufficient');
+      expect(result.trustState.reasons).toEqual(['mock-execution']);
+    });
+
+    it('relational end-to-end: trustState.relationalEvidenceSufficiency mirrors the validated relationalComposition exactly', () => {
+      const articles = [
+        makeArticle({
+          id: 'real-article-1',
+          title: 'Report',
+          summary: 'Climate change is reducing maize yields.',
+        }),
+      ];
+      const candidate = {
+        ...validCandidate('S1'),
+        keyFacts: [
+          { claim: 'Climate change reduces maize yields', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
+        ],
+        relationalEvidenceAssessments: [
+          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, {
+        ...context(articles),
+        relationalContextPresent: true,
+        relationalContext: { x: 'climate change', y: 'agriculture' },
+      });
+      expect(result.trustState.relationalEvidenceSufficiency).toBe(result.relationalComposition?.evidenceSufficiency);
+      expect(result.trustState.level).toBe('limited');
+    });
+  });
 });

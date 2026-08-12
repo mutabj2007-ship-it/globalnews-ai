@@ -26,6 +26,7 @@ import {
   resolveRelationalSupport,
 } from './resolve-relational-evidence-assessment.util';
 import { buildRelationalComposition } from './build-relational-composition.util';
+import { deriveTrustState } from './derive-trust-state.util';
 
 export class AnalysisValidationError extends Error {
   constructor(message: string) {
@@ -509,6 +510,21 @@ export function validateAnalysisResult(
       )
     : undefined;
 
+  // Milestone #42 — derived AFTER all M31-M41 validated structures are
+  // available, using ONLY those already-validated structures plus the
+  // already-authoritative context.analysisMode (never a second/new
+  // execution-mode signal, never raw candidate fields, never
+  // obj.confidence).
+  const trustState = deriveTrustState(
+    context.analysisMode,
+    keyFacts,
+    agreements,
+    differences,
+    timeline,
+    uncertainties.length,
+    relationalComposition,
+  );
+
   return {
     query: context.query,
     headline: obj.headline,
@@ -532,5 +548,8 @@ export function validateAnalysisResult(
     relationalEvidenceAssessments: allValidatedAssessments,
     // Milestone #41 — undefined for every non-relational request.
     ...(relationalComposition ? { relationalComposition } : {}),
+    // Milestone #42 — always present (required field), including in
+    // mock mode (hard override to 'insufficient').
+    trustState,
   };
 }
