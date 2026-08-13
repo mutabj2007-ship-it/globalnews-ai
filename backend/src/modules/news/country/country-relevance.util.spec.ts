@@ -9,10 +9,7 @@ const sudan: CountryMeta = {
   region: 'Africa',
 };
 
-function article(
-  title: string,
-  summary: string,
-): Pick<NewsArticle, 'title' | 'summary'> {
+function article(title: string, summary: string): Pick<NewsArticle, 'title' | 'summary'> {
   return { title, summary };
 }
 
@@ -95,10 +92,7 @@ describe('scoreCountryRelevance', () => {
 
   it('accepts the Sudanese demonym', () => {
     const result = scoreCountryRelevance(
-      article(
-        'Sudanese nationals return home',
-        'Hundreds crossed the border after a ceasefire.',
-      ),
+      article('Sudanese nationals return home', 'Hundreds crossed the border after a ceasefire.'),
       sudan,
     );
 
@@ -120,10 +114,7 @@ describe('scoreCountryRelevance', () => {
 
   it('rejects an unrelated article with no country mention', () => {
     const result = scoreCountryRelevance(
-      article(
-        'Local school launches new program',
-        'Students attended an educational event.',
-      ),
+      article('Local school launches new program', 'Students attended an educational event.'),
       sudan,
     );
 
@@ -135,10 +126,7 @@ describe('scoreCountryRelevance', () => {
 describe('articleMentionsCity', () => {
   it('matches a city mentioned in the title', () => {
     const matches = articleMentionsCity(
-      article(
-        'Kigali hosts regional summit',
-        'Delegates gathered this week.',
-      ),
+      article('Kigali hosts regional summit', 'Delegates gathered this week.'),
       'kigali',
     );
 
@@ -147,10 +135,7 @@ describe('articleMentionsCity', () => {
 
   it('matches a city mentioned only in the summary', () => {
     const matches = articleMentionsCity(
-      article(
-        'Regional summit opens',
-        'Delegates gathered in Kigali this week.',
-      ),
+      article('Regional summit opens', 'Delegates gathered in Kigali this week.'),
       'kigali',
     );
 
@@ -159,10 +144,7 @@ describe('articleMentionsCity', () => {
 
   it('is case-insensitive', () => {
     const matches = articleMentionsCity(
-      article(
-        'KIGALI hosts regional summit',
-        'Delegates gathered this week.',
-      ),
+      article('KIGALI hosts regional summit', 'Delegates gathered this week.'),
       'kigali',
     );
 
@@ -171,10 +153,7 @@ describe('articleMentionsCity', () => {
 
   it('does not match when the city is absent', () => {
     const matches = articleMentionsCity(
-      article(
-        'Rwanda government announces new policy',
-        'Officials confirmed the plan nationally.',
-      ),
+      article('Rwanda government announces new policy', 'Officials confirmed the plan nationally.'),
       'kigali',
     );
 
@@ -183,10 +162,7 @@ describe('articleMentionsCity', () => {
 
   it('does not match a bare substring inside another word', () => {
     const matches = articleMentionsCity(
-      article(
-        'A story about Kigalian traditions',
-        'Unrelated to the city of Kigali directly.',
-      ),
+      article('A story about Kigalian traditions', 'Unrelated to the city of Kigali directly.'),
       'kigali',
     );
 

@@ -14,7 +14,9 @@ describe('derivePolishRetrievalQuery (Milestone #47)', () => {
   });
 
   it('"Jakie są najważniejsze wiadomości z Polski?" -> "Polska" (bounded genitive-case normalization)', () => {
-    expect(derivePolishRetrievalQuery('Jakie są najważniejsze wiadomości z Polski?')).toBe('Polska');
+    expect(derivePolishRetrievalQuery('Jakie są najważniejsze wiadomości z Polski?')).toBe(
+      'Polska',
+    );
   });
 
   it('"Co dzieje się teraz w Warszawie?" -> "Warszawa" (bounded locative-case normalization)', () => {
@@ -35,7 +37,7 @@ describe('derivePolishRetrievalQuery (Milestone #47)', () => {
     expect(result.length).toBeGreaterThan(0);
   });
 
-  it('empty-input safety invariant matches deriveGenericNewsQuery\'s own contract', () => {
+  it("empty-input safety invariant matches deriveGenericNewsQuery's own contract", () => {
     expect(derivePolishRetrievalQuery('   ')).toBe('');
   });
 
@@ -44,9 +46,9 @@ describe('derivePolishRetrievalQuery (Milestone #47)', () => {
   });
 
   it('a query with an inserted word between "wiadomości" and the preposition does not match the pattern and falls through safely to the punctuation-stripped original — never fabricates a match', () => {
-    expect(derivePolishRetrievalQuery('Jakie są najważniejsze wiadomości gospodarcze w Polsce?')).toBe(
-      'Jakie są najważniejsze wiadomości gospodarcze w Polsce',
-    );
+    expect(
+      derivePolishRetrievalQuery('Jakie są najważniejsze wiadomości gospodarcze w Polsce?'),
+    ).toBe('Jakie są najważniejsze wiadomości gospodarcze w Polsce');
   });
 
   it('is a pure, deterministic function', () => {

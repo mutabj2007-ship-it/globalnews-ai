@@ -7,12 +7,12 @@ import type {
   ProviderHealthStatus,
 } from '@globalnews-ai/shared';
 import type { NewsProvider } from './interfaces';
-import {
-  ALL_NEWS_PROVIDERS,
-  NEWS_PROVIDERS,
-} from './providers/provider.tokens';
+import { ALL_NEWS_PROVIDERS, NEWS_PROVIDERS } from './providers/provider.tokens';
 import { ArticlePersistenceService } from './persistence/article-persistence.service';
-import { scoreGenericRelevance, scoreRelationalRelevance } from './relevance/generic-relevance.util';
+import {
+  scoreGenericRelevance,
+  scoreRelationalRelevance,
+} from './relevance/generic-relevance.util';
 
 const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
 
@@ -38,9 +38,7 @@ const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
  *   causality. See scoreRelationalRelevance's own doc comment.
  */
 export type RelevanceMode =
-  | { type: 'none' }
-  | { type: 'generic' }
-  | { type: 'relational'; x: string; y: string };
+  { type: 'none' } | { type: 'generic' } | { type: 'relational'; x: string; y: string };
 
 /**
  * The subset of RelevanceMode that actually triggers filtering —
@@ -69,9 +67,7 @@ interface ProviderCallResult {
 
 @Injectable()
 export class NewsService {
-  private readonly logger = new Logger(
-    NewsService.name,
-  );
+  private readonly logger = new Logger(NewsService.name);
 
   constructor(
     @Inject(NEWS_PROVIDERS)
@@ -93,13 +89,11 @@ export class NewsService {
     // retrieval and the public GET /news/search endpoint both call this
     // same method with the default 'none' mode, so their behavior is
     // completely unchanged by either milestone.
-    const providerCall =
-      await this.callAllProviders(
-        (provider) =>
-          provider.search(query, {
-            limit,
-          }),
-      );
+    const providerCall = await this.callAllProviders((provider) =>
+      provider.search(query, {
+        limit,
+      }),
+    );
 
     const rawResponse = this.buildResponse(
       providerCall.results,
@@ -124,9 +118,7 @@ export class NewsService {
 
     if (response.articles.length > 0) {
       if (response.dataMode === 'live') {
-        await this.articlePersistence.persistMany(
-          response.articles,
-        );
+        await this.articlePersistence.persistMany(response.articles);
       }
 
       return response;
@@ -136,13 +128,11 @@ export class NewsService {
       return response;
     }
 
-    const cachedArticles =
-      await this.articlePersistence.findRecent({
-        query,
-        limit,
-        maxAgeMinutes:
-          DATABASE_FALLBACK_MAX_AGE_MINUTES,
-      });
+    const cachedArticles = await this.articlePersistence.findRecent({
+      query,
+      limit,
+      maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+    });
 
     // Milestone #36/#37: the SAME gate (whichever mode is active)
     // applies to stored/persisted fallback results — live and stored
@@ -151,8 +141,8 @@ export class NewsService {
     const relevantCachedArticles =
       relevanceMode.type === 'none'
         ? cachedArticles
-        : cachedArticles.filter((article) =>
-            this.scoreByMode(article, query, relevanceMode).isRelevant,
+        : cachedArticles.filter(
+            (article) => this.scoreByMode(article, query, relevanceMode).isRelevant,
           );
 
     if (relevantCachedArticles.length === 0) {
@@ -165,9 +155,7 @@ export class NewsService {
       {
         query,
       },
-      this.resolveFallbackReason(
-        providerCall.failedProviderIds,
-      ),
+      this.resolveFallbackReason(providerCall.failedProviderIds),
     );
   }
 
@@ -182,20 +170,54 @@ export class NewsService {
    * search() uses internally, without retrofitting this method's own
    * DB-fallback/persistence logic (below, unchanged) with the
    * relevanceMode plumbing search() has.
+   *
+   * Milestone #47 (runtime correction): this method itself still just
+   * passes `options?.lang` straight through, unchanged — the English
+   * default for the generic homepage path now lives at
+   * GNewsProvider.topHeadlines() instead, mirroring exactly how
+   * GNewsProvider.search()/category() already default their own `lang`
+   * (this method doesn't default anything for THOSE either). Keeping
+   * the default at the single provider boundary, not duplicated here
+   * too, avoids two places disagreeing about what "no language
+   * specified" should mean.
+   *
+   * Milestone #48 (homepage news-content language containment
+   * correction) — when `options?.lang` is set, the database-cache
+   * fallback below (`articlePersistence.findRecent()`) is now SKIPPED
+   * entirely. Root cause, verified directly from
+   * article-persistence.service.ts: `persistMany()`'s Prisma
+   * create/update payload does not write a source-language field at
+   * all, and `findRecent()`'s query has no language filter — the
+   * stored article pool is accumulated across every past call in every
+   * language ever requested, with no way to partition it by language.
+   * Returning from that pool for a language-CONSTRAINED request would
+   * silently mix languages regardless of what was asked for — exactly
+   * the browser-reported defect (BOTH lang=en and lang=pl showing a
+   * heavy, varied multilingual mixture is the signature of a
+   * language-agnostic shared cache, not of GNews's own live filtering
+   * being merely imperfect).
+   *
+   * This is a deliberately conservative, deterministic policy: when a
+   * specific language was requested and live retrieval returns
+   * nothing, this method now returns the SAME "unavailable" response
+   * it already returns for the no-real-provider-configured case,
+   * rather than silently backfilling with untrusted-language cached
+   * content. A caller that does NOT request a specific language (lang
+   * omitted — no current caller does this, but the method itself
+   * doesn't forbid it) keeps the original DB-fallback behavior
+   * unchanged, since there is no language constraint to violate.
    */
   async topHeadlines(
     limit?: number,
     options?: { lang?: string; q?: string },
   ): Promise<NewsResponse> {
-    const providerCall =
-      await this.callAllProviders(
-        (provider) =>
-          provider.topHeadlines({
-            limit,
-            lang: options?.lang,
-            q: options?.q,
-          }),
-      );
+    const providerCall = await this.callAllProviders((provider) =>
+      provider.topHeadlines({
+        limit,
+        lang: options?.lang,
+        q: options?.q,
+      }),
+    );
 
     const response = this.buildResponse(
       providerCall.results,
@@ -209,9 +231,7 @@ export class NewsService {
 
     if (response.articles.length > 0) {
       if (response.dataMode === 'live') {
-        await this.articlePersistence.persistMany(
-          response.articles,
-        );
+        await this.articlePersistence.persistMany(response.articles);
       }
 
       return response;
@@ -221,12 +241,17 @@ export class NewsService {
       return response;
     }
 
-    const cachedArticles =
-      await this.articlePersistence.findRecent({
-        limit,
-        maxAgeMinutes:
-          DATABASE_FALLBACK_MAX_AGE_MINUTES,
-      });
+    // Milestone #48: a language-constrained request never falls back
+    // to the language-agnostic stored-article pool — see this method's
+    // own doc comment above for the verified root cause.
+    if (options?.lang) {
+      return response;
+    }
+
+    const cachedArticles = await this.articlePersistence.findRecent({
+      limit,
+      maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+    });
 
     if (cachedArticles.length === 0) {
       return response;
@@ -236,23 +261,16 @@ export class NewsService {
       cachedArticles,
       limit,
       {},
-      this.resolveFallbackReason(
-        providerCall.failedProviderIds,
-      ),
+      this.resolveFallbackReason(providerCall.failedProviderIds),
     );
   }
 
-  async byCategory(
-    category: NewsCategory,
-    limit?: number,
-  ): Promise<NewsResponse> {
-    const providerCall =
-      await this.callAllProviders(
-        (provider) =>
-          provider.category(category, {
-            limit,
-          }),
-      );
+  async byCategory(category: NewsCategory, limit?: number): Promise<NewsResponse> {
+    const providerCall = await this.callAllProviders((provider) =>
+      provider.category(category, {
+        limit,
+      }),
+    );
 
     const response = this.buildResponse(
       providerCall.results,
@@ -268,9 +286,7 @@ export class NewsService {
 
     if (response.articles.length > 0) {
       if (response.dataMode === 'live') {
-        await this.articlePersistence.persistMany(
-          response.articles,
-        );
+        await this.articlePersistence.persistMany(response.articles);
       }
 
       return response;
@@ -280,13 +296,11 @@ export class NewsService {
       return response;
     }
 
-    const cachedArticles =
-      await this.articlePersistence.findRecent({
-        category,
-        limit,
-        maxAgeMinutes:
-          DATABASE_FALLBACK_MAX_AGE_MINUTES,
-      });
+    const cachedArticles = await this.articlePersistence.findRecent({
+      category,
+      limit,
+      maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+    });
 
     if (cachedArticles.length === 0) {
       return response;
@@ -298,85 +312,60 @@ export class NewsService {
       {
         category,
       },
-      this.resolveFallbackReason(
-        providerCall.failedProviderIds,
-      ),
+      this.resolveFallbackReason(providerCall.failedProviderIds),
     );
   }
 
-  async providersHealth(): Promise<
-    ProviderHealthStatus[]
-  > {
+  async providersHealth(): Promise<ProviderHealthStatus[]> {
     return Promise.all(
-      this.allProviders.map(
-        async (provider) => {
-          try {
-            return await provider.health();
-          } catch (error) {
-            this.logger.warn(
-              `Health check failed for provider "${provider.id}"`,
-              error instanceof Error
-                ? error
-                : undefined,
-            );
+      this.allProviders.map(async (provider) => {
+        try {
+          return await provider.health();
+        } catch (error) {
+          this.logger.warn(
+            `Health check failed for provider "${provider.id}"`,
+            error instanceof Error ? error : undefined,
+          );
 
-            return {
-              providerId: provider.id,
-              displayName:
-                provider.displayName,
-              status: 'down' as const,
-              message:
-                error instanceof Error
-                  ? error.message
-                  : 'Unknown error',
-              checkedAt:
-                new Date().toISOString(),
-            };
-          }
-        },
-      ),
+          return {
+            providerId: provider.id,
+            displayName: provider.displayName,
+            status: 'down' as const,
+            message: error instanceof Error ? error.message : 'Unknown error',
+            checkedAt: new Date().toISOString(),
+          };
+        }
+      }),
     );
   }
 
   private async callAllProviders(
-    operation: (
-      provider: NewsProvider,
-    ) => Promise<NewsArticle[]>,
+    operation: (provider: NewsProvider) => Promise<NewsArticle[]>,
   ): Promise<ProviderCallResult> {
-    const settled =
-      await Promise.allSettled(
-        this.providers.map(
-          async (provider) => ({
-            providerId: provider.id,
-            articles:
-              await operation(provider),
-          }),
-        ),
-      );
+    const settled = await Promise.allSettled(
+      this.providers.map(async (provider) => ({
+        providerId: provider.id,
+        articles: await operation(provider),
+      })),
+    );
 
-    const results: ProviderCallResult['results'] =
-      [];
+    const results: ProviderCallResult['results'] = [];
 
     const failedProviderIds: string[] = [];
 
     settled.forEach((result, index) => {
-      const provider =
-        this.providers[index];
+      const provider = this.providers[index];
 
       if (result.status === 'fulfilled') {
         results.push(result.value);
         return;
       }
 
-      failedProviderIds.push(
-        provider.id,
-      );
+      failedProviderIds.push(provider.id);
 
       this.logger.warn(
         `Provider "${provider.id}" failed to respond`,
-        result.reason instanceof Error
-          ? result.reason
-          : undefined,
+        result.reason instanceof Error ? result.reason : undefined,
       );
     });
 
@@ -393,12 +382,7 @@ export class NewsService {
     }>,
     failedProviderIds: string[],
     limit: number | undefined,
-    extra: Partial<
-      Pick<
-        NewsResponse,
-        'query' | 'category'
-      >
-    > = {},
+    extra: Partial<Pick<NewsResponse, 'query' | 'category'>> = {},
     {
       sortByRecency,
     }: {
@@ -423,28 +407,14 @@ export class NewsService {
     }
 
     if (sortByRecency) {
-      merged.sort(
-        (a, b) =>
-          new Date(
-            b.publishedAt,
-          ).getTime() -
-          new Date(
-            a.publishedAt,
-          ).getTime(),
-      );
+      merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
     }
 
-    const capped = limit
-      ? merged.slice(0, limit)
-      : merged;
+    const capped = limit ? merged.slice(0, limit) : merged;
 
-    const successfulProviderIds = results.map(
-      (result) => result.providerId,
-    );
+    const successfulProviderIds = results.map((result) => result.providerId);
 
-    const dataMode = this.resolveDataMode(
-      successfulProviderIds,
-    );
+    const dataMode = this.resolveDataMode(successfulProviderIds);
 
     return {
       articles: capped,
@@ -452,13 +422,8 @@ export class NewsService {
       providers: successfulProviderIds,
       dataMode,
       fallbackReason:
-        dataMode === 'unavailable'
-          ? this.resolveFallbackReason(
-              failedProviderIds,
-            )
-          : undefined,
-      generatedAt:
-        new Date().toISOString(),
+        dataMode === 'unavailable' ? this.resolveFallbackReason(failedProviderIds) : undefined,
+      generatedAt: new Date().toISOString(),
       ...extra,
     };
   }
@@ -511,17 +476,10 @@ export class NewsService {
   private buildCachedResponse(
     articles: NewsArticle[],
     limit: number | undefined,
-    extra: Partial<
-      Pick<
-        NewsResponse,
-        'query' | 'category'
-      >
-    > = {},
+    extra: Partial<Pick<NewsResponse, 'query' | 'category'>> = {},
     fallbackReason?: NewsFallbackReason,
   ): NewsResponse {
-    const capped = limit
-      ? articles.slice(0, limit)
-      : articles;
+    const capped = limit ? articles.slice(0, limit) : articles;
 
     return {
       articles: capped,
@@ -529,34 +487,21 @@ export class NewsService {
       providers: [],
       dataMode: 'cached',
       fallbackReason,
-      generatedAt:
-        new Date().toISOString(),
+      generatedAt: new Date().toISOString(),
       ...extra,
     };
   }
 
-  private resolveFallbackReason(
-    failedProviderIds: string[],
-  ): NewsFallbackReason {
-    const failedRealProvider =
-      this.providers.some(
-        (provider) =>
-          !provider.isMock &&
-          failedProviderIds.includes(
-            provider.id,
-          ),
-      );
+  private resolveFallbackReason(failedProviderIds: string[]): NewsFallbackReason {
+    const failedRealProvider = this.providers.some(
+      (provider) => !provider.isMock && failedProviderIds.includes(provider.id),
+    );
 
-    return failedRealProvider
-      ? 'provider-error'
-      : 'no-live-results';
+    return failedRealProvider ? 'provider-error' : 'no-live-results';
   }
 
   private hasRealProviderConfigured(): boolean {
-    return this.providers.some(
-      (provider) =>
-        !provider.isMock,
-    );
+    return this.providers.some((provider) => !provider.isMock);
   }
 
   /**
@@ -570,34 +515,16 @@ export class NewsService {
    * every real provider failing outright ("unavailable", 0 articles):
    * the former has a non-empty `providers` list, the latter doesn't.
    */
-  private resolveDataMode(
-    successfulProviderIds: string[],
-  ): NewsResponse['dataMode'] {
-    const successfulProviders =
-      this.providers.filter(
-        (provider) =>
-          successfulProviderIds.includes(
-            provider.id,
-          ),
-      );
+  private resolveDataMode(successfulProviderIds: string[]): NewsResponse['dataMode'] {
+    const successfulProviders = this.providers.filter((provider) =>
+      successfulProviderIds.includes(provider.id),
+    );
 
-    if (
-      successfulProviders.length > 0
-    ) {
-      return successfulProviders.some(
-        (provider) =>
-          !provider.isMock,
-      )
-        ? 'live'
-        : 'mock';
+    if (successfulProviders.length > 0) {
+      return successfulProviders.some((provider) => !provider.isMock) ? 'live' : 'mock';
     }
 
-    if (
-      this.providers.length > 0 &&
-      this.providers.every(
-        (provider) => provider.isMock,
-      )
-    ) {
+    if (this.providers.length > 0 && this.providers.every((provider) => provider.isMock)) {
       return 'mock';
     }
 

@@ -108,6 +108,31 @@ export class GNewsProvider implements NewsProvider {
    * unlike search() — GNews's own documented default for an omitted
    * `lang` on this endpoint is "no language filter", a meaningfully
    * different, valid state from forcing English).
+   *
+   * Milestone #48 (Phase C — runtime language containment) — GNews's
+   * own server-side `lang` filtering on this "trending" endpoint is
+   * NOT strictly reliable: real browser acceptance showed articles in
+   * 5+ unrelated languages returned for both `lang=en` and `lang=pl`
+   * requests, even though `lang` was correctly sent on every request
+   * (verified — this was never a request-construction bug). This
+   * method previously trusted GNews's filtering completely and mapped
+   * every returned article verbatim, regardless of that article's OWN
+   * reported language.
+   *
+   * Now, when a `lang` was requested, every returned article is
+   * validated against its OWN `sourceLanguage` (already extracted from
+   * GNews's per-article `lang` field, unchanged) before being
+   * returned — an article whose own language doesn't match the
+   * request, OR whose language GNews didn't report at all, is
+   * discarded rather than silently shown. This is a strict,
+   * conservative policy: fewer articles (or none) is preferred over
+   * uncontrolled multilingual content, per explicit instruction.
+   * search()/category() are NOT filtered this way in this correction —
+   * scoped narrowly to the homepage's actual call path; search()'s
+   * Polish-Q&A English-fallback semantics have their own intentional
+   * cross-language design that a blanket filter could break, and
+   * extending containment there needs its own separate consideration
+   * (noted as deferred, not silently done).
    */
   async topHeadlines(options?: NewsSearchOptions): Promise<NewsArticle[]> {
     const apiKey = this.requireApiKey();
@@ -117,7 +142,25 @@ export class GNewsProvider implements NewsProvider {
       max: String(this.clampLimit(options?.limit)),
     });
     const payload = await this.request(url);
-    return this.normalize(payload);
+    const articles = this.normalize(payload);
+    return options?.lang ? this.filterByRequestedLanguage(articles, options.lang) : articles;
+  }
+
+  /**
+   * Milestone #48 (Phase C) — strict containment: keeps only articles
+   * whose own `sourceLanguage` (GNews's per-article `lang`, already
+   * trimmed/lowercased by mapSourceLanguage()) exactly matches the
+   * requested language. An article with no reported language at all
+   * (`sourceLanguage === undefined`) is discarded too — there is no
+   * way to confirm it matches the request, and the conservative policy
+   * is to exclude anything unconfirmed rather than guess. Comparison
+   * is done on a matching trim/lowercase of `requestedLang` so a
+   * caller-supplied value with different casing still matches
+   * correctly.
+   */
+  private filterByRequestedLanguage(articles: NewsArticle[], requestedLang: string): NewsArticle[] {
+    const normalizedRequested = requestedLang.trim().toLowerCase();
+    return articles.filter((article) => article.sourceLanguage === normalizedRequested);
   }
 
   /**
@@ -240,7 +283,11 @@ export class GNewsProvider implements NewsProvider {
       throw new GNewsProviderError('GNews returned a malformed (non-JSON) response.', error);
     }
 
-    if (!payload || typeof payload !== 'object' || !Array.isArray((payload as GNewsApiResponse).articles)) {
+    if (
+      !payload ||
+      typeof payload !== 'object' ||
+      !Array.isArray((payload as GNewsApiResponse).articles)
+    ) {
       throw new GNewsProviderError('GNews response did not match the expected shape.');
     }
 
@@ -306,7 +353,12 @@ export class GNewsProvider implements NewsProvider {
   }
 
   private slugify(value: string): string {
-    return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'gnews';
+    return (
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') || 'gnews'
+    );
   }
 
   private clampLimit(requested: number | undefined): number {

@@ -3,13 +3,15 @@ import { OpenAiAnalysisProvider, OpenAiAnalysisError } from './openai-analysis.p
 import type { AnalysisConfigService } from '../config/analysis-config.service';
 import type { AnalysisProviderInput } from '../interfaces/analysis-provider.interface';
 
-function makeConfigService(overrides: {
-  openAiApiKey?: string | undefined;
-  timeoutMs?: number;
-  retryAttempts?: number;
-  retryBaseDelayMs?: number;
-  maxCompletionTokens?: number;
-} = {}): AnalysisConfigService {
+function makeConfigService(
+  overrides: {
+    openAiApiKey?: string | undefined;
+    timeoutMs?: number;
+    retryAttempts?: number;
+    retryBaseDelayMs?: number;
+    maxCompletionTokens?: number;
+  } = {},
+): AnalysisConfigService {
   return {
     get: () => ({
       maxArticles: 8,
@@ -195,7 +197,9 @@ describe('OpenAiAnalysisProvider', () => {
           });
         }),
     );
-    const provider = new OpenAiAnalysisProvider(makeConfigService({ timeoutMs: 20, retryAttempts: 2 }));
+    const provider = new OpenAiAnalysisProvider(
+      makeConfigService({ timeoutMs: 20, retryAttempts: 2 }),
+    );
 
     await expect(provider.analyzeNews(makeInput())).rejects.toMatchObject({
       failureReason: 'provider-timeout',
@@ -228,7 +232,9 @@ describe('OpenAiAnalysisProvider', () => {
   });
 
   it('classifies non-JSON message content as malformed-output', async () => {
-    fetchMock.mockResolvedValue(jsonResponse(200, validCompletionBody({ content: 'not valid json' })));
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, validCompletionBody({ content: 'not valid json' })),
+    );
     const provider = new OpenAiAnalysisProvider(makeConfigService());
 
     await expect(provider.analyzeNews(makeInput())).rejects.toMatchObject({
@@ -237,7 +243,9 @@ describe('OpenAiAnalysisProvider', () => {
   });
 
   it('classifies a truncated (finish_reason: "length") response as malformed-output and does not retry', async () => {
-    fetchMock.mockResolvedValue(jsonResponse(200, validCompletionBody({ finish_reason: 'length' })));
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, validCompletionBody({ finish_reason: 'length' })),
+    );
     const provider = new OpenAiAnalysisProvider(makeConfigService({ retryAttempts: 2 }));
 
     await expect(provider.analyzeNews(makeInput())).rejects.toMatchObject({
@@ -261,7 +269,9 @@ describe('OpenAiAnalysisProvider', () => {
 
   it('never includes the API key in a thrown error message', async () => {
     fetchMock.mockResolvedValue(jsonResponse(401, {}));
-    const provider = new OpenAiAnalysisProvider(makeConfigService({ openAiApiKey: 'sk-super-secret-marker' }));
+    const provider = new OpenAiAnalysisProvider(
+      makeConfigService({ openAiApiKey: 'sk-super-secret-marker' }),
+    );
 
     try {
       await provider.analyzeNews(makeInput());
@@ -329,11 +339,16 @@ describe('OpenAiAnalysisProvider', () => {
 
     it('B5. the API key appears only in the Authorization header, never in the request body or the returned result', async () => {
       fetchMock.mockResolvedValue(jsonResponse(200, validCompletionBody()));
-      const provider = new OpenAiAnalysisProvider(makeConfigService({ openAiApiKey: 'sk-marker-b5' }));
+      const provider = new OpenAiAnalysisProvider(
+        makeConfigService({ openAiApiKey: 'sk-marker-b5' }),
+      );
 
       const result = await provider.analyzeNews(makeInput());
 
-      const [, init] = fetchMock.mock.calls[0] as [string, { headers: Record<string, string>; body: string }];
+      const [, init] = fetchMock.mock.calls[0] as [
+        string,
+        { headers: Record<string, string>; body: string },
+      ];
       expect(init.headers.Authorization).toBe('Bearer sk-marker-b5');
       expect(init.body).not.toContain('sk-marker-b5');
       expect(JSON.stringify(result)).not.toContain('sk-marker-b5');

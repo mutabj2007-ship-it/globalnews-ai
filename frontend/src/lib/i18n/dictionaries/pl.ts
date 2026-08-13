@@ -114,4 +114,128 @@ export const pl: Dictionary = {
     dayPlural: 'dni',
     ago: 'temu',
   },
+  newsroomSnapshot: {
+    label: 'Migawka z redakcji',
+    headline: 'Historia, którą dziś czyta każdy',
+  },
+  featuredStory: {
+    unavailable: 'Nagłówki na żywo są tymczasowo niedostępne. Sprawdź, czy backend działa.',
+    viewSources: 'Zobacz źródła',
+    sourceForms: ['źródło', 'źródła', 'źródeł'] as [string, string, string],
+  },
+  trendingSidebar: {
+    heading: 'Na czasie',
+    unavailable: 'Nagłówki na żywo są tymczasowo niedostępne.',
+  },
+  categoryCards: {
+    label: 'Dzisiejsze wydarzenia',
+    headline: 'Sześć sposobów, by zobaczyć, co się dzieje',
+    unavailable: 'Nagłówki na żywo są tymczasowo niedostępne. Sprawdź, czy backend działa.',
+    sourceForms: ['źródło', 'źródła', 'źródeł'] as [string, string, string],
+  },
+  latestUpdatesFeed: {
+    label: 'Najnowsze aktualizacje',
+    headline: 'Na bieżąco',
+    unavailable: 'Nagłówki na żywo są tymczasowo niedostępne. Sprawdź, czy backend działa.',
+    sourceForms: ['źródło', 'źródła', 'źródeł'] as [string, string, string],
+  },
+  howItWorks: {
+    label: 'Jak to działa',
+    headline: 'Od pytania do jasnej odpowiedzi, w trzech krokach',
+    steps: [
+      {
+        title: 'Zapytaj o cokolwiek',
+        description:
+          'Zadaj pytanie tak, jak zapytałbyś dobrze poinformowanego znajomego \u2014 bez słów kluczowych czy specjalnej składni.',
+      },
+      {
+        title: 'AI analizuje relacje',
+        description:
+          'GlobalNews AI przegląda doniesienia z wielu redakcji i punktów widzenia, a następnie zestawia to, w czym się zgadzają i różnią.',
+      },
+      {
+        title: 'Otrzymujesz jasną odpowiedź',
+        description:
+          'Zwięzłe podsumowanie oparte na źródłach \u2014 wraz z linkami do oryginalnych artykułów, byś zawsze mógł dowiedzieć się więcej.',
+      },
+    ],
+  },
+  trustSection: {
+    label: 'Oparte na zaufaniu',
+    headline: 'Dlaczego warto zaufać GlobalNews AI?',
+    items: [
+      {
+        title: 'Pełna przejrzystość',
+        description:
+          'Każde podsumowanie odsyła do oryginalnych źródeł, dzięki czemu możesz zweryfikować wszystko, co mówi GlobalNews AI.',
+      },
+      {
+        title: 'Wiele punktów widzenia',
+        description:
+          'Pokazujemy, jak różne redakcje i regiony relacjonują to samo wydarzenie \u2014 nie tylko jedną narrację.',
+      },
+      {
+        title: 'Podsumowania AI, wyraźnie oznaczone',
+        description:
+          'Kontekst generowany przez AI jest zawsze wyraźnie oznaczony i oddzielony od bezpośrednich relacji.',
+      },
+      {
+        title: 'Aktualizacje na żywo',
+        description: 'Historie rozwijają się wraz z napływem nowych doniesień, a Twoje podsumowanie aktualizuje się razem z nimi.',
+      },
+      {
+        title: 'Kontekst edukacyjny',
+        description: 'Nieznany temat? GlobalNews AI uzupełnia potrzebne tło, a nie tylko nagłówek.',
+      },
+    ],
+  },
+  footer: {
+    tagline:
+      'Jasne, oparte na źródłach zrozumienie wiadomości z wielu perspektyw \u2014 napędzane przez AI, oparte na rzetelnym dziennikarstwie.',
+    groupTitles: {
+      Company: 'Firma',
+      Legal: 'Informacje prawne',
+      Developers: 'Deweloperzy',
+    } as Record<string, string>,
+    linkLabels: {
+      '/about': 'O nas',
+      '/careers': 'Kariera',
+      '/contact': 'Kontakt',
+      '/privacy': 'Polityka prywatności',
+      '/terms': 'Regulamin',
+      '/api': 'API',
+    } as Record<string, string>,
+    comingSoon: 'Wkrótce',
+    copyrightSuffix: 'GlobalNews AI. Wszelkie prawa zastrzeżone.',
+    closingTagline: 'Tworzone dla jasności, nie dla kliknięć.',
+  },
+  navBar: {
+    homeAriaLabel: 'Strona główna GlobalNews AI',
+    primaryNavigationAriaLabel: 'Nawigacja główna',
+    mobileNavigationAriaLabel: 'Nawigacja mobilna',
+    searchAriaLabel: 'Szukaj',
+    openMenuAriaLabel: 'Otwórz menu',
+    closeMenuAriaLabel: 'Zamknij menu',
+    signIn: 'Zaloguj się',
+    linkLabels: {
+      '/': 'Strona główna',
+      '/map': 'Mapa świata',
+      '/world': 'Świat',
+      '/politics': 'Polityka',
+      '/business': 'Biznes',
+      '/technology': 'Technologia',
+      '/science': 'Nauka',
+      '/health': 'Zdrowie',
+      '/about': 'O nas',
+    } as Record<string, string>,
+  },
+  liveStatusStrip: {
+    reconnecting: 'PONOWNE ŁĄCZENIE',
+    live: 'NA ŻYWO \u00b7 Obsługiwane przez GNews',
+    cached: 'Z PAMIĘCI \u00b7 Wcześniej pobrane relacje',
+    mock: 'TRYB DEMO \u00b7 Wyłącznie treść przykładowa',
+    unknown: 'STATUS DANYCH NIEZNANY',
+    monitoring: 'Monitorowanie zaufanych źródeł na całym świecie',
+    lastUpdatedPrefix: 'Ostatnia aktualizacja:',
+  },
 };

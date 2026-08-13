@@ -1,19 +1,23 @@
 import { Link2 } from 'lucide-react';
-import type { NewsArticle } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { pluralWithForms } from '@/lib/i18n/pluralize';
 
 interface FeaturedStoryProps {
   story: NewsArticle | null;
+  /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
-export function FeaturedStory({ story }: FeaturedStoryProps): JSX.Element {
+export function FeaturedStory({ story, language = 'en' }: FeaturedStoryProps): JSX.Element {
+  const t = getDictionary(language).featuredStory;
+
   if (!story) {
     return (
       <div className="flex h-full flex-col items-start justify-center rounded-2xl border border-border bg-surface p-8">
-        <p className="text-sm text-ink-secondary">
-          Live headlines are temporarily unavailable. Check that the backend is running.
-        </p>
+        <p className="text-sm text-ink-secondary">{t.unavailable}</p>
       </div>
     );
   }
@@ -57,11 +61,11 @@ export function FeaturedStory({ story }: FeaturedStoryProps): JSX.Element {
           <span className="hidden sm:inline" aria-hidden="true">
             &middot;
           </span>
-          <span>{formatRelativeTime(story.publishedAt)}</span>
+          <span>{formatRelativeTime(story.publishedAt, language)}</span>
           <span className="hidden sm:inline" aria-hidden="true">
             &middot;
           </span>
-          <span>{story.sourcesCount} sources</span>
+          <span>{pluralWithForms(story.sourcesCount, language, t.sourceForms)}</span>
         </div>
 
         <a
@@ -71,7 +75,7 @@ export function FeaturedStory({ story }: FeaturedStoryProps): JSX.Element {
           className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border-strong px-4 py-2 text-sm font-medium text-ink-primary transition-colors hover:border-signal hover:text-signal-bright"
         >
           <Link2 size={16} strokeWidth={2} />
-          View sources
+          {t.viewSources}
         </a>
       </div>
     </article>

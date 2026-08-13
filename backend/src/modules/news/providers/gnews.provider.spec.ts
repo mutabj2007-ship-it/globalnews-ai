@@ -234,7 +234,9 @@ describe('GNewsProvider', () => {
     it('maps a present upstream lang field: trimmed and lowercased', async () => {
       global.fetch = jest
         .fn()
-        .mockResolvedValue(jsonResponse({ articles: [{ title: 'T', url: 'https://example.com/x', lang: 'PL ' }] }));
+        .mockResolvedValue(
+          jsonResponse({ articles: [{ title: 'T', url: 'https://example.com/x', lang: 'PL ' }] }),
+        );
       const provider = new GNewsProvider(makeConfig('test-key') as never);
 
       const articles = await provider.search('x');
@@ -245,7 +247,9 @@ describe('GNewsProvider', () => {
     it('sourceLanguage is undefined when the upstream field is absent — never fabricated', async () => {
       global.fetch = jest
         .fn()
-        .mockResolvedValue(jsonResponse({ articles: [{ title: 'T', url: 'https://example.com/y' }] }));
+        .mockResolvedValue(
+          jsonResponse({ articles: [{ title: 'T', url: 'https://example.com/y' }] }),
+        );
       const provider = new GNewsProvider(makeConfig('test-key') as never);
 
       const articles = await provider.search('x');
@@ -256,7 +260,9 @@ describe('GNewsProvider', () => {
     it('preserves an arbitrary provider language value (e.g. "de") verbatim — never coerced into a closed LanguageCode', async () => {
       global.fetch = jest
         .fn()
-        .mockResolvedValue(jsonResponse({ articles: [{ title: 'T', url: 'https://example.com/z', lang: 'de' }] }));
+        .mockResolvedValue(
+          jsonResponse({ articles: [{ title: 'T', url: 'https://example.com/z', lang: 'de' }] }),
+        );
       const provider = new GNewsProvider(makeConfig('test-key') as never);
 
       const articles = await provider.search('x');
@@ -267,12 +273,120 @@ describe('GNewsProvider', () => {
     it('an empty/whitespace-only upstream lang value maps to undefined, not an empty string', async () => {
       global.fetch = jest
         .fn()
-        .mockResolvedValue(jsonResponse({ articles: [{ title: 'T', url: 'https://example.com/w', lang: '   ' }] }));
+        .mockResolvedValue(
+          jsonResponse({ articles: [{ title: 'T', url: 'https://example.com/w', lang: '   ' }] }),
+        );
       const provider = new GNewsProvider(makeConfig('test-key') as never);
 
       const articles = await provider.search('x');
 
       expect(articles[0].sourceLanguage).toBeUndefined();
+    });
+  });
+
+  describe('Milestone #48 (Phase C) — topHeadlines runtime language containment', () => {
+    it('reproduces the real browser defect: a mixed-language GNews response for lang=en is filtered down to only the genuinely English article', async () => {
+      global.fetch = jest.fn().mockResolvedValue(
+        jsonResponse({
+          articles: [
+            { title: 'English article', url: 'https://x.com/1', lang: 'en' },
+            { title: 'French article', url: 'https://x.com/2', lang: 'fr' },
+            { title: 'Romanian article', url: 'https://x.com/3', lang: 'ro' },
+            { title: 'Spanish article', url: 'https://x.com/4', lang: 'es' },
+            { title: 'Bengali article', url: 'https://x.com/5', lang: 'bn' },
+            { title: 'Polish article', url: 'https://x.com/6', lang: 'pl' },
+            { title: 'No-lang article', url: 'https://x.com/7' },
+          ],
+        }),
+      );
+      const provider = new GNewsProvider(makeConfig('test-key') as never);
+
+      const articles = await provider.topHeadlines({ lang: 'en' });
+
+      expect(articles).toHaveLength(1);
+      expect(articles[0].title).toBe('English article');
+    });
+
+    it('reproduces the same defect for lang=pl: only the genuinely Polish article survives', async () => {
+      global.fetch = jest.fn().mockResolvedValue(
+        jsonResponse({
+          articles: [
+            { title: 'English article', url: 'https://x.com/1', lang: 'en' },
+            { title: 'Portuguese article', url: 'https://x.com/2', lang: 'pt' },
+            { title: 'German article', url: 'https://x.com/3', lang: 'de' },
+            { title: 'Romanian article', url: 'https://x.com/4', lang: 'ro' },
+            { title: 'Russian article', url: 'https://x.com/5', lang: 'ru' },
+            { title: 'Polish article', url: 'https://x.com/6', lang: 'pl' },
+          ],
+        }),
+      );
+      const provider = new GNewsProvider(makeConfig('test-key') as never);
+
+      const articles = await provider.topHeadlines({ lang: 'pl' });
+
+      expect(articles).toHaveLength(1);
+      expect(articles[0].title).toBe('Polish article');
+    });
+
+    it('no lang requested at all: no filtering is applied, matching this endpoint\'s existing "no language filter" default', async () => {
+      global.fetch = jest.fn().mockResolvedValue(
+        jsonResponse({
+          articles: [
+            { title: 'A', url: 'https://x.com/1', lang: 'en' },
+            { title: 'B', url: 'https://x.com/2', lang: 'fr' },
+          ],
+        }),
+      );
+      const provider = new GNewsProvider(makeConfig('test-key') as never);
+
+      const articles = await provider.topHeadlines();
+
+      expect(articles).toHaveLength(2);
+    });
+
+    it('when every returned article genuinely matches the requested language, nothing is discarded', async () => {
+      global.fetch = jest.fn().mockResolvedValue(
+        jsonResponse({
+          articles: [
+            { title: 'A', url: 'https://x.com/1', lang: 'en' },
+            { title: 'B', url: 'https://x.com/2', lang: 'en' },
+          ],
+        }),
+      );
+      const provider = new GNewsProvider(makeConfig('test-key') as never);
+
+      const articles = await provider.topHeadlines({ lang: 'en' });
+
+      expect(articles).toHaveLength(2);
+    });
+
+    it('a zero-match response after filtering returns a clean empty array, never a fabricated fallback', async () => {
+      global.fetch = jest.fn().mockResolvedValue(
+        jsonResponse({
+          articles: [
+            { title: 'A', url: 'https://x.com/1', lang: 'fr' },
+            { title: 'B', url: 'https://x.com/2', lang: 'de' },
+          ],
+        }),
+      );
+      const provider = new GNewsProvider(makeConfig('test-key') as never);
+
+      const articles = await provider.topHeadlines({ lang: 'en' });
+
+      expect(articles).toEqual([]);
+    });
+
+    it('an article with no reported language at all is discarded under a language-constrained request, never assumed to match', async () => {
+      global.fetch = jest.fn().mockResolvedValue(
+        jsonResponse({
+          articles: [{ title: 'Unlabeled article', url: 'https://x.com/1' }],
+        }),
+      );
+      const provider = new GNewsProvider(makeConfig('test-key') as never);
+
+      const articles = await provider.topHeadlines({ lang: 'en' });
+
+      expect(articles).toEqual([]);
     });
   });
 });

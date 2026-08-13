@@ -1,14 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type {
-  NewsArticle,
-  NewsResponse,
-} from '@globalnews-ai/shared';
+import type { NewsArticle, NewsResponse } from '@globalnews-ai/shared';
 import { CountryNewsService } from './country-news.service';
 
-function makeArticle(
-  overrides: Partial<NewsArticle> = {},
-): NewsArticle {
+function makeArticle(overrides: Partial<NewsArticle> = {}): NewsArticle {
   return {
     id: 'id',
     title: 'title',
@@ -30,20 +25,13 @@ function makeSearchResponse(
   return {
     articles,
     totalResults: articles.length,
-    providers:
-      dataMode === 'live'
-        ? ['gnews']
-        : dataMode === 'mock'
-          ? ['mock-wire']
-          : [],
+    providers: dataMode === 'live' ? ['gnews'] : dataMode === 'mock' ? ['mock-wire'] : [],
     dataMode,
     generatedAt: new Date().toISOString(),
   };
 }
 
-function makeConfig(
-  overrides: Record<string, string | undefined> = {},
-): ConfigService {
+function makeConfig(overrides: Record<string, string | undefined> = {}): ConfigService {
   return {
     get: (key: string) => overrides[key],
   } as ConfigService;
@@ -61,37 +49,23 @@ describe('CountryNewsService', () => {
     articlePersistence.findRecentByCountry.mockReset();
     articlePersistence.findRecent.mockReset();
 
-    articlePersistence.persistCountryRelations.mockResolvedValue(
-      undefined,
-    );
+    articlePersistence.persistCountryRelations.mockResolvedValue(undefined);
 
-    articlePersistence.findRecentByCountry.mockResolvedValue(
-      [],
-    );
+    articlePersistence.findRecentByCountry.mockResolvedValue([]);
 
-    articlePersistence.findRecent.mockResolvedValue(
-      [],
-    );
+    articlePersistence.findRecent.mockResolvedValue([]);
   });
 
   function buildService(
     newsService: { search: jest.Mock },
     config: ConfigService = makeConfig(),
   ): CountryNewsService {
-    return new CountryNewsService(
-      newsService as never,
-      config,
-      articlePersistence as never,
-    );
+    return new CountryNewsService(newsService as never, config, articlePersistence as never);
   }
 
   it('resolves a known ISO3 country code and searches by its name', async () => {
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse([
-          makeArticle({ id: 'a1' }),
-        ]),
-      ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])),
     };
 
     const service = buildService(newsService);
@@ -101,17 +75,12 @@ describe('CountryNewsService', () => {
     expect(response.countryCode).toBe('ESP');
     expect(response.countryName).toBe('Spain');
 
-    expect(newsService.search).toHaveBeenCalledWith(
-      'Spain',
-      expect.any(Number),
-    );
+    expect(newsService.search).toHaveBeenCalledWith('Spain', expect.any(Number));
   });
 
   it('is case-insensitive for the country code', async () => {
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(makeSearchResponse([])),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([])),
     };
 
     const service = buildService(newsService);
@@ -128,26 +97,18 @@ describe('CountryNewsService', () => {
 
     const service = buildService(newsService);
 
-    await expect(
-      service.getCountryNews('ZZZ'),
-    ).rejects.toThrow(BadRequestException);
+    await expect(service.getCountryNews('ZZZ')).rejects.toThrow(BadRequestException);
 
     expect(newsService.search).not.toHaveBeenCalled();
 
-    expect(
-      articlePersistence.persistCountryRelations,
-    ).not.toHaveBeenCalled();
+    expect(articlePersistence.persistCountryRelations).not.toHaveBeenCalled();
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).not.toHaveBeenCalled();
+    expect(articlePersistence.findRecentByCountry).not.toHaveBeenCalled();
   });
 
   it('returns an empty article list without error when there are no results', async () => {
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(makeSearchResponse([])),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([])),
     };
 
     const service = buildService(newsService);
@@ -157,23 +118,14 @@ describe('CountryNewsService', () => {
     expect(response.articles).toEqual([]);
     expect(response.totalResults).toBe(0);
     expect(response.fallbackReason).toBeUndefined();
-    expect(
-      response.newestArticlePublishedAt,
-    ).toBeUndefined();
+    expect(response.newestArticlePublishedAt).toBeUndefined();
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).toHaveBeenCalledTimes(1);
+    expect(articlePersistence.findRecentByCountry).toHaveBeenCalledTimes(1);
   });
 
   it('propagates live dataMode unchanged', async () => {
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse(
-          [makeArticle({ id: 'a1' })],
-          'live',
-        ),
-      ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })], 'live')),
     };
 
     const service = buildService(newsService);
@@ -182,19 +134,14 @@ describe('CountryNewsService', () => {
 
     expect(response.dataMode).toBe('live');
     expect(response.fallbackReason).toBeUndefined();
-    expect(
-      response.newestArticlePublishedAt,
-    ).toBeUndefined();
+    expect(response.newestArticlePublishedAt).toBeUndefined();
   });
 
   it('propagates cached dataMode unchanged', async () => {
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse(
-          [makeArticle({ id: 'a1' })],
-          'cached',
-        ),
-      ),
+      search: jest
+        .fn()
+        .mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })], 'cached')),
     };
 
     const service = buildService(newsService);
@@ -203,9 +150,7 @@ describe('CountryNewsService', () => {
 
     expect(response.dataMode).toBe('cached');
     expect(response.fallbackReason).toBeUndefined();
-    expect(
-      response.newestArticlePublishedAt,
-    ).toBeUndefined();
+    expect(response.newestArticlePublishedAt).toBeUndefined();
   });
   it('propagates unavailable dataMode with delayed feedTier and provider-error reason when every live provider fails and no stored country reporting exists', async () => {
     const newsService = {
@@ -222,25 +167,15 @@ describe('CountryNewsService', () => {
     expect(response.articles).toEqual([]);
     expect(response.dataMode).toBe('unavailable');
     expect(response.feedTier).toBe('delayed');
-    expect(response.providerDisplayName).toBe(
-      'Unavailable',
-    );
-    expect(response.fallbackReason).toBe(
-      'provider-error',
-    );
+    expect(response.providerDisplayName).toBe('Unavailable');
+    expect(response.fallbackReason).toBe('provider-error');
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).toHaveBeenCalledTimes(1);
+    expect(articlePersistence.findRecentByCountry).toHaveBeenCalledTimes(1);
   });
 
   it('does NOT report unavailable when the underlying provider succeeded with zero articles', async () => {
     const newsService = {
-      search: jest
-        .fn()
-        .mockResolvedValue(
-          makeSearchResponse([], 'live'),
-        ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([], 'live')),
     };
 
     const service = buildService(newsService);
@@ -261,10 +196,7 @@ describe('CountryNewsService', () => {
 
     const newsService = {
       search: jest.fn().mockResolvedValue({
-        ...makeSearchResponse(
-          [cachedArticle],
-          'cached',
-        ),
+        ...makeSearchResponse([cachedArticle], 'cached'),
         fallbackReason: 'provider-error',
       }),
     };
@@ -276,26 +208,16 @@ describe('CountryNewsService', () => {
     expect(newsService.search).toHaveBeenCalledTimes(1);
 
     expect(response.dataMode).toBe('cached');
-    expect(response.fallbackReason).toBe(
-      'provider-error',
-    );
+    expect(response.fallbackReason).toBe('provider-error');
 
-    expect(
-      response.newestArticlePublishedAt,
-    ).toBe('2026-08-08T09:15:00.000Z');
+    expect(response.newestArticlePublishedAt).toBe('2026-08-08T09:15:00.000Z');
 
     expect(response.articles).toHaveLength(1);
-    expect(response.articles[0].id).toBe(
-      'cached-provider-error',
-    );
+    expect(response.articles[0].id).toBe('cached-provider-error');
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).not.toHaveBeenCalled();
+    expect(articlePersistence.findRecentByCountry).not.toHaveBeenCalled();
 
-    expect(
-      articlePersistence.persistCountryRelations,
-    ).not.toHaveBeenCalled();
+    expect(articlePersistence.persistCountryRelations).not.toHaveBeenCalled();
   });
   it('filters results by category without re-querying the provider twice', async () => {
     const articles = [
@@ -310,32 +232,21 @@ describe('CountryNewsService', () => {
     ];
 
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse(articles),
-      ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
     };
 
     const service = buildService(newsService);
 
-    const response = await service.getCountryNews(
-      'ESP',
-      'business',
-    );
+    const response = await service.getCountryNews('ESP', 'business');
 
     expect(newsService.search).toHaveBeenCalledTimes(1);
     expect(response.articles).toHaveLength(1);
-    expect(response.articles[0].category).toBe(
-      'business',
-    );
+    expect(response.articles[0].category).toBe('business');
   });
 
   it('caches a response and does not call the news service again for the same request', async () => {
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse([
-          makeArticle({ id: 'a1' }),
-        ]),
-      ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])),
     };
 
     const service = buildService(
@@ -369,32 +280,18 @@ describe('CountryNewsService', () => {
 
     const service = buildService(newsService);
 
-    const business = await service.getCountryNews(
-      'ESP',
-      'business',
-    );
+    const business = await service.getCountryNews('ESP', 'business');
 
-    const technology = await service.getCountryNews(
-      'ESP',
-      'technology',
-    );
+    const technology = await service.getCountryNews('ESP', 'technology');
 
-    expect(business.articles[0].category).toBe(
-      'business',
-    );
+    expect(business.articles[0].category).toBe('business');
 
-    expect(technology.articles[0].category).toBe(
-      'technology',
-    );
+    expect(technology.articles[0].category).toBe('technology');
   });
 
   it('does not cache when COUNTRY_NEWS_CACHE_TTL_SECONDS is 0', async () => {
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse([
-          makeArticle({ id: 'a1' }),
-        ]),
-      ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])),
     };
 
     const service = buildService(
@@ -411,29 +308,19 @@ describe('CountryNewsService', () => {
   });
 
   it('rethrows the provider error when database fallback has no stored articles', async () => {
-    const providerError = new Error(
-      'GNews rate limit exceeded.',
-    );
+    const providerError = new Error('GNews rate limit exceeded.');
 
     const newsService = {
-      search: jest.fn().mockRejectedValue(
-        providerError,
-      ),
+      search: jest.fn().mockRejectedValue(providerError),
     };
 
     const service = buildService(newsService);
 
-    await expect(
-      service.getCountryNews('ESP'),
-    ).rejects.toBe(providerError);
+    await expect(service.getCountryNews('ESP')).rejects.toBe(providerError);
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).toHaveBeenCalledTimes(1);
+    expect(articlePersistence.findRecentByCountry).toHaveBeenCalledTimes(1);
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).toHaveBeenCalledWith({
+    expect(articlePersistence.findRecentByCountry).toHaveBeenCalledWith({
       countryCode: 'ESP',
       category: undefined,
       limit: 8,
@@ -441,17 +328,14 @@ describe('CountryNewsService', () => {
       relevantOnly: true,
     });
 
-    expect(
-      articlePersistence.persistCountryRelations,
-    ).not.toHaveBeenCalled();
+    expect(articlePersistence.persistCountryRelations).not.toHaveBeenCalled();
   });
 
   it('returns stored country articles when the provider throws an error', async () => {
     const olderStoredArticle = makeArticle({
       id: 'stored-provider-failure-1',
       title: 'Older stored Spain reporting',
-      summary:
-        'Previously fetched reporting remains available during a provider outage.',
+      summary: 'Previously fetched reporting remains available during a provider outage.',
       sourceId: 'stored-provider',
       sourceName: 'Stored Provider',
       category: 'world',
@@ -470,34 +354,23 @@ describe('CountryNewsService', () => {
     });
 
     const newsService = {
-      search: jest.fn().mockRejectedValue(
-        new Error('GNews service unavailable.'),
-      ),
+      search: jest.fn().mockRejectedValue(new Error('GNews service unavailable.')),
     };
 
-    articlePersistence.findRecentByCountry
-      .mockResolvedValueOnce([
-        olderStoredArticle,
-        newerStoredArticle,
-      ]);
+    articlePersistence.findRecentByCountry.mockResolvedValueOnce([
+      olderStoredArticle,
+      newerStoredArticle,
+    ]);
 
     const service = buildService(newsService);
 
-    const response = await service.getCountryNews(
-      'ESP',
-      undefined,
-      5,
-    );
+    const response = await service.getCountryNews('ESP', undefined, 5);
 
     expect(newsService.search).toHaveBeenCalledTimes(1);
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).toHaveBeenCalledTimes(1);
+    expect(articlePersistence.findRecentByCountry).toHaveBeenCalledTimes(1);
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).toHaveBeenCalledWith({
+    expect(articlePersistence.findRecentByCountry).toHaveBeenCalledWith({
       countryCode: 'ESP',
       category: undefined,
       limit: 5,
@@ -508,60 +381,39 @@ describe('CountryNewsService', () => {
     expect(response.countryCode).toBe('ESP');
     expect(response.countryName).toBe('Spain');
 
-    expect(response.articles).toEqual([
-      olderStoredArticle,
-      newerStoredArticle,
-    ]);
+    expect(response.articles).toEqual([olderStoredArticle, newerStoredArticle]);
 
     expect(response.totalResults).toBe(2);
     expect(response.providers).toEqual([]);
     expect(response.dataMode).toBe('cached');
     expect(response.feedTier).toBe('delayed');
-    expect(response.providerDisplayName).toBe(
-      'Stored reporting',
-    );
+    expect(response.providerDisplayName).toBe('Stored reporting');
 
-    expect(response.fallbackReason).toBe(
-      'provider-error',
-    );
+    expect(response.fallbackReason).toBe('provider-error');
 
-    expect(
-      response.newestArticlePublishedAt,
-    ).toBe('2026-08-08T09:30:00.000Z');
+    expect(response.newestArticlePublishedAt).toBe('2026-08-08T09:30:00.000Z');
 
-    expect(
-      articlePersistence.persistCountryRelations,
-    ).not.toHaveBeenCalled();
+    expect(articlePersistence.persistCountryRelations).not.toHaveBeenCalled();
   });
 
   it('persists article-country relations for live results', async () => {
     const article = makeArticle({
       id: 'spain-live-1',
       title: 'Spain government announces new policy',
-      summary:
-        'Spain parliament and government officials announced a national policy.',
+      summary: 'Spain parliament and government officials announced a national policy.',
     });
 
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse(
-          [article],
-          'live',
-        ),
-      ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([article], 'live')),
     };
 
     const service = buildService(newsService);
 
     await service.getCountryNews('ESP');
 
-    expect(
-      articlePersistence.persistCountryRelations,
-    ).toHaveBeenCalledTimes(1);
+    expect(articlePersistence.persistCountryRelations).toHaveBeenCalledTimes(1);
 
-    expect(
-      articlePersistence.persistCountryRelations,
-    ).toHaveBeenCalledWith([
+    expect(articlePersistence.persistCountryRelations).toHaveBeenCalledWith([
       expect.objectContaining({
         articleId: 'spain-live-1',
         countryCode: 'ESP',
@@ -576,26 +428,18 @@ describe('CountryNewsService', () => {
     const article = makeArticle({
       id: 'spain-score-1',
       title: 'Spain government election update',
-      summary:
-        'Spain parliament and government officials discussed the election.',
+      summary: 'Spain parliament and government officials discussed the election.',
     });
 
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse(
-          [article],
-          'live',
-        ),
-      ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([article], 'live')),
     };
 
     const service = buildService(newsService);
 
     await service.getCountryNews('ESP');
 
-    const relations =
-      articlePersistence.persistCountryRelations.mock
-        .calls[0][0];
+    const relations = articlePersistence.persistCountryRelations.mock.calls[0][0];
 
     expect(relations).toHaveLength(1);
 
@@ -607,9 +451,7 @@ describe('CountryNewsService', () => {
       }),
     );
 
-    expect(
-      relations[0].relevanceScore,
-    ).toBeGreaterThan(0);
+    expect(relations[0].relevanceScore).toBeGreaterThan(0);
 
     expect(relations[0].isRelevant).toBe(true);
   });
@@ -631,19 +473,13 @@ describe('CountryNewsService', () => {
 
     const service = buildService(newsService);
 
-    const response = await service.getCountryNews(
-      'ESP',
-    );
+    const response = await service.getCountryNews('ESP');
 
     expect(response.dataMode).toBe('mock');
     expect(response.fallbackReason).toBeUndefined();
-    expect(
-      response.newestArticlePublishedAt,
-    ).toBeUndefined();
+    expect(response.newestArticlePublishedAt).toBeUndefined();
 
-    expect(
-      articlePersistence.persistCountryRelations,
-    ).not.toHaveBeenCalled();
+    expect(articlePersistence.persistCountryRelations).not.toHaveBeenCalled();
   });
 
   it('does not persist article-country relations for cached results', async () => {
@@ -663,27 +499,20 @@ describe('CountryNewsService', () => {
 
     const service = buildService(newsService);
 
-    const response = await service.getCountryNews(
-      'ESP',
-    );
+    const response = await service.getCountryNews('ESP');
 
     expect(response.dataMode).toBe('cached');
     expect(response.fallbackReason).toBeUndefined();
-    expect(
-      response.newestArticlePublishedAt,
-    ).toBeUndefined();
+    expect(response.newestArticlePublishedAt).toBeUndefined();
 
-    expect(
-      articlePersistence.persistCountryRelations,
-    ).not.toHaveBeenCalled();
+    expect(articlePersistence.persistCountryRelations).not.toHaveBeenCalled();
   });
 
   it('returns stored country articles when the provider returns no articles', async () => {
     const olderStoredArticle = makeArticle({
       id: 'stored-spain-1',
       title: 'Older stored Spain headline',
-      summary:
-        'Previously fetched reporting about Spain.',
+      summary: 'Previously fetched reporting about Spain.',
       sourceId: 'stored-provider',
       sourceName: 'Stored Provider',
       category: 'world',
@@ -702,32 +531,21 @@ describe('CountryNewsService', () => {
     });
 
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse([], 'live'),
-      ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([], 'live')),
     };
 
-    articlePersistence.findRecentByCountry
-      .mockResolvedValueOnce([
-        olderStoredArticle,
-        newerStoredArticle,
-      ]);
+    articlePersistence.findRecentByCountry.mockResolvedValueOnce([
+      olderStoredArticle,
+      newerStoredArticle,
+    ]);
 
     const service = buildService(newsService);
 
-    const response = await service.getCountryNews(
-      'ESP',
-      undefined,
-      5,
-    );
+    const response = await service.getCountryNews('ESP', undefined, 5);
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).toHaveBeenCalledTimes(1);
+    expect(articlePersistence.findRecentByCountry).toHaveBeenCalledTimes(1);
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).toHaveBeenCalledWith({
+    expect(articlePersistence.findRecentByCountry).toHaveBeenCalledWith({
       countryCode: 'ESP',
       category: undefined,
       limit: 5,
@@ -735,26 +553,17 @@ describe('CountryNewsService', () => {
       relevantOnly: true,
     });
 
-    expect(response.articles).toEqual([
-      olderStoredArticle,
-      newerStoredArticle,
-    ]);
+    expect(response.articles).toEqual([olderStoredArticle, newerStoredArticle]);
 
     expect(response.totalResults).toBe(2);
     expect(response.dataMode).toBe('cached');
     expect(response.providers).toEqual([]);
     expect(response.feedTier).toBe('delayed');
-    expect(response.providerDisplayName).toBe(
-      'Stored reporting',
-    );
+    expect(response.providerDisplayName).toBe('Stored reporting');
 
-    expect(response.fallbackReason).toBe(
-      'no-live-results',
-    );
+    expect(response.fallbackReason).toBe('no-live-results');
 
-    expect(
-      response.newestArticlePublishedAt,
-    ).toBe('2026-08-08T10:00:00.000Z');
+    expect(response.newestArticlePublishedAt).toBe('2026-08-08T10:00:00.000Z');
   });
 
   it('uses the requested category when reading stored country articles', async () => {
@@ -766,27 +575,16 @@ describe('CountryNewsService', () => {
     });
 
     const newsService = {
-      search: jest.fn().mockResolvedValue(
-        makeSearchResponse([], 'live'),
-      ),
+      search: jest.fn().mockResolvedValue(makeSearchResponse([], 'live')),
     };
 
-    articlePersistence.findRecentByCountry
-      .mockResolvedValueOnce([
-        storedArticle,
-      ]);
+    articlePersistence.findRecentByCountry.mockResolvedValueOnce([storedArticle]);
 
     const service = buildService(newsService);
 
-    const response = await service.getCountryNews(
-      'ESP',
-      'technology',
-      5,
-    );
+    const response = await service.getCountryNews('ESP', 'technology', 5);
 
-    expect(
-      articlePersistence.findRecentByCountry,
-    ).toHaveBeenCalledWith(
+    expect(articlePersistence.findRecentByCountry).toHaveBeenCalledWith(
       expect.objectContaining({
         countryCode: 'ESP',
         category: 'technology',
@@ -797,66 +595,41 @@ describe('CountryNewsService', () => {
     expect(response.dataMode).toBe('cached');
     expect(response.category).toBe('technology');
 
-    expect(response.fallbackReason).toBe(
-      'no-live-results',
-    );
+    expect(response.fallbackReason).toBe('no-live-results');
 
-    expect(
-      response.newestArticlePublishedAt,
-    ).toBe('2026-08-08T08:45:00.000Z');
+    expect(response.newestArticlePublishedAt).toBe('2026-08-08T08:45:00.000Z');
 
-    expect(response.articles).toEqual([
-      storedArticle,
-    ]);
+    expect(response.articles).toEqual([storedArticle]);
   });
 
   describe('city-aware retrieval (Milestone 27)', () => {
     it('combines the city with the country name in the live search term', async () => {
       const newsService = {
-        search: jest.fn().mockResolvedValue(
-          makeSearchResponse([]),
-        ),
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
       };
 
       const service = buildService(newsService);
 
-      await service.getCountryNews(
-        'RWA',
-        undefined,
-        20,
-        'kigali',
-      );
+      await service.getCountryNews('RWA', undefined, 20, 'kigali');
 
-      expect(newsService.search).toHaveBeenCalledWith(
-        'kigali Rwanda',
-        expect.any(Number),
-      );
+      expect(newsService.search).toHaveBeenCalledWith('kigali Rwanda', expect.any(Number));
     });
 
     it('does not include a city in the search term when none was provided', async () => {
       const newsService = {
-        search: jest.fn().mockResolvedValue(
-          makeSearchResponse([]),
-        ),
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
       };
 
       const service = buildService(newsService);
 
       await service.getCountryNews('RWA');
 
-      expect(newsService.search).toHaveBeenCalledWith(
-        'Rwanda',
-        expect.any(Number),
-      );
+      expect(newsService.search).toHaveBeenCalledWith('Rwanda', expect.any(Number));
     });
 
     it('does not cache a city query together with a plain country query for the same country', async () => {
       const newsService = {
-        search: jest.fn().mockResolvedValue(
-          makeSearchResponse([
-            makeArticle({ id: 'a1' }),
-          ]),
-        ),
+        search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])),
       };
 
       const service = buildService(
@@ -866,12 +639,7 @@ describe('CountryNewsService', () => {
         }),
       );
 
-      await service.getCountryNews(
-        'RWA',
-        undefined,
-        20,
-        'kigali',
-      );
+      await service.getCountryNews('RWA', undefined, 20, 'kigali');
 
       await service.getCountryNews('RWA');
 
@@ -880,26 +648,16 @@ describe('CountryNewsService', () => {
 
     it('surfaces city in the response envelope when provided, and omits it otherwise', async () => {
       const newsService = {
-        search: jest.fn().mockResolvedValue(
-          makeSearchResponse([
-            makeArticle({ id: 'a1' }),
-          ]),
-        ),
+        search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })])),
       };
 
       const service = buildService(newsService);
 
-      const cityResponse = await service.getCountryNews(
-        'RWA',
-        undefined,
-        20,
-        'kigali',
-      );
+      const cityResponse = await service.getCountryNews('RWA', undefined, 20, 'kigali');
 
       expect(cityResponse.city).toBe('kigali');
 
-      const countryOnlyResponse =
-        await service.getCountryNews('RWA');
+      const countryOnlyResponse = await service.getCountryNews('RWA');
 
       expect(countryOnlyResponse.city).toBeUndefined();
     });
@@ -910,8 +668,7 @@ describe('CountryNewsService', () => {
       // never mentions Kigali.
       const highScoreCountryWide = makeArticle({
         id: 'country-wide-high-score',
-        title:
-          'Rwanda government and parliament announce new economy policy',
+        title: 'Rwanda government and parliament announce new economy policy',
         summary:
           'Rwanda officials, the president, and the military discussed the economy, war, and peace efforts nationally.',
       });
@@ -925,22 +682,14 @@ describe('CountryNewsService', () => {
       });
 
       const newsService = {
-        search: jest.fn().mockResolvedValue(
-          makeSearchResponse(
-            [highScoreCountryWide, lowScoreCityMatch],
-            'live',
-          ),
-        ),
+        search: jest
+          .fn()
+          .mockResolvedValue(makeSearchResponse([highScoreCountryWide, lowScoreCityMatch], 'live')),
       };
 
       const service = buildService(newsService);
 
-      const response = await service.getCountryNews(
-        'RWA',
-        undefined,
-        20,
-        'kigali',
-      );
+      const response = await service.getCountryNews('RWA', undefined, 20, 'kigali');
 
       expect(response.articles.map((a) => a.id)).toEqual([
         'city-match-low-score',
@@ -962,22 +711,14 @@ describe('CountryNewsService', () => {
       });
 
       const newsService = {
-        search: jest.fn().mockResolvedValue(
-          makeSearchResponse(
-            [countryWideArticle, cityArticle],
-            'live',
-          ),
-        ),
+        search: jest
+          .fn()
+          .mockResolvedValue(makeSearchResponse([countryWideArticle, cityArticle], 'live')),
       };
 
       const service = buildService(newsService);
 
-      const response = await service.getCountryNews(
-        'RWA',
-        undefined,
-        20,
-        'kigali',
-      );
+      const response = await service.getCountryNews('RWA', undefined, 20, 'kigali');
 
       // Both articles are returned (city article first), even though
       // only one mentions the city — country-wide coverage still
@@ -988,9 +729,7 @@ describe('CountryNewsService', () => {
     });
 
     it('uses findRecent to surface city-specific stored articles ahead of country-wide stored articles when the live provider fails', async () => {
-      const providerError = new Error(
-        'GNews service unavailable.',
-      );
+      const providerError = new Error('GNews service unavailable.');
 
       const newsService = {
         search: jest.fn().mockRejectedValue(providerError),
@@ -1010,22 +749,13 @@ describe('CountryNewsService', () => {
         publishedAt: '2026-08-08T07:00:00.000Z',
       });
 
-      articlePersistence.findRecent.mockResolvedValueOnce([
-        cityStoredArticle,
-      ]);
+      articlePersistence.findRecent.mockResolvedValueOnce([cityStoredArticle]);
 
-      articlePersistence.findRecentByCountry.mockResolvedValueOnce(
-        [countryStoredArticle],
-      );
+      articlePersistence.findRecentByCountry.mockResolvedValueOnce([countryStoredArticle]);
 
       const service = buildService(newsService);
 
-      const response = await service.getCountryNews(
-        'RWA',
-        undefined,
-        20,
-        'kigali',
-      );
+      const response = await service.getCountryNews('RWA', undefined, 20, 'kigali');
 
       expect(articlePersistence.findRecent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1037,16 +767,11 @@ describe('CountryNewsService', () => {
 
       expect(response.dataMode).toBe('cached');
       expect(response.city).toBe('kigali');
-      expect(response.articles.map((a) => a.id)).toEqual([
-        'stored-kigali-1',
-        'stored-rwanda-1',
-      ]);
+      expect(response.articles.map((a) => a.id)).toEqual(['stored-kigali-1', 'stored-rwanda-1']);
     });
 
     it('excludes a stored city-name match that is not actually about the country', async () => {
-      const providerError = new Error(
-        'GNews service unavailable.',
-      );
+      const providerError = new Error('GNews service unavailable.');
 
       const newsService = {
         search: jest.fn().mockRejectedValue(providerError),
@@ -1069,22 +794,13 @@ describe('CountryNewsService', () => {
         publishedAt: '2026-08-08T07:00:00.000Z',
       });
 
-      articlePersistence.findRecent.mockResolvedValueOnce([
-        unrelatedCityNameMatch,
-      ]);
+      articlePersistence.findRecent.mockResolvedValueOnce([unrelatedCityNameMatch]);
 
-      articlePersistence.findRecentByCountry.mockResolvedValueOnce(
-        [countryStoredArticle],
-      );
+      articlePersistence.findRecentByCountry.mockResolvedValueOnce([countryStoredArticle]);
 
       const service = buildService(newsService);
 
-      const response = await service.getCountryNews(
-        'RWA',
-        undefined,
-        20,
-        'kigali',
-      );
+      const response = await service.getCountryNews('RWA', undefined, 20, 'kigali');
 
       const ids = response.articles.map((a) => a.id);
       expect(ids).not.toContain('unrelated-kigali-cafe');
@@ -1093,9 +809,7 @@ describe('CountryNewsService', () => {
 
     it('uses findRecent to surface city-specific stored articles when live results are empty', async () => {
       const newsService = {
-        search: jest.fn().mockResolvedValue(
-          makeSearchResponse([], 'live'),
-        ),
+        search: jest.fn().mockResolvedValue(makeSearchResponse([], 'live')),
       };
 
       const cityStoredArticle = makeArticle({
@@ -1105,30 +819,19 @@ describe('CountryNewsService', () => {
         publishedAt: '2026-08-08T09:00:00.000Z',
       });
 
-      articlePersistence.findRecent.mockResolvedValueOnce([
-        cityStoredArticle,
-      ]);
+      articlePersistence.findRecent.mockResolvedValueOnce([cityStoredArticle]);
 
       const service = buildService(newsService);
 
-      const response = await service.getCountryNews(
-        'RWA',
-        undefined,
-        20,
-        'kigali',
-      );
+      const response = await service.getCountryNews('RWA', undefined, 20, 'kigali');
 
       expect(response.dataMode).toBe('cached');
-      expect(response.articles.map((a) => a.id)).toEqual([
-        'stored-kigali-empty-live',
-      ]);
+      expect(response.articles.map((a) => a.id)).toEqual(['stored-kigali-empty-live']);
     });
 
     it('does not call findRecent when no city was provided', async () => {
       const newsService = {
-        search: jest.fn().mockRejectedValue(
-          new Error('GNews service unavailable.'),
-        ),
+        search: jest.fn().mockRejectedValue(new Error('GNews service unavailable.')),
       };
 
       articlePersistence.findRecentByCountry.mockResolvedValueOnce([

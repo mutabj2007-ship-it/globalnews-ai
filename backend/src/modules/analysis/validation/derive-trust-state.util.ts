@@ -119,7 +119,11 @@ export function deriveTrustState(
     if (relationalComposition.directionalEligibility === 'unsupported') {
       return {
         level: 'insufficient',
-        reasons: ['requested-direction-unsupported', ...contradictionReasons, ...informationalReasons],
+        reasons: [
+          'requested-direction-unsupported',
+          ...contradictionReasons,
+          ...informationalReasons,
+        ],
         distinctSourceArticleCount,
         relationalContradictionPresent,
         differenceTopicCount,
@@ -131,11 +135,7 @@ export function deriveTrustState(
     if (relationalComposition.evidenceSufficiency === 'adequate') {
       return {
         level: relationalContradictionPresent ? 'moderate' : 'high',
-        reasons: [
-          'relational-support-adequate',
-          ...contradictionReasons,
-          ...informationalReasons,
-        ],
+        reasons: ['relational-support-adequate', ...contradictionReasons, ...informationalReasons],
         distinctSourceArticleCount,
         relationalContradictionPresent,
         differenceTopicCount,

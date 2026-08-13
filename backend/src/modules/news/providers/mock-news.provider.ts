@@ -1,9 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type {
-  NewsArticle,
-  NewsCategory,
-  ProviderHealthStatus,
-} from '@globalnews-ai/shared';
+import type { NewsArticle, NewsCategory, ProviderHealthStatus } from '@globalnews-ai/shared';
 import type { NewsProvider, NewsSearchOptions } from '../interfaces';
 
 interface MockArticleSeed extends Omit<NewsArticle, 'publishedAt'> {
@@ -192,8 +188,7 @@ export class MockNewsProvider implements NewsProvider {
 
     const matches = tokens.length
       ? this.getArticles().filter((article) => {
-          const haystack =
-            `${article.title} ${article.summary} ${article.category}`.toLowerCase();
+          const haystack = `${article.title} ${article.summary} ${article.category}`.toLowerCase();
           return tokens.some((token) => haystack.includes(token));
         })
       : this.getArticles();
@@ -210,10 +205,39 @@ export class MockNewsProvider implements NewsProvider {
    */
   private tokenizeQuery(query: string): string[] {
     const STOP_WORDS = new Set([
-      'the', 'a', 'an', 'is', 'are', 'was', 'were', 'what', 'whats', 'when',
-      'where', 'who', 'why', 'how', 'happening', 'tell', 'me', 'about',
-      'today', 'latest', 'news', 'in', 'on', 'of', 'to', 'for', 'and', 'or',
-      'with', 'this', 'that', 'give', 'show',
+      'the',
+      'a',
+      'an',
+      'is',
+      'are',
+      'was',
+      'were',
+      'what',
+      'whats',
+      'when',
+      'where',
+      'who',
+      'why',
+      'how',
+      'happening',
+      'tell',
+      'me',
+      'about',
+      'today',
+      'latest',
+      'news',
+      'in',
+      'on',
+      'of',
+      'to',
+      'for',
+      'and',
+      'or',
+      'with',
+      'this',
+      'that',
+      'give',
+      'show',
     ]);
 
     return query

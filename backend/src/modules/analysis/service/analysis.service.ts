@@ -420,9 +420,13 @@ export class AnalysisService {
                   `attempting one bounded English Search fallback for "${polishTopic}"`,
               );
 
-              const fallbackResponse = await this.newsService.search(polishTopic, SEARCH_POOL_SIZE, {
-                type: 'generic',
-              });
+              const fallbackResponse = await this.newsService.search(
+                polishTopic,
+                SEARCH_POOL_SIZE,
+                {
+                  type: 'generic',
+                },
+              );
 
               articles = fallbackResponse.articles;
               retrievalContext = this.toRetrievalContext(fallbackResponse);

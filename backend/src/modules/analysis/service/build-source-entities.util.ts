@@ -1,4 +1,8 @@
-import type { NewsArticle, ResolvedOrganizationMention, SourceEntities } from '@globalnews-ai/shared';
+import type {
+  NewsArticle,
+  ResolvedOrganizationMention,
+  SourceEntities,
+} from '@globalnews-ai/shared';
 import { extractArticleEntities } from '../../news/analysis/article-entities.util';
 
 /**

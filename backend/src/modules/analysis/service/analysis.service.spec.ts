@@ -3683,7 +3683,9 @@ describe('AnalysisService', () => {
 
       expect(newsService.topHeadlines).toHaveBeenCalledTimes(1);
       expect(newsService.search).toHaveBeenCalledTimes(1);
-      expect(newsService.search).toHaveBeenCalledWith('NATO', expect.any(Number), { type: 'generic' });
+      expect(newsService.search).toHaveBeenCalledWith('NATO', expect.any(Number), {
+        type: 'generic',
+      });
       expect(response.responseLanguage).toBe('pl');
       expect(response.articles[0]?.id).toBe('en-fallback-1');
     });
@@ -3734,7 +3736,9 @@ describe('AnalysisService', () => {
         isMock: true,
         analyzeNews: jest
           .fn()
-          .mockImplementation((input: { articles: NewsArticle[] }) => validCandidateFor(input.articles)),
+          .mockImplementation((input: { articles: NewsArticle[] }) =>
+            validCandidateFor(input.articles),
+          ),
       };
       const service = new AnalysisService(
         newsService as never,
@@ -3753,7 +3757,9 @@ describe('AnalysisService', () => {
     });
 
     it('7. requestedLanguage does not affect English relational-pattern matching — a genuine English relational query still routes to the relational branch regardless of requestedLanguage', async () => {
-      const articles = [makeArticle({ id: 'iran-1', title: 'Oil prices rise as Iran conflict disrupts shipping' })];
+      const articles = [
+        makeArticle({ id: 'iran-1', title: 'Oil prices rise as Iran conflict disrupts shipping' }),
+      ];
       const newsService = {
         search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
         topHeadlines: jest.fn(),

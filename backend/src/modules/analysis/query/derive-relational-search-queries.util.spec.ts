@@ -2,9 +2,7 @@ import { deriveRelationalSearchQueries } from './derive-relational-search-querie
 
 describe('deriveRelationalSearchQueries (Milestone #37)', () => {
   it('"How is the Iran conflict affecting oil prices?" -> X="Iran conflict", Y="oil prices"', () => {
-    const result = deriveRelationalSearchQueries(
-      'How is the Iran conflict affecting oil prices?',
-    );
+    const result = deriveRelationalSearchQueries('How is the Iran conflict affecting oil prices?');
     expect(result).toEqual({
       providerQuery: 'Iran conflict oil prices',
       x: 'Iran conflict',
@@ -13,9 +11,7 @@ describe('deriveRelationalSearchQueries (Milestone #37)', () => {
   });
 
   it('"How are US tariffs affecting European markets?" -> X="US tariffs", Y="European markets"', () => {
-    const result = deriveRelationalSearchQueries(
-      'How are US tariffs affecting European markets?',
-    );
+    const result = deriveRelationalSearchQueries('How are US tariffs affecting European markets?');
     expect(result).toEqual({
       providerQuery: 'US tariffs European markets',
       x: 'US tariffs',
@@ -24,9 +20,7 @@ describe('deriveRelationalSearchQueries (Milestone #37)', () => {
   });
 
   it('"How are interest rates affecting house prices?" -> X="interest rates", Y="house prices"', () => {
-    const result = deriveRelationalSearchQueries(
-      'How are interest rates affecting house prices?',
-    );
+    const result = deriveRelationalSearchQueries('How are interest rates affecting house prices?');
     expect(result).toEqual({
       providerQuery: 'interest rates house prices',
       x: 'interest rates',
@@ -55,9 +49,7 @@ describe('deriveRelationalSearchQueries (Milestone #37)', () => {
   });
 
   it('"How is climate change affecting agriculture?" -> X="climate change", Y="agriculture"', () => {
-    const result = deriveRelationalSearchQueries(
-      'How is climate change affecting agriculture?',
-    );
+    const result = deriveRelationalSearchQueries('How is climate change affecting agriculture?');
     expect(result).toEqual({
       providerQuery: 'climate change agriculture',
       x: 'climate change',
@@ -66,9 +58,7 @@ describe('deriveRelationalSearchQueries (Milestone #37)', () => {
   });
 
   it('"does/do" variant: "How does inflation affect consumer spending?"', () => {
-    const result = deriveRelationalSearchQueries(
-      'How does inflation affect consumer spending?',
-    );
+    const result = deriveRelationalSearchQueries('How does inflation affect consumer spending?');
     expect(result).toEqual({
       providerQuery: 'inflation consumer spending',
       x: 'inflation',

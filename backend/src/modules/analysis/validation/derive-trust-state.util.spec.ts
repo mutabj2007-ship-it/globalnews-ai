@@ -8,11 +8,18 @@ import type {
 } from '@globalnews-ai/shared';
 import { deriveTrustState } from './derive-trust-state.util';
 
-function claim(text: string, sourceArticleIds: string[] = [], relationalSupport?: SourcedClaim['relationalSupport']): SourcedClaim {
+function claim(
+  text: string,
+  sourceArticleIds: string[] = [],
+  relationalSupport?: SourcedClaim['relationalSupport'],
+): SourcedClaim {
   return { claim: text, sourceArticleIds, ...(relationalSupport ? { relationalSupport } : {}) };
 }
 
-function assessment(articleId: string, direction: RelationalEvidenceAssessment['direction']): RelationalEvidenceAssessment {
+function assessment(
+  articleId: string,
+  direction: RelationalEvidenceAssessment['direction'],
+): RelationalEvidenceAssessment {
   return { articleId, excerpt: 'x', direction };
 }
 
@@ -66,11 +73,20 @@ describe('deriveTrustState (Milestone #42)', () => {
       const rc = relationalComposition({
         directionalEligibility: 'supported',
         evidenceSufficiency: 'adequate',
-        supportingClaims: [{ section: 'keyFacts', index: 0 }, { section: 'keyFacts', index: 1 }],
+        supportingClaims: [
+          { section: 'keyFacts', index: 0 },
+          { section: 'keyFacts', index: 1 },
+        ],
       });
       const keyFacts = [
-        claim('c1', ['a1'], { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
-        claim('c2', ['a2'], { direction: 'requested-direction', assessments: [assessment('a2', 'requested-direction')] }),
+        claim('c1', ['a1'], {
+          direction: 'requested-direction',
+          assessments: [assessment('a1', 'requested-direction')],
+        }),
+        claim('c2', ['a2'], {
+          direction: 'requested-direction',
+          assessments: [assessment('a2', 'requested-direction')],
+        }),
       ];
       const result = deriveTrustState('mock-ai', keyFacts, [], [], [], 0, rc);
       expect(result.level).toBe('insufficient');
@@ -92,7 +108,15 @@ describe('deriveTrustState (Milestone #42)', () => {
     });
 
     it('2 distinct articles -> moderate', () => {
-      const result = deriveTrustState('live-ai', [claim('c1', ['a1']), claim('c2', ['a2'])], [], [], [], 0, undefined);
+      const result = deriveTrustState(
+        'live-ai',
+        [claim('c1', ['a1']), claim('c2', ['a2'])],
+        [],
+        [],
+        [],
+        0,
+        undefined,
+      );
       expect(result.level).toBe('moderate');
       expect(result.reasons).toContain('multiple-distinct-articles');
     });
@@ -131,7 +155,15 @@ describe('deriveTrustState (Milestone #42)', () => {
 
   describe('D. uncertainties', () => {
     it('uncertaintyCount is accurately populated', () => {
-      const result = deriveTrustState('live-ai', [claim('c1', ['a1', 'a2'])], [], [], [], 3, undefined);
+      const result = deriveTrustState(
+        'live-ai',
+        [claim('c1', ['a1', 'a2'])],
+        [],
+        [],
+        [],
+        3,
+        undefined,
+      );
       expect(result.uncertaintyCount).toBe(3);
     });
 
@@ -151,14 +183,30 @@ describe('deriveTrustState (Milestone #42)', () => {
         { topic: 't1', positions: [] },
         { topic: 't2', positions: [] },
       ];
-      const result = deriveTrustState('live-ai', [claim('c1', ['a1'])], [], differences, [], 0, undefined);
+      const result = deriveTrustState(
+        'live-ai',
+        [claim('c1', ['a1'])],
+        [],
+        differences,
+        [],
+        0,
+        undefined,
+      );
       expect(result.differenceTopicCount).toBe(2);
     });
 
     it('differences > 0 do NOT independently downgrade level or imply contradiction (non-relational)', () => {
       const keyFacts = [claim('c1', ['a1']), claim('c2', ['a2'])];
       const differences: DifferenceItem[] = [{ topic: 't1', positions: [] }];
-      const withDifferences = deriveTrustState('live-ai', keyFacts, [], differences, [], 0, undefined);
+      const withDifferences = deriveTrustState(
+        'live-ai',
+        keyFacts,
+        [],
+        differences,
+        [],
+        0,
+        undefined,
+      );
       const without = deriveTrustState('live-ai', keyFacts, [], [], [], 0, undefined);
       expect(withDifferences.level).toBe(without.level);
       expect(withDifferences.level).toBe('moderate');
@@ -169,14 +217,20 @@ describe('deriveTrustState (Milestone #42)', () => {
 
   describe('F. live relational', () => {
     it('unsupported -> insufficient', () => {
-      const rc = relationalComposition({ directionalEligibility: 'unsupported', evidenceSufficiency: 'insufficient' });
+      const rc = relationalComposition({
+        directionalEligibility: 'unsupported',
+        evidenceSufficiency: 'insufficient',
+      });
       const result = deriveTrustState('live-ai', [], [], [], [], 0, rc);
       expect(result.level).toBe('insufficient');
       expect(result.reasons).toContain('requested-direction-unsupported');
     });
 
     it('adequate / no reverse or mixed -> high', () => {
-      const rc = relationalComposition({ directionalEligibility: 'supported', evidenceSufficiency: 'adequate' });
+      const rc = relationalComposition({
+        directionalEligibility: 'supported',
+        evidenceSufficiency: 'adequate',
+      });
       const result = deriveTrustState('live-ai', [], [], [], [], 0, rc);
       expect(result.level).toBe('high');
       expect(result.reasons).toEqual(['relational-support-adequate']);
@@ -206,7 +260,10 @@ describe('deriveTrustState (Milestone #42)', () => {
     });
 
     it('limited -> limited', () => {
-      const rc = relationalComposition({ directionalEligibility: 'supported', evidenceSufficiency: 'limited' });
+      const rc = relationalComposition({
+        directionalEligibility: 'supported',
+        evidenceSufficiency: 'limited',
+      });
       const result = deriveTrustState('live-ai', [], [], [], [], 0, rc);
       expect(result.level).toBe('limited');
       expect(result.reasons).toContain('relational-support-limited');
@@ -273,7 +330,15 @@ describe('deriveTrustState (Milestone #42)', () => {
         reverseClaims: [{ section: 'keyFacts', index: 0 }],
         mixedClaims: [{ section: 'keyFacts', index: 1 }],
       });
-      const result = deriveTrustState('live-ai', [], [], [{ topic: 't', positions: [] }], [], 2, rc);
+      const result = deriveTrustState(
+        'live-ai',
+        [],
+        [],
+        [{ topic: 't', positions: [] }],
+        [],
+        2,
+        rc,
+      );
       expect(new Set(result.reasons).size).toBe(result.reasons.length);
     });
 
@@ -286,7 +351,15 @@ describe('deriveTrustState (Milestone #42)', () => {
 
     it('differences-reported only when differenceTopicCount > 0', () => {
       const withNone = deriveTrustState('live-ai', [claim('c1', ['a1'])], [], [], [], 0, undefined);
-      const withSome = deriveTrustState('live-ai', [claim('c1', ['a1'])], [], [{ topic: 't', positions: [] }], [], 0, undefined);
+      const withSome = deriveTrustState(
+        'live-ai',
+        [claim('c1', ['a1'])],
+        [],
+        [{ topic: 't', positions: [] }],
+        [],
+        0,
+        undefined,
+      );
       expect(withNone.reasons).not.toContain('differences-reported');
       expect(withSome.reasons).toContain('differences-reported');
     });
@@ -297,9 +370,16 @@ describe('deriveTrustState (Milestone #42)', () => {
         evidenceSufficiency: 'adequate',
         reverseClaims: [{ section: 'keyFacts', index: 0 }],
       });
-      const without = relationalComposition({ directionalEligibility: 'supported', evidenceSufficiency: 'adequate' });
-      expect(deriveTrustState('live-ai', [], [], [], [], 0, withReverse).reasons).toContain('reverse-evidence-present');
-      expect(deriveTrustState('live-ai', [], [], [], [], 0, without).reasons).not.toContain('reverse-evidence-present');
+      const without = relationalComposition({
+        directionalEligibility: 'supported',
+        evidenceSufficiency: 'adequate',
+      });
+      expect(deriveTrustState('live-ai', [], [], [], [], 0, withReverse).reasons).toContain(
+        'reverse-evidence-present',
+      );
+      expect(deriveTrustState('live-ai', [], [], [], [], 0, without).reasons).not.toContain(
+        'reverse-evidence-present',
+      );
     });
 
     it('mixed-evidence-present only when mixedClaims non-empty', () => {
@@ -308,9 +388,16 @@ describe('deriveTrustState (Milestone #42)', () => {
         evidenceSufficiency: 'adequate',
         mixedClaims: [{ section: 'keyFacts', index: 0 }],
       });
-      const without = relationalComposition({ directionalEligibility: 'supported', evidenceSufficiency: 'adequate' });
-      expect(deriveTrustState('live-ai', [], [], [], [], 0, withMixed).reasons).toContain('mixed-evidence-present');
-      expect(deriveTrustState('live-ai', [], [], [], [], 0, without).reasons).not.toContain('mixed-evidence-present');
+      const without = relationalComposition({
+        directionalEligibility: 'supported',
+        evidenceSufficiency: 'adequate',
+      });
+      expect(deriveTrustState('live-ai', [], [], [], [], 0, withMixed).reasons).toContain(
+        'mixed-evidence-present',
+      );
+      expect(deriveTrustState('live-ai', [], [], [], [], 0, without).reasons).not.toContain(
+        'mixed-evidence-present',
+      );
     });
   });
 

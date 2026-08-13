@@ -50,10 +50,7 @@ function titleTokens(title: string): Set<string> {
   return new Set(words);
 }
 
-function calculateTitleOverlap(
-  firstTitle: string,
-  secondTitle: string,
-): number {
+function calculateTitleOverlap(firstTitle: string, secondTitle: string): number {
   const first = titleTokens(firstTitle);
   const second = titleTokens(secondTitle);
 
@@ -83,9 +80,7 @@ export function areLikelyDuplicateArticles(
  * Preserves the original order, keeping the first and therefore
  * highest-ranked article from each likely duplicate story.
  */
-export function deduplicateArticles(
-  articles: NewsArticle[],
-): NewsArticle[] {
+export function deduplicateArticles(articles: NewsArticle[]): NewsArticle[] {
   const uniqueArticles: NewsArticle[] = [];
 
   for (const article of articles) {

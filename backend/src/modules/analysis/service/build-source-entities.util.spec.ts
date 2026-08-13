@@ -22,7 +22,11 @@ describe('buildSourceEntities', () => {
 
   it('aggregates the same organization mentioned via different surface forms across multiple articles', () => {
     const articles = [
-      makeArticle({ id: 'a1', title: 'UN Security Council meets', summary: 'The council convened.' }),
+      makeArticle({
+        id: 'a1',
+        title: 'UN Security Council meets',
+        summary: 'The council convened.',
+      }),
       makeArticle({
         id: 'a2',
         title: 'United Nations calls for ceasefire',
@@ -58,7 +62,11 @@ describe('buildSourceEntities', () => {
 
   it('keeps unrelated organizations as separate entries, not merged', () => {
     const articles = [
-      makeArticle({ id: 'a1', title: 'NATO statement', summary: 'NATO addressed security concerns.' }),
+      makeArticle({
+        id: 'a1',
+        title: 'NATO statement',
+        summary: 'NATO addressed security concerns.',
+      }),
       makeArticle({ id: 'a2', title: 'OPEC statement', summary: 'OPEC discussed oil output.' }),
     ];
 
@@ -66,13 +74,21 @@ describe('buildSourceEntities', () => {
 
     const canonicals = result.organizations.map((org) => org.canonical);
     expect(canonicals).toEqual(expect.arrayContaining(['NATO', 'OPEC']));
-    expect(result.organizations.find((org) => org.canonical === 'NATO')?.articleIds).toEqual(['a1']);
-    expect(result.organizations.find((org) => org.canonical === 'OPEC')?.articleIds).toEqual(['a2']);
+    expect(result.organizations.find((org) => org.canonical === 'NATO')?.articleIds).toEqual([
+      'a1',
+    ]);
+    expect(result.organizations.find((org) => org.canonical === 'OPEC')?.articleIds).toEqual([
+      'a2',
+    ]);
   });
 
   it('an article with no organizations contributes nothing', () => {
     const articles = [
-      makeArticle({ id: 'a1', title: 'Kenya and Uganda sign trade deal', summary: 'Regional trade grows.' }),
+      makeArticle({
+        id: 'a1',
+        title: 'Kenya and Uganda sign trade deal',
+        summary: 'Regional trade grows.',
+      }),
     ];
 
     expect(buildSourceEntities(articles)).toEqual({ organizations: [] });
@@ -82,7 +98,9 @@ describe('buildSourceEntities', () => {
     // Only a1 is supplied — a2's organization mention (had it been
     // supplied) must never leak in, since buildSourceEntities only
     // ever looks at what it is given.
-    const supplied = [makeArticle({ id: 'a1', title: 'NATO statement', summary: 'NATO spoke today.' })];
+    const supplied = [
+      makeArticle({ id: 'a1', title: 'NATO statement', summary: 'NATO spoke today.' }),
+    ];
 
     const result = buildSourceEntities(supplied);
     const suppliedIds = new Set(supplied.map((article) => article.id));

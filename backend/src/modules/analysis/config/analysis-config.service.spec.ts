@@ -1,9 +1,7 @@
 ﻿import { ConfigService } from '@nestjs/config';
 import { AnalysisConfigService } from './analysis-config.service';
 
-function makeService(
-  values: Record<string, string | undefined>,
-): AnalysisConfigService {
+function makeService(values: Record<string, string | undefined>): AnalysisConfigService {
   const config = {
     get: jest.fn((key: string) => values[key]),
   } as unknown as ConfigService;
@@ -75,10 +73,18 @@ describe('AnalysisConfigService', () => {
     });
 
     it('A3. zero, negative, and non-numeric values fall back to the default (existing safe parsing behavior, unchanged)', () => {
-      expect(makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: '0' }).get().maxCompletionTokens).toBe(2000);
-      expect(makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: '-100' }).get().maxCompletionTokens).toBe(2000);
-      expect(makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: 'not-a-number' }).get().maxCompletionTokens).toBe(2000);
-      expect(makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: undefined }).get().maxCompletionTokens).toBe(2000);
+      expect(makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: '0' }).get().maxCompletionTokens).toBe(
+        2000,
+      );
+      expect(
+        makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: '-100' }).get().maxCompletionTokens,
+      ).toBe(2000);
+      expect(
+        makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: 'not-a-number' }).get().maxCompletionTokens,
+      ).toBe(2000);
+      expect(
+        makeService({ ANALYSIS_MAX_COMPLETION_TOKENS: undefined }).get().maxCompletionTokens,
+      ).toBe(2000);
     });
   });
 });

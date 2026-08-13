@@ -24,10 +24,7 @@ export function scoreArticleConfidence(
   relevanceScore: number,
   nowMs: number = Date.now(),
 ): ArticleConfidenceResult {
-  const freshnessBonus = getFreshnessBonus(
-    article.publishedAt,
-    nowMs,
-  );
+  const freshnessBonus = getFreshnessBonus(article.publishedAt, nowMs);
 
   const rawScore = relevanceScore + freshnessBonus;
   const clampedScore = Math.min(100, Math.max(0, rawScore));
@@ -37,10 +34,7 @@ export function scoreArticleConfidence(
   };
 }
 
-function getFreshnessBonus(
-  publishedAt: string,
-  nowMs: number,
-): number {
+function getFreshnessBonus(publishedAt: string, nowMs: number): number {
   const publishedAtMs = Date.parse(publishedAt);
 
   if (!Number.isFinite(publishedAtMs)) {

@@ -1,12 +1,17 @@
-import type { NewsArticle } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 interface TrendingSidebarProps {
   items: NewsArticle[];
+  /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
-export function TrendingSidebar({ items }: TrendingSidebarProps): JSX.Element {
+export function TrendingSidebar({ items, language = 'en' }: TrendingSidebarProps): JSX.Element {
+  const t = getDictionary(language).trendingSidebar;
+
   return (
     <aside
       className="flex flex-col rounded-2xl border border-border bg-surface p-5 sm:p-6"
@@ -16,13 +21,11 @@ export function TrendingSidebar({ items }: TrendingSidebarProps): JSX.Element {
         id="trending-heading"
         className="mb-4 font-mono text-xs uppercase tracking-widest text-signal-bright"
       >
-        Trending now
+        {t.heading}
       </h3>
 
       {items.length === 0 ? (
-        <p className="text-sm text-ink-secondary">
-          Live headlines are temporarily unavailable.
-        </p>
+        <p className="text-sm text-ink-secondary">{t.unavailable}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-border">
           {items.map((item) => (
@@ -51,7 +54,7 @@ export function TrendingSidebar({ items }: TrendingSidebarProps): JSX.Element {
                     {item.title}
                   </p>
                   <span className="font-mono text-[11px] text-ink-tertiary">
-                    {formatRelativeTime(item.publishedAt)}
+                    {formatRelativeTime(item.publishedAt, language)}
                   </span>
                 </div>
               </a>

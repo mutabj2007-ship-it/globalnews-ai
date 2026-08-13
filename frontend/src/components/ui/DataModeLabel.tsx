@@ -1,10 +1,13 @@
 import { Database, Info, Radio } from 'lucide-react';
-import type { NewsDataMode } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsDataMode } from '@globalnews-ai/shared';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 interface DataModeLabelProps {
   /** null means the backend/data state is currently unknown. */
   dataMode: NewsDataMode | null;
   className?: string;
+  /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
 /**
@@ -15,22 +18,37 @@ interface DataModeLabelProps {
  * - cached: previously retrieved real reporting from our database
  * - mock: sample/demo content
  * - null: backend/data state unknown
+ *
+ * Milestone #48 (UI polish consistency fix) — this component's four
+ * label strings were found to be BYTE-IDENTICAL to LiveStatusStrip's
+ * own already-localized `liveStatusStrip.live/cached/mock/unknown`
+ * dictionary keys (both describe the exact same four data-provenance
+ * states). Rather than adding a second, duplicate set of dictionary
+ * keys for what is the same badge concept shown at a different size,
+ * this component now reuses those SAME keys directly — one shared
+ * source of truth, per the explicit "prefer one shared dictionary
+ * key/component" requirement. `language` defaults to 'en', so every
+ * pre-M48 caller (and every English render) is byte-for-byte
+ * unchanged. "GNews" itself is a proper provider/brand name and is
+ * never altered by localization, in either language.
  */
 export function DataModeLabel({
   dataMode,
   className = '',
+  language = 'en',
 }: DataModeLabelProps): JSX.Element {
   const isLive = dataMode === 'live';
   const isCached = dataMode === 'cached';
+  const t = getDictionary(language).liveStatusStrip;
 
   const label =
     dataMode === 'live'
-      ? 'LIVE · Powered by GNews'
+      ? t.live
       : dataMode === 'cached'
-        ? 'CACHED · Previously retrieved reporting'
+        ? t.cached
         : dataMode === 'mock'
-          ? 'DEMO MODE · Sample content only'
-          : 'DATA STATUS UNKNOWN';
+          ? t.mock
+          : t.unknown;
 
   return (
     <span

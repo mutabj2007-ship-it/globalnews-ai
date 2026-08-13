@@ -72,24 +72,17 @@ function containsWholePhrase(text: string, phrase: string): boolean {
   const normalizedText = ` ${normalize(text)} `;
   const normalizedPhrase = normalize(phrase);
 
-  return normalizedPhrase.length > 0
-    ? normalizedText.includes(` ${normalizedPhrase} `)
-    : false;
+  return normalizedPhrase.length > 0 ? normalizedText.includes(` ${normalizedPhrase} `) : false;
 }
 
-function containsCountryReference(
-  text: string,
-  country: CountryMeta,
-): boolean {
+function containsCountryReference(text: string, country: CountryMeta): boolean {
   if (containsWholePhrase(text, country.name)) {
     return true;
   }
 
   const demonyms = COUNTRY_DEMONYMS[country.iso3] ?? [];
 
-  return demonyms.some((demonym) =>
-    containsWholePhrase(text, demonym),
-  );
+  return demonyms.some((demonym) => containsWholePhrase(text, demonym));
 }
 
 function escapeRegExp(value: string): string {
@@ -97,16 +90,10 @@ function escapeRegExp(value: string): string {
 }
 
 function hasPersonContext(text: string): boolean {
-  return PERSON_CONTEXT_TERMS.some((term) =>
-    containsWholePhrase(text, term),
-  );
+  return PERSON_CONTEXT_TERMS.some((term) => containsWholePhrase(text, term));
 }
 
-function isLikelySurnameOnlyMention(
-  title: string,
-  summary: string,
-  country: CountryMeta,
-): boolean {
+function isLikelySurnameOnlyMention(title: string, summary: string, country: CountryMeta): boolean {
   if (containsCountryReference(title, country)) {
     return false;
   }
@@ -117,9 +104,7 @@ function isLikelySurnameOnlyMention(
 
   const escapedCountryName = escapeRegExp(country.name);
 
-  const surnamePattern = new RegExp(
-    `\\b[A-Z][a-z]+\\s+${escapedCountryName}\\b`,
-  );
+  const surnamePattern = new RegExp(`\\b[A-Z][a-z]+\\s+${escapedCountryName}\\b`);
 
   const match = summary.match(surnamePattern);
 
@@ -130,13 +115,7 @@ function isLikelySurnameOnlyMention(
   const precedingWord = match[0].split(/\s+/)[0]?.toLowerCase();
 
   // Avoid treating geographic names such as "South Sudan" as surnames.
-  const geographicPrefixes = new Set([
-    'north',
-    'south',
-    'east',
-    'west',
-    'new',
-  ]);
+  const geographicPrefixes = new Set(['north', 'south', 'east', 'west', 'new']);
 
   return !geographicPrefixes.has(precedingWord);
 }
@@ -176,15 +155,9 @@ export function scoreCountryRelevance(
   let score = 0;
   const reasons: string[] = [];
 
-  const titleHasCountryReference = containsCountryReference(
-    title,
-    country,
-  );
+  const titleHasCountryReference = containsCountryReference(title, country);
 
-  const summaryHasCountryReference = containsCountryReference(
-    summary,
-    country,
-  );
+  const summaryHasCountryReference = containsCountryReference(summary, country);
 
   if (titleHasCountryReference) {
     score += 60;

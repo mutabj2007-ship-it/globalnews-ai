@@ -1,4 +1,5 @@
-import type { NewsDataMode } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsDataMode } from '@globalnews-ai/shared';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 interface LiveStatusStripProps {
   /** Whether the last homepage data fetch reached the backend successfully. */
@@ -6,13 +7,29 @@ interface LiveStatusStripProps {
 
   /** The provenance of the news returned by the backend. */
   dataMode: NewsDataMode | null;
+
+  /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
 export function LiveStatusStrip({
   isLive,
   dataMode,
+  language = 'en',
 }: LiveStatusStripProps): JSX.Element {
-  const lastUpdated = new Date().toLocaleTimeString('en-US', {
+  const t = getDictionary(language).liveStatusStrip;
+
+  /**
+   * Milestone #48 — the CLOCK FORMAT itself (not just surrounding
+   * text) uses a locale string. With `hour: '2-digit', minute:
+   * '2-digit', hour12: false` explicitly forced, en-US and pl-PL
+   * produce the identical "HH:MM" digit format for this specific
+   * combination of options — the locale choice here only affects
+   * things this call doesn't use (AM/PM markers, separators), so
+   * switching it for Polish is safe and low-risk, verified not to
+   * change the rendered value.
+   */
+  const lastUpdated = new Date().toLocaleTimeString(language === 'pl' ? 'pl-PL' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: 'UTC',
@@ -22,14 +39,14 @@ export function LiveStatusStrip({
   const isReallyLive = isLive && dataMode === 'live';
 
   const badgeText = !isLive
-    ? 'RECONNECTING'
+    ? t.reconnecting
     : dataMode === 'live'
-      ? 'LIVE · Powered by GNews'
+      ? t.live
       : dataMode === 'cached'
-        ? 'CACHED · Previously retrieved reporting'
+        ? t.cached
         : dataMode === 'mock'
-          ? 'DEMO MODE · Sample content only'
-          : 'DATA STATUS UNKNOWN';
+          ? t.mock
+          : t.unknown;
 
   return (
     <div className="border-b border-border bg-surface">
@@ -61,14 +78,12 @@ export function LiveStatusStrip({
             </span>
           </span>
 
-          <span className="text-xs text-ink-secondary sm:text-sm">
-            Monitoring trusted global sources
-          </span>
+          <span className="text-xs text-ink-secondary sm:text-sm">{t.monitoring}</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <span className="font-mono text-[11px] text-ink-tertiary sm:text-xs">
-            Last updated: {lastUpdated} UTC
+            {t.lastUpdatedPrefix} {lastUpdated} UTC
           </span>
         </div>
       </div>

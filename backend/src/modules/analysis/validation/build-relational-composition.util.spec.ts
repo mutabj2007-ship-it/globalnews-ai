@@ -15,10 +15,7 @@ function assessment(
   return { articleId, excerpt, direction };
 }
 
-function claim(
-  text: string,
-  relationalSupport?: SourcedClaim['relationalSupport'],
-): SourcedClaim {
+function claim(text: string, relationalSupport?: SourcedClaim['relationalSupport']): SourcedClaim {
   return { claim: text, sourceArticleIds: [], ...(relationalSupport ? { relationalSupport } : {}) };
 }
 
@@ -36,7 +33,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('B. one distinct requested-direction article -> supported / limited', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.directionalEligibility).toBe('supported');
@@ -45,8 +45,14 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('C. two+ distinct requested-direction articles -> supported / adequate', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
-      claim('c2', { direction: 'requested-direction', assessments: [assessment('a2', 'requested-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
+      claim('c2', {
+        direction: 'requested-direction',
+        assessments: [assessment('a2', 'requested-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.directionalEligibility).toBe('supported');
@@ -55,9 +61,18 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('D. requested support + reverse evidence -> supported / limited (forced)', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
-      claim('c2', { direction: 'requested-direction', assessments: [assessment('a2', 'requested-direction')] }),
-      claim('c3', { direction: 'reverse-direction', assessments: [assessment('a3', 'reverse-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
+      claim('c2', {
+        direction: 'requested-direction',
+        assessments: [assessment('a2', 'requested-direction')],
+      }),
+      claim('c3', {
+        direction: 'reverse-direction',
+        assessments: [assessment('a3', 'reverse-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.directionalEligibility).toBe('supported');
@@ -66,11 +81,20 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('E. requested support + mixed evidence -> supported / limited (forced)', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
-      claim('c2', { direction: 'requested-direction', assessments: [assessment('a2', 'requested-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
+      claim('c2', {
+        direction: 'requested-direction',
+        assessments: [assessment('a2', 'requested-direction')],
+      }),
       claim('c3', {
         direction: 'mixed',
-        assessments: [assessment('a3', 'requested-direction'), assessment('a3', 'reverse-direction')],
+        assessments: [
+          assessment('a3', 'requested-direction'),
+          assessment('a3', 'reverse-direction'),
+        ],
       }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
@@ -79,9 +103,18 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('F. requested support + association-only (no reverse/mixed) -> per article-count rule, not downgraded', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
-      claim('c2', { direction: 'requested-direction', assessments: [assessment('a2', 'requested-direction')] }),
-      claim('c3', { direction: 'association-only', assessments: [assessment('a3', 'association-only')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
+      claim('c2', {
+        direction: 'requested-direction',
+        assessments: [assessment('a2', 'requested-direction')],
+      }),
+      claim('c3', {
+        direction: 'association-only',
+        assessments: [assessment('a3', 'association-only')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.directionalEligibility).toBe('supported');
@@ -90,7 +123,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('G. requested support + unclear/non-substantive only -> per article-count rule, not downgraded', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
       claim('c2', { direction: 'unclear', assessments: [assessment('a2', 'unclear')] }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
@@ -119,7 +155,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('J. reverse-only evidence -> unsupported / insufficient', () => {
     const keyFacts = [
-      claim('c1', { direction: 'reverse-direction', assessments: [assessment('a1', 'reverse-direction')] }),
+      claim('c1', {
+        direction: 'reverse-direction',
+        assessments: [assessment('a1', 'reverse-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.directionalEligibility).toBe('unsupported');
@@ -129,7 +168,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('K. association-only evidence only -> unsupported / insufficient', () => {
     const keyFacts = [
-      claim('c1', { direction: 'association-only', assessments: [assessment('a1', 'association-only')] }),
+      claim('c1', {
+        direction: 'association-only',
+        assessments: [assessment('a1', 'association-only')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.directionalEligibility).toBe('unsupported');
@@ -140,7 +182,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
     const keyFacts = [
       claim('c1', {
         direction: 'mixed',
-        assessments: [assessment('a1', 'requested-direction'), assessment('a1', 'reverse-direction')],
+        assessments: [
+          assessment('a1', 'requested-direction'),
+          assessment('a1', 'reverse-direction'),
+        ],
       }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
@@ -160,8 +205,14 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('1. two claims from the SAME article count as ONE supporting article', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('same-article', 'requested-direction')] }),
-      claim('c2', { direction: 'requested-direction', assessments: [assessment('same-article', 'requested-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('same-article', 'requested-direction')],
+      }),
+      claim('c2', {
+        direction: 'requested-direction',
+        assessments: [assessment('same-article', 'requested-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.evidenceSufficiency).toBe('limited'); // only 1 distinct article, not 2
@@ -169,8 +220,14 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('2. claims from two distinct articleIds count as TWO', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('article-a', 'requested-direction')] }),
-      claim('c2', { direction: 'requested-direction', assessments: [assessment('article-b', 'requested-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('article-a', 'requested-direction')],
+      }),
+      claim('c2', {
+        direction: 'requested-direction',
+        assessments: [assessment('article-b', 'requested-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.evidenceSufficiency).toBe('adequate');
@@ -180,7 +237,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
     const keyFacts = [
       claim('c1', {
         direction: 'mixed',
-        assessments: [assessment('a1', 'requested-direction'), assessment('a2', 'reverse-direction')],
+        assessments: [
+          assessment('a1', 'requested-direction'),
+          assessment('a2', 'reverse-direction'),
+        ],
       }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
@@ -191,10 +251,16 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('4. requested-direction + separate mixed claim -> supported + limited', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
       claim('c2', {
         direction: 'mixed',
-        assessments: [assessment('a2', 'requested-direction'), assessment('a3', 'reverse-direction')],
+        assessments: [
+          assessment('a2', 'requested-direction'),
+          assessment('a3', 'reverse-direction'),
+        ],
       }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
@@ -204,8 +270,14 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('5. requested-direction + reverse -> supported + limited', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
-      claim('c2', { direction: 'reverse-direction', assessments: [assessment('a2', 'reverse-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
+      claim('c2', {
+        direction: 'reverse-direction',
+        assessments: [assessment('a2', 'reverse-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.directionalEligibility).toBe('supported');
@@ -235,13 +307,18 @@ describe('buildRelationalComposition (Milestone #41)', () => {
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.directionalEligibility).toBe('unsupported');
     expect(result.evidenceSufficiency).toBe('insufficient');
-    expect(result.summary).toBe('Available reporting does not provide enough validated evidence to establish the requested relationship.');
+    expect(result.summary).toBe(
+      'Available reporting does not provide enough validated evidence to establish the requested relationship.',
+    );
   });
 
   it('10. ClaimReference indexes correspond exactly to the FINAL VALIDATED arrays passed in', () => {
     const keyFacts = [
       claim('irrelevant, no support'),
-      claim('c2', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
+      claim('c2', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.supportingClaims).toEqual([{ section: 'keyFacts', index: 1 }]);
@@ -256,7 +333,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
           {
             description: 'p1',
             sourceArticleIds: [],
-            relationalSupport: { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] },
+            relationalSupport: {
+              direction: 'requested-direction',
+              assessments: [assessment('a1', 'requested-direction')],
+            },
           },
         ],
       },
@@ -266,7 +346,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
         timestamp: new Date().toISOString(),
         event: 'e0',
         sourceArticleIds: [],
-        relationalSupport: { direction: 'reverse-direction', assessments: [assessment('a2', 'reverse-direction')] },
+        relationalSupport: {
+          direction: 'reverse-direction',
+          assessments: [assessment('a2', 'reverse-direction')],
+        },
       },
     ];
     const result = buildRelationalComposition(X, Y, [], [], differences, timeline);
@@ -280,7 +363,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
       {
         point: 'p1',
         sourceArticleIds: [],
-        relationalSupport: { direction: 'association-only', assessments: [assessment('a1', 'association-only')] },
+        relationalSupport: {
+          direction: 'association-only',
+          assessments: [assessment('a1', 'association-only')],
+        },
       },
     ];
     const result = buildRelationalComposition(X, Y, [], agreements, [], []);
@@ -289,8 +375,14 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('summary uses "multiple distinct articles" wording, never "sources"', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
-      claim('c2', { direction: 'requested-direction', assessments: [assessment('a2', 'requested-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
+      claim('c2', {
+        direction: 'requested-direction',
+        assessments: [assessment('a2', 'requested-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.summary).toContain('multiple distinct articles');
@@ -299,9 +391,18 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('reverse/association-only/mixed/unclear claims are never discarded even when supportingClaims is also non-empty', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
-      claim('c2', { direction: 'reverse-direction', assessments: [assessment('a2', 'reverse-direction')] }),
-      claim('c3', { direction: 'association-only', assessments: [assessment('a3', 'association-only')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
+      claim('c2', {
+        direction: 'reverse-direction',
+        assessments: [assessment('a2', 'reverse-direction')],
+      }),
+      claim('c3', {
+        direction: 'association-only',
+        assessments: [assessment('a3', 'association-only')],
+      }),
       claim('c4', { direction: 'unclear', assessments: [assessment('a4', 'unclear')] }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
@@ -312,7 +413,10 @@ describe('buildRelationalComposition (Milestone #41)', () => {
 
   it('summary never contains causal language ("caused", "resulted from")', () => {
     const keyFacts = [
-      claim('c1', { direction: 'requested-direction', assessments: [assessment('a1', 'requested-direction')] }),
+      claim('c1', {
+        direction: 'requested-direction',
+        assessments: [assessment('a1', 'requested-direction')],
+      }),
     ];
     const result = buildRelationalComposition(X, Y, keyFacts, [], [], []);
     expect(result.summary).not.toMatch(/\bcause[sd]?\b|\bresulted from\b/i);

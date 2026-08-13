@@ -4,9 +4,32 @@ const TITLE_SIMILARITY_THRESHOLD = 0.6;
 const TIME_WINDOW_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'to', 'of', 'in', 'on', 'for',
-  'and', 'or', 'with', 'at', 'by', 'as', 'it', 'its', 'this', 'that', 'after',
-  'over', 'amid', 'new',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'to',
+  'of',
+  'in',
+  'on',
+  'for',
+  'and',
+  'or',
+  'with',
+  'at',
+  'by',
+  'as',
+  'it',
+  'its',
+  'this',
+  'that',
+  'after',
+  'over',
+  'amid',
+  'new',
 ]);
 
 function tokenize(title: string): Set<string> {
@@ -90,7 +113,9 @@ function computeClusters(articles: NewsArticle[]): ArticleCluster[] {
   const clusters: ArticleCluster[] = [];
 
   for (const article of articles) {
-    const existingCluster = clusters.find((cluster) => isLikelyDuplicate(cluster.representative, article));
+    const existingCluster = clusters.find((cluster) =>
+      isLikelyDuplicate(cluster.representative, article),
+    );
     if (existingCluster) {
       existingCluster.members.push(article);
     } else {

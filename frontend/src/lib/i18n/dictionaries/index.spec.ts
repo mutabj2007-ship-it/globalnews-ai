@@ -1,4 +1,4 @@
-﻿import { getDictionary } from './index';
+import { getDictionary } from './index';
 
 /**
  * Milestone #47 (homepage integration) — these tests exist specifically
@@ -21,41 +21,15 @@ describe('Milestone #47 (homepage integration) — hero dictionary', () => {
     expect(en.hero.formAriaLabel).toBe('Ask GlobalNews AI');
     expect(en.hero.submitAriaLabel).toBe('Submit question');
     expect(en.hero.tryPrefix).toBe('Try:');
-    expect(en.hero.exampleQuestions).toEqual([
-      'What\u2019s happening in the Middle East right now?',
-      'Explain the new EU AI regulation in plain English',
-      'Summarize today\u2019s central bank announcement',
-      'What are scientists saying about the latest climate report?',
-      'Break down this week\u2019s tech earnings',
-      'What changed in the election polling this week?',
-    ]);
   });
 
   it('Polish hero strings are present, non-empty, and distinct from English', () => {
     const en = getDictionary('en');
     const pl = getDictionary('pl');
-    const stringKeys = [
-      'badge',
-      'headline',
-      'subhead',
-      'inputPlaceholder',
-      'inputAriaLabel',
-      'formAriaLabel',
-      'submitAriaLabel',
-      'tryPrefix',
-    ] as const;
-
-    for (const key of stringKeys) {
+    const keys = Object.keys(en.hero) as Array<keyof typeof en.hero>;
+    for (const key of keys) {
       expect(pl.hero[key].length).toBeGreaterThan(0);
       expect(pl.hero[key]).not.toBe(en.hero[key]);
-    }
-
-    expect(pl.hero.exampleQuestions).toHaveLength(6);
-    expect(en.hero.exampleQuestions).toHaveLength(6);
-
-    for (let i = 0; i < en.hero.exampleQuestions.length; i += 1) {
-      expect(pl.hero.exampleQuestions[i].length).toBeGreaterThan(0);
-      expect(pl.hero.exampleQuestions[i]).not.toBe(en.hero.exampleQuestions[i]);
     }
   });
 
@@ -69,5 +43,110 @@ describe('Milestone #47 (homepage integration) — hero dictionary', () => {
     const pl = getDictionary('pl');
     expect(Object.keys(en).sort()).toEqual(Object.keys(pl).sort());
     expect(Object.keys(en.hero).sort()).toEqual(Object.keys(pl.hero).sort());
+  });
+});
+
+describe('Milestone #48 — homepage below-Hero dictionary sections', () => {
+  it('every en homepage-section string is byte-identical to the original hardcoded component text', () => {
+    const en = getDictionary('en');
+    expect(en.newsroomSnapshot.label).toBe('Newsroom snapshot');
+    expect(en.newsroomSnapshot.headline).toBe('The story everyone\u2019s reading');
+    expect(en.featuredStory.unavailable).toBe(
+      'Live headlines are temporarily unavailable. Check that the backend is running.',
+    );
+    expect(en.featuredStory.viewSources).toBe('View sources');
+    expect(en.trendingSidebar.heading).toBe('Trending now');
+    expect(en.trendingSidebar.unavailable).toBe('Live headlines are temporarily unavailable.');
+    expect(en.categoryCards.label).toBe('Today\u2019s coverage');
+    expect(en.categoryCards.headline).toBe('Six ways to see what\u2019s happening');
+    expect(en.latestUpdatesFeed.label).toBe('Latest updates');
+    expect(en.latestUpdatesFeed.headline).toBe('As it comes in');
+    expect(en.howItWorks.label).toBe('How it works');
+    expect(en.howItWorks.headline).toBe('From question to clarity, in three steps');
+    expect(en.trustSection.label).toBe('Built on trust');
+    expect(en.trustSection.headline).toBe('Why trust GlobalNews AI?');
+    expect(en.navBar.signIn).toBe('Sign In');
+    expect(en.footer.comingSoon).toBe('Coming soon');
+    expect(en.footer.copyrightSuffix).toBe('GlobalNews AI. All rights reserved.');
+    expect(en.footer.closingTagline).toBe('Built for clarity, not clicks.');
+    expect(en.liveStatusStrip.reconnecting).toBe('RECONNECTING');
+    expect(en.liveStatusStrip.monitoring).toBe('Monitoring trusted global sources');
+  });
+
+  it('howItWorks.steps and trustSection.items are the same length and order in both languages, so array-index alignment with homeContent.ts never mismatches', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(en.howItWorks.steps.length).toBe(3);
+    expect(pl.howItWorks.steps.length).toBe(3);
+    expect(en.trustSection.items.length).toBe(5);
+    expect(pl.trustSection.items.length).toBe(5);
+  });
+
+  it('every Polish homepage-section string is present, non-empty, and distinct from its English counterpart', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    const sections = [
+      'newsroomSnapshot',
+      'featuredStory',
+      'trendingSidebar',
+      'categoryCards',
+      'latestUpdatesFeed',
+      'liveStatusStrip',
+    ] as const;
+    for (const section of sections) {
+      const enKeys = Object.keys(en[section]) as Array<keyof (typeof en)[typeof section]>;
+      for (const key of enKeys) {
+        const enValue = en[section][key];
+        const plValue = pl[section][key];
+        if (typeof enValue === 'string' && typeof plValue === 'string') {
+          expect(plValue.length).toBeGreaterThan(0);
+          expect(plValue).not.toBe(enValue);
+        }
+      }
+    }
+  });
+
+  it('footer.linkLabels and navBar.linkLabels are keyed by href, matching homeContent.ts / navigation.ts routes — routes themselves are never part of the dictionary', () => {
+    const en = getDictionary('en');
+    expect(en.footer.linkLabels['/about']).toBe('About');
+    expect(en.footer.linkLabels['/careers']).toBe('Careers');
+    expect(en.footer.linkLabels['/privacy']).toBe('Privacy Policy');
+    expect(en.navBar.linkLabels['/']).toBe('Home');
+    expect(en.navBar.linkLabels['/map']).toBe('World Map');
+  });
+
+  it('Polish footer/nav link labels exist for the same href keys as English', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(Object.keys(en.footer.linkLabels).sort()).toEqual(Object.keys(pl.footer.linkLabels).sort());
+    expect(Object.keys(en.navBar.linkLabels).sort()).toEqual(Object.keys(pl.navBar.linkLabels).sort());
+  });
+
+  it('an unimplemented language falls back to the full English dictionary, including all M48 sections', () => {
+    const fallback = getDictionary('sw');
+    expect(fallback.newsroomSnapshot.label).toBe('Newsroom snapshot');
+    expect(fallback.footer.copyrightSuffix).toBe('GlobalNews AI. All rights reserved.');
+  });
+
+  it('no duplicate i18n mechanism was introduced — every M48 section lives under the SAME getDictionary(language) call as pre-existing M47 sections', () => {
+    const en = getDictionary('en');
+    const topLevelKeys = Object.keys(en);
+    // M47 sections and M48 sections coexist as siblings under one dictionary object.
+    expect(topLevelKeys).toEqual(
+      expect.arrayContaining([
+        'hero',
+        'analysisResultView',
+        'newsroomSnapshot',
+        'featuredStory',
+        'trendingSidebar',
+        'categoryCards',
+        'latestUpdatesFeed',
+        'howItWorks',
+        'trustSection',
+        'footer',
+        'navBar',
+        'liveStatusStrip',
+      ]),
+    );
   });
 });

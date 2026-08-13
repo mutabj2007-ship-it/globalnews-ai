@@ -45,22 +45,16 @@ export class CountryNewsService {
     const country = resolveCountryByAnyIdentifier(countryIdentifier);
 
     if (!country) {
-      this.logger.debug(
-        `Could not resolve country identifier "${countryIdentifier}"`,
-      );
+      this.logger.debug(`Could not resolve country identifier "${countryIdentifier}"`);
 
-      throw new BadRequestException(
-        `Unknown country identifier: "${countryIdentifier}"`,
-      );
+      throw new BadRequestException(`Unknown country identifier: "${countryIdentifier}"`);
     }
 
     const cacheKey = `${country.iso3}:${category ?? 'all'}:${resolvedLimit}:${city ?? 'all'}`;
     const cached = this.getCached(cacheKey);
 
     if (cached) {
-      this.logger.debug(
-        `Serving cached country news for ${country.iso3}`,
-      );
+      this.logger.debug(`Serving cached country news for ${country.iso3}`);
 
       return cached;
     }
@@ -80,12 +74,7 @@ export class CountryNewsService {
         error instanceof Error ? error : undefined,
       );
 
-      const storedArticles = await this.getStoredArticles(
-        country,
-        category,
-        resolvedLimit,
-        city,
-      );
+      const storedArticles = await this.getStoredArticles(country, category, resolvedLimit, city);
 
       if (storedArticles.length > 0) {
         const response: CountryNewsResponse = {
@@ -98,10 +87,7 @@ export class CountryNewsService {
           feedTier: 'delayed',
           providerDisplayName: 'Stored reporting',
           fallbackReason: 'provider-error',
-          newestArticlePublishedAt:
-            this.getNewestArticlePublishedAt(
-              storedArticles,
-            ),
+          newestArticlePublishedAt: this.getNewestArticlePublishedAt(storedArticles),
           category,
           ...(city ? { city } : {}),
           generatedAt: new Date().toISOString(),
@@ -119,29 +105,22 @@ export class CountryNewsService {
       .map((article) => ({
         article,
         relevance: scoreCountryRelevance(article, country),
-        matchesCity: city
-          ? articleMentionsCity(article, city)
-          : false,
+        matchesCity: city ? articleMentionsCity(article, city) : false,
       }))
       .sort((left, right) => {
         if (left.matchesCity !== right.matchesCity) {
           return left.matchesCity ? -1 : 1;
         }
 
-        const scoreDifference =
-          right.relevance.score - left.relevance.score;
+        const scoreDifference = right.relevance.score - left.relevance.score;
 
         if (scoreDifference !== 0) {
           return scoreDifference;
         }
 
-        const rightPublishedAt = Date.parse(
-          right.article.publishedAt,
-        );
+        const rightPublishedAt = Date.parse(right.article.publishedAt);
 
-        const leftPublishedAt = Date.parse(
-          left.article.publishedAt,
-        );
+        const leftPublishedAt = Date.parse(left.article.publishedAt);
 
         return rightPublishedAt - leftPublishedAt;
       });
@@ -158,35 +137,21 @@ export class CountryNewsService {
       );
     }
 
-    const scoredArticles = scoredEntries.map(
-      ({ article, relevance }) => ({
-        ...article,
-        confidence: scoreArticleConfidence(
-          article,
-          relevance.score,
-        ).confidence,
-      }),
-    );
+    const scoredArticles = scoredEntries.map(({ article, relevance }) => ({
+      ...article,
+      confidence: scoreArticleConfidence(article, relevance.score).confidence,
+    }));
 
     const categoryFilteredArticles = category
-      ? scoredArticles.filter(
-          (article) => article.category === category,
-        )
+      ? scoredArticles.filter((article) => article.category === category)
       : scoredArticles;
 
-    const articles = deduplicateArticles(
-      categoryFilteredArticles,
-    );
+    const articles = deduplicateArticles(categoryFilteredArticles);
 
     const bounded = articles.slice(0, resolvedLimit);
 
     if (bounded.length === 0) {
-      const storedArticles = await this.getStoredArticles(
-        country,
-        category,
-        resolvedLimit,
-        city,
-      );
+      const storedArticles = await this.getStoredArticles(country, category, resolvedLimit, city);
 
       if (storedArticles.length > 0) {
         const response: CountryNewsResponse = {
@@ -198,13 +163,8 @@ export class CountryNewsService {
           dataMode: 'cached',
           feedTier: 'delayed',
           providerDisplayName: 'Stored reporting',
-          fallbackReason:
-            searchResponse.fallbackReason ??
-            'no-live-results',
-          newestArticlePublishedAt:
-            this.getNewestArticlePublishedAt(
-              storedArticles,
-            ),
+          fallbackReason: searchResponse.fallbackReason ?? 'no-live-results',
+          newestArticlePublishedAt: this.getNewestArticlePublishedAt(storedArticles),
           category,
           ...(city ? { city } : {}),
           generatedAt: new Date().toISOString(),
@@ -216,11 +176,10 @@ export class CountryNewsService {
       }
     }
 
-    const { feedTier, providerDisplayName } =
-      this.describeFeed(
-        searchResponse.providers,
-        searchResponse.dataMode,
-      );
+    const { feedTier, providerDisplayName } = this.describeFeed(
+      searchResponse.providers,
+      searchResponse.dataMode,
+    );
 
     const response: CountryNewsResponse = {
       countryCode: country.iso3,
@@ -231,19 +190,14 @@ export class CountryNewsService {
       dataMode: searchResponse.dataMode,
       feedTier,
       providerDisplayName,
-      ...(searchResponse.dataMode === 'cached' ||
-      searchResponse.dataMode === 'unavailable'
-  ? {
-      fallbackReason:
-        searchResponse.fallbackReason,
-      newestArticlePublishedAt:
-        searchResponse.fallbackReason
-          ? this.getNewestArticlePublishedAt(
-              bounded,
-            )
-          : undefined,
-    }
-  : {}),
+      ...(searchResponse.dataMode === 'cached' || searchResponse.dataMode === 'unavailable'
+        ? {
+            fallbackReason: searchResponse.fallbackReason,
+            newestArticlePublishedAt: searchResponse.fallbackReason
+              ? this.getNewestArticlePublishedAt(bounded)
+              : undefined,
+          }
+        : {}),
       category,
       ...(city ? { city } : {}),
       generatedAt: new Date().toISOString(),
@@ -267,10 +221,7 @@ export class CountryNewsService {
    * particular interpretation — the city-first sort below re-ranks
    * whatever comes back regardless.
    */
-  private buildSearchTerm(
-    country: CountryMeta,
-    city: string | undefined,
-  ): string {
+  private buildSearchTerm(country: CountryMeta, city: string | undefined): string {
     return city ? `${city} ${country.name}` : country.name;
   }
 
@@ -306,52 +257,39 @@ export class CountryNewsService {
     limit: number,
     city: string | undefined,
   ): Promise<NewsArticle[]> {
-    const countryStored =
-      await this.articlePersistence.findRecentByCountry({
-        countryCode: country.iso3,
-        category,
-        limit,
-        maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
-        relevantOnly: true,
-      });
+    const countryStored = await this.articlePersistence.findRecentByCountry({
+      countryCode: country.iso3,
+      category,
+      limit,
+      maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+      relevantOnly: true,
+    });
 
     if (!city) {
       return countryStored;
     }
 
-    const cityStoredCandidates =
-      await this.articlePersistence.findRecent({
-        query: city,
-        category,
-        limit,
-        maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
-      });
+    const cityStoredCandidates = await this.articlePersistence.findRecent({
+      query: city,
+      category,
+      limit,
+      maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+    });
 
     const cityStored = cityStoredCandidates.filter(
-      (article) =>
-        scoreCountryRelevance(article, country).isRelevant,
+      (article) => scoreCountryRelevance(article, country).isRelevant,
     );
 
-    return deduplicateArticles([
-      ...cityStored,
-      ...countryStored,
-    ]).slice(0, limit);
+    return deduplicateArticles([...cityStored, ...countryStored]).slice(0, limit);
   }
 
-  private getNewestArticlePublishedAt(
-    articles: NewsArticle[],
-  ): string | undefined {
+  private getNewestArticlePublishedAt(articles: NewsArticle[]): string | undefined {
     let newestTimestamp = Number.NEGATIVE_INFINITY;
 
     for (const article of articles) {
-      const timestamp = Date.parse(
-        article.publishedAt,
-      );
+      const timestamp = Date.parse(article.publishedAt);
 
-      if (
-        Number.isFinite(timestamp) &&
-        timestamp > newestTimestamp
-      ) {
+      if (Number.isFinite(timestamp) && timestamp > newestTimestamp) {
         newestTimestamp = timestamp;
       }
     }
@@ -360,9 +298,7 @@ export class CountryNewsService {
       return undefined;
     }
 
-    return new Date(
-      newestTimestamp,
-    ).toISOString();
+    return new Date(newestTimestamp).toISOString();
   }
 
   private describeFeed(
@@ -396,18 +332,12 @@ export class CountryNewsService {
     const activeProviderId = providerIds[0];
 
     if (activeProviderId === 'gnews') {
-      const configuredTier =
-        this.config.get<string>('GNEWS_FEED_TIER');
+      const configuredTier = this.config.get<string>('GNEWS_FEED_TIER');
 
-      const feedTier: NewsFeedTier =
-        configuredTier === 'live'
-          ? 'live'
-          : 'delayed';
+      const feedTier: NewsFeedTier = configuredTier === 'live' ? 'live' : 'delayed';
 
       const providerDisplayName =
-        this.config.get<string>(
-          'GNEWS_PROVIDER_DISPLAY_NAME',
-        ) || 'GNews Free';
+        this.config.get<string>('GNEWS_PROVIDER_DISPLAY_NAME') || 'GNews Free';
 
       return {
         feedTier,
@@ -417,9 +347,7 @@ export class CountryNewsService {
 
     return {
       feedTier: 'live',
-      providerDisplayName: activeProviderId
-        ? this.titleCase(activeProviderId)
-        : 'Live provider',
+      providerDisplayName: activeProviderId ? this.titleCase(activeProviderId) : 'Live provider',
     };
   }
 
@@ -427,17 +355,11 @@ export class CountryNewsService {
     return value
       .split(/[\s-]+/)
       .filter(Boolean)
-      .map(
-        (word) =>
-          word.charAt(0).toUpperCase() +
-          word.slice(1).toLowerCase(),
-      )
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
   }
 
-  private clampLimit(
-    requested: number | undefined,
-  ): number {
+  private clampLimit(requested: number | undefined): number {
     if (!requested || requested < 1) {
       return DEFAULT_LIMIT;
     }
@@ -446,22 +368,14 @@ export class CountryNewsService {
   }
 
   private getCacheTtlSeconds(): number {
-    const raw = this.config.get<string>(
-      'COUNTRY_NEWS_CACHE_TTL_SECONDS',
-    );
+    const raw = this.config.get<string>('COUNTRY_NEWS_CACHE_TTL_SECONDS');
 
-    const parsed = raw
-      ? parseInt(raw, 10)
-      : NaN;
+    const parsed = raw ? parseInt(raw, 10) : NaN;
 
-    return Number.isFinite(parsed) && parsed >= 0
-      ? parsed
-      : DEFAULT_CACHE_TTL_SECONDS;
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_CACHE_TTL_SECONDS;
   }
 
-  private getCached(
-    key: string,
-  ): CountryNewsResponse | null {
+  private getCached(key: string): CountryNewsResponse | null {
     const entry = this.cache.get(key);
 
     if (!entry) {
@@ -477,12 +391,8 @@ export class CountryNewsService {
     return entry.value;
   }
 
-  private setCached(
-    key: string,
-    value: CountryNewsResponse,
-  ): void {
-    const ttlSeconds =
-      this.getCacheTtlSeconds();
+  private setCached(key: string, value: CountryNewsResponse): void {
+    const ttlSeconds = this.getCacheTtlSeconds();
 
     if (ttlSeconds <= 0) {
       return;
@@ -490,8 +400,7 @@ export class CountryNewsService {
 
     this.cache.set(key, {
       value,
-      expiresAt:
-        Date.now() + ttlSeconds * 1000,
+      expiresAt: Date.now() + ttlSeconds * 1000,
     });
   }
 }

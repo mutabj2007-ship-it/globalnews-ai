@@ -9,10 +9,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import {
-  NEWS_CATEGORIES,
-  type NewsCategory,
-} from '@globalnews-ai/shared';
+import { NEWS_CATEGORIES, type NewsCategory } from '@globalnews-ai/shared';
 
 export class CountryParamsDto {
   @IsString()

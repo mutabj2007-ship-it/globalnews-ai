@@ -98,9 +98,7 @@ export interface OrganizationResolution {
  * lookup. Returns undefined for anything else — including near-misses
  * of a real organization name, which this module never fuzzy-corrects.
  */
-export function resolveOrganizationAlias(
-  candidate: string,
-): OrganizationResolution | undefined {
+export function resolveOrganizationAlias(candidate: string): OrganizationResolution | undefined {
   const trimmed = candidate.trim();
   if (!trimmed) {
     return undefined;

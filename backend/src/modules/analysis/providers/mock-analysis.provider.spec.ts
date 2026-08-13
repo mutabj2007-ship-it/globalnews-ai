@@ -130,7 +130,11 @@ describe('MockAnalysisProvider', () => {
     it('explicit responseLanguage="en" behaves identically to the default', async () => {
       const articles = [makeArticle({ id: 'a1', title: 'Story A' })];
       const withDefault = await provider.analyzeNews({ query: 'test', articles });
-      const withExplicitEn = await provider.analyzeNews({ query: 'test', articles, responseLanguage: 'en' });
+      const withExplicitEn = await provider.analyzeNews({
+        query: 'test',
+        articles,
+        responseLanguage: 'en',
+      });
       expect(withDefault).toEqual(withExplicitEn);
     });
 
@@ -157,7 +161,11 @@ describe('MockAnalysisProvider', () => {
         makeArticle({ id: 'a1', title: 'Story A' }),
         makeArticle({ id: 'a2', title: 'Story B' }),
       ];
-      const candidate = await provider.analyzeNews({ query: 'test', articles, responseLanguage: 'pl' });
+      const candidate = await provider.analyzeNews({
+        query: 'test',
+        articles,
+        responseLanguage: 'pl',
+      });
       const validated = validateAnalysisResult(candidate, {
         query: 'test',
         articles,
@@ -168,9 +176,11 @@ describe('MockAnalysisProvider', () => {
       expect(validated.keyFacts.length).toBeGreaterThan(0);
     });
 
-    it('headline is NEVER translated — always the real article\'s own title, verbatim, regardless of responseLanguage', async () => {
+    it("headline is NEVER translated — always the real article's own title, verbatim, regardless of responseLanguage", async () => {
       const articles = [makeArticle({ id: 'a1', title: 'Real English Headline Text' })];
-      const candidateEn = (await provider.analyzeNews({ query: 'test', articles })) as { headline: string };
+      const candidateEn = (await provider.analyzeNews({ query: 'test', articles })) as {
+        headline: string;
+      };
       const candidatePl = (await provider.analyzeNews({
         query: 'test',
         articles,

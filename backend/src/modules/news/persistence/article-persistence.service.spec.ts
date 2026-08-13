@@ -38,9 +38,7 @@ describe('ArticlePersistenceService', () => {
     service = new ArticlePersistenceService(prisma as never);
   });
 
-  function makeArticle(
-    overrides: Partial<NewsArticle> = {},
-  ): NewsArticle {
+  function makeArticle(overrides: Partial<NewsArticle> = {}): NewsArticle {
     return {
       id: 'article-1',
       title: 'Test headline',
@@ -55,9 +53,7 @@ describe('ArticlePersistenceService', () => {
     };
   }
 
-  function makeDatabaseRow(
-    overrides: Record<string, unknown> = {},
-  ) {
+  function makeDatabaseRow(overrides: Record<string, unknown> = {}) {
     return {
       id: 'article-1',
       title: 'Stored headline',
@@ -68,17 +64,13 @@ describe('ArticlePersistenceService', () => {
       sourceName: 'Stored Provider',
       sourcesCount: 1,
       category: 'world',
-      publishedAt: new Date(
-        '2026-08-07T10:00:00.000Z',
-      ),
+      publishedAt: new Date('2026-08-07T10:00:00.000Z'),
       confidenceScore: 87,
       ...overrides,
     };
   }
 
-  function makeCountryDatabaseRow(
-    overrides: Record<string, unknown> = {},
-  ) {
+  function makeCountryDatabaseRow(overrides: Record<string, unknown> = {}) {
     return {
       id: 'relation-1',
       articleId: 'article-1',
@@ -86,12 +78,8 @@ describe('ArticlePersistenceService', () => {
       countryName: 'Spain',
       relevanceScore: 82,
       isRelevant: true,
-      createdAt: new Date(
-        '2026-08-07T10:00:00.000Z',
-      ),
-      updatedAt: new Date(
-        '2026-08-07T10:00:00.000Z',
-      ),
+      createdAt: new Date('2026-08-07T10:00:00.000Z'),
+      updatedAt: new Date('2026-08-07T10:00:00.000Z'),
       article: makeDatabaseRow(),
       ...overrides,
     };
@@ -172,22 +160,16 @@ describe('ArticlePersistenceService', () => {
     expect(articleUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
-          publishedAt: new Date(
-            '2026-08-07T08:00:00.000Z',
-          ),
+          publishedAt: new Date('2026-08-07T08:00:00.000Z'),
         }),
       }),
     );
   });
 
   it('does not throw when database persistence fails', async () => {
-    transaction.mockRejectedValueOnce(
-      new Error('Simulated database failure'),
-    );
+    transaction.mockRejectedValueOnce(new Error('Simulated database failure'));
 
-    await expect(
-      service.persistMany([makeArticle()]),
-    ).resolves.toBeUndefined();
+    await expect(service.persistMany([makeArticle()])).resolves.toBeUndefined();
   });
 
   it('does nothing when there are no country relations', async () => {
@@ -282,9 +264,7 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('does not throw when country relation persistence fails', async () => {
-    transaction.mockRejectedValueOnce(
-      new Error('Simulated country relation database failure'),
-    );
+    transaction.mockRejectedValueOnce(new Error('Simulated country relation database failure'));
 
     await expect(
       service.persistCountryRelations([
@@ -300,17 +280,11 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('reads recent relevant articles for a country', async () => {
-    const now = new Date(
-      '2026-08-07T12:00:00.000Z',
-    ).getTime();
+    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
 
-    const nowSpy = jest
-      .spyOn(Date, 'now')
-      .mockReturnValue(now);
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-    articleCountryFindMany.mockResolvedValueOnce([
-      makeCountryDatabaseRow(),
-    ]);
+    articleCountryFindMany.mockResolvedValueOnce([makeCountryDatabaseRow()]);
 
     const result = await service.findRecentByCountry({
       countryCode: 'ESP',
@@ -324,9 +298,7 @@ describe('ArticlePersistenceService', () => {
         isRelevant: true,
         article: {
           publishedAt: {
-            gte: new Date(
-              '2026-08-06T12:00:00.000Z',
-            ),
+            gte: new Date('2026-08-06T12:00:00.000Z'),
           },
         },
       },
@@ -408,8 +380,7 @@ describe('ArticlePersistenceService', () => {
       relevantOnly: false,
     });
 
-    const call =
-      articleCountryFindMany.mock.calls[0][0];
+    const call = articleCountryFindMany.mock.calls[0][0];
 
     expect(call.where.countryCode).toBe('ESP');
     expect(call.where.isRelevant).toBeUndefined();
@@ -462,9 +433,7 @@ describe('ArticlePersistenceService', () => {
 
   it('returns an empty array when country database reading fails', async () => {
     articleCountryFindMany.mockRejectedValueOnce(
-      new Error(
-        'Simulated country database read failure',
-      ),
+      new Error('Simulated country database read failure'),
     );
 
     await expect(
@@ -475,17 +444,11 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('reads recent articles using the default 24-hour freshness window', async () => {
-    const now = new Date(
-      '2026-08-07T12:00:00.000Z',
-    ).getTime();
+    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
 
-    const nowSpy = jest
-      .spyOn(Date, 'now')
-      .mockReturnValue(now);
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-    articleFindMany.mockResolvedValueOnce([
-      makeDatabaseRow(),
-    ]);
+    articleFindMany.mockResolvedValueOnce([makeDatabaseRow()]);
 
     const result = await service.findRecent();
 
@@ -494,9 +457,7 @@ describe('ArticlePersistenceService', () => {
     expect(articleFindMany).toHaveBeenCalledWith({
       where: {
         publishedAt: {
-          gte: new Date(
-            '2026-08-06T12:00:00.000Z',
-          ),
+          gte: new Date('2026-08-06T12:00:00.000Z'),
         },
       },
       orderBy: {
@@ -538,13 +499,9 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('filters recent articles by category', async () => {
-    const now = new Date(
-      '2026-08-07T12:00:00.000Z',
-    ).getTime();
+    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
 
-    const nowSpy = jest
-      .spyOn(Date, 'now')
-      .mockReturnValue(now);
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
     articleFindMany.mockResolvedValueOnce([]);
 
@@ -557,9 +514,7 @@ describe('ArticlePersistenceService', () => {
     expect(articleFindMany).toHaveBeenCalledWith({
       where: {
         publishedAt: {
-          gte: new Date(
-            '2026-08-07T11:00:00.000Z',
-          ),
+          gte: new Date('2026-08-07T11:00:00.000Z'),
         },
         category: 'technology',
       },
@@ -602,12 +557,8 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('returns an empty array when database reading fails', async () => {
-    articleFindMany.mockRejectedValueOnce(
-      new Error('Simulated database read failure'),
-    );
+    articleFindMany.mockRejectedValueOnce(new Error('Simulated database read failure'));
 
-    await expect(
-      service.findRecent(),
-    ).resolves.toEqual([]);
+    await expect(service.findRecent()).resolves.toEqual([]);
   });
 });

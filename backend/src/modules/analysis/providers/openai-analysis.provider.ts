@@ -3,7 +3,10 @@ import type { AnalysisFailureReason } from '@globalnews-ai/shared';
 import type { AnalysisProvider, AnalysisProviderInput } from '../interfaces';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { isUsableOpenAiApiKey } from './provider.tokens';
-import { buildAnalysisMessages, buildAnalysisJsonSchema } from '../prompt/build-analysis-prompt.util';
+import {
+  buildAnalysisMessages,
+  buildAnalysisJsonSchema,
+} from '../prompt/build-analysis-prompt.util';
 
 const OPENAI_CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -139,7 +142,12 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
         const wrapped =
           error instanceof OpenAiAnalysisError
             ? error
-            : new OpenAiAnalysisError('Failed to reach OpenAI.', 'provider-unavailable', true, error);
+            : new OpenAiAnalysisError(
+                'Failed to reach OpenAI.',
+                'provider-unavailable',
+                true,
+                error,
+              );
 
         lastError = wrapped;
 
@@ -163,7 +171,12 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     // Unreachable in practice (the loop above always either returns or
     // throws), but keeps this function's control flow provably total.
     throw (
-      lastError ?? new OpenAiAnalysisError('OpenAI call failed for an unknown reason.', 'provider-unavailable', false)
+      lastError ??
+      new OpenAiAnalysisError(
+        'OpenAI call failed for an unknown reason.',
+        'provider-unavailable',
+        false,
+      )
     );
   }
 
@@ -211,7 +224,12 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
         // full configured timeout budget, so retrying a timeout would
         // silently multiply total latency past ANALYSIS_TIMEOUT_MS
         // rather than respecting it (Milestone #30 §E.5).
-        throw new OpenAiAnalysisError('OpenAI request timed out.', 'provider-timeout', false, error);
+        throw new OpenAiAnalysisError(
+          'OpenAI request timed out.',
+          'provider-timeout',
+          false,
+          error,
+        );
       }
       // A network-level failure (DNS, connection reset, etc.) before any
       // HTTP response was received — this is the "transient network
@@ -222,19 +240,31 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     }
 
     if (response.status === 401 || response.status === 403) {
-      throw new OpenAiAnalysisError('OpenAI rejected the configured API key.', 'provider-auth', false);
+      throw new OpenAiAnalysisError(
+        'OpenAI rejected the configured API key.',
+        'provider-auth',
+        false,
+      );
     }
     if (response.status === 429) {
       throw new OpenAiAnalysisError('OpenAI rate limit exceeded.', 'provider-rate-limited', true);
     }
     if (isServerErrorStatus(response.status)) {
-      throw new OpenAiAnalysisError(`OpenAI responded with status ${response.status}.`, 'provider-unavailable', true);
+      throw new OpenAiAnalysisError(
+        `OpenAI responded with status ${response.status}.`,
+        'provider-unavailable',
+        true,
+      );
     }
     if (!response.ok) {
       // Any other 4xx (e.g. 400 bad request) reflects a request we
       // built incorrectly, not a transient condition — retrying it
       // would just fail again the same way.
-      throw new OpenAiAnalysisError(`OpenAI responded with status ${response.status}.`, 'provider-unavailable', false);
+      throw new OpenAiAnalysisError(
+        `OpenAI responded with status ${response.status}.`,
+        'provider-unavailable',
+        false,
+      );
     }
 
     let payload: OpenAiChatCompletionResponse;
@@ -266,14 +296,23 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
 
     const content = choice?.message?.content;
     if (!content) {
-      throw new OpenAiAnalysisError('OpenAI response did not include a message.', 'malformed-output', false);
+      throw new OpenAiAnalysisError(
+        'OpenAI response did not include a message.',
+        'malformed-output',
+        false,
+      );
     }
 
     try {
       return { content: JSON.parse(content), usage: payload.usage };
     } catch (error) {
       this.logger.warn('OpenAI returned non-JSON content in a structured-output call');
-      throw new OpenAiAnalysisError('OpenAI returned an invalid analysis payload.', 'malformed-output', false, error);
+      throw new OpenAiAnalysisError(
+        'OpenAI returned an invalid analysis payload.',
+        'malformed-output',
+        false,
+        error,
+      );
     }
   }
 }

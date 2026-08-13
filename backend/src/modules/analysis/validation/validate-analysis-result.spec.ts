@@ -407,7 +407,11 @@ describe('validateAnalysisResult', () => {
       const candidate = {
         ...validCandidate('S1'),
         keyFacts: [
-          { claim: 'x', evidenceIds: ['S1'], evidenceBreadth: { sourceCount: 999, singleSource: false } },
+          {
+            claim: 'x',
+            evidenceIds: ['S1'],
+            evidenceBreadth: { sourceCount: 999, singleSource: false },
+          },
         ],
       };
       const result = validateAnalysisResult(candidate, context(articles));
@@ -417,7 +421,13 @@ describe('validateAnalysisResult', () => {
 
   describe('evidenceBasis (Milestone #32)', () => {
     it('accepts a valid evidence basis whose excerpt appears verbatim in the cited evidence text', () => {
-      const articles = [makeArticle({ id: 'a1', title: 'Officials discuss evacuation', summary: 'Local officials are discussing a possible evacuation of the district.' })];
+      const articles = [
+        makeArticle({
+          id: 'a1',
+          title: 'Officials discuss evacuation',
+          summary: 'Local officials are discussing a possible evacuation of the district.',
+        }),
+      ];
       const candidate = {
         ...validCandidate('S1'),
         keyFacts: [
@@ -437,7 +447,11 @@ describe('validateAnalysisResult', () => {
 
     it('accepts an excerpt that differs only by whitespace/typographic-quote normalization', () => {
       const articles = [
-        makeArticle({ id: 'a1', title: 'Report', summary: 'The mayor said   "recovery efforts are ongoing".' }),
+        makeArticle({
+          id: 'a1',
+          title: 'Report',
+          summary: 'The mayor said   "recovery efforts are ongoing".',
+        }),
       ];
       const candidate = {
         ...validCandidate('S1'),
@@ -446,7 +460,10 @@ describe('validateAnalysisResult', () => {
             claim: 'Recovery is ongoing',
             evidenceIds: ['S1'],
             // Curly quotes + collapsed whitespace vs. the source's straight quotes.
-            evidenceBasis: { evidenceId: 'S1', excerpt: '\u201Crecovery efforts are ongoing\u201D' },
+            evidenceBasis: {
+              evidenceId: 'S1',
+              excerpt: '\u201Crecovery efforts are ongoing\u201D',
+            },
           },
         ],
       };
@@ -489,7 +506,7 @@ describe('validateAnalysisResult', () => {
       expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
     });
 
-    it('omits evidenceBasis when the evidenceId belongs to another article, not among this entry\'s own citations', () => {
+    it("omits evidenceBasis when the evidenceId belongs to another article, not among this entry's own citations", () => {
       const articles = [
         makeArticle({ id: 'a1', title: 'Story A', summary: 'Summary A.' }),
         makeArticle({ id: 'a2', title: 'Story B', summary: 'Summary B.' }),
@@ -517,7 +534,11 @@ describe('validateAnalysisResult', () => {
       const candidate = {
         ...validCandidate('S1'),
         keyFacts: [
-          { claim: 'x', evidenceIds: ['S1'], evidenceBasis: { evidenceId: 'S2', excerpt: 'anything' } },
+          {
+            claim: 'x',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S2', excerpt: 'anything' },
+          },
         ],
       };
       const result = validateAnalysisResult(candidate, context(articles));
@@ -544,7 +565,10 @@ describe('validateAnalysisResult', () => {
     });
 
     it('never validates an excerpt against untruncated article content the model was never shown', () => {
-      const longSummary = 'Short lead. ' + 'Padding sentence repeated many times to exceed the truncation limit. '.repeat(50) + 'A UNIQUE TAIL PHRASE THAT ONLY EXISTS PAST THE TRUNCATION BOUNDARY.';
+      const longSummary =
+        'Short lead. ' +
+        'Padding sentence repeated many times to exceed the truncation limit. '.repeat(50) +
+        'A UNIQUE TAIL PHRASE THAT ONLY EXISTS PAST THE TRUNCATION BOUNDARY.';
       const articles = [makeArticle({ id: 'a1', title: 'T', summary: longSummary })];
       const candidate = {
         ...validCandidate('S1'),
@@ -560,12 +584,17 @@ describe('validateAnalysisResult', () => {
         ],
       };
       // maxArticleChars deliberately small enough to truncate before the tail phrase.
-      const result = validateAnalysisResult(candidate, { ...context(articles), maxArticleChars: 50 });
+      const result = validateAnalysisResult(candidate, {
+        ...context(articles),
+        maxArticleChars: 50,
+      });
       expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
     });
 
     it('resolves evidence basis for agreements', () => {
-      const articles = [makeArticle({ id: 'a1', title: 'T', summary: 'Widely reported detail here.' })];
+      const articles = [
+        makeArticle({ id: 'a1', title: 'T', summary: 'Widely reported detail here.' }),
+      ];
       const candidate = {
         ...validCandidate('S1'),
         agreements: [
@@ -582,7 +611,9 @@ describe('validateAnalysisResult', () => {
     });
 
     it('resolves evidence basis for a difference position', () => {
-      const articles = [makeArticle({ id: 'a1', title: 'T', summary: 'Officials dispute the death toll figures.' })];
+      const articles = [
+        makeArticle({ id: 'a1', title: 'T', summary: 'Officials dispute the death toll figures.' }),
+      ];
       const candidate = {
         ...validCandidate('S1'),
         differences: [
@@ -607,7 +638,9 @@ describe('validateAnalysisResult', () => {
     });
 
     it('resolves evidence basis for a timeline event', () => {
-      const articles = [makeArticle({ id: 'a1', title: 'T', summary: 'The evacuation began at dawn on Tuesday.' })];
+      const articles = [
+        makeArticle({ id: 'a1', title: 'T', summary: 'The evacuation began at dawn on Tuesday.' }),
+      ];
       const candidate = {
         ...validCandidate('S1'),
         timeline: [
@@ -661,15 +694,23 @@ describe('validateAnalysisResult', () => {
   describe('Milestone #40 fail-closed applicability (authoritative-context correction)', () => {
     it('when relationalContextPresent is omitted (default), a provider-emitted relationalEvidenceAssessments array is forced empty', () => {
       const articles = [
-        makeArticle({ id: 'a1', title: 'Report', summary: 'Climate change is reducing maize yields. Agricultural emissions contribute to climate change.' }),
+        makeArticle({
+          id: 'a1',
+          title: 'Report',
+          summary:
+            'Climate change is reducing maize yields. Agricultural emissions contribute to climate change.',
+        }),
       ];
       const candidate = {
         ...validCandidate('S1'),
-        keyFacts: [
-          { claim: 'x', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
-        ],
+        keyFacts: [{ claim: 'x', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] }],
         relationalEvidenceAssessments: [
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'requested-direction',
+          },
         ],
       };
       // context(articles) does not set relationalContextPresent -> defaults to falsy.
@@ -681,14 +722,28 @@ describe('validateAnalysisResult', () => {
     });
 
     it('when relationalContextPresent is explicitly false, behaves identically to omitted', () => {
-      const articles = [makeArticle({ id: 'a1', title: 'Report', summary: 'Climate change is reducing maize yields.' })];
+      const articles = [
+        makeArticle({
+          id: 'a1',
+          title: 'Report',
+          summary: 'Climate change is reducing maize yields.',
+        }),
+      ];
       const candidate = {
         ...validCandidate('S1'),
         relationalEvidenceAssessments: [
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'requested-direction',
+          },
         ],
       };
-      const result = validateAnalysisResult(candidate, { ...context(articles), relationalContextPresent: false });
+      const result = validateAnalysisResult(candidate, {
+        ...context(articles),
+        relationalContextPresent: false,
+      });
       expect(result.relationalEvidenceAssessments).toEqual([]);
     });
 
@@ -697,21 +752,43 @@ describe('validateAnalysisResult', () => {
         makeArticle({
           id: 'real-article-1',
           title: 'Report',
-          summary: 'Climate change is reducing maize yields. Agricultural emissions contribute to climate change.',
+          summary:
+            'Climate change is reducing maize yields. Agricultural emissions contribute to climate change.',
         }),
       ];
       const candidate = {
         ...validCandidate('S1'),
         keyFacts: [
-          { claim: 'Climate change reduces maize yields', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
-          { claim: 'Agriculture contributes to climate change', evidenceIds: ['S1'], relationshipAssessmentIds: ['R2'] },
+          {
+            claim: 'Climate change reduces maize yields',
+            evidenceIds: ['S1'],
+            relationshipAssessmentIds: ['R1'],
+          },
+          {
+            claim: 'Agriculture contributes to climate change',
+            evidenceIds: ['S1'],
+            relationshipAssessmentIds: ['R2'],
+          },
         ],
         relationalEvidenceAssessments: [
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
-          { assessmentId: 'R2', evidenceId: 'S1', excerpt: 'Agricultural emissions contribute to climate change', direction: 'reverse-direction' },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'requested-direction',
+          },
+          {
+            assessmentId: 'R2',
+            evidenceId: 'S1',
+            excerpt: 'Agricultural emissions contribute to climate change',
+            direction: 'reverse-direction',
+          },
         ],
       };
-      const result = validateAnalysisResult(candidate, { ...context(articles), relationalContextPresent: true });
+      const result = validateAnalysisResult(candidate, {
+        ...context(articles),
+        relationalContextPresent: true,
+      });
 
       expect(result.relationalEvidenceAssessments).toHaveLength(2);
       expect(result.keyFacts[0].relationalSupport?.direction).toBe('requested-direction');
@@ -722,22 +799,44 @@ describe('validateAnalysisResult', () => {
 
     it('when relationalContextPresent is true but the provider emits nothing relational, ordinary M31 behavior is unaffected', () => {
       const articles = [makeArticle({ id: 'a1' })];
-      const result = validateAnalysisResult(validCandidate('S1'), { ...context(articles), relationalContextPresent: true });
+      const result = validateAnalysisResult(validCandidate('S1'), {
+        ...context(articles),
+        relationalContextPresent: true,
+      });
       expect(result.relationalEvidenceAssessments).toEqual([]);
       expect(result.keyFacts[0].relationalSupport).toBeUndefined();
       expect(result.keyFacts[0].sourceArticleIds).toEqual(['a1']);
     });
 
     it('duplicate assessmentId fail-closed behavior still applies when relationalContextPresent is true', () => {
-      const articles = [makeArticle({ id: 'a1', title: 'Report', summary: 'Climate change is reducing maize yields.' })];
+      const articles = [
+        makeArticle({
+          id: 'a1',
+          title: 'Report',
+          summary: 'Climate change is reducing maize yields.',
+        }),
+      ];
       const candidate = {
         ...validCandidate('S1'),
         relationalEvidenceAssessments: [
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'reverse-direction' },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'requested-direction',
+          },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'reverse-direction',
+          },
         ],
       };
-      const result = validateAnalysisResult(candidate, { ...context(articles), relationalContextPresent: true });
+      const result = validateAnalysisResult(candidate, {
+        ...context(articles),
+        relationalContextPresent: true,
+      });
       expect(result.relationalEvidenceAssessments).toEqual([]);
     });
   });
@@ -751,7 +850,10 @@ describe('validateAnalysisResult', () => {
 
     it('8b. relationalContextPresent true but relationalContext (x/y) not supplied -> relationalComposition still undefined', () => {
       const articles = [makeArticle({ id: 'a1' })];
-      const result = validateAnalysisResult(validCandidate('S1'), { ...context(articles), relationalContextPresent: true });
+      const result = validateAnalysisResult(validCandidate('S1'), {
+        ...context(articles),
+        relationalContextPresent: true,
+      });
       expect(result.relationalComposition).toBeUndefined();
     });
 
@@ -768,7 +870,11 @@ describe('validateAnalysisResult', () => {
 
     it('11. malformed/dropped candidate claims cannot shift an untrusted reference — ClaimReference always corresponds to the FINAL VALIDATED array', () => {
       const articles = [
-        makeArticle({ id: 'real-article-1', title: 'Report', summary: 'Climate change is reducing maize yields.' }),
+        makeArticle({
+          id: 'real-article-1',
+          title: 'Report',
+          summary: 'Climate change is reducing maize yields.',
+        }),
       ];
       const candidate = {
         ...validCandidate('S1'),
@@ -781,7 +887,12 @@ describe('validateAnalysisResult', () => {
           },
         ],
         relationalEvidenceAssessments: [
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'requested-direction',
+          },
         ],
       };
       const result = validateAnalysisResult(candidate, {
@@ -797,7 +908,9 @@ describe('validateAnalysisResult', () => {
       // The ClaimReference correctly points at validated index 0 —
       // never accidentally computed from the candidate's original
       // index 1, because no candidate index is ever read at all.
-      expect(result.relationalComposition?.supportingClaims).toEqual([{ section: 'keyFacts', index: 0 }]);
+      expect(result.relationalComposition?.supportingClaims).toEqual([
+        { section: 'keyFacts', index: 0 },
+      ]);
     });
 
     it('12. M40 Case 9 remains unchanged, and relationalComposition correctly reflects both directions from the same article', () => {
@@ -805,18 +918,37 @@ describe('validateAnalysisResult', () => {
         makeArticle({
           id: 'real-article-1',
           title: 'Report',
-          summary: 'Climate change is reducing maize yields. Agricultural emissions contribute to climate change.',
+          summary:
+            'Climate change is reducing maize yields. Agricultural emissions contribute to climate change.',
         }),
       ];
       const candidate = {
         ...validCandidate('S1'),
         keyFacts: [
-          { claim: 'Climate change reduces maize yields', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
-          { claim: 'Agriculture contributes to climate change', evidenceIds: ['S1'], relationshipAssessmentIds: ['R2'] },
+          {
+            claim: 'Climate change reduces maize yields',
+            evidenceIds: ['S1'],
+            relationshipAssessmentIds: ['R1'],
+          },
+          {
+            claim: 'Agriculture contributes to climate change',
+            evidenceIds: ['S1'],
+            relationshipAssessmentIds: ['R2'],
+          },
         ],
         relationalEvidenceAssessments: [
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
-          { assessmentId: 'R2', evidenceId: 'S1', excerpt: 'Agricultural emissions contribute to climate change', direction: 'reverse-direction' },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'requested-direction',
+          },
+          {
+            assessmentId: 'R2',
+            evidenceId: 'S1',
+            excerpt: 'Agricultural emissions contribute to climate change',
+            direction: 'reverse-direction',
+          },
         ],
       };
       const result = validateAnalysisResult(candidate, {
@@ -831,22 +963,40 @@ describe('validateAnalysisResult', () => {
 
       // Composition correctly reflects both, from the SAME article,
       // without conflating them:
-      expect(result.relationalComposition?.supportingClaims).toEqual([{ section: 'keyFacts', index: 0 }]);
-      expect(result.relationalComposition?.reverseClaims).toEqual([{ section: 'keyFacts', index: 1 }]);
+      expect(result.relationalComposition?.supportingClaims).toEqual([
+        { section: 'keyFacts', index: 0 },
+      ]);
+      expect(result.relationalComposition?.reverseClaims).toEqual([
+        { section: 'keyFacts', index: 1 },
+      ]);
       // Only 1 distinct supporting article (real-article-1) -> limited, not adequate.
       expect(result.relationalComposition?.evidenceSufficiency).toBe('limited');
     });
 
     it('13. M40 duplicate-assessmentId fail-closed behavior remains unchanged, and relationalComposition correctly reflects the resulting empty state', () => {
-      const articles = [makeArticle({ id: 'a1', title: 'Report', summary: 'Climate change is reducing maize yields.' })];
+      const articles = [
+        makeArticle({
+          id: 'a1',
+          title: 'Report',
+          summary: 'Climate change is reducing maize yields.',
+        }),
+      ];
       const candidate = {
         ...validCandidate('S1'),
-        keyFacts: [
-          { claim: 'x', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
-        ],
+        keyFacts: [{ claim: 'x', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] }],
         relationalEvidenceAssessments: [
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'reverse-direction' },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'requested-direction',
+          },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'reverse-direction',
+          },
         ],
       };
       const result = validateAnalysisResult(candidate, {
@@ -879,7 +1029,11 @@ describe('validateAnalysisResult', () => {
       };
       const result = validateAnalysisResult(candidate, context(articles));
       // The model's own self-reported confidence is preserved unchanged...
-      expect(result.confidence).toEqual({ level: 'high', score: 95, explanation: 'Extremely confident.' });
+      expect(result.confidence).toEqual({
+        level: 'high',
+        score: 95,
+        explanation: 'Extremely confident.',
+      });
       // ...but trustState is derived entirely independently and disagrees.
       expect(result.trustState.level).toBe('limited');
       expect(result.trustState.reasons).toContain('single-distinct-article');
@@ -898,7 +1052,10 @@ describe('validateAnalysisResult', () => {
         ],
         confidence: { level: 'high', score: 90, explanation: 'x' },
       };
-      const result = validateAnalysisResult(candidate, { ...context(articles), analysisMode: 'mock-ai' });
+      const result = validateAnalysisResult(candidate, {
+        ...context(articles),
+        analysisMode: 'mock-ai',
+      });
       expect(result.trustState.level).toBe('insufficient');
       expect(result.trustState.reasons).toEqual(['mock-execution']);
     });
@@ -914,10 +1071,19 @@ describe('validateAnalysisResult', () => {
       const candidate = {
         ...validCandidate('S1'),
         keyFacts: [
-          { claim: 'Climate change reduces maize yields', evidenceIds: ['S1'], relationshipAssessmentIds: ['R1'] },
+          {
+            claim: 'Climate change reduces maize yields',
+            evidenceIds: ['S1'],
+            relationshipAssessmentIds: ['R1'],
+          },
         ],
         relationalEvidenceAssessments: [
-          { assessmentId: 'R1', evidenceId: 'S1', excerpt: 'Climate change is reducing maize yields', direction: 'requested-direction' },
+          {
+            assessmentId: 'R1',
+            evidenceId: 'S1',
+            excerpt: 'Climate change is reducing maize yields',
+            direction: 'requested-direction',
+          },
         ],
       };
       const result = validateAnalysisResult(candidate, {
@@ -925,7 +1091,9 @@ describe('validateAnalysisResult', () => {
         relationalContextPresent: true,
         relationalContext: { x: 'climate change', y: 'agriculture' },
       });
-      expect(result.trustState.relationalEvidenceSufficiency).toBe(result.relationalComposition?.evidenceSufficiency);
+      expect(result.trustState.relationalEvidenceSufficiency).toBe(
+        result.relationalComposition?.evidenceSufficiency,
+      );
       expect(result.trustState.level).toBe('limited');
     });
   });

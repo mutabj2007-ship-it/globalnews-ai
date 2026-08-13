@@ -1,30 +1,36 @@
 import { ArrowUpRight } from 'lucide-react';
-import type { NewsArticle } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { pluralWithForms } from '@/lib/i18n/pluralize';
 
 interface CategoryCardsProps {
   cards: NewsArticle[];
+  /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
-export function CategoryCards({ cards }: CategoryCardsProps): JSX.Element {
+export function CategoryCards({ cards, language = 'en' }: CategoryCardsProps): JSX.Element {
+  const t = getDictionary(language).categoryCards;
+
   return (
     <section className="border-b border-border bg-void" aria-labelledby="coverage-heading">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
         <div className="mb-10 flex flex-col gap-2 sm:mb-12">
           <span className="font-mono text-xs uppercase tracking-widest text-signal-bright">
-            Today&rsquo;s coverage
+            {t.label}
           </span>
           <h2
             id="coverage-heading"
             className="font-display text-2xl font-medium tracking-tight text-ink-primary sm:text-3xl"
           >
-            Six ways to see what&rsquo;s happening
+            {t.headline}
           </h2>
         </div>
 
         {cards.length === 0 ? (
           <p className="rounded-2xl border border-border bg-surface p-6 text-sm text-ink-secondary">
-            Live headlines are temporarily unavailable. Check that the backend is running.
+            {t.unavailable}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -56,9 +62,9 @@ export function CategoryCards({ cards }: CategoryCardsProps): JSX.Element {
                   </p>
 
                   <div className="flex items-center gap-3 border-t border-border pt-4 font-mono text-xs text-ink-tertiary">
-                    <span>{formatRelativeTime(card.publishedAt)}</span>
+                    <span>{formatRelativeTime(card.publishedAt, language)}</span>
                     <span aria-hidden="true">&middot;</span>
-                    <span>{card.sourcesCount} sources</span>
+                    <span>{pluralWithForms(card.sourcesCount, language, t.sourceForms)}</span>
                   </div>
                 </a>
               </article>

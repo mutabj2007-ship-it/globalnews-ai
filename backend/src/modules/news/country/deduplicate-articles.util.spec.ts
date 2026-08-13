@@ -1,13 +1,7 @@
 import type { NewsArticle } from '@globalnews-ai/shared';
-import {
-  areLikelyDuplicateArticles,
-  deduplicateArticles,
-} from './deduplicate-articles.util';
+import { areLikelyDuplicateArticles, deduplicateArticles } from './deduplicate-articles.util';
 
-function article(
-  id: string,
-  title: string,
-): NewsArticle {
+function article(id: string, title: string): NewsArticle {
   return {
     id,
     title,
@@ -29,24 +23,15 @@ describe('areLikelyDuplicateArticles', () => {
       '35 killed after Sudan army launches drone strike on Darfur civil court',
     );
 
-    const second = article(
-      '2',
-      'Sudan army drone attack on Darfur court kills 35',
-    );
+    const second = article('2', 'Sudan army drone attack on Darfur court kills 35');
 
     expect(areLikelyDuplicateArticles(first, second)).toBe(true);
   });
 
   it('does not merge different Sudan stories', () => {
-    const first = article(
-      '1',
-      'Sudan army drone attack on Darfur court kills 35',
-    );
+    const first = article('1', 'Sudan army drone attack on Darfur court kills 35');
 
-    const second = article(
-      '2',
-      'Sudan peace negotiations encounter new obstacles',
-    );
+    const second = article('2', 'Sudan peace negotiations encounter new obstacles');
 
     expect(areLikelyDuplicateArticles(first, second)).toBe(false);
   });
@@ -59,26 +44,16 @@ describe('deduplicateArticles', () => {
       '35 killed after Sudan army launches drone strike on Darfur civil court',
     );
 
-    const duplicate = article(
-      'duplicate',
-      'Sudan army drone attack on Darfur court kills 35',
-    );
+    const duplicate = article('duplicate', 'Sudan army drone attack on Darfur court kills 35');
 
     const different = article(
       'different',
       'Red Cross appeals for humanitarian support across Sudan',
     );
 
-    const result = deduplicateArticles([
-      first,
-      duplicate,
-      different,
-    ]);
+    const result = deduplicateArticles([first, duplicate, different]);
 
-    expect(result.map((item) => item.id)).toEqual([
-      'preferred',
-      'different',
-    ]);
+    expect(result.map((item) => item.id)).toEqual(['preferred', 'different']);
   });
 
   it('preserves order when all stories are different', () => {
@@ -88,10 +63,6 @@ describe('deduplicateArticles', () => {
       article('3', 'Humanitarian needs deepen across Sudan'),
     ]);
 
-    expect(result.map((item) => item.id)).toEqual([
-      '1',
-      '2',
-      '3',
-    ]);
+    expect(result.map((item) => item.id)).toEqual(['1', '2', '3']);
   });
 });

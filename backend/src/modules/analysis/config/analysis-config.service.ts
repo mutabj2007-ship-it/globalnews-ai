@@ -112,30 +112,17 @@ export class AnalysisConfigService {
 
   get(): AnalysisConfig {
     return {
-      maxArticles: this.readPositiveInt(
-        'ANALYSIS_MAX_ARTICLES',
-        DEFAULTS.maxArticles,
-      ),
+      maxArticles: this.readPositiveInt('ANALYSIS_MAX_ARTICLES', DEFAULTS.maxArticles),
 
-      maxArticleChars: this.readPositiveInt(
-        'ANALYSIS_MAX_ARTICLE_CHARS',
-        DEFAULTS.maxArticleChars,
-      ),
+      maxArticleChars: this.readPositiveInt('ANALYSIS_MAX_ARTICLE_CHARS', DEFAULTS.maxArticleChars),
 
-      timeoutMs: this.readPositiveInt(
-        'ANALYSIS_TIMEOUT_MS',
-        DEFAULTS.timeoutMs,
-      ),
+      timeoutMs: this.readPositiveInt('ANALYSIS_TIMEOUT_MS', DEFAULTS.timeoutMs),
 
-      cacheTtlSeconds: this.readPositiveInt(
-        'ANALYSIS_CACHE_TTL_SECONDS',
-        DEFAULTS.cacheTtlSeconds,
-      ),
+      cacheTtlSeconds: this.readPositiveInt('ANALYSIS_CACHE_TTL_SECONDS', DEFAULTS.cacheTtlSeconds),
 
       openAiApiKey: this.config.get<string>('OPENAI_API_KEY'),
 
-      openAiModel:
-        this.config.get<string>('OPENAI_MODEL') || DEFAULTS.openAiModel,
+      openAiModel: this.config.get<string>('OPENAI_MODEL') || DEFAULTS.openAiModel,
 
       maxCompletionTokens: this.readPositiveInt(
         'ANALYSIS_MAX_COMPLETION_TOKENS',
@@ -144,10 +131,7 @@ export class AnalysisConfigService {
 
       executionMode: this.readExecutionMode(),
 
-      retryAttempts: this.readNonNegativeInt(
-        'ANALYSIS_RETRY_ATTEMPTS',
-        DEFAULTS.retryAttempts,
-      ),
+      retryAttempts: this.readNonNegativeInt('ANALYSIS_RETRY_ATTEMPTS', DEFAULTS.retryAttempts),
 
       retryBaseDelayMs: this.readNonNegativeInt(
         'ANALYSIS_RETRY_BASE_DELAY_MS',
@@ -157,10 +141,7 @@ export class AnalysisConfigService {
   }
 
   private readExecutionMode(): AnalysisExecutionMode {
-    const nodeEnv = this.config
-      .get<string>('NODE_ENV')
-      ?.trim()
-      .toLowerCase();
+    const nodeEnv = this.config.get<string>('NODE_ENV')?.trim().toLowerCase();
 
     /*
      * Production deployment always wins.
@@ -171,10 +152,7 @@ export class AnalysisConfigService {
       return 'production';
     }
 
-    const raw = this.config
-      .get<string>('AI_EXECUTION_MODE')
-      ?.trim()
-      .toLowerCase();
+    const raw = this.config.get<string>('AI_EXECUTION_MODE')?.trim().toLowerCase();
 
     return raw === 'production' ? 'production' : 'development';
   }

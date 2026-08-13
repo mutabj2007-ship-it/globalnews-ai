@@ -50,7 +50,11 @@ describe('clusterDuplicateArticles', () => {
   it('keeps genuinely distinct articles separate', () => {
     const articles = [
       makeArticle({ id: 'a', url: 'https://a.example.com', title: 'Markets rally on rate news' }),
-      makeArticle({ id: 'b', url: 'https://b.example.com', title: 'New telescope data reveals galaxy' }),
+      makeArticle({
+        id: 'b',
+        url: 'https://b.example.com',
+        title: 'New telescope data reveals galaxy',
+      }),
     ];
     const result = clusterDuplicateArticles(articles);
     expect(result).toHaveLength(2);
@@ -91,7 +95,11 @@ describe('clusterArticlesWithMembership (Milestone #43)', () => {
 
     const distinct = [
       makeArticle({ id: 'a', url: 'https://a.example.com', title: 'Markets rally on rate news' }),
-      makeArticle({ id: 'b', url: 'https://b.example.com', title: 'New telescope data reveals galaxy' }),
+      makeArticle({
+        id: 'b',
+        url: 'https://b.example.com',
+        title: 'New telescope data reveals galaxy',
+      }),
     ];
     expect(clusterDuplicateArticles(distinct)).toEqual(distinct);
 
@@ -112,7 +120,11 @@ describe('clusterArticlesWithMembership (Milestone #43)', () => {
   it('reports each genuinely distinct article as its own singleton cluster', () => {
     const articles = [
       makeArticle({ id: 'a', url: 'https://a.example.com', title: 'Markets rally on rate news' }),
-      makeArticle({ id: 'b', url: 'https://b.example.com', title: 'New telescope data reveals galaxy' }),
+      makeArticle({
+        id: 'b',
+        url: 'https://b.example.com',
+        title: 'New telescope data reveals galaxy',
+      }),
     ];
     const result = clusterArticlesWithMembership(articles);
     expect(result).toHaveLength(2);
@@ -247,7 +259,11 @@ describe('URL identity normalization (Milestone #43 correction)', () => {
   it('5b. one malformed URL and one well-formed URL never crash and never falsely match on URL identity', () => {
     const articles = [
       makeArticle({ id: 'a', url: 'not a valid url at all', title: 'Markets rally on rate news' }),
-      makeArticle({ id: 'b', url: 'https://b.example.com/x', title: 'New telescope data reveals galaxy' }),
+      makeArticle({
+        id: 'b',
+        url: 'https://b.example.com/x',
+        title: 'New telescope data reveals galaxy',
+      }),
     ];
     expect(() => clusterDuplicateArticles(articles)).not.toThrow();
     const result = clusterDuplicateArticles(articles);
@@ -263,7 +279,11 @@ describe('URL identity normalization (Milestone #43 correction)', () => {
 
     const distinct = [
       makeArticle({ id: 'a', url: 'https://a.example.com', title: 'Markets rally on rate news' }),
-      makeArticle({ id: 'b', url: 'https://b.example.com', title: 'New telescope data reveals galaxy' }),
+      makeArticle({
+        id: 'b',
+        url: 'https://b.example.com',
+        title: 'New telescope data reveals galaxy',
+      }),
     ];
     expect(clusterDuplicateArticles(distinct)).toEqual(distinct);
 

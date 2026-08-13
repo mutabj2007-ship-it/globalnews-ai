@@ -56,7 +56,10 @@ const RELATIONAL_PATTERNS: RegExp[] = [
 ];
 
 function stripTrailingPunctuation(value: string): string {
-  return value.trim().replace(/[?!.,;:]+$/g, '').trim();
+  return value
+    .trim()
+    .replace(/[?!.,;:]+$/g, '')
+    .trim();
 }
 
 /** Strips exactly one leading "the " — mirrors the same idiom already used in derive-generic-news-query.util.ts and AnalysisService#detectLocation. */

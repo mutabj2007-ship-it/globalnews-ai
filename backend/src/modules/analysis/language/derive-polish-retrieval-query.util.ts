@@ -45,7 +45,10 @@ const POLISH_CASE_NORMALIZATION: Record<string, string> = {
 };
 
 function stripTrailingPunctuation(value: string): string {
-  return value.trim().replace(/[?!.,;:]+$/gu, '').trim();
+  return value
+    .trim()
+    .replace(/[?!.,;:]+$/gu, '')
+    .trim();
 }
 
 function wordCount(value: string): number {

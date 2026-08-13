@@ -116,4 +116,128 @@ export const en = {
     dayPlural: 'days',
     ago: 'ago',
   },
+  newsroomSnapshot: {
+    label: 'Newsroom snapshot',
+    headline: 'The story everyone\u2019s reading',
+  },
+  featuredStory: {
+    unavailable: 'Live headlines are temporarily unavailable. Check that the backend is running.',
+    viewSources: 'View sources',
+    sourceForms: ['source', 'sources', 'sources'] as [string, string, string],
+  },
+  trendingSidebar: {
+    heading: 'Trending now',
+    unavailable: 'Live headlines are temporarily unavailable.',
+  },
+  categoryCards: {
+    label: 'Today\u2019s coverage',
+    headline: 'Six ways to see what\u2019s happening',
+    unavailable: 'Live headlines are temporarily unavailable. Check that the backend is running.',
+    sourceForms: ['source', 'sources', 'sources'] as [string, string, string],
+  },
+  latestUpdatesFeed: {
+    label: 'Latest updates',
+    headline: 'As it comes in',
+    unavailable: 'Live headlines are temporarily unavailable. Check that the backend is running.',
+    sourceForms: ['source', 'sources', 'sources'] as [string, string, string],
+  },
+  howItWorks: {
+    label: 'How it works',
+    headline: 'From question to clarity, in three steps',
+    steps: [
+      {
+        title: 'Ask anything',
+        description:
+          'Type a question the way you\u2019d ask a well-informed friend \u2014 no keywords or search syntax required.',
+      },
+      {
+        title: 'AI reads the coverage',
+        description:
+          'GlobalNews AI scans reporting from multiple outlets and viewpoints, then reconciles what they agree and disagree on.',
+      },
+      {
+        title: 'You get a clear answer',
+        description:
+          'A concise, sourced summary \u2014 with the original articles linked, so you can always go deeper.',
+      },
+    ],
+  },
+  trustSection: {
+    label: 'Built on trust',
+    headline: 'Why trust GlobalNews AI?',
+    items: [
+      {
+        title: 'Full transparency',
+        description:
+          'Every summary links back to its original sources, so you can verify anything GlobalNews AI tells you.',
+      },
+      {
+        title: 'Multiple viewpoints',
+        description:
+          'We surface how different outlets and regions are covering the same story \u2014 not just one narrative.',
+      },
+      {
+        title: 'AI summaries, clearly labeled',
+        description:
+          'AI-generated context is always marked as such, and kept separate from direct reporting.',
+      },
+      {
+        title: 'Live updates',
+        description: 'Stories evolve as new reporting comes in, and your summary updates with them.',
+      },
+      {
+        title: 'Educational context',
+        description: 'Unfamiliar with a topic? GlobalNews AI fills in the background you need, not just the headline.',
+      },
+    ],
+  },
+  footer: {
+    tagline:
+      'Clear, sourced, multi-perspective news understanding \u2014 powered by AI, grounded in real reporting.',
+    groupTitles: {
+      Company: 'Company',
+      Legal: 'Legal',
+      Developers: 'Developers',
+    } as Record<string, string>,
+    linkLabels: {
+      '/about': 'About',
+      '/careers': 'Careers',
+      '/contact': 'Contact',
+      '/privacy': 'Privacy Policy',
+      '/terms': 'Terms of Service',
+      '/api': 'API',
+    } as Record<string, string>,
+    comingSoon: 'Coming soon',
+    copyrightSuffix: 'GlobalNews AI. All rights reserved.',
+    closingTagline: 'Built for clarity, not clicks.',
+  },
+  navBar: {
+    homeAriaLabel: 'GlobalNews AI home',
+    primaryNavigationAriaLabel: 'Primary navigation',
+    mobileNavigationAriaLabel: 'Mobile navigation',
+    searchAriaLabel: 'Search',
+    openMenuAriaLabel: 'Open menu',
+    closeMenuAriaLabel: 'Close menu',
+    signIn: 'Sign In',
+    linkLabels: {
+      '/': 'Home',
+      '/map': 'World Map',
+      '/world': 'World',
+      '/politics': 'Politics',
+      '/business': 'Business',
+      '/technology': 'Technology',
+      '/science': 'Science',
+      '/health': 'Health',
+      '/about': 'About',
+    } as Record<string, string>,
+  },
+  liveStatusStrip: {
+    reconnecting: 'RECONNECTING',
+    live: 'LIVE \u00b7 Powered by GNews',
+    cached: 'CACHED \u00b7 Previously retrieved reporting',
+    mock: 'DEMO MODE \u00b7 Sample content only',
+    unknown: 'DATA STATUS UNKNOWN',
+    monitoring: 'Monitoring trusted global sources',
+    lastUpdatedPrefix: 'Last updated:',
+  },
 };

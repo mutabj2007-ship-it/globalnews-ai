@@ -35,7 +35,6 @@ export interface ArticleEntities {
   organizationMatches?: OrganizationMatch[];
 }
 
-
 const COMPANY_NAMES = [
   'Airbus',
   'Amazon',
@@ -271,7 +270,6 @@ function extractOrganizations(text: string): {
 
   return { organizations: canonicalOrder, organizationMatches };
 }
-
 
 function extractCurrencies(text: string): string[] {
   const found: string[] = [];

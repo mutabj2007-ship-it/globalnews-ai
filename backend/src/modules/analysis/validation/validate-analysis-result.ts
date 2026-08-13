@@ -309,7 +309,10 @@ function validateTimeline(candidate: unknown, ctx: EvidenceContext): TimelineEve
  * NOT dropped merely for having no resolved evidence, only for having
  * no description.
  */
-function validateUncertainties(candidate: unknown, evidenceMap: Map<string, string>): UncertaintyItem[] {
+function validateUncertainties(
+  candidate: unknown,
+  evidenceMap: Map<string, string>,
+): UncertaintyItem[] {
   if (!Array.isArray(candidate)) return [];
   const result: UncertaintyItem[] = [];
   for (const entry of candidate) {
@@ -330,7 +333,9 @@ function validateConfidence(candidate: unknown): ConfidenceInfo {
     throw new AnalysisValidationError('"confidence.level" must be one of low, medium, high.');
   }
   const score = typeof obj.score === 'number' && Number.isFinite(obj.score) ? obj.score : 0;
-  const explanation = isNonEmptyString(obj.explanation) ? obj.explanation : 'No explanation provided.';
+  const explanation = isNonEmptyString(obj.explanation)
+    ? obj.explanation
+    : 'No explanation provided.';
   return {
     level: level as ConfidenceLevel,
     score: Math.max(0, Math.min(100, Math.round(score))),

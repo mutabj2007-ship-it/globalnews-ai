@@ -1,4 +1,5 @@
 import type { LanguageCode, SourceDiversity } from '@globalnews-ai/shared';
+import { pluralEn, pluralPl } from '@/lib/i18n/pluralize';
 
 interface SourceDiversitySummaryProps {
   sourceDiversity?: SourceDiversity;
@@ -12,29 +13,13 @@ interface SourceDiversityText {
   detail: string[];
 }
 
-function pluralEn(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? '' : 's'}`;
-}
-
 /**
- * Milestone #47 — small, deterministic Polish numeral-form selector.
- * Standard, well-known Polish grammar rule (not an NLP engine, not
- * stemming): singular for 1; "few" form for count ending in 2-4
- * (excluding the 12-14 teens exception); "many" (genitive plural) form
- * otherwise. forms = [singular, few, many].
+ * Milestone #48 — pluralEn/polishForm/pluralPl moved to
+ * lib/i18n/pluralize.ts so the new homepage components can reuse the
+ * SAME grammar helpers instead of duplicating them. This file now
+ * imports them rather than defining them locally — output is
+ * byte-for-byte identical to before this relocation.
  */
-function polishForm(count: number, forms: [string, string, string]): string {
-  const [one, few, many] = forms;
-  if (count === 1) return one;
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return few;
-  return many;
-}
-
-function pluralPl(count: number, forms: [string, string, string]): string {
-  return `${count} ${polishForm(count, forms)}`;
-}
 
 /**
  * Milestone #44 — pure text-selection logic, isolated from JSX for

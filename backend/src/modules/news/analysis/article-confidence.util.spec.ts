@@ -15,11 +15,7 @@ describe('scoreArticleConfidence', () => {
       publishedAt: isoPublishedBeforeNow(2 * HOUR_MS),
     };
 
-    const result = scoreArticleConfidence(
-      article,
-      75,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence(article, 75, NOW_MS);
 
     expect(result.confidence).toBe(95);
   });
@@ -29,11 +25,7 @@ describe('scoreArticleConfidence', () => {
       publishedAt: isoPublishedBeforeNow(6 * HOUR_MS),
     };
 
-    const result = scoreArticleConfidence(
-      article,
-      40,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence(article, 40, NOW_MS);
 
     expect(result.confidence).toBe(60);
   });
@@ -43,11 +35,7 @@ describe('scoreArticleConfidence', () => {
       publishedAt: isoPublishedBeforeNow(2 * DAY_MS),
     };
 
-    const result = scoreArticleConfidence(
-      article,
-      50,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence(article, 50, NOW_MS);
 
     expect(result.confidence).toBe(60);
   });
@@ -57,11 +45,7 @@ describe('scoreArticleConfidence', () => {
       publishedAt: isoPublishedBeforeNow(5 * DAY_MS),
     };
 
-    const result = scoreArticleConfidence(
-      article,
-      50,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence(article, 50, NOW_MS);
 
     expect(result.confidence).toBe(55);
   });
@@ -71,21 +55,13 @@ describe('scoreArticleConfidence', () => {
       publishedAt: isoPublishedBeforeNow(10 * DAY_MS),
     };
 
-    const result = scoreArticleConfidence(
-      article,
-      50,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence(article, 50, NOW_MS);
 
     expect(result.confidence).toBe(50);
   });
 
   it('adds no freshness bonus for an invalid publication date', () => {
-    const result = scoreArticleConfidence(
-      { publishedAt: 'not-a-date' },
-      50,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence({ publishedAt: 'not-a-date' }, 50, NOW_MS);
 
     expect(result.confidence).toBe(50);
   });
@@ -95,11 +71,7 @@ describe('scoreArticleConfidence', () => {
       publishedAt: new Date(NOW_MS + HOUR_MS).toISOString(),
     };
 
-    const result = scoreArticleConfidence(
-      futureArticle,
-      50,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence(futureArticle, 50, NOW_MS);
 
     expect(result.confidence).toBe(50);
   });
@@ -109,11 +81,7 @@ describe('scoreArticleConfidence', () => {
       publishedAt: isoPublishedBeforeNow(HOUR_MS),
     };
 
-    const result = scoreArticleConfidence(
-      article,
-      95,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence(article, 95, NOW_MS);
 
     expect(result.confidence).toBe(100);
   });
@@ -123,11 +91,7 @@ describe('scoreArticleConfidence', () => {
       publishedAt: isoPublishedBeforeNow(30 * DAY_MS),
     };
 
-    const result = scoreArticleConfidence(
-      article,
-      -10,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence(article, -10, NOW_MS);
 
     expect(result.confidence).toBe(0);
   });
@@ -137,11 +101,7 @@ describe('scoreArticleConfidence', () => {
       publishedAt: isoPublishedBeforeNow(5 * DAY_MS),
     };
 
-    const result = scoreArticleConfidence(
-      article,
-      42.4,
-      NOW_MS,
-    );
+    const result = scoreArticleConfidence(article, 42.4, NOW_MS);
 
     expect(result.confidence).toBe(47);
   });

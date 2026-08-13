@@ -39,17 +39,22 @@ export default async function HomePage(): Promise<JSX.Element> {
 
   return (
     <>
-      <NavBar />
-      <LiveStatusStrip isLive={feed.isLive} dataMode={feed.dataMode} />
+      <NavBar language={language} />
+      <LiveStatusStrip isLive={feed.isLive} dataMode={feed.dataMode} language={language} />
       <main>
         <Hero />
-        <NewsroomSection story={feed.featured} trending={feed.trending} dataMode={feed.dataMode} />
-        <CategoryCards cards={feed.categoryCards} />
-        <LatestUpdatesFeed updates={feed.latestUpdates} dataMode={feed.dataMode} />
-        <HowItWorks />
-        <TrustSection />
+        <NewsroomSection
+          story={feed.featured}
+          trending={feed.trending}
+          dataMode={feed.dataMode}
+          language={language}
+        />
+        <CategoryCards cards={feed.categoryCards} language={language} />
+        <LatestUpdatesFeed updates={feed.latestUpdates} dataMode={feed.dataMode} language={language} />
+        <HowItWorks language={language} />
+        <TrustSection language={language} />
       </main>
-      <Footer />
+      <Footer language={language} />
     </>
   );
 }

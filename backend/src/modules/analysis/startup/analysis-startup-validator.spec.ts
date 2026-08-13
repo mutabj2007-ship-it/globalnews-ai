@@ -1,4 +1,7 @@
-import { AnalysisStartupValidator, AnalysisStartupConfigurationError } from './analysis-startup-validator';
+import {
+  AnalysisStartupValidator,
+  AnalysisStartupConfigurationError,
+} from './analysis-startup-validator';
 import type { AnalysisConfigService } from '../config/analysis-config.service';
 
 function makeConfigService(overrides: {

@@ -13,32 +13,42 @@ import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
  * back to English demonstration prose — a defensive default, never a
  * claim that those languages have real mock translations.
  */
-const MOCK_STRINGS: Record<'en' | 'pl', {
-  summaryIntro: string;
-  summaryMiddle: (count: number) => string;
-  summaryOutro: string;
-  agreementPoint: (title: string) => string;
-  unknown: string;
-  uncertainty: string;
-  confidenceExplanation: string;
-}> = {
+const MOCK_STRINGS: Record<
+  'en' | 'pl',
+  {
+    summaryIntro: string;
+    summaryMiddle: (count: number) => string;
+    summaryOutro: string;
+    agreementPoint: (title: string) => string;
+    unknown: string;
+    uncertainty: string;
+    confidenceExplanation: string;
+  }
+> = {
   en: {
     summaryIntro: 'This is a demonstration analysis generated without a live AI provider.',
-    summaryMiddle: (count) => `It summarizes ${count} article(s) currently available for this question.`,
+    summaryMiddle: (count) =>
+      `It summarizes ${count} article(s) currently available for this question.`,
     summaryOutro: 'Configure OPENAI_API_KEY to enable real analysis.',
     agreementPoint: (title) => `Multiple outlets are covering "${title}".`,
-    unknown: 'This is mock analysis \u2014 no live AI reasoning has been performed on these articles.',
+    unknown:
+      'This is mock analysis \u2014 no live AI reasoning has been performed on these articles.',
     uncertainty: 'This is mock analysis \u2014 no live evidence assessment has been performed.',
     confidenceExplanation: 'Mock analysis mode does not perform real evidence assessment.',
   },
   pl: {
-    summaryIntro: 'To jest analiza demonstracyjna wygenerowana bez użycia rzeczywistego dostawcy AI.',
-    summaryMiddle: (count) => `Podsumowuje ${count} artykuł(y/ów) obecnie dostępnych dla tego pytania.`,
+    summaryIntro:
+      'To jest analiza demonstracyjna wygenerowana bez użycia rzeczywistego dostawcy AI.',
+    summaryMiddle: (count) =>
+      `Podsumowuje ${count} artykuł(y/ów) obecnie dostępnych dla tego pytania.`,
     summaryOutro: 'Skonfiguruj OPENAI_API_KEY, aby włączyć rzeczywistą analizę.',
     agreementPoint: (title) => `Wiele redakcji relacjonuje temat: "${title}".`,
-    unknown: 'To jest analiza demonstracyjna \u2014 nie przeprowadzono rzeczywistego wnioskowania AI na tych artykułach.',
-    uncertainty: 'To jest analiza demonstracyjna \u2014 nie przeprowadzono rzeczywistej oceny dowodów.',
-    confidenceExplanation: 'Tryb analizy demonstracyjnej nie przeprowadza rzeczywistej oceny dowodów.',
+    unknown:
+      'To jest analiza demonstracyjna \u2014 nie przeprowadzono rzeczywistego wnioskowania AI na tych artykułach.',
+    uncertainty:
+      'To jest analiza demonstracyjna \u2014 nie przeprowadzono rzeczywistej oceny dowodów.',
+    confidenceExplanation:
+      'Tryb analizy demonstracyjnej nie przeprowadza rzeczywistej oceny dowodów.',
   },
 };
 
@@ -81,13 +91,18 @@ export class MockAnalysisProvider implements AnalysisProvider {
   readonly displayName = 'GlobalNews Mock Analysis';
   readonly isMock = true;
 
-  async analyzeNews({ query, articles, responseLanguage }: AnalysisProviderInput): Promise<unknown> {
+  async analyzeNews({
+    query,
+    articles,
+    responseLanguage,
+  }: AnalysisProviderInput): Promise<unknown> {
     const strings = resolveMockStrings(responseLanguage);
 
     const evidenceByArticleId = new Map(
       buildEvidenceReferences(articles).map((ref) => [ref.articleId, ref.evidenceId]),
     );
-    const evidenceIdFor = (article: NewsArticle): string => evidenceByArticleId.get(article.id) as string;
+    const evidenceIdFor = (article: NewsArticle): string =>
+      evidenceByArticleId.get(article.id) as string;
 
     const top = articles.slice(0, 3);
     const evidenceIds = (list: NewsArticle[]) => list.map(evidenceIdFor);
