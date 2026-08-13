@@ -155,20 +155,64 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Map is hidden on small screens per the mobile fallback requirement: country
-            search + the selection panel below remain fully functional without it. */}
-        <div className="relative hidden h-[480px] lg:col-span-2 lg:block" aria-describedby="map-a11y-note">
-          <WorldMap
-            countryStoryCounts={countryStoryCounts}
-            selectedIso3={selectedCountry?.iso3 ?? null}
-            onHoverCountry={setHovered}
-            onSelectCountry={handleSelectFromMap}
-            language={language}
-          />
-          <CoverageLegend language={language} />
+      {/*
+        Milestone #50 Phase E (sticky World Map — corrected) — root
+        cause of the M50 v2 failure, confirmed by tracing the actual
+        containing-block relationship: the PREVIOUS structure applied
+        `lg:sticky` to the SAME element that both (a) had the fixed
+        `h-[480px]` height and (b) was a direct grid item under
+        `lg:items-start`. `items-start` collapses a grid item's height
+        to exactly its own content's height — but that content WAS the
+        sticky element, so its containing block (the grid cell) was
+        exactly 480px tall too. Sticky positioning needs its
+        containing block to be TALLER than the sticky element itself —
+        that's the "extra scroll room" the browser holds the element
+        within. With container height == element height, there is no
+        room to stick at all, and the element behaves as ordinary
+        `position: relative`, scrolling away with the page — exactly
+        the reported symptom.
 
-          {hovered && <MapTooltip hovered={hovered} knownStoryCount={hoveredKnownCount} language={language} />}
+        Fix: `lg:items-start` is REMOVED from this grid entirely, so
+        the left column reverts to CSS Grid's default
+        `align-items: stretch` and grows to match the (taller) right
+        column's natural height. The actual `lg:sticky` wrapper is now
+        a SEPARATE, INNER element nested inside that tall cell — its
+        own content is still only ~480px+legend tall, but its
+        containing block (the now-tall outer cell) is taller, giving
+        it genuine room to stick within. The sticky unit chosen is
+        "map + coverage legend" (not the map alone): both are compact,
+        directly related visual context, and observed by the CTO
+        moving together — separating them would serve no purpose.
+        Because sticking is bounded by the outer cell (which ends
+        where the two-column section ends, not the whole page), the
+        map naturally releases before the Footer below — Footer is a
+        separate sibling in page.tsx, entirely outside this grid.
+      */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Outer cell: no fixed height of its own, stretches to match
+            the right column via Grid's default align-items: stretch —
+            this is what gives the inner sticky wrapper room to work. */}
+        <div className="hidden lg:col-span-2 lg:block" aria-describedby="map-a11y-note">
+          {/* Inner sticky wrapper: shorter than its (now-tall) parent.
+              top-20 clears the sticky NavBar's 64px height with a
+              small gap; z-40 stays below the NavBar's z-50 so overlap
+              is structurally impossible. */}
+          <div className="lg:sticky lg:top-20 lg:z-40">
+            <div className="relative h-[480px]">
+              <WorldMap
+                countryStoryCounts={countryStoryCounts}
+                selectedIso3={selectedCountry?.iso3 ?? null}
+                onHoverCountry={setHovered}
+                onSelectCountry={handleSelectFromMap}
+                language={language}
+              />
+
+              {hovered && <MapTooltip hovered={hovered} knownStoryCount={hoveredKnownCount} language={language} />}
+            </div>
+            <div className="mt-4">
+              <CoverageLegend language={language} />
+            </div>
+          </div>
         </div>
 
         <div className="lg:col-span-1">

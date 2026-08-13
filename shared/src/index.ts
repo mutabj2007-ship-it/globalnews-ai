@@ -18,3 +18,4 @@ export * from './analysis';
 export * from './countries';
 export * from './query-normalization';
 export * from './geo-fuzzy-resolver';
+export * from './countryDisplayName';

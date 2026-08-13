@@ -309,6 +309,8 @@ export const pl: Dictionary = {
       noCoverageInCategory: 'w kategorii',
       noCoverageSuffix: '. Spróbuj innej kategorii lub zobacz pełny zasięg poniżej.',
       viewFullCoverage: 'Zobacz pełny zasięg kraju',
+      showDetails: 'Pokaż szczegóły',
+      hideDetails: 'Ukryj szczegóły',
     },
     storyForms: ['historia', 'historie', 'historii'] as [string, string, string],
     storiesCurrentlyLoadedSuffix: 'obecnie wczytanych',

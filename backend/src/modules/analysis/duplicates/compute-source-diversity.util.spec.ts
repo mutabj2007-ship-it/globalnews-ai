@@ -31,9 +31,7 @@ describe('computeSourceDiversity (Milestone #43)', () => {
   });
 
   it('B. one article', () => {
-    const result = computeSourceDiversity([
-      makeArticle({ id: 'a', url: 'https://a.example.com/x' }),
-    ]);
+    const result = computeSourceDiversity([makeArticle({ id: 'a', url: 'https://a.example.com/x' })]);
     expect(result.retrievedArticleCount).toBe(1);
     expect(result.reportingClusterCount).toBe(1);
     expect(result.duplicateLikeClusterCount).toBe(0);
@@ -44,16 +42,8 @@ describe('computeSourceDiversity (Milestone #43)', () => {
   it('C. all articles distinct', () => {
     const articles = [
       makeArticle({ id: 'a', url: 'https://a.example.com', title: 'Markets rally on rate news' }),
-      makeArticle({
-        id: 'b',
-        url: 'https://b.example.com',
-        title: 'New telescope data reveals galaxy',
-      }),
-      makeArticle({
-        id: 'c',
-        url: 'https://c.example.com',
-        title: 'Local election results announced',
-      }),
+      makeArticle({ id: 'b', url: 'https://b.example.com', title: 'New telescope data reveals galaxy' }),
+      makeArticle({ id: 'c', url: 'https://c.example.com', title: 'Local election results announced' }),
     ];
     const result = computeSourceDiversity(articles);
     expect(result.reportingClusterCount).toBe(3);
@@ -225,16 +215,8 @@ describe('computeSourceDiversity (Milestone #43)', () => {
       makeArticle({ id: 'a', url: 'https://example.com/story', title: 'Story one' }),
       makeArticle({ id: 'b', url: 'https://example.com/story', title: 'Story one dup' }),
       makeArticle({ id: 'c', url: 'https://c.example.com', title: 'Totally unrelated report' }),
-      makeArticle({
-        id: 'd',
-        url: 'https://d.example.com/story2',
-        title: 'Another repeated story',
-      }),
-      makeArticle({
-        id: 'e',
-        url: 'https://d.example.com/story2',
-        title: 'Another repeated story copy',
-      }),
+      makeArticle({ id: 'd', url: 'https://d.example.com/story2', title: 'Another repeated story' }),
+      makeArticle({ id: 'e', url: 'https://d.example.com/story2', title: 'Another repeated story copy' }),
     ];
     const result = computeSourceDiversity(articles);
     expect(result.duplicateLikeClusterCount).toBe(2); // {a,b} and {d,e}
@@ -253,14 +235,22 @@ describe('computeSourceDiversity (Milestone #43)', () => {
   });
 
   it('T. does not mutate the original NewsArticle objects or their URLs', () => {
-    const article = makeArticle({ id: 'a', url: 'https://example.com/story?utm_source=x' });
+    // Milestone #50 post-integration fix: `makeArticle()`'s default
+    // `publishedAt` is `new Date().toISOString()`, generated fresh on
+    // every call. The comparison fixture below previously called
+    // makeArticle() a second time with no `publishedAt` override,
+    // capturing a genuinely different (if millisecond-close)
+    // timestamp than the first call — a flaky TEST-fixture defect, not
+    // a real mutation bug. Both calls now share one fixed timestamp.
+    const fixedPublishedAt = new Date().toISOString();
+    const article = makeArticle({ id: 'a', url: 'https://example.com/story?utm_source=x', publishedAt: fixedPublishedAt });
     const originalUrl = article.url;
     const originalRef = article;
     computeSourceDiversity([article]);
     expect(article.url).toBe(originalUrl);
     expect(article).toBe(originalRef);
     expect(article).toEqual(
-      makeArticle({ id: 'a', url: 'https://example.com/story?utm_source=x' }),
+      makeArticle({ id: 'a', url: 'https://example.com/story?utm_source=x', publishedAt: fixedPublishedAt }),
     );
   });
 });

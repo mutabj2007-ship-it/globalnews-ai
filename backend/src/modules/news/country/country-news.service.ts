@@ -4,6 +4,7 @@ import {
   resolveCountryByAnyIdentifier,
   type CountryMeta,
   type CountryNewsResponse,
+  type LanguageCode,
   type NewsArticle,
   type NewsCategory,
   type NewsDataMode,
@@ -189,7 +190,11 @@ export class CountryNewsService {
     const scoredEntries = languageFilteredArticles
       .map((article) => ({
         article,
-        relevance: scoreCountryRelevance(article, country),
+        // Milestone #50 Phase C: `lang` is already validated upstream
+        // (TopHeadlinesQueryDto's @IsIn check) to only ever be a real
+        // LanguageCode when present — this cast reflects that existing
+        // guarantee, not a new assumption.
+        relevance: scoreCountryRelevance(article, country, lang as LanguageCode | undefined),
         matchesCity: city ? articleMentionsCity(article, city) : false,
       }))
       .sort((left, right) => {
@@ -222,7 +227,39 @@ export class CountryNewsService {
       );
     }
 
-    const scoredArticles = scoredEntries.map(({ article, relevance }) => ({
+    // Milestone #50 Phase B (country relevance enforcement) — root
+    // cause, confirmed in Phase A: scoredEntries was sorted by
+    // relevance but never FILTERED by it, so when a country had fewer
+    // genuinely relevant live results than the requested limit, the
+    // response was silently padded with score-0/isRelevant:false
+    // entries purely to fill the count (the exact reported "Canada
+    // FIFA"/"ITC Infotech" articles appearing in a Poland feed).
+    //
+    // Filter runs AFTER persistCountryRelations (above) so persistence
+    // semantics are completely unchanged — every scored entry is still
+    // recorded with its correct isRelevant flag, whether or not it
+    // ends up displayed. This mirrors the cached-fallback path, which
+    // already enforces relevantOnly: true at the database layer (see
+    // getStoredArticles() below) — this brings the live path to parity
+    // rather than introducing new semantics.
+    //
+    // Qualification is `isRelevant || matchesCity`, not `isRelevant`
+    // alone: a city-driven query's articles are correctly prioritized
+    // by matchesCity in the sort above, but scoreCountryRelevance()
+    // itself has no city signal, so a genuine city-only match (e.g.
+    // "Warsaw hosts summit" with no "Poland" mention) legitimately
+    // scores 0 there — the OR-condition protects exactly this case
+    // from being wrongly stripped out.
+    //
+    // Deliberately does NOT touch scoreCountryRelevance()'s formula,
+    // does NOT add a new numeric threshold, and does NOT expand
+    // demonym coverage — this is strictly an enforcement gap fix, per
+    // explicit Phase B scope.
+    const relevantEntries = scoredEntries.filter(
+      (entry) => entry.relevance.isRelevant || entry.matchesCity,
+    );
+
+    const scoredArticles = relevantEntries.map(({ article, relevance }) => ({
       ...article,
       confidence: scoreArticleConfidence(article, relevance.score).confidence,
     }));

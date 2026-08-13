@@ -224,10 +224,14 @@ describe('CountryNewsService', () => {
       makeArticle({
         id: 'a1',
         category: 'business',
+        title: 'Spain announces new business regulations',
+        summary: 'The Spanish government confirmed the plan.',
       }),
       makeArticle({
         id: 'a2',
         category: 'technology',
+        title: 'Spain unveils technology investment fund',
+        summary: 'The Spanish government confirmed the fund details.',
       }),
     ];
 
@@ -269,10 +273,14 @@ describe('CountryNewsService', () => {
           makeArticle({
             id: 'a1',
             category: 'business',
+            title: 'Spain announces new business regulations',
+            summary: 'The Spanish government confirmed the plan.',
           }),
           makeArticle({
             id: 'a2',
             category: 'technology',
+            title: 'Spain unveils technology investment fund',
+            summary: 'The Spanish government confirmed the fund details.',
           }),
         ]),
       ),
@@ -883,7 +891,17 @@ describe('CountryNewsService', () => {
           callCount += 1;
           const lang = options?.lang;
           return Promise.resolve(
-            makeSearchResponse([makeArticle({ id: `article-${callCount}`, sourceLanguage: lang })], 'live'),
+            makeSearchResponse(
+              [
+                makeArticle({
+                  id: `article-${callCount}`,
+                  sourceLanguage: lang,
+                  title: 'Rwanda announces new policy',
+                  summary: 'The Rwandan government confirmed the plan.',
+                }),
+              ],
+              'live',
+            ),
           );
         }),
       };
@@ -899,9 +917,19 @@ describe('CountryNewsService', () => {
 
     it('a second request with the SAME language for the same country still hits the cache (caching itself is not broken by the language-aware key)', async () => {
       const newsService = {
-        search: jest
-          .fn()
-          .mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1', sourceLanguage: 'pl' })], 'live')),
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'a1',
+                sourceLanguage: 'pl',
+                title: 'Rwanda announces new policy',
+                summary: 'The Rwandan government confirmed the plan.',
+              }),
+            ],
+            'live',
+          ),
+        ),
       };
 
       const service = buildService(newsService);
@@ -913,6 +941,20 @@ describe('CountryNewsService', () => {
     });
 
     describe('Phase C — country map language containment', () => {
+      // Milestone #50 Phase B note: after relevance enforcement was
+      // added, these fixtures were updated so their titles/summaries
+      // genuinely mention "Poland" (or an ISO code) — otherwise they'd
+      // now also be removed by the new relevance filter, which would
+      // confound what THIS describe block is specifically testing
+      // (language containment, not relevance). This surfaced a real,
+      // separate interaction worth flagging: scoreCountryRelevance()
+      // only matches the ENGLISH canonical country name/ISO codes, so
+      // a genuinely relevant Polish-language article that never
+      // includes an English mention of "Poland" would score 0 and be
+      // discarded by the M50 relevance filter even though it's
+      // legitimately about Poland — not fixed here (out of this
+      // round's explicit scope), reported to the CTO for a scope
+      // decision.
       it('lang=pl + provider failure + cached English/unlabeled rows: cached rows are NOT returned', async () => {
         const newsService = {
           search: jest.fn().mockRejectedValue(new Error('provider down')),
@@ -966,9 +1008,27 @@ describe('CountryNewsService', () => {
           search: jest.fn().mockResolvedValue(
             makeSearchResponse(
               [
-                makeArticle({ id: 'en-1', sourceLanguage: 'en', url: 'https://x.com/en1', title: 'English one' }),
-                makeArticle({ id: 'pl-1', sourceLanguage: 'pl', url: 'https://x.com/pl1', title: 'Polski jeden' }),
-                makeArticle({ id: 'unlabeled-1', sourceLanguage: undefined, url: 'https://x.com/u1', title: 'Unlabeled' }),
+                makeArticle({
+                  id: 'en-1',
+                  sourceLanguage: 'en',
+                  url: 'https://x.com/en1',
+                  title: 'Poland announces new policy',
+                  summary: 'The government confirmed the plan.',
+                }),
+                makeArticle({
+                  id: 'pl-1',
+                  sourceLanguage: 'pl',
+                  url: 'https://x.com/pl1',
+                  title: 'Poland ogłasza nową politykę',
+                  summary: 'Rząd potwierdził plan tego tygodnia.',
+                }),
+                makeArticle({
+                  id: 'unlabeled-1',
+                  sourceLanguage: undefined,
+                  url: 'https://x.com/u1',
+                  title: 'Poland unveils reform',
+                  summary: 'Officials in Poland confirmed the details.',
+                }),
               ],
               'live',
             ),
@@ -988,9 +1048,27 @@ describe('CountryNewsService', () => {
           search: jest.fn().mockResolvedValue(
             makeSearchResponse(
               [
-                makeArticle({ id: 'en-1', sourceLanguage: 'en', url: 'https://x.com/en1', title: 'English one' }),
-                makeArticle({ id: 'pl-1', sourceLanguage: 'pl', url: 'https://x.com/pl1', title: 'Polski jeden' }),
-                makeArticle({ id: 'fr-1', sourceLanguage: 'fr', url: 'https://x.com/fr1', title: 'Francais un' }),
+                makeArticle({
+                  id: 'en-1',
+                  sourceLanguage: 'en',
+                  url: 'https://x.com/en1',
+                  title: 'Poland announces new policy',
+                  summary: 'The government confirmed the plan.',
+                }),
+                makeArticle({
+                  id: 'pl-1',
+                  sourceLanguage: 'pl',
+                  url: 'https://x.com/pl1',
+                  title: 'Polska ogłasza nową politykę',
+                  summary: 'Rząd Polski potwierdził plan.',
+                }),
+                makeArticle({
+                  id: 'fr-1',
+                  sourceLanguage: 'fr',
+                  url: 'https://x.com/fr1',
+                  title: 'La Pologne annonce une nouvelle politique',
+                  summary: 'Le gouvernement polonais a confirmé le plan.',
+                }),
               ],
               'live',
             ),
@@ -1010,8 +1088,20 @@ describe('CountryNewsService', () => {
           search: jest.fn().mockResolvedValue(
             makeSearchResponse(
               [
-                makeArticle({ id: 'pl-1', sourceLanguage: 'pl', url: 'https://x.com/pl1', title: 'Polski jeden' }),
-                makeArticle({ id: 'pl-2', sourceLanguage: 'pl', url: 'https://x.com/pl2', title: 'Polski dwa' }),
+                makeArticle({
+                  id: 'pl-1',
+                  sourceLanguage: 'pl',
+                  url: 'https://x.com/pl1',
+                  title: 'Poland pierwsza wiadomość',
+                  summary: 'The Polish government confirmed the first plan.',
+                }),
+                makeArticle({
+                  id: 'pl-2',
+                  sourceLanguage: 'pl',
+                  url: 'https://x.com/pl2',
+                  title: 'Poland druga wiadomość',
+                  summary: 'The Polish government confirmed the second plan.',
+                }),
               ],
               'live',
             ),
@@ -1043,6 +1133,264 @@ describe('CountryNewsService', () => {
         expect(response.dataMode).toBe('unavailable');
         expect(articlePersistence.findRecentByCountry).not.toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('Milestone #50 Phase B — country relevance enforcement', () => {
+    it('1. a strong country-name match survives', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'strong-1',
+                title: 'Poland announces new energy policy',
+                summary: 'The Polish government confirmed the plan.',
+                url: 'https://x.com/strong1',
+              }),
+            ],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews('POL');
+
+      expect(response.articles.some((a) => a.id === 'strong-1')).toBe(true);
+    });
+
+    it('2. a zero-relevance article is removed, and 3. an unrelated-country article is removed, and 4. low supply returns fewer stories rather than padding', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'strong-1',
+                title: 'Poland announces new energy policy',
+                summary: 'The Polish government confirmed the plan.',
+                url: 'https://x.com/strong1',
+              }),
+              makeArticle({
+                id: 'zero-relevance',
+                title: 'Canada Confirms Participation Amid FIFA Governance Turmoil',
+                summary: 'Canada presses ahead with tournament plans.',
+                url: 'https://x.com/zero1',
+              }),
+              makeArticle({
+                id: 'unrelated-country',
+                title: 'ITC Infotech Strengthens Partnership With British American Tobacco',
+                summary: 'The companies announced a deal.',
+                url: 'https://x.com/zero2',
+              }),
+            ],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews('POL', undefined, 8);
+
+      expect(response.articles).toHaveLength(1);
+      expect(response.articles[0].id).toBe('strong-1');
+      expect(response.articles.some((a) => a.id === 'zero-relevance')).toBe(false);
+      expect(response.articles.some((a) => a.id === 'unrelated-country')).toBe(false);
+    });
+
+    it('5. a city-only legitimate match survives via matchesCity even though scoreCountryRelevance alone would score it 0', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'warsaw-1',
+                title: 'Warsaw hosts international summit',
+                summary: 'Officials gathered for two days of talks.',
+                url: 'https://x.com/warsaw1',
+              }),
+            ],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews('POL', undefined, 8, 'warsaw');
+
+      expect(response.articles.some((a) => a.id === 'warsaw-1')).toBe(true);
+    });
+
+    it('6. category filtering still works after relevance enforcement', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'poland-world',
+                title: 'Poland announces new policy',
+                summary: 'The government confirmed the plan.',
+                category: 'world',
+                url: 'https://x.com/pw',
+              }),
+              makeArticle({
+                id: 'poland-business',
+                title: 'Poland economy grows strongly',
+                summary: 'The government confirmed strong growth figures.',
+                category: 'business',
+                url: 'https://x.com/pb',
+              }),
+            ],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews('POL', 'business', 8);
+
+      expect(response.articles).toHaveLength(1);
+      expect(response.articles[0].id).toBe('poland-business');
+    });
+
+    it('7. deduplication still works after relevance filtering', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'dup-1',
+                title: 'Poland announces new energy policy today',
+                summary: 'The Polish government confirmed the plan.',
+                url: 'https://x.com/dup1',
+              }),
+              makeArticle({
+                id: 'dup-2',
+                title: 'Poland announces new energy policy today',
+                summary: 'The Polish government confirmed the plan.',
+                url: 'https://x.com/dup2',
+              }),
+            ],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews('POL');
+
+      expect(response.articles).toHaveLength(1);
+    });
+
+    it('8. language containment is unaffected by relevance enforcement — only the correct-language, relevant article survives', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'pl-relevant',
+                title: 'Poland announces new policy',
+                summary: 'The government confirmed the plan.',
+                sourceLanguage: 'pl',
+                url: 'https://x.com/plr',
+              }),
+              makeArticle({
+                id: 'en-relevant',
+                title: 'Poland announces new policy',
+                summary: 'The government confirmed the plan.',
+                sourceLanguage: 'en',
+                url: 'https://x.com/enr',
+              }),
+            ],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews('POL', undefined, 8, undefined, 'pl');
+
+      expect(response.articles).toHaveLength(1);
+      expect(response.articles[0].id).toBe('pl-relevant');
+    });
+
+    it('9. no-lang backward compatibility is unaffected by relevance enforcement', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'relevant-1',
+                title: 'Poland announces new policy',
+                summary: 'The government confirmed the plan.',
+                url: 'https://x.com/rel1',
+              }),
+            ],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      const response = await service.getCountryNews('POL');
+
+      expect(response.articles).toHaveLength(1);
+    });
+
+    it('10. cached fallback relevantOnly:true semantics remain completely unchanged', async () => {
+      const newsService = {
+        search: jest.fn().mockRejectedValue(new Error('provider down')),
+      };
+
+      articlePersistence.findRecentByCountry.mockResolvedValueOnce([makeArticle({ id: 'stored-1' })]);
+
+      const service = buildService(newsService);
+
+      await service.getCountryNews('POL');
+
+      expect(articlePersistence.findRecentByCountry).toHaveBeenCalledWith(
+        expect.objectContaining({ relevantOnly: true }),
+      );
+    });
+
+    it('persistCountryRelations still receives EVERY scored entry (relevant and irrelevant alike), with the correct isRelevant flag, unchanged by the new display filter', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'strong-1',
+                title: 'Poland announces new energy policy',
+                summary: 'The Polish government confirmed the plan.',
+                url: 'https://x.com/persist1',
+              }),
+              makeArticle({
+                id: 'zero-relevance',
+                title: 'Canada Confirms Participation Amid FIFA Governance Turmoil',
+                summary: 'Canada presses ahead with tournament plans.',
+                url: 'https://x.com/persist2',
+              }),
+            ],
+            'live',
+          ),
+        ),
+      };
+
+      const service = buildService(newsService);
+
+      await service.getCountryNews('POL');
+
+      expect(articlePersistence.persistCountryRelations).toHaveBeenCalledWith([
+        expect.objectContaining({ articleId: 'strong-1', isRelevant: true }),
+        expect.objectContaining({ articleId: 'zero-relevance', isRelevant: false }),
+      ]);
     });
   });
 });

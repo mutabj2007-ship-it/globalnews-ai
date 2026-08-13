@@ -311,6 +311,8 @@ export const en = {
       noCoverageInCategory: 'in',
       noCoverageSuffix: '. Try a different category, or view full coverage below.',
       viewFullCoverage: 'View full country coverage',
+      showDetails: 'Show details',
+      hideDetails: 'Hide details',
     },
     storyForms: ['story', 'stories', 'stories'] as [string, string, string],
     storiesCurrentlyLoadedSuffix: 'currently loaded',

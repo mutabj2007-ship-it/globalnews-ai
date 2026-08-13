@@ -1,4 +1,5 @@
-import type { CountryMeta, NewsArticle } from '@globalnews-ai/shared';
+import type { CountryMeta, LanguageCode, NewsArticle } from '@globalnews-ai/shared';
+import { getLocalizedCountryName } from '@globalnews-ai/shared';
 
 export interface CountryRelevanceResult {
   score: number;
@@ -75,8 +76,28 @@ function containsWholePhrase(text: string, phrase: string): boolean {
   return normalizedPhrase.length > 0 ? normalizedText.includes(` ${normalizedPhrase} `) : false;
 }
 
-function containsCountryReference(text: string, country: CountryMeta): boolean {
+/**
+ * Milestone #50 Phase C (multilingual country-relevance containment)
+ * — `localizedName` is new and optional. Every existing caller that
+ * never passes it (search()/GNewsProvider.search() context, or any
+ * call with no language context) behaves byte-for-byte as before:
+ * only the canonical English name and demonyms are checked. When
+ * present, it's an ADDITIONAL positive signal alongside the canonical
+ * name — never a replacement — derived centrally via
+ * getLocalizedCountryName() (Intl.DisplayNames, the same mechanism
+ * already established for display in Milestone #49), never a second,
+ * manually-maintained translation table. Because it's resolved from
+ * THAT country's own ISO2 code specifically, a Polish localized name
+ * can never accidentally match a different country's article (Poland
+ * resolves "Polska", not Germany's "Niemcy" or any other country's
+ * name).
+ */
+function containsCountryReference(text: string, country: CountryMeta, localizedName?: string): boolean {
   if (containsWholePhrase(text, country.name)) {
+    return true;
+  }
+
+  if (localizedName && containsWholePhrase(text, localizedName)) {
     return true;
   }
 
@@ -93,8 +114,13 @@ function hasPersonContext(text: string): boolean {
   return PERSON_CONTEXT_TERMS.some((term) => containsWholePhrase(text, term));
 }
 
-function isLikelySurnameOnlyMention(title: string, summary: string, country: CountryMeta): boolean {
-  if (containsCountryReference(title, country)) {
+function isLikelySurnameOnlyMention(
+  title: string,
+  summary: string,
+  country: CountryMeta,
+  localizedName?: string,
+): boolean {
+  if (containsCountryReference(title, country, localizedName)) {
     return false;
   }
 
@@ -144,20 +170,37 @@ export function articleMentionsCity(
   return containsWholePhrase(fullText, city);
 }
 
+/**
+ * Milestone #50 Phase C — `language` is new and optional. Every
+ * existing caller that never passes it (none currently do, outside
+ * CountryNewsService's own new call site) behaves byte-for-byte as
+ * before — only the canonical English name/ISO codes/demonyms are
+ * evaluated. When present and not 'en' (English text always already
+ * matches the canonical name directly), the corresponding localized
+ * country name is resolved via getLocalizedCountryName() and checked
+ * as an ADDITIONAL signal in both the title and summary checks —
+ * never replacing the canonical-name check, so English mentions of
+ * "Poland" continue to be recognized even while Polish retrieval is
+ * active (canonical-name compatibility is preserved unconditionally).
+ */
 export function scoreCountryRelevance(
   article: Pick<NewsArticle, 'title' | 'summary'>,
   country: CountryMeta,
+  language?: LanguageCode,
 ): CountryRelevanceResult {
   const title = article.title ?? '';
   const summary = article.summary ?? '';
   const fullText = `${title} ${summary}`;
 
+  const localizedName =
+    language && language !== 'en' ? getLocalizedCountryName(country.iso2, language) : undefined;
+
   let score = 0;
   const reasons: string[] = [];
 
-  const titleHasCountryReference = containsCountryReference(title, country);
+  const titleHasCountryReference = containsCountryReference(title, country, localizedName);
 
-  const summaryHasCountryReference = containsCountryReference(summary, country);
+  const summaryHasCountryReference = containsCountryReference(summary, country, localizedName);
 
   if (titleHasCountryReference) {
     score += 60;
@@ -189,7 +232,7 @@ export function scoreCountryRelevance(
     reasons.push(`${contextMatches} country-context term(s) found`);
   }
 
-  if (isLikelySurnameOnlyMention(title, summary, country)) {
+  if (isLikelySurnameOnlyMention(title, summary, country, localizedName)) {
     score -= 50;
     reasons.push('likely surname-only mention');
   }
