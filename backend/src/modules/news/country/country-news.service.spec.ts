@@ -75,7 +75,7 @@ describe('CountryNewsService', () => {
     expect(response.countryCode).toBe('ESP');
     expect(response.countryName).toBe('Spain');
 
-    expect(newsService.search).toHaveBeenCalledWith('Spain', expect.any(Number));
+    expect(newsService.search).toHaveBeenCalledWith('Spain', expect.any(Number), undefined, undefined);
   });
 
   it('is case-insensitive for the country code', async () => {
@@ -612,7 +612,7 @@ describe('CountryNewsService', () => {
 
       await service.getCountryNews('RWA', undefined, 20, 'kigali');
 
-      expect(newsService.search).toHaveBeenCalledWith('kigali Rwanda', expect.any(Number));
+      expect(newsService.search).toHaveBeenCalledWith('kigali Rwanda', expect.any(Number), undefined, undefined);
     });
 
     it('does not include a city in the search term when none was provided', async () => {
@@ -624,7 +624,7 @@ describe('CountryNewsService', () => {
 
       await service.getCountryNews('RWA');
 
-      expect(newsService.search).toHaveBeenCalledWith('Rwanda', expect.any(Number));
+      expect(newsService.search).toHaveBeenCalledWith('Rwanda', expect.any(Number), undefined, undefined);
     });
 
     it('does not cache a city query together with a plain country query for the same country', async () => {
@@ -843,6 +843,206 @@ describe('CountryNewsService', () => {
       await service.getCountryNews('RWA');
 
       expect(articlePersistence.findRecent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Milestone #49 — World Map EN/PL integration', () => {
+    it('forwards lang to NewsService.search() as the 4th options argument', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })], 'live')),
+      };
+
+      const service = buildService(newsService);
+
+      await service.getCountryNews('RWA', undefined, 8, undefined, 'pl');
+
+      expect(newsService.search).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Number),
+        undefined,
+        { lang: 'pl' },
+      );
+    });
+
+    it('no lang argument at all remains fully backward compatible — NewsService.search() receives undefined options', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1' })], 'live')),
+      };
+
+      const service = buildService(newsService);
+
+      await service.getCountryNews('RWA', undefined, 8);
+
+      expect(newsService.search).toHaveBeenCalledWith(expect.any(String), expect.any(Number), undefined, undefined);
+    });
+
+    it('the client-visible cache is language-aware: en and pl requests for the same country never collide', async () => {
+      let callCount = 0;
+      const newsService = {
+        search: jest.fn().mockImplementation((_query, _limit, _relevanceMode, options) => {
+          callCount += 1;
+          const lang = options?.lang;
+          return Promise.resolve(
+            makeSearchResponse([makeArticle({ id: `article-${callCount}`, sourceLanguage: lang })], 'live'),
+          );
+        }),
+      };
+
+      const service = buildService(newsService);
+
+      const responseEn = await service.getCountryNews('RWA', undefined, 8, undefined, 'en');
+      const responsePl = await service.getCountryNews('RWA', undefined, 8, undefined, 'pl');
+
+      expect(newsService.search).toHaveBeenCalledTimes(2);
+      expect(responseEn.articles[0].id).not.toBe(responsePl.articles[0].id);
+    });
+
+    it('a second request with the SAME language for the same country still hits the cache (caching itself is not broken by the language-aware key)', async () => {
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValue(makeSearchResponse([makeArticle({ id: 'a1', sourceLanguage: 'pl' })], 'live')),
+      };
+
+      const service = buildService(newsService);
+
+      await service.getCountryNews('RWA', undefined, 8, undefined, 'pl');
+      await service.getCountryNews('RWA', undefined, 8, undefined, 'pl');
+
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+    });
+
+    describe('Phase C — country map language containment', () => {
+      it('lang=pl + provider failure + cached English/unlabeled rows: cached rows are NOT returned', async () => {
+        const newsService = {
+          search: jest.fn().mockRejectedValue(new Error('provider down')),
+        };
+
+        articlePersistence.findRecentByCountry.mockResolvedValueOnce([
+          makeArticle({ id: 'stored-en', sourceLanguage: undefined }),
+        ]);
+
+        const service = buildService(newsService);
+
+        const response = await service.getCountryNews('POL', undefined, 8, undefined, 'pl');
+
+        expect(response.articles).toEqual([]);
+        expect(response.dataMode).toBe('unavailable');
+        expect(articlePersistence.findRecentByCountry).not.toHaveBeenCalled();
+      });
+
+      it('lang=en + provider failure + unlabeled cached rows: language-unverified rows are NOT returned', async () => {
+        const newsService = {
+          search: jest.fn().mockRejectedValue(new Error('provider down')),
+        };
+
+        articlePersistence.findRecentByCountry.mockResolvedValueOnce([makeArticle({ id: 'stored-unlabeled' })]);
+
+        const service = buildService(newsService);
+
+        const response = await service.getCountryNews('POL', undefined, 8, undefined, 'en');
+
+        expect(response.articles).toEqual([]);
+        expect(articlePersistence.findRecentByCountry).not.toHaveBeenCalled();
+      });
+
+      it('no lang + provider failure: existing cached fallback behavior remains unchanged', async () => {
+        const newsService = {
+          search: jest.fn().mockRejectedValue(new Error('provider down')),
+        };
+
+        articlePersistence.findRecentByCountry.mockResolvedValueOnce([makeArticle({ id: 'stored-1' })]);
+
+        const service = buildService(newsService);
+
+        const response = await service.getCountryNews('POL');
+
+        expect(response.articles).toHaveLength(1);
+        expect(response.dataMode).toBe('cached');
+      });
+
+      it('lang=pl + successful live mixed-language result: only confirmed Polish articles survive', async () => {
+        const newsService = {
+          search: jest.fn().mockResolvedValue(
+            makeSearchResponse(
+              [
+                makeArticle({ id: 'en-1', sourceLanguage: 'en', url: 'https://x.com/en1', title: 'English one' }),
+                makeArticle({ id: 'pl-1', sourceLanguage: 'pl', url: 'https://x.com/pl1', title: 'Polski jeden' }),
+                makeArticle({ id: 'unlabeled-1', sourceLanguage: undefined, url: 'https://x.com/u1', title: 'Unlabeled' }),
+              ],
+              'live',
+            ),
+          ),
+        };
+
+        const service = buildService(newsService);
+
+        const response = await service.getCountryNews('POL', undefined, 8, undefined, 'pl');
+
+        expect(response.articles).toHaveLength(1);
+        expect(response.articles[0].id).toBe('pl-1');
+      });
+
+      it('lang=en + successful live mixed-language result: only confirmed English articles survive', async () => {
+        const newsService = {
+          search: jest.fn().mockResolvedValue(
+            makeSearchResponse(
+              [
+                makeArticle({ id: 'en-1', sourceLanguage: 'en', url: 'https://x.com/en1', title: 'English one' }),
+                makeArticle({ id: 'pl-1', sourceLanguage: 'pl', url: 'https://x.com/pl1', title: 'Polski jeden' }),
+                makeArticle({ id: 'fr-1', sourceLanguage: 'fr', url: 'https://x.com/fr1', title: 'Francais un' }),
+              ],
+              'live',
+            ),
+          ),
+        };
+
+        const service = buildService(newsService);
+
+        const response = await service.getCountryNews('POL', undefined, 8, undefined, 'en');
+
+        expect(response.articles).toHaveLength(1);
+        expect(response.articles[0].id).toBe('en-1');
+      });
+
+      it('a fully matching live result is preserved in full', async () => {
+        const newsService = {
+          search: jest.fn().mockResolvedValue(
+            makeSearchResponse(
+              [
+                makeArticle({ id: 'pl-1', sourceLanguage: 'pl', url: 'https://x.com/pl1', title: 'Polski jeden' }),
+                makeArticle({ id: 'pl-2', sourceLanguage: 'pl', url: 'https://x.com/pl2', title: 'Polski dwa' }),
+              ],
+              'live',
+            ),
+          ),
+        };
+
+        const service = buildService(newsService);
+
+        const response = await service.getCountryNews('POL', undefined, 8, undefined, 'pl');
+
+        expect(response.articles).toHaveLength(2);
+        expect(response.dataMode).toBe('live');
+      });
+
+      it('a language-constrained result filtered to zero produces a safe unavailable response rather than cross-language cached fallback', async () => {
+        const newsService = {
+          search: jest.fn().mockResolvedValue(
+            makeSearchResponse([makeArticle({ id: 'en-1', sourceLanguage: 'en' })], 'live'),
+          ),
+        };
+
+        articlePersistence.findRecentByCountry.mockResolvedValueOnce([makeArticle({ id: 'stored-cross-lang' })]);
+
+        const service = buildService(newsService);
+
+        const response = await service.getCountryNews('POL', undefined, 8, undefined, 'pl');
+
+        expect(response.articles).toEqual([]);
+        expect(response.dataMode).toBe('unavailable');
+        expect(articlePersistence.findRecentByCountry).not.toHaveBeenCalled();
+      });
     });
   });
 });

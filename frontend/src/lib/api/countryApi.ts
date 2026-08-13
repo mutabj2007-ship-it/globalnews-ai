@@ -1,4 +1,4 @@
-import type { CountryNewsResponse, NewsCategory } from '@globalnews-ai/shared';
+import type { CountryNewsResponse, LanguageCode, NewsCategory } from '@globalnews-ai/shared';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const REQUEST_TIMEOUT_MS = 10000;
@@ -13,9 +13,17 @@ export class CountryNewsApiError extends Error {
   }
 }
 
+/**
+ * Milestone #49 (World Map EN/PL integration) — `lang` is new and
+ * optional, additive to the existing `category`/`limit` options.
+ * Omitted (every pre-existing caller): the request URL is unchanged
+ * from before this milestone. When present, sent as `?lang=en`/`?lang=pl`
+ * alongside the existing params — the backend DTO validates it against
+ * the same narrow en/pl set already established for the homepage feed.
+ */
 export async function fetchCountryNews(
   countryCode: string,
-  options: { category?: NewsCategory; limit?: number } = {},
+  options: { category?: NewsCategory; limit?: number; lang?: LanguageCode } = {},
 ): Promise<CountryNewsResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -23,6 +31,7 @@ export async function fetchCountryNews(
   const params = new URLSearchParams();
   if (options.category) params.set('category', options.category);
   if (options.limit) params.set('limit', String(options.limit));
+  if (options.lang) params.set('lang', options.lang);
   const query = params.toString();
 
   let response: Response;

@@ -1,4 +1,5 @@
-import type { NewsArticle } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 export type CoverageQualityLevel =
   | 'none'
@@ -16,14 +17,26 @@ export interface CoverageQualityResult {
   latestPublishedAt: string | null;
 }
 
+/**
+ * Milestone #49 (World Map EN/PL integration) — `language` is new and
+ * defaults to 'en', so every pre-M49 caller renders exactly the same
+ * `label`/`description` strings as before. The score/level/count
+ * calculation logic below is completely unchanged — only the two
+ * presentation strings attached to the result now come from the
+ * dictionary (`map.coverageQualityLevels`, keyed by the SAME `level`
+ * value already computed here) instead of being hardcoded inline.
+ */
 export function calculateCoverageQuality(
   articles: NewsArticle[],
+  language: LanguageCode = 'en',
 ): CoverageQualityResult {
+  const levels = getDictionary(language).map.coverageQualityLevels;
+
   if (articles.length === 0) {
     return {
       level: 'none',
-      label: 'No coverage',
-      description: 'No current articles are available for this selection.',
+      label: levels.none.label,
+      description: levels.none.description,
       score: 0,
       publisherCount: 0,
       articleCount: 0,
@@ -75,9 +88,8 @@ export function calculateCoverageQuality(
   if (score >= 75) {
     return {
       level: 'strong',
-      label: 'Strong coverage',
-      description:
-        'Coverage includes several recent articles from multiple publishers.',
+      label: levels.strong.label,
+      description: levels.strong.description,
       score,
       publisherCount,
       articleCount: articles.length,
@@ -88,9 +100,8 @@ export function calculateCoverageQuality(
   if (score >= 45) {
     return {
       level: 'developing',
-      label: 'Developing coverage',
-      description:
-        'Several reports are available, but coverage may still be developing.',
+      label: levels.developing.label,
+      description: levels.developing.description,
       score,
       publisherCount,
       articleCount: articles.length,
@@ -100,9 +111,8 @@ export function calculateCoverageQuality(
 
   return {
     level: 'limited',
-    label: 'Limited coverage',
-    description:
-      'Only a small number of reports or publishers are currently available.',
+    label: levels.limited.label,
+    description: levels.limited.description,
     score,
     publisherCount,
     articleCount: articles.length,

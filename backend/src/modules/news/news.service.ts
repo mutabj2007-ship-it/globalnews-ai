@@ -79,10 +79,33 @@ export class NewsService {
     private readonly articlePersistence: ArticlePersistenceService,
   ) {}
 
+  /**
+   * Milestone #49 (World Map EN/PL integration, CTO scope correction) —
+   * `options` is new and STRICTLY additive: every existing caller
+   * (AnalysisService's generic/relational Q&A branches, the public
+   * GET /news/search endpoint) continues to call this with 3 or fewer
+   * arguments, so `options` is `undefined` for them and behavior is
+   * byte-for-byte unchanged — `provider.search(query, {limit})` runs
+   * exactly as before, and GNewsProvider.search()'s own existing
+   * `options?.lang ?? 'en'` default applies exactly as it always has.
+   *
+   * Only a caller that explicitly passes `{ lang }` (currently:
+   * CountryNewsService, for the World Map) changes behavior — the
+   * requested language reaches the live provider call, giving GNews
+   * the best chance of returning correct-language results.
+   *
+   * Deliberately does NOT add any post-response language filtering
+   * here (unlike topHeadlines()'s Milestone #48 Phase C correction) —
+   * per explicit instruction, this phase stops at the narrowest safe
+   * handoff. Strict per-article containment for this path remains a
+   * known, disclosed gap pending a future round once the live
+   * unfiltered behavior has been observed against the real endpoint.
+   */
   async search(
     query: string,
     limit?: number,
     relevanceMode: RelevanceMode = NO_RELEVANCE_FILTERING,
+    options?: { lang?: string },
   ): Promise<NewsResponse> {
     // Milestone #36/#37: opt-in only, via the discriminated
     // RelevanceMode union above. CountryNewsService's country/city
@@ -92,6 +115,7 @@ export class NewsService {
     const providerCall = await this.callAllProviders((provider) =>
       provider.search(query, {
         limit,
+        lang: options?.lang,
       }),
     );
 

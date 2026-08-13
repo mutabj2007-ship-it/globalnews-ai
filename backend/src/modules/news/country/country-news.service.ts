@@ -35,11 +35,48 @@ export class CountryNewsService {
     private readonly articlePersistence: ArticlePersistenceService,
   ) {}
 
+  /**
+   * Milestone #49 (World Map EN/PL integration) — `lang` is new and
+   * optional, added as a 5th parameter after the existing `city`. Every
+   * pre-existing caller (none currently pass a 5th argument) continues
+   * to behave exactly as before, with `lang` left `undefined`.
+   *
+   * Milestone #49 Phase C (country map language containment) — root
+   * cause, confirmed from real runtime evidence: this method had TWO
+   * cache-fallback trigger points (the live-call catch block, and the
+   * "zero results after filtering" branch) that BOTH called
+   * getStoredArticles() unconditionally, regardless of whether `lang`
+   * was requested. getStoredArticles() draws from
+   * ArticlePersistenceService's persisted pool, which — exactly like
+   * the Milestone #48 Phase A root cause for the homepage — has no
+   * reliable per-article language metadata (persistMany() never wrote
+   * sourceLanguage). A Polish-constrained request whose live call
+   * failed was therefore silently served this language-unverified
+   * cached pool, which in practice contained the same English articles
+   * as the English request.
+   *
+   * Fix, applied at this country-specific boundary only (NOT inside
+   * NewsService.search() or GNewsProvider.search(), both left
+   * completely unchanged):
+   *   1. When `lang` is set, BOTH cache-fallback trigger points are
+   *      skipped entirely — a language-constrained request that can't
+   *      get a verified-language live result returns the safe
+   *      "unavailable" state instead of guessing.
+   *   2. When `lang` is set, LIVE results are filtered to only articles
+   *      whose own `sourceLanguage` matches — mirroring the exact
+   *      Milestone #48 Phase C policy for topHeadlines(), including
+   *      discarding articles with no reported language at all (treated
+   *      as unconfirmed, not assumed to match).
+   * A caller with no `lang` (none currently exists, but the method
+   * doesn't forbid it) retains the original fallback behavior,
+   * completely unchanged.
+   */
   async getCountryNews(
     countryIdentifier: string,
     category?: NewsCategory,
     limit?: number,
     city?: string,
+    lang?: string,
   ): Promise<CountryNewsResponse> {
     const resolvedLimit = this.clampLimit(limit);
     const country = resolveCountryByAnyIdentifier(countryIdentifier);
@@ -50,7 +87,13 @@ export class CountryNewsService {
       throw new BadRequestException(`Unknown country identifier: "${countryIdentifier}"`);
     }
 
-    const cacheKey = `${country.iso3}:${category ?? 'all'}:${resolvedLimit}:${city ?? 'all'}`;
+    // Milestone #49: `lang` is folded into the existing cache key so an
+    // English response can never be silently reused after the user
+    // switches to Polish, or vice versa. An unset `lang` uses 'en' as
+    // its key segment, matching the de facto behavior every existing
+    // caller already had — this does not change caching behavior for
+    // any caller that never passes `lang`.
+    const cacheKey = `${country.iso3}:${category ?? 'all'}:${resolvedLimit}:${city ?? 'all'}:${lang ?? 'en'}`;
     const cached = this.getCached(cacheKey);
 
     if (cached) {
@@ -67,12 +110,43 @@ export class CountryNewsService {
       searchResponse = await this.newsService.search(
         this.buildSearchTerm(country, city),
         fetchLimit,
+        undefined,
+        lang ? { lang } : undefined,
       );
     } catch (error) {
       this.logger.warn(
         `Live country news provider failed for ${country.iso3}; attempting database fallback`,
         error instanceof Error ? error : undefined,
       );
+
+      // Milestone #49 Phase C: a language-constrained request never
+      // falls back to the language-unverified stored pool — see this
+      // method's own doc comment above for the verified root cause.
+      // Returns a clean, structured "unavailable" response (matching
+      // the equivalent bounded.length===0 branch below) rather than
+      // re-throwing, so this safe behavior doesn't depend on whatever
+      // upstream error handling may or may not gracefully format an
+      // uncaught exception.
+      if (lang) {
+        const emptyResponse: CountryNewsResponse = {
+          countryCode: country.iso3,
+          countryName: country.name,
+          articles: [],
+          totalResults: 0,
+          providers: [],
+          dataMode: 'unavailable',
+          feedTier: 'delayed',
+          providerDisplayName: 'Unavailable',
+          fallbackReason: 'provider-error',
+          category,
+          ...(city ? { city } : {}),
+          generatedAt: new Date().toISOString(),
+        };
+
+        this.setCached(cacheKey, emptyResponse);
+
+        return emptyResponse;
+      }
 
       const storedArticles = await this.getStoredArticles(country, category, resolvedLimit, city);
 
@@ -101,7 +175,18 @@ export class CountryNewsService {
       throw error;
     }
 
-    const scoredEntries = searchResponse.articles
+    // Milestone #49 Phase C: when a specific language was requested,
+    // only articles whose OWN sourceLanguage matches survive — an
+    // article with no reported language is discarded too, since there
+    // is no way to confirm it matches the request. Applied before
+    // relevance scoring/sorting so every downstream step (persistence,
+    // category filtering, dedup) already operates on a language-pure
+    // set.
+    const languageFilteredArticles = lang
+      ? searchResponse.articles.filter((article) => article.sourceLanguage === lang)
+      : searchResponse.articles;
+
+    const scoredEntries = languageFilteredArticles
       .map((article) => ({
         article,
         relevance: scoreCountryRelevance(article, country),
@@ -151,6 +236,31 @@ export class CountryNewsService {
     const bounded = articles.slice(0, resolvedLimit);
 
     if (bounded.length === 0) {
+      // Milestone #49 Phase C: same language-constrained fallback skip
+      // as the catch block above — a zero-result language-filtered
+      // live response must not be silently backfilled from the
+      // language-unverified stored pool.
+      if (lang) {
+        const emptyResponse: CountryNewsResponse = {
+          countryCode: country.iso3,
+          countryName: country.name,
+          articles: [],
+          totalResults: 0,
+          providers: searchResponse.providers,
+          dataMode: 'unavailable',
+          feedTier: 'delayed',
+          providerDisplayName: 'Unavailable',
+          fallbackReason: searchResponse.fallbackReason ?? 'no-live-results',
+          category,
+          ...(city ? { city } : {}),
+          generatedAt: new Date().toISOString(),
+        };
+
+        this.setCached(cacheKey, emptyResponse);
+
+        return emptyResponse;
+      }
+
       const storedArticles = await this.getStoredArticles(country, category, resolvedLimit, city);
 
       if (storedArticles.length > 0) {

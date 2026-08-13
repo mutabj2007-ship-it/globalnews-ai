@@ -2,23 +2,65 @@
 
 import { useId, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { Search } from 'lucide-react';
-import { searchCountriesByName, type CountryMeta } from '@globalnews-ai/shared';
+import {
+  COUNTRIES,
+  searchCountriesByName,
+  type CountryMeta,
+  type LanguageCode,
+} from '@globalnews-ai/shared';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { getCountryDisplayName } from '@/lib/countryDisplayName';
 
 interface CountrySearchBoxProps {
   onSelectCountry: (country: CountryMeta) => void;
+  /** Milestone #49 — defaults to 'en', so every pre-M49 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
-export function CountrySearchBox({ onSelectCountry }: CountrySearchBoxProps): JSX.Element {
+/**
+ * Milestone #49 Phase D — resolves search matches from BOTH the
+ * existing canonical-name/code/alias matching (searchCountriesByName,
+ * completely unchanged, unmodified shared function) AND, for a
+ * non-English UI language, the localized display name. This means
+ * Polish-mode search recognizes "Polska" (not previously matchable at
+ * all) while continuing to recognize "Poland" exactly as before —
+ * English search behavior is entirely untouched, since this
+ * supplementary check only ever runs for language !== 'en'. Merged
+ * results are de-duplicated by ISO3 (a country matched by both paths
+ * appears once), preserving the canonical-match ordering first.
+ */
+export function searchCountries(query: string, language: LanguageCode, limit: number): CountryMeta[] {
+  const canonicalMatches = searchCountriesByName(query, limit);
+
+  if (language === 'en') {
+    return canonicalMatches;
+  }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const matchedIso3 = new Set(canonicalMatches.map((c) => c.iso3));
+  const localizedMatches = normalizedQuery
+    ? COUNTRIES.filter((country) => {
+        if (matchedIso3.has(country.iso3)) return false;
+        const displayName = getCountryDisplayName(country.iso2, language, country.name);
+        return displayName.toLowerCase().includes(normalizedQuery);
+      })
+    : [];
+
+  return [...canonicalMatches, ...localizedMatches].slice(0, limit);
+}
+
+export function CountrySearchBox({ onSelectCountry, language = 'en' }: CountrySearchBoxProps): JSX.Element {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CountryMeta[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isOpen, setIsOpen] = useState(false);
   const listboxId = useId();
+  const t = getDictionary(language).map;
 
   function handleChange(event: ChangeEvent<HTMLInputElement>): void {
     const value = event.target.value;
     setQuery(value);
-    const matches = searchCountriesByName(value, 8);
+    const matches = searchCountries(value, language, 8);
     setResults(matches);
     setActiveIndex(matches.length > 0 ? 0 : -1);
     setIsOpen(matches.length > 0);
@@ -26,7 +68,10 @@ export function CountrySearchBox({ onSelectCountry }: CountrySearchBoxProps): JS
 
   function selectResult(country: CountryMeta): void {
     onSelectCountry(country);
-    setQuery(country.name);
+    // Milestone #49 Phase D — the input reflects the LOCALIZED display
+    // name after selection, matching what the user actually sees in
+    // the results list, not the canonical English name.
+    setQuery(getCountryDisplayName(country.iso2, language, country.name));
     setResults([]);
     setIsOpen(false);
     setActiveIndex(-1);
@@ -52,7 +97,7 @@ export function CountrySearchBox({ onSelectCountry }: CountrySearchBoxProps): JS
   return (
     <div className="relative w-full max-w-sm">
       <label htmlFor="country-search-input" className="sr-only">
-        Search for a country by name
+        {t.searchLabel}
       </label>
       <div className="flex items-center gap-2 rounded-xl border border-border-strong bg-surface px-4 py-2.5 focus-within:border-signal">
         <Search size={16} className="shrink-0 text-ink-tertiary" strokeWidth={2} />
@@ -69,7 +114,7 @@ export function CountrySearchBox({ onSelectCountry }: CountrySearchBoxProps): JS
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setIsOpen(true)}
           onBlur={() => setTimeout(() => setIsOpen(false), 120)}
-          placeholder="Search for a country (e.g. Spain)"
+          placeholder={t.searchPlaceholder}
           className="w-full bg-transparent text-sm text-ink-primary placeholder:text-ink-tertiary focus:outline-none"
         />
       </div>
@@ -97,7 +142,7 @@ export function CountrySearchBox({ onSelectCountry }: CountrySearchBoxProps): JS
                     : 'text-ink-primary hover:bg-surface-hover'
                 }`}
               >
-                <span>{country.name}</span>
+                <span>{getCountryDisplayName(country.iso2, language, country.name)}</span>
                 <span className="font-mono text-[11px] text-ink-tertiary">{country.iso3}</span>
               </button>
             </li>

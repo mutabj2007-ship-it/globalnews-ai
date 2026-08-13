@@ -8,7 +8,8 @@ import {
   getCountryFeatureCollection,
   type CountryFeature,
 } from '@/lib/map/countryGeometry';
-import { COUNTRIES, type CountryMeta } from '@globalnews-ai/shared';
+import { COUNTRIES, type CountryMeta, type LanguageCode } from '@globalnews-ai/shared';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 const FILL_LAYER_ID = 'countries-fill';
 const OUTLINE_LAYER_ID = 'countries-outline';
@@ -66,6 +67,9 @@ interface WorldMapProps {
   onHoverCountry: (hover: HoveredCountry | null) => void;
 
   onSelectCountry: (feature: CountryFeature) => void;
+
+  /** Milestone #49 — defaults to 'en', so every pre-M49 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
 export function WorldMap({
@@ -73,11 +77,13 @@ export function WorldMap({
   selectedIso3,
   onHoverCountry,
   onSelectCountry,
+  language = 'en',
 }: WorldMapProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [isStyleLoaded, setIsStyleLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const t = getDictionary(language).map;
 
  // Initialize the map once.
 useEffect(() => {
@@ -456,8 +462,9 @@ useEffect(() => {
         role="alert"
       >
         <p className="text-sm text-ink-secondary">
-          The interactive map could not be loaded ({loadError}). Use the country search below
-          instead — the same country coverage is available without the map.
+          {t.mapLoadErrorPrefix}
+          {loadError}
+          {t.mapLoadErrorSuffix}
         </p>
       </div>
     );
@@ -468,7 +475,7 @@ useEffect(() => {
       <div ref={containerRef} className="h-full w-full" aria-hidden="true" />
       {!isStyleLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-void">
-          <p className="font-mono text-xs text-ink-tertiary">Loading world map…</p>
+          <p className="font-mono text-xs text-ink-tertiary">{t.loading}</p>
         </div>
       )}
     </div>

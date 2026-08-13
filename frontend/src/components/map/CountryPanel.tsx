@@ -10,6 +10,7 @@ import {
 import type {
   CountryMeta,
   CountryNewsResponse,
+  LanguageCode,
   NewsArticle,
 } from '@globalnews-ai/shared';
 import { SafeImage } from '@/components/ui/SafeImage';
@@ -19,6 +20,9 @@ import {
   CategoryFilterBar,
   type CategoryFilterValue,
 } from '@/components/map/CategoryFilterBar';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { pluralWithForms } from '@/lib/i18n/pluralize';
+import { getCountryDisplayName } from '@/lib/countryDisplayName';
 
 type FreshnessStatus =
   | 'FRESH'
@@ -40,6 +44,8 @@ interface CountryPanelProps {
   onCategoryChange: (
     value: CategoryFilterValue,
   ) => void;
+  /** Milestone #49 — defaults to 'en', so every pre-M49 caller renders exactly as before. */
+  language?: LanguageCode;
 }
 
 function countUniquePublishers(
@@ -115,74 +121,86 @@ function getFreshnessStatus(
   return 'LIMITED';
 }
 
-function getFeedBadge(
+/**
+ * Milestone #49 (World Map EN/PL integration) — pure text-resolution
+ * functions, exported for testability, mirroring the established
+ * resolveTrustVisual()/resolveRetrievalContextText() pattern already
+ * proven in the search-page components. `language` defaults to 'en',
+ * so every pre-M49 call site is byte-for-byte unchanged.
+ */
+export function resolveFeedBadgeText(
   response: CountryNewsResponse,
+  language: LanguageCode = 'en',
 ): string {
+  const t = getDictionary(language).map.badge;
+
+  // Milestone #49 Phase D — 'unavailable' is an internal dataMode
+  // value, never a provider name. It must be checked BEFORE the
+  // feedTier==='delayed' fallback below: the M49 Phase C
+  // containment fix constructs an unavailable response with
+  // feedTier:'delayed' and providerDisplayName:'Unavailable' (an
+  // internal placeholder, never meant for direct display), which —
+  // without this explicit branch — fell through into that fallback
+  // and rendered "DELAYED FEED · POWERED BY Unavailable" verbatim.
+  if (response.dataMode === 'unavailable') {
+    return t.unavailable;
+  }
+
   if (response.dataMode === 'mock') {
-    return 'DEMO MODE · SAMPLE CONTENT ONLY';
+    return t.demo;
   }
 
   if (response.dataMode === 'cached') {
-    return 'STORED REPORTING';
+    return t.stored;
   }
 
   if (response.feedTier === 'delayed') {
-    return `DELAYED FEED · POWERED BY ${response.providerDisplayName}`;
+    return `${t.delayedPrefix}${response.providerDisplayName}`;
   }
 
-  return `LIVE · POWERED BY ${response.providerDisplayName}`;
+  return `${t.livePrefix}${response.providerDisplayName}`;
 }
 
-function getFallbackTitle(
+export function resolveFallbackTitle(
   response: CountryNewsResponse,
+  language: LanguageCode = 'en',
 ): string | null {
   if (response.dataMode !== 'cached') {
     return null;
   }
 
+  const t = getDictionary(language).map.fallback;
+
   if (response.fallbackReason === 'provider-error') {
-    return 'Live provider unavailable';
+    return t.providerErrorTitle;
   }
 
-  if (
-    response.fallbackReason ===
-    'no-live-results'
-  ) {
-    return 'No usable live results';
+  if (response.fallbackReason === 'no-live-results') {
+    return t.noLiveResultsTitle;
   }
 
-  return 'Stored reporting';
+  return t.genericTitle;
 }
 
-function getFallbackDescription(
+export function resolveFallbackDescription(
   response: CountryNewsResponse,
+  language: LanguageCode = 'en',
 ): string | null {
   if (response.dataMode !== 'cached') {
     return null;
   }
 
+  const t = getDictionary(language).map.fallback;
+
   if (response.fallbackReason === 'provider-error') {
-    return (
-      'The live news provider could not be reached. ' +
-      'Previously retrieved reporting is shown instead.'
-    );
+    return t.providerErrorDescription;
   }
 
-  if (
-    response.fallbackReason ===
-    'no-live-results'
-  ) {
-    return (
-      'The provider responded, but no usable current ' +
-      'country stories were available. Stored reporting ' +
-      'is shown instead.'
-    );
+  if (response.fallbackReason === 'no-live-results') {
+    return t.noLiveResultsDescription;
   }
 
-  return (
-    'Previously retrieved reporting is being shown ' +
-    'for this country.'
-  );
+  return t.genericDescription;
 }
 
 const FRESHNESS_STYLES: Record<
@@ -206,12 +224,23 @@ export function CountryPanel({
   error,
   category,
   onCategoryChange,
+  language = 'en',
 }: CountryPanelProps): JSX.Element {
   const router = useRouter();
+  const t = getDictionary(language).map;
+  // Milestone #49 Phase D — DISPLAY name only, localized to the
+  // selected UI language via the centralized getCountryDisplayName()
+  // helper. `country.name` (the canonical English name from
+  // shared/src/countries.ts, completely unchanged) remains the value
+  // used for navigation/query purposes below (see the "View full
+  // country coverage" button) — deliberately kept separate from this
+  // display-only value.
+  const displayName = getCountryDisplayName(country.iso2, language, country.name);
 
   const coverageQuality =
     calculateCoverageQuality(
       response?.articles ?? [],
+      language,
     );
 
   const qualityStyles = {
@@ -242,11 +271,11 @@ export function CountryPanel({
   }[coverageQuality.level];
 
   const fallbackTitle = response
-    ? getFallbackTitle(response)
+    ? resolveFallbackTitle(response, language)
     : null;
 
   const fallbackDescription = response
-    ? getFallbackDescription(response)
+    ? resolveFallbackDescription(response, language)
     : null;
 
   return (
@@ -254,7 +283,7 @@ export function CountryPanel({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-medium text-ink-primary">
-            {country.name}
+            {displayName}
           </h2>
 
           <p className="font-mono text-[11px] text-ink-tertiary">
@@ -264,7 +293,7 @@ export function CountryPanel({
 
         {response && (
           <span className="inline-flex items-center rounded-full border border-brand/50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-brand">
-            {getFeedBadge(response)}
+            {resolveFeedBadgeText(response, language)}
           </span>
         )}
       </div>
@@ -274,6 +303,7 @@ export function CountryPanel({
           value={category}
           onChange={onCategoryChange}
           disabled={isLoading}
+          language={language}
         />
       </div>
 
@@ -307,18 +337,14 @@ export function CountryPanel({
         response && (
           <>
             <p className="mb-3 font-mono text-xs text-ink-tertiary">
-              {response.totalResults}{' '}
-              stor
-              {response.totalResults === 1
-                ? 'y'
-                : 'ies'}{' '}
-              currently loaded
+              {pluralWithForms(response.totalResults, language, t.storyForms)}{' '}
+              {t.storiesCurrentlyLoadedSuffix}
             </p>
 
             {response.dataMode === 'cached' && (
               <section
                 className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4"
-                aria-label="Stored reporting notice"
+                aria-label={t.storedReportingNoticeAriaLabel}
               >
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 shrink-0 text-amber-400">
@@ -351,7 +377,7 @@ export function CountryPanel({
 
                     {response.newestArticlePublishedAt && (
                       <p className="mt-2 font-mono text-[10px] text-ink-tertiary">
-                        Newest stored article:{' '}
+                        {t.newestStoredArticle}{' '}
                         <span className="text-ink-secondary">
                           {formatRelativeTime(
                             response.newestArticlePublishedAt,
@@ -368,7 +394,7 @@ export function CountryPanel({
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="font-mono text-[10px] uppercase tracking-wider text-signal-bright">
-                    Coverage Quality
+                    {t.panel.coverageQuality}
                   </p>
 
                   <p
@@ -392,7 +418,7 @@ export function CountryPanel({
               <div className="mt-3">
                 <div className="mb-1.5 flex items-center justify-between gap-3">
                   <span className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
-                    Coverage strength
+                    {t.panel.coverageStrength}
                   </span>
 
                   <span className="font-mono text-[10px] text-ink-secondary">
@@ -403,7 +429,7 @@ export function CountryPanel({
                 <div
                   className="h-1.5 overflow-hidden rounded-full bg-surface"
                   role="progressbar"
-                  aria-label={`${country.name} coverage quality`}
+                  aria-label={`${displayName} ${t.coverageQualityAriaSuffix}`}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={
@@ -419,16 +445,14 @@ export function CountryPanel({
                 </div>
 
                 <p className="mt-2 font-mono text-[9px] leading-relaxed text-ink-tertiary">
-                  Based on article volume,
-                  publisher diversity and reporting
-                  freshness.
+                  {t.panel.coverageQualityBasis}
                 </p>
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3">
                 <div>
                   <p className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
-                    Publishers
+                    {t.panel.publishers}
                   </p>
 
                   <p className="mt-1 text-sm font-medium text-ink-primary">
@@ -440,13 +464,14 @@ export function CountryPanel({
 
                 <div>
                   <p className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
-                    Latest
+                    {t.panel.latest}
                   </p>
 
                   <p className="mt-1 text-sm font-medium text-ink-primary">
                     {coverageQuality.latestPublishedAt
                       ? formatRelativeTime(
                           coverageQuality.latestPublishedAt,
+                          language,
                         )
                       : '—'}
                   </p>
@@ -492,20 +517,20 @@ export function CountryPanel({
                         id="coverage-snapshot-title"
                         className="font-mono text-[10px] font-semibold uppercase tracking-widest text-signal-bright"
                       >
-                        Coverage snapshot
+                        {t.panel.coverageSnapshot}
                       </h3>
 
                       <span
                         className={`inline-flex items-center rounded-full border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide ${FRESHNESS_STYLES[freshness]}`}
                       >
-                        {freshness}
+                        {t.freshness[freshness.toLowerCase()] ?? freshness}
                       </span>
                     </div>
 
                     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <div className="rounded-lg border border-border bg-surface p-3">
                         <dt className="font-mono text-[9px] uppercase tracking-wider text-ink-tertiary">
-                          Stories
+                          {t.panel.stories}
                         </dt>
 
                         <dd className="mt-1 text-lg font-semibold text-ink-primary">
@@ -515,7 +540,7 @@ export function CountryPanel({
 
                       <div className="rounded-lg border border-border bg-surface p-3">
                         <dt className="font-mono text-[9px] uppercase tracking-wider text-ink-tertiary">
-                          Publishers
+                          {t.panel.publishers}
                         </dt>
 
                         <dd className="mt-1 text-lg font-semibold text-ink-primary">
@@ -525,13 +550,14 @@ export function CountryPanel({
 
                       <div className="rounded-lg border border-border bg-surface p-3">
                         <dt className="font-mono text-[9px] uppercase tracking-wider text-ink-tertiary">
-                          Latest
+                          {t.panel.latest}
                         </dt>
 
                         <dd className="mt-1 truncate text-sm font-medium text-ink-primary">
                           {latestArticle
                             ? formatRelativeTime(
                                 latestArticle.publishedAt,
+                                language,
                               )
                             : '—'}
                         </dd>
@@ -539,7 +565,7 @@ export function CountryPanel({
 
                       <div className="rounded-lg border border-border bg-surface p-3">
                         <dt className="font-mono text-[9px] uppercase tracking-wider text-ink-tertiary">
-                          Main topic
+                          {t.panel.mainTopic}
                         </dt>
 
                         <dd className="mt-1 truncate text-sm font-medium capitalize text-ink-primary">
@@ -550,7 +576,7 @@ export function CountryPanel({
 
                     <div className="mt-4 border-t border-border pt-4">
                       <p className="mb-3 font-mono text-[9px] font-semibold uppercase tracking-widest text-ink-tertiary">
-                        Category activity
+                        {t.panel.categoryActivity}
                       </p>
 
                       <div className="flex flex-col gap-2.5">
@@ -597,7 +623,7 @@ export function CountryPanel({
 
                                 <span
                                   className="w-6 shrink-0 text-right font-mono text-[10px] text-ink-secondary"
-                                  aria-label={`${count} ${categoryName} stories`}
+                                  aria-label={`${t.categories[categoryName] ?? categoryName}: ${pluralWithForms(count, language, t.storyForms)}`}
                                 >
                                   {count}
                                 </span>
@@ -613,13 +639,12 @@ export function CountryPanel({
 
             {response.articles.length === 0 ? (
               <p className="flex-1 text-sm text-ink-secondary">
-                No current coverage found for{' '}
-                {country.name}
+                {t.panel.noCoveragePrefix}{' '}
+                {displayName}
                 {category !== 'all'
-                  ? ` in ${category}`
+                  ? ` ${t.panel.noCoverageInCategory} ${t.categories[category] ?? category}`
                   : ''}
-                . Try a different category, or
-                view full coverage below.
+                {t.panel.noCoverageSuffix}
               </p>
             ) : (
               <ul className="mb-4 flex flex-1 flex-col gap-3 overflow-y-auto">
@@ -631,7 +656,7 @@ export function CountryPanel({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="group flex items-start gap-3 rounded-xl border border-border bg-void p-3 transition-colors hover:border-signal/60"
-                        aria-label={`Read the full story: ${article.title}`}
+                        aria-label={`${t.readFullStoryPrefix} ${article.title}`}
                       >
                         <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border">
                           <SafeImage
@@ -664,6 +689,7 @@ export function CountryPanel({
                             {'·'}{' '}
                             {formatRelativeTime(
                               article.publishedAt,
+                              language,
                             )}
                           </span>
                         </div>
@@ -680,6 +706,14 @@ export function CountryPanel({
         type="button"
         onClick={() =>
           router.push(
+            // Milestone #49 Phase D: deliberately uses country.name
+            // (the canonical English name), NOT the localized
+            // `displayName` — this is a navigation query string to the
+            // general search page, not a display element, and the
+            // backend-boundary caution against sending localized
+            // display names into retrieval paths applies here too,
+            // out of caution, even though this specific query isn't
+            // the country-news retrieval path itself.
             `/search?q=${encodeURIComponent(
               country.name,
             )}`,
@@ -687,7 +721,7 @@ export function CountryPanel({
         }
         className="mt-auto inline-flex items-center justify-center gap-2 rounded-full bg-signal px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-signal-bright"
       >
-        View full country coverage
+        {t.panel.viewFullCoverage}
 
         <ArrowUpRight
           size={16}
