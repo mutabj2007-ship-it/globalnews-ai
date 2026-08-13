@@ -1,10 +1,22 @@
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
 import { fetchTopHeadlines } from '@/lib/api/newsApi';
+import { allocateHomeFeed } from '@/lib/homeFeedAllocation';
 
+/**
+ * Milestone #51 Phase B — field names now match the four explicit
+ * semantic roles (featured / inFocus / discovery / latestUpdates).
+ * `trending` and `categoryCards` are renamed to `inFocus` and
+ * `discovery` respectively — the OLD names implied concepts (measured
+ * popularity; genuine category navigation) the underlying data never
+ * actually provided. This is a rename of the data shape only; see
+ * homeFeedAllocation.ts for the actual selection logic, now a pure,
+ * separately-tested function rather than positional slicing
+ * previously inlined in page.tsx.
+ */
 export interface HomeFeed {
   featured: NewsArticle | null;
-  trending: NewsArticle[];
-  categoryCards: NewsArticle[];
+  inFocus: NewsArticle[];
+  discovery: NewsArticle[];
   latestUpdates: NewsArticle[];
   /** Whether this feed came from a live backend response. */
   isLive: boolean;
@@ -14,8 +26,8 @@ export interface HomeFeed {
 
 const EMPTY_FEED: HomeFeed = {
   featured: null,
-  trending: [],
-  categoryCards: [],
+  inFocus: [],
+  discovery: [],
   latestUpdates: [],
   isLive: false,
   dataMode: null,
@@ -23,9 +35,12 @@ const EMPTY_FEED: HomeFeed = {
 
 /**
  * Loads homepage content from the backend's /news/top-headlines endpoint
- * and slices it into the sections the homepage renders. A single request
- * powers the Featured Story, Trending sidebar, category cards, and the
- * Latest Updates feed, rather than four separate round trips.
+ * and allocates it into the sections the homepage renders. A single request
+ * powers every homepage news section — Featured, In Focus, Discovery, and
+ * Latest Updates — rather than four separate round trips. Milestone #51
+ * Phase B: the actual allocation logic now lives in the pure, independently
+ * tested allocateHomeFeed() (homeFeedAllocation.ts) rather than being
+ * inlined here or in page.tsx.
  *
  * If the backend is unreachable (e.g. not started yet in local dev), this
  * degrades to an empty feed instead of throwing, so the homepage still
@@ -41,19 +56,12 @@ const EMPTY_FEED: HomeFeed = {
 export async function getHomeFeed(language?: LanguageCode): Promise<HomeFeed> {
   try {
     const response = await fetchTopHeadlines(12, language);
-    const headlines = response.articles;
-
-    const featured = headlines[0] ?? null;
-    const trending = headlines.slice(1, 6);
-    const categoryCards = headlines.slice(6, 12);
-    const latestUpdates = [...headlines].sort(
-      (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-    );
+    const { featured, inFocus, discovery, latestUpdates } = allocateHomeFeed(response.articles);
 
     return {
       featured,
-      trending,
-      categoryCards,
+      inFocus,
+      discovery,
       latestUpdates,
       isLive: true,
       dataMode: response.dataMode,

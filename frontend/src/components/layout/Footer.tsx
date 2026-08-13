@@ -2,6 +2,7 @@ import type { LanguageCode } from '@globalnews-ai/shared';
 import { Logo } from '@/components/ui/Logo';
 import { footerLinkGroups } from '@/lib/homeContent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { hudCornerBracketClassName } from '@/components/home/hudPanelGeometry';
 
 interface FooterProps {
   /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
@@ -9,58 +10,60 @@ interface FooterProps {
 }
 
 /**
- * Milestone #48 — group titles and link labels are GlobalNews AI UI
- * copy (Category A), looked up from the dictionary by the SAME key
- * (`group.title`) / href (`link.href`) homeContent.ts's
- * footerLinkGroups already uses — homeContent.ts's own English strings
- * remain the fallback for any key the dictionary doesn't (yet) cover,
- * so this never renders a blank label. Routes/hrefs and the
- * `comingSoon` flag are completely untouched — only presentation text.
+ * CTO directive (Footer must be finished) — compacted from a
+ * 4-column stacked layout into a single-row flat link band (logo +
+ * tagline left, all real links inline right, copyright/tagline
+ * beneath a thin cyan rail) — closer to the reference's compact
+ * single-row footer than the earlier multi-column SaaS-style stack.
+ *
+ * Data unchanged: still every real group/link/href/comingSoon flag
+ * from `footerLinkGroups` (homeContent.ts) — flattened for DISPLAY
+ * only, nothing added or removed. Group titles are dropped from the
+ * visual (the reference doesn't show them either) but the underlying
+ * grouped data structure itself is untouched.
  */
 export function Footer({ language = 'en' }: FooterProps): JSX.Element {
   const currentYear = new Date().getFullYear();
   const t = getDictionary(language).footer;
+  const allLinks = footerLinkGroups.flatMap((group) => group.links);
 
   return (
-    <footer className="bg-void">
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="lg:col-span-1">
+    <footer className="relative border-t border-cyan-500/25 bg-void">
+      <span aria-hidden="true" className={hudCornerBracketClassName('top-left')} />
+      <span aria-hidden="true" className={hudCornerBracketClassName('top-right')} />
+      <div className="mx-auto max-w-[1480px] px-4 py-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
             <Logo />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-secondary">{t.tagline}</p>
+            <p className="hidden max-w-xs text-xs leading-relaxed text-ink-tertiary sm:block">{t.tagline}</p>
           </div>
 
-          {footerLinkGroups.map((group) => (
-            <div key={group.title}>
-              <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-ink-tertiary">
-                {t.groupTitles[group.title] ?? group.title}
-              </h3>
-              <ul className="flex flex-col gap-3">
-                {group.links.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="inline-flex items-center gap-2 text-sm text-ink-secondary transition-colors hover:text-ink-primary"
-                    >
-                      {t.linkLabels[link.href] ?? link.label}
-                      {link.comingSoon && (
-                        <span className="rounded-full border border-border-strong bg-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
-                          {t.comingSoon}
-                        </span>
-                      )}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <nav aria-label={t.tagline} className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {allLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center gap-1.5 text-xs text-ink-secondary transition-colors hover:text-cyan-300"
+              >
+                {t.linkLabels[link.href] ?? link.label}
+                {link.comingSoon && (
+                  <span className="rounded-full border border-border-strong bg-surface px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-ink-tertiary">
+                    {t.comingSoon}
+                  </span>
+                )}
+              </a>
+            ))}
+          </nav>
         </div>
 
-        <div className="mt-16 flex flex-col items-start gap-4 border-t border-border pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-mono text-xs text-ink-tertiary">
+        <div className="mt-4 flex flex-col items-start gap-2 border-t border-cyan-500/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="font-mono text-[11px] text-ink-tertiary">
             &copy; {currentYear} {t.copyrightSuffix}
           </p>
-          <p className="font-mono text-xs text-ink-tertiary">{t.closingTagline}</p>
+          <p className="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink-tertiary">
+            <span aria-hidden="true" className="h-1 w-1 rounded-full bg-cyan-400" />
+            {t.closingTagline}
+          </p>
         </div>
       </div>
     </footer>

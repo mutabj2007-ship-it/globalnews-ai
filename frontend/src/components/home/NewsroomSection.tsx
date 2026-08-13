@@ -1,12 +1,12 @@
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
 import { FeaturedStory } from '@/components/home/FeaturedStory';
-import { TrendingSidebar } from '@/components/home/TrendingSidebar';
+import { InFocusSidebar } from '@/components/home/InFocusSidebar';
 import { DataModeLabel } from '@/components/ui/DataModeLabel';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 
 interface NewsroomSectionProps {
   story: NewsArticle | null;
-  trending: NewsArticle[];
+  inFocus: NewsArticle[];
   dataMode: NewsDataMode | null;
   /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
   language?: LanguageCode;
@@ -14,7 +14,7 @@ interface NewsroomSectionProps {
 
 export function NewsroomSection({
   story,
-  trending,
+  inFocus,
   dataMode,
   language = 'en',
 }: NewsroomSectionProps): JSX.Element {
@@ -22,7 +22,7 @@ export function NewsroomSection({
 
   return (
     <section className="border-b border-border bg-void" aria-labelledby="newsroom-heading">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3 sm:mb-10">
           <div className="flex flex-col gap-2">
             <span className="font-mono text-xs uppercase tracking-widest text-signal-bright">
@@ -43,7 +43,7 @@ export function NewsroomSection({
             <FeaturedStory story={story} language={language} />
           </div>
           <div className="lg:col-span-1">
-            <TrendingSidebar items={trending} language={language} />
+            <InFocusSidebar items={inFocus} language={language} />
           </div>
         </div>
       </div>

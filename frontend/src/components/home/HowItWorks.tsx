@@ -1,6 +1,7 @@
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { processSteps } from '@/lib/homeContent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { hudCornerBracketClassName } from '@/components/home/hudPanelGeometry';
 
 interface HowItWorksProps {
   /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
@@ -21,40 +22,55 @@ export function HowItWorks({ language = 'en' }: HowItWorksProps): JSX.Element {
 
   return (
     <section
-      className="border-b border-border bg-surface/40"
+      className="relative border-b border-border bg-surface/40"
       aria-labelledby="how-it-works-heading"
     >
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
-        <div className="mb-12 flex flex-col gap-2 sm:mb-16">
-          <span className="font-mono text-xs uppercase tracking-widest text-signal-bright">
+      <span aria-hidden="true" className={hudCornerBracketClassName('top-left')} />
+      <span aria-hidden="true" className={hudCornerBracketClassName('top-right')} />
+      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
+        <div className="mb-4 flex flex-col gap-1.5 sm:mb-5">
+          <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">
             {t.label}
           </span>
           <h2
             id="how-it-works-heading"
-            className="font-display text-2xl font-medium tracking-tight text-ink-primary sm:text-3xl"
+            className="font-display text-xl font-medium tracking-tight text-ink-primary sm:text-2xl"
           >
             {t.headline}
           </h2>
         </div>
 
-        <div className="relative grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8">
-          {/* Connecting line for larger screens, purely decorative */}
-          <div
-            className="absolute left-0 right-0 top-6 hidden h-px bg-border sm:block"
-            aria-hidden="true"
-          />
+        <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-5">
+          {/* Signal-flow connector — a continuous cyan rail with an explicit pulsing "signal" marker at each midpoint between steps, not just a plain line. */}
+          <div className="pointer-events-none absolute left-0 right-0 top-5 hidden sm:block" aria-hidden="true">
+            <style>{`
+              @keyframes gna-flow-pulse { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.3); } }
+              .gna-flow-node { animation: gna-flow-pulse 2.4s ease-in-out infinite; }
+              @media (prefers-reduced-motion: reduce) { .gna-flow-node { animation: none !important; opacity: 0.7 !important; transform: none !important; } }
+            `}</style>
+            <div className="h-px bg-gradient-to-r from-cyan-500/10 via-cyan-500/60 to-cyan-500/10" />
+            <div className="absolute inset-0 flex items-center justify-around px-[16.6%]">
+              {[0, 1].map((i) => (
+                <span
+                  key={i}
+                  className="gna-flow-node h-1.5 w-1.5 rotate-45 bg-cyan-400"
+                  style={{ animationDelay: `${i * 0.8}s` }}
+                />
+              ))}
+            </div>
+          </div>
 
           {processSteps.map((item, index) => {
             const Icon = item.icon;
             const localized = t.steps[index];
             return (
-              <div key={item.step} className="relative flex flex-col items-start gap-4">
-                <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-xl border border-border-strong bg-void text-signal-bright">
-                  <Icon size={20} strokeWidth={2} />
+              <div key={item.step} className="relative flex flex-col items-start gap-3">
+                <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-500/40 bg-void text-cyan-300 shadow-[0_0_20px_-6px_rgba(34,211,238,0.4)]">
+                  <Icon size={17} strokeWidth={2} />
                 </div>
                 <div>
                   <div className="mb-1 font-mono text-xs text-ink-tertiary">{item.step}</div>
-                  <h3 className="mb-2 font-display text-lg font-medium text-ink-primary">
+                  <h3 className="mb-1.5 font-display text-base font-medium text-ink-primary">
                     {localized?.title ?? item.title}
                   </h3>
                   <p className="text-sm leading-relaxed text-ink-secondary">

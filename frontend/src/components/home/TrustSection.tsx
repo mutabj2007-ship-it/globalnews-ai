@@ -1,6 +1,7 @@
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { trustItems } from '@/lib/homeContent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { HUD_CARD_CLIP, hudCornerBracketClassName } from '@/components/home/hudPanelGeometry';
 
 interface TrustSectionProps {
   /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
@@ -18,44 +19,46 @@ export function TrustSection({ language = 'en' }: TrustSectionProps): JSX.Elemen
 
   return (
     <section className="border-b border-border bg-void" aria-labelledby="trust-heading">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
-        <div className="mb-12 flex flex-col gap-2 sm:mb-16">
-          <span className="font-mono text-xs uppercase tracking-widest text-signal-bright">
-            {t.label}
-          </span>
-          <h2
-            id="trust-heading"
-            className="font-display text-2xl font-medium tracking-tight text-ink-primary sm:text-3xl"
-          >
-            {t.headline}
-          </h2>
-        </div>
+      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+        <div className={`relative overflow-hidden border border-cyan-500/20 bg-surface/60 px-5 py-4 backdrop-blur-sm ${HUD_CARD_CLIP}`}>
+          <span aria-hidden="true" className={hudCornerBracketClassName('bottom-left')} />
+          <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-cyan-400/50" />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {trustItems.map((item, index) => {
-            const Icon = item.icon;
-            const localized = t.items[index];
-            const isLastOddCard =
-              trustItems.length % 3 !== 0 && index === trustItems.length - 1;
-            return (
-              <div
-                key={item.title}
-                className={`rounded-2xl border border-border bg-surface p-6 transition-colors hover:border-signal/60 ${
-                  isLastOddCard ? 'sm:col-span-2 lg:col-span-1' : ''
-                }`}
-              >
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-signal-dim/40 text-signal-bright">
-                  <Icon size={18} strokeWidth={2} />
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">
+              {t.label}
+            </span>
+            <span aria-hidden="true" className="h-3 w-px bg-cyan-500/30" />
+            <h2
+              id="trust-heading"
+              className="font-display text-sm font-medium tracking-tight text-ink-primary"
+            >
+              {t.headline}
+            </h2>
+          </div>
+
+          {/* Dense integrated strip — internal vertical dividers on desktop (not individual bordered boxes) so the five items read as one connected panel, matching the reference's single-frame trust bar. */}
+          <div className="grid grid-cols-1 divide-y divide-cyan-500/20 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-5 lg:divide-x lg:divide-cyan-500/20">
+            {trustItems.map((item, index) => {
+              const Icon = item.icon;
+              const localized = t.items[index];
+              return (
+                <div key={item.title} className="flex items-start gap-2.5 py-3 first:pt-0 sm:px-3 sm:py-0 sm:first:pl-0 lg:px-4">
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-500/40 bg-void text-cyan-300">
+                    <Icon size={14} strokeWidth={2} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-medium text-ink-primary">
+                      {localized?.title ?? item.title}
+                    </h3>
+                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-ink-tertiary">
+                      {localized?.description ?? item.description}
+                    </p>
+                  </div>
                 </div>
-                <h3 className="mb-2 font-display text-base font-medium text-ink-primary">
-                  {localized?.title ?? item.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-ink-secondary">
-                  {localized?.description ?? item.description}
-                </p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

@@ -49,29 +49,29 @@ export function LiveStatusStrip({
           : t.unknown;
 
   return (
-    <div className="border-b border-border bg-surface">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+    <div className="border-b border-cyan-500/15 bg-surface">
+      <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center gap-3">
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ${
-              isReallyLive ? 'bg-rose-500/10' : 'bg-ink-tertiary/10'
+              isReallyLive ? 'bg-emerald-500/10' : 'bg-amber-500/10'
             }`}
           >
             <span className="relative flex h-1.5 w-1.5">
               {isReallyLive && (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               )}
 
               <span
                 className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
-                  isReallyLive ? 'bg-rose-500' : 'bg-ink-tertiary'
+                  isReallyLive ? 'bg-emerald-400' : 'bg-amber-400'
                 }`}
               />
             </span>
 
             <span
               className={`font-mono text-[11px] font-semibold uppercase tracking-widest ${
-                isReallyLive ? 'text-rose-400' : 'text-ink-tertiary'
+                isReallyLive ? 'text-emerald-300' : 'text-amber-300'
               }`}
             >
               {badgeText}

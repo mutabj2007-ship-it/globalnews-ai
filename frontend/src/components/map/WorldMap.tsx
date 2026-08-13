@@ -156,7 +156,7 @@ useEffect(() => {
   source: SOURCE_ID,
   filter: ['==', ['get', 'numericId'], '__none__'],
   paint: {
-    'line-color': '#8fb0ff',
+    'line-color': '#67e8f9',
     'line-width': 2,
     'line-opacity': 0.95,
   },
@@ -373,7 +373,7 @@ useEffect(() => {
 
     // Selected country receives the strongest visual treatment.
     ['==', ['get', 'numericId'], selectedNumeric],
-    '#5f82ff',
+    '#22d3ee',
 
     // Previously loaded countries use a quieter heat scale.
     [
@@ -416,7 +416,7 @@ useEffect(() => {
     'case',
 
     ['==', ['get', 'numericId'], selectedNumeric],
-    '#dce7ff',
+    '#a5f3fc',
 
     [
       'step',

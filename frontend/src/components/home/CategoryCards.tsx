@@ -15,7 +15,7 @@ export function CategoryCards({ cards, language = 'en' }: CategoryCardsProps): J
 
   return (
     <section className="border-b border-border bg-void" aria-labelledby="coverage-heading">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="mb-10 flex flex-col gap-2 sm:mb-12">
           <span className="font-mono text-xs uppercase tracking-widest text-signal-bright">
             {t.label}
@@ -40,8 +40,8 @@ export function CategoryCards({ cards, language = 'en' }: CategoryCardsProps): J
                   href={card.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Read the full story: ${card.title}`}
-                  className="flex h-full flex-col rounded-2xl border border-border bg-surface p-6 transition-colors hover:border-signal/60 hover:bg-surface-hover"
+                  aria-label={`${t.readFullStoryPrefix} ${card.title}`}
+                  className="flex h-full flex-col rounded-2xl border border-border bg-surface p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-signal/60 hover:shadow-md focus-visible:-translate-y-0.5 focus-visible:border-signal/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                 >
                   <div className="mb-4 flex items-center justify-between">
                     <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-signal-bright">
@@ -49,7 +49,7 @@ export function CategoryCards({ cards, language = 'en' }: CategoryCardsProps): J
                     </span>
                     <ArrowUpRight
                       size={16}
-                      className="text-ink-tertiary opacity-0 transition-opacity group-hover:opacity-100"
+                      className="text-ink-tertiary opacity-0 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none motion-reduce:opacity-100"
                     />
                   </div>
 

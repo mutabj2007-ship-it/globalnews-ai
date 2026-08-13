@@ -3,12 +3,23 @@
 import { useEffect, useState, type FormEvent, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowRight } from 'lucide-react';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { resolveInitialLanguage, persistLanguageSelection, readLanguageCookie } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { formatRelativeTime } from '@/lib/formatRelativeTime';
+import { HeroWorldVisual } from '@/components/home/HeroWorldVisual';
+import { HUD_CARD_CLIP } from '@/components/home/hudPanelGeometry';
+import { HeroWorldVisualMobile } from '@/components/home/HeroWorldVisualMobile';
 
 const ROTATION_INTERVAL_MS = 3200;
+/** How many real HomeFeed articles the compact live-feed panel shows — small enough to stay a compact edge panel, not a duplicate news section. */
+const FEED_PANEL_COUNT = 3;
+
+interface HeroProps {
+  /** CTO Frontend Visual Revision (continuation), Section 12 — the compact "Global Intelligence / Live Feed" panel. Reuses the SAME already-fetched HomeFeed data page.tsx passes down; this introduces zero new fetch. Optional and defaults to empty so any pre-existing caller (none currently exist without this prop, but kept defensive) still renders correctly. */
+  latestArticles?: NewsArticle[];
+}
 
 /**
  * Milestone #47 (homepage integration) — the language selector now
@@ -40,7 +51,7 @@ const ROTATION_INTERVAL_MS = 3200;
  * localized, with the identical rotation timing/animation logic as
  * before.
  */
-export function Hero(): JSX.Element {
+export function Hero({ latestArticles = [] }: HeroProps): JSX.Element {
   const router = useRouter();
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
@@ -161,6 +172,8 @@ export function Hero(): JSX.Element {
     <section className="relative overflow-hidden border-b border-border bg-void">
       <div className="pointer-events-none absolute inset-0 bg-grid-pattern bg-grid [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent)]" />
       <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
+      {/* CTO continuation, priority 2 — a shared cyan atmosphere spanning BOTH Hero columns, so the world visualization reads as emerging from the same Hero background rather than a separate boxed card floating beside the text. */}
+      <div className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(ellipse_70%_60%_at_75%_45%,rgba(34,211,238,0.10),transparent_65%)] lg:block" />
 
       {/*
         Milestone #47 (homepage integration) — placed as a small,
@@ -178,69 +191,162 @@ export function Hero(): JSX.Element {
         />
       </div>
 
-      <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 pb-24 pt-10 text-center sm:px-6 sm:pb-32 lg:px-8">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface px-3 py-1.5">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal-bright opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-signal-bright" />
-          </span>
-          <span className="font-mono text-xs uppercase tracking-widest text-ink-secondary">
-            {t.badge}
-          </span>
+      <div className="relative mx-auto grid max-w-[1480px] grid-cols-1 items-center gap-6 px-4 pb-8 pt-6 sm:px-6 sm:pb-10 lg:grid-cols-[0.47fr_1fr] lg:gap-6 lg:px-8 lg:pb-12">
+        <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface px-3 py-1.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal-bright opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-signal-bright" />
+            </span>
+            <span className="font-mono text-xs uppercase tracking-widest text-ink-secondary">
+              {t.badge}
+            </span>
+          </div>
+
+          <h1 className="max-w-xl font-display text-3xl font-medium leading-[1.05] tracking-tight text-ink-primary sm:text-4xl lg:text-[2.75rem]">
+            {t.headline}
+          </h1>
+
+          <p className="mt-4 max-w-md text-balance text-sm text-ink-secondary sm:text-base">
+            {t.subhead}
+          </p>
+
+          {/* Compact mobile-only world visual — lightweight partial-horizon strip, not the desktop visual hidden/shown; see HeroWorldVisualMobile's own doc comment. Keeps geographic/global identity present on mobile without the desktop's full visual weight. */}
+          <div className="mt-6 h-24 w-full max-w-2xl lg:hidden">
+            <HeroWorldVisualMobile />
+          </div>
+
+          {/* Signal dial: pulse rings that echo the search bar's own shape */}
+          <div className="relative mt-6 w-full max-w-xl">
+            <div
+              className={`pointer-events-none absolute inset-0 border border-cyan-400/40 animate-ring-pulse ${HUD_CARD_CLIP}`}
+              aria-hidden="true"
+            />
+
+            <form
+              role="search"
+              aria-label={t.formAriaLabel}
+              onSubmit={handleSubmit}
+              className={`relative flex items-center gap-2.5 border border-cyan-500/30 bg-void/80 px-3.5 py-2.5 backdrop-blur-sm transition-colors focus-within:border-cyan-400 ${HUD_CARD_CLIP}`}
+            >
+              <span
+                aria-hidden="true"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-cyan-500/40 text-cyan-400"
+              >
+                <Search size={13} strokeWidth={2} />
+              </span>
+              <input
+                type="text"
+                value={query}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
+                placeholder={t.inputPlaceholder}
+                aria-label={t.inputAriaLabel}
+                className="w-full bg-transparent text-sm text-ink-primary placeholder:text-ink-tertiary focus:outline-none"
+              />
+              <button
+                type="submit"
+                aria-label={t.submitAriaLabel}
+                className="hidden shrink-0 items-center justify-center rounded-full bg-cyan-500 p-2 text-void transition-colors hover:bg-cyan-400 sm:flex"
+              >
+                <ArrowRight size={15} strokeWidth={2.25} />
+              </button>
+            </form>
+
+            {/* Rotating example suggestions — intentionally NOT translated, see this file's own doc comment. */}
+            <div className="mt-3 flex h-5 items-center justify-center gap-2 font-mono text-[11px] text-ink-tertiary sm:justify-start">
+              <span className="shrink-0 text-ink-tertiary/70">{t.tryPrefix}</span>
+              <span
+                key={suggestionIndex}
+                className={isVisible ? 'animate-fade-slide-in' : 'animate-fade-slide-out'}
+              >
+                &ldquo;{t.exampleQuestions[suggestionIndex]}&rdquo;
+              </span>
+            </div>
+
+            <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-start">
+              <a
+                href="/map"
+                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/25 bg-surface px-4 py-2 text-sm font-medium text-ink-secondary transition-colors hover:border-cyan-400 hover:text-cyan-300"
+              >
+                {t.exploreMapCta}
+              </a>
+            </div>
+
+            {/* Credibility row — only truthful, generic capability terms; no unsupported numeric claims. */}
+            <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 sm:justify-start">
+              {[t.credibilityLiveSources, t.credibilityAiAnalysis, t.credibilityEvidence].map((label) => (
+                <li key={label} className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wide text-ink-tertiary">
+                  <span aria-hidden="true" className="h-1 w-1 rounded-full bg-signal-bright" />
+                  {label}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
-        <h1 className="max-w-3xl font-display text-4xl font-medium leading-[1.1] tracking-tight text-ink-primary sm:text-5xl md:text-6xl">
-          {t.headline}
-        </h1>
+        {/* Ambient intelligence visualization — CTO Frontend Visual Revision: now HeroWorldVisual, using REAL world geometry (equirectangular-projected SVG, see its own doc comment), not the earlier abstract dot-grid. Enlarged (420px -> 520px) and given a wider grid ratio (Section 10: "should occupy a LARGE portion of the Hero... not reduce to a little decorative card"). Deliberately decorative/ambient, distinct from the real Global Situation Map further down the page. */}
+        <div className="relative hidden h-[520px] lg:block">
+          <HeroWorldVisual />
 
-        <p className="mt-6 max-w-xl text-balance text-base text-ink-secondary sm:text-lg">
-          {t.subhead}
-        </p>
+          {/* Section 5 (Visual Reference Directive) — this panel must remain visually present even when there is no live data; a disappearing panel was explicitly rejected as collapsing the Hero composition. Real HomeFeed articles when available (same data page.tsx already fetched once — zero new fetch); a truthful "source status" fallback when not — never fabricated headlines. */}
+          <div className="absolute bottom-4 right-4 top-4 hidden w-60 flex-col overflow-hidden rounded-xl border border-cyan-500/30 bg-void/90 p-3 shadow-[0_0_30px_-8px_rgba(34,211,238,0.3)] backdrop-blur-md xl:flex">
+            <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-cyan-400/60" />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-400">{t.feedPanelEyebrow}</span>
+            <span className="mb-3 font-display text-sm font-medium text-ink-primary">{t.feedPanelHeading}</span>
 
-        {/* Signal dial: pulse rings that echo the search bar's own shape */}
-        <div className="relative mt-12 w-full max-w-2xl">
-          <div
-            className="pointer-events-none absolute inset-0 rounded-2xl border border-signal/50 animate-ring-pulse"
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute inset-0 rounded-2xl border border-signal/50 animate-ring-pulse [animation-delay:1.1s]"
-            aria-hidden="true"
-          />
+            {latestArticles.length > 0 ? (
+              <ul className="flex flex-1 flex-col gap-2.5 overflow-hidden">
+                {latestArticles.slice(0, FEED_PANEL_COUNT).map((item) => (
+                  <li key={item.id} className="border-t border-border/60 pt-2.5 first:border-t-0 first:pt-0">
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block transition-colors hover:text-cyan-300"
+                    >
+                      <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wide text-ink-tertiary">
+                        {formatRelativeTime(item.publishedAt, language)}
+                        <span aria-hidden="true">&middot;</span>
+                        {item.category}
+                      </span>
+                      <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-ink-secondary">{item.title}</p>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="flex flex-1 flex-col gap-3 border-t border-amber-500/20 pt-3">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wide text-amber-400">
+                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                    {t.feedPanelUnavailableHeading}
+                  </span>
+                  <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">{t.feedPanelUnavailableBody}</p>
+                </div>
 
-          <form
-            role="search"
-            aria-label={t.formAriaLabel}
-            onSubmit={handleSubmit}
-            className="relative flex items-center gap-3 rounded-2xl border border-border-strong bg-surface px-5 py-4 shadow-[0_0_0_1px_rgba(61,111,255,0.08)] transition-colors focus-within:border-signal"
-          >
-            <Search size={20} className="shrink-0 text-ink-tertiary" strokeWidth={2} />
-            <input
-              type="text"
-              value={query}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
-              placeholder={t.inputPlaceholder}
-              aria-label={t.inputAriaLabel}
-              className="w-full bg-transparent text-base text-ink-primary placeholder:text-ink-tertiary focus:outline-none sm:text-lg"
-            />
-            <button
-              type="submit"
-              aria-label={t.submitAriaLabel}
-              className="hidden shrink-0 items-center justify-center rounded-xl bg-signal p-2.5 text-white transition-colors hover:bg-signal-bright sm:flex"
+                <dl className="flex flex-col gap-1.5 border-t border-border/50 pt-2.5">
+                  {[t.feedPanelSearchStatus, t.feedPanelCountryStatus, t.feedPanelMapStatus].map((label) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <dt className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">{label}</dt>
+                      <dd className="inline-flex items-center gap-1 text-[11px] text-emerald-300">
+                        <span aria-hidden="true" className="h-1 w-1 rounded-full bg-emerald-400" />
+                        {t.feedPanelAvailable}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <p className="text-[11px] leading-relaxed text-ink-tertiary">{t.feedPanelUnavailableFooter}</p>
+              </div>
+            )}
+
+            <a
+              href="/map"
+              className="mt-3 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-cyan-400 transition-colors hover:text-cyan-300"
             >
-              <ArrowRight size={18} strokeWidth={2.25} />
-            </button>
-          </form>
-
-          {/* Rotating example suggestions — intentionally NOT translated, see this file's own doc comment. */}
-          <div className="mt-4 flex h-6 items-center justify-center gap-2 font-mono text-xs text-ink-tertiary sm:text-sm">
-            <span className="shrink-0 text-ink-tertiary/70">{t.tryPrefix}</span>
-            <span
-              key={suggestionIndex}
-              className={isVisible ? 'animate-fade-slide-in' : 'animate-fade-slide-out'}
-            >
-              &ldquo;{t.exampleQuestions[suggestionIndex]}&rdquo;
-            </span>
+              {t.feedPanelViewMap}
+              <ArrowRight size={11} strokeWidth={2.5} aria-hidden="true" />
+            </a>
           </div>
         </div>
       </div>

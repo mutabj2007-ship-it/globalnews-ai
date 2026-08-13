@@ -23,13 +23,13 @@ export function FeaturedStory({ story, language = 'en' }: FeaturedStoryProps): J
   }
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-signal/60 hover:shadow-md focus-within:-translate-y-0.5 focus-within:border-signal/60 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       <a
         href={story.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex flex-1 flex-col"
-        aria-label={`Read the full story: ${story.title}`}
+        className="flex flex-1 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/50 focus-visible:ring-inset"
+        aria-label={`${t.readFullStoryPrefix} ${story.title}`}
       >
         <div className="relative aspect-[16/9] w-full overflow-hidden border-b border-border">
           <SafeImage
@@ -38,7 +38,7 @@ export function FeaturedStory({ story, language = 'en' }: FeaturedStoryProps): J
             fill
             priority
             sizes="(min-width: 1024px) 66vw, 100vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="object-cover transition-transform duration-200 motion-safe:group-hover:scale-105 motion-reduce:transition-none"
           />
           <span className="absolute left-4 top-4 rounded-full border border-border-strong bg-void/80 px-3 py-1 font-mono text-[11px] font-medium uppercase tracking-widest text-signal-bright backdrop-blur-sm">
             {story.tag ?? story.category}

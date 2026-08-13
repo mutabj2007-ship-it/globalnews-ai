@@ -47,18 +47,18 @@ describe('Milestone #47 (homepage integration) — hero dictionary', () => {
 });
 
 describe('Milestone #48 — homepage below-Hero dictionary sections', () => {
-  it('every en homepage-section string is byte-identical to the original hardcoded component text', () => {
+  it('every en homepage-section string matches the current dictionary-driven text', () => {
     const en = getDictionary('en');
     expect(en.newsroomSnapshot.label).toBe('Newsroom snapshot');
-    expect(en.newsroomSnapshot.headline).toBe('The story everyone\u2019s reading');
+    expect(en.newsroomSnapshot.headline).toBe('Top story right now');
     expect(en.featuredStory.unavailable).toBe(
       'Live headlines are temporarily unavailable. Check that the backend is running.',
     );
     expect(en.featuredStory.viewSources).toBe('View sources');
-    expect(en.trendingSidebar.heading).toBe('Trending now');
-    expect(en.trendingSidebar.unavailable).toBe('Live headlines are temporarily unavailable.');
+    expect(en.inFocusSidebar.heading).toBe('In focus');
+    expect(en.inFocusSidebar.unavailable).toBe('Live headlines are temporarily unavailable.');
     expect(en.categoryCards.label).toBe('Today\u2019s coverage');
-    expect(en.categoryCards.headline).toBe('Six ways to see what\u2019s happening');
+    expect(en.categoryCards.headline).toBe('More from today\u2019s coverage');
     expect(en.latestUpdatesFeed.label).toBe('Latest updates');
     expect(en.latestUpdatesFeed.headline).toBe('As it comes in');
     expect(en.howItWorks.label).toBe('How it works');
@@ -88,7 +88,7 @@ describe('Milestone #48 — homepage below-Hero dictionary sections', () => {
     const sections = [
       'newsroomSnapshot',
       'featuredStory',
-      'trendingSidebar',
+      'inFocusSidebar',
       'categoryCards',
       'latestUpdatesFeed',
       'liveStatusStrip',
@@ -138,7 +138,7 @@ describe('Milestone #48 — homepage below-Hero dictionary sections', () => {
         'analysisResultView',
         'newsroomSnapshot',
         'featuredStory',
-        'trendingSidebar',
+        'inFocusSidebar',
         'categoryCards',
         'latestUpdatesFeed',
         'howItWorks',
@@ -254,6 +254,102 @@ describe('Milestone #49 Phase B cleanup — remaining hardcoded accessibility st
     for (const key of Object.keys(en.map.freshness)) {
       expect(pl.map.freshness[key]).not.toBe(en.map.freshness[key]);
       expect(pl.map.freshness[key].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('Milestone #51 Phase B — homepage semantic correction', () => {
+  it('no user-facing "Trending" concept remains in the English dictionary', () => {
+    const en = getDictionary('en');
+    expect(en).not.toHaveProperty('trendingSidebar');
+    expect(en.inFocusSidebar.heading.toLowerCase()).not.toContain('trending');
+    expect(en.inFocusSidebar.heading.toLowerCase()).not.toContain('popular');
+    expect(en.inFocusSidebar.heading.toLowerCase()).not.toContain('hot');
+    expect(en.inFocusSidebar.heading.toLowerCase()).not.toContain('viral');
+    expect(en.inFocusSidebar.heading.toLowerCase()).not.toContain('most read');
+  });
+
+  it('the new "In Focus" heading exists in English and Polish, with genuinely different text', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(en.inFocusSidebar.heading.length).toBeGreaterThan(0);
+    expect(pl.inFocusSidebar.heading.length).toBeGreaterThan(0);
+    expect(pl.inFocusSidebar.heading).not.toBe(en.inFocusSidebar.heading);
+  });
+
+  it('the Featured Story headline no longer implies unsupported popularity', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(en.newsroomSnapshot.headline.toLowerCase()).not.toContain('everyone');
+    expect(en.newsroomSnapshot.headline.toLowerCase()).not.toContain('reading');
+    expect(pl.newsroomSnapshot.headline).not.toBe('Historia, którą dziś czyta każdy');
+  });
+
+  it('CategoryCards headline no longer implies genuine per-category navigation', () => {
+    const en = getDictionary('en');
+    expect(en.categoryCards.headline.toLowerCase()).not.toContain('six ways');
+  });
+
+  it('localized aria-label prefixes exist for every homepage component whose aria-label was previously hardcoded English', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    for (const group of ['featuredStory', 'inFocusSidebar', 'categoryCards'] as const) {
+      expect(en[group].readFullStoryPrefix.length).toBeGreaterThan(0);
+      expect(pl[group].readFullStoryPrefix.length).toBeGreaterThan(0);
+      expect(pl[group].readFullStoryPrefix).not.toBe(en[group].readFullStoryPrefix);
+    }
+  });
+
+  it('dictionary structural parity holds for every renamed/changed section (en/pl have identical key sets)', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    for (const group of ['newsroomSnapshot', 'featuredStory', 'inFocusSidebar', 'categoryCards'] as const) {
+      expect(Object.keys(en[group]).sort()).toEqual(Object.keys(pl[group]).sort());
+    }
+  });
+});
+
+describe('Milestone #51 consolidated round — Latest Now / World Map Gateway localization', () => {
+  it('latestNowRail copy exists in EN and PL, with genuinely different text, and implies no popularity signal', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(en.latestNowRail.label.length).toBeGreaterThan(0);
+    expect(pl.latestNowRail.label.length).toBeGreaterThan(0);
+    expect(pl.latestNowRail.label).not.toBe(en.latestNowRail.label);
+    for (const forbidden of ['trending', 'popular', 'most read', 'viral', 'hot']) {
+      expect(en.latestNowRail.label.toLowerCase()).not.toContain(forbidden);
+    }
+  });
+
+  it('latestNowRail previous/next control labels exist and are localized', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(en.latestNowRail.previousLabel).not.toBe(pl.latestNowRail.previousLabel);
+    expect(en.latestNowRail.nextLabel).not.toBe(pl.latestNowRail.nextLabel);
+    expect(pl.latestNowRail.previousLabel.length).toBeGreaterThan(0);
+    expect(pl.latestNowRail.nextLabel.length).toBeGreaterThan(0);
+  });
+
+  it('worldMapGateway copy exists in EN and PL with a real CTA in both', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(en.worldMapGateway.cta.length).toBeGreaterThan(0);
+    expect(pl.worldMapGateway.cta.length).toBeGreaterThan(0);
+    expect(pl.worldMapGateway.cta).not.toBe(en.worldMapGateway.cta);
+  });
+
+  it('latestUpdatesFeed gained a localized readFullStoryPrefix (rows are now real links)', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(en.latestUpdatesFeed.readFullStoryPrefix.length).toBeGreaterThan(0);
+    expect(pl.latestUpdatesFeed.readFullStoryPrefix).not.toBe(en.latestUpdatesFeed.readFullStoryPrefix);
+  });
+
+  it('every new Milestone #51 dictionary section has identical EN/PL key sets', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    for (const group of ['latestNowRail', 'worldMapGateway'] as const) {
+      expect(Object.keys(en[group]).sort()).toEqual(Object.keys(pl[group]).sort());
     }
   });
 });

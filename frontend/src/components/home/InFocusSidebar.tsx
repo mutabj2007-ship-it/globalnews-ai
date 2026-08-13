@@ -3,22 +3,30 @@ import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 
-interface TrendingSidebarProps {
+interface InFocusSidebarProps {
   items: NewsArticle[];
   /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
   language?: LanguageCode;
 }
 
-export function TrendingSidebar({ items, language = 'en' }: TrendingSidebarProps): JSX.Element {
-  const t = getDictionary(language).trendingSidebar;
+/**
+ * Milestone #51 Phase B — renamed from TrendingSidebar. "Trending"
+ * implied a measured popularity/engagement signal that never actually
+ * existed — these items were, and remain, a curated selection (see
+ * homeFeedAllocation.ts), not a ranked-by-engagement list. Renaming
+ * the component alongside the user-facing copy keeps the code honest
+ * about what the data represents, not just the label the user sees.
+ */
+export function InFocusSidebar({ items, language = 'en' }: InFocusSidebarProps): JSX.Element {
+  const t = getDictionary(language).inFocusSidebar;
 
   return (
     <aside
       className="flex flex-col rounded-2xl border border-border bg-surface p-5 sm:p-6"
-      aria-labelledby="trending-heading"
+      aria-labelledby="in-focus-heading"
     >
       <h3
-        id="trending-heading"
+        id="in-focus-heading"
         className="mb-4 font-mono text-xs uppercase tracking-widest text-signal-bright"
       >
         {t.heading}
@@ -34,8 +42,8 @@ export function TrendingSidebar({ items, language = 'en' }: TrendingSidebarProps
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-start gap-3"
-                aria-label={`Read the full story: ${item.title}`}
+                className="group flex items-start gap-3 rounded-lg p-1.5 -m-1.5 transition-colors duration-200 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/50 motion-reduce:transition-none"
+                aria-label={`${t.readFullStoryPrefix} ${item.title}`}
               >
                 <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border">
                   <SafeImage
@@ -43,7 +51,7 @@ export function TrendingSidebar({ items, language = 'en' }: TrendingSidebarProps
                     alt={item.title}
                     fill
                     sizes="64px"
-                    className="object-cover transition-transform duration-300 group-hover:scale-[1.05]"
+                    className="object-cover transition-transform duration-200 motion-safe:group-hover:scale-105 motion-reduce:transition-none"
                   />
                 </div>
                 <div className="flex min-w-0 flex-col gap-1">
