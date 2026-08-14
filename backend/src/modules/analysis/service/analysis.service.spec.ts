@@ -529,6 +529,111 @@ describe('AnalysisService', () => {
 
       dateSpy.mockRestore();
     });
+
+    it('does not replay a validation-rejected response for the full success cache TTL (M52-B Test 2)', async () => {
+      const articles = [makeArticle({ id: 'vr1' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const analyzeNewsMock = jest
+        .fn()
+        // Missing required "headline" — validateAnalysisResult throws
+        // AnalysisValidationError, exactly as the existing
+        // validation-rejected test above triggers it.
+        .mockResolvedValueOnce({ ...validCandidateFor(articles), headline: '' })
+        .mockResolvedValueOnce(validCandidateFor(articles));
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: analyzeNewsMock,
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ cacheTtlSeconds: 300 }),
+      );
+
+      let now = 2_000_000;
+      const dateSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+
+      const first = await service.analyzeNews('validation rejected query');
+      expect(first.analysis).toBeNull();
+      expect(first.provenance.status).toBe('validation-rejected');
+
+      // Still within the short failure TTL: served from cache.
+      now += 5_000;
+      const second = await service.analyzeNews('validation rejected query');
+      expect(second.provenance.cached).toBe(true);
+      expect(analyzeNewsMock).toHaveBeenCalledTimes(1);
+
+      // Past the short failure TTL, well within the 300s success TTL:
+      // must NOT be served from the stale cached rejection.
+      now += 20_000;
+      const third = await service.analyzeNews('validation rejected query');
+      expect(third.provenance.cached).toBe(false);
+      expect(third.analysis).not.toBeNull();
+      expect(analyzeNewsMock).toHaveBeenCalledTimes(2);
+
+      dateSpy.mockRestore();
+    });
+
+    it('does not replay a not-attempted (zero-evidence) response for the full success cache TTL (M52-B Test 2)', async () => {
+      const searchMock = jest
+        .fn()
+        .mockResolvedValueOnce(makeSearchResponse([]))
+        .mockResolvedValueOnce(makeSearchResponse([makeArticle({ id: 'na1' })]));
+
+      const newsService = { search: searchMock };
+      const countryNewsService = makeCountryNewsService();
+
+      const analyzeNewsMock = jest.fn().mockResolvedValue(validCandidateFor([makeArticle({ id: 'na1' })]));
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: analyzeNewsMock,
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ cacheTtlSeconds: 300 }),
+      );
+
+      let now = 3_000_000;
+      const dateSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+
+      const first = await service.analyzeNews('not attempted query');
+      expect(first.analysis).toBeNull();
+      expect(first.provenance.status).toBe('not-attempted');
+      expect(analyzeNewsMock).not.toHaveBeenCalled();
+
+      // Still within the short failure TTL: served from cache — the
+      // news provider must not be re-queried yet either.
+      now += 5_000;
+      const second = await service.analyzeNews('not attempted query');
+      expect(second.provenance.cached).toBe(true);
+      expect(searchMock).toHaveBeenCalledTimes(1);
+
+      // Past the short failure TTL, well within the 300s success TTL:
+      // a fresh retrieval attempt must occur (this time finding real
+      // articles), not a replay of the stale empty result.
+      now += 20_000;
+      const third = await service.analyzeNews('not attempted query');
+      expect(third.provenance.cached).toBe(false);
+      expect(third.provenance.status).toBe('success');
+      expect(searchMock).toHaveBeenCalledTimes(2);
+
+      dateSpy.mockRestore();
+    });
   });
 
   it('caches a successful response and does not call the news service again for the same query', async () => {

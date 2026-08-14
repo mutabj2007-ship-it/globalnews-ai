@@ -120,3 +120,153 @@ describe('F. Stale-response protection \u2014 behavioral race-condition test (M5
     );
   });
 });
+
+/**
+ * Milestone #52-B, Authorized Test 3 — extends (does not replace) the
+ * M52-A race-condition coverage above with a FAILURE-shaped response.
+ * The CTO's exact required scenario: Story A starts, the user moves
+ * to Story B (Story B becomes current), Story A later resolves with a
+ * failure-shaped AnalysisApiResponse (analysis: null,
+ * provenance.status: 'failed') — Story A must not overwrite Story B's
+ * already-current state, regardless of which response "shape"
+ * (success or failure) arrives late.
+ *
+ * Reuses the exact same runGuardedRequest reconstruction as the
+ * existing M52-A tests above — no new pattern invented, no production
+ * code touched.
+ */
+describe('Stale FAILURE response protection (M52-B Test 3)', () => {
+  function runGuardedRequest<T>(
+    fetcher: () => Promise<T>,
+    onResult: (result: T) => void,
+  ): () => void {
+    let cancelled = false;
+
+    fetcher().then((result) => {
+      if (!cancelled) onResult(result);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }
+
+  interface FakeAnalysisResponse {
+    query: string;
+    analysis: null | { headline: string };
+    provenance: { status: 'success' | 'failed'; cached: boolean };
+  }
+
+  it('a slower Story A response that resolves as a FAILURE never overwrites Story B\u2019s already-current (successful) state', async () => {
+    let observedState: FakeAnalysisResponse | null = null;
+
+    // Story A: starts first, later resolves as a FAILURE (analysis:
+    // null, provenance.status: 'failed') — slower, 40ms.
+    const cancelA = runGuardedRequest<FakeAnalysisResponse>(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                query: 'story A question',
+                analysis: null,
+                provenance: { status: 'failed', cached: false },
+              }),
+            40,
+          ),
+        ),
+      (result) => {
+        observedState = result;
+      },
+    );
+
+    // User navigates away from Story A to Story B before A resolves —
+    // React's cleanup fires first, exactly as before.
+    cancelA();
+
+    // Story B: starts second, resolves successfully — faster, 5ms.
+    runGuardedRequest<FakeAnalysisResponse>(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                query: 'story B question',
+                analysis: { headline: 'Story B headline' },
+                provenance: { status: 'success', cached: false },
+              }),
+            5,
+          ),
+        ),
+      (result) => {
+        observedState = result;
+      },
+    );
+
+    // Wait past both delays — Story A's slower failure has definitely
+    // landed by the time we assert.
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    expect(observedState).not.toBeNull();
+    expect(observedState!.query).toBe('story B question');
+    expect(observedState!.provenance.status).toBe('success');
+    expect(observedState!.analysis).not.toBeNull();
+  });
+
+  it('a slower Story A SUCCESS also never overwrites a faster Story B FAILURE \u2014 the guard is symmetric regardless of which response shape arrives late', async () => {
+    // Complements the above: proves the protection isn't accidentally
+    // shape-dependent (e.g. only guarding against a stale failure, or
+    // only against a stale success).
+    let observedState: FakeAnalysisResponse | null = null;
+
+    const cancelA = runGuardedRequest<FakeAnalysisResponse>(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                query: 'story A question',
+                analysis: { headline: 'Stale Story A headline' },
+                provenance: { status: 'success', cached: false },
+              }),
+            40,
+          ),
+        ),
+      (result) => {
+        observedState = result;
+      },
+    );
+
+    cancelA();
+
+    runGuardedRequest<FakeAnalysisResponse>(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                query: 'story B question',
+                analysis: null,
+                provenance: { status: 'failed', cached: false },
+              }),
+            5,
+          ),
+        ),
+      (result) => {
+        observedState = result;
+      },
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    expect(observedState).not.toBeNull();
+    expect(observedState!.query).toBe('story B question');
+    expect(observedState!.provenance.status).toBe('failed');
+  });
+
+  it('the real source\u2019s guard applies to every setState call in the effect (setResponse, setFetchError, setIsLoading alike) \u2014 a stale failure cannot partially leak through an unguarded branch', () => {
+    expect(searchClientSource).toMatch(/if \(!cancelled\) setResponse\(result\);/);
+    expect(searchClientSource).toMatch(/if \(cancelled\) return;\s*\n\s*setFetchError\(/);
+    expect(searchClientSource).toMatch(/if \(!cancelled\) setIsLoading\(false\);/);
+  });
+});
