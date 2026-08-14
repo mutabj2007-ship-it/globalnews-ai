@@ -106,3 +106,25 @@ describe('latestNowMotionSignal (Milestone #51)', () => {
     expect(signalSource).toMatch(/export function isLatestNowMotionPaused/);
   });
 });
+
+/**
+ * Milestone #53 regression repair — the accessible scroll-region
+ * landmark (role="region" + localized aria-label) was previously
+ * asserted against LatestNowRail.tsx's own source, but the actual
+ * scroll surface (and therefore the correct owner of this ARIA
+ * landmark) is LatestNowTicker.tsx. Moved here so accessibility is
+ * verified against the real DOM owner rather than duplicated as a
+ * second landmark in the non-scrolling wrapper.
+ */
+describe('LatestNowTicker accessible scroll-region ownership (Milestone #53)', () => {
+  const tickerSource = readFileSync(join(__dirname, 'LatestNowTicker.tsx'), 'utf-8');
+
+  it('the actual scroll surface carries the accessible landmark role and localized label', () => {
+    expect(tickerSource).toMatch(/role="region"/);
+    expect(tickerSource).toMatch(/aria-label=\{regionLabel\}/);
+  });
+
+  it('regionLabel is a required prop, not an internally-fabricated string \u2014 the real localized value flows in from the caller', () => {
+    expect(tickerSource).toMatch(/regionLabel: string;/);
+  });
+});

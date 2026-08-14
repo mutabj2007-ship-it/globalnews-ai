@@ -18,8 +18,21 @@ describe('HeroWorldVisual visual enrichment (CTO Visual Acceptance correction)',
   });
 
   it('every node has a soft halo (a larger, low-opacity circle behind the core dot)', () => {
+    // Milestone #53 regression repair — the exact opacity value has
+    // been tuned upward more than once during real-browser HUD
+    // brightness rounds (most recently to 0.25, from an earlier
+    // 0.12, after real-screenshot evidence showed the halos were too
+    // faint to read). The meaningful, durable contract is structural:
+    // a halo circle exists, sized larger than the core dot (radius =
+    // size * 4), and is genuinely translucent (opacity below 1, i.e.
+    // a real halo, not an opaque duplicate of the core) — not any one
+    // specific opacity number.
     expect(source).toMatch(/r=\{node\.size \* 4\}/);
-    expect(source).toMatch(/opacity="0\.12"/);
+    const haloMatch = source.match(/r=\{node\.size \* 4\} fill=\{node\.color\} opacity="([\d.]+)"/);
+    expect(haloMatch).not.toBeNull();
+    const haloOpacity = Number(haloMatch![1]);
+    expect(haloOpacity).toBeGreaterThan(0);
+    expect(haloOpacity).toBeLessThan(1);
   });
 
   it('has one larger focus node with concentric targeting rings, distinct from the ambient nodes', () => {

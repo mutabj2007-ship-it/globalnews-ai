@@ -2,6 +2,10 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const bandSource = readFileSync(join(__dirname, 'IntelligenceModulesDesktop.tsx'), 'utf-8');
+const interactiveSource = readFileSync(
+  join(__dirname, 'IntelligenceEngineInteractive.tsx'),
+  'utf-8',
+);
 const mobileGridSource = readFileSync(join(__dirname, 'IntelligenceModulesMobile.tsx'), 'utf-8');
 const heroSource = readFileSync(join(__dirname, 'Hero.tsx'), 'utf-8');
 const mapSource = readFileSync(join(__dirname, 'HomepageSituationMap.tsx'), 'utf-8');
@@ -16,10 +20,17 @@ const bottomNavSource = readFileSync(join(__dirname, '../navigation/MobileBottom
  */
 describe('Responsive hardening — Intelligence Modules (CTO HUD finishing pass)', () => {
   it('desktop band uses a graduated column count (3 -> 5 -> 9) rather than a fixed 9-column grid at every desktop width', () => {
-    expect(bandSource).toMatch(/grid-cols-3/);
-    expect(bandSource).toMatch(/md:grid-cols-5/);
-    expect(bandSource).toMatch(/2xl:grid-cols-9/);
-    expect(bandSource).not.toMatch(/(?<!2)xl:grid-cols-9/);
+    // Milestone #53 regression repair — the responsive grid moved
+    // from the server-shell IntelligenceModulesDesktop.tsx into the
+    // narrowly-scoped client component IntelligenceEngineInteractive.tsx
+    // (see that file's own doc comment: the M52-A connector-hover
+    // authorization). The shell itself no longer contains this class
+    // string at all; the test now inspects the component that
+    // actually owns the grid.
+    expect(interactiveSource).toMatch(/grid-cols-3/);
+    expect(interactiveSource).toMatch(/md:grid-cols-5/);
+    expect(interactiveSource).toMatch(/2xl:grid-cols-9/);
+    expect(interactiveSource).not.toMatch(/(?<!2)xl:grid-cols-9/);
   });
 
   it('mobile uses a genuinely different, 2-column composition — not the desktop band', () => {
@@ -47,7 +58,9 @@ describe('Responsive hardening — Hero (CTO HUD finishing pass)', () => {
   });
 
   it('a shared cyan atmosphere spans both Hero columns (CTO continuation, priority 2 — spatial integration)', () => {
-    expect(heroSource).toMatch(/radial-gradient\(ellipse_70%_60%_at_75%_45%,rgba\(34,211,238,0\.10\)/);
+    expect(heroSource).toMatch(
+      /radial-gradient\(ellipse_70%_60%_at_75%_45%,rgba\(34,211,238,0\.10\)/,
+    );
   });
 });
 

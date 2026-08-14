@@ -39,9 +39,8 @@ describe('LatestNowRail (Milestone #51)', () => {
     expect(railSource.trimStart().startsWith("'use client'")).toBe(false);
   });
 
-  it('the scroll region has an accessible landmark role and localized label', () => {
-    expect(railSource).toMatch(/role="region"/);
-    expect(railSource).toMatch(/aria-label=\{t\.regionLabel\}/);
+  it('passes the localized regionLabel through to LatestNowTicker, which owns the actual accessible scroll-region landmark', () => {
+    expect(railSource).toMatch(/regionLabel=\{t\.regionLabel\}/);
   });
 
   it('the scroll region (now owned by LatestNowTicker) uses CSS scroll-snap for native scrollability; the rail itself contains no timer code (auto-scroll lives in LatestNowTicker specifically, verified in its own spec)', () => {
@@ -83,8 +82,9 @@ describe('LatestNowScrollControls (Milestone #51, redesigned as overlay buttons)
 
   it('neither button renders when item count is below the useful-scroll threshold — no useless arrows', () => {
     expect(controlsSource).toMatch(/MIN_ITEMS_FOR_CONTROLS/);
-    const returnNullCount = (controlsSource.match(/if \(itemCount < MIN_ITEMS_FOR_CONTROLS\)\s*\{\s*return null;/g) ?? [])
-      .length;
+    const returnNullCount = (
+      controlsSource.match(/if \(itemCount < MIN_ITEMS_FOR_CONTROLS\)\s*\{\s*return null;/g) ?? []
+    ).length;
     expect(returnNullCount).toBe(2);
   });
 
@@ -122,7 +122,9 @@ describe('LatestNowRail control placement (Milestone #51 browser-acceptance UX p
   });
 
   it('the heading row above the rail contains only the section label, not controls', () => {
-    const headingBlockMatch = railSource.match(/<span[\s\S]*?id="latest-now-heading"[\s\S]*?<\/span>/);
+    const headingBlockMatch = railSource.match(
+      /<span[\s\S]*?id="latest-now-heading"[\s\S]*?<\/span>/,
+    );
     expect(headingBlockMatch).not.toBeNull();
   });
 

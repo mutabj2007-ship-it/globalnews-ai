@@ -3,10 +3,7 @@ import { join } from 'path';
 
 const cardSource = readFileSync(join(__dirname, 'CountryArticleCard.tsx'), 'utf-8');
 const panelSource = readFileSync(join(__dirname, 'CountryPanel.tsx'), 'utf-8');
-const searchClientSource = readFileSync(
-  join(__dirname, '../search/SearchPageClient.tsx'),
-  'utf-8',
-);
+const searchClientSource = readFileSync(join(__dirname, '../search/SearchPageClient.tsx'), 'utf-8');
 
 /**
  * Milestone #51 — Map -> Story -> Q&A integration. Behavioral tests
@@ -23,9 +20,20 @@ describe('Country-level context reaches Q&A (pre-existing, re-verified)', () => 
   });
 });
 
-describe('Story-level (article) context reaches Q&A \u2014 Milestone #51 new integration', () => {
-  it('CountryArticleCard offers a real navigation action to /search using the article\u2019s own real title as the query', () => {
-    expect(cardSource).toMatch(/router\.push\(`\/search\?q=\$\{encodeURIComponent\(article\.title\)\}`\)/);
+describe('Story-level (article) context reaches Q&A \u2014 Milestone #51 Phase B, current contract', () => {
+  it('CountryArticleCard builds a URLSearchParams-based navigation action carrying the real article title AND articleId (and countryCode when available) \u2014 the current, stronger anchoring contract', () => {
+    // Milestone #53 regression repair — this test previously asserted
+    // the OLD, title-only router.push string
+    // (`/search?q=${encodeURIComponent(article.title)}`), which was
+    // superseded by the M51 Phase B / CTO-final-correction work: a
+    // country-only anchor could not distinguish one story from
+    // another in the same country, so articleId became a real,
+    // intentional part of this contract, not an accidental
+    // regression. Updated to protect the CURRENT, stronger behavior.
+    expect(cardSource).toMatch(
+      /const params = new URLSearchParams\(\{ q: article\.title, articleId: article\.id \}\)/,
+    );
+    expect(cardSource).toMatch(/router\.push\(`\/search\?\$\{params\.toString\(\)\}`\)/);
   });
 
   it('the existing external "read full story" link is preserved unchanged \u2014 the new action is additive, not a replacement', () => {
@@ -34,9 +42,9 @@ describe('Story-level (article) context reaches Q&A \u2014 Milestone #51 new int
     expect(cardSource).toMatch(/rel="noopener noreferrer"/);
   });
 
-  it('does not invent a new articleId/story URL contract \u2014 uses the same plain-text query pattern as the existing country-level action', () => {
-    expect(cardSource).not.toMatch(/articleId=/);
-    expect(cardSource).not.toMatch(/storyId=/);
+  it('articleId is a real, intentional part of the current contract \u2014 the smallest stable story identifier, never the whole article object/body', () => {
+    expect(cardSource).toMatch(/articleId: article\.id/);
+    expect(cardSource).not.toMatch(/JSON\.stringify\(article\)/);
   });
 
   it('the two actions are structurally independent (no nested <a><button>, which is invalid HTML and would break click handling)', () => {
@@ -60,7 +68,12 @@ describe('Language survives Map -> Q&A navigation (pre-existing persisted-langua
 });
 
 describe('No fabricated backend contract fields were introduced', () => {
-  it('the analysis request shape used by /search is unchanged \u2014 still a plain query string, not a serialized object', () => {
-    expect(searchClientSource).toMatch(/analyzeNews\(query, language\)/);
+  it('the analysis request shape used by /search is unchanged \u2014 still query + language + the approved optional storyContext, never an arbitrary serialized object', () => {
+    // Milestone #53 regression repair — updated from a 2-argument
+    // analyzeNews(query, language) assertion to the current, approved
+    // 3-argument call: storyContext is a real, deliberate addition
+    // from M51 Phase B (see StoryContext in shared/src/analysis.ts),
+    // not an untracked contract drift.
+    expect(searchClientSource).toMatch(/analyzeNews\(query, language, storyContext\)/);
   });
 });

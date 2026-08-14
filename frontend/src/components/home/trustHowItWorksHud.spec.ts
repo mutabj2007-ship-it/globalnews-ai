@@ -28,7 +28,9 @@ describe('TrustSection (CTO HUD system — tertiary-tier behavior)', () => {
 
   it('is a single integrated panel, not a grid of five individually-bordered boxes — the CTO\u2019s explicit "compact integrated strip" requirement', () => {
     // One outer HUD panel wrapping the whole section, not one per item.
-    const outerPanels = (trustSource.match(/relative overflow-hidden border border-cyan-500\/20/g) ?? []).length;
+    const outerPanels = (
+      trustSource.match(/relative overflow-hidden border border-cyan-500\/20/g) ?? []
+    ).length;
     expect(outerPanels).toBe(1);
   });
 
@@ -48,13 +50,23 @@ describe('HowItWorks (CTO HUD system — tertiary-tier behavior)', () => {
     expect(processSteps.length).toBeGreaterThan(0);
   });
 
-  it('presents the steps as a connected sequence (a rail/connector element), not disconnected independent boxes', () => {
-    expect(howItWorksSource).toMatch(/absolute left-0 right-0 top-6/);
+  it('presents the steps as a connected sequence (a responsive absolute connector/rail spanning left-0 to right-0), not disconnected independent boxes', () => {
+    // Milestone #53 regression repair — the exact top offset (top-5
+    // vs the historical top-6) is a cosmetic value that has changed
+    // more than once during HUD tuning rounds and carries no
+    // behavioral meaning on its own. The real contract this test
+    // protects is structural: an absolute-positioned, full-width
+    // connector element exists, and it's responsively hidden below
+    // the breakpoint where the steps stack vertically (where a
+    // horizontal connector would look broken, not connected).
+    expect(howItWorksSource).toMatch(/absolute left-0 right-0 top-\d+ hidden sm:block/);
   });
 
   it('all decorative animation in this section genuinely respects prefers-reduced-motion', () => {
     expect(howItWorksSource).toMatch(/@media \(prefers-reduced-motion: reduce\)/);
-    const reducedMotionBlock = howItWorksSource.slice(howItWorksSource.indexOf('@media (prefers-reduced-motion'));
+    const reducedMotionBlock = howItWorksSource.slice(
+      howItWorksSource.indexOf('@media (prefers-reduced-motion'),
+    );
     expect(reducedMotionBlock).toMatch(/animation: none !important/);
   });
 });

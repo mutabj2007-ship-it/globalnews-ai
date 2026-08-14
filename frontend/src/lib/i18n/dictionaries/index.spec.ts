@@ -1,4 +1,6 @@
 import { getDictionary } from './index';
+import { footerLinkGroups } from '@/lib/homeContent';
+import { primaryNavLinks } from '@/lib/navigation';
 
 /**
  * Milestone #47 (homepage integration) — these tests exist specifically
@@ -96,8 +98,19 @@ describe('Milestone #48 — homepage below-Hero dictionary sections', () => {
     for (const section of sections) {
       const enKeys = Object.keys(en[section]) as Array<keyof (typeof en)[typeof section]>;
       for (const key of enKeys) {
-        const enValue = en[section][key];
-        const plValue = pl[section][key];
+        // Milestone #53 regression repair — `en[section][key]` is a
+        // doubly-generic indexed access (both `section` and `key`
+        // are union types iterated in a loop), which TypeScript's
+        // control-flow narrowing does not propagate through
+        // correctly: even after `typeof plValue === 'string'` is
+        // checked, TS still infers the narrowed type as `never`
+        // inside the branch. Cast to `unknown` first (the only
+        // type-safe way to widen before re-narrowing) rather than
+        // suppressing the check — the runtime `typeof` guard above
+        // still does the actual safety work; this only fixes what
+        // the type-checker is ABLE to conclude from it.
+        const enValue = en[section][key] as unknown;
+        const plValue = pl[section][key] as unknown;
         if (typeof enValue === 'string' && typeof plValue === 'string') {
           expect(plValue.length).toBeGreaterThan(0);
           expect(plValue).not.toBe(enValue);
@@ -106,20 +119,51 @@ describe('Milestone #48 — homepage below-Hero dictionary sections', () => {
     }
   });
 
-  it('footer.linkLabels and navBar.linkLabels are keyed by href, matching homeContent.ts / navigation.ts routes — routes themselves are never part of the dictionary', () => {
+  it('navBar.linkLabels contains entries for the current, real primaryNavLinks routes', () => {
+    const en = getDictionary('en');
+    expect(en.navBar.linkLabels['/']).toBe('Home');
+    expect(en.navBar.linkLabels['/map']).toBe('World Map');
+  });
+
+  it('footer.linkLabels retains legacy entries (/about, /careers, /privacy, etc.) as harmless unused translation data \u2014 Milestone #53 navigation cleanup', () => {
+    // Milestone #53 regression repair — this test previously claimed
+    // these dictionary keys "match homeContent.ts / navigation.ts
+    // routes", which is no longer true: the M53 dead-navigation fix
+    // emptied footerLinkGroups to [] (every one of these hrefs was a
+    // 404 with no matching page) and reduced primaryNavLinks to just
+    // '/' and '/map'. The raw dictionary strings themselves are
+    // unchanged and still correct as translation data — deleting them
+    // would be unrelated dictionary-coverage removal, which is out of
+    // scope here — but the test's own framing was misleading. This
+    // version states the current truth plainly: these are retained,
+    // presently-unused entries, cross-checked directly against the
+    // real (now-empty) footerLinkGroups/primaryNavLinks sources so a
+    // future re-wiring of any of these routes is free to happen
+    // without this test needing to change again.
     const en = getDictionary('en');
     expect(en.footer.linkLabels['/about']).toBe('About');
     expect(en.footer.linkLabels['/careers']).toBe('Careers');
     expect(en.footer.linkLabels['/privacy']).toBe('Privacy Policy');
-    expect(en.navBar.linkLabels['/']).toBe('Home');
-    expect(en.navBar.linkLabels['/map']).toBe('World Map');
+
+    const currentFooterHrefs = footerLinkGroups.flatMap((group) =>
+      group.links.map((link) => link.href),
+    );
+    const currentNavHrefs = primaryNavLinks.map((link) => link.href);
+    for (const legacyHref of ['/about', '/careers', '/privacy']) {
+      expect(currentFooterHrefs).not.toContain(legacyHref);
+      expect(currentNavHrefs).not.toContain(legacyHref);
+    }
   });
 
   it('Polish footer/nav link labels exist for the same href keys as English', () => {
     const en = getDictionary('en');
     const pl = getDictionary('pl');
-    expect(Object.keys(en.footer.linkLabels).sort()).toEqual(Object.keys(pl.footer.linkLabels).sort());
-    expect(Object.keys(en.navBar.linkLabels).sort()).toEqual(Object.keys(pl.navBar.linkLabels).sort());
+    expect(Object.keys(en.footer.linkLabels).sort()).toEqual(
+      Object.keys(pl.footer.linkLabels).sort(),
+    );
+    expect(Object.keys(en.navBar.linkLabels).sort()).toEqual(
+      Object.keys(pl.navBar.linkLabels).sort(),
+    );
   });
 
   it('an unimplemented language falls back to the full English dictionary, including all M48 sections', () => {
@@ -216,7 +260,9 @@ describe('Milestone #49 — World Map dictionary section', () => {
 
   it('no duplicate i18n mechanism was introduced — map lives under the SAME getDictionary(language) call as every other section', () => {
     const en = getDictionary('en');
-    expect(Object.keys(en)).toEqual(expect.arrayContaining(['map', 'hero', 'newsroomSnapshot', 'footer']));
+    expect(Object.keys(en)).toEqual(
+      expect.arrayContaining(['map', 'hero', 'newsroomSnapshot', 'footer']),
+    );
   });
 });
 
@@ -303,7 +349,12 @@ describe('Milestone #51 Phase B — homepage semantic correction', () => {
   it('dictionary structural parity holds for every renamed/changed section (en/pl have identical key sets)', () => {
     const en = getDictionary('en');
     const pl = getDictionary('pl');
-    for (const group of ['newsroomSnapshot', 'featuredStory', 'inFocusSidebar', 'categoryCards'] as const) {
+    for (const group of [
+      'newsroomSnapshot',
+      'featuredStory',
+      'inFocusSidebar',
+      'categoryCards',
+    ] as const) {
       expect(Object.keys(en[group]).sort()).toEqual(Object.keys(pl[group]).sort());
     }
   });
@@ -342,7 +393,9 @@ describe('Milestone #51 consolidated round — Latest Now / World Map Gateway lo
     const en = getDictionary('en');
     const pl = getDictionary('pl');
     expect(en.latestUpdatesFeed.readFullStoryPrefix.length).toBeGreaterThan(0);
-    expect(pl.latestUpdatesFeed.readFullStoryPrefix).not.toBe(en.latestUpdatesFeed.readFullStoryPrefix);
+    expect(pl.latestUpdatesFeed.readFullStoryPrefix).not.toBe(
+      en.latestUpdatesFeed.readFullStoryPrefix,
+    );
   });
 
   it('every new Milestone #51 dictionary section has identical EN/PL key sets', () => {
