@@ -83,24 +83,16 @@ export const trustItems: TrustItem[] = [
   },
 ];
 
-export const footerLinkGroups: FooterLinkGroup[] = [
-  {
-    title: 'Company',
-    links: [
-      { label: 'About', href: '/about' },
-      { label: 'Careers', href: '/careers' },
-      { label: 'Contact', href: '/contact' },
-    ],
-  },
-  {
-    title: 'Legal',
-    links: [
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Terms of Service', href: '/terms' },
-    ],
-  },
-  {
-    title: 'Developers',
-    links: [{ label: 'API', href: '/api', comingSoon: true }],
-  },
-];
+/**
+ * Milestone #53 — MVP release-gate remediation. Every entry
+ * previously here (About, Careers, Contact, Privacy Policy, Terms of
+ * Service, API) pointed at a route that does not currently exist in
+ * this Next.js app (confirmed via direct route inspection — only '/'
+ * and '/map' are real). Footer.tsx renders these flattened with no
+ * group-title UI (see that file's own comment), so an empty array
+ * here renders zero footer links with no leftover visual artifact —
+ * the same "remove the dead destination, don't fabricate a page"
+ * correction applied to primaryNavLinks in navigation.ts. Re-add an
+ * entry to the appropriate group only once its real route exists.
+ */
+export const footerLinkGroups: FooterLinkGroup[] = [];
