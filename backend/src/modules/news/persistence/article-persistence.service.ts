@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { NewsArticle, NewsCategory } from '@globalnews-ai/shared';
+import type {
+  NewsArticle,
+  NewsCategory,
+} from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 
 interface FindRecentArticlesOptions {
@@ -25,11 +28,15 @@ interface FindRecentByCountryOptions {
 }
 @Injectable()
 export class ArticlePersistenceService {
-  private readonly logger = new Logger(ArticlePersistenceService.name);
+  private readonly logger = new Logger(
+    ArticlePersistenceService.name,
+  );
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async persistMany(articles: NewsArticle[]): Promise<void> {
+  async persistMany(
+    articles: NewsArticle[],
+  ): Promise<void> {
     if (articles.length === 0) {
       return;
     }
@@ -49,9 +56,13 @@ export class ArticlePersistenceService {
               sourceName: article.sourceName,
               sourcesCount: article.sourcesCount,
               category: article.category,
-              publishedAt: new Date(article.publishedAt),
+              publishedAt: new Date(
+                article.publishedAt,
+              ),
               confidenceScore:
-                article.confidence !== undefined ? Math.round(article.confidence) : null,
+                article.confidence !== undefined
+                  ? Math.round(article.confidence)
+                  : null,
             },
             create: {
               id: article.id,
@@ -63,9 +74,13 @@ export class ArticlePersistenceService {
               sourceName: article.sourceName,
               sourcesCount: article.sourcesCount,
               category: article.category,
-              publishedAt: new Date(article.publishedAt),
+              publishedAt: new Date(
+                article.publishedAt,
+              ),
               confidenceScore:
-                article.confidence !== undefined ? Math.round(article.confidence) : null,
+                article.confidence !== undefined
+                  ? Math.round(article.confidence)
+                  : null,
             },
           }),
         ),
@@ -78,7 +93,9 @@ export class ArticlePersistenceService {
     }
   }
 
-  async persistCountryRelations(relations: ArticleCountryRelationInput[]): Promise<void> {
+  async persistCountryRelations(
+    relations: ArticleCountryRelationInput[],
+  ): Promise<void> {
     if (relations.length === 0) {
       return;
     }
@@ -95,14 +112,16 @@ export class ArticlePersistenceService {
             },
             update: {
               countryName: relation.countryName,
-              relevanceScore: relation.relevanceScore,
+              relevanceScore:
+                relation.relevanceScore,
               isRelevant: relation.isRelevant,
             },
             create: {
               articleId: relation.articleId,
               countryCode: relation.countryCode,
               countryName: relation.countryName,
-              relevanceScore: relation.relevanceScore,
+              relevanceScore:
+                relation.relevanceScore,
               isRelevant: relation.isRelevant,
             },
           }),
@@ -115,37 +134,54 @@ export class ArticlePersistenceService {
       );
     }
   }
-  async findRecentByCountry(options: FindRecentByCountryOptions): Promise<NewsArticle[]> {
-    const {
-      countryCode,
-      limit = 20,
-      maxAgeMinutes = 1440,
-      category,
-      relevantOnly = true,
-    } = options;
+async findRecentByCountry(
+  options: FindRecentByCountryOptions,
+): Promise<NewsArticle[]> {
+  const {
+    countryCode,
+    limit = 20,
+    maxAgeMinutes = 1440,
+    category,
+    relevantOnly = true,
+  } = options;
 
-    const safeLimit = Math.max(1, Math.min(limit, 100));
+  const safeLimit = Math.max(
+    1,
+    Math.min(limit, 100),
+  );
 
-    const safeMaxAgeMinutes = Math.max(1, maxAgeMinutes);
+  const safeMaxAgeMinutes = Math.max(
+    1,
+    maxAgeMinutes,
+  );
 
-    const normalizedCountryCode = countryCode.trim().toUpperCase();
+  const normalizedCountryCode =
+    countryCode.trim().toUpperCase();
 
-    if (!normalizedCountryCode) {
-      return [];
-    }
+  if (!normalizedCountryCode) {
+    return [];
+  }
 
-    const cutoff = new Date(Date.now() - safeMaxAgeMinutes * 60 * 1000);
+  const cutoff = new Date(
+    Date.now() -
+      safeMaxAgeMinutes * 60 * 1000,
+  );
 
-    try {
-      const rows = await this.prisma.articleCountry.findMany({
+  try {
+    const rows =
+      await this.prisma.articleCountry.findMany({
         where: {
           countryCode: normalizedCountryCode,
-          ...(relevantOnly ? { isRelevant: true } : {}),
+          ...(relevantOnly
+            ? { isRelevant: true }
+            : {}),
           article: {
             publishedAt: {
               gte: cutoff,
             },
-            ...(category ? { category } : {}),
+            ...(category
+              ? { category }
+              : {}),
           },
         },
         include: {
@@ -164,78 +200,157 @@ export class ArticlePersistenceService {
         take: safeLimit,
       });
 
+    return rows.map((row) => ({
+      id: row.article.id,
+      title: row.article.title,
+      summary: row.article.summary,
+      url: row.article.url,
+      imageUrl:
+        row.article.imageUrl ?? undefined,
+      sourceId: row.article.sourceId,
+      sourceName: row.article.sourceName,
+      category:
+        row.article.category as NewsCategory,
+      sourcesCount:
+        row.article.sourcesCount,
+      publishedAt:
+        row.article.publishedAt.toISOString(),
+      confidence:
+        row.article.confidenceScore ?? undefined,
+    }));
+  } catch (error) {
+    this.logger.warn(
+      `Failed to read recent articles for country "${normalizedCountryCode}" from database`,
+      error instanceof Error ? error : undefined,
+    );
+
+    return [];
+  }
+}
+  async findRecent(
+    options: FindRecentArticlesOptions = {},
+  ): Promise<NewsArticle[]> {
+    const {
+      limit = 20,
+      maxAgeMinutes = 1440,
+      category,
+      query,
+    } = options;
+
+    const safeLimit = Math.max(
+      1,
+      Math.min(limit, 100),
+    );
+
+    const safeMaxAgeMinutes = Math.max(
+      1,
+      maxAgeMinutes,
+    );
+
+    const normalizedQuery = query?.trim();
+
+    const cutoff = new Date(
+      Date.now() -
+        safeMaxAgeMinutes * 60 * 1000,
+    );
+
+    try {
+      const rows =
+        await this.prisma.article.findMany({
+          where: {
+            publishedAt: {
+              gte: cutoff,
+            },
+            ...(category
+              ? { category }
+              : {}),
+            ...(normalizedQuery
+              ? {
+                  OR: [
+                    {
+                      title: {
+                        contains: normalizedQuery,
+                        mode: 'insensitive',
+                      },
+                    },
+                    {
+                      summary: {
+                        contains: normalizedQuery,
+                        mode: 'insensitive',
+                      },
+                    },
+                    {
+                      sourceName: {
+                        contains: normalizedQuery,
+                        mode: 'insensitive',
+                      },
+                    },
+                  ],
+                }
+              : {}),
+          },
+          orderBy: {
+            publishedAt: 'desc',
+          },
+          take: safeLimit,
+        });
+
       return rows.map((row) => ({
-        id: row.article.id,
-        title: row.article.title,
-        summary: row.article.summary,
-        url: row.article.url,
-        imageUrl: row.article.imageUrl ?? undefined,
-        sourceId: row.article.sourceId,
-        sourceName: row.article.sourceName,
-        category: row.article.category as NewsCategory,
-        sourcesCount: row.article.sourcesCount,
-        publishedAt: row.article.publishedAt.toISOString(),
-        confidence: row.article.confidenceScore ?? undefined,
+        id: row.id,
+        title: row.title,
+        summary: row.summary,
+        url: row.url,
+        imageUrl:
+          row.imageUrl ?? undefined,
+        sourceId: row.sourceId,
+        sourceName: row.sourceName,
+        category:
+          row.category as NewsCategory,
+        sourcesCount: row.sourcesCount,
+        publishedAt:
+          row.publishedAt.toISOString(),
+        confidence:
+          row.confidenceScore ?? undefined,
       }));
     } catch (error) {
       this.logger.warn(
-        `Failed to read recent articles for country "${normalizedCountryCode}" from database`,
+        'Failed to read recent articles from database; continuing without database fallback',
         error instanceof Error ? error : undefined,
       );
 
       return [];
     }
   }
-  async findRecent(options: FindRecentArticlesOptions = {}): Promise<NewsArticle[]> {
-    const { limit = 20, maxAgeMinutes = 1440, category, query } = options;
 
-    const safeLimit = Math.max(1, Math.min(limit, 100));
+  /**
+   * Milestone #51 Phase B — resolves ONE article by its trusted
+   * server-side identity (the same Prisma `article.id` primary key
+   * `persistMany`'s upsert already writes/reads), so a story
+   * selected via the World Map country feed can be resolved as a
+   * genuine evidence anchor rather than trusted purely from
+   * frontend-supplied text. Mirrors findRecent/findRecentByCountry's
+   * own error-handling convention exactly: never throws, logs a
+   * warning and returns null on any database failure (including when
+   * the id genuinely doesn't exist), so a resolution failure always
+   * degrades safely rather than crashing the request.
+   */
+  async findById(articleId: string): Promise<NewsArticle | null> {
+    const normalizedId = articleId.trim();
 
-    const safeMaxAgeMinutes = Math.max(1, maxAgeMinutes);
-
-    const normalizedQuery = query?.trim();
-
-    const cutoff = new Date(Date.now() - safeMaxAgeMinutes * 60 * 1000);
+    if (!normalizedId) {
+      return null;
+    }
 
     try {
-      const rows = await this.prisma.article.findMany({
-        where: {
-          publishedAt: {
-            gte: cutoff,
-          },
-          ...(category ? { category } : {}),
-          ...(normalizedQuery
-            ? {
-                OR: [
-                  {
-                    title: {
-                      contains: normalizedQuery,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    summary: {
-                      contains: normalizedQuery,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    sourceName: {
-                      contains: normalizedQuery,
-                      mode: 'insensitive',
-                    },
-                  },
-                ],
-              }
-            : {}),
-        },
-        orderBy: {
-          publishedAt: 'desc',
-        },
-        take: safeLimit,
+      const row = await this.prisma.article.findUnique({
+        where: { id: normalizedId },
       });
 
-      return rows.map((row) => ({
+      if (!row) {
+        return null;
+      }
+
+      return {
         id: row.id,
         title: row.title,
         summary: row.summary,
@@ -247,14 +362,14 @@ export class ArticlePersistenceService {
         sourcesCount: row.sourcesCount,
         publishedAt: row.publishedAt.toISOString(),
         confidence: row.confidenceScore ?? undefined,
-      }));
+      };
     } catch (error) {
       this.logger.warn(
-        'Failed to read recent articles from database; continuing without database fallback',
+        `Failed to resolve article "${normalizedId}" by id from database`,
         error instanceof Error ? error : undefined,
       );
 
-      return [];
+      return null;
     }
   }
 }

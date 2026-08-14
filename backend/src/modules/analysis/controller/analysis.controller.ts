@@ -22,10 +22,14 @@ export class AnalysisController {
    * itself defaults to 'en' — this method does not invent its own
    * separate default, so there is exactly one place or the other,
    * never a third, that decides the English fallback.
+   * Milestone #51 Phase B: `storyContext`, when present, is already
+   * validated by AnalyzeNewsDto's nested @ValidateNested()/StoryContextDto
+   * — passed straight through to AnalysisService.analyzeNews(), which
+   * treats it as fully optional (absent for every pre-#51 caller).
    */
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('news')
-  analyzeNews(@Body() { query, requestedLanguage }: AnalyzeNewsDto): Promise<AnalysisApiResponse> {
-    return this.analysisService.analyzeNews(query, requestedLanguage);
+  analyzeNews(@Body() { query, requestedLanguage, storyContext }: AnalyzeNewsDto): Promise<AnalysisApiResponse> {
+    return this.analysisService.analyzeNews(query, requestedLanguage, storyContext);
   }
 }

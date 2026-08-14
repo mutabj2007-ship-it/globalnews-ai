@@ -6,12 +6,14 @@ describe('ArticlePersistenceService', () => {
   const articleCountryUpsert = jest.fn();
   const articleCountryFindMany = jest.fn();
   const articleFindMany = jest.fn();
+  const articleFindUnique = jest.fn();
   const transaction = jest.fn();
 
   const prisma = {
     article: {
       upsert: articleUpsert,
       findMany: articleFindMany,
+      findUnique: articleFindUnique,
     },
     articleCountry: {
       upsert: articleCountryUpsert,
@@ -27,18 +29,22 @@ describe('ArticlePersistenceService', () => {
     articleCountryUpsert.mockReset();
     articleCountryFindMany.mockReset();
     articleFindMany.mockReset();
+    articleFindUnique.mockReset();
     transaction.mockReset();
 
     articleUpsert.mockImplementation((args) => args);
     articleCountryUpsert.mockImplementation((args) => args);
     articleCountryFindMany.mockResolvedValue([]);
     articleFindMany.mockResolvedValue([]);
+    articleFindUnique.mockResolvedValue(null);
     transaction.mockResolvedValue([]);
 
     service = new ArticlePersistenceService(prisma as never);
   });
 
-  function makeArticle(overrides: Partial<NewsArticle> = {}): NewsArticle {
+  function makeArticle(
+    overrides: Partial<NewsArticle> = {},
+  ): NewsArticle {
     return {
       id: 'article-1',
       title: 'Test headline',
@@ -53,7 +59,9 @@ describe('ArticlePersistenceService', () => {
     };
   }
 
-  function makeDatabaseRow(overrides: Record<string, unknown> = {}) {
+  function makeDatabaseRow(
+    overrides: Record<string, unknown> = {},
+  ) {
     return {
       id: 'article-1',
       title: 'Stored headline',
@@ -64,13 +72,17 @@ describe('ArticlePersistenceService', () => {
       sourceName: 'Stored Provider',
       sourcesCount: 1,
       category: 'world',
-      publishedAt: new Date('2026-08-07T10:00:00.000Z'),
+      publishedAt: new Date(
+        '2026-08-07T10:00:00.000Z',
+      ),
       confidenceScore: 87,
       ...overrides,
     };
   }
 
-  function makeCountryDatabaseRow(overrides: Record<string, unknown> = {}) {
+  function makeCountryDatabaseRow(
+    overrides: Record<string, unknown> = {},
+  ) {
     return {
       id: 'relation-1',
       articleId: 'article-1',
@@ -78,8 +90,12 @@ describe('ArticlePersistenceService', () => {
       countryName: 'Spain',
       relevanceScore: 82,
       isRelevant: true,
-      createdAt: new Date('2026-08-07T10:00:00.000Z'),
-      updatedAt: new Date('2026-08-07T10:00:00.000Z'),
+      createdAt: new Date(
+        '2026-08-07T10:00:00.000Z',
+      ),
+      updatedAt: new Date(
+        '2026-08-07T10:00:00.000Z',
+      ),
       article: makeDatabaseRow(),
       ...overrides,
     };
@@ -160,16 +176,22 @@ describe('ArticlePersistenceService', () => {
     expect(articleUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
-          publishedAt: new Date('2026-08-07T08:00:00.000Z'),
+          publishedAt: new Date(
+            '2026-08-07T08:00:00.000Z',
+          ),
         }),
       }),
     );
   });
 
   it('does not throw when database persistence fails', async () => {
-    transaction.mockRejectedValueOnce(new Error('Simulated database failure'));
+    transaction.mockRejectedValueOnce(
+      new Error('Simulated database failure'),
+    );
 
-    await expect(service.persistMany([makeArticle()])).resolves.toBeUndefined();
+    await expect(
+      service.persistMany([makeArticle()]),
+    ).resolves.toBeUndefined();
   });
 
   it('does nothing when there are no country relations', async () => {
@@ -264,7 +286,9 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('does not throw when country relation persistence fails', async () => {
-    transaction.mockRejectedValueOnce(new Error('Simulated country relation database failure'));
+    transaction.mockRejectedValueOnce(
+      new Error('Simulated country relation database failure'),
+    );
 
     await expect(
       service.persistCountryRelations([
@@ -280,11 +304,17 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('reads recent relevant articles for a country', async () => {
-    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
+    const now = new Date(
+      '2026-08-07T12:00:00.000Z',
+    ).getTime();
 
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(now);
 
-    articleCountryFindMany.mockResolvedValueOnce([makeCountryDatabaseRow()]);
+    articleCountryFindMany.mockResolvedValueOnce([
+      makeCountryDatabaseRow(),
+    ]);
 
     const result = await service.findRecentByCountry({
       countryCode: 'ESP',
@@ -298,7 +328,9 @@ describe('ArticlePersistenceService', () => {
         isRelevant: true,
         article: {
           publishedAt: {
-            gte: new Date('2026-08-06T12:00:00.000Z'),
+            gte: new Date(
+              '2026-08-06T12:00:00.000Z',
+            ),
           },
         },
       },
@@ -380,7 +412,8 @@ describe('ArticlePersistenceService', () => {
       relevantOnly: false,
     });
 
-    const call = articleCountryFindMany.mock.calls[0][0];
+    const call =
+      articleCountryFindMany.mock.calls[0][0];
 
     expect(call.where.countryCode).toBe('ESP');
     expect(call.where.isRelevant).toBeUndefined();
@@ -433,7 +466,9 @@ describe('ArticlePersistenceService', () => {
 
   it('returns an empty array when country database reading fails', async () => {
     articleCountryFindMany.mockRejectedValueOnce(
-      new Error('Simulated country database read failure'),
+      new Error(
+        'Simulated country database read failure',
+      ),
     );
 
     await expect(
@@ -444,11 +479,17 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('reads recent articles using the default 24-hour freshness window', async () => {
-    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
+    const now = new Date(
+      '2026-08-07T12:00:00.000Z',
+    ).getTime();
 
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(now);
 
-    articleFindMany.mockResolvedValueOnce([makeDatabaseRow()]);
+    articleFindMany.mockResolvedValueOnce([
+      makeDatabaseRow(),
+    ]);
 
     const result = await service.findRecent();
 
@@ -457,7 +498,9 @@ describe('ArticlePersistenceService', () => {
     expect(articleFindMany).toHaveBeenCalledWith({
       where: {
         publishedAt: {
-          gte: new Date('2026-08-06T12:00:00.000Z'),
+          gte: new Date(
+            '2026-08-06T12:00:00.000Z',
+          ),
         },
       },
       orderBy: {
@@ -499,9 +542,13 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('filters recent articles by category', async () => {
-    const now = new Date('2026-08-07T12:00:00.000Z').getTime();
+    const now = new Date(
+      '2026-08-07T12:00:00.000Z',
+    ).getTime();
 
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(now);
 
     articleFindMany.mockResolvedValueOnce([]);
 
@@ -514,7 +561,9 @@ describe('ArticlePersistenceService', () => {
     expect(articleFindMany).toHaveBeenCalledWith({
       where: {
         publishedAt: {
-          gte: new Date('2026-08-07T11:00:00.000Z'),
+          gte: new Date(
+            '2026-08-07T11:00:00.000Z',
+          ),
         },
         category: 'technology',
       },
@@ -557,8 +606,77 @@ describe('ArticlePersistenceService', () => {
   });
 
   it('returns an empty array when database reading fails', async () => {
-    articleFindMany.mockRejectedValueOnce(new Error('Simulated database read failure'));
+    articleFindMany.mockRejectedValueOnce(
+      new Error('Simulated database read failure'),
+    );
 
-    await expect(service.findRecent()).resolves.toEqual([]);
+    await expect(
+      service.findRecent(),
+    ).resolves.toEqual([]);
+  });
+
+  /**
+   * Milestone #51 Phase B (CTO final correction) — findById is the
+   * server-side lookup AnalysisService uses to resolve a
+   * storyContext.articleId into a trusted evidence anchor. It must
+   * behave exactly like every other read method here: never throw,
+   * return null (not an empty array or fabricated value) on a miss or
+   * a database failure.
+   */
+  describe('findById', () => {
+    it('resolves a real article by its stored id', async () => {
+      articleFindUnique.mockResolvedValueOnce(makeDatabaseRow());
+
+      const result = await service.findById('article-1');
+
+      expect(articleFindUnique).toHaveBeenCalledWith({
+        where: { id: 'article-1' },
+      });
+      expect(result).toEqual({
+        id: 'article-1',
+        title: 'Stored headline',
+        summary: 'Stored summary',
+        url: 'https://example.com/stored',
+        imageUrl: 'https://example.com/image.jpg',
+        sourceId: 'stored-provider',
+        sourceName: 'Stored Provider',
+        category: 'world',
+        sourcesCount: 1,
+        publishedAt: '2026-08-07T10:00:00.000Z',
+        confidence: 87,
+      });
+    });
+
+    it('returns null when the id does not exist \u2014 never fabricates an article', async () => {
+      articleFindUnique.mockResolvedValueOnce(null);
+
+      const result = await service.findById('does-not-exist');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null (never throws) when the database read fails', async () => {
+      articleFindUnique.mockRejectedValueOnce(new Error('Simulated database failure'));
+
+      await expect(service.findById('article-1')).resolves.toBeNull();
+    });
+
+    it('returns null for an empty/whitespace-only id without querying the database', async () => {
+      const result = await service.findById('   ');
+
+      expect(result).toBeNull();
+      expect(articleFindUnique).not.toHaveBeenCalled();
+    });
+
+    it('maps nullable values safely, matching findRecent/findRecentByCountry\u2019s own convention', async () => {
+      articleFindUnique.mockResolvedValueOnce(
+        makeDatabaseRow({ imageUrl: null, confidenceScore: null }),
+      );
+
+      const result = await service.findById('article-1');
+
+      expect(result?.imageUrl).toBeUndefined();
+      expect(result?.confidence).toBeUndefined();
+    });
   });
 });

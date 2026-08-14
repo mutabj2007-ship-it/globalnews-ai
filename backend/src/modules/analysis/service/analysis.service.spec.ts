@@ -3895,4 +3895,353 @@ describe('AnalysisService', () => {
       expect(response.analysisError).toBe('No related articles were found for this question.');
     });
   });
+
+  /**
+   * Milestone #51 Phase B — regression coverage for the story-context
+   * retrieval-anchoring fix. Real-browser CTO acceptance testing found
+   * that a Rwanda migration-story title, asked via "Ask GlobalNews AI
+   * about this", fell through to unrelated generic retrieval (an
+   * Italian swimming article) because detectLocation()'s free-text
+   * parsing didn't recognize the headline as country-related. These
+   * tests prove: (a) a resolvable storyContext.countryCode now takes
+   * priority over free-text detection and anchors retrieval via the
+   * SAME countryNewsService.getCountryNews() path detectLocation()
+   * itself already uses — no parallel relevance system; (b) an absent
+   * or unresolvable storyContext leaves ordinary generic Q&A
+   * completely unaffected; (c) the DTO/service signature remains
+   * fully backward compatible with every pre-#51 caller.
+   */
+  describe('storyContext retrieval anchoring (Milestone #51 Phase B)', () => {
+    it('anchors retrieval to storyContext.countryCode via the existing countryNewsService path, even when the query text itself would not trigger free-text country detection', async () => {
+      const rwandaArticles = [
+        makeArticle({
+          id: 'rw1',
+          title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+        }),
+      ];
+
+      const newsService = {
+        // If free-text detection were still driving retrieval, this
+        // unrelated generic search result is what would wrongly be
+        // used — asserting it is NEVER called proves the story anchor,
+        // not detectLocation(), determined retrieval for this request.
+        search: jest.fn().mockResolvedValue(
+          makeSearchResponse([makeArticle({ id: 'unrelated', title: 'Swimming\u2013Italy\u2019s Curtis betters own 50m backstroke world record' })]),
+        ),
+      };
+
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', rwandaArticles)),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(null),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews(
+        'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+        'en',
+        { title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?', countryCode: 'RWA' },
+      );
+
+      expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('RWA', undefined, expect.any(Number), undefined);
+      expect(newsService.search).not.toHaveBeenCalled();
+      expect(response.articles.map((a) => a.id)).toEqual(['rw1']);
+      expect(response.articles.some((a) => a.title.includes('Swimming'))).toBe(false);
+    });
+
+    it('falls back to ordinary detectLocation() free-text behavior when storyContext is absent \u2014 generic Q&A is completely unaffected', async () => {
+      const articles = [makeArticle({ id: 'generic1' })];
+      const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(null),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('what happened in the markets today');
+
+      expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
+      expect(newsService.search).toHaveBeenCalled();
+      expect(response.articles.map((a) => a.id)).toEqual(['generic1']);
+    });
+
+    it('falls back to detectLocation() when storyContext.countryCode does not resolve to a real country \u2014 never throws, never silently produces empty retrieval', async () => {
+      const articles = [makeArticle({ id: 'fallback1' })];
+      const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(null),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('some generic question', 'en', {
+        title: 'some generic question',
+        countryCode: 'NOT_A_REAL_COUNTRY_CODE',
+      });
+
+      expect(countryNewsService.getCountryNews).not.toHaveBeenCalled();
+      expect(newsService.search).toHaveBeenCalled();
+      expect(response.articles.map((a) => a.id)).toEqual(['fallback1']);
+    });
+
+    it('folds storyContext.countryCode into the cache/in-flight key so the same query text anchored to two different countries never collides', async () => {
+      const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse([])) };
+      const rwandaArticles = [makeArticle({ id: 'rw-x' })];
+      const kenyaArticles = [makeArticle({ id: 'ke-x' })];
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockImplementation((iso3: string) =>
+          Promise.resolve(
+            iso3 === 'RWA'
+              ? makeCountryResponse('RWA', 'Rwanda', rwandaArticles)
+              : makeCountryResponse('KEN', 'Kenya', kenyaArticles),
+          ),
+        ),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(null),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const [rwandaResult, kenyaResult] = await Promise.all([
+        service.analyzeNews('same headline text', 'en', { title: 'same headline text', countryCode: 'RWA' }),
+        service.analyzeNews('same headline text', 'en', { title: 'same headline text', countryCode: 'KEN' }),
+      ]);
+
+      expect(rwandaResult.articles.map((a) => a.id)).toEqual(['rw-x']);
+      expect(kenyaResult.articles.map((a) => a.id)).toEqual(['ke-x']);
+    });
+  });
+
+  /**
+   * CTO final correction — the previous round only anchored retrieval
+   * to the story's COUNTRY, which could not distinguish one Rwanda
+   * story from another (e.g. migration vs. football vs. economy).
+   * These tests prove the selected ARTICLE itself is now a genuine
+   * evidence anchor: resolved server-side via
+   * NewsService.findArticleById (backed by the existing
+   * ArticlePersistenceService/Prisma `article` table — no new
+   * persistence layer), guaranteed present in the evidence set, and
+   * distinguished in cache/in-flight identity from a different story
+   * in the same country.
+   */
+  describe('storyContext.articleId anchoring (CTO final correction)', () => {
+    it('A/B: the selected article is present in the evidence set and survives maxArticles trimming even when other same-country articles would otherwise fill the pool', async () => {
+      const anchorArticle = makeArticle({
+        id: 'anchor-rwanda-migration',
+        title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+      });
+
+      // A full pool of OTHER Rwanda articles (football, economy, etc.)
+      // that do NOT include the anchor — simulating exactly the
+      // scenario the CTO described: country-level retrieval alone
+      // would not guarantee the anchor survives.
+      const otherRwandaArticles = Array.from({ length: 10 }, (_, i) =>
+        makeArticle({ id: `other-rwanda-${i}`, title: `Rwanda football result ${i}` }),
+      );
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+        findArticleById: jest.fn().mockResolvedValue(anchorArticle),
+      };
+
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', otherRwandaArticles)),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(null),
+      };
+
+      // maxArticles smaller than the other-articles pool, so the
+      // anchor would be trimmed away entirely if it weren't
+      // explicitly prioritized to the front of the array.
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 3 }),
+      );
+
+      const response = await service.analyzeNews(
+        'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+        'en',
+        {
+          title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+          countryCode: 'RWA',
+          articleId: 'anchor-rwanda-migration',
+        },
+      );
+
+      expect(newsService.findArticleById).toHaveBeenCalledWith('anchor-rwanda-migration');
+      expect(response.articles.some((a) => a.id === 'anchor-rwanda-migration')).toBe(true);
+      // The anchor must be FIRST — the only guarantee that survives an
+      // arbitrarily small maxArticles cap.
+      expect(response.articles[0]?.id).toBe('anchor-rwanda-migration');
+    });
+
+    it('C/D: two different stories in the same country with the same query text never share one cache/in-flight identity', async () => {
+      const storyAArticle = makeArticle({ id: 'story-a', title: 'Rwanda migrant hub story' });
+      const storyBArticle = makeArticle({ id: 'story-b', title: 'Rwanda football story' });
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+        findArticleById: jest.fn().mockImplementation((id: string) =>
+          Promise.resolve(id === 'story-a' ? storyAArticle : storyBArticle),
+        ),
+      };
+
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', [])),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(null),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      // Same country, same literal query text, different articleId —
+      // must not collide, either as a completed-cache entry or as an
+      // in-flight-collapsed operation (tested concurrently, mirroring
+      // the existing RWA/KEN in-flight test above).
+      const [resultA, resultB] = await Promise.all([
+        service.analyzeNews('same rwanda question', 'en', {
+          title: 'same rwanda question',
+          countryCode: 'RWA',
+          articleId: 'story-a',
+        }),
+        service.analyzeNews('same rwanda question', 'en', {
+          title: 'same rwanda question',
+          countryCode: 'RWA',
+          articleId: 'story-b',
+        }),
+      ]);
+
+      expect(resultA.articles.map((a) => a.id)).toContain('story-a');
+      expect(resultA.articles.map((a) => a.id)).not.toContain('story-b');
+      expect(resultB.articles.map((a) => a.id)).toContain('story-b');
+      expect(resultB.articles.map((a) => a.id)).not.toContain('story-a');
+    });
+
+    it('E: an unresolvable articleId falls back safely \u2014 country-anchored retrieval still runs, nothing is fabricated', async () => {
+      const rwandaArticles = [makeArticle({ id: 'rw-generic' })];
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+        // Simulates a genuinely unresolvable id (deleted/never
+        // persisted/database unavailable) — findById's own documented
+        // contract returns null, never throws.
+        findArticleById: jest.fn().mockResolvedValue(null),
+      };
+
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', rwandaArticles)),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(null),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('some rwanda question', 'en', {
+        title: 'some rwanda question',
+        countryCode: 'RWA',
+        articleId: 'does-not-exist-in-database',
+      });
+
+      expect(newsService.findArticleById).toHaveBeenCalledWith('does-not-exist-in-database');
+      // Falls back to the country-anchored retrieval already computed
+      // — never an empty/fabricated result merely because the
+      // specific articleId didn't resolve.
+      expect(response.articles.map((a) => a.id)).toEqual(['rw-generic']);
+    });
+
+    it('F: generic Q&A with no storyContext never calls findArticleById at all', async () => {
+      const articles = [makeArticle({ id: 'generic-only' })];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+        findArticleById: jest.fn(),
+      };
+      const countryNewsService = makeCountryNewsService();
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(null),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews('an ordinary generic question');
+
+      expect(newsService.findArticleById).not.toHaveBeenCalled();
+    });
+  });
 });

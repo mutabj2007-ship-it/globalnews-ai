@@ -809,3 +809,30 @@ export interface SourceDiversity {
    */
   distinctSourceNameCount: number;
 }
+
+/**
+ * Milestone #51 Phase B — bounded, optional context identifying a
+ * specific story the user selected (e.g. from the World Map country
+ * feed) before asking GlobalNews AI a question, so retrieval can be
+ * anchored to that story's real country/topic instead of re-deriving
+ * it (unreliably) from free-text query parsing alone.
+ *
+ * Deliberately NOT a full NewsArticle — only the minimal fields
+ * retrieval anchoring and display actually need. `title` is required
+ * (the field the query text itself was already built from) so this
+ * type is never meaningfully "empty"; everything else is optional
+ * because not every story-originated request has it available.
+ *
+ * `countryCode` is the primary anchor AnalysisService uses to bypass
+ * its own free-text country-detection heuristic when present — see
+ * AnalysisService.analyzeNews. Any ISO2/ISO3/name string that
+ * resolveCountryByAnyIdentifier() already accepts is valid here; this
+ * type does not further constrain the format.
+ */
+export interface StoryContext {
+  title: string;
+  articleId?: string;
+  url?: string;
+  sourceName?: string;
+  countryCode?: string;
+}

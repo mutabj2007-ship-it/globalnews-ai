@@ -1,4 +1,4 @@
-import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 // Longer than the news API timeout: the backend's own AI call timeout
@@ -69,15 +69,42 @@ const inFlightAnalysisRequests = new Map<string, Promise<AnalysisApiResponse>>()
 export function analyzeNews(
   query: string,
   requestedLanguage: LanguageCode = 'en',
+  /**
+   * Milestone #51 Phase B — optional, bounded story context (e.g.
+   * from a World Map country-feed article's "Ask GlobalNews AI about
+   * this" action). Every pre-#51 caller omits this and is completely
+   * unaffected. Folded into the in-flight dedup key (via
+   * countryCode only — the smallest safe key segment, mirroring the
+   * backend's own cache-key strategy) so the same query text
+   * anchored to two different stories/countries can never
+   * accidentally share one pending request.
+   */
+  storyContext?: StoryContext,
 ): Promise<AnalysisApiResponse> {
-  const key = `${requestedLanguage}:${query.trim()}`;
+  /**
+   * Milestone #51 Phase B (CTO final correction): prefers
+   * storyContext.articleId (the stable, server-resolvable story
+   * identity) over countryCode alone, mirroring the backend's own
+   * cache-key priority exactly — two different stories in the same
+   * country must never share one in-flight request merely because
+   * they share a country. Falls back to countryCode when articleId is
+   * absent (this session's earlier, still-valid country-only
+   * anchoring case); empty suffix when storyContext is absent
+   * entirely, unchanged from before this correction.
+   */
+  const storyAnchorKeySegment = storyContext?.articleId
+    ? `:story:${storyContext.articleId}`
+    : storyContext?.countryCode
+      ? `:story:${storyContext.countryCode.toLowerCase()}`
+      : '';
+  const key = `${requestedLanguage}:${query.trim()}${storyAnchorKeySegment}`;
 
   const existing = inFlightAnalysisRequests.get(key);
   if (existing) {
     return existing;
   }
 
-  const request = performAnalyzeNews(query, requestedLanguage).finally(() => {
+  const request = performAnalyzeNews(query, requestedLanguage, storyContext).finally(() => {
     // Only delete this key's entry if it still points at THIS promise.
     // Guards against a theoretical race where an older, already-
     // resolved request's cleanup could otherwise delete a NEWER
@@ -97,6 +124,7 @@ export function analyzeNews(
 async function performAnalyzeNews(
   query: string,
   requestedLanguage: LanguageCode,
+  storyContext?: StoryContext,
 ): Promise<AnalysisApiResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -106,7 +134,7 @@ async function performAnalyzeNews(
     response = await fetch(`${API_BASE_URL}/analysis/news`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, requestedLanguage }),
+      body: JSON.stringify(storyContext ? { query, requestedLanguage, storyContext } : { query, requestedLanguage }),
       cache: 'no-store',
       signal: controller.signal,
     });

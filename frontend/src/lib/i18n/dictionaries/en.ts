@@ -409,6 +409,7 @@ export const en = {
     storedReportingNoticeAriaLabel: 'Stored reporting notice',
     coverageQualityAriaSuffix: 'coverage quality',
     readFullStoryPrefix: 'Read the full story:',
+    askAboutStory: 'Ask GlobalNews AI about this',
     freshness: {
       fresh: 'FRESH',
       recent: 'RECENT',

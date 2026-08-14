@@ -122,7 +122,7 @@ export function CountryPanel({
       ) : (
         <ul className="flex flex-col gap-3">
           {response.articles.map((article) => (
-            <CountryArticleCard key={article.id} article={article} language={language} />
+            <CountryArticleCard key={article.id} article={article} language={language} countryCode={country.iso2} />
           ))}
         </ul>
       )}

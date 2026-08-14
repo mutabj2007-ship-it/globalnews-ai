@@ -101,6 +101,21 @@ export class NewsService {
    * known, disclosed gap pending a future round once the live
    * unfiltered behavior has been observed against the real endpoint.
    */
+  /**
+   * Milestone #51 Phase B — thin pass-through to
+   * ArticlePersistenceService.findById(), exposed here (rather than
+   * exporting ArticlePersistenceService from NewsModule directly) so
+   * AnalysisService — which already has NewsService injected — can
+   * resolve a story-context-supplied articleId as a trusted
+   * server-side evidence anchor without any new module wiring.
+   * Never throws; returns null when the id doesn't resolve (including
+   * on any database failure), exactly mirroring
+   * ArticlePersistenceService's own convention.
+   */
+  async findArticleById(articleId: string): Promise<NewsArticle | null> {
+    return this.articlePersistence.findById(articleId);
+  }
+
   async search(
     query: string,
     limit?: number,

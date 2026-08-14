@@ -407,6 +407,7 @@ export const pl: Dictionary = {
     storedReportingNoticeAriaLabel: 'Powiadomienie o zapisanych relacjach',
     coverageQualityAriaSuffix: 'jakość materiałów',
     readFullStoryPrefix: 'Przeczytaj pełną historię:',
+    askAboutStory: 'Zapytaj GlobalNews AI o to',
     freshness: {
       fresh: 'ŚWIEŻE',
       recent: 'NIEDAWNE',

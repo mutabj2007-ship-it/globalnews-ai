@@ -16,6 +16,7 @@ import {
   type LocationContext,
   type NewsArticle,
   type NewsResponse,
+  type StoryContext,
 } from '@globalnews-ai/shared';
 import { NewsService } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
@@ -191,6 +192,17 @@ export class AnalysisService {
   async analyzeNews(
     rawQuery: string,
     requestedLanguage: LanguageCode = 'en',
+    /**
+     * Milestone #51 Phase B — optional, bounded story context (e.g.
+     * from a World Map country-feed article's "Ask GlobalNews AI
+     * about this" action). When storyContext.countryCode is present
+     * and resolves to a real known country, it takes priority over
+     * this method's own free-text detectLocation() heuristic for
+     * choosing retrieval — see the `location` computation below. When
+     * absent (every pre-#51 caller, and ordinary homepage/search
+     * Q&A), behavior is completely unchanged.
+     */
+    storyContext?: StoryContext,
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
 
@@ -211,7 +223,26 @@ export class AnalysisService {
     // AnalysisApiResponse.responseLanguage/analysis prose. The in-flight
     // dedup map below reuses this SAME cacheKey, so it automatically
     // respects language too, with no separate change needed there.
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}`;
+    //
+    // Milestone #51 Phase B: also folds in a stable story identity
+    // when present, so two DIFFERENT stories in the SAME country with
+    // the SAME query text (e.g. "Rwanda" news re-asked from two
+    // different selected articles) can never collide on one cache
+    // entry or one in-flight operation — the CTO's own Story A/Story B
+    // acceptance requirement. Prefers storyContext.articleId (the
+    // most stable, server-resolvable identity) when present; falls
+    // back to countryCode alone only when articleId is absent, which
+    // preserves this session's earlier (accepted) country-only
+    // anchoring behavior for requests that never carry an articleId.
+    // A request with no storyContext keeps the exact pre-#51 key shape
+    // (empty suffix), so every existing cache entry and every
+    // generic-Q&A caller is completely unaffected.
+    const storyAnchorKeySegment = storyContext?.articleId
+      ? `:story:${storyContext.articleId}`
+      : storyContext?.countryCode
+        ? `:story:${storyContext.countryCode.toLowerCase()}`
+        : '';
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -288,7 +319,33 @@ export class AnalysisService {
 
     const inFlightOperation: Promise<AnalysisApiResponse> =
       (async (): Promise<AnalysisApiResponse> => {
-        const location = this.detectLocation(normalizedQuery);
+        /**
+         * Milestone #51 Phase B — root-cause fix. Previously, retrieval
+         * for a story-originated query relied ENTIRELY on
+         * detectLocation() re-parsing free text (an article title) —
+         * a real-browser-verified failure mode: a Rwanda migration-
+         * story title didn't trip the free-text detector, so retrieval
+         * silently fell through to unrelated generic search results
+         * (e.g. an Italian swimming article).
+         *
+         * When the frontend already KNOWS the story's country (because
+         * it came from a World Map country-feed selection), that known
+         * country now takes priority over re-derived free-text
+         * detection — reusing the exact same resolveCountryByAnyIdentifier()
+         * + countryNewsService.getCountryNews() path detectLocation()
+         * itself already uses, so every downstream branch (retrieval
+         * context construction, article set, prompt building, citation
+         * validation) is completely unchanged in shape — this only
+         * changes which `location` value seeds it, and only when
+         * storyContext really provides one. If storyContext is absent,
+         * or its countryCode doesn't resolve to a real country, this
+         * falls through to the exact pre-#51 detectLocation() call —
+         * ordinary homepage/search Q&A is byte-for-byte unaffected.
+         */
+        const storyAnchoredLocation: LocationContext | undefined = storyContext?.countryCode
+          ? this.resolveStoryContextLocation(storyContext.countryCode)
+          : undefined;
+        const location = storyAnchoredLocation ?? this.detectLocation(normalizedQuery);
 
         let articles: NewsArticle[];
         let retrievalContext: AnalysisRetrievalContext;
@@ -477,6 +534,40 @@ export class AnalysisService {
 
             articles = searchResponse.articles;
             retrievalContext = this.toRetrievalContext(searchResponse);
+          }
+        }
+
+        /**
+         * Milestone #51 Phase B (CTO final correction) — the selected
+         * article itself is now a genuine evidence ANCHOR, not merely
+         * a country hint. When storyContext.articleId resolves to a
+         * real, persisted article (via NewsService.findArticleById ->
+         * ArticlePersistenceService.findById, the same Prisma
+         * `article` table persistMany() already writes/reads — no new
+         * persistence layer), that article is guaranteed to be present
+         * AND prioritized (moved to the front) in the evidence set
+         * BEFORE clusterDuplicateArticles()/maxArticles trimming below,
+         * so it survives that cap and is weighted first for prompt
+         * building exactly like every other article already is —
+         * reusing the existing pipeline unchanged, not a competing
+         * relevance engine. Corroborating evidence is still the
+         * country/generic retrieval already computed above; this only
+         * ensures the SPECIFIC selected story is never silently
+         * dropped in favor of other same-country articles (the exact
+         * defect the Rwanda migration/football/economy example
+         * describes). If articleId is absent or does not resolve
+         * (including on any database failure), this is a no-op and
+         * behavior is byte-for-byte the pre-#51-correction retrieval —
+         * never fabricated, never thrown.
+         */
+        if (storyContext?.articleId) {
+          const anchorArticle = await this.newsService.findArticleById(storyContext.articleId);
+
+          if (anchorArticle) {
+            const withoutAnchor = articles.filter(
+              (article) => article.id !== anchorArticle.id && article.url !== anchorArticle.url,
+            );
+            articles = [anchorArticle, ...withoutAnchor];
           }
         }
 
@@ -787,6 +878,22 @@ export class AnalysisService {
    * word-shrinking scan, via resolveLocationContext), so no existing
    * country-only match changes.
    */
+  /**
+   * Milestone #51 Phase B — resolves a story-context-supplied country
+   * identifier (any format resolveCountryByAnyIdentifier() already
+   * accepts: ISO2, ISO3, or name) into the same LocationContext shape
+   * detectLocation() produces for a direct country match, so the rest
+   * of analyzeNews() treats it identically. Returns undefined (never
+   * throws) when the identifier doesn't resolve to a real country —
+   * callers fall back to ordinary detectLocation() in that case,
+   * exactly like an unresolvable free-text query already does.
+   */
+  private resolveStoryContextLocation(countryCode: string): LocationContext | undefined {
+    const country = resolveCountryByAnyIdentifier(countryCode.trim());
+
+    return country ? { country } : undefined;
+  }
+
   private detectLocation(query: string): LocationContext | undefined {
     const normalized = query.trim().replace(/[?!.,;:]+$/g, '');
 

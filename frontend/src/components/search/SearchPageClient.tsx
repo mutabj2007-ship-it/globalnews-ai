@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { analyzeNews, AnalysisApiError } from '@/lib/api/analysisApi';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { AnalysisResultView } from '@/components/search/AnalysisResultView';
@@ -17,6 +17,25 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 export function SearchPageClient(): JSX.Element {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') ?? '';
+  /**
+   * Milestone #51 Phase B — bounded, optional story anchor threaded
+   * through from CountryArticleCard's "Ask GlobalNews AI about this"
+   * action (see that file).
+   *
+   * CTO final correction — now also reads `articleId`. `undefined`
+   * when there's no country anchor, so ordinary homepage/search Q&A
+   * (which never sets these URL params) is completely unaffected.
+   * `title` mirrors the already-present `q` param (StoryContext
+   * requires it). articleId, when present, is what
+   * AnalysisService uses server-side to resolve the exact selected
+   * article as a trusted evidence anchor — countryCode alone could
+   * not distinguish one Rwanda story from another.
+   */
+  const countryCodeParam = searchParams.get('countryCode');
+  const articleIdParam = searchParams.get('articleId');
+  const storyContext: StoryContext | undefined = countryCodeParam
+    ? { title: query, countryCode: countryCodeParam, articleId: articleIdParam ?? undefined }
+    : undefined;
 
   // Milestone #47 — resolved once on mount via
   // resolveInitialLanguage()'s explicit-override > browser > English
@@ -75,7 +94,7 @@ export function SearchPageClient(): JSX.Element {
     setFetchError(null);
     setResponse(null);
 
-    analyzeNews(query, language)
+    analyzeNews(query, language, storyContext)
       .then((result) => {
         if (!cancelled) setResponse(result);
       })
@@ -90,7 +109,7 @@ export function SearchPageClient(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [query, language, hasResolvedLanguage, dictionary.noQuestionMessage, dictionary.genericFetchError]);
+  }, [query, language, hasResolvedLanguage, dictionary.noQuestionMessage, dictionary.genericFetchError, countryCodeParam, articleIdParam]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">

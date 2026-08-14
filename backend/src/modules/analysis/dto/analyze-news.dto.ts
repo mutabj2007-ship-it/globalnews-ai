@@ -1,5 +1,42 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import type { LanguageCode } from '@globalnews-ai/shared';
+
+/**
+ * Milestone #51 Phase B — bounded, optional story-context nested DTO.
+ * Mirrors StoryContext in shared/src/analysis.ts field-for-field.
+ * Every field is optional except `title`. Length caps mirror the
+ * top-level `query` field's own cap where relevant (title/url are
+ * user-influenced text that reaches the backend the same way `query`
+ * does — the same class-validator convention already used for
+ * `query` below, no new validation approach introduced).
+ */
+export class StoryContextDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(300)
+  title!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  articleId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  url?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  sourceName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  countryCode?: string;
+}
 
 /**
  * Milestone #47 — the exact closed set the DTO validates
@@ -44,4 +81,18 @@ export class AnalyzeNewsDto {
   @IsOptional()
   @IsIn(SUPPORTED_LANGUAGE_CODES)
   requestedLanguage?: LanguageCode;
+
+  /**
+   * Milestone #51 Phase B — optional, bounded story context (e.g. from
+   * a World Map country-feed article) so retrieval can be anchored to
+   * a real, known country/topic instead of relying solely on free-text
+   * parsing of `query`. Absent for every pre-Milestone-#51 caller and
+   * for ordinary homepage/search Q&A — existing behavior is completely
+   * unchanged when this is omitted. See StoryContextDto and
+   * AnalysisService.analyzeNews for how it's used.
+   */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoryContextDto)
+  storyContext?: StoryContextDto;
 }
