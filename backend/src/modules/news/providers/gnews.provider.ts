@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { logWithRequestId } from '../../../observability/log-with-request-id';
 import { ConfigService } from '@nestjs/config';
 import type { NewsArticle, NewsCategory, ProviderHealthStatus } from '@globalnews-ai/shared';
 import type { NewsProvider, NewsSearchOptions } from '../interfaces';
@@ -208,7 +209,7 @@ export class GNewsProvider implements NewsProvider {
         checkedAt: new Date().toISOString(),
       };
     } catch (error) {
-      this.logger.warn('GNews health check failed', error as Error);
+      logWithRequestId(this.logger, 'warn', 'GNews health check failed', error as Error);
       return {
         providerId: this.id,
         displayName: this.displayName,

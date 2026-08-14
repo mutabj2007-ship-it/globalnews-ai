@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { logWithRequestId } from '../../../observability/log-with-request-id';
 import type { AnalysisFailureReason } from '@globalnews-ai/shared';
 import type { AnalysisProvider, AnalysisProviderInput } from '../interfaces';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
@@ -131,7 +132,9 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
         // observability via safe structured logging only — never in the
         // response contract (see AnalysisProvider's return-type comment)
         // and never including the API key or any raw provider payload.
-        this.logger.log(
+        logWithRequestId(
+          this.logger,
+          'log',
           `OpenAI analysis succeeded: model=${config.openAiModel} attempt=${attempt}/${maxAttempts} ` +
             `latencyMs=${latencyMs} promptTokens=${result.usage?.prompt_tokens ?? 'n/a'} ` +
             `completionTokens=${result.usage?.completion_tokens ?? 'n/a'} totalTokens=${result.usage?.total_tokens ?? 'n/a'}`,
@@ -153,7 +156,9 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
 
         const isLastAttempt = attempt === maxAttempts;
         if (isLastAttempt || !wrapped.retryable) {
-          this.logger.warn(
+          logWithRequestId(
+            this.logger,
+            'warn',
             `OpenAI analysis failed (attempt ${attempt}/${maxAttempts}, reason: ${wrapped.failureReason}, ` +
               `retryable: ${wrapped.retryable}): ${wrapped.message}`,
           );
@@ -161,7 +166,9 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
         }
 
         const backoffMs = config.retryBaseDelayMs * 2 ** (attempt - 1);
-        this.logger.warn(
+        logWithRequestId(
+          this.logger,
+          'warn',
           `OpenAI analysis failed (attempt ${attempt}/${maxAttempts}, reason: ${wrapped.failureReason}) — retrying in ${backoffMs}ms.`,
         );
         await delay(backoffMs);

@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { logWithRequestId } from '../../observability/log-with-request-id';
 import type {
   NewsArticle,
   NewsCategory,
@@ -361,7 +362,9 @@ export class NewsService {
         try {
           return await provider.health();
         } catch (error) {
-          this.logger.warn(
+          logWithRequestId(
+            this.logger,
+            'warn',
             `Health check failed for provider "${provider.id}"`,
             error instanceof Error ? error : undefined,
           );
@@ -402,7 +405,9 @@ export class NewsService {
 
       failedProviderIds.push(provider.id);
 
-      this.logger.warn(
+      logWithRequestId(
+        this.logger,
+        'warn',
         `Provider "${provider.id}" failed to respond`,
         result.reason instanceof Error ? result.reason : undefined,
       );
