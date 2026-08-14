@@ -1,4 +1,24 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: globalnews-ai-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-globalnews_ai_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me}
+      - POSTGRES_DB=${POSTGRES_DB:-globalnews_ai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-globalnews_ai_user} -d ${POSTGRES_DB:-globalnews_ai}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
@@ -13,8 +33,28 @@ services:
       - GNEWS_API_KEY=${GNEWS_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      # Milestone #54 — points at the Compose service hostname
+      # ('postgres'), not localhost: containers on the same Compose
+      # network resolve each other by service name. Credentials are
+      # sourced from the SAME env vars (with the same non-secret
+      # dev-only defaults) as the postgres service above, so they can
+      # never drift apart; a real deployment overrides
+      # POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB (or DATABASE_URL
+      # directly) via its own environment, never by editing this file.
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-globalnews_ai_user}:${POSTGRES_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-globalnews_ai}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Milestone #54 — points at /health/ready (not /health): for this
+    # single-instance Compose stack, "healthy" should mean "actually
+    # able to serve real traffic" (i.e. database reachable), which is
+    # what gates docker compose ps's reported status and any future
+    # depends_on: condition: service_healthy on this service. /health
+    # itself (liveness only, no DB dependency) remains available for
+    # a future orchestrator that wants a separate, DB-independent
+    # liveness signal.
     healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/health']
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/health/ready']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -31,3 +71,6 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT:-4000}
     depends_on:
       - backend
+
+volumes:
+  postgres_data:

@@ -18,6 +18,15 @@ RUN npm install
 FROM dependencies AS build
 COPY shared ./shared
 COPY backend ./backend
+# Milestone #54 — mirrors the CI workflow's own proven sequence
+# (.github/workflows/ci.yml: "Generate Prisma Client" runs before any
+# build step) exactly: generates the Prisma client from the tracked
+# schema/config fresh at build time, so the image can never ship a
+# stale or missing client regardless of what happens to be committed
+# under backend/src/generated. Same command, same working directory
+# (repo root / WORKDIR /app) as CI uses. Does not touch schema.prisma,
+# migrations, or prisma.config.ts — reads them as-is.
+RUN npx prisma generate --config backend/prisma.config.ts
 RUN npm run build:shared
 RUN npm run build --workspace=backend
 
