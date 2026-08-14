@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { analyzeNews, AnalysisApiError } from '@/lib/api/analysisApi';
@@ -30,12 +30,29 @@ export function SearchPageClient(): JSX.Element {
    * AnalysisService uses server-side to resolve the exact selected
    * article as a trusted evidence anchor — countryCode alone could
    * not distinguish one Rwanda story from another.
+   *
+   * Milestone #52-A — memoized. A plain object-literal expression
+   * here would construct a NEW object identity on every render, which
+   * the effect below (correctly) uses inside its body — an honest
+   * exhaustive-deps lint warning, not a false positive, because
+   * including that ever-changing identity directly in the dependency
+   * array would refire the effect (and re-issue the analysis request)
+   * on every unrelated re-render, not only when the actual story
+   * changes. useMemo keyed on the real primitive inputs (query,
+   * countryCodeParam, articleIdParam) keeps the object identity
+   * stable across renders where none of those actually changed, so it
+   * can be listed in the effect's dependency array honestly — no
+   * eslint-disable, no suppressed rule.
    */
   const countryCodeParam = searchParams.get('countryCode');
   const articleIdParam = searchParams.get('articleId');
-  const storyContext: StoryContext | undefined = countryCodeParam
-    ? { title: query, countryCode: countryCodeParam, articleId: articleIdParam ?? undefined }
-    : undefined;
+  const storyContext: StoryContext | undefined = useMemo(
+    () =>
+      countryCodeParam
+        ? { title: query, countryCode: countryCodeParam, articleId: articleIdParam ?? undefined }
+        : undefined,
+    [query, countryCodeParam, articleIdParam],
+  );
 
   // Milestone #47 — resolved once on mount via
   // resolveInitialLanguage()'s explicit-override > browser > English
@@ -109,7 +126,7 @@ export function SearchPageClient(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [query, language, hasResolvedLanguage, dictionary.noQuestionMessage, dictionary.genericFetchError, countryCodeParam, articleIdParam]);
+  }, [query, language, hasResolvedLanguage, dictionary.noQuestionMessage, dictionary.genericFetchError, storyContext]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">

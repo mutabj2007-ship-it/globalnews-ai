@@ -4243,5 +4243,56 @@ describe('AnalysisService', () => {
 
       expect(newsService.findArticleById).not.toHaveBeenCalled();
     });
+
+    it('sparse evidence: the anchor article alone (zero corroborating country articles) is never padded with unrelated articles', async () => {
+      const anchorArticle = makeArticle({
+        id: 'anchor-alone',
+        title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+      });
+
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+        findArticleById: jest.fn().mockResolvedValue(anchorArticle),
+      };
+
+      // Country retrieval genuinely returns nothing else for this
+      // story — the exact "sparse evidence" scenario the CTO
+      // describes: the selected story may remain alone.
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', [])),
+      };
+
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(null),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews(
+        'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+        'en',
+        {
+          title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+          countryCode: 'RWA',
+          articleId: 'anchor-alone',
+        },
+      );
+
+      // The anchor alone is a valid, non-empty evidence set — it must
+      // NOT be treated as "no evidence found" (which would discard it
+      // and report analysisError), and it must contain ONLY the real
+      // anchor article, never a synthetic/unrelated addition.
+      expect(response.articles).toHaveLength(1);
+      expect(response.articles[0]?.id).toBe('anchor-alone');
+      expect(response.analysisError).not.toMatch(/no related articles/i);
+    });
   });
 });

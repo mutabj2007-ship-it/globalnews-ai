@@ -44,9 +44,9 @@ describe('B. CountryArticleCard carries selected-story context, not title-only n
 
 describe('A/I. Generic Q&A and existing country/map functionality are unaffected when there is no story context', () => {
   it('SearchPageClient only builds a storyContext when the URL actually carries a countryCode param \u2014 ordinary homepage/search Q&A gets storyContext === undefined', () => {
-    expect(searchClientSource).toMatch(/const storyContext: StoryContext \| undefined = countryCodeParam/);
+    expect(searchClientSource).toMatch(/const storyContext: StoryContext \| undefined = useMemo\(/);
     expect(searchClientSource).toMatch(
-      /\? \{ title: query, countryCode: countryCodeParam, articleId: articleIdParam \?\? undefined \}\s*\n\s*: undefined/,
+      /\? \{ title: query, countryCode: countryCodeParam, articleId: articleIdParam \?\? undefined \}\s*\n\s*: undefined,/,
     );
   });
 
