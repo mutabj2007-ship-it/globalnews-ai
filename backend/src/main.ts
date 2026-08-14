@@ -1,10 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { resolveFrontendOrigin } from './security/cors-startup-validator';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
+
+  // Milestone #56 — Helmet's default configuration (no custom CSP or
+  // header policy): this backend serves no HTML/static content that
+  // would require CSP tuning, it's a pure JSON API, so the default
+  // header set (X-Content-Type-Options, X-Frame-Options, etc.) is
+  // appropriate as-is. Registered before enableCors()/ValidationPipe
+  // below, which are both unchanged by this addition — Helmet only
+  // adds response headers, it does not alter request parsing,
+  // validation, or CORS behavior in any way.
+  app.use(helmet());
 
   // Milestone #34: origin resolution is shared with CorsStartupValidator
   // via resolveFrontendOrigin() — fails closed (throws) in production
