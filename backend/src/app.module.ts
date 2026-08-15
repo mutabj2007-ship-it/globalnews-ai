@@ -12,6 +12,9 @@ import { CorsStartupValidator } from './security/cors-startup-validator';
 import { LoggingInterceptor } from './observability/logging.interceptor';
 import { GlobalExceptionFilter } from './observability/global-exception.filter';
 import { RequestIdMiddleware } from './observability/request-id.middleware';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import { HistoryModule } from './modules/history/history.module';
 
 @Module({
   imports: [
@@ -35,6 +38,13 @@ import { RequestIdMiddleware } from './observability/request-id.middleware';
     HealthModule,
     NewsModule,
     AnalysisModule,
+    // Milestone #57 — optional accounts & user continuity. None of
+    // these three modules place a guard anywhere near the existing
+    // News/Analysis/Health routes — every guest capability remains
+    // exactly as unauthenticated as before this addition.
+    AuthModule,
+    UsersModule,
+    HistoryModule,
   ],
   controllers: [AppController],
   providers: [

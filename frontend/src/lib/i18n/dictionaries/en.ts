@@ -290,6 +290,13 @@ export const en = {
     openMenuAriaLabel: 'Open menu',
     closeMenuAriaLabel: 'Close menu',
     signIn: 'Sign In',
+    // Milestone #57 — Optional Accounts. Only rendered once a real
+    // session exists (see AccountControl.tsx) — a signed-out visitor
+    // never sees any of these three.
+    history: 'History',
+    signOut: 'Sign Out',
+    deleteAccount: 'Delete Account',
+    deleteAccountConfirm: 'Delete your account? This permanently removes your saved history and cannot be undone.',
     linkLabels: {
       '/': 'Home',
       '/map': 'World Map',

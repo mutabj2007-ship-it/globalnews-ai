@@ -7,6 +7,7 @@ import type { LanguageCode } from '@globalnews-ai/shared';
 import { Logo } from '@/components/ui/Logo';
 import { primaryNavLinks } from '@/lib/navigation';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { AccountControl } from './AccountControl';
 
 interface NavBarProps {
   /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
@@ -64,12 +65,14 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
           >
             <Search size={16} strokeWidth={2} />
           </button>
-          <button
-            type="button"
-            className="rounded-full bg-cyan-500 px-4 py-2 text-sm font-medium text-void transition-colors hover:bg-cyan-400"
-          >
-            {t.signIn}
-          </button>
+          <AccountControl
+            signInLabel={t.signIn}
+            signInClassName="rounded-full bg-cyan-500 px-4 py-2 text-sm font-medium text-void transition-colors hover:bg-cyan-400"
+            historyLabel={t.history}
+            signOutLabel={t.signOut}
+            deleteAccountLabel={t.deleteAccount}
+            deleteAccountConfirmLabel={t.deleteAccountConfirm}
+          />
         </div>
 
         {/* Mobile controls */}
@@ -115,12 +118,14 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
               </a>
             ))}
           </div>
-          <button
-            type="button"
-            className="mt-4 w-full rounded-full bg-signal px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-signal-bright"
-          >
-            {t.signIn}
-          </button>
+          <AccountControl
+            signInLabel={t.signIn}
+            signInClassName="mt-4 w-full rounded-full bg-signal px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-signal-bright"
+            historyLabel={t.history}
+            signOutLabel={t.signOut}
+            deleteAccountLabel={t.deleteAccount}
+            deleteAccountConfirmLabel={t.deleteAccountConfirm}
+          />
         </nav>
       )}
     </header>

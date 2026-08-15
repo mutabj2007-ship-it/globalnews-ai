@@ -38,12 +38,12 @@ model Article {
 }
 
 model ArticleCountry {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   articleId      String
   countryCode    String
   countryName    String
   relevanceScore Int
-  isRelevant     Boolean  @default(false)
+  isRelevant     Boolean @default(false)
 
   article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
@@ -53,4 +53,77 @@ model ArticleCountry {
   @@unique([articleId, countryCode])
   @@index([countryCode])
   @@index([relevanceScore])
+}
+
+// Milestone #57 — Optional Accounts & User Continuity.
+//
+// Provider-neutral identity: User carries no provider-specific column
+// at all. UserIdentity is the sole place a (provider, providerAccountId)
+// pair lives, so adding a second OAuth provider later — or linking a
+// second identity to an existing User — needs zero schema change here.
+//
+// Session stores only a SHA-256 hash of the raw session token (never
+// the raw value itself) — see AuthService/SessionService. A database
+// compromise alone can never be used to impersonate a session.
+//
+// SearchHistoryEntry deliberately stores only what's needed to let a
+// signed-in user revisit/re-run a previous question: the query text,
+// an optional countryCode, and a timestamp. Never the AI response,
+// prompt contents, evidence snapshot, article bodies, raw provider
+// output, or an articleId (a story-anchor is far more likely to be
+// stale/unresolvable by the time a user revisits history than a plain
+// country-level re-run, so it was deliberately excluded — see M57
+// architecture decision).
+//
+// All three new models cascade-delete from User (onDelete: Cascade),
+// so a single DELETE /users/me removes every account-owned row across
+// all three tables in one operation — no orphaned data by construction.
+model User {
+  id          String   @id @default(uuid())
+  email       String
+  displayName String?
+  createdAt   DateTime @default(now())
+
+  identities UserIdentity[]
+  sessions   Session[]
+  history    SearchHistoryEntry[]
+}
+
+model UserIdentity {
+  id                String   @id @default(uuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model SearchHistoryEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  query       String
+  countryCode String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }

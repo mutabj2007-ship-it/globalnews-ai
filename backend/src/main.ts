@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { resolveFrontendOrigin } from './security/cors-startup-validator';
 
@@ -17,12 +18,29 @@ async function bootstrap(): Promise<void> {
   // validation, or CORS behavior in any way.
   app.use(helmet());
 
+  // Milestone #57 — required so incoming requests to authenticated
+  // routes (RequireAuthGuard/CsrfGuard) can read req.cookies at all.
+  // Setting cookies (response.cookie(...)) is already built into
+  // Express and needed no new dependency; only READING an incoming
+  // cookie header requires this middleware.
+  app.use(cookieParser());
+
   // Milestone #34: origin resolution is shared with CorsStartupValidator
   // via resolveFrontendOrigin() — fails closed (throws) in production
   // when FRONTEND_ORIGIN is missing/empty/whitespace-only, rather than
   // silently falling back to the development localhost origin.
+  //
+  // Milestone #57 — credentials: true is now required so the browser
+  // will send/receive the session and CSRF cookies on cross-origin
+  // requests between the frontend and backend origins. This does NOT
+  // weaken the existing origin restriction: the CORS spec itself
+  // forbids a wildcard origin whenever credentials are enabled, and
+  // resolveFrontendOrigin() already only ever returns a specific,
+  // fail-closed-validated origin — never '*' — so this is additive,
+  // not a loosening of the existing policy.
   app.enableCors({
     origin: resolveFrontendOrigin(process.env.NODE_ENV, process.env.FRONTEND_ORIGIN),
+    credentials: true,
   });
 
   // Validates and transforms all incoming request DTOs (query params,

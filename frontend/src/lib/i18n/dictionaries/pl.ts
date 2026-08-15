@@ -288,6 +288,11 @@ export const pl: Dictionary = {
     openMenuAriaLabel: 'Otwórz menu',
     closeMenuAriaLabel: 'Zamknij menu',
     signIn: 'Zaloguj się',
+    // Milestone #57 — Optional Accounts.
+    history: 'Historia',
+    signOut: 'Wyloguj się',
+    deleteAccount: 'Usuń konto',
+    deleteAccountConfirm: 'Usunąć konto? Spowoduje to trwałe usunięcie zapisanej historii i nie można tego cofnąć.',
     linkLabels: {
       '/': 'Strona główna',
       '/map': 'Mapa świata',
