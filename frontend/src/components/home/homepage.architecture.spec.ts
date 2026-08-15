@@ -25,12 +25,11 @@ function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 }
 
-describe('Homepage current architecture (Milestone #53 — post-recomposition)', () => {
-  it('renders sections in the approved current order: NavBar, LiveStatusStrip, LatestNowRail, Hero, GlobalDevelopments, HomepageSituationMap, IntelligenceModulesDesktop, IntelligenceModulesMobile, HowItWorks, TrustSection, Footer, MobileBottomNav', () => {
+describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed as a duplicate presentation of feed.latestUpdates)', () => {
+  it('renders sections in the approved current order: NavBar, LiveStatusStrip, Hero, GlobalDevelopments, HomepageSituationMap, IntelligenceModulesDesktop, IntelligenceModulesMobile, HowItWorks, TrustSection, Footer, MobileBottomNav', () => {
     const order = [
       '<NavBar',
       '<LiveStatusStrip',
-      '<LatestNowRail',
       '<Hero',
       '<GlobalDevelopments',
       '<HomepageSituationMap',
@@ -59,8 +58,9 @@ describe('Homepage current architecture (Milestone #53 — post-recomposition)',
     expect(stripComments(pageSource)).not.toMatch(/\bfetch\(/);
   });
 
-  it('LatestNowRail and Hero both receive the SAME feed.latestUpdates \u2014 one derivation source, not a duplicated allocation', () => {
-    expect(pageSource).toMatch(/<LatestNowRail updates=\{feed\.latestUpdates\}/);
+  it('Hero is the sole presentation of feed.latestUpdates (M60 Phase 2 deduplication — the former separate LatestNowRail import/render was removed from page.tsx; the source file itself is preserved, unimported, per the "do not destroy potentially reusable code" instruction)', () => {
+    expect(pageSource).not.toMatch(/<LatestNowRail/);
+    expect(pageSource).not.toMatch(/import \{ LatestNowRail \}/);
     expect(pageSource).toMatch(/<Hero latestArticles=\{feed\.latestUpdates\}/);
   });
 

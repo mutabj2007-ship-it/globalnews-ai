@@ -3,9 +3,14 @@ import { join } from 'path';
 
 const source = readFileSync(join(__dirname, 'Hero.tsx'), 'utf-8');
 
-describe('Hero two-zone recomposition (Master Frontend Recomposition, Checkpoint 2)', () => {
-  it('uses a two-zone grid at the lg breakpoint (copy+ask left, dominant world visual right)', () => {
-    expect(source).toMatch(/lg:grid-cols-\[0\.47fr_1fr\]/);
+describe('Hero three-zone recomposition (M60 Phase 2 — search/ask left, dominant world visual center, live intelligence right, per CTO-approved reference geometry)', () => {
+  it('uses a three-zone grid at the lg breakpoint (~31% / ~50% / ~19%, matching the approved reference proportions)', () => {
+    expect(source).toMatch(/lg:grid-cols-\[0\.31fr_0\.50fr_0\.19fr\]/);
+  });
+
+  it('the live-intelligence panel is its own grid column, never absolutely positioned on top of the map', () => {
+    const codeOnly = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(codeOnly).not.toMatch(/absolute bottom-4 right-4 top-4/);
   });
 
   it('uses HeroWorldVisual (real world geometry) as the Hero globe — CTO Visual Revision replaced the earlier abstract dot-grid version', () => {
@@ -62,8 +67,8 @@ describe('Hero two-zone recomposition (Master Frontend Recomposition, Checkpoint
     expect(fallbackBlock).not.toMatch(/formatRelativeTime/);
   });
 
-  it('the Hero visual grid uses the wider frame-utilization max-width and a map-dominant ratio (~32/68), per the reference proportion target', () => {
-    expect(source).toMatch(/max-w-\[1480px\]/);
-    expect(source).toMatch(/lg:grid-cols-\[0\.47fr_1fr\]/);
+  it('the Hero visual grid uses the wider frame-utilization max-width and the approved three-zone map-dominant composition (~31/50/19), per the reference proportion target', () => {
+    expect(source).toMatch(/max-w-\[1600px\]/);
+    expect(source).toMatch(/lg:grid-cols-\[0\.31fr_0\.50fr_0\.19fr\]/);
   });
 });

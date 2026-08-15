@@ -191,7 +191,7 @@ export function Hero({ latestArticles = [] }: HeroProps): JSX.Element {
         />
       </div>
 
-      <div className="relative mx-auto grid max-w-[1480px] grid-cols-1 items-center gap-6 px-4 pb-8 pt-6 sm:px-6 sm:pb-10 lg:grid-cols-[0.47fr_1fr] lg:gap-6 lg:px-8 lg:pb-12">
+      <div className="relative mx-auto grid max-w-[1600px] grid-cols-1 items-center gap-6 px-4 pb-8 pt-6 sm:px-6 sm:pb-10 lg:grid-cols-[0.31fr_0.50fr_0.19fr] lg:gap-5 lg:px-8 lg:pb-12">
         <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface px-3 py-1.5">
             <span className="relative flex h-1.5 w-1.5">
@@ -284,70 +284,71 @@ export function Hero({ latestArticles = [] }: HeroProps): JSX.Element {
           </div>
         </div>
 
-        {/* Ambient intelligence visualization — CTO Frontend Visual Revision: now HeroWorldVisual, using REAL world geometry (equirectangular-projected SVG, see its own doc comment), not the earlier abstract dot-grid. Enlarged (420px -> 520px) and given a wider grid ratio (Section 10: "should occupy a LARGE portion of the Hero... not reduce to a little decorative card"). Deliberately decorative/ambient, distinct from the real Global Situation Map further down the page. */}
+        {/* Ambient intelligence visualization — CTO Frontend Visual Revision: now HeroWorldVisual, using REAL world geometry (equirectangular-projected SVG, see its own doc comment), not the earlier abstract dot-grid. Deliberately decorative/ambient, distinct from the real Global Situation Map further down the page.
+            M60 Phase 2 — this is now its OWN dedicated grid column (the middle ~50% zone), with nothing absolutely positioned on top of it: the live-intelligence panel that previously overlaid its right edge is now a genuine third sibling column below, so the map is never obscured. */}
         <div className="relative hidden h-[520px] lg:block">
           <HeroWorldVisual />
+        </div>
 
-          {/* Section 5 (Visual Reference Directive) — this panel must remain visually present even when there is no live data; a disappearing panel was explicitly rejected as collapsing the Hero composition. Real HomeFeed articles when available (same data page.tsx already fetched once — zero new fetch); a truthful "source status" fallback when not — never fabricated headlines. */}
-          <div className="absolute bottom-4 right-4 top-4 hidden w-60 flex-col overflow-hidden rounded-xl border border-cyan-500/30 bg-void/90 p-3 shadow-[0_0_30px_-8px_rgba(34,211,238,0.3)] backdrop-blur-md xl:flex">
-            <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-cyan-400/60" />
-            <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-400">{t.feedPanelEyebrow}</span>
-            <span className="mb-3 font-display text-sm font-medium text-ink-primary">{t.feedPanelHeading}</span>
+        {/* Global Intelligence / Live Feed — M60 Phase 2: promoted from an absolutely-positioned overlay on top of the map to its own real grid column (the right ~19% zone), matching the approved reference composition. Same real HomeFeed data (zero new fetch), same truthful fallback when unavailable — only the layout position changed. Visible at the same lg: breakpoint the 3-column grid itself activates, since it is now load-bearing layout, not an overlay reserved for extra-wide screens. */}
+        <div className="relative hidden h-[520px] w-full flex-col overflow-hidden rounded-xl border border-cyan-500/30 bg-void/90 p-3 shadow-[0_0_30px_-8px_rgba(34,211,238,0.3)] backdrop-blur-md lg:flex">
+          <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-cyan-400/60" />
+          <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-400">{t.feedPanelEyebrow}</span>
+          <span className="mb-3 font-display text-sm font-medium text-ink-primary">{t.feedPanelHeading}</span>
 
-            {latestArticles.length > 0 ? (
-              <ul className="flex flex-1 flex-col gap-2.5 overflow-hidden">
-                {latestArticles.slice(0, FEED_PANEL_COUNT).map((item) => (
-                  <li key={item.id} className="border-t border-border/60 pt-2.5 first:border-t-0 first:pt-0">
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block transition-colors hover:text-cyan-300"
-                    >
-                      <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wide text-ink-tertiary">
-                        {formatRelativeTime(item.publishedAt, language)}
-                        <span aria-hidden="true">&middot;</span>
-                        {item.category}
-                      </span>
-                      <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-ink-secondary">{item.title}</p>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="flex flex-1 flex-col gap-3 border-t border-amber-500/20 pt-3">
-                <div>
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wide text-amber-400">
-                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                    {t.feedPanelUnavailableHeading}
-                  </span>
-                  <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">{t.feedPanelUnavailableBody}</p>
-                </div>
-
-                <dl className="flex flex-col gap-1.5 border-t border-border/50 pt-2.5">
-                  {[t.feedPanelSearchStatus, t.feedPanelCountryStatus, t.feedPanelMapStatus].map((label) => (
-                    <div key={label} className="flex items-center justify-between">
-                      <dt className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">{label}</dt>
-                      <dd className="inline-flex items-center gap-1 text-[11px] text-emerald-300">
-                        <span aria-hidden="true" className="h-1 w-1 rounded-full bg-emerald-400" />
-                        {t.feedPanelAvailable}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-
-                <p className="text-[11px] leading-relaxed text-ink-tertiary">{t.feedPanelUnavailableFooter}</p>
+          {latestArticles.length > 0 ? (
+            <ul className="flex flex-1 flex-col gap-2.5 overflow-hidden">
+              {latestArticles.slice(0, FEED_PANEL_COUNT).map((item) => (
+                <li key={item.id} className="border-t border-border/60 pt-2.5 first:border-t-0 first:pt-0">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block transition-colors hover:text-cyan-300"
+                  >
+                    <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wide text-ink-tertiary">
+                      {formatRelativeTime(item.publishedAt, language)}
+                      <span aria-hidden="true">&middot;</span>
+                      {item.category}
+                    </span>
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-ink-secondary">{item.title}</p>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex flex-1 flex-col gap-3 border-t border-amber-500/20 pt-3">
+              <div>
+                <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wide text-amber-400">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  {t.feedPanelUnavailableHeading}
+                </span>
+                <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">{t.feedPanelUnavailableBody}</p>
               </div>
-            )}
 
-            <a
-              href="/map"
-              className="mt-3 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-cyan-400 transition-colors hover:text-cyan-300"
-            >
-              {t.feedPanelViewMap}
-              <ArrowRight size={11} strokeWidth={2.5} aria-hidden="true" />
-            </a>
-          </div>
+              <dl className="flex flex-col gap-1.5 border-t border-border/50 pt-2.5">
+                {[t.feedPanelSearchStatus, t.feedPanelCountryStatus, t.feedPanelMapStatus].map((label) => (
+                  <div key={label} className="flex items-center justify-between">
+                    <dt className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">{label}</dt>
+                    <dd className="inline-flex items-center gap-1 text-[11px] text-emerald-300">
+                      <span aria-hidden="true" className="h-1 w-1 rounded-full bg-emerald-400" />
+                      {t.feedPanelAvailable}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+
+              <p className="text-[11px] leading-relaxed text-ink-tertiary">{t.feedPanelUnavailableFooter}</p>
+            </div>
+          )}
+
+          <a
+            href="/map"
+            className="mt-3 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-cyan-400 transition-colors hover:text-cyan-300"
+          >
+            {t.feedPanelViewMap}
+            <ArrowRight size={11} strokeWidth={2.5} aria-hidden="true" />
+          </a>
         </div>
       </div>
     </section>

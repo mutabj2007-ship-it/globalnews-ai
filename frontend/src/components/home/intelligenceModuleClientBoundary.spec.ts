@@ -32,10 +32,11 @@ describe('Intelligence module Server/Client boundary (CTO browser-runtime fix)',
     expect(cardSource).toMatch(/onBlur=\{/);
   });
 
-  it('IntelligenceModulesMobile remains a Server Component — Server Components rendering Client Components is valid, no directive needed here', () => {
-    expect(mobileSource.trimStart().startsWith("'use client'")).toBe(false);
+  it('IntelligenceModulesMobile is now a Client Component (M60 Phase 2, Correction 1) — it owns its own hoveredModuleId-equivalent state and wires onHoverChange/isEmphasized to drive the new connected-hub connectors, the same class of requirement that made IntelligenceModuleCard itself a client component', () => {
+    expect(mobileSource.trimStart().startsWith("'use client'")).toBe(true);
     expect(mobileSource).toMatch(/import \{ IntelligenceModuleCard \} from/);
     expect(mobileSource).toMatch(/<IntelligenceModuleCard/);
+    expect(mobileSource).toMatch(/onHoverChange=\{setActiveModuleId\}/);
   });
 
   it('IntelligenceModulesDesktop remains a thin Server Component shell — it never imports IntelligenceModuleCard directly, only the already-client IntelligenceEngineInteractive', () => {
@@ -47,7 +48,7 @@ describe('Intelligence module Server/Client boundary (CTO browser-runtime fix)',
   it('IntelligenceEngineInteractive remains the intended narrow client boundary for the hover/focus interaction', () => {
     expect(interactiveSource.trimStart().startsWith("'use client'")).toBe(true);
     expect(interactiveSource).toMatch(/onHoverChange=\{setHoveredModuleId\}/);
-    expect(interactiveSource).toMatch(/isEmphasized=\{hoveredModuleId === module\.id\}/);
+    expect(interactiveSource).toMatch(/isEmphasized=\{hoveredModuleId === moduleItem\.id\}/);
   });
 
   it('no Server Component in this module group defines a raw DOM event handler in its own JSX (the exact class of bug that caused the runtime error)', () => {

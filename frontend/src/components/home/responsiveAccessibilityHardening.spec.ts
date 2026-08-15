@@ -18,27 +18,38 @@ const bottomNavSource = readFileSync(join(__dirname, '../navigation/MobileBottom
  * checking presence of the responsive breakpoint strategy and
  * accessibility affordances, not exact decorative styling.
  */
-describe('Responsive hardening — Intelligence Modules (CTO HUD finishing pass)', () => {
-  it('desktop band uses a graduated column count (3 -> 5 -> 9) rather than a fixed 9-column grid at every desktop width', () => {
-    // Milestone #53 regression repair — the responsive grid moved
-    // from the server-shell IntelligenceModulesDesktop.tsx into the
-    // narrowly-scoped client component IntelligenceEngineInteractive.tsx
-    // (see that file's own doc comment: the M52-A connector-hover
-    // authorization). The shell itself no longer contains this class
-    // string at all; the test now inspects the component that
-    // actually owns the grid.
-    expect(interactiveSource).toMatch(/grid-cols-3/);
-    expect(interactiveSource).toMatch(/md:grid-cols-5/);
-    expect(interactiveSource).toMatch(/2xl:grid-cols-9/);
-    expect(interactiveSource).not.toMatch(/(?<!2)xl:grid-cols-9/);
+describe('Responsive hardening — Intelligence Modules (M60 Phase 2: true radial geometry supersedes the earlier flat 3/5/9 band AND the subsequent left-stack/hub/right-stack correction)', () => {
+  it('desktop connectors are computed via vector arithmetic on fixed hub/module constants — no left/right column slice-and-grid layout, no orthogonal elbow path', () => {
+    expect(interactiveSource).toMatch(/function hubEdgePointToward/);
+    expect(interactiveSource).not.toMatch(/grid-cols-3/);
+    expect(interactiveSource).not.toMatch(/2xl:grid-cols-9/);
+    expect(interactiveSource).not.toMatch(/grid-cols-\[1fr_auto_1fr\]/);
   });
 
-  it('mobile uses a genuinely different, 2-column composition — not the desktop band', () => {
-    expect(mobileGridSource).toMatch(/grid-cols-2/);
-    expect(mobileGridSource).not.toMatch(/grid-cols-9/);
+  it('the 9th module remains represented, positioned via the shared fixed-slot system', () => {
+    expect(interactiveSource).toMatch(/INTELLIGENCE_MODULES\[8\]/);
+    expect(interactiveSource).toMatch(/BOTTOM_SLOT/);
   });
 
-  it('the desktop band and mobile grid are mutually exclusive via breakpoint gating, no double-render', () => {
+  it('the hub retains its concentric-ring/pulse identity and still respects prefers-reduced-motion', () => {
+    expect(interactiveSource).toMatch(/gna-hub-ring-a/);
+    expect(interactiveSource).toMatch(/gna-hub-ring-b/);
+    expect(interactiveSource).toMatch(/prefers-reduced-motion: reduce/);
+  });
+
+  it('connector geometry uses fixed constants and pure arithmetic, not runtime DOM measurement', () => {
+    const codeOnly = interactiveSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(codeOnly).not.toMatch(/requestAnimationFrame/);
+    expect(codeOnly).not.toMatch(/ResizeObserver/);
+    expect(codeOnly).not.toMatch(/getBoundingClientRect/);
+  });
+
+  it('mobile uses its own compressed, asymmetric slot topology — not the desktop layout, not a rigid 2-column grid', () => {
+    expect(mobileGridSource).toMatch(/SLOT_OFFSETS/);
+    expect(mobileGridSource).not.toMatch(/grid-cols-2/);
+  });
+
+  it('the desktop radial engine and mobile engine are mutually exclusive via breakpoint gating, no double-render', () => {
     expect(bandSource).toMatch(/lg:block/);
     expect(mobileGridSource).toMatch(/lg:hidden/);
   });
@@ -49,8 +60,9 @@ describe('Responsive hardening — Hero (CTO HUD finishing pass)', () => {
     expect(heroSource).toMatch(/lg:block/);
   });
 
-  it('the live-feed panel is gated to a wider breakpoint than the visual itself, so it never crowds a merely-desktop-but-not-huge screen', () => {
-    expect(heroSource).toMatch(/xl:flex/);
+  it('the live-feed panel is its own real grid column (M60 Phase 2), so it activates at the same lg breakpoint the three-column grid itself does, rather than a wider gate reserved for squeezing an overlay into extra space', () => {
+    expect(heroSource).toMatch(/lg:flex/);
+    expect(heroSource).not.toMatch(/xl:flex/);
   });
 
   it('the Hero grid stacks to a single column below lg — no horizontal overflow risk on mobile', () => {

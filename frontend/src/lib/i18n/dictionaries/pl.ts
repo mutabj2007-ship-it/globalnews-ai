@@ -156,6 +156,9 @@ export const pl: Dictionary = {
     statusSearchAvailable: 'Wyszukiwanie dostępne',
     statusMapAvailable: 'Mapa świata dostępna',
     statusWaitingProvider: 'Oczekiwanie na dostawcę',
+    // M60 Phase 2 — carousel controls.
+    previousLabel: 'Poprzednia historia',
+    nextLabel: 'Następna historia',
   },
   situationMap: {
     eyebrow: 'Mapa sytuacyjna świata',

@@ -9,10 +9,9 @@ function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 }
 
-describe('Final homepage recomposition (Master Frontend Recomposition)', () => {
+describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase 2 — LatestNowRail removed as a duplicate presentation of feed.latestUpdates)', () => {
   it('renders sections in the approved order', () => {
     const order = [
-      '<LatestNowRail',
       '<Hero',
       '<GlobalDevelopments',
       '<HomepageSituationMap',

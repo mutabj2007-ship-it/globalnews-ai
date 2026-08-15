@@ -158,6 +158,9 @@ export const en = {
     statusSearchAvailable: 'Search available',
     statusMapAvailable: 'World map available',
     statusWaitingProvider: 'Waiting for provider',
+    // M60 Phase 2 — carousel controls.
+    previousLabel: 'Previous story',
+    nextLabel: 'Next story',
   },
   situationMap: {
     eyebrow: 'Global situation map',

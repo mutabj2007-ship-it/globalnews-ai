@@ -46,9 +46,19 @@ describe('Module card compactness (corrected from real-screenshot evidence)', ()
   });
 });
 
-describe('Intelligence Engine density (corrected from real-screenshot evidence)', () => {
-  it('the hub is 176px, not the earlier oversized 208px that contributed to excess dead space', () => {
-    expect(interactiveSource).toMatch(/h-44 w-44/);
+describe('Intelligence Engine density (M60 Phase 2 hub-sizing correction: 24% proportional hub, radius-matched connectors — supersedes both the earlier fixed 176px hub AND the subsequently-rejected 30% oversized hub)', () => {
+  it('the hub is sized proportionally at 24% of the engine canvas width — dominant, but not overwhelming relative to the surrounding 9 modules', () => {
+    expect(interactiveSource).toMatch(/width: '24%'/);
+    expect(interactiveSource).not.toMatch(/h-44 w-44/);
+    expect(interactiveSource).not.toMatch(/width: '30%'/);
+  });
+
+  it('the central gna-hub-core remains present', () => {
     expect(interactiveSource).toMatch(/gna-hub-core/);
+  });
+
+  it('the connector edge radius (12, in the 0-100 percentage coordinate space) matches the resized 24% hub, so connector lines begin at the hub\u2019s visible outer edge rather than floating outside it or starting inside it', () => {
+    expect(interactiveSource).toMatch(/const HUB_EDGE_RADIUS = 12/);
+    expect(interactiveSource).not.toMatch(/const HUB_EDGE_RADIUS = 15/);
   });
 });

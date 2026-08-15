@@ -19,8 +19,8 @@ const footerSource = readFileSync(join(__dirname, '../layout/Footer.tsx'), 'utf-
  * file protects the concrete, verifiable outcomes of that pass.
  */
 describe('Reference-locked reconstruction — Hero', () => {
-  it('the Hero grid gives the world visual clear dominance (~32/68 split), not the earlier ~40/60', () => {
-    expect(heroSource).toMatch(/lg:grid-cols-\[0\.47fr_1fr\]/);
+  it('the Hero grid gives the world visual clear dominance in a genuine three-zone composition (M60 Phase 2: ~31/50/19 — search/ask, dominant world visual, separate live-intelligence column), not the earlier two-zone ~47/53', () => {
+    expect(heroSource).toMatch(/lg:grid-cols-\[0\.31fr_0\.50fr_0\.19fr\]/);
   });
 
   it('the search field uses the compact clipped HUD shell, not a plain large rounded input', () => {
@@ -49,14 +49,18 @@ describe('Reference-locked reconstruction — Situation Map', () => {
   });
 });
 
-describe('Reference-locked reconstruction — Intelligence Engine compaction', () => {
-  it('heading-to-hub and hub-to-connector gaps are further reduced', () => {
+describe('Reference-locked reconstruction — Intelligence Engine (M60 Phase 2: true radial geometry supersedes both the earlier compact command-deck-band AND the subsequent left-stack/hub/right-stack correction)', () => {
+  it('the hub is visually dominant — a percentage-sized element at 24% of the engine canvas (the CTO-approved dominant-but-not-overwhelming size, superseding the earlier-rejected 30%) with multiple concentric rings, not a small fixed-pixel icon between feature cards', () => {
     expect(shellSource).toMatch(/mb-2 flex flex-wrap items-end/);
-    expect(engineSource).toMatch(/mb-1 flex flex-col items-center/);
+    expect(engineSource).toMatch(/width: '24%'/);
+    expect(engineSource).not.toMatch(/width: '30%'/);
+    expect(engineSource).toMatch(/gna-hub-ring-outer/);
   });
 
-  it('the connector SVG height is reduced, shortening the routed distance to the card bank', () => {
-    expect(engineSource).toMatch(/h-4 w-full max-w-3xl/);
+  it('connectors are true radiating lines computed from a fixed hub center and fixed module positions via vector arithmetic, never an orthogonal elbow route', () => {
+    expect(engineSource).toMatch(/function hubEdgePointToward/);
+    expect(engineSource).toMatch(/<line/);
+    expect(engineSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')).not.toMatch(/<path/);
   });
 });
 

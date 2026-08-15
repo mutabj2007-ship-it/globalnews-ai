@@ -26,14 +26,17 @@ describe('Mobile visual pass (CTO directive — actual implementation, not verif
     expect(mobileVisualSource).toMatch(/prefers-reduced-motion: reduce/);
   });
 
-  it('9 modules in a 2-column mobile grid no longer orphan the last card — the 9th renders full-width', () => {
-    expect(mobileGridSource).toMatch(/const gridModules = INTELLIGENCE_MODULES\.slice\(0, 8\)/);
-    expect(mobileGridSource).toMatch(/const overflowModule = INTELLIGENCE_MODULES\[8\]/);
-    expect(mobileGridSource).toMatch(/\{overflowModule && \(/);
+  it('9 modules remain represented — 8 in the main slot topology, the 9th positioned via its own dedicated bottom slot, never orphaned', () => {
+    expect(mobileGridSource).toMatch(/INTELLIGENCE_MODULES\.slice\(0, 8\)/);
+    expect(mobileGridSource).toMatch(/INTELLIGENCE_MODULES\[8\]/);
+    expect(mobileGridSource).toMatch(/BOTTOM_SLOT/);
   });
 
-  it('mobile module hub badge uses the same cyan HUD system as the rest of the revised page', () => {
-    expect(mobileGridSource).toMatch(/border-cyan-500\/30/);
+  it('mobile hub reuses the SAME cyan HUD ring/core identity as the desktop engine hub (M60 Phase 2) — a real connected-engine visual, not the earlier plain label box\u2019s single border', () => {
+    expect(mobileGridSource).toMatch(/gna-hub-core-m/);
+    expect(mobileGridSource).toMatch(/gna-hub-ring-m-a/);
+    expect(mobileGridSource).toMatch(/gna-hub-ring-m-b/);
+    expect(mobileGridSource).toMatch(/border-cyan-400\/70/);
     expect(mobileGridSource).toMatch(/text-cyan-300/);
   });
 });
