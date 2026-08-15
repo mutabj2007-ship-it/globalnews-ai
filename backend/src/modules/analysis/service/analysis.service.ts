@@ -247,7 +247,7 @@ export class AnalysisService {
     const cached = this.getCached(cacheKey);
 
     if (cached) {
-      this.logger.debug(`Serving cached analysis for "${originalQuery}"`);
+      this.logger.debug('Serving cached analysis.');
 
       /**
        * The cached response's `query`/`normalizedQuery` reflect
@@ -287,7 +287,7 @@ export class AnalysisService {
     // begins for a genuinely new operation.
     const existingInFlightAnalysis = this.inFlightAnalyses.get(cacheKey);
     if (existingInFlightAnalysis) {
-      this.logger.debug(`Joining in-flight analysis for "${originalQuery}"`);
+      this.logger.debug('Joining in-flight analysis.');
 
       // Milestone #45 correction — derive THIS caller's own response
       // envelope from the shared result, exactly mirroring the
@@ -361,7 +361,7 @@ export class AnalysisService {
 
           if (geoMatch) {
             this.logger.debug(
-              `Resolved geographic typo "${geoMatch.matchedFrom}" -> "${geoMatch.canonicalLocation}" ` +
+              `Resolved geographic typo -> "${geoMatch.canonicalLocation}" ` +
                 `(${geoMatch.matchKind}, confidence ${geoMatch.matchConfidence}) for ${country.name} (${country.iso3})`,
             );
           }
@@ -393,10 +393,7 @@ export class AnalysisService {
           const relationalQuery = deriveRelationalSearchQueries(normalizedQuery);
 
           if (relationalQuery) {
-            this.logger.debug(
-              `Detected relational query: X="${relationalQuery.x}" Y="${relationalQuery.y}" ` +
-                `(provider query: "${relationalQuery.providerQuery}")`,
-            );
+            this.logger.debug('Detected relational query.');
 
             // Milestone #40 (authoritative-context correction): capture the
             // EXACT M37-derived x/y here — this is what will be forwarded
@@ -473,8 +470,8 @@ export class AnalysisService {
               // is never invoked here) — this structurally guarantees
               // exactly 2 total provider calls for this path, never 3.
               this.logger.debug(
-                `Polish primary retrieval for "${polishTopic}" (topHeadlines lang=pl) returned zero relevant articles — ` +
-                  `attempting one bounded English Search fallback for "${polishTopic}"`,
+                'Polish primary retrieval returned zero relevant articles — ' +
+                  'attempting one bounded English Search fallback.',
               );
 
               const fallbackResponse = await this.newsService.search(
@@ -523,8 +520,8 @@ export class AnalysisService {
               const fallbackQuery = deriveFallbackNewsQuery(genericSearchQuery);
               if (fallbackQuery) {
                 this.logger.debug(
-                  `Primary generic retrieval for "${genericSearchQuery}" returned zero relevant articles — ` +
-                    `attempting one bounded fallback search for "${fallbackQuery}"`,
+                  'Primary generic retrieval returned zero relevant articles — ' +
+                    'attempting one bounded fallback search.',
                 );
                 searchResponse = await this.newsService.search(fallbackQuery, SEARCH_POOL_SIZE, {
                   type: 'generic',
@@ -711,7 +708,7 @@ export class AnalysisService {
           const latencyMs = Date.now() - providerCallStartedAt;
 
           this.logger.warn(
-            `Analysis provider "${this.provider.id}" failed for query "${originalQuery}"`,
+            `Analysis provider "${this.provider.id}" failed.`,
             error instanceof Error ? error : undefined,
           );
 

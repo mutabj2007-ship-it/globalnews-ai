@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { CountryNewsResponse, NewsArticle, NewsResponse } from '@globalnews-ai/shared';
 import { AnalysisService } from './analysis.service';
 import type { AnalysisProvider } from '../interfaces';
@@ -4400,4 +4401,116 @@ describe('AnalysisService', () => {
       expect(response.analysisError).not.toMatch(/no related articles/i);
     });
   });
+
+  /**
+   * Milestone #58 privacy hardening — proves the actual execution paths
+   * that previously interpolated raw/derived user query text into log
+   * messages no longer do so, using a deliberately distinctive query
+   * string that would be trivially obvious if it leaked into any
+   * captured log call. Tests the real analyzeNews() method directly
+   * (not a standalone sanitization helper), matching the CTO's explicit
+   * instruction to test the actual affected paths where practical.
+   *
+   * Milestone #58 test-scoping correction — nested inside the outer
+   * describe('AnalysisService', ...) (rather than declared as a
+   * sibling describe after it closes) so this block can use
+   * makeCountryNewsService() and the other helpers already scoped
+   * inside that describe, instead of duplicating them.
+   */
+  describe('Privacy hardening: no raw/derived query text in application logs (Milestone #58)', () => {
+  const DISTINCTIVE_QUERY = 'zzz-distinctive-privacy-test-marker-Kigali-Rwanda-migration-9f3e';
+
+  it('the cache-hit debug log never contains the query text', async () => {
+    const debugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
+
+    const articles = [makeArticle({ id: 'a1' })];
+    const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+    const countryNewsService = makeCountryNewsService();
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+    };
+
+    const service = new AnalysisService(newsService as never, countryNewsService as never, provider, makeConfigService());
+
+    await service.analyzeNews(DISTINCTIVE_QUERY);
+    await service.analyzeNews(DISTINCTIVE_QUERY); // second call is the cache-hit path
+
+    const allDebugMessages = debugSpy.mock.calls.map((call) => String(call[0]));
+    for (const message of allDebugMessages) {
+      expect(message).not.toContain(DISTINCTIVE_QUERY);
+    }
+    // Confirms the operational signal (cache hit occurred) is still
+    // present in some form — this test would also fail (usefully) if
+    // the debug log were removed entirely rather than de-identified.
+    expect(allDebugMessages.some((message) => message.toLowerCase().includes('cached'))).toBe(true);
+
+    debugSpy.mockRestore();
+  });
+
+  it('the provider-failure warn log never contains the query text', async () => {
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+    const articles = [makeArticle({ id: 'a1' })];
+    const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+    const countryNewsService = makeCountryNewsService();
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockRejectedValue(new Error('simulated provider failure')),
+    };
+
+    const service = new AnalysisService(newsService as never, countryNewsService as never, provider, makeConfigService());
+
+    await service.analyzeNews(DISTINCTIVE_QUERY);
+
+    const allWarnMessages = warnSpy.mock.calls.map((call) => String(call[0]));
+    for (const message of allWarnMessages) {
+      expect(message).not.toContain(DISTINCTIVE_QUERY);
+    }
+    expect(allWarnMessages.some((message) => message.includes('Analysis provider'))).toBe(true);
+
+    warnSpy.mockRestore();
+  });
+
+  it('the in-flight-join debug log never contains the query text', async () => {
+    const debugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
+
+    const articles = [makeArticle({ id: 'a1' })];
+    let resolveSearch: (value: NewsResponse) => void = () => undefined;
+    const newsService = {
+      search: jest.fn().mockReturnValue(
+        new Promise<NewsResponse>((resolve) => {
+          resolveSearch = resolve;
+        }),
+      ),
+    };
+    const countryNewsService = makeCountryNewsService();
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+    };
+
+    const service = new AnalysisService(newsService as never, countryNewsService as never, provider, makeConfigService());
+
+    const firstCall = service.analyzeNews(DISTINCTIVE_QUERY);
+    const secondCall = service.analyzeNews(DISTINCTIVE_QUERY); // joins the in-flight first call
+
+    resolveSearch(makeSearchResponse(articles));
+    await Promise.all([firstCall, secondCall]);
+
+    const allDebugMessages = debugSpy.mock.calls.map((call) => String(call[0]));
+    for (const message of allDebugMessages) {
+      expect(message).not.toContain(DISTINCTIVE_QUERY);
+    }
+    expect(allDebugMessages.some((message) => message.toLowerCase().includes('in-flight'))).toBe(true);
+
+    debugSpy.mockRestore();
+  });
+});
 });

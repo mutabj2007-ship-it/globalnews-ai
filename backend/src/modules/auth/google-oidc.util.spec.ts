@@ -39,9 +39,14 @@ describe('buildGoogleAuthUrl (Milestone #57)', () => {
     expect(url.searchParams.get('code_challenge')).toBe('test-code-challenge');
   });
 
-  it('requests only openid/email/profile scope \u2014 never a broader Google API scope this product does not use', () => {
+  it('requests only openid/email scope \u2014 Milestone #58 privacy hardening narrowed this from the broader "profile" scope, which was requested but never used', () => {
     const url = new URL(buildGoogleAuthUrl(baseParams));
-    expect(url.searchParams.get('scope')).toBe('openid email profile');
+    expect(url.searchParams.get('scope')).toBe('openid email');
+  });
+
+  it('does not request the "profile" scope', () => {
+    const url = new URL(buildGoogleAuthUrl(baseParams));
+    expect(url.searchParams.get('scope')).not.toMatch(/\bprofile\b/);
   });
 
   it('includes the exact redirect_uri and client_id supplied', () => {

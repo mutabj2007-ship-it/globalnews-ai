@@ -24,17 +24,22 @@ export interface GoogleAuthUrlParams {
 /**
  * Milestone #57 — builds the full Google authorization-request URL.
  * response_type=code (authorization-code flow, never implicit).
- * code_challenge_method=S256 (PKCE, never 'plain'). scope is the
- * minimum needed to obtain an ID token with email/profile claims —
- * never requests any broader Google API access this product doesn't
- * use.
+ * code_challenge_method=S256 (PKCE, never 'plain').
+ *
+ * Milestone #58 privacy hardening — scope narrowed from
+ * 'openid email profile' to 'openid email'. verifyGoogleIdToken below
+ * only ever reads `sub` and `email` from the returned ID token — the
+ * broader `profile` scope's claims (name/picture/locale) were
+ * requested but never parsed, stored, or used anywhere in this
+ * codebase, confirmed by direct inspection before this change. Data
+ * minimisation: request only what is actually used.
  */
 export function buildGoogleAuthUrl(params: GoogleAuthUrlParams): string {
   const url = new URL(GOOGLE_AUTH_ENDPOINT);
   url.searchParams.set('client_id', params.clientId);
   url.searchParams.set('redirect_uri', params.redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', 'openid email profile');
+  url.searchParams.set('scope', 'openid email');
   url.searchParams.set('state', params.state);
   url.searchParams.set('nonce', params.nonce);
   url.searchParams.set('code_challenge', params.codeChallenge);
