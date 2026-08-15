@@ -13,6 +13,8 @@ import type {
   NewsArticle,
   NewsAnalysisResult,
   RelationalEvidenceAssessment,
+  Significance,
+  SignificanceLevel,
   SourcedClaim,
   TimelineEvent,
   UncertaintyItem,
@@ -241,6 +243,41 @@ function validateAffectedParties(candidate: unknown, ctx: EvidenceContext): Affe
     });
   }
   return result;
+}
+
+const VALID_SIGNIFICANCE_LEVELS = new Set(['minor', 'moderate', 'major', 'critical']);
+
+/**
+ * Milestone #62 Phase 3 — accepts null (the model's own explicit
+ * "insufficient evidence" signal), rejects any level string outside
+ * the closed set, reuses validateSourcedClaims for rationale
+ * (identical grounding discipline to every other field — no second
+ * evidence-validation system), caps rationale at 2, and — critically
+ * — returns null (not a level with empty rationale) if nothing
+ * survives grounding, since a level without any surviving grounded
+ * rationale is not a defensible judgment. Never touches trustState or
+ * confidence — this function's only inputs are the raw candidate and
+ * the evidence context, and its only output feeds the `significance`
+ * field, nothing else.
+ */
+function validateSignificance(candidate: unknown, ctx: EvidenceContext): Significance | null {
+  // Treats a MISSING key (undefined, from a pre-Phase-3 raw candidate
+  // that never declared "significance" at all) identically to an
+  // explicit null — the same backward-compatibility discipline as the
+  // `?? []` defaults used for context/relevance/affectedParties/
+  // immediateImpacts/spilloverImplications above.
+  if (candidate === null || candidate === undefined) return null;
+  const obj = requireObject(candidate, 'significance');
+  if (typeof obj.level !== 'string' || !VALID_SIGNIFICANCE_LEVELS.has(obj.level)) return null;
+  const rationale = validateSourcedClaims(obj.rationale ?? [], ctx, 'significance.rationale').slice(0, 2);
+  // A level with no surviving grounded rationale is not a defensible
+  // judgment — drop the whole field rather than present an
+  // unsupported severity claim.
+  if (rationale.length === 0) return null;
+  return {
+    level: obj.level as SignificanceLevel,
+    rationale,
+  };
 }
 
 function validateAgreements(candidate: unknown, ctx: EvidenceContext): AgreementPoint[] {
@@ -579,6 +616,14 @@ export function validateAnalysisResult(
     evidenceCtx,
     'spilloverImplications',
   ).slice(0, 4);
+  // Milestone #62 Phase 3 — computed here alongside every other
+  // Phase 1/2 field, using only the raw candidate and evidenceCtx.
+  // Deliberately NOT passed to deriveTrustState below, and never read
+  // by validateConfidence either — significance stays fully isolated
+  // from both the backend-derived trust signal and the model's own
+  // confidence self-assessment, per the explicit architectural
+  // constraint.
+  const significanceResult = validateSignificance(obj.significance, evidenceCtx);
   const agreements = validateAgreements(obj.agreements, evidenceCtx);
   const differences = validateDifferences(obj.differences, evidenceCtx);
   const unknowns = isStringArray(obj.unknowns) ? obj.unknowns.filter(isNonEmptyString) : [];
@@ -641,6 +686,7 @@ export function validateAnalysisResult(
     affectedParties: affectedPartiesResult,
     immediateImpacts: immediateImpactsClaims,
     spilloverImplications: spilloverImplicationsClaims,
+    significance: significanceResult,
     agreements,
     differences,
     unknowns,

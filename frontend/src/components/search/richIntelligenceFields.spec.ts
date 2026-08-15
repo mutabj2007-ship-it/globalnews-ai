@@ -14,11 +14,11 @@ const source = readFileSync(join(__dirname, 'AnalysisResultView.tsx'), 'utf-8');
  * CTO's own instruction, true browser visual acceptance remains a
  * separate, deferred step.
  *
- * Milestone #62 Phase 1 introduced context/relevance; Phase 2 (this
- * update) adds affectedParties/immediateImpacts/spilloverImplications
- * using the same structural-verification approach. significance and
- * watchNext remain out of scope and this file does not reference
- * either.
+ * Milestone #62 Phase 1 introduced context/relevance; Phase 2 added
+ * affectedParties/immediateImpacts/spilloverImplications; Phase 3
+ * (this update) adds significance, using the same
+ * structural-verification approach throughout. watchNext remains out
+ * of scope and this file does not reference it.
  */
 describe('AnalysisResultView — relevance/context (M62 Phase 1)', () => {
   it('the relevance section is gated on analysis.relevance.length > 0 — no unconditional heading, no placeholder for the empty case', () => {
@@ -84,8 +84,7 @@ describe('AnalysisResultView — relevance/context (M62 Phase 1)', () => {
     expect(relevanceIndex).toBeGreaterThan(detailsIndex);
   });
 
-  it('does not reference significance or watchNext — both remain out of scope through M62 Phase 2', () => {
-    expect(source).not.toMatch(/analysis\.significance/);
+  it('does not reference watchNext — it remains out of scope through M62 Phase 3', () => {
     expect(source).not.toMatch(/analysis\.watchNext/);
   });
 });
@@ -145,8 +144,52 @@ describe('AnalysisResultView — affectedParties/immediateImpacts/spilloverImpli
     expect(keyFactsCommentIndex).toBeGreaterThan(spilloverIndex);
   });
 
-  it('does not reference significance or watchNext anywhere — both remain out of scope for this phase', () => {
-    expect(source).not.toMatch(/analysis\.significance/);
+  it('does not reference watchNext anywhere — it remains out of scope for this phase', () => {
     expect(source).not.toMatch(/analysis\.watchNext/);
+  });
+});
+
+describe('AnalysisResultView — significance (M62 Phase 3)', () => {
+  it('the section is gated on a truthy check (analysis.significance &&), not .length — since significance is a single nullable object, not an array', () => {
+    expect(source).toMatch(/\{analysis\.significance && \(/);
+    expect(source).not.toMatch(/No significance available/i);
+  });
+
+  it('renders the significance heading and a level badge for all four levels, plus the rationale using the exact same claim-rendering shape as every other grounded-claim section', () => {
+    const gateIndex = source.indexOf('{analysis.significance && (');
+    const relevanceGateIndex = source.indexOf('{analysis.relevance.length > 0 && (');
+    const block = source.slice(gateIndex, relevanceGateIndex);
+
+    expect(block).toMatch(/\{t\.significance\}/);
+    expect(block).toMatch(/significanceMinor/);
+    expect(block).toMatch(/significanceModerate/);
+    expect(block).toMatch(/significanceMajor/);
+    expect(block).toMatch(/significanceCritical/);
+    expect(block).toMatch(/analysis\.significance\.rationale\.map\(\(item, index\) => \(/);
+    expect(block).toMatch(/\{item\.claim\}/);
+    expect(block).toMatch(
+      /<AnalysisCitation sourceArticleIds=\{item\.sourceArticleIds\} sources=\{analysis\.sources\} \/>/,
+    );
+    expect(block).toMatch(/<EvidenceSufficiencyNote/);
+  });
+
+  it('ordering: the AI self-assessment disclosure closes, THEN significance, THEN relevance — significance sits ahead of the Phase 1/2 interpretive sections, per the approved hierarchy', () => {
+    const detailsCloseIndex = source.indexOf('</details>');
+    const significanceIndex = source.indexOf('{analysis.significance && (');
+    const relevanceIndex = source.indexOf('{analysis.relevance.length > 0 && (');
+
+    expect(detailsCloseIndex).toBeGreaterThan(-1);
+    expect(significanceIndex).toBeGreaterThan(detailsCloseIndex);
+    expect(relevanceIndex).toBeGreaterThan(significanceIndex);
+  });
+
+  it('TrustBadge appears before significance, and the significance markup is never nested inside or adjacent-styled to resemble TrustBadge — trust/evidence status is never conflated with severity', () => {
+    const trustBadgeIndex = source.indexOf('<TrustBadge trustState={analysis.trustState}');
+    const significanceIndex = source.indexOf('{analysis.significance && (');
+    const trustBadgeSnippet = source.slice(trustBadgeIndex, trustBadgeIndex + 200);
+
+    expect(trustBadgeIndex).toBeGreaterThan(-1);
+    expect(significanceIndex).toBeGreaterThan(trustBadgeIndex);
+    expect(trustBadgeSnippet).not.toMatch(/significance/);
   });
 });

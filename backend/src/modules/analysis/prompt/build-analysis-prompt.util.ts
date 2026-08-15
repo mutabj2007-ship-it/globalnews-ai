@@ -194,6 +194,34 @@ Strict rules:
   extrapolation of what might plausibly follow. Each entry follows the
   exact same evidenceIds/evidenceBasis rules as keyFacts. Return an
   empty array if the evidence does not discuss any wider effect.
+- For "significance": provide an evidence-grounded judgment of this
+  development's magnitude/consequence — level ("minor", "moderate",
+  "major", or "critical") plus up to 2 grounded rationale entries. This
+  is an assessment of event magnitude/consequence ONLY — never a proxy
+  for source trust, your own confidence, evidence sufficiency,
+  emotional tone, topic category, or general importance inferred from
+  world knowledge. Base the level ONLY on objective signals actually
+  present in the supplied evidence: casualty or injury counts,
+  displacement/evacuation figures, documented financial/economic
+  magnitude, geographic scope, the number or scale of affected
+  people/groups/institutions, official emergency/disaster
+  declarations, major institutional/legal/policy consequences, or
+  explicit source characterization of scale where grounded in concrete
+  facts. Do NOT infer severity merely because reporting uses dramatic
+  language such as "crisis", "catastrophic", "historic", "shocking",
+  or "devastating" — those words alone are never sufficient evidence.
+  "critical" requires EITHER (A) an explicit authoritative designation
+  of exceptional severity supported by the supplied evidence, OR (B)
+  multiple independent objective high-severity indicators together
+  (for example, a very large casualty/displacement magnitude PLUS
+  major geographic/institutional/economic consequences) — one isolated
+  signal is generally not enough to justify "critical". When the
+  evidence is ambiguous between two levels, choose the lower defensible
+  level. Each rationale entry follows the exact same
+  evidenceIds/evidenceBasis rules as keyFacts. Return "significance":
+  null (the JSON null literal, not an object) when the supplied
+  evidence does not support a defensible level judgment — never
+  default to "minor" or guess.
 - For keyFacts, agreements, differences (each position), and timeline
   entries, you may optionally include "evidenceBasis": an object with
   "evidenceId" (one of the exact evidenceId values you already cited for
@@ -481,6 +509,24 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
     additionalProperties: false,
   };
 
+  /**
+   * Milestone #62 Phase 3 — nullable object, following the exact same
+   * strict-mode convention as evidenceBasisSchema above: under
+   * `strict: true`/`additionalProperties: false` the schema cannot
+   * express "may be omitted", so the model must emit `null` explicitly
+   * when the evidence does not support a defensible significance
+   * judgment, rather than the property being left out.
+   */
+  const significanceSchema = {
+    type: ['object', 'null'],
+    properties: {
+      level: { type: 'string', enum: ['minor', 'moderate', 'major', 'critical'] },
+      rationale: { type: 'array', items: sourcedClaim },
+    },
+    required: ['level', 'rationale'],
+    additionalProperties: false,
+  };
+
   const positionSchema = {
     type: 'object',
     properties: {
@@ -523,6 +569,8 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         immediateImpacts: { type: 'array', items: sourcedClaim },
         /** Milestone #62 Phase 2 — reuses the exact sourcedClaim shape, no new schema family. */
         spilloverImplications: { type: 'array', items: sourcedClaim },
+        /** Milestone #62 Phase 3 — nullable object; see significanceSchema's own doc comment above. */
+        significance: significanceSchema,
         agreements: {
           type: 'array',
           items: {
@@ -609,6 +657,7 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         'affectedParties',
         'immediateImpacts',
         'spilloverImplications',
+        'significance',
         'agreements',
         'differences',
         'unknowns',

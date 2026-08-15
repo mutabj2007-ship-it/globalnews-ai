@@ -42,6 +42,12 @@ export const pl: Dictionary = {
     affectedParties: 'Kogo to dotyczy',
     immediateImpacts: 'Bezpośrednie skutki',
     spilloverImplications: 'Szersze konsekwencje',
+    // Milestone #62 Phase 3.
+    significance: 'Znaczenie',
+    significanceMinor: 'Niewielkie',
+    significanceModerate: 'Umiarkowane',
+    significanceMajor: 'Duże',
+    significanceCritical: 'Krytyczne',
     keyFacts: 'Kluczowe fakty',
     whereSourcesAgree: 'W czym źródła się zgadzają',
     whereReportingDiffers: 'W czym doniesienia się różnią',

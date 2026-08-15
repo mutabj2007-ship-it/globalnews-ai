@@ -1272,3 +1272,122 @@ describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverIm
     expect(result.affectedParties).toHaveLength(1);
   });
 });
+
+describe('Milestone #62 Phase 3 — significance validation', () => {
+  it('a candidate with no significance key at all still validates successfully, defaulting to null (backward compatibility — missing key, not explicit null)', () => {
+    const articles = [makeArticle()];
+    const result = validateAnalysisResult(validCandidate('S1'), context(articles));
+    expect(result.significance).toBeNull();
+  });
+
+  it('a candidate with significance explicitly set to null validates to null', () => {
+    const articles = [makeArticle()];
+    const candidate = { ...validCandidate('S1'), significance: null };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.significance).toBeNull();
+  });
+
+  it('accepts a well-formed, grounded significance with a valid level and rationale', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      significance: {
+        level: 'major',
+        rationale: [{ claim: 'Large casualty count reported', evidenceIds: ['S1'] }],
+      },
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.significance).not.toBeNull();
+    expect(result.significance?.level).toBe('major');
+    expect(result.significance?.rationale).toHaveLength(1);
+    expect(result.significance?.rationale[0].claim).toBe('Large casualty count reported');
+    expect(result.significance?.rationale[0].sourceArticleIds).toEqual(['article-1']);
+  });
+
+  it('rejects an invalid level string, returning null for the whole field rather than coercing or defaulting', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      significance: { level: 'extreme', rationale: [{ claim: 'x', evidenceIds: ['S1'] }] },
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.significance).toBeNull();
+  });
+
+  it('returns null for the whole field — not a level with empty rationale — when no rationale entry survives grounding', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      significance: {
+        level: 'critical',
+        rationale: [{ claim: 'Ungrounded claim', evidenceIds: ['NOT-A-REAL-EVIDENCE-ID'] }],
+      },
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.significance).toBeNull();
+  });
+
+  it('caps rationale at 2 surviving entries, keeping the first', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      significance: {
+        level: 'moderate',
+        rationale: [1, 2, 3, 4].map((n) => ({ claim: `Rationale ${n}`, evidenceIds: ['S1'] })),
+      },
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.significance?.rationale).toHaveLength(2);
+    expect(result.significance?.rationale[0].claim).toBe('Rationale 1');
+  });
+
+  it('significance never affects trustState — an ungrounded/critical significance claim does not change the trust level derived from keyFacts/agreements/differences/timeline/uncertainties', () => {
+    const articles = [makeArticle()];
+    const withoutSignificance = validateAnalysisResult(validCandidate('S1'), context(articles));
+    const withCriticalSignificance = validateAnalysisResult(
+      {
+        ...validCandidate('S1'),
+        significance: {
+          level: 'critical',
+          rationale: [{ claim: 'Official emergency declared', evidenceIds: ['S1'] }],
+        },
+      },
+      context(articles),
+    );
+    expect(withCriticalSignificance.trustState.level).toBe(withoutSignificance.trustState.level);
+    expect(withCriticalSignificance.trustState.reasons).toEqual(withoutSignificance.trustState.reasons);
+  });
+
+  it('significance never affects confidence — confidence is validated independently from the candidate\u2019s own confidence field, not derived from significance', () => {
+    const articles = [makeArticle()];
+    const withoutSignificance = validateAnalysisResult(validCandidate('S1'), context(articles));
+    const withCriticalSignificance = validateAnalysisResult(
+      {
+        ...validCandidate('S1'),
+        significance: {
+          level: 'critical',
+          rationale: [{ claim: 'Official emergency declared', evidenceIds: ['S1'] }],
+        },
+      },
+      context(articles),
+    );
+    expect(withCriticalSignificance.confidence).toEqual(withoutSignificance.confidence);
+  });
+
+  it('Phase 1/2 fields remain unaffected by the presence of significance on the same candidate', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      context: [{ claim: 'Background', evidenceIds: ['S1'] }],
+      relevance: [{ claim: 'Why it matters', evidenceIds: ['S1'] }],
+      significance: {
+        level: 'minor',
+        rationale: [{ claim: 'Small localized effect', evidenceIds: ['S1'] }],
+      },
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.context).toHaveLength(1);
+    expect(result.relevance).toHaveLength(1);
+    expect(result.significance?.level).toBe('minor');
+  });
+});

@@ -360,6 +360,33 @@ export interface AffectedParty {
 }
 
 /**
+ * Milestone #62 Phase 3 — the closed set of significance/severity
+ * levels. 'critical' carries a deliberately strengthened evidentiary
+ * bar (see the prompt instructions in build-analysis-prompt.util.ts):
+ * either an explicit authoritative designation of exceptional
+ * severity, or multiple independent objective high-severity
+ * indicators together — never a single isolated signal, and never
+ * inferred from dramatic-sounding language alone.
+ */
+export type SignificanceLevel = 'minor' | 'moderate' | 'major' | 'critical';
+
+/**
+ * Milestone #62 Phase 3 — an evidence-grounded judgment of event
+ * magnitude/consequence. Deliberately SEPARATE from trustState
+ * (backend-derived evidence trust), confidence (model self-
+ * assessment), and evidence sufficiency — a story can be highly
+ * significant but poorly evidenced, or well evidenced but low
+ * significance; this field says nothing about either of the other
+ * two. `rationale` uses the SAME SourcedClaim evidence-grounding
+ * model as every other field — no separate citation system. Capped
+ * at 2 surviving entries — see validate-analysis-result.ts.
+ */
+export interface Significance {
+  level: SignificanceLevel;
+  rationale: SourcedClaim[];
+}
+
+/**
  * The validated, structured result of analyzing a set of news articles.
  * Every keyFact/agreement/difference-position/timeline entry must cite
  * at least one sourceArticleId from `sources` — ungrounded entries are
@@ -495,6 +522,15 @@ export interface NewsAnalysisResult {
    * 4 entries.
    */
   spilloverImplications: SourcedClaim[];
+
+  /**
+   * Milestone #62 Phase 3 — evidence-grounded significance/severity
+   * judgment. `null` is the required insufficient-evidence state —
+   * never defaulted to 'minor' or any other level when the evidence
+   * doesn't support a defensible judgment. Never read by trustState
+   * or confidence derivation, and never derived from either of them.
+   */
+  significance: Significance | null;
 }
 
 /**

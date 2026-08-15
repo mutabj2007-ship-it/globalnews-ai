@@ -138,6 +138,48 @@ export function AnalysisResultView({
       </details>
 
       {/*
+        Milestone #62 Phase 3 — significance, positioned after the AI
+        self-assessment disclosure and before relevance/context, per
+        the approved hierarchy. Deliberately visually distinct from
+        TrustBadge (a small standalone label/badge, not nested inside
+        or styled to resemble it) — significance is event magnitude/
+        consequence, never a trust or evidence-sufficiency signal.
+        Renders nothing when null. Rationale reuses the exact same
+        claim-rendering shape as every other grounded-claim section.
+      */}
+      {analysis.significance && (
+        <section>
+          <SectionHeading>{t.significance}</SectionHeading>
+          <span className="mb-3 inline-flex items-center rounded-full border border-border-strong px-2.5 py-1 font-mono text-[11px] uppercase tracking-wide text-ink-secondary">
+            {
+              {
+                minor: t.significanceMinor,
+                moderate: t.significanceModerate,
+                major: t.significanceMajor,
+                critical: t.significanceCritical,
+              }[analysis.significance.level]
+            }
+          </span>
+          <ul className="flex flex-col gap-3">
+            {analysis.significance.rationale.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-ink-primary"
+              >
+                {item.claim}
+                <AnalysisCitation sourceArticleIds={item.sourceArticleIds} sources={analysis.sources} />
+                <EvidenceSufficiencyNote
+                  evidenceBreadth={item.evidenceBreadth}
+                  evidenceBasis={item.evidenceBasis}
+                  language={language}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/*
         Milestone #62 Phase 1 — "Why this matters" (relevance), then
         "Background" (context), positioned after the AI self-assessment
         disclosure and before Key facts, per the approved hierarchy:

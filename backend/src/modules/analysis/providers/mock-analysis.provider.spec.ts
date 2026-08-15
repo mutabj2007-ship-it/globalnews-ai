@@ -249,4 +249,17 @@ describe('MockAnalysisProvider', () => {
       expect(candidate.spilloverImplications).toEqual([]);
     });
   });
+
+  describe('Milestone #62 Phase 3 — significance', () => {
+    it('always returns null significance — mock mode never fabricates a severity judgment', async () => {
+      const articles = [
+        makeArticle({ id: 'a1', title: 'Story A' }),
+        makeArticle({ id: 'a2', title: 'Story B' }),
+      ];
+      const candidate = (await provider.analyzeNews({ query: 'test', articles })) as {
+        significance: unknown;
+      };
+      expect(candidate.significance).toBeNull();
+    });
+  });
 });

@@ -304,10 +304,103 @@ describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverIm
     expect(normalizedSystem).toContain('never your own extrapolation of what might plausibly follow');
   });
 
-  it('does not reference significance or watchNext anywhere — both remain out of scope for this phase', () => {
+  it('does not reference watchNext anywhere — it remains out of scope through this phase', () => {
     const { system } = buildAnalysisMessages('q', articles, 1200);
-    expect(system).not.toMatch(/"significance"/);
     expect(system).not.toMatch(/"watchNext"/);
-    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/significance|watchNext/);
+    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/watchNext/);
+  });
+});
+
+describe('Milestone #62 Phase 3 — significance schema and prompt instructions', () => {
+  // Local fixture — same established per-describe-block pattern as
+  // every prior Milestone block in this file.
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Climate change reduces maize yields',
+      summary: 'Farmers report declining harvests.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  it('the structured-output schema uses a nullable object for significance, following the exact same strict-mode precedent as evidenceBasis', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: {
+        properties: {
+          significance: { type: string[]; required: string[]; additionalProperties: boolean };
+        };
+        required: string[];
+      };
+    };
+    const significanceSchema = schema.schema.properties.significance;
+    expect(significanceSchema.type).toEqual(expect.arrayContaining(['object', 'null']));
+    expect(significanceSchema.required).toEqual(expect.arrayContaining(['level', 'rationale']));
+    expect(significanceSchema.additionalProperties).toBe(false);
+    expect(schema.schema.required).toContain('significance');
+  });
+
+  it('additionalProperties remains false at the top level', () => {
+    const schema = buildAnalysisJsonSchema() as { schema: { additionalProperties: boolean } };
+    expect(schema.schema.additionalProperties).toBe(false);
+  });
+
+  it('does not use an unverified maxItems JSON Schema keyword anywhere in the schema', () => {
+    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/maxItems/);
+  });
+
+  it('the significance level enum is exactly the four approved values', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: { properties: { significance: { properties: { level: { enum: string[] } } } } };
+    };
+    expect(schema.schema.properties.significance.properties.level.enum).toEqual([
+      'minor',
+      'moderate',
+      'major',
+      'critical',
+    ]);
+  });
+
+  it('the prompt distinguishes significance from trust/confidence/tone/topic/general-knowledge importance, and lists the allowed objective evidence signals', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'never a proxy for source trust, your own confidence, evidence sufficiency, emotional tone, topic category, or general importance inferred from world knowledge',
+    );
+    expect(normalizedSystem).toContain('casualty or injury counts');
+    expect(normalizedSystem).toContain('official emergency/disaster declarations');
+  });
+
+  it('the prompt explicitly prohibits inferring severity from dramatic language alone', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain('Do NOT infer severity merely because reporting uses dramatic language');
+    expect(system).toMatch(/crisis/);
+    expect(system).toMatch(/catastrophic/);
+  });
+
+  it('the prompt gates "critical" behind either an explicit authoritative designation OR multiple independent high-severity indicators — never a single isolated signal', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain('an explicit authoritative designation of exceptional severity');
+    expect(normalizedSystem).toContain('multiple independent objective high-severity indicators');
+    expect(normalizedSystem).toContain('one isolated signal is generally not enough to justify "critical"');
+  });
+
+  it('the prompt instructs choosing the lower defensible level when ambiguous, and returning the JSON null literal (never "minor" as a default) when unsupported', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain('When the evidence is ambiguous between two levels, choose the lower defensible level');
+    expect(normalizedSystem).toContain('Return "significance": null (the JSON null literal, not an object)');
+  });
+
+  it('the prompt limits rationale to 2 entries, enforced via prompt instruction, not an unverified schema keyword', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    expect(system).toMatch(/up to 2 grounded rationale entries/);
   });
 });

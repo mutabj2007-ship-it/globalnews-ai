@@ -38,6 +38,12 @@ export const en = {
     affectedParties: 'Who is affected',
     immediateImpacts: 'Immediate effects',
     spilloverImplications: 'Wider implications',
+    // Milestone #62 Phase 3.
+    significance: 'Significance',
+    significanceMinor: 'Minor',
+    significanceModerate: 'Moderate',
+    significanceMajor: 'Major',
+    significanceCritical: 'Critical',
     keyFacts: 'Key facts',
     whereSourcesAgree: 'Where sources agree',
     whereReportingDiffers: 'Where reporting differs',
