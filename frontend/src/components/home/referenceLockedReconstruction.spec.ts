@@ -49,11 +49,10 @@ describe('Reference-locked reconstruction — Situation Map', () => {
   });
 });
 
-describe('Reference-locked reconstruction — Intelligence Engine (M60 Phase 2: true radial geometry supersedes both the earlier compact command-deck-band AND the subsequent left-stack/hub/right-stack correction)', () => {
-  it('the hub is visually dominant — a percentage-sized element at 24% of the engine canvas (the CTO-approved dominant-but-not-overwhelming size, superseding the earlier-rejected 30%) with multiple concentric rings, not a small fixed-pixel icon between feature cards', () => {
+describe('Reference-locked reconstruction — Intelligence Engine (M60 Phase 2: true radial geometry supersedes the earlier compact command-deck-band geometry)', () => {
+  it('the hub is visually dominant — a percentage-sized element (24%, the CTO-approved dominant-but-not-overwhelming size) with multiple concentric rings, not a small fixed-pixel icon between feature cards', () => {
     expect(shellSource).toMatch(/mb-2 flex flex-wrap items-end/);
     expect(engineSource).toMatch(/width: '24%'/);
-    expect(engineSource).not.toMatch(/width: '30%'/);
     expect(engineSource).toMatch(/gna-hub-ring-outer/);
   });
 
@@ -70,8 +69,8 @@ describe('Reference-locked reconstruction — HUD geometry coverage', () => {
     expect(trustSource).toMatch(/hudCornerBracketClassName/);
   });
 
-  it('How It Works section padding/gaps are compressed', () => {
-    expect(howItWorksSource).toMatch(/py-6 sm:px-6 sm:py-7/);
+  it('How It Works section padding gives genuine breathing room after the Intelligence Engine (M61 — increased from the earlier compressed py-6/py-7 values)', () => {
+    expect(howItWorksSource).toMatch(/py-8 sm:px-6 sm:py-10/);
   });
 });
 

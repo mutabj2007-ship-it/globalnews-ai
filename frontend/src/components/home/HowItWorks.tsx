@@ -27,7 +27,7 @@ export function HowItWorks({ language = 'en' }: HowItWorksProps): JSX.Element {
     >
       <span aria-hidden="true" className={hudCornerBracketClassName('top-left')} />
       <span aria-hidden="true" className={hudCornerBracketClassName('top-right')} />
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
+      <div className="mx-auto max-w-[1480px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <div className="mb-4 flex flex-col gap-1.5 sm:mb-5">
           <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">
             {t.label}
@@ -48,7 +48,7 @@ export function HowItWorks({ language = 'en' }: HowItWorksProps): JSX.Element {
               .gna-flow-node { animation: gna-flow-pulse 2.4s ease-in-out infinite; }
               @media (prefers-reduced-motion: reduce) { .gna-flow-node { animation: none !important; opacity: 0.7 !important; transform: none !important; } }
             `}</style>
-            <div className="h-px bg-gradient-to-r from-cyan-500/10 via-cyan-500/60 to-cyan-500/10" />
+            <div className="h-0.5 bg-gradient-to-r from-cyan-500/10 via-cyan-500/60 to-cyan-500/10" />
             <div className="absolute inset-0 flex items-center justify-around px-[16.6%]">
               {[0, 1].map((i) => (
                 <span
@@ -65,7 +65,7 @@ export function HowItWorks({ language = 'en' }: HowItWorksProps): JSX.Element {
             const localized = t.steps[index];
             return (
               <div key={item.step} className="relative flex flex-col items-start gap-3">
-                <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-500/40 bg-void text-cyan-300 shadow-[0_0_20px_-6px_rgba(34,211,238,0.4)]">
+                <div className="relative z-10 flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-500/40 bg-void text-cyan-300 shadow-[0_0_20px_-6px_rgba(34,211,238,0.4)]">
                   <Icon size={17} strokeWidth={2} />
                 </div>
                 <div>
