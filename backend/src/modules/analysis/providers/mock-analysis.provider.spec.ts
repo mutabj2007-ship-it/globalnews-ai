@@ -217,4 +217,19 @@ describe('MockAnalysisProvider', () => {
       expect(a).toEqual(b);
     });
   });
+
+  describe('Milestone #62 Phase 1 — context/relevance', () => {
+    it('always returns empty context and relevance arrays — the mock never fabricates background/importance reasoning, matching its existing honest differences: [] behavior', async () => {
+      const articles = [
+        makeArticle({ id: 'a1', title: 'Story A' }),
+        makeArticle({ id: 'a2', title: 'Story B' }),
+      ];
+      const candidate = (await provider.analyzeNews({ query: 'test', articles })) as {
+        context: unknown[];
+        relevance: unknown[];
+      };
+      expect(candidate.context).toEqual([]);
+      expect(candidate.relevance).toEqual([]);
+    });
+  });
 });

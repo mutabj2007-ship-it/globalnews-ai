@@ -35,6 +35,9 @@ export const pl: Dictionary = {
     aiSelfAssessmentPrefix: 'Samoocena AI',
     aiSelfAssessmentDisclaimer:
       'To jest własna ocena pewności modelu AI i nie stanowi autorytatywnej oceny zaufania do dowodów przedstawionej powyżej.',
+    // Milestone #62 Phase 1.
+    relevance: 'Dlaczego to ma znaczenie',
+    context: 'Kontekst',
     keyFacts: 'Kluczowe fakty',
     whereSourcesAgree: 'W czym źródła się zgadzają',
     whereReportingDiffers: 'W czym doniesienia się różnią',

@@ -1098,3 +1098,74 @@ describe('validateAnalysisResult', () => {
     });
   });
 });
+
+describe('Milestone #62 Phase 1 — context/relevance validation', () => {
+  it('a pre-M62 candidate with no context/relevance keys at all still validates successfully, defaulting both to an empty array (backward compatibility)', () => {
+    const articles = [makeArticle()];
+    const result = validateAnalysisResult(validCandidate('S1'), context(articles));
+    expect(result.context).toEqual([]);
+    expect(result.relevance).toEqual([]);
+  });
+
+  it('accepts well-formed, grounded context and relevance entries using the exact same evidence model as keyFacts', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      context: [{ claim: 'Background fact', evidenceIds: ['S1'] }],
+      relevance: [{ claim: 'Why it matters', evidenceIds: ['S1'] }],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.context).toHaveLength(1);
+    expect(result.context[0].claim).toBe('Background fact');
+    expect(result.context[0].sourceArticleIds).toEqual(['article-1']);
+    expect(result.relevance).toHaveLength(1);
+    expect(result.relevance[0].claim).toBe('Why it matters');
+  });
+
+  it('drops context/relevance entries with no valid evidenceIds, while valid sibling entries survive', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      context: [
+        { claim: 'Grounded', evidenceIds: ['S1'] },
+        { claim: 'Ungrounded', evidenceIds: [] },
+      ],
+      relevance: [
+        { claim: 'Ungrounded relevance', evidenceIds: ['NOT-A-REAL-ID'] },
+        { claim: 'Grounded relevance', evidenceIds: ['S1'] },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.context).toHaveLength(1);
+    expect(result.context[0].claim).toBe('Grounded');
+    expect(result.relevance).toHaveLength(1);
+    expect(result.relevance[0].claim).toBe('Grounded relevance');
+  });
+
+  it('caps context at 4 surviving entries and relevance at 3, even when the candidate supplies more', () => {
+    const articles = [makeArticle()];
+    const manyContext = [1, 2, 3, 4, 5, 6].map((n) => ({
+      claim: `Context ${n}`,
+      evidenceIds: ['S1'],
+    }));
+    const manyRelevance = [1, 2, 3, 4, 5].map((n) => ({
+      claim: `Relevance ${n}`,
+      evidenceIds: ['S1'],
+    }));
+    const candidate = { ...validCandidate('S1'), context: manyContext, relevance: manyRelevance };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.context).toHaveLength(4);
+    expect(result.relevance).toHaveLength(3);
+    // Confirms it's the FIRST surviving entries kept, not an arbitrary subset.
+    expect(result.context[0].claim).toBe('Context 1');
+    expect(result.relevance[0].claim).toBe('Relevance 1');
+  });
+
+  it('an empty context/relevance array on the candidate validates cleanly to empty arrays, not an error', () => {
+    const articles = [makeArticle()];
+    const candidate = { ...validCandidate('S1'), context: [], relevance: [] };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.context).toEqual([]);
+    expect(result.relevance).toEqual([]);
+  });
+});

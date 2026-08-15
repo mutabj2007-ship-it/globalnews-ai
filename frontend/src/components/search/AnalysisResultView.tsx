@@ -137,6 +137,63 @@ export function AnalysisResultView({
         </div>
       </details>
 
+      {/*
+        Milestone #62 Phase 1 — "Why this matters" (relevance), then
+        "Background" (context), positioned after the AI self-assessment
+        disclosure and before Key facts, per the approved hierarchy:
+        trust/evidence status always precedes these deeper interpretive
+        sections, never the reverse. Both reuse the exact same
+        claim-rendering shape keyFacts already uses below (claim text +
+        AnalysisCitation + EvidenceSufficiencyNote) — no new citation
+        system. Each section simply does not render when its array is
+        empty (evidence did not support a groundable claim) — no
+        placeholder heading, no "not available" card, matching the
+        existing conditional pattern already used for relationalComposition.
+      */}
+      {analysis.relevance.length > 0 && (
+        <section>
+          <SectionHeading>{t.relevance}</SectionHeading>
+          <ul className="flex flex-col gap-3">
+            {analysis.relevance.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-ink-primary"
+              >
+                {item.claim}
+                <AnalysisCitation sourceArticleIds={item.sourceArticleIds} sources={analysis.sources} />
+                <EvidenceSufficiencyNote
+                  evidenceBreadth={item.evidenceBreadth}
+                  evidenceBasis={item.evidenceBasis}
+                  language={language}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {analysis.context.length > 0 && (
+        <section>
+          <SectionHeading>{t.context}</SectionHeading>
+          <ul className="flex flex-col gap-3">
+            {analysis.context.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-ink-primary"
+              >
+                {item.claim}
+                <AnalysisCitation sourceArticleIds={item.sourceArticleIds} sources={analysis.sources} />
+                <EvidenceSufficiencyNote
+                  evidenceBreadth={item.evidenceBreadth}
+                  evidenceBasis={item.evidenceBasis}
+                  language={language}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Key facts */}
       {analysis.keyFacts.length > 0 && (
         <section>

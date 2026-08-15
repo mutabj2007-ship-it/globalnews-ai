@@ -482,6 +482,34 @@ export function validateAnalysisResult(
   }
 
   const keyFacts = validateSourcedClaims(obj.keyFacts, evidenceCtx, 'keyFacts');
+  // Milestone #62 Phase 1 — local variable names deliberately avoid
+  // `context`/`relevance`, since the outer function's own second
+  // parameter is already named `context` (the EvidenceContext-like
+  // object holding .articles/.analysisMode/.relationalContext/.query)
+  // — using those names locally would shadow it. `obj.context ?? []`
+  // and `obj.relevance ?? []` default a MISSING key on the raw
+  // candidate to an empty array before validation, so pre-M62 raw
+  // candidate fixtures/payloads that never declared these keys at all
+  // continue to validate safely rather than throwing (validateSourcedClaims
+  // requires its input to actually be an array). Real production
+  // provider responses always include both keys — the schema's own
+  // `required` list enforces this — so this default only ever matters
+  // for exactly that backward-compatibility case, not routine
+  // production behavior. Capped at 4/3 surviving entries AFTER
+  // grounding/filtering (never before) — deterministic enforcement
+  // that never depends on the model actually obeying the prompt's own
+  // "at most N" instruction, since maxItems is not used in this
+  // codebase's structured-output schema (unverified support — see
+  // build-analysis-prompt.util.ts).
+  const contextClaims = validateSourcedClaims(obj.context ?? [], evidenceCtx, 'context').slice(
+    0,
+    4,
+  );
+  const relevanceClaims = validateSourcedClaims(
+    obj.relevance ?? [],
+    evidenceCtx,
+    'relevance',
+  ).slice(0, 3);
   const agreements = validateAgreements(obj.agreements, evidenceCtx);
   const differences = validateDifferences(obj.differences, evidenceCtx);
   const unknowns = isStringArray(obj.unknowns) ? obj.unknowns.filter(isNonEmptyString) : [];
@@ -535,6 +563,12 @@ export function validateAnalysisResult(
     headline: obj.headline,
     summary: obj.summary,
     keyFacts,
+    // Milestone #62 Phase 1 — field key is `context`/`relevance` (matching
+    // the shared NewsAnalysisResult contract); the validated LOCAL
+    // variables are named contextClaims/relevanceClaims to avoid
+    // shadowing the outer function's own `context` parameter.
+    context: contextClaims,
+    relevance: relevanceClaims,
     agreements,
     differences,
     unknowns,

@@ -417,6 +417,29 @@ export interface NewsAnalysisResult {
    * set — see build-relational-composition.util.ts).
    */
   relationalComposition?: RelationalComposition;
+
+  /**
+   * Milestone #62 Phase 1 — evidence-grounded background facts
+   * necessary to understand the current development (historical,
+   * institutional, or geographic context), using the SAME SourcedClaim
+   * evidence-grounding model as keyFacts — no separate citation
+   * system. Always an array (never undefined) on a validated result;
+   * empty means the supplied evidence did not establish any useful
+   * background beyond the immediate facts, never a fabricated filler
+   * claim. Capped at 4 surviving entries after grounding/filtering —
+   * see validate-analysis-result.ts.
+   */
+  context: SourcedClaim[];
+
+  /**
+   * Milestone #62 Phase 1 — evidence-grounded claims answering "why
+   * does this matter", using the SAME SourcedClaim model. Always an
+   * array (never undefined); empty means no meaningful relevance
+   * claim could be grounded in the supplied evidence — never an
+   * inflated or inferred importance claim. Capped at 3 surviving
+   * entries — see validate-analysis-result.ts.
+   */
+  relevance: SourcedClaim[];
 }
 
 /**

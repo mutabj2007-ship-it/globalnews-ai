@@ -162,6 +162,21 @@ Strict rules:
   smoothing them into a single narrative.
 - If you are not confident about something, list it in "unknowns" and/or
   "uncertainties" instead of guessing.
+- For "context": provide at most 4 evidence-grounded background facts
+  needed to understand the current development — historical,
+  institutional, or geographic context. Only include background that is
+  actually contained in the supplied evidence above; never draw on
+  general knowledge beyond it. Each entry follows the exact same
+  evidenceIds/evidenceBasis rules as keyFacts. Return an empty array if
+  the evidence does not establish any useful background beyond the
+  immediate facts already covered elsewhere.
+- For "relevance": provide at most 3 evidence-grounded claims explaining
+  why this development matters. Do not exaggerate importance. Do not
+  infer political, economic, social, security, or geographic
+  consequences unless the supplied evidence itself states them. Each
+  entry follows the exact same evidenceIds/evidenceBasis rules as
+  keyFacts. Return an empty array if a meaningful relevance claim cannot
+  be grounded in the supplied evidence.
 - For keyFacts, agreements, differences (each position), and timeline
   entries, you may optionally include "evidenceBasis": an object with
   "evidenceId" (one of the exact evidenceId values you already cited for
@@ -458,6 +473,10 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         headline: { type: 'string' },
         summary: { type: 'string' },
         keyFacts: { type: 'array', items: sourcedClaim },
+        /** Milestone #62 Phase 1 — reuses the exact sourcedClaim shape, no new schema family. */
+        context: { type: 'array', items: sourcedClaim },
+        /** Milestone #62 Phase 1 — reuses the exact sourcedClaim shape, no new schema family. */
+        relevance: { type: 'array', items: sourcedClaim },
         agreements: {
           type: 'array',
           items: {
@@ -539,6 +558,8 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         'headline',
         'summary',
         'keyFacts',
+        'context',
+        'relevance',
         'agreements',
         'differences',
         'unknowns',

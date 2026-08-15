@@ -31,6 +31,9 @@ export const en = {
     aiSelfAssessmentPrefix: 'AI self-assessment',
     aiSelfAssessmentDisclaimer:
       "This is the AI model's own confidence estimate and is not the authoritative evidence trust rating above.",
+    // Milestone #62 Phase 1.
+    relevance: 'Why this matters',
+    context: 'Background',
     keyFacts: 'Key facts',
     whereSourcesAgree: 'Where sources agree',
     whereReportingDiffers: 'Where reporting differs',

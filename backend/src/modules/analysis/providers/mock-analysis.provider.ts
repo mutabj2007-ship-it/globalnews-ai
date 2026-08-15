@@ -125,6 +125,16 @@ export class MockAnalysisProvider implements AnalysisProvider {
           excerpt: article.title,
         },
       })),
+      // Milestone #62 Phase 1 — the mock provider deliberately does
+      // NOT fabricate background reasoning or importance claims, for
+      // the same reason it already returns `differences: []` above:
+      // genuine synthesis is exactly what mock mode is honestly
+      // declining to simulate. This also exercises the real
+      // "insufficient evidence -> empty array -> section doesn't
+      // render" path in the frontend, which is worth proving even in
+      // mock mode.
+      context: [],
+      relevance: [],
       agreements:
         top.length > 1
           ? [
