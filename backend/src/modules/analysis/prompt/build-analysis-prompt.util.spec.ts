@@ -231,3 +231,83 @@ describe('Milestone #62 Phase 1 — context/relevance schema and prompt instruct
     );
   });
 });
+
+describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverImplications schema and prompt instructions', () => {
+  // Local fixture — same established per-describe-block pattern as the
+  // M47 and M62 Phase 1 blocks above; `articles` is never shared at
+  // file scope in this file.
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Climate change reduces maize yields',
+      summary: 'Farmers report declining harvests.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  it('the structured-output schema includes affectedParties (dedicated shape), immediateImpacts, and spilloverImplications (both reusing the exact keyFacts/sourcedClaim shape) as required array properties', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: { properties: Record<string, unknown>; required: string[] };
+    };
+    const properties = schema.schema.properties;
+    expect(properties.immediateImpacts).toEqual(properties.keyFacts);
+    expect(properties.spilloverImplications).toEqual(properties.keyFacts);
+    expect(properties.affectedParties).not.toEqual(properties.keyFacts);
+    expect(schema.schema.required).toContain('affectedParties');
+    expect(schema.schema.required).toContain('immediateImpacts');
+    expect(schema.schema.required).toContain('spilloverImplications');
+  });
+
+  it('additionalProperties remains false at the top level', () => {
+    const schema = buildAnalysisJsonSchema() as { schema: { additionalProperties: boolean } };
+    expect(schema.schema.additionalProperties).toBe(false);
+  });
+
+  it('does not use an unverified maxItems JSON Schema keyword anywhere in the schema', () => {
+    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/maxItems/);
+  });
+
+  it('the affectedParties schema item requires party/partyType/effect/evidenceIds/evidenceBasis and constrains partyType to the closed enum', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: { properties: { affectedParties: { items: { properties: Record<string, unknown>; required: string[] } } } };
+    };
+    const item = schema.schema.properties.affectedParties.items;
+    expect(item.required).toEqual(
+      expect.arrayContaining(['party', 'partyType', 'effect', 'evidenceIds', 'evidenceBasis']),
+    );
+    expect((item.properties.partyType as { enum: string[] }).enum).toEqual(
+      expect.arrayContaining(['person', 'organization', 'country', 'region', 'group', 'other']),
+    );
+  });
+
+  it('the prompt instructs at most 6 affectedParties, at most 4 immediateImpacts, and at most 4 spilloverImplications, all evidence-bounded with explicit empty-array fallbacks', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(system).toMatch(/"affectedParties":.*up to 6/);
+    expect(system).toMatch(/"immediateImpacts":.*up to 4/);
+    expect(system).toMatch(/"spilloverImplications":.*up to 4/);
+    expect(normalizedSystem).toContain(
+      'Return an empty array if the evidence does not identify specific affected parties.',
+    );
+    expect(normalizedSystem).toContain(
+      'Return an empty array if the evidence does not state any direct effect.',
+    );
+    expect(normalizedSystem).toContain(
+      'Return an empty array if the evidence does not discuss any wider effect.',
+    );
+    expect(normalizedSystem).toContain('never your own extrapolation of what might plausibly follow');
+  });
+
+  it('does not reference significance or watchNext anywhere — both remain out of scope for this phase', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    expect(system).not.toMatch(/"significance"/);
+    expect(system).not.toMatch(/"watchNext"/);
+    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/significance|watchNext/);
+  });
+});

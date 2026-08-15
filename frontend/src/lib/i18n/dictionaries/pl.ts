@@ -38,6 +38,10 @@ export const pl: Dictionary = {
     // Milestone #62 Phase 1.
     relevance: 'Dlaczego to ma znaczenie',
     context: 'Kontekst',
+    // Milestone #62 Phase 2.
+    affectedParties: 'Kogo to dotyczy',
+    immediateImpacts: 'Bezpośrednie skutki',
+    spilloverImplications: 'Szersze konsekwencje',
     keyFacts: 'Kluczowe fakty',
     whereSourcesAgree: 'W czym źródła się zgadzają',
     whereReportingDiffers: 'W czym doniesienia się różnią',

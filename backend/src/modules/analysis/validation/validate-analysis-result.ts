@@ -1,4 +1,5 @@
 import type {
+  AffectedParty,
   AgreementPoint,
   AnalysisEntities,
   AnalysisMode,
@@ -184,6 +185,59 @@ function validateSourcedClaims(
       evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
       ...(evidenceBasis ? { evidenceBasis } : {}),
       ...(relationalSupport ? { relationalSupport } : {}),
+    });
+  }
+  return result;
+}
+
+/**
+ * Milestone #62 Phase 2 — dedicated helper for affectedParties, since
+ * its object shape has two content fields (party, effect) plus
+ * partyType instead of a single "claim" string. Reuses every existing
+ * grounding primitive (requireObject/resolveEvidenceIds/
+ * resolveEvidenceBasis/computeEvidenceBreadth) identically to
+ * validateSourcedClaims — only the per-entry shape differs. An entry
+ * with an invalid/missing partyType is dropped rather than defaulted
+ * to a guessed category, matching this file's existing
+ * drop-rather-than-fabricate philosophy for every other field.
+ */
+const VALID_AFFECTED_PARTY_TYPES = new Set([
+  'person',
+  'organization',
+  'country',
+  'region',
+  'group',
+  'other',
+]);
+
+function validateAffectedParties(candidate: unknown, ctx: EvidenceContext): AffectedParty[] {
+  if (!Array.isArray(candidate)) {
+    throw new AnalysisValidationError('Expected "affectedParties" to be an array.');
+  }
+
+  const result: AffectedParty[] = [];
+  for (const entry of candidate) {
+    const obj = requireObject(entry, 'affectedParties');
+    if (!isNonEmptyString(obj.party)) continue;
+    if (!isNonEmptyString(obj.effect)) continue;
+    if (typeof obj.partyType !== 'string' || !VALID_AFFECTED_PARTY_TYPES.has(obj.partyType)) continue;
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, ctx.evidenceMap);
+    // Same grounding discipline as every other field — zero valid
+    // supporting sources means this is not a grounded claim.
+    if (sourceArticleIds.length === 0) continue;
+    const evidenceBasis = resolveEvidenceBasis(
+      obj.evidenceBasis,
+      ctx.evidenceMap,
+      ctx.evidenceTextMap,
+      sourceArticleIds,
+    );
+    result.push({
+      party: obj.party,
+      partyType: obj.partyType as AffectedParty['partyType'],
+      effect: obj.effect,
+      sourceArticleIds,
+      evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
+      ...(evidenceBasis ? { evidenceBasis } : {}),
     });
   }
   return result;
@@ -510,6 +564,21 @@ export function validateAnalysisResult(
     evidenceCtx,
     'relevance',
   ).slice(0, 3);
+  // Milestone #62 Phase 2 — same `?? []` backward-compatibility default
+  // as Phase 1's context/relevance, for the identical reason: pre-M62-
+  // Phase-2 raw candidate fixtures/payloads that never declared these
+  // keys continue to validate safely rather than throwing.
+  const affectedPartiesResult = validateAffectedParties(obj.affectedParties ?? [], evidenceCtx).slice(0, 6);
+  const immediateImpactsClaims = validateSourcedClaims(
+    obj.immediateImpacts ?? [],
+    evidenceCtx,
+    'immediateImpacts',
+  ).slice(0, 4);
+  const spilloverImplicationsClaims = validateSourcedClaims(
+    obj.spilloverImplications ?? [],
+    evidenceCtx,
+    'spilloverImplications',
+  ).slice(0, 4);
   const agreements = validateAgreements(obj.agreements, evidenceCtx);
   const differences = validateDifferences(obj.differences, evidenceCtx);
   const unknowns = isStringArray(obj.unknowns) ? obj.unknowns.filter(isNonEmptyString) : [];
@@ -569,6 +638,9 @@ export function validateAnalysisResult(
     // shadowing the outer function's own `context` parameter.
     context: contextClaims,
     relevance: relevanceClaims,
+    affectedParties: affectedPartiesResult,
+    immediateImpacts: immediateImpactsClaims,
+    spilloverImplications: spilloverImplicationsClaims,
     agreements,
     differences,
     unknowns,

@@ -232,4 +232,21 @@ describe('MockAnalysisProvider', () => {
       expect(candidate.relevance).toEqual([]);
     });
   });
+
+  describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverImplications', () => {
+    it('always returns empty affectedParties, immediateImpacts, and spilloverImplications arrays — the mock never fabricates rich demo intelligence for these fields, matching the existing honest empty-array pattern', async () => {
+      const articles = [
+        makeArticle({ id: 'a1', title: 'Story A' }),
+        makeArticle({ id: 'a2', title: 'Story B' }),
+      ];
+      const candidate = (await provider.analyzeNews({ query: 'test', articles })) as {
+        affectedParties: unknown[];
+        immediateImpacts: unknown[];
+        spilloverImplications: unknown[];
+      };
+      expect(candidate.affectedParties).toEqual([]);
+      expect(candidate.immediateImpacts).toEqual([]);
+      expect(candidate.spilloverImplications).toEqual([]);
+    });
+  });
 });

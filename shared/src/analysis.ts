@@ -332,6 +332,34 @@ export interface AnalysisSourceRef {
 }
 
 /**
+ * Milestone #62 Phase 2 — the closed set of affected-party categories.
+ * A plain string, not an enum-like closed union of prose, so the
+ * frontend can group/label consistently without parsing free text.
+ */
+export type AffectedPartyType = 'person' | 'organization' | 'country' | 'region' | 'group' | 'other';
+
+/**
+ * Milestone #62 Phase 2 — one evidence-grounded affected-party entry.
+ * Unlike context/relevance/immediateImpacts/spilloverImplications
+ * (all plain SourcedClaim[], since each entry is a single
+ * self-contained idea), "who is affected" and "how they're affected"
+ * are two genuinely distinct questions bundled into one entity here —
+ * collapsing them into one opaque claim string would lose the ability
+ * to group by party/type that this field exists to provide. Uses the
+ * SAME evidence-grounding fields as SourcedClaim (sourceArticleIds/
+ * evidenceBreadth/evidenceBasis) — no separate citation system, only
+ * the content shape differs.
+ */
+export interface AffectedParty {
+  party: string;
+  partyType: AffectedPartyType;
+  effect: string;
+  sourceArticleIds: string[];
+  evidenceBreadth?: EvidenceBreadth;
+  evidenceBasis?: EvidenceBasis;
+}
+
+/**
  * The validated, structured result of analyzing a set of news articles.
  * Every keyFact/agreement/difference-position/timeline entry must cite
  * at least one sourceArticleId from `sources` — ungrounded entries are
@@ -440,6 +468,33 @@ export interface NewsAnalysisResult {
    * entries — see validate-analysis-result.ts.
    */
   relevance: SourcedClaim[];
+
+  /**
+   * Milestone #62 Phase 2 — evidence-grounded parties (people,
+   * organizations, countries, regions, or groups) the supplied
+   * evidence explicitly describes as affected, and how. Always an
+   * array (never undefined); empty means the evidence did not
+   * identify specific affected parties. Capped at 6 surviving
+   * entries — see validate-analysis-result.ts.
+   */
+  affectedParties: AffectedParty[];
+
+  /**
+   * Milestone #62 Phase 2 — direct, already-occurring effects the
+   * supplied evidence explicitly states, using the SAME SourcedClaim
+   * model as context/relevance. Always an array; empty means no
+   * groundable immediate effect was stated. Capped at 4 entries.
+   */
+  immediateImpacts: SourcedClaim[];
+
+  /**
+   * Milestone #62 Phase 2 — wider or secondary effects EXPLICITLY
+   * discussed in the supplied evidence — never the model's own
+   * extrapolation of what might plausibly follow. Always an array;
+   * empty means no groundable spillover effect was stated. Capped at
+   * 4 entries.
+   */
+  spilloverImplications: SourcedClaim[];
 }
 
 /**

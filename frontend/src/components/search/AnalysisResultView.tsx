@@ -194,6 +194,89 @@ export function AnalysisResultView({
         </section>
       )}
 
+      {/*
+        Milestone #62 Phase 2 — affectedParties, immediateImpacts,
+        spilloverImplications, positioned after context and before Key
+        facts, per the approved ordering. immediateImpacts/
+        spilloverImplications reuse the exact same claim-rendering
+        shape as context/relevance (no new component). affectedParties
+        uses the smallest readable structured treatment: the same card
+        style, with the party name and a small partyType label shown
+        inline above the effect text — no grouping subsystem, no new
+        visual pattern. Each section simply does not render when empty.
+      */}
+      {analysis.affectedParties.length > 0 && (
+        <section>
+          <SectionHeading>{t.affectedParties}</SectionHeading>
+          <ul className="flex flex-col gap-3">
+            {analysis.affectedParties.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-ink-primary"
+              >
+                <span className="mb-1 flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-ink-primary">{item.party}</span>
+                  <span className="rounded-full border border-border-strong px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+                    {item.partyType}
+                  </span>
+                </span>
+                {item.effect}
+                <AnalysisCitation sourceArticleIds={item.sourceArticleIds} sources={analysis.sources} />
+                <EvidenceSufficiencyNote
+                  evidenceBreadth={item.evidenceBreadth}
+                  evidenceBasis={item.evidenceBasis}
+                  language={language}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {analysis.immediateImpacts.length > 0 && (
+        <section>
+          <SectionHeading>{t.immediateImpacts}</SectionHeading>
+          <ul className="flex flex-col gap-3">
+            {analysis.immediateImpacts.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-ink-primary"
+              >
+                {item.claim}
+                <AnalysisCitation sourceArticleIds={item.sourceArticleIds} sources={analysis.sources} />
+                <EvidenceSufficiencyNote
+                  evidenceBreadth={item.evidenceBreadth}
+                  evidenceBasis={item.evidenceBasis}
+                  language={language}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {analysis.spilloverImplications.length > 0 && (
+        <section>
+          <SectionHeading>{t.spilloverImplications}</SectionHeading>
+          <ul className="flex flex-col gap-3">
+            {analysis.spilloverImplications.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-ink-primary"
+              >
+                {item.claim}
+                <AnalysisCitation sourceArticleIds={item.sourceArticleIds} sources={analysis.sources} />
+                <EvidenceSufficiencyNote
+                  evidenceBreadth={item.evidenceBreadth}
+                  evidenceBasis={item.evidenceBasis}
+                  language={language}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Key facts */}
       {analysis.keyFacts.length > 0 && (
         <section>

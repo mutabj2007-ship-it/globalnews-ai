@@ -177,6 +177,23 @@ Strict rules:
   entry follows the exact same evidenceIds/evidenceBasis rules as
   keyFacts. Return an empty array if a meaningful relevance claim cannot
   be grounded in the supplied evidence.
+- For "affectedParties": identify up to 6 people, organizations,
+  countries, regions, or groups the supplied evidence EXPLICITLY
+  describes as affected, and state the effect on each using only what
+  the evidence states — never inferred. For each entry, set "partyType"
+  to the single best-fitting category (person, organization, country,
+  region, group, or other). Return an empty array if the evidence does
+  not identify specific affected parties.
+- For "immediateImpacts": list up to 4 direct, already-occurring
+  effects the supplied evidence explicitly states — never a
+  plausible-sounding consequence you are inferring. Each entry follows
+  the exact same evidenceIds/evidenceBasis rules as keyFacts. Return an
+  empty array if the evidence does not state any direct effect.
+- For "spilloverImplications": list up to 4 wider or secondary effects
+  EXPLICITLY discussed in the supplied evidence — never your own
+  extrapolation of what might plausibly follow. Each entry follows the
+  exact same evidenceIds/evidenceBasis rules as keyFacts. Return an
+  empty array if the evidence does not discuss any wider effect.
 - For keyFacts, agreements, differences (each position), and timeline
   entries, you may optionally include "evidenceBasis": an object with
   "evidenceId" (one of the exact evidenceId values you already cited for
@@ -441,6 +458,29 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
     additionalProperties: false,
   };
 
+  /**
+   * Milestone #62 Phase 2 — same evidence-grounding fields as
+   * sourcedClaim (evidenceIds/evidenceBasis), but with "party"/
+   * "partyType"/"effect" in place of a single "claim" string, since
+   * affectedParties genuinely needs the who/how distinction — see
+   * AffectedParty's own doc comment in shared/src/analysis.ts.
+   */
+  const affectedParty = {
+    type: 'object',
+    properties: {
+      party: { type: 'string' },
+      partyType: {
+        type: 'string',
+        enum: ['person', 'organization', 'country', 'region', 'group', 'other'],
+      },
+      effect: { type: 'string' },
+      evidenceIds: { type: 'array', items: { type: 'string' } },
+      evidenceBasis: evidenceBasisSchema,
+    },
+    required: ['party', 'partyType', 'effect', 'evidenceIds', 'evidenceBasis'],
+    additionalProperties: false,
+  };
+
   const positionSchema = {
     type: 'object',
     properties: {
@@ -477,6 +517,12 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         context: { type: 'array', items: sourcedClaim },
         /** Milestone #62 Phase 1 — reuses the exact sourcedClaim shape, no new schema family. */
         relevance: { type: 'array', items: sourcedClaim },
+        /** Milestone #62 Phase 2 — dedicated affectedParty shape (party/partyType/effect), not sourcedClaim. */
+        affectedParties: { type: 'array', items: affectedParty },
+        /** Milestone #62 Phase 2 — reuses the exact sourcedClaim shape, no new schema family. */
+        immediateImpacts: { type: 'array', items: sourcedClaim },
+        /** Milestone #62 Phase 2 — reuses the exact sourcedClaim shape, no new schema family. */
+        spilloverImplications: { type: 'array', items: sourcedClaim },
         agreements: {
           type: 'array',
           items: {
@@ -560,6 +606,9 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         'keyFacts',
         'context',
         'relevance',
+        'affectedParties',
+        'immediateImpacts',
+        'spilloverImplications',
         'agreements',
         'differences',
         'unknowns',

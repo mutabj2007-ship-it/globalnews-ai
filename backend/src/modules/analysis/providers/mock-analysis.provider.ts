@@ -135,6 +135,12 @@ export class MockAnalysisProvider implements AnalysisProvider {
       // mock mode.
       context: [],
       relevance: [],
+      // Milestone #62 Phase 2 — same honest-empty pattern as Phase 1's
+      // context/relevance: the mock never fabricates affected-party
+      // analysis, immediate-impact claims, or spillover reasoning.
+      affectedParties: [],
+      immediateImpacts: [],
+      spilloverImplications: [],
       agreements:
         top.length > 1
           ? [

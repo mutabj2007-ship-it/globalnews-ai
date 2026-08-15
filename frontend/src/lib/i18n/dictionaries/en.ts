@@ -34,6 +34,10 @@ export const en = {
     // Milestone #62 Phase 1.
     relevance: 'Why this matters',
     context: 'Background',
+    // Milestone #62 Phase 2.
+    affectedParties: 'Who is affected',
+    immediateImpacts: 'Immediate effects',
+    spilloverImplications: 'Wider implications',
     keyFacts: 'Key facts',
     whereSourcesAgree: 'Where sources agree',
     whereReportingDiffers: 'Where reporting differs',

@@ -1169,3 +1169,106 @@ describe('Milestone #62 Phase 1 — context/relevance validation', () => {
     expect(result.relevance).toEqual([]);
   });
 });
+
+describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverImplications validation', () => {
+  it('a candidate with no Phase 2 keys at all still validates successfully, defaulting all three to an empty array (backward compatibility)', () => {
+    const articles = [makeArticle()];
+    const result = validateAnalysisResult(validCandidate('S1'), context(articles));
+    expect(result.affectedParties).toEqual([]);
+    expect(result.immediateImpacts).toEqual([]);
+    expect(result.spilloverImplications).toEqual([]);
+  });
+
+  it('accepts a well-formed, grounded affectedParties entry with the exact party/partyType/effect shape', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      affectedParties: [
+        { party: 'Kenyan farmers', partyType: 'group', effect: 'Reduced crop yields', evidenceIds: ['S1'] },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.affectedParties).toHaveLength(1);
+    expect(result.affectedParties[0].party).toBe('Kenyan farmers');
+    expect(result.affectedParties[0].partyType).toBe('group');
+    expect(result.affectedParties[0].effect).toBe('Reduced crop yields');
+    expect(result.affectedParties[0].sourceArticleIds).toEqual(['article-1']);
+  });
+
+  it('drops an affectedParties entry with an invalid partyType, while a valid sibling survives', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      affectedParties: [
+        { party: 'Bad Co', partyType: 'not-a-real-type', effect: 'x', evidenceIds: ['S1'] },
+        { party: 'Farmers', partyType: 'group', effect: 'declining harvests', evidenceIds: ['S1'] },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.affectedParties).toHaveLength(1);
+    expect(result.affectedParties[0].party).toBe('Farmers');
+  });
+
+  it('drops an affectedParties entry with no valid evidenceIds', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      affectedParties: [{ party: 'X', partyType: 'other', effect: 'y', evidenceIds: [] }],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.affectedParties).toEqual([]);
+  });
+
+  it('caps affectedParties at 6, immediateImpacts at 4, and spilloverImplications at 4, keeping the first surviving entries', () => {
+    const articles = [makeArticle()];
+    const manyParties = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
+      party: `Party ${n}`,
+      partyType: 'other',
+      effect: 'effect',
+      evidenceIds: ['S1'],
+    }));
+    const manyImpacts = [1, 2, 3, 4, 5].map((n) => ({ claim: `Impact ${n}`, evidenceIds: ['S1'] }));
+    const manySpillover = [1, 2, 3, 4, 5].map((n) => ({ claim: `Spillover ${n}`, evidenceIds: ['S1'] }));
+    const candidate = {
+      ...validCandidate('S1'),
+      affectedParties: manyParties,
+      immediateImpacts: manyImpacts,
+      spilloverImplications: manySpillover,
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.affectedParties).toHaveLength(6);
+    expect(result.affectedParties[0].party).toBe('Party 1');
+    expect(result.immediateImpacts).toHaveLength(4);
+    expect(result.immediateImpacts[0].claim).toBe('Impact 1');
+    expect(result.spilloverImplications).toHaveLength(4);
+    expect(result.spilloverImplications[0].claim).toBe('Spillover 1');
+  });
+
+  it('accepts well-formed grounded immediateImpacts and spilloverImplications using the exact same SourcedClaim shape as context/relevance', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      immediateImpacts: [{ claim: 'Prices rose immediately', evidenceIds: ['S1'] }],
+      spilloverImplications: [{ claim: 'Regional trade affected', evidenceIds: ['S1'] }],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.immediateImpacts).toHaveLength(1);
+    expect(result.immediateImpacts[0].claim).toBe('Prices rose immediately');
+    expect(result.spilloverImplications).toHaveLength(1);
+    expect(result.spilloverImplications[0].claim).toBe('Regional trade affected');
+  });
+
+  it('Phase 1 context/relevance remain unaffected by the presence of Phase 2 fields on the same candidate', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      context: [{ claim: 'Background', evidenceIds: ['S1'] }],
+      relevance: [{ claim: 'Why it matters', evidenceIds: ['S1'] }],
+      affectedParties: [{ party: 'X', partyType: 'other', effect: 'y', evidenceIds: ['S1'] }],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.context).toHaveLength(1);
+    expect(result.relevance).toHaveLength(1);
+    expect(result.affectedParties).toHaveLength(1);
+  });
+});
