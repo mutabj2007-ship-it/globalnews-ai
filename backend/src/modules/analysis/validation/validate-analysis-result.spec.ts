@@ -1391,3 +1391,104 @@ describe('Milestone #62 Phase 3 — significance validation', () => {
     expect(result.significance?.level).toBe('minor');
   });
 });
+
+describe('Milestone #62 Phase 4 (final) — watchNext validation', () => {
+  it('a candidate with no watchNext key at all still validates successfully, defaulting to an empty array (backward compatibility)', () => {
+    const articles = [makeArticle()];
+    const result = validateAnalysisResult(validCandidate('S1'), context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it('accepts a well-formed, grounded watchNext entry using the exact same SourcedClaim shape as context/relevance/immediateImpacts/spilloverImplications', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [{ claim: 'Officials said a decision is expected Tuesday', evidenceIds: ['S1'] }],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toHaveLength(1);
+    expect(result.watchNext[0].claim).toBe('Officials said a decision is expected Tuesday');
+    expect(result.watchNext[0].sourceArticleIds).toEqual(['article-1']);
+  });
+
+  it('drops a watchNext entry with no valid evidenceIds, while a valid sibling survives', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        { claim: 'Ungrounded speculative item', evidenceIds: [] },
+        { claim: 'Negotiations scheduled to resume next week', evidenceIds: ['S1'] },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toHaveLength(1);
+    expect(result.watchNext[0].claim).toBe('Negotiations scheduled to resume next week');
+  });
+
+  it('evidenceBasis excerpt verification remains active for watchNext, identical to every other grounded field', () => {
+    const articles = [makeArticle({ id: 'real-article', title: 'Officials said a decision is expected Tuesday' })];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim: 'A decision is expected Tuesday',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext[0].evidenceBasis).toBeDefined();
+    expect(result.watchNext[0].evidenceBasis?.excerpt).toBe(articles[0].title);
+  });
+
+  it('caps watchNext at 4 surviving entries, keeping the first', () => {
+    const articles = [makeArticle()];
+    const manyItems = [1, 2, 3, 4, 5, 6].map((n) => ({ claim: `Item ${n}`, evidenceIds: ['S1'] }));
+    const candidate = { ...validCandidate('S1'), watchNext: manyItems };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toHaveLength(4);
+    expect(result.watchNext[0].claim).toBe('Item 1');
+  });
+
+  it('an empty watchNext array on the candidate validates cleanly to an empty array, not an error', () => {
+    const articles = [makeArticle()];
+    const candidate = { ...validCandidate('S1'), watchNext: [] };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it('Phase 1–3 fields (context, relevance, significance) remain present and unaffected by the presence of watchNext on the same candidate', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      context: [{ claim: 'Background', evidenceIds: ['S1'] }],
+      relevance: [{ claim: 'Why it matters', evidenceIds: ['S1'] }],
+      significance: {
+        level: 'moderate',
+        rationale: [{ claim: 'Documented financial magnitude', evidenceIds: ['S1'] }],
+      },
+      watchNext: [{ claim: 'A hearing is scheduled next month', evidenceIds: ['S1'] }],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.context).toHaveLength(1);
+    expect(result.relevance).toHaveLength(1);
+    expect(result.significance?.level).toBe('moderate');
+    expect(result.watchNext).toHaveLength(1);
+  });
+
+  it('watchNext never affects trustState or confidence — an ungrounded watchNext candidate does not change either', () => {
+    const articles = [makeArticle()];
+    const withoutWatchNext = validateAnalysisResult(validCandidate('S1'), context(articles));
+    const withWatchNext = validateAnalysisResult(
+      {
+        ...validCandidate('S1'),
+        watchNext: [{ claim: 'A vote is scheduled next week', evidenceIds: ['S1'] }],
+      },
+      context(articles),
+    );
+    expect(withWatchNext.trustState.level).toBe(withoutWatchNext.trustState.level);
+    expect(withWatchNext.trustState.reasons).toEqual(withoutWatchNext.trustState.reasons);
+    expect(withWatchNext.confidence).toEqual(withoutWatchNext.confidence);
+  });
+});

@@ -16,9 +16,9 @@ const source = readFileSync(join(__dirname, 'AnalysisResultView.tsx'), 'utf-8');
  *
  * Milestone #62 Phase 1 introduced context/relevance; Phase 2 added
  * affectedParties/immediateImpacts/spilloverImplications; Phase 3
- * (this update) adds significance, using the same
- * structural-verification approach throughout. watchNext remains out
- * of scope and this file does not reference it.
+ * added significance; Phase 4 (this update, the final M62 phase)
+ * adds watchNext, using the same structural-verification approach
+ * throughout.
  */
 describe('AnalysisResultView — relevance/context (M62 Phase 1)', () => {
   it('the relevance section is gated on analysis.relevance.length > 0 — no unconditional heading, no placeholder for the empty case', () => {
@@ -83,10 +83,6 @@ describe('AnalysisResultView — relevance/context (M62 Phase 1)', () => {
     expect(detailsIndex).toBeGreaterThan(trustBadgeIndex);
     expect(relevanceIndex).toBeGreaterThan(detailsIndex);
   });
-
-  it('does not reference watchNext — it remains out of scope through M62 Phase 3', () => {
-    expect(source).not.toMatch(/analysis\.watchNext/);
-  });
 });
 
 describe('AnalysisResultView — affectedParties/immediateImpacts/spilloverImplications (M62 Phase 2)', () => {
@@ -143,10 +139,6 @@ describe('AnalysisResultView — affectedParties/immediateImpacts/spilloverImpli
     expect(spilloverIndex).toBeGreaterThan(immediateIndex);
     expect(keyFactsCommentIndex).toBeGreaterThan(spilloverIndex);
   });
-
-  it('does not reference watchNext anywhere — it remains out of scope for this phase', () => {
-    expect(source).not.toMatch(/analysis\.watchNext/);
-  });
 });
 
 describe('AnalysisResultView — significance (M62 Phase 3)', () => {
@@ -191,5 +183,56 @@ describe('AnalysisResultView — significance (M62 Phase 3)', () => {
     expect(trustBadgeIndex).toBeGreaterThan(-1);
     expect(significanceIndex).toBeGreaterThan(trustBadgeIndex);
     expect(trustBadgeSnippet).not.toMatch(/significance/);
+  });
+});
+
+describe('AnalysisResultView — watchNext (M62 Phase 4, final)', () => {
+  it('the section is gated on .length > 0, matching every other array-shaped grounded-claim field, and renders no empty-state placeholder', () => {
+    expect(source).toMatch(/\{analysis\.watchNext\.length > 0 && \(/);
+    expect(source).not.toMatch(/No watchNext available/i);
+    expect(source).not.toMatch(/Nothing to watch/i);
+  });
+
+  it('reuses the exact same claim-rendering shape as every other grounded-claim section — no new visual subsystem', () => {
+    const gateIndex = source.indexOf('{analysis.watchNext.length > 0 && (');
+    const keyFactsCommentIndex = source.indexOf('{/* Key facts */}');
+    const block = source.slice(gateIndex, keyFactsCommentIndex);
+
+    expect(block).toMatch(/\{t\.watchNext\}/);
+    expect(block).toMatch(/analysis\.watchNext\.map\(\(item, index\) => \(/);
+    expect(block).toMatch(/\{item\.claim\}/);
+    expect(block).toMatch(
+      /<AnalysisCitation sourceArticleIds=\{item\.sourceArticleIds\} sources=\{analysis\.sources\} \/>/,
+    );
+    expect(block).toMatch(/<EvidenceSufficiencyNote/);
+  });
+
+  it('ordering: spilloverImplications closes, THEN watchNext, THEN key facts — matching the final approved interpretive sequence', () => {
+    const spilloverIndex = source.indexOf('{analysis.spilloverImplications.length > 0 && (');
+    const watchNextIndex = source.indexOf('{analysis.watchNext.length > 0 && (');
+    const keyFactsCommentIndex = source.indexOf('{/* Key facts */}');
+
+    expect(spilloverIndex).toBeGreaterThan(-1);
+    expect(watchNextIndex).toBeGreaterThan(spilloverIndex);
+    expect(keyFactsCommentIndex).toBeGreaterThan(watchNextIndex);
+  });
+
+  it('the full final interpretive ordering holds end to end: significance, relevance, context, affectedParties, immediateImpacts, spilloverImplications, watchNext, then key facts', () => {
+    const order = [
+      '{analysis.significance && (',
+      '{analysis.relevance.length > 0 && (',
+      '{analysis.context.length > 0 && (',
+      '{analysis.affectedParties.length > 0 && (',
+      '{analysis.immediateImpacts.length > 0 && (',
+      '{analysis.spilloverImplications.length > 0 && (',
+      '{analysis.watchNext.length > 0 && (',
+      '{/* Key facts */}',
+    ];
+    let lastIndex = -1;
+    for (const marker of order) {
+      const index = source.indexOf(marker);
+      expect(index).toBeGreaterThan(lastIndex);
+      lastIndex = index;
+    }
   });
 });

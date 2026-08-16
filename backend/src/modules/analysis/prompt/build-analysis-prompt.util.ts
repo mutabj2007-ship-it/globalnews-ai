@@ -222,6 +222,31 @@ Strict rules:
   null (the JSON null literal, not an object) when the supplied
   evidence does not support a defensible level judgment — never
   default to "minor" or guess.
+- For "watchNext": list up to 4 concrete forthcoming or unresolved
+  developments EXPLICITLY signalled by the supplied evidence — a
+  scheduled meeting, vote, hearing, or negotiation; an announced
+  decision expected on a stated date or timeframe; a pending official
+  action; an investigation or test whose results are explicitly said
+  to be forthcoming; a stated deadline; a pending court or regulatory
+  decision; an officially announced report/result/release; or an
+  unresolved process the evidence explicitly says will continue or
+  reach another stage. This is NOT forecasting. Do not include
+  something merely because it would be a plausible or interesting
+  thing to happen next — only because the supplied evidence itself
+  already names it as scheduled, announced, pending, expected by an
+  identified source or authority, forthcoming, or proceeding toward a
+  documented next step. A useful internal check: if the supplied
+  evidence disappeared, could you still plausibly invent this item
+  from general knowledge alone? If yes, it does not belong here. Do
+  NOT generate items like "the conflict may escalate" merely because
+  fighting is occurring, "markets could decline further" from your own
+  inference, or "the government may respond" unless the evidence
+  explicitly says a response is pending or expected — these are
+  exactly the kind of unsupported forecasting this field must never
+  contain. Each entry follows the exact same evidenceIds/evidenceBasis
+  rules as keyFacts. Return an empty array if the evidence does not
+  explicitly signal any forthcoming development — never infer likely
+  outcomes to fill this field.
 - For keyFacts, agreements, differences (each position), and timeline
   entries, you may optionally include "evidenceBasis": an object with
   "evidenceId" (one of the exact evidenceId values you already cited for
@@ -571,6 +596,8 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         spilloverImplications: { type: 'array', items: sourcedClaim },
         /** Milestone #62 Phase 3 — nullable object; see significanceSchema's own doc comment above. */
         significance: significanceSchema,
+        /** Milestone #62 Phase 4 (final) — reuses the exact sourcedClaim shape, no new schema family. */
+        watchNext: { type: 'array', items: sourcedClaim },
         agreements: {
           type: 'array',
           items: {
@@ -658,6 +685,7 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         'immediateImpacts',
         'spilloverImplications',
         'significance',
+        'watchNext',
         'agreements',
         'differences',
         'unknowns',

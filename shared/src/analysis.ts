@@ -531,6 +531,20 @@ export interface NewsAnalysisResult {
    * or confidence derivation, and never derived from either of them.
    */
   significance: Significance | null;
+
+  /**
+   * Milestone #62 Phase 4 (final M62 phase) — concrete forthcoming or
+   * unresolved developments EXPLICITLY signalled by the supplied
+   * evidence (a scheduled vote, an announced decision date, pending
+   * official action, a forthcoming report) — never a forecast, never
+   * inferred from general knowledge or dramatic source language. Uses
+   * the SAME SourcedClaim evidence-grounding model as context/
+   * relevance/immediateImpacts/spilloverImplications — no new type,
+   * since each item is a single self-contained idea. Always an array;
+   * empty means the evidence did not explicitly signal any
+   * forthcoming development — never filler. Capped at 4 entries.
+   */
+  watchNext: SourcedClaim[];
 }
 
 /**

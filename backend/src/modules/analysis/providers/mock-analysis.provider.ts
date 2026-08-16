@@ -144,6 +144,9 @@ export class MockAnalysisProvider implements AnalysisProvider {
       // Milestone #62 Phase 3 — mock mode never fabricates a severity
       // judgment. null, always.
       significance: null,
+      // Milestone #62 Phase 4 (final) — mock mode never fabricates
+      // forthcoming intelligence. [], always.
+      watchNext: [],
       agreements:
         top.length > 1
           ? [

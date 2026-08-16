@@ -624,6 +624,15 @@ export function validateAnalysisResult(
   // confidence self-assessment, per the explicit architectural
   // constraint.
   const significanceResult = validateSignificance(obj.significance, evidenceCtx);
+  // Milestone #62 Phase 4 (final M62 phase) — direct reuse of
+  // validateSourcedClaims, identical to context/relevance/
+  // immediateImpacts/spilloverImplications: no new evidence-validation
+  // mechanism, no keyword-based future-event detector. The validator's
+  // job here is grounding and shape only — whether an item is
+  // genuinely future-facing vs. inferred is a prompt/schema-contract
+  // concern, not something this function attempts to independently
+  // judge from prose.
+  const watchNextClaims = validateSourcedClaims(obj.watchNext ?? [], evidenceCtx, 'watchNext').slice(0, 4);
   const agreements = validateAgreements(obj.agreements, evidenceCtx);
   const differences = validateDifferences(obj.differences, evidenceCtx);
   const unknowns = isStringArray(obj.unknowns) ? obj.unknowns.filter(isNonEmptyString) : [];
@@ -687,6 +696,7 @@ export function validateAnalysisResult(
     immediateImpacts: immediateImpactsClaims,
     spilloverImplications: spilloverImplicationsClaims,
     significance: significanceResult,
+    watchNext: watchNextClaims,
     agreements,
     differences,
     unknowns,

@@ -319,6 +319,35 @@ export function AnalysisResultView({
         </section>
       )}
 
+      {/*
+        Milestone #62 Phase 4 (final M62 phase) — watchNext, positioned
+        after spilloverImplications and before Key facts, per the final
+        approved interpretive ordering. Reuses the exact same
+        claim-rendering shape as every other grounded-claim section —
+        no new visual subsystem. Renders nothing when empty.
+      */}
+      {analysis.watchNext.length > 0 && (
+        <section>
+          <SectionHeading>{t.watchNext}</SectionHeading>
+          <ul className="flex flex-col gap-3">
+            {analysis.watchNext.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-ink-primary"
+              >
+                {item.claim}
+                <AnalysisCitation sourceArticleIds={item.sourceArticleIds} sources={analysis.sources} />
+                <EvidenceSufficiencyNote
+                  evidenceBreadth={item.evidenceBreadth}
+                  evidenceBasis={item.evidenceBasis}
+                  language={language}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Key facts */}
       {analysis.keyFacts.length > 0 && (
         <section>

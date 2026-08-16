@@ -262,4 +262,17 @@ describe('MockAnalysisProvider', () => {
       expect(candidate.significance).toBeNull();
     });
   });
+
+  describe('Milestone #62 Phase 4 (final) — watchNext', () => {
+    it('always returns an empty watchNext array — mock mode never fabricates forthcoming intelligence', async () => {
+      const articles = [
+        makeArticle({ id: 'a1', title: 'Story A' }),
+        makeArticle({ id: 'a2', title: 'Story B' }),
+      ];
+      const candidate = (await provider.analyzeNews({ query: 'test', articles })) as {
+        watchNext: unknown[];
+      };
+      expect(candidate.watchNext).toEqual([]);
+    });
+  });
 });

@@ -48,6 +48,8 @@ export const pl: Dictionary = {
     significanceModerate: 'Umiarkowane',
     significanceMajor: 'Duże',
     significanceCritical: 'Krytyczne',
+    // Milestone #62 Phase 4 (final).
+    watchNext: 'Co obserwować dalej',
     keyFacts: 'Kluczowe fakty',
     whereSourcesAgree: 'W czym źródła się zgadzają',
     whereReportingDiffers: 'W czym doniesienia się różnią',

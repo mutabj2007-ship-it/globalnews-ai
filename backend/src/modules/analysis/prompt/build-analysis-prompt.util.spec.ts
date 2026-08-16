@@ -303,12 +303,6 @@ describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverIm
     );
     expect(normalizedSystem).toContain('never your own extrapolation of what might plausibly follow');
   });
-
-  it('does not reference watchNext anywhere — it remains out of scope through this phase', () => {
-    const { system } = buildAnalysisMessages('q', articles, 1200);
-    expect(system).not.toMatch(/"watchNext"/);
-    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/watchNext/);
-  });
 });
 
 describe('Milestone #62 Phase 3 — significance schema and prompt instructions', () => {
@@ -402,5 +396,96 @@ describe('Milestone #62 Phase 3 — significance schema and prompt instructions'
   it('the prompt limits rationale to 2 entries, enforced via prompt instruction, not an unverified schema keyword', () => {
     const { system } = buildAnalysisMessages('q', articles, 1200);
     expect(system).toMatch(/up to 2 grounded rationale entries/);
+  });
+});
+
+describe('Milestone #62 Phase 4 (final) — watchNext schema and prompt instructions', () => {
+  // Local fixture — same established per-describe-block pattern as
+  // every prior Milestone block in this file.
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Climate change reduces maize yields',
+      summary: 'Farmers report declining harvests.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  it('the structured-output schema includes watchNext as a required array property, reusing the exact same sourcedClaim shape as keyFacts — no new schema family', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: { properties: Record<string, unknown>; required: string[] };
+    };
+    const properties = schema.schema.properties;
+    expect(properties.watchNext).toEqual(properties.keyFacts);
+    expect(schema.schema.required).toContain('watchNext');
+  });
+
+  it('additionalProperties remains false at the top level', () => {
+    const schema = buildAnalysisJsonSchema() as { schema: { additionalProperties: boolean } };
+    expect(schema.schema.additionalProperties).toBe(false);
+  });
+
+  it('does not use an unverified maxItems JSON Schema keyword anywhere in the schema', () => {
+    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/maxItems/);
+  });
+
+  it('the prompt requests at most 4 watchNext items, evidence-bounded, with an explicit empty-array fallback', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    expect(system).toMatch(/"watchNext":.*up to 4/);
+    expect(system).toMatch(/Return an empty array if the evidence does not\s+explicitly signal any forthcoming development/);
+  });
+
+  it('the prompt explicitly prohibits unsupported forecasting, naming the exact prohibited example patterns', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain('This is NOT forecasting');
+    expect(normalizedSystem).toContain(
+      'if the supplied evidence disappeared, could you still plausibly invent this item from general knowledge alone',
+    );
+    expect(system).toMatch(/the conflict may escalate/);
+    expect(system).toMatch(/markets could decline further/);
+    expect(system).toMatch(/the government may respond/);
+  });
+
+  it('the prompt lists concrete positive categories — scheduled, announced, pending, expected by an identified authority, forthcoming, or a documented next step', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'scheduled, announced, pending, expected by an identified source or authority, forthcoming, or proceeding toward a documented next step',
+    );
+  });
+
+  it('does not introduce any post-M62 intelligence field beyond the four approved phases', () => {
+    const schema = buildAnalysisJsonSchema() as { schema: { properties: Record<string, unknown> } };
+    const knownFields = new Set([
+      'query',
+      'headline',
+      'summary',
+      'keyFacts',
+      'context',
+      'relevance',
+      'affectedParties',
+      'immediateImpacts',
+      'spilloverImplications',
+      'significance',
+      'watchNext',
+      'agreements',
+      'differences',
+      'unknowns',
+      'uncertainties',
+      'relationalEvidenceAssessments',
+      'timeline',
+      'confidence',
+      'entities',
+    ]);
+    for (const key of Object.keys(schema.schema.properties)) {
+      expect(knownFields.has(key)).toBe(true);
+    }
   });
 });

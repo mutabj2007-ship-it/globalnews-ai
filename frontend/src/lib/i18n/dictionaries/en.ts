@@ -44,6 +44,8 @@ export const en = {
     significanceModerate: 'Moderate',
     significanceMajor: 'Major',
     significanceCritical: 'Critical',
+    // Milestone #62 Phase 4 (final).
+    watchNext: 'What to watch next',
     keyFacts: 'Key facts',
     whereSourcesAgree: 'Where sources agree',
     whereReportingDiffers: 'Where reporting differs',
