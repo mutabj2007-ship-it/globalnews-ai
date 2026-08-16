@@ -387,6 +387,37 @@ export interface Significance {
 }
 
 /**
+ * Milestone #62 Phase 4, second hardening — the deliberately narrow,
+ * non-catch-all set of future-hinge categories a watchNext item must
+ * fit. No "other"/"unknown"/generic fallback value exists on purpose:
+ * if an item cannot truthfully fit one of these five categories, the
+ * model is instructed to omit it entirely rather than force-fit it.
+ */
+export type WatchNextHingeType =
+  | 'pending_response'
+  | 'scheduled_event'
+  | 'announced_action'
+  | 'deadline'
+  | 'forthcoming_report';
+
+/**
+ * Milestone #62 Phase 4, second hardening — like SourcedClaim, but
+ * with an added required hingeType categorizing which kind of future
+ * hinge the item represents. evidenceBasis stays optional at the TYPE
+ * level (matching SourcedClaim's own convention) but is enforced as
+ * effectively required by the validator for this field specifically
+ * — the same pattern already established in the first hardening
+ * round, unchanged here.
+ */
+export interface WatchNextItem {
+  claim: string;
+  hingeType: WatchNextHingeType;
+  sourceArticleIds: string[];
+  evidenceBreadth?: EvidenceBreadth;
+  evidenceBasis?: EvidenceBasis;
+}
+
+/**
  * The validated, structured result of analyzing a set of news articles.
  * Every keyFact/agreement/difference-position/timeline entry must cite
  * at least one sourceArticleId from `sources` — ungrounded entries are
@@ -535,16 +566,26 @@ export interface NewsAnalysisResult {
   /**
    * Milestone #62 Phase 4 (final M62 phase) — concrete forthcoming or
    * unresolved developments EXPLICITLY signalled by the supplied
-   * evidence (a scheduled vote, an announced decision date, pending
-   * official action, a forthcoming report) — never a forecast, never
-   * inferred from general knowledge or dramatic source language. Uses
-   * the SAME SourcedClaim evidence-grounding model as context/
-   * relevance/immediateImpacts/spilloverImplications — no new type,
-   * since each item is a single self-contained idea. Always an array;
-   * empty means the evidence did not explicitly signal any
-   * forthcoming development — never filler. Capped at 4 entries.
+   * evidence, each tagged with a narrow, deliberately non-catch-all
+   * hingeType (see WatchNextHingeType below). Always an array; empty
+   * means the evidence did not explicitly signal any forthcoming
+   * development that fits an approved category — never filler, and
+   * [] is preferred over an unsupported item. Capped at 4 entries.
+   *
+   * Second-hardening note (post-first-hardening runtime finding): the
+   * first hardening round required evidenceBasis to be present and
+   * M32-verified, which closes "no real excerpt at all" and
+   * "fabricated excerpt" — but a real excerpt can still describe an
+   * already-completed event ("Moscow hits infrastructure") cited in
+   * support of a forward-looking claim. Requiring a structured
+   * hingeType is a real, evidence-based compliance improvement (models
+   * follow explicit categorical commitments more reliably than free
+   * prose), but it is NOT a semantic proof that the claim/excerpt
+   * genuinely match the declared category — the validator can only
+   * check that hingeType is present and one of the five allowed
+   * values, never that the classification is truthful.
    */
-  watchNext: SourcedClaim[];
+  watchNext: WatchNextItem[];
 }
 
 /**

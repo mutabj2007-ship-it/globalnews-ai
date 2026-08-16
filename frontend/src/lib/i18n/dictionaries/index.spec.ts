@@ -22,6 +22,9 @@ describe('Milestone #47 (homepage integration) — hero dictionary', () => {
     expect(en.hero.inputAriaLabel).toBe('Ask GlobalNews AI a question');
     expect(en.hero.formAriaLabel).toBe('Ask GlobalNews AI');
     expect(en.hero.submitAriaLabel).toBe('Submit question');
+    // Query-limit correction — Hero.tsx's textarea character-limit
+    // message, shown when the 1000-character maximum is reached.
+    expect(en.hero.questionMaxLengthReached).toBe('Maximum question length reached');
     expect(en.hero.tryPrefix).toBe('Try:');
   });
 
@@ -33,6 +36,13 @@ describe('Milestone #47 (homepage integration) — hero dictionary', () => {
       expect(pl.hero[key].length).toBeGreaterThan(0);
       expect(pl.hero[key]).not.toBe(en.hero[key]);
     }
+  });
+
+  it('Query-limit correction — questionMaxLengthReached has the exact approved English and Polish text', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(en.hero.questionMaxLengthReached).toBe('Maximum question length reached');
+    expect(pl.hero.questionMaxLengthReached).toBe('Osiągnięto maksymalną długość pytania');
   });
 
   it('an unimplemented language falls back to the English hero dictionary, not an error or empty object', () => {

@@ -73,6 +73,9 @@ export const pl: Dictionary = {
     inputAriaLabel: 'Zadaj pytanie GlobalNews AI',
     formAriaLabel: 'Zapytaj GlobalNews AI',
     submitAriaLabel: 'Wyślij pytanie',
+    // Query-limit correction — Hero.tsx's textarea character-limit
+    // message, shown when the 1000-character maximum is reached.
+    questionMaxLengthReached: 'Osiągnięto maksymalną długość pytania',
     tryPrefix: 'Na przykład:',
     exampleQuestions: [
       'Co się teraz dzieje na Bliskim Wschodzie?',

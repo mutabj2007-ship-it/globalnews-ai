@@ -275,7 +275,11 @@ describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverIm
 
   it('the affectedParties schema item requires party/partyType/effect/evidenceIds/evidenceBasis and constrains partyType to the closed enum', () => {
     const schema = buildAnalysisJsonSchema() as {
-      schema: { properties: { affectedParties: { items: { properties: Record<string, unknown>; required: string[] } } } };
+      schema: {
+        properties: {
+          affectedParties: { items: { properties: Record<string, unknown>; required: string[] } };
+        };
+      };
     };
     const item = schema.schema.properties.affectedParties.items;
     expect(item.required).toEqual(
@@ -301,7 +305,9 @@ describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverIm
     expect(normalizedSystem).toContain(
       'Return an empty array if the evidence does not discuss any wider effect.',
     );
-    expect(normalizedSystem).toContain('never your own extrapolation of what might plausibly follow');
+    expect(normalizedSystem).toContain(
+      'never your own extrapolation of what might plausibly follow',
+    );
   });
 });
 
@@ -373,7 +379,9 @@ describe('Milestone #62 Phase 3 — significance schema and prompt instructions'
   it('the prompt explicitly prohibits inferring severity from dramatic language alone', () => {
     const { system } = buildAnalysisMessages('q', articles, 1200);
     const normalizedSystem = system.replace(/\s+/g, ' ');
-    expect(normalizedSystem).toContain('Do NOT infer severity merely because reporting uses dramatic language');
+    expect(normalizedSystem).toContain(
+      'Do NOT infer severity merely because reporting uses dramatic language',
+    );
     expect(system).toMatch(/crisis/);
     expect(system).toMatch(/catastrophic/);
   });
@@ -381,16 +389,24 @@ describe('Milestone #62 Phase 3 — significance schema and prompt instructions'
   it('the prompt gates "critical" behind either an explicit authoritative designation OR multiple independent high-severity indicators — never a single isolated signal', () => {
     const { system } = buildAnalysisMessages('q', articles, 1200);
     const normalizedSystem = system.replace(/\s+/g, ' ');
-    expect(normalizedSystem).toContain('an explicit authoritative designation of exceptional severity');
+    expect(normalizedSystem).toContain(
+      'an explicit authoritative designation of exceptional severity',
+    );
     expect(normalizedSystem).toContain('multiple independent objective high-severity indicators');
-    expect(normalizedSystem).toContain('one isolated signal is generally not enough to justify "critical"');
+    expect(normalizedSystem).toContain(
+      'one isolated signal is generally not enough to justify "critical"',
+    );
   });
 
   it('the prompt instructs choosing the lower defensible level when ambiguous, and returning the JSON null literal (never "minor" as a default) when unsupported', () => {
     const { system } = buildAnalysisMessages('q', articles, 1200);
     const normalizedSystem = system.replace(/\s+/g, ' ');
-    expect(normalizedSystem).toContain('When the evidence is ambiguous between two levels, choose the lower defensible level');
-    expect(normalizedSystem).toContain('Return "significance": null (the JSON null literal, not an object)');
+    expect(normalizedSystem).toContain(
+      'When the evidence is ambiguous between two levels, choose the lower defensible level',
+    );
+    expect(normalizedSystem).toContain(
+      'Return "significance": null (the JSON null literal, not an object)',
+    );
   });
 
   it('the prompt limits rationale to 2 entries, enforced via prompt instruction, not an unverified schema keyword', () => {
@@ -417,13 +433,40 @@ describe('Milestone #62 Phase 4 (final) — watchNext schema and prompt instruct
     },
   ];
 
-  it('the structured-output schema includes watchNext as a required array property, reusing the exact same sourcedClaim shape as keyFacts — no new schema family', () => {
+  it('the structured-output schema includes watchNext as a required array property, using a dedicated watchNextItem shape (second hardening) rather than the plain sourcedClaim shape keyFacts uses', () => {
     const schema = buildAnalysisJsonSchema() as {
-      schema: { properties: Record<string, unknown>; required: string[] };
+      schema: {
+        properties: {
+          watchNext: { items: { properties: Record<string, unknown>; required: string[] } };
+          keyFacts: unknown;
+        };
+        required: string[];
+      };
     };
     const properties = schema.schema.properties;
-    expect(properties.watchNext).toEqual(properties.keyFacts);
+    expect(properties.watchNext).not.toEqual(properties.keyFacts);
+    expect(properties.watchNext.items.required).toEqual(
+      expect.arrayContaining(['claim', 'hingeType', 'evidenceIds', 'evidenceBasis']),
+    );
     expect(schema.schema.required).toContain('watchNext');
+  });
+
+  it('the watchNext item schema constrains hingeType to exactly the five approved, non-catch-all values', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: {
+        properties: { watchNext: { items: { properties: { hingeType: { enum: string[] } } } } };
+      };
+    };
+    const hingeTypeEnum = schema.schema.properties.watchNext.items.properties.hingeType.enum;
+    expect(hingeTypeEnum).toEqual([
+      'pending_response',
+      'scheduled_event',
+      'announced_action',
+      'deadline',
+      'forthcoming_report',
+    ]);
+    expect(hingeTypeEnum).not.toContain('other');
+    expect(hingeTypeEnum).not.toContain('unknown');
   });
 
   it('additionalProperties remains false at the top level', () => {
@@ -437,8 +480,11 @@ describe('Milestone #62 Phase 4 (final) — watchNext schema and prompt instruct
 
   it('the prompt requests at most 4 watchNext items, evidence-bounded, with an explicit empty-array fallback', () => {
     const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
     expect(system).toMatch(/"watchNext":.*up to 4/);
-    expect(system).toMatch(/Return an empty array if the evidence does not\s+explicitly signal any forthcoming development/);
+    expect(normalizedSystem).toContain(
+      'Return an empty array if the evidence does not explicitly signal any forthcoming development',
+    );
   });
 
   it('the prompt explicitly prohibits unsupported forecasting, naming the exact prohibited example patterns', () => {
@@ -448,9 +494,9 @@ describe('Milestone #62 Phase 4 (final) — watchNext schema and prompt instruct
     expect(normalizedSystem).toContain(
       'if the supplied evidence disappeared, could you still plausibly invent this item from general knowledge alone',
     );
-    expect(system).toMatch(/the conflict may escalate/);
-    expect(system).toMatch(/markets could decline further/);
-    expect(system).toMatch(/the government may respond/);
+    expect(normalizedSystem).toContain('the conflict may escalate');
+    expect(normalizedSystem).toContain('markets could decline further');
+    expect(normalizedSystem).toContain('the government may respond');
   });
 
   it('the prompt lists concrete positive categories — scheduled, announced, pending, expected by an identified authority, forthcoming, or a documented next step', () => {
@@ -458,6 +504,31 @@ describe('Milestone #62 Phase 4 (final) — watchNext schema and prompt instruct
     const normalizedSystem = system.replace(/\s+/g, ' ');
     expect(normalizedSystem).toContain(
       'scheduled, announced, pending, expected by an identified source or authority, forthcoming, or proceeding toward a documented next step',
+    );
+  });
+
+  it('the prompt hardening: every watchNext item must correspond to a specific FUTURE HINGE explicitly present in the evidence, never a general possibility', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'Every watchNext item must correspond to a specific FUTURE HINGE explicitly present in the supplied evidence',
+    );
+    expect(normalizedSystem).toContain(
+      'a concrete scheduled, announced, pending, unresolved, deadline-based, or forthcoming-report/result development, never a general possibility',
+    );
+  });
+
+  it('the prompt hardening: evidenceBasis is REQUIRED (not optional) for watchNext specifically, and must identify the exact passage establishing the future hinge', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'For "watchNext" specifically (unlike keyFacts), "evidenceBasis" is REQUIRED, not optional',
+    );
+    expect(normalizedSystem).toContain(
+      'you must quote or closely identify the exact passage in the supplied evidence that establishes the future hinge itself',
+    );
+    expect(normalizedSystem).toContain(
+      'A watchNext item with citations but no evidenceBasis identifying the future hinge will be discarded',
     );
   });
 

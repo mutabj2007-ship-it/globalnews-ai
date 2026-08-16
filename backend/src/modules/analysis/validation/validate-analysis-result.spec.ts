@@ -1184,7 +1184,12 @@ describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverIm
     const candidate = {
       ...validCandidate('S1'),
       affectedParties: [
-        { party: 'Kenyan farmers', partyType: 'group', effect: 'Reduced crop yields', evidenceIds: ['S1'] },
+        {
+          party: 'Kenyan farmers',
+          partyType: 'group',
+          effect: 'Reduced crop yields',
+          evidenceIds: ['S1'],
+        },
       ],
     };
     const result = validateAnalysisResult(candidate, context(articles));
@@ -1228,7 +1233,10 @@ describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverIm
       evidenceIds: ['S1'],
     }));
     const manyImpacts = [1, 2, 3, 4, 5].map((n) => ({ claim: `Impact ${n}`, evidenceIds: ['S1'] }));
-    const manySpillover = [1, 2, 3, 4, 5].map((n) => ({ claim: `Spillover ${n}`, evidenceIds: ['S1'] }));
+    const manySpillover = [1, 2, 3, 4, 5].map((n) => ({
+      claim: `Spillover ${n}`,
+      evidenceIds: ['S1'],
+    }));
     const candidate = {
       ...validCandidate('S1'),
       affectedParties: manyParties,
@@ -1355,7 +1363,9 @@ describe('Milestone #62 Phase 3 — significance validation', () => {
       context(articles),
     );
     expect(withCriticalSignificance.trustState.level).toBe(withoutSignificance.trustState.level);
-    expect(withCriticalSignificance.trustState.reasons).toEqual(withoutSignificance.trustState.reasons);
+    expect(withCriticalSignificance.trustState.reasons).toEqual(
+      withoutSignificance.trustState.reasons,
+    );
   });
 
   it('significance never affects confidence — confidence is validated independently from the candidate\u2019s own confidence field, not derived from significance', () => {
@@ -1399,11 +1409,18 @@ describe('Milestone #62 Phase 4 (final) — watchNext validation', () => {
     expect(result.watchNext).toEqual([]);
   });
 
-  it('accepts a well-formed, grounded watchNext entry using the exact same SourcedClaim shape as context/relevance/immediateImpacts/spilloverImplications', () => {
-    const articles = [makeArticle()];
+  it('accepts a well-formed, grounded watchNext entry with a verified evidenceBasis, using the exact same SourcedClaim shape as context/relevance/immediateImpacts/spilloverImplications', () => {
+    const articles = [makeArticle({ title: 'Officials said a decision is expected Tuesday' })];
     const candidate = {
       ...validCandidate('S1'),
-      watchNext: [{ claim: 'Officials said a decision is expected Tuesday', evidenceIds: ['S1'] }],
+      watchNext: [
+        {
+          claim: 'Officials said a decision is expected Tuesday',
+          hingeType: 'scheduled_event',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
     };
     const result = validateAnalysisResult(candidate, context(articles));
     expect(result.watchNext).toHaveLength(1);
@@ -1411,13 +1428,18 @@ describe('Milestone #62 Phase 4 (final) — watchNext validation', () => {
     expect(result.watchNext[0].sourceArticleIds).toEqual(['article-1']);
   });
 
-  it('drops a watchNext entry with no valid evidenceIds, while a valid sibling survives', () => {
-    const articles = [makeArticle()];
+  it('drops a watchNext entry with no valid evidenceIds, while a valid grounded-and-evidenced sibling survives', () => {
+    const articles = [makeArticle({ title: 'Negotiations scheduled to resume next week' })];
     const candidate = {
       ...validCandidate('S1'),
       watchNext: [
         { claim: 'Ungrounded speculative item', evidenceIds: [] },
-        { claim: 'Negotiations scheduled to resume next week', evidenceIds: ['S1'] },
+        {
+          claim: 'Negotiations scheduled to resume next week',
+          hingeType: 'scheduled_event',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
       ],
     };
     const result = validateAnalysisResult(candidate, context(articles));
@@ -1426,12 +1448,15 @@ describe('Milestone #62 Phase 4 (final) — watchNext validation', () => {
   });
 
   it('evidenceBasis excerpt verification remains active for watchNext, identical to every other grounded field', () => {
-    const articles = [makeArticle({ id: 'real-article', title: 'Officials said a decision is expected Tuesday' })];
+    const articles = [
+      makeArticle({ id: 'real-article', title: 'Officials said a decision is expected Tuesday' }),
+    ];
     const candidate = {
       ...validCandidate('S1'),
       watchNext: [
         {
           claim: 'A decision is expected Tuesday',
+          hingeType: 'scheduled_event',
           evidenceIds: ['S1'],
           evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
         },
@@ -1442,9 +1467,14 @@ describe('Milestone #62 Phase 4 (final) — watchNext validation', () => {
     expect(result.watchNext[0].evidenceBasis?.excerpt).toBe(articles[0].title);
   });
 
-  it('caps watchNext at 4 surviving entries, keeping the first', () => {
-    const articles = [makeArticle()];
-    const manyItems = [1, 2, 3, 4, 5, 6].map((n) => ({ claim: `Item ${n}`, evidenceIds: ['S1'] }));
+  it('caps watchNext at 4 surviving entries, keeping the first — all with verified evidenceBasis', () => {
+    const articles = [makeArticle({ title: 'Item 1 Item 2 Item 3 Item 4 Item 5 Item 6' })];
+    const manyItems = [1, 2, 3, 4, 5, 6].map((n) => ({
+      claim: `Item ${n}`,
+      hingeType: 'scheduled_event',
+      evidenceIds: ['S1'],
+      evidenceBasis: { evidenceId: 'S1', excerpt: `Item ${n}` },
+    }));
     const candidate = { ...validCandidate('S1'), watchNext: manyItems };
     const result = validateAnalysisResult(candidate, context(articles));
     expect(result.watchNext).toHaveLength(4);
@@ -1458,7 +1488,323 @@ describe('Milestone #62 Phase 4 (final) — watchNext validation', () => {
     expect(result.watchNext).toEqual([]);
   });
 
-  it('Phase 1–3 fields (context, relevance, significance) remain present and unaffected by the presence of watchNext on the same candidate', () => {
+  it('Phase 1–3 fields (context, relevance, significance) remain present and unaffected by the presence of a properly-evidenced watchNext on the same candidate', () => {
+    const articles = [makeArticle({ title: 'A hearing is scheduled next month' })];
+    const candidate = {
+      ...validCandidate('S1'),
+      context: [{ claim: 'Background', evidenceIds: ['S1'] }],
+      relevance: [{ claim: 'Why it matters', evidenceIds: ['S1'] }],
+      significance: {
+        level: 'moderate',
+        rationale: [{ claim: 'Documented financial magnitude', evidenceIds: ['S1'] }],
+      },
+      watchNext: [
+        {
+          claim: 'A hearing is scheduled next month',
+          hingeType: 'scheduled_event',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.context).toHaveLength(1);
+    expect(result.relevance).toHaveLength(1);
+    expect(result.significance?.level).toBe('moderate');
+    expect(result.watchNext).toHaveLength(1);
+  });
+
+  it('watchNext never affects trustState or confidence — a properly-evidenced watchNext candidate does not change either', () => {
+    const articles = [makeArticle({ title: 'A vote is scheduled next week' })];
+    const withoutWatchNext = validateAnalysisResult(validCandidate('S1'), context(articles));
+    const withWatchNext = validateAnalysisResult(
+      {
+        ...validCandidate('S1'),
+        watchNext: [
+          {
+            claim: 'A vote is scheduled next week',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+          },
+        ],
+      },
+      context(articles),
+    );
+    expect(withWatchNext.trustState.level).toBe(withoutWatchNext.trustState.level);
+    expect(withWatchNext.trustState.reasons).toEqual(withoutWatchNext.trustState.reasons);
+    expect(withWatchNext.confidence).toEqual(withoutWatchNext.confidence);
+  });
+});
+
+describe('Milestone #62 Phase 4 hardening (round 1) — watchNext requires a verified evidenceBasis (post-M62 runtime finding)', () => {
+  it('drops a watchNext item that has valid sourceArticleIds but no evidenceBasis at all', () => {
+    const articles = [makeArticle({ title: 'Recent strikes have raised tensions' })];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim: 'Watch for potential escalations following recent strikes',
+          hingeType: 'pending_response',
+          evidenceIds: ['S1'],
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it("drops a watchNext item whose evidenceBasis excerpt cannot be verified against the cited article's actual text", () => {
+    const articles = [makeArticle({ title: 'Recent strikes have raised tensions' })];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim: 'Watch for potential escalations following recent strikes',
+          hingeType: 'pending_response',
+          evidenceIds: ['S1'],
+          evidenceBasis: {
+            evidenceId: 'S1',
+            excerpt: 'a fabricated quote never present in the article',
+          },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it('a valid item with a verified evidenceBasis and valid hingeType survives', () => {
+    const articles = [
+      makeArticle({ title: 'Russia has not yet responded to the proposed Black Sea truce' }),
+    ];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim: "Monitor Russia's response to the proposed Black Sea truce",
+          hingeType: 'pending_response',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toHaveLength(1);
+    expect(result.watchNext[0].claim).toBe(
+      "Monitor Russia's response to the proposed Black Sea truce",
+    );
+    expect(result.watchNext[0].evidenceBasis?.excerpt).toBe(articles[0].title);
+  });
+
+  it('one item without a verified evidenceBasis is dropped while a properly-evidenced, correctly-typed sibling survives', () => {
+    const articles = [
+      makeArticle({
+        id: 'article-1',
+        title: 'Russia has not yet responded to the proposed Black Sea truce',
+      }),
+    ];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim: 'Watch for potential escalations following recent strikes',
+          hingeType: 'pending_response',
+          evidenceIds: ['S1'],
+        },
+        {
+          claim: "Monitor Russia's response to the proposed Black Sea truce",
+          hingeType: 'pending_response',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toHaveLength(1);
+    expect(result.watchNext[0].claim).toBe(
+      "Monitor Russia's response to the proposed Black Sea truce",
+    );
+  });
+
+  it('a pre-hardening raw candidate with no watchNext key at all remains compatible, defaulting to an empty array', () => {
+    const articles = [makeArticle()];
+    const result = validateAnalysisResult(validCandidate('S1'), context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it('does not alter generic SourcedClaim validation for other fields — keyFacts without evidenceBasis still survive normally', () => {
+    const articles = [makeArticle()];
+    const candidate = {
+      ...validCandidate('S1'),
+      keyFacts: [{ claim: 'A plain grounded fact with no evidenceBasis', evidenceIds: ['S1'] }],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.keyFacts).toHaveLength(1);
+    expect(result.keyFacts[0].evidenceBasis).toBeUndefined();
+  });
+});
+
+describe('Milestone #62 Phase 4 hardening (round 2) — watchNext requires a narrow, non-catch-all hingeType (post-round-1 runtime finding)', () => {
+  it('reproduces the exact reported failure: a real, verified evidenceBasis describing an ALREADY-COMPLETED event, with no hingeType, is dropped', () => {
+    const articles = [makeArticle({ title: 'Moscow hits infrastructure.' })];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim:
+            "Monitoring Russia's response to Ukraine's military strikes and any potential escalation in conflict.",
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: 'Moscow hits infrastructure.' },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it('a valid allowed hingeType (pending_response) with verified evidenceBasis survives', () => {
+    const articles = [
+      makeArticle({
+        title:
+          'The response from Russia regarding the proposed Black Sea shipping truce is still pending.',
+      }),
+    ];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim:
+            'The response from Russia regarding the proposed Black Sea shipping truce is still pending.',
+          hingeType: 'pending_response',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toHaveLength(1);
+    expect(result.watchNext[0].hingeType).toBe('pending_response');
+  });
+
+  it('each of the other four allowed hingeType values individually survives when properly evidenced', () => {
+    const types = ['scheduled_event', 'announced_action', 'deadline', 'forthcoming_report'];
+    for (const hingeType of types) {
+      const articles = [makeArticle({ title: `A concrete development for ${hingeType}` })];
+      const candidate = {
+        ...validCandidate('S1'),
+        watchNext: [
+          {
+            claim: `Claim for ${hingeType}`,
+            hingeType,
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+          },
+        ],
+      };
+      const result = validateAnalysisResult(candidate, context(articles));
+      expect(result.watchNext).toHaveLength(1);
+      expect(result.watchNext[0].hingeType).toBe(hingeType);
+    }
+  });
+
+  it('missing hingeType is rejected, even with a valid, verified evidenceBasis', () => {
+    const articles = [makeArticle({ title: 'A hearing is scheduled next month' })];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim: 'A hearing is scheduled next month',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it('an invalid/catch-all hingeType ("other") is rejected — there is no fallback category', () => {
+    const articles = [makeArticle({ title: 'A hearing is scheduled next month' })];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim: 'A hearing is scheduled next month',
+          hingeType: 'other',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it('an "unknown" hingeType is likewise rejected', () => {
+    const articles = [makeArticle({ title: 'A hearing is scheduled next month' })];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim: 'A hearing is scheduled next month',
+          hingeType: 'unknown',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it('missing evidenceBasis is rejected even with a valid hingeType', () => {
+    const articles = [makeArticle({ title: 'A hearing is scheduled next month' })];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim: 'A hearing is scheduled next month',
+          hingeType: 'scheduled_event',
+          evidenceIds: ['S1'],
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toEqual([]);
+  });
+
+  it('one item with an invalid hingeType is dropped while a properly-typed, evidenced sibling survives', () => {
+    const articles = [
+      makeArticle({
+        id: 'article-1',
+        title:
+          'The response from Russia regarding the proposed Black Sea shipping truce is still pending.',
+      }),
+    ];
+    const candidate = {
+      ...validCandidate('S1'),
+      watchNext: [
+        {
+          claim:
+            "Monitoring Russia's response to Ukraine's military strikes and any potential escalation in conflict.",
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: 'Moscow hits infrastructure.' },
+        },
+        {
+          claim:
+            'The response from Russia regarding the proposed Black Sea shipping truce is still pending.',
+          hingeType: 'pending_response',
+          evidenceIds: ['S1'],
+          evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+        },
+      ],
+    };
+    const result = validateAnalysisResult(candidate, context(articles));
+    expect(result.watchNext).toHaveLength(1);
+    expect(result.watchNext[0].hingeType).toBe('pending_response');
+  });
+
+  it('existing unrelated analysis fields (context, relevance, significance, keyFacts) remain unaffected by the watchNext hingeType requirement', () => {
     const articles = [makeArticle()];
     const candidate = {
       ...validCandidate('S1'),
@@ -1468,27 +1814,41 @@ describe('Milestone #62 Phase 4 (final) — watchNext validation', () => {
         level: 'moderate',
         rationale: [{ claim: 'Documented financial magnitude', evidenceIds: ['S1'] }],
       },
-      watchNext: [{ claim: 'A hearing is scheduled next month', evidenceIds: ['S1'] }],
+      keyFacts: [{ claim: 'A plain fact', evidenceIds: ['S1'] }],
+      watchNext: [{ claim: 'Missing hingeType, should be dropped', evidenceIds: ['S1'] }],
     };
     const result = validateAnalysisResult(candidate, context(articles));
     expect(result.context).toHaveLength(1);
     expect(result.relevance).toHaveLength(1);
     expect(result.significance?.level).toBe('moderate');
-    expect(result.watchNext).toHaveLength(1);
+    expect(result.keyFacts).toHaveLength(1);
+    expect(result.watchNext).toEqual([]);
   });
 
-  it('watchNext never affects trustState or confidence — an ungrounded watchNext candidate does not change either', () => {
-    const articles = [makeArticle()];
+  it('watchNext hingeType requirement never affects trustState or confidence', () => {
+    const articles = [
+      makeArticle({
+        title:
+          'The response from Russia regarding the proposed Black Sea shipping truce is still pending.',
+      }),
+    ];
     const withoutWatchNext = validateAnalysisResult(validCandidate('S1'), context(articles));
     const withWatchNext = validateAnalysisResult(
       {
         ...validCandidate('S1'),
-        watchNext: [{ claim: 'A vote is scheduled next week', evidenceIds: ['S1'] }],
+        watchNext: [
+          {
+            claim:
+              'The response from Russia regarding the proposed Black Sea shipping truce is still pending.',
+            hingeType: 'pending_response',
+            evidenceIds: ['S1'],
+            evidenceBasis: { evidenceId: 'S1', excerpt: articles[0].title },
+          },
+        ],
       },
       context(articles),
     );
     expect(withWatchNext.trustState.level).toBe(withoutWatchNext.trustState.level);
-    expect(withWatchNext.trustState.reasons).toEqual(withoutWatchNext.trustState.reasons);
     expect(withWatchNext.confidence).toEqual(withoutWatchNext.confidence);
   });
 });

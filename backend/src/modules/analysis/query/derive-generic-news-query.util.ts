@@ -223,3 +223,59 @@ export function deriveFallbackNewsQuery(primaryDerivedQuery: string): string | u
 
   return significant.join(' ');
 }
+
+/**
+ * Query-limit correction — the intended provider-safe length target
+ * for a GNews `q` search phrase. Kept below GNews's own documented
+ * 200-code-point hard maximum (see GNewsProvider.search()'s own
+ * unconditional backstop) so this reduction step has a genuine chance
+ * of avoiding that backstop for realistic long questions, rather than
+ * aiming exactly at the boundary.
+ */
+const PROVIDER_TARGET_MAX_LENGTH = 180;
+
+/**
+ * Query-limit correction (wiring revision) — a pure, narrow
+ * provider-safety step. Deliberately does NOT call
+ * deriveGenericNewsQuery() itself — it accepts an ALREADY-DERIVED
+ * retrieval query (the caller's job, e.g. AnalysisService, is to
+ * derive first, then pass that specific string here) and applies
+ * length-safety only.
+ *
+ * This shape exists specifically so it can be applied independently
+ * to BOTH of AnalysisService's existing generic-retrieval call sites
+ * — the primary derived query AND the M46 zero-result fallback query
+ * — without re-deriving from the raw user question each time, which
+ * would otherwise let the M46 retry silently become identical to the
+ * primary attempt whenever the primary needed length-reduction (see
+ * this function's own call sites in analysis.service.ts for the
+ * redundancy guard that also depends on this narrow contract).
+ *
+ * If the input already fits PROVIDER_TARGET_MAX_LENGTH, it is
+ * returned completely unchanged. Otherwise this reuses the EXISTING
+ * deriveFallbackNewsQuery() — its stopword-stripping structurally
+ * tends to leave proper nouns and topical terms (geography,
+ * organizations, named entities) behind, since those were never in
+ * the stopword set to begin with. This is a genuine SEMANTIC
+ * reduction, not a blind truncation.
+ *
+ * If that reduction still isn't short enough (or
+ * deriveFallbackNewsQuery() returns undefined because stripping
+ * wouldn't help), the longer input is still returned here —
+ * GNewsProvider.search()'s own unconditional, Unicode-safe ≤200
+ * backstop remains the final, independent guarantee regardless of
+ * what this function produces. This function's job is to make that
+ * backstop rarely necessary, not to replace it.
+ */
+export function makeProviderSafeNewsQuery(derivedQuery: string): string {
+  if (derivedQuery.length <= PROVIDER_TARGET_MAX_LENGTH) {
+    return derivedQuery;
+  }
+
+  const reduced = deriveFallbackNewsQuery(derivedQuery);
+  if (reduced && reduced.length < derivedQuery.length) {
+    return reduced;
+  }
+
+  return derivedQuery;
+}

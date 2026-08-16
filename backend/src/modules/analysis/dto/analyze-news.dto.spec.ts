@@ -22,8 +22,25 @@ describe('AnalyzeNewsDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('rejects an excessively long query', async () => {
-    const dto = plainToInstance(AnalyzeNewsDto, { query: 'a'.repeat(500) });
+  it('accepts a question comfortably above the old 300-character limit but at or below the new 1000-character limit — the whole reason this milestone raised the limit', async () => {
+    const question = 'Give me a comprehensive analysis of recent developments. '
+      .repeat(10)
+      .slice(0, 600);
+    expect(question.length).toBeGreaterThan(300);
+    expect(question.length).toBeLessThanOrEqual(1000);
+    const dto = plainToInstance(AnalyzeNewsDto, { query: question });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('accepts a query of exactly 1000 characters', async () => {
+    const dto = plainToInstance(AnalyzeNewsDto, { query: 'a'.repeat(1000) });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('rejects a query of 1001 characters', async () => {
+    const dto = plainToInstance(AnalyzeNewsDto, { query: 'a'.repeat(1001) });
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
   });
@@ -94,9 +111,11 @@ describe('AnalyzeNewsDto', () => {
 
     it('query + a full valid storyContext validates successfully', async () => {
       const dto = plainToInstance(AnalyzeNewsDto, {
-        query: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+        query:
+          'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
         storyContext: {
-          title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+          title:
+            'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
           articleId: 'abc123',
           url: 'https://example.com/rwanda-migrant-hub',
           sourceName: 'Example Wire',

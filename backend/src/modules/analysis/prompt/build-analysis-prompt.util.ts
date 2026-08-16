@@ -235,18 +235,57 @@ Strict rules:
   thing to happen next — only because the supplied evidence itself
   already names it as scheduled, announced, pending, expected by an
   identified source or authority, forthcoming, or proceeding toward a
-  documented next step. A useful internal check: if the supplied
-  evidence disappeared, could you still plausibly invent this item
-  from general knowledge alone? If yes, it does not belong here. Do
-  NOT generate items like "the conflict may escalate" merely because
-  fighting is occurring, "markets could decline further" from your own
-  inference, or "the government may respond" unless the evidence
-  explicitly says a response is pending or expected — these are
-  exactly the kind of unsupported forecasting this field must never
-  contain. Each entry follows the exact same evidenceIds/evidenceBasis
-  rules as keyFacts. Return an empty array if the evidence does not
-  explicitly signal any forthcoming development — never infer likely
-  outcomes to fill this field.
+  documented next step. Every watchNext item must correspond to a
+  specific FUTURE HINGE explicitly present in the supplied evidence —
+  a concrete scheduled, announced, pending, unresolved, deadline-based,
+  or forthcoming-report/result development, never a general possibility.
+  A useful internal check: if the supplied evidence disappeared, could
+  you still plausibly invent this item from general knowledge alone?
+  If yes, it does not belong here. Do NOT generate items like "the
+  conflict may escalate" merely because fighting is occurring, "markets
+  could decline further" from your own inference, or "the government
+  may respond" unless the evidence explicitly says a response is
+  pending or expected — these are exactly the kind of unsupported
+  forecasting this field must never contain. Critically, a real,
+  verbatim excerpt from the evidence is NOT sufficient on its own: the
+  excerpt must itself describe the FUTURE hinge, not merely be real
+  text about the topic. An excerpt describing something that ALREADY
+  HAPPENED (a completed strike, an event already reported as having
+  occurred) does NOT establish a future hinge, even if you cite it
+  accurately and even if the surrounding claim sounds forward-looking.
+  For example, an excerpt stating that a strike on infrastructure
+  already occurred does not support a claim like "monitor potential
+  escalation" — that is a completed event repackaged as something to
+  watch, not a genuine future hinge, and must be omitted. By contrast,
+  an excerpt stating that a named party's response to a specific
+  proposed action REMAINS PENDING is a genuine future hinge and IS
+  valid. Do NOT include: a completed event merely repackaged as
+  something to monitor; a generic escalation possibility; a generic
+  risk or consequence; a prediction inferred merely because fighting or
+  another event is occurring; or any claim whose evidenceBasis only
+  establishes a past or already-completed event rather than an
+  explicitly pending or forthcoming one. Every watchNext item must also
+  include "hingeType", one of exactly: "pending_response" (a named
+  party's response to a specific proposed action or event remains
+  pending), "scheduled_event" (a meeting, vote, hearing, or negotiation
+  with a stated or implied date), "announced_action" (an official
+  action or decision that has been announced but not yet taken),
+  "deadline" (a stated deadline the evidence identifies), or
+  "forthcoming_report" (an investigation, test, or report whose result
+  is explicitly said to be forthcoming). There is no "other" or
+  "unknown" category — if an item does not truthfully fit one of these
+  five, OMIT IT from watchNext rather than forcing it into the nearest
+  category. watchNext: [] is valid and preferable to including an
+  unsupported or mischaracterized item. For "watchNext" specifically
+  (unlike keyFacts), "evidenceBasis" is REQUIRED, not optional: you
+  must quote or closely identify the exact passage in the supplied
+  evidence that establishes the future hinge itself — the specific
+  words that show the development is scheduled, announced, pending, or
+  otherwise explicitly forthcoming, not merely related to the topic. A
+  watchNext item with citations but no evidenceBasis identifying the
+  future hinge will be discarded. Return an empty array if the evidence
+  does not explicitly signal any forthcoming development — never infer
+  likely outcomes to fill this field.
 - For keyFacts, agreements, differences (each position), and timeline
   entries, you may optionally include "evidenceBasis": an object with
   "evidenceId" (one of the exact evidenceId values you already cited for
@@ -535,6 +574,36 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
   };
 
   /**
+   * Milestone #62 Phase 4, second hardening — deliberately narrow,
+   * non-catch-all hingeType enum. No "other"/"unknown" value exists on
+   * purpose — an item that doesn't truthfully fit one of these five
+   * categories must be omitted from watchNext entirely, never
+   * force-fit. evidenceBasis remains nullable at the schema level
+   * (same strict-mode convention as elsewhere), but the runtime
+   * validator enforces it as effectively required for this field.
+   */
+  const watchNextItem = {
+    type: 'object',
+    properties: {
+      claim: { type: 'string' },
+      hingeType: {
+        type: 'string',
+        enum: [
+          'pending_response',
+          'scheduled_event',
+          'announced_action',
+          'deadline',
+          'forthcoming_report',
+        ],
+      },
+      evidenceIds: { type: 'array', items: { type: 'string' } },
+      evidenceBasis: evidenceBasisSchema,
+    },
+    required: ['claim', 'hingeType', 'evidenceIds', 'evidenceBasis'],
+    additionalProperties: false,
+  };
+
+  /**
    * Milestone #62 Phase 3 — nullable object, following the exact same
    * strict-mode convention as evidenceBasisSchema above: under
    * `strict: true`/`additionalProperties: false` the schema cannot
@@ -597,7 +666,7 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
         /** Milestone #62 Phase 3 — nullable object; see significanceSchema's own doc comment above. */
         significance: significanceSchema,
         /** Milestone #62 Phase 4 (final) — reuses the exact sourcedClaim shape, no new schema family. */
-        watchNext: { type: 'array', items: sourcedClaim },
+        watchNext: { type: 'array', items: watchNextItem },
         agreements: {
           type: 'array',
           items: {

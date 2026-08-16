@@ -1,4 +1,8 @@
-import { deriveGenericNewsQuery, deriveFallbackNewsQuery } from './derive-generic-news-query.util';
+import {
+  deriveGenericNewsQuery,
+  deriveFallbackNewsQuery,
+  makeProviderSafeNewsQuery,
+} from './derive-generic-news-query.util';
 
 describe('deriveGenericNewsQuery (Milestone #35)', () => {
   it('"What\'s happening in the Middle East?" -> "Middle East"', () => {
@@ -173,5 +177,66 @@ describe('deriveGenericNewsQuery (Milestone #35)', () => {
       const input = 'What is the impact of new tariffs on global trade';
       expect(deriveFallbackNewsQuery(input)).toBe(deriveFallbackNewsQuery(input));
     });
+  });
+});
+
+describe('makeProviderSafeNewsQuery (query-limit correction, wiring revision)', () => {
+  it('leaves a short, already-provider-safe derived query completely unchanged', () => {
+    const derived = deriveGenericNewsQuery("What's happening in Ceuta?");
+    expect(makeProviderSafeNewsQuery(derived)).toBe(derived);
+  });
+
+  it('reduces a long derived query using the existing deriveFallbackNewsQuery() reduction, not a new duplicate system', () => {
+    const longMatched =
+      "What's happening with the extremely complicated and multifaceted ongoing situation regarding trade tensions between the United States, European Union, and several major Southeast Asian economies over semiconductor export restrictions and technology transfer policies";
+    const derived = deriveGenericNewsQuery(longMatched);
+    expect(derived.length).toBeGreaterThan(180);
+
+    const result = makeProviderSafeNewsQuery(derived);
+    const expectedFallback = deriveFallbackNewsQuery(derived);
+    expect(result).toBe(expectedFallback);
+    expect(result.length).toBeLessThan(derived.length);
+  });
+
+  it('reduces a long derived query from a genuine multi-clause analytical question (no pattern matched upstream, so the derived input is nearly the full sentence)', () => {
+    const rwanda =
+      'Give me a comprehensive analysis of the current situation in Rwanda. Cover the most important recent political, economic, security, diplomatic, social, infrastructure, technology and regional developments affecting the country. Explain what has actually happened, identify the main actors involved, show where the available sources agree or differ, distinguish well-established facts from uncertain or incomplete information, explain why the developments matter for Rwanda and the wider Great Lakes and East African region, and identify any concrete upcoming decisions, scheduled events, pending negotiations, announced government actions, deadlines, reports, diplomatic processes or other evidence-backed developments that are genuinely worth watching next.';
+    const derived = deriveGenericNewsQuery(rwanda);
+    const result = makeProviderSafeNewsQuery(derived);
+    expect(result.length).toBeLessThan(derived.length);
+  });
+
+  it('retains meaningful geography/entity/topic terms through reduction — Rwanda survives, even though the reducer alone cannot bring this specific question under the GNews 200-character threshold (that guarantee is GNewsProvider.search()\u2019s own unconditional backstop, not this function\u2019s job)', () => {
+    const rwanda =
+      'Give me a comprehensive analysis of the current situation in Rwanda. Cover the most important recent political, economic, security, diplomatic, social, infrastructure, technology and regional developments affecting the country. Explain what has actually happened, identify the main actors involved, show where the available sources agree or differ, distinguish well-established facts from uncertain or incomplete information, explain why the developments matter for Rwanda and the wider Great Lakes and East African region, and identify any concrete upcoming decisions, scheduled events, pending negotiations, announced government actions, deadlines, reports, diplomatic processes or other evidence-backed developments that are genuinely worth watching next.';
+    const derived = deriveGenericNewsQuery(rwanda);
+    const result = makeProviderSafeNewsQuery(derived);
+    expect(result).toContain('Rwanda');
+  });
+
+  it('the Ukraine acceptance question retains Russia/Ukraine and its derived query is already short enough to reach the GNews threshold unaided', () => {
+    const ukraine =
+      'What is the latest situation in the Russia-Ukraine war, what are the most important recent developments, and what should we watch for next?';
+    const derived = deriveGenericNewsQuery(ukraine);
+    const result = makeProviderSafeNewsQuery(derived);
+    expect(result).toMatch(/Russia|Ukraine/);
+    expect(result.length).toBeLessThanOrEqual(200);
+  });
+
+  it('never returns a result longer than its own input', () => {
+    const derived = deriveGenericNewsQuery(
+      'What is the impact of new tariffs on global trade for the ongoing multilateral negotiations',
+    );
+    expect(makeProviderSafeNewsQuery(derived).length).toBeLessThanOrEqual(derived.length);
+  });
+
+  it('does NOT itself call deriveGenericNewsQuery — passing an already-short string through unaffected, even one that would look nothing like a fresh derivation', () => {
+    const alreadyDerived = 'NATO summit Brussels';
+    expect(makeProviderSafeNewsQuery(alreadyDerived)).toBe(alreadyDerived);
+  });
+
+  it('is a pure, deterministic function', () => {
+    const derived = deriveGenericNewsQuery('What is the impact of new tariffs on global trade');
+    expect(makeProviderSafeNewsQuery(derived)).toBe(makeProviderSafeNewsQuery(derived));
   });
 });

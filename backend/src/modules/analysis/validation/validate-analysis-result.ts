@@ -18,6 +18,7 @@ import type {
   SourcedClaim,
   TimelineEvent,
   UncertaintyItem,
+  WatchNextItem,
 } from '@globalnews-ai/shared';
 import {
   buildEvidenceReferences,
@@ -222,7 +223,8 @@ function validateAffectedParties(candidate: unknown, ctx: EvidenceContext): Affe
     const obj = requireObject(entry, 'affectedParties');
     if (!isNonEmptyString(obj.party)) continue;
     if (!isNonEmptyString(obj.effect)) continue;
-    if (typeof obj.partyType !== 'string' || !VALID_AFFECTED_PARTY_TYPES.has(obj.partyType)) continue;
+    if (typeof obj.partyType !== 'string' || !VALID_AFFECTED_PARTY_TYPES.has(obj.partyType))
+      continue;
     const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, ctx.evidenceMap);
     // Same grounding discipline as every other field — zero valid
     // supporting sources means this is not a grounded claim.
@@ -240,6 +242,63 @@ function validateAffectedParties(candidate: unknown, ctx: EvidenceContext): Affe
       sourceArticleIds,
       evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
       ...(evidenceBasis ? { evidenceBasis } : {}),
+    });
+  }
+  return result;
+}
+
+const VALID_WATCHNEXT_HINGE_TYPES = new Set([
+  'pending_response',
+  'scheduled_event',
+  'announced_action',
+  'deadline',
+  'forthcoming_report',
+]);
+
+/**
+ * Milestone #62 Phase 4, second hardening — dedicated helper for
+ * watchNext, mirroring validateAffectedParties's own structure. Two
+ * deterministic checks beyond generic SourcedClaim validation, both
+ * purely structural (never a semantic/keyword judgment on the claim
+ * text itself): hingeType must be present and one of the five narrow,
+ * non-catch-all approved values (dropped otherwise — no coercion, no
+ * default category); evidenceBasis must be present AND successfully
+ * M32-verified (dropped otherwise — same requirement the first
+ * hardening round established, unchanged here). This does NOT and
+ * cannot prove the hingeType classification is truthful, nor that the
+ * excerpt genuinely establishes a future (vs. completed) event — that
+ * remains a prompt-level responsibility. See the doc comment on
+ * WatchNextItem in shared/src/analysis.ts for the full reasoning.
+ */
+function validateWatchNextItems(candidate: unknown, ctx: EvidenceContext): WatchNextItem[] {
+  if (!Array.isArray(candidate)) {
+    throw new AnalysisValidationError('Expected "watchNext" to be an array.');
+  }
+
+  const result: WatchNextItem[] = [];
+  for (const entry of candidate) {
+    const obj = requireObject(entry, 'watchNext');
+    if (!isNonEmptyString(obj.claim)) continue;
+    if (typeof obj.hingeType !== 'string' || !VALID_WATCHNEXT_HINGE_TYPES.has(obj.hingeType))
+      continue;
+    const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, ctx.evidenceMap);
+    if (sourceArticleIds.length === 0) continue;
+    const evidenceBasis = resolveEvidenceBasis(
+      obj.evidenceBasis,
+      ctx.evidenceMap,
+      ctx.evidenceTextMap,
+      sourceArticleIds,
+    );
+    // Required, not optional, for watchNext specifically — an item
+    // without a successfully verified evidenceBasis is dropped
+    // entirely, matching the first hardening round's requirement.
+    if (!evidenceBasis) continue;
+    result.push({
+      claim: obj.claim,
+      hingeType: obj.hingeType as WatchNextItem['hingeType'],
+      sourceArticleIds,
+      evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
+      evidenceBasis,
     });
   }
   return result;
@@ -269,7 +328,10 @@ function validateSignificance(candidate: unknown, ctx: EvidenceContext): Signifi
   if (candidate === null || candidate === undefined) return null;
   const obj = requireObject(candidate, 'significance');
   if (typeof obj.level !== 'string' || !VALID_SIGNIFICANCE_LEVELS.has(obj.level)) return null;
-  const rationale = validateSourcedClaims(obj.rationale ?? [], ctx, 'significance.rationale').slice(0, 2);
+  const rationale = validateSourcedClaims(obj.rationale ?? [], ctx, 'significance.rationale').slice(
+    0,
+    2,
+  );
   // A level with no surviving grounded rationale is not a defensible
   // judgment — drop the whole field rather than present an
   // unsupported severity claim.
@@ -605,7 +667,10 @@ export function validateAnalysisResult(
   // as Phase 1's context/relevance, for the identical reason: pre-M62-
   // Phase-2 raw candidate fixtures/payloads that never declared these
   // keys continue to validate safely rather than throwing.
-  const affectedPartiesResult = validateAffectedParties(obj.affectedParties ?? [], evidenceCtx).slice(0, 6);
+  const affectedPartiesResult = validateAffectedParties(
+    obj.affectedParties ?? [],
+    evidenceCtx,
+  ).slice(0, 6);
   const immediateImpactsClaims = validateSourcedClaims(
     obj.immediateImpacts ?? [],
     evidenceCtx,
@@ -632,7 +697,15 @@ export function validateAnalysisResult(
   // genuinely future-facing vs. inferred is a prompt/schema-contract
   // concern, not something this function attempts to independently
   // judge from prose.
-  const watchNextClaims = validateSourcedClaims(obj.watchNext ?? [], evidenceCtx, 'watchNext').slice(0, 4);
+  // Second hardening (post-first-hardening runtime finding): a real
+  // excerpt can still describe an already-completed event cited in
+  // support of a forward-looking claim. validateWatchNextItems adds a
+  // required, narrow, non-catch-all hingeType (purely structural —
+  // presence + allowed enum value only, never a semantic judgment of
+  // whether the classification is truthful) on top of the required
+  // M32-verified evidenceBasis. See validateWatchNextItems's own doc
+  // comment for the full reasoning and its acknowledged limits.
+  const watchNextClaims = validateWatchNextItems(obj.watchNext ?? [], evidenceCtx).slice(0, 4);
   const agreements = validateAgreements(obj.agreements, evidenceCtx);
   const differences = validateDifferences(obj.differences, evidenceCtx);
   const unknowns = isStringArray(obj.unknowns) ? obj.unknowns.filter(isNonEmptyString) : [];

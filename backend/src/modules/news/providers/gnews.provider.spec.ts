@@ -390,3 +390,105 @@ describe('GNewsProvider', () => {
     });
   });
 });
+
+describe('Query-limit correction — GNews search q ≤200-code-point backstop', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function capturedUrl(fetchMock: jest.Mock): string {
+    return (fetchMock.mock.calls[0] as [string, unknown])[0];
+  }
+
+  it('a short query passes through unchanged', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
+    global.fetch = fetchMock;
+    const provider = new GNewsProvider(makeConfig('test-key') as never);
+
+    await provider.search('Rwanda');
+
+    const url = new URL(capturedUrl(fetchMock));
+    expect(url.searchParams.get('q')).toBe('Rwanda');
+  });
+
+  it('a query over 200 code points is bounded to exactly 200, never sent to GNews unbounded', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
+    global.fetch = fetchMock;
+    const provider = new GNewsProvider(makeConfig('test-key') as never);
+    const longQuery = 'a'.repeat(400);
+
+    await provider.search(longQuery);
+
+    const url = new URL(capturedUrl(fetchMock));
+    const sentQuery = url.searchParams.get('q');
+    expect(sentQuery).not.toBeNull();
+    expect(Array.from(sentQuery as string)).toHaveLength(200);
+  });
+
+  it('a query of exactly 200 code points is sent unchanged (boundary case)', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
+    global.fetch = fetchMock;
+    const provider = new GNewsProvider(makeConfig('test-key') as never);
+    const exactQuery = 'a'.repeat(200);
+
+    await provider.search(exactQuery);
+
+    const url = new URL(capturedUrl(fetchMock));
+    expect(url.searchParams.get('q')).toBe(exactQuery);
+  });
+
+  it('truncates by Unicode code point, never splitting a surrogate pair (an emoji straddling the 200th position stays intact rather than becoming a malformed lone surrogate)', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
+    global.fetch = fetchMock;
+    const provider = new GNewsProvider(makeConfig('test-key') as never);
+    // Code point 200 (0-indexed 199) is a globe emoji, outside the
+    // Basic Multilingual Plane — represented as a surrogate PAIR in
+    // UTF-16. A naive .slice(0, 200) would split this pair and
+    // produce a lone, invalid surrogate.
+    const emoji = '\u{1F30D}';
+    const longQuery = 'a'.repeat(199) + emoji + 'b'.repeat(50);
+
+    await provider.search(longQuery);
+
+    const url = new URL(capturedUrl(fetchMock));
+    const sentQuery = url.searchParams.get('q') as string;
+    expect(Array.from(sentQuery)).toHaveLength(200);
+    expect(Array.from(sentQuery)).toContain(emoji);
+    // No lone (unpaired) surrogate anywhere in the result.
+    for (let i = 0; i < sentQuery.length; i += 1) {
+      const code = sentQuery.charCodeAt(i);
+      const isHighSurrogate = code >= 0xd800 && code <= 0xdbff;
+      const isLowSurrogate = code >= 0xdc00 && code <= 0xdfff;
+      if (isHighSurrogate) {
+        const next = sentQuery.charCodeAt(i + 1);
+        expect(next >= 0xdc00 && next <= 0xdfff).toBe(true);
+      } else if (isLowSurrogate) {
+        const prev = sentQuery.charCodeAt(i - 1);
+        expect(prev >= 0xd800 && prev <= 0xdbff).toBe(true);
+      }
+    }
+  });
+
+  it('ordinary GNews search request behavior (lang, max, article normalization) remains completely unchanged by the length backstop', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        articles: [
+          {
+            title: 'Test Article',
+            url: 'https://example.com/1',
+            description: 'A description',
+            source: { name: 'Example' },
+          },
+        ],
+      }),
+    );
+    const provider = new GNewsProvider(makeConfig('test-key') as never);
+
+    const articles = await provider.search('Ceuta', { lang: 'en', limit: 5 });
+
+    expect(articles).toHaveLength(1);
+    expect(articles[0].title).toBe('Test Article');
+  });
+});

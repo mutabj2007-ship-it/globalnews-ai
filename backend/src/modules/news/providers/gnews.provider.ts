@@ -9,6 +9,18 @@ const GNEWS_BASE_URL = 'https://gnews.io/api/v4';
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
 const REQUEST_TIMEOUT_MS = 8000;
+/**
+ * Query-limit correction — GNews's own documented search `q` parameter
+ * maximum. This is an UNCONDITIONAL, last-resort defensive backstop —
+ * see search()'s own use of clampQueryLength() below — not the
+ * primary retrieval strategy. Upstream derivation (AnalysisService's
+ * use of deriveGenericNewsQuery()/deriveFallbackNewsQuery()) is
+ * expected to already produce a short, topically-focused phrase in
+ * ordinary operation; this exists so a sufficiently long or complex
+ * user question can never violate GNews's own limit regardless of
+ * what upstream code does now or is changed to do later.
+ */
+const GNEWS_MAX_QUERY_LENGTH = 200;
 
 /**
  * GlobalNews AI categories don't map 1:1 onto GNews's category set.
@@ -93,7 +105,7 @@ export class GNewsProvider implements NewsProvider {
   async search(query: string, options?: NewsSearchOptions): Promise<NewsArticle[]> {
     const apiKey = this.requireApiKey();
     const url = this.buildUrl('/search', apiKey, {
-      q: query,
+      q: this.clampQueryLength(query),
       lang: options?.lang ?? 'en',
       max: String(this.clampLimit(options?.limit)),
     });
@@ -365,6 +377,25 @@ export class GNewsProvider implements NewsProvider {
   private clampLimit(requested: number | undefined): number {
     if (!requested || requested < 1) return DEFAULT_LIMIT;
     return Math.min(requested, MAX_LIMIT);
+  }
+
+  /**
+   * Query-limit correction — GNewsProvider.search()'s unconditional,
+   * last-resort length backstop (see GNEWS_MAX_QUERY_LENGTH's own doc
+   * comment above). Truncates by Unicode CODE POINT, not raw UTF-16
+   * .slice(), specifically so a character outside the Basic
+   * Multilingual Plane (some emoji, certain extended scripts) is never
+   * split mid-surrogate-pair, which would otherwise produce a
+   * malformed string containing an unpaired surrogate. Array.from()
+   * iterates a string by code point (JavaScript's string iteration
+   * protocol already correctly groups surrogate pairs into single
+   * steps), so this is safe without any new dependency. A query
+   * already at or under the limit is returned completely unchanged.
+   */
+  private clampQueryLength(query: string): string {
+    const codePoints = Array.from(query);
+    if (codePoints.length <= GNEWS_MAX_QUERY_LENGTH) return query;
+    return codePoints.slice(0, GNEWS_MAX_QUERY_LENGTH).join('');
   }
 
   private describeError(error: unknown): string {

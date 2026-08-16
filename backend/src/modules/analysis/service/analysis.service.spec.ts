@@ -593,7 +593,9 @@ describe('AnalysisService', () => {
       const newsService = { search: searchMock };
       const countryNewsService = makeCountryNewsService();
 
-      const analyzeNewsMock = jest.fn().mockResolvedValue(validCandidateFor([makeArticle({ id: 'na1' })]));
+      const analyzeNewsMock = jest
+        .fn()
+        .mockResolvedValue(validCandidateFor([makeArticle({ id: 'na1' })]));
 
       const provider: AnalysisProvider = {
         id: 'mock-analysis',
@@ -3580,6 +3582,97 @@ describe('AnalysisService', () => {
       expect(response.articles.length).toBeGreaterThan(0);
     });
 
+    it('query-limit correction (wiring revision) — a long analytical question results in newsService.search() receiving the PROVIDER-SAFE reduced query, not the raw long derivation', async () => {
+      const articles = [
+        makeArticle({ id: 'supply-chain-1', title: 'Global supply chain developments' }),
+      ];
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse(articles)),
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      // Test-fixture correction: the original fixture used here
+      // contained "in Rwanda", which detectLocation()'s
+      // COUNTRY_CONTEXT_PATTERN correctly recognizes — routing that
+      // question through CountryNewsService, never reaching this
+      // generic branch at all. That made the test pass for the wrong
+      // reason (or fail once routing was inspected), not a genuine
+      // exercise of generic-branch wiring. This replacement question
+      // does not match COUNTRY_CONTEXT_PATTERN, any RELATIONAL_PATTERN,
+      // or any SUBJECT_EXTRACTION_PATTERN, confirmed by direct
+      // execution against the real patterns — so it reaches this
+      // branch as intended, while still being a genuinely long
+      // (>180 char), realistic sophisticated analytical question. The
+      // original real long Rwanda acceptance question is intentionally
+      // NOT used here — it remains reserved for a real end-to-end
+      // geographic-routing acceptance test elsewhere, not generic-branch
+      // unit coverage.
+      const longQuestion =
+        'What are the most significant recent economic security diplomatic social infrastructure and technological developments currently reshaping global supply chains, and how are disruptions influencing international trade relationships and long-term geopolitical stability, considering shifting alliances, emerging regulatory frameworks, and evolving multilateral cooperation efforts?';
+      expect(longQuestion.length).toBeGreaterThan(180);
+
+      await service.analyzeNews(longQuestion);
+
+      const sentQuery = (newsService.search as jest.Mock).mock.calls[0][0] as string;
+      expect(sentQuery.length).toBeLessThan(longQuestion.length);
+      expect(sentQuery).toContain('supply chains');
+    });
+
+    it('query-limit correction (wiring revision) — when the primary query needed provider-safety reduction, the M46 fallback (re-derived from the same original query) collides with what was already sent, so the redundant second request is skipped and provider call count stays at 1', async () => {
+      const newsService = {
+        search: jest.fn().mockResolvedValue(makeSearchResponse([])), // zero results on the (only) call
+      };
+      const countryNewsService = { getCountryNews: jest.fn() };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn(),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      // Test-fixture correction: see the sibling test above for why the
+      // original "in Rwanda" fixture was replaced — it never actually
+      // reached this generic branch. This replacement question is
+      // confirmed (by direct execution against the real routing
+      // patterns) to reach the generic branch, and its derived primary
+      // query is long enough to require provider-safety reduction,
+      // which is exactly the scenario this test needs to exercise the
+      // redundancy guard.
+      const longQuestion =
+        'What are the most significant recent economic security diplomatic social infrastructure and technological developments currently reshaping global supply chains, and how are disruptions influencing international trade relationships and long-term geopolitical stability, considering shifting alliances, emerging regulatory frameworks, and evolving multilateral cooperation efforts?';
+
+      await service.analyzeNews(longQuestion);
+
+      // deriveFallbackNewsQuery is pure/deterministic: re-deriving it
+      // from the SAME original genericSearchQuery for the M46 retry
+      // necessarily reproduces exactly what makeProviderSafeNewsQuery()
+      // already used for the primary attempt whenever that primary
+      // needed reduction at all — so the guard correctly recognizes
+      // the would-be second request as identical to the first and
+      // skips it, rather than wasting a GNews call on a repeat search.
+      expect(newsService.search).toHaveBeenCalledTimes(1);
+    });
+
     it('successful primary retrieval performs exactly ONE provider search — no fallback attempted when primary already returned articles', async () => {
       const articles = [makeArticle({ id: 'a1' })];
       const newsService = {
@@ -4022,7 +4115,8 @@ describe('AnalysisService', () => {
       const rwandaArticles = [
         makeArticle({
           id: 'rw1',
-          title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+          title:
+            'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
         }),
       ];
 
@@ -4032,12 +4126,19 @@ describe('AnalysisService', () => {
         // used — asserting it is NEVER called proves the story anchor,
         // not detectLocation(), determined retrieval for this request.
         search: jest.fn().mockResolvedValue(
-          makeSearchResponse([makeArticle({ id: 'unrelated', title: 'Swimming\u2013Italy\u2019s Curtis betters own 50m backstroke world record' })]),
+          makeSearchResponse([
+            makeArticle({
+              id: 'unrelated',
+              title: 'Swimming\u2013Italy\u2019s Curtis betters own 50m backstroke world record',
+            }),
+          ]),
         ),
       };
 
       const countryNewsService = {
-        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', rwandaArticles)),
+        getCountryNews: jest
+          .fn()
+          .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', rwandaArticles)),
       };
 
       const provider: AnalysisProvider = {
@@ -4057,10 +4158,19 @@ describe('AnalysisService', () => {
       const response = await service.analyzeNews(
         'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
         'en',
-        { title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?', countryCode: 'RWA' },
+        {
+          title:
+            'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+          countryCode: 'RWA',
+        },
       );
 
-      expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('RWA', undefined, expect.any(Number), undefined);
+      expect(countryNewsService.getCountryNews).toHaveBeenCalledWith(
+        'RWA',
+        undefined,
+        expect.any(Number),
+        undefined,
+      );
       expect(newsService.search).not.toHaveBeenCalled();
       expect(response.articles.map((a) => a.id)).toEqual(['rw1']);
       expect(response.articles.some((a) => a.title.includes('Swimming'))).toBe(false);
@@ -4126,13 +4236,15 @@ describe('AnalysisService', () => {
       const rwandaArticles = [makeArticle({ id: 'rw-x' })];
       const kenyaArticles = [makeArticle({ id: 'ke-x' })];
       const countryNewsService = {
-        getCountryNews: jest.fn().mockImplementation((iso3: string) =>
-          Promise.resolve(
-            iso3 === 'RWA'
-              ? makeCountryResponse('RWA', 'Rwanda', rwandaArticles)
-              : makeCountryResponse('KEN', 'Kenya', kenyaArticles),
+        getCountryNews: jest
+          .fn()
+          .mockImplementation((iso3: string) =>
+            Promise.resolve(
+              iso3 === 'RWA'
+                ? makeCountryResponse('RWA', 'Rwanda', rwandaArticles)
+                : makeCountryResponse('KEN', 'Kenya', kenyaArticles),
+            ),
           ),
-        ),
       };
 
       const provider: AnalysisProvider = {
@@ -4150,8 +4262,14 @@ describe('AnalysisService', () => {
       );
 
       const [rwandaResult, kenyaResult] = await Promise.all([
-        service.analyzeNews('same headline text', 'en', { title: 'same headline text', countryCode: 'RWA' }),
-        service.analyzeNews('same headline text', 'en', { title: 'same headline text', countryCode: 'KEN' }),
+        service.analyzeNews('same headline text', 'en', {
+          title: 'same headline text',
+          countryCode: 'RWA',
+        }),
+        service.analyzeNews('same headline text', 'en', {
+          title: 'same headline text',
+          countryCode: 'KEN',
+        }),
       ]);
 
       expect(rwandaResult.articles.map((a) => a.id)).toEqual(['rw-x']);
@@ -4175,7 +4293,8 @@ describe('AnalysisService', () => {
     it('A/B: the selected article is present in the evidence set and survives maxArticles trimming even when other same-country articles would otherwise fill the pool', async () => {
       const anchorArticle = makeArticle({
         id: 'anchor-rwanda-migration',
-        title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+        title:
+          'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
       });
 
       // A full pool of OTHER Rwanda articles (football, economy, etc.)
@@ -4192,7 +4311,9 @@ describe('AnalysisService', () => {
       };
 
       const countryNewsService = {
-        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', otherRwandaArticles)),
+        getCountryNews: jest
+          .fn()
+          .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', otherRwandaArticles)),
       };
 
       const provider: AnalysisProvider = {
@@ -4216,7 +4337,8 @@ describe('AnalysisService', () => {
         'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
         'en',
         {
-          title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+          title:
+            'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
           countryCode: 'RWA',
           articleId: 'anchor-rwanda-migration',
         },
@@ -4235,9 +4357,11 @@ describe('AnalysisService', () => {
 
       const newsService = {
         search: jest.fn().mockResolvedValue(makeSearchResponse([])),
-        findArticleById: jest.fn().mockImplementation((id: string) =>
-          Promise.resolve(id === 'story-a' ? storyAArticle : storyBArticle),
-        ),
+        findArticleById: jest
+          .fn()
+          .mockImplementation((id: string) =>
+            Promise.resolve(id === 'story-a' ? storyAArticle : storyBArticle),
+          ),
       };
 
       const countryNewsService = {
@@ -4293,7 +4417,9 @@ describe('AnalysisService', () => {
       };
 
       const countryNewsService = {
-        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', rwandaArticles)),
+        getCountryNews: jest
+          .fn()
+          .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', rwandaArticles)),
       };
 
       const provider: AnalysisProvider = {
@@ -4353,7 +4479,8 @@ describe('AnalysisService', () => {
     it('sparse evidence: the anchor article alone (zero corroborating country articles) is never padded with unrelated articles', async () => {
       const anchorArticle = makeArticle({
         id: 'anchor-alone',
-        title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+        title:
+          'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
       });
 
       const newsService = {
@@ -4386,7 +4513,8 @@ describe('AnalysisService', () => {
         'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
         'en',
         {
-          title: 'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
+          title:
+            'Rwanda revealed as EU\u2019s first migrant return hub, but what\u2019s in it for Kigali?',
           countryCode: 'RWA',
           articleId: 'anchor-alone',
         },
@@ -4418,99 +4546,118 @@ describe('AnalysisService', () => {
    * inside that describe, instead of duplicating them.
    */
   describe('Privacy hardening: no raw/derived query text in application logs (Milestone #58)', () => {
-  const DISTINCTIVE_QUERY = 'zzz-distinctive-privacy-test-marker-Kigali-Rwanda-migration-9f3e';
+    const DISTINCTIVE_QUERY = 'zzz-distinctive-privacy-test-marker-Kigali-Rwanda-migration-9f3e';
 
-  it('the cache-hit debug log never contains the query text', async () => {
-    const debugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
+    it('the cache-hit debug log never contains the query text', async () => {
+      const debugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
 
-    const articles = [makeArticle({ id: 'a1' })];
-    const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
-    const countryNewsService = makeCountryNewsService();
-    const provider: AnalysisProvider = {
-      id: 'mock-analysis',
-      displayName: 'Mock',
-      isMock: true,
-      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
-    };
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+      const countryNewsService = makeCountryNewsService();
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
 
-    const service = new AnalysisService(newsService as never, countryNewsService as never, provider, makeConfigService());
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
 
-    await service.analyzeNews(DISTINCTIVE_QUERY);
-    await service.analyzeNews(DISTINCTIVE_QUERY); // second call is the cache-hit path
+      await service.analyzeNews(DISTINCTIVE_QUERY);
+      await service.analyzeNews(DISTINCTIVE_QUERY); // second call is the cache-hit path
 
-    const allDebugMessages = debugSpy.mock.calls.map((call) => String(call[0]));
-    for (const message of allDebugMessages) {
-      expect(message).not.toContain(DISTINCTIVE_QUERY);
-    }
-    // Confirms the operational signal (cache hit occurred) is still
-    // present in some form — this test would also fail (usefully) if
-    // the debug log were removed entirely rather than de-identified.
-    expect(allDebugMessages.some((message) => message.toLowerCase().includes('cached'))).toBe(true);
+      const allDebugMessages = debugSpy.mock.calls.map((call) => String(call[0]));
+      for (const message of allDebugMessages) {
+        expect(message).not.toContain(DISTINCTIVE_QUERY);
+      }
+      // Confirms the operational signal (cache hit occurred) is still
+      // present in some form — this test would also fail (usefully) if
+      // the debug log were removed entirely rather than de-identified.
+      expect(allDebugMessages.some((message) => message.toLowerCase().includes('cached'))).toBe(
+        true,
+      );
 
-    debugSpy.mockRestore();
+      debugSpy.mockRestore();
+    });
+
+    it('the provider-failure warn log never contains the query text', async () => {
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+      const articles = [makeArticle({ id: 'a1' })];
+      const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
+      const countryNewsService = makeCountryNewsService();
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockRejectedValue(new Error('simulated provider failure')),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews(DISTINCTIVE_QUERY);
+
+      const allWarnMessages = warnSpy.mock.calls.map((call) => String(call[0]));
+      for (const message of allWarnMessages) {
+        expect(message).not.toContain(DISTINCTIVE_QUERY);
+      }
+      expect(allWarnMessages.some((message) => message.includes('Analysis provider'))).toBe(true);
+
+      warnSpy.mockRestore();
+    });
+
+    it('the in-flight-join debug log never contains the query text', async () => {
+      const debugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
+
+      const articles = [makeArticle({ id: 'a1' })];
+      let resolveSearch: (value: NewsResponse) => void = () => undefined;
+      const newsService = {
+        search: jest.fn().mockReturnValue(
+          new Promise<NewsResponse>((resolve) => {
+            resolveSearch = resolve;
+          }),
+        ),
+      };
+      const countryNewsService = makeCountryNewsService();
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const firstCall = service.analyzeNews(DISTINCTIVE_QUERY);
+      const secondCall = service.analyzeNews(DISTINCTIVE_QUERY); // joins the in-flight first call
+
+      resolveSearch(makeSearchResponse(articles));
+      await Promise.all([firstCall, secondCall]);
+
+      const allDebugMessages = debugSpy.mock.calls.map((call) => String(call[0]));
+      for (const message of allDebugMessages) {
+        expect(message).not.toContain(DISTINCTIVE_QUERY);
+      }
+      expect(allDebugMessages.some((message) => message.toLowerCase().includes('in-flight'))).toBe(
+        true,
+      );
+
+      debugSpy.mockRestore();
+    });
   });
-
-  it('the provider-failure warn log never contains the query text', async () => {
-    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-
-    const articles = [makeArticle({ id: 'a1' })];
-    const newsService = { search: jest.fn().mockResolvedValue(makeSearchResponse(articles)) };
-    const countryNewsService = makeCountryNewsService();
-    const provider: AnalysisProvider = {
-      id: 'mock-analysis',
-      displayName: 'Mock',
-      isMock: true,
-      analyzeNews: jest.fn().mockRejectedValue(new Error('simulated provider failure')),
-    };
-
-    const service = new AnalysisService(newsService as never, countryNewsService as never, provider, makeConfigService());
-
-    await service.analyzeNews(DISTINCTIVE_QUERY);
-
-    const allWarnMessages = warnSpy.mock.calls.map((call) => String(call[0]));
-    for (const message of allWarnMessages) {
-      expect(message).not.toContain(DISTINCTIVE_QUERY);
-    }
-    expect(allWarnMessages.some((message) => message.includes('Analysis provider'))).toBe(true);
-
-    warnSpy.mockRestore();
-  });
-
-  it('the in-flight-join debug log never contains the query text', async () => {
-    const debugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
-
-    const articles = [makeArticle({ id: 'a1' })];
-    let resolveSearch: (value: NewsResponse) => void = () => undefined;
-    const newsService = {
-      search: jest.fn().mockReturnValue(
-        new Promise<NewsResponse>((resolve) => {
-          resolveSearch = resolve;
-        }),
-      ),
-    };
-    const countryNewsService = makeCountryNewsService();
-    const provider: AnalysisProvider = {
-      id: 'mock-analysis',
-      displayName: 'Mock',
-      isMock: true,
-      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
-    };
-
-    const service = new AnalysisService(newsService as never, countryNewsService as never, provider, makeConfigService());
-
-    const firstCall = service.analyzeNews(DISTINCTIVE_QUERY);
-    const secondCall = service.analyzeNews(DISTINCTIVE_QUERY); // joins the in-flight first call
-
-    resolveSearch(makeSearchResponse(articles));
-    await Promise.all([firstCall, secondCall]);
-
-    const allDebugMessages = debugSpy.mock.calls.map((call) => String(call[0]));
-    for (const message of allDebugMessages) {
-      expect(message).not.toContain(DISTINCTIVE_QUERY);
-    }
-    expect(allDebugMessages.some((message) => message.toLowerCase().includes('in-flight'))).toBe(true);
-
-    debugSpy.mockRestore();
-  });
-});
 });

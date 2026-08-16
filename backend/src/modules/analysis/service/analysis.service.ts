@@ -29,6 +29,7 @@ import { buildSourceEntities } from './build-source-entities.util';
 import {
   deriveGenericNewsQuery,
   deriveFallbackNewsQuery,
+  makeProviderSafeNewsQuery,
 } from '../query/derive-generic-news-query.util';
 import { deriveRelationalSearchQueries } from '../query/derive-relational-search-queries.util';
 import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
@@ -497,8 +498,21 @@ export class AnalysisService {
             // changes.
             const genericSearchQuery = deriveGenericNewsQuery(normalizedQuery);
 
+            // Query-limit correction (wiring revision) — a long or complex
+            // analytical question can produce a genericSearchQuery that
+            // still exceeds what's safe to send to GNews (its own regex
+            // capture groups are not length-bounded). makeProviderSafeNewsQuery()
+            // is a pure, narrow length-safety step — it does NOT re-derive
+            // from normalizedQuery, only reduces the ALREADY-derived
+            // genericSearchQuery further when needed, reusing the existing
+            // deriveFallbackNewsQuery() reduction rather than a new,
+            // duplicate system. genericSearchQuery itself (used below for
+            // the M46 fallback derivation) is left completely untouched —
+            // only what's actually SENT to the provider changes.
+            const primarySent = makeProviderSafeNewsQuery(genericSearchQuery);
+
             let searchResponse = await this.newsService.search(
-              genericSearchQuery,
+              primarySent,
               SEARCH_POOL_SIZE,
               // Milestone #36: opt-in relevance gate — only this call site
               // (AnalysisService's ordinary generic-search branch) enables
@@ -516,16 +530,32 @@ export class AnalysisService {
             // through it). Never a second AI call, never a multi-query
             // fan-out — at most one additional GNews search per question,
             // capped here explicitly.
+            //
+            // Query-limit correction (wiring revision) — fallbackQuery is
+            // still derived from the ORIGINAL genericSearchQuery, exactly
+            // as before this correction (M46's own semantics are
+            // unchanged). makeProviderSafeNewsQuery() is then applied to
+            // THAT result independently — never by re-running length
+            // reduction on an already-reduced primarySent, which would
+            // risk producing the identical string twice. The explicit
+            // `fallbackSent !== primarySent` guard is what actually
+            // prevents that: if the provider-safe fallback would be
+            // identical to what attempt 1 already sent, the second
+            // request is skipped entirely rather than wastefully repeating
+            // an identical search.
             if (searchResponse.articles.length === 0) {
               const fallbackQuery = deriveFallbackNewsQuery(genericSearchQuery);
               if (fallbackQuery) {
-                this.logger.debug(
-                  'Primary generic retrieval returned zero relevant articles — ' +
-                    'attempting one bounded fallback search.',
-                );
-                searchResponse = await this.newsService.search(fallbackQuery, SEARCH_POOL_SIZE, {
-                  type: 'generic',
-                });
+                const fallbackSent = makeProviderSafeNewsQuery(fallbackQuery);
+                if (fallbackSent !== primarySent) {
+                  this.logger.debug(
+                    'Primary generic retrieval returned zero relevant articles — ' +
+                      'attempting one bounded fallback search.',
+                  );
+                  searchResponse = await this.newsService.search(fallbackSent, SEARCH_POOL_SIZE, {
+                    type: 'generic',
+                  });
+                }
               }
             }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent, type ChangeEvent } from 'react';
+import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowRight } from 'lucide-react';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
@@ -56,6 +56,13 @@ export function Hero({ latestArticles = [] }: HeroProps): JSX.Element {
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [query, setQuery] = useState('');
+  // Query-limit correction — mirrors AnalyzeNewsDto.query's own
+  // @MaxLength(1000). Enforced client-side via the textarea's own
+  // maxLength attribute (so a user simply cannot type past it) and
+  // used here only to drive the live character-count display.
+  const QUESTION_MAX_LENGTH = 1000;
+  const formRef = useRef<HTMLFormElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [language, setLanguage] = useState<LanguageCode>('en');
   const [hasResolvedLanguage, setHasResolvedLanguage] = useState(false);
@@ -148,6 +155,29 @@ export function Hero({ latestArticles = [] }: HeroProps): JSX.Element {
     // depends on dictionary-driven, per-language data.
   }, [language, t.exampleQuestions.length]);
 
+  // Query-limit correction — auto-grow the textarea as content wraps,
+  // capped by the CSS max-height already applied to the element (see
+  // the className below) so growth stops and the textarea scrolls
+  // internally beyond that point, rather than growing unboundedly.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [query]);
+
+  // Query-limit correction — Enter submits (matching the prior
+  // single-line <input>'s native behavior); Shift+Enter inserts a
+  // literal newline instead, since a <textarea> does not submit its
+  // form on Enter the way an <input> does. Uses the form's own native
+  // requestSubmit() rather than duplicating handleSubmit's logic.
+  function handleTextareaKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      formRef.current?.requestSubmit();
+    }
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const trimmed = query.trim();
@@ -224,10 +254,11 @@ export function Hero({ latestArticles = [] }: HeroProps): JSX.Element {
             />
 
             <form
+              ref={formRef}
               role="search"
               aria-label={t.formAriaLabel}
               onSubmit={handleSubmit}
-              className={`relative flex items-center gap-2.5 border border-cyan-500/30 bg-void/80 px-3.5 py-2.5 backdrop-blur-sm transition-colors focus-within:border-cyan-400 ${HUD_CARD_CLIP}`}
+              className={`relative flex items-end gap-2.5 border border-cyan-500/30 bg-void/80 px-3.5 py-2.5 backdrop-blur-sm transition-colors focus-within:border-cyan-400 ${HUD_CARD_CLIP}`}
             >
               <span
                 aria-hidden="true"
@@ -235,13 +266,29 @@ export function Hero({ latestArticles = [] }: HeroProps): JSX.Element {
               >
                 <Search size={13} strokeWidth={2} />
               </span>
-              <input
-                type="text"
+              {/*
+                Query-limit correction — converted from a single-line
+                <input> to an auto-growing <textarea>. rows={1} plus
+                matching padding/line-height keeps the initial rendered
+                height visually equivalent to the prior input; the
+                useEffect above grows it as content wraps, capped by
+                max-h-40 (~8 lines at this font size) beyond which it
+                scrolls internally via overflow-y-auto rather than
+                growing unboundedly. maxLength enforces the 1000-char
+                limit natively; Enter submits (via handleTextareaKeyDown
+                below), Shift+Enter inserts a literal newline.
+              */}
+              <textarea
+                ref={textareaRef}
                 value={query}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
+                onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setQuery(event.target.value)}
+                onKeyDown={handleTextareaKeyDown}
                 placeholder={t.inputPlaceholder}
                 aria-label={t.inputAriaLabel}
-                className="w-full bg-transparent text-sm text-ink-primary placeholder:text-ink-tertiary focus:outline-none"
+                aria-describedby="hero-question-char-count"
+                maxLength={QUESTION_MAX_LENGTH}
+                rows={1}
+                className="max-h-40 w-full resize-none overflow-y-auto bg-transparent text-sm leading-6 text-ink-primary placeholder:text-ink-tertiary focus:outline-none"
               />
               <button
                 type="submit"
@@ -251,6 +298,44 @@ export function Hero({ latestArticles = [] }: HeroProps): JSX.Element {
                 <ArrowRight size={15} strokeWidth={2.25} />
               </button>
             </form>
+
+            {/*
+              Query-limit correction — live character count, kept
+              visually subordinate: invisible until the user
+              approaches the limit (800+), then a plain count, turning
+              into an explicit "maximum reached" message once the
+              1000-char cap is hit. aria-live announces the
+              limit-reached state to screen reader users without
+              chattering on every keystroke below that threshold.
+              Accessibility correction — this element is now ALWAYS
+              rendered with the same id, matching the textarea's
+              aria-describedby, which must resolve to a real element
+              at all times, not one conditionally absent from the DOM.
+              Below the 800-char threshold it uses sr-only (visually
+              hidden but still present in the accessibility tree,
+              never `hidden`/display:none, which would remove it from
+              that tree too) with empty content, so nothing gets
+              announced on every keystroke; at 800+ it becomes visually
+              present with real, live-updating content exactly as
+              before.
+            */}
+            <p
+              id="hero-question-char-count"
+              aria-live="polite"
+              className={
+                query.length >= 800
+                  ? `mt-1.5 text-right font-mono text-[11px] ${
+                      query.length >= QUESTION_MAX_LENGTH ? 'text-amber-400' : 'text-ink-tertiary'
+                    }`
+                  : 'sr-only'
+              }
+            >
+              {query.length >= 800
+                ? query.length >= QUESTION_MAX_LENGTH
+                  ? t.questionMaxLengthReached
+                  : `${query.length} / ${QUESTION_MAX_LENGTH}`
+                : ''}
+            </p>
 
             {/* Rotating example suggestions — intentionally NOT translated, see this file's own doc comment. */}
             <div className="mt-3 flex h-5 items-center justify-center gap-2 font-mono text-[11px] text-ink-tertiary sm:justify-start">

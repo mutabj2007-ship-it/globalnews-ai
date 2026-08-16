@@ -69,6 +69,9 @@ export const en = {
     inputAriaLabel: 'Ask GlobalNews AI a question',
     formAriaLabel: 'Ask GlobalNews AI',
     submitAriaLabel: 'Submit question',
+    // Query-limit correction — Hero.tsx's textarea character-limit
+    // message, shown when the 1000-character maximum is reached.
+    questionMaxLengthReached: 'Maximum question length reached',
     tryPrefix: 'Try:',
     /**
      * Milestone #47 (Defect 2 correction) — parallel, translated

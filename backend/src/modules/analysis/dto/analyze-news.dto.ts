@@ -1,15 +1,27 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import type { LanguageCode } from '@globalnews-ai/shared';
 
 /**
  * Milestone #51 Phase B — bounded, optional story-context nested DTO.
  * Mirrors StoryContext in shared/src/analysis.ts field-for-field.
- * Every field is optional except `title`. Length caps mirror the
- * top-level `query` field's own cap where relevant (title/url are
- * user-influenced text that reaches the backend the same way `query`
- * does — the same class-validator convention already used for
- * `query` below, no new validation approach introduced).
+ * Every field is optional except `title`.
+ *
+ * Query-limit correction — `title` is deliberately kept at its own
+ * independent 300-character bound, NOT scaled up alongside `query`
+ * (which moved to 1000 to support sophisticated analytical
+ * questions). A news article headline has no legitimate reason to
+ * approach that length — this DTO's `title` field and the top-level
+ * `query` field below use the same class-validator convention, but
+ * are no longer coupled to the same numeric cap.
  */
 export class StoryContextDto {
   @IsString()
@@ -60,7 +72,7 @@ export class AnalyzeNewsDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(2)
-  @MaxLength(300)
+  @MaxLength(1000)
   query!: string;
 
   /**
