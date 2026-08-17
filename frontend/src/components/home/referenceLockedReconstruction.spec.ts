@@ -75,13 +75,13 @@ describe('Reference-locked reconstruction — HUD geometry coverage', () => {
 });
 
 describe('Reference-locked reconstruction — Nav/Footer', () => {
-  it('nav height is reduced and a bottom technical scan-line rail is present', () => {
-    expect(navSource).toMatch(/h-14 max-w/);
+  it('nav height matches the approved Claude Design C2.1 header spec (62px) and a bottom technical scan-line rail is present', () => {
+    expect(navSource).toMatch(/h-\[62px\] max-w/);
     expect(navSource).toMatch(/bg-gradient-to-r from-transparent via-cyan-400\/50 to-transparent/);
   });
 
-  it('footer padding is further tightened and the status line carries a real indicator dot', () => {
-    expect(footerSource).toMatch(/py-4 sm:px-6 lg:px-8/);
+  it('footer padding accommodates the approved Claude Design C2.1 bordered-panel treatment and the status line carries a real indicator dot', () => {
+    expect(footerSource).toMatch(/py-6 sm:px-6 lg:px-8/);
     expect(footerSource).toMatch(/bg-cyan-400" \/>/);
   });
 });

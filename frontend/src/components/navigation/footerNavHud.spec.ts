@@ -169,3 +169,61 @@ describe('B2 — Public Legal Surfaces footer wiring', () => {
     }
   });
 });
+
+describe('C2.1 — global shell / brand / navigation foundation', () => {
+  const logoSource = readFileSync(
+    join(__dirname, '..', 'ui', 'Logo.tsx'),
+    'utf-8',
+  );
+  const mobileBottomNavSource = readFileSync(join(__dirname, 'MobileBottomNav.tsx'), 'utf-8');
+
+  it('Logo.tsx is a reusable, framework-native component \u2014 no leftover prototype markup (no dc-import/x-dc custom elements, no actual import of the prototype runtime)', () => {
+    expect(logoSource).toMatch(/export function Logo/);
+    expect(logoSource).not.toMatch(/<dc-import|<x-dc/);
+    expect(logoSource).not.toMatch(/from ['"].*support(\.js)?['"]/);
+  });
+
+  it('Logo.tsx gives each rendered instance unique SVG gradient/filter ids (useId) \u2014 required since it renders more than once per page (NavBar + Footer)', () => {
+    expect(logoSource).toMatch(/useId/);
+    // The gradient/filter ids must be templated per-instance, not a
+    // fixed literal string repeated verbatim across renders.
+    expect(logoSource).not.toMatch(/id="gnEmbGlow"/);
+    expect(logoSource).not.toMatch(/id="gnEmbBlur"/);
+  });
+
+  it('Logo.tsx preserves its existing public props contract (className, showWordmark) so every current call site keeps working unchanged', () => {
+    expect(logoSource).toMatch(/className\?:\s*string/);
+    expect(logoSource).toMatch(/showWordmark\?:\s*boolean/);
+  });
+
+  it('the emblem SVG is marked decorative (aria-hidden) \u2014 the accessible name for navigation comes from the surrounding link/wordmark, not the icon itself', () => {
+    expect(logoSource).toMatch(/aria-hidden="true"/);
+  });
+
+  it('C2.1 introduced no new navigation destinations \u2014 NavBar and MobileBottomNav still derive their real links entirely from primaryNavLinks / their own existing real-route list, never a fabricated category route', () => {
+    for (const fakeRoute of ['/world', '/politics', '/business', '/technology', '/science', '/health', '/about']) {
+      expect(navBarSource).not.toContain(`href="${fakeRoute}"`);
+      expect(navBarSource).not.toContain(`href='${fakeRoute}'`);
+      expect(mobileBottomNavSource).not.toContain(`href: '${fakeRoute}'`);
+    }
+    // Confirms NavBar still renders links FROM primaryNavLinks.map(...),
+    // not a separate hardcoded list.
+    expect(navBarSource).toMatch(/primaryNavLinks\.map/);
+  });
+
+  it('MobileBottomNav.tsx keeps its real, deliberate item set (Home, World Map, Search, Intelligence anchor) unchanged by the C2.1 visual pass', () => {
+    expect(mobileBottomNavSource).toMatch(/href: '\/'/);
+    expect(mobileBottomNavSource).toMatch(/href: '\/map'/);
+    expect(mobileBottomNavSource).toMatch(/href: '\/search'/);
+    expect(mobileBottomNavSource).toMatch(/href: '#intelligence-modules'/);
+  });
+
+  it('the footer still renders every real footerLinkGroups destination after the C2.1 visual panel change \u2014 the restyle did not drop any link', () => {
+    expect(footerSource).toMatch(/footerLinkGroups\.flatMap/);
+    expect(footerSource).toMatch(/allLinks\.map/);
+  });
+
+  it('the footer sharing system is explicitly NOT implemented in C2.1 \u2014 that belongs to a later, separately approved checkpoint', () => {
+    expect(footerSource).not.toMatch(/LinkedIn|WhatsApp|Copy Link|ShareControls|\bshare\b/i);
+  });
+});

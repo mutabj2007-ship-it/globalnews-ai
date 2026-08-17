@@ -38,7 +38,7 @@ export function MobileBottomNav({ language = 'en' }: MobileBottomNavProps): JSX.
   return (
     <nav
       aria-label={t.navigationAriaLabel}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-void/95 backdrop-blur-md lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-cyan-500/15 bg-void/95 backdrop-blur-md lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <ul className="flex items-stretch justify-around">

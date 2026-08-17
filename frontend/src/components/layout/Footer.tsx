@@ -31,8 +31,18 @@ export function Footer({ language = 'en' }: FooterProps): JSX.Element {
     <footer className="relative border-t border-cyan-500/25 bg-void">
       <span aria-hidden="true" className={hudCornerBracketClassName('top-left')} />
       <span aria-hidden="true" className={hudCornerBracketClassName('top-right')} />
-      <div className="mx-auto max-w-[1480px] px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+        {/*
+         * C2.1 — the logo/identity/link row now sits inside its own
+         * contained, rounded panel (border-radius 16px == Tailwind's
+         * existing `rounded-2xl`, achieved with already-defined
+         * tokens/utilities — no new arbitrary values needed here),
+         * matching the approved design's compact bordered footer
+         * band. The social-sharing icon row the design shows here is
+         * deliberately NOT added in this checkpoint — that belongs to
+         * a later, explicitly approved interaction round.
+         */}
+        <div className="flex flex-col gap-5 rounded-2xl border border-cyan-500/15 bg-surface/85 px-5 py-5 sm:flex-row sm:items-center sm:gap-9 sm:px-6">
           <div className="flex items-center gap-3">
             <Logo />
             <p className="hidden max-w-xs text-xs leading-relaxed text-ink-tertiary sm:block">{t.tagline}</p>
