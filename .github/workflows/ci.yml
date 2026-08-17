@@ -48,3 +48,6 @@ jobs:
 
       - name: Run backend unit tests
         run: npm test --workspace=backend -- --runInBand
+
+      - name: Run frontend unit tests
+        run: npm test --workspace=frontend -- --runInBand
