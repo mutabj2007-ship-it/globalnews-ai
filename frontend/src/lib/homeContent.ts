@@ -94,5 +94,24 @@ export const trustItems: TrustItem[] = [
  * the same "remove the dead destination, don't fabricate a page"
  * correction applied to primaryNavLinks in navigation.ts. Re-add an
  * entry to the appropriate group only once its real route exists.
+ *
+ * B2 — Public Legal Surfaces: /privacy and /terms are now real
+ * Next.js routes (frontend/src/app/privacy/page.tsx and
+ * frontend/src/app/terms/page.tsx), so exactly these two entries are
+ * reintroduced here. About/Careers/Contact/API remain excluded —
+ * none of those have real routes yet. label values here are the
+ * English fallback only; Footer.tsx already prefers
+ * t.linkLabels[link.href] when present (see its own
+ * `t.linkLabels[link.href] ?? link.label`), and both '/privacy' and
+ * '/terms' already have real English and Polish entries in
+ * footer.linkLabels in both dictionary files.
  */
-export const footerLinkGroups: FooterLinkGroup[] = [];
+export const footerLinkGroups: FooterLinkGroup[] = [
+  {
+    title: 'Legal',
+    links: [
+      { href: '/privacy', label: 'Privacy Policy' },
+      { href: '/terms', label: 'Terms of Service' },
+    ],
+  },
+];

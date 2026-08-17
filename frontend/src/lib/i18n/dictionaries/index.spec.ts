@@ -135,7 +135,7 @@ describe('Milestone #48 — homepage below-Hero dictionary sections', () => {
     expect(en.navBar.linkLabels['/map']).toBe('World Map');
   });
 
-  it('footer.linkLabels retains legacy entries (/about, /careers, /privacy, etc.) as harmless unused translation data \u2014 Milestone #53 navigation cleanup', () => {
+  it('footer.linkLabels retains legacy entries (/about, /careers, etc.) as harmless unused translation data \u2014 Milestone #53 navigation cleanup, updated for B2', () => {
     // Milestone #53 regression repair — this test previously claimed
     // these dictionary keys "match homeContent.ts / navigation.ts
     // routes", which is no longer true: the M53 dead-navigation fix
@@ -150,6 +150,14 @@ describe('Milestone #48 — homepage below-Hero dictionary sections', () => {
     // real (now-empty) footerLinkGroups/primaryNavLinks sources so a
     // future re-wiring of any of these routes is free to happen
     // without this test needing to change again.
+    //
+    // B2 correction: /privacy became a real route and a real footer
+    // destination in the B2 milestone (frontend/src/app/privacy/page.tsx,
+    // reintroduced in footerLinkGroups) — it is no longer a "legacy,
+    // unused" entry for the FOOTER specifically, so it is removed from
+    // the footer-absence check below. It was never added to
+    // primaryNavLinks by B2, so that half of the assertion is
+    // unchanged and still correct.
     const en = getDictionary('en');
     expect(en.footer.linkLabels['/about']).toBe('About');
     expect(en.footer.linkLabels['/careers']).toBe('Careers');
@@ -159,9 +167,23 @@ describe('Milestone #48 — homepage below-Hero dictionary sections', () => {
       group.links.map((link) => link.href),
     );
     const currentNavHrefs = primaryNavLinks.map((link) => link.href);
-    for (const legacyHref of ['/about', '/careers', '/privacy']) {
+    for (const legacyHref of ['/about', '/careers']) {
       expect(currentFooterHrefs).not.toContain(legacyHref);
       expect(currentNavHrefs).not.toContain(legacyHref);
+    }
+    // /privacy remains correctly absent from primaryNavLinks (B2 only
+    // restored it as a footer destination, not a top-nav destination).
+    expect(currentNavHrefs).not.toContain('/privacy');
+  });
+
+  it('B2 — /privacy and /terms are real, expected footer destinations; /about, /careers, /contact, and /api remain absent', () => {
+    const currentFooterHrefs = footerLinkGroups.flatMap((group) =>
+      group.links.map((link) => link.href),
+    );
+    expect(currentFooterHrefs).toContain('/privacy');
+    expect(currentFooterHrefs).toContain('/terms');
+    for (const stillDeadHref of ['/about', '/careers', '/contact', '/api']) {
+      expect(currentFooterHrefs).not.toContain(stillDeadHref);
     }
   });
 
@@ -413,6 +435,114 @@ describe('Milestone #51 consolidated round — Latest Now / World Map Gateway lo
     const pl = getDictionary('pl');
     for (const group of ['latestNowRail', 'worldMapGateway'] as const) {
       expect(Object.keys(en[group]).sort()).toEqual(Object.keys(pl[group]).sort());
+    }
+  });
+});
+
+describe('B2 — Public Legal Surfaces dictionary sections', () => {
+  it('privacyPage and termsPage exist in both English and Polish with non-empty titles and intros', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    for (const page of ['privacyPage', 'termsPage'] as const) {
+      expect(en[page].title.length).toBeGreaterThan(0);
+      expect(en[page].intro.length).toBeGreaterThan(0);
+      expect(pl[page].title.length).toBeGreaterThan(0);
+      expect(pl[page].intro.length).toBeGreaterThan(0);
+      expect(pl[page].title).not.toBe(en[page].title);
+      expect(pl[page].intro).not.toBe(en[page].intro);
+    }
+  });
+
+  it('privacyPage and termsPage have the SAME number of sections in English and Polish, so no section is missing in either language', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    for (const page of ['privacyPage', 'termsPage'] as const) {
+      expect(pl[page].sections.length).toBe(en[page].sections.length);
+    }
+  });
+
+  it('every section in privacyPage and termsPage has a non-empty heading and body in both languages, and the Polish text is genuinely different from the English text', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    for (const page of ['privacyPage', 'termsPage'] as const) {
+      en[page].sections.forEach((section, index) => {
+        const plSection = pl[page].sections[index];
+        expect(section.heading.length).toBeGreaterThan(0);
+        expect(section.body.length).toBeGreaterThan(0);
+        expect(plSection.heading.length).toBeGreaterThan(0);
+        expect(plSection.body.length).toBeGreaterThan(0);
+        expect(plSection.heading).not.toBe(section.heading);
+        expect(plSection.body).not.toBe(section.body);
+      });
+    }
+  });
+
+  it('does not fabricate legal entity facts — no invented company name, registration number, address, jurisdiction, legal email, DPO, regulator, or VAT details appear in the legal copy', () => {
+    const en = getDictionary('en');
+    const forbiddenPatterns = [
+      /\bltd\b/i,
+      /\binc\.\b/i,
+      /\bregistration number\b/i,
+      /\bcompany number\b/i,
+      /\bvat\b/i,
+      /\bdata protection officer\b/i,
+      /\bregistered office\b/i,
+      /governed by the laws of/i,
+    ];
+    const allText = [
+      en.privacyPage.intro,
+      ...en.privacyPage.sections.flatMap((s) => [s.heading, s.body]),
+      en.termsPage.intro,
+      ...en.termsPage.sections.flatMap((s) => [s.heading, s.body]),
+    ].join(' ');
+    for (const pattern of forbiddenPatterns) {
+      expect(allText).not.toMatch(pattern);
+    }
+  });
+
+  it('B2 pre-commit correction — no dictionary string contains a literal, unescaped-looking double-backslash Unicode escape sequence (e.g. "\\\\u201c"), which renders as literal backslash-u text in the browser instead of a real character', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    const allText = [
+      en.privacyPage.intro,
+      ...en.privacyPage.sections.flatMap((s) => [s.heading, s.body]),
+      en.termsPage.intro,
+      ...en.termsPage.sections.flatMap((s) => [s.heading, s.body]),
+      pl.privacyPage.intro,
+      ...pl.privacyPage.sections.flatMap((s) => [s.heading, s.body]),
+      pl.termsPage.intro,
+      ...pl.termsPage.sections.flatMap((s) => [s.heading, s.body]),
+    ].join(' ');
+    // If a double-backslash escape had survived, the RUNTIME STRING
+    // value itself would contain a literal backslash character
+    // followed by "u201c"/"u2019"/etc. — checked directly on the
+    // resolved string, not the source text, so this proves the
+    // actual rendered value is correct.
+    expect(allText).not.toMatch(/\\u[0-9a-fA-F]{4}/);
+  });
+
+  it('B2 pre-commit correction — the terms "General disclaimer" section renders real curly quotation marks around "as is", not literal escape text', () => {
+    const en = getDictionary('en');
+    const disclaimer = en.termsPage.sections.find((s) => s.heading === 'General disclaimer');
+    expect(disclaimer?.body).toContain('\u201cas is\u201d');
+  });
+
+  it('B2 pre-commit correction — privacyPage and termsPage now define a static, non-empty lastUpdatedDate in both languages, distinct between EN and PL', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    for (const page of ['privacyPage', 'termsPage'] as const) {
+      expect(en[page].lastUpdatedDate.length).toBeGreaterThan(0);
+      expect(pl[page].lastUpdatedDate.length).toBeGreaterThan(0);
+      expect(pl[page].lastUpdatedDate).not.toBe(en[page].lastUpdatedDate);
+    }
+  });
+
+  it('B2 pre-commit correction — the exact approved publication date is used verbatim: "17 August 2026" (EN) and "17 sierpnia 2026" (PL)', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    for (const page of ['privacyPage', 'termsPage'] as const) {
+      expect(en[page].lastUpdatedDate).toBe('17 August 2026');
+      expect(pl[page].lastUpdatedDate).toBe('17 sierpnia 2026');
     }
   });
 });

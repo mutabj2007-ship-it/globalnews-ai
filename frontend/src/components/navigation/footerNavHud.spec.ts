@@ -101,19 +101,26 @@ describe('Dead primary-navigation and footer-link remediation (Milestone #53)', 
     expect(primaryNavLinks.map((link) => link.href).sort()).toEqual(['/', '/map']);
   });
 
-  it('footerLinkGroups no longer contains any of the previously-dead destinations (/about, /careers, /contact, /privacy, /terms, /api)', () => {
+  it('footerLinkGroups no longer contains any of the still-dead destinations (/about, /careers, /contact, /api)', () => {
     const allFooterHrefs = footerLinkGroups.flatMap((group) => group.links.map((link) => link.href));
-    const previouslyDeadHrefs = ['/about', '/careers', '/contact', '/privacy', '/terms', '/api'];
-    for (const deadHref of previouslyDeadHrefs) {
+    // B2 correction: /privacy and /terms are now real routes
+    // (frontend/src/app/privacy/page.tsx, frontend/src/app/terms/page.tsx)
+    // and are intentionally reintroduced below — they are removed
+    // from this "still dead" list, not from the assertion's intent.
+    // About/Careers/Contact/API remain excluded, matching the
+    // approved B2 scope (do not restore those).
+    const stillDeadHrefs = ['/about', '/careers', '/contact', '/api'];
+    for (const deadHref of stillDeadHrefs) {
       expect(allFooterHrefs).not.toContain(deadHref);
     }
   });
 
-  it('footerLinkGroups is empty rather than containing any fabricated placeholder route \u2014 the minimal truthful fix', () => {
-    expect(footerLinkGroups).toEqual([]);
+  it('B2 — footerLinkGroups contains exactly the two real legal routes reintroduced this milestone, nothing fabricated beyond them', () => {
+    const allFooterHrefs = footerLinkGroups.flatMap((group) => group.links.map((link) => link.href));
+    expect(allFooterHrefs.sort()).toEqual(['/privacy', '/terms']);
   });
 
-  it('Footer.tsx renders an empty link array with no leftover visual artifact (no group-title markup exists to orphan)', () => {
+  it('Footer.tsx still renders links with no leftover group-title visual artifact (no group-title markup exists to orphan) — unchanged by the B2 data addition', () => {
     expect(footerSource).toMatch(/footerLinkGroups\.flatMap/);
     expect(footerSource).not.toMatch(/group\.title/);
   });
@@ -131,6 +138,34 @@ describe('Dead primary-navigation and footer-link remediation (Milestone #53)', 
       const hasEn = link.href in enLinkLabels;
       const hasPl = link.href in plLinkLabels;
       expect(hasEn).toBe(hasPl);
+    }
+  });
+});
+
+describe('B2 — Public Legal Surfaces footer wiring', () => {
+  it('every real footerLinkGroups href has a real, non-fallback label in both English and Polish footer.linkLabels', () => {
+    const enLinkLabels = getDictionary('en').footer.linkLabels;
+    const plLinkLabels = getDictionary('pl').footer.linkLabels;
+    const allFooterHrefs = footerLinkGroups.flatMap((group) => group.links.map((link) => link.href));
+
+    for (const href of allFooterHrefs) {
+      expect(href in enLinkLabels).toBe(true);
+      expect(href in plLinkLabels).toBe(true);
+    }
+  });
+
+  it('the English and Polish labels for /privacy and /terms are genuinely different strings, not an untranslated English fallback', () => {
+    const enLinkLabels = getDictionary('en').footer.linkLabels;
+    const plLinkLabels = getDictionary('pl').footer.linkLabels;
+
+    expect(plLinkLabels['/privacy']).not.toBe(enLinkLabels['/privacy']);
+    expect(plLinkLabels['/terms']).not.toBe(enLinkLabels['/terms']);
+  });
+
+  it('previously-dead links (/about, /careers, /contact, /api) remain absent even after the B2 footer data change', () => {
+    const allFooterHrefs = footerLinkGroups.flatMap((group) => group.links.map((link) => link.href));
+    for (const stillDeadHref of ['/about', '/careers', '/contact', '/api']) {
+      expect(allFooterHrefs).not.toContain(stillDeadHref);
     }
   });
 });

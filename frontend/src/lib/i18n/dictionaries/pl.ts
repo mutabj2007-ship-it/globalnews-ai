@@ -491,4 +491,82 @@ export const pl: Dictionary = {
       },
     },
   },
+  privacyPage: {
+    title: 'Polityka prywatności',
+    lastUpdatedLabel: 'Ostatnia aktualizacja',
+    lastUpdatedDate: '17 sierpnia 2026',
+    intro:
+      'Ta strona wyjaśnia, w prosty sposób, jakie informacje zbiera GlobalNews AI i jak są one wykorzystywane. Opisuje produkt dokładnie w takiej formie, w jakiej działa on obecnie.',
+    sections: [
+      {
+        heading: 'Konto i logowanie',
+        body: 'Możesz korzystać z GlobalNews AI, wyszukiwać i czytać analizy bez logowania. Jeśli zdecydujesz się zalogować przy użyciu konta Google, otrzymujemy od Google podstawowe informacje identyfikacyjne (takie jak imię i nazwisko, adres e-mail oraz zdjęcie profilowe), aby utworzyć i utrzymać Twoje konto oraz zachować Twoje zalogowanie między sesjami.',
+      },
+      {
+        heading: 'Aktywność wyszukiwania i historia',
+        body: 'Gdy jesteś zalogowany, zadawane przez Ciebie pytania mogą być zapisywane na Twoim koncie, abyś mógł do nich wrócić później. W dowolnym momencie możesz przeglądać i usuwać poszczególne wpisy lub wyczyścić całą historię wyszukiwania na swoim koncie. Usunięcie konta powoduje również usunięcie zapisanej historii wyszukiwania.',
+      },
+      {
+        heading: 'Preferencje językowe',
+        body: 'Wybrany przez Ciebie język wyświetlania jest zapisywany w Twojej przeglądarce (za pomocą pamięci lokalnej oraz niewielkiego pliku cookie), aby strona zapamiętała Twoją preferencję przy kolejnej wizycie. Jest to wyłącznie techniczne ustawienie preferencji \u2014 nie jest ono powiązane z profilowaniem ani działaniami reklamowymi.',
+      },
+      {
+        heading: 'Jak przetwarzane jest Twoje pytanie',
+        body: 'Aby odpowiedzieć na pytanie, GlobalNews AI pobiera odpowiednie doniesienia prasowe od zewnętrznych dostawców wiadomości i wykorzystuje model językowy AI do analizy i podsumowania tych doniesień. Treść Twojego pytania oraz pobrane artykuły są przesyłane do tych zewnętrznych usług w ramach generowania odpowiedzi.',
+      },
+      {
+        heading: 'Czego nie zbieramy',
+        body: 'GlobalNews AI nie żąda ani nie zbiera Twojej dokładnej lokalizacji fizycznej. Obecnie nie prowadzimy systemów analitycznych, reklamowych ani śledzenia administracyjnego wykraczających poza zakres opisany na tej stronie.',
+      },
+      {
+        heading: 'Bezpieczeństwo',
+        body: 'Stosujemy standardowe zabezpieczenia techniczne odpowiednie dla usługi tego rodzaju, aby pomóc chronić Twoje informacje. Żadna usługa online nie może zagwarantować pełnego bezpieczeństwa, dlatego zachęcamy do używania silnego, unikalnego hasła do konta powiązanego z tą usługą.',
+      },
+      {
+        heading: 'Zmiany w niniejszej polityce',
+        body: 'W miarę rozwoju GlobalNews AI ta strona będzie aktualizowana, aby odzwierciedlać rzeczywisty sposób działania produktu. Zachęcamy do regularnego odwiedzania tej strony.',
+      },
+    ],
+  },
+  termsPage: {
+    title: 'Regulamin',
+    lastUpdatedLabel: 'Ostatnia aktualizacja',
+    lastUpdatedDate: '17 sierpnia 2026',
+    intro:
+      'Niniejszy regulamin opisuje, w jaki sposób GlobalNews AI powinien być używany. Prosimy o zapoznanie się z nim przed skorzystaniem z usługi.',
+    sections: [
+      {
+        heading: 'Czym jest GlobalNews AI',
+        body: 'GlobalNews AI to narzędzie informacyjne, które pomaga zrozumieć bieżące wydarzenia poprzez pobieranie doniesień prasowych i generowanie ich analizy wspomaganej przez AI. Ma na celu szybkie zorientowanie się w danym temacie \u2014 nie zastępuje samodzielnej lektury źródłowych doniesień i nie stanowi porady prawnej, finansowej ani medycznej.',
+      },
+      {
+        heading: 'Analiza generowana przez AI może zawierać błędy',
+        body: 'Analizy na tej stronie są generowane przez model językowy AI na podstawie pobranych dowodów. Treści generowane przez AI mogą być niepełne, nieaktualne lub po prostu błędne. Zawsze sprawdzaj cytowane źródła i dowody przedstawione obok analizy, zanim się na niej oprzesz, i kieruj się własnym osądem.',
+      },
+      {
+        heading: 'Zakres i dostępność nie są gwarantowane',
+        body: 'Działanie GlobalNews AI zależy od zewnętrznych dostawców wiadomości i usług AI. Zakres informacji na dany temat może być częściowy, opóźniony lub czasowo niedostępny, a sama usługa może być okresowo niedostępna. Nie gwarantujemy pełnego ani ciągłego zakresu informacji dla żadnego tematu, regionu ani wydarzenia.',
+      },
+      {
+        heading: 'Twoje konto i obowiązki',
+        body: 'Jeśli utworzysz konto, jesteś odpowiedzialny za zachowanie poufności danych logowania oraz za aktywność odbywającą się za pośrednictwem Twojego konta. W dowolnym momencie możesz usunąć swoje konto wraz z powiązanymi danymi.',
+      },
+      {
+        heading: 'Dozwolone korzystanie',
+        body: 'Prosimy o korzystanie z GlobalNews AI zgodnie z jego przeznaczeniem. Nie należy podejmować prób zakłócania, przeciążania ani obchodzenia działania usługi, ani wykorzystywać jej w sposób naruszający obowiązujące prawo lub prawa osób trzecich.',
+      },
+      {
+        heading: 'Atrybucja źródeł',
+        body: 'Analizy przedstawiane na tej stronie opierają się na doniesieniach pochodzących od zewnętrznych źródeł prasowych, które są cytowane obok analizy. Źródła te zachowują własne prawa do swoich oryginalnych doniesień; rolą GlobalNews AI jest pomóc Ci odnaleźć i zrozumieć te doniesienia, a nie je zastąpić.',
+      },
+      {
+        heading: 'Zmiany usługi i niniejszego regulaminu',
+        body: 'GlobalNews AI jest w fazie aktywnego rozwoju, w związku z czym zarówno usługa, jak i niniejszy regulamin mogą ulegać zmianom. Będziemy aktualizować tę stronę, aby odzwierciedlić istotne zmiany.',
+      },
+      {
+        heading: 'Ogólne zastrzeżenie',
+        body: 'Usługa jest świadczona w stanie \u201cjaki jest\u201d, bez jakichkolwiek gwarancji, w zakresie dozwolonym przez obowiązujące prawo.',
+      },
+    ],
+  },
 };
