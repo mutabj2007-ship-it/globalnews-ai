@@ -55,11 +55,21 @@ const config: Config = {
           '0%': { opacity: '1', transform: 'translateY(0)' },
           '100%': { opacity: '0', transform: 'translateY(-6px)' },
         },
+        // C2.1 — radar emblem scan sweep (Logo.tsx). A single new
+        // keyframe, not a broader token rewrite: the emblem's other
+        // two motions (breathing outer ring, pulsing core) reuse the
+        // ALREADY-EXISTING `ring-pulse` keyframe above and Tailwind's
+        // own built-in `animate-pulse` utility respectively — nothing
+        // new needed for those.
+        'emblem-scan': {
+          to: { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         'ring-pulse': 'ring-pulse 3.2s cubic-bezier(0.2, 0.6, 0.4, 1) infinite',
         'fade-slide-in': 'fade-slide-in 0.4s ease-out forwards',
         'fade-slide-out': 'fade-slide-out 0.4s ease-in forwards',
+        'emblem-scan': 'emblem-scan 14s linear infinite',
       },
     },
   },

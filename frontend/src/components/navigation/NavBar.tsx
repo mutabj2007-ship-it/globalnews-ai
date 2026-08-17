@@ -27,10 +27,10 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
   const t = getDictionary(language).navBar;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-cyan-500/15 bg-void/85 backdrop-blur-md relative">
+    <header className="sticky top-0 z-50 border-b border-cyan-500/20 bg-void/90 backdrop-blur-[10px] relative">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-[-1px] h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
 
-      <div className="mx-auto flex h-14 max-w-[1480px] items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-[62px] max-w-[1480px] items-center justify-between px-4 sm:px-6 lg:px-8">
         <a href="/" className="shrink-0" aria-label={t.homeAriaLabel}>
           <Logo />
         </a>
@@ -67,7 +67,7 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
           </button>
           <AccountControl
             signInLabel={t.signIn}
-            signInClassName="rounded-full bg-cyan-500 px-4 py-2 text-sm font-medium text-void transition-colors hover:bg-cyan-400"
+            signInClassName="rounded-[9px] bg-gradient-to-b from-signal to-signal-dim px-4 py-2 text-sm font-medium text-white transition-colors hover:from-signal-bright hover:to-signal"
             historyLabel={t.history}
             signOutLabel={t.signOut}
             deleteAccountLabel={t.deleteAccount}
@@ -120,7 +120,7 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
           </div>
           <AccountControl
             signInLabel={t.signIn}
-            signInClassName="mt-4 w-full rounded-full bg-signal px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-signal-bright"
+            signInClassName="mt-4 w-full rounded-[9px] bg-gradient-to-b from-signal to-signal-dim px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:from-signal-bright hover:to-signal"
             historyLabel={t.history}
             signOutLabel={t.signOut}
             deleteAccountLabel={t.deleteAccount}
