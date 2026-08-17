@@ -29,10 +29,24 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=4000
-      - FRONTEND_ORIGIN=http://localhost:${FRONTEND_PORT:-3000}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:${FRONTEND_PORT:-3000}}
       - GNEWS_API_KEY=${GNEWS_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      # Milestone B3 — optional Google OAuth/OIDC credentials for the
+      # sign-in flow. Passed ONLY as backend container runtime
+      # environment variables (never into a Docker build ARG/ENV,
+      # unlike NEXT_PUBLIC_API_URL below) since these include real
+      # secrets (OAUTH_CLIENT_SECRET, OAUTH_FLOW_SECRET) that must
+      # never be baked into an image layer. Empty-string defaults
+      # preserve today's guest-mode-only behavior unchanged when
+      # unset — auth.service.ts's startGoogleAuth() already fails
+      # closed with a 503 on sign-in specifically when these are
+      # absent; every other browse/search/map/analysis capability is
+      # unaffected either way.
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID:-}
+      - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET:-}
+      - OAUTH_FLOW_SECRET=${OAUTH_FLOW_SECRET:-}
       # Milestone #54 — points at the Compose service hostname
       # ('postgres'), not localhost: containers on the same Compose
       # network resolve each other by service name. Credentials are
@@ -63,6 +77,17 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      # Milestone B3 — NEXT_PUBLIC_API_URL must reach the frontend
+      # BUILD (Next.js inlines public env vars into the compiled
+      # bundle at build time, not read at container runtime — see
+      # frontend/Dockerfile's own comment). The `environment:` entry
+      # below was, before this change, the ONLY place this value was
+      # ever supplied — too late to affect the already-built image.
+      # Same default as before (unchanged local-dev behavior); a real
+      # deployment sets NEXT_PUBLIC_API_URL in its own environment to
+      # override it. No production URL invented here.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${BACKEND_PORT:-4000}}
     container_name: globalnews-ai-frontend
     ports:
       - '${FRONTEND_PORT:-3000}:3000'
