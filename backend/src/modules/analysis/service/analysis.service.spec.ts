@@ -4661,3 +4661,1135 @@ describe('AnalysisService', () => {
     });
   });
 });
+
+describe('Milestone #63 — bounded domain-aware supplemental retrieval', () => {
+  const RWANDA_QUESTION =
+    'What is the current situation in Rwanda covering the most important recent political, economic, security, diplomatic, social, infrastructure, technological, and regional developments? Explain what has changed recently in each of these areas, why those developments matter, how they affect Rwanda and its people, what the major risks and opportunities are, how Rwanda\u2019s relationships with neighboring countries and the wider international community are evolving, and what important developments we should watch for next.';
+
+  // Mirrors the real M63 Phase 2 diagnostic observation: a narrow
+  // primary pool concentrated in only 2 of 8 requested domains
+  // (diplomatic via "bilateral migration", social via "healthcare").
+  // Titles are deliberately DISTINCT from one another (no shared
+  // phrasing) so the real areLikelyDuplicateArticles() title-overlap
+  // check never produces an accidental false-positive match between
+  // two genuinely different primary articles in these tests.
+  //
+  // URL correction (post-integration fix): makeArticle()'s own default
+  // url ('https://example.com') is shared by every article that
+  // doesn't override it. isLikelyDuplicate()'s FIRST check is an exact
+  // normalized-URL match, which short-circuits before title similarity
+  // is even evaluated — so fixtures representing genuinely DIFFERENT
+  // real articles must each get an explicit, distinct url, exactly as
+  // real production articles always would.
+  function narrowPrimaryArticles() {
+    return [
+      makeArticle({
+        id: 'primary-1',
+        title: 'Rwanda and DRC sign migration arrangement',
+        summary: 'Officials announced a new bilateral migration deal between Rwanda and DRC.',
+        url: 'https://example.com/m63-primary-1',
+      }),
+      makeArticle({
+        id: 'primary-2',
+        title: 'NPR: healthcare drones deliver medical supplies',
+        summary: 'Drones are used to deliver blood and medical supplies to the community in rural Rwanda.',
+        url: 'https://example.com/m63-primary-2',
+      }),
+    ];
+  }
+
+  // A larger, mutually-distinct 9-article pool matching the real M63
+  // Phase 2 diagnostic count (primary=9), used for the final-evidence
+  // reservation tests below.
+  function ninePrimaryArticles() {
+    const titles = [
+      'Rwanda and DRC sign migration arrangement',
+      'Legal ruling issued in Rwanda court case',
+      'Tourism sponsorship deal announced in Kigali',
+      'Rwanda influence campaign scrutinized abroad',
+      'NPR: healthcare drones deliver medical supplies',
+      'Coffee export prices rise sharply this season',
+      'New stadium construction begins in Kigali',
+      'Wildlife conservation park expands in Rwanda',
+      'Refugee camp conditions reported by aid workers',
+    ];
+    return titles.map((title, index) =>
+      makeArticle({
+        id: `primary-${index}`,
+        title,
+        summary: `${title} — full report.`,
+        url: `https://example.com/m63-primary-${index}`,
+      }),
+    );
+  }
+
+  it('0-2 requested domains: no supplemental retrieval, ordinary single-call behavior preserved', async () => {
+    const articles = [makeArticle({ id: 'a1', title: 'Rwanda political election news' })];
+    const newsService = { search: jest.fn() };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles)),
+    };
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews('What is the political news in Rwanda?');
+
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledTimes(1);
+    expect(newsService.search).not.toHaveBeenCalled();
+  });
+
+  it('>=3 requested domains with adequate primary coverage: no supplemental retrieval', async () => {
+    const articles = [
+      makeArticle({
+        id: 'full-1',
+        title: 'Rwanda political economic security news',
+        summary: 'Government economy trade military security all covered in one report.',
+      }),
+    ];
+    const newsService = { search: jest.fn() };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles)),
+    };
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews('What are the political, economic, and security developments in Rwanda?');
+
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledTimes(1);
+    expect(newsService.search).not.toHaveBeenCalled();
+  });
+
+  it('broad question + narrow primary pool (2 missing domains): exactly TWO supplemental searches, total provider calls capped at 3', async () => {
+    const primaryArticles = narrowPrimaryArticles();
+    const newsService = {
+      search: jest
+        .fn()
+        .mockResolvedValueOnce(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'supp-political-1',
+                title: 'Rwanda parliament election minister vote',
+                url: 'https://example.com/m63-supp-political-1',
+              }),
+            ],
+            { dataMode: 'live' },
+          ),
+        )
+        .mockResolvedValueOnce(
+          makeSearchResponse(
+            [
+              makeArticle({
+                id: 'supp-economic-1',
+                title: 'Rwanda trade investment finance growth',
+                url: 'https://example.com/m63-supp-economic-1',
+              }),
+            ],
+            { dataMode: 'live' },
+          ),
+        ),
+    };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+    };
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(RWANDA_QUESTION);
+
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledTimes(1);
+    expect(newsService.search).toHaveBeenCalledTimes(2);
+  });
+
+  it('broad question + more than 2 missing domains: still exactly TWO supplemental searches (hard cap)', async () => {
+    const primaryArticles = [
+      makeArticle({
+        id: 'primary-1',
+        title: 'Rwanda bilateral migration arrangement',
+        summary: 'A diplomatic bilateral deal was signed.',
+        url: 'https://example.com/m63-cap-primary-1',
+      }),
+    ];
+    const newsService = {
+      search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+    };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+    };
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(RWANDA_QUESTION);
+
+    expect(newsService.search).toHaveBeenCalledTimes(2);
+  });
+
+  it('deterministic first-mentioned-domain priority: supplemental searches target political and economic (the first two missing domains in question order), not later-mentioned ones', async () => {
+    const primaryArticles = narrowPrimaryArticles(); // represents diplomatic, social
+    const newsService = {
+      search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+    };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+    };
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(RWANDA_QUESTION);
+
+    const searchedTerms = (newsService.search as jest.Mock).mock.calls.map((call) => call[0] as string);
+    expect(searchedTerms).toEqual(['Rwanda politics', 'Rwanda economy']);
+  });
+
+  it('supplemental results undergo the same country-relevance filtering as primary results — a supplement with only irrelevant results reserves no slot', async () => {
+    const primaryArticles = narrowPrimaryArticles();
+    const newsService = {
+      search: jest
+        .fn()
+        .mockResolvedValueOnce(
+          makeSearchResponse(
+            [
+              // Genuinely irrelevant to Rwanda — no country reference at all.
+              makeArticle({
+                id: 'irrelevant-1',
+                title: 'Global stock markets rally',
+                summary: 'Markets worldwide.',
+                url: 'https://example.com/m63-irrelevant-1',
+              }),
+            ],
+            { dataMode: 'live' },
+          ),
+        )
+        .mockResolvedValueOnce(makeSearchResponse([])),
+    };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+    };
+    let capturedArticles: NewsArticle[] = [];
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+        capturedArticles = request.articles;
+        return validCandidateFor(request.articles);
+      }),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews(RWANDA_QUESTION);
+
+    expect(capturedArticles.some((article) => article.id === 'irrelevant-1')).toBe(false);
+  });
+
+  it('a supplemental search returning zero articles is handled safely — no crash, primary evidence still used', async () => {
+    const primaryArticles = narrowPrimaryArticles();
+    const newsService = {
+      search: jest.fn().mockResolvedValue(makeSearchResponse([])),
+    };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+    };
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    const response = await service.analyzeNews(RWANDA_QUESTION);
+
+    expect(response.articles.length).toBeGreaterThan(0);
+    expect(response.articles.some((a) => a.id === 'primary-1')).toBe(true);
+  });
+
+  it('a domain with no evidence anywhere (neither primary nor supplemental) remains unsupported — never fabricated', async () => {
+    const primaryArticles = narrowPrimaryArticles();
+    const newsService = {
+      search: jest.fn().mockResolvedValue(makeSearchResponse([])), // both supplements find nothing
+    };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+    };
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    const response = await service.analyzeNews(RWANDA_QUESTION);
+
+    expect(response.articles).toHaveLength(primaryArticles.length);
+  });
+
+  it('the total provider-call ceiling cannot exceed 3 for this branch, even when a supplemental search itself fails', async () => {
+    const primaryArticles = narrowPrimaryArticles();
+    const newsService = {
+      search: jest
+        .fn()
+        .mockRejectedValueOnce(new Error('provider outage'))
+        .mockResolvedValueOnce(makeSearchResponse([])),
+    };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+    };
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    const response = await service.analyzeNews(RWANDA_QUESTION);
+
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledTimes(1);
+    expect(newsService.search).toHaveBeenCalledTimes(2);
+    expect(response.articles.length).toBeGreaterThan(0);
+  });
+
+  it('ordinary country behavior (no domain keywords at all) remains completely unchanged — exactly the pre-existing single-call path', async () => {
+    const articles = [makeArticle({ id: 'ordinary-1', title: 'Rwanda general news update' })];
+    const newsService = { search: jest.fn() };
+    const countryNewsService = {
+      getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', articles)),
+    };
+    const provider: AnalysisProvider = {
+      id: 'mock-analysis',
+      displayName: 'Mock',
+      isMock: true,
+      analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+    };
+    const service = new AnalysisService(
+      newsService as never,
+      countryNewsService as never,
+      provider,
+      makeConfigService(),
+    );
+
+    await service.analyzeNews('Latest news from Rwanda');
+
+    expect(countryNewsService.getCountryNews).toHaveBeenCalledWith('RWA', undefined, 20, undefined);
+    expect(newsService.search).not.toHaveBeenCalled();
+  });
+
+  describe('final-evidence reserved-slot selection (CTO correction)', () => {
+    it('real-style primary=9, maxArticles=8, one unique supplemental domain: the supplemental representative SURVIVES and final evidence count remains exactly 8', async () => {
+      const primaryArticles = ninePrimaryArticles();
+      const supplementalArticle = makeArticle({
+        id: 'supp-political-1',
+        title: 'Rwanda parliament election minister vote',
+        summary: 'Government and president election coverage.',
+        url: 'https://example.com/m63-real-style-supp-political-1',
+      });
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(makeSearchResponse([supplementalArticle], { dataMode: 'live' }))
+          .mockResolvedValueOnce(makeSearchResponse([])),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }), // matches the real M63 Phase 2 diagnostic value
+      );
+
+      const response = await service.analyzeNews(RWANDA_QUESTION);
+
+      expect(capturedArticles.some((a) => a.id === 'supp-political-1')).toBe(true);
+      expect(response.articles).toHaveLength(8);
+    });
+
+    it('two successful supplemental domains: at most two supplemental representatives survive, primary remains dominant', async () => {
+      const primaryArticles = ninePrimaryArticles();
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(
+            makeSearchResponse(
+              [
+                makeArticle({
+                  id: 'supp-political-1',
+                  title: 'Rwanda parliament election minister vote',
+                  url: 'https://example.com/m63-2dom-supp-political-1',
+                }),
+              ],
+              { dataMode: 'live' },
+            ),
+          )
+          .mockResolvedValueOnce(
+            makeSearchResponse(
+              [
+                makeArticle({
+                  id: 'supp-economic-1',
+                  title: 'Rwanda trade investment finance growth',
+                  url: 'https://example.com/m63-2dom-supp-economic-1',
+                }),
+              ],
+              { dataMode: 'live' },
+            ),
+          ),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      const supplementalSurvivors = capturedArticles.filter(
+        (a) => a.id === 'supp-political-1' || a.id === 'supp-economic-1',
+      );
+      expect(supplementalSurvivors).toHaveLength(2);
+      // Primary dominance: at most 2 of maxArticles=8 slots are ever
+      // supplemental — at least 6 of the final 8 are primary articles.
+      const primarySurvivors = capturedArticles.filter((a) => a.id.startsWith('primary-'));
+      expect(primarySurvivors.length).toBeGreaterThanOrEqual(6);
+      expect(capturedArticles).toHaveLength(8);
+    });
+
+    it('first supplemental result is a duplicate of primary evidence but the second is unique: the second (non-duplicate) one is selected, not the duplicate', async () => {
+      const primaryArticles = ninePrimaryArticles();
+      const duplicateOfPrimary = makeArticle({
+        id: 'dup-of-primary',
+        title: primaryArticles[0].title, // exact duplicate of the first primary article
+        summary: primaryArticles[0].summary,
+        // Deliberately its OWN distinct URL — this is a DIFFERENT
+        // provider's coverage of the SAME real-world story (a
+        // realistic scenario), so the duplicate classification here
+        // must come from the title-Jaccard path (title is verbatim
+        // identical to primaryArticles[0]'s, guaranteeing similarity
+        // 1.0, well over the 0.6 threshold), not from an accidental
+        // shared default URL.
+        url: 'https://example.com/m63-dup-of-primary-alt-source',
+      });
+      const uniqueRepresentative = makeArticle({
+        id: 'genuinely-unique',
+        title: 'Rwanda parliament election minister vote in new session',
+        summary: 'A distinct political story never covered by the primary pool.',
+        url: 'https://example.com/m63-genuinely-unique',
+      });
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(
+            makeSearchResponse([duplicateOfPrimary, uniqueRepresentative], { dataMode: 'live' }),
+          )
+          .mockResolvedValueOnce(makeSearchResponse([])),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      expect(capturedArticles.some((a) => a.id === 'genuinely-unique')).toBe(true);
+      expect(capturedArticles.some((a) => a.id === 'dup-of-primary')).toBe(false);
+    });
+
+    it('all supplemental candidates for a domain duplicate primary evidence: no reserved slot for that domain, final evidence is exactly the clustered primary pool', async () => {
+      const primaryArticles = ninePrimaryArticles();
+      const allDuplicates = [
+        makeArticle({
+          id: 'dup-1',
+          title: primaryArticles[0].title,
+          summary: primaryArticles[0].summary,
+          url: 'https://example.com/m63-dup1-alt-source',
+        }),
+        makeArticle({
+          id: 'dup-2',
+          title: primaryArticles[1].title,
+          summary: primaryArticles[1].summary,
+          url: 'https://example.com/m63-dup2-alt-source',
+        }),
+      ];
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(makeSearchResponse(allDuplicates, { dataMode: 'live' }))
+          .mockResolvedValueOnce(makeSearchResponse([])),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      expect(capturedArticles.some((a) => a.id === 'dup-1' || a.id === 'dup-2')).toBe(false);
+      expect(capturedArticles).toHaveLength(8);
+    });
+
+    it('the merged candidate pool used for retrieval metadata is cross-primary/supplement deduplicated', async () => {
+      const primaryArticles = ninePrimaryArticles();
+      const supplementalDuplicate = makeArticle({
+        id: 'supp-dup-of-primary-0',
+        title: primaryArticles[0].title,
+        summary: primaryArticles[0].summary,
+        url: 'https://example.com/m63-supp-dup-alt-source',
+      });
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(makeSearchResponse([supplementalDuplicate], { dataMode: 'live' }))
+          .mockResolvedValueOnce(makeSearchResponse([])),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      const response = await service.analyzeNews(RWANDA_QUESTION);
+
+      // 9 primary + 1 supplemental that duplicates primary-0 = 9
+      // unique candidates in the merged pool, never 10.
+      expect(response.retrievalContext.articlesRetrieved).toBe(9);
+    });
+
+    it('retrievalContext.articlesRetrieved equals the unique merged pre-final-selection candidate count when supplements succeed (9 primary + 1 genuinely new supplemental = 10)', async () => {
+      const primaryArticles = ninePrimaryArticles();
+      const supplementalArticle = makeArticle({
+        id: 'supp-political-1',
+        title: 'Rwanda parliament election minister vote',
+        summary: 'Government and president election coverage.',
+        url: 'https://example.com/m63-real-style-supp-political-1',
+      });
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(makeSearchResponse([supplementalArticle], { dataMode: 'live' }))
+          .mockResolvedValueOnce(makeSearchResponse([])),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      const response = await service.analyzeNews(RWANDA_QUESTION);
+
+      expect(response.retrievalContext.articlesRetrieved).toBe(10);
+      // Final evidence itself still respects maxArticles even though
+      // articlesRetrieved (a retrieval-pool count) exceeds it — these
+      // are deliberately different numbers describing different things.
+      expect(response.articles).toHaveLength(8);
+    });
+
+    it('ordinary country retrieval (no supplements) preserves its previous articlesRetrieved semantics — the plain primary pool count', async () => {
+      const primaryArticles = [makeArticle({ id: 'ordinary-1', title: 'Rwanda general news update' })];
+      const newsService = { search: jest.fn() };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Latest news from Rwanda');
+
+      expect(response.retrievalContext.articlesRetrieved).toBe(1);
+      expect(newsService.search).not.toHaveBeenCalled();
+    });
+
+    it('no provider call count exceeds 3 even in the reserved-slot selection scenarios', async () => {
+      const primaryArticles = ninePrimaryArticles();
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(
+            makeSearchResponse(
+              [
+                makeArticle({
+                  id: 'supp-political-1',
+                  title: 'Rwanda parliament election minister vote',
+                  url: 'https://example.com/m63-cap3-supp-political-1',
+                }),
+              ],
+              { dataMode: 'live' },
+            ),
+          )
+          .mockResolvedValueOnce(
+            makeSearchResponse(
+              [
+                makeArticle({
+                  id: 'supp-economic-1',
+                  title: 'Rwanda trade investment finance growth',
+                  url: 'https://example.com/m63-cap3-supp-economic-1',
+                }),
+              ],
+              { dataMode: 'live' },
+            ),
+          ),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      const totalProviderCalls =
+        (countryNewsService.getCountryNews as jest.Mock).mock.calls.length +
+        (newsService.search as jest.Mock).mock.calls.length;
+      expect(totalProviderCalls).toBeLessThanOrEqual(3);
+    });
+
+    it('regression: distinct URLs do NOT defeat title-based duplicate detection when titles genuinely satisfy the existing similarity rule — proves the URL fix above did not weaken clusterDuplicateArticles()', async () => {
+      // Two DIFFERENT urls, but titles sharing enough non-stopword
+      // tokens to score >= 0.6 Jaccard under the real, UNCHANGED
+      // TITLE_SIMILARITY_THRESHOLD (verified by hand-calculation:
+      // "rwanda parliament election results announced today" vs
+      // "...confirmed today" share 5 of 7 union tokens = 0.714).
+      const primaryArticles = [
+        makeArticle({
+          id: 'title-dup-1',
+          title: 'Rwanda parliament election results announced today',
+          summary: 'Election results were announced.',
+          url: 'https://example.com/m63-title-dup-source-a',
+        }),
+        makeArticle({
+          id: 'title-dup-2',
+          title: 'Rwanda parliament election results confirmed today',
+          summary: 'A second outlet confirmed the same election results.',
+          url: 'https://example.com/m63-title-dup-source-b',
+        }),
+      ];
+      const newsService = { search: jest.fn() };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      // Deliberately NOT a broad question — this test is about the
+      // clustering/dedup mechanism itself, not M63's domain-detection
+      // gate, so it should still cluster to one representative via the
+      // pre-existing, unmodified title-similarity path.
+      await service.analyzeNews("What's happening in Rwanda?");
+
+      expect(capturedArticles).toHaveLength(1);
+    });
+  });
+
+  describe('supplemental provider-state distinction (CTO live-acceptance correction)', () => {
+    it('live response + zero articles = genuine zero-result case — no provider-unavailable warning logged', async () => {
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const primaryArticles = narrowPrimaryArticles();
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(makeSearchResponse([], { dataMode: 'live' }))
+          .mockResolvedValueOnce(makeSearchResponse([], { dataMode: 'live' })),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      const providerUnavailableWarnings = warnSpy.mock.calls.filter((call) =>
+        String(call[0]).includes('provider unavailable'),
+      );
+      expect(providerUnavailableWarnings).toHaveLength(0);
+      warnSpy.mockRestore();
+    });
+
+    it('unavailable/provider-error response = provider-failure case — logged with truthful "provider unavailable" wording, not "call succeeded"', async () => {
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const primaryArticles = narrowPrimaryArticles();
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(
+            makeSearchResponse([], { dataMode: 'unavailable', fallbackReason: 'provider-error' }),
+          )
+          .mockResolvedValueOnce(makeSearchResponse([], { dataMode: 'live' })),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      const providerUnavailableWarnings = warnSpy.mock.calls.filter((call) =>
+        String(call[0]).includes('provider unavailable'),
+      );
+      expect(providerUnavailableWarnings).toHaveLength(1);
+      expect(String(providerUnavailableWarnings[0][0])).toContain('dataMode=unavailable');
+      expect(String(providerUnavailableWarnings[0][0])).toContain('fallbackReason=provider-error');
+      expect(String(providerUnavailableWarnings[0][0])).not.toContain('call succeeded');
+      warnSpy.mockRestore();
+    });
+
+    it('CTO correction — a non-live supplemental response (dataMode="cached", fallbackReason="provider-error") deliberately containing a highly relevant Rwanda article does NOT receive a reserved supplemental slot', async () => {
+      const primaryArticles = narrowPrimaryArticles();
+      // Deliberately a genuinely relevant Rwanda article — proves the
+      // fix rejects it specifically BECAUSE of dataMode/fallbackReason,
+      // not because the article itself would have failed relevance
+      // filtering. This is exactly the reported bug scenario: a
+      // non-live fallback response that happens to carry real,
+      // on-topic stored articles must still never become supplemental
+      // evidence for this domain.
+      const highlyRelevantStaleArticle = makeArticle({
+        id: 'stale-but-relevant',
+        title: 'Rwanda parliament election minister vote',
+        summary: 'Government and president election coverage directly about Rwanda.',
+        url: 'https://example.com/m63-correction2-stale-relevant',
+      });
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(
+            makeSearchResponse([highlyRelevantStaleArticle], {
+              dataMode: 'cached',
+              fallbackReason: 'provider-error',
+            }),
+          )
+          .mockResolvedValueOnce(makeSearchResponse([], { dataMode: 'live' })),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      expect(capturedArticles.some((a) => a.id === 'stale-but-relevant')).toBe(false);
+    });
+
+    it('a provider-failure response does not fabricate or reserve supplemental evidence', async () => {
+      const primaryArticles = narrowPrimaryArticles();
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(
+            makeSearchResponse([], { dataMode: 'unavailable', fallbackReason: 'provider-error' }),
+          )
+          .mockResolvedValueOnce(
+            makeSearchResponse([], { dataMode: 'unavailable', fallbackReason: 'provider-error' }),
+          ),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews(RWANDA_QUESTION);
+
+      // Final evidence is exactly the (unmodified) primary pool —
+      // nothing fabricated to fill the provider-failed domains.
+      expect(response.articles).toHaveLength(primaryArticles.length);
+    });
+
+    it('total provider-call ceiling remains 3 even when supplemental calls return provider-failure responses', async () => {
+      const primaryArticles = narrowPrimaryArticles();
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(
+            makeSearchResponse([], { dataMode: 'unavailable', fallbackReason: 'provider-error' }),
+          )
+          .mockResolvedValueOnce(
+            makeSearchResponse([], { dataMode: 'unavailable', fallbackReason: 'provider-error' }),
+          ),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(primaryArticles)),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      const totalProviderCalls =
+        (countryNewsService.getCountryNews as jest.Mock).mock.calls.length +
+        (newsService.search as jest.Mock).mock.calls.length;
+      expect(totalProviderCalls).toBeLessThanOrEqual(3);
+    });
+
+    it('successful supplement behavior remains completely unchanged by this correction — a genuine live supplemental result still survives into final evidence', async () => {
+      const primaryArticles = ninePrimaryArticles();
+      const supplementalArticle = makeArticle({
+        id: 'supp-political-1',
+        title: 'Rwanda parliament election minister vote',
+        summary: 'Government and president election coverage.',
+        url: 'https://example.com/m63-provider-state-supp-political-1',
+      });
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(makeSearchResponse([supplementalArticle], { dataMode: 'live' }))
+          .mockResolvedValueOnce(makeSearchResponse([], { dataMode: 'live' })),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      expect(capturedArticles.some((a) => a.id === 'supp-political-1')).toBe(true);
+    });
+
+    it('CTO correction — dataMode="mock" is a valid intentional development/demo operating mode, NOT provider failure: a mock supplemental response is not classified as provider unavailable and its relevant article survives', async () => {
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const primaryArticles = ninePrimaryArticles();
+      const supplementalArticle = makeArticle({
+        id: 'supp-political-1',
+        title: 'Rwanda parliament election minister vote',
+        summary: 'Government and president election coverage.',
+        url: 'https://example.com/m63-mock-mode-supp-political-1',
+      });
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(makeSearchResponse([supplementalArticle], { dataMode: 'mock' }))
+          .mockResolvedValueOnce(makeSearchResponse([], { dataMode: 'mock' })),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      const providerUnavailableWarnings = warnSpy.mock.calls.filter((call) =>
+        String(call[0]).includes('provider unavailable'),
+      );
+      expect(providerUnavailableWarnings).toHaveLength(0);
+      expect(capturedArticles.some((a) => a.id === 'supp-political-1')).toBe(true);
+      warnSpy.mockRestore();
+    });
+
+    it('CTO correction — dataMode="cached" with fallbackReason="no-live-results" is NOT the same as provider failure: the narrowed gate does not reject it merely for being cached, though downstream relevance/dedup rules still decide survival', async () => {
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const primaryArticles = ninePrimaryArticles();
+      const supplementalArticle = makeArticle({
+        id: 'supp-political-1',
+        title: 'Rwanda parliament election minister vote',
+        summary: 'Government and president election coverage.',
+        url: 'https://example.com/m63-cached-no-live-results-supp-political-1',
+      });
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(
+            makeSearchResponse([supplementalArticle], {
+              dataMode: 'cached',
+              fallbackReason: 'no-live-results',
+            }),
+          )
+          .mockResolvedValueOnce(makeSearchResponse([], { dataMode: 'live' })),
+      };
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      const providerUnavailableWarnings = warnSpy.mock.calls.filter((call) =>
+        String(call[0]).includes('provider unavailable'),
+      );
+      expect(providerUnavailableWarnings).toHaveLength(0);
+      // Not rejected merely for being cached — the genuinely relevant
+      // article still reaches the existing relevance/dedup/reservation
+      // pipeline and survives, exactly as a live response would.
+      expect(capturedArticles.some((a) => a.id === 'supp-political-1')).toBe(true);
+      warnSpy.mockRestore();
+    });
+  });
+});

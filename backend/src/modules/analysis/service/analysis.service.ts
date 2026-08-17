@@ -25,6 +25,16 @@ import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
 import { computeSourceDiversity } from '../duplicates/compute-source-diversity.util';
+import {
+  detectRequestedDomains,
+  isBroadMultiDomainQuestion,
+  detectRepresentedDomains,
+  selectMissingDomains,
+  buildSupplementalSearchTerm,
+  type AnalyticalDomain,
+} from '../query/detect-analytical-domains.util';
+import { scoreCountryRelevance } from '../../news/country/country-relevance.util';
+import { deduplicateArticles, areLikelyDuplicateArticles } from '../../news/country/deduplicate-articles.util';
 import { buildSourceEntities } from './build-source-entities.util';
 import {
   deriveGenericNewsQuery,
@@ -382,6 +392,203 @@ export class AnalysisService {
 
           articles = countryResponse.articles;
           retrievalContext = this.toRetrievalContext(countryResponse, geoMatch);
+
+          // Milestone #63 — bounded domain-aware supplemental retrieval.
+          // Fires ONLY for genuinely broad questions (>=3 distinct
+          // requested analytical domains) AND only when the primary
+          // candidate pool is missing coverage for at least one of
+          // them. Ordinary and already-well-covered broad questions
+          // take exactly the same single-provider-call path as before
+          // this milestone — confirmed by this block never running for
+          // fewer than 3 requested domains or zero missing domains.
+          const requestedDomains = detectRequestedDomains(normalizedQuery);
+
+          if (isBroadMultiDomainQuestion(requestedDomains)) {
+            const representedDomains = detectRepresentedDomains(articles);
+            const missingDomains = selectMissingDomains(requestedDomains, representedDomains);
+
+            // Hard cap: at most 2 supplemental provider calls, giving a
+            // maximum of 3 total for this branch (1 primary + up to 2
+            // supplemental) — selectMissingDomains() itself already
+            // slices to 2, this loop cannot iterate more than that.
+            if (missingDomains.length > 0) {
+              // Kept GROUPED BY DOMAIN (not flattened) — final-evidence
+              // selection below reserves at most ONE representative per
+              // successful domain, so it needs each domain's own
+              // relevance-filtered result set, not one merged list.
+              const relevantSupplementalByDomain = new Map<AnalyticalDomain, NewsArticle[]>();
+
+              for (const domain of missingDomains) {
+                const supplementalTerm = makeProviderSafeNewsQuery(
+                  buildSupplementalSearchTerm(country.name, domain),
+                );
+
+                try {
+                  const supplementalResponse = await this.newsService.search(
+                    supplementalTerm,
+                    SEARCH_POOL_SIZE,
+                  );
+
+                  // M63 live-acceptance correction — NewsResponse.dataMode
+                  // / fallbackReason already distinguish a provider
+                  // failure/rate-limit degradation (dataMode
+                  // 'unavailable' or 'cached', fallbackReason
+                  // 'provider-error') from a genuine live zero-result
+                  // search (dataMode 'live', no fallbackReason). This is
+                  // read-only — it changes only which log message is
+                  // emitted, never the actual relevance filtering,
+                  // reservation, or evidence flow below: a genuine
+                  // provider-error response already carries no usable
+                  // live articles by its own contract, so
+                  // relevantSupplemental naturally ends up empty and no
+                  // slot gets reserved for this domain either way — the
+                  // existing "no usable supplemental evidence, continue
+                  // safely" behavior is completely unchanged. No
+                  // retries, no additional provider calls, no change to
+                  // domain selection.
+                  //
+                  // CTO correction (narrowed condition): the gate below
+                  // targets ONLY the two states that genuinely represent
+                  // a provider failure/rate-limit degradation —
+                  // 'unavailable' (nothing could be returned at all) and
+                  // 'cached' specifically WHEN fallbackReason is
+                  // 'provider-error' (stored reporting was substituted
+                  // because the live provider failed). It deliberately
+                  // does NOT reject:
+                  //   - dataMode 'mock' — a valid, intentional
+                  //     development/demo operating mode, not a failure
+                  //     (confirmed via GNewsProvider.health()'s own
+                  //     "running in mock mode" wording for an
+                  //     unconfigured API key — this is a real,
+                  //     documented, non-error state);
+                  //   - dataMode 'cached' with fallbackReason
+                  //     'no-live-results' — the provider genuinely
+                  //     responded; it simply had nothing new to report,
+                  //     which is not the same as failing. Existing
+                  //     downstream relevance/dedup/reservation logic
+                  //     still decides whether such articles ultimately
+                  //     survive — this gate only prevents a genuine
+                  //     provider-failure response from masquerading as
+                  //     successful evidence.
+                  const isProviderFailure =
+                    supplementalResponse.dataMode === 'unavailable' ||
+                    (supplementalResponse.dataMode === 'cached' &&
+                      supplementalResponse.fallbackReason === 'provider-error');
+
+                  if (isProviderFailure) {
+                    this.logger.warn(
+                      `M63 supplemental domain "${domain}": provider unavailable ` +
+                        `(dataMode=${supplementalResponse.dataMode}, ` +
+                        `fallbackReason=${supplementalResponse.fallbackReason ?? 'none'}); ` +
+                        'treating as no usable supplemental evidence for this domain',
+                    );
+                    // CTO correction: a genuine provider-failure
+                    // response (e.g. an 'unavailable' result, or a
+                    // 'cached' fallback returned specifically because
+                    // the live provider failed) must never populate
+                    // relevantSupplementalByDomain, even if it happens
+                    // to carry stored/stale articles — those were not
+                    // genuinely retrieved for THIS supplemental request
+                    // and must not be treated as fresh evidence for
+                    // this domain. Skip straight to the next domain —
+                    // no retry, no additional provider call, no change
+                    // to domain selection.
+                    continue;
+                  }
+
+                  // Same country-relevance discipline the primary
+                  // country retrieval already applies (isRelevant, per
+                  // scoreCountryRelevance) — reused directly, not a
+                  // second relevance system. An irrelevant supplemental
+                  // result never enters evidence, and a domain with no
+                  // relevant results simply gets no entry in the map
+                  // below (never a reserved slot).
+                  const relevantSupplemental = supplementalResponse.articles.filter(
+                    (article) => scoreCountryRelevance(article, country).isRelevant,
+                  );
+
+                  if (relevantSupplemental.length > 0) {
+                    relevantSupplementalByDomain.set(domain, relevantSupplemental);
+                  }
+                } catch (error) {
+                  // A failed supplemental search never fails the whole
+                  // analysis — the primary country evidence still
+                  // proceeds exactly as it would have before this
+                  // milestone. No evidence for this domain is simply
+                  // no evidence — never fabricated.
+                  this.logger.warn(
+                    `M63 supplemental domain search failed for "${domain}"; continuing without it`,
+                    error instanceof Error ? error : undefined,
+                  );
+                }
+              }
+
+              if (relevantSupplementalByDomain.size > 0) {
+                // Truthful retrieval metadata (CTO-approved semantics):
+                // articlesRetrieved reflects the UNIQUE MERGED CANDIDATE
+                // POOL — primary + all relevant supplemental results,
+                // deduplicated — BEFORE final maxArticles selection.
+                // This is a retrieval-pool count, matching how this
+                // field already behaved pre-M63 (it was never a
+                // final-evidence count), not primary count + reserved-
+                // representative count.
+                const allRelevantSupplemental = [...relevantSupplementalByDomain.values()].flat();
+                const uniqueMergedCandidatePool = deduplicateArticles([
+                  ...articles,
+                  ...allRelevantSupplemental,
+                ]);
+                retrievalContext = {
+                  ...retrievalContext,
+                  articlesRetrieved: uniqueMergedCandidatePool.length,
+                };
+
+                // Existing clustering, applied to primary evidence only
+                // — unchanged function, unchanged input for this step.
+                const clusteredPrimary = clusterDuplicateArticles(articles);
+
+                // For each successful supplemental domain (at most 2),
+                // walk its relevant results in their EXISTING provider/
+                // service order and reserve the FIRST one that is not a
+                // likely duplicate of the clustered primary evidence or
+                // of a supplemental representative already reserved for
+                // an earlier domain. No new ranking/scoring — reuses
+                // the existing areLikelyDuplicateArticles() pairwise
+                // check. If every relevant article for a domain
+                // duplicates existing evidence, that domain simply
+                // reserves no slot.
+                const reservedRepresentatives: NewsArticle[] = [];
+
+                for (const domainArticles of relevantSupplementalByDomain.values()) {
+                  const representative = domainArticles.find(
+                    (candidate) =>
+                      !clusteredPrimary.some((existing) =>
+                        areLikelyDuplicateArticles(existing, candidate),
+                      ) &&
+                      !reservedRepresentatives.some((reserved) =>
+                        areLikelyDuplicateArticles(reserved, candidate),
+                      ),
+                  );
+
+                  if (representative) {
+                    reservedRepresentatives.push(representative);
+                  }
+                }
+
+                // reservedRepresentatives.length <= 2 always holds here
+                // (at most 2 domains ever reach this loop). Remaining
+                // slots are filled with the EXISTING primary ordering —
+                // primary evidence remains dominant by construction,
+                // since at most 2 of config.maxArticles slots are ever
+                // reserved for supplemental representatives.
+                const remainingSlots = Math.max(
+                  0,
+                  config.maxArticles - reservedRepresentatives.length,
+                );
+
+                articles = [...clusteredPrimary.slice(0, remainingSlots), ...reservedRepresentatives];
+              }
+            }
+          }
         } else {
           // Milestone #37: attempt deterministic relational decomposition
           // FIRST — only ever reached after detectLocation() has already
