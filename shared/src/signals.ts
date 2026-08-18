@@ -26,6 +26,18 @@ import type { OfficialSourceClass } from './officialSources';
  *     is explicitly out of M64.1's scope.
  */
 export interface GeoSignal {
+  /**
+   * M64.2 — stable PROVIDER/GEOGRAPHIC identity, deliberately excluding
+   * any measurement value or GlobalNews AI request context. Two
+   * fetches of the same underlying provider observation must produce
+   * the same id even if mentionCount differs between them (a later
+   * fetch legitimately sees a higher count) and even if different
+   * GlobalNews AI queries happened to surface the same observation
+   * (query text is retrieval/request context — see raw.requestQuery
+   * — never signal identity). See gdelt.provider.ts's own
+   * buildStableSignalId() for the concrete canonicalization used by
+   * that provider.
+   */
   id: string;
 
   /** e.g. 'gdelt'. */
@@ -44,8 +56,18 @@ export interface GeoSignal {
 
   sourceUrl?: string;
 
-  /** ISO-8601 — when the underlying event/mention occurred, per the provider. */
+  /** ISO-8601 — when the underlying event/mention occurred, per the provider. For a window-based provider (e.g. GDELT GEO 2.0), this is the observation window's end — a real, defensible boundary — not a discrete event time. See observationWindowStart/observationWindowEnd for the full honest range. */
   observedAt: string;
+
+  /**
+   * M64.2 — ISO-8601. Start of the aggregation window this record's
+   * measurement covers, when the provider's semantics are window-based
+   * rather than a discrete event time.
+   */
+  observationWindowStart?: string;
+
+  /** M64.2 — ISO-8601. End of the aggregation window. */
+  observationWindowEnd?: string;
 
   /**
    * ISO-8601 — when this backend retrieved the signal. This is a new
@@ -55,6 +77,16 @@ export interface GeoSignal {
    * M64.1, so no naming collision applies here.
    */
   retrievedAt: string;
+
+  /**
+   * M64.2 — number of provider observations/mentions represented by
+   * this signal when the upstream provider exposes an aggregate
+   * count (e.g. GDELT GEO 2.0's `properties.count`). This is a
+   * MEASUREMENT, not identity — two fetches of the same geographic
+   * observation with different mentionCount values are still the
+   * same signal (see id's own doc comment).
+   */
+  mentionCount?: number;
 
   /** Set only when this signal traces to an Official Source Registry entry. */
   sourceAuthorityClass?: OfficialSourceClass;
