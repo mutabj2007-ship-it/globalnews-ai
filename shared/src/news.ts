@@ -7,6 +7,8 @@
  * place as real providers are added in later sprints.
  */
 
+import type { OfficialSourceClass } from './officialSources';
+
 export type NewsCategory =
   | 'world'
   | 'politics'
@@ -63,6 +65,39 @@ export interface NewsArticle {
   sourceLanguage?: string;
 
   confidence?: number;
+
+  /**
+   * M64.1 — which SourceProvider produced this record (e.g. 'gnews',
+   * 'official-source:iebc-kenya'). Optional: every existing article
+   * (GNews-sourced, already in the database or freshly fetched today)
+   * has no value here, and that is a correct, honest absence — never
+   * backfilled or inferred from sourceId/sourceName.
+   */
+  providerId?: string;
+
+  /** M64.1 — the provider's own record identifier, if it has one distinct from `id`. */
+  providerRecordId?: string;
+
+  /**
+   * M64.1 — how precisely this record's geography is known. Absent
+   * means "not assessed" — never defaults to a guessed precision.
+   */
+  geographicPrecision?: 'country' | 'region' | 'city' | 'coordinate' | 'unknown';
+
+  /**
+   * M64.1 — where this record sits relative to primary reporting.
+   * Absent means "not assessed", not a claim that the source itself
+   * is of unknown quality.
+   */
+  evidencePrecision?: 'primary' | 'secondary' | 'aggregated' | 'unknown';
+
+  /**
+   * M64.1 — set only when this record's provider is itself an
+   * Official Source Registry entry (see officialSources.ts). Absent
+   * for ordinary news-provider articles (GNews, etc.) — never
+   * populated by inference from sourceName.
+   */
+  sourceAuthorityClass?: OfficialSourceClass;
 }
 
 /**
@@ -148,6 +183,50 @@ export interface ProviderHealthStatus {
   status: ProviderHealthState;
   message?: string;
   checkedAt: string;
+
+  /**
+   * M64.1 — observability additions. All optional and backward-
+   * compatible: every existing ProviderHealthStatus literal in this
+   * codebase (e.g. GNewsProvider.health()'s real return objects)
+   * satisfies this extended interface completely unchanged, since
+   * none of these fields are populated yet by any existing provider.
+   *
+   * requestCount, failureCount, recordsRetrieved, recordsAccepted,
+   * and duplicatesRemoved are PROCESS-LIFETIME counters when a
+   * provider eventually populates them — cumulative since process
+   * start, not per-request or per-health-check values. This is a
+   * documentation commitment for future implementers, not something
+   * enforced by the type itself.
+   */
+
+  /** Whether this provider is currently enabled for reads (distinct from health/reachability). */
+  enabled?: boolean;
+
+  /** Process-lifetime cumulative count. */
+  requestCount?: number;
+
+  /** Process-lifetime cumulative count. */
+  failureCount?: number;
+
+  /** Milliseconds. The single most recent request's latency — not an average, not cumulative. Absent if this provider has never completed a timed request. */
+  lastLatencyMs?: number;
+
+  /** ISO-8601. Absent if this provider has never succeeded. */
+  lastSuccessAt?: string;
+
+  rateLimitState?: 'ok' | 'throttled' | 'unknown';
+
+  /** Process-lifetime cumulative count. */
+  recordsRetrieved?: number;
+
+  /** Process-lifetime cumulative count. */
+  recordsAccepted?: number;
+
+  /** Process-lifetime cumulative count. */
+  duplicatesRemoved?: number;
+
+  /** 0-1. Fraction of this provider's records for which geographic resolution succeeded. */
+  geoResolutionSuccessRate?: number;
 }
 
 /**
