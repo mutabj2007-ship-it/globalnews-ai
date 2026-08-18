@@ -8,6 +8,7 @@ import { PrismaModule } from './database/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { NewsModule } from './modules/news/news.module';
+import { SignalsModule } from './modules/signals/signals.module';
 import { CorsStartupValidator } from './security/cors-startup-validator';
 import { LoggingInterceptor } from './observability/logging.interceptor';
 import { GlobalExceptionFilter } from './observability/global-exception.filter';
@@ -38,6 +39,16 @@ import { HistoryModule } from './modules/history/history.module';
     HealthModule,
     NewsModule,
     AnalysisModule,
+    // M64.3 — Signals Runtime Orchestration Foundation. Internal only:
+    // SignalsModule exports SignalsService, but registers no
+    // controller and no public route. Importing it here makes the
+    // already-built M64.1/M64.2 signal architecture (SignalProvider,
+    // GdeltProvider) reachable via real NestJS DI for the first time,
+    // without changing any existing endpoint's behavior. Constructing
+    // this module performs zero GDELT HTTP requests and never
+    // requires GDELT to be enabled or configured — see
+    // signals.module.ts's own doc comment for the full reasoning.
+    SignalsModule,
     // Milestone #57 — optional accounts & user continuity. None of
     // these three modules place a guard anywhere near the existing
     // News/Analysis/Health routes — every guest capability remains
