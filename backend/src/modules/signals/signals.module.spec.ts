@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { SignalsModule } from './signals.module';
 import { SignalsService } from './signals.service';
 import { GdeltProvider } from './providers/gdelt.provider';
+import { EventRegistryProvider } from './providers/event-registry.provider';
 import { ALL_SIGNAL_PROVIDERS, SIGNAL_PROVIDERS, isGdeltEnabled } from './providers/provider.tokens';
 import type { SignalProvider } from './interfaces';
 
@@ -23,70 +24,159 @@ import type { SignalProvider } from './interfaces';
  * way the original engineering-gate failure did — which is the point:
  * this file must not rely on some sibling module's isGlobal setting
  * to make SignalsModule's own real dependency happen to resolve.
+ *
+ * M64.4 — updated to reflect the truthful two-provider architecture.
+ * The prior contract (ALL_SIGNAL_PROVIDERS has exactly length 1) was
+ * correct when GDELT was the only registered SignalProvider; it is
+ * now superseded, not weakened — EventRegistryProvider genuinely
+ * exists and is genuinely registered, so ALL_SIGNAL_PROVIDERS
+ * genuinely has two entries. Every existing GDELT-specific assertion
+ * below is preserved exactly, extended only to also account for
+ * Event Registry's real, independent enablement gate.
  */
 
-async function buildTestingModule(gdeltEnabled: string) {
-  process.env.GDELT_ENABLED = gdeltEnabled;
+interface TestEnv {
+  GDELT_ENABLED?: string;
+  EVENT_REGISTRY_ENABLED?: string;
+  EVENT_REGISTRY_API_KEY?: string;
+}
+
+const ENV_KEYS: Array<keyof TestEnv> = ['GDELT_ENABLED', 'EVENT_REGISTRY_ENABLED', 'EVENT_REGISTRY_API_KEY'];
+
+async function buildTestingModule(env: TestEnv) {
+  for (const key of ENV_KEYS) {
+    if (env[key] === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = env[key];
+    }
+  }
   return Test.createTestingModule({
     imports: [ConfigModule.forRoot({ isGlobal: false, ignoreEnvFile: true }), SignalsModule],
   }).compile();
 }
 
 describe('SignalsModule — real NestJS DI compilation', () => {
-  const originalEnv = process.env.GDELT_ENABLED;
+  const originalEnv: Partial<Record<keyof TestEnv, string | undefined>> = {};
+  for (const key of ENV_KEYS) originalEnv[key] = process.env[key];
 
   afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env.GDELT_ENABLED;
-    } else {
-      process.env.GDELT_ENABLED = originalEnv;
+    for (const key of ENV_KEYS) {
+      if (originalEnv[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = originalEnv[key];
+      }
     }
   });
 
   it('compiles a real Nest testing module that imports SignalsModule without error', async () => {
-    const moduleRef = await buildTestingModule('false');
+    const moduleRef = await buildTestingModule({ GDELT_ENABLED: 'false', EVENT_REGISTRY_ENABLED: 'false' });
     expect(moduleRef).toBeDefined();
     await moduleRef.close();
   });
 
   it('GdeltProvider is injectable from the compiled module', async () => {
-    const moduleRef = await buildTestingModule('false');
+    const moduleRef = await buildTestingModule({ GDELT_ENABLED: 'false', EVENT_REGISTRY_ENABLED: 'false' });
     const provider = moduleRef.get(GdeltProvider);
     expect(provider).toBeInstanceOf(GdeltProvider);
     await moduleRef.close();
   });
 
+  it('EventRegistryProvider is injectable from the compiled module', async () => {
+    const moduleRef = await buildTestingModule({ GDELT_ENABLED: 'false', EVENT_REGISTRY_ENABLED: 'false' });
+    const provider = moduleRef.get(EventRegistryProvider);
+    expect(provider).toBeInstanceOf(EventRegistryProvider);
+    await moduleRef.close();
+  });
+
   it('SignalsService is injectable from the compiled module (it is the only exported provider)', async () => {
-    const moduleRef = await buildTestingModule('false');
+    const moduleRef = await buildTestingModule({ GDELT_ENABLED: 'false', EVENT_REGISTRY_ENABLED: 'false' });
     const service = moduleRef.get(SignalsService);
     expect(service).toBeInstanceOf(SignalsService);
     await moduleRef.close();
   });
 
-  it('with GDELT_ENABLED=false: SIGNAL_PROVIDERS is empty, ALL_SIGNAL_PROVIDERS contains GdeltProvider', async () => {
-    const moduleRef = await buildTestingModule('false');
+  it('with both providers disabled: SIGNAL_PROVIDERS is empty, but ALL_SIGNAL_PROVIDERS contains BOTH GdeltProvider and EventRegistryProvider — a disabled provider is still registered, still visible for health/operations', async () => {
+    const moduleRef = await buildTestingModule({
+      GDELT_ENABLED: 'false',
+      EVENT_REGISTRY_ENABLED: 'false',
+      EVENT_REGISTRY_API_KEY: '',
+    });
 
     const enabled = moduleRef.get<SignalProvider[]>(SIGNAL_PROVIDERS);
     const all = moduleRef.get<SignalProvider[]>(ALL_SIGNAL_PROVIDERS);
 
     expect(enabled).toEqual([]);
-    expect(all).toHaveLength(1);
-    expect(all[0]).toBeInstanceOf(GdeltProvider);
+    expect(all).toHaveLength(2);
+    expect(all.some((p) => p instanceof GdeltProvider)).toBe(true);
+    expect(all.some((p) => p instanceof EventRegistryProvider)).toBe(true);
     await moduleRef.close();
   });
 
-  it('with GDELT_ENABLED=true: SIGNAL_PROVIDERS contains the same GdeltProvider instance as ALL_SIGNAL_PROVIDERS', async () => {
-    const moduleRef = await buildTestingModule('true');
+  it('with GDELT_ENABLED=true and Event Registry disabled: SIGNAL_PROVIDERS contains only the GdeltProvider instance, matching the one present in ALL_SIGNAL_PROVIDERS', async () => {
+    const moduleRef = await buildTestingModule({
+      GDELT_ENABLED: 'true',
+      EVENT_REGISTRY_ENABLED: 'false',
+      EVENT_REGISTRY_API_KEY: '',
+    });
 
     const enabled = moduleRef.get<SignalProvider[]>(SIGNAL_PROVIDERS);
     const all = moduleRef.get<SignalProvider[]>(ALL_SIGNAL_PROVIDERS);
 
     expect(enabled).toHaveLength(1);
-    expect(enabled[0]).toBe(all[0]);
+    expect(enabled[0]).toBeInstanceOf(GdeltProvider);
+    expect(all.find((p) => p instanceof GdeltProvider)).toBe(enabled[0]);
     await moduleRef.close();
   });
 
-  it('module construction performs zero network requests, under any GDELT_ENABLED value', async () => {
+  it('Event Registry requires BOTH EVENT_REGISTRY_ENABLED=true AND a usable API key — enabled alone, with no key, is still excluded from SIGNAL_PROVIDERS', async () => {
+    const moduleRef = await buildTestingModule({
+      GDELT_ENABLED: 'false',
+      EVENT_REGISTRY_ENABLED: 'true',
+      EVENT_REGISTRY_API_KEY: '',
+    });
+
+    const enabled = moduleRef.get<SignalProvider[]>(SIGNAL_PROVIDERS);
+    const all = moduleRef.get<SignalProvider[]>(ALL_SIGNAL_PROVIDERS);
+
+    expect(enabled).toEqual([]);
+    expect(all.some((p) => p instanceof EventRegistryProvider)).toBe(true);
+    await moduleRef.close();
+  });
+
+  it('with EVENT_REGISTRY_ENABLED=true and a real API key: SIGNAL_PROVIDERS contains the EventRegistryProvider instance', async () => {
+    const moduleRef = await buildTestingModule({
+      GDELT_ENABLED: 'false',
+      EVENT_REGISTRY_ENABLED: 'true',
+      EVENT_REGISTRY_API_KEY: 'real-key',
+    });
+
+    const enabled = moduleRef.get<SignalProvider[]>(SIGNAL_PROVIDERS);
+    const all = moduleRef.get<SignalProvider[]>(ALL_SIGNAL_PROVIDERS);
+
+    expect(enabled).toHaveLength(1);
+    expect(enabled[0]).toBeInstanceOf(EventRegistryProvider);
+    expect(all.find((p) => p instanceof EventRegistryProvider)).toBe(enabled[0]);
+    await moduleRef.close();
+  });
+
+  it('both providers can simultaneously appear in SIGNAL_PROVIDERS when both are genuinely enabled/configured — the exact scenario M64.3\u2019s architecture was built for', async () => {
+    const moduleRef = await buildTestingModule({
+      GDELT_ENABLED: 'true',
+      EVENT_REGISTRY_ENABLED: 'true',
+      EVENT_REGISTRY_API_KEY: 'real-key',
+    });
+
+    const enabled = moduleRef.get<SignalProvider[]>(SIGNAL_PROVIDERS);
+
+    expect(enabled).toHaveLength(2);
+    expect(enabled.some((p) => p instanceof GdeltProvider)).toBe(true);
+    expect(enabled.some((p) => p instanceof EventRegistryProvider)).toBe(true);
+    await moduleRef.close();
+  });
+
+  it('module construction performs zero network requests, under any combination of GDELT_ENABLED / EVENT_REGISTRY_ENABLED / EVENT_REGISTRY_API_KEY', async () => {
     let fetchCalled = false;
     const originalFetch = global.fetch;
     (global as any).fetch = async (...args: unknown[]) => {
@@ -94,7 +184,11 @@ describe('SignalsModule — real NestJS DI compilation', () => {
       return originalFetch ? (originalFetch as any)(...args) : undefined;
     };
 
-    const moduleRef = await buildTestingModule('true');
+    const moduleRef = await buildTestingModule({
+      GDELT_ENABLED: 'true',
+      EVENT_REGISTRY_ENABLED: 'true',
+      EVENT_REGISTRY_API_KEY: 'real-key',
+    });
 
     expect(fetchCalled).toBe(false);
     (global as any).fetch = originalFetch;

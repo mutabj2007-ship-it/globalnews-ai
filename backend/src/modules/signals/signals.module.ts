@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SignalsService } from './signals.service';
 import { GdeltProvider } from './providers/gdelt.provider';
+import { EventRegistryProvider, isEventRegistryEnabled, isUsableEventRegistryApiKey } from './providers/event-registry.provider';
 import { ALL_SIGNAL_PROVIDERS, SIGNAL_PROVIDERS, isGdeltEnabled } from './providers/provider.tokens';
 import type { SignalProvider } from './interfaces';
 
@@ -63,26 +64,56 @@ import type { SignalProvider } from './interfaces';
  * equivalent here and none is added — GDELT is optional, never
  * required for backend startup, at any GDELT_ENABLED value.
  *
+ * M64.4 — EventRegistryProvider registered alongside GdeltProvider,
+ * following the exact same pattern: SIGNAL_PROVIDERS includes it only
+ * when BOTH EVENT_REGISTRY_ENABLED is exactly "true" AND a genuinely
+ * usable (non-blank) EVENT_REGISTRY_API_KEY is configured — unlike
+ * GDELT, Event Registry requires a real API key, so activation is a
+ * two-part gate, not a single flag. ALL_SIGNAL_PROVIDERS always
+ * includes it, keeping its health/operational status visible
+ * regardless of activation state. No network call occurs at module
+ * construction for Event Registry either — EventRegistryProvider's
+ * constructor only stores a ConfigService reference, identical to
+ * GdeltProvider's own established pattern. No startup validator is
+ * added for Event Registry either — it remains fully optional.
+ *
  * NO CONTROLLER: this module exports only SignalsService. No public
- * route exists yet in M64.3.
+ * route exists yet in M64.3/M64.4.
  */
 @Module({
   imports: [ConfigModule],
   providers: [
     SignalsService,
     GdeltProvider,
+    EventRegistryProvider,
     {
       provide: SIGNAL_PROVIDERS,
-      useFactory: (config: ConfigService, gdeltProvider: GdeltProvider): SignalProvider[] => {
+      useFactory: (
+        config: ConfigService,
+        gdeltProvider: GdeltProvider,
+        eventRegistryProvider: EventRegistryProvider,
+      ): SignalProvider[] => {
+        const providers: SignalProvider[] = [];
+
         const gdeltEnabled = isGdeltEnabled(config.get<string>('GDELT_ENABLED'));
-        return gdeltEnabled ? [gdeltProvider] : [];
+        if (gdeltEnabled) providers.push(gdeltProvider);
+
+        const eventRegistryEnabled =
+          isEventRegistryEnabled(config.get<string>('EVENT_REGISTRY_ENABLED')) &&
+          isUsableEventRegistryApiKey(config.get<string>('EVENT_REGISTRY_API_KEY'));
+        if (eventRegistryEnabled) providers.push(eventRegistryProvider);
+
+        return providers;
       },
-      inject: [ConfigService, GdeltProvider],
+      inject: [ConfigService, GdeltProvider, EventRegistryProvider],
     },
     {
       provide: ALL_SIGNAL_PROVIDERS,
-      useFactory: (gdeltProvider: GdeltProvider): SignalProvider[] => [gdeltProvider],
-      inject: [GdeltProvider],
+      useFactory: (gdeltProvider: GdeltProvider, eventRegistryProvider: EventRegistryProvider): SignalProvider[] => [
+        gdeltProvider,
+        eventRegistryProvider,
+      ],
+      inject: [GdeltProvider, EventRegistryProvider],
     },
   ],
   exports: [SignalsService],

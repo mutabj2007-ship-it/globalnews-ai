@@ -99,4 +99,14 @@ export interface GeoSignalQueryOptions {
   countryCode?: string;
   eventType?: string;
   limit?: number;
+
+  /**
+   * M64.4 — free-text discovery intent supplied by GlobalNews AI.
+   *
+   * Providers may translate this into their own supported query
+   * model. A provider must explicitly reject combinations or
+   * constraints it cannot honor; it must never silently drop a
+   * caller constraint.
+   */
+  query?: string;
 }
