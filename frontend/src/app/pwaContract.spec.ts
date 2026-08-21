@@ -1,5 +1,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import resolveConfig from 'tailwindcss/resolveConfig';
+import tailwindConfig from '../../tailwind.config';
 import { en } from '@/lib/i18n/dictionaries/en';
 
 /**
@@ -15,8 +17,9 @@ import { en } from '@/lib/i18n/dictionaries/en';
  * to make specific, named regressions impossible:
  *
  *   - §3 COLOURS pins theme_color/background_color to the tailwind `void`
- *     token by READING tailwind.config.ts, so the hex is never a second
- *     hardcoded literal that can silently drift from the design system.
+ *     token by RESOLVING tailwind.config.ts and reading the key, so the hex is
+ *     never a second hardcoded literal that can silently drift from the design
+ *     system.
  *
  *   - §4 METADATA asserts `themeColor` lives in the Viewport export and NOT in
  *     the Metadata object. Next 14 deprecated the latter; without this test the
@@ -43,10 +46,30 @@ const layoutPath = join(appDir, 'layout.tsx');
 const manifestPath = join(publicDir, 'manifest.webmanifest');
 const iconSvgPath = join(appDir, 'icon.svg');
 const appleIconPath = join(appDir, 'apple-icon.png');
-const tailwindConfigPath = join(frontendDir, 'tailwind.config.ts');
 
 const layoutSource = readFileSync(layoutPath, 'utf-8');
 const manifestRaw = readFileSync(manifestPath, 'utf-8');
+
+/**
+ * The resolved Tailwind theme, read by KEY rather than by position in the
+ * config's source text.
+ *
+ * WHY THIS IS NOT A REGEX. It was one, and I3 proved that wrong. The previous
+ * assertion matched the first `void:` line in tailwind.config.ts at any nesting
+ * depth, which was the top-level token only by accident of ordering. When F1.b
+ * added the `adm-*` namespace above the legacy block — correctly, and without
+ * changing a single existing value — the match silently became
+ * `colors.adm.void` (#050b11, the Admin Platform base) and the assertion began
+ * comparing two unrelated surfaces' tokens.
+ *
+ * `colors.void` is unique by JavaScript object semantics, so reading it by key
+ * cannot be repointed by any future namespace, reordering or reformatting.
+ * This also brings the file in line with the two specs that already do it this
+ * way: claudeDesignFoundation.spec.ts and adminVisualContract.spec.ts.
+ */
+const theme = resolveConfig(tailwindConfig).theme as unknown as {
+  colors: Record<string, Record<string, string> | string>;
+};
 
 interface ManifestIcon {
   src: string;
@@ -328,16 +351,17 @@ describe('PWA-1 §2 — icons', () => {
 });
 
 describe('PWA-1 §3 — colours come from the design system, not a second literal', () => {
-  const tailwindSource = readFileSync(tailwindConfigPath, 'utf-8');
-
   it('theme_color equals background_color', () => {
     expect(manifest.theme_color).toBe(manifest.background_color);
   });
 
   it('both equal the tailwind `void` token that <body className="bg-void"> renders', () => {
-    const match = tailwindSource.match(/\n\s*void:\s*'(#[0-9a-fA-F]{6})'/);
-    expect(match).not.toBeNull();
-    const voidToken = (match as RegExpMatchArray)[1];
+    // The TOP-LEVEL token, which is what the `bg-void` utility on <body>
+    // resolves to — deliberately not `colors.adm.void` (#050b11, the F1.b Admin
+    // Platform base) and not `colors.cd.void` (#04060c, the Claude Design page
+    // base). All three exist; only this one reaches the public site.
+    const voidToken = theme.colors.void;
+    expect(voidToken).toBe('#080b12');
     expect(manifest.theme_color).toBe(voidToken);
     expect(manifest.background_color).toBe(voidToken);
   });

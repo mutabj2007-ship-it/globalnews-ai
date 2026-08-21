@@ -1,9 +1,54 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import ts from 'typescript';
 
 const cardSource = readFileSync(join(__dirname, 'CountryArticleCard.tsx'), 'utf-8');
 const panelSource = readFileSync(join(__dirname, 'CountryPanel.tsx'), 'utf-8');
 const searchClientSource = readFileSync(join(__dirname, '../search/SearchPageClient.tsx'), 'utf-8');
+
+/**
+ * Every JSX element in a .tsx source, with the tag path of its ancestors.
+ *
+ * WHY A PARSER AND NOT indexOf(). The assertion below used to compare the
+ * source-string positions of `'<a\n'`, `'</a>'` and `'<button'`. Three things
+ * were wrong with that, and they compounded:
+ *
+ *   1. `'<a\n'` hard-codes a bare LF. This repository pins no EOL (there is no
+ *      .gitattributes) and this file's own working copy is CRLF, where the JSX
+ *      reads `<a\r\n` — so the search returned -1.
+ *   2. String.prototype.indexOf() CLAMPS a negative start index to 0 rather
+ *      than failing, so the two following searches silently restarted from the
+ *      top of the file instead of from the anchor.
+ *   3. `'<button'` then matched its first occurrence in the file, which is
+ *      inside CountryArticleCard's own doc comment — the sentence explaining
+ *      that a <button> must not be nested inside an <a>. The guard reported
+ *      the documentation of the fix as the defect.
+ *
+ * Parsing removes all three failure modes at once: trivia (comments, string
+ * literals, whitespace and line endings) cannot satisfy or break an assertion
+ * made against the syntax tree, and the tree states containment directly
+ * instead of inferring it from the order of two substrings.
+ */
+function jsxElements(source: string, fileName: string): Array<{ tag: string; ancestors: string[] }> {
+  const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const found: Array<{ tag: string; ancestors: string[] }> = [];
+
+  const tagOf = (node: ts.Node): string | null =>
+    ts.isJsxElement(node)
+      ? node.openingElement.tagName.getText(sourceFile)
+      : ts.isJsxSelfClosingElement(node)
+        ? node.tagName.getText(sourceFile)
+        : null;
+
+  const walk = (node: ts.Node, ancestors: string[]): void => {
+    const tag = tagOf(node);
+    if (tag !== null) found.push({ tag, ancestors });
+    node.forEachChild((child) => walk(child, tag === null ? ancestors : [...ancestors, tag]));
+  };
+
+  walk(sourceFile, []);
+  return found;
+}
 
 /**
  * Milestone #51 — Map -> Story -> Q&A integration. Behavioral tests
@@ -48,11 +93,28 @@ describe('Story-level (article) context reaches Q&A \u2014 Milestone #51 Phase B
   });
 
   it('the two actions are structurally independent (no nested <a><button>, which is invalid HTML and would break click handling)', () => {
-    const rootOpen = cardSource.indexOf('<div className="group flex items-start');
-    const anchorOpen = cardSource.indexOf('<a\n', rootOpen);
-    const anchorClose = cardSource.indexOf('</a>', anchorOpen);
-    const buttonOpen = cardSource.indexOf('<button', anchorOpen);
-    expect(buttonOpen).toBeGreaterThan(anchorClose);
+    const elements = jsxElements(cardSource, 'CountryArticleCard.tsx');
+    const INTERACTIVE = ['a', 'button'];
+
+    const anchors = elements.filter((element) => element.tag === 'a');
+    const buttons = elements.filter((element) => element.tag === 'button');
+
+    // Fail loudly if either element disappears, rather than degrading into a
+    // -1 that the old comparison could read as a pass.
+    expect(anchors).toHaveLength(1);
+    expect(buttons).toHaveLength(1);
+
+    // THE ACTUAL RULE, asserted directly: no interactive element may have an
+    // interactive ancestor. This is what "invalid <a><button> nesting" means,
+    // and it also catches the inverse (<a> inside <button>) and any nesting a
+    // simple ordering comparison would miss.
+    for (const element of elements.filter((candidate) => INTERACTIVE.includes(candidate.tag))) {
+      expect({ tag: element.tag, nestedInsideInteractive: element.ancestors.some((ancestor) => INTERACTIVE.includes(ancestor)) })
+        .toEqual({ tag: element.tag, nestedInsideInteractive: false });
+    }
+
+    // ...and they are peers, so neither click target can swallow the other.
+    expect(anchors[0].ancestors).toEqual(buttons[0].ancestors);
   });
 });
 
