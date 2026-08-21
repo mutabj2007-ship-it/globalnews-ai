@@ -30,7 +30,11 @@ describe('Milestone B3 — Docker/Compose production configuration wiring', () =
   const composePath = join(repoRoot, 'docker-compose.yml');
 
   const dockerfileSource = readFileSync(dockerfilePath, 'utf-8');
-  const composeSource = readFileSync(composePath, 'utf-8');
+  // B3 — line endings normalized in memory only. In JavaScript regexes `\r` is
+  // a line terminator, so `.` stops before it and any pattern spanning a line
+  // end cannot match on a CRLF checkout. This normalizes ONLY the string these
+  // assertions read: no repository file is modified.
+  const composeSource = readFileSync(composePath, 'utf-8').replace(/\r\n/g, '\n');
 
   describe('frontend/Dockerfile', () => {
     it('declares ARG NEXT_PUBLIC_API_URL and ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL', () => {
