@@ -24,6 +24,11 @@ import { capabilitiesFor } from './rbac/capabilities';
  */
 const ADMIN_ROUTES: ReadonlyArray<{ method: 'get'; path: string }> = [
   { method: 'get', path: '/admin/me' },
+  // F1.b — the two authorized read-only surfaces. Every denial case
+  // below iterates this table, so a new admin route cannot be added
+  // without inheriting the full 401/403/404 battery.
+  { method: 'get', path: '/admin/system/health' },
+  { method: 'get', path: '/admin/news/providers' },
 ];
 
 const ORDINARY_TOKEN = 'raw-token-ordinary-user';
@@ -74,6 +79,10 @@ const USERS: ReadonlyArray<{ id: string; adminRole: string | null }> = [
 ];
 
 const stubPrisma = {
+  // F1.b — AdminSystemService probes the database with the same
+  // `SELECT 1` HealthController.ready() runs. Stubbed so the security
+  // suite still contacts no database.
+  $queryRaw: () => Promise.resolve([{ probe: 1 }]),
   session: {
     findUnique: ({ where }: { where: { tokenHash: string } }) =>
       Promise.resolve(SESSIONS.find((s) => s.tokenHash === where.tokenHash) ?? null),

@@ -1,4 +1,5 @@
 import type { Dictionary } from './index';
+import { adminPl } from './adminPl';
 
 /**
  * Milestone #47 — Polish dictionary, the first production non-English
@@ -9,6 +10,14 @@ import type { Dictionary } from './index';
  * form/language, per the M47 authorization's explicit instruction.
  */
 export const pl: Dictionary = {
+  /**
+   * F1.b — the Admin Platform namespace. Spread here so it resolves
+   * through the SAME getDictionary(language) call as every other
+   * section; the strings live in their own file only because this one
+   * is already large. No second i18n mechanism is introduced.
+   */
+  admin: adminPl,
+
   languageSelectorLabel: 'Język',
   yourQuestion: 'Twoje pytanie',
   noQuestionProvided: 'Nie podano pytania',

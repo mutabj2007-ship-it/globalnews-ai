@@ -36,27 +36,53 @@ function adminSourceFiles(): string[] {
 
 describe('F1.a admin module — source contracts', () => {
   describe('every admin route is explicitly authorized', () => {
-    const controller = read(ADMIN_DIR, 'admin.controller.ts');
+    // F1.b — this sweeps EVERY admin controller, not only
+    // admin.controller.ts, so a newly added controller cannot introduce
+    // an unguarded or un-annotated route.
+    const controllers = adminSourceFiles().filter(
+      (file) => file.endsWith('.controller.ts') && !file.endsWith('.spec.ts'),
+    );
 
-    it('the controller class carries the three guards in the order the security model requires', () => {
-      expect(controller).toContain(
-        '@UseGuards(AdminPlatformEnabledGuard, RequireAuthGuard, AdminGuard)',
-      );
+    it('finds every admin controller', () => {
+      expect(controllers.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('exposes exactly one route — GET me — and nothing else', () => {
-      const routeDecorators = controller.match(/@(Get|Post|Put|Patch|Delete)\(/g) ?? [];
-      expect(routeDecorators).toEqual(['@Get(']);
-      expect(controller).toContain("@Get('me')");
-    });
-
-    it('every route handler carries a capability decorator', () => {
-      const routeBlocks = controller.split(/@(?=Get\(|Post\(|Put\(|Patch\(|Delete\()/).slice(1);
-      expect(routeBlocks.length).toBeGreaterThan(0);
-
-      routeBlocks.forEach((block) => {
-        expect(/@AdminOnly\(\)|@RequireCapability\(/.test(block)).toBe(true);
+    it('every admin controller carries the three guards in the order the security model requires', () => {
+      controllers.forEach((file) => {
+        expect(read(file)).toContain(
+          '@UseGuards(AdminPlatformEnabledGuard, RequireAuthGuard, AdminGuard)',
+        );
       });
+    });
+
+    it('every route handler in every admin controller carries a capability decorator', () => {
+      let handlerCount = 0;
+
+      controllers.forEach((file) => {
+        const routeBlocks = read(file)
+          .split(/@(?=Get\(|Post\(|Put\(|Patch\(|Delete\()/)
+          .slice(1);
+        handlerCount += routeBlocks.length;
+
+        routeBlocks.forEach((block) => {
+          expect(/@AdminOnly\(\)|@RequireCapability\(/.test(block)).toBe(true);
+        });
+      });
+
+      expect(handlerCount).toBeGreaterThanOrEqual(3);
+    });
+
+    it('exposes only GET routes — F1.b ships no mutating admin action', () => {
+      controllers.forEach((file) => {
+        const decorators = read(file).match(/@(Get|Post|Put|Patch|Delete)\(/g) ?? [];
+        expect(decorators.every((decorator) => decorator === '@Get(')).toBe(true);
+      });
+    });
+
+    it('admin.controller.ts still exposes exactly GET me', () => {
+      const controller = read(ADMIN_DIR, 'admin.controller.ts');
+      expect(controller.match(/@(Get|Post|Put|Patch|Delete)\(/g) ?? []).toEqual(['@Get(']);
+      expect(controller).toContain("@Get('me')");
     });
   });
 
@@ -64,7 +90,7 @@ describe('F1.a admin module — source contracts', () => {
     const files = adminSourceFiles();
 
     it('finds admin source files to check', () => {
-      expect(files.length).toBeGreaterThanOrEqual(9);
+      expect(files.length).toBeGreaterThanOrEqual(14);
     });
 
     it('contains no email address literal', () => {

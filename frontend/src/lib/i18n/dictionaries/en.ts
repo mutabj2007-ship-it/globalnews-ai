@@ -4,7 +4,17 @@
  * so the SAME rendering code path can look up either language, not to
  * change any existing English wording.
  */
+import { adminEn } from './adminEn';
+
 export const en = {
+  /**
+   * F1.b — the Admin Platform namespace. Spread here so it resolves
+   * through the SAME getDictionary(language) call as every other
+   * section; the strings live in their own file only because this one
+   * is already large. No second i18n mechanism is introduced.
+   */
+  admin: adminEn,
+
   languageSelectorLabel: 'Language',
   yourQuestion: 'Your question',
   noQuestionProvided: 'No question provided',
