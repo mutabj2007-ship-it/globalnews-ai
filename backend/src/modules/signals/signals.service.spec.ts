@@ -44,6 +44,7 @@ function makeProvider(
     displayName: id,
     isMock: false,
     discoverSignals: async (_options?: GeoSignalQueryOptions) => {
+      void _options;
       if (behavior.signalsError) throw behavior.signalsError;
       return behavior.signals ?? [];
     },
