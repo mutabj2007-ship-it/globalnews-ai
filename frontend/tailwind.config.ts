@@ -52,6 +52,77 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        /**
+         * F1.b — THE ADMIN PLATFORM SYSTEM (`adm-*`).
+         *
+         * A THIRD token namespace, added under the same rule this file
+         * already states for `cd-*`: ADD, NEVER REDEFINE. Every name below
+         * is new, so it has zero existing consumers and cannot change the
+         * appearance of anything that does not explicitly opt in — not the
+         * homepage, not /search, /map, /history, /workspace, /privacy or
+         * /terms.
+         *
+         * WHY A THIRD SYSTEM RATHER THAN REUSING `cd-*`. The Admin Platform
+         * is a different released surface from the public site: its base is
+         * `#050b11` (not the homepage's `#04060c`), its field is a single
+         * 1100x520 radial anchored at 18%/-12% (not the homepage's two-layer
+         * composite), and it carries a 252px sidebar the public site has no
+         * equivalent of. Values are transcribed verbatim from the approved
+         * `Admin Platform.dc.html`; `adminVisualContract.spec.ts` asserts
+         * each one and asserts that no `cd-*` or legacy value moved.
+         */
+        adm: {
+          void: '#050b11',
+          'rail-from': '#071219',
+          'rail-to': '#050d13',
+          topbar: 'rgba(6,15,21,.86)',
+          card: '#08161e',
+          'card-soft': 'rgba(8,22,30,.7)',
+
+          edge: '#123040',
+          'edge-soft': '#133441',
+          'edge-input': '#143644',
+          'edge-mute': '#112b38',
+
+          ink: '#e8f4f8',
+          'ink-2': '#cbe4ee',
+          'ink-3': '#9fbccb',
+          'ink-4': '#8fb0bf',
+          'ink-mute': '#7fa0b0',
+          'ink-dim': '#5f8595',
+          'ink-faint': '#4f707f',
+          'ink-ghost': '#3f6272',
+
+          accent: '#2dd4e8',
+          'accent-hi': '#8ceef8',
+          'accent-wash': 'rgba(45,212,232,.13)',
+          'accent-hover': 'rgba(45,212,232,.06)',
+
+          val: '#e8f4f8',
+          'val-mute': '#5f8595',
+          'val-warn': '#e0b25e',
+          'val-bad': '#f2938d',
+
+          'chip-good-edge': '#1c4c40',
+          'chip-good-bg': 'rgba(20,60,50,.42)',
+          'chip-good-ink': '#7fe0bb',
+          'chip-warn-edge': '#5a4620',
+          'chip-warn-bg': 'rgba(58,44,16,.42)',
+          'chip-warn-ink': '#e0b25e',
+          'chip-bad-edge': '#6d3535',
+          'chip-bad-bg': 'rgba(70,25,25,.4)',
+          'chip-bad-ink': '#f2938d',
+          'chip-info-edge': '#1d5666',
+          'chip-info-bg': 'rgba(20,60,72,.42)',
+          'chip-info-ink': '#6fdcef',
+          'chip-violet-edge': '#3d3266',
+          'chip-violet-bg': 'rgba(45,36,80,.45)',
+          'chip-violet-ink': '#b9a2f0',
+          'chip-mute-edge': '#1d3340',
+          'chip-mute-bg': '#0a141a',
+          'chip-mute-ink': '#7fa0b0',
+        },
+
         // ── EXISTING SYSTEM — UNCHANGED. Do not repoint these. ──────────
         void: '#080b12',
         surface: {
@@ -738,7 +809,35 @@ const config: Config = {
        * Additive: a new screen name has zero existing consumers, and `sm`,
        * `md`, `lg`, `xl` and `2xl` are all untouched.
        */
+      /**
+       * F1.b — Admin shell geometry.
+       *
+       * DELIBERATELY `width`, NOT `spacing`. M66.1's
+       * claudeDesignFoundation.spec.ts asserts that EVERY key in
+       * theme.spacing matches /^cd-\d+$/ and equals its own pixel value —
+       * a released GN-CD contract this milestone must not weaken. Adding
+       * `adm-rail` to spacing would have broken it, so the two Admin
+       * measurements live under `width`, which no released spec
+       * constrains. Nothing in the GN-CD spacing ladder is touched.
+       */
+      width: {
+        'adm-rail': '252px',
+        'adm-icon-rail': '68px',
+      },
+
       screens: {
+        /**
+         * F1.b — the two Admin shell breakpoints, min-width like every
+         * Tailwind screen, so the base (mobile-first) state is the drawer:
+         *   below 900px             drawer
+         *   `adm-rail`  >= 900px    collapsed 68px icon rail
+         *   `adm-full`  >= 1280px   full 252px sidebar
+         * Exactly the responsive behaviour ADMIN-01 specifies. Additive:
+         * two new screen names with zero existing consumers.
+         */
+        'adm-rail': '900px',
+        'adm-full': '1280px',
+
         'cd-header': '1400px',
 
         /**
@@ -793,6 +892,14 @@ const config: Config = {
       },
 
       backgroundImage: {
+        /**
+         * F1.b — the Admin page field, transcribed verbatim from the
+         * approved artifact's own `body` declaration. One radial layer,
+         * not the homepage's two-layer composite.
+         */
+        'adm-page': 'radial-gradient(1100px 520px at 18% -12%, #0b2432 0%, #050b11 62%)',
+        'adm-rail': 'linear-gradient(180deg, #071219, #050d13)',
+
         // ── EXISTING — UNCHANGED (both currently have zero consumers). ──
         'grid-pattern':
           'linear-gradient(to right, rgba(61,111,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(61,111,255,0.06) 1px, transparent 1px)',
