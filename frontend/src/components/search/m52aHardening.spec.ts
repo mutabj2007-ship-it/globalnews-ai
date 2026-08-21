@@ -1,7 +1,19 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-const searchClientSource = readFileSync(join(__dirname, 'SearchPageClient.tsx'), 'utf-8');
+/**
+ * I3 — the source is read with line endings normalized to LF in memory.
+ *
+ * This checkout is CRLF while the committed blob is LF. Every locator below
+ * reasons about source STRUCTURE, never about EOL convention, so the two must
+ * not be coupled. This normalizes ONLY the in-memory copy these assertions
+ * read: no repository file is modified and no working-tree EOL normalization
+ * is performed.
+ */
+const searchClientSource = readFileSync(join(__dirname, 'SearchPageClient.tsx'), 'utf-8').replace(
+  /\r\n/g,
+  '\n',
+);
 
 /**
  * Milestone #52-A — hardening the already-working M51 Map -> Story ->
@@ -34,11 +46,29 @@ describe('A. storyContext is stable across renders (real lint defect found and f
   });
 
   it('the effect body still only reads storyContext (not countryCodeParam/articleIdParam directly), so the memoized value is the single source of truth for the request', () => {
-    const effectBody = searchClientSource.slice(
-      searchClientSource.indexOf('useEffect(() => {\n    // Milestone #47'),
-      searchClientSource.indexOf('}, [query, language, hasResolvedLanguage'),
-    );
+    /*
+      Anchored on the effect's own dependency array, then walked backwards to
+      the nearest enclosing `useEffect(() => {`.
+
+      The previous form anchored on the literal comment text
+      `// Milestone #47` with exact indentation and an LF newline, so on a CRLF
+      checkout indexOf() returned -1; slice(-1, end) then inverted its range
+      and produced an empty string. The assertion failed while the production
+      effect it describes was entirely correct.
+    */
+    const effectEnd = searchClientSource.indexOf('}, [query, language, hasResolvedLanguage');
+    const effectStart = searchClientSource.lastIndexOf('useEffect(() => {', effectEnd);
+    expect(effectStart).toBeGreaterThan(-1);
+    expect(effectEnd).toBeGreaterThan(effectStart);
+
+    const effectBody = searchClientSource.slice(effectStart, effectEnd);
     expect(effectBody).toMatch(/analyzeNews\(query, language, storyContext\)/);
+
+    // The memoized storyContext is the single source of truth for the request,
+    // so the effect must not read the raw params directly. This test's title
+    // has always claimed exactly that; now it is actually asserted.
+    expect(effectBody).not.toMatch(/\bcountryCodeParam\b/);
+    expect(effectBody).not.toMatch(/\barticleIdParam\b/);
   });
 });
 

@@ -1,7 +1,19 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-const searchClientSource = readFileSync(join(__dirname, 'SearchPageClient.tsx'), 'utf-8');
+/**
+ * I3 — the source is read with line endings normalized to LF in memory.
+ *
+ * This checkout is CRLF while the committed blob is LF. Every locator below
+ * reasons about source STRUCTURE, never about EOL convention, so the two must
+ * not be coupled. This normalizes ONLY the in-memory copy these assertions
+ * read: no repository file is modified and no working-tree EOL normalization
+ * is performed.
+ */
+const searchClientSource = readFileSync(join(__dirname, 'SearchPageClient.tsx'), 'utf-8').replace(
+  /\r\n/g,
+  '\n',
+);
 
 /**
  * Milestone #52-B, Authorized Test 1 — proves the EXISTING
@@ -30,12 +42,23 @@ describe('Evidence survives AI failure \u2014 SearchPageClient renders sources i
     const ternaryStart = searchClientSource.indexOf('{response.analysis ? (');
     expect(ternaryStart).toBeGreaterThan(-1);
 
-    const ternaryCloseMarker = '          )}\n\n          {response.articles.length > 0 && (';
-    const ternaryCloseIndex = searchClientSource.indexOf(ternaryCloseMarker);
-    expect(ternaryCloseIndex).toBeGreaterThan(ternaryStart);
-
     const articlesBlockStart = searchClientSource.indexOf('{response.articles.length > 0 && (');
-    expect(articlesBlockStart).toBe(ternaryCloseIndex + '          )}\n\n          '.length);
+    expect(articlesBlockStart).toBeGreaterThan(ternaryStart);
+
+    /*
+      The article grid is a SIBLING of the analysis ternary, not nested inside
+      either of its branches. Proof: the only text between the ternary's
+      opening and the grid's opening ends with the ternary's own closing `)}`.
+      Were the grid nested inside either branch, that branch's own JSX would
+      necessarily intervene and this could not hold.
+
+      Asserted structurally rather than by exact character arithmetic. The
+      previous form hard-coded ten spaces of indentation, exactly one blank
+      line and LF endings, so it broke on a CRLF checkout while the source it
+      describes was byte-for-byte correct.
+    */
+    const betweenTernaryAndGrid = searchClientSource.slice(ternaryStart, articlesBlockStart);
+    expect(betweenTernaryAndGrid).toMatch(/\)\}\s*$/);
   });
 
   it('the article grid\u2019s own condition depends only on response.articles.length \u2014 never on response.analysis or provenance.status', () => {
