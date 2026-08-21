@@ -5,6 +5,7 @@ import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/sha
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { DataModeLabel } from '@/components/ui/DataModeLabel';
 import { TrendingCard } from '@/components/home/TrendingCard';
+import { GlobalDevelopmentsHashFocus } from '@/components/home/GlobalDevelopmentsHashFocus';
 
 interface GlobalDevelopmentsProps {
   lead: NewsArticle | null;
@@ -173,6 +174,13 @@ export function GlobalDevelopments({
   return (
     <section className="relative mt-cd-14 cd-hero:mt-0" aria-labelledby="global-developments-heading">
       {/*
+        DC-02 — renders nothing. Focuses this section's heading when the
+        Intelligence Engine's World Intelligence module resolves its
+        `/#global-developments-heading` destination. See the component's own
+        file for why the viewport moving is not, by itself, sufficient.
+      */}
+      <GlobalDevelopmentsHashFocus />
+      {/*
         GN-CD-100 — on desktop this is a bordered, radius-16 panel on its own
         gradient. On mobile the design authors NO container at all: no border,
         no radius, no background, no padding. Both are deliberate.
@@ -197,8 +205,15 @@ export function GlobalDevelopments({
               production heading and its aria-labelledby relationship are kept
               rather than that defect being reproduced.
             */}
+            {/*
+              DC-02 — `tabIndex={-1}` makes this heading programmatically
+              focusable without adding a Tab stop. It is what lets
+              GlobalDevelopmentsHashFocus place focus here on hash activation.
+              Nothing visual changes, and the id and text are untouched.
+            */}
             <h2
               id="global-developments-heading"
+              tabIndex={-1}
               className="mt-cd-4 font-cd-display text-2xl font-medium tracking-tight text-cd-ink-primary sm:text-3xl"
             >
               {t.headline}

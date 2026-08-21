@@ -3,7 +3,7 @@ import { join } from 'path';
 import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModules';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import tailwindConfig from '../../../tailwind.config';
-import { ENGINE_DESKTOP, ENGINE_MOBILE, RING_ORDER } from './intelligenceEngineGeometry';
+import { ENGINE_DESKTOP, ENGINE_MOBILE, MODULE_IDENTITY, RING_ORDER } from './intelligenceEngineGeometry';
 
 const sectionSource = readFileSync(join(__dirname, 'IntelligenceEngineSection.tsx'), 'utf-8');
 const ringSource = readFileSync(join(__dirname, 'IntelligenceEngineRing.tsx'), 'utf-8');
@@ -11,6 +11,8 @@ const panelSource = readFileSync(join(__dirname, 'IntelligenceModulePanel.tsx'),
 const geometrySource = readFileSync(join(__dirname, 'intelligenceEngineGeometry.ts'), 'utf-8');
 const pageSource = readFileSync(join(__dirname, '../../app/page.tsx'), 'utf-8');
 const bottomNavSource = readFileSync(join(__dirname, '../navigation/MobileBottomNav.tsx'), 'utf-8');
+const developmentsSource = readFileSync(join(__dirname, 'GlobalDevelopments.tsx'), 'utf-8');
+const hashFocusSource = readFileSync(join(__dirname, 'GlobalDevelopmentsHashFocus.tsx'), 'utf-8');
 
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -399,7 +401,12 @@ describe('M66.5 — released module card (GN-CD-148/149/156)', () => {
   it('identity colour reaches border, fill, glow, tile, name, icon and badge through ONE property', () => {
     const code = stripComments(panelSource);
     expect(code).toMatch(/'--em-ch': identity\.rgb/);
+    // The card BOUNDARY carries the identity RGB plus a per-module alpha
+    // (DC-03); the decorative tile and badge keep the released .35. Both still
+    // read the identity colour from the same single property.
+    expect(code).toMatch(/border-\[color:rgba\(var\(--em-ch\),var\(--em-ba\)\)\]/);
     expect(code).toMatch(/border-\[color:rgba\(var\(--em-ch\),\.35\)\]/);
+    expect(code).toMatch(/'--em-ch': identity\.rgb, '--em-ba': borderAlpha/);
     expect(code).toMatch(/bg-\[linear-gradient\(120deg,rgba\(var\(--em-ch\),\.1\),rgba\(6,11,22,\.85\)\)\]/);
     expect(code).toMatch(/shadow-\[0_0_16px_rgba\(var\(--em-ch\),\.07\)\]/);
     expect(code).toMatch(/md:shadow-\[0_0_24px_rgba\(var\(--em-ch\),\.07\)\]/);
@@ -467,9 +474,138 @@ describe('M66.5 — released module card (GN-CD-148/149/156)', () => {
     expect(code).toMatch(/motion-reduce:/);
   });
 
-  it('CTO decision D-12 A — the released .35 border alpha ships unaltered', () => {
-    expect(stripComments(panelSource)).toMatch(/rgba\(var\(--em-ch\),\.35\)/);
-    expect(stripComments(panelSource)).not.toMatch(/rgba\(var\(--em-ch\),\.5\)/);
+  /*
+    SUPERSEDED, NOT DELETED. This block used to assert 'CTO decision D-12 A —
+    the released .35 border alpha ships unaltered'. Claude Design's DC-03 closes
+    that deliberately-open question the other way for the four cards that are
+    interactive components, so the lock is REPLACED by a stronger guard: the
+    contrast is COMPUTED here, from the shipped alphas and the released colour
+    stack, rather than asserted from a table. A future edit to any alpha that
+    drops a navigable card below 3:1 now fails, and the five inert cards are
+    still held at the released value.
+  */
+  it('DC-03 — every NAVIGABLE card boundary clears WCAG 2.1 SC 1.4.11 (3:1), computed', () => {
+    const code = stripComments(panelSource);
+
+    // The card border is the one place the alpha varies; the tile and the badge
+    // are decorative children, not component boundaries, and keep .35.
+    expect(code).toMatch(/border border-\[color:rgba\(var\(--em-ch\),var\(--em-ba\)\)\]/);
+    expect((code.match(/rgba\(var\(--em-ch\),\.35\)/g) ?? []).length).toBe(2);
+
+    const alphas: Record<string, number> = {};
+    const mapBlock = code.slice(code.indexOf('const SC1411_BORDER_ALPHA: Record<string, string> = {'));
+    for (const [, key, value] of mapBlock
+      .slice(0, mapBlock.indexOf('};'))
+      .matchAll(/'?([a-z-]+)'?:\s*'(\.\d+)'/g)) {
+      alphas[key] = Number(value);
+    }
+    const inert = Number(/const INERT_BORDER_ALPHA = '(\.\d+)'/.exec(code)?.[1]);
+    const fallback = Number(/const SC1411_BORDER_ALPHA_FALLBACK = '(\.\d+)'/.exec(code)?.[1]);
+
+    const navigable = INTELLIGENCE_MODULES.filter(isModuleNavigable);
+    expect(navigable).toHaveLength(4);
+    expect(Object.keys(alphas).sort()).toEqual(navigable.map((m) => m.id).sort());
+
+    type Rgb = [number, number, number];
+    const channel = (c: number): number => {
+      const v = c / 255;
+      return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = ([r, g, b]: Rgb): number =>
+      0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+    const contrast = (a: Rgb, b: Rgb): number => {
+      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const composite = (fg: Rgb, alpha: number, bg: Rgb): Rgb =>
+      [0, 1, 2].map((i) => fg[i] * alpha + bg[i] * (1 - alpha)) as Rgb;
+
+    // The released stack, read from the config rather than restated here.
+    const PAGE: Rgb = [4, 6, 12];
+    const stops = (token: string): Rgb[] =>
+      [...String((themeExtend.backgroundImage ?? {})[token]).matchAll(
+        /rgba\((\d+),(\d+),(\d+),([\d.]+)\)/g,
+      )].map(([, r, g, b, a]) => composite([+r, +g, +b], Number(a), PAGE));
+    const grounds = [...stops('cd-engine'), ...stops('cd-engine-m')];
+    expect(grounds).toHaveLength(4);
+
+    for (const moduleItem of navigable) {
+      const rgb = MODULE_IDENTITY[moduleItem.id].rgb.split(',').map(Number) as Rgb;
+      const alpha = alphas[moduleItem.id] ?? fallback;
+      for (const ground of grounds) {
+        // Both stops of the card's own 120deg gradient, each over the ground.
+        for (const fill of [composite(rgb, 0.1, ground), composite([6, 11, 22], 0.85, ground)]) {
+          const border = composite(rgb, alpha, fill);
+          // SC 1.4.11 names the ADJACENT colours: the fill inside, the ground outside.
+          for (const adjacent of [fill, ground]) {
+            expect({
+              module: moduleItem.id,
+              passes: contrast(border, adjacent) >= 3,
+            }).toEqual({ module: moduleItem.id, passes: true });
+          }
+        }
+      }
+    }
+
+    // The five inert cards are NOT interactive components; DC-03 explicitly
+    // leaves them at the released value, and the difference is useful.
+    expect(inert).toBe(0.35);
+    // Any future promotion without a measured value must still clear 3:1: the
+    // fallback is the highest alpha ANY of the nine identity colours needs.
+    expect(fallback).toBeGreaterThanOrEqual(Math.max(...Object.values(alphas)));
+  });
+
+  it('DC-01 — the open affordance exists, is gated on the SOLE navigability check, and invents nothing', () => {
+    const code = stripComments(panelSource);
+
+    // The string is the one that already shipped, translated, in both
+    // dictionaries — orphaned until now. No new copy was written.
+    expect(code).toMatch(/\{t\.openAction\}/);
+    for (const language of ['en', 'pl'] as const) {
+      expect(getDictionary(language).intelligenceModules.openAction.length).toBeGreaterThan(0);
+    }
+    expect(getDictionary('pl').intelligenceModules.openAction).not.toBe(
+      getDictionary('en').intelligenceModules.openAction,
+    );
+
+    // Rendered ONLY behind `navigable` — the same isModuleNavigable() result
+    // that chooses <a> over <div>, so an inert card cannot show it by styling.
+    const affordance = code.slice(code.indexOf('{navigable && ('), code.indexOf('{t.openAction}'));
+    expect(affordance).toMatch(/aria-hidden="true"/);
+    expect((code.match(/\{navigable && \(/g) ?? []).length).toBe(1);
+    expect(code).toMatch(/const navigable = isModuleNavigable\(module\)/);
+
+    // Below md the word does not fit beside shortTitle and the badge in 108x56,
+    // so the arrow travels alone — Claude Design's own instruction.
+    expect(code).toMatch(/hidden md:inline">\{t\.openAction\}/);
+
+    // No new colour: the card's own identity property tints it.
+    const glyph = code.slice(code.indexOf('{navigable && ('), code.indexOf('</svg>', code.indexOf('{navigable && (')));
+    expect(glyph).toMatch(/text-\[color:rgb\(var\(--em-ch\)\)\]/);
+    expect(glyph).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+
+    // No UI-library import surface was added to this file for a 10px arrow.
+    expect(panelSource).not.toMatch(/lucide-react/);
+
+    // It must NOT enter the accessible name — the element is already announced
+    // as a link and the name already ends in the status label.
+    expect(code).toMatch(
+      /const accessibleName = `\$\{moduleText\.title\}: \$\{moduleText\.description\}, \$\{stateLabel\}`/,
+    );
+    expect(code).not.toMatch(/accessibleName[^;]*openAction/);
+  });
+
+  it('DC-01 — the affordance can never reach an inert card', () => {
+    const code = stripComments(panelSource);
+    // The inert branch is the LAST return; the affordance lives in the shared
+    // body behind the navigable gate, so the inert element renders no cue.
+    const inertBranch = code.slice(code.lastIndexOf('return ('));
+    expect(inertBranch).not.toMatch(/openAction/);
+    // And the five modules that would render it are provably not navigable.
+    for (const moduleItem of INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m))) {
+      expect(moduleItem.destination).toBeUndefined();
+    }
+    expect(INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m))).toHaveLength(5);
   });
 });
 
@@ -697,5 +833,76 @@ describe('M66.5 — navigation, localization and protected surfaces', () => {
     const code = stripComments(ringSource) + stripComments(panelSource);
     expect(code).not.toMatch(/const ENGINE_(DESKTOP|MOBILE)\s*=/);
     expect(code).not.toMatch(/function ringEngine/);
+  });
+});
+
+/* ─────────── Claude Design DC-02 — hash activation moves FOCUS, not only the viewport ─────────── */
+
+describe('DC-02 — the one in-page module actually announces its arrival', () => {
+  it('the anchor target is programmatically focusable, and is still the same heading', () => {
+    // The id, the text and the classes are untouched — the destination in
+    // intelligenceModules.ts and the guard above both depend on them.
+    expect(developmentsSource).toMatch(/<h2\s+id="global-developments-heading"/);
+    const heading = developmentsSource.slice(
+      developmentsSource.indexOf('<h2'),
+      developmentsSource.indexOf('</h2>'),
+    );
+    expect(heading).toMatch(/tabIndex=\{-1\}/);
+    // -1 only: a real Tab stop on a heading would be a new, undesigned stop.
+    expect(developmentsSource).not.toMatch(/tabIndex=\{0\}/);
+  });
+
+  it('focus is placed by a client handler mounted inside the already-client section, not by page.tsx', () => {
+    expect(hashFocusSource.trimStart().startsWith("'use client'")).toBe(true);
+    expect(developmentsSource).toMatch(/<GlobalDevelopmentsHashFocus \/>/);
+    // app/page.tsx is a protected file for this work and must not have moved.
+    expect(pageSource).not.toMatch(/GlobalDevelopmentsHashFocus/);
+    // The handler renders nothing.
+    expect(hashFocusSource).toMatch(/\): null \{/);
+    expect(hashFocusSource).toMatch(/return null;/);
+  });
+
+  it('it focuses the real heading, and knows only that one id', () => {
+    const code = stripComments(hashFocusSource);
+    expect(code).toMatch(/const TARGET_ID = 'global-developments-heading'/);
+    expect(code).toMatch(/document\.getElementById\(TARGET_ID\)\?\.focus\(\)/);
+    // The id it focuses is the id the module points at, and the id that exists.
+    const world = INTELLIGENCE_MODULES.find((m) => m.id === 'world-intelligence');
+    expect(world?.destination).toBe('/#global-developments-heading');
+    expect(developmentsSource).toMatch(/id="global-developments-heading"/);
+  });
+
+  it('all three activation paths are covered — including re-activating an already-current fragment', () => {
+    const code = stripComments(hashFocusSource);
+    // 1. arriving with the fragment already in the URL (no hashchange fires)
+    expect(code).toMatch(/focusIfTargeted\(\);/);
+    // 2. ordinary same-document fragment navigation
+    expect(code).toMatch(/addEventListener\('hashchange', focusIfTargeted\)/);
+    // 3. the second activation of the SAME link, which fires no hashchange at
+    //    all — the case the design's acceptance criterion names explicitly.
+    expect(code).toMatch(/addEventListener\('click', handleClick\)/);
+    // Both listeners are removed again.
+    expect(code).toMatch(/removeEventListener\('hashchange', focusIfTargeted\)/);
+    expect(code).toMatch(/removeEventListener\('click', handleClick\)/);
+  });
+
+  it('the native anchor is never hijacked — no preventDefault, no routing, no scroll animation of our own', () => {
+    const code = stripComments(hashFocusSource);
+    expect(code).not.toMatch(/preventDefault/);
+    expect(code).not.toMatch(/scrollIntoView|scrollTo|behavior:/);
+    expect(code).not.toMatch(/useRouter|next\/navigation|next\/link/);
+    // It reads href and nothing else, and ignores every other anchor.
+    expect(code).toMatch(/href\.endsWith\(`#\$\{TARGET_ID\}`\)/);
+  });
+
+  it('no /world route was invented to solve this, and the destination is unchanged', () => {
+    expect(INTELLIGENCE_MODULES.every((m) => m.destination !== '/world')).toBe(true);
+    expect(stripComments(hashFocusSource)).not.toMatch(/'\/world'|"\/world"/);
+    const destinations = INTELLIGENCE_MODULES.map((m) => m.destination).filter(Boolean);
+    expect([...new Set(destinations)].sort()).toEqual([
+      '/#global-developments-heading',
+      '/map',
+      '/search',
+    ]);
   });
 });
