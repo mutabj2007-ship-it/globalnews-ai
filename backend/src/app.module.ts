@@ -16,6 +16,7 @@ import { RequestIdMiddleware } from './observability/request-id.middleware';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { HistoryModule } from './modules/history/history.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -56,6 +57,17 @@ import { HistoryModule } from './modules/history/history.module';
     AuthModule,
     UsersModule,
     HistoryModule,
+    // Milestone F1.a — administrative authorization foundation. This
+    // is the ONLY line of any pre-existing file that F1.a changes.
+    // Registering the module places no guard anywhere near an existing
+    // route: every public capability (homepage, search, map, analysis,
+    // news, health) remains exactly as unauthenticated as before, and
+    // /users/me and /history keep the guards they already had.
+    //
+    // The admin surface additionally sits behind ADMIN_PLATFORM_ENABLED,
+    // which is fail-closed: unset or anything other than "true" makes
+    // every /admin route return 404, whoever is asking.
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
