@@ -20,8 +20,16 @@ describe('A. storyContext is stable across renders (real lint defect found and f
 
   it('the analysis effect honestly lists storyContext in its own dependency array \u2014 no eslint-disable directive, no suppressed exhaustive-deps rule', () => {
     expect(searchClientSource).not.toMatch(/\/\/\s*eslint-disable|\/\*\s*eslint-disable/);
+    // M65 — the dependency array changed for one honest reason: the
+    // empty-query branch no longer renders dictionary.noQuestionMessage
+    // as an error (queryless /search is now a usable research
+    // workspace), and the catch branch now selects a localized message
+    // from the whole dictionary rather than one fixed string. The
+    // contract this test exists to protect — an honest, complete
+    // dependency array with no suppressed rule — is unchanged and is
+    // still asserted above.
     expect(searchClientSource).toMatch(
-      /\}, \[query, language, hasResolvedLanguage, dictionary\.noQuestionMessage, dictionary\.genericFetchError, storyContext\]\);/,
+      /\}, \[query, language, hasResolvedLanguage, dictionary, storyContext\]\);/,
     );
   });
 

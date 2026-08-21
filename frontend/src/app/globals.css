@@ -30,3 +30,158 @@
   }
 }
 
+/* ==========================================================================
+   M66.1 — CLAUDE DESIGN FOUNDATION
+   Everything above this line is the pre-existing production foundation and is
+   UNCHANGED. Every rule below is additive and either (a) declares a value, or
+   (b) is scoped to `.cd-canvas`, so no route that has not been redesigned can
+   be affected. Authority: GN-CD-300 → GN-CD-307, released 2026-08-18.
+   ========================================================================== */
+
+@layer base {
+  /*
+    The handful of Claude Design values that raw CSS and SVG attribute
+    contexts need directly — a Tailwind class cannot be used inside an SVG
+    `stroke=""` or a multi-layer shorthand. Deliberately NOT a second copy of
+    the palette: duplicating tokens invites drift, and this repository has
+    already paid for that once. `claudeDesignFoundation.spec.ts` cross-checks
+    every property below against `tailwind.config.ts`, so the two cannot
+    diverge silently.
+  */
+  :root {
+    /* GN-CD-300 §F.1 — page base. */
+    --cd-void: #04060c;
+    /* GN-CD-300 §G — grid/technical-field line colours. Four distinct
+       alphas; GN-CD-300 §W.2 forbids collapsing them. */
+    --cd-rule-page: rgba(56, 189, 248, 0.045);
+    --cd-rule-hero: rgba(56, 189, 248, 0.035);
+    --cd-rule-engine: rgba(56, 189, 248, 0.03);
+    --cd-rule-map: rgba(56, 189, 248, 0.05);
+    /* GN-CD-300 §H — the structural border role. */
+    --cd-edge-structural: rgba(56, 189, 248, 0.12);
+    /* GN-CD-306 §N.3 — the standard focus stroke. */
+    --cd-edge-focus: rgba(34, 211, 238, 0.7);
+  }
+
+  /*
+    GN-CD-306 — focus-visible treatment, SCOPED TO CLAUDE DESIGN SURFACES.
+
+    The global `:focus-visible` rule above stays exactly as it is, because it
+    serves /search, /map, /history, /workspace, /privacy and /terms — six
+    routes with no released design. Repointing it to the Claude Design cyan
+    would restyle all six, which CTO authorization §15 prohibits. Scoping the
+    Claude Design stroke to `.cd-canvas` gives the homepage the released
+    treatment and leaves every other route untouched. Each section milestone
+    brings its own surface inside the canvas and inherits this automatically.
+
+    Two deliberate, documented divergences from GN-CD-306 §N.2:
+      1. Width stays 2px where the design authors 1px. A thicker indicator is
+         strictly more visible, and the design's 1px values belong to
+         per-element declarations that the component milestones will apply
+         directly. This global rule is the FALLBACK the prototype never had.
+      2. `outline-offset` stays 2px, matching GN-CD-306 §N.3's "2px outside
+         cards". The -4px inset variant is an inline-control declaration and
+         belongs to the component that uses it.
+
+    Measured, not assumed: `rgba(34,211,238,.7)` on the released page base
+    `#04060c` is 5.77:1, and 5.72:1 on the darkest released panel
+    `rgba(4,8,16,.9)` — both clear WCAG 2.1 SC 1.4.11's 3:1 requirement for
+    non-text contrast. The spec asserts these ratios so a future colour tweak
+    cannot silently drop below the bar.
+  */
+  .cd-canvas :focus-visible {
+    outline: 2px solid var(--cd-edge-focus);
+    outline-offset: 2px;
+  }
+
+  /*
+    GN-CD-305 §L.1 — the released reduced-motion rule, added BENEATH the
+    existing universal block rather than replacing it.
+
+    Both are kept because each catches what the other misses. The existing
+    universal selector reaches Tailwind utility animations (`animate-*`),
+    which the design's attribute selector cannot see. The design's
+    `[style*="animation"]` rule stops inline-style animations outright rather
+    than merely collapsing their duration — which matters for a travelling
+    pulse, since a zero-duration animation leaves the element parked at its
+    start position instead of removing it.
+
+    `.cd-motion-pulse` is this repository's name for the design's `.gn-pulse`
+    (GN-CD-300 §S delegates naming to the repository). It marks a decorative
+    travelling pulse for removal from the render tree, per GN-CD-305 §L.1's
+    `display:none` — not `paused`. `!important` is required here where the
+    design does not need it, because in a Tailwind codebase a display utility
+    would otherwise win.
+
+    NOT implemented here, and recorded rather than quietly skipped: the
+    three-point LOGIC guard of GN-CD-305 §L.2 (SMIL emitted with
+    `begin="indefinite"`, carousel interval never created, control scrolling
+    switched to `behavior:'auto'`). CSS alone cannot stop SMIL or a JS timer.
+    Nothing in the current render path emits SMIL or runs a carousel timer, so
+    there is nothing to guard yet; the engine and trending milestones must
+    implement it. GN-CD-305 §O also asks production to subscribe to the media
+    query's `change` event rather than memoise it — that belongs with the same
+    logic layer.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    [style*='animation'] {
+      animation: none !important;
+    }
+
+    .cd-motion-pulse {
+      display: none !important;
+    }
+  }
+}
+
+/* ==========================================================================
+   M66.8a — NATIVE CONTROL COLOUR SCHEME
+   Purely additive: no line above this banner changes. Authority: M66.8a FINAL
+   CTO IMPLEMENTATION AUTHORIZATION, resolving carry-forward item M66.2.1.
+   ========================================================================== */
+
+@layer base {
+  /*
+    ONE declaration — and it is the only standards-based lever that reaches a
+    browser-owned popup.
+
+    THE PROBLEM. The header language control is a native <select> styled with
+    `appearance:none`. That styles the COLLAPSED control only; the dropped list
+    is a separate popup the browser paints outside the page's compositing tree,
+    so no class on the <select> can reach it. Until now this application never
+    declared a colour scheme anywhere — not in CSS, not on <html>, and not
+    through the Next.js metadata API. With nothing declared, Chromium resolves
+    every form-control popup to its LIGHT palette however dark the page behind
+    it is. That is the bright surface reported as M66.2-CARRY-001, and it is why
+    the non-selected option reads as invisible until hover.
+
+    WHY THIS, AND NOT A CUSTOM MENU. GN-CD-026 authors the closed trigger and
+    nothing else: the released specification states outright that the dropdown
+    "does not exist" and that no menu geometry, background, shadow or item
+    spacing is authored. There is no design contract to build a popup against,
+    and replacing a native <select> with a hand-rolled listbox is where keyboard
+    and screen-reader regressions come from. The native control keeps its
+    semantics, its keyboard model, its type-ahead and its accessible name; only
+    the palette the browser paints with changes.
+
+    WHAT IT DELIVERS, AND WHAT IT DOES NOT. Chromium and Gecko render the popup
+    with their DARK menu palette. That is a dark PLATFORM menu, not the
+    GlobalNews AI chrome — it stops the clash; it does not achieve brand
+    fidelity. Windows forced-colors mode overrides it entirely, and Safari
+    paints its own menu regardless. Product-accurate styling of a native
+    <select> popup is not achievable on today's web platform; `::picker(select)`
+    is Chromium-only and recent. The real result must be accepted in a browser,
+    not asserted in a source test.
+
+    SCOPE OF EFFECT. `color-scheme` changes UA-OWNED surfaces only: form-control
+    popups, default scrollbars and the canvas backdrop. Every form control in
+    this application already declares its own background — `bg-slate-900/70`
+    (workspace), `bg-surface` (search workspace and the selector's default),
+    `bg-transparent` over a dark parent (Hero textarea, country search, header
+    selector) — and <body> already carries `bg-void`. Nothing this repository
+    paints can move. Audited directly, not assumed.
+  */
+  :root {
+    color-scheme: dark;
+  }
+}

@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { footerLinkGroups } from '@/lib/homeContent';
 import { primaryNavLinks } from '@/lib/navigation';
@@ -6,6 +6,7 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 
 const footerSource = readFileSync(join(__dirname, '../layout/Footer.tsx'), 'utf-8');
 const navBarSource = readFileSync(join(__dirname, 'NavBar.tsx'), 'utf-8');
+const navModelSource = readFileSync(join(__dirname, '../../lib/navModel.ts'), 'utf-8');
 
 /**
  * CTO directive (test discipline) — rewritten to protect real
@@ -41,14 +42,27 @@ describe('Footer (CTO HUD system)', () => {
   });
 
   it('is a single compact row, not a multi-column stack — a real layout-density decision, not cosmetics', () => {
+    // M66.7 — CONVERTED, not weakened. The original negative still passes, but
+    // it guards against a layout that no longer exists anywhere in the tree, so
+    // it had stopped meaning anything. The density decision it was written to
+    // protect is now the RELEASED contract: GN-CD-200 authors one flat bar with
+    // five flex regions, and GN-CD-202 authors one ungrouped wrapping link row.
     expect(footerSource).not.toMatch(/grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4/);
+    const code = footerSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(code).toMatch(/flex flex-wrap items-center/);
+    expect(code).not.toMatch(/grid-cols-/);
+    // One bar, not a bar plus a second copyright row: the copyright now lives in
+    // the identity block's released secondary slot.
+    expect((code.match(/rounded-cd-14|lg:rounded-cd-16/g) ?? []).length).toBe(2);
   });
 });
 
 describe('NavBar (CTO HUD system)', () => {
   it('active-route detection is genuine, driven by the real pathname, not a hardcoded/fake state', () => {
     expect(navBarSource).toMatch(/usePathname/);
-    expect(navBarSource).toMatch(/const isActive = pathname === link\.href/);
+    // M65 — entries come from NAV_MODEL now; the detection itself is the
+    // same real pathname comparison it always was.
+    expect(navBarSource).toMatch(/const isActive = pathname === entry\.href/);
   });
 
   it('active state is communicated with a real aria-current attribute', () => {
@@ -59,12 +73,16 @@ describe('NavBar (CTO HUD system)', () => {
     expect(navBarSource).not.toMatch(/notification/i);
   });
 
-  it('renders nav links from the real primaryNavLinks source, not a hardcoded duplicate list', () => {
-    expect(navBarSource).toMatch(/primaryNavLinks\.map/);
+  it('renders nav items from the single canonical NAV_MODEL, not a hardcoded duplicate list \u2014 and NAV_MODEL still derives its real routes from the unchanged primaryNavLinks', () => {
+    expect(navBarSource).toMatch(/import \{ NAV_MODEL/);
+    expect(navBarSource).not.toMatch(/href="\/map"/);
+    expect(navModelSource).toMatch(/import \{ primaryNavLinks \} from '@\/lib\/navigation'/);
+    expect(navModelSource).toMatch(/realRouteHref\('Home'\)/);
+    expect(navModelSource).toMatch(/realRouteHref\('World Map'\)/);
   });
 
-  it('both the desktop and mobile-menu sections consume the SAME primaryNavLinks source \u2014 confirmed by exactly two real usages, not two independently-maintained lists', () => {
-    const usages = (navBarSource.match(/primaryNavLinks\.map/g) ?? []).length;
+  it('both the desktop header and the mobile menu consume the SAME NAV_MODEL source \u2014 confirmed by exactly two real usages, not two independently-maintained lists', () => {
+    const usages = (navBarSource.match(/NAV_MODEL\.map/g) ?? []).length;
     expect(usages).toBe(2);
   });
 });
@@ -115,9 +133,28 @@ describe('Dead primary-navigation and footer-link remediation (Milestone #53)', 
     }
   });
 
-  it('B2 — footerLinkGroups contains exactly the two real legal routes reintroduced this milestone, nothing fabricated beyond them', () => {
+  it('M66.10B — footerLinkGroups contains exactly the three real legal routes, nothing fabricated beyond them', () => {
+    // B2 reintroduced /privacy and /terms and locked this to exactly two.
+    // M66.10B adds /source-policy, whose route ships in the SAME change
+    // (frontend/src/app/source-policy/page.tsx) — the destination is never
+    // added before the page exists.
+    //
+    // This stays an EXACT equality rather than three toContain() calls, because
+    // the value of this assertion is that it fails when a FOURTH destination is
+    // added. About/Careers/Contact/API are still routeless and are still guarded
+    // by the test above; loosening this to membership checks would let any of
+    // them back in silently.
     const allFooterHrefs = footerLinkGroups.flatMap((group) => group.links.map((link) => link.href));
-    expect(allFooterHrefs.sort()).toEqual(['/privacy', '/terms']);
+    expect(allFooterHrefs.sort()).toEqual(['/privacy', '/source-policy', '/terms']);
+  });
+
+  it('M66.10B — each of the three legal destinations resolves to a real App Router page on disk', () => {
+    // Filesystem-backed route truth, mirroring footerGeometry.spec.ts. A string
+    // list can be edited into a lie; this cannot pass without the page file.
+    for (const href of footerLinkGroups.flatMap((group) => group.links.map((link) => link.href))) {
+      const segment = href === '/' ? '' : href.replace(/^\//, '');
+      expect(existsSync(join(__dirname, '../../app', segment, 'page.tsx'))).toBe(true);
+    }
   });
 
   it('Footer.tsx still renders links with no leftover group-title visual artifact (no group-title markup exists to orphan) — unchanged by the B2 data addition', () => {
@@ -206,9 +243,11 @@ describe('C2.1 — global shell / brand / navigation foundation', () => {
       expect(navBarSource).not.toContain(`href='${fakeRoute}'`);
       expect(mobileBottomNavSource).not.toContain(`href: '${fakeRoute}'`);
     }
-    // Confirms NavBar still renders links FROM primaryNavLinks.map(...),
-    // not a separate hardcoded list.
-    expect(navBarSource).toMatch(/primaryNavLinks\.map/);
+    // M65 — NavBar renders from NAV_MODEL, whose two real routes are
+    // still looked up from the unchanged primaryNavLinks. The guard that
+    // matters is unchanged and asserted above: no fabricated category
+    // href exists anywhere in the header.
+    expect(navBarSource).toMatch(/NAV_MODEL\.map/);
   });
 
   it('MobileBottomNav.tsx keeps its real, deliberate item set (Home, World Map, Search, Intelligence anchor) unchanged by the C2.1 visual pass', () => {
@@ -223,7 +262,21 @@ describe('C2.1 — global shell / brand / navigation foundation', () => {
     expect(footerSource).toMatch(/allLinks\.map/);
   });
 
-  it('the footer sharing system is explicitly NOT implemented in C2.1 \u2014 that belongs to a later, separately approved checkpoint', () => {
-    expect(footerSource).not.toMatch(/LinkedIn|WhatsApp|Copy Link|ShareControls|\bshare\b/i);
+  it('the footer sharing system remains NOT implemented — M66.7 is the later checkpoint, and CTO decision D-5 A omitted it', () => {
+    // M66.7 — RE-AIMED. This guard was written in C2.1 to hold the line until a
+    // "later, separately approved checkpoint". M66.7 IS that checkpoint, and it
+    // answered no: GN-CD-203's four controls fire toasts only, this repository
+    // has no toast infrastructure, and the controls' resting border measures
+    // 1.47:1 — the sole visual signal that a 34px circle is interactive. So the
+    // guard stays, now recording a decision rather than a deferral, and it runs
+    // on comment-stripped source so the decision can be EXPLAINED in the file it
+    // governs. Recorded as M66.7-DEFERRED-002.
+    const code = footerSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(code).not.toMatch(/LinkedIn|WhatsApp|ShareControls/i);
+    // Nothing that would constitute share infrastructure, in any form:
+    expect(code).not.toMatch(/navigator\.(clipboard|share)/);
+    expect(code).not.toMatch(/toast|notify\(/i);
+    expect(code).not.toMatch(/x\.com|twitter\.com|linkedin\.com|wa\.me|whatsapp\.com/i);
+    expect(code).not.toMatch(/'use client'/);
   });
 });

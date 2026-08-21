@@ -1,5 +1,18 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+// M66.3 — the released Hero type roles now live in the token layer rather than
+// in an arbitrary class string, so the assertions below read the config the way
+// headerSourcePort.spec.ts already does. tailwind.config.ts's only import is a
+// type-only import, so importing it from a spec pulls in no runtime dependency.
+import tailwindConfig from '../../../tailwind.config';
+
+/**
+ * `theme` on a Tailwind `Config` is optional and loosely typed, so released
+ * values are read through the same narrowed view M66.2's headerSourcePort.spec
+ * established rather than by indexing an optional chain.
+ */
+type ThemeExtend = Record<string, Record<string, unknown>>;
+const themeExtend = (tailwindConfig.theme?.extend ?? {}) as unknown as ThemeExtend;
 
 const heroSource = readFileSync(join(__dirname, 'Hero.tsx'), 'utf-8');
 const mapSource = readFileSync(join(__dirname, 'HomepageSituationMap.tsx'), 'utf-8');
@@ -7,7 +20,6 @@ const engineSource = readFileSync(join(__dirname, 'IntelligenceEngineInteractive
 const shellSource = readFileSync(join(__dirname, 'IntelligenceModulesDesktop.tsx'), 'utf-8');
 const worldVisualSource = readFileSync(join(__dirname, 'HeroWorldVisual.tsx'), 'utf-8');
 const howItWorksSource = readFileSync(join(__dirname, 'HowItWorks.tsx'), 'utf-8');
-const trustSource = readFileSync(join(__dirname, 'TrustSection.tsx'), 'utf-8');
 const navSource = readFileSync(join(__dirname, '../navigation/NavBar.tsx'), 'utf-8');
 const footerSource = readFileSync(join(__dirname, '../layout/Footer.tsx'), 'utf-8');
 
@@ -19,17 +31,43 @@ const footerSource = readFileSync(join(__dirname, '../layout/Footer.tsx'), 'utf-
  * file protects the concrete, verifiable outcomes of that pass.
  */
 describe('Reference-locked reconstruction — Hero', () => {
-  it('the Hero grid gives the world visual clear dominance in a genuine three-zone composition (M60 Phase 2: ~31/50/19 — search/ask, dominant world visual, separate live-intelligence column), not the earlier two-zone ~47/53', () => {
-    expect(heroSource).toMatch(/lg:grid-cols-\[0\.31fr_0\.50fr_0\.19fr\]/);
+  it('the Hero grid gives the intelligence visual clear dominance in a genuine three-zone composition — M66.3 moved the SAME released tracks from the lg gate to the cd-hero gate (CTO decision L-1A); the tracks themselves are unchanged', () => {
+    expect(heroSource).toMatch(/cd-hero:grid-cols-\[minmax\(0,470px\)_minmax\(0,1fr\)_312px\]/);
+    expect(heroSource).toMatch(/cd-hero:min-h-cd-hero-frame/);
+    // The dominance this test has always protected is the MAP track, and what
+    // actually threatened it was not the track definition but the Hero-local
+    // padding and gap that were subtracted from it. Those are now forbidden.
+    // Guards run on comment-stripped source: Hero.tsx's own documentation
+    // legitimately names each constraint while explaining why it was removed.
+    const heroCode = heroSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(heroCode).not.toMatch(/lg:px-8/);
+    expect(heroCode).not.toMatch(/lg:gap-5/);
+    expect(heroCode).not.toMatch(/max-w-\[1600px\]/);
   });
 
-  it('the search field uses the compact clipped HUD shell, not a plain large rounded input', () => {
-    expect(heroSource).toMatch(/HUD_CARD_CLIP/);
-    expect(heroSource).toMatch(/max-w-xl/);
+  it('the search field is the approved design\u2019s 12px-radius rounded rectangle — M66.3 re-expresses the same released values as tokens rather than an arbitrary class string', () => {
+    expect(heroSource).toMatch(/rounded-cd-12 border border-cd-edge-control-active-32/);
+    const colors = (themeExtend.colors.cd as Record<string, unknown>) as Record<string, string>;
+    expect(colors['edge-control-active-32']).toBe('rgba(56,189,248,0.32)');
+    expect((themeExtend.borderRadius as unknown as Record<string, string>)['cd-12']).toBe('12px');
+    // `max-w-xl` is superseded by GN-CD-055's own column padding (20px 26px
+    // 24px), which is what bounds the field now.
+    expect(heroSource).toMatch(/cd-hero:px-cd-26/);
   });
 
-  it('the headline is tightened for the narrower column (smaller size, tighter line-height)', () => {
-    expect(heroSource).toMatch(/text-3xl font-medium leading-\[1\.05\]/);
+  it('the headline uses the approved design\u2019s exact fluid clamp, weight and tracking — now via the released cd-hero type role, and with its separately authored mobile ladder', () => {
+    expect(heroSource).toMatch(/cd-hero:text-cd-hero\b/);
+    expect(heroSource).toMatch(/text-cd-hero-m\b/);
+    const fontSize = themeExtend.fontSize as unknown as Record<string, [string, Record<string, string>]>;
+    expect(fontSize['cd-hero'][0]).toBe('clamp(34px,3.5vw,54px)');
+    expect(fontSize['cd-hero'][1].lineHeight).toBe('1.05');
+    expect(fontSize['cd-hero'][1].letterSpacing).toBe('-0.026em');
+    expect(fontSize['cd-hero'][1].fontWeight).toBe('700');
+    // GN-CD-058's mobile ladder is 26px/1.1/-.02em — NOT the clamp floor, which
+    // is what the pre-M66.3 Hero rendered at 390px.
+    expect(fontSize['cd-hero-m'][0]).toBe('26px');
+    expect(fontSize['cd-hero-m'][1].lineHeight).toBe('1.1');
+    expect(fontSize['cd-hero-m'][1].letterSpacing).toBe('-0.02em');
   });
 });
 
@@ -64,9 +102,16 @@ describe('Reference-locked reconstruction — Intelligence Engine (M60 Phase 2: 
 });
 
 describe('Reference-locked reconstruction — HUD geometry coverage', () => {
-  it('How It Works and Trust now carry corner brackets, extending the HUD geometry system beyond Hero/Modules/Map/Footer', () => {
+  /**
+   * M66.6 — the ONE change authorized in this protected file (CTO decision
+   * D-7). The Trust half of this assertion was removed and the title narrowed
+   * accordingly, because GN-CD-180 replaces the Trust panel's HUD brackets
+   * with a released 16px-radius bordered surface. `hudPanelGeometry.spec.ts`
+   * now records that exception with its reason. The How It Works expectation
+   * below is UNCHANGED, and no other assertion in this file was touched.
+   */
+  it('How It Works still carries corner brackets, extending the HUD geometry system beyond Hero/Modules/Map/Footer', () => {
     expect(howItWorksSource).toMatch(/hudCornerBracketClassName/);
-    expect(trustSource).toMatch(/hudCornerBracketClassName/);
   });
 
   it('How It Works section padding gives genuine breathing room after the Intelligence Engine (M61 — increased from the earlier compressed py-6/py-7 values)', () => {
@@ -75,13 +120,53 @@ describe('Reference-locked reconstruction — HUD geometry coverage', () => {
 });
 
 describe('Reference-locked reconstruction — Nav/Footer', () => {
-  it('nav height matches the approved Claude Design C2.1 header spec (62px) and a bottom technical scan-line rail is present', () => {
+  /**
+   * M66.2 — the rail assertion was inverted; the height assertion is untouched.
+   *
+   * GN-CD-020's layer table lists "Scan line ❌ none" and describes the header
+   * as "four declarations deep: fill, blur, border, nothing else" — deliberately
+   * the plainest surface in the design, because every section beneath it carries
+   * its own technical field. The rail was a C2.1 addition with no authority in
+   * the released family, and CTO authorization §10 instructed its removal, so
+   * its ABSENCE is now the contract.
+   *
+   * Replacing one presentation lock with another would leave this test weaker
+   * than it was, so the three released base declarations it never covered are
+   * asserted here instead.
+   */
+  it('nav height matches the released GN-CD-020 header (62px) and the header carries no scan-line rail', () => {
     expect(navSource).toMatch(/h-\[62px\] max-w/);
-    expect(navSource).toMatch(/bg-gradient-to-r from-transparent via-cyan-400\/50 to-transparent/);
+    expect(navSource).not.toMatch(/bg-gradient-to-r from-transparent via-cyan-400\/50 to-transparent/);
+    // The released base: a flat translucent fill, a 10px backdrop blur and one
+    // 1px bottom border. No gradient, no glow, no shadow at any scroll position.
+    expect(navSource).toMatch(/bg-\[rgba\(4,7,14,0\.92\)\]/);
+    expect(navSource).toMatch(/backdrop-blur-\[10px\]/);
+    expect(navSource).toMatch(/border-b border-\[rgba\(56,189,248,0\.18\)\]/);
   });
 
-  it('footer padding accommodates the approved Claude Design C2.1 bordered-panel treatment and the status line carries a real indicator dot', () => {
-    expect(footerSource).toMatch(/py-6 sm:px-6 lg:px-8/);
-    expect(footerSource).toMatch(/bg-cyan-400" \/>/);
+  /**
+   * M66.7 — the ONE change authorized in this protected file (CTO decision
+   * D-9). Both assertions below were C2.1 presentation locks that GN-CD-200
+   * disproves: the released footer is a single flat bar, and its layer
+   * inventory has no status line and therefore no indicator dot.
+   *
+   * Replacing one presentation lock with another would leave this test weaker
+   * than it was — the same reasoning M66.2 recorded for the sibling NavBar
+   * assertion in this describe block — so the released BASE declarations the
+   * test never covered are asserted instead: the flat fill, the .14 border,
+   * and the absence of every technical layer. That last one is the point of
+   * GN-CD-200: 'the only home section with a flat fill and no technical field
+   * of any kind... the page ends by removing every technical layer.'
+   *
+   * No other assertion in this file was touched.
+   */
+  it('the footer is the released terminal surface — a flat fill, the .14 border, and no technical field of any kind', () => {
+    const footerCode = footerSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(footerCode).toMatch(/bg-cd-fill-footer/);
+    expect(footerCode).toMatch(/lg:border-cd-edge-card/);
+    // Every layer GN-CD-200's inventory records as absent stays absent.
+    expect(footerCode).not.toMatch(/hudCornerBracketClassName|HUD_CARD_CLIP|HUD_PANEL_CLIP/);
+    expect(footerCode).not.toMatch(/gradient|backdrop-blur|shadow-|bg-cd-grid-|bg-cd-rules-/);
+    expect(footerCode).not.toMatch(/bg-cyan-400/);
   });
 });

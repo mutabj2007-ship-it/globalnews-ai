@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 const pageSource = readFileSync(join(__dirname, '../../app/page.tsx'), 'utf-8');
@@ -26,15 +26,18 @@ function stripComments(src: string): string {
 }
 
 describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed as a duplicate presentation of feed.latestUpdates)', () => {
-  it('renders sections in the approved current order: NavBar, LiveStatusStrip, Hero, GlobalDevelopments, HomepageSituationMap, IntelligenceModulesDesktop, IntelligenceModulesMobile, HowItWorks, TrustSection, Footer, MobileBottomNav', () => {
+  it('renders sections in the approved current order: NavBar, LiveStatusStrip, Hero, GlobalDevelopments, IntelligenceEngineSection, HowItWorks, TrustSection, Footer, MobileBottomNav', () => {
+    // M65.1 — the two per-breakpoint Intelligence Engine renderers were
+    // replaced by ONE section that serves every breakpoint.
+    // M66.8c — HomepageSituationMap is retired from this render path. The
+    // ORDER contract this test protects is otherwise unchanged; the marker
+    // was removed, not reordered, and its component file remains on disk.
     const order = [
       '<NavBar',
       '<LiveStatusStrip',
       '<Hero',
       '<GlobalDevelopments',
-      '<HomepageSituationMap',
-      '<IntelligenceModulesDesktop',
-      '<IntelligenceModulesMobile',
+      '<IntelligenceEngineSection',
       '<HowItWorks',
       '<TrustSection',
       '<Footer',
@@ -46,6 +49,47 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
       expect(index).toBeGreaterThan(lastIndex);
       lastIndex = index;
     }
+  });
+
+  it('M65.1 — the retired per-breakpoint Intelligence Engine renderers are no longer wired into the homepage (their files are retained, unimported)', () => {
+    expect(stripComments(pageSource)).not.toMatch(/<IntelligenceModulesDesktop/);
+    expect(stripComments(pageSource)).not.toMatch(/<IntelligenceModulesMobile/);
+    expect(stripComments(pageSource)).not.toMatch(/import \{ IntelligenceModulesDesktop \}/);
+    expect(stripComments(pageSource)).not.toMatch(/import \{ IntelligenceModulesMobile \}/);
+  });
+
+  it('M66.8c — HomepageSituationMap is retired from the homepage, and its file is RETAINED', () => {
+    // Exactly the shape of the M65.1 test above: unwired here, kept on disk.
+    // The doc comment still names it, which is why both guards run on
+    // comment-stripped source.
+    const code = stripComments(pageSource);
+    expect(code).not.toMatch(/<HomepageSituationMap/);
+    expect(code).not.toMatch(/import \{ HomepageSituationMap \}/);
+    expect(code).not.toMatch(/HomepageSituationMap/);
+    // RETAINED, not deleted. If a later cleanup removes the file, this fails —
+    // and so would five direct specs that read it and are outside M66.8c's
+    // scope. "Retired from the page" must never quietly become "deleted".
+    expect(existsSync(join(__dirname, 'HomepageSituationMap.tsx'))).toBe(true);
+  });
+
+  it('M66.8c — no duplicate situation-map surface was left behind or re-added elsewhere', () => {
+    const code = stripComments(pageSource);
+    expect(code).not.toMatch(/SituationMap|WorldMap|situationMap/);
+    // And /map itself is untouched: the route file still renders the real
+    // client, so the capability moved nowhere.
+    const mapRoute = readFileSync(join(__dirname, '../../app/map/page.tsx'), 'utf-8');
+    expect(mapRoute).toMatch(/MapPageClient/);
+  });
+
+  it('M66.8c — the World Map remains reachable from the homepage, five ways, none of them the retired section', () => {
+    const navModel = readFileSync(join(__dirname, '../../lib/navModel.ts'), 'utf-8');
+    expect(navModel).toMatch(/label: 'World Map'/);
+    const bottomNav = readFileSync(join(__dirname, '../navigation/MobileBottomNav.tsx'), 'utf-8');
+    expect(bottomNav).toMatch(/href: '\/map'/);
+    const hero = readFileSync(join(__dirname, 'Hero.tsx'), 'utf-8');
+    expect((hero.match(/href="\/map"/g) ?? []).length).toBe(2);
+    const feedPanel = readFileSync(join(__dirname, 'HeroLiveFeedPanel.tsx'), 'utf-8');
+    expect(feedPanel).toMatch(/href="\/map"/);
   });
 
   it('makes exactly one EXECUTABLE getHomeFeed call \u2014 comment/prose mentions of the same text do not count', () => {

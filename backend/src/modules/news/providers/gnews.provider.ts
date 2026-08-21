@@ -336,6 +336,17 @@ export class GNewsProvider implements NewsProvider {
       category: classifyCategory({ title: raw.title, summary: raw.description }, categoryHint),
       sourcesCount: 1,
       publishedAt: raw.publishedAt ?? new Date().toISOString(),
+      // E1 — provider provenance. The real provider id, verbatim, on
+      // every article this class emits, so a merged multi-provider
+      // response can always say which provider produced each record.
+      //
+      // providerRecordId is deliberately NOT set: GNews's article
+      // payload carries no identifier of its own distinct from `url`,
+      // and `url` is already what buildStableId() derives `id` from.
+      // Inventing a second id from the same field would be a
+      // fabricated provenance claim, so the field stays absent —
+      // honest absence, per NewsArticle.providerRecordId's contract.
+      providerId: this.id,
       // Milestone #47 — verbatim (trimmed, lowercased) mapping of
       // GNews's own reported `lang` field. Never fabricated: absent or
       // empty upstream value maps to undefined, never a guessed or

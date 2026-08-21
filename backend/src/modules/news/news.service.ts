@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { logWithRequestId } from '../../observability/log-with-request-id';
 import type {
+  LanguageCode,
   NewsArticle,
   NewsCategory,
   NewsFallbackReason,
@@ -10,10 +11,12 @@ import type {
 import type { NewsProvider } from './interfaces';
 import { ALL_NEWS_PROVIDERS, NEWS_PROVIDERS } from './providers/provider.tokens';
 import { ArticlePersistenceService } from './persistence/article-persistence.service';
+import { resolvePrimaryCountry } from './country/country-relevance.util';
 import {
   scoreGenericRelevance,
   scoreRelationalRelevance,
 } from './relevance/generic-relevance.util';
+import { collapseCrossProviderDuplicates } from './cross-provider-dedup.util';
 
 const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
 
@@ -267,6 +270,7 @@ export class NewsService {
       {
         sortByRecency: false,
       },
+      options?.lang,
     );
 
     if (response.articles.length > 0) {
@@ -302,6 +306,7 @@ export class NewsService {
       limit,
       {},
       this.resolveFallbackReason(providerCall.failedProviderIds),
+      options?.lang,
     );
   }
 
@@ -419,6 +424,49 @@ export class NewsService {
     };
   }
 
+  /**
+   * M66.14B — annotate each article with its canonical country.
+   *
+   * ANNOTATION ONLY. This is a 1:1 map: it never filters, never reorders, never
+   * drops and never adds. Article count and order are byte-identical before and
+   * after, on every path — live, cached and mock alike — so the GNews feed the
+   * homepage renders is exactly the feed it rendered before. That property is
+   * asserted, not assumed.
+   *
+   * An article with no resolvable country keeps NO countryCode at all rather
+   * than a placeholder, and still renders normally. Absence means "we do not
+   * know", which is the contract documented on NewsArticle itself.
+   *
+   * The try/catch is deliberate and is the reason this can sit on the live
+   * path: country resolution is a presentation nicety, and no failure inside it
+   * may ever cost a reader their news. A throw degrades that one article to
+   * unannotated and the response continues.
+   *
+   * `language` is the REQUEST language, forwarded to scoreCountryRelevance where
+   * it only ever ADDS the localized country name as an extra positive signal.
+   * A Polish interface therefore still resolves an English article by its
+   * canonical English name — asserted in country-relevance.util.spec.ts.
+   */
+  private resolveArticleCountries(articles: NewsArticle[], language?: string): NewsArticle[] {
+    return articles.map((article) => {
+      try {
+        const primary = resolvePrimaryCountry(article, language as LanguageCode | undefined);
+
+        if (!primary) {
+          return article;
+        }
+
+        return {
+          ...article,
+          countryCode: primary.countryCode,
+          countryName: primary.countryName,
+        };
+      } catch {
+        return article;
+      }
+    });
+  }
+
   private buildResponse(
     results: Array<{
       providerId: string;
@@ -434,6 +482,7 @@ export class NewsService {
     } = {
       sortByRecency: true,
     },
+    language?: string,
   ): NewsResponse {
     const seen = new Set<string>();
 
@@ -450,18 +499,46 @@ export class NewsService {
       }
     }
 
+    // E1 — the exact-id pass above is necessary but not sufficient
+    // once more than one provider can be active at a time: every
+    // provider namespaces its own ids ('gnews-...', 'mock-...'), so
+    // two providers carrying the identical story arrive as two
+    // different ids and survive id-based dedup intact.
+    //
+    // The cross-provider pass runs ONLY when more than one provider
+    // actually contributed results to THIS call. With a single
+    // contributing provider — today's shipped configuration, and every
+    // pre-E1 request — `merged` is returned untouched, so the live
+    // feed is byte-for-byte what it was before E1. This is a
+    // deliberate scope line: E1 is about the multi-provider seam, not
+    // about retroactively applying title-similarity dedup to one
+    // provider's own results.
+    //
+    // The similarity decision itself is the repository's existing
+    // deduplicateArticles utility, reused unchanged — see
+    // cross-provider-dedup.util.ts for the deterministic winner rule.
+    const deduplicated =
+      results.length > 1
+        ? collapseCrossProviderDuplicates(
+            merged,
+            this.providers.map((provider) => provider.id),
+          )
+        : merged;
+
     if (sortByRecency) {
-      merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+      deduplicated.sort(
+        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+      );
     }
 
-    const capped = limit ? merged.slice(0, limit) : merged;
+    const capped = limit ? deduplicated.slice(0, limit) : deduplicated;
 
     const successfulProviderIds = results.map((result) => result.providerId);
 
     const dataMode = this.resolveDataMode(successfulProviderIds);
 
     return {
-      articles: capped,
+      articles: this.resolveArticleCountries(capped, language),
       totalResults: capped.length,
       providers: successfulProviderIds,
       dataMode,
@@ -522,11 +599,12 @@ export class NewsService {
     limit: number | undefined,
     extra: Partial<Pick<NewsResponse, 'query' | 'category'>> = {},
     fallbackReason?: NewsFallbackReason,
+    language?: string,
   ): NewsResponse {
     const capped = limit ? articles.slice(0, limit) : articles;
 
     return {
-      articles: capped,
+      articles: this.resolveArticleCountries(capped, language),
       totalResults: capped.length,
       providers: [],
       dataMode: 'cached',

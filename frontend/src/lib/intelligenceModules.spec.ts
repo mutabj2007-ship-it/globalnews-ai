@@ -39,8 +39,11 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     }
   });
 
-  it('every destination that IS set points to a real, existing route', () => {
-    const realRoutes = ['/search', '/map'];
+  it('every destination that IS set points to a real, existing surface', () => {
+    // M66 — the hash entry is an anchor that already exists in
+    // GlobalDevelopments.tsx, reached by the same in-page pattern
+    // MobileBottomNav already ships. Still no fabricated destination.
+    const realRoutes = ['/search', '/map', '/#global-developments-heading'];
     for (const moduleConfig of INTELLIGENCE_MODULES) {
       if (moduleConfig.destination) {
         expect(realRoutes).toContain(moduleConfig.destination);
@@ -64,10 +67,50 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     expect(INTELLIGENCE_MODULES.find((m) => m.id === 'evidence')?.destination).toBe('/search');
   });
 
-  it('World Intelligence is active but has no separate destination — it represents the homepage feed itself', () => {
+  /*
+    M66 — CTO decision D-6 A is SUPERSEDED by 'ACTIVE means actionable'.
+    World Intelligence still IS the homepage feed rather than a page; what
+    changed is that the feed's own section anchor was always a real
+    destination, so the card no longer has to be inert to stay honest.
+  */
+  it('World Intelligence is active AND actionable, pointing at the homepage feed it represents', () => {
     const worldIntelligence = INTELLIGENCE_MODULES.find((m) => m.id === 'world-intelligence');
     expect(worldIntelligence?.state).toBe('active');
-    expect(worldIntelligence?.destination).toBeUndefined();
+    expect(worldIntelligence?.destination).toBe('/#global-developments-heading');
+  });
+
+  it('M65.1 — every module carries a unique two-letter identifier, matching the approved Claude Design reference', () => {
+    const codes = INTELLIGENCE_MODULES.map((m) => m.code);
+    expect(codes).toHaveLength(9);
+    expect(new Set(codes).size).toBe(9);
+    for (const code of codes) {
+      expect(code).toMatch(/^[A-Z]{2}$/);
+    }
+    expect(INTELLIGENCE_MODULES.map((m) => `${m.id}:${m.code}`)).toEqual([
+      'ai-research:AI',
+      'world-intelligence:WD',
+      'country-intelligence:CO',
+      'evidence:EV',
+      'economy:EC',
+      'conflict:CF',
+      'market:MK',
+      'timeline:TL',
+      'forecast:FC',
+    ]);
+  });
+
+  it('M65.1 — adding the identifier changed no capability truth: ids, states and destinations are untouched', () => {
+    expect(INTELLIGENCE_MODULES.map((m) => `${m.id}:${m.state}:${m.destination ?? '-'}`)).toEqual([
+      'ai-research:active:/search',
+      'world-intelligence:active:/#global-developments-heading',
+      'country-intelligence:active:/map',
+      'evidence:active:/search',
+      'economy:preview:-',
+      'conflict:preview:-',
+      'market:comingSoon:-',
+      'timeline:comingSoon:-',
+      'forecast:comingSoon:-',
+    ]);
   });
 
   it('every module has a dictionaryKey — no hardcoded English title/description in the config itself', () => {

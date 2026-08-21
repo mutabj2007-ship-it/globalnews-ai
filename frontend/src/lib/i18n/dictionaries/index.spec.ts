@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { getDictionary } from './index';
 import { footerLinkGroups } from '@/lib/homeContent';
 import { primaryNavLinks } from '@/lib/navigation';
@@ -250,11 +252,66 @@ describe('Milestone #49 — World Map dictionary section', () => {
     expect(en.map.panel.viewFullCoverage).toBe('View full country coverage');
   });
 
-  it('map.categories reuses the same NewsCategory keys used everywhere else, not a new taxonomy', () => {
-    const en = getDictionary('en');
-    expect(Object.keys(en.map.categories).sort()).toEqual(
-      ['all', 'business', 'health', 'politics', 'science', 'technology', 'world'].sort(),
+  /*
+    M66.13C — the canonical set is read from shared/src/news.ts as TEXT.
+    jest resolves no mapping for '@globalnews-ai/shared', and adding one means
+    editing frontend/jest.config.js, which this milestone is not authorized to
+    touch. Reading the source also beats importing shared/dist, which is a
+    build artifact and can be stale. A failed parse throws rather than
+    returning an empty set, so this can never pass vacuously.
+  */
+  const canonicalCategories = (): string[] => {
+    const source = readFileSync(
+      join(__dirname, '..', '..', '..', '..', '..', 'shared', 'src', 'news.ts'),
+      'utf-8',
     );
+    const declaration = /export const NEWS_CATEGORIES: NewsCategory\[\] = \[([\s\S]*?)\];/.exec(source);
+    if (!declaration) {
+      throw new Error('shared/src/news.ts no longer declares NEWS_CATEGORIES in the expected form');
+    }
+    const members = [...declaration[1].matchAll(/'([a-z-]+)'/g)].map((match) => match[1]);
+    if (members.length === 0) {
+      throw new Error('NEWS_CATEGORIES parsed as empty — this guard would be vacuous');
+    }
+    return members;
+  };
+
+  const NEWS_CATEGORIES = canonicalCategories();
+
+  /*
+    This test's TITLE always claimed parity with the canonical
+    NewsCategory set, but its assertion hardcoded a six-key list that was
+    NOT that set: 'sports' and 'entertainment' were missing, and the
+    backend classifier genuinely emits both. The test could not fail on the
+    very drift it was named for.
+
+    It is converted, not deleted: the expectation is now DERIVED from the
+    shared NEWS_CATEGORIES constant, so adding a category to the union
+    fails this test until the taxonomy is localized. 'all' is not a
+    NewsCategory — it is the filter bar's own 'no filter' option — so it is
+    named explicitly as the single deliberate addition.
+  */
+  it('map.categories covers the canonical NewsCategory set exactly, plus the filter-only \'all\' option', () => {
+    const en = getDictionary('en');
+    const expected = ['all', ...NEWS_CATEGORIES].sort();
+    expect(Object.keys(en.map.categories).sort()).toEqual(expected);
+    expect(Object.keys(getDictionary('pl').map.categories).sort()).toEqual(expected);
+  });
+
+  it('every canonical category has a real, distinct label in BOTH languages — no raw token can reach a user', () => {
+    const en = getDictionary('en').map.categories;
+    const pl = getDictionary('pl').map.categories;
+    for (const category of NEWS_CATEGORIES) {
+      expect(typeof en[category]).toBe('string');
+      expect(en[category].length).toBeGreaterThan(0);
+      expect(typeof pl[category]).toBe('string');
+      expect(pl[category].length).toBeGreaterThan(0);
+      // A label equal to its own key is the token leaking, not a translation.
+      expect(en[category]).not.toBe(category);
+      expect(pl[category]).not.toBe(category);
+      // Polish must actually differ from English for every one of these.
+      expect(pl[category]).not.toBe(en[category]);
+    }
   });
 
   it('map.storyForms is structured for pluralWithForms (a 3-tuple), matching the M48 pluralization architecture, not a second mechanism', () => {
@@ -440,10 +497,16 @@ describe('Milestone #51 consolidated round — Latest Now / World Map Gateway lo
 });
 
 describe('B2 — Public Legal Surfaces dictionary sections', () => {
-  it('privacyPage and termsPage exist in both English and Polish with non-empty titles and intros', () => {
+  // M66.10B — the policy-page tuple. Extending THIS constant is how a new legal
+  // surface inherits every structural guarantee below at once, rather than each
+  // test being remembered individually. sourcePolicyPage joins privacyPage and
+  // termsPage here; no existing coverage of the first two is weakened.
+  const POLICY_PAGES = ['privacyPage', 'termsPage', 'sourcePolicyPage'] as const;
+
+  it('every policy page exists in both English and Polish with non-empty titles and intros', () => {
     const en = getDictionary('en');
     const pl = getDictionary('pl');
-    for (const page of ['privacyPage', 'termsPage'] as const) {
+    for (const page of POLICY_PAGES) {
       expect(en[page].title.length).toBeGreaterThan(0);
       expect(en[page].intro.length).toBeGreaterThan(0);
       expect(pl[page].title.length).toBeGreaterThan(0);
@@ -453,18 +516,20 @@ describe('B2 — Public Legal Surfaces dictionary sections', () => {
     }
   });
 
-  it('privacyPage and termsPage have the SAME number of sections in English and Polish, so no section is missing in either language', () => {
+  it('every policy page has the SAME number of sections in English and Polish, so no section is missing in either language', () => {
     const en = getDictionary('en');
     const pl = getDictionary('pl');
-    for (const page of ['privacyPage', 'termsPage'] as const) {
+    for (const page of POLICY_PAGES) {
       expect(pl[page].sections.length).toBe(en[page].sections.length);
+      // A policy page with no sections would satisfy the equality above.
+      expect(en[page].sections.length).toBeGreaterThan(0);
     }
   });
 
-  it('every section in privacyPage and termsPage has a non-empty heading and body in both languages, and the Polish text is genuinely different from the English text', () => {
+  it('every section in every policy page has a non-empty heading and body in both languages, and the Polish text is genuinely different from the English text', () => {
     const en = getDictionary('en');
     const pl = getDictionary('pl');
-    for (const page of ['privacyPage', 'termsPage'] as const) {
+    for (const page of POLICY_PAGES) {
       en[page].sections.forEach((section, index) => {
         const plSection = pl[page].sections[index];
         expect(section.heading.length).toBeGreaterThan(0);
@@ -489,12 +554,12 @@ describe('B2 — Public Legal Surfaces dictionary sections', () => {
       /\bregistered office\b/i,
       /governed by the laws of/i,
     ];
-    const allText = [
-      en.privacyPage.intro,
-      ...en.privacyPage.sections.flatMap((s) => [s.heading, s.body]),
-      en.termsPage.intro,
-      ...en.termsPage.sections.flatMap((s) => [s.heading, s.body]),
-    ].join(' ');
+    // M66.10B — driven off POLICY_PAGES, so sourcePolicyPage is covered by the
+    // same guard and any future legal page is covered automatically.
+    const allText = POLICY_PAGES.flatMap((page) => [
+      en[page].intro,
+      ...en[page].sections.flatMap((s) => [s.heading, s.body]),
+    ]).join(' ');
     for (const pattern of forbiddenPatterns) {
       expect(allText).not.toMatch(pattern);
     }
@@ -503,16 +568,13 @@ describe('B2 — Public Legal Surfaces dictionary sections', () => {
   it('B2 pre-commit correction — no dictionary string contains a literal, unescaped-looking double-backslash Unicode escape sequence (e.g. "\\\\u201c"), which renders as literal backslash-u text in the browser instead of a real character', () => {
     const en = getDictionary('en');
     const pl = getDictionary('pl');
-    const allText = [
-      en.privacyPage.intro,
-      ...en.privacyPage.sections.flatMap((s) => [s.heading, s.body]),
-      en.termsPage.intro,
-      ...en.termsPage.sections.flatMap((s) => [s.heading, s.body]),
-      pl.privacyPage.intro,
-      ...pl.privacyPage.sections.flatMap((s) => [s.heading, s.body]),
-      pl.termsPage.intro,
-      ...pl.termsPage.sections.flatMap((s) => [s.heading, s.body]),
-    ].join(' ');
+    // M66.10B — both languages, every policy page.
+    const allText = POLICY_PAGES.flatMap((page) => [
+      en[page].intro,
+      ...en[page].sections.flatMap((s) => [s.heading, s.body]),
+      pl[page].intro,
+      ...pl[page].sections.flatMap((s) => [s.heading, s.body]),
+    ]).join(' ');
     // If a double-backslash escape had survived, the RUNTIME STRING
     // value itself would contain a literal backslash character
     // followed by "u201c"/"u2019"/etc. — checked directly on the
@@ -527,22 +589,96 @@ describe('B2 — Public Legal Surfaces dictionary sections', () => {
     expect(disclaimer?.body).toContain('\u201cas is\u201d');
   });
 
-  it('B2 pre-commit correction — privacyPage and termsPage now define a static, non-empty lastUpdatedDate in both languages, distinct between EN and PL', () => {
+  it('every policy page defines a static, non-empty lastUpdatedDate in both languages, distinct between EN and PL', () => {
     const en = getDictionary('en');
     const pl = getDictionary('pl');
-    for (const page of ['privacyPage', 'termsPage'] as const) {
+    for (const page of POLICY_PAGES) {
       expect(en[page].lastUpdatedDate.length).toBeGreaterThan(0);
       expect(pl[page].lastUpdatedDate.length).toBeGreaterThan(0);
       expect(pl[page].lastUpdatedDate).not.toBe(en[page].lastUpdatedDate);
+      expect(en[page].lastUpdatedLabel.length).toBeGreaterThan(0);
+      expect(pl[page].lastUpdatedLabel.length).toBeGreaterThan(0);
     }
   });
 
   it('B2 pre-commit correction — the exact approved publication date is used verbatim: "17 August 2026" (EN) and "17 sierpnia 2026" (PL)', () => {
     const en = getDictionary('en');
     const pl = getDictionary('pl');
+    // DELIBERATELY NOT driven off POLICY_PAGES. This assertion pins the B2
+    // publication date, and the Source Policy has its OWN approved date (CTO
+    // M66.10B: "Do not reuse the Privacy/Terms publication date"). Extending
+    // this tuple would have forced a false shared date onto the new page.
     for (const page of ['privacyPage', 'termsPage'] as const) {
       expect(en[page].lastUpdatedDate).toBe('17 August 2026');
       expect(pl[page].lastUpdatedDate).toBe('17 sierpnia 2026');
     }
+  });
+
+  it('M66.10B — the Source Policy carries its OWN approved publication date: "20 August 2026" (EN) and "20 sierpnia 2026" (PL)', () => {
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    expect(en.sourcePolicyPage.lastUpdatedDate).toBe('20 August 2026');
+    expect(pl.sourcePolicyPage.lastUpdatedDate).toBe('20 sierpnia 2026');
+    // And it is genuinely its own date, not the B2 one copied forward.
+    expect(en.sourcePolicyPage.lastUpdatedDate).not.toBe(en.privacyPage.lastUpdatedDate);
+    expect(pl.sourcePolicyPage.lastUpdatedDate).not.toBe(pl.privacyPage.lastUpdatedDate);
+  });
+
+  it('M66.10B — the Source Policy makes no claim the repository cannot support', () => {
+    // The six claims M66.10A evaluated and REJECTED, asserted as absences over
+    // the real runtime strings in both languages. This is the test that stops a
+    // future copy edit from quietly reintroducing an unsupportable claim.
+    const en = getDictionary('en');
+    const pl = getDictionary('pl');
+    const enText = [
+      en.sourcePolicyPage.title,
+      en.sourcePolicyPage.intro,
+      ...en.sourcePolicyPage.sections.flatMap((s) => [s.heading, s.body]),
+    ].join(' ');
+
+    // 1. No accuracy, completeness or real-time GUARANTEE. The page may say what
+    //    it does NOT guarantee — hence the negative-lookahead on "not".
+    expect(enText).not.toMatch(/(?<!not )guarantees?\s+(that\s+)?(accuracy|completeness|coverage|complete)/i);
+    expect(enText).not.toMatch(/always\s+(up[- ]to[- ]date|current|accurate|complete)/i);
+    expect(enText).not.toMatch(/real[- ]time/i);
+    expect(enText).not.toMatch(/nothing hidden/i);
+
+    // 2. No source-authority claim. OFFICIAL_SOURCES is empty and consumed by
+    //    nothing; sourceAuthorityClass is never populated.
+    expect(enText).not.toMatch(/source authority (is|are)|authoritative sources|trust score|credibility score/i);
+    expect(enText).not.toMatch(/official source registry/i);
+
+    // 3. No per-story source count. GNews hardcodes sourcesCount: 1.
+    expect(enText).not.toMatch(/number of (distinct )?sources reporting|sources? count/i);
+
+    // 4. No geographic/evidence precision claim. Both fields are declared in
+    //    shared/src/news.ts and never written or read anywhere.
+    expect(enText).not.toMatch(/geographic precision|evidence precision/i);
+
+    // 5. No staffing claim (CTO wording correction A) — the repository cannot
+    //    prove organizational staffing either way.
+    expect(enText).not.toMatch(/employ(s|ed)? (reporters|journalists)|our (reporters|journalists|newsroom)/i);
+
+    // 6. No universal sentence-level citation guarantee (CTO wording
+    //    correction B) — validate-analysis-result.ts grounds ENTRIES, not
+    //    every sentence.
+    expect(enText).not.toMatch(/every (sentence|statement|claim) (in an analysis )?(must )?(cite|is cited)/i);
+
+    // The claims the repository DOES support are present, so this test fails on
+    // deletion as well as on overreach.
+    expect(enText).toMatch(/24-hour/);
+    expect(enText).toMatch(/does not guarantee/i);
+    expect(enText).toMatch(/unknown/i);
+
+    // Polish must not be stronger than English: same structural absences.
+    const plText = [
+      pl.sourcePolicyPage.title,
+      pl.sourcePolicyPage.intro,
+      ...pl.sourcePolicyPage.sections.flatMap((s) => [s.heading, s.body]),
+    ].join(' ');
+    expect(plText).not.toMatch(/real[- ]time/i);
+    expect(plText).not.toMatch(/(?<!nie )gwarantuje, że/i);
+    expect(plText).toMatch(/nie gwarantuje/i);
+    expect(plText).toMatch(/24-godzinnego/);
   });
 });

@@ -1,13 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
-import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { pluralWithForms } from '@/lib/i18n/pluralize';
-import { SafeImage } from '@/components/ui/SafeImage';
 import { DataModeLabel } from '@/components/ui/DataModeLabel';
-import { CARD_INTERACTION_CLASSES } from '@/components/home/interactionStyles';
+import { TrendingCard } from '@/components/home/TrendingCard';
 
 interface GlobalDevelopmentsProps {
   lead: NewsArticle | null;
@@ -17,37 +14,72 @@ interface GlobalDevelopmentsProps {
 }
 
 const SECONDARY_COUNT = 5;
+
+/** GN-CD-108 — the released auto-advance interval. */
 const AUTO_ADVANCE_INTERVAL_MS = 6000;
+/** GN-CD-108 — the released re-arm delay after a control activation. */
+const MANUAL_REARM_MS = 9000;
+/** GN-CD-105 — the released step constant, added to the measured card width. */
+const RAIL_STEP_GAP = 12;
+/** GN-CD-105 — the released fallback step when no card can be measured. */
+const RAIL_STEP_FALLBACK = 220;
 
 /**
- * M60 Phase 2 — CTO-approved recomposition into a controlled
- * horizontal carousel matching the "Trending Around the World"
- * reference: show a readable set of cards -> pause -> advance
- * approximately one card -> pause -> repeat, rather than the prior
- * "one large lead card + vertical list" layout OR perpetual
- * pixel-by-pixel scrolling (both explicitly rejected).
+ * Global Developments — the Claude Design news-discovery rail
+ * (GN-CD-100 -> GN-CD-115), reconciled in M66.4.
  *
- * Data: still exactly `lead` + `secondary` (Phase B's
- * featured/inFocus allocation, untouched) — `[lead, ...secondary]`
- * is simply rendered as a single uniform sequence of up to 6 cards
- * instead of one large card plus a separate list. No new fetch, no
- * hardcoded reference-image stories — every card is real
- * getHomeFeed() data, per the explicit Real Data Rule.
+ * ── NAMING ────────────────────────────────────────────────────────────────
  *
- * This file is now a client component (the auto-advance timer and
- * manual controls both need it), but stays a single focused
- * component — matching this codebase's own precedent
- * (IntelligenceEngineInteractive) of keeping a client boundary
- * narrowly scoped to the interactive surface rather than converting
- * the whole page tree, since GlobalDevelopments was already this
- * page's own independent section (page.tsx itself remains an async
- * Server Component; only this section became client).
+ * The Claude Design family is called Trending. The product surface is not,
+ * and must not be. `allocateHomeFeed` selects the lead story by response
+ * order and states in its own contract that no popularity or engagement claim
+ * is made or implied; `inFocus` explicitly replaced the former "trending"
+ * concept with a curated selection rather than a measured popularity signal.
+ * There is no rank, no engagement metric and no editorial score anywhere
+ * behind this rail, so the rendered copy stays Global Developments / What is
+ * happening right now, and this file's own spec enforces that no rendered
+ * string ever says trending, most read or popular. The design family name
+ * survives only in the imported component's identifier.
  *
- * Native CSS scroll-snap on a horizontal overflow-x-auto track
- * provides touch swipe for free (no custom touch-event handlers
- * needed) while the auto-advance/manual-control logic scrolls the
- * same track programmatically via scrollTo — both paths move the
- * same underlying DOM state, so they never fight each other.
+ * ── ONE REQUEST, NO RE-ORDERING ───────────────────────────────────────────
+ *
+ * `lead` and `secondary` are `feed.featured` and `feed.inFocus` from the
+ * single homepage getHomeFeed(language) call that page.tsx already makes.
+ * This file fetches nothing and sorts nothing: array order is the editorial
+ * order, exactly as GN-CD's hierarchy analysis requires, and re-ordering here
+ * would invent a ranking the data does not carry.
+ *
+ * ── THE TWO-FLAG PAUSE MODEL (GN-CD-108) ──────────────────────────────────
+ *
+ * The rail carries two independent pause flags, and the specification is
+ * emphatic that both are required: a single merged flag was tried during
+ * design and failed, because touch and keyboard users never fire mouseleave,
+ * so the pause latched permanently and the rail died after one arrow tap.
+ * The pre-M66.4 implementation had exactly that single flag, and
+ * onPointerDown set it with nothing to clear it — so one tap on a touch
+ * device stopped the rail for the life of the page. Corrected here:
+ *
+ *   holdRef   set by pointer enter / focus within, cleared by leave / blur
+ *   pausedRef set by any arrow activation, cleared by a 9000ms timer
+ *
+ * Both live in refs rather than state so a hover cannot tear down and rebuild
+ * the interval.
+ *
+ * ── CONTROLS THAT CANNOT ACT ARE NOT RENDERED ─────────────────────────────
+ *
+ * GN-CD records that a rail shorter than its viewport leaves the arrows with
+ * nothing to scroll, "appearing broken". At the released desktop geometry the
+ * rail only overflows from the fifth card onward, and a short provider
+ * response is entirely possible. A ResizeObserver measures the real overflow
+ * and the arrows render only when they can actually move something.
+ *
+ * ── DELIBERATELY NOT IMPLEMENTED ──────────────────────────────────────────
+ *
+ * GN-CD-104's VIEW ALL has no destination: the design sends it to the search
+ * screen and says plainly that this is a prototype convenience, not an
+ * intent. No trending listing route exists, so the control is omitted rather
+ * than pointed somewhere invented. The urgent and top-story card treatments
+ * are absent for the reasons recorded in TrendingCard.tsx.
  */
 export function GlobalDevelopments({
   lead,
@@ -58,8 +90,12 @@ export function GlobalDevelopments({
   const t = getDictionary(language).globalDevelopments;
   const items = lead ? [lead, ...secondary].slice(0, SECONDARY_COUNT + 1) : [];
 
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const holdRef = useRef(false);
+  const pausedRef = useRef(false);
+  const rearmRef = useRef<number | null>(null);
+
+  const [canScroll, setCanScroll] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -70,109 +106,124 @@ export function GlobalDevelopments({
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  function scrollByOneCard(direction: 1 | -1): void {
-    const track = trackRef.current;
-    if (!track) return;
-    const firstCard = track.querySelector<HTMLElement>('[data-carousel-card]');
-    const step = firstCard ? firstCard.offsetWidth + 16 : track.clientWidth * 0.8;
-    track.scrollBy({ left: step * direction, behavior: 'smooth' });
-  }
-
-  // Reduced-motion users receive NO automatic movement at all — this
-  // effect never even registers a timer in that case, rather than
-  // registering one and skipping its tick.
+  // Real overflow, measured rather than assumed: the released card widths and
+  // gap mean a rail of four or fewer desktop cards has nothing to scroll.
   useEffect(() => {
-    if (prefersReducedMotion || items.length <= 1 || isPaused) return;
+    const el = railRef.current;
+    if (!el) return;
+    const measure = () => setCanScroll(el.scrollWidth > el.clientWidth + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [items.length]);
+
+  useEffect(() => () => {
+    if (rearmRef.current !== null) window.clearTimeout(rearmRef.current);
+  }, []);
+
+  /** GN-CD-105 step algorithm, ported exactly, including the backward wrap. */
+  const railStep = useCallback(
+    (direction: 1 | -1): void => {
+      const el = railRef.current;
+      if (!el) return;
+      const card = el.querySelector<HTMLElement>('[data-rail-card]');
+      const step = card ? card.offsetWidth + RAIL_STEP_GAP : RAIL_STEP_FALLBACK;
+      const max = Math.max(0, el.scrollWidth - el.clientWidth);
+      let target = el.scrollLeft + direction * step;
+      if (target > max - 4) target = direction > 0 ? 0 : max;
+      if (target < 0) target = max;
+      el.scrollTo({ left: target, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    },
+    [prefersReducedMotion],
+  );
+
+  /** GN-CD-108 railNudge — arrow activation pauses, then re-arms on a timer. */
+  const railNudge = useCallback(
+    (direction: 1 | -1): void => {
+      if (rearmRef.current !== null) window.clearTimeout(rearmRef.current);
+      pausedRef.current = true;
+      railStep(direction);
+      rearmRef.current = window.setTimeout(() => {
+        pausedRef.current = false;
+      }, MANUAL_REARM_MS);
+    },
+    [railStep],
+  );
+
+  // Reduced-motion users receive NO automatic movement at all — the interval
+  // is never created, rather than created and skipped. Neither is it created
+  // when there is nothing to scroll.
+  useEffect(() => {
+    if (prefersReducedMotion || !canScroll) return;
 
     const intervalId = window.setInterval(() => {
-      const track = trackRef.current;
-      if (!track) return;
-      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
-      if (atEnd) {
-        track.scrollTo({ left: 0, behavior: 'smooth' });
-      } else {
-        scrollByOneCard(1);
-      }
+      if (!holdRef.current && !pausedRef.current) railStep(1);
     }, AUTO_ADVANCE_INTERVAL_MS);
 
     return () => window.clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefersReducedMotion, isPaused, items.length]);
+  }, [prefersReducedMotion, canScroll, railStep]);
 
-  function renderCard(item: NewsArticle, isLead: boolean) {
-    return (
-      <a
-        key={item.id}
-        data-carousel-card
-        href={item.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`${t.readFullStoryPrefix} ${item.title}`}
-        className={`group flex w-[260px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-cyan-500/15 bg-surface sm:w-[300px] ${CARD_INTERACTION_CLASSES}`}
-      >
-        <div className="relative aspect-[16/10] w-full overflow-hidden border-b border-border">
-          <SafeImage
-            src={item.imageUrl || '/images/article-placeholder.jpg'}
-            alt={item.title}
-            fill
-            priority={isLead}
-            sizes="300px"
-            className="object-cover transition-transform duration-200 motion-safe:group-hover:scale-105 motion-reduce:transition-none"
-          />
-          <span className="absolute left-3 top-3 rounded-full border border-cyan-500/30 bg-void/80 px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-widest text-cyan-300 backdrop-blur-sm">
-            {item.category}
-          </span>
-        </div>
-        <div className="flex flex-1 flex-col p-4">
-          <h3 className="mb-1.5 line-clamp-2 text-balance font-display text-sm font-medium leading-snug text-ink-primary transition-colors group-hover:text-cyan-300">
-            {item.title}
-          </h3>
-          <div className="mt-auto flex items-center gap-1.5 font-mono text-[11px] text-ink-tertiary">
-            <span>{formatRelativeTime(item.publishedAt, language)}</span>
-            {item.sourcesCount > 1 && (
-              <>
-                <span aria-hidden="true">&middot;</span>
-                <span>{pluralWithForms(item.sourcesCount, language, t.sourceForms)}</span>
-              </>
-            )}
-          </div>
-        </div>
-      </a>
-    );
-  }
+  const arrowBase =
+    'grid place-items-center text-cd-ink-glyph transition-colors duration-cd-180 hover:text-cd-ink-primary focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-cd-edge-focus';
+  const arrowDesktop =
+    'absolute top-1/2 z-[3] hidden h-cd-34 w-cd-34 -translate-y-1/2 rounded-full border border-cd-edge-control-active bg-cd-fill-rail-arrow backdrop-blur-[6px] hover:border-cd-accent-cyan focus-visible:border-cd-accent-cyan cd-hero:grid';
+  const arrowMobile = 'h-cd-touch w-cd-touch cd-hero:hidden';
 
   return (
-    <section className="border-b border-border bg-void" aria-labelledby="global-developments-heading">
-      <div className="mx-auto max-w-[1480px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3 sm:mb-10">
-          <div>
-            <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">{t.eyebrow}</span>
+    <section className="relative mt-cd-14 cd-hero:mt-0" aria-labelledby="global-developments-heading">
+      {/*
+        GN-CD-100 — on desktop this is a bordered, radius-16 panel on its own
+        gradient. On mobile the design authors NO container at all: no border,
+        no radius, no background, no padding. Both are deliberate.
+      */}
+      <div className="relative cd-hero:overflow-hidden cd-hero:rounded-cd-16 cd-hero:border cd-hero:border-cd-edge-section cd-hero:bg-cd-trending cd-hero:px-cd-18 cd-hero:py-cd-16">
+        {/* GN-CD-101 — 1px vertical rules every 88px. Desktop only, decorative. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 hidden bg-cd-rules-trending cd-hero:block"
+        />
+
+        {/* GN-CD-102/103 — header row. */}
+        <div className="relative mb-cd-10 flex flex-wrap items-center justify-between gap-cd-10 cd-hero:mb-cd-13">
+          <div className="min-w-0">
+            <span className="block font-cd-mono text-cd-mono-section-m uppercase text-cd-ink-label cd-hero:text-cd-mono-section">
+              {t.eyebrow}
+            </span>
+            {/*
+              GN-CD-103 authors this label as a styled <div> and then reports
+              its own DEFECT-009: no section on the home surface is a real
+              heading, so the page cannot be navigated by heading at all. The
+              production heading and its aria-labelledby relationship are kept
+              rather than that defect being reproduced.
+            */}
             <h2
               id="global-developments-heading"
-              className="mt-1 font-display text-2xl font-medium tracking-tight text-ink-primary sm:text-3xl"
+              className="mt-cd-4 font-cd-display text-2xl font-medium tracking-tight text-cd-ink-primary sm:text-3xl"
             >
               {t.headline}
             </h2>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-cd-10">
             {dataMode && <DataModeLabel dataMode={dataMode} language={language} />}
-            {items.length > 1 && (
-              <div className="flex items-center gap-2">
+            {canScroll && (
+              <div className="-mx-cd-4 -my-cd-16 flex items-center gap-cd-2 cd-hero:hidden">
                 <button
                   type="button"
                   aria-label={t.previousLabel}
-                  onClick={() => scrollByOneCard(-1)}
-                  className="rounded-full border border-cyan-500/25 p-1.5 text-ink-secondary transition-colors hover:border-cyan-400/60 hover:text-cyan-300"
+                  onClick={() => railNudge(-1)}
+                  className={`${arrowBase} ${arrowMobile}`}
                 >
-                  <span aria-hidden="true">&larr;</span>
+                  <span aria-hidden="true">&#8249;</span>
                 </button>
                 <button
                   type="button"
                   aria-label={t.nextLabel}
-                  onClick={() => scrollByOneCard(1)}
-                  className="rounded-full border border-cyan-500/25 p-1.5 text-ink-secondary transition-colors hover:border-cyan-400/60 hover:text-cyan-300"
+                  onClick={() => railNudge(1)}
+                  className={`${arrowBase} ${arrowMobile}`}
                 >
-                  <span aria-hidden="true">&rarr;</span>
+                  <span aria-hidden="true">&#8250;</span>
                 </button>
               </div>
             )}
@@ -213,18 +264,64 @@ export function GlobalDevelopments({
             </div>
           </div>
         ) : (
+          /*
+            GN-CD-100 SS-D — the pause wrapper. Pointer and focus hold live
+            here so the whole rail region, arrows included, holds the
+            auto-advance while a user is working with it.
+          */
           <div
-            ref={trackRef}
-            role="region"
-            aria-label={t.headline}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            onFocus={() => setIsPaused(true)}
-            onBlur={() => setIsPaused(false)}
-            onPointerDown={() => setIsPaused(true)}
-            className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="relative"
+            onMouseEnter={() => {
+              holdRef.current = true;
+            }}
+            onMouseLeave={() => {
+              holdRef.current = false;
+            }}
+            onFocus={() => {
+              holdRef.current = true;
+            }}
+            onBlur={() => {
+              holdRef.current = false;
+            }}
           >
-            {items.map((item, index) => renderCard(item, index === 0))}
+            {canScroll && (
+              <>
+                <button
+                  type="button"
+                  aria-label={t.previousLabel}
+                  onClick={() => railNudge(-1)}
+                  className={`${arrowBase} ${arrowDesktop} left-[-19px]`}
+                >
+                  <span aria-hidden="true">&#8249;</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={t.nextLabel}
+                  onClick={() => railNudge(1)}
+                  className={`${arrowBase} ${arrowDesktop} right-[-19px]`}
+                >
+                  <span aria-hidden="true">&#8250;</span>
+                </button>
+              </>
+            )}
+
+            {/* GN-CD-105 — the rail viewport. */}
+            <div
+              ref={railRef}
+              role="region"
+              aria-roledescription="carousel"
+              aria-label={t.headline}
+              className="-mx-cd-14 flex gap-cd-11 snap-x snap-mandatory overflow-x-auto overscroll-x-contain px-cd-14 pb-cd-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] cd-hero:mx-0 cd-hero:gap-cd-12 cd-hero:px-0 cd-hero:pb-cd-2 [&::-webkit-scrollbar]:hidden"
+            >
+              {items.map((item, index) => (
+                <TrendingCard
+                  key={item.id}
+                  article={item}
+                  language={language}
+                  isLead={index === 0}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

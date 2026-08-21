@@ -17,6 +17,19 @@ const howItWorksSource = readFileSync(join(__dirname, 'HowItWorks.tsx'), 'utf-8'
  * behavioral distinction (e.g. "one integrated panel, not five
  * separate boxes" — a real information-architecture choice, not
  * cosmetics).
+ *
+ * M66.6 — TWO of the four Trust assertions below were STALE
+ * PRESENTATION LOCKS against the pre-Claude-Design HUD panel
+ * (`border border-cyan-500/20`, and an arbitrary-value shadow guard).
+ * GN-CD-180 replaces that panel with a 16px-radius bordered surface,
+ * so both were CONVERTED to the released contract rather than
+ * deleted: each still protects exactly the behaviour it was written
+ * for — one integrated panel rather than five boxes, and Trust
+ * staying the quietest section on the page — expressed against the
+ * vocabulary that now ships. The other two Trust assertions and ALL
+ * FOUR How It Works assertions are untouched; How It Works itself is
+ * out of scope this milestone (CTO decision D-1 A,
+ * M66.6-DEFERRED-001).
  */
 describe('TrustSection (CTO HUD system — tertiary-tier behavior)', () => {
   it('renders every real trust item from the shared source data — no invented/hardcoded items', () => {
@@ -27,15 +40,32 @@ describe('TrustSection (CTO HUD system — tertiary-tier behavior)', () => {
   });
 
   it('is a single integrated panel, not a grid of five individually-bordered boxes — the CTO\u2019s explicit "compact integrated strip" requirement', () => {
-    // One outer HUD panel wrapping the whole section, not one per item.
-    const outerPanels = (
-      trustSource.match(/relative overflow-hidden border border-cyan-500\/20/g) ?? []
-    ).length;
+    // CONVERTED, not weakened. The information-architecture choice this test
+    // was written to protect is unchanged; only the panel's vocabulary moved.
+    // GN-CD-180 authors ONE bounded desktop panel, and GN-CD-184-DA authors
+    // its five cards as BORDERLESS columns separated by right hairlines — the
+    // same "one connected strip, not five boxes" contract, now released.
+    const outerPanels = (trustSource.match(/lg:rounded-cd-16 lg:border lg:border-cd-edge-section/g) ?? []).length;
     expect(outerPanels).toBe(1);
+    expect(trustSource).toMatch(/lg:border-0 lg:border-r/);
+    // The mobile viewport deliberately INVERTS this: no panel, five bordered
+    // cards (GN-CD §D "Structural divergence"). Both readings must be present.
+    expect(trustSource).toMatch(/border border-cd-edge-card/);
   });
 
   it('remains visually quieter than Hero/Engine/Modules — no glow/shadow intensity applied to individual items', () => {
-    expect(trustSource).not.toMatch(/shadow-\[0_0_\d+px/);
+    // CONVERTED. The old arbitrary-value guard still passes but no longer
+    // means anything, because Trust now expresses shadows as tokens. The real
+    // hierarchy contract — GN-CD-303: Trust is "deliberately quieter than
+    // everything above it" — is asserted directly instead.
+    const code = trustSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(code).not.toMatch(/shadow-\[0_0_\d+px/);
+    // No resting glow on any card, and no outward shadow anywhere: the only
+    // shadow in the family is the icon tile's INSET glow, desktop only.
+    const shadows = code.match(/shadow-[\w-]+/g) ?? [];
+    expect(shadows).toEqual(['shadow-cd-tile-glow']);
+    // And nothing moves — GN-CD acceptance: "presence of any animation is a failure".
+    expect(code).not.toMatch(/\banimate-|animation:|@keyframes/);
   });
 
   it('uses the same cyan HUD accent family as the rest of the revised page, not a disconnected color scheme', () => {

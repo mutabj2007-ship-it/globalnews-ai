@@ -105,6 +105,24 @@ export const trustItems: TrustItem[] = [
  * `t.linkLabels[link.href] ?? link.label`), and both '/privacy' and
  * '/terms' already have real English and Polish entries in
  * footer.linkLabels in both dictionary files.
+ *
+ * M66.10B — SOURCE POLICY. A third entry joins the Legal group on
+ * exactly the same terms as the B2 pair: the route is real and shipped
+ * in this same change (frontend/src/app/source-policy/page.tsx), and
+ * '/source-policy' has real English and Polish footer.linkLabels
+ * entries in both dictionary files. The route is created BEFORE the
+ * link is added, never the other way round.
+ *
+ * This is the ONLY file that had to change for the Footer to render a
+ * third link. Footer.tsx holds no destination list of its own — it
+ * maps footerLinkGroups.flatMap(...) — so it is untouched by this
+ * milestone (M66.10A §D.1, CTO decision: "Footer.tsx MUST remain
+ * untouched unless a concrete contradiction is discovered"; none was).
+ *
+ * About/Careers/Contact/API remain excluded and remain guarded as dead
+ * destinations in footerGeometry.spec.ts and footerNavHud.spec.ts. The
+ * MVP footer destination set is exactly: /privacy, /source-policy,
+ * /terms.
  */
 export const footerLinkGroups: FooterLinkGroup[] = [
   {
@@ -112,6 +130,7 @@ export const footerLinkGroups: FooterLinkGroup[] = [
     links: [
       { href: '/privacy', label: 'Privacy Policy' },
       { href: '/terms', label: 'Terms of Service' },
+      { href: '/source-policy', label: 'Source Policy' },
     ],
   },
 ];

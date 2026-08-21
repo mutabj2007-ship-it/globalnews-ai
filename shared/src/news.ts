@@ -79,6 +79,25 @@ export interface NewsArticle {
   providerRecordId?: string;
 
   /**
+   * M66.14B — the article's canonical country, when one was resolved from the
+   * article's OWN TEXT by scoreCountryRelevance(). COUNTRY PRECISION ONLY:
+   * there is deliberately no latitude, longitude, city or region here, because
+   * nothing in this system knows those things about an article, and a field
+   * that exists is a field somebody eventually fills in with a guess.
+   *
+   * ABSENT means genuinely unresolved — no country scored relevant against the
+   * article's text. It is never inferred from sourceName, never defaulted to a
+   * query country, never back-filled. A consumer must read absence as "we do
+   * not know", never as "nowhere", and must render the article normally.
+   *
+   * ISO 3166-1 alpha-2, matching CountryMeta.iso2.
+   */
+  countryCode?: string;
+
+  /** M66.14B — canonical English name for countryCode. Present exactly when countryCode is. */
+  countryName?: string;
+
+  /**
    * M64.1 — how precisely this record's geography is known. Absent
    * means "not assessed" — never defaults to a guessed precision.
    */

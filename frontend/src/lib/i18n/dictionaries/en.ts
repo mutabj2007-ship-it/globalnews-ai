@@ -10,6 +10,30 @@ export const en = {
   noQuestionProvided: 'No question provided',
   noQuestionMessage: 'No question was provided. Try searching from the homepage.',
   genericFetchError: 'Something went wrong while analyzing this question. Please try again.',
+  // M65 — /search with no question is a usable research workspace, not
+  // an error-only dead end. These strings are its own copy.
+  searchMetaTitle: 'Research workspace \u2014 GlobalNews AI',
+  searchMetaDescription: 'Ask a question and get AI-powered, source-grounded analysis of the news.',
+  /**
+   * M66.13 — the root document title and description. Values are byte-identical
+   * to the literals they replace in app/layout.tsx, so English output is
+   * unchanged; the keys exist so Polish has a surface at all.
+   */
+  homeMetaTitle: 'GlobalNews AI — Understand today\u2019s world in seconds.',
+  homeMetaDescription:
+    'GlobalNews AI turns the day\u2019s news into clear, sourced, multi-perspective answers you can actually understand.',
+  searchWorkspaceHeading: 'Ask GlobalNews AI',
+  searchWorkspaceIntro: 'Ask a question about world events and get an evidence-grounded answer built from real sources.',
+  searchWorkspacePlaceholder: 'What would you like to understand?',
+  searchWorkspaceSubmitLabel: 'Analyze',
+  searchWorkspaceAriaLabel: 'Ask a research question',
+  // M65 — localized analysis failures. The underlying HTTP status is
+  // preserved on the error object; users never see the raw number.
+  analysisErrorTimeout: 'The analysis is taking longer than expected. Please try again.',
+  analysisErrorNetwork: 'We could not reach GlobalNews AI. Check your connection and try again.',
+  analysisErrorInvalidQuery: 'That question is too short to analyze. Please add a little more detail.',
+  analysisErrorRateLimited: 'You have made several requests in quick succession. Please wait a moment and try again.',
+  analysisErrorServer: 'GlobalNews AI could not complete this analysis right now. Please try again shortly.',
   noEvidenceMessage: 'No related articles were found for this question.',
   aiUnavailableMessage: 'AI analysis is temporarily unavailable, but the underlying articles are shown below.',
   originalSourcesHeading: 'Original sources',
@@ -60,6 +84,25 @@ export const en = {
     organizations: 'Organizations',
     topics: 'Topics',
   },
+  /*
+    M66.14B — the hero intelligence context card. THREE keys, all application
+    chrome. The category label reuses map.categories (the one canonical
+    taxonomy, M66.13C) and the country name is resolved through
+    getCountryDisplayName(), so neither is restated here.
+    Provider headlines are NEVER translated and appear nowhere in this group.
+  */
+  heroContext: {
+    heading: 'INTELLIGENCE CONTEXT',
+    /*
+      The scope is a fact about the JOIN, not a claim about the article:
+      ArticleCountry is country-scoped by construction, so country is the only
+      precision this wording may ever assert. No city or regional variant
+      exists, deliberately — geographicPrecision is populated by nothing.
+    */
+    countryEvidence: 'COUNTRY-LEVEL EVIDENCE',
+    dismissLabel: 'Dismiss intelligence context',
+  },
+
   hero: {
     badge: 'AI-powered news intelligence',
     headline: 'Understand today\u2019s world in seconds.',
@@ -92,6 +135,9 @@ export const en = {
     credibilityLiveSources: 'Live sources',
     credibilityAiAnalysis: 'AI analysis',
     credibilityEvidence: 'Evidence-based context',
+    credibilityMultiPerspective: 'Multi-perspective',
+    dataStatusLabel: 'Data status',
+    lastUpdatedLabel: 'Last updated',
     exploreMapCta: 'View World Map',
     feedPanelEyebrow: 'Global intelligence',
     feedPanelHeading: 'Live feed',
@@ -227,6 +273,16 @@ export const en = {
     readFullStoryPrefix: 'Read the full story:',
   },
   howItWorks: {
+    /**
+     * M66.8d (CTO decision D-1, option A) — the localized step prefix.
+     * GN-CD-HIW-005 renders `STEP 01` where the current build shows a bare
+     * `01`. The prefix is new user-facing copy, so it is a dictionary key
+     * rather than a literal in the component: hardcoding an English `STEP`
+     * would put an untranslated string on the Polish page. Composed with the
+     * EXISTING processSteps numerals ('01', '02', '03'), which are
+     * language-independent and unchanged.
+     */
+    stepPrefix: 'STEP',
     label: 'How it works',
     headline: 'From question to clarity, in three steps',
     steps: [
@@ -290,6 +346,7 @@ export const en = {
       '/contact': 'Contact',
       '/privacy': 'Privacy Policy',
       '/terms': 'Terms of Service',
+      '/source-policy': 'Source Policy',
       '/api': 'API',
     } as Record<string, string>,
     comingSoon: 'Coming soon',
@@ -318,6 +375,46 @@ export const en = {
     signOut: 'Sign Out',
     deleteAccount: 'Delete Account',
     deleteAccountConfirm: 'Delete your account? This permanently removes your saved history and cannot be undone.',
+    languageSelectorLabel: 'Language',
+    /**
+     * M66.11 — the action half of the language control's accessible name,
+     * and the listbox's own label. GN-CD-M66.11 §7 requires the trigger to be
+     * named "Language: {current}. Select language" FROM LOCALIZED STRINGS,
+     * never a concatenated English template.
+     *
+     * ONE key, not two. It serves both the trigger's action phrase and the
+     * listbox aria-label, which are the same words for the same purpose — the
+     * same reuse decision M48 made when DataModeLabel adopted
+     * liveStatusStrip's four existing state labels rather than duplicating
+     * them. No interpolation mechanism is introduced: NavBar composes
+     * `${languageSelectorLabel}: ${endonym}. ${languageSelectorAction}` from
+     * these two localized strings and LANGUAGE_NATIVE_LABELS.
+     */
+    languageSelectorAction: 'Select language',
+    /**
+     * M66.13 — the mobile menu's section heading. It was a bare 'SECTIONS'
+     * literal in NavBar.tsx, ported verbatim from the Claude Design prototype
+     * during the M65 header reconstruction, so it rendered English inside an
+     * otherwise fully Polish menu. English value is byte-identical to what
+     * shipped; only the Polish surface is new.
+     */
+    sectionsHeading: 'SECTIONS',
+    editorialUnavailableLabel: 'not yet available',
+    // M65 — the approved design's nine-item header sequence. Keyed by
+    // navModel.ts's labelKey so every visible label localizes, including
+    // the six editorial items that resolve to real /search queries and
+    // the deliberately unavailable About entry.
+    navItemLabels: {
+      home: 'Home',
+      worldMap: 'World Map',
+      world: 'World',
+      politics: 'Politics',
+      business: 'Business',
+      technology: 'Technology',
+      science: 'Science',
+      health: 'Health',
+      about: 'About',
+    } as Record<string, string>,
     linkLabels: {
       '/': 'Home',
       '/map': 'World Map',
@@ -331,6 +428,15 @@ export const en = {
     } as Record<string, string>,
   },
   liveStatusStrip: {
+    /**
+     * M66.13 — the FOURTH NewsDataMode member finally gets its own label.
+     * `unavailable` means live retrieval was attempted, no configured real
+     * provider succeeded, and no stored reporting existed either — see
+     * shared/src/news.ts, which states it 'must never be presented as "live"
+     * or "cached"'. It previously collapsed into `unknown`, which is weaker
+     * but not false; the two are now distinguished, per CTO decision G.
+     */
+    unavailable: 'NO REPORTING AVAILABLE',
     reconnecting: 'RECONNECTING',
     live: 'LIVE \u00b7 Powered by GNews',
     cached: 'CACHED \u00b7 Previously retrieved reporting',
@@ -365,6 +471,12 @@ export const en = {
       technology: 'Technology',
       science: 'Science',
       health: 'Health',
+      // M66.13C — the shared NewsCategory union has EIGHT members and the
+      // backend classifier genuinely emits these two. They had no label, so
+      // a sports or entertainment story fell through to its raw token in both
+      // languages. Added here, in the one canonical mapping, not a new one.
+      sports: 'Sports',
+      entertainment: 'Entertainment',
     } as Record<string, string>,
     coverageLegendTitle: 'Coverage Legend',
     legendNoStories: 'No stories loaded',
@@ -456,41 +568,76 @@ export const en = {
     },
     openAction: 'Open',
     hubLabel: 'GlobalNews AI Intelligence Engine',
+    // M65.1 — the approved Claude Design canvas subtitle.
+    canvasSubtitle: 'Connected capabilities powering deeper understanding',
+    // M65.1 — the hub's capability line is DERIVED from the canonical
+    // INTELLIGENCE_MODULES array (total count, and how many are actually
+    // ACTIVE), never a hardcoded claim. These are only its grammatical
+    // forms. English has two real forms; the third mirrors the second by
+    // the convention pluralize.ts documents.
+    moduleForms: ['module', 'modules', 'modules'] as [string, string, string],
+    activeForms: ['active', 'active', 'active'] as [string, string, string],
     modules: {
+      /*
+        M66.5 — GN-CD-154. `shortTitle` is the MOBILE radial card's name.
+        The released mobile card is a fixed 108x56 box with
+        `overflow:hidden`, so the desktop `title` cannot simply be reused:
+        measured against the released 71px text column and 46px vertical
+        budget, `title` wraps `Evidence & Source Comparison` to three lines
+        and clips it. Every value below is GN-CD-148's own
+        `Short name (mobile)` column, stored in the same casing as its
+        sibling `title` and uppercased by CSS exactly as `title` already is.
+        Approved by the CTO under decision D-5 A. All nine fit in two lines
+        or fewer; none clips.
+      */
       aiResearch: {
         title: 'AI Research Assistant',
+        shortTitle: 'AI Research',
         description: 'Ask a question and get an evidence-grounded answer built from real sources.',
       },
       worldIntelligence: {
         title: 'World Intelligence',
+        shortTitle: 'World Intel',
         description: 'Global developments organized by relevance, recency, and source diversity.',
       },
       countryIntelligence: {
         title: 'Country Intelligence',
+        shortTitle: 'Country Intel',
         description: 'Explore coverage, categories, and freshness for any country on the map.',
       },
       evidence: {
         title: 'Evidence & Source Comparison',
-        description: 'See which sources agree, where they differ, and what remains unconfirmed.',
+        shortTitle: 'Evidence & Source',
+        // M65.1 — CTO Decision 2: the approved reference's own wording
+        // included "Detect bias", which overstates what this product
+        // does. SourceDiversity's own contract states it cannot prove
+        // editorial independence or bias. This is the approved truthful
+        // replacement.
+        description: 'Compare sources. Find agreements and disagreements.',
       },
       economy: {
         title: 'Economy Intelligence',
+        shortTitle: 'Economy Intel',
         description: 'Early-stage: economic and business coverage, without dedicated market data yet.',
       },
       conflict: {
         title: 'Conflict Intelligence',
+        shortTitle: 'Conflict Intel',
         description: 'Early-stage: conflict-relevant coverage, without dedicated risk monitoring yet.',
       },
       market: {
         title: 'Market Intelligence',
+        shortTitle: 'Market Intel',
         description: 'Planned: dedicated market and pricing data is not yet connected.',
       },
       timeline: {
         title: 'Timeline Intelligence',
+        shortTitle: 'Timeline Intel',
         description: 'Planned: structured event timelines are not yet available.',
       },
       forecast: {
         title: 'Forecast & Watchlist',
+        shortTitle: 'Forecast & Watchlist',
         description: 'Planned: monitored risks and indicators are not yet available.',
       },
     },
@@ -570,6 +717,73 @@ export const en = {
       {
         heading: 'General disclaimer',
         body: 'The service is provided on an \u201cas is\u201d basis, without warranties of any kind, to the fullest extent permitted by applicable law.',
+      },
+    ],
+  },
+  /**
+   * M66.10B — Source Policy. Every sentence below traces to a
+   * repository finding recorded in the M66.10A Source Policy Contract
+   * audit, and the CTO's four mandatory wording corrections (A-D) are
+   * applied: no staffing claim, no universal sentence-level citation
+   * guarantee, no claim to have established original/journalistic
+   * origin, and no claim that every UI label states its data mode
+   * using the exact internal name.
+   *
+   * Deliberately ABSENT, because the repository cannot support them:
+   * per-story source counts (GNews hardcodes sourcesCount: 1), source
+   * authority evaluation (the Official Source Registry is empty and
+   * consumed by nothing), geographic/evidence precision (declared in
+   * shared/src/news.ts and never written or read), complete coverage,
+   * real-time guarantees, and accuracy guarantees.
+   *
+   * Same shape as privacyPage/termsPage — no new i18n mechanism.
+   */
+  sourcePolicyPage: {
+    title: 'Source Policy',
+    lastUpdatedLabel: 'Last updated',
+    lastUpdatedDate: '20 August 2026',
+    intro:
+      'This page explains where the information in GlobalNews AI comes from, how it is presented, and what it does and does not tell you. It describes the product as it actually works today, not as it is intended to work later.',
+    sections: [
+      {
+        heading: 'Where information comes from',
+        body: 'GlobalNews AI retrieves published news reporting through a third-party news provider and uses that reporting for its news and analysis features. The provider returns articles from many different publishers. Production news retrieval currently depends on a single provider, GNews \u2014 GlobalNews AI does not draw on multiple live news providers today.',
+      },
+      {
+        heading: 'Source names and article links',
+        body: 'Each article is shown with the source name supplied by the news provider, and links to the page identified by that provider, using the URL supplied with the retrieved reporting. GlobalNews AI does not republish or rehost articles. Where the provider supplies no source name, GlobalNews AI shows that the source is unknown rather than guessing one.',
+      },
+      {
+        heading: 'Comparing reporting across sources',
+        body: 'When GlobalNews AI analyzes a question, it works from a set of retrieved articles and identifies where they agree and where they differ. This comparison describes what the retrieved reporting says. It is not a judgement about which source is right.',
+      },
+      {
+        heading: 'AI-generated analysis',
+        body: 'Summaries, comparisons and context in GlobalNews AI are generated by an AI language model and are shown separately from the reporting itself. Every analysis carries provenance and status information describing how it was produced \u2014 including when the AI service was unavailable, when a request failed, and when a demonstration mode is in use.',
+      },
+      {
+        heading: 'How analysis entries are checked',
+        body: 'Evidence-bearing claims and structured analysis entries are checked against the articles supplied to the analysis. Entries whose cited evidence cannot be resolved to those articles are removed before the result is returned, even when that leaves a section empty. The citations shown to you are created from the retrieved article records rather than being trusted directly from model output. An AI analysis can still misread or oversimplify the reporting it cites, which is why the links are there.',
+      },
+      {
+        heading: 'Source diversity',
+        body: 'For an analysis, GlobalNews AI counts structural properties of the reporting it retrieved: how many articles were returned, how many distinct source names appeared, how many distinct web domains appeared, and how many articles resembled repeats of one another. These are counts of what was retrieved. They do not establish editorial independence, syndication or wire-copy origin, or relationships between sources, and GlobalNews AI does not currently evaluate or rate source authority.',
+      },
+      {
+        heading: 'Live, cached, sample and unavailable information',
+        body: 'The news pipeline distinguishes four data states. Live means the news provider was queried and answered. Cached means the provider could not supply current results, so previously retrieved reporting from our own database is used instead, limited to a configured 24-hour fallback window. Mock means sample content, which is not permitted as production news. Unavailable means no reporting could be retrieved and none was stored, so nothing is shown. The interface uses status and provenance indicators so that cached or sample information is not presented as live reporting, and mock and real news responses are not blended together.',
+      },
+      {
+        heading: 'Provider limitations and coverage',
+        body: 'The coverage available in GlobalNews AI depends on what its news provider returns. If the provider is unavailable, rate-limited, or returns nothing for a query, GlobalNews AI falls back to cached reporting or reports that nothing is available; it does not substitute content from elsewhere. Coverage is therefore uneven, and a topic, region, language or source that the provider does not cover will not appear here. The absence of reporting in GlobalNews AI is not evidence that nothing happened.',
+      },
+      {
+        heading: 'Corrections and how coverage changes',
+        body: 'GlobalNews AI retrieves reporting again when you ask, and a stored copy of an article is replaced when a newer version of the same article is retrieved. There is no publisher correction or retraction tracking mechanism: GlobalNews AI does not track, annotate or notify you about corrections issued by a source. If a source corrects or retracts a story, the authoritative record is that source\u2019s own page, which the article links point to.',
+      },
+      {
+        heading: 'What GlobalNews AI does not guarantee',
+        body: 'GlobalNews AI does not guarantee that coverage of any topic is complete, that information is current at the moment you read it, or that any summary or analysis is accurate. It does not verify the factual accuracy of the reporting it retrieves, and it does not rank, rate or certify sources. Use the links \u2014 they lead to the reporting GlobalNews AI is describing.',
       },
     ],
   },

@@ -14,6 +14,28 @@ export const pl: Dictionary = {
   noQuestionProvided: 'Nie podano pytania',
   noQuestionMessage: 'Nie podano pytania. Spróbuj wyszukać ze strony głównej.',
   genericFetchError: 'Coś poszło nie tak podczas analizy tego pytania. Spróbuj ponownie.',
+  // M65 — /search bez pytania to pełnoprawna przestrzeń badawcza, a nie
+  // ślepy zaułek z komunikatem błędu. Poniżej jej własne teksty.
+  searchMetaTitle: 'Przestrzeń badawcza — GlobalNews AI',
+  searchMetaDescription: 'Zadaj pytanie i otrzymaj analizę wiadomości opartą na rzeczywistych źródłach.',
+  /**
+   * M66.13 — ta sama rola co w en.ts.
+   */
+  homeMetaTitle: 'GlobalNews AI \u2014 Zrozum dzisiejszy \u015bwiat w kilka sekund.',
+  homeMetaDescription:
+    'GlobalNews AI zamienia codzienne wiadomo\u015bci w jasne, oparte na \u017ar\u00f3d\u0142ach i wielu perspektywach odpowiedzi, kt\u00f3re naprawd\u0119 rozumiesz.',
+  searchWorkspaceHeading: 'Zapytaj GlobalNews AI',
+  searchWorkspaceIntro: 'Zadaj pytanie o wydarzenia na świecie i otrzymaj odpowiedź opartą na dowodach z rzeczywistych źródeł.',
+  searchWorkspacePlaceholder: 'Co chcesz zrozumieć?',
+  searchWorkspaceSubmitLabel: 'Analizuj',
+  searchWorkspaceAriaLabel: 'Zadaj pytanie badawcze',
+  // M65 — zlokalizowane komunikaty o błędach analizy. Rzeczywisty status
+  // HTTP pozostaje na obiekcie błędu; użytkownik nigdy nie widzi liczby.
+  analysisErrorTimeout: 'Analiza trwa dłużej niż zwykle. Spróbuj ponownie.',
+  analysisErrorNetwork: 'Nie udało się połączyć z GlobalNews AI. Sprawdź połączenie i spróbuj ponownie.',
+  analysisErrorInvalidQuery: 'To pytanie jest zbyt krótkie do analizy. Dodaj trochę więcej szczegółów.',
+  analysisErrorRateLimited: 'Wysłano kilka zapytań w krótkim czasie. Odczekaj chwilę i spróbuj ponownie.',
+  analysisErrorServer: 'GlobalNews AI nie może teraz ukończyć tej analizy. Spróbuj wkrótce ponownie.',
   noEvidenceMessage: 'Nie znaleziono powiązanych artykułów dla tego pytania.',
   aiUnavailableMessage: 'Analiza AI jest tymczasowo niedostępna, ale powiązane artykuły są pokazane poniżej.',
   originalSourcesHeading: 'Oryginalne źródła',
@@ -64,6 +86,13 @@ export const pl: Dictionary = {
     organizations: 'Organizacje',
     topics: 'Tematy',
   },
+  /* M66.14B — see en.ts. Application chrome only; provider text is untranslated. */
+  heroContext: {
+    heading: 'KONTEKST WYWIADOWCZY',
+    countryEvidence: 'DANE NA POZIOMIE KRAJU',
+    dismissLabel: 'Zamknij kontekst wywiadowczy',
+  },
+
   hero: {
     badge: 'Analiza wiadomości oparta na AI',
     headline: 'Zrozum dzisiejszy świat w kilka sekund.',
@@ -88,6 +117,9 @@ export const pl: Dictionary = {
     credibilityLiveSources: 'Źródła na żywo',
     credibilityAiAnalysis: 'Analiza AI',
     credibilityEvidence: 'Kontekst oparty na dowodach',
+    credibilityMultiPerspective: 'Wiele perspektyw',
+    dataStatusLabel: 'Status danych',
+    lastUpdatedLabel: 'Ostatnia aktualizacja',
     exploreMapCta: 'Zobacz mapę świata',
     feedPanelEyebrow: 'Analiza globalna',
     feedPanelHeading: 'Na żywo',
@@ -225,6 +257,16 @@ export const pl: Dictionary = {
     readFullStoryPrefix: 'Przeczytaj pełną historię:',
   },
   howItWorks: {
+    /**
+     * M66.8d (CTO decision D-1, option A) — the localized step prefix.
+     * GN-CD-HIW-005 renders `STEP 01` where the current build shows a bare
+     * `01`. The prefix is new user-facing copy, so it is a dictionary key
+     * rather than a literal in the component: hardcoding an English `STEP`
+     * would put an untranslated string on the Polish page. Composed with the
+     * EXISTING processSteps numerals ('01', '02', '03'), which are
+     * language-independent and unchanged.
+     */
+    stepPrefix: 'KROK',
     label: 'Jak to działa',
     headline: 'Od pytania do jasnej odpowiedzi, w trzech krokach',
     steps: [
@@ -288,6 +330,7 @@ export const pl: Dictionary = {
       '/contact': 'Kontakt',
       '/privacy': 'Polityka prywatności',
       '/terms': 'Regulamin',
+      '/source-policy': 'Polityka źródeł',
       '/api': 'API',
     } as Record<string, string>,
     comingSoon: 'Wkrótce',
@@ -314,6 +357,39 @@ export const pl: Dictionary = {
     signOut: 'Wyloguj się',
     deleteAccount: 'Usuń konto',
     deleteAccountConfirm: 'Usunąć konto? Spowoduje to trwałe usunięcie zapisanej historii i nie można tego cofnąć.',
+    languageSelectorLabel: 'Język',
+    /**
+     * M66.11 — the action half of the language control's accessible name,
+     * and the listbox's own label. GN-CD-M66.11 §7 requires the trigger to be
+     * named "Language: {current}. Select language" FROM LOCALIZED STRINGS,
+     * never a concatenated English template.
+     *
+     * ONE key, not two. It serves both the trigger's action phrase and the
+     * listbox aria-label, which are the same words for the same purpose — the
+     * same reuse decision M48 made when DataModeLabel adopted
+     * liveStatusStrip's four existing state labels rather than duplicating
+     * them. No interpolation mechanism is introduced: NavBar composes
+     * `${languageSelectorLabel}: ${endonym}. ${languageSelectorAction}` from
+     * these two localized strings and LANGUAGE_NATIVE_LABELS.
+     */
+    languageSelectorAction: 'Wybierz język',
+    /** M66.13 — ta sama rola co w en.ts. */
+    sectionsHeading: 'SEKCJE',
+    editorialUnavailableLabel: 'jeszcze niedostępne',
+    // M65 — zatwierdzona dziewięciopozycyjna sekwencja nagłówka. Klucze
+    // odpowiadają labelKey z navModel.ts, dzięki czemu każda widoczna
+    // etykieta jest tłumaczona.
+    navItemLabels: {
+      home: 'Strona główna',
+      worldMap: 'Mapa świata',
+      world: 'Świat',
+      politics: 'Polityka',
+      business: 'Biznes',
+      technology: 'Technologia',
+      science: 'Nauka',
+      health: 'Zdrowie',
+      about: 'O nas',
+    } as Record<string, string>,
     linkLabels: {
       '/': 'Strona główna',
       '/map': 'Mapa świata',
@@ -327,6 +403,8 @@ export const pl: Dictionary = {
     } as Record<string, string>,
   },
   liveStatusStrip: {
+    /** M66.13 — czwarty stan NewsDataMode, wcześniej łączony z `unknown`. */
+    unavailable: 'BRAK DOSTĘPNYCH RELACJI',
     reconnecting: 'PONOWNE ŁĄCZENIE',
     live: 'NA ŻYWO \u00b7 Obsługiwane przez GNews',
     cached: 'Z PAMIĘCI \u00b7 Wcześniej pobrane relacje',
@@ -361,6 +439,10 @@ export const pl: Dictionary = {
       technology: 'Technologia',
       science: 'Nauka',
       health: 'Zdrowie',
+      // M66.13C — see en.ts. Polish singular 'Sport' is the ordinary section
+      // name, matching the existing single-word register of this group.
+      sports: 'Sport',
+      entertainment: 'Rozrywka',
     } as Record<string, string>,
     coverageLegendTitle: 'Legenda zasięgu',
     legendNoStories: 'Brak wczytanych materiałów',
@@ -452,41 +534,67 @@ export const pl: Dictionary = {
     },
     openAction: 'Otwórz',
     hubLabel: 'Silnik analityczny GlobalNews AI',
+    // M65.1 — patrz en.ts
+    canvasSubtitle: 'Połączone funkcje pogłębiające zrozumienie świata',
+    moduleForms: ['moduł', 'moduły', 'modułów'] as [string, string, string],
+    activeForms: ['aktywny', 'aktywne', 'aktywnych'] as [string, string, string],
     modules: {
+      /*
+        M66.5 — GN-CD-154, patrz en.ts. Claude Design supplies English short
+        names only; these nine were authored for this milestone and approved
+        by the CTO under decision D-5 A, then measured against the same
+        released 108x56 card. Six deliberately equal their own `title`:
+        Polish has no clipping equivalent of English "...Intelligence ->
+        ...Intel", and those six already fit. Only the three that genuinely
+        needed shortening were shortened. `Prognozy i alerty` was rejected
+        because "alerts" would imply a notification capability this product
+        does not have.
+      */
       aiResearch: {
         title: 'Asystent badawczy AI',
+        shortTitle: 'Badania AI',
         description: 'Zadaj pytanie i otrzymaj odpowiedź opartą na dowodach z rzeczywistych źródeł.',
       },
       worldIntelligence: {
         title: 'Analiza świata',
+        shortTitle: 'Analiza świata',
         description: 'Globalne wydarzenia uporządkowane według trafności, aktualności i różnorodności źródeł.',
       },
       countryIntelligence: {
         title: 'Analiza krajów',
+        shortTitle: 'Analiza krajów',
         description: 'Przeglądaj zasięg, kategorie i aktualność relacji dla dowolnego kraju na mapie.',
       },
       evidence: {
         title: 'Dowody i porównanie źródeł',
-        description: 'Zobacz, które źródła się zgadzają, gdzie się różnią i co pozostaje niepotwierdzone.',
+        shortTitle: 'Dowody i źródła',
+        // M65.1 — decyzja CTO nr 2: bez deklaracji wykrywania
+        // stronniczości; opis oddaje rzeczywistą funkcję produktu.
+        description: 'Porównuj źródła. Znajduj zgodności i rozbieżności.',
       },
       economy: {
         title: 'Analiza gospodarcza',
+        shortTitle: 'Analiza gospodarcza',
         description: 'Wczesny etap: relacje gospodarcze i biznesowe, bez dedykowanych danych rynkowych.',
       },
       conflict: {
         title: 'Analiza konfliktów',
+        shortTitle: 'Analiza konfliktów',
         description: 'Wczesny etap: relacje związane z konfliktami, bez dedykowanego monitorowania ryzyka.',
       },
       market: {
         title: 'Analiza rynkowa',
+        shortTitle: 'Analiza rynkowa',
         description: 'Planowane: dedykowane dane rynkowe i cenowe nie są jeszcze podłączone.',
       },
       timeline: {
         title: 'Oś czasu wydarzeń',
+        shortTitle: 'Oś czasu wydarzeń',
         description: 'Planowane: uporządkowane osie czasu wydarzeń nie są jeszcze dostępne.',
       },
       forecast: {
         title: 'Prognozy i lista obserwowanych',
+        shortTitle: 'Prognozy i obserwacje',
         description: 'Planowane: monitorowane ryzyka i wskaźniki nie są jeszcze dostępne.',
       },
     },
@@ -566,6 +674,66 @@ export const pl: Dictionary = {
       {
         heading: 'Ogólne zastrzeżenie',
         body: 'Usługa jest świadczona w stanie \u201cjaki jest\u201d, bez jakichkolwiek gwarancji, w zakresie dozwolonym przez obowiązujące prawo.',
+      },
+    ],
+  },
+  /**
+   * M66.10B — Source Policy, Polish. A faithful translation of the
+   * CTO-approved English factual policy: same section order, same
+   * section count, same claims. No claim is strengthened in
+   * translation, and no claim absent from the English text is
+   * introduced here.
+   *
+   * Product and provider names (GlobalNews AI, GNews) are proper
+   * names and are never localized, consistent with the M47/M48
+   * treatment of "GNews" elsewhere in this file.
+   */
+  sourcePolicyPage: {
+    title: 'Polityka źródeł',
+    lastUpdatedLabel: 'Ostatnia aktualizacja',
+    lastUpdatedDate: '20 sierpnia 2026',
+    intro:
+      'Ta strona wyjaśnia, skąd pochodzą informacje prezentowane w GlobalNews AI, w jaki sposób są przedstawiane oraz co mówią, a czego nie mówią. Opisuje produkt dokładnie w takiej formie, w jakiej działa on obecnie, a nie w takiej, w jakiej ma działać w przyszłości.',
+    sections: [
+      {
+        heading: 'Skąd pochodzą informacje',
+        body: 'GlobalNews AI pobiera opublikowane materiały dziennikarskie za pośrednictwem zewnętrznego dostawcy wiadomości i wykorzystuje je w swoich funkcjach informacyjnych i analitycznych. Dostawca zwraca artykuły pochodzące od wielu różnych wydawców. Produkcyjne pobieranie wiadomości opiera się obecnie na jednym dostawcy, GNews \u2014 GlobalNews AI nie korzysta dziś z wielu dostawców wiadomości na żywo.',
+      },
+      {
+        heading: 'Nazwy źródeł i odnośniki do artykułów',
+        body: 'Każdy artykuł jest prezentowany wraz z nazwą źródła podaną przez dostawcę wiadomości i prowadzi do strony wskazanej przez tego dostawcę, przy użyciu adresu URL dołączonego do pobranego materiału. GlobalNews AI nie publikuje ponownie ani nie hostuje artykułów. Jeśli dostawca nie poda nazwy źródła, GlobalNews AI informuje, że źródło jest nieznane, zamiast je zgadywać.',
+      },
+      {
+        heading: 'Porównywanie materiałów z różnych źródeł',
+        body: 'Analizując pytanie, GlobalNews AI pracuje na zbiorze pobranych artykułów i wskazuje, w czym są one zgodne, a w czym się różnią. To porównanie opisuje treść pobranych materiałów. Nie jest oceną tego, które źródło ma rację.',
+      },
+      {
+        heading: 'Analiza generowana przez AI',
+        body: 'Podsumowania, porównania i kontekst w GlobalNews AI są generowane przez model językowy AI i są prezentowane oddzielnie od samych materiałów dziennikarskich. Każda analiza zawiera informację o pochodzeniu i statusie opisującą sposób jej powstania \u2014 w tym sytuacje, gdy usługa AI była niedostępna, gdy żądanie zakończyło się niepowodzeniem oraz gdy działa tryb demonstracyjny.',
+      },
+      {
+        heading: 'Jak sprawdzane są elementy analizy',
+        body: 'Twierdzenia oparte na dowodach oraz ustrukturyzowane elementy analizy są weryfikowane względem artykułów przekazanych do analizy. Elementy, których przywołanych dowodów nie da się powiązać z tymi artykułami, są usuwane przed zwróceniem wyniku \u2014 nawet jeśli pozostawia to pustą sekcję. Wyświetlane odnośniki źródeł są tworzone na podstawie rekordów pobranych artykułów, a nie przyjmowane bezpośrednio z odpowiedzi modelu. Analiza AI nadal może błędnie odczytać lub nadmiernie uprościć przywoływane materiały \u2014 właśnie dlatego są tu odnośniki.',
+      },
+      {
+        heading: 'Różnorodność źródeł',
+        body: 'Na potrzeby analizy GlobalNews AI zlicza strukturalne właściwości pobranych materiałów: ile artykułów zwrócono, ile wystąpiło odrębnych nazw źródeł, ile odrębnych domen internetowych oraz ile artykułów przypominało swoje powtórzenia. Są to wyłącznie liczby opisujące to, co pobrano. Nie dowodzą one niezależności redakcyjnej, pochodzenia syndykowanego lub agencyjnego ani powiązań między źródłami, a GlobalNews AI nie ocenia obecnie autorytetu źródeł.',
+      },
+      {
+        heading: 'Informacje na żywo, z pamięci podręcznej, próbne i niedostępne',
+        body: 'Potok wiadomości rozróżnia cztery stany danych. Na żywo oznacza, że dostawca wiadomości został odpytany i udzielił odpowiedzi. Z pamięci podręcznej oznacza, że dostawca nie mógł dostarczyć bieżących wyników, więc wykorzystywane są wcześniej pobrane materiały z naszej własnej bazy danych, ograniczone do skonfigurowanego 24-godzinnego okna zapasowego. Próbne oznacza treść demonstracyjną, która nie jest dopuszczona jako wiadomości produkcyjne. Niedostępne oznacza, że nie udało się pobrać żadnych materiałów ani nie było zapisanych, więc nic nie jest pokazywane. Interfejs stosuje wskaźniki statusu i pochodzenia, aby dane z pamięci podręcznej lub próbne nie były przedstawiane jako materiały na żywo, a odpowiedzi próbne i rzeczywiste nie były ze sobą mieszane.',
+      },
+      {
+        heading: 'Ograniczenia dostawcy i zakres materiałów',
+        body: 'Zakres materiałów dostępnych w GlobalNews AI zależy od tego, co zwróci jego dostawca wiadomości. Jeśli dostawca jest niedostępny, ograniczony limitem zapytań lub nie zwraca nic dla danego zapytania, GlobalNews AI sięga po materiały z pamięci podręcznej albo informuje, że nic nie jest dostępne; nie zastępuje ich treścią z innego źródła. Zakres jest zatem nierównomierny, a temat, region, język lub źródło nieobjęte przez dostawcę nie pojawi się w serwisie. Brak materiałów w GlobalNews AI nie jest dowodem na to, że nic się nie wydarzyło.',
+      },
+      {
+        heading: 'Sprostowania i zmiany zakresu w czasie',
+        body: 'GlobalNews AI pobiera materiały ponownie przy każdym zapytaniu, a zapisana kopia artykułu jest zastępowana, gdy pobrana zostanie nowsza wersja tego samego artykułu. Nie istnieje mechanizm śledzenia sprostowań ani wycofań publikowanych przez wydawców: GlobalNews AI nie śledzi ich, nie oznacza i nie powiadamia o nich. Jeśli źródło prostuje lub wycofuje materiał, wiążącym zapisem pozostaje jego własna strona, do której prowadzą odnośniki artykułów.',
+      },
+      {
+        heading: 'Czego GlobalNews AI nie gwarantuje',
+        body: 'GlobalNews AI nie gwarantuje, że zakres materiałów na jakikolwiek temat jest kompletny, że informacje są aktualne w momencie ich czytania ani że jakiekolwiek podsumowanie lub analiza są poprawne. Nie weryfikuje zgodności pobieranych materiałów ze stanem faktycznym i nie tworzy rankingu, ocen ani certyfikacji źródeł. Korzystaj z odnośników \u2014 prowadzą one do materiałów, które GlobalNews AI opisuje.',
       },
     ],
   },

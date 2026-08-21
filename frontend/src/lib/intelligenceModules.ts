@@ -47,6 +47,18 @@ export interface IntelligenceModuleConfig {
   id: string;
   /** Key into dictionary().intelligenceModules.modules[key] */
   dictionaryKey: string;
+  /**
+   * M65.1 — the two-letter identifier the approved Claude Design
+   * Intelligence Engine shows on every capability panel. Deliberately
+   * part of the canonical configuration rather than a lookup table in a
+   * component, so a module can never render with someone else's mark,
+   * and so uniqueness is testable at the source.
+   *
+   * NOT localized: these are short product identifiers, in the same
+   * class as the module `id` itself, not user-facing prose. The visible
+   * title and description remain fully dictionary-driven.
+   */
+  code: string;
   accent: IntelligenceModuleAccent;
   /** lucide-react icon name, resolved by the renderer — kept as a string here so this config has zero UI-library import surface. */
   icon: 'Search' | 'Globe2' | 'MapPinned' | 'ScanSearch' | 'LineChart' | 'ShieldAlert' | 'TrendingUp' | 'History' | 'Radar';
@@ -59,6 +71,7 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
   {
     id: 'ai-research',
     dictionaryKey: 'aiResearch',
+    code: 'AI',
     accent: 'amber',
     icon: 'Search',
     state: 'active',
@@ -67,15 +80,37 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
   {
     id: 'world-intelligence',
     dictionaryKey: 'worldIntelligence',
+    code: 'WD',
     accent: 'emerald',
     icon: 'Globe2',
     state: 'active',
-    // No separate destination: this capability IS the homepage feed
-    // itself (Global Developments below), not a distinct page.
+    /*
+      M66 — ACTIVE NOW MEANS ACTIONABLE, AND THIS DESTINATION IS REAL.
+
+      CTO decision D-6 A previously left this module ACTIVE but inert, on the
+      reasoning that the capability IS the homepage feed rather than a page and
+      that no honest destination therefore existed. The first half of that is
+      still true; the second half was not. The section this card describes has
+      carried a real anchor all along:
+
+        GlobalDevelopments.tsx  ->  id="global-developments-heading"
+
+      and in-page hash navigation is already a released pattern in this product,
+      not one invented here: MobileBottomNav ships href '#intelligence-modules'
+      against IntelligenceEngineSection's own id.
+
+      So the card now goes to the thing it names — its own description reads
+      'Global developments organized by relevance, recency, and source
+      diversity'. No /world route was created and no page was invented; the
+      rooted form is used rather than a bare '#' so the link stays correct if
+      the Engine is ever rendered on a non-home surface.
+    */
+    destination: '/#global-developments-heading',
   },
   {
     id: 'country-intelligence',
     dictionaryKey: 'countryIntelligence',
+    code: 'CO',
     accent: 'blue',
     icon: 'MapPinned',
     state: 'active',
@@ -84,6 +119,7 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
   {
     id: 'evidence',
     dictionaryKey: 'evidence',
+    code: 'EV',
     accent: 'violet',
     icon: 'ScanSearch',
     state: 'active',
@@ -92,13 +128,17 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
   {
     id: 'economy',
     dictionaryKey: 'economy',
-    accent: 'orange',
+    code: 'EC',
+    // M65.1 — realigned to the approved reference, which shows this
+    // panel in the same green family as World Intelligence.
+    accent: 'emerald',
     icon: 'LineChart',
     state: 'preview',
   },
   {
     id: 'conflict',
     dictionaryKey: 'conflict',
+    code: 'CF',
     accent: 'red',
     icon: 'ShieldAlert',
     state: 'preview',
@@ -106,6 +146,7 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
   {
     id: 'market',
     dictionaryKey: 'market',
+    code: 'MK',
     accent: 'cyan',
     icon: 'TrendingUp',
     state: 'comingSoon',
@@ -113,14 +154,18 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
   {
     id: 'timeline',
     dictionaryKey: 'timeline',
-    accent: 'magenta',
+    code: 'TL',
+    // M65.1 — realigned to the approved reference (purple, not fuchsia).
+    accent: 'purple',
     icon: 'History',
     state: 'comingSoon',
   },
   {
     id: 'forecast',
     dictionaryKey: 'forecast',
-    accent: 'lime',
+    code: 'FC',
+    // M65.1 — realigned to the approved reference (amber, not lime).
+    accent: 'amber',
     icon: 'Radar',
     state: 'comingSoon',
   },

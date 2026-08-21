@@ -858,6 +858,33 @@ describe('NewsService', () => {
       publishedAt: '2024-02-01T00:00:00.000Z',
     });
 
+    /*
+      M66.14B — THE EXPECTATION IS ENRICHED; THE M37 GUARANTEE IS NOT RELAXED.
+
+      news.service now annotates every returned article with its canonical
+      country, resolved from the article's own text by the existing
+      scoreCountryRelevance. The joint article says "Iran", so the accepted
+      article legitimately carries countryCode 'IR' / countryName 'Iran' —
+      verified against the authorized resolver, which scores it 65 for Iran
+      with or without a request language.
+
+      THE ASSERTION STAYS EXACT. It is still toHaveBeenCalledWith on a
+      single-element array, so it still proves that EXACTLY ONE article was
+      persisted and precisely WHICH one. No expect.anything(), no
+      objectContaining, nothing that could let a relational-filtering
+      regression through.
+
+      This fixture makes that unusually sharp: xOnlyArticle mentions Iran too
+      and resolves to the SAME country, so a broken gate would deliver an
+      article carrying identical enrichment. Only the id distinguishes them,
+      and the id is what this assertion pins.
+    */
+    const enrichedJointArticle = {
+      ...jointArticle,
+      countryCode: 'IR',
+      countryName: 'Iran',
+    };
+
     it('filters live relational results, keeping only articles where BOTH x and y are present', async () => {
       const service = await buildService([
         new FakeQueryProvider([jointArticle, xOnlyArticle, yOnlyArticle]),
@@ -883,7 +910,41 @@ describe('NewsService', () => {
         y: 'oil prices',
       });
 
-      expect(articlePersistence.persistMany).toHaveBeenCalledWith([jointArticle]);
+      expect(articlePersistence.persistMany).toHaveBeenCalledWith([enrichedJointArticle]);
+    });
+
+    it('M66.14B — country enrichment is ADDITIVE: it adds two fields and changes nothing the M37 gate depends on', async () => {
+      /*
+        The assertion above pins the enriched object. This one pins the RULE
+        behind it, so a future change to enrichment cannot quietly alter an
+        article on its way into persistence: identity, content, provenance and
+        ordering must all survive untouched, and the only difference between
+        what the provider supplied and what was persisted must be the two
+        authorized country fields.
+      */
+      const service = await buildService([
+        new FakeQueryProvider([jointArticle, xOnlyArticle, yOnlyArticle]),
+      ]);
+
+      await service.search('Iran conflict oil prices', 20, {
+        type: 'relational',
+        x: 'Iran conflict',
+        y: 'oil prices',
+      });
+
+      const persisted = articlePersistence.persistMany.mock.calls[0][0] as NewsArticle[];
+
+      // Still exactly one article, and still the joint one — the M37 gate.
+      expect(persisted).toHaveLength(1);
+      expect(persisted[0].id).toBe('joint-1');
+
+      // Every field the provider supplied is byte-identical after enrichment.
+      const { countryCode, countryName, ...persistedWithoutCountry } = persisted[0];
+      expect(persistedWithoutCountry).toEqual(jointArticle);
+
+      // And the two added fields are the only difference.
+      expect(countryCode).toBe('IR');
+      expect(countryName).toBe('Iran');
     });
 
     it('applies the SAME relational gate to the stored/persisted database fallback, so live and stored relational results share one trust rule', async () => {

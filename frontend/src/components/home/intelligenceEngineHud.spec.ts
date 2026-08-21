@@ -1,6 +1,26 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+/**
+ * M65.1 RETIREMENT NOTE — the components this file inspects
+ * (IntelligenceModulesDesktop, IntelligenceEngineInteractive,
+ * IntelligenceModulesMobile, IntelligenceModuleCard) have been RETIRED
+ * FROM THE HOMEPAGE RENDER PATH. Their files are retained unmodified,
+ * per explicit CTO decision, so every assertion below still describes
+ * those files accurately and still passes — but it no longer describes
+ * what the homepage renders.
+ *
+ * The live Intelligence Engine is IntelligenceEngineSection /
+ * IntelligenceEngineRing / IntelligenceModulePanel, and the guards from
+ * this file that remain genuinely valuable — no DOM measurement, pure
+ * connector arithmetic, straight lines rather than elbow paths, a narrow
+ * client boundary, no fabricated destination — were PORTED to
+ * intelligenceEngineCanvas.spec.ts rather than deleted.
+ *
+ * Nothing here was removed. Deleting these components, and this file
+ * with them, is a separate cleanup decision the CTO has deferred.
+ */
+
 const desktopSource = readFileSync(join(__dirname, 'IntelligenceEngineInteractive.tsx'), 'utf-8');
 const mobileSource = readFileSync(join(__dirname, 'IntelligenceModulesMobile.tsx'), 'utf-8');
 const shellSource = readFileSync(join(__dirname, 'IntelligenceModulesDesktop.tsx'), 'utf-8');

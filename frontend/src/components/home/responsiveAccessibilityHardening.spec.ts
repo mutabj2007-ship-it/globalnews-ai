@@ -1,5 +1,16 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+// M66.3 — released Hero values now live in the token layer; assert them there
+// rather than pattern-matching an arbitrary class string.
+import tailwindConfig from '../../../tailwind.config';
+
+/**
+ * `theme` on a Tailwind `Config` is optional and loosely typed, so released
+ * values are read through the same narrowed view M66.2's headerSourcePort.spec
+ * established rather than by indexing an optional chain.
+ */
+type ThemeExtend = Record<string, Record<string, unknown>>;
+const themeExtend = (tailwindConfig.theme?.extend ?? {}) as unknown as ThemeExtend;
 
 const bandSource = readFileSync(join(__dirname, 'IntelligenceModulesDesktop.tsx'), 'utf-8');
 const interactiveSource = readFileSync(
@@ -56,23 +67,46 @@ describe('Responsive hardening — Intelligence Modules (M60 Phase 2: true radia
 });
 
 describe('Responsive hardening — Hero (CTO HUD finishing pass)', () => {
-  it('the world visual is desktop-only — mobile gets the simpler stacked layout, not a crowded screen', () => {
-    expect(heroSource).toMatch(/lg:block/);
+  it('the desktop world visual is gated to the composition that has room for it — M66.3 moved that gate from lg to cd-hero (CTO decision L-1A) and the mobile bleed takes over below it', () => {
+    expect(heroSource).toMatch(/cd-hero:block/);
+    expect(heroSource).toMatch(/cd-hero:hidden/);
+    // The real contract: the desktop map field must never render inside the
+    // mobile card composition, and vice versa.
+    expect(heroSource).not.toMatch(/hidden lg:block/);
   });
 
-  it('the live-feed panel is its own real grid column (M60 Phase 2), so it activates at the same lg breakpoint the three-column grid itself does, rather than a wider gate reserved for squeezing an overlay into extra space', () => {
-    expect(heroSource).toMatch(/lg:flex/);
+  it('the live-feed panel is its own real grid column and activates at exactly the same breakpoint as the three-column grid — never a wider or narrower gate', () => {
+    expect(heroSource).toMatch(/className="hidden cd-hero:flex"/);
+    expect(heroSource).toMatch(/cd-hero:grid-cols-\[minmax\(0,470px\)_minmax\(0,1fr\)_312px\]/);
     expect(heroSource).not.toMatch(/xl:flex/);
+    expect(heroSource).not.toMatch(/lg:flex/);
   });
 
   it('the Hero grid stacks to a single column below lg — no horizontal overflow risk on mobile', () => {
     expect(heroSource).toMatch(/grid-cols-1/);
   });
 
-  it('a shared cyan atmosphere spans both Hero columns (CTO continuation, priority 2 — spatial integration)', () => {
-    expect(heroSource).toMatch(
-      /radial-gradient\(ellipse_70%_60%_at_75%_45%,rgba\(34,211,238,0\.10\)/,
+  it('a shared atmosphere spans the whole Hero surface — M66.3 replaced M65\u2019s approximated radial with GN-CD-040\u2019s exact one, released as a token, and gave mobile its own authored card field', () => {
+    const backgroundImage = themeExtend.backgroundImage as unknown as Record<string, string>;
+    expect(backgroundImage['cd-hero']).toBe(
+      'radial-gradient(1200px 620px at 58% 40%, rgba(11,52,100,.5), rgba(4,7,14,.97) 72%)',
     );
+    expect(backgroundImage['cd-hero-m']).toBe(
+      'radial-gradient(320px 260px at 92% 6%, rgba(13,58,112,.75), rgba(6,10,20,.96) 72%)',
+    );
+    expect(heroSource).toMatch(/cd-hero:bg-cd-hero\b/);
+    expect(heroSource).toMatch(/bg-cd-hero-m\b/);
+    // The `#04060c` base beneath the radial, exactly as PageCanvas composes it.
+    expect(heroSource).toMatch(/bg-cd-void/);
+    // Radius and border survive unchanged in value; only their carrier is now a token.
+    expect(heroSource).toMatch(/rounded-cd-16 border border-cd-edge-section/);
+    expect(heroSource).toMatch(/cd-hero:rounded-cd-18 cd-hero:border-cd-edge-card/);
+    const colors = (themeExtend.colors.cd as Record<string, unknown>) as Record<string, string>;
+    expect(colors['edge-card']).toBe('rgba(56,189,248,0.14)');
+    expect(colors['edge-section']).toBe('rgba(56,189,248,0.16)');
+    const borderRadius = themeExtend.borderRadius as unknown as Record<string, string>;
+    expect(borderRadius['cd-18']).toBe('18px');
+    expect(borderRadius['cd-16']).toBe('16px');
   });
 });
 

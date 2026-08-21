@@ -26,9 +26,16 @@ describe('HUD panel geometry applied to real components (CTO final visual direct
     expect(source).toMatch(/HUD_CARD_CLIP/);
   });
 
-  it('the Trust panel uses the clipped-corner treatment', () => {
+  it('M66.6 — the Trust panel deliberately does NOT clip: GN-CD-180 authors a 16px radius, so the released surface supersedes the HUD clip here', () => {
+    // The second documented exception in this file, recorded for the same
+    // reason as the Situation Map below: so nobody "restores" the clip later.
+    // GN-CD-180 authors `border-radius:16px` with a 1px border and no bracket
+    // fragments, and its acceptance contract requires the radius exact. The
+    // clip helper itself is untouched and still serves its other consumers.
     const source = readFileSync(join(__dirname, 'TrustSection.tsx'), 'utf-8');
-    expect(source).toMatch(/HUD_CARD_CLIP/);
+    expect(source).not.toMatch(/HUD_PANEL_CLIP|HUD_CARD_CLIP/);
+    expect(source).not.toMatch(/hudCornerBracketClassName/);
+    expect(source).toMatch(/lg:rounded-cd-16/);
   });
 
   it('the Situation Map deliberately does NOT clip its container — clipping would visually cut off real map content; corner brackets are the documented safe alternative there', () => {

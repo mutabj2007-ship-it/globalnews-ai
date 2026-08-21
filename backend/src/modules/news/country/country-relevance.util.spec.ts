@@ -1,4 +1,6 @@
-import type { CountryMeta, NewsArticle } from '@globalnews-ai/shared';
+import { createHash } from 'crypto';
+import type { CountryMeta, LanguageCode, NewsArticle } from '@globalnews-ai/shared';
+import { COUNTRIES } from '@globalnews-ai/shared';
 import { articleMentionsCity, scoreCountryRelevance } from './country-relevance.util';
 
 const sudan: CountryMeta = {
@@ -299,5 +301,208 @@ describe('scoreCountryRelevance — Milestone #50 Phase C (multilingual EN/PL re
     );
 
     expect(withEnglish).toEqual(withoutLanguage);
+  });
+});
+
+/*
+  M66.14B — SEMANTIC LOCK FOR THE PREPARED-TEXT OPTIMIZATION.
+
+  containsWholePhrase() used to re-normalize the ARTICLE TEXT on every
+  containment check — 30-60 times per country — so a caller sweeping all 195
+  countries repeated all of it on text that never changes. The optimization
+  prepares each distinct text once and reuses it, for ~5x on that workload.
+
+  It is a refactor, so the only thing worth testing is that NOTHING MOVED. The
+  expectations below were generated from the PRE-OPTIMIZATION implementation at
+  commit 935b8652: they are an oracle, not a description of the new code. If any
+  future change to weights, thresholds, aliases, demonyms, localized names, ISO
+  checks, context terms or the surname heuristic alters a result, this fails —
+  which is exactly the point.
+
+  The aggregate hash covers all 20,280 (article x country x language) results
+  INCLUDING every `reasons` string, so it catches what the readable table cannot.
+  The table exists so that when the hash fails you can see which case moved.
+*/
+describe('country relevance — M66.14B prepared-text optimization preserves semantics', () => {
+  const REPRESENTATIVE: Array<Pick<NewsArticle, 'title' | 'summary'>> = [
+    { title: 'Kenya opens new transport corridor as Nairobi expands rail links', summary: 'The Kenyan government said the corridor will cut freight times.' },
+    { title: 'Germany reports slower industrial output in November', summary: 'German factories reported a second consecutive monthly decline.' },
+    { title: 'Poland and Lithuania agree on border infrastructure funding', summary: 'Warsaw confirmed the joint programme on Tuesday.' },
+    { title: 'Bitcoin volatility returns as traders weigh rate expectations', summary: 'Crypto markets swung sharply through the session.' },
+    { title: 'Japan unveils semiconductor investment package', summary: 'The Japanese ministry set out subsidies for domestic fabrication.' },
+    { title: 'Brazil expands Amazon monitoring programme', summary: 'Brazilian authorities said satellite coverage would double.' },
+    { title: 'New study links sleep patterns to metabolic health', summary: 'Researchers followed participants over four years.' },
+    { title: 'India completes first phase of solar corridor', summary: 'Indian officials described the milestone as on schedule.' },
+    { title: 'Canada and Mexico resume trade discussions', summary: 'Ottawa said talks would continue next month.' },
+    { title: 'Global shipping rates ease after months of disruption', summary: 'Carriers reported improved schedule reliability.' },
+    { title: 'France announces nuclear plant refurbishment timetable', summary: 'The French operator confirmed the outage schedule.' },
+    { title: 'Australia sets new emissions reporting rules for large firms', summary: 'Australian regulators published the final guidance.' },
+  ];
+
+  /* Exercises every branch: empty input, the surname heuristic and its
+     geographic-prefix escape, localized names, ISO2/ISO3, context-term
+     saturation, punctuation and multi-space normalization. */
+  const ADVERSARIAL: Array<Pick<NewsArticle, 'title' | 'summary'>> = [
+    { title: '', summary: '' },
+    { title: 'Chad', summary: '' },
+    { title: '', summary: 'Chad Johnson, the veteran spokesman, said the policy would change.' },
+    { title: 'Markets steady', summary: 'Chad Johnson, a spokesman for the ministry, confirmed the report.' },
+    { title: 'South Sudan peace talks resume', summary: 'The president met citizens near the border.' },
+    { title: 'North Macedonia joins the programme', summary: 'Officials in the capital confirmed the state would participate.' },
+    { title: 'Polska podpisala umowe', summary: 'Rzad w Warszawie potwierdzil porozumienie.' },
+    { title: 'Niemcy i Francja uzgodnily plan', summary: 'Rzady obu krajow potwierdzily wspolprace.' },
+    { title: 'USA and GBR sign accord', summary: 'The US delegation met the UK team.' },
+    { title: 'Report: government, president, capital, army, military, border', summary: 'citizens nationals country state' },
+    { title: 'Punctuation!!! Kenya??? ...Kenyan---government', summary: 'Multi   spaced    text.' },
+    { title: 'The Republic of Korea and Cote d Ivoire met', summary: 'Both delegations issued statements.' },
+    { title: 'Jane Ireland spoke to reporters', summary: 'Jane Ireland, a spokesman, addressed the press.' },
+    { title: 'New Zealand announces policy', summary: 'New Zealand officials confirmed the plan.' },
+  ];
+
+  const CORPUS = [...REPRESENTATIVE, ...ADVERSARIAL];
+
+  /** Winner over all 195 countries — the exact shape a country sweep produces. */
+  const argmax = (article: Pick<NewsArticle, 'title' | 'summary'>, language?: LanguageCode) => {
+    let winner: string | null = null;
+    let score = 0;
+    let relevantCount = 0;
+
+    for (const country of COUNTRIES) {
+      const result = scoreCountryRelevance(article, country, language);
+      if (!result.isRelevant) continue;
+      relevantCount += 1;
+      if (winner === null || result.score > score) {
+        winner = country.iso2;
+        score = result.score;
+      }
+    }
+
+    return { winner, score, relevantCount };
+  };
+
+  /*
+    Golden master, generated from the pre-optimization implementation.
+    One entry per CORPUS article, in order. `iso2:score:relevantCount`, or `-`
+    for an article no country claims. Compact deliberately: 52 expanded object
+    literals obscure the one line that differs.
+  */
+  const GOLDEN: Record<'en' | 'pl', string> = {
+    en: 'KE:65:1|DE:60:1|PL:65:2|-|JP:60:1|BR:60:1|-|IN:60:1|CA:60:2|-|FR:60:1|AU:60:1|-|TD:60:1|-|-|SD:80:2|MK:70:1|-|-|-|-|KE:65:1|CI:60:1|IE:90:1|NZ:90:1',
+    pl: 'KE:65:1|DE:60:1|PL:65:2|-|JP:60:1|BR:60:1|-|IN:60:1|CA:60:2|-|FR:60:1|AU:60:1|-|TD:60:1|-|-|SD:80:2|MK:70:1|PL:60:1|FR:60:2|-|-|KE:65:1|CI:60:1|IE:90:1|NZ:90:1',
+  };
+
+  const expected = (encoded: string) => {
+    if (encoded === '-') return { winner: null, score: 0, relevantCount: 0 };
+    const [winner, score, relevantCount] = encoded.split(':');
+    return { winner, score: Number(score), relevantCount: Number(relevantCount) };
+  };
+
+  it('reproduces the pre-optimization winner, score and relevant-count for every article, in both languages', () => {
+    for (const language of ['en', 'pl'] as const) {
+      const rows = GOLDEN[language].split('|');
+      expect(rows).toHaveLength(CORPUS.length);
+      rows.forEach((encoded, index) => {
+        expect({ language, index, ...argmax(CORPUS[index], language) }).toEqual({
+          language,
+          index,
+          ...expected(encoded),
+        });
+      });
+    }
+  });
+
+  it('reproduces the pre-optimization result for all 20,280 combinations, including every reasons string', () => {
+    const hash = createHash('sha256');
+    let comparisons = 0;
+
+    for (const language of ['en', 'pl', undefined, 'de'] as Array<LanguageCode | undefined>) {
+      CORPUS.forEach((article, index) => {
+        for (const country of COUNTRIES) {
+          const result = scoreCountryRelevance(article, country, language);
+          hash.update(
+            `${language}|${index}|${country.iso2}|${result.score}|${result.isRelevant}|${result.reasons.join(';')}\n`,
+          );
+          comparisons += 1;
+        }
+      });
+    }
+
+    expect(comparisons).toBe(CORPUS.length * COUNTRIES.length * 4);
+    expect(hash.digest('hex')).toBe('500212da806b577d1c1e2c871c55927af627314fffb66d3927a598828e8dbd48');
+  });
+
+  it('articleMentionsCity is untouched — containsWholePhrase keeps its public behaviour', () => {
+    expect(articleMentionsCity(CORPUS[0], 'nairobi')).toBe(true);
+    expect(articleMentionsCity(CORPUS[0], 'warsaw')).toBe(false);
+    expect(articleMentionsCity(CORPUS[0], '')).toBe(false);
+    expect(articleMentionsCity({ title: 'Report from NAIROBI, today', summary: '' }, 'nairobi')).toBe(true);
+  });
+});
+
+/*
+  M66.14B — CROSS-LANGUAGE GEOGRAPHY.
+
+  GlobalNews AI runs a Polish interface over provider articles that are usually
+  English. Country resolution must be driven by the ARTICLE's evidence, never by
+  the interface locale: a Polish UI must not blind the system to the word
+  'Kenya'. scoreCountryRelevance's own contract says the localized name is an
+  ADDITIONAL signal, never a replacement — these hold it to that.
+*/
+describe('country relevance — the interface language never suppresses canonical geography', () => {
+  const ENGLISH_ARTICLE = {
+    title: 'Kenya opens new transport corridor as Nairobi expands rail links',
+    summary: 'The Kenyan government said the corridor will cut freight times.',
+  };
+
+  const kenya = COUNTRIES.find((country) => country.iso2 === 'KE') as CountryMeta;
+  const poland = COUNTRIES.find((country) => country.iso2 === 'PL') as CountryMeta;
+  const POLISH_ARTICLE = { title: 'Polska podpisala umowe', summary: 'Rzad w Warszawie potwierdzil porozumienie.' };
+
+  it('THE CORE RULE — a Polish interface resolves an English article identically to an English one', () => {
+    const withPolishUi = scoreCountryRelevance(ENGLISH_ARTICLE, kenya, 'pl');
+    expect(withPolishUi.isRelevant).toBe(true);
+    expect(withPolishUi).toEqual(scoreCountryRelevance(ENGLISH_ARTICLE, kenya, 'en'));
+  });
+
+  it('the winner across ALL 195 countries is the same under either interface language', () => {
+    // A single-country check could not see a locale that shifted the winner.
+    const pick = (language: LanguageCode) => {
+      let winner: string | null = null;
+      let score = 0;
+      for (const country of COUNTRIES) {
+        const result = scoreCountryRelevance(ENGLISH_ARTICLE, country, language);
+        if (result.isRelevant && (winner === null || result.score > score)) {
+          winner = country.iso2;
+          score = result.score;
+        }
+      }
+      return winner;
+    };
+
+    expect(pick('pl')).toBe('KE');
+    expect(pick('en')).toBe('KE');
+  });
+
+  it('a Polish interface genuinely ADDS reach — a Polish-language article resolves via its localized name', () => {
+    expect(scoreCountryRelevance(POLISH_ARTICLE, poland, 'pl').isRelevant).toBe(true);
+  });
+
+  it('DIAGNOSTIC, NOT AN ASPIRATION — an English interface does NOT resolve a Polish-language article', () => {
+    /*
+      KNOWN MULTILINGUAL-GEOGRAPHY LIMITATION, recorded rather than fixed.
+
+      'Polska' is only checked when the INTERFACE language is Polish, because the
+      localized name is resolved from the caller's language. An English interface
+      reading a Polish-language article therefore finds no country at all.
+
+      This documents behaviour that EXISTS. It is not behaviour anyone wants and
+      must not be read as approval of it — the honest fix is to test an article
+      against localized names for every supported language, which is a scope
+      change and is NOT authorized in M66.14B.
+
+      If a later milestone fixes it, THIS TEST SHOULD FAIL and be updated. That
+      is the correct outcome, not a regression.
+    */
+    expect(scoreCountryRelevance(POLISH_ARTICLE, poland, 'en').isRelevant).toBe(false);
   });
 });

@@ -53,6 +53,10 @@ export class ArticlePersistenceService {
               publishedAt: new Date(article.publishedAt),
               confidenceScore:
                 article.confidence !== undefined ? Math.round(article.confidence) : null,
+              // M66.14B — the resolved canonical country, or NULL when the
+              // article genuinely has none. Never a placeholder.
+              countryCode: article.countryCode ?? null,
+              countryName: article.countryName ?? null,
             },
             create: {
               id: article.id,
@@ -67,6 +71,10 @@ export class ArticlePersistenceService {
               publishedAt: new Date(article.publishedAt),
               confidenceScore:
                 article.confidence !== undefined ? Math.round(article.confidence) : null,
+              // M66.14B — the resolved canonical country, or NULL when the
+              // article genuinely has none. Never a placeholder.
+              countryCode: article.countryCode ?? null,
+              countryName: article.countryName ?? null,
             },
           }),
         ),
@@ -181,6 +189,8 @@ export class ArticlePersistenceService {
         sourcesCount: row.article.sourcesCount,
         publishedAt: row.article.publishedAt.toISOString(),
         confidence: row.article.confidenceScore ?? undefined,
+        countryCode: row.article.countryCode ?? undefined,
+        countryName: row.article.countryName ?? undefined,
       }));
     } catch (error) {
       logWithRequestId(
@@ -254,6 +264,8 @@ export class ArticlePersistenceService {
         sourcesCount: row.sourcesCount,
         publishedAt: row.publishedAt.toISOString(),
         confidence: row.confidenceScore ?? undefined,
+        countryCode: row.countryCode ?? undefined,
+        countryName: row.countryName ?? undefined,
       }));
     } catch (error) {
       logWithRequestId(
@@ -307,6 +319,8 @@ export class ArticlePersistenceService {
         sourcesCount: row.sourcesCount,
         publishedAt: row.publishedAt.toISOString(),
         confidence: row.confidenceScore ?? undefined,
+        countryCode: row.countryCode ?? undefined,
+        countryName: row.countryName ?? undefined,
       };
     } catch (error) {
       logWithRequestId(

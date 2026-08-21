@@ -272,11 +272,23 @@ export class MockNewsProvider implements NewsProvider {
     };
   }
 
-  /** Materializes the seed data into NewsArticle[] with fresh timestamps. */
+  /**
+   * Materializes the seed data into NewsArticle[] with fresh timestamps.
+   *
+   * E1 — provider provenance is stamped here rather than repeated on
+   * every seed, so no seed can ever be added without it. The value is
+   * this provider's real id ('mock-wire'), never a real provider's:
+   * an article that came from the demo wire says so.
+   *
+   * providerRecordId is deliberately NOT set — the seeds have no
+   * identifier distinct from their own `id`, and inventing one would
+   * be a fabricated provenance claim.
+   */
   private getArticles(): NewsArticle[] {
     const now = Date.now();
     return this.seeds.map(({ publishedMinutesAgo, ...seed }) => ({
       ...seed,
+      providerId: this.id,
       publishedAt: new Date(now - publishedMinutesAgo * 60_000).toISOString(),
     }));
   }

@@ -2,7 +2,13 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const mapSource = readFileSync(join(__dirname, 'HomepageSituationMap.tsx'), 'utf-8');
-const heroSource = readFileSync(join(__dirname, 'Hero.tsx'), 'utf-8');
+// M66.3 — the Hero live-feed panel, including this honest
+// feed-unavailable state, moved into HeroLiveFeedPanel.tsx under CTO
+// authorization section 15. Same contract, new home: the five assertions
+// below are unchanged in substance and now read the file that renders it.
+// Hero.tsx is no longer read here because no assertion in this file
+// inspects it any more.
+const feedPanelSource = readFileSync(join(__dirname, 'HeroLiveFeedPanel.tsx'), 'utf-8');
 const globalDevSource = readFileSync(join(__dirname, 'GlobalDevelopments.tsx'), 'utf-8');
 const cardSource = readFileSync(join(__dirname, 'IntelligenceModuleCard.tsx'), 'utf-8');
 
@@ -33,14 +39,14 @@ describe('Situation Map no-selection state — filled with real structural rows,
 
 describe('Hero live-feed-unavailable panel — filled with real structural status rows', () => {
   it('shows real availability rows for search/country/map intelligence, not just 2-3 short sentences', () => {
-    expect(heroSource).toMatch(/t\.feedPanelSearchStatus/);
-    expect(heroSource).toMatch(/t\.feedPanelCountryStatus/);
-    expect(heroSource).toMatch(/t\.feedPanelMapStatus/);
-    expect(heroSource).toMatch(/t\.feedPanelAvailable/);
+    expect(feedPanelSource).toMatch(/t\.feedPanelSearchStatus/);
+    expect(feedPanelSource).toMatch(/t\.feedPanelCountryStatus/);
+    expect(feedPanelSource).toMatch(/t\.feedPanelMapStatus/);
+    expect(feedPanelSource).toMatch(/t\.feedPanelAvailable/);
   });
 
   it('status rows are rendered from a real array, not fabricated per-row content', () => {
-    expect(heroSource).toMatch(/\[t\.feedPanelSearchStatus, t\.feedPanelCountryStatus, t\.feedPanelMapStatus\]\.map/);
+    expect(feedPanelSource).toMatch(/\[t\.feedPanelSearchStatus, t\.feedPanelCountryStatus, t\.feedPanelMapStatus\]\.map/);
   });
 });
 

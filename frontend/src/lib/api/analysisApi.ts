@@ -6,10 +6,49 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 // client gives up, plus network overhead.
 const REQUEST_TIMEOUT_MS = 30000;
 
+/**
+ * M65 — a stable, localizable failure taxonomy.
+ *
+ * Before M65 the only failure signal this module produced was a
+ * hardcoded English sentence, so a throttled or rejected request
+ * surfaced to real users as the raw string "Backend responded with 429"
+ * / "Backend responded with 400". The HTTP semantics were correct; the
+ * user-facing presentation was not.
+ *
+ * `code` is that same information as a stable enum the UI maps to a
+ * dictionary entry, in any language. `status` is retained untouched, so
+ * the underlying HTTP semantics remain fully available to any caller
+ * that wants them, and `message` still carries the developer-facing
+ * detail for logs.
+ */
+export type AnalysisApiErrorCode =
+  /** The request never reached a response: aborted at REQUEST_TIMEOUT_MS. */
+  | 'timeout'
+  /** The request failed before any HTTP status existed (offline, DNS, CORS, backend down). */
+  | 'network'
+  /** HTTP 400/422 — the backend rejected the request itself (e.g. AnalyzeNewsDto's @MinLength(2)). */
+  | 'invalid-query'
+  /** HTTP 429 — the route's own @Throttle limit was hit. */
+  | 'rate-limited'
+  /** HTTP 5xx — the backend failed while handling a valid request. */
+  | 'server'
+  /** Any other non-OK status; deliberately distinct from the above rather than silently folded in. */
+  | 'unknown';
+
+/** Maps a real HTTP status onto the taxonomy above. Never invents a status. */
+function codeForStatus(status: number): AnalysisApiErrorCode {
+  if (status === 429) return 'rate-limited';
+  if (status === 400 || status === 422) return 'invalid-query';
+  if (status >= 500) return 'server';
+  return 'unknown';
+}
+
 export class AnalysisApiError extends Error {
   constructor(
     message: string,
     public readonly status?: number,
+    /** M65 — stable, localizable classification. Defaults to 'unknown' so every pre-M65 construction site keeps working. */
+    public readonly code: AnalysisApiErrorCode = 'unknown',
   ) {
     super(message);
     this.name = 'AnalysisApiError';
@@ -140,17 +179,26 @@ async function performAnalyzeNews(
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new AnalysisApiError('The analysis is taking longer than expected. Please try again.');
+      throw new AnalysisApiError('The analysis is taking longer than expected. Please try again.', undefined, 'timeout');
     }
     throw new AnalysisApiError(
       error instanceof Error ? error.message : 'Failed to reach the GlobalNews AI backend',
+      undefined,
+      'network',
     );
   } finally {
     clearTimeout(timeout);
   }
 
   if (!response.ok) {
-    throw new AnalysisApiError(`Backend responded with ${response.status}`, response.status);
+    // The message stays developer-facing (logs, debugging). What the
+    // user sees is chosen by the caller from `code`, via the dictionary
+    // — never this string.
+    throw new AnalysisApiError(
+      `Backend responded with ${response.status}`,
+      response.status,
+      codeForStatus(response.status),
+    );
   }
 
   return response.json() as Promise<AnalysisApiResponse>;

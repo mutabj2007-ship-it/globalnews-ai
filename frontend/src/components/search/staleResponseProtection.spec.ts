@@ -116,7 +116,7 @@ describe('F. Stale-response protection \u2014 behavioral race-condition test (M5
 
   it('the effect re-runs (and therefore re-triggers cleanup) when storyContext changes \u2014 the real mechanism that invokes the cleanup function between Story A and Story B in the actual component', () => {
     expect(searchClientSource).toMatch(
-      /\}, \[query, language, hasResolvedLanguage, dictionary\.noQuestionMessage, dictionary\.genericFetchError, storyContext\]\);/,
+      /\}, \[query, language, hasResolvedLanguage, dictionary, storyContext\]\);/,
     );
   });
 });
