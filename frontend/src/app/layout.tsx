@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Space_Grotesk, Inter, IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
 import './globals.css';
 
 /**
@@ -98,6 +99,30 @@ const claudeDesignMonoFont = IBM_Plex_Mono({
 });
 
 /**
+ * PWA — Next 14 requires `themeColor` in its own `viewport` export; leaving it
+ * inside Metadata is deprecated and emits a build warning. Placed above the
+ * M66.13 block below so that block stays attached to the function it documents.
+ *
+ * `#080b12` is the tailwind `void` token — the exact value
+ * <body className="bg-void"> already renders — so the browser chrome and the
+ * installed app's splash screen match the application surface rather than
+ * approximating it.
+ *
+ * WHAT IS DELIBERATELY ABSENT, AND WHY. Next also offers a UA-scheme field
+ * here. It is not set. M66.11 made the `:root` declaration in globals.css the
+ * single source of truth for that, and nativeControlScheme.spec.ts asserts that
+ * no competing mechanism exists in this file — naming a Next metadata field as
+ * exactly the thing it forbids. That test caught this on the first native run.
+ * The declaration in globals.css already covers every route, so the field would
+ * have bought nothing and cost a second source of truth.
+ */
+export const viewport: Viewport = {
+  themeColor: '#080b12',
+  width: 'device-width',
+  initialScale: 1,
+};
+
+/**
  * M66.13 — the root metadata is now request-aware, so it localizes.
  *
  * THE DEFECT. `export const metadata` is evaluated WITHOUT request context, so
@@ -121,8 +146,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = getDictionary(language);
 
   return {
+    // Brand name, not prose — Logo.tsx already renders this identical wordmark
+    // in both languages. Every localizable string below still comes from the
+    // dictionary, exactly as M66.13 established.
+    applicationName: 'GlobalNews AI',
     title: t.homeMetaTitle,
     description: t.homeMetaDescription,
+    manifest: '/manifest.webmanifest',
+    appleWebApp: { capable: true, title: 'GlobalNews', statusBarStyle: 'black-translucent' },
   };
 }
 
@@ -169,7 +200,17 @@ export default function RootLayout({
 
   return (
     <html lang={language} className={fontVariables}>
-      <body className="bg-void font-body text-ink-primary antialiased">{children}</body>
+      <body className="bg-void font-body text-ink-primary antialiased">
+        {/*
+          PWA — ServiceWorkerRegistrar returns null, so it contributes no
+          element, no text node and no class to the document. The <body> class
+          list above is unchanged and the Claude Design tree below it is
+          untouched; this is a side effect mounted in the tree, not a wrapper
+          around it.
+        */}
+        <ServiceWorkerRegistrar />
+        {children}
+      </body>
     </html>
   );
 }
