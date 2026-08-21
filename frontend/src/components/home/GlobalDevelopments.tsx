@@ -210,11 +210,47 @@ export function GlobalDevelopments({
               focusable without adding a Tab stop. It is what lets
               GlobalDevelopmentsHashFocus place focus here on hash activation.
               Nothing visual changes, and the id and text are untouched.
+
+              G-001 — `scroll-mt-*` is the other half of that correction.
+
+              This heading is the Intelligence Engine's World Intelligence
+              destination (`/#global-developments-heading`). NavBar is
+              `sticky top-0 z-50`, so without a scroll margin the browser's
+              fragment scroll aligns this heading's box with the viewport top —
+              i.e. underneath the header. Measured in Chromium: the resting
+              offset was 0px against a 53/63px header, on direct arrival, on an
+              in-page activation, and on a repeat activation alike.
+
+              DC-02's `.focus()` does NOT rescue it. Once the fragment scroll
+              has run, the element already counts as in view, so focusing it
+              moves nothing — it simply lands focus on an element that is
+              entirely behind the header, taking its `.cd-canvas
+              :focus-visible` ring with it. The heading DC-02 exists to
+              announce was invisible at the moment it was announced.
+
+              `scroll-margin-top` RENDERS NOTHING. It has no effect on layout,
+              paint or stacking; it is read only while the browser performs a
+              scroll-into-view. The approved Claude Design appearance is
+              therefore unchanged, which is the whole reason this correction
+              was authorized to touch a released composition.
+
+              The breakpoint is `cd-header`, not `sm`/`md`, because it is the
+              breakpoint the HEADER ITSELF switches on (NavBar.tsx: `h-[52px]`
+              below, `h-[62px]` at and above `cd-header` = 1400px, plus its
+              1px bottom border). Mirroring it keeps the offset correct by
+              construction if the header's own gate ever moves. The CTO-
+              approved 65/75px carry ~12px of clearance over the 53/63px the
+              header actually occupies, so the heading does not sit flush
+              against the header edge and read as clipped.
+
+              Applies identically under `prefers-reduced-motion`: globals.css
+              switches `scroll-behavior` to `auto`, which changes how the
+              scroll happens, never where it stops.
             */}
             <h2
               id="global-developments-heading"
               tabIndex={-1}
-              className="mt-cd-4 font-cd-display text-2xl font-medium tracking-tight text-cd-ink-primary sm:text-3xl"
+              className="scroll-mt-[65px] mt-cd-4 font-cd-display text-2xl font-medium tracking-tight text-cd-ink-primary sm:text-3xl cd-header:scroll-mt-[75px]"
             >
               {t.headline}
             </h2>
