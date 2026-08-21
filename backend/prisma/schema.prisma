@@ -55,6 +55,21 @@ model ArticleCountry {
   @@index([relevanceScore])
 }
 
+/// Milestone F1.a — administrative authorization.
+///
+/// ANALYST is this schema's name for the approved design's READ-ONLY
+/// role; the design's own actor-type vocabulary already uses ANALYST.
+///
+/// There is deliberately no NONE member. "Not an administrator" is
+/// represented by User.adminRole being NULL, so no value of this enum
+/// can ever be mistaken for an absence of privilege.
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  ANALYST
+}
+
 // Milestone #57 — Optional Accounts & User Continuity.
 //
 // Provider-neutral identity: User carries no provider-specific column
@@ -84,9 +99,20 @@ model User {
   displayName String?
   createdAt   DateTime @default(now())
 
+  /// Milestone F1.a — NULL means "not an administrator", and NULL is
+  /// the only value any pre-existing row can hold: the column is
+  /// nullable with NO default, and F1.a ships no code path that writes
+  /// it. AuthService.findOrCreateUser() does not set it, so a new
+  /// Google sign-in produces a non-administrator by construction
+  /// rather than by policy. Administrator status is data, never a
+  /// code constant and never configuration.
+  adminRole AdminRole?
+
   identities UserIdentity[]
   sessions   Session[]
   history    SearchHistoryEntry[]
+
+  @@index([adminRole])
 }
 
 model UserIdentity {
