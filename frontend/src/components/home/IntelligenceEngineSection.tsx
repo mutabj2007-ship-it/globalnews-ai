@@ -60,11 +60,31 @@ interface IntelligenceEngineSectionProps {
 export function IntelligenceEngineSection({ language = 'en' }: IntelligenceEngineSectionProps): JSX.Element {
   const t = getDictionary(language).intelligenceModules;
 
+  /*
+    G-001 — the only change this milestone makes to this file, and it is
+    VISUALLY INERT.
+
+    `id="intelligence-modules"` is a real fragment target: MobileBottomNav's
+    "Intelligence" tab ships `href: '#intelligence-modules'`. NavBar is
+    `sticky top-0 z-50`, so without a scroll margin that tab lands this
+    section's top edge underneath the header.
+
+    `scroll-margin-top` participates in no layout, paint or stacking pass —
+    the browser reads it only while performing a scroll-into-view. Every
+    released value on this element is untouched: the radius, the border, both
+    background fields, all six padding tokens and `overflow-hidden`
+    (GN-CD-151's load-bearing HUD crop) are exactly as approved. Touching this
+    file was authorized for this one property.
+
+    `cd-header` mirrors the breakpoint the header itself switches on, so the
+    offset stays correct by construction. GlobalDevelopments.tsx carries the
+    full G-001 note and the measurement.
+  */
   return (
     <section
       id="intelligence-modules"
       aria-labelledby="intelligence-engine-heading"
-      className="relative overflow-hidden rounded-cd-16 border border-cd-edge-section bg-cd-engine-m px-cd-11 pb-cd-14 pt-cd-13 md:bg-cd-engine md:px-cd-24 md:pb-cd-30 md:pt-cd-26"
+      className="relative scroll-mt-[65px] overflow-hidden rounded-cd-16 border border-cd-edge-section bg-cd-engine-m px-cd-11 pb-cd-14 pt-cd-13 md:bg-cd-engine md:px-cd-24 md:pb-cd-30 md:pt-cd-26 cd-header:scroll-mt-[75px]"
     >
       {/*
         Z01 — GN-CD-132, the engine's single grid layer. GN-CD-133 records

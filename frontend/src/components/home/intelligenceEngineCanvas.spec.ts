@@ -13,6 +13,7 @@ const pageSource = readFileSync(join(__dirname, '../../app/page.tsx'), 'utf-8');
 const bottomNavSource = readFileSync(join(__dirname, '../navigation/MobileBottomNav.tsx'), 'utf-8');
 const developmentsSource = readFileSync(join(__dirname, 'GlobalDevelopments.tsx'), 'utf-8');
 const hashFocusSource = readFileSync(join(__dirname, 'GlobalDevelopmentsHashFocus.tsx'), 'utf-8');
+const navBarSource = readFileSync(join(__dirname, '../navigation/NavBar.tsx'), 'utf-8');
 
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -22,6 +23,7 @@ interface ThemeExtend {
   colors?: { cd?: Record<string, unknown> };
   fontSize?: Record<string, unknown>;
   screens?: Record<string, unknown>;
+  scrollMargin?: Record<string, unknown>;
   backgroundImage?: Record<string, unknown>;
   backgroundSize?: Record<string, unknown>;
   boxShadow?: Record<string, unknown>;
@@ -904,5 +906,123 @@ describe('DC-02 — the one in-page module actually announces its arrival', () =
       '/map',
       '/search',
     ]);
+  });
+});
+
+/* ───────── G-001 — fragment navigation must not land under the sticky header ───────── */
+
+describe('G-001 — every fragment target clears the sticky header', () => {
+  /**
+   * The opening tag that owns a given id, so every assertion below is about
+   * THAT element. Comments are stripped first: IntelligenceEngineSection's own
+   * doc comment quotes `id="intelligence-modules"` while explaining why the
+   * anchor lives there, and matching the prose instead of the element would
+   * make these guards vacuous.
+   */
+  function openingTagOf(rawSource: string, id: string): string {
+    const source = stripComments(rawSource);
+    const idIndex = source.indexOf(`id="${id}"`);
+    expect(idIndex).toBeGreaterThan(0);
+    return source.slice(idIndex, source.indexOf('>', idIndex));
+  }
+
+  /** Every `scroll-mt-[Npx]` value in an opening tag, base and variant alike. */
+  function scrollMargins(tag: string): number[] {
+    return [...tag.matchAll(/scroll-mt-\[(\d+)px\]/g)].map(([, px]) => Number(px));
+  }
+
+  it('the sticky header is real, and these are the heights being cleared', () => {
+    // Read, not assumed: if NavBar stops being sticky, or its bars change
+    // height, this test is the thing that notices.
+    expect(navBarSource).toMatch(/<header className="sticky top-0/);
+    expect(navBarSource).toMatch(/h-\[62px\][^"]*cd-header:flex/);
+    expect(navBarSource).toMatch(/flex h-\[52px\]/);
+    // The offsets below are gated on cd-header because that is the breakpoint
+    // the header ITSELF switches on — mirroring it keeps them correct by
+    // construction rather than by coincidence.
+    expect(navBarSource).toMatch(/cd-header:(flex|hidden)/);
+    expect((themeExtend.screens ?? {})['cd-header']).toBe('1400px');
+  });
+
+  it('the World Intelligence destination lands its heading clear of the header', () => {
+    const world = INTELLIGENCE_MODULES.find((m) => m.id === 'world-intelligence');
+    expect(world?.destination).toBe('/#global-developments-heading');
+
+    const tag = openingTagOf(developmentsSource, 'global-developments-heading');
+    expect(scrollMargins(tag)).toEqual([65, 75]);
+    expect(tag).toMatch(/cd-header:scroll-mt-\[75px\]/);
+
+    // DC-02 focuses this element, and focusing scrolls it into view — so the
+    // compensation has to sit on the SAME element the focus lands on, not on
+    // an ancestor.
+    expect(tag).toMatch(/tabIndex=\{-1\}/);
+  });
+
+  it("MobileBottomNav's Intelligence tab lands the engine section clear of the header", () => {
+    expect(bottomNavSource).toMatch(/href: '#intelligence-modules'/);
+    const tag = openingTagOf(sectionSource, 'intelligence-modules');
+    expect(scrollMargins(tag)).toEqual([65, 75]);
+    expect(tag).toMatch(/cd-header:scroll-mt-\[75px\]/);
+  });
+
+  it('every offset genuinely exceeds the header height it is compensating for', () => {
+    // Computed from NavBar's own literals rather than restated here: the
+    // mobile bar plus its 1px border, and the desktop bar plus the same.
+    const mobileBar = Number(/flex h-\[(\d+)px\]/.exec(navBarSource)?.[1]);
+    const desktopBar = Number(/h-\[(\d+)px\][^"]*cd-header:flex/.exec(navBarSource)?.[1]);
+    const border = 1;
+    expect(mobileBar).toBeGreaterThan(0);
+    expect(desktopBar).toBeGreaterThan(mobileBar);
+
+    for (const [source, id] of [
+      [developmentsSource, 'global-developments-heading'],
+      [sectionSource, 'intelligence-modules'],
+    ] as const) {
+      const [base, wide] = scrollMargins(openingTagOf(source, id));
+      expect({ id, clearsMobile: base > mobileBar + border }).toEqual({ id, clearsMobile: true });
+      expect({ id, clearsDesktop: wide > desktopBar + border }).toEqual({ id, clearsDesktop: true });
+    }
+  });
+
+  it('NO fragment destination anywhere in the engine is left uncompensated', () => {
+    // The generalizing guard. A future hash destination added to the registry
+    // without a scroll margin on its target fails here rather than in a user's
+    // viewport.
+    const fragments = INTELLIGENCE_MODULES.map((m) => m.destination)
+      .filter((d): d is string => typeof d === 'string' && d.includes('#'))
+      .map((d) => d.slice(d.indexOf('#') + 1));
+    expect(fragments).toEqual(['global-developments-heading']);
+
+    const owners: Record<string, string> = {
+      'global-developments-heading': developmentsSource,
+      'intelligence-modules': sectionSource,
+    };
+    for (const id of [...fragments, 'intelligence-modules']) {
+      expect({ id, compensated: scrollMargins(openingTagOf(owners[id], id)).length === 2 }).toEqual({
+        id,
+        compensated: true,
+      });
+    }
+  });
+
+  it('the correction is VISUALLY INERT — nothing released was displaced', () => {
+    // scroll-margin participates in no layout, paint or stacking pass. The
+    // section's released treatment is asserted in full above; this guard says
+    // the G-001 classes did not arrive at the cost of any of it.
+    const code = stripComments(sectionSource);
+    for (const released of [
+      /relative/, /overflow-hidden/, /rounded-cd-16/, /border-cd-edge-section/,
+      /bg-cd-engine-m/, /md:bg-cd-engine/, /px-cd-11/, /pb-cd-14/, /pt-cd-13/,
+      /md:px-cd-24/, /md:pb-cd-30/, /md:pt-cd-26/,
+    ]) {
+      expect(code).toMatch(released);
+    }
+    // The heading keeps its released type treatment and its id.
+    const heading = openingTagOf(developmentsSource, 'global-developments-heading');
+    expect(heading).toMatch(/mt-cd-4 font-cd-display text-2xl font-medium tracking-tight text-cd-ink-primary sm:text-3xl/);
+
+    // Arbitrary values only — no scrollMargin key was added to the config, so
+    // tailwind.config.ts stays untouched by this milestone.
+    expect(themeExtend.scrollMargin).toBeUndefined();
   });
 });
