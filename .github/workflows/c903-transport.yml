@@ -47,20 +47,13 @@ jobs:
           git rm -rf . >/dev/null 2>&1 || true
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a /tmp/c903/. .
-
-          # GitHub Actions GITHUB_TOKEN cannot update workflow files without
-          # workflow permission. CTO restores this exact file after publish.
           rm -f .github/workflows/ci.yml
-
-          # Force-add is intentional: the repository's broad logs/ ignore rule
-          # otherwise drops frontend/src/app/admin/system/logs/page.tsx.
           git add -Af .
           test "$(git ls-files | wc -l | tr -d ' ')" = "974"
           test -n "$(git ls-files frontend/src/app/admin/system/logs/page.tsx)"
           test -z "$(git ls-files .github/workflows/ci.yml)"
           test -z "$(git ls-files frontend/tsconfig.tsbuildinfo)"
           test -z "$(git ls-files backend/src/generated/prisma || true)"
-
           git commit -m "release: frozen C903 alpha candidate (workflow restored by CTO)"
           git branch -M release/alpha-c903-final
           git push origin HEAD:refs/heads/release/alpha-c903-final --force
