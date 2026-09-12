@@ -1,0 +1,76 @@
+name: C905 publish exact release
+
+on:
+  push:
+    branches:
+      - transport/c905-upload
+    paths:
+      - .github/workflows/c905-publish.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout transport branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materialize and publish exact frozen C905
+        shell: bash
+        env:
+          BASE_COMMIT: 26c50c1ccefe1388425faccaf4cb01cc1d3d981a
+          EXPECTED_TREE: da9800b5c011bc589de92ed159ac16cdc8477978
+          EXPECTED_COMMIT: 0d8ab961c84ed3221f2a5eb5050700e6f1942403
+          PATCH_XZ_SHA256: 3860c70caabffdfc73c39dc1fc105bc7ad1f540b5f445617b228091b60023c7a
+        run: |
+          set -euo pipefail
+
+          cp .c905-transport/c905-source.patch.xz.b64 /tmp/c905-source.patch.xz.b64
+          COMMIT_RAW_B64="$(sed -n 's/^          COMMIT_RAW_B64: //p' .github/workflows/c905-transport.yml)"
+          test -n "$COMMIT_RAW_B64"
+
+          base64 -d /tmp/c905-source.patch.xz.b64 > /tmp/c905-source.patch.xz
+          echo "$PATCH_XZ_SHA256  /tmp/c905-source.patch.xz" | sha256sum -c -
+          xz -dc /tmp/c905-source.patch.xz > /tmp/c905-source.patch
+
+          git reset --hard "$BASE_COMMIT"
+          git clean -fdx
+          git apply --index /tmp/c905-source.patch
+
+          mkdir -p /tmp/ne50
+          for f in \
+            ne_50m_lakes.geojson \
+            ne_50m_rivers_lake_centerlines.geojson \
+            ne_50m_admin_1_states_provinces_lines.geojson \
+            ne_50m_populated_places_simple.geojson; do
+            curl -fsSL --retry 3 \
+              "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/$f" \
+              -o "/tmp/ne50/$f"
+          done
+
+          node scripts/build-reference-geography.mjs --src /tmp/ne50 --repo "$PWD"
+          git add -Af .
+
+          test "$(sha256sum backend/prisma/schema.prisma | awk '{print $1}')" = "9d2507760af86d4aedb2f1890191af775605517e45d2ec68a5016823a6c0d1f4"
+          test "$(sha256sum backend/src/modules/geo/data/rwanda-boundary-districts.geojson | awk '{print $1}')" = "4e5217c6f83a21d26c65c82e902da7b2af02a93cdcf068b15022d9b7f017c9cd"
+          test "$(sha256sum backend/src/modules/geo/data/rwanda-boundary-sectors.geojson | awk '{print $1}')" = "fb97d28a91f95e7c218c12be7813ba9a9732796f2e8dd81ab72a39e65a936b3c"
+
+          TREE="$(git write-tree)"
+          echo "C905_TREE=$TREE"
+          test "$TREE" = "$EXPECTED_TREE"
+
+          printf '%s' "$COMMIT_RAW_B64" | base64 -d > /tmp/c905.commit.raw
+          COMMIT="$(git hash-object -t commit -w /tmp/c905.commit.raw)"
+          echo "C905_COMMIT=$COMMIT"
+          test "$COMMIT" = "$EXPECTED_COMMIT"
+
+          git push origin "$COMMIT:refs/heads/release/alpha-c905-final" --force
+
+          git fetch origin release/alpha-c905-final
+          test "$(git rev-parse origin/release/alpha-c905-final)" = "$EXPECTED_COMMIT"
+          test "$(git rev-parse origin/release/alpha-c905-final^{tree})" = "$EXPECTED_TREE"
+          echo "C905 exact transport PASS"
