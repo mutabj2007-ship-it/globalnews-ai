@@ -6,6 +6,7 @@ on:
       - transport/c903-upload
     paths:
       - MAIN-FINAL-ALPHA-READY-CANDIDATE-1-C903-SOURCE.tar.gz
+      - .github/workflows/c903-transport.yml
 
 permissions:
   contents: write
@@ -35,7 +36,7 @@ jobs:
           test ! -e /tmp/c903/frontend/tsconfig.tsbuildinfo
           test ! -d /tmp/c903/backend/src/generated/prisma
 
-      - name: Publish exact archive tree as release branch
+      - name: Publish archive tree except protected workflow path
         shell: bash
         run: |
           set -euo pipefail
@@ -47,15 +48,20 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a /tmp/c903/. .
 
+          # GitHub Actions GITHUB_TOKEN cannot update workflow files without
+          # workflow permission. CTO restores this exact file after publish.
+          rm -f .github/workflows/ci.yml
+
           # Force-add is intentional: the repository's broad logs/ ignore rule
           # otherwise drops frontend/src/app/admin/system/logs/page.tsx.
           git add -Af .
-          test "$(git ls-files | wc -l | tr -d ' ')" = "975"
+          test "$(git ls-files | wc -l | tr -d ' ')" = "974"
           test -n "$(git ls-files frontend/src/app/admin/system/logs/page.tsx)"
+          test -z "$(git ls-files .github/workflows/ci.yml)"
           test -z "$(git ls-files frontend/tsconfig.tsbuildinfo)"
           test -z "$(git ls-files backend/src/generated/prisma || true)"
 
-          git commit -m "release: frozen C903 alpha candidate"
+          git commit -m "release: frozen C903 alpha candidate (workflow restored by CTO)"
           git branch -M release/alpha-c903-final
           git push origin HEAD:refs/heads/release/alpha-c903-final --force
 
@@ -65,5 +71,6 @@ jobs:
           set -euo pipefail
           git fetch origin release/alpha-c903-final
           test "$(git rev-parse HEAD^{tree})" = "$(git rev-parse origin/release/alpha-c903-final^{tree})"
+          test "$(git ls-tree -r --name-only origin/release/alpha-c903-final | wc -l | tr -d ' ')" = "974"
           echo "C903_REMOTE_COMMIT=$(git rev-parse origin/release/alpha-c903-final)"
           echo "C903_REMOTE_TREE=$(git rev-parse origin/release/alpha-c903-final^{tree})"
