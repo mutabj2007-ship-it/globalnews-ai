@@ -1,0 +1,109 @@
+name: C905 exact transport
+
+on:
+  push:
+    branches:
+      - transport/c905-upload
+    paths:
+      - MAIN-C905-FINAL-ALPHA-CORRECTION.zip.part0
+      - MAIN-C905-FINAL-ALPHA-CORRECTION.zip.part1
+      - .github/workflows/c905-transport.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish-c905:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout transport branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Wait for both frozen parts
+        id: parts
+        shell: bash
+        run: |
+          set -euo pipefail
+          P0="MAIN-C905-FINAL-ALPHA-CORRECTION.zip.part0"
+          P1="MAIN-C905-FINAL-ALPHA-CORRECTION.zip.part1"
+          if [[ ! -f "$P0" || ! -f "$P1" ]]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "C905 transport waiting for both bytewise archive parts."
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Verify parts and frozen C905 archive
+        if: steps.parts.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          P0="MAIN-C905-FINAL-ALPHA-CORRECTION.zip.part0"
+          P1="MAIN-C905-FINAL-ALPHA-CORRECTION.zip.part1"
+          ARCHIVE="/tmp/MAIN-C905-FINAL-ALPHA-CORRECTION.zip"
+
+          test "$(stat -c%s "$P0")" = "12000000"
+          test "$(stat -c%s "$P1")" = "10151646"
+          echo "1941a85bb1664fa0bf7a42e322206000f3944b273681c683fd2240d6d19773a5  $P0" | sha256sum -c -
+          echo "4ddb5a4b1e866ac1177ffaddc22b11bde9491417f272e6f4ea0f598d16edaac7  $P1" | sha256sum -c -
+
+          cat "$P0" "$P1" > "$ARCHIVE"
+          test "$(stat -c%s "$ARCHIVE")" = "22151646"
+          echo "b27d5ead0c30a6cd9cd2b35799e8f7d0c9e01983c1e8b305a8fc07a9a9b899f1  $ARCHIVE" | sha256sum -c -
+          unzip -t "$ARCHIVE"
+
+      - name: Extract and sanity-check C905 tree
+        if: steps.parts.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/c905
+          mkdir -p /tmp/c905
+          unzip -q /tmp/MAIN-C905-FINAL-ALPHA-CORRECTION.zip -d /tmp/c905
+
+          test -f /tmp/c905/package.json
+          test -d /tmp/c905/frontend
+          test -d /tmp/c905/backend
+          test -d /tmp/c905/shared
+
+          echo "9d2507760af86d4aedb2f1890191af775605517e45d2ec68a5016823a6c0d1f4  /tmp/c905/backend/prisma/schema.prisma" | sha256sum -c -
+          echo "4e5217c6f83a21d26c65c82e902da7b2af02a93cdcf068b15022d9b7f017c9cd  /tmp/c905/backend/src/modules/geo/data/rwanda-boundary-districts.geojson" | sha256sum -c -
+          echo "fb97d28a91f95e7c218c12be7813ba9a9732796f2e8dd81ab72a39e65a936b3c  /tmp/c905/backend/src/modules/geo/data/rwanda-boundary-sectors.geojson" | sha256sum -c -
+
+          test ! -e /tmp/c905/frontend/tsconfig.tsbuildinfo
+          test ! -d /tmp/c905/backend/src/generated/prisma
+
+      - name: Publish exact C905 tree as isolated release branch
+        if: steps.parts.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "GlobalNewsAI Release Automation"
+          git config user.email "release-bot@users.noreply.github.com"
+
+          git checkout --orphan c905-release-build
+          git rm -rf . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/c905/. .
+
+          # Force-add is intentional because the repository has broad ignore
+          # rules that have previously hidden C-scope source files.
+          git add -Af .
+          test -z "$(git ls-files frontend/tsconfig.tsbuildinfo || true)"
+          test -z "$(git ls-files backend/src/generated/prisma || true)"
+
+          git commit -m "release: frozen C905 alpha correction"
+          git branch -M release/alpha-c905-final
+          git push origin HEAD:refs/heads/release/alpha-c905-final --force
+
+      - name: Verify remote release branch
+        if: steps.parts.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin release/alpha-c905-final
+          test "$(git rev-parse HEAD^{tree})" = "$(git rev-parse origin/release/alpha-c905-final^{tree})"
+          echo "C905_REMOTE_COMMIT=$(git rev-parse origin/release/alpha-c905-final)"
+          echo "C905_REMOTE_TREE=$(git rev-parse origin/release/alpha-c905-final^{tree})"
