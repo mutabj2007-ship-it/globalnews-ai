@@ -1,0 +1,40 @@
+-- R4 GDELT — record WHAT KIND OF TIME `Article.publishedAt` holds.
+--
+-- WHY THIS COLUMN EXISTS
+--
+-- Until GDELT DOC there was one news provider and `publishedAt` had one
+-- meaning: the outlet's own assertion of when it published. GDELT reports
+-- `seendate`, the time GDELT SAW the article, and the live capture measured
+-- the difference rather than assuming it — GDELT observed the Haberler
+-- record roughly 55 minutes after the outlet published it. Close enough to
+-- pass for clock skew; far enough to be a false statement.
+--
+-- Without this column a stored GDELT row is indistinguishable from a
+-- publisher-time row on the very next read: there is no basis column and
+-- `providerId` is not persisted either. The provenance would not be lost
+-- loudly, it would be lost silently, so until this migration the
+-- application refused to persist observed-basis articles at all.
+--
+-- WHY TEXT WITH A DEFAULT RATHER THAN AN ENUM OR A NULLABLE COLUMN
+--
+--   The default is a TRUE STATEMENT about the existing data, not a
+--   convenient fill: today only GNewsProvider writes rows, and GNews
+--   reports the outlet's own publication time. Every pre-existing row
+--   genuinely IS publisher-basis.
+--
+--   NULLABLE would reintroduce the ambiguity this column exists to remove,
+--   and every read would have to decide what NULL meant.
+--
+--   A POSTGRES ENUM cannot gain a value and use it in the same transaction
+--   (`ALTER TYPE ... ADD VALUE` then referencing it fails), which is a
+--   sharp edge to accept for a two-member set that may one day gain a
+--   third. The application validates the value on read instead — see
+--   persistence/published-at-basis.util.ts — and an unrecognized string is
+--   treated as UNPROVEN rather than silently becoming 'publisher'.
+--
+-- Additive and non-breaking: no backfill, no data migration, no rewrite of
+-- existing rows beyond the default, no downtime. Nothing reads this column
+-- until the application code that writes it ships alongside.
+
+ALTER TABLE "Article"
+  ADD COLUMN "publishedAtBasis" TEXT NOT NULL DEFAULT 'publisher';

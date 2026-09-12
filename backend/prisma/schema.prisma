@@ -1,0 +1,742 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Article {
+  id           String   @id
+  title        String
+  summary      String
+  url          String   @unique
+  imageUrl     String?
+  sourceId     String
+  sourceName   String
+  sourcesCount Int      @default(1)
+  category     String
+  publishedAt  DateTime
+  fetchedAt    DateTime @default(now())
+
+  /// R4 GDELT — what KIND of time `publishedAt` is: 'publisher' (the outlet
+  /// asserted it) or 'observed' (an aggregator recorded seeing the article
+  /// then, an UPPER BOUND on publication). Defaults to 'publisher', which is
+  /// a true statement about every row written before this column existed —
+  /// only GNews wrote them, and GNews reports the outlet's own time.
+  /// Validated on read rather than by a database enum; an unrecognized value
+  /// is treated as UNPROVEN, never silently as 'publisher'.
+  publishedAtBasis String @default("publisher")
+
+  countryCode String?
+  countryName String?
+
+  relevanceScore  Int?
+  confidenceScore Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  countries ArticleCountry[]
+
+  @@index([publishedAt])
+  @@index([sourceId])
+  @@index([category])
+  @@index([countryCode])
+}
+
+model ArticleCountry {
+  id             String  @id @default(cuid())
+  articleId      String
+  countryCode    String
+  countryName    String
+  relevanceScore Int
+  isRelevant     Boolean @default(false)
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([articleId, countryCode])
+  @@index([countryCode])
+  @@index([relevanceScore])
+}
+
+/// Milestone F1.a — administrative authorization.
+///
+/// ANALYST is this schema's name for the approved design's READ-ONLY
+/// role; the design's own actor-type vocabulary already uses ANALYST.
+///
+/// There is deliberately no NONE member. "Not an administrator" is
+/// represented by User.adminRole being NULL, so no value of this enum
+/// can ever be mistaken for an absence of privilege.
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  ANALYST
+}
+
+// Milestone #57 — Optional Accounts & User Continuity.
+//
+// Provider-neutral identity: User carries no provider-specific column
+// at all. UserIdentity is the sole place a (provider, providerAccountId)
+// pair lives, so adding a second OAuth provider later — or linking a
+// second identity to an existing User — needs zero schema change here.
+//
+// Session stores only a SHA-256 hash of the raw session token (never
+// the raw value itself) — see AuthService/SessionService. A database
+// compromise alone can never be used to impersonate a session.
+//
+// SearchHistoryEntry deliberately stores only what's needed to let a
+// signed-in user revisit/re-run a previous question: the query text,
+// an optional countryCode, and a timestamp. Never the AI response,
+// prompt contents, evidence snapshot, article bodies, raw provider
+// output, or an articleId (a story-anchor is far more likely to be
+// stale/unresolvable by the time a user revisits history than a plain
+// country-level re-run, so it was deliberately excluded — see M57
+// architecture decision).
+//
+// All three new models cascade-delete from User (onDelete: Cascade),
+// so a single DELETE /users/me removes every account-owned row across
+// all three tables in one operation — no orphaned data by construction.
+model User {
+  id          String   @id @default(uuid())
+  email       String
+  displayName String?
+  createdAt   DateTime @default(now())
+
+  /// Milestone F1.a — NULL means "not an administrator", and NULL is
+  /// the only value any pre-existing row can hold: the column is
+  /// nullable with NO default, and F1.a ships no code path that writes
+  /// it. AuthService.findOrCreateUser() does not set it, so a new
+  /// Google sign-in produces a non-administrator by construction
+  /// rather than by policy. Administrator status is data, never a
+  /// code constant and never configuration.
+  adminRole AdminRole?
+
+  identities UserIdentity[]
+  sessions   Session[]
+  history    SearchHistoryEntry[]
+
+  /// Support loop S1 — a fourth account-owned relation, cascading like
+  /// the three above, so DELETE /users/me still removes every row this
+  /// account owns in one database operation and UsersService needs no
+  /// change. See the SupportTicket model for the ownership rules.
+  supportTickets SupportTicket[]
+
+  /// R1/T2 — the previous MEANINGFUL return-surface visit.
+  ///
+  /// NOT last login: a long-lived session never re-logs in, so login is
+  /// too coarse to answer "what is new since you were last here".
+  /// NOT every request: that is a write amplifier, not a visit.
+  /// NOT Session.createdAt: sessions are DELETED on sign-out and on
+  /// expiry validation, so prior sessions are routinely gone and cannot
+  /// be relied on as history.
+  ///
+  /// NULL means "never observed" and is the only value any pre-existing
+  /// row can hold — the column is nullable with NO default. NULL is
+  /// reported as "make no return claim". It is NEVER "everything is new".
+  ///
+  /// This is one half of a comparison. The other half is R0's
+  /// NewsArticle.firstSeenAt, which is read from the immutable
+  /// Article.fetchedAt column. This value is NEVER derived from
+  /// publishedAt (mutable, provider-reported) and never from now().
+  ///
+  /// RETENTION: lives and dies with the User row. DELETE /users/me
+  /// removes it with the row; no separate deletion path is needed.
+  lastSeenAt DateTime?
+
+  /// R1/T3 — a fifth account-owned relation, cascading like the four
+  /// above.
+  countryFollows CountryFollow[]
+
+  /// R3/T7 — account-scoped telemetry. SET NULL, NOT Cascade (CTO
+  /// decision): deleting an account severs the link to the person while
+  /// leaving aggregate history true. See the ProductEvent model.
+  productEvents ProductEvent[]
+
+  @@index([adminRole])
+}
+
+/// R1/T3 — an authenticated user's followed countries.
+///
+/// A DEDICATED TABLE, NOT A PREFERENCE JSON COLUMN. JSON cannot express
+/// the composite unique below, cannot be indexed for "who follows PL",
+/// cannot be bounded by the database, and would have to be re-parsed and
+/// re-validated on every read.
+///
+/// Mirrors SearchHistoryEntry almost exactly, so it introduces no new
+/// pattern: userId from the session, cascade from User, createdAt.
+///
+/// RETENTION: cascade-deleted with the User row. Followed countries are
+/// user-declared interests — low sensitivity, but personal data, and
+/// they are covered by the same one-operation deletion path as every
+/// other account-owned table.
+model CountryFollow {
+  id String @id @default(uuid())
+
+  userId String
+
+  /// Canonical ISO-3166 alpha-3, validated against ALL_ISO3_CODES in
+  /// shared/src/countries.ts BEFORE any write. Never free text, and
+  /// never a country name.
+  countryCode String
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Makes a repeat follow a database-level no-op rather than a matter
+  /// of application politeness.
+  @@unique([userId, countryCode])
+  @@index([userId])
+}
+
+/// R3/T7 — the product event vocabulary.
+///
+/// Twelve names. A name outside this enum cannot be stored: the ingest
+/// DTO validates against the same list, so the table cannot accumulate
+/// junk names.
+enum ProductEventName {
+  today_view
+  today_item_open
+  country_filter
+  world_map_open
+  analysis_started
+  analysis_completed
+  evidence_open
+  source_open
+  follow_created
+  follow_removed
+  return_visit
+  language_selected
+}
+
+/// R3/T7 — append-only product telemetry.
+///
+/// APPEND-ONLY IS A PROPERTY OF THE CODE, NOT A HOPE: TelemetryService
+/// contains no update, no upsert and no delete path, and a spec asserts
+/// that it never grows one.
+///
+/// WHAT THIS TABLE CANNOT HOLD, BY CONSTRUCTION — there is no column for
+/// an email address, a raw IP, a raw user-agent, an article title, a URL
+/// or any other free text. Every dimension below is an enumeration, an
+/// ISO3 code, a language code or an identifier. No third-party analytics
+/// SDK and no advertising tracker exists anywhere in this platform.
+///
+/// RETENTION: 90 days. DECLARED, NOT YET ENFORCED — this backend has no
+/// scheduler, so no purge job ships with R3. The rule is recorded here,
+/// where the columns are, rather than only in a document that can drift
+/// away from the code.
+model ProductEvent {
+  id String @id @default(uuid())
+
+  name ProductEventName
+
+  /// NULL for every event that is not ACCOUNT-SCOPED.
+  ///
+  /// Only follow_created, follow_removed and return_visit are
+  /// account-scoped. Every other event is stored anonymously EVEN WHEN A
+  /// VALID SESSION IS PRESENT — the ingest path discards the session
+  /// rather than storing it. The one list lives in
+  /// modules/telemetry/account-scoped-events.ts so it cannot drift.
+  userId String?
+
+  /// SET NULL, not Cascade (CTO decision). Deleting an account severs
+  /// the link to the person; the row survives anonymously so historical
+  /// aggregate counts stay true rather than being silently rewritten.
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// ISO-3166 alpha-3, validated against ALL_ISO3_CODES.
+  countryCode String?
+
+  /// A supported UI language code.
+  language String?
+
+  /// An article identifier, when the event is about one article. NEVER a
+  /// title, a URL or a body.
+  ///
+  /// AGGREGATE USE ONLY. Article.id is derived from buildStableId(url),
+  /// a 32-bit rolling hash with real collision potential at scale, so no
+  /// Return or "since" logic may key on it — R0 §6 reaches the same
+  /// conclusion and keys on url + firstSeenAt instead. Telemetry is
+  /// aggregate and tolerates a rare collision; correctness logic is not
+  /// and does not.
+  subjectId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([createdAt])
+}
+
+/// R3/T7 — server-derived analysis telemetry.
+///
+/// Written ONLY from the server's own view of a completed request. Every
+/// value here comes from AnalysisProvenance, which the analysis pipeline
+/// already produces on every response; nothing is client-reported.
+///
+/// NO userId COLUMN, DELIBERATELY. POST /analysis/news is
+/// unauthenticated, and an analysis is not an account-scoped event under
+/// the linkage rule above. Omitting the column removes the possibility
+/// rather than relying on nobody populating it.
+///
+/// NO COST COLUMN, DELIBERATELY. No price table exists anywhere in this
+/// repository — verified by sweep, and independently recorded in the
+/// accepted Data Capability Matrix. Tokens and latency are what is
+/// measurable today; monetary conversion is deferred until a documented
+/// price source exists. A nullable cost column that nothing ever filled
+/// would eventually be rendered as a zero by somebody who did not read
+/// this comment.
+///
+/// RETENTION: 90 days. DECLARED, NOT YET ENFORCED — see ProductEvent.
+model AnalysisRun {
+  id String @id @default(uuid())
+
+  /// AnalysisProvenance.provider — e.g. "openai", "mock-analysis".
+  provider String
+
+  /// AnalysisProvenance.model. Absent for mock analysis.
+  model String?
+
+  /// success | failed | validation-rejected | not-attempted
+  status String
+
+  /// The coarse, provider-agnostic AnalysisFailureReason. NEVER raw
+  /// provider error text.
+  failureReason String?
+
+  latencyMs Int?
+
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+
+  /// Served from the in-memory cache rather than freshly computed. This
+  /// is the cache hit/miss signal the capability matrix records as
+  /// requiring new schema.
+  cached Boolean
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([provider, createdAt])
+}
+
+model UserIdentity {
+  id                String   @id @default(uuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model SearchHistoryEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  query       String
+  countryCode String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+/// Support loop S1 — what a user says their request is about.
+///
+/// Mirrors SupportCategory in shared/src/support.ts member for member;
+/// supportContract.spec.ts reads both files and fails on any drift.
+enum SupportCategory {
+  NEWS_QUESTION
+  BUG_REPORT
+  CONTENT_REPORT
+  FEEDBACK
+  ABUSE_REPORT
+  ACCOUNT_PROBLEM
+  OTHER
+}
+
+/// Support loop S1 — where a ticket stands.
+///
+/// RESOLVED is reachable only by a human action. S1 ships no code that
+/// writes any status at all; the default below is the only value this
+/// milestone can produce.
+enum SupportTicketStatus {
+  OPEN
+  AWAITING_USER
+  AWAITING_ADMIN
+  RESOLVED
+}
+
+/// Support loop S1 — who may read a message.
+///
+/// INTERNAL is an admin-only note. This is a STORED, NOT NULL column so
+/// that user-facing reads can filter on it in the WHERE clause. A note
+/// hidden only by the client is not hidden.
+enum SupportMessageVisibility {
+  PUBLIC
+  INTERNAL
+}
+
+/// Support loop S1 — who wrote a message.
+///
+/// SYSTEM_AI is distinct from ADMIN so machine output can never be
+/// presented as a human reply, to either party.
+enum SupportAuthorType {
+  USER
+  ADMIN
+  SYSTEM_AI
+}
+
+/// Support loop S1 — one support request.
+///
+/// OWNERSHIP IS THE WHOLE POINT. userId is required and cascades from
+/// User, so a ticket cannot exist without an owner and DELETE
+/// /users/me removes it with the rest of the account (CTO Option A).
+/// Every user-facing read in S2 will be scoped to this column.
+///
+/// `reference` is the opaque GN- identifier declared in
+/// shared/src/support.ts. It is @unique so a generator collision
+/// becomes a database error and a retry, never a duplicate. S1 creates
+/// no reference: nothing here generates or consumes one.
+model SupportTicket {
+  id        String              @id @default(uuid())
+  reference String              @unique
+  userId    String
+  category  SupportCategory
+  status    SupportTicketStatus @default(OPEN)
+  subject   String
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages SupportMessage[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+/// Support loop S1 — one message on a ticket, from a user, an
+/// administrator, or the machine.
+///
+/// TWO DELIBERATE DECISIONS, BOTH LOAD-BEARING.
+///
+/// 1. `visibility` is NOT NULL and defaults to PUBLIC. An admin reply
+///    that somehow omitted the field would become user-visible rather
+///    than accidentally internal: a note that leaks is a breach, a
+///    reply the user can see is at worst noise. S2's admin route will
+///    still require the field explicitly — the default exists so the
+///    column can never be null, not as an input convenience.
+///
+/// 2. `authorId` carries NO relation to User, and that is a decision
+///    rather than an omission (CTO-approved). A second cascading
+///    foreign key to User would mean deleting an ADMINISTRATOR's
+///    account silently deletes their replies out of other users'
+///    ticket threads — destroying one person's correspondence as a
+///    side effect of an unrelated deletion. The cost is real and
+///    accepted: referential integrity on this column is weaker, and
+///    S2 must treat an author id with no surviving account as an
+///    ordinary case, never an error.
+model SupportMessage {
+  id         String                   @id @default(uuid())
+  ticketId   String
+  authorType SupportAuthorType
+  authorId   String?
+  visibility SupportMessageVisibility @default(PUBLIC)
+  body       String
+  createdAt  DateTime                 @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+
+/* ──────────────────────────────────────────────────────────────────────
+   SITUATION MEMORY SUBSTRATE — recovered VERBATIM from the accepted
+   authority (canonical worktree alpha-convergence-2-20260830-133946) under
+   MAIN-FINAL-CORRECTED-ALPHA-CONVERGENCE-1 PO ruling 1. NOT ONE FIELD IS
+   INVENTED, RENAMED OR RETYPED. Its migration,
+   20260901050000_add_situation_memory, creates five NEW tables and alters no
+   existing one; DOWN.sql beside it drops exactly those five.
+   ────────────────────────────────────────────────────────────────────── */
+
+/// The thing a user follows and the system remembers across retrieval cycles.
+model Situation {
+  id String @id @default(uuid())
+
+  /// TIER 1 — G'S BUCKET KEY. `sit:v1:<sorted ISO3 scope, or 'world'>`.
+  ///
+  /// DELIBERATELY NOT UNIQUE. G's contract states the asymmetry that decides
+  /// it: a FALSE SPLIT is unrecoverable and invisible — two halves of one
+  /// situation get two identities and nothing can detect it happened — while a
+  /// FALSE MERGE INSIDE A BUCKET is caught, because tier 2 compares against the
+  /// bucket's anchors and separates it, and the comparison is recorded. So the
+  /// key errs coarse on purpose. Its job is to make a fallible relation
+  /// BOUNDED: an observation is compared only against situations sharing its
+  /// partition, never against the whole history.
+  ///
+  /// Recomputed per observation from that observation alone. Never treated as
+  /// a situation's identity.
+  partitionKey String
+
+  /// G'S SITUATION_KEY_VERSION, PERSISTED PER ROW — currently 'v1'.
+  ///
+  /// G's invariant 3, and it is not bookkeeping. A change to any derivation
+  /// rule bumps the version, and a v1 situation must never be matched against
+  /// a v2 key. Without the version stored beside the key, a rule change
+  /// silently re-partitions the whole history and every continuity claim made
+  /// before the change quietly becomes a claim about a different partition.
+  keyVersion String
+
+  /// THE SITUATION'S ACTUAL IDENTITY WITHIN ITS BUCKET. ASSIGN-ONCE.
+  ///
+  /// G's invariant 2: assigned exactly once, at situation creation, and NEVER
+  /// recomputed. Recomputing it from the current member set would reintroduce
+  /// precisely the set-dependence G's contract exists to eliminate — the key
+  /// would change every retrieval cycle because the set changes every
+  /// retrieval cycle.
+  ///
+  /// It is OPAQUE and collision-free by construction rather than derived from
+  /// the seed observation's text. That is deliberate: a text-derived
+  /// discriminator under the unique index below would REJECT a second
+  /// situation whose seed happened to read alike, which is a false merge
+  /// imposed by a constraint. The audit trail — what the seed actually was —
+  /// lives in the seed* columns, which carry no uniqueness.
+  ///
+  /// Enforced immutable at the database level by the trigger this migration
+  /// installs, not merely by the repository's good behaviour.
+  discriminator String
+
+  /// The rule under which `discriminator` was assigned, so a future change to
+  /// that rule is detectable in the data instead of being invisible.
+  discriminatorBasis String
+
+  /// PROVENANCE OF THE SEED — the observation that opened this situation.
+  /// Assign-once, like the discriminator. Article URL, not article id:
+  /// shared/src/news.ts documents `id` as a 32-bit rolling hash and unsafe as
+  /// a key, and `url` is what the Article table is unique on.
+  seedArticleUrl String
+  seedObservedAt DateTime
+
+  /// ISO-3166 alpha-2 when the situation is country-anchored. Optional because
+  /// not every situation is, and absence must never be read as "global".
+  /// Only ever filled in, never overwritten with null: a later analysis that
+  /// could not establish a country is not evidence the earlier one was wrong.
+  countryCode String?
+
+  firstObservedAt DateTime @default(now())
+
+  /// THE TWO TIMESTAMPS, AND THEY ARE TWO COLUMNS ON PURPOSE.
+  ///
+  /// "We looked and nothing material moved" and "we have not looked" are
+  /// different facts, and a single column cannot hold both. Retrieval touches
+  /// lastRetrievedAt only; only a completed analysis touches lastAnalysedAt.
+  ///
+  /// NULL MEANS NEVER. Not "unknown", not "a long time ago". The columns are
+  /// nullable so that case has its own value rather than being faked with an
+  /// epoch date that later reads as a real measurement.
+  lastRetrievedAt DateTime?
+  lastAnalysedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  snapshots SituationSnapshot[]
+
+  /// THE IDENTITY CONSTRAINT, AND IT IS THE TRIPLE — NOT THE KEY.
+  ///
+  /// Many situations may share a partition; none may share the full triple.
+  /// This is what replaces S1's `key @unique`, and it is the only uniqueness
+  /// this model asserts.
+  @@unique([partitionKey, keyVersion, discriminator])
+
+  /// The bounded lookup G's write path performs: load the situations in this
+  /// observation's bucket, at this key version, and nothing else.
+  @@index([partitionKey, keyVersion])
+  @@index([countryCode])
+  @@index([lastAnalysedAt])
+}
+
+/// One completed analysis of one situation, at one instant. APPEND-ONLY.
+model SituationSnapshot {
+  id String @id @default(uuid())
+
+  situationId String
+  situation   Situation @relation(fields: [situationId], references: [id], onDelete: Cascade)
+
+  /// When the analysis COMPLETED — not when the request arrived, and not when
+  /// the row was written.
+  analysedAt DateTime
+
+  /// STORED rather than recomputed on read. The comparison that produced it
+  /// had both snapshots in hand at a known instant; a reader months later
+  /// would be re-deriving it from whatever the history looks like then.
+  ///
+  /// FIRST_OBSERVATION · MATERIAL_CHANGE · STABLE · INCOMPARABLE.
+  /// One snapshot NEVER proves STABLE — see situation.state.ts, where each
+  /// clause of that ruling is a separate guard.
+  state String
+
+  /// Dimension VALUES, never the prose. Prose would make every re-run
+  /// "different" for reasons that have nothing to do with the subject having
+  /// changed — the exact false positive this store exists to avoid. Enforced,
+  /// not merely intended: see assertComparableDimensions.
+  dimensions Json
+
+  /// OPTIONAL TRACE to the AnalysisRun telemetry row for the same request.
+  /// A POINTER, DELIBERATELY NOT A FOREIGN KEY. AnalysisRun is telemetry and
+  /// is subject to retention rules this store has no say over; a real FK would
+  /// mean either that trimming telemetry cascades into deleting analysis
+  /// history, or that telemetry can never be trimmed. Both are worse than a
+  /// pointer that may dangle, so readers must treat a miss as ordinary.
+  analysisRunId String?
+
+  createdAt DateTime @default(now())
+
+  clusters SituationCluster[]
+
+  @@index([situationId, analysedAt])
+  @@index([analysedAt])
+}
+
+/// One story, as carried by several publishers, within one snapshot.
+model SituationCluster {
+  id String @id @default(uuid())
+
+  snapshotId String
+  snapshot   SituationSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  /// G-owned derivation. Main stores it and enforces uniqueness within the
+  /// snapshot; Main does not decide what it means.
+  clusterKey String
+
+  /// The number of DISTINCT PUBLISHERS behind the members. Stored as supplied
+  /// rather than recomputed, because publisher identity is G-owned (C2-5) and
+  /// this layer must not re-derive it from the URL and get a different answer.
+  publisherCount Int
+
+  /// The number of members actually written, so the count and the rows cannot
+  /// disagree.
+  memberCount Int
+
+  createdAt DateTime @default(now())
+
+  members SituationClusterMember[]
+
+  @@unique([snapshotId, clusterKey])
+}
+
+/// One article's membership of one cluster.
+model SituationClusterMember {
+  id String @id @default(uuid())
+
+  clusterId String
+  cluster   SituationCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  /// ARTICLE URL, NOT ARTICLE ID. shared/src/news.ts states `id` is derived
+  /// from a 32-bit rolling hash and is not a safe key; `url` is what the
+  /// Article table is unique on and what persistMany upserts against.
+  /// Deliberately NOT a foreign key to Article: article retention is not this
+  /// store's concern, and losing an article must not delete the record that
+  /// it was once evidence.
+  articleUrl String
+
+  createdAt DateTime @default(now())
+
+  @@unique([clusterId, articleUrl])
+  @@index([articleUrl])
+}
+
+/// ----------------------------------------------------------------------------
+/// TIER 2, IN SHADOW ONLY.
+///
+/// G measured the continuity policy's separation margin at 0.042 — lowest true
+/// positive 0.375, highest true negative 0.333 — over eighteen hand-built
+/// pairs, and declined to certify a threshold from it. This table is what
+/// "shadow mode" means concretely: every attachment decision is COMPUTED and
+/// RECORDED, and NONE of it governs anything a reader sees.
+///
+/// A false merge acted on in production is a reader shown two unrelated
+/// matters as one continuing situation. A false merge recorded here is a row.
+///
+/// THE POLICY AND ITS THRESHOLD ARE STORED ON EVERY ROW. Without them a
+/// gathered distribution is uninterpretable the moment the policy changes —
+/// which it will, because gathering the distribution is the whole point.
+/// ----------------------------------------------------------------------------
+model SituationShadowDecision {
+  id String @id @default(uuid())
+
+  /// When the decision was computed.
+  decidedAt DateTime
+
+  /// The bucket the observation fell in, and the key version that produced it.
+  partitionKey String
+  keyVersion   String
+
+  /// OBSERVATION IDENTITY. Article URL, for the same reason as cluster
+  /// membership: `id` is a rolling hash and is not a safe key.
+  observationUrl String
+
+  /// THE CANDIDATE, when there was one. Nullable, because an empty bucket is a
+  /// perfectly ordinary outcome and must be recorded as itself rather than
+  /// omitted — a distribution missing its no-candidate cases is a biased one.
+  ///
+  /// Deliberately NOT a foreign key, and the discriminator is stored beside
+  /// the id: the record of what was compared must survive the candidate's
+  /// deletion, or the shadow corpus silently loses its negatives.
+  candidateSituationId   String?
+  candidateDiscriminator String?
+  anchorArticleUrl       String?
+
+  /// The similarity the policy computed. Null only when there was no candidate
+  /// to score — never 0, which is a real score and a different fact.
+  score Float?
+
+  /// ATTACH_RECOMMENDED · OPEN_NEW_RECOMMENDED · NO_CANDIDATE.
+  /// A RECOMMENDATION, never an action. Nothing reads this column to decide
+  /// what a user sees.
+  recommendation String
+
+  /// G's own reason string, and the features the score was computed from, so a
+  /// row can be re-examined without re-running the pipeline that produced it.
+  reason   String
+  features Json
+
+  /// WHICH policy, at WHICH threshold. See the note above the model.
+  policyId        String
+  policyThreshold Float
+
+  /// Always true. A CHECK constraint in the migration forbids false, so a
+  /// shadow row cannot quietly be promoted into an authoritative one by an
+  /// UPDATE somebody thought was harmless.
+  shadowOnly Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([partitionKey, keyVersion, decidedAt])
+  @@index([decidedAt])
+  @@index([candidateSituationId])
+}
