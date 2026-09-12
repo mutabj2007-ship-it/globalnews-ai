@@ -1,0 +1,255 @@
+<!doctype html>
+<!--
+  GlobalNews AI — offline fallback.
+
+  Served by the service worker ONLY when a document request fails at the
+  network transport layer. It is not a route, it is not rendered by the
+  App Router, and it never appears while the server is reachable.
+
+  THREE THINGS THIS PAGE MUST NEVER DO, and does not:
+
+  1. Show reporting. There are no articles here, no headlines, no
+     placeholders shaped like articles, and no imagery from any provider.
+     Offline means offline.
+
+  2. Claim a data state. It carries none of the four provenance labels —
+     LIVE, CACHED, DEMO MODE, NO REPORTING AVAILABLE — and no
+     DataModeLabel. Those describe what the newsroom knows. This page
+     describes what the network is doing, which is a different fact with
+     a different owner, and the copy says so explicitly.
+
+  3. Fetch anything. No stylesheet, no font, no script, no image from any
+     origin. It has to work with the network down, which is the only
+     circumstance in which it is ever shown.
+
+  LANGUAGE. The inline script reproduces readLanguageCookie() from
+  src/lib/i18n/languages.ts exactly: same cookie name, same parse, same
+  validation against the active set, same 'en' default for an absent,
+  malformed or unsupported value. That cookie is written by
+  persistLanguageSelection() through document.cookie — no httpOnly flag,
+  path=/ — so it is readable here, and reading it is what keeps this page
+  in agreement with the language the last real page was rendered in. With
+  JavaScript disabled the English block is what shows, which is the same
+  default every route applies.
+
+  A NOTED COST. These four strings are duplicated from the dictionary
+  rather than imported from it, because a static file in public/ cannot
+  import a TypeScript module. Adding `offline.*` keys to en.ts / pl.ts
+  would make the dictionary the single source of truth, but those files
+  belong to the localization lane and PWA scope was not authorized to
+  change them. The duplication is deliberate, is recorded here, and
+  should be collapsed into dictionary keys when that lane is free.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080b12" />
+    <meta name="robots" content="noindex" />
+    <title>Offline — GlobalNews AI</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --void: #080b12;
+        --surface: #0e1622;
+        --border: #1e2a3a;
+        --ink: #e6edf6;
+        --ink-dim: #8fa3b8;
+        --signal: #22d3ee;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        background: var(--void);
+        color: var(--ink);
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 24px;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        width: 100%;
+        max-width: 34rem;
+        text-align: center;
+      }
+      .emblem {
+        display: block;
+        margin: 0 auto 28px;
+        width: 64px;
+        height: 64px;
+        overflow: visible;
+      }
+      h1 {
+        margin: 0 0 14px;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 0 0 14px;
+        color: var(--ink-dim);
+        font-size: 1rem;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 24px;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--ink-dim);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .status::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--ink-dim);
+      }
+      .distinction {
+        margin: 26px auto 0;
+        padding: 14px 18px;
+        max-width: 30rem;
+        border-left: 2px solid var(--signal);
+        background: var(--surface);
+        color: var(--ink-dim);
+        font-size: 0.875rem;
+        text-align: left;
+      }
+      button {
+        margin-top: 26px;
+        padding: 11px 26px;
+        border: 1px solid var(--signal);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--signal);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover,
+      button:focus-visible {
+        background: rgba(34, 211, 238, 0.1);
+      }
+      button:focus-visible {
+        outline: 2px solid var(--signal);
+        outline-offset: 2px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg
+        class="emblem"
+        viewBox="0 0 40 40"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+      >
+        <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(34,211,238,0.34)" stroke-width="1.3" />
+        <circle cx="20" cy="20" r="13.5" fill="none" stroke="rgba(34,211,238,0.2)" stroke-width="1" />
+        <circle
+          cx="20"
+          cy="20"
+          r="9"
+          fill="none"
+          stroke="rgba(34,211,238,0.28)"
+          stroke-width="1"
+          stroke-dasharray="3 5"
+        />
+        <g stroke="rgba(103,232,249,0.4)" stroke-width="1.2" stroke-linecap="round">
+          <path d="M20 0.6 v3.4" />
+          <path d="M20 36 v3.4" />
+          <path d="M0.6 20 h3.4" />
+          <path d="M36 20 h3.4" />
+        </g>
+        <circle cx="20" cy="20" r="4.6" fill="rgba(34,211,238,0.45)" />
+      </svg>
+
+      <div data-language="en">
+        <p class="status">No network connection</p>
+        <h1>You are offline</h1>
+        <p>
+          GlobalNews AI cannot reach the network right now, so no current reporting can be
+          retrieved. Nothing is shown on this page because there is nothing we can honestly show.
+        </p>
+        <p class="distinction">
+          This is a connectivity problem on this device — not a statement about world events, and
+          not a report from our sources. GlobalNews AI does not store news for offline reading, so
+          no headline here could be trusted as current. Reconnect to see live reporting.
+        </p>
+        <button type="button" data-retry>Try again</button>
+      </div>
+
+      <div data-language="pl" hidden>
+        <p class="status">Brak połączenia z siecią</p>
+        <h1>Jesteś offline</h1>
+        <p>
+          GlobalNews AI nie może teraz połączyć się z siecią, więc nie da się pobrać bieżących
+          doniesień. Na tej stronie nic nie jest wyświetlane, ponieważ nie mamy nic, co moglibyśmy
+          uczciwie pokazać.
+        </p>
+        <p class="distinction">
+          To problem z połączeniem na tym urządzeniu — a nie informacja o wydarzeniach na świecie
+          ani materiał od naszych źródeł. GlobalNews AI nie przechowuje wiadomości do czytania
+          offline, więc żaden nagłówek nie mógłby tu uchodzić za aktualny. Połącz się ponownie, aby
+          zobaczyć relacje na żywo.
+        </p>
+        <button type="button" data-retry>Spróbuj ponownie</button>
+      </div>
+    </main>
+
+    <script>
+      (function () {
+        var COOKIE_NAME = 'globalnews-ai-language';
+        var ACTIVE = ['en', 'pl'];
+
+        function readLanguageCookie() {
+          try {
+            var match = document.cookie.split('; ').filter(function (entry) {
+              return entry.indexOf(COOKIE_NAME + '=') === 0;
+            })[0];
+            var value = match ? match.split('=')[1] : undefined;
+            return value && ACTIVE.indexOf(value) !== -1 ? value : 'en';
+          } catch (error) {
+            return 'en';
+          }
+        }
+
+        var language = readLanguageCookie();
+        document.documentElement.lang = language;
+
+        var blocks = document.querySelectorAll('[data-language]');
+        for (var index = 0; index < blocks.length; index += 1) {
+          blocks[index].hidden = blocks[index].getAttribute('data-language') !== language;
+        }
+
+        var retries = document.querySelectorAll('[data-retry]');
+        for (var button = 0; button < retries.length; button += 1) {
+          retries[button].addEventListener('click', function () {
+            window.location.reload();
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>

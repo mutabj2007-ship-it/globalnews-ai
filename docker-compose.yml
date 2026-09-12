@@ -1,0 +1,235 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: globalnews-ai-postgres
+    restart: unless-stopped
+    # RC-E2 / C-3 - bounded container logs.
+    #
+    # Docker's default json-file driver has NO rotation, so every service's
+    # log grows until the disk is full. That is not merely a logging problem
+    # here: all three containers share a host with the database volume, so an
+    # unbounded log takes PostgreSQL down with it. 10 MB x 3 files caps each
+    # service at 30 MB, which is enough history to diagnose an incident and
+    # far too little to fill a disk.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-globalnews_ai_user}
+      # P-2 - mandatory, no default. Compose refuses to render this file at all
+      # when POSTGRES_PASSWORD is unset or empty, instead of silently substituting
+      # a placeholder credential. The backend DATABASE_URL below uses the same
+      # mandatory form, so the two can never drift apart.
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set explicitly - no default is supplied, so a placeholder credential can never reach a real deployment}
+      - POSTGRES_DB=${POSTGRES_DB:-globalnews_ai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-globalnews_ai_user} -d ${POSTGRES_DB:-globalnews_ai}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: globalnews-ai-backend
+    # RC-E2 / B-1 - the backend had NO restart policy, so it inherited Docker's
+    # default of `no`.
+    #
+    # That mattered more here than it looks. This container's command is
+    # `prisma migrate deploy && node backend/dist/main`, and the `&&` is
+    # deliberate: a failed migration must never reach a serving state. But with
+    # no restart policy, a database that is briefly unreachable at start - a
+    # restart, a failover, a slow volume - made the container exit and stay
+    # exited. The fail-closed design was right; the missing policy turned a
+    # transient blip into an outage waiting for a human.
+    #
+    # `unless-stopped` rather than `always`: a container an operator stopped
+    # deliberately stays stopped across a daemon restart, which is what an
+    # operator means by stopping it. Matches the postgres service above.
+    restart: unless-stopped
+    # RC-E2 / C-3 - see the postgres service. This one matters most: the
+    # LoggingInterceptor emits two lines per request, so log volume tracks
+    # traffic directly.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    # S1 - bound to LOOPBACK, not to every interface.
+    #
+    # This published port used to be '${BACKEND_PORT:-4000}:4000', which
+    # Docker binds on 0.0.0.0 - the API was reachable from anywhere that could
+    # reach the host, AROUND whatever reverse proxy sits in front of it.
+    #
+    # That contradicted the precondition .env.example states for trusting
+    # forwarded headers: a TRUST_PROXY hop count is only safe where this
+    # backend is unreachable except through the proxies being counted. With the
+    # port open to the world, an attacker who bypasses the proxy can send any
+    # X-Forwarded-For they like and mint a fresh rate-limit identity per
+    # request, which turns every per-IP limit in the application into no limit
+    # at all. Direct reachability also bypasses whatever TLS termination, WAF
+    # or header normalisation the edge performs.
+    #
+    # The bind address is a variable so a deployment can widen it DELIBERATELY
+    # (BACKEND_BIND_HOST=0.0.0.0) rather than by inheriting the old default.
+    # Local development is unaffected: 127.0.0.1:4000 is exactly what a
+    # developer's browser and test scripts already use.
+    ports:
+      - '${BACKEND_BIND_HOST:-127.0.0.1}:${BACKEND_PORT:-4000}:4000'
+    environment:
+      # P-2 - mandatory, no default. Every fail-closed guard in this codebase
+      # (CorsStartupValidator, NewsStartupValidator, AnalysisStartupValidator and
+      # the Secure attribute on every session cookie) is conditioned on
+      # NODE_ENV === 'production'. A defaults-to-development value disarmed all of
+      # them silently, and overrode this image's own ENV NODE_ENV=production
+      # (backend/Dockerfile) in the process. Compose now refuses to render rather
+      # than guess. .env.example supplies NODE_ENV=development for local work.
+      - NODE_ENV=${NODE_ENV:?NODE_ENV must be set explicitly to development or production - no default is supplied, because a silent development default disarms every fail-closed production guard at once}
+      - PORT=4000
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:${FRONTEND_PORT:-3000}}
+      - GNEWS_API_KEY=${GNEWS_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      # P-3 - deployment pass-through. .dockerignore excludes .env, so
+      # ConfigModule's envFilePath finds no file inside the image and THIS block is
+      # the only source of backend configuration. Both variables are documented in
+      # .env.example and read via ConfigService, but could not reach the container
+      # at all before this change - ADMIN_PLATFORM_ENABLED in particular made the
+      # entire /admin surface unreachable in any Compose deployment. Each default
+      # below is the exact fail-closed value the code already assumes when the
+      # variable is absent, so a deployment that sets neither behaves identically.
+      # This list is deliberately additive: a later lane appends its own bounded
+      # deployment variable here without altering any entry above it.
+      - ADMIN_PLATFORM_ENABLED=${ADMIN_PLATFORM_ENABLED:-false}
+      - AI_EXECUTION_MODE=${AI_EXECUTION_MODE:-development}
+      # B-1 - bounded proxy trust, appended per the additive contract above.
+      # Default false = today's behaviour exactly: req.ip is the direct socket
+      # peer and no X-Forwarded-For header is believed, so an unset value cannot
+      # widen anything. Unlike NODE_ENV this is NOT mandatory, because absent
+      # genuinely has a correct and safe meaning here.
+      #
+      # Set it only to describe the real topology. An IP/CIDR allowlist is the
+      # safer form and carries no preconditions; a proxy count is permitted only
+      # where ingress guarantees this backend is unreachable except through those
+      # proxies. The literal "true" is REJECTED at startup - it would trust the
+      # whole forwarded chain and let any client forge a fresh rate-limit
+      # identity per request. See backend/src/security/trusted-proxy.config.ts.
+      - TRUST_PROXY=${TRUST_PROXY:-false}
+      # S1 - PostgreSQL connection-pool maximum, appended per the additive
+      # contract above. Default 10 is exactly the pg-pool library default this
+      # backend inherited before S1, so an unset value changes nothing; the
+      # number is simply now a decision instead of a default nobody chose.
+      # Sizing guidance lives in .env.example - the ceiling that matters is
+      # replicas x DB_POOL_MAX staying below the server's own max_connections.
+      - DB_POOL_MAX=${DB_POOL_MAX:-10}
+      # Milestone B3 — optional Google OAuth/OIDC credentials for the
+      # sign-in flow. Passed ONLY as backend container runtime
+      # environment variables (never into a Docker build ARG/ENV,
+      # unlike NEXT_PUBLIC_API_URL below) since these include real
+      # secrets (OAUTH_CLIENT_SECRET, OAUTH_FLOW_SECRET) that must
+      # never be baked into an image layer. Empty-string defaults
+      # preserve today's guest-mode-only behavior unchanged when
+      # unset — auth.service.ts's startGoogleAuth() already fails
+      # closed with a 503 on sign-in specifically when these are
+      # absent; every other browse/search/map/analysis capability is
+      # unaffected either way.
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID:-}
+      - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET:-}
+      - OAUTH_FLOW_SECRET=${OAUTH_FLOW_SECRET:-}
+      # Milestone #54 — points at the Compose service hostname
+      # ('postgres'), not localhost: containers on the same Compose
+      # network resolve each other by service name. Credentials are
+      # sourced from the SAME env vars (with the same non-secret
+      # dev-only defaults) as the postgres service above, so they can
+      # never drift apart; a real deployment overrides
+      # POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB (or DATABASE_URL
+      # directly) via its own environment, never by editing this file.
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-globalnews_ai_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set explicitly - no default is supplied, so a placeholder credential can never reach a real deployment}@postgres:5432/${POSTGRES_DB:-globalnews_ai}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Milestone #54 — points at /health/ready (not /health): for this
+    # single-instance Compose stack, "healthy" should mean "actually
+    # able to serve real traffic" (i.e. database reachable), which is
+    # what gates docker compose ps's reported status and any future
+    # depends_on: condition: service_healthy on this service. /health
+    # itself (liveness only, no DB dependency) remains available for
+    # a future orchestrator that wants a separate, DB-independent
+    # liveness signal.
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/health/ready']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      # Milestone B3 — NEXT_PUBLIC_API_URL must reach the frontend
+      # BUILD (Next.js inlines public env vars into the compiled
+      # bundle at build time, not read at container runtime — see
+      # frontend/Dockerfile's own comment). The `environment:` entry
+      # below was, before this change, the ONLY place this value was
+      # ever supplied — too late to affect the already-built image.
+      # Same default as before (unchanged local-dev behavior); a real
+      # deployment sets NEXT_PUBLIC_API_URL in its own environment to
+      # override it. No production URL invented here.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${BACKEND_PORT:-4000}}
+    container_name: globalnews-ai-frontend
+    # RC-E2 / B-1 - same reasoning as the backend service above.
+    restart: unless-stopped
+    # RC-E2 / C-3 - see the postgres service.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    # RC-E2 / B-4 - bound to LOOPBACK, completing what S1 started.
+    #
+    # S1 moved the BACKEND behind loopback because a directly reachable API
+    # defeats every per-IP rate limit once forwarded headers are trusted at
+    # all - see that service's own comment above. The FRONTEND was
+    # outside that authorized scope and still bound 0.0.0.0, which is the more
+    # visible problem of the two: with TLS terminated at a reverse proxy and
+    # nothing in this repository configuring one, http://host:3000 served the
+    # whole application in cleartext, around TLS, around HSTS and around
+    # whatever header policy the edge applies. Session cookies are `Secure` in
+    # production so they would simply not be sent, and sign-in would fail in a
+    # confusing way rather than a safe one - while every browsing surface
+    # served happily over plain HTTP.
+    #
+    # Same mechanism as the backend, deliberately: a documented bind-host
+    # variable, defaulting to loopback, so a deployment that genuinely wants to
+    # publish widely does so BY DECISION (FRONTEND_BIND_HOST=0.0.0.0) rather
+    # than by inheriting an old default. Local development is unchanged -
+    # http://localhost:3000 is exactly what a developer already opens.
+    ports:
+      - '${FRONTEND_BIND_HOST:-127.0.0.1}:${FRONTEND_PORT:-3000}:3000'
+    environment:
+      # P-2 - mandatory, no default; same reasoning as the backend service above.
+      - NODE_ENV=${NODE_ENV:?NODE_ENV must be set explicitly to development or production - no default is supplied, because a silent development default disarms every fail-closed production guard at once}
+      - NEXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT:-4000}
+      # Milestone R2 - server-side rendering runs INSIDE this container,
+      # where `localhost` is the frontend itself, not the backend. This
+      # runtime-only, non-public variable gives server-side code the
+      # Docker-internal backend address. It is deliberately NOT a build
+      # arg and deliberately NOT a NEXT_PUBLIC_* variable, so it is never
+      # inlined into the browser bundle; browser requests continue to use
+      # NEXT_PUBLIC_API_URL above, which they can actually resolve.
+      - SERVER_INTERNAL_API_URL=${SERVER_INTERNAL_API_URL:-http://backend:${BACKEND_PORT:-4000}}
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
