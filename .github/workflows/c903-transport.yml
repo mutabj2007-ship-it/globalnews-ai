@@ -1,0 +1,68 @@
+name: C903 exact transport
+
+on:
+  push:
+    branches:
+      - transport/c903-upload
+    paths:
+      - C903_SOURCE.tar.gz
+
+permissions:
+  contents: write
+
+jobs:
+  publish-c903:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout transport branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify frozen C903 archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "adf8ea398944d34e6da137582614fd92974e30cce26f0d1e8af307b446cbfccd  C903_SOURCE.tar.gz" | sha256sum -c -
+          rm -rf /tmp/c903
+          mkdir -p /tmp/c903
+          tar -xzf C903_SOURCE.tar.gz -C /tmp/c903
+          test "$(find /tmp/c903 -type f | wc -l | tr -d ' ')" = "975"
+          echo "4e5217c6f83a21d26c65c82e902da7b2af02a93cdcf068b15022d9b7f017c9cd  /tmp/c903/backend/src/modules/geo/data/rwanda-boundary-districts.geojson" | sha256sum -c -
+          echo "fb97d28a91f95e7c218c12be7813ba9a9732796f2e8dd81ab72a39e65a936b3c  /tmp/c903/backend/src/modules/geo/data/rwanda-boundary-sectors.geojson" | sha256sum -c -
+          test -f /tmp/c903/frontend/src/app/admin/system/logs/page.tsx
+          test ! -e /tmp/c903/frontend/tsconfig.tsbuildinfo
+          test ! -d /tmp/c903/backend/src/generated/prisma
+
+      - name: Publish exact archive tree as release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "GlobalNewsAI Release Automation"
+          git config user.email "release-bot@users.noreply.github.com"
+
+          git checkout --orphan c903-release-build
+          git rm -rf . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/c903/. .
+
+          # Force-add is intentional: the repository's broad logs/ ignore rule
+          # otherwise drops frontend/src/app/admin/system/logs/page.tsx.
+          git add -Af .
+          test "$(git ls-files | wc -l | tr -d ' ')" = "975"
+          test -n "$(git ls-files frontend/src/app/admin/system/logs/page.tsx)"
+          test -z "$(git ls-files frontend/tsconfig.tsbuildinfo)"
+          test -z "$(git ls-files backend/src/generated/prisma || true)"
+
+          git commit -m "release: frozen C903 alpha candidate"
+          git branch -M release/alpha-c903-final
+          git push origin HEAD:refs/heads/release/alpha-c903-final --force
+
+      - name: Verify remote release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin release/alpha-c903-final
+          test "$(git rev-parse HEAD^{tree})" = "$(git rev-parse origin/release/alpha-c903-final^{tree})"
+          echo "C903_REMOTE_COMMIT=$(git rev-parse origin/release/alpha-c903-final)"
+          echo "C903_REMOTE_TREE=$(git rev-parse origin/release/alpha-c903-final^{tree})"
