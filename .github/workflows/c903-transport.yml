@@ -5,7 +5,7 @@ on:
     branches:
       - transport/c903-upload
     paths:
-      - C903_SOURCE.tar.gz
+      - MAIN-FINAL-ALPHA-READY-CANDIDATE-1-C903-SOURCE.tar.gz
 
 permissions:
   contents: write
@@ -23,10 +23,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "adf8ea398944d34e6da137582614fd92974e30cce26f0d1e8af307b446cbfccd  C903_SOURCE.tar.gz" | sha256sum -c -
+          ARCHIVE="MAIN-FINAL-ALPHA-READY-CANDIDATE-1-C903-SOURCE.tar.gz"
+          echo "adf8ea398944d34e6da137582614fd92974e30cce26f0d1e8af307b446cbfccd  ${ARCHIVE}" | sha256sum -c -
           rm -rf /tmp/c903
           mkdir -p /tmp/c903
-          tar -xzf C903_SOURCE.tar.gz -C /tmp/c903
+          tar -xzf "${ARCHIVE}" -C /tmp/c903
           test "$(find /tmp/c903 -type f | wc -l | tr -d ' ')" = "975"
           echo "4e5217c6f83a21d26c65c82e902da7b2af02a93cdcf068b15022d9b7f017c9cd  /tmp/c903/backend/src/modules/geo/data/rwanda-boundary-districts.geojson" | sha256sum -c -
           echo "fb97d28a91f95e7c218c12be7813ba9a9732796f2e8dd81ab72a39e65a936b3c  /tmp/c903/backend/src/modules/geo/data/rwanda-boundary-sectors.geojson" | sha256sum -c -
