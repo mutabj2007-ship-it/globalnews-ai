@@ -1,0 +1,99 @@
+name: GlobalNews AI CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-build-test:
+    name: Test, Lint & Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      # RC-E2 - build-egress preflight.
+      #
+      # A cold build of this repository reaches FOUR external hosts across
+      # THREE providers, and only one of them is the one people plan for:
+      #
+      #   registry.npmjs.org    npm ci
+      #   binaries.prisma.sh    @prisma/engines postinstall, prisma generate
+      #   fonts.googleapis.com  next/font/google - the font CSS
+      #   fonts.gstatic.com     next/font/google - the font binaries
+      #
+      # When egress is restricted, each of these fails LATER and less clearly:
+      # Prisma reports a 403 on an engine URL, and next/font reports a fetch
+      # failure from inside a build that has already run for a minute. This
+      # step turns all four into one legible failure at second zero.
+      #
+      # It is deliberately a DIAGNOSTIC, not a gate on unrelated work:
+      # `continue-on-error` means a flaky DNS lookup can never fail an
+      # otherwise good build. Its job is to make the cause obvious in the log
+      # when a later step does fail, not to add a new way for CI to break.
+      #
+      # Touches no application source. The font dependency itself is unchanged
+      # and remains an accepted external build dependency - see .env.example.
+      - name: Preflight - build-egress reachability
+        continue-on-error: true
+        run: |
+          set +e
+          echo "Checking the four hosts a cold build requires..."
+          FAILED=0
+          for HOST in registry.npmjs.org binaries.prisma.sh fonts.googleapis.com fonts.gstatic.com; do
+            if curl -sSf -m 15 -o /dev/null "https://$HOST" 2>/dev/null \
+               || curl -sS -m 15 -o /dev/null -w '%{http_code}' "https://$HOST" 2>/dev/null | grep -qE '^[2-4]'; then
+              echo "  reachable      $HOST"
+            else
+              echo "  NOT REACHABLE  $HOST"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -ne 0 ]; then
+            echo ""
+            echo "::warning::One or more build hosts are unreachable from this runner."
+            echo "A cold build needs all four. Expect npm, 'prisma generate' or"
+            echo "'next build' (next/font/google) to fail below - the cause is egress,"
+            echo "not the code. See the COLD-BUILD NETWORK DEPENDENCIES section of"
+            echo ".env.example."
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --config backend/prisma.config.ts
+
+      - name: Build shared package
+        run: npm run build:shared
+
+      - name: Lint frontend
+        run: npm run lint --workspace=frontend
+
+      - name: Lint backend
+        run: npm run lint --workspace=backend
+
+      - name: Build backend
+        run: npm run build:backend
+
+      - name: Build frontend
+        run: npm run build:frontend
+
+      - name: Run backend unit tests
+        run: npm test --workspace=backend -- --runInBand
+
+      - name: Run frontend unit tests
+        run: npm test --workspace=frontend -- --runInBand
