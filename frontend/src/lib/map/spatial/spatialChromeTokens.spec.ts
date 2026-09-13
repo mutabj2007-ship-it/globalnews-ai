@@ -3,6 +3,8 @@ import { join } from 'path';
 
 import tailwindConfig from '../../../../tailwind.config';
 
+import { DESIGN_REFERENCE } from './designRenderTokens';
+
 /*
  * ─────────────────────────────────────────────────────────────────────────────
  * THE SPATIAL CHROME TOKENS — C907 §1
@@ -187,8 +189,6 @@ describe('3 · ADD, NEVER REDEFINE', () => {
       SAME value `DESIGN_REFERENCE.ocean` carries — one colour, stated twice
       in two systems, never two colours.
     */
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { DESIGN_REFERENCE } = require('./designRenderTokens');
     expect(sp.ocean).toBe(DESIGN_REFERENCE.ocean);
   });
 });

@@ -31,8 +31,8 @@
  * Exit 0 = all checks pass. Exit 1 = at least one fails.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 
 const args = process.argv.slice(2);
 const explicit = args.indexOf('--worktree') === -1 ? undefined : args[args.indexOf('--worktree') + 1];
@@ -711,6 +711,81 @@ check(
   'the runner waits on measured settling, not on an attribute nothing emits',
   /captureSettledPane/.test(visualSpec) && !/data-gn-idle="true"/.test(visualSpec.replace(/\/\*[\s\S]*?\*\//g, '')),
   'The idle attribute does not exist in the product, so every run would have died on a 20-second timeout.',
+);
+
+/* ══════════════════════════════════════════════════════════════════════════
+   11 · NO LINT DIRECTIVE NAMES A RULE THE FRONTEND DOES NOT HAVE
+   ══════════════════════════════════════════════════════════════════════════
+   C907, Railway frontend deployment 11651910. The R2 packaging correction
+   worked — npm ci, COPY scripts, shared build, token gate 42/42, structure gate
+   and Next compilation all passed — and the build then died in `next lint`:
+
+       ./src/lib/map/spatial/spatialChromeTokens.spec.ts
+       190:5  Error: Definition for rule
+       '@typescript-eslint/no-var-requires' was not found.
+
+   The frontend extends `next/core-web-vitals` and `prettier` and declares no
+   TypeScript-ESLint plugin, so that rule does not exist here. ESLint treats a
+   directive naming an undefined rule as an ERROR, not a warning — a suppression
+   comment for a rule nobody loaded fails the build that the comment was
+   supposed to keep quiet.
+
+   THE COMMENT WAS ALSO SUPPRESSING NOTHING. It guarded a `require()` that had
+   no reason to be lazy: `designRenderTokens.ts` is a leaf module with zero
+   imports, so a static import cannot cycle. The fix removes the require and the
+   directive together; no rule was disabled, because none was ever enabled.
+
+   This check is what stops the class returning. It reads the directives rather
+   than the rules, so it needs no ESLint and no node_modules, and it runs inside
+   `next build` like the rest of Part A. */
+
+const lintPluginPrefixes = new Set([
+  /* supplied by eslint-config-next / next/core-web-vitals */
+  '@next/next',
+  'react-hooks',
+  'react',
+  'jsx-a11y',
+  'import',
+]);
+
+const directiveFiles = [];
+const collectSources = (dir) => {
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) collectSources(full);
+    else if (/\.(ts|tsx)$/.test(entry)) directiveFiles.push(full);
+  }
+};
+collectSources(join(ROOT, 'frontend', 'src'));
+
+const unknownRuleDirectives = [];
+for (const file of directiveFiles) {
+  const lines = readFileSync(file, 'utf8').split('\n');
+  lines.forEach((line, index) => {
+    /* Only real directive comments. A spec that merely mentions the words
+       "eslint-disable" inside a string or a regex is not a directive, and two
+       specs in this repository legitimately do exactly that. */
+    const match = /^\s*(?:\/\/|\/\*)\s*eslint-disable(?:-next-line|-line)?\s+([^*\n]+)/.exec(line);
+    if (!match) return;
+    for (const raw of match[1].split(',')) {
+      const rule = raw.trim().replace(/\s*--.*$/, '');
+      if (rule === '') continue;
+      const slash = rule.lastIndexOf('/');
+      if (slash === -1) continue; /* a core ESLint rule; always defined */
+      const prefix = rule.slice(0, slash);
+      if (!lintPluginPrefixes.has(prefix)) {
+        unknownRuleDirectives.push(`${relative(ROOT, file)}:${index + 1} → ${rule}`);
+      }
+    }
+  });
+}
+
+check(
+  'every eslint-disable directive names a rule this frontend actually loads',
+  unknownRuleDirectives.length === 0,
+  'ESLint fails the build on a directive for an undefined rule, so a suppression comment for a plugin the frontend does not declare BREAKS `next lint`. Offenders: ' +
+    (unknownRuleDirectives.join('; ') || 'none'),
 );
 
 /* ══════════════════════════════════════════════════════════════════════════
