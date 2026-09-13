@@ -196,7 +196,16 @@ describe('3 · THE ACCEPTED PATH IS STAMPED TOO', () => {
     expect(accepted.briefState!.reason).toBeUndefined();
   });
 
-  it('records that a repair WAS requested when the second answer is the one that complied', () => {
+  it('records repairRequested=true when a caller reports that a repair produced the compliant answer', () => {
+    /*
+      A UTILITY CONTRACT, NOT A CLAIM ABOUT THE CURRENT PATH. `repairRequested`
+      records what actually happened, as reported by the caller. The current
+      synchronous path never requests a repair and therefore always passes
+      `false`; a future GOVERNED ASYNCHRONOUS repair may legitimately pass
+      `true`, and this test keeps that branch of the utility honest and covered
+      for the day it does. It asserts the utility's behaviour, never the
+      service's.
+    */
     const verdict = assessBriefCompliance(COMPLIANT, BREADTH);
     const accepted = acceptExecutiveBrief(analysisWith(COMPLIANT), verdict, true);
 
@@ -238,19 +247,53 @@ describe('4 · NO EXTRA AI CALL WAS INVENTED', () => {
     expect(utilCode).not.toMatch(/\bawait\b|\basync\b/);
   });
 
-  it('the service still makes AT MOST TWO provider calls on the success path', () => {
+  it('the service makes EXACTLY ONE synchronous provider generation on the success path', () => {
     /*
-      The analysis and the one permitted repair. C906's own ruling forbids a
-      retry loop and C907 adds no call of its own — the third outcome is a
-      decision about work already done.
+      ─────────────────────────────────────────────────────────────────────────
+      RETARGETED, NOT RELAXED — ALPHA BUDGET R1 REV B CONVERGENCE
+      ─────────────────────────────────────────────────────────────────────────
+
+      This assertion used to read `.toBe(2)`: the analysis plus the one
+      permitted synchronous repair. That ceiling is obsolete. The synchronous
+      repair was REMOVED under the accepted Alpha latency correction — it added
+      a second full `provider.analyzeNews()` over the same entire article set
+      (6,689 tokens against the original's 6,367 on the observed Railway run)
+      to the critical path, for an answer that was withheld anyway whenever it
+      failed. A brief that fails structural compliance is now withheld
+      immediately, with its reason, and the validated analysis is returned at
+      once.
+
+      THE INVARIANT IS TIGHTER, NOT WEAKER. The old bound permitted two calls;
+      this one permits one. Nothing that was forbidden before is allowed now,
+      and the same `not.toMatch` guard against a retry loop is retained
+      unchanged beneath. The authority for the new number is
+      `briefSingleGeneration.spec.ts`, which asserts the same fact from the
+      service's own side; this file asserts it from the fail-closed side, so
+      the two agree by measurement rather than by assumption.
+
+      WHAT IS EXPLICITLY NOT TOUCHED. Brief validation itself. Every other test
+      in this file — the withheld prose never leaving the backend, the
+      machine-readable state, the single presentability predicate, the
+      unconditional stamp, the ban on the C906 sentence — is unchanged, and the
+      protection is retargeted rather than deleted.
     */
     const successPath = serviceSource.slice(
       serviceSource.indexOf('const providerCallStartedAt = Date.now();'),
       serviceSource.indexOf('} catch (error) {\n          const latencyMs'),
     );
 
-    expect((successPath.match(/this\.provider\.analyzeNews\(/g) ?? []).length).toBe(2);
+    expect((successPath.match(/this\.provider\.analyzeNews\(/g) ?? []).length).toBe(1);
     expect(successPath).not.toMatch(/\bwhile\s*\(|\bfor\s*\(/);
+  });
+
+  it('and ONE is the whole file, not merely the success path', () => {
+    /*
+      The slice above proves the success path. This proves nothing reintroduced
+      a second generation anywhere else in the service — a repair moved into a
+      catch block, a retry helper, a "just once more" branch. The synchronous
+      path has exactly one model generation, measured against the whole file.
+    */
+    expect((serviceSource.match(/this\.provider\.analyzeNews\(/g) ?? []).length).toBe(1);
   });
 
   it('the rejected C906 behaviour cannot come back silently', () => {

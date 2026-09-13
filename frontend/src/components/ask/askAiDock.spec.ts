@@ -21,8 +21,18 @@ const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ')
 describe('it consumes the existing Analysis engine and nothing else', () => {
   it('the only request path is the existing analysis client', () => {
     expect(CODE).toMatch(/import \{ analyzeNews \} from '@\/lib\/api\/analysisApi'/);
-    /* no second transport, no second endpoint, no second client */
-    expect(CODE).not.toMatch(/fetch\(|XMLHttpRequest|axios|new Request|\/analysis\/|\/ask\b/);
+    /*
+     * No second transport, no second endpoint, no second client.
+     *
+     * IMPORT LINES ARE EXCLUDED FROM THIS SCAN, and the reason is a real
+     * false positive rather than a convenience: Rev A's own modules live
+     * under `@/lib/ask/` and `@/components/ask/`, which the `\/ask\b`
+     * alternative matches inside a MODULE SPECIFIER. The rule is about
+     * request paths in executable code; a module path is not one. The
+     * imports are asserted on their own terms above and in §7.6/§7.7.
+     */
+    const executable = CODE.split('\n').filter((line) => !/^\s*import\s/.test(line)).join('\n');
+    expect(executable).not.toMatch(/fetch\(|XMLHttpRequest|axios|new Request|\/analysis\/|\/ask\b/);
   });
 
   it('it contains no provider, model, prompt, retrieval or ranking of its own', () => {
@@ -37,7 +47,7 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     /* the submitted value is the trimmed input and nothing else: no synonym
        expansion, no template, no appended keywords, no site: operators */
     expect(CODE).toMatch(/const asked = question\.trim\(\);/);
-    expect(CODE).toMatch(/analyzeNews\(asked, language\)/);
+    expect(CODE).toMatch(/analyzeNews\(asked, language, sent\)/);
     expect(CODE).not.toMatch(/asked \+|`\$\{asked\}[^`]/);
   });
 
@@ -54,12 +64,23 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     expect(CODE).not.toMatch(/analysisErrorTimeout|analysisErrorRateLimited|'rate-limited'/);
   });
 
-  it('reuses the EXISTING analysis presentation for answer, evidence and citations', () => {
-    expect(CODE).toMatch(
-      /import \{ AnalysisFrameSurface \} from '@\/components\/analysis-frame\/AnalysisFrameSurface'/,
-    );
-    expect(CODE).toMatch(/<AnalysisFrameSurface response=\{phase\.response\} language=\{language\}/);
-    /* it must not author its own evidence, source or citation rendering */
+  /*
+   * REV A §2 INVERTS THIS ASSERTION, AND THE INVERSION IS THE FIX.
+   *
+   * It used to REQUIRE the nested `AnalysisFrameSurface`. Rev A §2 rules
+   * that mount out and gives the measured root cause: the frame sizes from
+   * `window.innerWidth` and its accepted geometry states in-file that
+   * "SURFACE B IS THE ONLY CONSUMER". Mounting it inside
+   * `lg:w-[min(720px,52vw)]` made a second consumer measuring the viewport
+   * while drawing into half of it.
+   *
+   * What must still hold is the half that was always the real point: the
+   * dock authors NO evidence, source or citation rendering of its own. The
+   * projection renders through Surface B's own readers, so that list is
+   * still asserted — unchanged.
+   */
+  it('does NOT mount the analysis frame, and authors no evidence rendering of its own', () => {
+    expect(CODE).not.toMatch(/AnalysisFrameSurface/);
     for (const own of ['SourceArticleCard', 'SourcesDrawer', 'TrustBadge', 'SourceDiversitySummary',
                        'EvidenceSufficiencyNote', 'RetrievalContextStatus', 'AnalysisResultView']) {
       expect(`${own}: ${CODE.includes(own)}`).toBe(`${own}: false`);
@@ -89,23 +110,87 @@ describe('opening the panel is not a question', () => {
   });
 });
 
-describe('ASK RULE A — no caller context crosses the boundary in Phase 1', () => {
-  it('storyContext is never passed to the analysis client', () => {
-    /* `analyzeNews(query, language, storyContext?)` takes a third argument.
-       Phase 1 calls it with two, so the rule holds by construction. */
-    expect(CODE).toMatch(/analyzeNews\(asked, language\)/);
-    expect(CODE).not.toMatch(/storyContext|articleId|countryCode|StoryContext/);
+/*
+ * ASK RULE A SURVIVES REV A. ITS ENFORCEMENT MOVES (contract §7).
+ *
+ * The old test asserted the ABSENCE of any context. Rev A §7 replaces that
+ * with the BOUND: the dock may transport exactly `{title, articleId?,
+ * countryCode?}` and nothing else. Point 3 below is what carries the rule
+ * after the old assertion is gone — evidence, report and cluster identities
+ * are OUTPUTS of a prior analysis, and feeding them back would make results
+ * into inputs. This describe block is amended, not deleted.
+ */
+describe('ASK RULE A — only bounded context crosses the boundary', () => {
+  it('§7.1/§7.2 — a third argument is passed, and its keys are a subset of {title, articleId, countryCode}', () => {
+    expect(CODE).toMatch(/analyzeNews\(asked, language, sent\)/);
+    /* the narrowing lives in ONE place, so no call site can widen it */
+    expect(CODE).toMatch(/const sent = transportableContext\(storyContext\);/);
+
+    const store = readFileSync(join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'), 'utf8');
+    const fn = store.slice(store.indexOf('export function transportableContext'));
+    const body = fn.slice(0, fn.indexOf('\n}'));
+    expect(body).toMatch(/title: context\.title/);
+    expect(body).toMatch(/articleId: context\.articleId/);
+    expect(body).toMatch(/countryCode: context\.countryCode/);
+    /* nothing else is copied across */
+    expect(body).not.toMatch(/url|sourceName|sources|articles|evidence|cluster|report|dimension/i);
   });
 
-  it('the contextual affordance is visible, disabled and has no submit path', () => {
+  it('§7.3 — no evidence/report/cluster identity and no response field is used as an INPUT', () => {
+    const submit = CODE.slice(CODE.indexOf('const submit = useCallback'), CODE.indexOf('return ('));
+    for (const forbidden of ['evidenceId', 'reportId', 'clusterId', 'sourceEntities', 'keyFacts',
+                             'agreements', 'differences', 'sourceDiversity', 'retrievalContext',
+                             'phase.response', 'analysis.sources']) {
+      expect(`${forbidden}: ${submit.includes(forbidden)}`).toBe(`${forbidden}: false`);
+    }
+  });
+
+  it('§7.4 — `title` comes from the published context, never from the input box', () => {
+    const store = readFileSync(join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'), 'utf8');
+    expect(store).toMatch(/title: context\.title/);
+    /* the dock never assigns a title at all, so it cannot assign the question */
+    expect(CODE).not.toMatch(/title:\s*(asked|question)/);
+  });
+
+  it('§7.5 — with no context in scope, analyzeNews is called with TWO arguments', () => {
+    /*
+     * BY CONSTRUCTION RATHER THAN BY BRANCH. `transportableContext`
+     * returns `undefined` for an absent context, and `f(a, b, undefined)`
+     * IS a two-argument call at the boundary: `arguments.length` differs,
+     * but the request `analysisApi` builds is byte-identical to Phase 1's
+     * because it omits an undefined `storyContext`. Asserted on the client
+     * so the claim is about the REQUEST, not about the call shape.
+     */
+    const api = readFileSync(join(__dirname, '..', '..', 'lib', 'api', 'analysisApi.ts'), 'utf8');
+    expect(api).toMatch(/storyContext/);
+    const store = readFileSync(join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'), 'utf8');
+    expect(store).toMatch(/if \(context === undefined\) return undefined;/);
+  });
+
+  it('§7.6 — the dock does not import the analysis frame', () => {
+    expect(SRC).not.toMatch(/import .*AnalysisFrameSurface/);
+  });
+
+  it('§7.7 — the compact result performs no second analysis call', () => {
+    const compact = readFileSync(join(__dirname, 'AskCompactResult.tsx'), 'utf8');
+    const code = compact.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+    expect(code).not.toMatch(/analyzeNews|fetch\(|XMLHttpRequest|axios|useEffect/);
+  });
+
+  it('the contextual affordance is a statement, not a control — still no submit path', () => {
     const span = CODE.slice(CODE.indexOf('data-ask="context-affordance"'));
     const element = span.slice(0, span.indexOf('>'));
-    expect(element).toMatch(/aria-disabled="true"/);
     expect(element).not.toMatch(/onClick|onSubmit|type="submit"/);
   });
 });
 
-describe('the evidence states are the accepted ones, resolved by the accepted frame', () => {
+/*
+ * THESE ARE SURFACE B's STATES, ASSERTED HERE BECAUSE THE ASK SURFACE MUST
+ * NOT INVENT A FIFTH. Rev A removed the nested frame from the dock, so this
+ * block no longer describes what the dock RENDERS — it pins the vocabulary
+ * the dock's compact projection must not diverge from. Unchanged assertions.
+ */
+describe('the accepted evidence-state vocabulary is the one the product has', () => {
   const VP = { width: 1440, height: 900 };
   const render = (response: AnalysisApiResponse): string =>
     renderToStaticMarkup(
@@ -187,8 +272,13 @@ describe('the released navigation geometry is untouched', () => {
     for (const f of ['en.ts', 'pl.ts']) {
       const src = readFileSync(join(dir, f), 'utf8');
       const group = src.slice(src.indexOf('askAi: {'));
-      expect(`${f}: ${group.startsWith('askAi: {') && group.slice(0, 2000).includes('contextPendingHint:')}`)
-        .toBe(`${f}: true`);
+      const head = group.slice(0, 4000);
+      for (const key of ['contextPendingHint:', 'contextChipAnchored:', 'contextChipGeneric:',
+                         'resultSourcesHeading:', 'resultSourcesNone:', 'resultSourcesTruncated:',
+                         'resultBriefAbsent:', 'resultNoAnswer:', 'openFullAnalysis:']) {
+        expect(`${f} ${key} ${group.startsWith('askAi: {') && head.includes(key)}`)
+          .toBe(`${f} ${key} true`);
+      }
     }
   });
 });

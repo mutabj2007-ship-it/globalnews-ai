@@ -424,7 +424,25 @@ describe('8 — one reading scroll, and no nested trap', () => {
     const html = render(width, height);
     const i = html.indexOf('data-paf="centre-viewport"');
     const tag = html.slice(html.lastIndexOf('<', i), html.indexOf('>', i) + 1);
-    expect({ width, scrolls: /overflow-y-auto/.test(tag) }).toEqual({ width, scrolls: true });
+    /*
+      ANALYSIS-VIEWPORT-ADAPT-1 RETARGET — THE CENTRE IS NO LONGER A
+      SCROLLER, AND THE PROTECTION THIS ASSERTS IS STRONGER FOR IT.
+
+      What this test defends has never been "the centre has
+      overflow-y-auto". It is that NO REGION TRAPS A GESTURE: the reader
+      must have one reading scroll and no nested trap. R4 §1 expressed
+      that as "exactly one region scrolls, and it is the reading
+      surface"; the Product Owner's ruling on Analysis Workspace
+      flexibility expresses it as the document model the phone column has
+      always had — "do not trap content inside an unreachable
+      fixed-height box".
+
+      So the assertion is inverted rather than relaxed: there must now be
+      NO `overflow-y-auto` on the centre AND none on the frame, at every
+      width. That forbids both a nested trap and a second scroller beside
+      the centre, which is strictly more than the old form forbade.
+    */
+    expect({ width, scrolls: /overflow-y-auto/.test(tag) }).toEqual({ width, scrolls: false });
     expect(frameTag(html)).not.toMatch(/overflow-y-auto/);
   });
 
@@ -516,8 +534,16 @@ describe('10 — the layouts that already passed are byte-identical', () => {
        explicit pixel tracks and row 2 is `minmax(0,1fr)`, which is what
        makes "expanding the dock reduces the centre" fall out of the
        layout instead of being computed. */
+    /*
+      ANALYSIS-WORKSPACE-FLEX-1 RETARGET — the three tracks became ranges
+      around the SAME three numbers. Rows 1 and 3 still carry what
+      `resolveTracks` decided and row 2 is still the flexible track, so
+      "expanding the dock reduces the centre" still falls out of the
+      layout rather than being computed. The COLUMN template above is
+      untouched and still asserted byte-for-byte.
+    */
     expect(frameTag(render(width, height)))
-      .toMatch(/grid-template-rows:\d+px minmax\(0,1fr\) \d+px/);
+      .toMatch(/grid-template-rows:minmax\(min-content,\s*max-content\) minmax\(\d+px,\s*1fr\) minmax\(\d+px,\s*max-content\)/);
   });
 
   it('frameGeometry.ts was not modified', () => {

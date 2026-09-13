@@ -4,7 +4,10 @@ import type { AnalysisConfigService } from '../config/analysis-config.service';
 import { AnalysisService } from './analysis.service';
 import { scoreGenericRelevance } from '../../news/relevance/generic-relevance.util';
 import { scoreCountryRelevance } from '../../news/country/country-relevance.util';
-import { resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
+import {
+  ANALYSIS_TOTAL_BUDGET_MS,
+  resolveCountryByAnyIdentifier,
+} from '@globalnews-ai/shared';
 
 /**
  * G-ALPHA-2 ACCEPTANCE — END TO END THROUGH THE REAL AnalysisService.
@@ -117,6 +120,16 @@ function harness(corpus: NewsArticle[], anchor?: NewsArticle): Harness {
       maxArticles: 8,
       maxArticleChars: 1200,
       timeoutMs: 20000,
+      /*
+        REV B — STATED, NOT INHERITED. AnalysisService arms its total response
+        deadline from this field. Every double in this repository predates it, so
+        each one silently supplied `undefined`; `withResponseDeadline` now resolves
+        that to the shared authority rather than to an accidental zero, but a test
+        that exercises the real service should say which budget it is running
+        under rather than rely on a fallback. This is the shipped value, so no
+        existing timing expectation changes.
+      */
+      totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
       cacheTtlSeconds: 0,
       openAiApiKey: undefined,
       openAiModel: 'gpt-4o-mini',

@@ -48,7 +48,25 @@ describe('R4 §7 — the responsive contract', () => {
       html.indexOf('data-paf="centre-viewport"'),
       html.indexOf('data-paf="centre-viewport"') + 400,
     );
-    expect({ width, scroller: /overflow-y-auto/.test(centre) }).toEqual({ width, scroller: width >= 768 });
+    /*
+      ANALYSIS-VIEWPORT-ADAPT-1 RETARGET — THE CENTRE IS NO LONGER A
+      SCROLLER, AND THE PROTECTION THIS ASSERTS IS STRONGER FOR IT.
+
+      What this test defends has never been "the centre has
+      overflow-y-auto". It is that NO REGION TRAPS A GESTURE: the reader
+      must have one reading scroll and no nested trap. R4 §1 expressed
+      that as "exactly one region scrolls, and it is the reading
+      surface"; the Product Owner's ruling on Analysis Workspace
+      flexibility expresses it as the document model the phone column has
+      always had — "do not trap content inside an unreachable
+      fixed-height box".
+
+      So the assertion is inverted rather than relaxed: there must now be
+      NO `overflow-y-auto` on the centre AND none on the frame, at every
+      width. That forbids both a nested trap and a second scroller beside
+      the centre, which is strictly more than the old form forbade.
+    */
+    expect({ width, scroller: /overflow-y-auto/.test(centre) }).toEqual({ width, scroller: false });
   });
 
   it('375 — the PHONE COLUMN owns the scroll, and the centre does not', () => {

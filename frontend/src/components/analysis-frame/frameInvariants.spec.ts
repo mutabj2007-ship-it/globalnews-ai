@@ -78,36 +78,59 @@ describe('PAF-2 — the DOCUMENT scrolls, and no analytical prose scroller exist
    * assertion, because it forbids the nested scroller entirely rather
    * than naming one permitted owner.
    */
-  /* ── AMENDED BY MAIN-FINAL-CORRECTED-ALPHA-CONVERGENCE-1, PO DECISION 4 ──
-     These are the three assertions the Product Owner authorised by line
-     number. "The prior R9 ordinary-document-scroll ruling is superseded."
+  /* ── RESTORED BY THE ANALYSIS WORKSPACE FLEXIBILITY RULING ──────────────
+     PO decision 4 amended this block to REQUIRE a scoped document lock,
+     because under a bounded frame there was nothing below the fold and
+     the centre owned the only block-axis scroll. The flexibility ruling
+     removes both premises — the shell is a minimum height, the rows size
+     to their content, and the centre is no longer a scroller — so the
+     document is the reader's scroll owner and a lock on it leaves the
+     surface with NO scroll owner at all.
 
-     WHAT WAS BEING PROTECTED IS NOT GIVEN UP. The old invariant existed
-     because a region had trapped the reader's scroll with content that
-     could not be reached by any gesture. The cause of that was never the
-     four-sided geometry — it was a `100vh` box starting BELOW the NavBar,
-     one header taller than its own space, clipping the overhang. The
-     three replacements below hold the same ground by arithmetic: the
-     document lock is SCOPED and always released, the shell is
-     `calc(100dvh - navbar)` and never `100vh`, and exactly one region
-     scrolls rather than none. */
+     The invariant above is therefore back in force, verbatim, and this
+     is the one place in the flexibility delta where a retarget RESTORES
+     an older accepted assertion rather than inverting a newer one. */
 
-  it('the document lock is scoped to the bounded frame and always released', () => {
-    /* R4 §2 — `html, body { overflow:hidden }`, restored. What this now
-       forbids is the unscoped version: the previous values must be
-       captured and put back, and the phone must be exempt, so no other
-       route and no unmount can inherit our lock. */
-    expect(source).toMatch(/previousHtml/);
-    expect(source).toMatch(/previousBody/);
-    expect(source).toMatch(/html\.style\.overflow = previousHtml/);
-    expect(source).toMatch(/body\.style\.overflow = previousBody/);
-    expect(source).toMatch(/if \(isPhone\) return undefined;/);
+  it('NOTHING forces html/body to overflow:hidden on this surface, at any width', () => {
+    /*
+      The stated form, so a future reintroduction cannot pass by being
+      written differently. It is asserted against the frame's own source
+      rather than a render, because the lock was an effect: it never
+      appeared in server markup, which is exactly why the R1 measurement
+      pass did not catch it.
+
+      A locked document still reports `scrollHeight > clientHeight` and
+      still obeys `window.scrollTo()`. Neither is a user gesture, so
+      neither is acceptance evidence — `analysis-gesture-scroll` in the
+      R2 evidence set drives a real `mouse.wheel` instead.
+    */
+    /*
+      COMMENTS STRIPPED, STRING LITERALS KEPT. The frame's own source
+      explains at length why the lock was removed and quotes the removed
+      statement to do it. A raw-text scan reports that explanation as a
+      violation — found by a failing run, and the same trap the Rev A
+      specs hit.
+    */
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+    expect(code).not.toMatch(/documentElement\.style\.overflow/);
+    expect(code).not.toMatch(/document\.body\.style\.overflow/);
+    expect(code).not.toMatch(/(html|body)\.style\.overflow\s*=/);
+    expect(code).not.toMatch(/previousHtml|previousBody/);
+    /* nor the class-based form of the same thing */
+    expect(code).not.toMatch(/classList\.(add|toggle)\([^)]*overflow-hidden/);
   });
 
   it('the shell is viewport-minus-navbar on the frame, a document on the phone, and never 100vh', () => {
     const desktop = render({ response: fixture(), initialViewport: { width: 1440, height: 900 } });
     expect(desktop).not.toMatch(/data-paf="shell"[^>]*100vh/);
-    expect(desktop).toMatch(/data-paf="shell"[^>]*calc\(100dvh-52px\)/);
+    /*
+      `min-h-`, NOT a bare `h-`. PO invariant 2 — "the shell no longer
+      pins itself to the viewport" — is the half of this assertion that
+      the flexibility ruling restores, and a bare `h-[calc(100dvh-52px)]`
+      would satisfy the old regex while reinstating the box.
+    */
+    expect(desktop).toMatch(/data-paf="shell"[^>]*min-h-\[calc\(100dvh-52px\)\]/);
+    expect(desktop).not.toMatch(/data-paf="shell"[^>]*class="[^"]*[^-]h-\[calc\(100dvh/);
     expect(desktop).not.toMatch(/data-paf="shell"[^>]*min-h-screen/);
 
     const phone = render({ response: fixture(), initialViewport: { width: 375, height: 844 } });
@@ -125,8 +148,25 @@ describe('PAF-2 — the DOCUMENT scrolls, and no analytical prose scroller exist
       /* R4 §1: "persist top + left + right + bottom; scroll centre."
          Below 768 R4 §9 hands the surface to `08-MOBILE-TABLET` and the
          document scrolls, so the phone assertions are unchanged. */
-      const framed = width >= 768;
-      expect({ width, scroller: /overflow-y-auto/.test(centre) }).toEqual({ width, scroller: framed });
+    /*
+      ANALYSIS-VIEWPORT-ADAPT-1 RETARGET — THE CENTRE IS NO LONGER A
+      SCROLLER, AND THE PROTECTION THIS ASSERTS IS STRONGER FOR IT.
+
+      What this test defends has never been "the centre has
+      overflow-y-auto". It is that NO REGION TRAPS A GESTURE: the reader
+      must have one reading scroll and no nested trap. R4 §1 expressed
+      that as "exactly one region scrolls, and it is the reading
+      surface"; the Product Owner's ruling on Analysis Workspace
+      flexibility expresses it as the document model the phone column has
+      always had — "do not trap content inside an unreachable
+      fixed-height box".
+
+      So the assertion is inverted rather than relaxed: there must now be
+      NO `overflow-y-auto` on the centre AND none on the frame, at every
+      width. That forbids both a nested trap and a second scroller beside
+      the centre, which is strictly more than the old form forbade.
+    */
+      expect({ width, scroller: /overflow-y-auto/.test(centre) }).toEqual({ width, scroller: false });
     }
   });
 });
@@ -256,7 +296,33 @@ describe('PAF-7 — every interior region scrolls rather than clipping', () => {
      * the scroller never engages.
      */
     const centre = html.slice(html.indexOf('data-paf="centre-viewport"'), html.indexOf('data-paf="location-detail-track"'));
-    expect(centre).toMatch(/overflow-y-auto/);
-    expect(centre).toMatch(/min-h-0/);
+    /*
+      ANALYSIS-VIEWPORT-ADAPT-1 RETARGET — THE CENTRE IS NO LONGER A
+      SCROLLER, AND THE PROTECTION THIS ASSERTS IS STRONGER FOR IT.
+
+      What this test defends has never been "the centre has
+      overflow-y-auto". It is that NO REGION TRAPS A GESTURE: the reader
+      must have one reading scroll and no nested trap. R4 §1 expressed
+      that as "exactly one region scrolls, and it is the reading
+      surface"; the Product Owner's ruling on Analysis Workspace
+      flexibility expresses it as the document model the phone column has
+      always had — "do not trap content inside an unreachable
+      fixed-height box".
+
+      So the assertion is inverted rather than relaxed: there must now be
+      NO `overflow-y-auto` on the centre AND none on the frame, at every
+      width. That forbids both a nested trap and a second scroller beside
+      the centre, which is strictly more than the old form forbade.
+    */
+    expect(centre).not.toMatch(/overflow-y-auto/);
+    /*
+      `min-h-0` went with it, and had to. Its ONLY purpose was to make
+      `overflow-y-auto` mean something inside a fixed grid track: without
+      it the item's automatic minimum size is its content, the track
+      grows, and the scroller never engages. With no scroller to arm, an
+      explicit zero minimum would do the one thing the ruling forbids —
+      let the track be smaller than its content, and clip it.
+    */
+    expect(centre).not.toMatch(/min-h-0/);
   });
 });

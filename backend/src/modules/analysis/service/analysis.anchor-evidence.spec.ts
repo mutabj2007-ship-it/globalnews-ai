@@ -1,3 +1,4 @@
+import { ANALYSIS_TOTAL_BUDGET_MS } from '@globalnews-ai/shared';
 import type { CountryNewsResponse, NewsArticle, NewsResponse } from '@globalnews-ai/shared';
 import { AnalysisService } from './analysis.service';
 import type { AnalysisProvider } from '../interfaces';
@@ -73,6 +74,16 @@ function makeConfigService(): AnalysisConfigService {
       maxArticles: 8,
       maxArticleChars: 1200,
       timeoutMs: 20000,
+      /*
+        REV B — STATED, NOT INHERITED. AnalysisService arms its total response
+        deadline from this field. Every double in this repository predates it, so
+        each one silently supplied `undefined`; `withResponseDeadline` now resolves
+        that to the shared authority rather than to an accidental zero, but a test
+        that exercises the real service should say which budget it is running
+        under rather than rely on a fallback. This is the shipped value, so no
+        existing timing expectation changes.
+      */
+      totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
       cacheTtlSeconds: 300,
       openAiApiKey: undefined,
       openAiModel: 'gpt-4o-mini',

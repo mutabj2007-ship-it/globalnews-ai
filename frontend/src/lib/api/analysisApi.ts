@@ -1,3 +1,4 @@
+import { ANALYSIS_CLIENT_TIMEOUT_MS } from '@globalnews-ai/shared';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { resolveAccountApiBase } from './accountBase';
 
@@ -30,10 +31,26 @@ import { resolveAccountApiBase } from './accountBase';
   timeout. NONE of them is taken here. This backport carries the first-party
   base and nothing else.
 */
-// Longer than the news API timeout: the backend's own AI call timeout
-// (ANALYSIS_TIMEOUT_MS, default 20s) needs room to complete before the
-// client gives up, plus network overhead.
-const REQUEST_TIMEOUT_MS = 30000;
+/*
+  DERIVED FROM THE SERVER BUDGET. NOT CHOSEN HERE, AND NOT 30s OR 75s.
+
+  The comment that used to stand here derived 30,000 as "the backend's own AI
+  call timeout (ANALYSIS_TIMEOUT_MS, default 20s) ... plus network overhead".
+  That arithmetic is valid for ONE provider call. `ANALYSIS_TIMEOUT_MS` is a
+  PER-ATTEMPT budget, and the Executive Brief repair added a second full
+  generation to the same request — so on Railway run 579a0134 the backend
+  legitimately took 30,914 ms and this constant had already declared failure at
+  30,000.
+
+  There is now one authority for the whole budget, and this value is its
+  arithmetic consequence:
+
+      32,000 total server budget + 8,000 transport margin = 40,000 ms
+
+  Changing the client deadline now REQUIRES changing the server budget, which is
+  the only way these two can be prevented from drifting apart again.
+*/
+const REQUEST_TIMEOUT_MS = ANALYSIS_CLIENT_TIMEOUT_MS;
 
 /**
  * M65 — a stable, localizable failure taxonomy.
@@ -51,7 +68,18 @@ const REQUEST_TIMEOUT_MS = 30000;
  * detail for logs.
  */
 export type AnalysisApiErrorCode =
-  /** The request never reached a response: aborted at REQUEST_TIMEOUT_MS. */
+  /**
+   * The analysis did not finish inside the time budget.
+   *
+   * REV B — TWO SOURCES, ONE MEANING, DELIBERATELY NOT SPLIT. Either the
+   * request never reached a response and was aborted locally at
+   * REQUEST_TIMEOUT_MS, or the SERVER reached its own total response deadline
+   * first and said so with an explicit HTTP 504. The fact the reader needs is
+   * identical in both cases — it took too long, try again — and the existing
+   * dictionary entry already says exactly that, so no new taxonomy member is
+   * introduced. `status` still distinguishes them for logs: 504 for the
+   * server-side deadline, undefined for the local abort.
+   */
   | 'timeout'
   /** The request failed before any HTTP status existed (offline, DNS, CORS, backend down). */
   | 'network'
@@ -68,6 +96,16 @@ export type AnalysisApiErrorCode =
 function codeForStatus(status: number): AnalysisApiErrorCode {
   if (status === 429) return 'rate-limited';
   if (status === 400 || status === 422) return 'invalid-query';
+  /*
+    REV B — 504 IS A DEADLINE, NOT A FAULT, AND MUST BE TESTED BEFORE `>= 500`.
+
+    The backend's AnalysisDeadlineExceededError is a real HTTP 504. Without this
+    line it falls through to the `>= 500` rule below and is reported as
+    'server' — telling the reader the backend broke, when the backend in fact
+    enforced exactly the deadline it promised. Order matters: this must precede
+    the general 5xx rule, which stays unchanged for every genuine server fault.
+  */
+  if (status === 504) return 'timeout';
   if (status >= 500) return 'server';
   return 'unknown';
 }

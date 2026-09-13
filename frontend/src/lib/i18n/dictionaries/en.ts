@@ -80,6 +80,24 @@ export const en = {
     idle: 'Ask a question and the answer will be assembled from retrieved reporting, with its sources shown.',
     contextPending: 'Ask about this view \u2014 coming soon',
     contextPendingHint: 'Asking about the page you are on is not available yet. Questions here are answered from retrieved reporting only.',
+    /*
+     * ASK AI REV A §6 — the compact result's own words.
+     *
+     * These name STATES; they never stand in for an answer. The withheld
+     * case deliberately reuses `analysisResultView.briefWithheld*`, which
+     * is already the product's accepted wording for that state, so the
+     * dock cannot describe it differently from Surface B.
+     */
+    contextChipAnchored: 'Asking about this story',
+    contextChipGeneric: 'Asking about world events',
+    resultSourcesHeading: 'Sources',
+    resultSourcesNone: 'No sources were retrieved for this question.',
+    resultSourcesTruncated: 'Showing {shown} of {total}. Open the full analysis for the rest.',
+    resultBriefAbsent: 'This analysis carried no executive brief. That is an absence, not an assessment \u2014 nothing was measured and withheld.',
+    resultNoAnswer: 'No answer was produced for this question. The state above says why.',
+    openFullAnalysis: 'Open full analysis',
+    telemetryReports: 'retrieved reports',
+    telemetryClusters: 'reporting clusters',
   },
   loadingStages: [
     'Searching trusted sources\u2026',
@@ -2122,14 +2140,24 @@ export const en = {
 
       Deliberately distinct from `stateNoEvidence` / `stateProviderUnavailable`
       above, which describe RETRIEVAL outcomes. This one describes a brief that
-      was produced, measured against the structural requirement, repaired once,
-      measured again and rejected — while the rest of the analysis record
-      remains valid and is still shown. Saying "unavailable" without saying
-      which half is unavailable would be the vaguer, less useful sentence.
+      was produced, measured against the structural requirement and rejected —
+      while the rest of the analysis record remains valid and is still shown.
+      Saying "unavailable" without saying which half is unavailable would be the
+      vaguer, less useful sentence.
+
+      C907 ASK+ANALYSIS CONVERGENCE 1 — CORRECTED, BECAUSE IT BECAME FALSE.
+      This copy previously said the brief failed "and the one permitted
+      correction did not either". The synchronous repair was REMOVED under the
+      accepted Alpha latency correction, so no correction is attempted at all:
+      the sentence described an attempt that no longer happens. Telling a reader
+      that a second, more careful try was made and also failed is a stronger
+      claim about the evidence than the product can now support, so it is gone.
+      The brief is measured ONCE and withheld if it fails, and the copy says
+      exactly that and nothing more.
     */
     briefWithheldHeading: 'EXECUTIVE BRIEF UNAVAILABLE',
     briefWithheldBody:
-      'The brief produced for this evidence set did not meet the structural requirement, and the one permitted correction did not either. It is withheld rather than shown. The analysis below is unaffected: every claim, source and timeline entry was validated independently.',
+      'The brief produced for this evidence set did not meet the structural requirement. It is withheld rather than shown. The analysis below is unaffected: every claim, source and timeline entry was validated independently.',
     sourceGeographyAbsent: 'NO RESOLVED COUNTRY',
     /* R4 - four different reasons an analysis can be absent. */
     stateNoQuestion: 'NO QUESTION ASKED YET',

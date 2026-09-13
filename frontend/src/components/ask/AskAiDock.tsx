@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { analyzeNews } from '@/lib/api/analysisApi';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClient';
-import { AnalysisFrameSurface } from '@/components/analysis-frame/AnalysisFrameSurface';
+import { AskCompactResult } from '@/components/ask/AskCompactResult';
+import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
+import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
+import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 
 /**
@@ -21,13 +24,20 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
  * and the same service that `/search` has always used. This file contains no
  * provider, no model name, no prompt, no retrieval strategy and no ranking.
  *
- * NO SECOND ANALYSIS PRESENTATION. The answer, its citations, the evidence
- * library, the sources dock, retrieval context, trust and diversity are
- * rendered by `AnalysisFrameSurface` — the accepted R4 frame — not by
- * anything authored here. The frame also owns the four evidence states
- * (`populated`, `analysis-failed`, `no-evidence`, `provider-unavailable`),
- * so the no-evidence and provider-unavailable cases this surface must show
- * are the SAME ones `/search` shows, resolved by the same function.
+ * NO SECOND ANALYSIS PRESENTATION — AND, SINCE REV A, NO NESTED FRAME.
+ * This dock used to mount `AnalysisFrameSurface` here. Rev A §2 rules that
+ * out and names the root cause, which is NOT css: the frame sizes itself
+ * from `window.innerWidth`, and its own accepted geometry states in-file
+ * that "SURFACE B IS THE ONLY CONSUMER". Mounting it inside
+ * `lg:w-[min(720px,52vw)]` created a second consumer measuring the whole
+ * viewport while drawing into half of it.
+ *
+ * What replaces it is a PROJECTION, not a second presentation:
+ * `AskCompactResult` renders four permitted elements of the response the
+ * engine already returned, each through the reader Surface B uses
+ * (`AnalysisModeBadge`, `buildBriefModel`, `analysis.sources`,
+ * `buildBriefTelemetry`). Full analytical detail TRANSITIONS to the
+ * workspace (§4.5); it never expands in place.
  *
  * NO QUERY REWRITING. The reader's question is passed verbatim. Retrieval
  * quality is the backend's to own, and a frontend that quietly reshapes the
@@ -44,18 +54,29 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
  * ASK RULE A — caller context is not evidence.
  * ASK RULE B — the model prompt is the export boundary.
  *
- * Phase 1 sends NO structured Map/Situation context: `analyzeNews` is called
- * with two arguments, so the optional `storyContext` parameter is not passed
- * at all. The contextual control renders DISABLED and carries no submit
- * path, so the affordance can be seen and reasoned about without any caller
- * context crossing the boundary before Main's context interface exists.
+ * REV A MOVES THE ENFORCEMENT, NOT THE RULE. Phase 1 satisfied ASK RULE A
+ * by sending nothing at all. Rev A §1 rules that the dock may send exactly
+ * `{title, articleId?, countryCode?}` — the EXISTING `StoryContext`, no new
+ * type and no DTO field — and nothing else.
+ *
+ * WHAT IS STILL FORBIDDEN, and why it is a contract question rather than a
+ * tidiness one (§1.4): evidence, report and cluster identities are OUTPUTS
+ * of a prior analysis. Feeding them back makes results into inputs and
+ * requires a service path that consumes supplied evidence — the second
+ * retrieval architecture the contract exists to prevent. The anchor is
+ * IDENTITY; the service re-retrieves. Also excluded: the previous
+ * `AnalysisApiResponse`, source lists, dimension state, any page object.
+ *
+ * The bound is enforced in one place — `transportableContext` — so there is
+ * no call site able to widen it, and `askAiDock.spec.ts` asserts the bound
+ * rather than the old absence (§7).
  */
 
 type AskPhase =
   /* opened, nothing asked. NOT a failure, and NOT a request. */
   | { kind: 'idle' }
   | { kind: 'loading'; question: string }
-  | { kind: 'answered'; question: string; response: AnalysisApiResponse }
+  | { kind: 'answered'; question: string; response: AnalysisApiResponse; context: StoryContext | undefined }
   | { kind: 'failed'; question: string; message: string };
 
 interface AskAiDockProps {
@@ -72,6 +93,29 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
 
   const dictionary = getDictionary(language);
   const t = dictionary.askAi;
+
+  /*
+   * §5.2.5 — THE DOCK READS, NEVER WRITES, AND KEEPS NO COPY.
+   *
+   * No state, no ref, no memo of a previous anchor survives a question
+   * here: this is a live read of the store, so a submission always sees
+   * what is published AT THAT MOMENT. That is the whole reason L1 (ask
+   * after navigating away) and L3 (story A then story B) hold — the dock
+   * has nothing of its own to go stale.
+   */
+  const storyContext = useAskStoryContext();
+
+  /*
+   * R2 FINDING 2 — WHERE THE LAUNCHER SITS IS A SURFACE QUESTION.
+   *
+   * This dock is mounted once, from the root layout, over every route.
+   * A width-based rule therefore makes one surface's problem into every
+   * surface's problem, which is exactly what R1 did. `useLauncherAnchor`
+   * measures what is actually beneath each candidate position and picks
+   * the clearer one; at and above `spatial` it returns the released
+   * placement without measuring anything.
+   */
+  const anchor = useLauncherAnchor();
 
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
@@ -98,14 +142,25 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
       setPhase({ kind: 'loading', question: asked });
 
       /*
-        TWO ARGUMENTS, ON PURPOSE. `analyzeNews(query, language, storyContext?)`
-        accepts a third; Phase 1 does not pass one. ASK RULE A holds here by
-        construction rather than by a promise in a comment.
+        THE ONE TRANSPORT SITE.
+ 
+        `transportableContext` narrows to `{title, articleId?, countryCode?}`
+        (§1.1) — `url` and `sourceName` are display-only and retrieval
+        ignores them. With no context published, it returns `undefined` and
+        `analyzeNews` is called with TWO arguments, byte-for-byte the Phase
+        1 request (§7.5). The generic path is not merely similar; it is the
+        same call.
+ 
+        `title` is the SUBJECT and comes from the published context — never
+        from the input box (§1.3, §7.4). Passing the follow-up as the title
+        is exactly the inversion Rev A's change log owns.
       */
-      analyzeNews(asked, language)
+      const sent = transportableContext(storyContext);
+
+      analyzeNews(asked, language, sent)
         .then((response) => {
           if (requestSeq.current !== seq) return;
-          setPhase({ kind: 'answered', question: asked, response });
+          setPhase({ kind: 'answered', question: asked, response, context: sent });
         })
         .catch((error: unknown) => {
           if (requestSeq.current !== seq) return;
@@ -117,7 +172,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           });
         });
     },
-    [question, language, dictionary],
+    [question, language, dictionary, storyContext],
   );
 
   return (
@@ -133,7 +188,26 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
         aria-expanded={isOpen}
         aria-controls="ask-ai-panel"
         onClick={() => setIsOpen((open) => !open)}
-        className="fixed bottom-4 end-4 z-40 inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink-primary shadow-lg transition-colors hover:border-signal focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
+        /*
+          ALPHA-MOBILE-SPATIAL-1C — THE LAUNCHER MUST NOT SIT ON ANYTHING
+          THE READER NEEDS.
+
+          `spatial:bottom-4 spatial:top-auto` is unconditional, so the
+          released desktop placement is restored by CSS at and above the
+          breakpoint no matter what the measurement decided — desktop
+          geometry cannot be moved by this feature even if the hook
+          misbehaves.
+
+          Below it the anchor is MEASURED (see `useLauncherAnchor`).
+          `top` is what the Map resolves to, because the Spatial sheet
+          owns the bottom at PEEK, HALF and FULL alike; `bottom` is what
+          the Analysis workspace resolves to, because its top carries the
+          command bar, the mode badge and the reader's own question
+          heading — which is where R1 put the launcher, and was wrong.
+        */
+        style={anchor === 'top' ? { top: COMPACT_TOP_PX, bottom: 'auto' } : undefined}
+        data-ask-anchor={anchor}
+        className="fixed end-4 bottom-4 z-40 inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink-primary shadow-lg transition-colors spatial:bottom-4 spatial:top-auto hover:border-signal focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
       >
         <span aria-hidden="true" className="font-mono text-[11px] text-signal">◆</span>
         {t.launcher}
@@ -183,17 +257,26 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
             />
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/*
-                THE CONTEXTUAL AFFORDANCE — VISIBLE, DISABLED, NON-SUBMITTING.
-                It has no onClick and is `disabled`, so no caller context can
-                cross the model boundary before Main's interface exists.
+                THE CONTEXTUAL AFFORDANCE — NOW A TRUTHFUL STATEMENT OF
+                WHAT WILL BE SENT.
+
+                It was "coming soon" and disabled while no context could
+                cross the boundary. Under Rev A one can, so leaving the
+                old label would misdescribe the request the reader is
+                about to make. It is still NOT a control: there is no
+                onClick and no submit path. It reads the same value the
+                submission reads, so the label and the request cannot
+                disagree — and `title` is shown so the reader can see
+                WHICH story is anchored rather than being told that one
+                is.
               */}
               <span
                 data-ask="context-affordance"
-                aria-disabled="true"
-                title={t.contextPendingHint}
-                className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border border-border px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary opacity-60"
+                data-ask-context={storyContext === undefined ? 'generic' : 'anchored'}
+                title={storyContext === undefined ? undefined : storyContext.title}
+                className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary"
               >
-                {t.contextPending}
+                {storyContext === undefined ? t.contextChipGeneric : t.contextChipAnchored}
               </span>
 
               <button
@@ -229,15 +312,20 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
 
             {phase.kind === 'answered' ? (
               /*
-                THE ACCEPTED ANALYSIS PRESENTATION, UNMODIFIED.
+                §6 — A PROJECTION OF THE RESPONSE, NOT A SECOND WORKSPACE.
 
-                Answer, citations, evidence library, sources dock, retrieval
-                context, trust and diversity all come from here — and so do
-                the no-evidence and provider-unavailable states, which the
-                frame resolves itself. Nothing about them is re-implemented,
-                re-worded or re-decided on this surface.
+                `phase.context` is the context the question was ASKED with,
+                not a fresh read: the transition must reproduce the request
+                that produced THIS response, and by the time the reader
+                presses it the live context may already be a different
+                story.
               */
-              <AnalysisFrameSurface response={phase.response} language={language} />
+              <AskCompactResult
+                response={phase.response}
+                question={phase.question}
+                language={language}
+                context={phase.context}
+              />
             ) : null}
           </div>
         </section>

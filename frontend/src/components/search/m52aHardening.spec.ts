@@ -26,6 +26,18 @@ const searchClientSource = readFileSync(join(__dirname, 'SearchPageClient.tsx'),
  * Q&A journey. Behavioral tests only, per the explicit "prefer
  * behavior tests over brittle CSS-string tests" instruction.
  */
+/*
+ * ASK AI REV A §4.2 RETARGET — the dep list gained `storyTitle`.
+ *
+ * The INVARIANT this file pins is unchanged and is the reason the
+ * assertion is written against the dep list at all: the memo is keyed on
+ * URL-derived PRIMITIVES ONLY and never on `language`. Rev A adds one
+ * more URL primitive — `storyTitle`, the transport that stops the
+ * follow-up from becoming the story title — so the correct expression of
+ * the same rule now names four params, not three. Nothing about
+ * language-independence is relaxed; `not.toMatch(/\blanguage\b/)` below
+ * still carries it.
+ */
 describe('A. storyContext is stable across renders (real lint defect found and fixed)', () => {
   it('storyContext is memoized with useMemo, not a fresh object literal every render', () => {
     expect(searchClientSource).toMatch(/import \{ useEffect, useMemo, useState \} from 'react'/);
@@ -33,7 +45,7 @@ describe('A. storyContext is stable across renders (real lint defect found and f
   });
 
   it('useMemo is keyed on the real primitive inputs (query, countryCodeParam, articleIdParam) \u2014 the smallest set that actually determines storyContext\u2019s content', () => {
-    expect(searchClientSource).toMatch(/\[query, countryCodeParam, articleIdParam\],\s*\n\s*\);/);
+    expect(searchClientSource).toMatch(/\[query, storyTitleParam, countryCodeParam, articleIdParam\],\s*\n\s*\);/);
   });
 
   it('the analysis effect honestly lists storyContext in its own dependency array \u2014 no eslint-disable directive, no suppressed exhaustive-deps rule', () => {
@@ -100,7 +112,7 @@ describe('B. Generic query without storyContext still works (no regression from 
     expect(searchClientSource).toMatch(
       /articleIdParam !== null \|\| countryCodeParam !== null/,
     );
-    expect(searchClientSource).toMatch(/:\s*undefined,\s*\n\s*\[query, countryCodeParam, articleIdParam\],/);
+    expect(searchClientSource).toMatch(/:\s*undefined,\s*\n\s*\[query, storyTitleParam, countryCodeParam, articleIdParam\],/);
   });
 });
 

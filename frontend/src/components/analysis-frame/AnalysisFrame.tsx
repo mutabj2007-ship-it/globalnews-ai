@@ -25,8 +25,8 @@ import { buildRelationalEvidence } from './relationalEvidence';
 import { resolveLocationImage } from './locationAssets';
 import { buildGeographicEvidenceState } from './geographicEvidenceState';
 import {
-  COMMAND_BAR_HEIGHT, frameHeightFor, framedHeightFor, opensCompressed, resolveColumns,
-  resolveCompressed, resolveTracks, shouldClearForcedExpansion, type DockState,
+  COMMAND_BAR_HEIGHT, flexTrackTemplate, frameHeightFor, framedHeightFor, opensCompressed,
+  resolveColumns, resolveCompressed, resolveTracks, shouldClearForcedExpansion, type DockState,
 } from './frameGeometry';
 
 /**
@@ -323,22 +323,16 @@ export function AnalysisFrame({
     if (shouldClearForcedExpansion(scrollTop)) setUserForcedExpanded(false);
   }, []);
 
-  /* §4.2 — restore the centre's scroll position in the same commit as
+  /* §4.2 — restore the reader's scroll position in the same commit as
      the track resize, so a growing brief never moves the claim being
-     read. */
+     read. The centre is no longer a scroller, so the position restored
+     is the PAGE's. */
   /* R4 §9 — `useIsomorphicLayoutEffect` IS `useLayoutEffect` in the
      browser, so the pre-paint timing this restore depends on is
      unchanged. Only the server, where no layout phase exists and neither
      hook runs a body, takes the `useEffect` branch. That satisfies "no
      React server-render warning from useLayoutEffect" without touching
      scroll-restoration behaviour. */
-  useIsomorphicLayoutEffect(() => {
-    const node = centreRef.current;
-    const target = pendingScrollTop.current;
-    if (node !== null && target !== null && node.scrollTop !== target) {
-      node.scrollTop = target;
-    }
-  }, [compressed, dock]);
 
   const tracks = resolveTracks({ frameHeight, compressed, dock });
 
@@ -403,37 +397,71 @@ export function AnalysisFrame({
   const isPhone = !columns.frameApplies;
 
   /*
-   * ── R4 §2 · THE DOCUMENT LOCK, AND WHY IT IS SCOPED ──────────────────
+   * ANALYSIS-VIEWPORT-ADAPT-1 — §4.2's SCROLL CAUSE, RE-SOURCED.
    *
-   * `12-FOUR-SIDED-FRAME-GEOMETRY` §2 opens with
-   * `html, body { height:100%; overflow:hidden }` — "the page never
-   * scrolls". Product-Owner decision 4 authorises restoring it.
+   * `onCentreScroll` used to be fired by the centre's own
+   * `overflow-y-auto`. The centre is now part of the document, so that
+   * element never scrolls and the signal would silently read 0 forever —
+   * the brief would stop compressing as the reader moved into the
+   * analysis, and `▾ FULL` would never be cleared by the next downward
+   * pass. Neither is a behaviour anyone asked to change.
    *
-   * It is applied by the frame and ONLY while the frame is in force, so
-   * the phone column, every other route, and this component's own
-   * unmount all get the document back exactly as they left it. The
-   * previous values are captured rather than assumed empty, because a
-   * route that had set its own would otherwise be cleared by us.
-   *
-   * This is the assertion the old invariant at `frameInvariants` :81
-   * forbade. It is amended, not deleted: the thing that test protected —
-   * that no region can trap the reader's scroll with no gesture able to
-   * reach the content — is now protected by arithmetic instead. The
-   * frame is `calc(100dvh - navbar)`, so there is no overhang to clip.
+   * So the same handler is driven by the same gesture measured where it
+   * now happens: the page. `resolveCompressed`, the 60/30 hysteresis and
+   * `shouldClearForcedExpansion` are untouched — only the source of the
+   * number moves. Passive listener; no layout read beyond `scrollY`.
    */
   useEffect(() => {
-    if (isPhone) return undefined;
-    const html = document.documentElement;
-    const body = document.body;
-    const previousHtml = html.style.overflow;
-    const previousBody = body.style.overflow;
-    html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
-    return () => {
-      html.style.overflow = previousHtml;
-      body.style.overflow = previousBody;
-    };
-  }, [isPhone]);
+    if (isPhone || typeof window === 'undefined') return undefined;
+    const onWindowScroll = (): void => onCentreScroll(window.scrollY);
+    window.addEventListener('scroll', onWindowScroll, { passive: true });
+    onWindowScroll();
+    return () => window.removeEventListener('scroll', onWindowScroll);
+  }, [isPhone, onCentreScroll]);
+
+  useIsomorphicLayoutEffect(() => {
+    const target = pendingScrollTop.current;
+    if (target === null) return;
+    if (isPhone) {
+      const node = centreRef.current;
+      if (node !== null && node.scrollTop !== target) node.scrollTop = target;
+      return;
+    }
+    if (typeof window !== 'undefined' && window.scrollY !== target) {
+      window.scrollTo({ top: target });
+    }
+  }, [compressed, dock, isPhone]);
+
+  /*
+   * ── THE DOCUMENT LOCK IS GONE (ANALYSIS-VIEWPORT-ADAPT-1) ────────────
+   *
+   * WHAT USED TO BE HERE, AND WHY REMOVING IT IS THE POINT. This effect
+   * set `html.style.overflow = 'hidden'` and the same on `body` for the
+   * whole time the desktop frame was mounted, restoring
+   * `12-FOUR-SIDED-FRAME-GEOMETRY` §2's "the page never scrolls" under
+   * PO decision 4. It was correct for a BOUNDED frame: with the shell
+   * pinned to `calc(100dvh - navbar)` there was nothing below the fold
+   * to reach, and the centre owned the only block-axis scroll.
+   *
+   * The flexibility ruling removes both of those premises. The shell is
+   * now a MINIMUM height, the rows size to their content, and the centre
+   * is no longer a scroller — so the reader's scroll owner is the
+   * document. Leaving the lock in place would have left the surface with
+   * NO scroll owner at all: content laid out below the fold, and every
+   * wheel, trackpad and touch gesture refused by `overflow:hidden` on the
+   * scrolling element.
+   *
+   * This is the CTO's R2 finding 1, and it was a real contradiction in
+   * my R1 delta, not a stylistic one. My R1 evidence did not catch it
+   * because `scrollHeight > clientHeight` is still true under a locked
+   * document and `window.scrollTo()` still moves it — neither is a user
+   * gesture. R2 measures an actual `mouse.wheel`.
+   *
+   * `frameInvariants.spec.ts` now asserts the ABSENCE of any such lock,
+   * which is the invariant this file carried before PO decision 4 and
+   * which the flexibility ruling restores.
+   */
+
 
   const gridTemplateColumns = columns.indexIsChipRow
     ? `minmax(0,1fr) ${columns.rightWidth}px`
@@ -483,11 +511,30 @@ export function AnalysisFrame({
          `overflow-x-auto` by design, and without this it sized the track
          to its content and pushed the page sideways — measured
          scrollWidth 490 against a 375 viewport in Polish. */
-      className="min-w-0 shrink-0 overflow-hidden"
+      /*
+        ANALYSIS-SOURCES-VISIBILITY-1 — `overflow-x-hidden`, not
+        `overflow-hidden`, and no `minHeight: 0`.
+
+        The horizontal half of this containment is the one that was
+        described when it was added and is KEPT verbatim: the card row is
+        `overflow-x-auto` by design, and without it the track sized to its
+        content and pushed the page sideways (measured scrollWidth 490
+        against a 375 viewport in Polish). Nothing about that changes.
+
+        The VERTICAL half is what halved the source cards. Paired with
+        `minHeight: 0` and a fixed row-3 track it guaranteed that whatever
+        the cards needed beyond `tracks.dockHeight` was cut off with no
+        gesture able to reach it — the Product Owner's measurement at
+        `/search?q=Iran&countryCode=IR`. Row 3 is now `minmax(dockHeight,
+        max-content)`, so the band grows to its cards. It still does not
+        scroll inside itself: PO ruling F-2a's prohibition on an inner
+        vertical scrollbar in this region is unchanged and unweakened.
+      */
+      className="min-w-0 overflow-x-hidden"
       style={
         isPhone
           ? undefined
-          : { gridColumn: columns.indexIsChipRow ? '1 / 3' : '1 / 4', gridRow: '3', minHeight: 0 }
+          : { gridColumn: columns.indexIsChipRow ? '1 / 3' : '1 / 4', gridRow: '3' }
       }
     >
       {/*
@@ -520,7 +567,14 @@ export function AnalysisFrame({
       */}
       <div
         data-paf-dock-fits={tracks.dockFitsContent}
-        className={isPhone ? undefined : 'h-full min-h-0 overflow-hidden'}
+        /*
+          `h-full min-h-0` forced this wrapper to the track's height and
+          then clipped anything taller — the second half of the same
+          defect. With row 3 sized `minmax(dockHeight, max-content)` the
+          wrapper takes its natural height and the track follows it.
+          `overflow-x-hidden` keeps the horizontal containment above.
+        */
+        className={isPhone ? undefined : 'overflow-x-hidden'}
       >
       <SourcesReporting
         sources={model.sourceSupport}
@@ -627,10 +681,28 @@ export function AnalysisFrame({
        * inside a fixed box steals height from the centre instead of
        * clearing chrome.
        */
+      /*
+       * ANALYSIS-VIEWPORT-ADAPT-1 — `min-h`, NOT `h`, AND NO CLIPPING.
+       *
+       * THE HEIGHT ARITHMETIC IS UNCHANGED AND STILL CORRECT.
+       * `calc(100dvh - navbar)` is exactly the subtraction R4 §2 introduced
+       * to fix the old overhang, with the same two NavBar heights and the
+       * same `cd-header:` switch, and `100dvh` still tracks a retracting
+       * mobile toolbar. What changes is one letter: it is now the
+       * MINIMUM the workspace occupies rather than a box it may not
+       * exceed.
+       *
+       * `overflow-hidden` is gone with it. Those two went together: a box
+       * that cannot grow needs something to hide the overflow, and what it
+       * hid was the bottom half of the source cards. With the shell free to
+       * grow, ordinary document scrolling reaches everything, which is the
+       * behaviour the Product Owner ruled permitted "where necessary" and
+       * which the phone column has had all along.
+       */
       className={
         isPhone
           ? 'flex min-h-screen flex-col bg-[#05080d]'
-          : 'flex h-[calc(100dvh-52px)] cd-header:h-[calc(100dvh-62px)] flex-col overflow-hidden bg-[#05080d]'
+          : 'flex min-h-[calc(100dvh-52px)] cd-header:min-h-[calc(100dvh-62px)] flex-col bg-[#05080d]'
       }
       style={isPhone ? { paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' } : undefined}
     >
@@ -780,23 +852,27 @@ export function AnalysisFrame({
         data-paf="frame"
         data-layout={isPhone ? 'phone-column' : 'grid'}
         data-frame-applies={columns.frameApplies ? 'true' : 'false'}
-        className={isPhone ? 'flex min-w-0 flex-col' : 'grid min-h-0 min-w-0 flex-1 overflow-hidden'}
+        className={isPhone ? 'flex min-w-0 flex-col' : 'grid min-w-0 flex-1'}
         style={
           isPhone
             ? undefined
             : {
                 gridTemplateColumns,
                 /*
-                  R4 §2 — rows 1 and 3 are explicit pixel tracks, row 2 is
-                  `minmax(0,1fr)`. THE CENTRE'S HEIGHT IS NEVER ASSIGNED:
-                  it is whatever the frame has left, which is the whole
-                  mechanism behind "expanding the dock reduces the centre"
-                  (F-6). `frameGeometry.resolveTracks` already decided both
-                  pixel values and already clamps the dock so the centre
-                  keeps its 240px floor — this is the consumer that stopped
-                  reading it, not arithmetic being written twice.
+                  ANALYSIS-WORKSPACE-FLEX-1 — the SAME three numbers
+                  `resolveTracks` has always decided, expressed as ranges.
+                  `flexTrackTemplate` holds the reasoning; the short version
+                  is that row 1's height became a ceiling, row 3's became a
+                  floor, and row 2 kept its accepted 240px floor and still
+                  absorbs the slack.
+
+                  F-6 IS UNAFFECTED AND STILL HOLDS BY THE SAME MECHANISM:
+                  the centre's height is STILL never assigned. It is
+                  `minmax(240px, 1fr)` — whatever is left — so expanding the
+                  dock still reduces the centre rather than moving rows 1
+                  or 2, exactly as before.
                 */
-                gridTemplateRows: `${tracks.briefHeight}px minmax(0,1fr) ${tracks.dockHeight}px`,
+                gridTemplateRows: flexTrackTemplate(tracks),
               }
         }
       >
@@ -804,10 +880,16 @@ export function AnalysisFrame({
         <div
           ref={bandRef}
           data-paf="brief-track"
-          /* R4 §2 — "every panel is `overflow:hidden` ... no panel can
-             push another". On the phone column the opposite is required,
-             so the containment is conditional rather than absolute. */
-          className={isPhone ? 'shrink-0' : 'min-h-0 shrink-0 overflow-hidden'}
+          /*
+            R4 §2's "every panel is `overflow:hidden` ... no panel can push
+            another" was HORIZONTAL containment doing double duty as
+            vertical clipping. The horizontal half is still load-bearing and
+            is kept as `overflow-x-hidden`; the vertical half is exactly
+            what cut a short brief's row down to a fixed 196px of mostly
+            empty band, so it goes. The row is now a ceiling, so a brief
+            still cannot push another panel — it can only take LESS.
+          */
+          className={isPhone ? 'shrink-0' : 'min-w-0 overflow-x-hidden'}
           style={isPhone ? undefined : { gridColumn: columns.indexIsChipRow ? '1 / 2' : '1 / 3', gridRow: '1' }}
         >
           {/*
@@ -852,7 +934,7 @@ export function AnalysisFrame({
               ? 'min-w-0 shrink-0 border-t border-[#101923]'
               : 'min-w-0 shrink-0 border-l border-[#101923]'
           }
-            style={isPhone ? undefined : { gridColumn: columns.indexIsChipRow ? '2' : '3', gridRow: '1', minHeight: 0, overflow: 'hidden' }}
+            style={isPhone ? undefined : { gridColumn: columns.indexIsChipRow ? '2' : '3', gridRow: '1', minWidth: 0, overflowX: 'hidden' }}
           >
             <LocationTop retrievalContext={response.retrievalContext} compressed={compressed} language={language} />
           </aside>
@@ -899,7 +981,7 @@ export function AnalysisFrame({
             forbids. `min-w-0` contains the row without touching the block
             axis at all.
           */
-          className={isPhone ? 'flex min-w-0 flex-col' : 'flex min-h-0 min-w-0 flex-col overflow-hidden'}
+          className={isPhone ? 'flex min-w-0 flex-col' : 'flex min-w-0 flex-col'}
           style={isPhone ? undefined : { gridColumn: columns.indexIsChipRow ? '1' : '2', gridRow: '2' }}
         >
           {/*
@@ -962,7 +1044,26 @@ export function AnalysisFrame({
             onScroll={onCentreScroll}
             labelledBy={DIMENSION_HEADING_ID}
             language={language}
-            bounded={!isPhone}
+            /*
+              ANALYSIS-VIEWPORT-ADAPT-1 — THE CENTRE IS NO LONGER A
+              BOUNDED SCROLLER AT ANY WIDTH.
+
+              `bounded` mounted `overflow-y-auto` on a track of fixed
+              height, which is a fixed-height box with content inside it —
+              the shape the Product Owner ruled against ("do not trap
+              content inside an unreachable fixed-height box"). One
+              component, two models, and the frame still decides which;
+              what changes is that the document model R4 §9 kept for the
+              phone now governs every width.
+
+              THE COMPRESSION SIGNAL IS RE-SOURCED, NOT DROPPED — see the
+              document-scroll effect above. §4.2's hysteresis, its 60/30
+              thresholds and `▾ FULL`'s hold-until-next-downward-pass all
+              still run; they read the page's scroll position instead of
+              this element's, because that is now where the reader
+              actually scrolls.
+            */
+            bounded={false}
           >
             {model.analysisUnavailable ? (
               /* R4 — FOUR REASONS, FOUR SENTENCES. Before R4 every absent
@@ -1157,7 +1258,16 @@ export function AnalysisFrame({
           className={
             isPhone
               ? 'min-w-0 shrink-0 border-t border-[#101923]'
-              : 'flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-l border-[#101923]'
+              /*
+                PO point 7 — the right rail must stay usable and must not
+                force the centre into clipping. `min-h-0 ... overflow-hidden`
+                did both halves of the wrong thing: it clipped the rail's own
+                content and, inside a fixed-height grid, made the rail a
+                reason the centre could not grow. It keeps its horizontal
+                containment and takes its natural height, exactly as the
+                phone column already does.
+              */
+              : 'flex min-w-0 shrink-0 flex-col overflow-x-hidden border-l border-[#101923]'
           }
           style={
             isPhone

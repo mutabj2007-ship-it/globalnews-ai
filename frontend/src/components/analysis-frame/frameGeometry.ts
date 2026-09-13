@@ -290,6 +290,79 @@ export function resolveTracks(input: TrackInput): FrameTracks {
   };
 }
 
+/* ------------------------------------------------------------------ *
+ * ANALYSIS-WORKSPACE-FLEX-1 / ANALYSIS-VIEWPORT-ADAPT-1 /
+ * ANALYSIS-SOURCES-VISIBILITY-1 — the tracks become RANGES
+ * ------------------------------------------------------------------ */
+
+/**
+ * THE SAME THREE TRACKS, THE SAME THREE NUMBERS — AS RANGES RATHER THAN
+ * FIXED HEIGHTS.
+ *
+ * WHAT WAS MEASURED. On Railway Alpha at `/search?q=Iran&countryCode=IR`
+ * the Product Owner measured a workspace whose Executive Brief reserved a
+ * full 196px row for a brief that had been WITHHELD — three lines of
+ * notice — while the Sources & Reporting cards below were cut in half by
+ * the frame's own bottom edge. Both facts come from one decision: rows 1
+ * and 3 were EXACT pixel tracks inside a box sized `calc(100dvh - navbar)`
+ * with `overflow-hidden`, so a row could neither give space back nor take
+ * the space it needed, and whatever did not fit was unreachable.
+ *
+ * THE CORRECTION IS NOT A REDESIGN, AND THAT IS DELIBERATE. The
+ * arrangement is untouched: Analysis Index left, reader centre, Evidence
+ * Geography right, brief on row 1, Sources on row 3. `resolveTracks` is
+ * unchanged and still decides all three numbers. What changes is what
+ * those numbers MEAN:
+ *
+ *   row 1  `minmax(min-content, briefHeight)`  — briefHeight is now a
+ *          CEILING. A short or withheld brief occupies what it needs and
+ *          returns the rest; a normal brief is unchanged at 196/52.
+ *   row 2  `minmax(CENTRE_MIN_HEIGHT, 1fr)`    — the accepted 240px floor
+ *          is kept verbatim and the centre still absorbs the slack, so a
+ *          workspace that fits the viewport looks exactly as it does now.
+ *   row 3  `minmax(dockHeight, max-content)`   — dockHeight is now a
+ *          FLOOR. The Sources band grows to its cards instead of clipping
+ *          them, which is the whole of ANALYSIS-SOURCES-VISIBILITY-1.
+ *
+ * WHY THIS IS A RESTORATION RATHER THAN AN INVENTION. R1 rulings 1-3 said
+ * exactly this — "Rows size to their content and the DOCUMENT scrolls" —
+ * and `AnalysisFrame.tsx` still carries that comment above the grid. R4 §2
+ * superseded the behaviour to fix a REAL defect (a `100vh` box starting
+ * below the NavBar, overhanging by one header) but fixed it by pinning the
+ * rows as well as correcting the arithmetic. The height arithmetic stays
+ * corrected — `calc(100dvh - navbar)` is still what the shell is sized
+ * from. Only the pinning is lifted.
+ *
+ * WHAT IS NOT DONE, because the Product Owner ruled it out by name: no
+ * inner vertical scrollbar is introduced anywhere in the Sources region.
+ * The band grows; it does not scroll inside itself. Horizontal source
+ * navigation is untouched, and the dedicated Sources destination remains
+ * for expanded exploration rather than becoming the only way to read the
+ * bottom half of a card already on screen.
+ */
+export function flexTrackTemplate(tracks: FrameTracks): string {
+  return [
+    /*
+      `max-content`, NOT `${'$'}{briefHeight}px`, AS THE CEILING.
+      `minmax(min-content, 196px)` still RESERVES 196: grid grows a track
+      toward its growth limit before it distributes free space to `1fr`,
+      so a withheld three-line brief measured 196px exactly — the defect
+      unchanged. Measured at all four desktop viewports before this was
+      corrected. The row now takes what the brief actually needs;
+      `briefHeight` continues to govern BriefRow's own compressed/normal
+      tier, which is where the 196/52 distinction belongs.
+    */
+    'minmax(min-content, max-content)',
+    `minmax(${CENTRE_MIN_HEIGHT}px, 1fr)`,
+    `minmax(${tracks.dockHeight}px, max-content)`,
+  ].join(' ');
+}
+
+/** The bounded template this replaces, kept so the two are comparable. */
+export function boundedTrackTemplate(tracks: FrameTracks): string {
+  return `${tracks.briefHeight}px minmax(0,1fr) ${tracks.dockHeight}px`;
+}
+
 /**
  * §3.3 — the frame's opening compression state, before the user has
  * scrolled or overridden anything.

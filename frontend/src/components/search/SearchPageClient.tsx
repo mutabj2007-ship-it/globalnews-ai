@@ -10,6 +10,7 @@ import { AnalysisFrameSurface } from '@/components/analysis-frame/AnalysisFrameS
 import { resolveFrameEvidence } from '@/components/analysis-frame/analysisFrameState';
 import { ZeroReportRecovery } from '@/components/analysis-frame/ZeroReportRecovery';
 import { PRIMARY_DIMENSION_KEYS, type PrimaryDimensionKey } from '@/components/search/analysisDimensions';
+import { resolveStoryTitle, usePublishStoryContext } from '@/lib/ask/storyContextStore';
 import { resolveInitialLanguage } from '@/lib/i18n/languages';
 import { getDictionary, type Dictionary } from '@/lib/i18n/dictionaries';
 
@@ -82,6 +83,23 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
   const countryCodeParam = searchParams.get('countryCode');
   const articleIdParam = searchParams.get('articleId');
   /*
+   * ASK AI REV A §4.2 — the transport for the SUBJECT across the Ask ->
+   * full-analysis transition.
+   *
+   * Rev A owns the reason this parameter exists: without it the
+   * transition builds `title: query`, which makes the FOLLOW-UP the
+   * story title and reintroduces the subject/question inversion the
+   * contract rules against (Rev A change log #1).
+   *
+   * IT IS NOT AN ANCHOR AND CANNOT BECOME ONE — see the gate below.
+   * The three-state resolution lives in `resolveStoryTitle`, and the
+   * distinction it makes is the point: ABSENT is legacy behaviour,
+   * MALFORMED fails closed. R1 collapsed the two and then wrote
+   * `title: storyTitle ?? query`, which promoted the follow-up to
+   * subject exactly when the URL was least trustworthy.
+   */
+  const storyTitleParam = searchParams.get('storyTitle');
+  /*
    * ── ARTICLE-ANCHOR REPAIR ─────────────────────────────────────────────
    *
    * This gate used to require `countryCode`, and threw `articleId` away
@@ -114,15 +132,58 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
    */
   const storyContext: StoryContext | undefined = useMemo(
     () =>
-      articleIdParam !== null || countryCodeParam !== null
+      /*
+        FAIL CLOSED FIRST (R2 finding 3). `&&` evaluates left to right, so
+        a malformed subject short-circuits before the anchor gate is
+        consulted: no context is constructed, therefore none is published,
+        therefore the dock cannot transport one.
+
+        THE ANCHOR GATE ITSELF IS UNCHANGED, character for character, and
+        deliberately so — `articleAnchorParity`, `m51PhaseB` and
+        `m52aHardening` pin it, and the R2 corrections had no business
+        moving an accepted assertion that was already right.
+
+        `resolveStoryTitle` is called twice rather than hoisted into a
+        const. It is pure and takes a short string, and hoisting it would
+        either add a dependency this memo does not need or force a block
+        body — which would change the two textual shapes those three
+        accepted specs assert. The duplication is the cheaper price.
+      */
+      resolveStoryTitle(storyTitleParam).kind !== 'malformed' &&
+      (articleIdParam !== null || countryCodeParam !== null)
         ? {
-            title: query,
+            /*
+              `query` is reachable as the subject ONLY on the absent
+              branch. R1's `storyTitle ?? query` also reached it on the
+              malformed branch, which promoted the reader's follow-up to
+              story subject exactly when the URL was least trustworthy.
+            */
+            title:
+              resolveStoryTitle(storyTitleParam).kind === 'valid' && storyTitleParam !== null
+                ? storyTitleParam
+                : query,
             ...(articleIdParam !== null ? { articleId: articleIdParam } : {}),
             ...(countryCodeParam !== null ? { countryCode: countryCodeParam } : {}),
           }
         : undefined,
-    [query, countryCodeParam, articleIdParam],
+    [query, storyTitleParam, countryCodeParam, articleIdParam],
   );
+
+  /*
+   * ASK AI REV A §5 — THIS PAGE IS THE PUBLISHER.
+   *
+   * The dock is a sibling of the page in the root layout and cannot
+   * reach page state (§0(a)). This hook is the only writer: it publishes
+   * the SAME `storyContext` object the workspace itself analyses, so
+   * there is no second derivation of the anchor and no way for the two
+   * to disagree.
+   *
+   * It also clears — when the context becomes `undefined` on this very
+   * route (L2), and on unmount (L1, L5). That is the correctness half:
+   * an anchor outliving its page would silently attach a story the
+   * reader has already left to an unrelated question.
+   */
+  usePublishStoryContext(storyContext);
 
   // Milestone #47 — resolved once on mount via resolveInitialLanguage()'s
   // explicit-override > browser > English order. M65 — seeded from the

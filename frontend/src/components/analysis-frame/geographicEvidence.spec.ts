@@ -206,13 +206,31 @@ describe('G — the expanded dock never consumes the geographic anchor', () => {
     // The dock is a grid track: only `centreHeight` can change (PAF-3).
     /* Derived from DOCK_COMPACT_NORMAL: the alpha closure raised the compact
        dock so it can show a real source row instead of one thin line. */
+    /*
+      ANALYSIS-WORKSPACE-FLEX-1 RETARGET — THE ROW MODEL BECAME RANGES.
+
+      The invariant this assertion exists for is UNCHANGED and is still
+      what is asserted: rows 1 and 3 carry the heights `resolveTracks`
+      decided, and row 2 is the flexible track that absorbs the
+      difference — which is why expanding the dock can only take from the
+      centre (PAF-3/F-6). The centre's height is still never written to a
+      style; the companion assertion below still proves that.
+
+      What changed is that each track is now a RANGE around the same
+      number, so a short brief can return space (row 1's ceiling) and the
+      source cards can be fully shown instead of clipped (row 3's floor).
+      `minmax(min-content, Npx) minmax(240px,1fr) minmax(Npx, max-content)`
+      is the same three numbers as `Npx minmax(0,1fr) Npx`.
+    */
     expect(compactHtml).toMatch(
-      /grid-template-rows:\d+px minmax\(0,1fr\) \d+px/,
+      /grid-template-rows:minmax\(min-content,\s*max-content\) minmax\(\d+px,\s*1fr\) minmax\(\d+px,\s*max-content\)/,
     );
     // 962 - 62 navbar - 48 command bar = 852 frame; 0.46 => 392, under the
     // 852-196-240 = 416 ceiling. Unchanged arithmetic, stated with the
     // chrome the product actually has.
-    expect(expandedHtml).toMatch(/grid-template-rows:\d+px minmax\(0,1fr\) \d+px/);
+    expect(expandedHtml).toMatch(
+      /grid-template-rows:minmax\(min-content,\s*max-content\) minmax\(\d+px,\s*1fr\) minmax\(\d+px,\s*max-content\)/,
+    );
     // Row 1 — the brief and the location image — is byte-identical either way.
     for (const html of [compactHtml, expandedHtml]) {
       expect(html).toContain('data-paf="location-top"');

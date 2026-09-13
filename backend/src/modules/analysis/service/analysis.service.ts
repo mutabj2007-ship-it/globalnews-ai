@@ -1,6 +1,7 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   normalizeQuery,
+  resolveServerBudgetMs,
   resolveLocationContext,
   resolveCountryByAnyIdentifier,
   resolveCountryByCity,
@@ -29,7 +30,6 @@ import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-c
 import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
 import {
   assessBriefCompliance,
-  buildBriefRepairDirective,
   detectDevelopmentBreadth,
 } from '../validation/brief-compliance.util';
 import {
@@ -277,6 +277,57 @@ function resolveNoEvidenceMessage(language: LanguageCode): string {
   return NO_EVIDENCE_MESSAGE[language] ?? NO_EVIDENCE_MESSAGE.en!;
 }
 
+/**
+ * The total synchronous budget was exhausted before a response existed.
+ *
+ * A DISTINCT TYPE, not a generic failure: "the analysis failed" and "the
+ * analysis did not finish inside the budget we promised the client" are
+ * different facts, and the second one is usually followed by a cache hit.
+ *
+ * ── REV B — IT IS AN HttpException, AND THAT IS THE WHOLE FIX ──────────────
+ *
+ * In Rev A this extended `Error`. `GlobalExceptionFilter` catches everything and
+ * branches on type: an `HttpException` keeps its own status and body, and
+ * ANYTHING ELSE becomes a sanitized 500 with "An unexpected error occurred." So
+ * a deadline — a known, deliberate, correctly-handled outcome — reached the
+ * reader as an unexplained server fault, and `analysisApi.ts`'s `codeForStatus`
+ * mapped `>= 500` to `'server'`. The client was told the backend had broken
+ * when in fact the backend had kept exactly the promise it made.
+ *
+ * 504 GATEWAY TIMEOUT IS THE TRUTHFUL STATUS, not merely an available one. This
+ * service is a gateway in front of a model provider, and the upstream did not
+ * answer inside the time this gateway was willing to wait. That is precisely
+ * what 504 means. 408 would be wrong — it blames the CLIENT's request for being
+ * slow; 503 would be wrong — it claims unavailability, when the service is up,
+ * healthy, and still working on this very request.
+ *
+ * NOTHING IN THE FILTER CHANGES. By being an HttpException this takes the
+ * filter's FIRST branch, which re-emits status and body exactly as Nest would
+ * unfiltered, and logs at warn rather than error — correct, because a deadline
+ * is an expected operating condition and not an unhandled fault.
+ *
+ * THE BODY DISCLOSES NOTHING SENSITIVE. `budgetMs` is a published constant and
+ * `cacheKey` stays server-side: it is carried as a field for logging and is
+ * deliberately absent from the response shape below.
+ */
+export class AnalysisDeadlineExceededError extends HttpException {
+  constructor(
+    public readonly budgetMs: number,
+    public readonly cacheKey: string,
+  ) {
+    super(
+      {
+        status: 'error',
+        code: 'analysis-deadline-exceeded',
+        message: `Analysis did not complete within the total synchronous budget of ${budgetMs} ms.`,
+        budgetMs,
+      },
+      HttpStatus.GATEWAY_TIMEOUT,
+    );
+    this.name = 'AnalysisDeadlineExceededError';
+  }
+}
+
 @Injectable()
 export class AnalysisService {
   private readonly logger = new Logger(AnalysisService.name);
@@ -444,7 +495,44 @@ export class AnalysisService {
       // misrepresent what actually happened — `buildProvenance()`
       // already sets `cached: false` for every freshly-generated
       // result, which remains the truthful value here.
-      const sharedResult = await existingInFlightAnalysis;
+      /*
+        ══════════════════════════════════════════════════════════════════════
+        REV B — A JOINER IS A CALLER, AND EVERY CALLER IS BOUNDED
+        ══════════════════════════════════════════════════════════════════════
+
+        THE HOLE THIS CLOSES. Rev A raced the FRESH operation against the total
+        budget at the bottom of this method, and stopped there. This branch
+        awaited the shared promise directly, so a request that joined work
+        already in progress had no deadline of its own at all — and it is the
+        WORSE case, not the better one: a joiner arrives partway through, so the
+        remaining wait it inherits is unknown to it and can be the entire
+        remainder of a run that is already struggling. The one caller with the
+        least information about how long it had left was the one caller with no
+        limit on it.
+
+        MEASURED FROM THIS CALLER'S OWN ARRIVAL, DELIBERATELY. The deadline is
+        armed here, now, not inherited from whenever the shared operation began.
+        That is what makes it match the promise actually made to THIS request:
+        its browser started its own compiled `ANALYSIS_CLIENT_TIMEOUT_MS` timer
+        when it sent its own fetch, and the server's response deadline is
+        defined against the same instant. A joiner is therefore bounded on its
+        own clock, exactly like an originator.
+
+        ONE SHARED OPERATION IS PRESERVED — no provider work is duplicated.
+        `existingInFlightAnalysis` is the single underlying promise and is
+        neither replaced nor re-created here; only what THIS caller AWAITS is
+        raced. The originator keeps awaiting its own race over the same promise,
+        `inFlightAnalyses` still holds it, and a third caller arriving a moment
+        later still joins that same one. If this caller's deadline fires, the
+        shared operation continues, completes, and populates the cache — so the
+        very next identical request is served from it.
+      */
+      const sharedResult = await this.withResponseDeadline(
+        existingInFlightAnalysis,
+        config.totalBudgetMs,
+        cacheKey,
+      );
+
       return {
         ...sharedResult,
         query: originalQuery,
@@ -1705,81 +1793,67 @@ export class AnalysisService {
             exactly as before: the analysis and the one repair.
           */
           let analysisResult = analysis;
-          let briefVerdict = assessBriefCompliance(analysis.summary, developmentBreadth);
-          let repairRequested = false;
+          const briefVerdict = assessBriefCompliance(analysis.summary, developmentBreadth);
+          /*
+            ══════════════════════════════════════════════════════════════════
+            THE REPAIR IS NO LONGER ON THE SYNCHRONOUS PATH — ALPHA BUDGET R1
+            ══════════════════════════════════════════════════════════════════
 
+            WHAT WAS HERE. C906 ruling D permitted "AT MOST ONE targeted repair
+            request to the provider", and C907 correction 3 made a
+            still-non-compliant repair fail closed. Both rulings are preserved
+            in outcome. What is removed is the SECOND SYNCHRONOUS CALL.
+
+            WHY, MEASURED. The "targeted repair" was not targeted. It called
+            `provider.analyzeNews()` again with the ENTIRE article set and the
+            same prompt plus an appended directive — the directive's own words
+            are "Produce the analysis again" — so every field was regenerated
+            and fully re-validated. Railway run 579a0134 settles the cost:
+
+                generation #1   6,367 tokens   16,535 ms
+                generation #2   6,689 tokens   13,887 ms   <- LARGER
+                POST completed               30,914 ms
+                client deadline              30,000 ms
+
+            A bounded repair of one field cannot cost more than the analysis
+            that produced it. The reader was told the analysis had failed, 914 ms
+            before a correct 201 was written to a socket nobody was reading.
+
+            WHAT IS PRESERVED — ALL OF IT. `assessBriefCompliance` is unchanged,
+            its threshold is unchanged, `withholdExecutiveBrief` is unchanged,
+            and the reason travels with the withheld state exactly as before. A
+            non-compliant brief is still refused. NOTHING about the validation
+            moved; only the second expensive attempt to satisfy it did.
+
+            WHY WITHHOLDING IMMEDIATELY IS THE RIGHT ALPHA ANSWER. A withheld
+            brief is already a fully specified, rendered state carrying its own
+            reason — the product does not need the repair in order to ANSWER,
+            only in order to IMPROVE an answer it can already serve. Making the
+            reader wait a second full generation for an improvement that failed
+            twice on the observed run is the worst of both.
+
+            NO BACKGROUND QUEUE. Deliberately. No governed durable job or result
+            mechanism exists in this architecture, and inventing one for Alpha
+            would be new infrastructure on the critical path of a release
+            correction. If the repair is to return, it returns as governed
+            asynchronous work, not as a second synchronous call.
+          */
           if (!briefVerdict.compliant) {
             this.logger.warn(
               `Executive brief failed structural compliance: ${briefVerdict.reason ?? ''} ` +
-                'Requesting one targeted repair.',
+                'Withholding the brief and returning the validated analysis record without it. ' +
+                'No synchronous repair is attempted — see shared/src/analysis-budget.ts.',
             );
-            repairRequested = true;
-
-            try {
-              const repairedCandidate = await this.provider.analyzeNews({
-                query: normalizedQuery,
-                articles: deduped,
-                relationalContext,
-                responseLanguage: requestedLanguage,
-                repairDirective: buildBriefRepairDirective(briefVerdict),
-              });
-
-              /*
-                THE REPAIR IS VALIDATED EXACTLY LIKE THE ORIGINAL. Same
-                validator, same options, same grounding — a repaired answer is
-                model output and gets no more trust than the first one, so it
-                cannot smuggle in an evidence id or a claim the first could
-                not have made.
-              */
-              const repaired = validateAnalysisResult(repairedCandidate, {
-                query: normalizedQuery,
-                articles: deduped,
-                analysisMode: this.provider.isMock ? 'mock-ai' : 'live-ai',
-                maxArticleChars: config.maxArticleChars,
-                relationalContextPresent: relationalContext !== undefined,
-                relationalContext,
-              });
-
-              const repairedVerdict = assessBriefCompliance(repaired.summary, developmentBreadth);
-
-              if (repairedVerdict.compliant) {
-                analysisResult = repaired;
-                briefVerdict = repairedVerdict;
-              } else {
-                /*
-                  BOTH ANSWERS FAILED. The model will not produce a compliant
-                  brief for this evidence set, and we know it. The reader gets
-                  the validated evidence record and an honest statement that
-                  the brief is unavailable — never the paragraph we just
-                  measured and rejected twice.
-
-                  The ORIGINAL verdict is carried into the withheld state, not
-                  the repaired one: it describes the evidence breadth (which is
-                  identical for both) and the defect as first measured, and the
-                  repair produced no new information about the evidence.
-                */
-                this.logger.warn(
-                  'Executive brief repair did not comply either. ' +
-                    'Withholding the brief and returning the validated analysis record without it.',
-                );
-              }
-            } catch (repairError) {
-              /*
-                A FAILED REPAIR CALL IS NOT A FAILED ANALYSIS — but it is also
-                not a compliant brief. The first answer is valid and cited and
-                is retained in full; its summary is still the one the check
-                rejected, so it is withheld on this path too. The difference
-                between "the repair disagreed" and "the repair never arrived"
-                does not change what is known about the FIRST answer, which is
-                the only thing the invariant is about.
-              */
-              this.logger.warn(
-                'Executive brief repair call failed. ' +
-                  'Withholding the brief and returning the validated analysis record without it.',
-                repairError instanceof Error ? repairError : undefined,
-              );
-            }
           }
+
+          /*
+            `repairRequested` is now always false, and ExecutiveBriefState's own
+            doc comment has been corrected to say what false means on this path:
+            no repair was requested, because none is requested synchronously any
+            more. It never meant "a repair was skipped silently", and it must
+            not start meaning that without the field saying so.
+          */
+          const repairRequested = false;
 
           /*
             ONE PLACE STAMPS THE RECORD, so an accepted brief and a withheld
@@ -1851,7 +1925,100 @@ export class AnalysisService {
     });
 
     this.inFlightAnalyses.set(cacheKey, settledInFlightOperation);
-    return settledInFlightOperation;
+
+    /*
+      ══════════════════════════════════════════════════════════════════════════
+      THE TOTAL SYNCHRONOUS RESPONSE DEADLINE — ENFORCED, NOT DECLARED
+      ══════════════════════════════════════════════════════════════════════════
+
+      WHY A CONSTANT WAS NOT ENOUGH. R1 defined ANALYSIS_TOTAL_BUDGET_MS and
+      derived the client deadline from it. The CTO rejected that as enforcement,
+      correctly: `20s x 1` is not a valid worst-case provider term. A PROVIDER
+      TIMEOUT is non-retryable, but a 429, a 5xx or a network failure IS
+      retryable, and one of those can arrive at 19.9 s — after which a further
+      attempt begins with its own full 20 s budget. Nothing bounded the sum.
+
+      This bounds it, for every reachable path at once, because it measures WALL
+      CLOCK around the COMPLETE operation — retrieval, every provider attempt,
+      every retry and backoff, validation, brief assessment and assembly. It does
+      not need to know how many retries happened or where the time went.
+
+      COALESCING IS NOT DISTURBED. `inFlightAnalyses` still holds the real
+      operation, so a concurrent identical request still joins it rather than
+      starting a second analysis. Only what THIS caller awaits is raced.
+
+      THE WORK IS NOT CANCELLED, AND THIS COMMENT WILL NOT PRETEND OTHERWISE.
+      On deadline the operation continues, completes and populates the cache —
+      which is a genuine benefit, because the next identical request is then
+      served in about a millisecond. What is bounded here is the RESPONSE, not
+      the spend. See the honest split in the report:
+
+          synchronous RESPONSE deadline .......... BOUNDED (this code)
+          abandoned provider work cancellation ... OPEN (unwired; next correction)
+    */
+    return this.withResponseDeadline(settledInFlightOperation, config.totalBudgetMs, cacheKey);
+  }
+
+  /**
+   * Races an operation against the total synchronous budget.
+   *
+   * The timer is cleared on settlement either way, so a fast response leaves no
+   * pending handle behind. The underlying operation keeps a no-op rejection
+   * handler attached when the deadline fires, because after this method has
+   * rejected nobody is awaiting it any more and an unhandled rejection would be
+   * a second, unrelated failure mode.
+   */
+  private withResponseDeadline<T>(
+    operation: Promise<T>,
+    budgetMs: number | undefined,
+    cacheKey: string,
+  ): Promise<T> {
+    /*
+      REV B — RESOLVE BEFORE ARMING, ALWAYS.
+
+      `setTimeout(fn, undefined)` is not "no deadline"; it is a deadline of
+      approximately zero. Every AnalysisConfigService test double in this
+      repository predates `totalBudgetMs` and supplies none, so arming the raw
+      value would have made each of them fail instantly on a deadline that was
+      never intended — a new zero-millisecond behaviour introduced into existing
+      tests by an omission rather than by a decision.
+
+      `resolveServerBudgetMs` is the shared authority's own resolver: an absent
+      or nonsensical value becomes ANALYSIS_TOTAL_BUDGET_MS, and an excessive one
+      is clamped to the ceiling the compiled client can tolerate. Both directions
+      end at a REAL enforced deadline, so this is a hardening of the boundary and
+      not a relaxation of it — there is no input for which this method now
+      declines to arm a deadline.
+
+      Production is unaffected: AnalysisConfigService already clamps through this
+      same function, so the value arriving here is a positive number at or below
+      the ceiling and passes through unchanged.
+    */
+    const resolvedBudgetMs = resolveServerBudgetMs(budgetMs);
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        this.logger.warn(
+          `Analysis exceeded the total synchronous budget of ${resolvedBudgetMs} ms. ` +
+            'Responding with a deadline error; the operation continues and will populate the ' +
+            'cache, so an identical retry is served from it. Provider work is NOT cancelled — ' +
+            'see ANALYSIS CANCELLATION, OPEN.',
+        );
+
+        /* After this rejection nobody awaits the operation. Keep its eventual
+           outcome handled so a late failure cannot surface as an unhandled
+           rejection in an unrelated request's tick. */
+        void operation.catch(() => undefined);
+
+        reject(new AnalysisDeadlineExceededError(resolvedBudgetMs, cacheKey));
+      }, resolvedBudgetMs);
+    });
+
+    return Promise.race([operation, deadline]).finally(() => {
+      if (timer !== undefined) clearTimeout(timer);
+    }) as Promise<T>;
   }
 
   /**

@@ -59,6 +59,18 @@ const QUESTION = 'What is happening with the Russia grain corridor?';
 const ARTICLE_ID = 'article-russia-7f3a';
 const COUNTRY = 'RUS';
 
+/*
+ * ASK AI REV A §4.2 RETARGET — the dep list gained `storyTitle`.
+ *
+ * The INVARIANT this file pins is unchanged and is the reason the
+ * assertion is written against the dep list at all: the memo is keyed on
+ * URL-derived PRIMITIVES ONLY and never on `language`. Rev A adds one
+ * more URL primitive — `storyTitle`, the transport that stops the
+ * follow-up from becoming the story title — so the correct expression of
+ * the same rule now names four params, not three. Nothing about
+ * language-independence is relaxed; `not.toMatch(/\blanguage\b/)` below
+ * still carries it.
+ */
 describe('article anchor — articleId alone is a valid story context', () => {
   it('an articleId with NO countryCode still produces an anchored context', () => {
     const ctx = buildStoryContext(QUESTION, ARTICLE_ID, null);
@@ -149,7 +161,7 @@ describe('article anchor — EN and PL anchor to the SAME article', () => {
 
     const code = SOURCE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
     const start = code.indexOf('const storyContext');
-    const memo = code.slice(start, code.indexOf('[query, countryCodeParam, articleIdParam],', start));
+    const memo = code.slice(start, code.indexOf('[query, storyTitleParam, countryCodeParam, articleIdParam],', start));
     expect(start).toBeGreaterThan(-1);
     expect(memo).not.toMatch(/\blanguage\b/);
   });
@@ -162,7 +174,7 @@ describe('article anchor — a language switch reissues with the same context', 
   });
 
   it('the memo is keyed on the URL params only — not on language', () => {
-    expect(SOURCE).toMatch(/\[query, countryCodeParam, articleIdParam\],/);
+    expect(SOURCE).toMatch(/\[query, storyTitleParam, countryCodeParam, articleIdParam\],/);
   });
 
   it('the request is reissued rather than served from a result cache', () => {

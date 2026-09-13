@@ -8,6 +8,16 @@ import {
 /**
  * SPATIAL M1.0B — THE FRONTEND'S ONE READER OF ARTICLE PRECISION.
  *
+ * ALPHA PRECISION R1 — THE LINE BELOW WAS FALSE IN THIS TREE AND IS CORRECTED.
+ * It claimed M1.0A made the field produced. Measured here: no backend file
+ * writes `NewsArticle.geographicPrecision`, two backend specs assert its
+ * absence, and `withDerivedEvidenceFields` — named as its writer — does not
+ * exist anywhere in this repository or in either historical worktree available.
+ * The M1.0A contract module that documented the producer
+ * (`backend/src/modules/spatial/spatial-precision.contract.ts`) is itself
+ * ABSENT from the C907 line. Retained verbatim below as the superseded claim,
+ * because deleting it would erase the conflict rather than record it:
+ *
  * M1.0A made `NewsArticle.geographicPrecision` a produced field with a stated
  * contract. Until now the frontend did not read it: every geography surface
  * inferred precision from whether a country happened to be known, and the
@@ -255,3 +265,19 @@ export function evidenceDisplayCeiling(
 
   return 'unresolved';
 }
+
+
+/*
+ * ALPHA PRECISION R1 REV A — `evidencePrecisionAssessed()` WAS REMOVED, NOT KEPT.
+ *
+ * R1 added it to distinguish "no article carried a precision" from "precision
+ * was assessed and did not resolve", because in the C907 line NOTHING wrote
+ * `NewsArticle.geographicPrecision` and the ceiling was a silent constant.
+ *
+ * The M1.0A producer is now restored (`news/identity/geographic-precision.util.ts`),
+ * so every article on both the live and cached paths carries an ASSESSED value —
+ * 'country' or 'unknown'. The distinction the helper existed to express is now
+ * carried by the field itself, and keeping the helper would leave two ways to
+ * ask one question. It was removed rather than retained as a second truth
+ * source.
+ */

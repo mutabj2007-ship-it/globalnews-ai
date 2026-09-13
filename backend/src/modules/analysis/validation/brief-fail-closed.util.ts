@@ -92,10 +92,25 @@ export function acceptExecutiveBrief(
  * — the ruling asks for a "truthful structured-analysis degradation state",
  * and a blank space is not a state, it is an absence.
  *
- * `repairRequested` is always true on this path in practice, because the only
- * way to reach it is through a failed repair; it is a parameter rather than a
- * literal so the record states what actually happened rather than what the
- * caller is assumed to have done.
+ * `repairRequested` RECORDS WHAT ACTUALLY HAPPENED. It is a parameter rather
+ * than a literal precisely so this record can never assert something the run
+ * did not do.
+ *
+ * CORRECTED FOR THE CURRENT PATH. This comment used to say the flag was
+ * "always true on this path in practice, because the only way to reach it is
+ * through a failed repair". That is no longer so. The synchronous repair was
+ * removed under the accepted Alpha latency correction: the current synchronous
+ * path DOES NOT REQUEST A REPAIR, so it reaches this function with `false`,
+ * and a withheld brief now means "the one generation did not meet the
+ * structural requirement" — not "two attempts failed".
+ *
+ * `true` REMAINS A LEGITIMATE VALUE, which is why the parameter stays. A future
+ * GOVERNED ASYNCHRONOUS repair may run outside the synchronous response path
+ * and report that it was attempted; this function will then record that truly,
+ * exactly as it records `false` truly today.
+ *
+ * THE UTILITY'S BEHAVIOUR IS UNCHANGED by this correction — only the account of
+ * which values callers currently supply.
  */
 export function withholdExecutiveBrief(
   analysis: NewsAnalysisResult,

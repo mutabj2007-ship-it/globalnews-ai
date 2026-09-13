@@ -65,6 +65,16 @@ export const pl: Dictionary = {
     idle: 'Zadaj pytanie, a odpowied\u017a zostanie zbudowana z pozyskanych materia\u0142\u00f3w, wraz ze wskazaniem \u017ar\u00f3de\u0142.',
     contextPending: 'Zapytaj o ten widok \u2014 wkr\u00f3tce',
     contextPendingHint: 'Pytanie o bie\u017c\u0105c\u0105 stron\u0119 nie jest jeszcze dost\u0119pne. Pytania s\u0105 tu odpowiadane wy\u0142\u0105cznie na podstawie pozyskanych materia\u0142\u00f3w.',
+    contextChipAnchored: 'Pytanie o t\u0119 histori\u0119',
+    contextChipGeneric: 'Pytanie o wydarzenia na \u015bwiecie',
+    resultSourcesHeading: '\u0179r\u00f3d\u0142a',
+    resultSourcesNone: 'Dla tego pytania nie pozyskano \u017cadnych \u017ar\u00f3de\u0142.',
+    resultSourcesTruncated: 'Pokazano {shown} z {total}. Otw\u00f3rz pe\u0142n\u0105 analiz\u0119, aby zobaczy\u0107 reszt\u0119.',
+    resultBriefAbsent: 'Ta analiza nie zawiera\u0142a streszczenia. To brak, a nie ocena \u2014 niczego nie zmierzono ani nie wstrzymano.',
+    resultNoAnswer: 'Dla tego pytania nie powsta\u0142a odpowied\u017a. Stan powy\u017cej wyja\u015bnia dlaczego.',
+    openFullAnalysis: 'Otw\u00f3rz pe\u0142n\u0105 analiz\u0119',
+    telemetryReports: 'pozyskanych doniesie\u0144',
+    telemetryClusters: 'grup doniesie\u0144',
   },
   loadingStages: [
     'Przeszukiwanie zaufanych źródeł\u2026',
@@ -1838,10 +1848,20 @@ export const pl: Dictionary = {
   },
   analysisFrame: {
     skipToAnalysis: 'Przejd\u017a do analizy',
-    /* C907 — patrz en.ts. */
+    /*
+      C907 — patrz en.ts.
+
+      C907 ASK+ANALYSIS CONVERGENCE 1 — usunięto zdanie o „jedynej dozwolonej
+      korekcie”. Synchroniczna korekta została usunięta wraz z zaakceptowaną
+      poprawką opóźnień, więc żadna korekta nie jest podejmowana; zdanie
+      opisywało próbę, która już nie następuje. Znaczenie pozostaje dokładnie
+      takie samo jak w en.ts: wymóg strukturalny niespełniony, streszczenie
+      wstrzymane, analiza poniżej pozostaje bez zmian i zweryfikowana
+      niezależnie.
+    */
     briefWithheldHeading: 'STRESZCZENIE WYKONAWCZE NIEDOST\u0118PNE',
     briefWithheldBody:
-      'Streszczenie przygotowane dla tego zestawu dowod\u00f3w nie spe\u0142ni\u0142o wymogu strukturalnego, podobnie jak jedyna dozwolona korekta. Zosta\u0142o wstrzymane, a nie pokazane. Nie ma to wp\u0142ywu na poni\u017csz\u0105 analiz\u0119: ka\u017cde twierdzenie, \u017ar\u00f3d\u0142o i wpis osi czasu zosta\u0142y zweryfikowane niezale\u017cnie.',
+      'Streszczenie przygotowane dla tego zestawu dowod\u00f3w nie spe\u0142ni\u0142o wymogu strukturalnego. Zosta\u0142o wstrzymane, a nie pokazane. Nie ma to wp\u0142ywu na poni\u017csz\u0105 analiz\u0119: ka\u017cde twierdzenie, \u017ar\u00f3d\u0142o i wpis osi czasu zosta\u0142y zweryfikowane niezale\u017cnie.',
     sourceGeographyAbsent: 'BRAK ROZSTRZYGNI\u0118TEGO KRAJU',
     stateNoQuestion: 'NIE ZADANO JESZCZE PYTANIA',
     stateNoQuestionBody: 'Zadaj pytanie, aby otworzy\u0107 analiz\u0119 w tej ramce.',

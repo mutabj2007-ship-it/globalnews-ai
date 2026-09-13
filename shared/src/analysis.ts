@@ -645,9 +645,21 @@ export interface ExecutiveBriefState {
   /** Distinct editorial domains across that same retrieved evidence. */
   readonly categories: number;
   /**
-   * True when the one permitted targeted repair was actually requested. False
-   * means the first answer already complied (or the requirement never
-   * applied), so no repair was needed — never that a repair was skipped.
+   * True when a targeted repair was actually requested of the provider.
+   *
+   * ALPHA BUDGET R1 — WHAT FALSE MEANS NOW, STATED RATHER THAN LEFT TO DRIFT.
+   * This used to promise that false "never" meant a repair was skipped. That
+   * promise no longer holds and the field must say so: the synchronous repair
+   * has been REMOVED from the analysis critical path, because it was a second
+   * full `provider.analyzeNews()` regeneration (measured LARGER than the
+   * original — 6,689 tokens against 6,367) that pushed a successful response
+   * past the client deadline.
+   *
+   * So on the current synchronous path this is ALWAYS false, and it means: no
+   * repair was requested. It does NOT mean the brief was accepted — read
+   * `availability` for that, which is unchanged and still fail-closed. If a
+   * governed asynchronous repair is introduced later, this field is where it
+   * reports, and it can become true again without changing its meaning.
    */
   readonly repairRequested: boolean;
   /**

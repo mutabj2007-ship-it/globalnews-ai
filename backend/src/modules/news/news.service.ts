@@ -20,6 +20,7 @@ import {
   ArticlePersistenceService,
   type FirstSeenByUrl,
 } from './persistence/article-persistence.service';
+import { withDerivedEvidenceFields } from './identity/geographic-precision.util';
 import { resolvePrimaryCountry } from './country/country-relevance.util';
 import {
   scoreGenericRelevance,
@@ -266,8 +267,31 @@ export class NewsService {
    * on any database failure), exactly mirroring
    * ArticlePersistenceService's own convention.
    */
+  /**
+   * REV B — THE DERIVATION APPLIES HERE TOO, BECAUSE ANALYSIS CONSUMES THIS.
+   *
+   * `resolveArticleCountries` covers the retrieval paths, and this one is not
+   * a retrieval path — it is the story ANCHOR. An article reaching Analysis
+   * through `articleId` therefore bypassed the producer entirely and arrived
+   * with `geographicPrecision` undefined, so `evidenceDisplayCeiling` fell back
+   * to UNRESOLVED for the single most important article on the page: the one
+   * the reader actually clicked.
+   *
+   * WHAT IS READ, AND WHY IT IS ARTICLE-LEVEL EVIDENCE. `withDerivedEvidenceFields`
+   * reads `article.countryCode` and nothing else. On a persisted article that
+   * column was written by `resolveArticleCountries` from the article's OWN title
+   * and summary at the time it was stored. It is the same fact, durably kept —
+   * not the query's country, and not the retrieval context's. There is no
+   * parameter on the producer through which `retrievalContext.countryCode`
+   * could reach it even if some future caller tried.
+   *
+   * MISSING-ONLY, LIKE EVERYWHERE ELSE. A stored article that already carries a
+   * precision keeps it untouched.
+   */
   async findArticleById(articleId: string): Promise<NewsArticle | null> {
-    return this.articlePersistence.findById(articleId);
+    const article = await this.articlePersistence.findById(articleId);
+
+    return article === null ? null : withDerivedEvidenceFields(article);
   }
 
   /**
@@ -294,7 +318,26 @@ export class NewsService {
     limit: number,
     maxAgeMinutes: number,
   ): Promise<NewsArticle[]> {
-    return this.articlePersistence.findRecentByCountry({ countryCode, limit, maxAgeMinutes });
+    const retained = await this.articlePersistence.findRecentByCountry({
+      countryCode,
+      limit,
+      maxAgeMinutes,
+    });
+
+    /*
+      REV B — the second Analysis-consumed path that bypassed the producer.
+      Same missing-only derivation, same single input, for the same reason as
+      findArticleById above.
+
+      A NOTE ON THE ONE THING THAT LOOKS LIKE BORROWING AND IS NOT. This method
+      takes a `countryCode` ARGUMENT — the region being asked about — and that
+      argument is never passed to the derivation. What is read is each returned
+      article's OWN stored `countryCode` column. The two happen to agree here,
+      because the query selected on that column, but they agree by consequence
+      and not by substitution: the value credited to the article is the one the
+      article itself established, exactly as it would be on any other path.
+    */
+    return retained.map((article) => withDerivedEvidenceFields(article));
   }
 
   async search(
@@ -882,22 +925,39 @@ export class NewsService {
    * A Polish interface therefore still resolves an English article by its
    * canonical English name — asserted in country-relevance.util.spec.ts.
    */
+  /*
+    ALPHA PRECISION R1 REV A — THE M1.0A PRODUCER IS WIRED BACK IN HERE, AND
+    HERE ONLY.
+
+    This is the one function BOTH article paths run through — `buildResponse`
+    (live) and `buildCachedResponse` (cached) each call it — so restoring the
+    derivation at this single point makes `NewsArticle.geographicPrecision` real
+    on both, with no second code path to drift.
+
+    Order is the contract: the country is resolved FIRST, from the article's own
+    text, and precision is derived from the RESULT. So precision follows
+    article-level evidence and can never be reached from the query, which is not
+    in scope in this function at all.
+  */
   private resolveArticleCountries(articles: NewsArticle[], language?: string): NewsArticle[] {
     return articles.map((article) => {
       try {
         const primary = resolvePrimaryCountry(article, language as LanguageCode | undefined);
 
         if (!primary) {
-          return article;
+          /* No article-level country. UNKNOWN is the honest answer, and it is
+             still an ASSESSED answer — the difference between "we looked and
+             found none" and "nobody looked" is exactly what was missing. */
+          return withDerivedEvidenceFields(article);
         }
 
-        return {
+        return withDerivedEvidenceFields({
           ...article,
           countryCode: primary.countryCode,
           countryName: primary.countryName,
-        };
+        });
       } catch {
-        return article;
+        return withDerivedEvidenceFields(article);
       }
     });
   }

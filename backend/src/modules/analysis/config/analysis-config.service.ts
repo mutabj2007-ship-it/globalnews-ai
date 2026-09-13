@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  ANALYSIS_MAX_SERVER_BUDGET_MS,
+  ANALYSIS_PROVIDER_ATTEMPT_BUDGET_MS,
+  ANALYSIS_TOTAL_BUDGET_MS,
+  resolveServerBudgetMs,
+} from '@globalnews-ai/shared';
 
 /** Milestone #30 — explicit deploy-mode flag for AI execution. */
 export type AnalysisExecutionMode = 'production' | 'development';
@@ -68,12 +74,32 @@ export interface AnalysisConfig {
    * Read from ANALYSIS_RETRY_BASE_DELAY_MS.
    */
   retryBaseDelayMs: number;
+  /**
+   * THE TOTAL SYNCHRONOUS BUDGET for one POST /analysis/news, from the shared
+   * authority. Before this existed there was no deadline spanning retrieval +
+   * generation + validation — only a per-attempt one — so no client timeout
+   * could be defended. See shared/src/analysis-budget.ts.
+   *
+   * REV B — ALWAYS CLAMPED, NEVER THE RAW ENVIRONMENT VALUE. This field is
+   * guaranteed to be a positive number no greater than
+   * ANALYSIS_MAX_SERVER_BUDGET_MS, whatever ANALYSIS_TOTAL_BUDGET_MS was set
+   * to. The frontend's abort deadline is compiled in and cannot be renegotiated
+   * from a dashboard, so neither can this.
+   */
+  totalBudgetMs: number;
 }
 
 const DEFAULTS = {
   maxArticles: 8,
   maxArticleChars: 1200,
-  timeoutMs: 20000,
+  /*
+    DERIVED, NOT RESTATED. The one authority is
+    shared/src/analysis-budget.ts; this default is the per-attempt term of it,
+    so the client deadline and this value cannot drift apart silently. An
+    operator may still override with ANALYSIS_TIMEOUT_MS, and the total budget
+    below is what keeps that override honest.
+  */
+  timeoutMs: ANALYSIS_PROVIDER_ATTEMPT_BUDGET_MS,
   cacheTtlSeconds: 300,
   openAiModel: 'gpt-4o-mini',
   retryAttempts: 2,
@@ -90,6 +116,13 @@ const DEFAULTS = {
    * revision if real usage shows it's too tight or too loose.
    */
   maxCompletionTokens: 2000,
+  /*
+    The shared authority's own total, unmodified. ANALYSIS_MAX_SERVER_BUDGET_MS
+    is imported alongside it so this file names the ceiling its override is
+    measured against, rather than leaving that relationship implicit in another
+    module.
+  */
+  totalBudgetMs: Math.min(ANALYSIS_TOTAL_BUDGET_MS, ANALYSIS_MAX_SERVER_BUDGET_MS),
 };
 
 /**
@@ -117,6 +150,18 @@ export class AnalysisConfigService {
       maxArticleChars: this.readPositiveInt('ANALYSIS_MAX_ARTICLE_CHARS', DEFAULTS.maxArticleChars),
 
       timeoutMs: this.readPositiveInt('ANALYSIS_TIMEOUT_MS', DEFAULTS.timeoutMs),
+
+      /*
+        REV B — READ, THEN CLAMPED. `readPositiveInt` already rejects garbage and
+        non-positive values, but it has no opinion about how LARGE a value may
+        be, and largeness is the direction that breaks the client contract.
+        `resolveServerBudgetMs` is the shared authority's own ceiling function,
+        so the rule lives beside the constant that defines it rather than being
+        restated here. An operator may still lower this freely.
+      */
+      totalBudgetMs: resolveServerBudgetMs(
+        this.readPositiveInt('ANALYSIS_TOTAL_BUDGET_MS', DEFAULTS.totalBudgetMs),
+      ),
 
       cacheTtlSeconds: this.readPositiveInt('ANALYSIS_CACHE_TTL_SECONDS', DEFAULTS.cacheTtlSeconds),
 

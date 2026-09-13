@@ -24,6 +24,18 @@ const analysisApiSource = readFileSync(join(__dirname, '../../lib/api/analysisAp
  * Behavioral tests only, per the explicit "avoid CSS-string tests for
  * this milestone" instruction.
  */
+/*
+ * ASK AI REV A §4.2 RETARGET — the dep list gained `storyTitle`.
+ *
+ * The INVARIANT this file pins is unchanged and is the reason the
+ * assertion is written against the dep list at all: the memo is keyed on
+ * URL-derived PRIMITIVES ONLY and never on `language`. Rev A adds one
+ * more URL primitive — `storyTitle`, the transport that stops the
+ * follow-up from becoming the story title — so the correct expression of
+ * the same rule now names four params, not three. Nothing about
+ * language-independence is relaxed; `not.toMatch(/\blanguage\b/)` below
+ * still carries it.
+ */
 describe('B. CountryArticleCard carries selected-story context, not title-only navigation', () => {
   it('includes both articleId (article.id, already available) and countryCode in the /search navigation URL', () => {
     expect(cardSource).toMatch(/const params = new URLSearchParams\(\{ q: article\.title, articleId: article\.id \}\)/);
@@ -63,7 +75,7 @@ describe('A/I. Generic Q&A and existing country/map functionality are unaffected
     expect(searchClientSource).toMatch(
       /articleIdParam !== null \|\| countryCodeParam !== null/,
     );
-    expect(searchClientSource).toMatch(/:\s*undefined,\s*\n\s*\[query, countryCodeParam, articleIdParam\],/);
+    expect(searchClientSource).toMatch(/:\s*undefined,\s*\n\s*\[query, storyTitleParam, countryCodeParam, articleIdParam\],/);
   });
 
   it('CountryPanel\u2019s own pre-existing "view full coverage" country-level navigation is untouched by this change', () => {
