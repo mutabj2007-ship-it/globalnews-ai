@@ -1,0 +1,121 @@
+# DATABASE INTEGRITY MANIFEST
+## MAIN-FINAL-CORRECTED-ALPHA-CONVERGENCE-1 — E1 C895 HARDENED (D-1 · D-2 · D-3 · D-6)
+
+**Why this file exists.** The three promotion fingerprints do not cover the database.
+C spans `.ts .tsx .mjs .json`; PA covers `frontend/public`; SC covers `scripts/`.
+**`schema.prisma` is `.prisma` and both migration files are `.sql`, so all three are
+invisible to all three scopes.** Candidate identity is C/PA/SC **plus** this manifest.
+
+## 1 · EXACT HASHES
+
+```
+sha256  9d2507760af86d4aedb2f1890191af775605517e45d2ec68a5016823a6c0d1f4   28406 B
+        backend/prisma/schema.prisma
+
+sha256  4949a41675824f941280b921edd16b298de76157e559aa88bb182c486eac496e    9057 B
+        backend/prisma/migrations/20260901050000_add_situation_memory/migration.sql
+
+sha256  84f730ab5bc4ec824f7e6db4340781e61ee3453902bca60d9a12a0837086cb18    4727 B
+        backend/prisma/migrations/20260901050000_add_situation_memory/DOWN.sql
+```
+
+**`migration.sql` is no longer byte-identical to the accepted authority, and that is
+deliberate and bounded.** E1 item D-2 required the stale rollback path in its header to be
+corrected. The change is **comment-only**: `diff` over the file with comment and blank lines
+removed shows **ZERO statement difference**. Not one SQL statement, identifier, type,
+constraint or index was touched, and the accepted Situation identity semantics are unaltered.
+
+> **OPERATOR NOTE, BECAUSE IT IS A REAL HAZARD.** Prisma records a checksum of the WHOLE
+> migration file, comments included. Editing it is safe here only because this migration has
+> **never been applied to any database** — it is new to this candidate and nothing has been
+> deployed. After the first `prisma migrate deploy`, this file must not be edited again for
+> any reason, including a comment: Prisma would then fail with a modified-migration error.
+
+## 2 · MIGRATION IDENTITY
+
+```
+NAME      20260901050000_add_situation_memory
+POSITION  immediately after 20260826210000_add_article_published_at_basis
+CLASS     ADDITIVE — five new tables; no existing table altered, dropped or renamed
+APPLIED   never (no deployment has occurred)
+```
+
+## 3 · THE FIVE ADDED PRISMA MODELS
+
+Schema model count **11 → 16**. Each block was compared to the accepted authority by digest.
+
+```
+Situation                 832d60a73350…      SituationClusterMember    5b0238d2afaf…
+SituationSnapshot         62cdb79f353c…      SituationShadowDecision   76dbe8e534eb…
+SituationCluster          01553ca8f98a…
+```
+
+The eleven pre-existing models are unchanged and none gains a back-relation. The new models
+reference `Article` and `AnalysisRun` **in comments only**; there is deliberately no foreign
+key to either.
+
+## 4 · FORWARD MIGRATION — FULL OBJECT ENUMERATION (D-6)
+
+```
+5   CREATE TABLE                Situation · SituationSnapshot · SituationCluster
+                                SituationClusterMember · SituationShadowDecision
+9   CREATE INDEX                Situation ×3 · SituationSnapshot ×2
+                                SituationClusterMember ×1 · SituationShadowDecision ×3
+3   CREATE UNIQUE INDEX         Situation_partitionKey_keyVersion_discriminator_key
+                                SituationCluster_snapshotId_clusterKey_key
+                                SituationClusterMember_clusterId_articleUrl_key
+4   ALTER TABLE                 = 3 FOREIGN KEY + 1 CHECK
+      3 FOREIGN KEY             SituationSnapshot_situationId_fkey
+                                SituationCluster_snapshotId_fkey
+                                SituationClusterMember_clusterId_fkey
+      1 CHECK                   SituationShadowDecision_shadowOnly_check
+1   CREATE FUNCTION (plpgsql)   situation_identity_is_assign_once()
+1   CREATE TRIGGER              situation_identity_assign_once  BEFORE UPDATE ON "Situation"
+0   DROP                        zero forward drops; no operation touches an existing object
+0   CREATE TYPE                 no enum is introduced
+```
+
+**IDENTITY INVARIANT — PRESERVED.** `Situation` carries exactly ONE unique index and it is the
+triple `(partitionKey, keyVersion, discriminator)`. `partitionKey` is **NON-UNIQUE** on its
+own — it is a coarse partition (`sit:v1:RWA` holds every Rwandan situation), and a unique
+index there would force them all into one row: a false merge manufactured by a constraint
+instead of caught by tier 2. `situationWriteGate.spec.ts` asserts this in both the schema and
+the migration.
+
+## 5 · ROLLBACK — FULL OBJECT ENUMERATION (D-1 · D-3 · D-6)
+
+```
+1   DROP TRIGGER    IF EXISTS   situation_identity_assign_once   (guarded on the TABLE)
+1   DROP FUNCTION   IF EXISTS   situation_identity_is_assign_once()          <- D-1
+4   DROP CONSTRAINT IF EXISTS   3 foreign keys + the CHECK
+4   ALTER TABLE     IF EXISTS   the carriers of those four constraints
+5   DROP TABLE      IF EXISTS   reverse dependency order
+0   DROP TYPE                   nothing to drop — the forward migration creates no enum
+```
+
+**D-1 — the function was the object that survived.** The first draft dropped the foreign keys
+and the tables and stopped, reasoning that a table drops its own constraints and triggers. True
+— and exactly why the gap was easy to miss: the TRIGGER goes with `Situation`, but the
+plpgsql FUNCTION is **schema-level** and would have outlived a "complete" rollback. Re-running
+the forward migration would then silently reuse the leftover definition, because
+`CREATE OR REPLACE FUNCTION` does not complain.
+
+**D-3 — safely re-runnable, ordering unchanged.** Every destructive statement is guarded.
+`ALTER TABLE IF EXISTS … DROP CONSTRAINT IF EXISTS` needs **both** guards; the constraint
+guard alone still fails once the table is gone. The trigger drop uses a `DO` block testing
+`to_regclass('"Situation"')`, because PostgreSQL's `IF EXISTS` on `DROP TRIGGER … ON t`
+covers the trigger, **not** the table, and would still raise on a second run. Ordering is
+unchanged: trigger and function first, then the foreign keys, then the tables in reverse
+dependency order (ClusterMember → Cluster → Snapshot → Situation; ShadowDecision has no FK).
+
+## 6 · WHAT THIS MANIFEST DOES NOT ATTEST
+
+- **Not a migration run.** No database was migrated from this validation host.
+- **Not a semantic typecheck.** `prisma generate` cannot run here (`binaries.prisma.sh` 403)
+  and generating the client would write inside the C scope. Backend semantic typechecking
+  remains **UNMEASURED — ENVIRONMENTAL**.
+- **Not a claim that Situation is producing.** `SITUATION STORAGE = ACTIVE`;
+  `SITUATION PRODUCERS = GATED` pending a bounded write contract for `dimensions`,
+  `features`, `reason` and `discriminatorBasis`. The module declares no controller, no file
+  in the namespace carries an HTTP decorator, and `app.module.ts` is the only importer
+  anywhere — all asserted by `situationWriteGate.spec.ts`.

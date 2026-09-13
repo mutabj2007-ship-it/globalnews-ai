@@ -1,0 +1,56 @@
+{
+  "$comment": [
+    "SC-OWNED IMMUTABLE VISUAL AUTHORITY MANIFEST \u2014 C907 \u00a70.1(5) FINAL RULING.",
+    "'A changed golden image without a corresponding reviewed SC identity change must fail the release gate.'",
+    "This file lives under scripts/, so it is inside the SC fingerprint. Changing any sha256 below moves SC,",
+    "which is exactly the reviewed identity change the ruling requires. Editing a golden PNG without editing",
+    "this file fails verify-golden-authority.mjs; editing this file without a ruling moves SC and is visible",
+    "in the candidate's identity. Neither can be done quietly.",
+    "A frame whose status is PENDING has NO approved golden capture. The gate refuses to certify it rather",
+    "than comparing it against nothing \u2014 an absent authority is not a passing one."
+  ],
+  "version": 1,
+  "goldenRoot": "GOLDEN-SPATIAL-AUTHORITY-1",
+  "frames": [
+    {
+      "id": "V1",
+      "name": "WORLD",
+      "status": "APPROVED",
+      "authority": "Product Owner golden capture. Full Spatial Intelligence world canvas, EVIDENCE mode, 7D. The density authority for world scale: continents, oceans and country names; no river, city or lake wall. The framing authority: the world occupies the usable map frame.",
+      "filename": "GOLDEN-01-world-evidence.png",
+      "width": 2048,
+      "height": 1190,
+      "sha256": "5d7b24e877b780d7e08328501e1cdc937a35f276306bcfcb3845bcce27ffea11"
+    },
+    {
+      "id": "V2",
+      "name": "RWANDA / EAST AFRICA",
+      "status": "APPROVED",
+      "authority": "Product Owner golden capture. Regional East Africa framing with Rwanda selected, EVIDENCE mode, 7D, centre 1.94S 29.87E. The regional-density authority and the geographic-field authority: dark teal/slate, not near-black; lakes and neighbouring-country context visible beneath the intelligence.",
+      "filename": "GOLDEN-02-rwanda-selected.png",
+      "width": 2048,
+      "height": 1207,
+      "sha256": "961787f60df3b97e90dbd808f1d0f527fa0d7aa9d00a4609a75a7d0f7bf3c8fa"
+    },
+    {
+      "id": "V3",
+      "name": "SELECTED COUNTRY",
+      "status": "PENDING",
+      "authority": "No approved golden capture has been supplied. The frame is defined and captured, and the gate refuses to certify it until the Product Owner supplies and approves a capture.",
+      "filename": null,
+      "width": null,
+      "height": null,
+      "sha256": null
+    },
+    {
+      "id": "V4",
+      "name": "EVIDENCE MODE",
+      "status": "PENDING",
+      "authority": "No approved golden capture has been supplied. The frame is defined and captured, and the gate refuses to certify it until the Product Owner supplies and approves a capture.",
+      "filename": null,
+      "width": null,
+      "height": null,
+      "sha256": null
+    }
+  ]
+}

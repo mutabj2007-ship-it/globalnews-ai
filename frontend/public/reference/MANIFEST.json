@@ -1,0 +1,65 @@
+{
+  "generator": "scripts/build-reference-geography.mjs",
+  "layers": {
+    "lakes": {
+      "file": "frontend/public/reference/lakes.json",
+      "features": 412,
+      "bytes": 420899,
+      "sha256": "9aaa95babf8ac78a8f8e9f466d8b0faf5af7a5d020d0f054b2adc3803f201f24",
+      "note": "Inland water bodies, drawn as fill beneath all evidence."
+    },
+    "rivers": {
+      "file": "frontend/public/reference/rivers.json",
+      "features": 462,
+      "bytes": 531086,
+      "sha256": "b903d98627cb8e2ac348c292108fbe50451decb645707410586f3bc33d0d6f10",
+      "note": "River and lake centrelines."
+    },
+    "admin1-lines": {
+      "file": "frontend/public/reference/admin1-lines.json",
+      "features": 581,
+      "bytes": 374130,
+      "sha256": "b967c6038c08dd87342a4a6a51c46b5ea6753fc7cdac6fb69655ee8fbe92b33b",
+      "note": "Sub-national boundaries. 0 feature(s) excluded for RWA — that country's administrative authority is NISR, and a second unofficial source must not be drawn beside it."
+    }
+  },
+  "administrativeAuthorityExclusion": {
+    "iso3": [
+      "RWA"
+    ],
+    "excludedFeatures": 0,
+    "reason": "PO ruling D-2 — NISR remains the Rwanda administrative authority."
+  },
+  "labelSeeds": {
+    "file": "frontend/src/lib/map/labels/referencePlaces.ts",
+    "lake": 309,
+    "river": 342,
+    "city": 1230,
+    "deduplicated": {
+      "lake": 12,
+      "river": 107,
+      "city": 21
+    },
+    "bytes": 175535,
+    "sha256": "a633a6a96ff1fb17a5af5361c335d04674dc4644e08868c56b28bc51c9454c14"
+  },
+  "sources": {
+    "lakes": {
+      "file": "ne_50m_lakes.geojson",
+      "sha256": "d350b75978b26fe839b797c2c529b2fb8f47fb3983c03f4964e36d5df9378a52"
+    },
+    "rivers": {
+      "file": "ne_50m_rivers_lake_centerlines.geojson",
+      "sha256": "f286e0ce978fde999ca2d7a78c764be08542e19b63cded52b05c12d5173ccc51"
+    },
+    "admin1Lines": {
+      "file": "ne_50m_admin_1_states_provinces_lines.geojson",
+      "sha256": "72cca93c850d412628a5da4bc5ebfe21ba4d376eb34611bde6b623ee73f0fdcf"
+    },
+    "places": {
+      "file": "ne_50m_populated_places_simple.geojson",
+      "sha256": "8e70756b39fae9bcdc1e332bfc510c024c5edd3a13203ffd20092ee37b61d978"
+    }
+  },
+  "attribution": "Reference geography: Natural Earth (public domain), 1:50m physical and cultural vectors."
+}

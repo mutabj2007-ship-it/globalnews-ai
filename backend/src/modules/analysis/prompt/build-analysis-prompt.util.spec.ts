@@ -1,0 +1,733 @@
+import {
+  buildAnalysisMessages,
+  buildRelationalPromptSection,
+  buildResponseLanguageInstruction,
+  buildAnalysisJsonSchema,
+} from './build-analysis-prompt.util';
+
+describe('buildRelationalPromptSection (Milestone #40 — authoritative-context correction)', () => {
+  it('when relationalContext is present, encodes the EXACT x/y values verbatim', () => {
+    const section = buildRelationalPromptSection({ x: 'climate change', y: 'agriculture' });
+    expect(section).toContain('X = "climate change"');
+    expect(section).toContain('Y = "agriculture"');
+  });
+
+  it('reversed x/y produces a reversed encoding (proves no independent re-derivation)', () => {
+    const forward = buildRelationalPromptSection({ x: 'climate change', y: 'agriculture' });
+    const reversed = buildRelationalPromptSection({ x: 'agriculture', y: 'climate change' });
+    expect(forward).toContain('X = "climate change"');
+    expect(forward).toContain('Y = "agriculture"');
+    expect(reversed).toContain('X = "agriculture"');
+    expect(reversed).toContain('Y = "climate change"');
+    expect(forward).not.toBe(reversed);
+  });
+
+  it('defines requested-direction and reverse-direction strictly in terms of the supplied x/y', () => {
+    const section = buildRelationalPromptSection({ x: 'AI', y: 'employment' });
+    expect(section).toMatch(/requested-direction.*"AI".*affecting.*"employment"/s);
+    expect(section).toMatch(/reverse-direction.*"employment".*affecting.*"AI"/s);
+  });
+
+  it('instructs the model never to reinterpret or substitute x/y', () => {
+    const section = buildRelationalPromptSection({ x: 'AI', y: 'employment' });
+    expect(section).toMatch(/do not infer, replace, or\s+reinterpret/i);
+  });
+
+  it('never claims causality is proven merely by classifying a direction', () => {
+    const section = buildRelationalPromptSection({ x: 'AI', y: 'employment' });
+    expect(section).toMatch(/never[\s\S]*caus(?:al|ally)/i);
+  });
+
+  it('when relationalContext is absent, explicitly disables M40 and requires an empty array', () => {
+    const section = buildRelationalPromptSection(undefined);
+    expect(section).toMatch(/NOT a Milestone #40 relational request/i);
+    expect(section).toMatch(/relationalEvidenceAssessments.*empty array/is);
+    expect(section).not.toContain('X = "');
+    expect(section).not.toContain('Y = "');
+  });
+
+  it('the absent-context section never mentions requested-direction/reverse-direction at all', () => {
+    const section = buildRelationalPromptSection(undefined);
+    expect(section).not.toMatch(/requested-direction/);
+    expect(section).not.toMatch(/reverse-direction/);
+  });
+});
+
+describe('buildAnalysisMessages (Milestone #40 wiring)', () => {
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Climate change reduces maize yields',
+      summary: 'Farmers report declining harvests.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  it('with relationalContext, the system prompt contains the exact x/y', () => {
+    const { system } = buildAnalysisMessages(
+      'How is climate change affecting agriculture?',
+      articles,
+      1200,
+      {
+        x: 'climate change',
+        y: 'agriculture',
+      },
+    );
+    expect(system).toContain('X = "climate change"');
+    expect(system).toContain('Y = "agriculture"');
+  });
+
+  it('without relationalContext, the system prompt disables M40 and never mentions any x/y', () => {
+    const { system } = buildAnalysisMessages('What is happening in cybersecurity?', articles, 1200);
+    expect(system).toMatch(/NOT a Milestone #40 relational request/i);
+    expect(system).not.toContain('X = "');
+    expect(system).not.toContain('Y = "');
+  });
+
+  it('the base rules (evidenceIds, evidenceBasis, output format) are present in both cases, unchanged', () => {
+    const withContext = buildAnalysisMessages('q', articles, 1200, { x: 'a', y: 'b' }).system;
+    const withoutContext = buildAnalysisMessages('q', articles, 1200).system;
+    for (const shared of [
+      'You are a careful news analyst working for GlobalNews AI.',
+      'Use only the supplied articles.',
+      'evidenceBasis',
+      'Output must be valid JSON matching the provided schema exactly.',
+    ]) {
+      expect(withContext).toContain(shared);
+      expect(withoutContext).toContain(shared);
+    }
+  });
+
+  it('the user prompt is unaffected by relationalContext (query/evidence rendering unchanged)', () => {
+    const a = buildAnalysisMessages('q', articles, 1200, { x: 'a', y: 'b' }).user;
+    const b = buildAnalysisMessages('q', articles, 1200).user;
+    expect(a).toBe(b);
+  });
+});
+
+describe('Milestone #47 — response-language instruction', () => {
+  // Milestone #47 correction (Blocker 3): a dedicated, minimal local
+  // fixture — NOT shared with the M40 describe block above, whose own
+  // `articles` const is scoped to that block only and was never
+  // visible here. Same shape as that fixture (kept identical so this
+  // test's behavior is unaffected), declared locally to avoid touching
+  // the M40 block's existing structure at all.
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Climate change reduces maize yields',
+      summary: 'Farmers report declining harvests.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  it('English returns an empty instruction (no-op, byte-identical prior behavior)', () => {
+    expect(buildResponseLanguageInstruction('en')).toBe('');
+  });
+
+  it('Polish instruction names the language and forbids altering IDs/enums', () => {
+    const instruction = buildResponseLanguageInstruction('pl');
+    expect(instruction).toContain('Polish');
+    expect(instruction.toLowerCase()).toContain('evidenceid');
+    expect(instruction.toLowerCase()).toContain('enum');
+  });
+
+  it('every LanguageCode has a distinct, correctly-named instruction (except en, which is empty)', () => {
+    expect(buildResponseLanguageInstruction('sw')).toContain('Swahili');
+    expect(buildResponseLanguageInstruction('fr')).toContain('French');
+    expect(buildResponseLanguageInstruction('es')).toContain('Spanish');
+    expect(buildResponseLanguageInstruction('ar')).toContain('Arabic');
+    expect(buildResponseLanguageInstruction('rw')).toContain('Kinyarwanda');
+  });
+
+  it('buildAnalysisMessages with no responseLanguage argument behaves exactly like "en" — full backward compatibility for every pre-Milestone-#47 caller', () => {
+    const withDefault = buildAnalysisMessages('q', articles, 1200);
+    const withExplicitEn = buildAnalysisMessages('q', articles, 1200, undefined, 'en');
+    expect(withDefault.system).toBe(withExplicitEn.system);
+  });
+
+  it('Polish system prompt is the English base prompt with the instruction appended, never replacing or reordering existing content', () => {
+    const en = buildAnalysisMessages('q', articles, 1200).system;
+    const pl = buildAnalysisMessages('q', articles, 1200, undefined, 'pl').system;
+    expect(pl.startsWith(en)).toBe(true);
+    expect(pl).not.toBe(en);
+  });
+
+  it('the response-language instruction does not affect the user prompt (evidence/citation rendering unchanged)', () => {
+    const withoutLanguage = buildAnalysisMessages('q', articles, 1200).user;
+    const withLanguage = buildAnalysisMessages('q', articles, 1200, undefined, 'pl').user;
+    expect(withoutLanguage).toBe(withLanguage);
+  });
+});
+
+describe('Milestone #62 Phase 1 — context/relevance schema and prompt instructions', () => {
+  // Local fixture — mirrors the M47 block's own established pattern in
+  // this file (see its doc comment above): `articles` is scoped
+  // per-describe-block throughout this file, never shared at file
+  // scope, so each block that needs it declares its own minimal copy.
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Climate change reduces maize yields',
+      summary: 'Farmers report declining harvests.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  it('the structured-output schema includes context and relevance as required array properties, using the exact same shape as keyFacts', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: { properties: Record<string, unknown>; required: string[] };
+    };
+    const properties = schema.schema.properties;
+    expect(properties.context).toEqual(properties.keyFacts);
+    expect(properties.relevance).toEqual(properties.keyFacts);
+    expect(schema.schema.required).toContain('context');
+    expect(schema.schema.required).toContain('relevance');
+  });
+
+  it('additionalProperties remains false at the top level — no undisclosed fields introduced', () => {
+    const schema = buildAnalysisJsonSchema() as { schema: { additionalProperties: boolean } };
+    expect(schema.schema.additionalProperties).toBe(false);
+  });
+
+  it('does not use an unverified maxItems JSON Schema keyword anywhere in the schema (limits are enforced by prompt instruction + validator caps instead)', () => {
+    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/maxItems/);
+  });
+
+  it('the prompt instructs at most 4 context entries and at most 3 relevance entries, evidence-bounded, with an explicit empty-array fallback for both', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    // The production prompt is a template literal, so the source
+    // file's own line-wrapping becomes literal newline characters in
+    // this string — normalizing whitespace here makes the full-sentence
+    // checks below resistant to exactly where the prompt happens to
+    // wrap, rather than brittle against one specific formatting.
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(system).toMatch(/"context":.*at most 4/);
+    expect(system).toMatch(/"relevance":.*at most 3/);
+    expect(system).toMatch(/general knowledge beyond it/);
+    expect(normalizedSystem).toContain(
+      'Return an empty array if the evidence does not establish any useful background beyond the immediate facts already covered elsewhere.',
+    );
+    expect(normalizedSystem).toContain(
+      'Return an empty array if a meaningful relevance claim cannot be grounded in the supplied evidence.',
+    );
+  });
+});
+
+describe('Milestone #62 Phase 2 — affectedParties/immediateImpacts/spilloverImplications schema and prompt instructions', () => {
+  // Local fixture — same established per-describe-block pattern as the
+  // M47 and M62 Phase 1 blocks above; `articles` is never shared at
+  // file scope in this file.
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Climate change reduces maize yields',
+      summary: 'Farmers report declining harvests.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  it('the structured-output schema includes affectedParties (dedicated shape), immediateImpacts, and spilloverImplications (both reusing the exact keyFacts/sourcedClaim shape) as required array properties', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: { properties: Record<string, unknown>; required: string[] };
+    };
+    const properties = schema.schema.properties;
+    expect(properties.immediateImpacts).toEqual(properties.keyFacts);
+    expect(properties.spilloverImplications).toEqual(properties.keyFacts);
+    expect(properties.affectedParties).not.toEqual(properties.keyFacts);
+    expect(schema.schema.required).toContain('affectedParties');
+    expect(schema.schema.required).toContain('immediateImpacts');
+    expect(schema.schema.required).toContain('spilloverImplications');
+  });
+
+  it('additionalProperties remains false at the top level', () => {
+    const schema = buildAnalysisJsonSchema() as { schema: { additionalProperties: boolean } };
+    expect(schema.schema.additionalProperties).toBe(false);
+  });
+
+  it('does not use an unverified maxItems JSON Schema keyword anywhere in the schema', () => {
+    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/maxItems/);
+  });
+
+  it('the affectedParties schema item requires party/partyType/effect/evidenceIds/evidenceBasis and constrains partyType to the closed enum', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: {
+        properties: {
+          affectedParties: { items: { properties: Record<string, unknown>; required: string[] } };
+        };
+      };
+    };
+    const item = schema.schema.properties.affectedParties.items;
+    expect(item.required).toEqual(
+      expect.arrayContaining(['party', 'partyType', 'effect', 'evidenceIds', 'evidenceBasis']),
+    );
+    expect((item.properties.partyType as { enum: string[] }).enum).toEqual(
+      expect.arrayContaining(['person', 'organization', 'country', 'region', 'group', 'other']),
+    );
+  });
+
+  it('the prompt instructs at most 6 affectedParties, at most 4 immediateImpacts, and at most 4 spilloverImplications, all evidence-bounded with explicit empty-array fallbacks', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(system).toMatch(/"affectedParties":.*up to 6/);
+    expect(system).toMatch(/"immediateImpacts":.*up to 4/);
+    expect(system).toMatch(/"spilloverImplications":.*up to 4/);
+    expect(normalizedSystem).toContain(
+      'Return an empty array if the evidence does not identify specific affected parties.',
+    );
+    expect(normalizedSystem).toContain(
+      'Return an empty array if the evidence does not state any direct effect.',
+    );
+    expect(normalizedSystem).toContain(
+      'Return an empty array if the evidence does not discuss any wider effect.',
+    );
+    expect(normalizedSystem).toContain(
+      'never your own extrapolation of what might plausibly follow',
+    );
+  });
+});
+
+describe('Milestone #62 Phase 3 — significance schema and prompt instructions', () => {
+  // Local fixture — same established per-describe-block pattern as
+  // every prior Milestone block in this file.
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Climate change reduces maize yields',
+      summary: 'Farmers report declining harvests.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  it('the structured-output schema uses a nullable object for significance, following the exact same strict-mode precedent as evidenceBasis', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: {
+        properties: {
+          significance: { type: string[]; required: string[]; additionalProperties: boolean };
+        };
+        required: string[];
+      };
+    };
+    const significanceSchema = schema.schema.properties.significance;
+    expect(significanceSchema.type).toEqual(expect.arrayContaining(['object', 'null']));
+    expect(significanceSchema.required).toEqual(expect.arrayContaining(['level', 'rationale']));
+    expect(significanceSchema.additionalProperties).toBe(false);
+    expect(schema.schema.required).toContain('significance');
+  });
+
+  it('additionalProperties remains false at the top level', () => {
+    const schema = buildAnalysisJsonSchema() as { schema: { additionalProperties: boolean } };
+    expect(schema.schema.additionalProperties).toBe(false);
+  });
+
+  it('does not use an unverified maxItems JSON Schema keyword anywhere in the schema', () => {
+    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/maxItems/);
+  });
+
+  it('the significance level enum is exactly the four approved values', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: { properties: { significance: { properties: { level: { enum: string[] } } } } };
+    };
+    expect(schema.schema.properties.significance.properties.level.enum).toEqual([
+      'minor',
+      'moderate',
+      'major',
+      'critical',
+    ]);
+  });
+
+  it('the prompt distinguishes significance from trust/confidence/tone/topic/general-knowledge importance, and lists the allowed objective evidence signals', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'never a proxy for source trust, your own confidence, evidence sufficiency, emotional tone, topic category, or general importance inferred from world knowledge',
+    );
+    expect(normalizedSystem).toContain('casualty or injury counts');
+    expect(normalizedSystem).toContain('official emergency/disaster declarations');
+  });
+
+  it('the prompt explicitly prohibits inferring severity from dramatic language alone', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'Do NOT infer severity merely because reporting uses dramatic language',
+    );
+    expect(system).toMatch(/crisis/);
+    expect(system).toMatch(/catastrophic/);
+  });
+
+  it('the prompt gates "critical" behind either an explicit authoritative designation OR multiple independent high-severity indicators — never a single isolated signal', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'an explicit authoritative designation of exceptional severity',
+    );
+    expect(normalizedSystem).toContain('multiple independent objective high-severity indicators');
+    expect(normalizedSystem).toContain(
+      'one isolated signal is generally not enough to justify "critical"',
+    );
+  });
+
+  it('the prompt instructs choosing the lower defensible level when ambiguous, and returning the JSON null literal (never "minor" as a default) when unsupported', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'When the evidence is ambiguous between two levels, choose the lower defensible level',
+    );
+    expect(normalizedSystem).toContain(
+      'Return "significance": null (the JSON null literal, not an object)',
+    );
+  });
+
+  it('the prompt limits rationale to 2 entries, enforced via prompt instruction, not an unverified schema keyword', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    expect(system).toMatch(/up to 2 grounded rationale entries/);
+  });
+});
+
+describe('Milestone #62 Phase 4 (final) — watchNext schema and prompt instructions', () => {
+  // Local fixture — same established per-describe-block pattern as
+  // every prior Milestone block in this file.
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Climate change reduces maize yields',
+      summary: 'Farmers report declining harvests.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  it('the structured-output schema includes watchNext as a required array property, using a dedicated watchNextItem shape (second hardening) rather than the plain sourcedClaim shape keyFacts uses', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: {
+        properties: {
+          watchNext: { items: { properties: Record<string, unknown>; required: string[] } };
+          keyFacts: unknown;
+        };
+        required: string[];
+      };
+    };
+    const properties = schema.schema.properties;
+    expect(properties.watchNext).not.toEqual(properties.keyFacts);
+    expect(properties.watchNext.items.required).toEqual(
+      expect.arrayContaining(['claim', 'hingeType', 'evidenceIds', 'evidenceBasis']),
+    );
+    expect(schema.schema.required).toContain('watchNext');
+  });
+
+  it('the watchNext item schema constrains hingeType to exactly the five approved, non-catch-all values', () => {
+    const schema = buildAnalysisJsonSchema() as {
+      schema: {
+        properties: { watchNext: { items: { properties: { hingeType: { enum: string[] } } } } };
+      };
+    };
+    const hingeTypeEnum = schema.schema.properties.watchNext.items.properties.hingeType.enum;
+    expect(hingeTypeEnum).toEqual([
+      'pending_response',
+      'scheduled_event',
+      'announced_action',
+      'deadline',
+      'forthcoming_report',
+    ]);
+    expect(hingeTypeEnum).not.toContain('other');
+    expect(hingeTypeEnum).not.toContain('unknown');
+  });
+
+  it('additionalProperties remains false at the top level', () => {
+    const schema = buildAnalysisJsonSchema() as { schema: { additionalProperties: boolean } };
+    expect(schema.schema.additionalProperties).toBe(false);
+  });
+
+  it('does not use an unverified maxItems JSON Schema keyword anywhere in the schema', () => {
+    expect(JSON.stringify(buildAnalysisJsonSchema())).not.toMatch(/maxItems/);
+  });
+
+  it('the prompt requests at most 4 watchNext items, evidence-bounded, with an explicit empty-array fallback', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(system).toMatch(/"watchNext":.*up to 4/);
+    expect(normalizedSystem).toContain(
+      'Return an empty array if the evidence does not explicitly signal any forthcoming development',
+    );
+  });
+
+  it('the prompt explicitly prohibits unsupported forecasting, naming the exact prohibited example patterns', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain('This is NOT forecasting');
+    expect(normalizedSystem).toContain(
+      'if the supplied evidence disappeared, could you still plausibly invent this item from general knowledge alone',
+    );
+    expect(normalizedSystem).toContain('the conflict may escalate');
+    expect(normalizedSystem).toContain('markets could decline further');
+    expect(normalizedSystem).toContain('the government may respond');
+  });
+
+  it('the prompt lists concrete positive categories — scheduled, announced, pending, expected by an identified authority, forthcoming, or a documented next step', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'scheduled, announced, pending, expected by an identified source or authority, forthcoming, or proceeding toward a documented next step',
+    );
+  });
+
+  it('the prompt hardening: every watchNext item must correspond to a specific FUTURE HINGE explicitly present in the evidence, never a general possibility', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'Every watchNext item must correspond to a specific FUTURE HINGE explicitly present in the supplied evidence',
+    );
+    expect(normalizedSystem).toContain(
+      'a concrete scheduled, announced, pending, unresolved, deadline-based, or forthcoming-report/result development, never a general possibility',
+    );
+  });
+
+  it('the prompt hardening: evidenceBasis is REQUIRED (not optional) for watchNext specifically, and must identify the exact passage establishing the future hinge', () => {
+    const { system } = buildAnalysisMessages('q', articles, 1200);
+    const normalizedSystem = system.replace(/\s+/g, ' ');
+    expect(normalizedSystem).toContain(
+      'For "watchNext" specifically (unlike keyFacts), "evidenceBasis" is REQUIRED, not optional',
+    );
+    expect(normalizedSystem).toContain(
+      'you must quote or closely identify the exact passage in the supplied evidence that establishes the future hinge itself',
+    );
+    expect(normalizedSystem).toContain(
+      'A watchNext item with citations but no evidenceBasis identifying the future hinge will be discarded',
+    );
+  });
+
+  it('does not introduce any post-M62 intelligence field beyond the four approved phases', () => {
+    const schema = buildAnalysisJsonSchema() as { schema: { properties: Record<string, unknown> } };
+    const knownFields = new Set([
+      'query',
+      'headline',
+      'summary',
+      'keyFacts',
+      'context',
+      'relevance',
+      'affectedParties',
+      'immediateImpacts',
+      'spilloverImplications',
+      'significance',
+      'watchNext',
+      'agreements',
+      'differences',
+      'unknowns',
+      'uncertainties',
+      'relationalEvidenceAssessments',
+      'timeline',
+      'confidence',
+      'entities',
+    ]);
+    for (const key of Object.keys(schema.schema.properties)) {
+      expect(knownFields.has(key)).toBe(true);
+    }
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * GEO-4 — GEOGRAPHIC SCOPE GROUNDING
+ * ------------------------------------------------------------------ */
+
+/**
+ * The risk this rule closes, and why it was reachable.
+ *
+ * The model receives the user's question VERBATIM — so a query for
+ * "Kigali, Rwanda" tells it the target is Kigali — followed by evidence that
+ * may be entirely national, because acceptance in CountryNewsService is
+ * `isRelevant || matchesCity` and country-level backfill is deliberate,
+ * accepted behaviour.
+ *
+ * The pre-existing evidence-grounding rule is ENUMERATED — "keyFacts,
+ * agreements, differences, timeline, and uncertainties" — and `headline` and
+ * `summary` are absent from that list, are bare `{ type: 'string' }` in the
+ * schema with no description, and are checked by the validator only for being
+ * non-empty. Nothing constrained the geographic SCOPE of any generated prose.
+ *
+ * That gap is not about inventing facts. "The latest developments in Kigali
+ * centre on economic policy" invents nothing when the evidence says Rwanda's
+ * economy grew — it misattributes LOCATION, which the fact-level rules do not
+ * address. GEO-PRECISION-1 raised the exposure rather than lowering it: the
+ * repaired resolver correctly routes many more queries through city-targeted
+ * retrieval than before.
+ *
+ * WHAT THESE TESTS CAN AND CANNOT PROVE. They prove the instruction is
+ * present, complete across every prose field, correctly scoped, and reaches
+ * every request. They do NOT prove a live model obeys it — that would require
+ * either a real model call in CI or a mock, and a mock proves only that the
+ * mock returns what the mock was told to return. A structural guarantee needs
+ * per-claim geographic evidence mapping, which is deliberately out of scope
+ * for this slice.
+ */
+describe('GEO-4 — the prompt forbids geographic precision exceeding evidence precision', () => {
+  const articles = [
+    {
+      id: 'a1',
+      title: 'Rwanda economy grows this quarter',
+      summary: 'Officials cite steady government policy.',
+      url: 'https://example.com/a1',
+      imageUrl: undefined,
+      sourceId: 'src',
+      sourceName: 'Example',
+      category: 'world' as const,
+      sourcesCount: 1,
+      publishedAt: new Date().toISOString(),
+    },
+  ];
+
+  const system = buildAnalysisMessages(
+    'What are the latest developments in Kigali, Rwanda?',
+    articles,
+    1200,
+  ).system;
+
+  it('states the never-upgrade principle explicitly', () => {
+    expect(system).toContain('GEOGRAPHIC SCOPE IS A FACT, AND IT IS NEVER UPGRADED');
+    expect(system).toMatch(
+      /state the location AT THE LEVEL THE\s+EVIDENCE SUPPORTS, never at the level the question asked for/i,
+    );
+  });
+
+  it('names a country-to-city upgrade as a FABRICATION, not merely a style preference', () => {
+    expect(system).toMatch(
+      /presenting it as something that happened "in <city>" is a\s+fabrication/i,
+    );
+  });
+
+  /**
+   * THE FIELD LIST IS THE POINT. The pre-existing grounding rule is
+   * enumerated, so a scope rule that did not enumerate would be read as
+   * applying only to the same sourced-claim families and would leave the two
+   * least-constrained fields — the ones a reader actually sees first —
+   * untouched.
+   */
+  it('BINDS EVERY GENERATED PROSE FIELD, headline and summary explicitly included', () => {
+    const REQUIRED_FIELDS = [
+      'headline',
+      'summary',
+      'keyFacts',
+      'context',
+      'relevance',
+      'significance',
+      'affectedParties',
+      'immediateImpacts',
+      'spilloverImplications',
+      'watchNext',
+    ];
+
+    const ruleStart = system.indexOf('GEOGRAPHIC SCOPE IS A FACT');
+    expect(ruleStart).toBeGreaterThan(-1);
+    const ruleEnd = system.indexOf('\n- ', ruleStart);
+    const rule = system.slice(ruleStart, ruleEnd === -1 ? undefined : ruleEnd);
+
+    for (const field of REQUIRED_FIELDS) {
+      expect(`${field} named inside the scope rule: ${rule.includes(field)}`).toBe(
+        `${field} named inside the scope rule: true`,
+      );
+    }
+
+    // Stated as binding headline/summary AS STRICTLY AS the sourced-claim
+    // families, so the enumeration above cannot be read as a weaker tier.
+    expect(rule).toMatch(/binds\s+"headline" and "summary" exactly as strictly as keyFacts/i);
+    expect(rule).toMatch(/every other piece of prose you\s+generate/i);
+  });
+
+  it('PRESERVES broader evidence as legitimate — country backfill is not undermined', () => {
+    // The rule must constrain how national evidence is DESCRIBED, never
+    // instruct the model to discard it. Country-level contextual backfill is
+    // accepted product behaviour and this slice does not change it.
+    expect(system).toMatch(
+      /Broader evidence remains legitimate and useful, and you should use it/i,
+    );
+    expect(system).toMatch(/bears on a question\s+about a city/i);
+    expect(system).toMatch(/What you may never do is relocate it/i);
+  });
+
+  it('carries a worked example that distinguishes relevance from relocation', () => {
+    expect(system).toContain('"Rwanda\'s economy grew, which bears on the capital" is');
+    expect(system).toContain('"Kigali\'s economy grew" is not');
+  });
+
+  it('routes an unreachable place to uncertainties rather than to silence', () => {
+    expect(system).toMatch(
+      /Where the supplied evidence does not reach the place the question named,\s+say so in\s+"uncertainties"/i,
+    );
+  });
+
+  it('applies to any named place, not only to cities', () => {
+    expect(system).toMatch(/a city, region, or other place/i);
+    expect(system).toMatch(
+      /The same holds for a\s+region, a province, or any other place named in the question/i,
+    );
+  });
+
+  it('is present exactly once — not duplicated by any composition path', () => {
+    const occurrences = system.split('GEOGRAPHIC SCOPE IS A FACT').length - 1;
+    expect(occurrences).toBe(1);
+  });
+
+  it('REACHES EVERY REQUEST — relational or not, English or Polish', () => {
+    const withRelational = buildAnalysisMessages('q', articles, 1200, {
+      x: 'a',
+      y: 'b',
+    }).system;
+    const polish = buildAnalysisMessages('q', articles, 1200, undefined, 'pl').system;
+    const plain = buildAnalysisMessages('q', articles, 1200).system;
+
+    for (const variant of [withRelational, polish, plain]) {
+      expect(variant).toContain('GEOGRAPHIC SCOPE IS A FACT, AND IT IS NEVER UPGRADED');
+    }
+  });
+
+  it('WAS ADDED, NOT SUBSTITUTED — every pre-existing grounding rule survives verbatim', () => {
+    // A "hardening" that quietly reworded an existing instruction would be a
+    // regression wearing the right label.
+    expect(system).toContain(
+      'Use only the supplied articles. Do not use outside knowledge, do not',
+    );
+    expect(system).toContain('Every entry in keyFacts, agreements, differences (each position),');
+    expect(system).toContain(
+      'Clearly distinguish observed facts from interpretation. If something is',
+    );
+    expect(system).toContain('Do not assume that multiple articles are independent confirmation');
+    expect(system).toContain(
+      'Avoid political persuasion, advocacy, or loaded language of any kind.',
+    );
+  });
+});
