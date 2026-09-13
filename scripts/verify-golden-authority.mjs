@@ -33,6 +33,22 @@
  * authority must never be treated as a satisfied one — that is how a gate
  * quietly becomes decoration.
  *
+ * ── WHERE THIS GATE RUNS — C907 R2 ─────────────────────────────────────────
+ *
+ * RELEASE / CI VALIDATION, NOT APPLICATION IMAGE CONSTRUCTION.
+ *
+ * This gate verifies the approved capture BINARIES, and those live outside the
+ * repository on purpose (see the GOLDEN_ROOT note below). An application Docker
+ * image never contains them, so requiring this gate during image construction
+ * could only ever be satisfied by shipping the goldens into the image or by
+ * faking them — and the second is the exact failure this gate exists to stop.
+ *
+ * It is therefore invoked by `npm run verify:visual-authority` (and
+ * `verify:visual-authority:production`, which adds --require-all) rather than
+ * by `next build`. That wiring is itself asserted by
+ * scripts/verify-spatial-structure.mjs section 10, so the gate cannot be
+ * quietly dropped: delete the wiring and the structure gate fails the build.
+ *
  * Usage: node scripts/verify-golden-authority.mjs [--golden-root <abs>] [--require-all]
  *   --require-all  fail if any frame is still PENDING. For a Production gate.
  * Exit 0 = every APPROVED golden matches its manifest entry.
@@ -74,6 +90,34 @@ const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'));
 const GOLDEN_ROOT = resolve(
   flagValue('--golden-root') ?? process.env.GOLDEN_AUTHORITY_ROOT ?? join(HERE, '..', '..', manifest.goldenRoot),
 );
+
+/*
+  A MISSING GOLDEN ROOT IS DIAGNOSED ONCE, BY NAME.
+
+  Without this, an absent authority pack produced one "approved golden not
+  found" line per APPROVED frame and no statement of WHERE the gate had looked
+  or how to tell it otherwise — which reads like the goldens were deleted when
+  in fact the gate was simply run somewhere that cannot see them. The default
+  root is a SIBLING OF THE REPOSITORY ROOT, not a path inside it, so it is
+  correct for the authoring layout and meaningless anywhere else: inside a
+  Docker image it resolves to "/GOLDEN-SPATIAL-AUTHORITY-1" at the filesystem
+  root. That is not a bug to be papered over by relocating the pack into the
+  image — the pack stays out of the repository by design, and this gate stays
+  out of image construction for the same reason.
+
+  This still FAILS. Nothing here turns an absent authority into a passing one.
+*/
+if (!existsSync(GOLDEN_ROOT) && manifest.frames.some((frame) => frame.status === 'APPROVED')) {
+  console.error('');
+  console.error('GOLDEN AUTHORITY GATE — FAIL');
+  console.error(`  The approved-capture pack was not found at: ${GOLDEN_ROOT}`);
+  console.error(`  manifest.goldenRoot = ${manifest.goldenRoot} (resolved relative to the repository's parent)`);
+  console.error('  Supply it with --golden-root <abs> or GOLDEN_AUTHORITY_ROOT=<abs>.');
+  console.error('  This gate is release/CI validation and is not expected to run inside an');
+  console.error('  application Docker image, where the capture pack is deliberately absent.');
+  console.error('');
+  process.exit(1);
+}
 
 const REQUIRED_FRAMES = ['V1', 'V2', 'V3', 'V4'];
 const seen = new Set();

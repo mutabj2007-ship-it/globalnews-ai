@@ -18,9 +18,13 @@
  *                     product's own camera contract — not a synthetic hook. A
  *                     case that cannot be expressed as a URL is a case a human
  *                     cannot reproduce by hand.
- *   FIXTURE EVIDENCE  a pinned evidence payload, so tone, halo radius and
- *                     marker count are the same on every run. Live evidence
- *                     would make every capture a different picture.
+ *   PINNED EVIDENCE   supplied by the TEST HARNESS, not by the product. The
+ *                     first issue of these cases asked for it with a
+ *                     `fixture=golden-*` query parameter; nothing in the
+ *                     product ever read that parameter, so every "deterministic"
+ *                     capture was in fact taken against the live feed. The
+ *                     parameters are gone and `interception.mjs` pins the
+ *                     responses from outside instead — C907 R2.
  *   MOTION DISABLED   the 3.2 s evidence ripple and the amber sweep are real
  *                     product behaviour and would otherwise sample at a random
  *                     phase.
@@ -56,7 +60,7 @@ export const PROTECTED_FRAMES: readonly ProtectedFrame[] = [
     name: 'WORLD',
     viewport: { width: 1440, height: 900 },
     cam: null,
-    query: { mode: 'EVIDENCE', period: '7D', fixture: 'golden-world' },
+    query: { mode: 'EVIDENCE', period: '7D' },
     acceptance: [
       'The world occupies the usable map frame — no small Earth in an empty field.',
       'Continents, coastlines and internal borders are all separately legible.',
@@ -72,7 +76,7 @@ export const PROTECTED_FRAMES: readonly ProtectedFrame[] = [
     viewport: { width: 1440, height: 900 },
     /* The golden Rwanda frame's own printed centre. */
     cam: '5.9/29.87/-1.94',
-    query: { mode: 'EVIDENCE', period: '7D', fixture: 'golden-rwanda', select: 'RWA' },
+    query: { mode: 'EVIDENCE', period: '7D', select: 'RWA' },
     acceptance: [
       'East Africa geography is visible FIRST, with intelligence above it.',
       'The field is dark teal/slate, not near-black.',
@@ -87,7 +91,7 @@ export const PROTECTED_FRAMES: readonly ProtectedFrame[] = [
     name: 'SELECTED COUNTRY',
     viewport: { width: 1440, height: 900 },
     cam: '4.2/37.9/0.2',
-    query: { mode: 'EVIDENCE', period: '7D', fixture: 'golden-rwanda', select: 'KEN' },
+    query: { mode: 'EVIDENCE', period: '7D', select: 'KEN' },
     acceptance: [
       'The selection is carried by fill + edge + HUD state, never by an oversized border.',
       'The selection callout has its own ground and does not float on the map.',
@@ -99,7 +103,7 @@ export const PROTECTED_FRAMES: readonly ProtectedFrame[] = [
     name: 'EVIDENCE MODE',
     viewport: { width: 1440, height: 900 },
     cam: '2.4/24/6',
-    query: { mode: 'EVIDENCE', period: '30D', fixture: 'golden-evidence' },
+    query: { mode: 'EVIDENCE', period: '30D' },
     acceptance: [
       'All five legend states are distinguishable: verified, attention, interpreted, none, reference.',
       'Uncertainty is DRAWN — dashed and unfilled — not merely labelled.',

@@ -1,0 +1,22 @@
+{
+  "countryCode": "RWA",
+  "countryName": "Rwanda",
+  "articles": [
+    {
+      "id": "c907-country-001",
+      "title": "Protected-frame country fixture record",
+      "summary": "Pinned by the C907 visual gate harness. Not live reporting.",
+      "url": "https://example.invalid/c907/country/1",
+      "sourceId": "c907-fixture",
+      "sourceName": "C907 Fixture",
+      "category": "world",
+      "sourcesCount": 2,
+      "publishedAt": "2026-09-01T00:00:00.000Z"
+    }
+  ],
+  "totalResults": 1,
+  "providers": ["c907-fixture"],
+  "dataMode": "mock",
+  "feedTier": "delayed",
+  "providerDisplayName": "C907 Fixture"
+}

@@ -197,6 +197,29 @@ export function luminanceProfile(pixels, nearBlackThreshold = NEAR_BLACK_DEFAULT
  * did — and because "palette drifted AND the pane went dark" is a different
  * diagnosis from either alone.
  */
+/**
+ * GEOGRAPHIC OCCUPANCY, MEASURED FROM THE PANE RATHER THAN ASKED OF THE PRODUCT.
+ *
+ * C907 R2. The runner used to read `window.__gnGeographicOccupancy`, a global
+ * NO PART OF THE PRODUCT EVER SET — with `?? 0` behind it, so the measurement
+ * silently became zero and the threshold below it could only ever have failed
+ * or been ignored. The number is a share of pane area, which is exactly what
+ * the decoded pixels already say, so it is computed here from the same pixels
+ * the palette occupancies come from and needs no instrumentation in shipped
+ * code.
+ *
+ * The token list per frame is the frame's own approved geographic palette. No
+ * threshold in GOLDEN is altered by this function; it only supplies the input
+ * that was previously absent.
+ */
+export function geographicOccupancy(pixels, frameId) {
+  const expected = GOLDEN[frameId];
+  if (!expected || !expected.palette) return 0;
+  let total = 0;
+  for (const hex of Object.keys(expected.palette)) total += occupancy(pixels, hex, 2);
+  return total;
+}
+
 export function compareFrame(frameId, pane, domCounts) {
   const expected = GOLDEN[frameId];
   const failures = [];

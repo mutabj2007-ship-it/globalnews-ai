@@ -17,6 +17,8 @@
     "build:backend": "npm run build --workspace=backend",
     "build": "npm run build:shared && npm run build:frontend && npm run build:backend",
     "build:shared": "npm run build --workspace=shared",
+    "verify:visual-authority": "node scripts/run-visual-gate.mjs",
+    "verify:visual-authority:production": "node scripts/run-visual-gate.mjs --require-all",
     "lint": "npm run lint --workspace=frontend && npm run lint --workspace=backend",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",

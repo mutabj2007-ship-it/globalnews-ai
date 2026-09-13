@@ -1,0 +1,30 @@
+{
+  "articles": [
+    {
+      "id": "c907-frame-001",
+      "title": "Protected-frame fixture record 1",
+      "summary": "Pinned by the C907 visual gate harness. Not live reporting.",
+      "url": "https://example.invalid/c907/1",
+      "sourceId": "c907-fixture",
+      "sourceName": "C907 Fixture",
+      "category": "world",
+      "sourcesCount": 3,
+      "publishedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "c907-frame-002",
+      "title": "Protected-frame fixture record 2",
+      "summary": "Pinned by the C907 visual gate harness. Not live reporting.",
+      "url": "https://example.invalid/c907/2",
+      "sourceId": "c907-fixture",
+      "sourceName": "C907 Fixture",
+      "category": "world",
+      "sourcesCount": 2,
+      "publishedAt": "2026-09-01T00:00:00.000Z"
+    }
+  ],
+  "totalResults": 2,
+  "providers": ["c907-fixture"],
+  "dataMode": "mock",
+  "generatedAt": "2026-09-01T00:00:00.000Z"
+}

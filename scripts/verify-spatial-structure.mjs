@@ -527,6 +527,193 @@ check(
 );
 
 /* ══════════════════════════════════════════════════════════════════════════
+   10 · THE GATES ARE PACKAGED WHERE THEY CAN ACTUALLY RUN, AND PART B IS REAL
+   ══════════════════════════════════════════════════════════════════════════
+   C907 R2. Two defects, one visible and one not.
+
+   VISIBLE: Railway frontend deployment 34cf76f9 died with
+
+       Cannot find module '/app/scripts/verify-spatial-tokens.mjs'
+
+   because the build script ran the gates from `../scripts/` while the image
+   build stage copied only `shared` and `frontend`.
+
+   NOT VISIBLE, AND WORSE: the first correction moved the golden-authority
+   command into a release script and described the result as "full Part B runs
+   for every release candidate". It did not. That command verified the golden
+   BINARIES and never captured or compared a frame. The runner it was standing
+   in for could not have executed at all — it imported a module that did not
+   exist, waited on a DOM attribute nothing emits, read two `window` globals no
+   product file sets, and asked for determinism through a `fixture=` parameter
+   no product code reads.
+
+   A gate that cannot run is not a gate, and a package that says it runs is
+   worse than one that says it is missing. These checks assert the WHOLE chain
+   exists — golden authority, frame execution, perceptual comparison — and that
+   the runner's real dependencies are present. */
+
+const frontendPkg = read('frontend/package.json');
+const rootPkg = read('package.json');
+const frontendDockerfile = read('frontend/Dockerfile');
+const visualRunner = read('scripts/run-visual-gate.mjs');
+const visualSpec = read('scripts/spatial-visual/spatial-visual.spec.ts');
+const visualCases = read('scripts/spatial-visual/cases.ts');
+
+/* ── Part A belongs in the image build ── */
+
+check(
+  'the frontend build still runs the Spatial token gate',
+  /"build":\s*"[^"]*verify-spatial-tokens\.mjs/.test(frontendPkg),
+  'Part A is source-truth and must gate every build, image builds included.',
+);
+
+check(
+  'the frontend build still runs the Spatial structure gate',
+  /"build":\s*"[^"]*verify-spatial-structure\.mjs/.test(frontendPkg),
+  'A candidate that fails the structural assertions must not be buildable.',
+);
+
+check(
+  'the frontend image build copies scripts/ into the build stage',
+  /^COPY scripts \.\/scripts$/m.test(frontendDockerfile),
+  'Without it the Part A gates cannot be resolved at /app/scripts and the image build dies.',
+);
+
+check(
+  'the frontend build does NOT depend on the golden capture binaries',
+  !/"build":\s*"[^"]*verify-golden-authority\.mjs/.test(frontendPkg) &&
+    !/"build":\s*"[^"]*run-visual-gate\.mjs/.test(frontendPkg),
+  'The approved goldens live outside the repository by design and are never copied into an application image, so requiring them during image construction can only be satisfied by shipping or faking them.',
+);
+
+/* ── Part B must be the WHOLE chain, not the manifest check wearing its name ── */
+
+check(
+  'the release gate runs the visual RUNNER, not merely the golden manifest check',
+  /"verify:visual-authority":\s*"node scripts\/run-visual-gate\.mjs"/.test(rootPkg),
+  'Pointing this at verify-golden-authority.mjs alone verifies the reference and captures nothing, while claiming Part B runs. That was the C907 R2 review finding.',
+);
+
+check(
+  'a production release entry point requires every frame, so PENDING blocks Production',
+  /"verify:visual-authority:production":\s*"node scripts\/run-visual-gate\.mjs --require-all"/.test(rootPkg),
+  'V3 and V4 are PENDING. --require-all is what stops an unapproved frame reaching Production as a silent pass.',
+);
+
+check(
+  'the runner chains golden authority BEFORE frame execution',
+  /verify-golden-authority\.mjs/.test(visualRunner) && /playwright\.config\.mjs/.test(visualRunner),
+  'Comparing captures against an unverified reference proves nothing, so stage 1 must gate stage 2.',
+);
+
+check(
+  'a missing Playwright runner FAILS the gate rather than skipping it',
+  /@playwright\/test/.test(visualRunner) && /process\.exit\(1\)/.test(visualRunner),
+  'An absent measurement is not a satisfied one. A gate that goes green because its runner is missing converts a gap into a positive claim.',
+);
+
+/* ── the runner's own dependencies must exist ── */
+
+for (const asset of [
+  'scripts/run-visual-gate.mjs',
+  'scripts/spatial-visual/decodePng.mjs',
+  'scripts/spatial-visual/interception.mjs',
+  'scripts/spatial-visual/playwright.config.mjs',
+  'scripts/spatial-visual/fixtures',
+]) {
+  check(
+    `the Part B runner dependency exists: ${asset}`,
+    existsSync(join(ROOT, asset)),
+    'The first issue of this runner imported a module that was never written, so Part B could not have executed.',
+  );
+}
+
+check(
+  'the runner decodes captures with the in-repo decoder',
+  /from '\.\/decodePng\.mjs'/.test(visualSpec),
+  'It previously imported ./decodePng, which did not exist.',
+);
+
+check(
+  'the runner pins evidence by harness interception',
+  /from '\.\/interception\.mjs'/.test(visualSpec) && /installPinnedEvidence/.test(visualSpec),
+  'Determinism must come from the harness, not from a fixture branch shipped to users.',
+);
+
+check(
+  'the runner FAILS when any API endpoint went unpinned',
+  /evidence\.missing/.test(visualSpec),
+  'A harness that falls back to the live feed is non-deterministic exactly when a fixture is missing.',
+);
+
+check(
+  'the protected cases no longer ask the product for a fixture parameter',
+  !/fixture:\s*'/.test(visualCases),
+  'No product code ever read fixture=golden-*, so every capture taken that way was against live evidence.',
+);
+
+check(
+  'the runner reads no test-only product globals',
+  !/window\.__gn/.test(visualSpec.replace(/\/\*[\s\S]*?\*\//g, '')),
+  'window.__gnGeographicOccupancy and window.__gnWorldSpanDegrees were never set by any product file, and `?? 0` hid that.',
+);
+
+/* ── PENDING IS CAPTURED, NEVER CERTIFIED ──
+   C907 R2 review finding. The runner compared every frame, while the comparator
+   holds measurements only for V1/V2 — so the ordinary Alpha gate could never
+   pass while V3/V4 were legitimately PENDING. The repair must not be a skip:
+   "nobody wrote a threshold" and "the Product Owner approved this" have to stay
+   distinguishable, which is what the authority manifest is for. */
+
+check(
+  'frame status is read from the SC-owned authority manifest',
+  /golden-authority\.manifest\.json/.test(visualSpec) && /statusOf/.test(visualSpec),
+  'The manifest is the one artefact a Product Owner ruling moves. Deciding status anywhere else puts acceptance outside fingerprint governance.',
+);
+
+check(
+  'a PENDING frame is captured but explicitly NOT CERTIFIED',
+  /PENDING/.test(visualSpec) && /NOT CERTIFIED/.test(visualSpec),
+  'A pending capture exists for Part C inspection. It must never read as evidence the frame is correct.',
+);
+
+check(
+  'a PENDING frame is never compared against golden measurements',
+  /if \(status === 'PENDING'\)[\s\S]{0,1200}?return;/.test(visualSpec),
+  'Comparing a frame with no approved reference is how an absent authority becomes a satisfied one.',
+);
+
+check(
+  'the Production gate fails on a PENDING frame inside the runner too',
+  /SPATIAL_VISUAL_REQUIRE_ALL/.test(visualSpec) && /SPATIAL_VISUAL_REQUIRE_ALL/.test(visualRunner),
+  '--require-all must be enforced in both stages, so neither entry point can certify a frame nobody approved.',
+);
+
+check(
+  'an APPROVED frame with no golden measurements is a hard failure',
+  /no golden measurements/.test(visualSpec),
+  'An approved frame without a threshold is an uncertified frame, and must fail rather than be skipped.',
+);
+
+check(
+  'a protected case absent from the manifest is a hard failure',
+  /absent from golden-authority\.manifest\.json/.test(visualSpec),
+  'An undeclared case is ungoverned: nothing says whether it should be certified or ignored.',
+);
+
+check(
+  'the pinned validation-tooling procedure is recorded under SC',
+  existsSync(join(ROOT, 'scripts/spatial-visual/VALIDATION-TOOLING.md')),
+  'The Alpha validation environment needs an exact runner version; "whatever npm resolved" can move the pixels the thresholds measure.',
+);
+
+check(
+  'the runner waits on measured settling, not on an attribute nothing emits',
+  /captureSettledPane/.test(visualSpec) && !/data-gn-idle="true"/.test(visualSpec.replace(/\/\*[\s\S]*?\*\//g, '')),
+  'The idle attribute does not exist in the product, so every run would have died on a 20-second timeout.',
+);
+
+/* ══════════════════════════════════════════════════════════════════════════
    REPORT
    ══════════════════════════════════════════════════════════════════════════ */
 

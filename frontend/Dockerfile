@@ -50,6 +50,22 @@ ARG NEXT_PUBLIC_MAP_SHELL
 ENV NEXT_PUBLIC_MAP_SHELL=$NEXT_PUBLIC_MAP_SHELL
 COPY shared ./shared
 COPY frontend ./frontend
+# C907 R2 — THE BUILD GATES LIVE IN scripts/, SO scripts/ MUST BE IN THE IMAGE.
+# `npm run build --workspace=frontend` runs the Spatial token and structure
+# gates from `../scripts/` before `next build`. Without this COPY the build
+# stage fails with "Cannot find module /app/scripts/verify-spatial-tokens.mjs"
+# — which is exactly how Railway frontend deployment 34cf76f9 failed. The gates
+# are source-truth checks over frontend/src and frontend/tailwind.config.ts;
+# they need no browser, no network and no golden PNG, so they belong here.
+#
+# The golden-authority gate deliberately does NOT run here. It verifies the
+# approved V1/V2 capture binaries, which live OUTSIDE the repository (see
+# docs/spatial-visual-gate.md, Part B) and are never copied into an application
+# image. It runs in release/CI validation instead, via
+# `npm run verify:visual-authority`. It was not weakened and was not dropped —
+# scripts/verify-spatial-structure.mjs section 10 fails the build if that
+# release wiring is ever removed.
+COPY scripts ./scripts
 RUN npm run build:shared
 RUN npm run build --workspace=frontend
 

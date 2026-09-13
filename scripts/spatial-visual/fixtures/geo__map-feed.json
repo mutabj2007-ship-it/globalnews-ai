@@ -1,0 +1,16 @@
+{
+  "precision": "COUNTRY",
+  "renderable": true,
+  "contested": false,
+  "place": {
+    "geographyId": "gn:country:RWA",
+    "kind": "country",
+    "label": "Rwanda",
+    "canonicalName": "Rwanda",
+    "countryName": "Rwanda",
+    "joinKeys": { "iso3": "RWA", "iso2": "RW" },
+    "camera": { "center": [29.87, -1.94] }
+  },
+  "candidates": [],
+  "reason": "C907 R2 pinned protected-frame fixture. Not live evidence. Diagnostics only; never rendered."
+}

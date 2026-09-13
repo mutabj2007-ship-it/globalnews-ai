@@ -5,9 +5,82 @@ by the person whose change is being gated.
 
 | Part | What it is | Where it lives | Runs |
 |---|---|---|---|
-| **A** | Structural assertions — layers, controls, token resolution, camera rule, rail geometry | `scripts/verify-spatial-structure.mjs` | every commit, in `next build` |
-| **B** | Perceptual comparison of four captured frames against the golden measurements | `scripts/spatial-visual/` | every release candidate |
+| **A** | Structural assertions — layers, controls, token resolution, camera rule, rail geometry | `scripts/verify-spatial-tokens.mjs`, `scripts/verify-spatial-structure.mjs` | every commit, in `next build` — **including the Docker image build** |
+| **B** | Golden-capture authority, then perceptual comparison of four captured frames | `scripts/verify-golden-authority.mjs`, `scripts/spatial-visual/` | every release candidate, in **release/CI** — `npm run verify:visual-authority` |
 | **C** | **Mandatory Product Owner visual acceptance** | this document | before Production, every time |
+
+## Where each part can run, and why it matters — C907 R2
+
+Part A reads only repository source: `frontend/src`, `frontend/tailwind.config.ts`
+and the SC-owned assets under `scripts/`. It needs no browser, no network and no
+image. It therefore gates **every** build, image builds included, and
+`frontend/Dockerfile` copies `scripts/` into the build stage so it can.
+
+Part B verifies the approved capture **binaries**. Those live in
+`GOLDEN-SPATIAL-AUTHORITY-1/`, a **sibling of the repository root** — deliberately
+outside the repo, because a 1.2 MB PNG is not source and its identity, not its
+bytes, is what governance needs. The SC-owned manifest holds that identity.
+
+Consequently Part B **cannot** run inside an application Docker image: the image
+does not contain the capture pack and must not, so the only ways to make it
+"pass" there would be to ship the goldens into the image or to fake them. The
+second is precisely what this gate exists to prevent. Part B runs in
+release/CI validation instead.
+
+### What `verify:visual-authority` actually does — corrected in C907 R2
+
+The first C907 R2 issue pointed this script at `verify-golden-authority.mjs`
+alone and described the result as "full Part B runs for every release
+candidate". **That was false**, and the CTO review caught it: the command
+verified the golden *binaries* and never captured or compared a frame. Worse,
+the runner it stood in for could not have executed — it imported a module that
+did not exist, waited on a DOM attribute nothing emits, read two `window`
+globals no product file sets, and asked for determinism through a `fixture=`
+parameter no product code reads.
+
+`npm run verify:visual-authority` now runs `scripts/run-visual-gate.mjs`, which
+is the whole chain in order, each stage gating the next:
+
+1. **golden authority** — are the approved captures the ones the manifest says?
+2. **protected-frame execution** — capture V1–V4 in a real browser against
+   pinned evidence;
+3. **perceptual comparison** — `compare-golden-frame.mjs` judges each capture.
+
+**It is red until it can actually run.** If `@playwright/test` cannot be
+resolved, the gate exits non-zero and prints the install command. It does not
+skip and does not warn-and-pass: a release gate that goes green because its
+runner is absent converts a missing measurement into a positive claim.
+
+### Determinism comes from the harness, not from the product
+
+`scripts/spatial-visual/interception.mjs` pins every API response through
+Playwright routing. It **fails closed**: an API request with no pinned fixture is
+aborted and named, and the test fails listing the paths. It never falls back to
+the live feed — that would be non-deterministic exactly when a fixture is
+missing. Consequently the product carries no test-only branch and no
+`fixture=` code path a user could reach.
+
+Settling is detected by **pixel stability** — two byte-identical consecutive
+captures of the pane — rather than by a bespoke idle attribute. Geographic
+occupancy is computed from the decoded pane, and world span is derived from the
+settled camera in the page's own `cam=` URL, so neither needs instrumentation in
+shipped code.
+
+> **This split is enforced, not merely documented.** `verify-spatial-structure.mjs`
+> section 10 asserts that the frontend build still runs both Part A gates, that
+> the Dockerfile still copies `scripts/`, that the frontend build does *not*
+> depend on the capture binaries, that `verify:visual-authority` runs the
+> **runner** rather than the manifest check wearing its name, that the runner
+> chains golden authority before frame execution, that a missing Playwright
+> runner fails rather than skips, that every runner dependency exists, and that
+> none of the five phantom hooks has returned. Delete any of it and the
+> structure gate fails, which fails the build. All fourteen of those removals
+> were tested by performing them.
+
+**V3 and V4 remain PENDING.** `verify:visual-authority:production` passes
+`--require-all`, which fails while any frame is pending — so an unapproved frame
+cannot reach Production as a silent pass. The ordinary Alpha gate reports V1/V2
+as verified and V3/V4 as PENDING notes, which is the truthful state.
 
 ---
 
