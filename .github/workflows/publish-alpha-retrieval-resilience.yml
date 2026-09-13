@@ -1,0 +1,68 @@
+name: Publish Alpha Retrieval Resilience
+
+on:
+  push:
+    branches:
+      - transport/alpha-c907-r2-resilience-publish-20260913
+    paths:
+      - '.github/workflows/publish-alpha-retrieval-resilience.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout transport payload
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct, verify, and publish immutable Alpha branch
+        shell: bash
+        env:
+          BASE_COMMIT: 643bfdb5faf6db8bbbb57ef444d6c4866f1f049c
+          FINAL_BRANCH: release/alpha-c907-r2-retrieval-resilience1
+          DELTA_SHA256: ff60d9c39e3537646298ddbf07967d230bc581b2e4b3b094d84a0180d2ecaf15
+        run: |
+          set -euo pipefail
+
+          cat transport_payload/resilience/part{00..09} > /tmp/delta.b64
+          base64 --decode /tmp/delta.b64 > /tmp/delta.tar.xz
+          echo "${DELTA_SHA256}  /tmp/delta.tar.xz" | sha256sum -c -
+
+          FILES_IN_DELTA="$(tar -tJf /tmp/delta.tar.xz | grep -v '/$' | wc -l | tr -d ' ')"
+          test "${FILES_IN_DELTA}" = "28"
+
+          git cat-file -e "${BASE_COMMIT}^{commit}"
+          if git ls-remote --exit-code --heads origin "refs/heads/${FINAL_BRANCH}" >/dev/null 2>&1; then
+            echo "STOP: final immutable branch already exists"
+            exit 1
+          fi
+
+          git checkout --detach "${BASE_COMMIT}"
+          git config core.fileMode false
+          tar -xJf /tmp/delta.tar.xz
+          git add -A
+
+          CHANGED="$(git diff --cached --name-only | wc -l | tr -d ' ')"
+          test "${CHANGED}" = "28"
+          test -z "$(git diff --cached --diff-filter=D --name-only)"
+
+          git config user.name "GlobalNews AI Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "release(alpha): retrieval resilience convergence 1"
+
+          PARENT="$(git rev-parse HEAD^)"
+          test "${PARENT}" = "${BASE_COMMIT}"
+          TRACKED="$(git ls-files | wc -l | tr -d ' ')"
+          test "${TRACKED}" = "1057"
+
+          echo "FINAL_COMMIT=$(git rev-parse HEAD)"
+          echo "FINAL_TREE=$(git rev-parse HEAD^{tree})"
+          echo "PARENT=${PARENT}"
+          echo "TRACKED=${TRACKED}"
+          echo "CHANGED=${CHANGED}"
+
+          git push origin "HEAD:refs/heads/${FINAL_BRANCH}"
