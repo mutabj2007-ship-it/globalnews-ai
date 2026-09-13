@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useReducer, useState } from 'react';
+import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { EvidenceMapCanvas } from '@/components/map/shell/EvidenceMapCanvas';
@@ -15,7 +15,8 @@ import {
   initialCameraSession,
   type CameraIntent,
 } from '@/lib/map/camera/cameraIntents';
-import type { Bounds, CameraState } from '@/lib/map/camera/cameraState';
+import type { CameraState } from '@/lib/map/camera/cameraState';
+import { useSelectionCamera } from '@/lib/map/camera/useSelectionCamera';
 import {
   EMPTY_EVIDENCE_SET,
   type EvidenceSet,
@@ -28,6 +29,7 @@ import { useResolvedRegion } from '@/lib/map/region/useResolvedRegion';
 import { RegionIdentityCard } from '@/components/map/shell/RegionIdentityCard';
 import {
   MobileBottomSheet,
+  FULL_FRACTION,
   HALF_FRACTION,
   MIN_TOUCH_PX,
   PEEK_HEIGHT_PX,
@@ -151,7 +153,72 @@ export function MobileSpatialShell({
   );
   const [engineMinZoom, setEngineMinZoom] = useState<number | undefined>(undefined);
   const [stop, setStop] = useState<SheetStop>('PEEK');
-  const [pendingBounds, setPendingBounds] = useState<Bounds | null>(null);
+
+  /*
+    ══ H-C907 DEFECT A · THE PHONE NOW FRAMES THE COUNTRY IT SELECTED ═══════
+
+    MEASURED ON THE RAILWAY ALPHA, AFG AND ZWE: selection succeeded, identity,
+    counts and story cards updated, and the map stayed at the world camera.
+    This shell already had the reducer, the `fitBounds` wiring into
+    `EvidenceMapCanvas` and the `initialCameraRestored` prop — everything
+    except the transition that turns a selected ISO3 into a camera.
+
+    IT IS THE DESKTOP POLICY, NOT A SECOND ONE. `useSelectionCamera` is the
+    accepted `GlobalMapShell` implementation lifted out verbatim, so explicit
+    `cam=` restore still wins at mount, deselection still moves nothing, the
+    antimeridian exceptions still commit directly, and a bounds target is still
+    measured by the engine against the REAL viewport before it is committed —
+    which is what makes the framing correct at 375 px rather than at some
+    assumed width.
+
+    AND IT IS ORIGIN-BLIND. The hook watches the `selectedIso3` PROP, so search
+    result, map tap, URL-restored country and any parent selection update all
+    frame identically. Nothing below needs to remember to call it.
+  */
+  const commitCamera = useCallback((resolved: CameraState) => {
+    dispatch({ kind: 'commit', camera: resolved });
+  }, []);
+
+  const { pendingBounds, onBoundsResolved, focusBounds } = useSelectionCamera({
+    selectedIso3,
+    initialCameraRestored,
+    commitCamera,
+  });
+
+  /*
+    ══ R2 · THE MAP IS FULL-BLEED AND THE SHEET IS DRAWN OVER IT ════════════
+
+    MEASURED after R1: the camera was committed and the country was framed —
+    into the middle of the CANVAS, which on this shell extends underneath the
+    sheet. At 375x844 only 18% of Afghanistan's height and 2% of Luxembourg's
+    fell inside the visible map pane.
+
+    So the canvas is told which of its edges are covered, and it adds that to
+    the accepted fit padding. Read at RESOLVE time through a callback rather
+    than passed as a value: the current detent is what is covering the map at
+    the moment the fit happens, and a value prop would either be stale or make
+    the fit a render dependency.
+
+    `PERMANENT_HUD_PX` on top is the 82px hard cap this shell already declares.
+  */
+  const stopRef = useRef<SheetStop>(stop);
+  stopRef.current = stop;
+
+  const fitInset = useCallback(() => {
+    const viewportHeight = typeof window === 'undefined' ? 0 : window.innerHeight;
+
+    if (viewportHeight <= 0) return { top: PERMANENT_HUD_PX };
+
+    const current = stopRef.current;
+    const sheet =
+      current === 'PEEK'
+        ? PEEK_HEIGHT_PX
+        : current === 'HALF'
+          ? Math.floor(viewportHeight * HALF_FRACTION)
+          : Math.floor(viewportHeight * FULL_FRACTION);
+
+    return { top: PERMANENT_HUD_PX, bottom: sheet };
+  }, []);
 
   const availability = useMemo(
     () => cameraAvailability(session, engineMinZoom),
@@ -339,16 +406,16 @@ export function MobileSpatialShell({
         setStop('HALF');
 
         if (regionMayFrame(committed) && committed.extent !== null) {
-          setPendingBounds(committed.extent);
+          focusBounds(committed.extent);
         }
 
         return;
       }
 
       if (selection !== null && selection !== undefined) onSelectionChange?.(null);
-      if (result.bounds) setPendingBounds(result.bounds);
+      if (result.bounds) focusBounds(result.bounds);
     },
-    [onSelectionChange, selection, adoptRegion],
+    [onSelectionChange, selection, adoptRegion, focusBounds],
   );
 
   const onSelectFromMap = useCallback(
@@ -428,10 +495,8 @@ export function MobileSpatialShell({
           countryStoryCounts={countryStoryCounts}
           evidenceRecords={evidenceSet.records}
           fitBounds={pendingBounds}
-          onBoundsResolved={(resolved) => {
-            setPendingBounds(null);
-            dispatch({ kind: 'commit', camera: resolved });
-          }}
+          onBoundsResolved={onBoundsResolved}
+          fitInset={fitInset}
           language={language}
           /*
             MOBILE-SPATIAL-LABELS — the reference label layer needs its names.

@@ -22,7 +22,7 @@ import {
   type CameraIntent,
 } from '@/lib/map/camera/cameraIntents';
 import { WORLD_CAMERA, type Bounds, type CameraState } from '@/lib/map/camera/cameraState';
-import { selectionCameraFor } from '@/lib/map/coveragePaint';
+import { useSelectionCamera } from '@/lib/map/camera/useSelectionCamera';
 import type { CountryFeature } from '@/lib/map/countryGeometry';
 import type { HoveredCountry } from '@/components/map/WorldMap';
 import {
@@ -491,43 +491,28 @@ export function GlobalMapShell({
     is recorded as ALREADY SEEN, and the effect below returns on its first run
     instead of committing a fit over the restored camera.
   */
-  const lastSelectionRef = useRef<string | null>(
-    initialCameraRestored ? (selectedIso3 ?? null) : null,
-  );
-  const [pendingBounds, setPendingBounds] = useState<Bounds | null>(null);
+  /*
+    H-C907 — THIS POLICY NOW LIVES IN `useSelectionCamera`, UNCHANGED.
 
-  useEffect(() => {
-    if (selectedIso3 === lastSelectionRef.current) return;
-
-    lastSelectionRef.current = selectedIso3 ?? null;
-    setPendingBounds(null);
-
-    if (!selectedIso3) return;
-
-    const target = selectionCameraFor(selectedIso3);
-
-    if (target === null) return;
-
-    if (target.kind === 'camera') {
-      dispatch({ kind: 'commit', camera: target.camera });
-
-      return;
-    }
-
-    /*
-      A bounds focus goes to the ENGINE to be measured against the real
-      viewport, then comes back as an exact camera we commit — so the framing
-      matches the legacy `fitBounds` precisely instead of the engine-free
-      approximation, while the reducer stays the only thing that moves the
-      camera. One history entry either way.
-    */
-    setPendingBounds(target.bounds);
-  }, [selectedIso3]);
-
-  const onBoundsResolved = useCallback((resolved: CameraState) => {
-    setPendingBounds(null);
-    dispatch({ kind: 'commit', camera: resolved });
+    Every rule described above still holds and is still the desktop behaviour;
+    it has simply stopped being desktop-only. `MobileSpatialShell` had all of
+    this machinery and none of this transition, so a phone selected a country
+    and never framed it. Moving the accepted implementation into one hook is
+    what makes the two shells share a camera policy instead of drifting into
+    two — and a bounds focus still goes to the ENGINE to be measured against
+    the real viewport, then comes back as an exact camera we commit, so the
+    framing matches the legacy `fitBounds` precisely. One history entry either
+    way.
+  */
+  const commitCamera = useCallback((camera: CameraState) => {
+    dispatch({ kind: 'commit', camera });
   }, []);
+
+  const { pendingBounds, onBoundsResolved } = useSelectionCamera({
+    selectedIso3,
+    initialCameraRestored,
+    commitCamera,
+  });
 
   /*
     ── RESET EVIDENCE — Part I §C's second promise ──────────────────────────

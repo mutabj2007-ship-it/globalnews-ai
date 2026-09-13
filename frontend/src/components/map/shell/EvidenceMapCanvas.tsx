@@ -17,6 +17,7 @@ import { getSpatialCountryFeatureCollection } from '@/lib/map/spatial/spatialCou
 import { splitAntimeridianFeatures } from '@/lib/map/antimeridian';
 import { COUNTRIES, type CountryMeta } from '@globalnews-ai/shared';
 import { SELECTION_FIT_PADDING, SELECTION_MAX_ZOOM, isoToNumeric } from '@/lib/map/coveragePaint';
+import { fitPaddingFor, type FitInset } from '@/lib/map/camera/fitPadding';
 import type { Bounds } from '@/lib/map/camera/cameraState';
 import { haloRadiusExpression } from '@/lib/map/spatial/evidenceHaloRadius';
 import type { HoveredCountry } from '@/components/map/WorldMap';
@@ -542,6 +543,13 @@ export interface EvidenceMapCanvasProps {
   readonly fitBounds?: Bounds | null;
   readonly onBoundsResolved?: (camera: CameraState) => void;
   /**
+   * H-C907 R2 — the region of this canvas that is COVERED at fit time, read at
+   * resolve time so it is always current and never a render dependency.
+   * Omitted on desktop, where nothing overlays the map column, which is what
+   * keeps the desktop fit byte-identical.
+   */
+  readonly fitInset?: () => FitInset | null;
+  /**
    * Why the camera changed. A camera the user dragged to must not be animated
    * back at them — they are already looking at it.
    */
@@ -611,6 +619,7 @@ export function EvidenceMapCanvas({
   onMinZoomChange,
   fitBounds = null,
   onBoundsResolved,
+  fitInset,
   evidenceRecords = [],
   layers,
   watch,
@@ -642,6 +651,8 @@ export function EvidenceMapCanvas({
   minZoomRef.current = onMinZoomChange;
   const boundsResolvedRef = useRef(onBoundsResolved);
   boundsResolvedRef.current = onBoundsResolved;
+  const fitInsetRef = useRef(fitInset);
+  fitInsetRef.current = fitInset;
 
   /*
     ── v1.4 ITEM 4 · THE CONTAINER-SIZE CAMERA CONTRACT ────────────────────
@@ -700,15 +711,26 @@ export function EvidenceMapCanvas({
    * nothing.
    */
   const resolveFit = (map: maplibregl.Map, bounds: Bounds): boolean => {
-    if (measuredSize(map) === null) return false;
+    const pane = measuredSize(map);
+
+    if (pane === null) return false;
 
     const [west, south, east, north] = bounds;
+    /*
+      H-C907 R2 — fit to the VISIBLE map, not the whole canvas. On compact
+      Spatial the sheet is drawn over the map, and fitting the full canvas
+      centred every country underneath it. With no inset this is the scalar
+      `SELECTION_FIT_PADDING` exactly as before.
+    */
     const resolved = map.cameraForBounds(
       [
         [west, south],
         [east, north],
       ],
-      { padding: SELECTION_FIT_PADDING, maxZoom: SELECTION_MAX_ZOOM },
+      {
+        padding: fitPaddingFor(SELECTION_FIT_PADDING, fitInsetRef.current?.() ?? null, pane),
+        maxZoom: SELECTION_MAX_ZOOM,
+      },
     );
 
     if (resolved === undefined) return false;

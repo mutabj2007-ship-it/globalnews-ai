@@ -72,9 +72,10 @@ export default function MapPage(): JSX.Element {
     global navigation, or any other route changes — every other page mounts
     its own `<NavBar>` exactly as before.
 
-    THE FOOTER IS UNTOUCHED. It already sits below the fold and consumes no
-    visible height; the ruling names the bar above, and removing a second
-    element would be a change nobody asked for.
+    THE FOOTER CLAIM THAT USED TO BE HERE WAS EMPIRICALLY FALSE — see the
+    DEFECT B block below the flag read. It said the footer "sits below the fold
+    and consumes no visible height". On compact Spatial it does both of the
+    things that sentence denies.
   */
   const spatial = mapShellVariant() === 'shell';
 
@@ -118,13 +119,67 @@ export default function MapPage(): JSX.Element {
     The Arabic run boundary on this route remains OPEN, and is recorded as such
     rather than silently dropped.
   */
+  /*
+    ══ H-C907 DEFECT B · THE COMPACT SPATIAL WORKSPACE OWNS THE VIEWPORT ════
+
+    MEASURED BY THE PRODUCT OWNER ON THE RAILWAY ALPHA: while the compact sheet
+    was in use the global footer entered the viewport, the map disappeared, and
+    the fixed Ask AI affordance collided with the footer.
+
+    ── THE ARITHMETIC, WHICH IS THE WHOLE DEFECT ───────────────────────────
+
+    `MobileSpatialShell` is `h-[100dvh]`. `main` was `min-h-screen`, and the
+    footer was an unconditional sibling BELOW it. So the document was one full
+    viewport of map PLUS a footer — taller than the screen by exactly the
+    footer's height — and the outer document scrolled. A drag on the map that
+    the engine did not consume scrolled that document, which is how a map you
+    cannot pan and a footer over the sheet are the same bug.
+
+    ── THE CORRECTION, AND ITS EXACT SCOPE ─────────────────────────────────
+
+    Below 861 px on the SHELL VARIANT ONLY:
+
+      main    is the viewport, not a minimum: `h-[100dvh]`, `overflow-hidden`,
+              so the document has nothing to scroll and `window.scrollY`
+              cannot leave 0. `overscroll-none` stops a gesture the map did
+              not consume from chaining out to the document.
+      footer  does not render into the compact workspace.
+
+    At 861 px and above every one of those yields to the released desktop
+    behaviour — `spatial:h-auto spatial:min-h-screen spatial:overflow-visible
+    spatial:overscroll-auto` and a visible footer — so desktop Spatial is
+    unchanged.
+
+    WHAT IS DELIBERATELY NOT TOUCHED. `Footer` itself: not one byte, because
+    the defect is where it is MOUNTED on one route at one width, not what it
+    is. The flag-off legacy map and every other route keep the unconditional
+    `<main className="min-h-screen">` + `<Footer>` pair they already render —
+    that branch below is the rollback and must stay a flag flip.
+
+    THE FOOTER IS NOT LOST ON A PHONE. It is absent from the compact SPATIAL
+    workspace, which is a full-screen application surface; the ordinary
+    document routes that carry the footer are unaffected at every width.
+  */
   return (
     <>
       {spatial ? null : <NavBar language={language} />}
-      <main className="min-h-screen bg-void">
+      <main
+        data-gn="map-route-main"
+        className={
+          spatial
+            ? 'h-[100dvh] overflow-hidden overscroll-none bg-void spatial:h-auto spatial:min-h-screen spatial:overflow-visible spatial:overscroll-auto'
+            : 'min-h-screen bg-void'
+        }
+      >
         <MapPageClient language={language} />
       </main>
-      <Footer language={language} />
+      {spatial ? (
+        <div data-gn="map-route-footer" className="hidden spatial:block">
+          <Footer language={language} />
+        </div>
+      ) : (
+        <Footer language={language} />
+      )}
     </>
   );
 }
