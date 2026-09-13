@@ -217,6 +217,30 @@ export class GdeltDocProvider implements NewsProvider {
   private cooldownUntil = 0;
 
   /**
+   * REV A — WHY THE CIRCUIT IS OPEN.
+   *
+   * The circuit used to remember only WHEN it closes, so every message it
+   * produced had to guess at a cause and guessed the same one every time:
+   * "GDELT asked for slower requests", "after a throttle or reset". After R1-A
+   * a timeout opens the circuit too, and GDELT asked for nothing — the request
+   * simply did not come back inside our own 8 s deadline. Reporting that as
+   * upstream rate limiting invents an accusation against the endpoint and
+   * sends an operator looking for a quota problem that does not exist.
+   *
+   * This is the SMALLEST state that fixes it: one private field, three values,
+   * never exported, never serialised. The shared `ProviderFailureKind`
+   * taxonomy is untouched — this only decides WHICH existing kind and which
+   * wording a cooling refusal carries.
+   *
+   * `undefined` means a circuit whose cause was not recorded. That is not
+   * reachable through this class's own API — every `openCooldown()` call site
+   * passes a cause — but a test that sets `cooldownUntil` directly produces it,
+   * and the honest answer there is the pre-R1 behaviour rather than a claim
+   * this object cannot support.
+   */
+  private cooldownCause: 'rate-limit' | 'timeout' | 'transport' | undefined;
+
+  /**
    * The single in-flight request per query key.
    *
    * CONCURRENCY COLLAPSE. Twenty readers asking the same question during a
@@ -337,13 +361,51 @@ export class GdeltDocProvider implements NewsProvider {
 
     const cooling = Date.now() < this.cooldownUntil;
 
+    /*
+     * R1-B — "NEVER WORKED" IS A HEALTH STATE, AND IT WAS REPORTING AS 'ok'.
+     *
+     * `status` used to derive from `cooldownUntil` ALONE. Because a timeout
+     * armed no circuit (see R1-A), a provider that had been asked N times,
+     * failed N times and never once succeeded reported:
+     *
+     *     status 'ok' · enabled true · failureCount N · lastSuccessAt ABSENT
+     *
+     * Every fact needed to contradict that was already on the object. Nothing
+     * was reading them.
+     *
+     * `lastSuccessAt` IS THE ANCHOR, DELIBERATELY, AND NOT THE COUNTERS. It is
+     * set at exactly one place — after a response parses — so its absence is an
+     * unambiguous "nothing has ever worked". Counter arithmetic cannot say that
+     * cleanly: `requestCount` increments BEFORE the wire and `failureCount`
+     * only after a failure resolves, so a request in flight makes
+     * `failureCount === requestCount` briefly false and an equality test would
+     * flicker back to 'ok' mid-request. `failureCount > 0` then adds the other
+     * half — that we have evidence of failure and are not merely mid-first-call.
+     *
+     * THIS INVENTS NO TELEMETRY. `degraded` is an existing ProviderHealthState
+     * member, already used for cooldown; `enabled` already distinguishes
+     * switched-off from broken (G-ALPHA-1 D3). No counter, no field and no probe
+     * is added — this reads what the provider was already recording. In
+     * particular it still spends NO request: the no-live-probe rule that exists
+     * because this provider is rate-limited is untouched.
+     *
+     * WHY IT OUTLIVES THE COOLDOWN. Cooldown clears after COOLDOWN_MS; "has
+     * never succeeded" clears only when something actually succeeds. That gap is
+     * the whole point — an operator looking 60 s after the last timeout must
+     * still see a provider that has never served an article.
+     */
+    const neverSucceeded =
+      this.requestCount > 0 && this.failureCount > 0 && this.lastSuccessAt === undefined;
+
     return {
       providerId: this.id,
       displayName: this.displayName,
-      status: cooling ? 'degraded' : 'ok',
+      status: cooling || neverSucceeded ? 'degraded' : 'ok',
       message: cooling
-        ? 'GDELT asked for slower requests; this provider is in cooldown and is not being called.'
-        : 'GDELT DOC is enabled. Status reflects observed request outcomes, not a live probe.',
+        ? this.coolingMessage()
+        : neverSucceeded
+          ? `GDELT DOC is enabled and reachable in configuration, but no request has ever succeeded (${this.failureCount} of ${this.requestCount} attempted failed, no recorded success).`
+          : 'GDELT DOC is enabled. Status reflects observed request outcomes, not a live probe.',
       checkedAt,
       /*
        * G-ALPHA-1 D3 — the other half of the same fact. A provider in cooldown
@@ -355,8 +417,32 @@ export class GdeltDocProvider implements NewsProvider {
       failureCount: this.failureCount,
       ...(this.lastLatencyMs === undefined ? {} : { lastLatencyMs: this.lastLatencyMs }),
       ...(this.lastSuccessAt === undefined ? {} : { lastSuccessAt: this.lastSuccessAt }),
-      rateLimitState: cooling ? 'throttled' : this.rateLimitState,
+      /*
+       * REV A — 'throttled' is a statement that GDELT rate-limited us, so it is
+       * asserted ONLY when GDELT actually said so. A timeout- or
+       * transport-opened circuit reports whatever the last OBSERVED rate-limit
+       * state was, which is honest ignorance rather than a false accusation.
+       * An unrecorded cause keeps the pre-R1 answer.
+       */
+      rateLimitState:
+        cooling && (this.cooldownCause === 'rate-limit' || this.cooldownCause === undefined)
+          ? 'throttled'
+          : this.rateLimitState,
     };
+  }
+
+  /** Cooling wording that matches the recorded cause. Never invents a throttle. */
+  private coolingMessage(): string {
+    switch (this.cooldownCause) {
+      case 'timeout':
+        return 'A GDELT request timed out; this provider is in cooldown and is not being called. GDELT did not report a rate limit.';
+      case 'transport':
+        return 'A GDELT request failed to reach the endpoint; this provider is in cooldown and is not being called. GDELT did not report a rate limit.';
+      case 'rate-limit':
+        return 'GDELT asked for slower requests; this provider is in cooldown and is not being called.';
+      default:
+        return 'This provider is in cooldown and is not being called.';
+    }
   }
 
   private isEnabled(): boolean {
@@ -427,11 +513,7 @@ export class GdeltDocProvider implements NewsProvider {
      * costs nothing at all — no queueing, no timer, no socket.
      */
     if (Date.now() < this.cooldownUntil) {
-      throw new GdeltDocProviderError(
-        'GDELT DOC is in cooldown after a throttle or reset.',
-        undefined,
-        'rate-limited',
-      );
+      throw this.cooldownRefusal();
     }
 
     await this.awaitRequestSlot();
@@ -448,7 +530,25 @@ export class GdeltDocProvider implements NewsProvider {
     this.requestCount += 1;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    /*
+     * R1-A — WHOSE ABORT WAS IT.
+     *
+     * `AbortError` says a request was aborted; it does not say BY WHOM. Today
+     * this controller has exactly one trigger — the deadline below — so every
+     * AbortError on this path is our own timeout. That is true by construction
+     * and not worth relying on: the moment a caller-supplied signal is threaded
+     * in, an abort would mean "the reader navigated away", which is not GDELT
+     * signalling distress and must not arm a circuit against it.
+     *
+     * So the deadline records that IT fired. Cooldown is opened on this flag,
+     * never on the error name alone.
+     */
+    let deadlineFired = false;
+    const timeout = setTimeout(() => {
+      deadlineFired = true;
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
 
     let response: Response;
     try {
@@ -457,6 +557,34 @@ export class GdeltDocProvider implements NewsProvider {
       this.failureCount += 1;
 
       if (error instanceof Error && error.name === 'AbortError') {
+        /*
+         * R1-A — A TIMEOUT IS DISTRESS, AND THE OLD CODE READ IT AS IMPATIENCE.
+         *
+         * This branch used to return here, BEFORE openCooldown(). The reasoning
+         * was defensible: a timeout can be our own 8 s deadline being hasty
+         * against a healthy endpoint, and punishing GDELT for that would be
+         * wrong. What it missed is that the provider never counted them, so it
+         * could not tell one hasty deadline from a host that accepts the socket
+         * and never answers. Live Alpha showed the consequence: the next
+         * analysis walked straight back into the same wall, now additionally
+         * paying MIN_REQUEST_SPACING_MS for the privilege.
+         *
+         * Timing out IS the endpoint failing to serve us inside the budget we
+         * published, which is the same operational fact a reset expresses more
+         * rudely. It opens the circuit for the same COOLDOWN_MS as every other
+         * distress signal, and for the same reason: so the next caller fails
+         * fast and free rather than spending another 8 s discovering it.
+         *
+         * WHAT DOES NOT CHANGE. There is no retry — not here, not anywhere in
+         * this provider. The failure kind stays 'timeout', because 'timeout' is
+         * what happened and NewsService's taxonomy, the public fallback reason
+         * and the Analysis diagnostic channel all continue to read it as such.
+         * Only the circuit moves.
+         */
+        if (deadlineFired) {
+          this.openCooldown('timeout', 'request timeout');
+        }
+
         throw new GdeltDocProviderError('GDELT DOC request timed out.', error, 'timeout');
       }
 
@@ -466,7 +594,7 @@ export class GdeltDocProvider implements NewsProvider {
        * circuit too. Treating it as an ordinary network blip and trying
        * again shortly is precisely the behaviour that earned the reset.
        */
-      this.openCooldown('connection failure');
+      this.openCooldown('transport', 'connection failure');
       throw new GdeltDocProviderError('Failed to reach GDELT DOC.', error, 'unreachable');
     } finally {
       clearTimeout(timeout);
@@ -476,7 +604,7 @@ export class GdeltDocProvider implements NewsProvider {
 
     if (response.status === 429) {
       this.failureCount += 1;
-      this.openCooldown('HTTP 429');
+      this.openCooldown('rate-limit', 'HTTP 429');
       throw new GdeltDocProviderError('GDELT DOC rate limit exceeded.', undefined, 'rate-limited');
     }
 
@@ -501,7 +629,7 @@ export class GdeltDocProvider implements NewsProvider {
        * signal as often as it is corruption, and the safe reading is to
        * back off rather than to retry into the same wall.
        */
-      this.openCooldown('non-JSON response body');
+      this.openCooldown('rate-limit', 'non-JSON response body');
       throw new GdeltDocProviderError(
         'GDELT DOC returned a malformed (non-JSON) response.',
         error,
@@ -545,15 +673,61 @@ export class GdeltDocProvider implements NewsProvider {
     await wait;
   }
 
-  private openCooldown(reason: string): void {
+  /**
+   * REV A — the cause is recorded, and only a PROVEN throttle moves
+   * `rateLimitState`.
+   *
+   * `rateLimitState` is a claim about what the REMOTE SIDE said. A 429 and a
+   * plain-text "limit requests to one every 5 seconds" body are GDELT saying
+   * it; a socket that never answered and a transport failure are not. Setting
+   * 'throttled' for those was the provider asserting something it had not
+   * observed. COOLDOWN_MS is unchanged at 60 s.
+   */
+  private openCooldown(cause: 'rate-limit' | 'timeout' | 'transport', reason: string): void {
     this.cooldownUntil = Date.now() + COOLDOWN_MS;
-    this.rateLimitState = 'throttled';
+    this.cooldownCause = cause;
+
+    if (cause === 'rate-limit') {
+      this.rateLimitState = 'throttled';
+    }
 
     logWithRequestId(
       this.logger,
       'warn',
       `GDELT DOC entering ${COOLDOWN_MS}ms cooldown after ${reason}. No retry will be issued.`,
     );
+  }
+
+  /** The truthful refusal for an open circuit, by recorded cause. */
+  private cooldownRefusal(): GdeltDocProviderError {
+    switch (this.cooldownCause) {
+      case 'timeout':
+        return new GdeltDocProviderError(
+          'GDELT DOC is in cooldown after a request timeout. The endpoint did not respond ' +
+            'within the request deadline; it did not report a rate limit.',
+          undefined,
+          'timeout',
+        );
+      case 'transport':
+        return new GdeltDocProviderError(
+          'GDELT DOC is in cooldown after a connection failure. The endpoint was unreachable; ' +
+            'no rate limit was reported.',
+          undefined,
+          'unreachable',
+        );
+      case 'rate-limit':
+        return new GdeltDocProviderError(
+          'GDELT DOC is in cooldown after GDELT reported a rate limit.',
+          undefined,
+          'rate-limited',
+        );
+      default:
+        return new GdeltDocProviderError(
+          'GDELT DOC is in cooldown and is not being called.',
+          undefined,
+          'rate-limited',
+        );
+    }
   }
 
   /**

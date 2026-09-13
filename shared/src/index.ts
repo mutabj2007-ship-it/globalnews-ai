@@ -21,6 +21,13 @@ export * from './query-normalization';
 export * from './geo-fuzzy-resolver';
 export * from './countryDisplayName';
 export * from './officialSources';
+/*
+  PUBLISHER FEEDS RECOVERY R1 — the recovered C55 `SourceType`, plus the one
+  corroboration rule the ruling requires. Placed beside './officialSources'
+  because the two describe the same axis: who is speaking, and whether they can
+  confirm each other.
+*/
+export * from './source-type';
 export * from './signals';
 export * from './support';
 export * from './follows';

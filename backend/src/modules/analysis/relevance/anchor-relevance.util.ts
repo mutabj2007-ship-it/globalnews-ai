@@ -48,7 +48,15 @@ import { scoreGenericRelevance } from '../../news/relevance/generic-relevance.ut
  * them would mean a future tweak to question-stripping silently changed
  * evidence admission.
  */
-const HEADLINE_STOPWORDS = new Set([
+/**
+ * R1-C — EXPORTED, NOT COPIED.
+ *
+ * The retained-reporting matcher needs exactly this stopword set. Re-declaring
+ * it in the news module would create a second list that drifts from this one
+ * the first time either is edited. Export is additive: no member changes, no
+ * consumer of this module behaves differently.
+ */
+export const HEADLINE_STOPWORDS = new Set([
   'a',
   'an',
   'the',

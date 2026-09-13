@@ -269,6 +269,20 @@ const COUNTRY_ALIASES: Record<string, string> = {
   'dr congo': 'COD',
   'congo kinshasa': 'COD',
   'democratic republic of the congo': 'COD',
+  /*
+    ALPHA RESILIENCE 1 — THE SPELLING THE LIVE QUERY ACTUALLY CARRIED.
+
+    "eastern Democratic Republic of Congo" — no "the" — is a common and
+    entirely valid rendering of the country's name, and it is what the Product
+    Owner typed during live Alpha validation. Without this key the phrase
+    resolved to CG (Republic of the Congo) on the bare embedded token "Congo",
+    which is a different country roughly 2,000 km away.
+
+    Both spellings are listed rather than the table being made fuzzy: an exact
+    table that carries both real spellings stays an exact table, and a matcher
+    that guessed at optional words would start resolving phrases nobody wrote.
+  */
+  'democratic republic of congo': 'COD',
   'south korea': 'KOR',
   'north korea': 'PRK',
   uae: 'ARE',
@@ -533,6 +547,35 @@ export function resolveCountryByAnyIdentifier(input: string): CountryMeta | unde
 }
 
 export const ALL_ISO3_CODES: string[] = COUNTRIES.map((c) => c.iso3);
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * THE ALIAS TABLE, EXPOSED READ-ONLY — ONE COUNTRY VOCABULARY, NOT TWO
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * WHY THIS EXPORT EXISTS. `country-relevance.util.ts` resolves a country from
+ * free text by matching country NAMES, and it has never been able to see this
+ * table. That is the whole reason "Democratic Republic of Congo" resolved to
+ * CG: the alias saying otherwise was sitting here, unreachable from the one
+ * function that needed it.
+ *
+ * The alternative was a second alias list inside the relevance scorer. That is
+ * exactly the "second country vocabulary" the ruling forbids, and it would
+ * drift from this one within a round.
+ *
+ * EXPOSED AS `Readonly`, DELIBERATELY. A consumer must be able to read the
+ * curated judgement — including its deliberate omissions — and must never be
+ * able to extend it. An alias added from outside would silently change country
+ * resolution for every article in the system, which is the same reason
+ * `COUNTRY_DEMONYMS_BY_ISO3` is exposed read-only rather than mutable.
+ *
+ * WHAT A CONSUMER MUST NOT ASSUME. These keys are IDENTIFIERS, not prose
+ * tokens. Several are single words that are also ordinary English or ordinary
+ * abbreviations — `us`, `uk`, `england`, `britain`. A consumer scanning prose
+ * must take that into account itself; this export states the fact and does not
+ * pre-filter, because the right filter depends on what the consumer is doing.
+ */
+export const COUNTRY_ALIASES_BY_ISO3: Readonly<Record<string, string>> = COUNTRY_ALIASES;
 
 /**
  * The result of resolving a free-text query candidate to a country,

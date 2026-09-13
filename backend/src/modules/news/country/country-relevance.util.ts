@@ -1,6 +1,7 @@
 import type { CountryMeta, LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import {
   COUNTRIES,
+  COUNTRY_ALIASES_BY_ISO3,
   getCuratedCityNames,
   getLocalizedCountryName,
   resolveCountryByCity,
@@ -387,6 +388,118 @@ const LONGER_NAMES_BY_ISO3: Record<string, string[]> = (() => {
 })();
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ALPHA RESILIENCE 1 — THE SAME MECHANISM, EXTENDED FROM NAMES TO ALIASES
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * THE DEFECT, MEASURED IN LIVE ALPHA. "eastern Democratic Republic of Congo"
+ * resolved to CG — the Republic of the Congo, a different country about 2,000 km
+ * from the fighting the question was about.
+ *
+ * WHY THE EXISTING GUARD DID NOT CATCH IT, PRECISELY. `LONGER_NAMES_BY_ISO3`
+ * above already implements "longest name wins", and it is why Sudan does not
+ * win South Sudan articles and why CG does not win a "DR Congo" article: "DR
+ * Congo" is CD's registry NAME, so the derivation sees it. But "Democratic
+ * Republic of Congo" is not any country's name — it is an ALIAS, and this file
+ * had no way to see the alias table at all. The vocabulary that knew the right
+ * answer and the function that needed it were in different modules.
+ *
+ * THIS IS THE SAME MECHANISM, NOT A NEW ONE — the third time this file has
+ * extended it, after country names and the subnational collision set below.
+ * It adds no scoring tier, no weight and no threshold.
+ *
+ * ── MULTI-WORD ONLY, AND THAT IS THE ISO-CODE PROTECTION ────────────────────
+ *
+ * A phrase enters this table only if it contains a space. That single rule is
+ * what keeps the alias table safe to read as PROSE:
+ *
+ *   'us' 'uk' 'usa' 'uae' — excluded. "us" is the commonest word in English
+ *                           reporting. Admitting it would make every article
+ *                           containing "told us" evidence for the United States.
+ *   'england' 'britain'   — excluded here; they are single tokens and the
+ *                           existing name/demonym machinery already handles GBR.
+ *   ISO2 / ISO3 codes     — never present in this table at all, and single
+ *                           tokens besides. The existing protection against
+ *                           'and', 'arm', 'are', 'no', 'it' matching codes as
+ *                           prose is untouched, because nothing here scans codes.
+ *
+ * So the admitted set is exactly the unambiguous multi-word phrases: 'united
+ * states of america', 'democratic republic of congo', 'republic of the congo',
+ * 'congo kinshasa', 'congo brazzaville', 'south korea', 'ivory coast' and their
+ * kind. Every one of them names a country and nothing else.
+ */
+const ALIAS_PHRASES_BY_ISO3: Record<string, string[]> = (() => {
+  const table: Record<string, string[]> = {};
+
+  for (const [alias, iso3] of Object.entries(COUNTRY_ALIASES_BY_ISO3)) {
+    const normalized = normalize(alias);
+
+    /* THE WHOLE PROTECTION, IN ONE CONDITION. Single tokens never participate. */
+    if (!normalized.includes(' ')) continue;
+
+    (table[iso3] ??= []).push(normalized);
+  }
+
+  return table;
+})();
+
+/**
+ * Every phrase that can stand for a country in prose: its registry name plus
+ * its multi-word aliases. One list, so the positive and negative halves below
+ * cannot disagree about what counts as naming a country.
+ */
+function countryPhrases(iso3: string, name: string): string[] {
+  return [normalize(name), ...(ALIAS_PHRASES_BY_ISO3[iso3] ?? [])];
+}
+
+/**
+ * LONGEST SPECIFIC PHRASE WINS — the negative half.
+ *
+ * For each country, the phrases belonging to a DIFFERENT country that strictly
+ * contain one of this country's own phrases. While such a phrase is present, a
+ * shorter embedded country name is not evidence.
+ *
+ * DERIVED, NOT CURATED, exactly like the name table above — computed from
+ * COUNTRIES and the shared alias authority at module load. No pair is
+ * hand-listed, so a future alias cannot reintroduce the defect by being
+ * forgotten here.
+ *
+ * `other.iso3 !== iso3` IS LOAD-BEARING AND IS WHY BRAZZAVILLE STILL WORKS.
+ * 'congo brazzaville' and 'republic of the congo' both belong to COG, the same
+ * country whose name is 'Congo'. A country never suppresses itself, so those
+ * phrases leave CG standing — while 'democratic republic of congo' and 'congo
+ * kinshasa', which belong to COD, suppress it.
+ */
+const LONGER_PHRASES_BY_ISO3: Record<string, string[]> = (() => {
+  const table: Record<string, string[]> = {};
+
+  const all = COUNTRIES.flatMap((country) =>
+    countryPhrases(country.iso3, country.name).map((phrase) => ({ iso3: country.iso3, phrase })),
+  );
+
+  for (const country of COUNTRIES) {
+    const own = countryPhrases(country.iso3, country.name);
+
+    const longer = all
+      .filter(
+        (other) =>
+          other.iso3 !== country.iso3 &&
+          own.some(
+            (mine) =>
+              other.phrase.length > mine.length && ` ${other.phrase} `.includes(` ${mine} `),
+          ),
+      )
+      .map((other) => other.phrase);
+
+    if (longer.length > 0) {
+      table[country.iso3] = [...new Set(longer)];
+    }
+  }
+
+  return table;
+})();
+
+/**
  * G1 — COUNTRY/SUBNATIONAL COLLISION.
  *
  * THE DEFECT THIS CLOSES, measured on the real article that exposed it.
@@ -545,7 +658,20 @@ function textForContextTerms(preparedFullText: string, country: CountryMeta): st
 function isOverriddenByLongerName(preparedText: string, country: CountryMeta): boolean {
   const longer = LONGER_NAMES_BY_ISO3[country.iso3] ?? [];
 
-  return longer.some((name) => preparedContainsPhrase(preparedText, name));
+  if (longer.some((name) => preparedContainsPhrase(preparedText, name))) {
+    return true;
+  }
+
+  /*
+    ALPHA RESILIENCE 1 — the alias half of the same rule. Kept as a second
+    check rather than folded into LONGER_NAMES_BY_ISO3 so the name-derived
+    behaviour that South Sudan, Guinea and the subnational set rely on is
+    provably byte-unchanged: if this expression is removed, the file behaves
+    exactly as it did before.
+  */
+  const longerPhrases = LONGER_PHRASES_BY_ISO3[country.iso3] ?? [];
+
+  return longerPhrases.some((phrase) => preparedContainsPhrase(preparedText, phrase));
 }
 
 /**
@@ -567,6 +693,26 @@ function containsCountryReference(
   }
 
   if (preparedContainsPhrase(preparedText, country.name)) {
+    return true;
+  }
+
+  /*
+    ALPHA RESILIENCE 1 — THE POSITIVE HALF, AND IT IS REQUIRED FOR THE NEGATIVE
+    HALF TO MEAN ANYTHING.
+
+    Suppressing CG on "Democratic Republic of Congo" only helps if CD can then
+    WIN, and CD's registry name is "DR Congo", which that phrase does not
+    contain. Without this the text would resolve to no country at all —
+    trading a wrong answer for an absent one.
+
+    Multi-word aliases only, from the shared authority, at the SAME weight as
+    the canonical name. An alias is the country's name as people write it; it is
+    not weaker evidence, and giving it its own tier would be a scoring change
+    rather than a vocabulary correction.
+  */
+  const aliasPhrases = ALIAS_PHRASES_BY_ISO3[country.iso3] ?? [];
+
+  if (aliasPhrases.some((phrase) => preparedContainsPhrase(preparedText, phrase))) {
     return true;
   }
 

@@ -9,6 +9,15 @@ interface FindRecentArticlesOptions {
   maxAgeMinutes?: number;
   category?: NewsCategory;
   query?: string;
+  /**
+   * R1-C — optional tokenisation of a natural-language `query`.
+   *
+   * When present the row predicate matches ANY of these terms in title or
+   * summary, instead of requiring `query` as one contiguous substring. This
+   * selects CANDIDATES; the caller's relevance gate still decides admission.
+   * Absent (every pre-R1 caller) => the previous whole-string predicate.
+   */
+  queryTerms?: string[];
 }
 
 interface ArticleCountryRelationInput {
@@ -336,13 +345,53 @@ export class ArticlePersistenceService {
     }
   }
   async findRecent(options: FindRecentArticlesOptions = {}): Promise<NewsArticle[]> {
-    const { limit = 20, maxAgeMinutes = 1440, category, query } = options;
+    const { limit = 20, maxAgeMinutes = 1440, category, query, queryTerms } = options;
 
     const safeLimit = Math.max(1, Math.min(limit, 100));
 
     const safeMaxAgeMinutes = Math.max(1, maxAgeMinutes);
 
     const normalizedQuery = query?.trim();
+
+    /*
+     * R1-C — CANDIDATES, NOT A VERDICT.
+     *
+     * `queryTerms` is the caller's tokenisation of a natural-language query.
+     * When supplied, the predicate below stops asking for the whole query
+     * string as one contiguous run of characters — which for a sentence
+     * fragment such as "eastern Democratic Republic of Congo" is a condition no
+     * stored row can satisfy — and asks instead for ANY meaningful term.
+     *
+     * OR, not AND, and that is deliberate. This layer casts a bounded net; the
+     * admission decision belongs to the accepted relevance gate in
+     * NewsService, in one place, where tests can see it. An AND here would move
+     * half the decision into Prisma where nothing asserts on it, and would
+     * re-create the same over-strictness one level down: a genuinely relevant
+     * article need not carry every word of the reader's question.
+     *
+     * Because the net is wider, the take is widened WITH IT — otherwise the
+     * gate would be handed `safeLimit` rows chosen by recency alone and the
+     * good candidates could be truncated away before it ever saw them. The
+     * multiple is bounded and the hard 100-row ceiling below is unchanged.
+     *
+     * Callers that pass no `queryTerms` — every existing one — keep the exact
+     * previous predicate and the exact previous take.
+     */
+    const candidateTerms = (queryTerms ?? [])
+      .map((term) => term.trim())
+      .filter((term) => term.length > 0);
+
+    const usingTermNet = candidateTerms.length > 0;
+
+    const CANDIDATE_OVERFETCH = 5;
+    const fetchLimit = usingTermNet
+      ? Math.max(1, Math.min(safeLimit * CANDIDATE_OVERFETCH, 100))
+      : safeLimit;
+
+    const termNetClauses = candidateTerms.flatMap((term) => [
+      { title: { contains: term, mode: 'insensitive' as const } },
+      { summary: { contains: term, mode: 'insensitive' as const } },
+    ]);
 
     const cutoff = new Date(Date.now() - safeMaxAgeMinutes * 60 * 1000);
 
@@ -353,35 +402,37 @@ export class ArticlePersistenceService {
             gte: cutoff,
           },
           ...(category ? { category } : {}),
-          ...(normalizedQuery
-            ? {
-                OR: [
-                  {
-                    title: {
-                      contains: normalizedQuery,
-                      mode: 'insensitive',
+          ...(usingTermNet
+            ? { OR: termNetClauses }
+            : normalizedQuery
+              ? {
+                  OR: [
+                    {
+                      title: {
+                        contains: normalizedQuery,
+                        mode: 'insensitive',
+                      },
                     },
-                  },
-                  {
-                    summary: {
-                      contains: normalizedQuery,
-                      mode: 'insensitive',
+                    {
+                      summary: {
+                        contains: normalizedQuery,
+                        mode: 'insensitive',
+                      },
                     },
-                  },
-                  {
-                    sourceName: {
-                      contains: normalizedQuery,
-                      mode: 'insensitive',
+                    {
+                      sourceName: {
+                        contains: normalizedQuery,
+                        mode: 'insensitive',
+                      },
                     },
-                  },
-                ],
-              }
-            : {}),
+                  ],
+                }
+              : {}),
         },
         orderBy: {
           publishedAt: 'desc',
         },
-        take: safeLimit,
+        take: fetchLimit,
       });
 
       return rows.map((row) => ({

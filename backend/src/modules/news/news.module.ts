@@ -5,6 +5,7 @@ import { NewsService } from './news.service';
 import { MockNewsProvider } from './providers/mock-news.provider';
 import { GNewsProvider } from './providers/gnews.provider';
 import { GdeltDocProvider } from './providers/gdelt-doc.provider';
+import { RssFeedProvider, isRssFeedsEnabled } from './providers/rss-feed.provider';
 import {
   ALL_NEWS_PROVIDERS,
   FALLBACK_NEWS_PROVIDERS,
@@ -51,6 +52,7 @@ function buildProviderSelectionInput(
   mockNewsProvider: MockNewsProvider,
   gnewsProvider: GNewsProvider,
   gdeltDocProvider: GdeltDocProvider,
+  rssFeedProvider: RssFeedProvider,
 ): NewsProviderSelectionInput {
   const realCandidates: RealNewsProviderCandidate[] = [
     {
@@ -85,6 +87,44 @@ function buildProviderSelectionInput(
       // it defaults OFF: landing this code changes no deployment's
       // behaviour until someone sets GDELT_DOC_ENABLED=true.
       isConfigured: isGdeltDocEnabled(config.get<string>('GDELT_DOC_ENABLED')),
+      tier: 'fallback',
+    },
+    {
+      /*
+        ══════════════════════════════════════════════════════════════════════
+        PUBLISHER FEEDS — RECOVERED FROM CANONICAL C55, REGISTERED AT FALLBACK
+        ══════════════════════════════════════════════════════════════════════
+
+        THE LANE. `RssFeedProvider` fetches a CURATED registry of named
+        publishers — KT Press, Taarifa, The Standard, Wirtualna Polska, the
+        Central Bank of Kenya and Statistics Poland. It is not a generic RSS
+        crawler and must not become one: the registry is the allowlist, and
+        "RSS is the transport, not the publisher" is the rule the whole lane
+        rests on.
+
+        FALLBACK, NOT PRIMARY — AND THIS IS A CHANGE FROM C55, BY RULING.
+        C55 registered this provider at `primary`, beside GNews. On this
+        ladder that would call it on EVERY request worldwide, while it covers
+        exactly three countries, so most calls would fetch six feeds to answer
+        a question about none of them. At `fallback` it does the one thing this
+        recovery is for: it answers when the primaries have returned nothing —
+        and for RW, KE and PL it answers with local journalism rather than
+        silence. Promotion to primary is a Beta decision with measurements
+        behind it, not a default.
+
+        IT DOES NOT DISPLACE GDELT DOC. Both sit in the fallback tier and
+        `callProviderSet` fans out across the whole tier with
+        `Promise.allSettled`, so neither can fail the other and neither is
+        consulted ahead of the other. GNews's primary tier is untouched.
+
+        SHIPPED OFF, TWICE OVER. `isConfigured` is false unless
+        RSS_FEEDS_ENABLED is the exact string "true", and even then every
+        registry entry ships `enabled: false` and must be named explicitly in
+        RSS_FEED_SOURCES. Landing this code activates nothing, fetches
+        nothing and changes no deployment's behaviour.
+      */
+      provider: rssFeedProvider,
+      isConfigured: isRssFeedsEnabled(config.get<string>('RSS_FEEDS_ENABLED')),
       tier: 'fallback',
     },
   ];
@@ -137,6 +177,7 @@ function buildProviderSelectionInput(
     MockNewsProvider,
     GNewsProvider,
     GdeltDocProvider,
+    RssFeedProvider,
     // Milestone #33: fail-closed startup guard. Registered as a plain
     // provider so Nest's OnApplicationBootstrap lifecycle invokes it
     // automatically — nothing else needs to reference it directly
@@ -149,11 +190,18 @@ function buildProviderSelectionInput(
         mockNewsProvider: MockNewsProvider,
         gnewsProvider: GNewsProvider,
         gdeltDocProvider: GdeltDocProvider,
+        rssFeedProvider: RssFeedProvider,
       ): NewsProvider[] =>
         selectActiveNewsProviders(
-          buildProviderSelectionInput(config, mockNewsProvider, gnewsProvider, gdeltDocProvider),
+          buildProviderSelectionInput(
+            config,
+            mockNewsProvider,
+            gnewsProvider,
+            gdeltDocProvider,
+            rssFeedProvider,
+          ),
         ),
-      inject: [ConfigService, MockNewsProvider, GNewsProvider, GdeltDocProvider],
+      inject: [ConfigService, MockNewsProvider, GNewsProvider, GdeltDocProvider, RssFeedProvider],
     },
     {
       provide: ALL_NEWS_PROVIDERS,
@@ -162,11 +210,18 @@ function buildProviderSelectionInput(
         mockNewsProvider: MockNewsProvider,
         gnewsProvider: GNewsProvider,
         gdeltDocProvider: GdeltDocProvider,
+        rssFeedProvider: RssFeedProvider,
       ): NewsProvider[] =>
         collectRegisteredNewsProviders(
-          buildProviderSelectionInput(config, mockNewsProvider, gnewsProvider, gdeltDocProvider),
+          buildProviderSelectionInput(
+            config,
+            mockNewsProvider,
+            gnewsProvider,
+            gdeltDocProvider,
+            rssFeedProvider,
+          ),
         ),
-      inject: [ConfigService, MockNewsProvider, GNewsProvider, GdeltDocProvider],
+      inject: [ConfigService, MockNewsProvider, GNewsProvider, GdeltDocProvider, RssFeedProvider],
     },
     {
       // R4 GDELT — the fallback-tier subset of the ACTIVE set, built from
@@ -179,12 +234,19 @@ function buildProviderSelectionInput(
         mockNewsProvider: MockNewsProvider,
         gnewsProvider: GNewsProvider,
         gdeltDocProvider: GdeltDocProvider,
+        rssFeedProvider: RssFeedProvider,
       ): NewsProvider[] =>
         selectProvidersByTier(
-          buildProviderSelectionInput(config, mockNewsProvider, gnewsProvider, gdeltDocProvider),
+          buildProviderSelectionInput(
+            config,
+            mockNewsProvider,
+            gnewsProvider,
+            gdeltDocProvider,
+            rssFeedProvider,
+          ),
           'fallback',
         ),
-      inject: [ConfigService, MockNewsProvider, GNewsProvider, GdeltDocProvider],
+      inject: [ConfigService, MockNewsProvider, GNewsProvider, GdeltDocProvider, RssFeedProvider],
     },
   ],
   // MVP-G4 (G4-3), CTO-authorized cross-lane wiring, export-only.

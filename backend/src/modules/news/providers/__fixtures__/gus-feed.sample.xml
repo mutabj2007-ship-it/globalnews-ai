@@ -1,0 +1,54 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/" version="2.0">
+<channel>
+<title>Statistics Poland</title>
+<link>https://stat.gov.pl/</link>
+<description/>
+<image>
+<title>Statistics Poland</title>
+<url>https://stat.gov.pl/szablony/portalinformacyjny/images/logo_normal.gif</url>
+<link>https://stat.gov.pl/</link>
+</image>
+<atom:link href="https://stat.gov.pl/rss/en/portalinformacyjny.xml" rel="self" type="application/rss+xml"/>
+<item>
+<title>
+<![CDATA[ Domestic deliveries and consumption of selected consumer goods per capita in 2025 ]]>
+</title>
+<pubDate>
+<![CDATA[ Mon, 31 Aug 2026 15:00:00 +0200 ]]>
+</pubDate>
+<link>https://stat.gov.pl/en/topics/prices-trade/trade/domestic-deliveries-and-consumption-of-selected-consumer-goods-per-capita-in-2025,9,16.html</link>
+<guid isPermaLink="false">https://stat.gov.pl/en/topics/prices-trade/trade/domestic-deliveries-and-consumption-of-selected-consumer-goods-per-capita-in-2025,9,16.html</guid>
+<category>Current information</category>
+<description>
+<![CDATA[ In 2025 domestic deliveries of meat (including pork, beef, veal and poultry) amounted to 5061 thousand tonnes and were higher by 9.7% compared with the previous year. ]]>
+</description>
+</item>
+<item>
+<title>
+<![CDATA[ Intermodal transport in Poland in 2025 ]]>
+</title>
+<pubDate>
+<![CDATA[ Mon, 31 Aug 2026 15:00:00 +0200 ]]>
+</pubDate>
+<link>https://stat.gov.pl/en/topics/transport-and-communications/transport/intermodal-transport-in-poland-in-2025,12,10.html</link>
+<guid isPermaLink="false">https://stat.gov.pl/en/topics/transport-and-communications/transport/intermodal-transport-in-poland-in-2025,12,10.html</guid>
+<category>Current information</category>
+<description>
+<![CDATA[ Intermodal transport allows to create modern transport chains that combine two or more modes of transport into single system. ]]>
+</description>
+</item>
+<item>
+<title>
+<![CDATA[ Infographic - Economic aspects of environmental protection 2025 ]]>
+</title>
+<pubDate>
+<![CDATA[ Mon, 31 Aug 2026 10:35:00 +0200 ]]>
+</pubDate>
+<link>https://stat.gov.pl/en/infographics-and-widgets/infographics/infographic-economic-aspects-of-environmental-protection-2025,11,9.html</link>
+<guid isPermaLink="false">https://stat.gov.pl/en/infographics-and-widgets/infographics/infographic-economic-aspects-of-environmental-protection-2025,11,9.html</guid>
+<description>
+<![CDATA[ ]]>
+</description>
+</item>
+</channel>
+</rss>

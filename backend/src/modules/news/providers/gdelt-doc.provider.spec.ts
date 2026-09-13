@@ -370,7 +370,16 @@ describe('GdeltDocProvider — E, F, W: throttling, timeout and cooldown', () =>
     global.fetch = fetchMock as unknown as typeof fetch;
 
     await expect(provider.search('first query')).rejects.toMatchObject({ kind: 'unreachable' });
-    await expect(provider.search('second query')).rejects.toMatchObject({ kind: 'rate-limited' });
+    /*
+     * REV A (CTO-required change to this accepted assertion): the cooling
+     * refusal used to be reported as 'rate-limited' whatever opened the
+     * circuit. A connection reset is not a rate limit unless GDELT said so,
+     * and it did not — it dropped the socket. The refusal now carries
+     * 'unreachable', which is the same shared taxonomy and the truthful member
+     * of it. The behaviour under test — one network call, second request
+     * refused without touching the wire — is unchanged.
+     */
+    await expect(provider.search('second query')).rejects.toMatchObject({ kind: 'unreachable' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

@@ -39,6 +39,15 @@ import { resolveProviderFailureKind, type ProviderFailureKind } from './provider
  * into `news`, which is exactly the divergence that produced this defect.
  */
 import { resolveSearchEndpointLanguage } from '../analysis/language/resolve-retrieval-language.util';
+import {
+  extractRetainedQueryTerms,
+  matchesRetainedQuery,
+  retainedCandidateTerms,
+} from './relevance/retained-query-match.util';
+import {
+  resolveRetainedQueryCountry,
+  retainedCountryVerdict,
+} from './relevance/retained-country-gate.util';
 
 const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
 
@@ -492,22 +501,101 @@ export class NewsService {
       return attachProviderFailures(response, failures);
     }
 
+    /*
+     * R1-C — RETAINED-REPORTING MATCH PARITY.
+     *
+     * THE DEFECT. This stage asked the database for rows whose title or summary
+     * CONTAINS THE WHOLE QUERY STRING contiguously, then applied the relevance
+     * gate to whatever came back. For the natural-language fragments
+     * AnalysisService derives, the first step could not succeed: the live Alpha
+     * query "eastern Democratic Republic of Congo" is a 36-character run that no
+     * headline carries. The stage ran, spent a round trip, and was structurally
+     * incapable of returning anything — which is not the same as the database
+     * being empty, and is why a GDELT timeout degraded to nothing at all rather
+     * than to retained reporting.
+     *
+     * THE CORRECTION, IN TWO HALVES THAT MUST NOT BE CONFLATED.
+     *
+     *   SELECTION widens. `queryTerms` turns the row predicate into "any
+     *   meaningful term", bounded and over-fetched so the gate has candidates
+     *   to judge. This is a candidate net, not a verdict.
+     *
+     *   ADMISSION stays a gate, and is still made of accepted parts.
+     *   `matchesRetainedQuery()` decides every term with an UNMODIFIED
+     *   `scoreGenericRelevance()` and applies the counting rule lifted verbatim
+     *   from `isMateriallyRelatedToAnchor()`. No new scoring exists anywhere.
+     *
+     * SCOPE, DELIBERATELY NARROW. Only the GENERIC mode, and only a multi-word
+     * query — the shape that was impossible. A single-word query already had a
+     * working whole-phrase predicate and keeps `scoreByMode()` untouched; the
+     * RELATIONAL mode keeps `scoreByMode()` untouched, because X/Y decomposition
+     * is a different question this term counting would answer wrongly; and
+     * `relevanceMode.type === 'none'` is untouched. LIVE retrieval is not
+     * affected at all — `applyRelevanceMode()` above is byte-for-byte unchanged.
+     *
+     * Retention window, ordering, dedup and identity, provider provenance and
+     * the country/precision derivation are all downstream of this and all
+     * untouched. If nothing matches, the result is still zero retained
+     * articles, and the zero-evidence surface still refuses to call OpenAI.
+     */
+    const retainedTerms =
+      relevanceMode.type === 'generic' ? extractRetainedQueryTerms(query) : undefined;
+
+    const useTermParity =
+      retainedTerms !== undefined &&
+      retainedTerms.distinctive.length + retainedTerms.supporting.length >= 2;
+
     const cachedArticles = await this.articlePersistence.findRecent({
       query,
       limit,
       maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+      ...(useTermParity ? { queryTerms: retainedCandidateTerms(retainedTerms) } : {}),
     });
 
     // Milestone #36/#37: the SAME gate (whichever mode is active)
     // applies to stored/persisted fallback results — live and stored
     // generic/relational results must not have inconsistent trust
-    // rules.
+    // rules. R1-C narrows that to the shape where "the same gate" was
+    // unsatisfiable by construction; every other mode is unchanged.
+    /*
+     * REV A · 1 — THE COUNTRY GATE, APPLIED AFTER THE LEXICAL ONE.
+     *
+     * R1 shipped the lexical parity with a pinned, disclosed limitation: a
+     * Republic of the Congo story could satisfy a Democratic Republic of Congo
+     * query, because the lexical gate counts terms and has no notion of place.
+     * The pin is removed and this is what replaces it.
+     *
+     * ORDER MATTERS AND IS DELIBERATE. The lexical gate runs first and decides
+     * topicality; the country gate then removes anything whose own geography
+     * contradicts the query, or whose geography cannot be established at all.
+     * Both must pass. Narrowing only ever removes articles here — it can never
+     * admit one the lexical gate rejected.
+     *
+     * SCOPE IS THE SAME AS THE PARITY IT GUARDS: the generic multi-word retained
+     * path only. `type: 'none'` is untouched; the relational and single-word
+     * paths keep `scoreByMode()` and are not country-gated, because R1 did not
+     * widen them and this correction must not widen them either.
+     *
+     * Nothing is written back. `retainedCountryVerdict()` reads; it returns no
+     * article and mutates none, so no query geography can reach an article's
+     * precision.
+     */
+    const retainedQueryCountry = useTermParity
+      ? resolveRetainedQueryCountry(query)
+      : undefined;
+
     const relevantCachedArticles =
       relevanceMode.type === 'none'
         ? cachedArticles
-        : cachedArticles.filter(
-            (article) => this.scoreByMode(article, query, relevanceMode).isRelevant,
-          );
+        : useTermParity
+          ? cachedArticles.filter(
+              (article) =>
+                matchesRetainedQuery(article, retainedTerms).isMatch &&
+                retainedCountryVerdict(article, retainedQueryCountry).decision === 'admit',
+            )
+          : cachedArticles.filter(
+              (article) => this.scoreByMode(article, query, relevanceMode).isRelevant,
+            );
 
     if (relevantCachedArticles.length === 0) {
       return attachProviderFailures(response, failures);
