@@ -102,6 +102,11 @@ import {
 import { deriveRelationalSearchQueries } from '../query/derive-relational-search-queries.util';
 import { blocksGeographicRouting } from '../query/routing-function-words.util';
 import { classifyQueryIntent } from '../query/query-intent.util';
+import { detectSourceAttributedIntent } from '../query/derive-source-attributed-query.util';
+import {
+  resolveRequestedSource,
+  type RequestedSource,
+} from '../../news/identity/requested-source.util';
 import { polishCountryName } from '../query/polish-country-forms.util';
 import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
 import { scoreGenericRelevance } from '../../news/relevance/generic-relevance.util';
@@ -617,6 +622,140 @@ export class AnalysisService {
          * its existing precedence ahead of everything here.
          */
         /*
+         * NATURAL SOURCE-ATTRIBUTED QUESTION R1 — RESOLVED BEFORE ROUTING,
+         * BECAUSE IT DECIDES ROUTING.
+         *
+         * Two steps, deliberately separate. The frame only reports that a
+         * sentence has a source half and a topic half; the curated registry
+         * decides whether that half names a publisher this product carries.
+         * BOTH must succeed. A frame that matched around an unknown name
+         * yields `undefined` here and the question keeps exactly the routing
+         * it had before this block existed — it does NOT quietly become an
+         * unrestricted search for its topic.
+         *
+         * WHY IT IS RESOLVED HERE, AHEAD OF EVERY ROUTING DECISION. Two
+         * branches would otherwise answer a source-attributed question with
+         * someone else's reporting, and both name a PLACE that really is in
+         * the sentence:
+         *
+         *   "What does KT Press report about East Africa?"      -> the
+         *   declared-region branch fans out across eleven member countries
+         *   and the KT Press constraint is simply gone.
+         *
+         *   "What does Statistics Poland report about X in Poland?" -> the
+         *   country branch answers with any Polish reporting at all.
+         *
+         * In both, the reader named a PUBLISHER. That is the stronger,
+         * explicitly-stated constraint, and neither place-name is the thing
+         * being asked about. So this intent stands both of them down.
+         *
+         * EACH STAND-DOWN IS EXPRESSED WHERE IT COSTS NO ACCEPTED AUTHORITY.
+         * `detectDeclaredRegion` is simply not consulted, so `declaredRegion`
+         * is `undefined` and `if (declaredRegion) {` below is reached exactly
+         * as written. The `location` expression is likewise computed exactly
+         * as before — declared-regions.spec.ts asserts BOTH of those texts
+         * verbatim, because they are what prove a typed region outranks the
+         * map camera — and the country branch's own guard stands down
+         * instead.
+         *
+         * THE ARTICLE ANCHOR STILL OUTRANKS THIS INTENT, and that falls out
+         * of the structure rather than being asserted separately: with
+         * `declaredRegion` undefined the chain reaches `else if
+         * (anchorArticle)` next, so a reader who selected a specific story
+         * still gets that story's routing.
+         *
+         * No question the product already routes can reach the new branch,
+         * because none of them place a closed reporting verb between a
+         * bounded name and a topic preposition.
+         */
+        const sourceAttributedIntent = detectSourceAttributedIntent(normalizedQuery);
+        const sourceAttributedFrame = sourceAttributedIntent?.query;
+        const requestedSource: RequestedSource | undefined = sourceAttributedFrame
+          ? resolveRequestedSource(sourceAttributedFrame.sourcePhrase)
+          : undefined;
+        const sourceAttributed =
+          sourceAttributedFrame && requestedSource
+            ? { topic: sourceAttributedFrame.topic, requestedSource }
+            : undefined;
+
+        /*
+         * REV C — THE PARSED FRAME IS ITSELF THE CONSTRAINT. RESOLUTION ONLY
+         * DECIDES WHETHER IT CAN BE SATISFIED.
+         *
+         * WHAT R1 GOT WRONG HERE, AND I DID NOT SEE UNTIL IT WAS POINTED OUT.
+         * R1 treated an unresolved publisher as "no source intent" and let
+         * ordinary routing resume. I defended that as a strict no-op, and it
+         * is a no-op only against ONE risk — an unrestricted topic search.
+         * It is not a no-op against the branches that route on a PLACE:
+         *
+         *   "What does Reuters report about Poland?"       -> country routing,
+         *                                                     answered with any
+         *                                                     Polish reporting
+         *   "What does Reuters report about East Africa?"  -> eleven-member
+         *                                                     regional fan-out
+         *
+         * Both hand the reader another publisher's reporting in answer to a
+         * question about Reuters. That is precisely the substitution this
+         * whole correction exists to prevent, arrived at by a different road.
+         *
+         * SO THE SIGNAL IS THE FRAME, NOT THE RESOLUTION. `sourceIntent` is
+         * true whenever the sentence parsed as a source-attributed question at
+         * all. It stands down region, country and relational routing. Whether
+         * the named publisher is in the curated registry then decides only
+         * ONE thing: whether the question can be answered, or must fail
+         * closed.
+         *
+         * FAIL CLOSED MEANS ZERO, NOT "NEXT BEST". An unknown publisher is not
+         * an invitation to search the topic, nor to answer about the place:
+         * the honest reply to "what does an outlet we do not carry say about
+         * X" is that we cannot know. Nothing is substituted and OpenAI is
+         * never reached.
+         *
+         * THE ARTICLE ANCHOR IS DELIBERATELY EXEMPT and keeps the precedence
+         * it already had — see the branch chain below, which the anchor
+         * reaches before any of this.
+         */
+        /*
+         * REV C REV A — THE SIGNAL IS THE MATCHED FRAME, NOT THE USABLE PARSE.
+         *
+         * Rev C read this from `deriveSourceAttributedQuery()`, which returns
+         * `undefined` BOTH when no source-attributed syntax matched AND when it
+         * matched but a half was unusable — an over-long source span, or an
+         * empty topic. The second case therefore lost its intent and ordinary
+         * place routing became eligible again:
+         *
+         *   "What does The International Center for Investigative Reporting
+         *    Network report about Poland?"
+         *
+         * matched the frame, had its seven-word source rejected by the parser's
+         * admissibility bound, and was answered as an ordinary Poland question.
+         * That is the substitution Rev C exists to prevent, reached through the
+         * bound instead of through resolution.
+         *
+         * `detectSourceAttributedIntent()` reports the two facts separately, so
+         * this line now means what Rev C always intended it to mean: the reader
+         * named a source. Whether that source is USABLE and whether it RESOLVES
+         * are two further questions, and both of them only decide whether the
+         * question can be answered — never whether the constraint applies.
+         *
+         * THE SIX-WORD BOUND IS UNCHANGED AND STILL USEFUL. It still decides
+         * what may be treated as a publisher name; it simply no longer decides
+         * whether the reader imposed a constraint.
+         */
+        const sourceIntent = sourceAttributedIntent;
+
+        if (sourceIntent && !requestedSource) {
+          this.logger.debug(
+            `Question names a source ("${sourceIntent.rawSourcePhrase}")` +
+              (sourceIntent.rejection
+                ? ` that this parser cannot use (${sourceIntent.rejection})`
+                : ' that resolves to no curated publisher') +
+              '. The constraint still stands: no country route, no regional route and no ' +
+              'unrestricted topic search are attempted.',
+          );
+        }
+
+        /*
          * ══════════════════════════════════════════════════════════════════
          * C907 §8 — A DECLARED REGION IS A REQUEST SCOPE, AND IT OUTRANKS THE
          * CAMERA
@@ -643,7 +782,24 @@ export class AnalysisService {
          * routing it reached before this block existed, including the
          * storyContext precedence — which is why no other shape changes.
          */
-        const declaredRegion = detectDeclaredRegion(normalizedQuery);
+        /*
+         * REV B · B — EXPLICIT SOURCE INTENT IS NOT LOST TO REGION ROUTING.
+         *
+         * Standing the region down by NOT CONSULTING the detector — rather
+         * than by rewriting `if (declaredRegion) {` or the `location`
+         * expression — is deliberate: both of those texts are asserted
+         * verbatim by declared-regions.spec.ts, and neither was written to
+         * express this. `detectDeclaredRegion` itself is untouched, region
+         * membership is untouched, and regional retrieval is untouched.
+         *
+         * An ordinary "What's happening in East Africa?" carries no reporting
+         * verb between a bounded publisher name and a topic preposition, so
+         * `sourceAttributed` is undefined for it and this line is exactly the
+         * call it always was.
+         */
+        const declaredRegion = sourceIntent
+          ? undefined
+          : detectDeclaredRegion(normalizedQuery);
 
         if (declaredRegion) {
           this.logger.debug(
@@ -830,7 +986,7 @@ export class AnalysisService {
             anchored.supporting,
             storyContext?.countryCode,
           );
-        } else if (location) {
+        } else if (location && sourceIntent === undefined) {
           const { country, city, geoMatch } = location;
 
           if (geoMatch) {
@@ -1075,9 +1231,116 @@ export class AnalysisService {
           // — this branch never runs for "What's happening with NATO?",
           // "What's happening in the Middle East?", "cybersecurity", etc.,
           // since none of those match the closed relational pattern set.
-          const relationalQuery = deriveRelationalSearchQueries(normalizedQuery);
+          const relationalQuery = sourceIntent
+            ? undefined
+            : deriveRelationalSearchQueries(normalizedQuery);
 
-          if (relationalQuery) {
+          if (sourceAttributed) {
+            /*
+             * R1 REV A — THE CONSTRAINT IS HANDED TO RETRIEVAL, NOT APPLIED
+             * TO ITS RESULT.
+             *
+             * R1 filtered here, after `newsService.search()` had returned.
+             * That was wrong for a reason no amount of filtering could fix:
+             * the tier ladder stops at the primaries as soon as they return
+             * one RAW article, so a healthy GNews carrying one topically
+             * relevant article from the WRONG publisher ended retrieval before
+             * Publisher Feeds was ever asked — and this branch then removed
+             * the only article there was. R1 worked only while GNews was
+             * failing.
+             *
+             * The constraint now travels WITH the request. NewsService applies
+             * it inside the same closure as the relevance gate, so its existing
+             * bounded post-relevance rescue sees "zero qualifying
+             * requested-source articles" and consults the fallback tier once,
+             * exactly as it already does when the gate rejects everything. No
+             * second ladder, no tier promotion, and no RSS call from here.
+             *
+             * The topic half still goes through the SAME provider-safety
+             * chokepoint and the SAME 'generic' relevance gate every other
+             * generic query uses.
+             *
+             * WHEN NOTHING QUALIFIES, THE ANSWER IS NOTHING. The retrieval
+             * context still records what retrieval actually did, `articles`
+             * is empty, and the existing zero-evidence surface below produces
+             * the honest not-attempted response with no OpenAI call.
+             * Substituting another publisher's reporting is never an option.
+             */
+            const topicSent = makeProviderSafeNewsQuery(sourceAttributed.topic);
+
+            if (topicSent === undefined) {
+              this.logger.warn(
+                'Source-attributed retrieval has no lexical topic after provider-safe ' +
+                  'normalization — no provider request was made.',
+              );
+              articles = [];
+              retrievalContext = NON_RETRIEVABLE_QUERY_CONTEXT;
+            } else {
+              this.logger.debug(
+                `Source-attributed question: topic "${topicSent}" constrained to ` +
+                  `${sourceAttributed.requestedSource.displayName} ` +
+                  `(${sourceAttributed.requestedSource.sourceId}).`,
+              );
+
+              const sourceResponse = await this.newsService.search(
+                topicSent,
+                SEARCH_POOL_SIZE,
+                { type: 'generic' },
+                { requestedSource: sourceAttributed.requestedSource },
+              );
+
+              if (sourceResponse.articles.length === 0) {
+                this.logger.debug(
+                  'Retrieval found no article attributable to ' +
+                    `${sourceAttributed.requestedSource.displayName} — returning zero evidence ` +
+                    'rather than another publisher.',
+                );
+              }
+
+              articles = sourceResponse.articles;
+              retrievalContext = this.toRetrievalContext(sourceResponse);
+            }
+          } else if (sourceIntent) {
+            /*
+             * REV C — FAIL CLOSED. THE READER NAMED A PUBLISHER THIS PRODUCT
+             * DOES NOT CARRY.
+             *
+             * Reached only when the sentence parsed as a source-attributed
+             * question AND the named publisher resolved to nothing in the
+             * curated registry AND no article anchor claimed the request
+             * first. Every other route has already been stood down above, so
+             * there is exactly one thing left to decide: what to do instead.
+             *
+             * NOTHING. No provider is asked, because there is no publisher to
+             * ask about. The topic is NOT searched on its own — that would
+             * answer a question about Reuters with whoever else happened to
+             * publish. The place named inside the topic is NOT routed to —
+             * that is the same substitution wearing a country's name.
+             *
+             * THE SURFACE IS THE EXISTING ONE, NOT A NEW STATE.
+             * NON_RETRIEVABLE_QUERY_CONTEXT already means "no provider was
+             * asked, and nothing about a provider is claimed"; its own
+             * comment covers the neighbouring case of a question with no
+             * determinable members. An unresolvable publisher is the same
+             * family: the question names a constraint the product cannot
+             * satisfy. `articles` stays empty, so the zero-evidence guard
+             * below returns the honest not-attempted response and OpenAI is
+             * never reached.
+             *
+             * THIS IS NOT A REFUSAL TO ADD PUBLISHERS. Widening the registry
+             * is a separate, curated decision with its own verification; it
+             * is not something a question should be able to do by naming a
+             * masthead.
+             */
+            this.logger.log(
+              `Source-attributed question names "${sourceIntent.rawSourcePhrase}", which is not ` +
+                'a curated publisher this product carries. Returning zero evidence rather than ' +
+                'answering from some other source, or about the place its topic mentions.',
+            );
+
+            articles = [];
+            retrievalContext = NON_RETRIEVABLE_QUERY_CONTEXT;
+          } else if (relationalQuery) {
             this.logger.debug('Detected relational query.');
 
             // Milestone #40 (authoritative-context correction): capture the

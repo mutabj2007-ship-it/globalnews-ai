@@ -21,6 +21,10 @@ import {
   type FirstSeenByUrl,
 } from './persistence/article-persistence.service';
 import { withDerivedEvidenceFields } from './identity/geographic-precision.util';
+import {
+  filterToRequestedSource,
+  type RequestedSource,
+} from './identity/requested-source.util';
 import { resolvePrimaryCountry } from './country/country-relevance.util';
 import {
   scoreGenericRelevance,
@@ -349,12 +353,49 @@ export class NewsService {
     return retained.map((article) => withDerivedEvidenceFields(article));
   }
 
+  /**
+   * R1 REV A — THE SOURCE CONSTRAINT LIVES HERE, NOT ABOVE THIS METHOD.
+   *
+   * WHAT R1 GOT WRONG, STATED PLAINLY. R1 applied the requested-publisher
+   * constraint in AnalysisService, to whatever this method had already
+   * returned. `callAllProviders()` stops at the primary tier the moment the
+   * primaries return at least one RAW article, so a healthy GNews carrying one
+   * topically relevant article from the WRONG publisher ended the ladder: the
+   * Publisher Feeds tier was never consulted, and the constraint then removed
+   * the only article there was. The reader was told there is no reporting while
+   * `feed:gus-pl` held exactly the report they asked for. R1 therefore only
+   * worked while GNews was failing — it depended on the outage it was measured
+   * during, which is not a correction at all.
+   *
+   * WHY THIS PLACEMENT FIXES IT WITHOUT A SECOND LADDER. `search()` already
+   * owns a bounded post-relevance rescue (see G-ALPHA-1 D1 below) that exists
+   * for precisely the neighbouring case: the primaries answered, the gate
+   * rejected everything, and the tier logic could not tell that apart from
+   * success. A requested-source constraint is the same shape of problem — an
+   * admission rule the tier logic cannot see — so it is applied INSIDE the same
+   * `buildFilteredResponse()` closure the gate uses. The rescue's own
+   * condition, `response.articles.length === 0`, then reads "zero qualifying
+   * REQUESTED-SOURCE articles" without the rescue itself being modified at all.
+   *
+   * ADDITIVE, AND ORTHOGONAL TO RelevanceMode. It rides on the existing
+   * `options` bag rather than widening the RelevanceMode union, so every
+   * existing call site compiles untouched, `ActiveRelevanceMode` narrowing is
+   * unchanged, and `applyRelevanceMode()` stays byte-for-byte as it was. A
+   * caller that passes no `requestedSource` — every caller in the product
+   * except AnalysisService's source-attributed branch — reaches exactly the
+   * code it reached before.
+   *
+   * NO TIER WAS MOVED. GNews is still primary, Publisher Feeds and GDELT DOC
+   * are still fallback, provider ordering is unchanged, and nothing calls RSS
+   * directly.
+   */
   async search(
     query: string,
     limit?: number,
     relevanceMode: RelevanceMode = NO_RELEVANCE_FILTERING,
-    options?: { lang?: string },
+    options?: { lang?: string; requestedSource?: RequestedSource },
   ): Promise<NewsResponse> {
+    const requestedSource = options?.requestedSource;
     // Milestone #36/#37: opt-in only, via the discriminated
     // RelevanceMode union above. CountryNewsService's country/city
     // retrieval and the public GET /news/search endpoint both call this
@@ -414,8 +455,44 @@ export class NewsService {
     // -> accepted result handling/persistence" ordering, which applies
     // identically to both modes).
     const buildFilteredResponse = (): NewsResponse => {
+      /*
+       * REV B · A — THE CONSTRAINT MUST REACH THE CANDIDATES, NOT ONLY THE
+       * SURVIVORS.
+       *
+       * THE EDGE THIS CLOSES. `buildResponse()` collapses cross-provider
+       * duplicates BEFORE anything below it runs, and that collapse picks a
+       * deterministic WINNER — better-corroborated record first, then provider
+       * registration order. So when GDELT DOC carries a near-identical
+       * headline to the Publisher Feed's Statistics Poland record, at equal
+       * `sourcesCount`, GDELT's earlier registration rank wins and the feed
+       * record is GONE before attribution is ever consulted. The constraint
+       * then filtered a set the right article had already been deleted from,
+       * and the reader got zero.
+       *
+       * WHAT THIS IS, PRECISELY. A narrowing of the CANDIDATE POOL for a
+       * source-constrained request, per provider, before the merge. It is not
+       * a relevance rule and it ADMITS NOTHING: `filterToRequestedSource` can
+       * only remove, and every article it keeps still has to pass the same
+       * unmodified relevance gate and the same unmodified admission check
+       * below. Its entire effect is that a publisher the reader explicitly
+       * disallowed can no longer eliminate one they explicitly asked for.
+       *
+       * THE GLOBAL WINNER RULE IS UNTOUCHED. This maps over the provider
+       * results and never reorders them, never drops a provider entry (an
+       * emptied one stays, so `results.length > 1` and `successfulProviderIds`
+       * are exactly what they were, and provenance keeps telling the truth
+       * about who answered), and does nothing at all when no `requestedSource`
+       * was supplied — which is every ordinary request in the product.
+       */
+      const candidates = requestedSource
+        ? results.map(({ providerId, articles }) => ({
+            providerId,
+            articles: filterToRequestedSource(articles, requestedSource),
+          }))
+        : results;
+
       const raw = this.buildResponse(
-        results,
+        candidates,
         failedProviderIds,
         limit,
         { query },
@@ -424,9 +501,31 @@ export class NewsService {
         },
       );
 
-      return relevanceMode.type === 'none'
-        ? raw
-        : this.applyRelevanceMode(raw, query, relevanceMode);
+      const gated =
+        relevanceMode.type === 'none'
+          ? raw
+          : this.applyRelevanceMode(raw, query, relevanceMode);
+
+      /*
+       * THE ADMISSION AUTHORITY, APPLIED AFTER THE GATE, AND ONLY NARROWING.
+       *
+       * Order is load-bearing. Relevance decides topicality; the constraint
+       * then decides attribution. Reversed, the rescue's zero-count would mean
+       * "the requested publisher had nothing TOPICAL or nothing AT ALL", which
+       * are different facts. Both must pass, and neither can admit what the
+       * other rejected.
+       *
+       * REV B — THIS IS NOW STRUCTURALLY REDUNDANT, AND IS KEPT ON PURPOSE.
+       * The candidate narrowing above already removes every non-attributable
+       * record, so this pass has nothing left to find. It stays because it,
+       * not the narrowing, is the ADMISSION rule: the narrowing exists to
+       * protect deduplication, and if it were ever relaxed or re-scoped, this
+       * line is what still guarantees no other publisher reaches the reader.
+       * One rule, still one predicate, still one authority.
+       */
+      return requestedSource
+        ? this.applyRequestedSourceConstraint(gated, requestedSource)
+        : gated;
     };
 
     let response = buildFilteredResponse();
@@ -597,13 +696,28 @@ export class NewsService {
               (article) => this.scoreByMode(article, query, relevanceMode).isRelevant,
             );
 
-    if (relevantCachedArticles.length === 0) {
+    /*
+     * R1 REV A — THE STORED PATH IS CONSTRAINED BY THE SAME RULE.
+     *
+     * Milestone #36/#37 established that live and stored results must not have
+     * inconsistent trust rules. A requested-publisher constraint is a trust
+     * rule, so retained reporting is narrowed by exactly the same predicate
+     * from exactly the same authority. Without this, a question about one
+     * publisher could still be answered out of the database with another
+     * publisher's stored reporting — the very substitution this correction
+     * exists to make impossible.
+     */
+    const attributedCachedArticles = requestedSource
+      ? filterToRequestedSource(relevantCachedArticles, requestedSource)
+      : relevantCachedArticles;
+
+    if (attributedCachedArticles.length === 0) {
       return attachProviderFailures(response, failures);
     }
 
     return attachProviderFailures(
       this.buildCachedResponse(
-        relevantCachedArticles,
+        attributedCachedArticles,
         limit,
         {
           query,
@@ -1202,6 +1316,38 @@ export class NewsService {
       ...response,
       articles: filtered,
       totalResults: filtered.length,
+    };
+  }
+
+  /**
+   * R1 REV A — narrows a response to the requested publisher, recomputing
+   * totalResults to match.
+   *
+   * DELIBERATELY THE SAME SHAPE AS applyRelevanceMode() ABOVE, for the same
+   * reason: every other field — dataMode, providers, fallbackReason,
+   * generatedAt, query/category — is preserved unchanged, because `dataMode`
+   * describes what the RETRIEVAL did and stays true however few of its results
+   * survive an admission rule.
+   *
+   * ORDER IS PRESERVED, NOT RE-RANKED. This is a constraint; a constraint that
+   * also reordered evidence would be making a relevance judgement the gates
+   * already own. `Array.filter` can only remove.
+   *
+   * THE PREDICATE IS NOT DEFINED HERE. It is `isAttributableToRequestedSource`
+   * in ./identity/requested-source.util.ts — curated `sourceId` or the
+   * publisher's own registrable domain, never `sourceName` alone and never
+   * `providerId`. One rule, one place.
+   */
+  private applyRequestedSourceConstraint(
+    response: NewsResponse,
+    requestedSource: RequestedSource,
+  ): NewsResponse {
+    const attributed = filterToRequestedSource(response.articles, requestedSource);
+
+    return {
+      ...response,
+      articles: attributed,
+      totalResults: attributed.length,
     };
   }
 
