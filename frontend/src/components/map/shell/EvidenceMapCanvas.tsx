@@ -1984,6 +1984,25 @@ export function EvidenceMapCanvas({
     setEnabled(map.touchZoomRotate, interactive);
     setEnabled(map.keyboard, interactive);
     setEnabled(map.scrollZoom, interactive && capturesWheel);
+
+    /*
+      R3 · AND THE ENGINE'S OWN TAB STOP, WHICH THE HANDLERS DO NOT REMOVE.
+
+      MapLibre writes `tabindex="0"` onto the canvas it creates, and
+      `map.keyboard.disable()` stops the keys WITHOUT giving the tab stop
+      back. Measured in the rendered EMBED: one focusable element, reachable
+      by Tab, on which every key is inert — a control that takes focus and
+      does nothing.
+
+      Set on the engine's canvas rather than worked around with a CSS or
+      pointer-events overlay, because an overlay large enough to cover the
+      canvas is also large enough to swallow the page's wheel, which is the
+      one thing EMBED must never do.
+
+      Restored to `0` whenever the density is interactive, so this can only
+      ever mirror the handler state above — it is not a one-way change.
+    */
+    map.getCanvas().setAttribute('tabindex', interactive ? '0' : '-1');
   }, [interactive, capturesWheel]);
 
   /*
@@ -2059,18 +2078,42 @@ export function EvidenceMapCanvas({
         ref={containerRef}
         data-gn="map-canvas-surface"
         className="h-full w-full"
-        role="application"
+        /*
+          R3 · A DEAD CONTROL IS ALSO ONE A KEYBOARD CAN REACH.
+
+          MEASURED in the rendered EMBED: one focusable element inside the
+          embed — MapLibre's own `<canvas tabindex="0">` — announced as
+          `role="application"` and described by "Drag or use the arrow keys
+          to pan. Scroll, pinch, or press plus and minus to zoom…".
+
+          Every one of those keys is already disabled at this density by the
+          handler effect above (`setEnabled(map.keyboard, interactive)`), so
+          the surface was offering a keyboard contract it had itself turned
+          off. That is the definition of a dead control, and it is worse than
+          a visible one: a sighted reader can see there is no zoom button,
+          while a screen-reader user is told the keys work.
+
+          `role="application"` earns its name by passing keys through. Where
+          no key is passed through it is withdrawn along with the hint, and
+          the element is left as a labelled picture. Interactive densities
+          are untouched — PANEL, FULL and MODAL all read `interactive: true`.
+        */
+        role={interactive ? 'application' : undefined}
         aria-label={ariaLabel}
-        aria-describedby="gn-map-interaction-hint"
+        aria-describedby={interactive ? 'gn-map-interaction-hint' : undefined}
       />
       {/*
         The interaction contract, available to a screen reader rather than
         implied by a mouse. `role="application"` tells assistive technology to
-        pass keys through, which is only honest if the keys are described.
+        pass keys through, which is only honest if the keys are described —
+        and R3 adds the converse: it is only honest to describe them where
+        they are passed through.
       */}
-      <p id="gn-map-interaction-hint" className="sr-only">
-        {interactionHint}
-      </p>
+      {interactive && (
+        <p id="gn-map-interaction-hint" className="sr-only">
+          {interactionHint}
+        </p>
+      )}
 
       {/*
         THE LABEL LAYER — a DOM overlay, exactly as the Design prototype does

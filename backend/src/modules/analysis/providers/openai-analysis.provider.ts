@@ -2,8 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { logWithRequestId } from '../../../observability/log-with-request-id';
 import type { AnalysisFailureReason } from '@globalnews-ai/shared';
 import type { AnalysisProvider, AnalysisProviderInput } from '../interfaces';
+import type { AnalysisDevelopmentBreadth } from '../interfaces/analysis-provider.interface';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { isUsableOpenAiApiKey } from './provider.tokens';
+import { normalizeBriefFields } from './normalize-brief-fields.util';
 import {
   buildAnalysisMessages,
   buildAnalysisJsonSchema,
@@ -96,6 +98,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     relationalContext,
     responseLanguage,
     repairDirective,
+    developmentBreadth,
   }: AnalysisProviderInput): Promise<unknown> {
     const config = this.analysisConfig.get();
 
@@ -119,6 +122,10 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       relationalContext,
       responseLanguage,
       repairDirective,
+      // EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — forwarded
+      // unchanged, exactly as relationalContext and repairDirective are:
+      // this provider never measures or reinterprets breadth itself.
+      developmentBreadth,
     );
     const maxAttempts = config.retryAttempts + 1;
     const startedAt = Date.now();
@@ -127,7 +134,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
-        const result = await this.attemptOnce(system, user, config);
+        const result = await this.attemptOnce(system, user, config, developmentBreadth);
         const latencyMs = Date.now() - startedAt;
 
         // Milestone #30 §J: capture latency/model/token-usage for later
@@ -194,6 +201,10 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     system: string,
     user: string,
     config: AnalysisConfig,
+    // C910 - the SAME measured breadth that shaped the prose section and that
+    // assessBriefCompliance will judge the answer against. It selects the brief's
+    // schema shape; it is never re-derived here.
+    developmentBreadth?: AnalysisDevelopmentBreadth,
   ): Promise<AttemptResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
@@ -214,7 +225,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
           ],
           response_format: {
             type: 'json_schema',
-            json_schema: buildAnalysisJsonSchema(),
+            json_schema: buildAnalysisJsonSchema(developmentBreadth),
           },
           temperature: 0.2,
           // Milestone #45 — `max_completion_tokens`, NOT the deprecated
@@ -313,7 +324,12 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     }
 
     try {
-      return { content: JSON.parse(content), usage: payload.usage };
+      /*
+        C910 - join the two required brief fields back into the single `summary`
+        string before the payload leaves this provider. A no-op on every response
+        that does not carry both, so the narrow path is untouched.
+      */
+      return { content: normalizeBriefFields(JSON.parse(content)), usage: payload.usage };
     } catch (error) {
       this.logger.warn('OpenAI returned non-JSON content in a structured-output call');
       throw new OpenAiAnalysisError(

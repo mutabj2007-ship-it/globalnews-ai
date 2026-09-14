@@ -324,7 +324,7 @@ describe('REV C · C5 — the article anchor still outranks all of it', () => {
     const response = await h.service.analyzeNews(
       'What does Reuters report about East Africa?',
       'en',
-      { articleId: 'kt-1' },
+      { articleId: 'kt-1', title: EAST_AFRICA_STORY.title },
     );
 
     /*
@@ -469,7 +469,7 @@ describe('REV C REV A · D3 — nothing else moved', () => {
     const response = await h.service.analyzeNews(
       `What does ${OVER_LIMIT_SOURCE} report about East Africa?`,
       'en',
-      { articleId: 'kt-1' },
+      { articleId: 'kt-1', title: EAST_AFRICA_STORY.title },
     );
 
     expect(response.articles.map((a) => a.id)).toContain('kt-1');

@@ -71,6 +71,25 @@ export interface JumpTarget {
   readonly id: string;
   readonly rung: ScaleRung;
   readonly bounds: Bounds;
+  /**
+   * C911-V2 -- the country this target IS, when it is one.
+   *
+   * A jump target used to carry bounds and nothing else, so a jump could only
+   * ever move a camera. That is why selecting RWANDA from JUMP TO VALIDATION
+   * STATE moved the viewport and left the intelligence rail describing Poland:
+   * there was no identity in the target for the shell to select.
+   *
+   * Present ONLY on COUNTRY-rung targets. A supranational region is not a
+   * selectable evidence geography -- the accepted rule the search path already
+   * states -- so 'world', 'africa', 'eastAfrica' and 'europe' deliberately
+   * carry no identity, and neither does the city rung.
+   *
+   * THIS IS NOT A GEOGRAPHY TABLE. It is the ISO-3 of a country this table
+   * already names and already carries real bounds for; the canonical country
+   * record still lives in COUNTRIES and is resolved from this id by the single
+   * selection handler, exactly as a map click is.
+   */
+  readonly countryIso3?: string;
 }
 
 /**
@@ -88,9 +107,9 @@ export const DEPLOYMENT_JUMP_TARGETS: readonly JumpTarget[] = [
   { id: 'africa', rung: 'CONTINENT', bounds: [-18, -35, 52, 37] },
   { id: 'eastAfrica', rung: 'SUBREGION', bounds: [28.8, -11.8, 42, 5.5] },
   { id: 'europe', rung: 'CONTINENT', bounds: [-11, 35, 40, 71] },
-  { id: 'rwanda', rung: 'COUNTRY', bounds: [28.86, -2.84, 30.9, -1.05] },
-  { id: 'kenya', rung: 'COUNTRY', bounds: [33.9, -4.7, 41.9, 5.5] },
-  { id: 'poland', rung: 'COUNTRY', bounds: [14.12, 49, 24.15, 54.84] },
+  { id: 'rwanda', rung: 'COUNTRY', bounds: [28.86, -2.84, 30.9, -1.05], countryIso3: 'RWA' },
+  { id: 'kenya', rung: 'COUNTRY', bounds: [33.9, -4.7, 41.9, 5.5], countryIso3: 'KEN' },
+  { id: 'poland', rung: 'COUNTRY', bounds: [14.12, 49, 24.15, 54.84], countryIso3: 'POL' },
   /*
     KIGALI — the CITY rung, added under the PO's golden-frame correction.
 

@@ -9,6 +9,9 @@ import { EvidenceMap, EvidenceMapLegend } from './EvidenceMap';
 import type { EvidenceGeographyModel } from './evidenceGeography';
 import { buildGeographicEvidenceState, formatPlace } from './geographicEvidenceState';
 import { EvidenceGeographyExpanded } from './EvidenceGeographyExpanded';
+import { AnalysisSpatialEmbed } from './AnalysisSpatialEmbed';
+import type { AnalysisSpatialEvidence } from './spatialEvidenceAdapter';
+import { mapShellVariant } from '@/lib/map/mapShellFlag';
 
 /**
  * P-08 — row 2, column 3.
@@ -63,6 +66,17 @@ export interface LocationDetailProps {
    * evidence claim it cannot substantiate.
    */
   evidence?: EvidenceGeographyModel;
+  /**
+   * ANALYSIS-SPATIAL-MAP-CONVERGENCE-1 — the SAME evidence, expressed in
+   * the shared shell's vocabulary by `spatialEvidenceAdapter`.
+   *
+   * Adapted where the analysis response lives (`AnalysisFrame`) rather
+   * than here, because the adapter needs the response's articles for real
+   * publication times and distinct publisher counts, and this component
+   * has never taken the response. Optional, so a caller that supplies no
+   * evidence is unchanged in every respect.
+   */
+  spatialEvidence?: AnalysisSpatialEvidence;
   /** ISO3 of the currently selected evidence country, if any. */
   activeIso3?: string | null;
   insufficientEvidence: InsufficientEvidenceModel | null;
@@ -79,6 +93,7 @@ export interface LocationDetailProps {
 export function LocationDetail({
   retrievalContext,
   evidence,
+  spatialEvidence,
   activeIso3 = null,
   insufficientEvidence,
   compressed = false,
@@ -92,6 +107,29 @@ export function LocationDetail({
      SAME drawing is currently on screen. */
   const [expanded, setExpanded] = useState(false);
   const geo = dict.analysisWorkspace.geography;
+
+  /*
+    ── ANALYSIS-SPATIAL-MAP-CONVERGENCE-1 · ROLLBACK GATE ────────────────
+    THE SAME FLAG `/map` USES, AND DELIBERATELY NOT A SECOND ONE.
+    `mapShellVariant()` already decides which of two implementations the
+    World Map route mounts; this makes the Analysis rail answer to the
+    same switch, so Spatial is one decision across the product and
+    rolling back stays a configuration change rather than a revert.
+    When `legacy`, everything below this line behaves exactly as the
+    accepted build does today — `EvidenceMap`, `EvidenceMapLegend` and
+    `EvidenceGeographyExpanded` are untouched and still reachable.
+  */
+  const spatial = mapShellVariant() === 'shell' && spatialEvidence !== undefined;
+
+  /*
+    THE EXPAND DESTINATION, BUILT FROM WHAT THE EVIDENCE SUPPORTS.
+    `/map`'s own `?country=<ISO3>` and nothing else — see the control
+    below for why no `cam=` is emitted. Null when no country resolved, in
+    which case the control is not rendered at all (`evidence.empty`).
+  */
+  const expandIso3 = spatialEvidence?.selection?.id ?? null;
+  const expandHref =
+    expandIso3 === null ? null : `/map?${new URLSearchParams({ country: expandIso3 }).toString()}`;
 
   const state = buildGeographicEvidenceState(retrievalContext);
   const noOpenQuestions = `${dict.analysisWorkspace.dimensions.insufficientEvidence} · 0`.toUpperCase();
@@ -218,13 +256,33 @@ export function LocationDetail({
           />
         ) : (
           <>
-            <EvidenceMap
-              model={evidence}
-              activeIso3={activeIso3}
-              compressed={compressed || dense}
-              language={language}
-            />
-            <EvidenceMapLegend model={evidence} activeIso3={activeIso3} language={language} />
+            {spatial && spatialEvidence !== undefined ? (
+              /*
+                THE SHARED SPATIAL SURFACE. The legend goes with the
+                renderer it belonged to: EMBED's own precision banner is
+                what discloses precision here, and keeping a second
+                legend beside it would restate the same fact in a second
+                visual register. Every OTHER statement in this rail — the
+                evidence-country list, report counts, unresolved-report
+                disclosure, precision text, open questions and the
+                target-vs-evidence warning — is below and unchanged.
+              */
+              <AnalysisSpatialEmbed
+                evidence={spatialEvidence}
+                compressed={compressed || dense}
+                language={language}
+              />
+            ) : (
+              <>
+                <EvidenceMap
+                  model={evidence}
+                  activeIso3={activeIso3}
+                  compressed={compressed || dense}
+                  language={language}
+                />
+                <EvidenceMapLegend model={evidence} activeIso3={activeIso3} language={language} />
+              </>
+            )}
 
             {/*
               H-ALPHA-VISUAL-1 ITEM E — the one control that opens the
@@ -235,7 +293,40 @@ export function LocationDetail({
               map would imply there is something to look at, which is the
               precise misreading this lane exists to prevent.
             */}
-            {evidence.empty ? null : (
+            {evidence.empty ? null : spatial ? (
+              /*
+                ── EXPAND MAP NOW GOES TO THE REAL MAP ────────────────────
+
+                On the shell path this is a LINK to the existing `/map`
+                FULL Spatial surface, not a second renderer. That retires
+                the active use of `EvidenceGeographyExpanded`, which was
+                the third geography implementation in this workspace.
+
+                IT CARRIES ONLY WHAT IS ALREADY KNOWN, through `/map`'s
+                OWN parameter — `?country=<ISO3>`, which `MapPageClient`
+                already reads and already writes. No parallel navigation
+                contract, no new query key.
+
+                AND IT CARRIES NO CAMERA. `?cam=` exists, but a camera is
+                a zoom and a coordinate; this evidence is country-level
+                and holds neither. `/map` frames a country it is given,
+                which is the framing the evidence actually supports.
+                Emitting a camera here would be inventing the coordinate
+                the whole lane forbids.
+
+                A real anchor, so it survives middle-click, copy-link and
+                the back button — and so the destination is visible.
+              */
+              <a
+                data-paf="geo-expand"
+                data-paf-expand="map-route"
+                href={expandHref ?? '/map'}
+                className="mt-[6px] inline-flex min-h-[44px] items-center gap-[6px] font-gn-mono text-[12px] uppercase tracking-[0.14em] text-[#67e8f9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gn-focus md:text-[11px]"
+              >
+                {t.geoExpand}
+                <span aria-hidden="true">&#8599;</span>
+              </a>
+            ) : (
               <button
                 type="button"
                 data-paf="geo-expand"
@@ -247,7 +338,7 @@ export function LocationDetail({
               </button>
             )}
 
-            {expanded ? (
+            {expanded && !spatial ? (
               <EvidenceGeographyExpanded
                 model={evidence}
                 precisionLabel={

@@ -627,8 +627,29 @@ describe('EG — expansion is bounded, keyboard-operable and truthful', () => {
   });
 
   it('the expand control is withheld when nothing resolved', () => {
+    /*
+      RETARGETED BY ANALYSIS-SPATIAL-MAP-CONVERGENCE-1, AND THE INVARIANT
+      IS UNCHANGED — only the spelling moved.
+
+      This pinned the literal `{evidence.empty ? null : (`. The shell path
+      adds a second branch after that guard (a LINK to /map instead of the
+      in-place overlay), so the text now reads
+      `{evidence.empty ? null : spatial ? (`. What the test exists to
+      protect is that NO expand affordance can render when nothing
+      resolved — an expand control on an empty map implies there is
+      something to look at, which is the misreading this lane prevents.
+
+      So it is asserted as an ORDERING over every control rather than as
+      one string: the empty guard must come first, and every `geo-expand`
+      must sit after it. That covers both branches, and would still catch
+      a third.
+    */
     const detail = codeOnly(src('LocationDetail.tsx'));
-    expect(detail).toMatch(/\{evidence\.empty \? null : \(/);
-    expect(detail).toMatch(/data-paf="geo-expand"/);
+    const guard = detail.indexOf('evidence.empty ? null :');
+    expect(guard).toBeGreaterThan(-1);
+
+    const controls = [...detail.matchAll(/data-paf="geo-expand"/g)].map((m) => m.index ?? -1);
+    expect(controls.length).toBeGreaterThan(0);
+    for (const at of controls) expect(at).toBeGreaterThan(guard);
   });
 });

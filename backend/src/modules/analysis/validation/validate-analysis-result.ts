@@ -31,6 +31,11 @@ import {
 } from './resolve-relational-evidence-assessment.util';
 import { buildRelationalComposition } from './build-relational-composition.util';
 import { deriveTrustState } from './derive-trust-state.util';
+import type { RoleAttribution } from './entity-role-geography.util';
+import {
+  extractEvidenceAttributions,
+  findContradictionsAgainst,
+} from './entity-role-geography.util';
 
 export class AnalysisValidationError extends Error {
   constructor(message: string) {
@@ -150,6 +155,13 @@ function resolveEvidenceBasis(
 interface EvidenceContext {
   evidenceMap: Map<string, string>;
   evidenceTextMap: Map<string, string>;
+  /**
+   * C911-R2 — every (person, role, country) attribution the SUPPLIED EVIDENCE
+   * makes, extracted once per request rather than once per claim. Empty when
+   * the evidence makes no such attribution, in which case no claim can ever be
+   * dropped for this reason.
+   */
+  evidenceAttributions: RoleAttribution[];
   /** Milestone #40 — trusted, request-local assessmentId -> validated assessment map. Never exposed downstream; see resolveRelationalSupport. */
   assessmentsById: Map<string, RelationalEvidenceAssessment>;
 }
@@ -167,6 +179,24 @@ function validateSourcedClaims(
   for (const entry of candidate) {
     const obj = requireObject(entry, field);
     if (!isNonEmptyString(obj.claim)) continue;
+    /*
+      C911-R2 — ENTITY + ROLE + GEOGRAPHY, NOT ENTITY OCCURRENCE.
+
+      The Production error "South Africa's Prime Minister Narendra Modi"
+      passed every check in this file: the words were all present in the
+      evidence, the cited article id was real, and the excerpt was a genuine
+      substring. What none of those measure is whether the RELATION the claim
+      asserts is the relation the evidence attests.
+
+      This drops a claim that attributes a named person to a country the
+      supplied evidence positively attributes elsewhere. It is the same
+      "drop the unsupported bit" rule this function already applies to a claim
+      with zero valid sources, applied to a claim whose sources do not support
+      what it says. Silence in the evidence is never a contradiction, so a
+      claim about a person the evidence never places is untouched.
+    */
+    const contradictions = findContradictionsAgainst(obj.claim, ctx.evidenceAttributions);
+    if (contradictions.length > 0) continue;
     const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, ctx.evidenceMap);
     // A key fact with zero valid supporting sources is not a
     // grounded fact — drop it rather than let it appear as one.
@@ -625,7 +655,16 @@ export function validateAnalysisResult(
     evidenceTextMap,
   );
 
-  const evidenceCtx: EvidenceContext = { evidenceMap, evidenceTextMap, assessmentsById };
+  // C911-R2 — read the evidence's own (person, role, country) attributions
+  // once. Built from context.articles, the exact set the model was shown.
+  const evidenceAttributions = extractEvidenceAttributions(context.articles);
+
+  const evidenceCtx: EvidenceContext = {
+    evidenceMap,
+    evidenceTextMap,
+    assessmentsById,
+    evidenceAttributions,
+  };
 
   if (!isNonEmptyString(obj.headline)) {
     throw new AnalysisValidationError('Missing or empty "headline".');

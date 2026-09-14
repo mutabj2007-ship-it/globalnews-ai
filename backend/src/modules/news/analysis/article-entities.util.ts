@@ -153,7 +153,20 @@ const LOCATION_SUFFIXES = [
   'Valley',
 ];
 
-const PERSON_TITLES = [
+/**
+ * C911-R2 -- NARROW READ-ONLY EXPOSURE.
+ *
+ * entity-role-geography.util.ts validates the ROLE half of an entity/role/
+ * geography attribution and needs exactly this list. It is exposed rather
+ * than copied so there is ONE title table in the repository: a second copy
+ * would drift, and a title present in one list but not the other would mean
+ * person extraction and relation validation disagreed about what a person is.
+ *
+ * Exposed AS READONLY. A caller must be able to read the curated list and
+ * must never be able to extend it -- an added title would silently change
+ * person extraction for every article in the system.
+ */
+export const PERSON_TITLES: readonly string[] = [
   'Ambassador',
   'Chairman',
   'Chairwoman',

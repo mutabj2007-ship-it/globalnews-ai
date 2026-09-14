@@ -11,6 +11,20 @@ import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
  * forward this exact object. Absent for any non-relational request
  * (ordinary M35/M36 generic queries, country/city retrieval).
  */
+/**
+ * EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — the shape of the
+ * development-breadth fact carried to the provider. Mirrors
+ * `DevelopmentBreadth` (validation/brief-compliance.util.ts) exactly.
+ */
+export interface AnalysisDevelopmentBreadth {
+  /** Distinct stories after duplicate clustering. */
+  readonly clusters: number;
+  /** Distinct editorial domains across the retrieved set. */
+  readonly categories: number;
+  /** True when a single blended paragraph is NOT an acceptable answer. */
+  readonly multiDevelopment: boolean;
+}
+
 export interface AnalysisRelationalContext {
   x: string;
   y: string;
@@ -41,6 +55,44 @@ export interface AnalysisProviderInput {
   responseLanguage?: LanguageCode;
 
   /**
+   * EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — THE AUTHORITATIVE
+   * BREADTH, MEASURED ONCE.
+   *
+   * This is the value AnalysisService ALREADY computed with
+   * `detectDevelopmentBreadth(deduped)` from the exact `articles` array
+   * carried on this same input, and it is the SAME value
+   * `assessBriefCompliance()` will judge the returned summary against
+   * afterwards. It is not a second measurement and it costs nothing — no
+   * extra provider call, no extra retrieval, no extra clustering pass.
+   *
+   * WHY IT EXISTS. The validator rejected briefs using an arithmetic the
+   * model was never shown: the service knew this evidence set carried N
+   * clusters across M domains, graded the answer against N and M, and told
+   * the model only that it should "organise by material development". The
+   * governing rule of this correction is that THE MODEL AND THE VALIDATOR
+   * MUST RECEIVE THE SAME ALREADY-COMPUTED BREADTH FACT. This field is that
+   * fact travelling to the model.
+   *
+   * It is structurally identical to `DevelopmentBreadth` in
+   * validation/brief-compliance.util.ts, declared here rather than imported
+   * for the same reason `AnalysisRelationalContext` is: the provider contract
+   * does not depend on the validation module.
+   *
+   * ABSENT MEANS NOT MEASURED. The prompt then emits nothing extra and the
+   * request is byte-identical to pre-recovery behaviour, so a provider or a
+   * caller that never sets this is completely unaffected.
+   */
+  developmentBreadth?: AnalysisDevelopmentBreadth;
+
+  /**
+   * @deprecated EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — NOT SUPPLIED
+   * BY ANY CALLER. The synchronous repair was removed by Alpha Budget R1
+   * (`shared/src/analysis-budget.ts` derives the total WITHOUT it), so
+   * AnalysisService never sets this field. The plumbing is retained, not
+   * removed: it is the declared shape a governed ASYNCHRONOUS repair would
+   * reuse, and deleting it would be a wider change than this correction needs.
+   * Treat it as dead on the synchronous path.
+   *
    * PO ruling D (C906) — the ONE targeted repair the service may request when
    * a brief fails the structural compliance check.
    *

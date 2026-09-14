@@ -1,3 +1,4 @@
+import type { AnalysisDevelopmentBreadth } from '../interfaces/analysis-provider.interface';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 
 /**
@@ -339,13 +340,15 @@ Strict rules:
   into a single sentence.
   Every rule above about geographic scope, invention and interpretation binds
   this field exactly as strictly as keyFacts.
-  THIS REQUIREMENT IS CHECKED AFTER YOU ANSWER, NOT MERELY REQUESTED. When the
-  supplied evidence covers several distinct developments across different
-  domains, a single blended paragraph is rejected and you will be asked once to
-  re-organise the same analysis. Writing it correctly the first time is the
-  only way to avoid that, and padding a thin evidence set to look structured
-  fails for a different reason — the number of paragraphs must follow the
-  evidence, not a target.
+  THIS REQUIREMENT IS CHECKED AFTER YOU ANSWER, NOT MERELY REQUESTED, AND
+  THERE IS NO SECOND ATTEMPT. When the supplied evidence covers several
+  distinct developments across different domains, a single blended paragraph
+  is REJECTED AND THE EXECUTIVE BRIEF IS WITHHELD FROM THE READER ENTIRELY.
+  You are not asked to re-organise it and you do not get to revise it. The
+  rest of your analysis is still shown, so a blended paragraph does not
+  produce a weaker brief — it produces NO brief. Padding a thin evidence set
+  to look structured fails for a different reason — the number of paragraphs
+  must follow the evidence, not a target.
 - For keyFacts, agreements, differences (each position), and timeline
   entries, you may optionally include "evidenceBasis": an object with
   "evidenceId" (one of the exact evidenceId values you already cited for
@@ -459,6 +462,93 @@ ${articleBlocks}
 Produce the structured analysis now.`;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * THE MEASURED-BREADTH SECTION — EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-
+ * RECOVERY-1
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * THE GOVERNING RULE OF THIS CORRECTION: the model and the validator must
+ * receive the SAME already-computed breadth fact. This function is the model's
+ * end of that rule. `assessBriefCompliance()` is the validator's end, and it
+ * is unchanged.
+ *
+ * ── WHY THIS IS NOT THE WORDING-ONLY CHANGE C906 FORBADE ───────────────────
+ *
+ * C906 ruling D: "The C905 prompt already asks for multiple paragraphs,
+ * therefore DO NOT report another wording-only prompt change as a fix." That
+ * reasoning is correct and is preserved here. This does not ask harder. It
+ * supplies a FACT the model did not previously have — the cluster and domain
+ * counts THIS evidence set carries, computed by the same function that grades
+ * the answer — and it states the real consequence, which the base prompt
+ * previously stated incorrectly (it promised a repair request that Alpha
+ * Budget R1 removed).
+ *
+ * ENFORCEMENT IS STILL THE GUARANTEE, NOT THIS TEXT. A brief that ignores
+ * this section is refused by `assessBriefCompliance()` exactly as before. No
+ * threshold moved, and nothing here can make a non-compliant brief pass.
+ *
+ * ── TWO BEHAVIOURS, BECAUSE THE RULING HAS TWO HALVES ──────────────────────
+ *
+ * The ruling protects narrow questions as explicitly as it demands structure
+ * from broad ones: "narrow/single-story questions remain allowed to produce
+ * one paragraph." So a narrow set is told it is narrow and that one paragraph
+ * is a correct answer. A generic instruction firm enough to fix the broad case
+ * would push the narrow case into padding — the same failure wearing
+ * structure, which is precisely what the ruling's no-quota clause forbids.
+ *
+ * ── ABSENT MEANS SILENT ────────────────────────────────────────────────────
+ *
+ * Undefined returns the empty string, so a caller that does not measure
+ * breadth produces a byte-identical prompt to pre-recovery behaviour.
+ */
+export function buildDevelopmentBreadthSection(
+  breadth?: AnalysisDevelopmentBreadth,
+): string {
+  if (breadth === undefined) {
+    return '';
+  }
+
+  if (!breadth.multiDevelopment) {
+    return (
+      `\n\nMEASURED EVIDENCE BREADTH FOR THIS REQUEST: ${breadth.clusters} distinct reporting ` +
+      `cluster(s) across ${breadth.categories} editorial domain(s). This count was computed from ` +
+      'the exact articles supplied below.\n\nTHIS IS A NARROW EVIDENCE SET. One well-written ' +
+      'paragraph is a correct and fully accepted answer here. Do NOT pad it into a ' +
+      'multi-paragraph shape the evidence does not earn — the number of paragraphs must follow ' +
+      'the evidence, not a target.'
+    );
+  }
+
+  /*
+    C910 - THIS SECTION NOW DESCRIBES THE FIELDS THE SCHEMA ACTUALLY ASKS FOR.
+
+    Two C909 sentences are corrected, and only those two. "There is no target
+    count" argued against the requirement stated immediately above it, and the
+    reference to a `summary` field is wrong here because the multi-development
+    schema does not contain one. Everything else C909 said is kept verbatim in
+    substance - the WITHHELD consequence, the absence of a second attempt, the
+    blank-line separator and the anti-padding rule - because the contract asked
+    for a structural guarantee, not for a quieter prompt.
+  */
+  return (
+    `\n\nMEASURED EVIDENCE BREADTH FOR THIS REQUEST: ${breadth.clusters} distinct reporting ` +
+    `clusters across ${breadth.categories} editorial domains. This count was computed from the ` +
+    'exact articles supplied below, by the same check that will grade your answer.\n\n' +
+    'HOW THE BRIEF IS REQUESTED HERE: not as one "summary" field, but as two required fields, ' +
+    '"primaryDevelopment" and "additionalDevelopments". Every earlier rule about the brief binds ' +
+    'their combined content. They must cover DIFFERENT material developments: do not restate one ' +
+    'in both, and do not split one across them. Where a field carries more than one development, ' +
+    'separate them with a BLANK LINE.\n\n' +
+    'THE CONSEQUENCE, STATED PLAINLY: if the brief still reads as a single paragraph for this ' +
+    'evidence set, it is WITHHELD from the reader entirely - there is no repair request, no ' +
+    'second attempt and no opportunity to revise.\n\n' +
+    `DO NOT PAD: ${breadth.clusters} clusters do not mean ${breadth.clusters} developments. Cover ` +
+    'what the evidence establishes and nothing more, and do not pad a thin strand into a second ' +
+    'development. An honest short second field is correct; an invented one is not.'
+  );
+}
+
 export function buildAnalysisMessages(
   query: string,
   articles: NewsArticle[],
@@ -466,6 +556,7 @@ export function buildAnalysisMessages(
   relationalContext?: RelationalPromptContext,
   responseLanguage: LanguageCode = 'en',
   repairDirective?: string,
+  developmentBreadth?: AnalysisDevelopmentBreadth,
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
@@ -473,6 +564,13 @@ export function buildAnalysisMessages(
       BASE_SYSTEM_PROMPT +
       buildRelationalPromptSection(relationalContext) +
       buildResponseLanguageInstruction(responseLanguage) +
+      /*
+        EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — the measured breadth,
+        appended by the same mechanism and for the same reason as the sections
+        above it: never substituted, so every rule above still binds. Empty
+        string when breadth was not measured.
+      */
+      buildDevelopmentBreadthSection(developmentBreadth) +
       /*
         PO ruling D (C906) — APPENDED LAST, AND ONLY ON A REPAIR.
         Last so it is the most recent thing the model reads, and appended
@@ -540,7 +638,48 @@ const RESPONSE_LANGUAGE_NAMES: Record<LanguageCode, string> = {
  * still exposes "sourceArticleIds" containing REAL article IDs — that
  * translation happens entirely in the validator, never here.
  */
-export function buildAnalysisJsonSchema(): Record<string, unknown> {
+/**
+ * ============================================================================
+ * C910 - THE FIRST-PASS STRUCTURAL GUARANTEE LIVES IN THE SCHEMA
+ * ============================================================================
+ *
+ * WHY THE SCHEMA AND NOT MORE PROMPT. C909 supplied the measured breadth to the
+ * model and stated the consequence in prose. Production then withheld the brief
+ * for "Zambia" anyway - 6 clusters across 3 domains, one paragraph. The reason
+ * was measured, not guessed: this is a `strict: true` structured-output call, the
+ * prompt tells the model "Output must be valid JSON matching the provided schema
+ * exactly", and the schema declared `summary` an unconstrained string. The only
+ * statement of the requirement lived in the one channel the model was told was
+ * advisory.
+ *
+ * So the requirement moves into the channel that is already binding. When the
+ * evidence is multi-development the brief is requested as TWO REQUIRED fields.
+ * Under `strict: true` with `additionalProperties: false` every declared property
+ * must be present, so a single undivided brief is not expressible.
+ *
+ * THIS IS NOT A PARAGRAPH QUOTA, and the C906 ruling that forbids one is intact.
+ * Two fields is exactly the validator's own threshold (`paragraphs >= 2`), not one
+ * field per reporting cluster. Six clusters do not become six paragraphs; the model
+ * still decides how the evidence divides, and `additionalDevelopments` may itself
+ * carry several paragraphs or one.
+ *
+ * NARROW EVIDENCE IS UNTOUCHED. When `multiDevelopment` is false - and when no
+ * breadth is supplied at all - the schema is byte-identical to C909's: one
+ * `summary` string. A narrow question cannot be pushed into a shape it has not
+ * earned, because it is never asked for one.
+ *
+ * NOTHING DOWNSTREAM SEES THIS. `normalizeBriefFields()` joins the two fields with
+ * a blank line into the existing `summary` string before the result leaves the
+ * provider, so `validateAnalysisResult`, the compliance validator, the shared
+ * contract and the frontend all receive exactly what they receive today.
+ *
+ * NO UNSUPPORTED KEYWORD. `minItems` is deliberately not used: OpenAI strict
+ * structured outputs support only a subset of JSON Schema and array cardinality
+ * has not been part of it. Required named properties need no such keyword.
+ */
+export function buildAnalysisJsonSchema(
+  developmentBreadth?: AnalysisDevelopmentBreadth,
+): Record<string, unknown> {
   /**
    * Milestone #32 — model-facing evidence-basis shape. Nullable +
    * listed in `required` per OpenAI strict-mode structured-output
@@ -713,6 +852,32 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
     additionalProperties: false,
   };
 
+  /*
+    C910 - the brief's shape, chosen from the SAME measured breadth the compliance
+    validator will judge the answer against. One fact, three consumers: the prose
+    section, this schema, and the verdict.
+  */
+  const multiDevelopment = developmentBreadth?.multiDevelopment === true;
+
+  const briefProperties: Record<string, unknown> = multiDevelopment
+    ? {
+        primaryDevelopment: {
+          type: 'string',
+          description:
+            'The single most significant material development the supplied evidence establishes, written as readable prose. This field and "additionalDevelopments" must cover DIFFERENT material developments - do not restate the same development in both, and do not split one development across them.',
+        },
+        additionalDevelopments: {
+          type: 'string',
+          description:
+            'The OTHER material developments the supplied evidence establishes, distinct from the one in "primaryDevelopment". Separate them from each other with a blank line where there is more than one. There is no required number: cover what the evidence actually establishes and nothing more. Do NOT pad, do NOT invent a second development, and do NOT emit one per article or per source - if the evidence genuinely supports only a thin second strand, say so plainly and briefly rather than inflating it.',
+        },
+      }
+    : { summary: { type: 'string' } };
+
+  const briefRequired: string[] = multiDevelopment
+    ? ['primaryDevelopment', 'additionalDevelopments']
+    : ['summary'];
+
   return {
     name: 'news_analysis',
     strict: true,
@@ -721,7 +886,8 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
       properties: {
         query: { type: 'string' },
         headline: { type: 'string' },
-        summary: { type: 'string' },
+        // C910 - one `summary` string, or the two required brief fields.
+        ...briefProperties,
         keyFacts: { type: 'array', items: sourcedClaim },
         /** Milestone #62 Phase 1 — reuses the exact sourcedClaim shape, no new schema family. */
         context: { type: 'array', items: sourcedClaim },
@@ -816,7 +982,9 @@ export function buildAnalysisJsonSchema(): Record<string, unknown> {
       required: [
         'query',
         'headline',
-        'summary',
+        // C910 - must mirror briefProperties exactly: under `strict: true` every
+        // declared property has to appear in `required`.
+        ...briefRequired,
         'keyFacts',
         'context',
         'relevance',

@@ -36,6 +36,7 @@ import {
   acceptExecutiveBrief,
   withholdExecutiveBrief,
 } from '../validation/brief-fail-closed.util';
+import { applyBriefRelationIntegrity } from '../validation/entity-role-geography.util';
 import {
   buildRegionScope,
   memberIso3WithEvidence,
@@ -1994,6 +1995,21 @@ export class AnalysisService {
             // prompt to pre-Milestone-#47 behavior — see
             // buildResponseLanguageInstruction()'s own doc comment.
             responseLanguage: requestedLanguage,
+            /*
+              EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — THE SAME
+              `developmentBreadth` COMPUTED ABOVE, AND THE SAME ONE HANDED TO
+              `assessBriefCompliance()` BELOW.
+
+              It is the one variable, referenced twice. It cannot disagree with
+              the verdict because there is only one of it, and it cannot cost
+              anything because it was already computed from this exact
+              `deduped` array before the call.
+
+              This is the whole of the correction at this call site: no second
+              provider call, no second measurement, no change to retrieval, and
+              no change to what happens to a non-compliant answer.
+            */
+            developmentBreadth,
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;
@@ -2056,7 +2072,37 @@ export class AnalysisService {
             exactly as before: the analysis and the one repair.
           */
           let analysisResult = analysis;
-          const briefVerdict = assessBriefCompliance(analysis.summary, developmentBreadth);
+          /*
+            C911-R11 -- TWO COMPLIANCE QUESTIONS, ONE VERDICT, ONE VOCABULARY.
+
+            STRUCTURE, unchanged: does the paragraph shape match the measured
+            evidence breadth. This is the accepted C906/C910 check and neither
+            its threshold nor its inputs move here.
+
+            RELATION INTEGRITY, new: does the brief positively CONTRADICT the
+            evidence it was generated from on an entity + role + geography
+            relationship. The reported Production defect --
+            "South Africa's Prime Minister Narendra Modi" -- was a brief that
+            passed structure and contradicted its own sources.
+
+            `deduped` is the exact array the provider was given above and
+            the exact array `validateAnalysisResult` grounds against, so the brief
+            is judged against precisely the evidence the model saw. It is the
+            one variable, referenced again -- no second measurement.
+
+            NO NEW STATE. A brief that fails either question is
+            `withheld-non-compliant`, which is what a known non-compliant brief
+            has always been. NO SECOND PROVIDER CALL, no repair request, no
+            retrieval, and no rewriting of generated prose: this returns a
+            verdict and `withholdExecutiveBrief()` below does exactly what it
+            already does. Fail closed rather than fabricate.
+          */
+          const structuralVerdict = assessBriefCompliance(analysis.summary, developmentBreadth);
+          const briefVerdict = applyBriefRelationIntegrity(
+            structuralVerdict,
+            analysis.summary,
+            deduped,
+          );
           /*
             ══════════════════════════════════════════════════════════════════
             THE REPAIR IS NO LONGER ON THE SYNCHRONOUS PATH — ALPHA BUDGET R1

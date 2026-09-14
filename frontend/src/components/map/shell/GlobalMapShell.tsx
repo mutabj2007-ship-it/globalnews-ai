@@ -544,10 +544,63 @@ export function GlobalMapShell({
     dispatch({ kind: 'focus-bounds', bounds: evidenceBounds });
   }, [evidenceBounds]);
 
-  const onJump = useCallback((target: JumpTarget) => {
-    /* Part II §3: "Search and breadcrumbs call focus." */
-    dispatch({ kind: 'focus-bounds', bounds: target.bounds });
-  }, []);
+  const onJump = useCallback(
+    (target: JumpTarget) => {
+      /*
+        ══ C911-V2 — A JUMP MOVES THE CAMERA *AND* THE SELECTION ═══════════
+
+        MEASURED IN PRODUCTION. Selecting RWANDA from JUMP TO VALIDATION STATE
+        changed the URL, the camera and the country highlight, and the
+        intelligence rail went on saying "World view" over Poland's evidence.
+        No Rwanda evidence ever loaded.
+
+        THE CAUSE WAS HERE, AND IT WAS ONE LINE. This callback dispatched
+        `focus-bounds` and nothing else, so a jump could only ever move a
+        camera. Every other selection path — a map click, a search result, the
+        context panel — goes through `onSelectionChange`, which is what
+        actually resolves the country, clears the card filters and triggers the
+        retrieval that fills the rail. The jump path was the one entry point
+        that never joined it.
+
+        THIS IS THE M16 DEFECT, ONE ROUTE LATER. M16 fixed exactly this shape
+        for a search REGION result — "selects nothing" had been implemented as
+        "changes nothing", leaving the previous country behind. The same repair
+        is applied here, in the same two branches and for the same reasons.
+
+        A COUNTRY TARGET SELECTS, AND DOES NOT ALSO FOCUS. The selection-fit
+        effect frames a selected country through `selectionCameraFor`, which
+        carries the accepted antimeridian exceptions and is resolved against
+        the real viewport. Dispatching `focus-bounds` as well would produce
+        TWO camera commits and TWO history entries for one click, and Previous
+        View would land on an intermediate frame nobody saw — the precise
+        regression the search path documents immediately below.
+
+        A TARGET ABOVE COUNTRY SCALE CLEARS AN INCOMPATIBLE SELECTION. Jumping
+        to East Africa while Poland is selected must not leave the rail
+        describing Poland. Clearing is not a new selection: `null` is the same
+        signal `reset-world` already sends.
+
+        THE CITY RUNG IS DELIBERATELY UNTOUCHED. Kigali sits INSIDE Rwanda, so
+        clearing a Rwanda selection to move to Kigali would destroy a
+        compatible, correct state. A city is not a selectable evidence
+        geography either, so it selects nothing and simply focuses — exactly
+        what it did before this correction.
+      */
+      if (target.rung === 'COUNTRY' && target.countryIso3) {
+        onSelectionChange?.({ kind: 'COUNTRY', id: target.countryIso3 });
+
+        return;
+      }
+
+      if (target.rung !== 'CITY' && selection !== null && selection !== undefined) {
+        onSelectionChange?.(null);
+      }
+
+      /* Part II §3: "Search and breadcrumbs call focus." */
+      dispatch({ kind: 'focus-bounds', bounds: target.bounds });
+    },
+    [onSelectionChange, selection],
+  );
 
   const onSelectSearchResult = useCallback(
     (result: PlaceResult) => {
@@ -1347,6 +1400,26 @@ export function GlobalMapShell({
           configured. With none configured the control is UNAVAILABLE with that
           reason attached, which is a different statement from OFF.
         */}
+        {/*
+          ── R3 · THE HUD PROFILE IS AUTHORITATIVE IN THE DOM, NOT ONLY IN
+          THE TABLE ───────────────────────────────────────────────────────
+
+          This cluster mounted UNCONDITIONALLY. `mapState.ts` says surfaces
+          "declare a density and an evidence scope, and the shell DERIVES
+          the HUD" — but two mounts in this file were never asked. The
+          consequence was measured in the Analysis EMBED: a Globe/Layers/3D
+          cluster and a zoom stack rendered inside a 263px rail, colliding
+          with the attribution and with each other, and every one of them
+          dead because EMBED is `interactive: false`.
+
+          `hud.interactive` IS THE RIGHT QUESTION, and it is minimal:
+          this cluster is a set of CONTROLS, and a surface that declares
+          itself non-interactive has no business rendering one. Only MINI
+          and EMBED declare `interactive: false`; PANEL, FULL and MODAL are
+          all `true`, so their DOM is unchanged — FULL included, which is
+          why this is a gate rather than a redesign.
+        */}
+        {hud.interactive && (
         <MapControlCluster
           label={shell.lowerLeftControlsLabel}
           globeLocator={
@@ -1391,6 +1464,7 @@ export function GlobalMapShell({
             />
           }
         />
+        )}
 
         {/*
           THE SELECTION CALLOUT — inside the canvas region, so it is placed in
@@ -1503,6 +1577,30 @@ export function GlobalMapShell({
           the readout, so a density that shows no readout renders the strip alone
           and the stack simply has one child.
         */}
+        {/*
+          ── R3 · THE THIRD UNCONDITIONAL MOUNT, FOUND BY MEASURING ────────
+
+          Not in the CTO's R2 list, because R2's 52px box was too small to
+          show it. Measured in the rendered EMBED at 263x104: this island
+          printed "Rings hidden at this scale" at x=130 in a 261px box, so
+          it both leaked HUD text into a non-interactive surface AND ran
+          155px wide from x=130 — past the right edge of the map itself.
+
+          THE GATE IS `hud.interactive`, NOT `hud.readout`. `hud.readout`
+          would have been the narrower-looking answer and it is the wrong
+          one: PANEL declares `readout: false`, so gating on it would strip
+          the change strip from PANEL too, which is a surface this round is
+          not authorised to touch. `interactive` is true for PANEL, FULL and
+          MODAL and false for MINI and EMBED — the same partition the two
+          corrections above use, so this removes the island from exactly the
+          two densities that declare themselves pictures and from no other.
+          `hud.readout` still gates the readout INSIDE it, unchanged.
+
+          It belongs behind that gate on its own terms as well: the strip
+          reports what the CURRENT ZOOM is hiding, which is a sentence only
+          a reader who can zoom can act on.
+        */}
+        {hud.interactive && (
         <div
           data-gn-hud-reserve
           className={`${HUD_ISLAND} absolute right-[12px] top-[12px] z-20 flex max-w-[46%] flex-col items-end gap-[6px]`}
@@ -1519,6 +1617,7 @@ export function GlobalMapShell({
             <MapReadout camera={session.camera} mode={mode} period={period} labels={spatial.readout} />
           )}
         </div>
+        )}
 
         {hud.legend && (
           <div data-gn-hud-reserve className={`${HUD_ISLAND} absolute bottom-[128px] left-[12px] z-20`}>
@@ -1532,8 +1631,39 @@ export function GlobalMapShell({
           </div>
         )}
 
-        {hud.precisionBanner && (
-          <div data-gn-hud-reserve className={`${HUD_ISLAND} absolute bottom-[12px] left-[12px] z-20`}>
+        {/*
+          ── R3 · TWO BOTTOM ISLANDS CANNOT SHARE A 261px ROW ───────────────
+
+          MEASURED in the rendered EMBED at 263x104: the banner occupied
+          x 13..262 / y 24..91 and the attribution x 1..250 / y 46..91 — an
+          overlap of 10,665px², with the licence text printed through the
+          trust statement. The CTO's R2 list requires "no overlapping
+          attribution/HUD text", and this is why it happened: the banner is
+          bottom-LEFT and the attribution bottom-RIGHT, each about 249px
+          wide, in a map 261px wide. At that width the corners are the same
+          corner, and no amount of re-offsetting separates them.
+
+          THE FIX IS FLOW, NOT A NEW OFFSET — the same correction the
+          top-right island already carries a note about. Where the surface
+          is non-interactive the bottom HUD is ONE COLUMN: trust statement,
+          then licence line beneath it. Two boxes in a flex column cannot
+          overlap at any width or in any language, so this does not have to
+          be re-measured for Polish, and it cannot regress when a label
+          changes length.
+
+          INTERACTIVE DENSITIES ARE NOT TOUCHED. PANEL, FULL and MODAL keep
+          the bottom-right island with the deck, the camera controls and the
+          attribution exactly where they were — those surfaces are wide
+          enough for two corners to be two corners.
+        */}
+        {(hud.precisionBanner || !hud.interactive) && (
+          <div
+            data-gn-hud-reserve
+            className={`${HUD_ISLAND} absolute bottom-[12px] left-[12px] z-20 ${
+              hud.interactive ? '' : 'right-[12px] flex flex-col items-start gap-[6px]'
+            }`}
+          >
+            {hud.precisionBanner && (
             <PrecisionBanner
               precision={selectedTotal?.finestPrecision}
               provenance={selectedProvenance}
@@ -1545,6 +1675,23 @@ export function GlobalMapShell({
               }
               labels={spatial.banner}
             />
+            )}
+            {/*
+              R3 · THE LICENCE LINE, IN THE COLUMN RATHER THAN THE OPPOSITE
+              CORNER. Same element, same text, same CC BY 4.0 obligation —
+              only its parent differs, and only where the surface is a
+              picture. It keeps `text-left` here because a right-aligned
+              line under a left-aligned banner reads as a second island
+              again.
+            */}
+            {!hud.interactive && (
+              <p
+                data-gn="map-attribution"
+                className="pointer-events-none max-w-full text-left font-gn-mono text-[8px] leading-[1.4] text-sp-ink-3/70"
+              >
+                {spatial.attribution}
+              </p>
+            )}
           </div>
         )}
 
@@ -1640,6 +1787,24 @@ export function GlobalMapShell({
               hasWatch={false}
             />
           )}
+          {/*
+            ── R3 · SAME CORRECTION, SAME REASONING ────────────────────────
+
+            This stack is zoom in/out, Previous view, Reset evidence and
+            Reset world. EMBED declares all four false and this mounted
+            them anyway; the file was already consulting the profile one
+            line down (`hud.resetEvidence ? … : undefined`), so the shape
+            of the answer was here — it just had not been asked of the
+            mount.
+
+            THE CONDITION IS EXACT RATHER THAN APPROXIMATE. Across the five
+            densities these four flags move together: MINI and EMBED have
+            all four false, PANEL, FULL and MODAL have all four true. So
+            "mount when any is enabled" mounts precisely the same component
+            for every density that had it before — FULL's DOM is untouched
+            — and removes it only where nothing inside it was ever live.
+          */}
+          {(hud.zoomControls || hud.resetWorld || hud.resetEvidence || hud.previousView) && (
           <MapCameraControls
             availability={availability}
             onIntent={onIntent}
@@ -1654,17 +1819,28 @@ export function GlobalMapShell({
               zoomOut: shell.zoomOut,
             }}
           />
+          )}
           {/*
             ATTRIBUTION IS A LICENCE OBLIGATION, NOT A NICETY. G's §8: GeoNames
             is CC BY 4.0, which REQUIRES attribution wherever the data is
             presented. Diagnostic register, permanent, not dismissible.
+
+            R3 · STILL UNCONDITIONAL AS AN OBLIGATION, RELOCATED AS A BOX.
+            The condition here is not "whether to attribute" — it is "which
+            island this surface's attribution lives in". Non-interactive
+            densities render the identical element inside the bottom-left
+            HUD column above, which is the only arrangement that fits a
+            261px map. Exactly one `map-attribution` renders at every
+            density, and a spec asserts that.
           */}
+          {hud.interactive && (
           <p
             data-gn="map-attribution"
             className="pointer-events-none max-w-[300px] text-right font-gn-mono text-[8px] leading-[1.4] text-sp-ink-3/70"
           >
             {spatial.attribution}
           </p>
+          )}
         </div>
 
         {children}

@@ -21,6 +21,7 @@ import { buildBriefModel, buildBriefTelemetry } from './briefModel';
 import { resolveFrameEvidence, type FrameEvidenceState } from './analysisFrameState';
 import { TrustSummaryLine } from './TrustSummaryLine';
 import { buildEvidenceGeography } from './evidenceGeography';
+import { buildAnalysisSpatialEvidence } from './spatialEvidenceAdapter';
 import { buildRelationalEvidence } from './relationalEvidence';
 import { resolveLocationImage } from './locationAssets';
 import { buildGeographicEvidenceState } from './geographicEvidenceState';
@@ -135,6 +136,21 @@ export function AnalysisFrame({
    * about what the evidence says.
    */
   const evidenceGeography = useMemo(() => buildEvidenceGeography(response), [response]);
+
+  /*
+    ANALYSIS-SPATIAL-MAP-CONVERGENCE-1 — the SAME evidence, in the shared
+    shell's vocabulary. Adapted here because the adapter reads the
+    response's articles for real publication times and distinct publisher
+    counts, and this is where the response is. Memoised on the same input,
+    so it recomputes exactly when the evidence model does.
+
+    NO REQUEST IS MADE. `buildAnalysisSpatialEvidence` is a pure function
+    of a response that has already arrived.
+  */
+  const spatialEvidence = useMemo(
+    () => buildAnalysisSpatialEvidence(evidenceGeography, response),
+    [evidenceGeography, response],
+  );
 
   /*
    * R4.2 — relational evidence, grouped by articleId. Derived from the
@@ -1322,6 +1338,7 @@ export function AnalysisFrame({
           <LocationDetail
             retrievalContext={response.retrievalContext}
             evidence={evidenceGeography}
+            spatialEvidence={spatialEvidence}
             activeIso3={activeEvidenceIso3}
             insufficientEvidence={model.insufficientEvidence}
             compressed={compressed}

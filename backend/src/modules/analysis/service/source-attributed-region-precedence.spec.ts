@@ -261,6 +261,7 @@ describe('REV B · B3 — the article anchor still outranks this intent', () => 
 
     await h.service.analyzeNews('What does KT Press report about East Africa?', 'en', {
       articleId: 'kt-1',
+      title: KTPRESS_EAST_AFRICA.title,
     });
 
     /*
