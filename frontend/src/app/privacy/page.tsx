@@ -1,8 +1,10 @@
 import { cookies } from 'next/headers';
+import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
 /**
  * B2 — Public Legal Surfaces. Mirrors the homepage's own server-side
@@ -15,6 +17,28 @@ import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages
  * client' directive (unlike /history, which needs one for its own
  * account-fetching behavior).
  */
+/*
+ * ALPHA-SEO-FOUNDATION-1 — metadata for a public canonical surface.
+ *
+ * Title and description come from the SAME dictionary section the page
+ * already renders, in the SAME language the page already resolved. No
+ * new copy is authored here and no string is truncated: a shortened
+ * description is a different description, and §E/§G's rule against
+ * fabricated metadata applies to prose as much as to dates.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
+  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const t = getDictionary(language).privacyPage;
+
+  return buildPageMetadata({
+    path: '/privacy',
+    title: `${t.title} \u2014 GlobalNews AI`,
+    description: t.intro,
+    language,
+  });
+}
+
 export default async function PrivacyPage(): Promise<JSX.Element> {
   const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';

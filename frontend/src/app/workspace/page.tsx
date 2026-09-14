@@ -1,4 +1,9 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import type { Metadata } from 'next';
+import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 
@@ -206,6 +211,33 @@ function CapabilityCard({ module }: { module: CapabilityModule }): JSX.Element {
   }
 
   return <div>{content}</div>;
+}
+
+/*
+ * ALPHA-SEO-FOUNDATION-1 — EXCLUDED IN R1, AND FLAGGED FOR MAIN.
+ *
+ * §B lists "personalized workspaces" among the surfaces that must not
+ * become discovery surfaces. This page as built is not personalized — it
+ * is a static capability list with no account call and no user state — so
+ * the §B category and the actual content disagree, and resolving that
+ * disagreement is an indexability-policy decision governance reserves to
+ * Main rather than one H may take.
+ *
+ * H therefore excludes it, because wrongly indexing a surface is harder to
+ * withdraw than wrongly excluding one. If Main rules it public the change
+ * is one field in `lib/seo/routes.ts` and nothing here moves.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
+  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const t = getDictionary(language);
+
+  return buildPageMetadata({
+    path: '/workspace',
+    title: t.homeMetaTitle,
+    description: t.homeMetaDescription,
+    language,
+  });
 }
 
 export default function HomePage(): JSX.Element {

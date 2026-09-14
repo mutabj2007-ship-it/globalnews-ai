@@ -7,6 +7,7 @@ import { SearchPageClient } from '@/components/search/SearchPageClient';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
 /**
  * M65 — resolves the language exactly as the homepage and the map route
@@ -27,11 +28,26 @@ function resolvePageLanguage(): 'en' | 'pl' {
  * established rather than introducing a parallel one.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const t = getDictionary(resolvePageLanguage());
-  return {
+  const language = resolvePageLanguage();
+  const t = getDictionary(language);
+  /*
+    ALPHA-SEO-FOUNDATION-1 — THE TITLE AND DESCRIPTION ARE UNCHANGED; what
+    is added is the `noindex, nofollow` directive §B requires for
+    "arbitrary /search result pages" and "arbitrary user natural-language
+    question result pages".
+
+    This surface renders one person's question and the analysis produced
+    for it. There is no stable public document here to be the canonical
+    home of anything, so the builder emits no canonical and no `og:url`
+    either — a canonical tag would nominate a transient URL as published
+    content.
+  */
+  return buildPageMetadata({
+    path: '/search',
     title: t.searchMetaTitle,
     description: t.searchMetaDescription,
-  };
+    language,
+  });
 }
 
 export default function SearchPage(): JSX.Element {

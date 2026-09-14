@@ -23,6 +23,7 @@ import {
 import { withDerivedEvidenceFields } from './identity/geographic-precision.util';
 import {
   filterToRequestedSource,
+  isAttributableToRequestedSource,
   type RequestedSource,
 } from './identity/requested-source.util';
 import { resolvePrimaryCountry } from './country/country-relevance.util';
@@ -96,6 +97,52 @@ type ActiveRelevanceMode = Exclude<RelevanceMode, { type: 'none' }>;
 
 const NO_RELEVANCE_FILTERING: RelevanceMode = { type: 'none' };
 
+/**
+ * FALLBACK-PEER-TAIL-LATENCY-1 R1 — THE ONLY TUNABLE THIS CORRECTION ADDS.
+ *
+ * THE MEASURED DEFECT. `callProviderSet()` awaits `Promise.allSettled`, so a
+ * tier is exactly as slow as its slowest member. In the live Alpha the
+ * Publisher Feeds connector produced usable evidence in ~140 ms and the
+ * request still took 13.331 s, because GDELT DOC was in the same fallback
+ * fan-out. GDELT's worst-case contribution to one request is not its 8 s
+ * deadline alone: `MIN_REQUEST_SPACING_MS` (5 500) is awaited BEFORE that
+ * deadline is armed, so the true bound is 13 500 ms.
+ *
+ * THIS IS NOT A PROVIDER TIMEOUT AND MUST NEVER BECOME ONE. It does not
+ * cancel anything. GDELT's 8 s deadline, its 5.5 s spacing rule, its 60 s
+ * cooldown and its no-retry behaviour are untouched — a peer we stop awaiting
+ * runs to its own completion and keeps its own semantics entirely. All this
+ * constant decides is how long a request that ALREADY HAS ADMISSIBLE EVIDENCE
+ * keeps waiting for a straggler that might add more.
+ *
+ * PROVISIONAL ALPHA VALUE, approved as such and deliberately isolated here so
+ * it can be tuned from one line after Railway GDELT TTFB measurement.
+ */
+const PEER_TAIL_GRACE_MS = 1500;
+
+/**
+ * R1 — WHAT "USABLE" MEANS IS THE REQUEST'S OWN BUSINESS, NOT THIS MODULE'S.
+ *
+ * THE CORRECTION THIS ENCODES. The first proposal started the grace on
+ * `articles.length > 0` — raw articles from a settled peer. That is wrong, and
+ * wrong in the one way that matters: in the Search path, relevance admission
+ * and the requested-source constraint both run AFTER the fan-out, so raw
+ * articles routinely include records the request is about to discard. Starting
+ * a cutoff on them would abandon a slow peer carrying the only genuinely
+ * admissible evidence — trading a latency defect for an evidence defect.
+ *
+ * So the caller supplies `admits`, built from the SAME authorities that will
+ * judge these articles a few lines later: `scoreByMode()` for the active
+ * relevance mode, and `isAttributableToRequestedSource()` for the source
+ * constraint. No second scoring system exists, and none may be introduced
+ * here — this interface deliberately cannot express a rule of its own.
+ */
+interface PeerTailPolicy {
+  /** True only for an article the request's existing admission rules accept. */
+  readonly admits: (article: NewsArticle) => boolean;
+  readonly graceMs: number;
+}
+
 interface ProviderCallResult {
   results: Array<{
     providerId: string;
@@ -108,6 +155,24 @@ interface ProviderCallResult {
    * — buildResponse and resolveFallbackReason — is byte-for-byte unaffected.
    */
   failures: ProviderFailure[];
+  /**
+   * R1 — PEERS WE CHOSE NOT TO AWAIT. DELIBERATELY NOT A FAILURE.
+   *
+   * WHY THIS IS ITS OWN CHANNEL AND NOT A ProviderFailure. The failures list is
+   * consumed OPERATIONALLY by AnalysisService: a recorded failure suppresses
+   * the bounded secondary generic fallback, on the sound reasoning that
+   * re-asking a provider that just refused earns the same refusal. A peer we
+   * stopped waiting for did not refuse anything — it is still running, and it
+   * may well succeed. Filing it as a failure would teach the rest of the
+   * product something untrue and would suppress a retry that is still worth
+   * making.
+   *
+   * It is equally NOT in `failedProviderIds`, so the public `fallbackReason`
+   * cannot move, and it is never passed to `attachProviderFailures()`, so it
+   * never reaches the Analysis side-channel at all. Backend-internal,
+   * request-scoped, and for logging and assertions only.
+   */
+  notAwaitedProviderIds: string[];
   /**
    * G-ALPHA-1 — WAS THE FALLBACK TIER ALREADY ASKED ON THIS CALL?
    *
@@ -430,7 +495,56 @@ export class NewsService {
         lang: provider.id === 'gnews' ? gnewsSearchLang : options?.lang,
       });
 
-    const providerCall = await this.callAllProviders(searchOperation, 'search');
+    /*
+     * R1 — THE ADMISSION RULE, BUILT FROM THE AUTHORITIES THAT WILL JUDGE
+     * THESE ARTICLES ANYWAY.
+     *
+     * Every clause below is the SAME call the gate a few lines down makes.
+     * `scoreByMode()` is the relevance authority; `isAttributableToRequestedSource()`
+     * is the source authority. Nothing here scores, ranks or decides anything
+     * of its own, and a reader checking whether the grace can admit something
+     * the request would reject only has to see that both calls are the
+     * existing ones.
+     *
+     * ORDER MIRRORS buildFilteredResponse(): relevance first, attribution
+     * second.
+     *
+     * A REQUEST WITH NO ADMISSION RULE IS NOT RACED AT ALL — see
+     * `peerTailPolicy` below. That case is the un-gated public
+     * GET /news/search, and the first implementation of this correction got it
+     * wrong: with no relevance mode and no source constraint every clause here
+     * passes, so a raw article started the grace and the public endpoint
+     * quietly began returning fewer articles than before. Measured, not
+     * reasoned about — the scope test caught it.
+     */
+    const admitsForPeerTail = (article: NewsArticle): boolean => {
+      if (relevanceMode.type !== 'none' && !this.scoreByMode(article, query, relevanceMode).isRelevant) {
+        return false;
+      }
+
+      if (requestedSource && !isAttributableToRequestedSource(article, requestedSource)) {
+        return false;
+      }
+
+      return true;
+    };
+
+    /*
+     * THE POLICY EXISTS ONLY WHEN THE REQUEST HAS SOMETHING TO ADMIT AGAINST.
+     *
+     * "Survives the existing admission rules" is meaningless where there are
+     * none. The public search path has neither a relevance mode nor a source
+     * constraint: every article it retrieves is served, so there is no such
+     * thing as an inadmissible one, and a grace there would only ever mean
+     * "return fewer results than before" on an endpoint that has no latency
+     * defect. `undefined` restores the pre-R1 `Promise.allSettled` exactly.
+     */
+    const peerTailPolicy: PeerTailPolicy | undefined =
+      relevanceMode.type !== 'none' || requestedSource !== undefined
+        ? { admits: admitsForPeerTail, graceMs: PEER_TAIL_GRACE_MS }
+        : undefined;
+
+    const providerCall = await this.callAllProviders(searchOperation, 'search', peerTailPolicy);
 
     /*
      * WHY the providers failed, kept for the one caller that must not treat a
@@ -572,7 +686,17 @@ export class NewsService {
             `consulting ${fallbacks.length} fallback provider(s) once`,
         );
 
-        const rescueCall = await this.callProviderSet(fallbacks, searchOperation);
+        const rescueCall = await this.callProviderSet(
+          fallbacks,
+          searchOperation,
+          /*
+           * R1 — THE RESCUE OBEYS THE SAME CORRECTED RULE. It is the second
+           * path that consults the fallback tier, and a peer tail there costs
+           * a reader exactly what it costs here. Same scope gate, same
+           * admission predicate, same constant.
+           */
+          this.peerTailFor('search', fallbacks, peerTailPolicy),
+        );
 
         // Provenance and failure reasons both accumulate. A rescue must not
         // erase who already answered, and must not hide its own failure.
@@ -989,10 +1113,21 @@ export class NewsService {
   private async callAllProviders(
     operation: (provider: NewsProvider) => Promise<NewsArticle[]>,
     capability: NewsProviderCapability,
+    /**
+     * R1 — supplied ONLY by search(). topHeadlines() and category() pass
+     * nothing and are therefore byte-for-byte unchanged.
+     */
+    peerTail?: PeerTailPolicy,
   ): Promise<ProviderCallResult> {
     const primaries = this.eligibleProvidersForTier(capability, 'primary');
     const fallbacks = this.eligibleProvidersForTier(capability, 'fallback');
 
+    /*
+     * R1 — THE PRIMARY FAN-OUT IS NOT IN SCOPE AND IS NOT PASSED A POLICY.
+     * The defect is a FALLBACK-tier peer tail. Widening this to the primaries
+     * would change the behaviour of every ordinary request in the product to
+     * fix a problem none of them has.
+     */
     const primaryCall = await this.callProviderSet(primaries, operation);
 
     const primaryArticleCount = primaryCall.results.reduce(
@@ -1010,11 +1145,22 @@ export class NewsService {
       `Primary providers returned no articles; consulting ${fallbacks.length} fallback provider(s)`,
     );
 
-    const fallbackCall = await this.callProviderSet(fallbacks, operation);
+    const fallbackCall = await this.callProviderSet(
+      fallbacks,
+      operation,
+      this.peerTailFor(capability, fallbacks, peerTail),
+    );
 
     return {
       results: [...primaryCall.results, ...fallbackCall.results],
       failedProviderIds: [...primaryCall.failedProviderIds, ...fallbackCall.failedProviderIds],
+      /* Accumulated like every other channel, and like every other channel it
+         is the fallback set that can contribute one — a primary set is never
+         given a policy, so its list is always empty. */
+      notAwaitedProviderIds: [
+        ...primaryCall.notAwaitedProviderIds,
+        ...fallbackCall.notAwaitedProviderIds,
+      ],
       // MAIN + E convergence — a fallback rescue must not erase WHY a
       // primary failed. The non-enumerable Analysis side-channel consumes
       // this list; failedProviderIds continues to drive the public fallback
@@ -1023,6 +1169,33 @@ export class NewsService {
       // G-ALPHA-1 — the tier has now been spent for this request.
       fallbackConsulted: true,
     };
+  }
+
+  /**
+   * R1 — THE SCOPE GATE, IN ONE PLACE SO IT CANNOT DRIFT.
+   *
+   * A peer-tail grace is permitted only where the defect exists and only where
+   * it is safe:
+   *
+   *   SEARCH capability   — top-headlines and category are untouched;
+   *   FALLBACK tier       — the primaries are never raced (see callAllProviders);
+   *   MORE THAN ONE PEER  — with a single provider there is no peer tail, so a
+   *                         grace could only ever abandon the sole source of
+   *                         evidence. It is refused outright rather than
+   *                         relying on the admission trigger never firing.
+   *
+   * Returning `undefined` restores the pre-R1 `Promise.allSettled` exactly.
+   */
+  private peerTailFor(
+    capability: NewsProviderCapability,
+    peers: readonly NewsProvider[],
+    policy: PeerTailPolicy | undefined,
+  ): PeerTailPolicy | undefined {
+    if (policy === undefined) return undefined;
+    if (capability !== 'search') return undefined;
+    if (peers.length < 2) return undefined;
+
+    return policy;
   }
 
   /**
@@ -1060,45 +1233,157 @@ export class NewsService {
   private async callProviderSet(
     providers: readonly NewsProvider[],
     operation: (provider: NewsProvider) => Promise<NewsArticle[]>,
+    /**
+     * R1 — ABSENT MEANS "BEHAVE EXACTLY AS BEFORE". Every existing call site
+     * omits it: the primary fan-out, topHeadlines and category all reach the
+     * identical `Promise.allSettled` they always did. Only the SEARCH fallback
+     * tier with more than one eligible peer ever supplies a policy.
+     */
+    peerTail?: PeerTailPolicy,
   ): Promise<ProviderCallResult> {
-    const settled = await Promise.allSettled(
-      providers.map(async (provider) => ({
-        providerId: provider.id,
-        articles: await operation(provider),
-      })),
-    );
+    const startedAt = Date.now();
+
+    /*
+     * ── R1 · THE SEALED SNAPSHOT ──────────────────────────────────────────
+     *
+     * WHAT THIS STRUCTURE EXISTS TO PREVENT. A peer we stop awaiting keeps
+     * running. If its continuation could still push into the arrays this
+     * function has already returned, the caller's aggregation would mutate
+     * underneath it — after relevance has been applied, after dedup, possibly
+     * after the response was serialised. That is a data race in all but name,
+     * and no test that inspects the return value would reliably catch it.
+     *
+     * So outcomes are recorded per peer in a Map, never appended to a shared
+     * array, and `sealed` is set BEFORE the snapshot is built. JavaScript runs
+     * this seal-then-build synchronously, so no continuation can interleave:
+     * a peer settling after the seal takes the early return and writes
+     * nothing, anywhere, ever.
+     */
+    const outcomes = new Map<string, { articles: NewsArticle[] } | { error: unknown }>();
+    let sealed = false;
+
+    let firstAdmittedProviderId: string | undefined;
+    let graceStartedAt: number | undefined;
+    let resolveGrace: (() => void) | undefined;
+
+    const graceElapsed =
+      peerTail === undefined
+        ? undefined
+        : new Promise<void>((resolve) => {
+            resolveGrace = resolve;
+          });
+
+    /*
+     * Started at most once, and ONLY by an article the request's own admission
+     * rules accept — see PeerTailPolicy. A peer that returns raw records the
+     * relevance gate or the source constraint will discard does not start it.
+     */
+    const startGraceIfAdmissible = (providerId: string, articles: NewsArticle[]): void => {
+      if (peerTail === undefined || graceStartedAt !== undefined) return;
+      if (!articles.some((article) => peerTail.admits(article))) return;
+
+      firstAdmittedProviderId = providerId;
+      graceStartedAt = Date.now();
+
+      setTimeout(() => resolveGrace?.(), peerTail.graceMs).unref?.();
+    };
+
+    const settleOne = async (provider: NewsProvider): Promise<void> => {
+      try {
+        const articles = await operation(provider);
+
+        if (sealed) return;
+
+        outcomes.set(provider.id, { articles });
+        startGraceIfAdmissible(provider.id, articles);
+      } catch (error) {
+        if (sealed) return;
+
+        outcomes.set(provider.id, { error });
+      }
+    };
+
+    const everyPeer = providers.map((provider) => {
+      const settle = settleOne(provider);
+
+      /*
+       * ORPHAN SAFETY, ATTACHED AT CREATION RATHER THAN AT ABANDONMENT.
+       * `settleOne` already catches the operation's own rejection, so this is
+       * belt-and-braces against anything thrown by the recording itself. A
+       * detached promise must never become an unhandled rejection.
+       */
+      settle.catch(() => {});
+
+      return settle;
+    });
+
+    const allSettled = Promise.all(everyPeer);
+    allSettled.catch(() => {});
+
+    if (graceElapsed === undefined) {
+      await allSettled;
+    } else {
+      await Promise.race([allSettled, graceElapsed]);
+    }
+
+    /* SEAL FIRST. Everything below reads a frozen world. */
+    sealed = true;
 
     const results: ProviderCallResult['results'] = [];
-
     const failedProviderIds: string[] = [];
     const failures: ProviderFailure[] = [];
+    const notAwaitedProviderIds: string[] = [];
 
-    settled.forEach((result, index) => {
-      const provider = providers[index];
+    /*
+     * Iterated in PROVIDER ORDER, exactly as the previous `settled.forEach`
+     * was, because cross-provider dedup's winner rule reads registration order
+     * and `results.length > 1` gates that pass. Settle order must not leak in.
+     */
+    for (const provider of providers) {
+      const outcome = outcomes.get(provider.id);
 
-      if (result.status === 'fulfilled') {
-        results.push(result.value);
-        return;
+      if (outcome === undefined) {
+        notAwaitedProviderIds.push(provider.id);
+        continue;
+      }
+
+      if ('articles' in outcome) {
+        results.push({ providerId: provider.id, articles: outcome.articles });
+        continue;
       }
 
       failedProviderIds.push(provider.id);
 
       /* The reason was already in hand here and was being thrown away. */
-      const kind = resolveProviderFailureKind(result.reason);
+      const kind = resolveProviderFailureKind(outcome.error);
       failures.push({ providerId: provider.id, kind });
 
       logWithRequestId(
         this.logger,
         'warn',
         `Provider "${provider.id}" failed to respond [${kind}]`,
-        result.reason instanceof Error ? result.reason : undefined,
+        outcome.error instanceof Error ? outcome.error : undefined,
       );
-    });
+    }
+
+    if (notAwaitedProviderIds.length > 0) {
+      logWithRequestId(
+        this.logger,
+        'log',
+        `Peer-tail grace: "${firstAdmittedProviderId}" produced admissible evidence, ` +
+          `waited ${peerTail?.graceMs}ms for the tail, and did not await ` +
+          `${notAwaitedProviderIds.map((id) => `"${id}"`).join(', ')}. ` +
+          `Fan-out returned in ${Date.now() - startedAt}ms. ` +
+          'The un-awaited peer(s) keep running under their own timeout, cooldown ' +
+          'and retry rules, which this decision does not touch.',
+      );
+    }
 
     return {
       results,
       failedProviderIds,
       failures,
+      notAwaitedProviderIds,
       // This call asked exactly the providers it was given and nothing else.
       fallbackConsulted: false,
     };

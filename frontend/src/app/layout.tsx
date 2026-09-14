@@ -10,6 +10,7 @@ import {
 } from 'next/font/google';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { buildRootMetadataBase } from '@/lib/seo/metadata';
 import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
 import { AskAiDock } from '@/components/ask/AskAiDock';
 import './globals.css';
@@ -193,6 +194,20 @@ export async function generateMetadata(): Promise<Metadata> {
     // in both languages. Every localizable string below still comes from the
     // dictionary, exactly as M66.13 established.
     applicationName: 'GlobalNews AI',
+    /*
+      ALPHA-SEO-FOUNDATION-1 — `metadataBase` and NOTHING ELSE here.
+
+      It is what lets Next resolve a relative metadata URL into an
+      absolute one, and it belongs at the root because it is a property
+      of the site rather than of a page. It resolves to `{}` when no
+      origin is configured, so this object is byte-identical to what
+      shipped in that case.
+
+      Canonical, robots and social metadata are deliberately NOT set
+      here. They are per-page facts, and a root-level default is how a
+      private surface ends up inheriting a public page's canonical.
+    */
+    ...buildRootMetadataBase(),
     title: t.homeMetaTitle,
     description: t.homeMetaDescription,
     manifest: '/manifest.webmanifest',

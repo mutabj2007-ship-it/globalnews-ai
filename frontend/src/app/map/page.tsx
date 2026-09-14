@@ -5,6 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 import { MapPageClient } from '@/components/map/MapPageClient';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 import { mapShellVariant } from '@/lib/map/mapShellFlag';
 
 /**
@@ -21,10 +22,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
   const t = getDictionary(language).map;
 
-  return {
+  /*
+    ALPHA-SEO-FOUNDATION-1 — the same two dictionary strings, now carrying
+    the canonical, robots and social facts that belong with them. The
+    language already resolved above is reused; no second mechanism.
+  */
+  return buildPageMetadata({
+    path: '/map',
     title: t.metaTitle,
     description: t.metaDescription,
-  };
+    language,
+  });
 }
 
 /**

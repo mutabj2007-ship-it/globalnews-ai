@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { LiveStatusStrip } from '@/components/home/LiveStatusStrip';
@@ -13,6 +14,9 @@ import { Footer } from '@/components/layout/Footer';
 import { PageCanvas } from '@/components/layout/PageCanvas';
 import { getHomeFeed } from '@/lib/homeFeed';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { buildPageMetadata } from '@/lib/seo/metadata';
+import { SiteStructuredData } from '@/components/seo/SiteStructuredData';
 
 /**
  * Master Frontend Recomposition — final homepage architecture:
@@ -106,6 +110,30 @@ import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages
  * triggered and never part of this page's initial render. The request count
  * for this page is therefore identical before and after.
  */
+/*
+ * ALPHA-SEO-FOUNDATION-1 — the home page's own metadata.
+ *
+ * It previously inherited title and description from the root layout,
+ * which was correct for those two fields and silent on the other three:
+ * there was no canonical, no robots directive and no social card. The
+ * SAME dictionary strings are used, so the title and description are
+ * byte-identical to what shipped; what is added is the canonical, the
+ * explicit `index, follow`, and Open Graph/Twitter metadata that follows
+ * that canonical.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
+  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const t = getDictionary(language);
+
+  return buildPageMetadata({
+    path: '/',
+    title: t.homeMetaTitle,
+    description: t.homeMetaDescription,
+    language,
+  });
+}
+
 export default async function HomePage(): Promise<JSX.Element> {
   const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
@@ -126,6 +154,14 @@ export default async function HomePage(): Promise<JSX.Element> {
 
   return (
     <>
+      {/*
+        ALPHA-SEO-FOUNDATION-1 — `WebSite` + `Organization` JSON-LD.
+
+        A `<script type="application/ld+json">` renders no box and no text
+        node, so the released home composition below is untouched: NavBar
+        remains the first visible element and nothing is wrapped.
+      */}
+      <SiteStructuredData />
       <NavBar language={language} />
       <LiveStatusStrip isLive={feed.isLive} dataMode={feed.dataMode} language={language} updatedAt={updatedAt} />
       <main className="pb-16 lg:pb-0">

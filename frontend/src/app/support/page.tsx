@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 import { SupportScreen } from '@/components/support/SupportScreen';
 
 /**
@@ -37,11 +38,19 @@ function resolveSupportDictionary(): ReturnType<typeof getDictionary>['support']
 export async function generateMetadata(): Promise<Metadata> {
   const t = resolveSupportDictionary();
 
-  return {
+  /*
+    ALPHA-SEO-FOUNDATION-1 — the `robots: index false` this page already
+    carried is PRESERVED, not re-decided: the registry classifies
+    /support as user-dependent (§B, "support conversations/tickets") and
+    the builder emits the identical directive. Routing it through the one
+    builder is what stops this page and the sitemap from ever disagreeing.
+  */
+  return buildPageMetadata({
+    path: '/support',
     title: t.meta.title,
     description: t.meta.description,
-    robots: { index: false, follow: false },
-  };
+    language: currentLanguage(),
+  });
 }
 
 export default function SupportPage(): JSX.Element {

@@ -298,7 +298,37 @@ describe('S4 — the page boundary', () => {
   const page = read(SUPPORT_PAGE);
 
   it('asks crawlers not to index a page of private correspondence', () => {
-    expect(page).toMatch(/robots:\s*\{\s*index:\s*false,\s*follow:\s*false\s*\}/);
+    /*
+      RETARGETED BY ALPHA-SEO-FOUNDATION-1, AND THE RETARGET IS STRICTER.
+
+      This asserted the LITERAL `robots: { index: false, follow: false }`
+      in the page source. That directive has not been relaxed — it now
+      comes from the route indexability registry, which classifies
+      /support as user-dependent, so the page and the sitemap read the
+      same table and cannot disagree about this surface. The old form
+      could not have caught the failure that actually matters: a page
+      spelling `noindex` correctly while the sitemap advertised it anyway.
+
+      So the assertion moves from the spelling to the EFFECT. It calls the
+      builder the page calls and checks the directive it produces, and it
+      additionally checks the surface is absent from the sitemap — which
+      the string form never checked at all.
+    */
+    expect(page).toMatch(/buildPageMetadata\(\{\s*\n?\s*path: '\/support'/);
+
+    const { buildPageMetadata } = require('@/lib/seo/metadata') as typeof import('@/lib/seo/metadata');
+    const { sitemapRoutes } = require('@/lib/seo/routes') as typeof import('@/lib/seo/routes');
+
+    const meta = buildPageMetadata({
+      path: '/support',
+      title: 'x',
+      description: 'y',
+      language: 'en',
+    });
+    expect(meta.robots).toEqual({ index: false, follow: false });
+    /* and it never acquires a public canonical */
+    expect(meta.alternates?.canonical).toBeUndefined();
+    expect(sitemapRoutes().some((entry) => entry.path === '/support')).toBe(false);
   });
 
   /**
