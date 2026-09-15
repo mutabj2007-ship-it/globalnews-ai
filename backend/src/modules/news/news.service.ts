@@ -57,6 +57,52 @@ import {
 const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
 
 /**
+ * NAVIGATION-LIVE-RETRIEVAL-CORRECTION (Option 1) — the freshness window for
+ * the shared Home evidence snapshot.
+ *
+ * 300 seconds, taken deliberately from the ONE caching mechanism this product
+ * already runs in production: CountryNewsService's
+ * DEFAULT_CACHE_TTL_SECONDS. This lane was instructed not to invent a TTL
+ * strategy, and matching the proven one means the two shared-evidence surfaces
+ * age at the same rate rather than at two numbers nobody can justify against
+ * each other.
+ *
+ * Deliberately NO environment override. CountryNewsService has one
+ * (COUNTRY_NEWS_CACHE_TTL_SECONDS) because its TTL was tuned per deployment;
+ * nothing has asked for that here, and adding a variable merely for symmetry
+ * would enlarge the configuration surface — and the deployment checklist —
+ * for no stated need.
+ */
+const DEFAULT_HOME_NEWS_CACHE_TTL_SECONDS = 300;
+
+/**
+ * The retrieval-language key segment used when a caller specifies NO language
+ * at all.
+ *
+ * WHY THIS IS NOT SIMPLY 'en'. An absent `lang` and an explicit `lang: 'en'`
+ * produce genuinely DIFFERENT corpora at the provider boundary, and conflating
+ * them would serve one as the other. With a language set,
+ * GNewsProvider.topHeadlines() sends `lang` to GNews AND then applies
+ * filterByRequestedLanguage(), which discards every article whose own
+ * sourceLanguage does not match exactly — including articles of unknown
+ * language. With no language set it sends no `lang` parameter and applies no
+ * filter, so the response is an unfiltered multilingual mixture.
+ *
+ * Those are two different bodies of evidence. They get two different keys.
+ */
+const UNSPECIFIED_RETRIEVAL_LANGUAGE = '__unspecified__';
+
+/**
+ * One cached Home evidence snapshot, with the instant it stops being fresh.
+ * Shape mirrors CountryNewsService's CacheEntry for the same reason the TTL
+ * does: one pattern, not two.
+ */
+interface HomeNewsCacheEntry {
+  response: NewsResponse;
+  expiresAt: number;
+}
+
+/**
  * Milestone #36/#37 — discriminated union, so a search() caller can
  * never request both generic and relational relevance filtering at
  * once. This is a TYPE-LEVEL guarantee, not a documented convention: it
@@ -269,6 +315,25 @@ export class NewsService {
   private readonly allProviders: NewsProvider[];
   private readonly fallbackProviders: NewsProvider[];
   private readonly articlePersistence: ArticlePersistenceService;
+
+  /**
+   * NAVIGATION-LIVE-RETRIEVAL-CORRECTION (Option 1) — the shared Home evidence
+   * snapshot, keyed by what actually selects the corpus.
+   *
+   * ONE ENTRY SERVES EVERY READER. This is instance state on a singleton
+   * provider, not per-request state, which is the entire point: the measured
+   * defect was one live GNews retrieval per page view, so the fix is only a fix
+   * if the second reader reuses what the first one retrieved.
+   *
+   * THE KEY CONTAINS NOTHING ABOUT WHO IS ASKING. No user id, no session, no
+   * authentication state, no route, no returnTo, no Watch or Follow state.
+   * That is a correctness requirement, not a style preference: any per-reader
+   * segment would silently restore one-retrieval-per-reader while still
+   * looking, in code review, like a working cache. buildHomeNewsCacheKey() is
+   * the only place a key is constructed, so there is exactly one place to read
+   * to confirm that.
+   */
+  private readonly homeNewsCache = new Map<string, HomeNewsCacheEntry>();
 
   constructor(
     @Inject(NEWS_PROVIDERS)
@@ -906,6 +971,31 @@ export class NewsService {
     limit?: number,
     options?: { lang?: string; q?: string },
   ): Promise<NewsResponse> {
+    /*
+      NAVIGATION-LIVE-RETRIEVAL-CORRECTION (Option 1) — THE FRESHNESS DECISION,
+      PLACED BEFORE callAllProviders() BECAUSE THAT IS THE WHOLE CORRECTION.
+      The audited defect was that callAllProviders() was the first statement of
+      this method, so every homepage render — every reload, every navigation
+      return, every post-OAuth landing, every additional reader — spent one live
+      GNews retrieval. Production measured 95 such retrievals in a day against a
+      quota that answered 53 of them with HTTP 403 and 26 with HTTP 429.
+
+      A HIT RETURNS WITHOUT TOUCHING A PROVIDER. That is the only behaviour
+      change in this method. Every path below a miss is byte-for-byte the code
+      that shipped, including the Milestone #48 language containment at the
+      `options?.lang` early return, which this correction deliberately leaves
+      standing.
+    */
+    const cacheKey = this.buildHomeNewsCacheKey(limit, options);
+
+    if (cacheKey !== null) {
+      const cached = this.readFreshHomeNews(cacheKey);
+
+      if (cached) {
+        return cached;
+      }
+    }
+
     const providerCall = await this.callAllProviders(
       (provider) =>
         provider.topHeadlines({
@@ -953,10 +1043,27 @@ export class NewsService {
         // return value stopped being discarded. See attachFirstSeen().
         const firstSeenByUrl = await this.articlePersistence.persistMany(response.articles);
 
-        return attachProviderFailures(this.attachFirstSeen(response, firstSeenByUrl), failures);
+        return this.rememberHomeNews(
+          cacheKey,
+          attachProviderFailures(this.attachFirstSeen(response, firstSeenByUrl), failures),
+        );
       }
 
-      return attachProviderFailures(response, failures);
+      /*
+        A NON-'live' RESPONSE THAT STILL CARRIES REPORTING IS CACHEABLE, AND
+        THAT IS DELIBERATE. When GNews is quota-exhausted and the accepted
+        fallback provider supplies valid articles, this is real evidence that
+        real readers are shown. Caching it means the NEXT reader is served from
+        it rather than re-attempting an exhausted GNews — which is exactly the
+        retry pattern production already shows (87 fallback activations against
+        79 GNews refusals in a single day).
+
+        Its dataMode and fallbackReason travel with it untouched, so a reader
+        served from this entry is told precisely what a reader served from the
+        original retrieval was told. The degraded state is cached; it is never
+        disguised.
+      */
+      return this.rememberHomeNews(cacheKey, attachProviderFailures(response, failures));
     }
 
     if (!this.hasRealProviderConfigured()) {
@@ -989,6 +1096,131 @@ export class NewsService {
       ),
       failures,
     );
+  }
+
+  /**
+   * NAVIGATION-LIVE-RETRIEVAL-CORRECTION (Option 1) — builds the shared-evidence
+   * key, or returns null to mean "this call is not Home traffic; do not cache
+   * it at all".
+   *
+   * ─── WHY THE PARAMETER IS CALLED retrievalLanguage AND NOT lang ───────────
+   *
+   * The audit that produced this correction found that one `lang` value was
+   * doing two unrelated jobs, and that conflating them is what made the defect
+   * hard to see:
+   *
+   *   RETRIEVAL LANGUAGE — selects WHICH ARTICLES EXIST. GNewsProvider sends it
+   *     to GNews and then filterByRequestedLanguage() keeps only articles whose
+   *     own sourceLanguage matches exactly. lang='en' and lang='pl' are
+   *     DISJOINT CORPORA, not two renderings of one corpus.
+   *   DISPLAY LANGUAGE — selects how a COUNTRY NAME is written, via
+   *     buildResponse() -> resolveArticleCountries() -> resolvePrimaryCountry().
+   *     Article text itself is never translated anywhere in this product.
+   *
+   * ONLY THE FIRST BELONGS IN A CACHE KEY. A key carrying display language
+   * would make a cosmetic label change look like a different body of evidence
+   * and spend a live provider retrieval on it. Naming the segment
+   * `retrievalLanguage` is therefore not decoration: it states which of the two
+   * meanings this key is allowed to encode, so that a future edit adding a
+   * display concern to it reads as obviously wrong.
+   *
+   * Under Option 1 the two values happen to coincide on Home — a Polish reader
+   * is deliberately shown Polish-source reporting — so this key does still vary
+   * with the reader's language. That is accepted product behaviour, not a
+   * defect: the corpus genuinely differs. Separating the two meanings properly
+   * is recorded as the future milestone
+   * MULTILINGUAL-EVIDENCE-LANGUAGE-SEPARATION-1 and is NOT attempted here.
+   *
+   * ─── WHY A KEYWORD-FILTERED CALL IS NEVER CACHED ──────────────────────────
+   *
+   * Returning null for any call carrying `q` keeps this correction strictly
+   * inside Home. AnalysisService reaches this same method with a `q` (see its
+   * Polish staged retrieval), and analysis retrieval is explicitly outside this
+   * lane. Excluding it by CONSTRUCTION rather than by careful call-site
+   * discipline means analysis behaviour cannot drift into this cache later by
+   * accident.
+   */
+  private buildHomeNewsCacheKey(
+    limit: number | undefined,
+    options?: { lang?: string; q?: string },
+  ): string | null {
+    if (options?.q !== undefined) {
+      return null;
+    }
+
+    const retrievalLanguage = options?.lang?.trim().toLowerCase();
+
+    const retrievalLanguageSegment =
+      retrievalLanguage && retrievalLanguage.length > 0
+        ? retrievalLanguage
+        : UNSPECIFIED_RETRIEVAL_LANGUAGE;
+
+    /*
+      `limit` is in the key because it changes the retrieved corpus width: it is
+      passed to the provider as GNews's `max`, so a request for 24 and a request
+      for 12 are not the same retrieval and must not satisfy one another.
+
+      Nothing else is in the key. No user id, no session, no authentication
+      state, no route, no returnTo, no Watch or Follow state. This is the single
+      place a Home key is constructed, so this comment is the whole contract.
+    */
+    return `${limit ?? 'default'}:${retrievalLanguageSegment}`;
+  }
+
+  /**
+   * Returns the shared snapshot for this corpus if it is still fresh, else
+   * null. Expired entries are deleted on read, mirroring
+   * CountryNewsService.getCached() rather than introducing a second eviction
+   * idiom into the same codebase.
+   */
+  private readFreshHomeNews(cacheKey: string): NewsResponse | null {
+    const entry = this.homeNewsCache.get(cacheKey);
+
+    if (!entry) {
+      return null;
+    }
+
+    if (Date.now() > entry.expiresAt) {
+      this.homeNewsCache.delete(cacheKey);
+
+      return null;
+    }
+
+    return entry.response;
+  }
+
+  /**
+   * Stores a successfully retrieved Home snapshot and returns it unchanged, so
+   * the call sites above read as `return this.rememberHomeNews(key, response)`
+   * rather than needing a separate store-then-return pair at each of them.
+   *
+   * ─── WHAT THIS DELIBERATELY REFUSES TO STORE ──────────────────────────────
+   *
+   * A null key (not Home traffic) and an empty response are both rejected here,
+   * at the one place a write can happen, rather than being the caller's problem.
+   *
+   * THE EMPTY-RESPONSE REFUSAL IS THE LOAD-BEARING ONE. Every failure mode in
+   * this method — a thrown provider, a quota 403, a rate-limit 429, a language
+   * constrained request that found nothing, no real provider configured —
+   * converges on a response with zero articles. If any of those were stored,
+   * ONE quota refusal would blank the homepage for every reader for the whole
+   * freshness window, converting a provider hiccup into a product outage and
+   * doing it silently. Refusing to cache an empty response means a failed
+   * retrieval leaves the cache exactly as it was: the previous good snapshot
+   * keeps serving if one is still fresh, and otherwise the next reader simply
+   * retries. Failure is never cached as success.
+   */
+  private rememberHomeNews(cacheKey: string | null, response: NewsResponse): NewsResponse {
+    if (cacheKey === null || response.articles.length === 0) {
+      return response;
+    }
+
+    this.homeNewsCache.set(cacheKey, {
+      response,
+      expiresAt: Date.now() + DEFAULT_HOME_NEWS_CACHE_TTL_SECONDS * 1000,
+    });
+
+    return response;
   }
 
   async byCategory(category: NewsCategory, limit?: number): Promise<NewsResponse> {
