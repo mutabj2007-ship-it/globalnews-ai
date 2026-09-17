@@ -134,11 +134,18 @@ describe('E-2 — an unavailable control is reachable, and still refuses', () =>
     });
 
     it('marks it aria-disabled instead', () => {
-      expect(rail).toContain('aria-disabled={!layer.available || undefined}');
+      /*
+        E-3 widened this from availability alone to "operable" — available AND
+        applicable in the active mode. The reachability guarantee is unchanged:
+        the control keeps its place in the tab order either way.
+      */
+      expect(rail).toContain('aria-disabled={!operable || undefined}');
     });
 
     it('STILL REFUSES TO TOGGLE AN UNBUILT LAYER', () => {
-      expect(rail).toMatch(/if \(!layer\.available\) return;\s*onToggle\(layer\.id, !on\);/);
+      /* E-3 made the guard STRICTER, never looser: unbuilt or wrong mode. */
+      expect(rail).toMatch(/if \(!operable\) return;\s*onToggle\(layer\.id, !on\);/);
+      expect(rail).toContain('const operable = layer.available && applies;');
     });
 
     it('still states the reason on the accessible name', () => {
@@ -147,11 +154,15 @@ describe('E-2 — an unavailable control is reachable, and still refuses', () =>
 
     it('and OUT OF RANGE is still not treated as unavailable', () => {
       /*
-        A layer outside its zoom range stays ON and stays operable — the user's
-        preference has not changed. Only `available` gates the control.
+        A layer outside its zoom range stays ON and stays OPERABLE — the user's
+        preference has not changed, so the control must remain usable. Only
+        availability and mode-applicability gate it.
       */
-      expect(rail).toContain("const status = !layer.available ? 'unavailable' : !inRange ? 'out-of-range'");
+      expect(rail).toContain("? 'out-of-range'");
       expect(rail).not.toContain('aria-disabled={!inRange');
+      /* The decisive one: range never enters the operable test. */
+      expect(rail).toContain('const operable = layer.available && applies;');
+      expect(rail).not.toMatch(/const operable = [^;]*inRange/);
     });
   });
 

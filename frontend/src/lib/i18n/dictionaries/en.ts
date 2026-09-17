@@ -1310,7 +1310,27 @@ export const en = {
         group: 'Map layers',
         reference: 'Reference',
         evidence: 'Evidence',
+        /*
+          CHECKPOINT E-3 — RETAINED AS A FALLBACK, NO LONGER THE ANSWER.
+
+          Every unavailable layer used to render this one phrase, which is the
+          exact collapse the ruling names. It now applies only to a layer whose
+          runtime status says nothing more specific.
+        */
         unavailable: 'No data yet',
+        /* Derived from each layer's own runtime evidence — see layerUnavailableReason(). */
+        unavailableReasons: {
+          NOT_BUILT: 'Not built yet',
+          NOT_CONNECTED: 'Built, but not connected to the map yet',
+          NO_DATA_FOR_GEOGRAPHY: 'No data for this geography',
+          TIER_RESTRICTED: 'Not included in your access',
+          TEMPORARILY_UNAVAILABLE: 'Temporarily unavailable',
+        },
+        /*
+          NOT an unavailability. The layer is built and works; this mode simply
+          does not draw it. Saying "not built" here would be untrue.
+        */
+        notInMode: 'Not shown in this mode',
         outOfRange: 'Not at this zoom',
         layers: {
           base: 'Land & ocean',

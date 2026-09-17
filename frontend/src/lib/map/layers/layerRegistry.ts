@@ -1,4 +1,4 @@
-import type { MapMode } from '@/lib/map/state/mapState';
+import type { MapMode, ModeUnavailableReason } from '@/lib/map/state/mapState';
 
 /**
  * SPATIAL M2 — THE LAYER REGISTRY, FROM DESIGN PART I §F.
@@ -210,7 +210,76 @@ export function layerById(id: string): LayerDefinition | undefined {
 
 /** Layers a surface may offer in this mode. Availability is reported, not filtered. */
 export function layersForMode(mode: MapMode): readonly LayerDefinition[] {
-  return LAYER_REGISTRY.filter((layer) => layer.modes.length === 0 || layer.modes.includes(mode));
+  /* One predicate, so this and the rail cannot drift apart. */
+  return LAYER_REGISTRY.filter((layer) => layerAppliesInMode(layer, mode));
+}
+
+/**
+ * ══ E-3 · WHY A LAYER CANNOT DRAW, IN THE SAME FIVE WORDS THE MODES USE ════
+ *
+ * The rail said "No data yet" for every unavailable layer — the exact collapse
+ * the ruling names: *"Do not collapse every condition into 'No data yet.'"*
+ * E-1 fixed that for the mode row and left the layer rail saying one word for
+ * four different situations.
+ *
+ * NOTHING NEW IS INVENTED HERE. `runtime` already records what is true today, with
+ * `runtimeEvidence` stating the evidence in the layer's own words, so the reason
+ * is DERIVED from that rather than assigned by taste:
+ *
+ *   NOT_IMPLEMENTED  -> NOT_BUILT      "No admin-1 geometry exists in the
+ *                                       product." Nothing to connect.
+ *   GATED            -> NOT_CONNECTED  `situations`: the substrate IS registered,
+ *                                       and serves no route. Calling that "not
+ *                                       built" would be FALSER than the generic
+ *                                       word it replaces — the same test E-1
+ *                                       applied to Watch, Change and Sources.
+ *   FAILED_MEASUREMENT -> TEMPORARILY_UNAVAILABLE   it worked and stopped.
+ *
+ * Returns null for an available layer, because there is no reason to give.
+ */
+export function layerUnavailableReason(layer: LayerDefinition): ModeUnavailableReason | null {
+  if (layer.available) return null;
+
+  switch (layer.runtime) {
+    case 'NOT_IMPLEMENTED':
+      return 'NOT_BUILT';
+    case 'GATED':
+      return 'NOT_CONNECTED';
+    case 'FAILED_MEASUREMENT':
+      return 'TEMPORARILY_UNAVAILABLE';
+    default:
+      /*
+        A LIVE layer that is nonetheless unavailable is a contradiction in the
+        registry, not a state to describe. The honest answer promises nothing.
+      */
+      return 'TEMPORARILY_UNAVAILABLE';
+  }
+}
+
+/**
+ * ══ E-3 · ONE AUTHORITY ON APPLICABILITY, NOT TWO ══════════════════════════
+ *
+ * `layersForMode()` has always answered "which layers may this mode draw", and
+ * NOTHING CALLED IT. Meanwhile the rail decided what to offer from
+ * `available` alone and never asked about the mode at all — so the registry held
+ * two answers to one question and used neither together.
+ *
+ * Today that gap is invisible: every layer whose `modes` exclude the current mode
+ * also happens to be unavailable, so it is already disabled for the other
+ * reason. It is a LATENT defect with a named trigger — the moment `sourceDensity`
+ * or `situations` becomes available, the rail would offer it as fully operable in
+ * a mode that cannot draw it, and switching it on would draw nothing. That is
+ * exactly the failure the rail's own doc comment forbids: "a toggle that
+ * switches on and draws nothing teaches the user that the world is empty
+ * there".
+ *
+ * So the rail now asks, and a layer that does not apply is DISABLED WITH ITS
+ * REASON rather than removed — which is what `RAIL_EVIDENCE_LAYERS`' own comment
+ * already promised: "A control that is not applicable is shown disabled with
+ * its reason, exactly like an unavailable mode; it is not removed."
+ */
+export function layerAppliesInMode(layer: LayerDefinition, mode: MapMode): boolean {
+  return layer.modes.length === 0 || layer.modes.includes(mode);
 }
 
 /** Whether the camera's zoom is inside a layer's declared visible range. */

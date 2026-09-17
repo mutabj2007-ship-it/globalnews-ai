@@ -1067,6 +1067,14 @@ export const pl: Dictionary = {
         reference: 'Odniesienie',
         evidence: 'Dowody',
         unavailable: 'Brak danych',
+        unavailableReasons: {
+          NOT_BUILT: 'Jeszcze nie zbudowane',
+          NOT_CONNECTED: 'Zbudowane, ale jeszcze niepod\u0142\u0105czone do mapy',
+          NO_DATA_FOR_GEOGRAPHY: 'Brak danych dla tej geografii',
+          TIER_RESTRICTED: 'Nieobj\u0119te Twoim dost\u0119pem',
+          TEMPORARILY_UNAVAILABLE: 'Tymczasowo niedost\u0119pne',
+        },
+        notInMode: 'Nie pokazywane w tym trybie',
         outOfRange: 'Nie przy tym przybli\u017ceniu',
         layers: {
           base: 'L\u0105d i ocean',

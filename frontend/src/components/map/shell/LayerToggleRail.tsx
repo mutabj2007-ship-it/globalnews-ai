@@ -3,10 +3,12 @@
 import {
   type LayerDefinition,
   RAIL_EVIDENCE_LAYERS,
+  layerAppliesInMode,
+  layerUnavailableReason,
   layerVisibleAtZoom,
   railLayers,
 } from '@/lib/map/layers/layerRegistry';
-import type { MapMode } from '@/lib/map/state/mapState';
+import type { MapMode, ModeUnavailableReason } from '@/lib/map/state/mapState';
 import { BAND_CLASS, bandFor } from '@/lib/map/spatial/controlBands';
 
 /**
@@ -101,7 +103,18 @@ export interface LayerToggleRailLabels {
   readonly layers: Readonly<Record<string, string>>;
   readonly reference: string;
   readonly evidence: string;
+  /**
+   * The generic fallback. Kept because a surface may still have nothing more
+   * specific to say, but it is no longer the answer for every unbuilt layer.
+   */
   readonly unavailable: string;
+  /**
+   * E-3 — why THIS layer cannot draw. Every unavailable layer used to share
+   * "No data yet", which the ruling names as the collapse to avoid.
+   */
+  readonly unavailableReasons: Readonly<Record<ModeUnavailableReason, string>>;
+  /** E-3 — applicable layer, wrong mode. Not an unavailability: a scope. */
+  readonly notInMode: string;
   readonly outOfRange: string;
 }
 
@@ -143,11 +156,15 @@ export function LayerToggleRail({
   watchboard = null,
 }: LayerToggleRailProps): JSX.Element {
   /*
-    The rail is STABLE across modes — see `railLayers()`. `mode` is still a prop
-    because the availability copy may one day differ by mode, and because a rail
-    that silently ignored it would be lying about what it reads.
+    THE RAIL IS STABLE ACROSS MODES — the same seven controls in the same places,
+    whatever mode is active, so its geometry never moves under the cursor.
+
+    E-3: stable is not the same as mode-blind. The SET of controls is fixed;
+    whether each one can draw RIGHT NOW depends on the mode, and that is now
+    asked rather than assumed. A layer outside the active mode is disabled with
+    its reason, exactly as the registry's own comment promised — never removed,
+    which is what would move the geometry.
   */
-  void mode;
   const offered = railLayers();
 
   const renderGroup = (heading: string, layers: readonly LayerDefinition[]): JSX.Element | null => {
@@ -158,14 +175,38 @@ export function LayerToggleRail({
         {layers.map((layer) => {
           const on = state[layer.id] === true;
           const inRange = layerVisibleAtZoom(layer, zoom);
-          const drawing = on && layer.available && inRange;
-          const status = !layer.available ? 'unavailable' : !inRange ? 'out-of-range' : on ? 'on' : 'off';
+          const applies = layerAppliesInMode(layer, mode);
+          /*
+            E-3 — THE FOURTH QUESTION. A layer draws only if it is built, applies
+            in this mode, is switched on, and the camera is inside its range.
+            `drawing` is what the canvas actually shows, so every one of those
+            must be true for the control to read as active.
+          */
+          const drawing = on && layer.available && applies && inRange;
+          const operable = layer.available && applies;
+          const unavailableReason = layerUnavailableReason(layer);
+          const status = !layer.available
+            ? 'unavailable'
+            : !applies
+              ? 'not-in-mode'
+              : !inRange
+                ? 'out-of-range'
+                : on
+                  ? 'on'
+                  : 'off';
           const code = CODE[layer.id] ?? layer.id.slice(0, 5).toUpperCase();
           const reason = !layer.available
-            ? labels.unavailable
-            : !inRange
-              ? `${labels.outOfRange} (Z${layer.zoomRange[0]}–${layer.zoomRange[1]})`
-              : null;
+            ? /*
+                The SPECIFIC reason, derived from the registry's own runtime
+                evidence. `labels.unavailable` survives only as the fallback for
+                a layer whose runtime says nothing usable.
+              */
+              (unavailableReason === null ? labels.unavailable : labels.unavailableReasons[unavailableReason])
+            : !applies
+              ? labels.notInMode
+              : !inRange
+                ? `${labels.outOfRange} (Z${layer.zoomRange[0]}–${layer.zoomRange[1]})`
+                : null;
 
           return (
             <button
@@ -187,7 +228,10 @@ export function LayerToggleRail({
                 read; the click handler still refuses to toggle an unbuilt layer,
                 so nothing becomes switchable that has no data behind it.
               */
-              aria-disabled={!layer.available || undefined}
+              aria-disabled={!operable || undefined}
+              data-gn-unavailable-reason={
+                !layer.available && unavailableReason !== null ? unavailableReason : undefined
+              }
               data-gn="layer-toggle"
               data-gn-layer={layer.id}
               data-gn-class={layer.class}
@@ -203,8 +247,11 @@ export function LayerToggleRail({
               aria-label={reason ? `${labels.layers[layer.id] ?? layer.id} — ${reason}` : (labels.layers[layer.id] ?? layer.id)}
               title={reason ? `${labels.layers[layer.id] ?? layer.id} — ${reason}` : (labels.layers[layer.id] ?? layer.id)}
               onClick={() => {
-                /* Unbuilt stays unbuilt — the refusal is unchanged, only reachable. */
-                if (!layer.available) return;
+                /*
+                  Unbuilt stays unbuilt, and a layer this mode cannot draw stays
+                  un-toggleable — the refusal is unchanged, only reachable.
+                */
+                if (!operable) return;
                 onToggle(layer.id, !on);
               }}
               /*
@@ -236,7 +283,7 @@ export function LayerToggleRail({
                 over an empty map is how a reader concludes the data is missing
                 rather than that they are too far out.
               */}
-              {layer.available && on && !inRange && (
+              {layer.available && applies && on && !inRange && (
                 <span data-gn="layer-out-of-range" aria-hidden="true" className="h-[2px] w-[14px] bg-sp-amber" />
               )}
             </button>
