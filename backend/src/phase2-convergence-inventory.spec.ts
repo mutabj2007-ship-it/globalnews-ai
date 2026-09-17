@@ -183,10 +183,24 @@ describe('PHASE 2.2 — the capability claims the tree rests on', () => {
       'utf-8',
     );
 
-    it('three domain ids are declared', () => {
-      expect(registry).toContain(
-        "export type SpecialistDomainId = 'CONFLICT' | 'ELECTION' | 'DELIVERY';",
-      );
+    it('the domain ids are declared — SIX since Gate B1', () => {
+      /*
+        B1 SUPERSEDED THE THREE-MEMBER ENUM, and this assertion is updated rather
+        than deleted so the supersession is visible.
+
+        Phase 2.2 recorded CONFLICT | ELECTION | DELIVERY as an Alpha-era fact.
+        The CTO's Gate B1 ruling added ECONOMY, MARKET and SECURITY, and the
+        classification this test supports is UNCHANGED by that: a domain id is a
+        reserved identity, and all six are still DESIGNED ONLY until something
+        registers one.
+
+        The sealed Alpha branch keeps the three-member assertion, because the
+        sealed candidate keeps the three-member enum.
+      */
+      expect(registry).toContain('export type SpecialistDomainId =');
+      for (const id of ['CONFLICT','ELECTION','DELIVERY','ECONOMY','MARKET','SECURITY']) {
+        expect(registry).toContain("| '" + id + "'");
+      }
     });
 
     it('and the registration function is never called in the product', () => {

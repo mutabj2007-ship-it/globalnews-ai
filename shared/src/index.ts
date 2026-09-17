@@ -28,6 +28,21 @@ export * from './officialSources';
   confirm each other.
 */
 export * from './source-type';
+
+/*
+  B3.1 — the provenance structures the Economy read model needs. Recovered from
+  canonical C55 WITHOUT its `SourceType` declaration, which './source-type'
+  above already owns; the two unions were measured equivalent first. Placed
+  after it so the dependency direction is visible in the barrel itself.
+*/
+export * from './source-provenance';
+
+/*
+  B3.1 — LANG-UI-7 display-locale TYPES only. Recovering them activates no
+  language: the SELECTABLE registry is a separate, frontend-owned deployment
+  fact (lib/i18n/languages.ts), and it remains ['en','pl'].
+*/
+export * from './language';
 export * from './signals';
 export * from './support';
 export * from './follows';

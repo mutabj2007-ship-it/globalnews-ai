@@ -52,24 +52,52 @@ const sharedFile = (name: string): string | null => {
 };
 
 describe('B3 — the two shared-contract prerequisites are still open', () => {
-  describe('PREREQUISITE 1 — the language module', () => {
-    it('`shared/src/language/` is absent from this tree', () => {
-      /*
-        `DisplayLocale` and `DISPLAY_LOCALES` live there. It is part of the
-        multilingual block the CTO reclassified to BETA REFERENCE — RECOVER WITH
-        ADAPTATION, and recovering it is a scope decision, not an Economy one.
-      */
-      expect(existsSync(join(REPO, 'shared', 'src', 'language'))).toBe(false);
+  describe('PREREQUISITE 1 — the language module — CLOSED BY B3.1', () => {
+    /*
+      THIS BLOCK IS A TRIPWIRE THAT FIRED, AND THAT IS THE POINT.
+
+      B3 asserted `shared/src/language/` was ABSENT and named it as the thing
+      blocking Economy. B3.1 recovered it — the CTO ruled it RECOVERABLE WITH NO
+      LANGUAGE ACTIVATION — so the original assertion began failing, by design,
+      and is replaced here rather than deleted.
+
+      The authority for the recovery's correctness is
+      `b31EconomyPrerequisites.spec.ts`. What remains here is the ONE property
+      this gate cares about: recovering the type activated no language.
+    */
+    it('the language module is now present', () => {
+      expect(existsSync(join(REPO, 'shared', 'src', 'language'))).toBe(true);
     });
 
-    it('and nothing in this tree exports DisplayLocale', () => {
-      expect(sharedFile('index.ts')).not.toContain('DisplayLocale');
+    it('and ACTIVE_LANGUAGES is still exactly EN + PL', () => {
+      /*
+        The load-bearing check. A display-locale TYPE is a contract; the
+        SELECTABLE registry is a deployment fact, and only the second decides
+        what a reader can choose.
+
+        The earlier assertion here grepped the shared barrel for the literal
+        'DisplayLocale' and passed only because the barrel re-exports with
+        `export *`, which names nothing. It was checking the wrong file for the
+        wrong thing, so it is replaced with the one that matters.
+      */
+      const languages = readFileSync(
+        join(REPO, 'frontend', 'src', 'lib', 'i18n', 'languages.ts'),
+        'utf-8',
+      );
+
+      expect(languages).toContain("export const ACTIVE_LANGUAGES: LanguageCode[] = ['en', 'pl'];");
     });
   });
 
   describe('PREREQUISITE 2 — SourceProvenance, and the SourceType collision', () => {
-    it('`shared/src/sourceModel.ts` is absent', () => {
+    it('`shared/src/sourceModel.ts` is still absent — it was NOT recovered wholesale', () => {
+      /*
+        B3.1 recovered only what the candidate lacked, into
+        `source-provenance.ts`, precisely so `SourceType` is not redeclared.
+        The canonical module itself stays out of the tree.
+      */
       expect(sharedFile('sourceModel.ts')).toBeNull();
+      expect(sharedFile('source-provenance.ts')).not.toBeNull();
     });
 
     it('but `source-type.ts` IS present and exports SourceType', () => {
