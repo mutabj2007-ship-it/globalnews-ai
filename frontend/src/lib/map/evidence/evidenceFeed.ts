@@ -139,7 +139,26 @@ export interface GeoRecordInput {
   readonly resolution: GeoResolution;
   readonly lastObservedAt: string;
   readonly reportCount?: number;
+  /**
+   * THE PROVIDER'S OWN NUMBER, WHICH IS NOT A DISTINCT-OUTLET COUNT.
+   *
+   * All three providers hard-code `NewsArticle.sourcesCount` to 1, so this
+   * counts nothing useful. It is kept because it is what the producer said;
+   * distinct outlets are counted from `publisherId` instead.
+   */
   readonly sourceCount?: number;
+  /**
+   * CHECKPOINT H — THE OUTLET'S OWN IDENTITY.
+   *
+   * `globalEvidenceFeed` has always carried this; this path never did, so every
+   * record built here reached `geographyTotals` with no publisher identity and
+   * fell back to `Math.max(sourceCount)` — which, given the hard-coded 1 above,
+   * reports "1 SOURCE" for a geography several different outlets reported on.
+   *
+   * `sourceId` is real on every article. Optional, so a producer without one
+   * degrades to an UNSUPPLIED count rather than to a wrong one.
+   */
+  readonly publisherId?: string;
   readonly headline?: string;
 }
 
@@ -208,6 +227,7 @@ export function geoRecordsFrom(input: GeoRecordInput): readonly EvidenceRecord[]
       provenance: resolution.provenance,
       reportCount: input.reportCount ?? 1,
       sourceCount: input.sourceCount ?? 1,
+      publisherId: input.publisherId,
       lastObservedAt: input.lastObservedAt,
       headline: input.headline,
     },
@@ -284,7 +304,25 @@ export interface MapFeedRecordInput {
   readonly feed: MapEvidenceGeography;
   readonly lastObservedAt: string;
   readonly reportCount?: number;
+  /**
+   * THE PROVIDER'S OWN NUMBER, WHICH IS NOT A DISTINCT-OUTLET COUNT.
+   * See `publisherId` below, and `EvidenceRecord.publisherId`.
+   */
   readonly sourceCount?: number;
+  /**
+   * CHECKPOINT H — THE OUTLET'S OWN IDENTITY.
+   *
+   * This is the path the map's country enrichment uses, and it never carried a
+   * publisher. So every record it produced reached `geographyTotals` with no
+   * identity and fell back to `Math.max(sourceCount)` — which, since all three
+   * providers hard-code `sourcesCount` to 1, reported "1 SOURCE" for a
+   * geography several visibly different outlets had reported on.
+   *
+   * `globalEvidenceFeed` already carried it. This closes the gap between the
+   * two producers so one geography cannot report two different source counts
+   * depending on which path filled it.
+   */
+  readonly publisherId?: string;
   readonly headline?: string;
   /**
    * The item's own category, carried so a selection-scoped card filter can
@@ -383,6 +421,7 @@ export function mapFeedRecordsFrom(input: MapFeedRecordInput): readonly Evidence
       provenance: feed.locationProvenance,
       reportCount: input.reportCount ?? 1,
       sourceCount: input.sourceCount ?? 1,
+      publisherId: input.publisherId,
       lastObservedAt: input.lastObservedAt,
       headline: input.headline,
       topics: input.topics,

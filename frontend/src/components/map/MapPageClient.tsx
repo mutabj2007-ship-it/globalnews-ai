@@ -768,6 +768,8 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
                 observedAt: article.publishedAt,
                 headline: article.title,
                 sourceCount: article.sourcesCount > 0 ? article.sourcesCount : 1,
+                /* CHECKPOINT H — the real outlet identity, for distinct-publisher counting. */
+                publisherId: article.sourceId,
                 category: article.category,
                 countryIso3: iso3,
               };
@@ -851,6 +853,8 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
                   observedAt: article.publishedAt,
                   headline: article.title,
                   sourceCount: article.sourcesCount > 0 ? article.sourcesCount : 1,
+                /* CHECKPOINT H — the real outlet identity, for distinct-publisher counting. */
+                publisherId: article.sourceId,
                   category: article.category,
                   countryIso3: iso3,
                 };
@@ -1251,6 +1255,7 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
         feed: entry.feed,
         lastObservedAt: entry.observedAt,
         sourceCount: entry.sourceCount,
+        publisherId: entry.publisherId,
         headline: entry.headline,
         topics: [entry.category],
         expectCountryIso3: entry.countryIso3,

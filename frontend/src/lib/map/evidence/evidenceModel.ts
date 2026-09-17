@@ -140,9 +140,31 @@ export interface GeographyTotal {
   readonly geographyId: string;
   readonly countryIso3: string;
   readonly displayName: string;
+  /** Evidence records folded into this geography. One article can be one record. */
   readonly recordCount: number;
+  /** Reports, as the producer counted them. */
   readonly reportCount: number;
+  /**
+   * ── CHECKPOINT H — THIS IS NOT A DISTINCT-PUBLISHER COUNT ───────────────
+   *
+   * It is the provider's own `sourcesCount`, which all three providers
+   * hard-code to 1, folded with `Math.max`. Read `publisherCount` instead for
+   * "how many different outlets"; this field is retained because it is what
+   * the producer said, and because removing it would silently change what
+   * existing surfaces are reading.
+   */
   readonly sourceCount: number;
+  /**
+   * ── DISTINCT OUTLETS, OR null WHEN NOBODY SAID ─────────────────────────
+   *
+   * Counted from `EvidenceRecord.publisherId`. `null` means NO RECORD CARRIED
+   * A PUBLISHER IDENTITY, which is not the same as "one outlet" and must never
+   * render as 1 — that is the exact defect this field exists to make
+   * unrepresentable: several visibly different publishers labelled "1 SOURCE".
+   *
+   * A surface showing this renders an em dash for null, never a number.
+   */
+  readonly publisherCount: number | null;
   readonly newSinceLastVisit: number;
   /** The FINEST precision any record here asserts. */
   readonly finestPrecision: DisplayPrecision;
@@ -185,6 +207,8 @@ export function geographyTotals(records: readonly EvidenceRecord[]): readonly Ge
         recordCount: 1,
         reportCount: record.reportCount,
         sourceCount: record.sourceCount,
+        /* Filled from the publisher set after the fold; see below. */
+        publisherCount: null,
         newSinceLastVisit: record.newSinceLastVisit ?? 0,
         finestPrecision: record.precision,
         hasUnverified: !verified,
@@ -206,16 +230,27 @@ export function geographyTotals(records: readonly EvidenceRecord[]): readonly Ge
   }
 
   /*
-    The distinct-outlet count replaces the provider's own number wherever the
-    records actually carried a publisher identity. Applied after the fold so
-    the merge above stays pure and the substitution is one statement.
+    ══ CHECKPOINT H — THE DISTINCT-OUTLET COUNT IS ITS OWN FIELD NOW ════════
+
+    It used to OVERWRITE `sourceCount` when publisher identities existed, which
+    made one field mean two different things depending on data the reader
+    cannot see: distinct outlets sometimes, the provider's hard-coded 1 the
+    rest of the time. A surface had no way to tell which it was holding.
+
+    So the two are separated. `sourceCount` remains the producer's own number,
+    and `publisherCount` is distinct outlets or NULL — never 1 by default,
+    because "nobody told us" and "one outlet" are different facts and the
+    second one is a claim.
+
+    `sourceCount` is still overwritten where identities exist, so no existing
+    surface regresses to the hard-coded number while it is being migrated.
   */
   const totals = [...byId.values()].map((total) => {
     const publishers = publishersById.get(total.geographyId);
 
     return publishers === undefined || publishers.size === 0
       ? total
-      : { ...total, sourceCount: publishers.size };
+      : { ...total, sourceCount: publishers.size, publisherCount: publishers.size };
   });
 
   return totals.sort((a, b) => b.reportCount - a.reportCount);

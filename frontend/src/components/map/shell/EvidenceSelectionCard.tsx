@@ -273,7 +273,14 @@ const Stat = ({
   tone,
   gn,
 }: {
-  value: number;
+  /*
+    CHECKPOINT H — `null` IS A STATE, NOT A MISSING NUMBER.
+
+    A count nobody supplied renders as an em dash. It must never fall back to
+    0 or to 1: "we were not told how many outlets" and "one outlet" are
+    different facts, and printing the second is a claim the data does not make.
+  */
+  value: number | null;
   label: string;
   tone: 'cy' | 'ink' | 'am' | 'mu';
   gn: string;
@@ -285,7 +292,7 @@ const Stat = ({
         tone === 'cy' ? 'text-sp-cyan' : tone === 'am' ? 'text-sp-amber' : tone === 'mu' ? 'text-sp-muted' : 'text-sp-ink'
       }`}
     >
-      {value}
+      {value ?? '—'}
     </b>
     <span className="font-gn-mono text-[8px] uppercase tracking-[0.12em] text-sp-ink-3">{label}</span>
   </div>
@@ -676,7 +683,16 @@ export function EvidenceSelectionCard({
           "Three equal cells, monospace numerals." */}
       <div data-gn="card-stats" className="grid grid-cols-3 gap-px border-y border-sp-line bg-sp-line">
         <Stat gn="card-reports" value={total.reportCount} label={labels.reports} tone="cy" />
-        <Stat gn="card-sources" value={total.sourceCount} label={labels.sources} tone="ink" />
+        {/*
+          CHECKPOINT H — DISTINCT PUBLISHERS, OR NOTHING.
+
+          This read `sourceCount`, which is the provider's own number folded with
+          `Math.max` — and all three providers hard-code it to 1. So a geography
+          reported on by several visibly different outlets displayed
+          "1 SOURCE". `publisherCount` counts real outlet identities and is null
+          when none were supplied, which renders as an em dash.
+        */}
+        <Stat gn="card-sources" value={total.publisherCount} label={labels.sources} tone="ink" />
         <Stat
           gn="card-new-since"
           value={total.newSinceLastVisit}

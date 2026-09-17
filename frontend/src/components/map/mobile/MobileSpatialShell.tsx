@@ -823,7 +823,13 @@ export function MobileSpatialShell({
             >
               {[
                 [selectedTotal?.reportCount ?? 0, spatial.card.reports],
-                [selectedTotal?.sourceCount ?? 0, spatial.card.sources],
+                /*
+                  CHECKPOINT H — `?? 0` was the worst of the three fallbacks: it
+                  asserted that zero outlets reported, for a geography whose
+                  publishers simply were not counted. Distinct publishers, or
+                  an em dash.
+                */
+                [selectedTotal?.publisherCount ?? null, spatial.card.sources],
                 [selectedTotal?.newSinceLastVisit ?? 0, spatial.card.newSince],
               ].map(([value, label]) => (
                 <div key={String(label)} className="bg-sp-panel px-[8px] py-[8px]">

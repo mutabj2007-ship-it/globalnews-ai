@@ -71,6 +71,12 @@ export interface ResolvedArticleGeography {
   readonly observedAt: string;
   readonly headline: string;
   readonly sourceCount: number;
+  /**
+   * CHECKPOINT H — carried so a retained corpus can still count DISTINCT
+   * outlets after the Analysis round trip. Without it, restored evidence would
+   * report a different source count from the evidence that produced it.
+   */
+  readonly publisherId: string;
   readonly category: NewsCategory;
   /** The country of the ARTICLE that produced this headline — the join-key expectation. */
   readonly countryIso3: string;

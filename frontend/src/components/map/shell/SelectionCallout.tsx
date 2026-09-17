@@ -284,7 +284,11 @@ export function SelectionCallout({
           {(
             [
               [total.reportCount, labels.reports, 'text-sp-cyan'],
-              [total.sourceCount, labels.sources, 'text-sp-ink'],
+              /*
+                CHECKPOINT H — distinct publishers, or an em dash. Never the
+                provider's hard-coded 1 under the word SOURCES.
+              */
+              [total.publisherCount, labels.sources, 'text-sp-ink'],
               [
                 total.newSinceLastVisit,
                 labels.newSince,
@@ -293,7 +297,9 @@ export function SelectionCallout({
             ] as const
           ).map(([value, label, tone]) => (
             <div key={label} className="bg-sp-panel-2 px-[8px] py-[6px]">
-              <b className={`block font-gn-mono text-[15px] font-medium ${tone}`}>{value}</b>
+              <b className={`block font-gn-mono text-[15px] font-medium ${tone}`}>
+                {value ?? '—'}
+              </b>
               <span className="block truncate font-gn-mono text-[7.5px] uppercase tracking-[0.1em] text-sp-ink-3">
                 {label}
               </span>
