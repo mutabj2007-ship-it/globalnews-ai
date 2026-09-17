@@ -10,6 +10,35 @@ correspondence, which is not a place a future contributor will look.
 
 ---
 
+## PHASE 1 STATUS — CTO RULING
+
+| | |
+| --- | --- |
+| **Phase 1 audit** | **COMPLETE** |
+| **Phase 1 functionality** | **PARTIAL** — explicitly deferred/open items remain |
+
+Phase 1 covers Checkpoints A–M. The audit is finished; the functionality is not,
+and it must not be recorded as if it were.
+
+### The six items that must survive to sign-off
+
+These are carried by CTO ruling. **Do not remove any of them from this file**
+without a ruling that closes it.
+
+| item | status | blocked on |
+| ---- | ------ | ---------- |
+| E-4 · `SPATIAL-EVIDENCE-MODE-AFFORDANCE-1` | OPEN | backend point-evidence producer |
+| E-5 · `SPATIAL-COUNTRY-EVIDENCE-LAYER-TOGGLE-1` | OPEN | backend point-evidence producer |
+| `SUPPORT-PRODUCT-KNOWLEDGE-ROUTING-1` | OPEN | Claude F (Support domain authority) |
+| `AUTH-OAUTH-ERROR-REASON-VISIBILITY-1` | OPEN | backend failure contract + security decision |
+| J · analysis semantic contract | PASS / **live-Alpha validation pending** | observation against a running Alpha |
+| K · analysis source admission | PASS / **live-Alpha validation pending** | observation against a running Alpha |
+| `ANALYSIS-NON-ENGLISH-MATERIAL-RELEVANCE-1` | OPEN | multilingual demonym/locative data |
+
+Each is detailed in its own section below.
+
+---
+
 ## Deferred to Claude Design (presentation / vocabulary)
 
 ### `ANALYSIS-METRIC-VOCABULARY-1` — "moderate" means two unrelated things

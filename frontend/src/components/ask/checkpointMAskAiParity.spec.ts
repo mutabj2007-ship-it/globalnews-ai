@@ -12,49 +12,54 @@ import { join } from 'path';
  * affordance IS, so the classification rests on assertions rather than on a
  * reading.
  *
- * ─── WHAT "PRODUCTION" MEANS IN THIS PASS, STATED HONESTLY ────────────────
+ * ─── CORRECTED AGAINST THE GOVERNED BASELINE ──────────────────────────────
  *
- * The Alpha side is PROVEN: this candidate descends from `2c4b6ce`, the
- * materialised deployed Alpha tree `654be554`, recovered under DOMAIN-1 with
- * 1087/1087 files byte-identical.
+ * THIS SPEC FIRST COMPARED AGAINST LOCAL `main`, AND THAT WAS WRONG. The CTO
+ * ruling is explicit — do not use `main` as the Production proxy — and the
+ * measurement proves why: `main` (41428ea) is a DIFFERENT LINEAGE that has no
+ * `components/ask/` directory at all, so comparing against it manufactured two
+ * differences that do not exist.
  *
- * The Production side is NOT proven to the same standard. No equivalent
- * deployed-commit evidence was gathered for Production in this pass, so the
- * comparison is against the local `main` branch as a LINEAGE PROXY. Every
- * classification below is therefore "Alpha vs main"; whether the Production
- * deployment matches `main` is UNVERIFIED and is recorded as such rather than
- * assumed. Production was not touched, which is why it could not be measured.
+ * THE THREE LAYERS, ALL PROVABLE:
  *
- * ─── THE FINDING ──────────────────────────────────────────────────────────
+ *   L1  GOVERNED PRODUCTION BASELINE — C911-V1, commit `fc162e2`, tree
+ *       `64f42a52`, 1086 entries verified against
+ *       SHA256-MANIFEST-C911-V1-full-tree.txt (1086/1086 OK).
+ *   L2  DEPLOYED ALPHA CANDIDATE — `2c4b6ce`, tree `654be554`, 1087/1087
+ *       byte-identical. `git merge-base` returns L1, so L2 DESCENDS FROM L1.
+ *   L3  this convergence candidate — L2 plus the Phase 1 corrections.
  *
- * There are FOUR Ask AI affordances, not one, and they do not all differ.
+ * L1 -> L2 IS TWO FILES. `git diff --stat fc162e2 2c4b6ce` is
+ * `news.service.ts` and `news.service.home-cache.spec.ts`, +960/-2, both in
+ * `backend/src/modules/news`. Everything else in the deployed Alpha candidate
+ * is byte-identical to the governed Production baseline.
+ *
+ * LIVE DEPLOYMENT COMMIT = UNVERIFIED. Railway exposes no commit hash for
+ * frontend d1d564d3-3416-454e-8963-2216c9f30d32 or backend
+ * 241e7157-7fec-47a6-b2d5-e3ca0d4d84c0. No Git ref is manufactured for them.
+ *
+ * ─── THE FINDING, RESTATED ────────────────────────────────────────────────
+ *
+ * There are four Ask AI affordances. Against the GOVERNED BASELINE, three are
+ * identical and the fourth is not a parity difference at all.
  *
  *   1. MOBILE BOTTOM NAV — `{ key: 'ask', href: '/search', Icon: Search }`
- *      Byte-identical in both. This is almost certainly the control the
- *      Production evidence shows.                                   ->  SAME
+ *      Inside the untouched region of the L1->L2 diff.              ->  SAME
  *
- *   2. COUNTRY ARTICLE CARD — "Ask GlobalNews AI about this".
- *      Present in both; the only diff `git` reports is the file MODE
- *      (100644 -> 100755), a worktree artefact, not content.        ->  SAME
+ *   2. COUNTRY ARTICLE CARD — "Ask GlobalNews AI about this".       ->  SAME
  *
- *   3. ASK AI DOCK — a floating surface mounted in the root layout on EVERY
- *      route. Absent from `main` entirely: no `components/ask/` directory,
- *      no mount, no dictionary section.          ->  ALPHA-ONLY UNPROMOTED
+ *   3. ASK AI DOCK — PRESENT IN C911-V1, with all six files in
+ *      `components/ask/` and mounted in the layout. It is not an Alpha-only
+ *      surface; it is governed Production source.                   ->  SAME
  *
- *   4. SOURCE CARD ASK ACTION — `askAiShort`, the affordance Checkpoint D
- *      made explicit. No `askAiShort` anywhere in `main`.
- *                                                ->  ALPHA-ONLY UNPROMOTED
+ *   4. SOURCE CARD ASK ACTION — `askAiShort` is absent from BOTH L1 and L2.
+ *      It was added by Checkpoint D on this convergence branch, so it is a
+ *      CONVERGENCE ADDITION and not an Alpha/Production difference.
+ *                                              ->  ALPHA ONLY (this candidate)
  *
- * ─── WHY 3 AND 4 ARE "UNPROMOTED" AND NOT "REGRESSION" ────────────────────
- *
- * A regression is something Production HAD and Alpha LOST. This is the
- * opposite direction: Alpha has surfaces Production never had. And the hold is
- * recorded in the layout itself — the dock is deliberately NOT a NavBar item
- * because "that row is released design and Ask AI's own chrome/geometry
- * reconciliation is still held".
- *
- * NOTHING NEEDS RESTORING. The entry control Production has is present and
- * identical in Alpha. No button was lost in either direction.
+ * NOTHING NEEDS RESTORING, and the reason is now stronger than before: the Ask
+ * AI entry controls are the SAME source in both, so no button was lost in
+ * either direction and none was ever Alpha-only.
  *
  * ─── THE EIGHT ATTRIBUTES, FOR THE DOCK ───────────────────────────────────
  *
@@ -86,7 +91,7 @@ const stripComments = (value: string): string =>
 
 const dockCode = stripComments(dock);
 
-describe('M — the entry control Production has, Alpha has identically', () => {
+describe('M — the entry controls are the SAME source as the governed baseline', () => {
   it('the bottom nav offers Ask AI', () => {
     expect(bottomNav).toContain("{ key: 'ask', href: '/search', Icon: Search }");
   });
