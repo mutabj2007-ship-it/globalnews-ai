@@ -1263,6 +1263,8 @@ export const pl: Dictionary = {
         retainedFilteredEmpty: 'Brak zachowanych doniesie\u0144 w wybranych kategoriach.',
         openSource: 'Otw\u00f3rz \u017ar\u00f3d\u0142o w nowej karcie',
         askAbout: 'Zapytaj GlobalNews AI o to',
+        /* CHECKPOINT D — the visible name of the AI action. See en.ts. */
+        askAiShort: 'Zapytaj AI',
         topicsHeading: 'Tematy',
         clearSelection: 'Wyczy\u015b\u0107 wyb\u00f3r',
         follow: {

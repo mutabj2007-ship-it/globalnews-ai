@@ -120,6 +120,8 @@ export interface EvidenceSelectionCardLabels {
   readonly retainedFilteredEmpty: string;
   readonly openSource: string;
   readonly askAbout: string;
+  /** CHECKPOINT D — the VISIBLE name of the AI action; askAbout stays the accessible one. */
+  readonly askAiShort: string;
   /** 11 topics. */
   readonly topicsHeading: string;
   /** 07a follow control. */
@@ -925,6 +927,7 @@ export function EvidenceSelectionCard({
                   levels: labels.levels,
                   openSource: labels.openSource,
                   askAbout: labels.askAbout,
+                  askAiShort: labels.askAiShort,
                   seenPrefix: labels.coverage.seenPrefix,
                   publishedPrefix: labels.coverage.publishedPrefix,
                 }}

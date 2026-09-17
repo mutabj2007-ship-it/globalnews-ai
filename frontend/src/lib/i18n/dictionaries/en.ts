@@ -1496,6 +1496,20 @@ export const en = {
         retainedFilteredEmpty: 'No retained reporting in the selected categories.',
         openSource: 'Open source in a new tab',
         askAbout: 'Ask GlobalNews AI about this',
+        /*
+          CHECKPOINT D — THE VISIBLE NAME OF THE AI ACTION.
+
+          `askAbout` is the ACCESSIBLE name and stays exactly as it was. This is
+          the name a SIGHTED reader sees, which until now was a bare magnifier
+          glyph. /search auto-executes POST /analysis/news on arrival, so this
+          control is the decision point at which model compute is spent, and it
+          has to say so on the surface rather than only to a screen reader.
+
+          Deliberately NOT "paid": the monetization contract is still under
+          review, and naming a price the product has not agreed would be a
+          different kind of untruth.
+        */
+        askAiShort: 'Ask AI',
         topicsHeading: 'Topics',
         clearSelection: 'Clear selection',
         follow: {

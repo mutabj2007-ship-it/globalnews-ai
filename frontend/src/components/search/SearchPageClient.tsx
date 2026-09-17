@@ -5,6 +5,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { analyzeNews, AnalysisApiError, type AnalysisApiErrorCode } from '@/lib/api/analysisApi';
+import { analysisAutoRunDecision } from '@/lib/analysis/analysisAutoRun';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { AnalysisFrameSurface } from '@/components/analysis-frame/AnalysisFrameSurface';
 import { resolveFrameEvidence } from '@/components/analysis-frame/analysisFrameState';
@@ -235,11 +236,17 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
     // the first request, so the very first fetch already uses the
     // correct language instead of always starting as English and
     // re-fetching immediately after.
-    if (!hasResolvedLanguage) return undefined;
+    /*
+      CHECKPOINT D — the decision is named and countable. Same two conditions,
+      same order, same outcomes; see analysisAutoRun.ts for why it is a function.
+    */
+    const decision = analysisAutoRunDecision(query, hasResolvedLanguage);
+
+    if (decision === 'idle-language-pending') return undefined;
 
     let cancelled = false;
 
-    if (!query.trim()) {
+    if (decision === 'idle-no-query') {
       // M65 — no question is no longer an error condition. The render
       // below shows the research workspace instead of an alert.
       setIsLoading(false);

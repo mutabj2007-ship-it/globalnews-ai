@@ -57,6 +57,16 @@ export interface SourceCardLabels {
   /** "Ask GlobalNews AI about this" — the accepted Map -> Story -> Q&A action. */
   readonly askAbout: string;
   /**
+   * CHECKPOINT D — the VISIBLE name of the same action ("Ask AI").
+   *
+   * `askAbout` above remains the ACCESSIBLE name and is unchanged. This exists
+   * because the two used to disagree: the label said "Ask GlobalNews AI about
+   * this" while the surface showed a bare magnifier, and /search auto-executes
+   * POST /analysis/news on arrival — so the click spent model compute behind a
+   * glyph that reads as "inspect".
+   */
+  readonly askAiShort: string;
+  /**
    * Prefix for an OBSERVED timestamp. `NewsArticle.publishedAtBasis`'s contract
    * rule: an observed time "may be rendered as 'Seen 3h ago' and must NEVER be
    * rendered as 'Published 3h ago'".
@@ -255,14 +265,46 @@ export function SourceCard({
           link exactly as the anatomy requires of the affordance it does define.
         */}
         {onAskAbout && (
+          /*
+            ══ CHECKPOINT D · AN AI ACTION MUST LOOK LIKE ONE ═══════════════
+
+            THIS WAS A BARE MAGNIFIER — `&#8981;`, aria-hidden, in a box
+            identical to the external-link arrow beside it. The accessible name
+            was honest ("Ask GlobalNews AI about this"); the visible affordance
+            was not. A magnifier conventionally means search, zoom, inspect,
+            look closer — all free and all local.
+
+            IT IS NOT FREE. `onAskAbout` pushes /search?q=…, and that route
+            AUTO-EXECUTES POST /analysis/news on arrival (see
+            analysisAutoRun.ts). This click IS the decision to spend model
+            compute, and it was the only one the reader got.
+
+            SO THE NAME IS NOW ON THE SURFACE. The accessible label is unchanged
+            — a screen-reader user still hears the full sentence — and sighted
+            readers now read the same thing the label always said.
+
+            NOT LABELLED "PAID". The monetization contract is under review, and
+            naming a price the product has not agreed would be its own untruth.
+
+            THE CARD IS NOT REDESIGNED. Same row, same height, same border and
+            hover language, same keyboard treatment. What changed is that the
+            glyph became a word, and the box widened to hold it.
+          */
           <button
             type="button"
             data-gn="source-ask"
+            data-gn-ai-action="true"
             onClick={() => onAskAbout(item.id)}
             aria-label={`${labels.askAbout}: ${item.headline}`}
-            className="flex h-[26px] w-[26px] items-center justify-center border border-sp-story-line text-[11px] text-sp-story-meta outline-none transition-[background-color,border-color] duration-[160ms] ease-in-out group-hover:border-sp-story-line-hover hover:!border-sp-cyan/45 hover:bg-sp-cyan/[0.16] hover:text-sp-cyan focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sp-cyan"
+            className="flex h-[26px] items-center justify-center gap-[4px] border border-sp-story-line px-[6px] text-[10px] uppercase tracking-[0.08em] text-sp-story-meta outline-none transition-[background-color,border-color] duration-[160ms] ease-in-out group-hover:border-sp-story-line-hover hover:!border-sp-cyan/45 hover:bg-sp-cyan/[0.16] hover:text-sp-cyan focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sp-cyan"
           >
-            <span aria-hidden="true">&#8981;</span>
+            {/*
+              The indicator and the word carry the same fact. The glyph is
+              aria-hidden because the button already has a full accessible
+              name; announcing a decorative mark as well would be noise.
+            */}
+            <span aria-hidden="true" className="text-sp-cyan">&#9673;</span>
+            <span>{labels.askAiShort}</span>
           </button>
         )}
       </span>

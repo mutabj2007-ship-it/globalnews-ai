@@ -1014,6 +1014,7 @@ export function MobileSpatialShell({
                       levels: spatial.card.levels,
                       openSource: spatial.card.openSource,
                       askAbout: spatial.card.askAbout,
+                      askAiShort: spatial.card.askAiShort,
                       seenPrefix: spatial.card.coverage.seenPrefix,
                       publishedPrefix: spatial.card.coverage.publishedPrefix,
                     }}
