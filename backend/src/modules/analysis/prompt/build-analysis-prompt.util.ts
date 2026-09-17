@@ -203,6 +203,27 @@ Strict rules:
   keyFacts. Return an empty array if a meaningful relevance claim cannot
   be grounded in the supplied evidence.
 ${renderDimensionSemanticsInstruction()}
+- ATTRIBUTION IS STRUCTURAL, NOT PROSE. Every entry in "keyFacts" carries
+  "assertion", which is either "FACT" or "REPORTED_STATEMENT".
+  * "FACT" — the supplied evidence ESTABLISHES this proposition. It is stated
+    in GlobalNews AI's own voice, so only use it where the evidence supports
+    the proposition itself.
+  * "REPORTED_STATEMENT" — someone SAID this. What is being asserted is that
+    they said it, which is a different claim from the content being true. Set
+    "attribution" with "speaker" naming the most precise attributor the
+    evidence supports: a named official or ministry where one is given, the
+    institution where it is not, and the country ONLY when the evidence
+    attributes it no more precisely. Put the reporting verb the evidence uses
+    in "attribution.verb".
+  AN INTERPRETIVE CHARACTERISATION IS NOT A KEY FACT. Words such as "threat",
+  "escalation", "crackdown", "crisis" or "landmark" are judgements about what
+  something MEANS. You may use such a word only where the supplied evidence
+  itself uses it, and then it is a REPORTED_STATEMENT attributed to whoever
+  used it — never a "FACT" in our own voice. If the evidence reports an action
+  without characterising it, report the action.
+  DO NOT SOFTEN A CHARACTERISATION INTO ACCEPTABLE WORDING. Rewriting "issued a
+  threat" as "made a strongly worded statement" is the same judgement in
+  quieter language. State what the evidence states, attributed.
 - For "affectedParties": identify up to 6 people, organizations,
   countries, regions, or groups the supplied evidence EXPLICITLY
   describes as affected, and state the effect on each using only what

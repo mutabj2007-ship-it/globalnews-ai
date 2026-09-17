@@ -155,10 +155,17 @@ export const ANALYSIS_DIMENSION_SEMANTICS: readonly DimensionSemantics[] = [
       'second is what a source reports someone else asserting, and the third is ' +
       'yours and must not appear here at all.',
     example: {
-      rejected: 'This is the most serious escalation in years',
+      rejected: 'Russia issued a threat to Poland',
       because:
-        'Unless a source states it, that is a characterisation. It may belong in ' +
-        'significance, attributed — never in key facts as though established.',
+        'This collapses four separate questions into one sentence asserted in ' +
+        'our own voice: whether the evidence supports RUSSIA as the actor rather ' +
+        'than a named ministry or official; whether it names a more precise ' +
+        'speaker; whether it supports the statement itself; and whether the ' +
+        'SOURCE calls it a threat or that is our word. If the evidence says a ' +
+        'named official said something, the key fact is that they said it — ' +
+        'assertion "REPORTED_STATEMENT" with that speaker attributed. Calling it ' +
+        'a threat is admissible ONLY if the evidence itself characterises it so, ' +
+        'and then it is still attributed to whoever characterised it.',
     },
   },
 ];

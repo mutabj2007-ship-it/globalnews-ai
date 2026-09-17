@@ -216,6 +216,34 @@ function validateSourcedClaims(
     */
     const contradictions = findContradictionsAgainst(obj.claim, ctx.evidenceAttributions);
     if (contradictions.length > 0) continue;
+    /*
+      J-3 — A REPORTED STATEMENT WITHOUT A SPEAKER IS INDISTINGUISHABLE FROM A
+      FACT, which is the exact collapse this field exists to prevent. Dropped
+      rather than repaired: inventing an attributor would fabricate provenance,
+      and silently downgrading it to a FACT would assert in our own voice
+      something the model itself flagged as merely reported. Both are worse than
+      one fewer key fact, and this file's existing philosophy is to drop.
+    */
+    const assertion = obj.assertion === 'REPORTED_STATEMENT' ? 'REPORTED_STATEMENT' : 'FACT';
+    /*
+      Read defensively rather than with requireObject: a malformed attribution
+      must DROP this one claim, not throw away the whole analysis. The rest of
+      this function treats a bad entry the same way.
+    */
+    const rawAttribution =
+      obj.attribution !== null && typeof obj.attribution === 'object' && !Array.isArray(obj.attribution)
+        ? (obj.attribution as Record<string, unknown>)
+        : undefined;
+    const speaker =
+      rawAttribution !== undefined && isNonEmptyString(rawAttribution.speaker)
+        ? rawAttribution.speaker
+        : undefined;
+    const verb =
+      rawAttribution !== undefined && isNonEmptyString(rawAttribution.verb)
+        ? rawAttribution.verb
+        : undefined;
+
+    if (assertion === 'REPORTED_STATEMENT' && speaker === undefined) continue;
     const sourceArticleIds = resolveEvidenceIds(obj.evidenceIds, ctx.evidenceMap);
     // A key fact with zero valid supporting sources is not a
     // grounded fact — drop it rather than let it appear as one.
@@ -233,6 +261,23 @@ function validateSourcedClaims(
     );
     result.push({
       claim: obj.claim,
+      /*
+        J-3 — carried only when the model actually said so. An omitted
+        "assertion" stays omitted rather than defaulting to FACT on the wire, so
+        a result produced before this distinction existed is byte-identical and
+        readers can tell "not stated" from "stated as fact".
+      */
+      ...(obj.assertion === 'REPORTED_STATEMENT' || obj.assertion === 'FACT'
+        ? { assertion }
+        : {}),
+      ...(assertion === 'REPORTED_STATEMENT' && speaker !== undefined
+        ? {
+            attribution: {
+              speaker,
+              ...(verb !== undefined ? { verb } : {}),
+            },
+          }
+        : {}),
       sourceArticleIds,
       evidenceBreadth: computeEvidenceBreadth(sourceArticleIds),
       ...(evidenceBasis ? { evidenceBasis } : {}),

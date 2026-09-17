@@ -148,8 +148,69 @@ export interface RelationalSupport {
   assessments: RelationalEvidenceAssessment[];
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * J-3 — WHAT KIND OF ASSERTION A CLAIM IS MAKING
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * CTO ruling: *"An interpretive label must not silently become GlobalNews AI's
+ * own factual assertion unless the cited evidence directly supports that
+ * characterization … Prefer preserving attribution structurally rather than
+ * post-processing prose after generation."*
+ *
+ * THE MEASURED CASE. "Russia issued a threat to Poland…" collapses four separate
+ * questions into one sentence the product then asserts in its own voice:
+ *
+ *   1. does the evidence support RUSSIA as the actor, or a ministry/official?
+ *   2. does it identify a more precise speaker than the country?
+ *   3. does it support the statement itself?
+ *   4. does the SOURCE call it a threat — or is that our word?
+ *
+ * A reader cannot tell which parts are reported and which are ours, because the
+ * sentence has no structure to carry the difference.
+ *
+ * TWO KINDS, NOT THREE. An interpretive characterisation is not a third kind of
+ * key fact — it is a kind that does not belong in key facts at all, unless the
+ * evidence itself makes the characterisation, in which case it is a REPORTED
+ * STATEMENT attributed to whoever made it.
+ */
+export type ClaimAssertionKind =
+  /** The evidence establishes this proposition. Stated in the product's voice. */
+  | 'FACT'
+  /**
+   * Someone said this. The product reports THAT THEY SAID IT, which is a
+   * different assertion from the content being true, and requires a speaker.
+   */
+  | 'REPORTED_STATEMENT';
+
+/**
+ * Who made a reported statement, as precisely as the evidence names them.
+ *
+ * REQUIRED whenever assertion is 'REPORTED_STATEMENT'. A reported statement
+ * with no speaker is indistinguishable from a fact, which is the collapse this
+ * exists to prevent — so the validator DROPS such an entry rather than
+ * inventing an attributor or silently downgrading it to a fact.
+ */
+export interface StatementAttribution {
+  /**
+   * The most precise attributor the evidence supports: a named official or
+   * ministry where one is given, the institution where it is not, and the
+   * country only when the evidence attributes it no more precisely than that.
+   */
+  speaker: string;
+  /** The reporting verb the evidence uses — said, announced, warned, denied. */
+  verb?: string;
+}
+
 export interface SourcedClaim {
   claim: string;
+  /**
+   * J-3 — additive and optional. Absent means a result produced before this
+   * distinction existed, and readers must treat it exactly as they always did.
+   */
+  assertion?: ClaimAssertionKind;
+  /** J-3 — present only for REPORTED_STATEMENT, and required there. */
+  attribution?: StatementAttribution;
   sourceArticleIds: string[];
   /** Milestone #32 — additive; absent on results generated before this milestone. */
   evidenceBreadth?: EvidenceBreadth;
