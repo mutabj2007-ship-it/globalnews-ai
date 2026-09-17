@@ -1038,6 +1038,7 @@ export const pl: Dictionary = {
         brand: 'GlobalNews AI',
         brandSub: 'Inteligencja przestrzenna',
         brandHome: 'powr\u00f3t do GlobalNews AI',
+        languageGroup: 'Język',
         periodGroup: 'Zakres czasu',
         periods: { NOW: 'Teraz', '24H': '24h', '7D': '7d', '30D': '30d' },
       },

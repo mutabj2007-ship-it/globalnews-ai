@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   COUNTRIES,
   type LanguageCode,
@@ -59,6 +60,7 @@ import { PrecisionBanner } from './PrecisionBanner';
 import { MapHudTopBar } from './MapHudTopBar';
 import { ModeSwitcher } from './ModeSwitcher';
 import { LayerToggleRail } from './LayerToggleRail';
+import { MapLanguageControl } from './MapLanguageControl';
 import { MapControlCluster } from './d1/MapControlCluster';
 import { GlobeLocator } from './d1/GlobeLocator';
 import { LayersControl } from './d1/LayersControl';
@@ -104,6 +106,8 @@ import {
   type UnderstandingSignal,
 } from '@/lib/map/monetization/watchCtaLadder';
 import { accountSignInUrl } from '@/lib/api/accountBase';
+/* CHECKPOINT F — the product's ONE language persistence path, reused. */
+import { persistLanguageSelection } from '@/lib/i18n/languages';
 
 /*
   The same released sign-in path the accepted anonymous Follow state already
@@ -354,6 +358,16 @@ export function GlobalMapShell({
   const t = getDictionary(language).map;
   const shell = t.shell;
   const spatial = t.spatial;
+
+  /*
+    CHECKPOINT F — router.refresh() is what makes a language change take effect.
+
+    This route resolves the language in a Server Component from the cookie, so
+    re-rendering against the freshly written cookie is the whole mechanism —
+    the same one NavBar.handleLanguageChange has always used. Nothing here holds
+    language state of its own.
+  */
+  const router = useRouter();
 
   /* THE HUD IS DERIVED, NEVER PASSED. See the note above. */
   const hud = hudProfile(surfaceDensity);
@@ -1392,6 +1406,25 @@ export function GlobalMapShell({
         <div className="col-span-full">
           <MapHudTopBar
             labels={spatial.topBar}
+            /*
+              CHECKPOINT F — the map's EN/PL control.
+
+              Persistence is THE SAME ONE PATH the NavBar uses:
+              persistLanguageSelection() writes the cookie this route's Server
+              Component already reads, and router.refresh() re-renders against
+              it. No second mechanism, and no language state held here — the
+              cookie remains the single source of truth.
+            */
+            languageSlot={
+              <MapLanguageControl
+                value={language}
+                label={spatial.topBar.languageGroup}
+                onChange={(next) => {
+                  persistLanguageSelection(next);
+                  router.refresh();
+                }}
+              />
+            }
             period={period}
             onPeriodChange={(next) => onPeriodChange?.(next)}
             showPeriodChips={hud.periodChips}

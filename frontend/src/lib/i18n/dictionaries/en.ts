@@ -1271,6 +1271,7 @@ export const en = {
         brand: 'GlobalNews AI',
         brandSub: 'Spatial intelligence',
         brandHome: 'back to GlobalNews AI',
+        languageGroup: 'Language',
         periodGroup: 'Time period',
         periods: { NOW: 'Now', '24H': '24h', '7D': '7d', '30D': '30d' },
       },

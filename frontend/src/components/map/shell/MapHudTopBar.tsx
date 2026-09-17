@@ -41,6 +41,16 @@ export interface MapHudTopBarLabels {
 export interface MapHudTopBarProps {
   readonly modeSlot?: ReactNode;
   readonly searchSlot?: ReactNode;
+  /**
+   * CHECKPOINT F — MAP-GLOBAL-LANGUAGE-CONTROL-1.
+   *
+   * A SLOT, not a component, because that is what this bar takes. The Spatial
+   * shell mounts no NavBar, so before this there was no EN/PL control anywhere
+   * on the map: the language could be read from the cookie and never changed.
+   *
+   * Optional, so a bar rendered without it is exactly the accepted bar.
+   */
+  readonly languageSlot?: ReactNode;
   readonly period: MapPeriod;
   readonly onPeriodChange: (period: MapPeriod) => void;
   readonly showPeriodChips?: boolean;
@@ -51,6 +61,7 @@ export interface MapHudTopBarProps {
 export function MapHudTopBar({
   modeSlot,
   searchSlot,
+  languageSlot,
   period,
   onPeriodChange,
   showPeriodChips = true,
@@ -108,6 +119,23 @@ export function MapHudTopBar({
       {searchSlot && (
         <div data-gn="hud-search-slot" className="ms-auto shrink">
           {searchSlot}
+        </div>
+      )}
+
+      {/*
+        LANGUAGE SITS BESIDE THE PERIOD CHIPS, AND BEFORE THEM.
+
+        Both are small closed-set choices in the same segmented grammar, so they
+        belong together rather than at opposite ends of the bar. Language comes
+        first because it governs everything else in the row — the mode names,
+        the period names and the search placeholder are all rendered in it.
+
+        It never shrinks, for the same reason the chips do not: Part II §5 gives
+        the mode row the entire shrink budget.
+      */}
+      {languageSlot && (
+        <div data-gn="hud-language-slot" className="flex shrink-0 items-center">
+          {languageSlot}
         </div>
       )}
 
