@@ -25,7 +25,8 @@
     "test:backend": "npm run test --workspace=backend",
     "test:frontend": "npm run test --workspace=frontend",
     "docker:up": "docker compose up --build",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "verify:file-inclusion": "node scripts/verify-release-file-inclusion.mjs"
   },
   "engines": {
     "node": ">=20.0.0",

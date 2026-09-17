@@ -18,6 +18,13 @@ out/
 
 # ---- Logs ----
 logs/
+# RELEASE-EXACT-CANDIDATE-FILE-INCLUSION-1 — `logs/` above is a RUNTIME-OUTPUT
+# rule, but it also matches this Next.js route segment, which is SOURCE.
+# `railway up` honours .gitignore by default, so without this negation the
+# admin system-logs page is silently dropped from the deployed artifact and
+# the deployed tree is not the reviewed candidate. Verified by
+# `node scripts/verify-release-file-inclusion.mjs`.
+!frontend/src/app/admin/system/logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
