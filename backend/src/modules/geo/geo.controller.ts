@@ -1,7 +1,20 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import {
   childrenOf,
   lookupGeographyId,
@@ -50,6 +63,59 @@ export class MapFeedQueryDto {
   @IsOptional()
   @IsIn(['query', 'article'])
   mode?: 'query' | 'article';
+}
+
+/**
+ * THE BOUND ON ONE BATCH, AND WHY IT IS A CONSTANT RATHER THAN A FEELING.
+ *
+ * The frontend's own enrichment ceilings are 24 (global feed) and 12 (per
+ * country), so the largest legitimate UNION a single screen can ask for is 36
+ * distinct inputs. 64 leaves headroom for that union to grow without a backend
+ * change, while still refusing an unbounded request.
+ *
+ * A caller with more than this must CHUNK — deterministically, in order — and
+ * the frontend does. Silently truncating would be the worse failure: the map
+ * would simply be missing evidence with nothing reporting why.
+ */
+export const MAP_FEED_BATCH_MAX_ITEMS = 64;
+
+export class MapFeedBatchItemDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  q!: string;
+
+  /** Identical semantics to the scalar route: a tiebreak, never a manufacturer. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(3)
+  country?: string;
+
+  /** Identical semantics to the scalar route, including the 'query' default. */
+  @IsOptional()
+  @IsIn(['query', 'article'])
+  mode?: 'query' | 'article';
+}
+
+export class MapFeedBatchRequestDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAP_FEED_BATCH_MAX_ITEMS)
+  @ValidateNested({ each: true })
+  @Type(() => MapFeedBatchItemDto)
+  items!: MapFeedBatchItemDto[];
+}
+
+/**
+ * INDEX-ALIGNED BY CONTRACT. `results[i]` is the resolution of `items[i]`.
+ *
+ * Association is by POSITION rather than by echoing the query text back,
+ * because two items in one batch may legitimately carry identical text with
+ * different `country` context, and a text-keyed response could not tell them
+ * apart. Position cannot collide.
+ */
+export interface MapFeedBatchResponse {
+  readonly results: readonly MapEvidenceGeography[];
 }
 
 /**
@@ -179,9 +245,72 @@ export class GeoController {
    */
   @Get('map-feed')
   mapFeed(@Query() query: MapFeedQueryDto): MapEvidenceGeography {
-    return query.mode === 'article'
-      ? mapGeographyForArticle(query.q, query.country)
-      : mapGeographyForQuery(query.q, query.country);
+    return this.resolveOne(query);
+  }
+
+  /**
+   * THE ONE PLACE THE GATE IS CHOSEN.
+   *
+   * CTO ruling, B-1: *"Do not create a second geography algorithm."* This
+   * private method is how that is guaranteed STRUCTURALLY rather than by
+   * discipline — the scalar route and the batch route both call it, so there is
+   * exactly one expression in this file that decides between the article gate
+   * and the query gate, and per-item batch semantics cannot drift from scalar
+   * semantics without changing scalar semantics in the same edit.
+   *
+   * It is deliberately shaped to take the DTO rather than three loose
+   * arguments, so an item and a query are interchangeable at the call site and
+   * the 'query' default lives in one place.
+   */
+  private resolveOne(item: MapFeedQueryDto | MapFeedBatchItemDto): MapEvidenceGeography {
+    return item.mode === 'article'
+      ? mapGeographyForArticle(item.q, item.country)
+      : mapGeographyForQuery(item.q, item.country);
+  }
+
+  /**
+   * POST /geo/map-feed/batch
+   *
+   * ─────────────────────────────────────────────────────────────────────────
+   * WHY THIS EXISTS, AND WHY THE BACKEND IS THE RIGHT OWNER
+   * ─────────────────────────────────────────────────────────────────────────
+   *
+   * The map enriched evidence by issuing ONE HTTP REQUEST PER ARTICLE — a
+   * deliberate frontend fan-out, capped at 24 on map open and 12 per country
+   * selection. Measured in Alpha, a single user action produced /geo/map-feed
+   * x3, x4, x7 and x8.
+   *
+   * None of it consumed provider quota — this resolver is synchronous and
+   * touches no provider, no database and no network — so the cost was never
+   * retrieval spend. It was N round-trips and N rate-limit slots for one user
+   * action, which is latency and backend load.
+   *
+   * CACHING IN THE FRONTEND WOULD HAVE HIDDEN THE SECOND OCCURRENCE OF THE
+   * STORM WITHOUT REMOVING THE FIRST. A synchronous, deterministic, pure
+   * function of its arguments is exactly the thing that should accept N inputs
+   * in one call, so the requests stop existing rather than stop being visible.
+   *
+   * ─────────────────────────────────────────────────────────────────────────
+   * WHAT IS GUARANTEED
+   * ─────────────────────────────────────────────────────────────────────────
+   *
+   *   EQUIVALENCE   `results[i]` is what GET /geo/map-feed would have returned
+   *                 for `items[i]`, because both go through `resolveOne`.
+   *   ORDER         results are index-aligned with items, always.
+   *   NO-MATCH KEPT A no-match is a RESULT, not an omission. Filtering them out
+   *                 would break index alignment and silently turn "this text
+   *                 named no place" into "this text was never asked about".
+   *   BOUNDED       MAP_FEED_BATCH_MAX_ITEMS, enforced by the DTO.
+   *   ADDITIVE      GET /geo/map-feed is untouched and remains the scalar API.
+   *
+   * DUPLICATE INPUTS ARE NOT COLLAPSED HERE. Deduplication is the CALLER's
+   * concern, because only the caller knows which of its own items shared an
+   * input and must receive the same answer. Collapsing server-side would break
+   * the index-alignment guarantee above, which is the more valuable property.
+   */
+  @Post('map-feed/batch')
+  mapFeedBatch(@Body() body: MapFeedBatchRequestDto): MapFeedBatchResponse {
+    return { results: body.items.map((item) => this.resolveOne(item)) };
   }
 
   /**

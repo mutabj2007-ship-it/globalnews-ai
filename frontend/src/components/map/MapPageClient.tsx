@@ -28,7 +28,11 @@ import type { MapMode, MapPeriod, MapSelection } from '@/lib/map/state/mapState'
 import { countryEvidenceSet, mapFeedRecordsFrom, mergeEvidenceSets } from '@/lib/map/evidence/evidenceFeed';
 import { globalEvidenceSet, placeableArticles } from '@/lib/map/evidence/globalEvidenceFeed';
 import { fetchTopHeadlines } from '@/lib/api/newsApi';
-import { fetchMapFeed, type MapEvidenceGeography } from '@/lib/api/mapFeedApi';
+import {
+  mapFeedRequestKey,
+  type MapEvidenceGeography,
+} from '@/lib/api/mapFeedApi';
+import { createGeographyResolver } from '@/lib/map/evidence/geographyResolver';
 import {
   applyCardFilters,
   categoryDistribution,
@@ -596,6 +600,36 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
   }, [language]);
 
   /*
+    ══ CHECKPOINT B-1 · ONE RESOLUTION PATH, SHARED BY BOTH ENRICHMENTS ══════
+
+    THE DEFECT. Both enrichments below issued ONE HTTP REQUEST PER ARTICLE —
+    capped at 24 (global) and 12 (per country). Measured in Alpha, one user
+    action produced /geo/map-feed x3, x4, x7 and x8.
+
+    None of it spent provider quota: the backend resolver is synchronous and
+    touches no provider, database or network. The cost was N round-trips and N
+    rate-limit slots for one action.
+
+    TWO SEPARATE REDUNDANCIES, AND THEY NEED DIFFERENT ANSWERS:
+
+      the FAN-OUT   removed by batching. N inputs go in one request, so the
+                    requests stop existing rather than stop being visible.
+      the OVERLAP   the global feed resolves a country's headlines with that
+                    country as context, and selecting the country then resolves
+                    largely the SAME articles. The memo below is what stops the
+                    second path re-asking, and it is a DEDUPLICATION on top of
+                    the batch, never a substitute for it.
+
+    A FAILURE IS NEVER MEMOISED. `fetchMapFeedBatch` fails soft and yields null
+    for a chunk it could not resolve; writing that null into the memo would make
+    a transient outage permanent for those articles, because nothing would ever
+    ask again. Only real resolutions are remembered, so a later render retries
+    exactly the ones that did not land.
+  */
+  const resolveGeographiesRef = useRef(createGeographyResolver());
+  const resolveGeographies = resolveGeographiesRef.current;
+
+  /*
     The global headlines go through the SAME resolver, the SAME article gate and
     the SAME join guard as the per-country path. The only difference is where
     the text came from: each headline is resolved with its OWN country as
@@ -611,26 +645,49 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
 
     const candidates = placeableArticles(globalFeed.articles).slice(0, GLOBAL_FEED_ENRICH_CAP);
 
-    void Promise.all(
-      candidates.map(async ({ article, iso3 }) => {
-        const feed = await fetchMapFeed(article.title, {
-          mode: 'article',
-          contextCountryIso3: iso3,
+    /*
+      B-1: up to 24 resolutions, in ONE request. The cap is unchanged and still
+      bounds how much is asked for; what changed is that asking no longer costs
+      one round-trip per article.
+    */
+    void resolveGeographies(
+      candidates.map(({ article, iso3 }) => ({
+        text: article.title,
+        mode: 'article' as const,
+        contextCountryIso3: iso3,
+      })),
+    )
+      .then((byKey) => {
+        /*
+          Association is by the REQUEST KEY, not by array position, so a
+          deduplicated or reordered response cannot attribute one article's
+          geography to another.
+        */
+        const entries = candidates.map(({ article, iso3 }) => {
+          const feed =
+            byKey.get(
+              mapFeedRequestKey({
+                text: article.title,
+                mode: 'article',
+                contextCountryIso3: iso3,
+              }),
+            ) ?? null;
+
+          return feed === null
+            ? null
+            : {
+                recordId: article.id,
+                feed,
+                observedAt: article.publishedAt,
+                headline: article.title,
+                sourceCount: article.sourcesCount > 0 ? article.sourcesCount : 1,
+                category: article.category,
+                countryIso3: iso3,
+              };
         });
 
-        return feed === null
-          ? null
-          : {
-              recordId: article.id,
-              feed,
-              observedAt: article.publishedAt,
-              headline: article.title,
-              sourceCount: article.sourcesCount > 0 ? article.sourcesCount : 1,
-              category: article.category,
-              countryIso3: iso3,
-            };
-      }),
-    )
+        return entries;
+      })
       .then((entries) => {
         if (cancelled) return;
 
@@ -645,7 +702,7 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     return () => {
       cancelled = true;
     };
-  }, [globalFeed]);
+  }, [globalFeed, resolveGeographies]);
 
   const enrichmentInFlight = useRef<Set<string>>(new Set());
 
@@ -669,31 +726,46 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
 
       const articles = response.articles.slice(0, MAP_FEED_ARTICLE_CAP);
 
-      void Promise.all(
-        articles.map(async (article) => {
-          /*
-            ARTICLE MODE — the gate for evidence text, routed by G's C-N
-            correction and present in this tree's own controller. A headline is
-            prose, not a question, and the query gate refuses most of it.
-          */
-          const feed = await fetchMapFeed(article.title, {
-            mode: 'article',
-            contextCountryIso3: iso3,
-          });
+      /*
+        ARTICLE MODE — the gate for evidence text, routed by G's C-N correction
+        and present in this tree's own controller. A headline is prose, not a
+        question, and the query gate refuses most of it.
 
-          return feed === null
-            ? null
-            : {
-                recordId: article.id,
-                feed,
-                observedAt: article.publishedAt,
-                headline: article.title,
-                sourceCount: article.sourcesCount > 0 ? article.sourcesCount : 1,
-                category: article.category,
-                countryIso3: iso3,
-              };
-        }),
+        B-1: up to 12 resolutions in ONE request, and any headline the global
+        feed already resolved with this same country context is served from the
+        shared memo without reaching the network at all.
+      */
+      void resolveGeographies(
+        articles.map((article) => ({
+          text: article.title,
+          mode: 'article' as const,
+          contextCountryIso3: iso3,
+        })),
       )
+        .then((byKey) =>
+          articles.map((article) => {
+            const feed =
+              byKey.get(
+                mapFeedRequestKey({
+                  text: article.title,
+                  mode: 'article',
+                  contextCountryIso3: iso3,
+                }),
+              ) ?? null;
+
+            return feed === null
+              ? null
+              : {
+                  recordId: article.id,
+                  feed,
+                  observedAt: article.publishedAt,
+                  headline: article.title,
+                  sourceCount: article.sourcesCount > 0 ? article.sourcesCount : 1,
+                  category: article.category,
+                  countryIso3: iso3,
+                };
+          }),
+        )
         .then((entries) => {
           enrichmentInFlight.current.delete(iso3);
 
@@ -715,7 +787,7 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
         })
         .catch(() => {
           /*
-            `fetchMapFeed` already fails soft per request, so reaching here means
+            `fetchMapFeedBatch` already fails soft per chunk, so reaching here means
             something structural. The country map is unaffected; the flag is
             cleared so a later render may retry.
           */
@@ -726,7 +798,7 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     return () => {
       cancelled = true;
     };
-  }, [cache, geography, globalFeed, globalGeography, language]);
+  }, [cache, geography, globalFeed, globalGeography, language, resolveGeographies]);
 
   /*
     The URL follows the selection. Written from an effect rather than from

@@ -247,6 +247,179 @@ export async function fetchMapFeed(
   }
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * CHECKPOINT B-1 — BATCH RESOLUTION, SO THE FAN-OUT STOPS EXISTING
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * THE DEFECT. Evidence enrichment issued ONE HTTP REQUEST PER ARTICLE, capped
+ * at 24 on map open and 12 per country selection. Measured in Alpha, one user
+ * action produced /geo/map-feed x3, x4, x7 and x8.
+ *
+ * It consumed no provider quota — the backend resolver is synchronous and
+ * touches no provider, database or network — so the cost was never retrieval
+ * spend. It was N round-trips and N rate-limit slots for one action.
+ *
+ * WHY THIS IS NOT A CACHE. A cache would have hidden the SECOND occurrence of
+ * the storm while leaving the first intact. Resolution is a pure function of
+ * (text, mode, country), so N inputs belong in ONE call: the requests stop
+ * existing rather than stop being visible. Deduplication below is an additional
+ * saving, not the mechanism.
+ */
+
+/** One resolution request. Identical fields to the scalar call, named for a list. */
+export interface MapFeedRequest {
+  readonly text: string;
+  readonly mode?: MapFeedMode;
+  readonly contextCountryIso3?: string;
+}
+
+/**
+ * THE IDENTITY OF A RESOLUTION, AND WHY ALL THREE FIELDS ARE IN IT.
+ *
+ * Two requests are the same request only when they would produce the same
+ * answer. `country` changes the answer — it breaks ties — and `mode` selects
+ * a different gate entirely, so keying on text alone would collapse
+ * "Aberdeen"/GBR with "Aberdeen"/USA and hand one country's answer to the
+ * other. The default is spelled out rather than left undefined so that an
+ * explicit `mode: 'query'` and an omitted mode share one key, as they must —
+ * the backend defaults them identically.
+ */
+export function mapFeedRequestKey(request: MapFeedRequest): string {
+  return JSON.stringify([
+    request.text,
+    request.mode ?? 'query',
+    request.contextCountryIso3 ?? '',
+  ]);
+}
+
+/**
+ * The per-call bound, matching MAP_FEED_BATCH_MAX_ITEMS on the backend DTO.
+ *
+ * Restated here rather than imported because the frontend does not depend on
+ * backend source; `mapFeedBatchChunkSizes` is exported so a test can assert the
+ * two agree in shape without crossing that boundary.
+ *
+ * A larger input is CHUNKED, never truncated. The caps in MapPageClient remain
+ * the safeguards on how much is asked for; this is only the transport limit,
+ * and silently dropping the tail of a legitimate union would leave the map
+ * missing evidence with nothing reporting why.
+ */
+export const MAP_FEED_BATCH_MAX_ITEMS = 64;
+
+/** Deterministic chunk boundaries for n items. Exported so the split is testable. */
+export function mapFeedBatchChunkSizes(count: number): readonly number[] {
+  const sizes: number[] = [];
+
+  for (let remaining = count; remaining > 0; remaining -= MAP_FEED_BATCH_MAX_ITEMS) {
+    sizes.push(Math.min(remaining, MAP_FEED_BATCH_MAX_ITEMS));
+  }
+
+  return sizes;
+}
+
+/**
+ * Resolves many texts in as few requests as the bound allows.
+ *
+ * RETURNS A MAP KEYED BY `mapFeedRequestKey`, not an array. An array would make
+ * the caller responsible for keeping two lists in step, which is exactly the
+ * kind of index bookkeeping that produces evidence attributed to the wrong
+ * article. A key that encodes the whole request cannot be misaligned, and it
+ * also means a duplicated input appears once in the map and is resolved once on
+ * the wire.
+ *
+ * FAILS SOFT, PER CHUNK, exactly as the scalar call does: an endpoint that is
+ * down is a capability briefly absent, not an error for the reader. A failed
+ * chunk yields `null` for its keys, which callers already treat as "no
+ * geography", so a partial outage degrades instead of blanking the map.
+ */
+export async function fetchMapFeedBatch(
+  requests: readonly MapFeedRequest[],
+): Promise<ReadonlyMap<string, MapEvidenceGeography | null>> {
+  const resolved = new Map<string, MapEvidenceGeography | null>();
+
+  /*
+    DEDUPLICATE FIRST, IN INPUT ORDER. The global feed and the per-country feed
+    overlap — a country's top headlines are largely the articles that put it in
+    the global feed — so the same (text, mode, country) arrives twice. Resolving
+    it twice would be two answers that are identical by construction.
+  */
+  const unique = new Map<string, MapFeedRequest>();
+
+  for (const request of requests) {
+    if (request.text.trim().length === 0) continue;
+
+    const key = mapFeedRequestKey(request);
+
+    if (!unique.has(key)) unique.set(key, request);
+  }
+
+  if (unique.size === 0) return resolved;
+
+  const entries = [...unique.entries()];
+
+  for (let offset = 0; offset < entries.length; offset += MAP_FEED_BATCH_MAX_ITEMS) {
+    const chunk = entries.slice(offset, offset + MAP_FEED_BATCH_MAX_ITEMS);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/geo/map-feed/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        signal: controller.signal,
+        body: JSON.stringify({
+          items: chunk.map(([, request]) => ({
+            q: request.text,
+            ...(request.mode === undefined ? {} : { mode: request.mode }),
+            ...(request.contextCountryIso3 === undefined
+              ? {}
+              : { country: request.contextCountryIso3 }),
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        for (const [key] of chunk) resolved.set(key, null);
+        continue;
+      }
+
+      const payload: unknown = await response.json();
+      const results =
+        typeof payload === 'object' && payload !== null && 'results' in payload
+          ? (payload as { results: unknown }).results
+          : null;
+
+      if (!Array.isArray(results) || results.length !== chunk.length) {
+        /*
+          A length mismatch means the index alignment the backend guarantees has
+          been broken somewhere. Attributing the results anyway would place
+          evidence on the wrong articles, which is worse than showing none.
+        */
+        for (const [key] of chunk) resolved.set(key, null);
+        continue;
+      }
+
+      chunk.forEach(([key, request], index) => {
+        /*
+          The same structured guard the scalar path applies, with THIS item's
+          own country context — which is why the request is carried alongside
+          its key rather than discarded after the body is built.
+        */
+        resolved.set(key, readMapFeed(results[index], request.contextCountryIso3));
+      });
+    } catch {
+      for (const [key] of chunk) resolved.set(key, null);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return resolved;
+}
+
 export interface GazetteerAttribution {
   readonly attribution: string;
   readonly counts?: Readonly<Record<string, number>>;
