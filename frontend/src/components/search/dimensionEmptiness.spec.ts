@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 
 import {
@@ -116,5 +119,50 @@ describe('J-2 — the empty-dimension sentence', () => {
         expect(source).toContain('nothingReportedInDimension:');
       }
     });
+  });
+});
+
+/**
+ * ── THE WIRING GUARANTEE ──────────────────────────────────────────────────
+ *
+ * Added after a near-miss worth recording: an earlier revision landed the
+ * helper, the dictionaries and the backend census, and every test above passed
+ * — while `AnalysisWorkspace` still rendered the generic line, because a patch
+ * failed at its anchor and only the import was applied.
+ *
+ * A helper nothing calls is not a fix. These assertions read the real component
+ * so the two cannot pass independently again.
+ */
+describe('J-2 — the workspace actually uses the reason', () => {
+  const workspace = readFileSync(
+    join(__dirname, 'AnalysisWorkspace.tsx'),
+    'utf-8',
+  ).replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('derives the label key from the active dimension', () => {
+    expect(workspace).toContain('const emptyDimensionLabelKey = dimensionEmptyLabelKey(');
+    expect(workspace).toContain('dimensionEmptyReason(response, activeDimension),');
+  });
+
+  it('the dimension panel renders the derived key, not the generic label', () => {
+    const panel = workspace.slice(
+      workspace.indexOf('font-gn-mono text-gn-hud-meta uppercase text-gn-hud-faint'),
+    );
+
+    expect(panel.slice(0, 200)).toContain('{t[emptyDimensionLabelKey]}');
+  });
+
+  it('the generic sub-view empty state renders it too', () => {
+    expect(workspace).toContain(
+      'if (entries.length === 0) return <EmptySubView label={t[emptyDimensionLabelKey]} />;',
+    );
+  });
+
+  it('agreement and difference sub-views KEEP the generic line — they carry no census', () => {
+    /*
+      Only the four census-backed dimensions have a reason to give. Wiring the
+      derived key into these would assert a cause the backend never measured.
+    */
+    expect(workspace).toContain('if (differenceGroups.length === 0) return <EmptySubView label={t.noItemsInDimension} />;');
   });
 });

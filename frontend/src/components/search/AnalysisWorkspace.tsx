@@ -135,6 +135,22 @@ export function AnalysisWorkspace({
    * true if a future slice ever makes the list conditional, and it costs
    * one array lookup.
    */
+  /*
+    ── J-2 · WHY THIS DIMENSION IS EMPTY ────────────────────────────────────
+
+    Computed ONCE for the active dimension so the dimension panel and any
+    sub-view panel cannot give different reasons for the same emptiness.
+
+    The backend reports how many entries the model generated and how many
+    survived grounding. Those counts are diagnostics and never render; what
+    reaches the reader is the distinction they carry — the reporting was silent,
+    or it did not support what was drafted. Where no census exists this resolves
+    to the original generic line rather than guessing.
+  */
+  const emptyDimensionLabelKey = dimensionEmptyLabelKey(
+    dimensionEmptyReason(response, activeDimension),
+  );
+
   const activeIndex = model.dimensions.findIndex((d) => d.key === activeDimension);
   const safeIndex = activeIndex >= 0 ? activeIndex : 0;
   const activeModel = model.dimensions[safeIndex];
@@ -247,7 +263,7 @@ export function AnalysisWorkspace({
     }
 
     const entries = buildSubViewClaims(response, subView);
-    if (entries.length === 0) return <EmptySubView label={t.noItemsInDimension} />;
+    if (entries.length === 0) return <EmptySubView label={t[emptyDimensionLabelKey]} />;
     const accent =
       activeModel.subViews.find((view) => view.key === subView)?.accent ?? activeModel.accent;
     return (
@@ -402,7 +418,7 @@ export function AnalysisWorkspace({
             */
             <div className="rounded-gn-module border border-gn-line-card bg-gn-panel p-5">
               <p className="font-gn-mono text-gn-hud-meta uppercase text-gn-hud-faint">
-                {t.noItemsInDimension}
+                {t[emptyDimensionLabelKey]}
               </p>
             </div>
           ) : (
