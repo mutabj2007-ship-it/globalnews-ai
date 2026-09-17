@@ -221,8 +221,31 @@ export function mergePlaceResults(
     is an ALIAS of `region:eastern-africa`, and only G may resolve it (RSC-1's
     alias trap). This drops a duplicate; it never converts one.
   */
-  const navigatorHasRegion = navigator.some((place) => place.kind === 'region');
-  const kept = navigatorHasRegion ? local.filter((r) => r.kind !== 'REGION') : local;
+  /*
+    ══ CHECKPOINT G — THE PREDICATE COMPARED THE WRONG VOCABULARY ═══════════
+
+    This read `navigator.some((place) => place.kind === 'region')` — G's
+    SUPRANATIONAL rung. But the collision a reader sees is in the RENDERED
+    vocabulary, and `KIND_OF` maps admin1 and admin2 onto `REGION` too.
+
+    So searching "Kigali", where the navigator returns a city and an admin-1 and
+    no supranational region at all, the predicate was false and the local row
+    stood its ground — producing two rows a reader reads as the same kind of
+    thing, one of which carries no identity.
+
+    Generalised to the rendered kind, with the RSC-1 argument unchanged: an
+    identity-carrying row is strictly better than a label over a hard-coded box,
+    and the local row stands down ONLY when such a row actually exists for this
+    query. When the navigator is unreachable it returns nothing, no kind is
+    suppressed, and every jump row is still there and still works — which is why
+    H-GEO-2 says not to delete the table.
+
+    COUNTRY ROWS ARE NEVER SUPPRESSED HERE. Only the local country row carries
+    the evidence annotation for the current mode and period, and it is already
+    reconciled against the navigator's own country rows below.
+  */
+  const navigatorKinds = new Set(navigator.map((place) => KIND_OF[place.kind]));
+  const kept = local.filter((r) => r.kind === 'COUNTRY' || !navigatorKinds.has(r.kind));
 
   const seen = new Set(kept.map((r) => r.id));
   const merged: PlaceResult[] = [...kept];

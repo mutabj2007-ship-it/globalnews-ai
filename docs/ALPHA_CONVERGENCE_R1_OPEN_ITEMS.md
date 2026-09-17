@@ -94,9 +94,30 @@ presentation was explicitly out of scope: *"no redesign"*.
 
 ## Blocked on a backend producer
 
-Both of these are Checkpoint E items, both were **classified rather than
-corrected**, and both are closed by the *same* backend capability: a producer
-that emits point-precision evidence.
+### Checkpoint E status — CTO ruling
+
+| item | status |
+| ---- | ------ |
+| E-1 · mode unavailability reasons | **PASS** |
+| E-2 · unavailable controls state their reason to everyone | **PASS** |
+| E-3 · layer reasons and mode applicability | **PASS** |
+| E-4 · `SPATIAL-EVIDENCE-MODE-AFFORDANCE-1` | **OPEN — backend capability dependency** |
+| E-5 · `SPATIAL-COUNTRY-EVIDENCE-LAYER-TOGGLE-1` | **OPEN — backend capability dependency** |
+| **Checkpoint E audit** | **COMPLETE** |
+| **Checkpoint E functionality** | **PARTIAL** |
+
+Checkpoint E is NOT functionally complete and must not be recorded as such.
+WORLD and EVIDENCE still produce indistinguishable record sets, and the Country
+Evidence / EVID controls lack the point-precision evidence producer needed to
+implement their intended behaviour.
+
+**Frontend semantics must not be fabricated to close either item.** Neither can
+be resolved in the map layer; inventing a difference between WORLD and EVIDENCE,
+or a control over a layer that draws nothing, would put a claim on screen that no
+data supports.
+
+Both are closed by the *same* backend capability: a producer that emits
+point-precision evidence.
 
 ### `SPATIAL-EVIDENCE-MODE-AFFORDANCE-1` — EVIDENCE mode equals WORLD
 

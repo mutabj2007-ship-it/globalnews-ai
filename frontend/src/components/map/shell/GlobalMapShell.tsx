@@ -843,7 +843,50 @@ export function GlobalMapShell({
         return;
       }
 
-      if (selection !== null && selection !== undefined) onSelectionChange?.(null);
+      /*
+        ══ CHECKPOINT G — TWO ROUTES TO KIGALI, OPPOSITE BEHAVIOUR ═══════════
+
+        The breadcrumb jump path already states the rule, and states it as
+        settled:
+
+            "THE CITY RUNG IS DELIBERATELY UNTOUCHED. Kigali sits INSIDE
+             Rwanda, so clearing a Rwanda selection to move to Kigali would
+             destroy a compatible, correct state."
+
+        This path did the opposite. It cleared UNCONDITIONALLY, so committing
+        the Kigali row from search destroyed a Rwanda selection that the same
+        move from the breadcrumb row preserves. The right rail went blank and
+        the evidence state was discarded, for a navigation that had gone
+        somewhere strictly inside what was already selected.
+
+        THE CLEARING IS NOW WHAT IT ALWAYS CLAIMED TO BE: the removal of an
+        INCOMPATIBLE selection. A result that lies inside the selected country
+        is compatible, so the selection stands, the rail keeps describing the
+        evidence geography, and only the camera moves.
+
+        CONTAINMENT IS READ FROM PUBLISHED FIELDS. `countryIso3` comes from G's
+        own hierarchy via `navigatorCountryIso3`; nothing is parsed out of a
+        geographyId and no containment is inferred from a bounding box.
+
+        WHY THIS DOES NOT MAKE CITY AND REGION THE SAME THING. It does not
+        select the city — a city is not a selectable evidence geography, and the
+        evidence ceiling is COUNTRY, so Rwanda genuinely IS the evidence
+        geography for a report in Kigali. What distinguishes the two rows is
+        what honestly differs: their identity in the list, their context line,
+        and where the camera lands. Nothing is invented to make them look more
+        different than the data is.
+
+        A supranational region carries no `countryIso3`, so it is never
+        contained, and the M16 clearing it exists for is untouched.
+      */
+      const containedInSelection =
+        selection?.kind === 'COUNTRY' &&
+        result.countryIso3 !== undefined &&
+        result.countryIso3 === selection.id;
+
+      if (selection !== null && selection !== undefined && !containedInSelection) {
+        onSelectionChange?.(null);
+      }
 
       if (result.bounds) dispatch({ kind: 'focus-bounds', bounds: result.bounds });
     },

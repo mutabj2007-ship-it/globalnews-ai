@@ -220,9 +220,32 @@ export function searchPlaces(input: PlaceSearchInput): readonly PlaceResult[] {
 
     if (label === undefined || !matches(label, needle)) continue;
 
+    /*
+      ══ CHECKPOINT G — A CITY RUNG IS NOT A REGION ══════════════════════════
+
+      MEASURED. Searching "Kigali" returned three rows:
+
+        Kigali  REGION                 <- THIS LOOP
+        Kigali  CITY   Rwanda          <- G's navigator, the city node
+        Kigali  REGION Rwanda          <- G's navigator, the admin-1 node
+
+      The first row is the defect. `DEPLOYMENT_JUMP_TARGETS` carries
+      `{ id: 'kigali', rung: 'CITY' }`, and this loop excluded only the COUNTRY
+      rung, so a CITY-rung target was published as `kind: 'REGION'` under a
+      minted `region:kigali` id. A city was announced as a region, with an id
+      asserting a region identity that no gazetteer holds — the same class of
+      claim `regionSelection.ts` calls the alias trap.
+
+      The rung is published as what it IS. The id keeps the rung's own prefix so
+      it cannot be mistaken for a region identity, and this row still carries NO
+      `region` field — a jump target remains a label over a hard-coded box, and
+      the shell still branches on identity rather than on kind.
+    */
+    const rungKind: PlaceKind = target.rung === 'CITY' ? 'CITY' : 'REGION';
+
     results.push({
-      id: `region:${target.id}`,
-      kind: 'REGION',
+      id: `${rungKind === 'CITY' ? 'city' : 'region'}:${target.id}`,
+      kind: rungKind,
       label,
       bounds: target.bounds,
       annotation: { kind: 'REFERENCE' },
