@@ -38,6 +38,17 @@ export * from './source-type';
 export * from './source-provenance';
 
 /*
+  B5-A — OAUTH V1 frozen state set: cancelled | failed.
+
+  Declared in shared because the BACKEND writes the auth_error parameter and the
+  FRONTEND reads it; a second copy of the admissible set would be a second
+  answer to one question. isAuthErrorCode is the only admission test on either
+  side, which is what makes repeated/array/object query shapes inert without a
+  special case for each.
+*/
+export * from './auth-error';
+
+/*
   B3.1 — LANG-UI-7 display-locale TYPES only. Recovering them activates no
   language: the SELECTABLE registry is a separate, frontend-owned deployment
   fact (lib/i18n/languages.ts), and it remains ['en','pl'].

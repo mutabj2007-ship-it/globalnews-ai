@@ -27,8 +27,13 @@ import { ANALYSIS_ELIGIBLE_CATEGORY, creationStateFor } from './support-ai.servi
 const locales: readonly ProductKnowledgeLocale[] = ['en', 'pl'];
 
 describe('B4-B — the corpus is authored, complete and shippable', () => {
-  it('ships exactly 35 VERIFIED entries', () => {
-    expect(PRODUCT_KNOWLEDGE.filter((e) => e.mark === 'VERIFIED')).toHaveLength(35);
+  it('ships exactly 34 VERIFIED entries after the R2-2 delta', () => {
+    /*
+      35 in B4-B, 34 now: K-43 was DOWNGRADED to OWNER-GATED because its claim is
+      CONTRADICTED by the tree — it told readers the product does not use the
+      word "beta" while a user-facing `Beta` label ships in both locales.
+    */
+    expect(PRODUCT_KNOWLEDGE.filter((e) => e.mark === 'VERIFIED')).toHaveLength(34);
   });
 
   it('and 3 NOT YET AVAILABLE entries, which say so in their own words', () => {
@@ -46,7 +51,16 @@ describe('B4-B — the corpus is authored, complete and shippable', () => {
         flag is a thing someone can turn on without the confirmation the gate
         exists to require.
       */
-      expect(OWNER_GATED_IDS).toHaveLength(6);
+      expect(OWNER_GATED_IDS).toHaveLength(7);
+      expect([...OWNER_GATED_IDS].sort()).toEqual([
+        'K-04',
+        'K-07',
+        'K-10',
+        'K-11',
+        'K-12',
+        'K-22',
+        'K-43',
+      ]);
 
       const shipped = new Set(PRODUCT_KNOWLEDGE.map((e) => e.id));
 
@@ -69,39 +83,38 @@ describe('B4-B — the corpus is authored, complete and shippable', () => {
     }
   });
 
-  it('RECORDED — eight VERIFIED entries ship with no grounding string', () => {
+  it('SUPPORT-CORPUS-GROUNDING-GAP-1 IS CLOSED — every shipped entry records its grounding', () => {
     /*
-      MEASURED, NOT ASSERTED AWAY. I first wrote this as "every entry records
-      where its claim comes from" and it failed: eight VERIFIED entries carry an
-      empty `grounding` in the corpus as authored — K-19, K-26, K-27, K-35,
-      K-37, K-38, K-39, K-43.
+      SUPERSEDED IN PLACE, NOT DELETED, so the supersession stays visible.
 
-      Inventing a grounding string to make the assertion pass would be the exact
-      fabrication this whole corpus exists to avoid, and editing the authored
-      answers is not this checkpoint's authority. So the fact is pinned instead,
-      and it is a question for F: these answers are VERIFIED, so someone
-      verified them against something, and the field is where that belongs.
+      B4-B pinned a measured defect here: eight VERIFIED entries shipped with an
+      empty `grounding` field. I did NOT invent grounding strings to make the
+      assertion pass — that would have been the exact fabrication the corpus
+      exists to prevent — and the fact was carried as an open item instead.
 
-      Recorded as SUPPORT-CORPUS-GROUNDING-GAP-1.
+      F then measured all eight. SEVEN had real support and were simply missing
+      their citation; they keep VERIFIED and now carry F's grounding. The eighth,
+      K-43, was WRONG — its claim is contradicted by the tree — and it is
+      withheld rather than reworded (see below).
+
+      The gap is therefore closed by evidence, not by assertion.
     */
     const ungrounded = PRODUCT_KNOWLEDGE.filter((e) => e.grounding.length === 0);
 
-    expect(ungrounded.map((e) => e.id).sort()).toEqual([
-      'K-19',
-      'K-26',
-      'K-27',
-      'K-35',
-      'K-37',
-      'K-38',
-      'K-39',
-      'K-43',
-    ]);
+    expect(ungrounded).toEqual([]);
   });
 
-  it('and the other thirty carry one', () => {
-    const grounded = PRODUCT_KNOWLEDGE.filter((e) => e.grounding.length > 0);
+  it('and the seven newly grounded entries cite a file, a symbol or a measurement', () => {
+    /*
+      A NON-EMPTY STRING IS NOT A CITATION. Without this, 'ok' would satisfy the
+      test above and the gap would be closed in name only.
+    */
+    for (const id of ['K-19', 'K-26', 'K-27', 'K-35', 'K-37', 'K-38', 'K-39']) {
+      const entry = PRODUCT_KNOWLEDGE.find((e) => e.id === id);
 
-    expect(grounded).toHaveLength(PRODUCT_KNOWLEDGE.length - 8);
+      expect(entry?.mark).toBe('VERIFIED');
+      expect(entry?.grounding ?? '').toMatch(/\.tsx?\b|\.json\b|= 0\b|= 1\b|:\d+/);
+    }
   });
 });
 
@@ -222,8 +235,89 @@ describe('B4-B · THE ROUTING RULE — withhold-only', () => {
   });
 });
 
-describe('B4-B · K-25 — the converged behaviour is what the answer states', () => {
+describe('B5-D · K-43 — withheld, because the tree contradicts it', () => {
+  it('does not ship, and is named as owner-gated', () => {
+    /*
+      NOT A WORDING SLIP. K-43 told readers the product marks unfinished parts
+      "not yet available" RATHER THAN as a beta — while a user-facing `Beta`
+      label ships in both locales (en.ts:1308, pl.ts:1064) inside the map
+      mode-switcher vocabulary, beside five separate unavailability reasons.
+
+      An answer that contradicts what the reader is looking at is worse than no
+      answer: it teaches them Support does not know the product. So the sentence
+      is WITHHELD, not reworded — no replacement copy was invented, because
+      which vocabulary Support may describe is a question for Spatial/H with L,
+      not one this checkpoint may answer.
+    */
+    expect(PRODUCT_KNOWLEDGE.find((e) => e.id === 'K-43')).toBeUndefined();
+    expect(OWNER_GATED_IDS).toContain('K-43');
+  });
+
+  it('and the word "beta" appears in no shipped answer at all', () => {
+    /*
+      The withholding has to cover the CLAIM, not just the entry. A different
+      entry asserting the same thing would reopen the contradiction.
+    */
+    for (const entry of PRODUCT_KNOWLEDGE) {
+      for (const locale of locales) {
+        expect(entry.body[locale].toLowerCase()).not.toMatch(/\bbeta\b/);
+      }
+    }
+  });
+
+  it('the safe residue still ships — K-40 and K-41 are untouched', () => {
+    /*
+      Withholding K-43 must not silently remove what IS known: that some parts
+      are visible but not yet available, and what works today.
+    */
+    for (const id of ['K-40', 'K-41']) {
+      expect(PRODUCT_KNOWLEDGE.find((e) => e.id === id)?.mark).toBe('VERIFIED');
+    }
+  });
+});
+
+describe('B5-D · K-25 — surface-qualified, because parity was disproved', () => {
   const k25 = PRODUCT_KNOWLEDGE.find((e) => e.id === 'K-25');
+
+  it('names the DESKTOP map, rather than claiming both surfaces', () => {
+    /*
+      SOURCE-CARD-ASK-AI-MOBILE-PARITY-1 = FAIL, measured in this tree:
+
+        SourceCard.tsx:98    onAskAbout?: (id: string) => void     OPTIONAL
+        SourceCard.tsx:267   {onAskAbout && (                      CONDITIONAL
+        EvidenceSelectionCard.tsx:961  passes it                   desktop map
+        MobileSpatialShell.tsx:1013    does NOT                    phone
+        SourcesReporting.tsx:654       does NOT                    analysis frame
+
+      The phone receives the LABELS (`askAbout`, `askAiShort`) but no handler, so
+      the control is never rendered there. R2.1 read "both label call sites" as
+      "both surfaces"; the label landed on both, the action did not.
+
+      Behaviour was NOT changed to match the copy. The accepted card anatomy
+      names ONE trailing affordance and records Ask AI as a DECLARED DEVIATION
+      for the desktop map; no mobile rationale and no equivalent mobile
+      affordance exist in the tree. With design authority ambiguous, the ruling
+      is to leave mobile alone and qualify the sentence — so the copy now
+      describes only what is implemented.
+    */
+    expect(k25?.body.en).toMatch(/on the desktop map/i);
+    expect(k25?.body.pl).toMatch(/na komputerze/i);
+  });
+
+  it('and states what the compact layout actually shows', () => {
+    expect(k25?.body.en).toMatch(/compact phone layout .* arrow only/i);
+    expect(k25?.body.pl).toMatch(/telefonie .* tylko strza/i);
+  });
+
+  it('claims cross-device parity nowhere', () => {
+    for (const locale of locales) {
+      expect(k25?.body[locale]).not.toMatch(/every device|any device|both surfaces|każdym urządzeniu/i);
+    }
+  });
+
+  it('and its grounding records that R2.1 fact 6 was withdrawn', () => {
+    expect(k25?.grounding).toMatch(/WITHDRAWN/);
+  });
 
   it('ships, and is VERIFIED after the R2-1 addendum', () => {
     expect(k25?.mark).toBe('VERIFIED');

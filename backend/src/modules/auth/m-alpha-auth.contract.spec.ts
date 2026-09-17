@@ -111,6 +111,7 @@ describe('M-ALPHA-AUTH callback return destination', () => {
     await service.handleGoogleCallback(
       'auth-code',
       flowState?.state,
+      undefined,
       { cookies: { [OAUTH_FLOW_COOKIE_NAME]: encodedFlow } } as never,
       callbackResponse as never,
     );
@@ -483,6 +484,7 @@ describe('M-ALPHA-AUTH Option A callback base', () => {
     await service.handleGoogleCallback(
       'auth-code',
       flowState?.state,
+      undefined,
       { cookies: { [OAUTH_FLOW_COOKIE_NAME]: encodedFlow } } as never,
       { cookie: jest.fn(), clearCookie: jest.fn(), redirect: jest.fn() } as never,
     );

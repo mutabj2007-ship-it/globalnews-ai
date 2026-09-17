@@ -19,16 +19,24 @@
  *
  * ── WHAT SHIPS, AND WHAT DOES NOT ────────────────────────────────────────
  *
- *   VERIFIED            35   shipped
+ *   VERIFIED            34   shipped
  *   NOT YET AVAILABLE    3   shipped, and say so in their own words
- *   OWNER-GATED          6   NOT SHIPPED — see below
+ *   OWNER-GATED          7   NOT SHIPPED — see below
+ *
+ * B5-D applied F-SUPPORT-GROUNDING-DELTA-R2-2: seven entries that shipped with
+ * an empty `grounding` received F's measured citations, and K-43 was DOWNGRADED
+ * from VERIFIED to OWNER-GATED because its claim is CONTRADICTED by the tree —
+ * it says the product does not use the word "beta" while a user-facing `Beta`
+ * label ships in both locales (en.ts:1308, pl.ts:1064). An answer that
+ * contradicts what the reader is looking at is worse than no answer, so the
+ * sentence is withheld rather than reworded; no replacement copy was invented.
  *
  * AN OWNER-GATED ENTRY DOES NOT SHIP UNTIL ITS NAMED OWNER CONFIRMS IT. They are
  * excluded from this file entirely rather than included behind a flag, because a
  * flag is a thing someone can turn on without the confirmation the gate exists
  * to require. Their ids are recorded below so the outstanding work stays visible.
  *
- * NOT SHIPPED: K-04, K-07, K-10, K-11, K-12, K-22
+ * NOT SHIPPED: K-04, K-07, K-10, K-11, K-12, K-22, K-43
  */
 
 export type ProductKnowledgeMark = 'VERIFIED' | 'NOT YET AVAILABLE';
@@ -47,7 +55,7 @@ export interface ProductKnowledgeEntry {
 }
 
 /** Ids withheld pending owner confirmation. Recorded, never rendered. */
-export const OWNER_GATED_IDS: readonly string[] = ["K-04", "K-07", "K-10", "K-11", "K-12", "K-22"];
+export const OWNER_GATED_IDS: readonly string[] = ["K-04", "K-07", "K-10", "K-11", "K-12", "K-22", "K-43"];
 
 export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
   {
@@ -265,7 +273,7 @@ export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
     key: "askai.not_assistant",
     intentClass: "PRODUCT_CAPABILITY",
     mark: "VERIFIED",
-    grounding: "",
+    grounding: "AskAiDock.tsx:6,160 -> analysisApi.ts:270 POST /analysis/news; grep -c accountFetch AskAiDock.tsx = 0 (control: 3 in app/history/page.tsx); analysis.service.ts:278 NO_EVIDENCE_MESSAGE",
     triggers: {
       en: ["can ask ai do", "ask ai assistant", "ask ai my account"],
       pl: ["czy ask ai moze", "czy ask ai może", "ask ai asystent"],
@@ -340,14 +348,14 @@ export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
     key: "sources.ask_about",
     intentClass: "NAV_HOWTO",
     mark: "VERIFIED",
-    grounding: "R2.1 addendum §1 — converged Checkpoint D behaviour",
+    grounding: "R2.1 addendum §1 (facts 1-5) — converged Checkpoint D behaviour. SURFACE-QUALIFIED in B5-D: SourceCard.tsx:98 onAskAbout is OPTIONAL and :267 renders conditionally; EvidenceSelectionCard.tsx:961 passes it, MobileSpatialShell.tsx:1013-1029 and SourcesReporting.tsx:654 do not. R2.1 fact 6 (cross-device parity) is WITHDRAWN as measured false.",
     triggers: {
       en: ["magnifier", "ask about this", "ask about this story", "the second icon"],
       pl: ["lupa", "zapytaj o to", "drugi przycisk"],
     },
     body: {
-      en: "A retained item carries two separate controls. The arrow opens the item at its original publisher — an ordinary link, in a new tab, nothing else happens. Beside it, **Ask AI** turns the item into a question and opens it in Search, and arriving there **runs one analysis straight away** — there is no further confirmation step. So the arrow is for reading the source, and Ask AI is for asking GlobalNews AI about it.",
-      pl: "Zachowana pozycja ma dwa osobne elementy. Strzałka otwiera pozycję u jej pierwotnego wydawcy — to zwykły link, w nowej karcie, nic więcej się nie dzieje. Obok, **Zapytaj AI** zamienia pozycję w pytanie i otwiera je w Szukaj, a po przejściu **od razu uruchamia jedną analizę** — nie ma dodatkowego potwierdzenia. Strzałka służy więc do przeczytania źródła, a Zapytaj AI do zapytania GlobalNews AI o nie.",
+      en: "On the desktop map, a retained item carries two separate controls. The arrow opens the item at its original publisher — an ordinary link, in a new tab, nothing else happens. Beside it, **Ask AI** turns the item into a question and opens it in Search, and arriving there **runs one analysis straight away** — there is no further confirmation step. So the arrow is for reading the source, and Ask AI is for asking GlobalNews AI about it. On the compact phone layout the retained item shows the arrow only.",
+      pl: "Na mapie w widoku na komputerze zachowana pozycja ma dwa osobne elementy. Strzałka otwiera pozycję u jej pierwotnego wydawcy — to zwykły link, w nowej karcie, nic więcej się nie dzieje. Obok, **Zapytaj AI** zamienia pozycję w pytanie i otwiera je w Szukaj, a po przejściu **od razu uruchamia jedną analizę** — nie ma dodatkowego potwierdzenia. Strzałka służy więc do przeczytania źródła, a Zapytaj AI do zapytania GlobalNews AI o nie. W kompaktowym widoku na telefonie zachowana pozycja pokazuje tylko strzałkę.",
     },
   },
   {
@@ -355,7 +363,7 @@ export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
     key: "sources.why_listed",
     intentClass: "PRODUCT_CONCEPT",
     mark: "VERIFIED",
-    grounding: "",
+    grounding: "en.ts:93-95 / pl.ts:70-72 resultSourcesHeading|None|Truncated; support-ai.service.ts:112 ANSWER_SOURCES_LABEL, appended at :376",
     triggers: {
       en: ["why are sources listed", "what are the sources", "check the sources"],
       pl: ["dlaczego zrodla", "dlaczego źródła", "jakie zrodla", "jakie źródła", "sprawdzic zrodla", "sprawdzić źródła"],
@@ -370,7 +378,7 @@ export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
     key: "sources.unavailable",
     intentClass: "STATE_EXPLAIN",
     mark: "VERIFIED",
-    grounding: "",
+    grounding: "en.ts:516-517 feedPanelUnavailableHeading|Body; en.ts:561 liveDataUnavailable; en.ts:564 liveUnavailableStoredUsed; en.ts:614 statusFeedUnavailable; news.service.ts:274 PROVIDER_FAILURES",
     triggers: {
       en: ["source unavailable", "source is unavailable", "feed unavailable", "why is a source"],
       pl: ["zrodlo niedostepne", "źródło niedostępne", "dlaczego zrodlo", "dlaczego źródło", "kanal niedostepny", "kanał niedostępny"],
@@ -490,7 +498,7 @@ export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
     key: "language.support_scope",
     intentClass: "PRODUCT_CAPABILITY",
     mark: "VERIFIED",
-    grounding: "",
+    grounding: "support-ai.service.ts:44 SupportAiLanguage = 'en' | 'pl' (keys the tables at :102,:107,:112,:117); only supportEn.ts and supportPl.ts exist",
     triggers: {
       en: ["support language", "do you answer in", "other languages here"],
       pl: ["jezyk wsparcia", "język wsparcia", "inne jezyki tutaj", "inne języki tutaj"],
@@ -520,7 +528,7 @@ export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
     key: "support.ai_or_human",
     intentClass: "META",
     mark: "VERIFIED",
-    grounding: "",
+    grounding: "TranscriptTurn.tsx:61-62 and :90-92 (authorship in the region accessible name); stateMachine.ts:30-31 declare and :43,:46,:73,:77 implement HUMAN-terminal and CLOSED->HUMAN",
     triggers: {
       en: ["are you a person", "are you human", "am i talking to a bot", "is this a human"],
       pl: ["czy jestes czlowiekiem", "czy jesteś człowiekiem", "czy rozmawiam z czlowiekiem", "czy rozmawiam z człowiekiem", "czy to bot"],
@@ -535,7 +543,7 @@ export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
     key: "support.where_replies",
     intentClass: "PRODUCT_CONCEPT",
     mark: "VERIFIED",
-    grounding: "",
+    grounding: "supportEn.ts:35; absence of any outbound delivery: 0 mailer libs in backend/src, 0 mail/push deps in backend/package.json, 0 notification/mail modules, NOTIFICATION_DELIVERY occurs only in shared/src/watch.ts as a declared UNAVAILABLE capability. Controls alive: grep -c '\"@nestjs/common\"' backend/package.json = 1; find backend/src -iname '*support*' returns rows",
     triggers: {
       en: ["where will you reply", "where do i see the answer", "will you email me"],
       pl: ["gdzie odpowiecie", "gdzie zobacze odpowiedz", "gdzie zobaczę odpowiedź", "czy wysle mail", "czy wyślecie maila"],
@@ -550,7 +558,7 @@ export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
     key: "support.privacy_pointer",
     intentClass: "POLICY",
     mark: "VERIFIED",
-    grounding: "",
+    grounding: "SupportConversation.tsx:220 {!hasSent ? ( ... :228 disclosure.beforeFirstSend ... :231-232 the persistent compact form",
     triggers: {
       en: ["what happens to what i write", "who reads this", "is this private"],
       pl: ["co dzieje sie z tym co pisze", "co dzieje się z tym co piszę", "kto to czyta", "czy to prywatne"],
@@ -603,21 +611,6 @@ export const PRODUCT_KNOWLEDGE: readonly ProductKnowledgeEntry[] = [
     body: {
       en: "Conflict Intelligence is in development and cannot be opened yet. I will not point you at a part of the product that will not open for you.",
       pl: "Conflict Intelligence jest w rozwoju i nie można go jeszcze otworzyć. Nie będę wskazywać części produktu, która się dla Ciebie nie otworzy.",
-    },
-  },
-  {
-    id: "K-43",
-    key: "unavailable.beta_word",
-    intentClass: "META",
-    mark: "VERIFIED",
-    grounding: "",
-    triggers: {
-      en: ["is it in beta", "beta version", "early access"],
-      pl: ["wersja beta", "czy to beta", "wczesny dostep", "wczesny dostęp"],
-    },
-    body: {
-      en: "GlobalNews AI marks unfinished parts as **not yet available** rather than as a beta. If you have been told something is in beta, it is the same thing: it is visible, it does not open yet, and nothing you do is at fault.",
-      pl: "GlobalNews AI oznacza nieukończone części jako **jeszcze niedostępne**, a nie jako wersję beta. Jeśli usłyszałeś, że coś jest w wersji beta, chodzi o to samo: jest widoczne, jeszcze się nie otwiera i nie jest to niczyja wina po Twojej stronie.",
     },
   },
 ];

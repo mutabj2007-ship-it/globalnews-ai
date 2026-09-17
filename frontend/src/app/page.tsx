@@ -17,6 +17,7 @@ import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { SiteStructuredData } from '@/components/seo/SiteStructuredData';
+import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
 
 /**
  * Master Frontend Recomposition — final homepage architecture:
@@ -166,6 +167,19 @@ export default async function HomePage(): Promise<JSX.Element> {
       <LiveStatusStrip isLive={feed.isLive} dataMode={feed.dataMode} language={language} updatedAt={updatedAt} />
       <main className="pb-16 lg:pb-0">
         <PageCanvas>
+          {/*
+            B5-A · C-13 — THE ERROR LANDING IS ALWAYS THE FRONTEND ORIGIN ROOT.
+
+            A failed or cancelled sign-in never carries a returnTo, so this is
+            the only surface that has to read the parameter, and it is mounted
+            here rather than in the layout for exactly that reason.
+
+            THIS FILE STAYS A SERVER COMPONENT. AuthErrorBanner is a client
+            component that renders nothing at all unless the parameter is
+            present and admissible, so on every ordinary visit it contributes no
+            box, no text node and no layout shift.
+          */}
+          <AuthErrorBanner language={language} />
           {/*
             M66.14B — HeroFocusProvider owns the hero's focus state and wraps
             BOTH consumers, because Hero and GlobalDevelopments are siblings

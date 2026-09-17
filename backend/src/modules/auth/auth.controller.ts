@@ -53,10 +53,24 @@ export class AuthController {
   async googleCallback(
     @Query('code') code: string | undefined,
     @Query('state') state: string | undefined,
+    /**
+     * B5-A · C-5 — READ GOOGLE'S ERROR.
+     *
+     * The callback previously took `code` and `state` only, which is exactly
+     * why a cancellation was logged as a state rejection: a cancelled sign-in
+     * arrives with NO code and NO state, so it fell into the mismatch branch
+     * and was recorded as a security-relevant event. Reading this parameter is
+     * what lets the two be told apart.
+     *
+     * C-7 — the provider's string never leaves the process. It is passed to the
+     * service to be CLASSIFIED and is never logged, echoed, stored or placed in
+     * a URL. `error_description` is not read at all.
+     */
+    @Query('error') providerError: string | undefined,
     @Req() request: Request,
     @Res() response: Response,
   ): Promise<void> {
-    await this.authService.handleGoogleCallback(code, state, request, response);
+    await this.authService.handleGoogleCallback(code, state, providerError, request, response);
   }
 
   @Post('signout')

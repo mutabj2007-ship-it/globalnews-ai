@@ -1,4 +1,5 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { AUTH_ERROR_PARAM } from '@globalnews-ai/shared';
 import type { Request, Response } from 'express';
 import { PrismaService } from '../../database/prisma.service';
 import { logWithRequestId } from '../../observability/log-with-request-id';
@@ -128,7 +129,8 @@ export class AuthService {
    * one that was depended on startup ordering rather than on configuration.
    *
    * Every value this method produces is a Location header sent to a real
-   * browser — the post-sign-in landing, the `?auth_error=1` failure landing, and
+   * browser — the post-sign-in landing, the `?auth_error=cancelled|failed`
+   * failure landing, and
    * the origin `resolveSafeReturnUrl()` resolves the validated returnTo against.
    * A silent localhost fallback in production therefore does not degrade: it
    * redirects users off the product, and it makes the returnTo allowlist
@@ -198,6 +200,7 @@ export class AuthService {
   async handleGoogleCallback(
     code: string | undefined,
     state: string | undefined,
+    providerError: string | undefined,
     request: Request,
     response: Response,
   ): Promise<void> {
@@ -211,13 +214,44 @@ export class AuthService {
     // presented again for a second callback attempt.
     response.clearCookie(OAUTH_FLOW_COOKIE_NAME, { path: '/' });
 
+    /*
+      ═══ B5-A · C-3 — CANCELLATION: AFTER THE CLEAR, BEFORE THE COMPARISON ═══
+
+      THE ORDER OF THESE TWO STATEMENTS IS THE WHOLE CONTRACT, and placing this
+      branch ONE LINE EARLIER is the single most likely way to implement it
+      wrongly. An early return above clearCookie would leave a REPLAYABLE flow
+      cookie on every cancellation — a one-time value that is no longer
+      one-time, and a person who cancels is exactly the person who should not be
+      left holding a reusable credential. C-T11 is the only test that catches
+      it, which is why it exists.
+
+      C-6 — ANY non-empty value means cancelled. access_denied,
+      consent_required, interaction_required, anything. The value is NOT
+      switched on: a value-specific branch turns a provider-controlled string
+      into a control-flow selector, so the string is measured for emptiness and
+      then discarded.
+
+      C-7 — the string never leaves the process. The CLASSIFICATION is logged,
+      never the value. A foreign string is classified, never interpolated.
+
+      C-8 — and the correction below is a deliverable, not a side effect: with
+      cancellations routed here, "OAuth callback rejected: missing or mismatched
+      state." finally MEANS what it says, and recovers its value as the evidence
+      the trace gate depends on.
+    */
+    if (typeof providerError === 'string' && providerError.length > 0) {
+      logWithRequestId(this.logger, 'log', 'OAuth sign-in was cancelled at the provider.');
+      response.redirect(`${this.frontendOrigin()}/?${AUTH_ERROR_PARAM}=cancelled`);
+      return;
+    }
+
     if (!flowState || !code || !state || state !== flowState.state) {
       logWithRequestId(
         this.logger,
         'warn',
         'OAuth callback rejected: missing or mismatched state.',
       );
-      response.redirect(`${this.frontendOrigin()}/?auth_error=1`);
+      response.redirect(`${this.frontendOrigin()}/?${AUTH_ERROR_PARAM}=failed`);
       return;
     }
 
@@ -269,7 +303,14 @@ export class AuthService {
         'OAuth callback failed',
         error instanceof Error ? error : undefined,
       );
-      response.redirect(`${this.frontendOrigin()}/?auth_error=1`);
+      /*
+        B5-A — 'failed', not a stage name. The try block above spans exchange,
+        JWKS, findOrCreateUser and createSession under ONE catch, so the code
+        genuinely cannot tell which of them failed. "session could not be
+        created" was refused for that reason: it would name a stage this handler
+        cannot distinguish.
+      */
+      response.redirect(`${this.frontendOrigin()}/?${AUTH_ERROR_PARAM}=failed`);
     }
   }
 

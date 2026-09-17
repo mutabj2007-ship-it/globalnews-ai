@@ -106,10 +106,10 @@ describe('AuthService.handleGoogleCallback (Milestone #57)', () => {
     };
     const request = makeFakeRequest(undefined);
 
-    await service.handleGoogleCallback('some-code', 'some-state', request, response as never);
+    await service.handleGoogleCallback('some-code', 'some-state', undefined, request, response as never);
 
     expect(response.clearCookie).toHaveBeenCalledWith(OAUTH_FLOW_COOKIE_NAME, expect.anything());
-    expect(response._redirectedTo).toContain('auth_error=1');
+    expect(response._redirectedTo).toContain('auth_error=failed');
     expect(googleOidc.exchangeGoogleAuthorizationCode).not.toHaveBeenCalled();
   });
 
@@ -125,11 +125,12 @@ describe('AuthService.handleGoogleCallback (Milestone #57)', () => {
     await service.handleGoogleCallback(
       'some-code',
       'a-completely-different-state',
+      undefined,
       request,
       response as never,
     );
 
-    expect(response._redirectedTo).toContain('auth_error=1');
+    expect(response._redirectedTo).toContain('auth_error=failed');
     expect(googleOidc.exchangeGoogleAuthorizationCode).not.toHaveBeenCalled();
   });
 
@@ -142,9 +143,9 @@ describe('AuthService.handleGoogleCallback (Milestone #57)', () => {
     };
     const request = makeFakeRequest(encodeOAuthFlowState(flowState));
 
-    await service.handleGoogleCallback(undefined, flowState.state, request, response as never);
+    await service.handleGoogleCallback(undefined, flowState.state, undefined, request, response as never);
 
-    expect(response._redirectedTo).toContain('auth_error=1');
+    expect(response._redirectedTo).toContain('auth_error=failed');
   });
 
   it('proceeds to token exchange and ID-token verification when state matches, passing the stored nonce through unchanged', async () => {
@@ -159,7 +160,7 @@ describe('AuthService.handleGoogleCallback (Milestone #57)', () => {
       email: 'user@example.com',
     });
 
-    await service.handleGoogleCallback('real-code', flowState.state, request, response as never);
+    await service.handleGoogleCallback('real-code', flowState.state, undefined, request, response as never);
 
     expect(googleOidc.exchangeGoogleAuthorizationCode).toHaveBeenCalledWith(
       expect.objectContaining({ code: 'real-code', codeVerifier: flowState.codeVerifier }),
@@ -186,9 +187,9 @@ describe('AuthService.handleGoogleCallback (Milestone #57)', () => {
       new GoogleOidcError('ID token nonce did not match.'),
     );
 
-    await service.handleGoogleCallback('real-code', flowState.state, request, response as never);
+    await service.handleGoogleCallback('real-code', flowState.state, undefined, request, response as never);
 
-    expect(response._redirectedTo).toContain('auth_error=1');
+    expect(response._redirectedTo).toContain('auth_error=failed');
     expect(response.cookie).not.toHaveBeenCalledWith(
       SESSION_COOKIE_NAME,
       expect.anything(),
@@ -212,7 +213,7 @@ describe('AuthService.handleGoogleCallback (Milestone #57)', () => {
       email: 'user@example.com',
     });
 
-    await service.handleGoogleCallback('real-code', flowState.state, request, response as never);
+    await service.handleGoogleCallback('real-code', flowState.state, undefined, request, response as never);
 
     expect(response.cookie).toHaveBeenCalledWith(
       SESSION_COOKIE_NAME,
@@ -422,6 +423,7 @@ describe('B-2 — the OAuth redirect URI comes from configuration, never from th
     await service.handleGoogleCallback(
       'real-code',
       flowState.state,
+      undefined,
       hostileRequest(encodeOAuthFlowState(flowState)),
       callback.response,
     );

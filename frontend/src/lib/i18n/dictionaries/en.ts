@@ -2425,4 +2425,23 @@ export const en = {
     deletedNote: 'Your account and its data have been deleted. You are now signed out.',
     deleteFailed: 'The account could not be deleted. Nothing was removed. Please try again.',
   },
+  /**
+   * B5-A · OAUTH V1 — the two frozen auth-error strings.
+   *
+   * These say the least that is true. "cancelled" states the person stopped and
+   * asserts no fault; "failed" states only that it did not complete and names no
+   * cause — because the handler genuinely cannot tell which stage failed, so any
+   * named cause would be a guess presented as a diagnosis.
+   *
+   * NEITHER MAY EVER CARRY A LINK, AN EMAIL ADDRESS OR A PHONE NUMBER. That is a
+   * security property, not a style rule: `auth_error` is attacker-supplied, so
+   * anyone can manufacture this banner on the real site. The forgery is inert
+   * precisely because the message gives its reader nothing to act on except the
+   * site's own sign-in button.
+   */
+  authError: {
+    cancelled: 'Sign-in was cancelled. You can sign in whenever you\u2019re ready.',
+    failed: 'Sign-in didn\u2019t complete. Please try again.',
+    dismissLabel: 'Dismiss',
+  },
 };

@@ -2034,4 +2034,13 @@ export const pl: Dictionary = {
     deletedNote: 'Twoje konto i jego dane zosta\u0142y usuni\u0119te. Jeste\u015b teraz wylogowany.',
     deleteFailed: 'Nie uda\u0142o si\u0119 usun\u0105\u0107 konta. Nic nie zosta\u0142o usuni\u0119te. Spr\u00f3buj ponownie.',
   },
+  /**
+   * B5-A · OAUTH V1 — polskie odpowiedniki. Truth conditions are E1's; the
+   * wording awaits locale ratification (recorded as OAUTH-V1-PL-COPY-RATIFY-1).
+   */
+  authError: {
+    cancelled: 'Logowanie zosta\u0142o anulowane. Mo\u017cesz zalogowa\u0107 si\u0119 w dowolnej chwili.',
+    failed: 'Logowanie nie zosta\u0142o uko\u0144czone. Spr\u00f3buj ponownie.',
+    dismissLabel: 'Zamknij',
+  },
 };
