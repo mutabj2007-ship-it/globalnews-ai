@@ -71,11 +71,22 @@ export function ParticipantEntityCard({
         a licence — which is what stops a missing portrait from reading as a
         layout fault someone should fix by supplying an image.
       */}
+      {/*
+        B3.1 · SPECIALIST-SP-SURFACE-RAISED-TOKEN-1 — RESOLVED.
+
+        A DIFFERENT ROLE FROM THE HOVER CASE, which is why one ruling could not
+        cover both: this is the RESTING fill of the reserved entity-image block,
+        not a pointer state. The accepted hover mapping would have asserted a
+        hover treatment on something that is never hovered.
+
+        `sp-panel-2` (#101b25) is the existing panel fill for a nested surface.
+        No token invented.
+      */}
       <div
         data-gn="entity-image"
         aria-hidden={image.kind !== 'IMAGE'}
         style={{ width: box, height: box, minWidth: box }}
-        className="flex shrink-0 items-center justify-center rounded-[2px] border border-gn-line-structural bg-sp-surface-raised font-gn-mono text-[12px] tracking-[0.08em] text-sp-ink-3"
+        className="flex shrink-0 items-center justify-center rounded-[2px] border border-gn-line-structural bg-sp-panel-2 font-gn-mono text-[12px] tracking-[0.08em] text-sp-ink-3"
       >
         {image.kind === 'IMAGE' ? (
           /* eslint-disable-next-line @next/next/no-img-element */

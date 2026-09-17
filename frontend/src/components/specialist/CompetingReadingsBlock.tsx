@@ -156,8 +156,22 @@ export function CompetingReadingsBlock({
         <button
           type="button"
           data-gn="readings-compare"
+          /*
+            B3.1 · SPECIALIST-SP-SURFACE-RAISED-TOKEN-1 — RESOLVED.
+
+            `sp-surface-raised` was never in any accepted authority. C907 §1
+            ruled it and two siblings STALE and repointed their consumers rather
+            than minting a colour; `spatialChromeTokens.spec.ts` and
+            `verify-spatial-tokens.mjs` both fail if the name returns.
+
+            THIS IS THE HOVER ROLE, so it takes the mapping already accepted for
+            it: `sp-item-hover` (#101a24), the prototype's own `.item:hover`
+            and the only neutral raised hover surface in the authority. Cyan was
+            disqualified because Part I §E forbids an intelligence hue on a
+            control state; amber is a monitoring claim.
+          */
           onClick={onCompareSources}
-          className="mt-[10px] min-h-[44px] w-full border border-gn-line-structural text-[12px] text-sp-ink transition-colors hover:bg-sp-surface-raised"
+          className="mt-[10px] min-h-[44px] w-full border border-gn-line-structural text-[12px] text-sp-ink transition-colors hover:bg-sp-item-hover"
         >
           {compareLabel}
         </button>
