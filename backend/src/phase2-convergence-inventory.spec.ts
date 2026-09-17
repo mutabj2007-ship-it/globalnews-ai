@@ -43,6 +43,28 @@ const git = (...args: string[]): string =>
 const hasGit = existsSync(join(REPO, '.git')) || existsSync(join(REPO, '.git', 'HEAD'));
 const describeGit = hasGit ? describe : describe.skip;
 
+/**
+ * `git grep` exits 1 when it matches NOTHING, and `execFileSync` throws on a
+ * nonzero exit — so "no matches", the outcome these assertions want, arrived as
+ * an exception. This returns an empty list for that case and re-throws anything
+ * else, so a genuinely broken invocation is still loud.
+ */
+const gitGrepFiles = (pattern: string, pathspec: string): readonly string[] => {
+  try {
+    return execFileSync('git', ['grep', '-l', pattern, '--', pathspec], {
+      cwd: REPO,
+      encoding: 'utf-8',
+    })
+      .split('\n')
+      .filter(Boolean);
+  } catch (error) {
+    const status = (error as { status?: number }).status;
+
+    if (status === 1) return [];
+    throw error;
+  }
+};
+
 const doc = (name: string): string => readFileSync(join(REPO, 'docs', name), 'utf-8');
 
 describeGit('PHASE 2.1 — the three source layers are what the matrix says', () => {
@@ -172,14 +194,9 @@ describe('PHASE 2.2 — the capability claims the tree rests on', () => {
         The load-bearing fact behind "DESIGNED ONLY". A registry with no
         registrations is a platform layer, not a feature.
       */
-      const callers = execFileSync(
-        'git',
-        ['grep', '-l', 'registerSpecialistDomain(', '--', 'frontend/src'],
-        { cwd: REPO, encoding: 'utf-8' },
-      )
-        .split('\n')
-        .filter(Boolean)
-        .filter((f) => !f.includes('.spec.') && !f.endsWith('specialistDomain.ts'));
+      const callers = gitGrepFiles('registerSpecialistDomain(', 'frontend/src').filter(
+        (f) => !f.includes('.spec.') && !f.endsWith('specialistDomain.ts'),
+      );
 
       expect(callers).toEqual([]);
     });
