@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { ProductIntent } from './product-intent.util';
 import { ConfigService } from '@nestjs/config';
 import type {
   AnalysisApiResponse,
@@ -140,7 +141,17 @@ export function buildAnalysisQuery(subject: string, message: string): string {
  * acknowledgement message; what survived is the state decision it used
  * to carry alongside the copy.
  */
-export function creationStateFor(category: SupportCategory): SupportTicketCreationState {
+export function creationStateFor(
+  category: SupportCategory,
+  /**
+   * B4-B — THE SECOND CONJUNCT.
+   *
+   * Optional, and its absence means "not classified", which keeps the previous
+   * behaviour exactly. Every existing caller compiles and behaves unchanged; a
+   * caller that classifies the turn gets the withholding.
+   */
+  intent?: ProductIntent,
+): SupportTicketCreationState {
   return {
     /*
       AWAITING_ADMIN FOR EVERY CATEGORY AT THIS POINT, INCLUDING A NEWS
@@ -156,7 +167,25 @@ export function creationStateFor(category: SupportCategory): SupportTicketCreati
       request is with the human Support team from the moment it opens.
     */
     status: 'AWAITING_ADMIN',
-    analysisEligible: category === ANALYSIS_ELIGIBLE_CATEGORY,
+    /*
+      ══ B4-B · analysisEligible = category === NEWS_QUESTION && family === W ══
+
+      AN AND, NEVER AN OR, AND THAT IS THE WHOLE SAFETY ARGUMENT. A conjunct can
+      only ever WITHHOLD: nothing eligible before this change becomes newly
+      eligible, and a product question filed under NEWS_QUESTION — which is
+      exactly how "How does GlobalNews AI work?" arrives — stops reaching a
+      provider.
+
+      An unclassified turn is treated as WORLD, so omitting the classification
+      leaves today's behaviour untouched. Recognising a PRODUCT question is the
+      only thing that removes a call.
+
+      THE CORPUS IS THE OTHER HALF. This conjunct decides what must not be
+      retrieved; the authored corpus decides what is said instead. Landing this
+      alone would turn a misleading answer into a blank one.
+    */
+    analysisEligible:
+      category === ANALYSIS_ELIGIBLE_CATEGORY && (intent?.family ?? 'W') === 'W',
   };
 }
 
