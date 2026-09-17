@@ -95,6 +95,15 @@ export interface ActivationPanelProps {
   readonly capability: WatchCapability;
   readonly labels: ActivationPanelLabels;
   readonly signInHref: string;
+  /**
+   * CHECKPOINT I — fired immediately before the sign-in navigation.
+   *
+   * Optional and inert by default, so a panel rendered without it behaves
+   * exactly as the accepted one does. It exists because the map needs to
+   * remember where the reader was, and that state may not travel in
+   * `returnTo` — see `signInReturnState.ts`.
+   */
+  readonly onSignIn?: (() => void) | undefined;
   readonly onFollowInstead: (() => void) | undefined;
   readonly onDismiss: () => void;
 }
@@ -105,6 +114,7 @@ export function ActivationPanel({
   capability,
   labels,
   signInHref,
+  onSignIn,
   onFollowInstead,
   onDismiss,
 }: ActivationPanelProps): JSX.Element {
@@ -171,6 +181,7 @@ export function ActivationPanel({
           <a
             data-gn="activation-signin"
             href={signInHref}
+            onClick={onSignIn}
             className="flex min-h-[44px] w-full items-center justify-center rounded-[2px] border border-sp-line-2 px-[10px] py-[11px] font-gn-mono text-[10px] uppercase tracking-[0.14em] text-sp-ui-idle outline-none transition-[color,background-color,border-color] duration-[140ms] hover:border-sp-cyan/45 hover:bg-sp-cyan/[0.16] hover:text-sp-cyan focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sp-cyan"
           >
             {labels.signIn}

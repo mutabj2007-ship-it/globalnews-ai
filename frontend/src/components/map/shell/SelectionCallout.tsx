@@ -8,6 +8,7 @@ import type { CoverageState, ProviderStatus } from '@/lib/map/selection/selectio
 import type { CalloutPlacement } from '@/lib/map/selection/calloutPlacement';
 import { FollowControl } from '@/components/map/shell/FollowControl';
 import { accountSignInUrl } from '@/lib/api/accountBase';
+import { rememberMapStateForSignIn } from '@/lib/map/state/signInReturnState';
 import type { EvidenceSelectionCardLabels, FollowRelationship } from './EvidenceSelectionCard';
 import { MachineReadable } from '@/lib/typography/runBoundary';
 import type { LocationProvenance } from '@/lib/spatial/spatialPrecision';
@@ -362,6 +363,15 @@ export function SelectionCallout({
           <a
             data-gn="callout-follow-signin"
             href={accountSignInUrl(CALLOUT_RETURN_DESTINATION)}
+            /*
+              CHECKPOINT I — the map state is remembered HERE, in the browser,
+              because it may not travel in `returnTo`: the backend rejects a
+              query string outright, and that gate is what keeps this
+              application from becoming an open-redirect primitive at the one
+              moment a reader is primed to trust whatever follows a real Google
+              sign-in.
+            */
+            onClick={() => rememberMapStateForSignIn(window.location.search)}
             className="flex min-h-[44px] w-full items-center justify-center gap-[8px] rounded-[2px] border border-sp-line-2 px-[10px] py-[11px] font-gn-mono text-[10px] uppercase tracking-[0.14em] text-sp-ink-2 outline-none transition-colors hover:border-sp-amber/50 hover:bg-sp-amber/[0.14] hover:text-sp-amber focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gn-focus"
           >
             {labels.follow.signIn}

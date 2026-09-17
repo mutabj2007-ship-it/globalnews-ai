@@ -5,6 +5,7 @@ import { type DisplayPrecision, isFinerThan, markerStyleFor } from '@/lib/map/sp
 import { legendToken } from '@/lib/map/spatial/colourGrammar';
 import type { GeographyTotal } from '@/lib/map/evidence/evidenceModel';
 import type { MapPeriod } from '@/lib/map/state/mapState';
+import { rememberMapStateForSignIn } from '@/lib/map/state/signInReturnState';
 import type {
   CategoryCount,
   CoverageState,
@@ -465,9 +466,17 @@ export function EvidenceSelectionCard({
     <Section gn="card-follow-block">
       {follow === null ? (
         <div data-gn="card-follow" data-gn-state="anonymous">
+          {/*
+            CHECKPOINT I — the map state is remembered HERE, in the browser,
+            because it may not travel in `returnTo`: the backend rejects a query
+            string outright, and that gate is what keeps this application from
+            becoming an open-redirect primitive at the one moment a reader is
+            primed to trust whatever follows a real Google sign-in.
+          */}
           <a
             data-gn="follow-signin"
             href={accountSignInUrl(FOLLOW_RETURN_DESTINATION)}
+            onClick={() => rememberMapStateForSignIn(window.location.search)}
             className="flex min-h-[44px] w-full items-center justify-center gap-[8px] rounded-[2px] border border-sp-line-2 px-[10px] py-[11px] font-gn-mono text-[10px] uppercase tracking-[0.14em] text-sp-ink-2 outline-none transition-colors hover:border-sp-amber/50 hover:bg-sp-amber/[0.14] hover:text-sp-amber focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gn-focus"
           >
             {labels.follow.signIn}

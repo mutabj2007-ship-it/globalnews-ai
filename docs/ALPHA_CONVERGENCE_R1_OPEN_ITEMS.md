@@ -170,6 +170,69 @@ control can switch off.
 
 ---
 
+## Owned by another domain
+
+### `SUPPORT-PRODUCT-KNOWLEDGE-ROUTING-1` — no category for a product question
+
+**Status:** OPEN — **Claude F is the Support domain authority.** Traced and
+evidenced here; deliberately not changed.
+
+The CTO asks that *"How can I sign in?"* and *"How does GlobalNews AI work?"*
+resolve to internal product knowledge rather than to news-evidence searches.
+
+**What the trace found.** `SupportCategory` has seven values, and the shared
+contract states the routing rule plainly: *"The category is the ONLY thing that
+decides whether machine assistance is attempted at all: NEWS_QUESTION may be
+answered from evidence, and the other six go to a human."* The backend enforces
+exactly that — `ANALYSIS_ELIGIBLE_CATEGORY = 'NEWS_QUESTION'` is the only
+category permitted to reach `AnalysisService`, and `analysisEligible` is set
+from a direct equality against it.
+
+So six of the seven categories already cannot become a news-evidence search. The
+new-request form defaults to no category at all (`useState<SupportCategory | ''>('')`)
+and refuses to submit without one, so nothing is silently classified as news
+either.
+
+**The actual gap is that there is nowhere correct to put the question.** No
+category means "ask the product about itself". A reader with *"How can I sign
+in?"* can choose `ACCOUNT_PROBLEM` or `OTHER` — both of which go to a human and
+wait — or `NEWS_QUESTION`, which is the first option in the list and the only
+one that promises an answer. That last choice is how a product question becomes
+a news-evidence search, and it is a vocabulary gap rather than a routing bug.
+
+**Why it is not fixed here.** Closing it means adding a category to a shared
+enum, the Prisma enum, DTO validation, both dictionaries and the AI service's
+routing, plus a product-knowledge answer path that does not exist. That is
+Support domain design, and the ruling names Claude F as its authority.
+
+**Evidence:** `shared/src/support.ts`,
+`backend/src/modules/support/support-ai.service.ts`,
+`frontend/src/components/support/NewSupportRequestForm.tsx`
+
+---
+
+### `AUTH-OAUTH-ERROR-REASON-VISIBILITY-1` — no `auth_error` handling exists
+
+**Status:** OPEN — needs a backend contract first.
+
+The CTO asks for OAuth error-reason visibility and frontend `auth_error`
+handling. The string `auth_error` appears **nowhere in the frontend**, and the
+callback has no failure contract for it to read: `resolveSafeReturnUrl` falls
+back to the frontend origin on any unusable destination, and a rejected value is
+deliberately *"never echoed back to the caller, never logged as content, and
+never surfaced in a message, so an open-redirect probe and an ordinary sign-in
+are indistinguishable from outside."*
+
+That silence is correct for a **rejected returnTo** and says nothing about a
+**failed authentication**, which is a different event. Displaying a reason
+requires the callback to emit one, and deciding what may be disclosed without
+leaking probe signal is a security decision, not a frontend one.
+
+The return-state half of the same item **was** corrected — see
+`signInReturnState.ts` — without touching the redirect contract.
+
+---
+
 ## Deferred for cause (behaviour)
 
 ### `ANALYSIS-NON-ENGLISH-MATERIAL-RELEVANCE-1`

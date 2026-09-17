@@ -3,6 +3,10 @@ import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { MapPageClient } from '@/components/map/MapPageClient';
+/* CHECKPOINT I — the released language reconciliation, now on this route too. */
+import { LanguageSync } from '@/components/i18n/LanguageSync';
+/* CHECKPOINT I — restores the map state the sign-in redirect may not carry. */
+import { MapSignInReturn } from '@/components/map/MapSignInReturn';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
@@ -170,6 +174,19 @@ export default function MapPage(): JSX.Element {
   */
   return (
     <>
+      {/*
+        CHECKPOINT I — LANGUAGE-PERSISTENCE-ON-REFRESH.
+
+        This route reads the language cookie server-side and falls back to
+        English. When the cookie alone is missing — cleared, or never written
+        because the reader arrived here first with a Polish browser — that
+        fallback was permanent: refreshing re-read the same absent cookie, and
+        only a detour through the homepage repaired it.
+
+        Renders nothing; it reconciles the two stores and refreshes once.
+      */}
+      <LanguageSync />
+      <MapSignInReturn />
       {spatial ? null : <NavBar language={language} />}
       <main
         data-gn="map-route-main"

@@ -61,6 +61,7 @@ import { MapHudTopBar } from './MapHudTopBar';
 import { ModeSwitcher } from './ModeSwitcher';
 import { LayerToggleRail } from './LayerToggleRail';
 import { MapLanguageControl } from './MapLanguageControl';
+import { rememberMapStateForSignIn } from '@/lib/map/state/signInReturnState';
 import { MapControlCluster } from './d1/MapControlCluster';
 import { GlobeLocator } from './d1/GlobeLocator';
 import { LayersControl } from './d1/LayersControl';
@@ -2113,6 +2114,8 @@ export function GlobalMapShell({
               capability={capability}
               labels={spatial.monetization.activation}
               signInHref={accountSignInUrl(FOLLOW_RETURN_DESTINATION)}
+              /* CHECKPOINT I — the state stays in the browser; see signInReturnState.ts. */
+              onSignIn={() => rememberMapStateForSignIn(window.location.search)}
               /*
                 THE ONE THING ON THAT PANEL THAT WORKS. Follow is shipped and
                 free; it is offered only when the account actually holds the
