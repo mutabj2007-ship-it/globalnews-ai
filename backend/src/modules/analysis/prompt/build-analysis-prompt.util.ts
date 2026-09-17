@@ -1,4 +1,5 @@
 import type { AnalysisDevelopmentBreadth } from '../interfaces/analysis-provider.interface';
+import { renderDimensionSemanticsInstruction } from './dimension-semantics';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 
 /**
@@ -201,6 +202,7 @@ Strict rules:
   entry follows the exact same evidenceIds/evidenceBasis rules as
   keyFacts. Return an empty array if a meaningful relevance claim cannot
   be grounded in the supplied evidence.
+${renderDimensionSemanticsInstruction()}
 - For "affectedParties": identify up to 6 people, organizations,
   countries, regions, or groups the supplied evidence EXPLICITLY
   describes as affected, and state the effect on each using only what
@@ -208,11 +210,27 @@ Strict rules:
   to the single best-fitting category (person, organization, country,
   region, group, or other). Return an empty array if the evidence does
   not identify specific affected parties.
+  AN ACTOR IS NOT AN AFFECTED PARTY. Something in the evidence must
+  HAPPEN TO the entity you list. An entity that decides, announces,
+  implements, seeks, threatens or responds is acting, and being the most
+  prominent name in the story does not make it affected. If the evidence
+  states both — an actor who also bears a consequence — the "effect"
+  field must state the CONSEQUENCE IT BEARS, never the action it took.
+  "<Country> implementing policy" is an action and must be rejected;
+  "<Country> now pays X more for Y, per the evidence" is an effect.
 - For "immediateImpacts": list up to 4 direct, already-occurring
   effects the supplied evidence explicitly states — never a
   plausible-sounding consequence you are inferring. Each entry follows
   the exact same evidenceIds/evidenceBasis rules as keyFacts. Return an
   empty array if the evidence does not state any direct effect.
+  A DEVELOPMENT IS NOT AN EFFECT, AND NEITHER IS A RESPONSE. An effect is
+  a consequence ON someone or something, caused by the event. Something
+  that merely HAPPENED is a development, and something an actor CHOSE TO
+  DO about it is a response — however recent or important either is.
+  "<Proposal> revived" is a development and must be rejected; "<Group>
+  has already halted <activity> as a result, per the evidence" is an
+  effect. If the evidence states the event but no consequence of it, this
+  array is empty, and that is the correct answer.
 - For "spilloverImplications": list up to 4 wider or secondary effects
   EXPLICITLY discussed in the supplied evidence — never your own
   extrapolation of what might plausibly follow. Each entry follows the
