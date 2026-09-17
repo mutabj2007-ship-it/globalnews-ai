@@ -7,6 +7,16 @@ import { TrustBadge } from '@/components/search/TrustBadge';
 import { SourceDiversitySummary } from '@/components/search/SourceDiversitySummary';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+/*
+  L-1 — THE SAME SPLITTER THE WORKSPACE USES, NOT A SECOND ONE.
+
+  The ruling is explicit: "do not reconstruct paragraphs independently on each
+  surface". This surface rendered `analysis.summary` in a single <p>, which
+  collapsed a multi-paragraph synthesis into one slab while the Analysis
+  Workspace — importing this exact function — showed it correctly. Two surfaces,
+  one string, two different answers about where a paragraph ends.
+*/
+import { splitSynthesisParagraphs } from '@/components/analysis-frame/briefModel';
 
 interface AnalysisResultViewProps {
   analysis: NewsAnalysisResult;
@@ -94,9 +104,28 @@ export function AnalysisResultView({
             )}
           </div>
         ) : (
-          <p className="text-sm leading-relaxed text-ink-secondary sm:text-base">
-            {analysis.summary}
-          </p>
+          <div className="flex flex-col gap-3">
+            {/*
+              L-1 — canonical paragraph boundaries, preserved.
+
+              L-2 — BODY PROSE ONLY is justified (`gn-justified-prose`). Headings,
+              metadata, chips, labels, source cards and metrics keep their own
+              alignment: justification is for running prose, and applying it to a
+              label row would stretch a two-word chip across a column.
+
+              The LAST LINE STAYS NATURAL because `text-align: justify` leaves it
+              ragged by default and `text-align-last` is deliberately NOT set.
+            */}
+            {splitSynthesisParagraphs(analysis.summary).map((paragraph, index) => (
+              <p
+                key={`brief-paragraph-${index}`}
+                data-gn="brief-paragraph"
+                className="gn-justified-prose text-sm leading-relaxed text-ink-secondary sm:text-base"
+              >
+                {paragraph}
+              </p>
+            ))}
+          </div>
         )}
       </div>
 

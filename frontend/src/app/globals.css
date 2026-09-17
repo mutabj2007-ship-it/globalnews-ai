@@ -185,3 +185,41 @@
     color-scheme: dark;
   }
 }
+
+/*
+  ════════════════════════════════════════════════════════════════════════════
+  L-2 — JUSTIFIED BODY PROSE, AND ONLY BODY PROSE
+  ════════════════════════════════════════════════════════════════════════════
+
+  Product-Owner approved: body paragraphs of the Executive Brief and the
+  Complete Analysis Record are justified. Headings, metadata, chips, labels,
+  source cards, tables and metrics are NOT — justification is for running prose,
+  and stretching a two-word chip across a column is not typography.
+
+  THE LAST LINE STAYS NATURAL. `text-align: justify` already leaves the final
+  line ragged; `text-align-last` is deliberately NOT set. Forcing the last line
+  to justify is the single most recognisable way to make justified text look
+  broken.
+
+  NARROW COLUMNS ARE NOT JUSTIFIED, and that is the responsive rule rather than
+  a compromise. Justification works by stretching inter-word spaces; in a narrow
+  measure there are too few words per line to absorb the difference, so it
+  produces rivers of white space. Below 640px — the same breakpoint the prose
+  already uses for its type scale — the text stays left-aligned, which is the
+  better of the two honest options.
+
+  `hyphens: auto` is what makes justification tolerable at the widths where it
+  IS applied: without it, one long word forces a line of gaps.
+*/
+.gn-justified-prose {
+  text-align: left;
+  hyphens: auto;
+}
+
+@media (min-width: 640px) {
+  .gn-justified-prose {
+    text-align: justify;
+    /* Explicit, so no future reset can quietly justify the last line. */
+    text-align-last: auto;
+  }
+}

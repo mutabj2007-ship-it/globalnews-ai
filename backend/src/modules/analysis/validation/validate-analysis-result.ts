@@ -583,7 +583,28 @@ function validateConfidence(candidate: unknown): ConfidenceInfo {
   if (!isString(level) || !CONFIDENCE_LEVELS.includes(level as ConfidenceLevel)) {
     throw new AnalysisValidationError('"confidence.level" must be one of low, medium, high.');
   }
-  const score = typeof obj.score === 'number' && Number.isFinite(obj.score) ? obj.score : 0;
+  const rawScore = typeof obj.score === 'number' && Number.isFinite(obj.score) ? obj.score : 0;
+
+  /*
+    L-3 — A FRACTION IS A SCALE, NOT A ROUNDING PROBLEM.
+
+    `Math.round` used to be applied directly, so a model answering on the 0-1
+    scale it naturally uses for confidence had 0.92 collapsed to 1 — displayed,
+    accurately, as "HIGH (1/100)".
+
+    The schema and the prompt now state the 0-100 scale, which is the real fix.
+    This is the defensive half: a NON-INTEGER value in [0, 1] cannot be a
+    0-100 score — there is no whole number there — so it is unambiguously a
+    fraction and is scaled.
+
+    WHAT IS DELIBERATELY NOT RESCALED: an integer 0 or 1. Those are genuinely
+    ambiguous (1 could mean "1 out of 100" or "certain"), and after the schema
+    fix a compliant model emits 0-100, so the declared contract wins. Guessing
+    would turn a legitimate score of 1 into 100, which is a far worse error than
+    reporting a low score the model actually gave.
+  */
+  const looksLikeFraction = !Number.isInteger(rawScore) && rawScore > 0 && rawScore < 1;
+  const score = looksLikeFraction ? rawScore * 100 : rawScore;
   const explanation = isNonEmptyString(obj.explanation)
     ? obj.explanation
     : 'No explanation provided.';

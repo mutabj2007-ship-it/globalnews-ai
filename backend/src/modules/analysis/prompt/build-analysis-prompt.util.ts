@@ -181,6 +181,12 @@ Strict rules:
   "uncertainties" describing the gap, citing the relevant evidenceIds when
   the gap concerns specific articles (an empty evidenceIds array is fine
   for a general gap). Also reflect this in the confidence score.
+- "confidence.score" IS ON A 0-100 SCALE, not a 0-1 probability. Give a whole
+  number where 0 is no confidence and 100 is maximum confidence, and keep it
+  consistent with "confidence.level": roughly 0-39 for "low", 40-74 for
+  "medium", 75-100 for "high". This is YOUR OWN self-assessment and is a
+  different thing from how well the evidence supports the analysis, which the
+  backend derives and you are not asked for.
 - Avoid political persuasion, advocacy, or loaded language of any kind.
 - Avoid sensational or exaggerated language; use a neutral, precise tone.
 - Preserve genuinely important differences between sources rather than
@@ -999,7 +1005,29 @@ export function buildAnalysisJsonSchema(
           type: 'object',
           properties: {
             level: { type: 'string', enum: ['low', 'medium', 'high'] },
-            score: { type: 'number' },
+            /*
+              L-3 — THE SCALE WAS NEVER STATED, AND THAT IS THE WHOLE DEFECT.
+
+              This was `{ type: 'number' }`: no range, no description, nothing
+              anywhere telling the model what units to answer in. The shared
+              TypeScript type says "0-100", but a comment in our repository is
+              not a contract the model can read.
+
+              So the model answered on the scale models naturally use for
+              confidence — a 0-1 probability. 0.92 then met
+              `Math.round(score)` in the validator and became 1, which the UI
+              rendered faithfully as "HIGH (1/100)".
+
+              Neither the number nor the label was wrong. They were on
+              different scales, and nothing reconciled them.
+            */
+            score: {
+              type: 'number',
+              minimum: 0,
+              maximum: 100,
+              description:
+                'Integer 0-100, where 100 is maximum confidence. NOT a 0-1 probability.',
+            },
             explanation: { type: 'string' },
           },
           required: ['level', 'score', 'explanation'],

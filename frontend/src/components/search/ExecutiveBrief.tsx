@@ -215,6 +215,11 @@ export function ExecutiveBrief({
     never clamped — the control exists for genuinely long syntheses, not as a
     default state that hides the answer.
   */
+  /*
+    L-2 — the same body-prose justification the Complete Record applies, from
+    the same class, so the two surfaces cannot drift in alignment any more than
+    they can in paragraph boundaries.
+  */
   const paragraphs = splitSynthesisParagraphs(brief?.summary ?? '');
   const clampable = paragraphs.length > 3;
   const [contextOpen, setContextOpen] = useState(false);
@@ -316,7 +321,13 @@ export function ExecutiveBrief({
             }`}
           >
             {paragraphs.map((paragraph, index) => (
-              <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
+              <p
+                key={`${index}-${paragraph.slice(0, 24)}`}
+                data-gn="brief-paragraph"
+                className="gn-justified-prose"
+              >
+                {paragraph}
+              </p>
             ))}
           </div>
           )}
