@@ -92,6 +92,63 @@ presentation was explicitly out of scope: *"no redesign"*.
 
 ---
 
+## Blocked on a backend producer
+
+Both of these are Checkpoint E items, both were **classified rather than
+corrected**, and both are closed by the *same* backend capability: a producer
+that emits point-precision evidence.
+
+### `SPATIAL-EVIDENCE-MODE-AFFORDANCE-1` — EVIDENCE mode equals WORLD
+
+**Status:** OPEN — needs a product decision, not a convergence fix.
+
+Measured, not argued: `qualifyingRecords` switches on the mode, and WORLD and
+EVIDENCE share one `default: return true` arm. Given identical input the two
+**live** modes return the same records, so switching between them changes
+nothing a reader can see. The other four modes genuinely do discriminate, which
+is what makes that equality meaningful rather than vacuous.
+
+**The cause is a producer gate, not a missing design.** The registry already
+declares the distinction — `evidencePoints` applies in EVIDENCE and CHANGE and
+not in WORLD, so EVIDENCE is meant to be the mode that draws point-precision
+evidence. That layer is GATED: *"no producer emits point-precision evidence;
+`PRODUCIBLE_SPATIAL_PRECISION` is ['COUNTRY','UNKNOWN']"*. The difference cannot
+manifest. EVIDENCE is not empty of intent; it is waiting on a backend that does
+not emit what it exists to show.
+
+**Why not corrected here:** the ways forward — merge the modes, relabel EVIDENCE
+as pending, or wait for the producer — are product decisions with different
+costs, and the ruling forbids inventing.
+
+**Evidence:** `frontend/src/components/map/checkpointEEvidenceMode.spec.ts`
+
+---
+
+### `SPATIAL-COUNTRY-EVIDENCE-LAYER-TOGGLE-1` — EVID governs two of four layers
+
+**Status:** OPEN — latent, guarded.
+
+The canvas binds four evidence layers to two different keys:
+
+| layers | key | control |
+| ------ | --- | ------- |
+| FILL, EVIDENCE_LINE | `layers.countryEvidence` | the EVID chip |
+| HALO, MARK | `layers.evidencePoints` | **none exists** |
+
+`evidencePoints` is not in `RAIL_EVIDENCE_LAYERS`, so no rail control can ever
+set it, and `layers.evidencePoints !== false` means an unset key reads as
+**visible**. Both keys even share the same glyph, so they would read as one
+layer.
+
+Invisible today because `evidencePoints` is gated and draws nothing — turning
+EVID off does remove all *visible* evidence. The moment a producer emits
+point-precision evidence, marks appear that the EVID chip does not govern and no
+control can switch off.
+
+**Evidence:** `frontend/src/components/map/checkpointEEvidenceMode.spec.ts`
+
+---
+
 ## Deferred for cause (behaviour)
 
 ### `ANALYSIS-NON-ENGLISH-MATERIAL-RELEVANCE-1`
