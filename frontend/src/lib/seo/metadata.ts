@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { isAlphaEnvironment } from './deploymentEnvironment';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { absoluteUrl, resolveSiteOrigin } from './siteOrigin';
 import { classify } from './routes';
@@ -49,7 +50,26 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
   const entry = classify(input.path);
   const origin = resolveSiteOrigin();
   const canonical = absoluteUrl(entry.path, origin);
-  const indexable = entry.indexability === 'index' && !entry.userDependent;
+  /*
+    ═══ B5.1 · ALPHA IS NEVER INDEXABLE, WHATEVER THE REGISTRY SAYS ═════════
+
+    This is the ONLY place a page's robots directive is decided, which is why
+    the override belongs here rather than in each route: the registry stays the
+    single source of truth for what is PUBLIC, and the environment decides
+    whether this deployment may be indexed AT ALL. Two questions, one answer
+    each, and neither has to know about the other.
+
+    The conjunct can only ever WITHHOLD. Alpha cannot make a private surface
+    indexable, and Production behaviour is byte-identical to before, because
+    isAlphaEnvironment() is false for every value except one exact id.
+
+    NOT robots.txt. A noindex directive must be CRAWLABLE to be obeyed — a
+    blocked URL is never fetched, so the directive is never read and the URL can
+    still surface from elsewhere. That is why 'Disallow: /' is not a stronger
+    form of this and is ruled out; robots.ts deliberately keeps 'Allow: /'.
+  */
+  const indexable =
+    entry.indexability === 'index' && !entry.userDependent && !isAlphaEnvironment();
 
   const robots: Metadata['robots'] = indexable
     ? { index: true, follow: true }

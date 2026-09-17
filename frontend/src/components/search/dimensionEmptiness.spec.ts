@@ -104,14 +104,21 @@ describe('J-2 — the empty-dimension sentence', () => {
     });
 
     it('the label keys exist in BOTH dictionaries', () => {
-      /* eslint-disable @typescript-eslint/no-var-requires */
-      const fs = require('fs') as typeof import('fs');
-      const path = require('path') as typeof import('path');
-      /* eslint-enable @typescript-eslint/no-var-requires */
+      /*
+        B5.1 — the local `require`s were REMOVED, not re-suppressed.
 
+        This file already imports readFileSync and join at the top, so the block
+        was redundant. Its `eslint-disable` named
+        `@typescript-eslint/no-var-requires` — a rule this frontend does not
+        load — and ESLint FAILS on a directive for an undefined rule, so the
+        comment broke `next lint` and therefore `next build`.
+
+        Behaviour is unchanged; only the mechanism for reading the two
+        dictionaries is.
+      */
       for (const dict of ['en.ts', 'pl.ts']) {
-        const source = fs.readFileSync(
-          path.join(__dirname, '..', '..', 'lib', 'i18n', 'dictionaries', dict),
+        const source = readFileSync(
+          join(__dirname, '..', '..', 'lib', 'i18n', 'dictionaries', dict),
           'utf-8',
         );
 

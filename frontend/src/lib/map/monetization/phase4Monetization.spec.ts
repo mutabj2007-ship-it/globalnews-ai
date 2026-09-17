@@ -108,10 +108,19 @@ describe('PHASE 4 — the product cannot state a figure it was not given', () =>
     });
 
     it('the module declares no default anywhere', () => {
-      const module = stripComments(src('lib', 'map', 'monetization', 'entitlement.ts'));
+      /*
+        B5.1 — RENAMED FROM `module`, and that is not a style preference.
 
-      expect(module).not.toMatch(/\?\?\s*\{/);
-      expect(module).not.toMatch(/DEFAULT_ENTITLEMENT/);
+        `@next/next/no-assign-module-variable` is an ERROR, not a warning, so
+        binding the name `module` failed `next lint` and therefore `next build`.
+        The assertion never needed the name; only the build did.
+      */
+      const entitlementSource = stripComments(
+        src('lib', 'map', 'monetization', 'entitlement.ts'),
+      );
+
+      expect(entitlementSource).not.toMatch(/\?\?\s*\{/);
+      expect(entitlementSource).not.toMatch(/DEFAULT_ENTITLEMENT/);
     });
   });
 

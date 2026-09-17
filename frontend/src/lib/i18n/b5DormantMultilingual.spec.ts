@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import {
   DISPLAY_LOCALES,
@@ -201,8 +201,7 @@ describe('B5-C · what was NOT recovered, and why it is not safely separable', (
       corrected afterwards, so no dictionary was installed here.
     */
     const dir = join(__dirname, 'dictionaries');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const files = (require('fs').readdirSync(dir) as string[]).filter((f) =>
+    const files = readdirSync(dir).filter((f) =>
       /^(en|pl|fr|de|es|pt|ar)\.ts$/.test(f),
     );
 

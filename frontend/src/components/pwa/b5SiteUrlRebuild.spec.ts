@@ -87,10 +87,32 @@ describe('B5-B · NEXT_PUBLIC_SITE_URL is build-time, so DOMAIN-1 must rebuild',
 
   it('no build-time origin is hardcoded anywhere as a fallback', () => {
     /*
-      A default would be worse than null here: it would make the misconfiguration
-      invisible by producing plausible absolute URLs for a host nobody chose.
+      A default would be worse than null here: it would make the
+      misconfiguration invisible by producing plausible absolute URLs for a host
+      nobody chose.
+
+      ── CORRECTED IN B5.1, AND THE MISS IS RECORDED ───────────────────────
+
+      My first version asserted `not.toMatch(/https?:\/\/[a-z]/)` over the WHOLE
+      FILE, which fails on `https://host` — an ILLUSTRATIVE URL inside
+      siteOrigin.ts's own doc comments, present since long before B5 and
+      changed by nothing.
+
+      So this assertion was wrong the day I wrote it. It did not surface in B5
+      because the file was created AFTER that gate's frontend regression had
+      already started, so the run never executed it. B5's reported "5 failing
+      suites" therefore omitted this one. Recorded rather than quietly fixed.
+
+      The rule was always about CODE, not prose: no literal origin may be
+      compiled in as a fallback. Comments are stripped, and the specific
+      production host is still forbidden everywhere, prose included.
     */
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
     expect(source).not.toMatch(/globalnewsai\.live/);
-    expect(source).not.toMatch(/https?:\/\/[a-z]/);
+    expect(code).not.toMatch(/https?:\/\/[a-z]/);
+
+    /* Positive control: the stripper did not simply empty the file. */
+    expect(code).toContain('NEXT_PUBLIC_SITE_URL');
   });
 });

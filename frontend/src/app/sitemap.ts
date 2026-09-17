@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { sitemapRoutes } from '@/lib/seo/routes';
 import { absoluteUrl, resolveSiteOrigin } from '@/lib/seo/siteOrigin';
+import { isAlphaEnvironment } from '@/lib/seo/deploymentEnvironment';
 
 /**
  * ═══ /sitemap.xml ══════════════════════════════════════════════════════
@@ -26,6 +27,23 @@ import { absoluteUrl, resolveSiteOrigin } from '@/lib/seo/siteOrigin';
 export const dynamic = 'force-dynamic';
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  /*
+    B5.1 — AN ALPHA DEPLOYMENT ADVERTISES NOTHING.
+
+    This file's own principle, applied one environment further out. It already
+    refuses to emit a URL the registry has not marked public, because a page can
+    say `noindex` while the sitemap advertises it and nobody notices.
+
+    On Alpha EVERY page says `noindex`, so a sitemap listing any of them would
+    be that exact contradiction at full scale — and a sitemap is an INVITATION,
+    the one artefact whose entire purpose is to get URLs fetched.
+
+    `force-dynamic` above is what makes the environment readable here: the
+    variable is absent at build, so a statically generated sitemap could not
+    have consulted it.
+  */
+  if (isAlphaEnvironment()) return [];
+
   const origin = resolveSiteOrigin();
   if (origin === null) return [];
 

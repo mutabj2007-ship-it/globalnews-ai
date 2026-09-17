@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
 import { DISALLOWED_PREFIXES } from './routes';
@@ -83,11 +83,9 @@ describe('B5-F · the environment distinction does not exist — measured', () =
       revisited rather than inherited.
     */
     const walk = (dir: string, out: string[] = []): string[] => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const fs = require('fs');
-      for (const entry of fs.readdirSync(dir) as string[]) {
+      for (const entry of readdirSync(dir)) {
         const full = join(dir, entry);
-        if (fs.statSync(full).isDirectory()) {
+        if (statSync(full).isDirectory()) {
           if (entry !== 'node_modules') walk(full, out);
         } else if (/\.tsx?$/.test(entry) && !/\.spec\.tsx?$/.test(entry)) {
           out.push(full);
@@ -105,7 +103,27 @@ describe('B5-F · the environment distinction does not exist — measured', () =
       }
     }
 
-    expect(offenders).toEqual([]);
+    /*
+      ══ SUPERSEDED BY B5.1 — AND THIS TRIPWIRE FIRED EXACTLY AS DESIGNED ════
+
+      B5 wrote: "If this test ever fails, an identifier has appeared and the
+      HOLD should be revisited rather than inherited." It failed, for that
+      reason, and the HOLD was revisited rather than inherited.
+
+      A Railway-injected `RAILWAY_ENVIRONMENT_ID` was then measured read-only
+      against both governed environments and found to discriminate them exactly.
+      The single reader is `deploymentEnvironment.ts`, which
+      `alphaNoindex.spec.ts` constrains in far more detail than a file-count
+      could.
+
+      The assertion is kept and NARROWED rather than deleted, so the property it
+      really protects survives: there must be exactly ONE environment reader. A
+      second one is how two parts of the product start disagreeing about which
+      environment they are in.
+    */
+    const ENVIRONMENT_AUTHORITY = 'deploymentEnvironment.ts';
+
+    expect(offenders.map((f) => f.split(/[\\/]/).pop())).toEqual([ENVIRONMENT_AUTHORITY]);
   });
 
   it('NEXT_PUBLIC_SITE_URL is inlined at BUILD time, so it cannot identify a runtime environment', () => {
@@ -127,15 +145,41 @@ describe('B5-F · the environment distinction does not exist — measured', () =
   });
 });
 
-describe('B5-F · nothing was implemented, and Production behaviour is unchanged', () => {
-  it('no noindex rule keys off an environment anywhere', () => {
+describe('B5-F · the environment now drives noindex — and ONLY through the authority', () => {
+  it('no noindex rule keys off a FORBIDDEN signal anywhere', () => {
+    /*
+      ══ SUPERSEDED BY B5.1 ══════════════════════════════════════════════════
+
+      B5 asserted that NOTHING keyed off an environment, because nothing could:
+      no reliable signal existed. B5.1 found one and implemented it, so the
+      blanket ban is now false by design.
+
+      What must STILL hold is the part that was never about availability: the
+      FORBIDDEN signals remain forbidden. NODE_ENV is 'production' in both
+      environments; a hostname comparison and NEXT_PUBLIC_SITE_URL both fail
+      towards deindexing Production. None of them may appear here whatever
+      signal is available.
+
+      `metadata.ts` may now name the authority — that IS the implementation —
+      but it must not re-derive the environment for itself.
+    */
     const metadata = read('lib/seo/metadata.ts');
     const routes = read('lib/seo/routes.ts');
 
     for (const source of [metadata, routes]) {
       expect(source).not.toMatch(/NODE_ENV/);
-      expect(source).not.toMatch(/alpha/i);
+      expect(source).not.toMatch(/RAILWAY_/);
+      expect(source).not.toMatch(/process\.env/);
+      expect(source).not.toMatch(/hostname/i);
+      expect(source).not.toMatch(/NEXT_PUBLIC_SITE_URL/);
     }
+  });
+
+  it('metadata consults the authority rather than reading the environment itself', () => {
+    const metadata = read('lib/seo/metadata.ts');
+
+    expect(metadata).toContain('isAlphaEnvironment()');
+    expect(metadata).toContain("from './deploymentEnvironment'");
   });
 
   it('indexability still comes only from the route registry', () => {

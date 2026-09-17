@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { AUTH_ERROR_CODES, AUTH_ERROR_PARAM, isAuthErrorCode } from '@globalnews-ai/shared';
 
@@ -196,26 +196,75 @@ describe('B5-A · C-T8 / C-14 — the copy gives the reader nothing to act on', 
     }
   });
 
-  it('names no cause, and offers no reassurance or blame', () => {
-    const forbidden = [
-      /session expired/i,
-      /provider/i,
-      /unavailable/i,
-      /invalid state/i,
-      /usually works/i,
-      /your (account|browser|credentials)/i,
-      /minutes?/i,
-      /try again in/i,
-      /contact/i,
-      /support/i,
+  it('names no cause, and offers no reassurance or blame — IN BOTH LANGUAGES', () => {
+    /*
+      ══ AUTH-C14-MULTILINGUAL-GUARD-1 — the guard was English-centric ═══════
+
+      Every pattern here used to be an English phrase, so the Polish strings
+      were being checked against words that cannot appear in Polish. They
+      passed, and that pass meant nothing: a Polish message reading
+      "Twoja sesja wygasła" ("your session expired") would have sailed through
+      a guard looking only for /session expired/i.
+
+      A forbidden-pattern list is only as strong as the languages it can read,
+      and this one shipped able to read one of the two languages it guarded.
+
+      TEST-ONLY. The ratified EN/PL strings are NOT touched — L measured them
+      and they require zero changes. What changes is the instrument.
+
+      Patterns are grouped by the SEMANTIC CLASS each one exists to forbid, so
+      a future locale is extended class by class rather than by pattern-matching
+      whatever the previous language happened to say.
+    */
+    const forbiddenByClass: ReadonlyArray<readonly [string, readonly RegExp[]]> = [
+      [
+        'names a cause',
+        [
+          /session expired/i,
+          /provider/i,
+          /unavailable/i,
+          /invalid state/i,
+          /sesja wygas/i,
+          /wygasła/i,
+          /dostawc/i,
+          /niedostępn/i,
+          /nieprawidłow/i,
+          /błąd serwera/i,
+          /awaria/i,
+        ],
+      ],
+      [
+        'unbacked reassurance',
+        [/usually works/i, /don't worry/i, /zwykle działa/i, /bez obaw/i, /nie martw/i],
+      ],
+      [
+        'blames the reader',
+        [
+          /your (account|browser|credentials)/i,
+          /twoje (konto|hasło|dane)/i,
+          /twój (browser|konto)/i,
+          /przeglądarka/i,
+          /twoja przegl/i,
+        ],
+      ],
+      [
+        'a counter or countdown',
+        [/minutes?/i, /try again in/i, /spróbuj ponownie za/i, /minut/i, /sekund/i],
+      ],
+      [
+        'routes the reader elsewhere',
+        [/contact/i, /support/i, /skontaktuj/i, /pomoc techniczn/i, /wsparcie/i, /napisz do/i],
+      ],
     ];
 
     for (const locale of locales) {
       const copy = getDictionary(locale).authError;
 
       for (const message of [copy.cancelled, copy.failed]) {
-        for (const pattern of forbidden) {
-          expect(message).not.toMatch(pattern);
+        for (const [, patterns] of forbiddenByClass) {
+          for (const pattern of patterns) {
+            expect(message).not.toMatch(pattern);
+          }
         }
       }
     }
@@ -231,6 +280,64 @@ describe('B5-A · C-T8 / C-14 — the copy gives the reader nothing to act on', 
     expect(bad).toMatch(/https?:\/\//i);
     expect(bad).toMatch(/\d/);
     expect(bad).toMatch(/contact|support|call/i);
+  });
+
+  describe('AUTH-C14-MULTILINGUAL-GUARD-1 — a real positive control per class, per language', () => {
+    /*
+      THE GAP THIS CLOSES. A single English positive control proves the
+      instrument can fire, but not that it can fire IN POLISH — and an
+      English-only instrument guarding a Polish string is the defect being
+      corrected. Each case below is a plausible non-compliant sentence in the
+      language it is written in, and the guard must reject it.
+
+      These are CONTROLS. None of them is shipped copy, and the ratified strings
+      are unchanged.
+    */
+    const mustBeRejected: ReadonlyArray<readonly [string, string, RegExp]> = [
+      ['EN names a cause', 'Sign-in didn’t complete because your session expired.', /session expired/i],
+      ['PL names a cause', 'Logowanie nie powiodło się, ponieważ Twoja sesja wygasła.', /sesja wygas/i],
+      ['EN unbacked reassurance', 'Please try again — it usually works the second time.', /usually works/i],
+      ['PL unbacked reassurance', 'Spróbuj ponownie — zwykle działa za drugim razem.', /zwykle działa/i],
+      ['EN blames the reader', 'Sign-in failed. Check your browser settings.', /your (account|browser|credentials)/i],
+      ['PL blames the reader', 'Logowanie nie powiodło się. Sprawdź swoją przeglądarkę.', /przeglądarka|przeglądark/i],
+      ['EN countdown', 'Too many attempts. Try again in 5 minutes.', /try again in/i],
+      ['PL countdown', 'Zbyt wiele prób. Spróbuj ponownie za 5 minut.', /spróbuj ponownie za/i],
+      ['EN routes elsewhere', 'Sign-in failed. Please contact support.', /contact|support/i],
+      ['PL routes elsewhere', 'Logowanie nie powiodło się. Skontaktuj się z pomocą techniczną.', /skontaktuj|pomoc techniczn/i],
+    ];
+
+    it.each(mustBeRejected)('the guard REJECTS: %s', (_label, sentence, pattern) => {
+      expect(sentence).toMatch(pattern);
+    });
+
+    it('and none of those control sentences is anywhere in the shipped copy', () => {
+      /*
+        The other direction, so the controls cannot drift into being examples of
+        what IS shipped.
+      */
+      for (const locale of locales) {
+        const copy = getDictionary(locale).authError;
+
+        for (const [, sentence] of mustBeRejected) {
+          expect(copy.cancelled).not.toBe(sentence);
+          expect(copy.failed).not.toBe(sentence);
+        }
+      }
+    });
+
+    it('THE RATIFIED STRINGS ARE UNCHANGED — L measured them and required zero edits', () => {
+      /*
+        Pinned exactly. This hardening is test-only by ruling, so if a future
+        change touches the copy while claiming to be improving the guard, this
+        is what fails.
+      */
+      const pl = getDictionary('pl').authError;
+
+      expect(pl.cancelled).toBe(
+        'Logowanie zostało anulowane. Możesz zalogować się w dowolnej chwili.',
+      );
+      expect(pl.failed).toBe('Logowanie nie zostało ukończone. Spróbuj ponownie.');
+    });
   });
 
   it('C-19 — there is one string per state, so the message cannot escalate', () => {
@@ -284,20 +391,16 @@ describe('B5-A · C-T10 / C-13 — the error landing carries nothing onward', ()
 
 /* Small helpers kept local so the walk above stays readable. */
 function readdirSyncSafe(dir: string): string[] {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const fs = require('fs');
   try {
-    return fs.readdirSync(dir) as string[];
+    return readdirSync(dir);
   } catch {
     return [];
   }
 }
 
 function isDirSafe(path: string): boolean {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const fs = require('fs');
   try {
-    return fs.statSync(path).isDirectory() as boolean;
+    return statSync(path).isDirectory();
   } catch {
     return false;
   }
