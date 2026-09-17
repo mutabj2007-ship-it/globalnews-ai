@@ -251,8 +251,94 @@ const CONTEST_NOUNS: readonly string[] = [
  * role. `haystack` is space-padded and normalized, so tokens are
  * whitespace-delimited throughout.
  */
+/**
+ * C911-K1 -- THE COMPARATIVE-YARDSTICK FRAME.
+ *
+ * -- THE MEASURED DEFECT ------------------------------------------------
+ *
+ *     "Mumbai flat costs more than a house in Poland"
+ *
+ * entered a POLAND analysis corpus. Measured against the classifier as it
+ * stood: tier NATIONAL_DEVELOPMENT, primacy TARGET_FIRST. Correctly so, by its
+ * own rules -- "Mumbai" is a CITY and never counts as a country, so Poland was
+ * the first and only country named in the title.
+ *
+ * The existing frame list already demotes "compared to", "compared with" and
+ * "unlike", but those sit IMMEDIATELY before the country. This construction
+ * puts a noun phrase in between:
+ *
+ *     ... more THAN  a house  IN  Poland
+ *              ^marker  ^comparand  ^locative  ^yardstick
+ *
+ * -- WHY A BOUNDED LOOK-BACK, AND WHY IT IS NOT JUST 'than' -------------
+ *
+ * Adding 'than' to INCIDENTAL_PRECEDING_FRAMES would only catch "more than
+ * Poland" and still miss the measured headline. Scanning backwards for 'than'
+ * with no other condition INVERTS on a real development:
+ *
+ *     "Fewer than 10 people in Poland were affected"
+ *
+ * where 'than' introduces a QUANTITY and Poland locates the subject rather than
+ * being the yardstick. Measured, and the reason for the numeric guard below.
+ *
+ * So all four conditions must hold, and each one is load-bearing:
+ *
+ *   1. a comparative marker appears within a short window before the country;
+ *   2. the token immediately after the marker is NOT a number -- that is the
+ *      quantity frame, where the country is the subject's location;
+ *   3. the country is the object of a locative preposition (in/from/of/at),
+ *      i.e. it modifies the comparand rather than acting;
+ *   4. the whole span is short. A marker far away is a different clause.
+ *
+ * The window is deliberately tight. A miss leaves an article ranked second,
+ * which is the partition's stated failure mode; a false positive would demote a
+ * genuine national development, which is worse.
+ */
+const COMPARATIVE_MARKERS: readonly string[] = ['than', 'versus', 'vs'];
+
+/** Locative prepositions that make the country modify a noun rather than act. */
+const LOCATIVE_PREPOSITIONS: readonly string[] = ['in', 'from', 'of', 'at'];
+
+/** Tokens allowed between the comparative marker and the country. */
+const COMPARATIVE_WINDOW_TOKENS = 4;
+
+function isComparativeYardstick(before: string): boolean {
+  const tokens = before.split(' ').filter((t) => t.length > 0);
+  if (tokens.length === 0) return false;
+
+  /* Condition 3 — the country must be the object of a locative preposition. */
+  const immediatelyBefore = tokens[tokens.length - 1];
+  if (!LOCATIVE_PREPOSITIONS.includes(immediatelyBefore)) {
+    /*
+      ... unless the marker is directly adjacent: "costs more than Poland". The
+      country is then the yardstick with no comparand noun in between.
+    */
+    return COMPARATIVE_MARKERS.includes(immediatelyBefore);
+  }
+
+  /* Conditions 1, 2 and 4 — a marker within the window, not introducing a number. */
+  const windowStart = Math.max(0, tokens.length - 1 - COMPARATIVE_WINDOW_TOKENS);
+
+  for (let i = tokens.length - 2; i >= windowStart; i -= 1) {
+    if (!COMPARATIVE_MARKERS.includes(tokens[i])) continue;
+
+    const afterMarker = tokens[i + 1] ?? '';
+
+    /* Condition 2 — a quantity frame locates the subject; it is not a comparison OF the country. */
+    if (/^[0-9]/.test(afterMarker)) return false;
+
+    return true;
+  }
+
+  return false;
+}
+
 function isIncidentalOccurrence(haystack: string, at: number, formLength: number): boolean {
   const before = haystack.slice(0, at).trimEnd();
+
+  /* C911-K1 — the country is a yardstick in a comparison, not the subject. */
+  if (isComparativeYardstick(before)) return true;
+
 
   // FAMILY A -- a preceding opposition/schedule/enumeration marker. Matched as
   // a trailing phrase so multi-token markers ('ahead of', 'such as') work.
@@ -348,4 +434,82 @@ export function assessCountryDevelopment(
     primacy,
     reason: 'the country leads the title under its own name or demonym',
   };
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * K — ANALYTICAL ADMISSION: COUNTRY RELEVANCE IS NECESSARY, NOT SUFFICIENT
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * CTO ruling K: *"country relevance alone is insufficient for analytical
+ * admission when the requested analysis is about current national developments.
+ * Admission should require material relevance to the analysis subject, not
+ * merely mention of the country."*
+ *
+ * THE MEASURED DEFECT. A Hindustan Times article comparing a Mumbai flat's price
+ * to a house in Poland entered a POLAND analysis corpus, was sent to the model,
+ * consumed tokens and appeared as a retained source. It was admitted because
+ * `scoreCountryRelevance(...).isRelevant` was the ONLY condition the analysis
+ * path applied — and by that measure the article genuinely IS about Poland.
+ *
+ * `assessCountryDevelopment` already drew the distinction that was missing, but
+ * NOTHING IN THE ANALYSIS PATH CALLED IT. It had exactly one consumer,
+ * `country-news.service.ts`, where it RANKS the country feed.
+ *
+ * ─── WHY THIS IS A GATE HERE AND A PARTITION THERE ────────────────────────
+ *
+ * The partition's own documentation warns that "a gate that is wrong LOSES a
+ * national emergency", and for the COUNTRY FEED that is decisive: a quiet news
+ * day must still show something, so weak items rank second rather than vanish.
+ *
+ * ANALYSIS IS THE OPPOSITE TRADE, and the ruling states it: *"If the correct
+ * result is fewer than 7 sources, fewer is preferable to irrelevant evidence."*
+ * An irrelevant article in an analysis corpus does not merely rank badly — it
+ * reaches the model, consumes tokens, inflates the source count, and is cited
+ * back to the reader as evidence. A missing weak article costs a sentence; a
+ * wrong one costs the reader's trust in every sentence.
+ *
+ * So the two surfaces deliberately consume the same classifier differently, and
+ * that divergence is recorded here rather than being a silent difference
+ * between two call sites.
+ *
+ * THIS LOWERS NO THRESHOLD AND ADDS NO COUNTRY-SPECIFIC RULE. It ADDS a
+ * condition to admission, reading the existing partition. No publisher is
+ * blocked; Hindustan Times reporting genuinely about Poland still admits,
+ * because the test is the article's frame, not its source.
+ *
+ * ─── AND IT DOES NOT RULE ON TEXT IT CANNOT READ ──────────────────────────
+ *
+ * MEASURED, AND THE REASON THIS PARAMETER EXISTS. `COUNTRY_DEMONYMS_BY_ISO3` is
+ * ENGLISH-ONLY — `POL: ['polish']`, `RUS: ['russian']`. A Polish-language
+ * headline says "Rosja", not "Russia", so `nationalAttachment` is false for
+ * every non-English article and the partition returns IN_COUNTRY_CONTEXT for
+ * all of them.
+ *
+ * Gating on that would have silently rejected THE ENTIRE POLISH CORPUS. It was
+ * caught by `polish-query-routing.spec.ts`, which measured exactly that: zero
+ * articles admitted for "Co dzieje się między Rosją a Ukrainą?".
+ *
+ * So the gate applies only where the classifier has the vocabulary to judge. A
+ * classifier with no words for a language has NO OPINION about it, and no
+ * opinion must never read as a rejection — that is the same "silence is not a
+ * contradiction" rule `entity-role-geography.util.ts` states for its own
+ * evidence checks.
+ *
+ * THIS IS A RECORDED LIMITATION, NOT A DESIGN. Non-English analysis retrieval
+ * still admits on country relevance alone, and remains exposed to the defect
+ * this gate closes for English. Closing it needs localized country forms, which
+ * this module deliberately will not invent — see "NO NEW VOCABULARY" above.
+ */
+export function admitsToAnalysisCorpus(
+  article: Pick<NewsArticle, 'title'>,
+  country: CountryMeta,
+  language?: string,
+): boolean {
+  const normalized = language?.trim().toLowerCase();
+
+  /* No vocabulary for this language — no opinion, and no opinion never rejects. */
+  if (normalized !== undefined && normalized.length > 0 && normalized !== 'en') return true;
+
+  return assessCountryDevelopment(article, country).tier === 'NATIONAL_DEVELOPMENT';
 }

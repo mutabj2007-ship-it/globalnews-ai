@@ -89,6 +89,7 @@ import {
   scoreCountryRelevance,
   resolveCountriesByDemonym,
 } from '../../news/country/country-relevance.util';
+import { admitsToAnalysisCorpus } from '../../news/country/country-development-eligibility.util';
 import {
   deduplicateArticles,
   areLikelyDuplicateArticles,
@@ -1134,8 +1135,22 @@ export class AnalysisService {
                   // result never enters evidence, and a domain with no
                   // relevant results simply gets no entry in the map
                   // below (never a reserved slot).
+                  /*
+                    K — COUNTRY RELEVANCE IS NECESSARY, NOT SUFFICIENT.
+
+                    `isRelevant` answers "is this article about Poland". It
+                    admitted a Mumbai property comparison that mentioned a house
+                    in Poland — genuinely about Poland, and not a Polish
+                    development. `admitsToAnalysisCorpus` adds the second
+                    question, reading the partition that already existed and had
+                    no caller on this path.
+
+                    No threshold moved and no publisher is blocked.
+                  */
                   const relevantSupplemental = supplementalResponse.articles.filter(
-                    (article) => scoreCountryRelevance(article, country).isRelevant,
+                    (article) =>
+                      scoreCountryRelevance(article, country).isRelevant &&
+                      admitsToAnalysisCorpus(article, country),
                   );
 
                   if (relevantSupplemental.length > 0) {
@@ -2857,7 +2872,10 @@ export class AnalysisService {
 
       return {
         articles: response.articles.filter(
-          (article) => scoreCountryRelevance(article, member, requestedLanguage).isRelevant,
+          /* K — the same two questions as the supplemental path; see admitsToAnalysisCorpus. */
+          (article) =>
+            scoreCountryRelevance(article, member, requestedLanguage).isRelevant &&
+            admitsToAnalysisCorpus(article, member, requestedLanguage),
         ),
         providers: [...(response.providers ?? [])],
         dataMode: response.dataMode,
