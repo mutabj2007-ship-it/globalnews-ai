@@ -52,7 +52,69 @@
  * in this layer is therefore addressed as `<domainId>:<token>` and no domain
  * may extend a shared enum because a display label happens to overlap.
  */
-export type SpecialistDomainId = 'CONFLICT' | 'ELECTION' | 'DELIVERY';
+/**
+ * ══ B1 · THE CANONICAL BETA SPECIALIST-DOMAIN VOCABULARY ═══════════════════
+ *
+ * Six members, ruled by the CTO at Gate B1:
+ *
+ *   Conflict Intelligence  -> CONFLICT
+ *   Kenya Elections        -> ELECTION
+ *   Imihigo                -> DELIVERY
+ *   Economy Intelligence   -> ECONOMY
+ *   Market Intelligence    -> MARKET
+ *   Security Intelligence  -> SECURITY
+ *
+ * ── WHAT THIS ENUM IS NOT, AND WHY THAT MATTERS ──────────────────────────
+ *
+ * Gate B0 measured THREE separate accepted declarations of "what the domains
+ * are", and no two agreed. Their intersection was `CONFLICT` alone:
+ *
+ *   WatchSurface          MAP · ECONOMY · MARKET · CONFLICT · SECURITY
+ *   SpecialistDomainId    CONFLICT · ELECTION · DELIVERY        (before B1)
+ *   /workspace roadmap    twelve capability cards
+ *
+ * THE RULING IS THAT THEY STAY SEPARATE. `WatchSurface` is NOT this enum, and
+ * the `/workspace` roadmap is NOT this enum. They are not to be forced into one
+ * type for symmetry.
+ *
+ * The reason is that they answer different questions. This enum answers "which
+ * specialist domains exist as intelligence domains". `WatchSurface` answers
+ * "which surfaces a watch subject can be scoped to" — which is why it contains
+ * `MAP`, a surface and not a domain, and omits ELECTION and DELIVERY. The
+ * roadmap answers "what a reader is told is coming". Merging them would force
+ * `MAP` into the domain vocabulary or force a Watch surface to exist for every
+ * domain, and Watch support remains a capability attached only where separately
+ * approved.
+ *
+ * ── AND A DOMAIN ID IS NOT AN IMPLEMENTATION ─────────────────────────────
+ *
+ * B0 proved that ELECTION and DELIVERY exist in NEITHER lineage as code. A
+ * member here is a reserved identity, not a claim that anything is built.
+ */
+export type SpecialistDomainId =
+  | 'CONFLICT'
+  | 'ELECTION'
+  | 'DELIVERY'
+  | 'ECONOMY'
+  | 'MARKET'
+  | 'SECURITY';
+
+/**
+ * The six, as data.
+ *
+ * ONE LIST, SO THE TYPE AND THE RUNTIME CANNOT DRIFT. `tokenDomain` below used
+ * to re-state the members as a hard-coded triple, which is exactly how a
+ * seventh domain gets added to the type and silently fails to parse at
+ * runtime. Everything that needs to know the membership reads this.
+ */
+export const SPECIALIST_DOMAIN_IDS: readonly SpecialistDomainId[] = [
+  'CONFLICT',
+  'ELECTION',
+  'DELIVERY',
+  'ECONOMY',
+  'MARKET',
+  'SECURITY',
+];
 
 /** The question kinds a domain claims — Addendum §16. Kinds, never keywords. */
 export interface DomainClaim {
@@ -104,9 +166,20 @@ export function domainToken(domain: SpecialistDomainId, token: string): DomainSt
 }
 
 export function tokenDomain(token: string): SpecialistDomainId | null {
-  const head = token.slice(0, token.indexOf(':'));
+  const separator = token.indexOf(':');
 
-  return head === 'CONFLICT' || head === 'ELECTION' || head === 'DELIVERY' ? head : null;
+  /*
+    A token with no separator has no domain, and `slice(0, -1)` would otherwise
+    lop off the last character and compare the remainder — which is how a
+    malformed token becomes a confident wrong answer rather than a null.
+  */
+  if (separator === -1) return null;
+
+  const head = token.slice(0, separator);
+
+  return (SPECIALIST_DOMAIN_IDS as readonly string[]).includes(head)
+    ? (head as SpecialistDomainId)
+    : null;
 }
 
 /**
