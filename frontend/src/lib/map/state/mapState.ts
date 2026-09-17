@@ -42,6 +42,89 @@ export function modeAvailability(mode: MapMode): ModeAvailability {
   return LIVE_MAP_MODES.includes(mode) ? 'live' : 'unavailable';
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * CHECKPOINT E — WHY A MODE CANNOT ANSWER, NOT MERELY THAT IT CANNOT
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * CTO ruling: *"Placeholder semantics must distinguish NOT BUILT / NOT CONNECTED
+ * / NO DATA FOR THIS GEOGRAPHY / TIER RESTRICTED / TEMPORARILY UNAVAILABLE. Do
+ * not collapse every condition into 'No data yet.'"*
+ *
+ * `modeAvailability` above answers a BOOLEAN question — can this mode answer? —
+ * and four modes shared one word, "Unavailable", for four different reasons.
+ * That is the same class of flattening the availability model was written to
+ * prevent: it told the reader a capability was absent while saying nothing about
+ * whether it was coming, broken, empty here, or gated.
+ *
+ * THE FIVE REASONS ARE NOT INTERCHANGEABLE, and the difference is what a reader
+ * actually needs:
+ *
+ *   NOT_BUILT              the capability does not exist yet. Nothing the reader
+ *                          does will produce an answer, today or after a retry.
+ *   NOT_CONNECTED          the capability EXISTS and renders elsewhere in the
+ *                          product, but this surface is not wired to it. The
+ *                          answer exists; this door does not open onto it.
+ *   NO_DATA_FOR_GEOGRAPHY  the capability works and has nothing for THIS place.
+ *                          Another geography would answer.
+ *   TIER_RESTRICTED        the capability works and this reader may not reach
+ *                          it. Reserved; no mode uses it while the monetization
+ *                          contract is under review.
+ *   TEMPORARILY_UNAVAILABLE a transient failure. A retry is the right response,
+ *                          which is true of none of the others.
+ */
+export type ModeUnavailableReason =
+  | 'NOT_BUILT'
+  | 'NOT_CONNECTED'
+  | 'NO_DATA_FOR_GEOGRAPHY'
+  | 'TIER_RESTRICTED'
+  | 'TEMPORARILY_UNAVAILABLE';
+
+/**
+ * WHY EACH UNBUILT MODE CANNOT ANSWER, ESTABLISHED FROM THE CODEBASE RATHER
+ * THAN ASSUMED.
+ *
+ *   SITUATIONS  NOT_BUILT. The situation model does not exist. The product
+ *               already says so in its own words — see `situationsUnavailable`
+ *               in the dictionaries: "the situation model is not built yet, so
+ *               this is not 'no situations here' — it is a capability that
+ *               cannot answer the question."
+ *
+ *   WATCH       NOT_CONNECTED. Watch is REAL and reachable: `Watchboard`,
+ *               `WatchComposer` and `WatchCta` render in the intelligence rail,
+ *               and `/follows/countries` backs them. What does not exist is a
+ *               MAP MODE that projects it onto the canvas.
+ *
+ *   CHANGE      NOT_CONNECTED. `ChangeStrip` renders beside the breadcrumb row
+ *               today. Again the capability is present and the mode is not.
+ *
+ *   SOURCES     NOT_CONNECTED. Retained sources render in the rail through
+ *               `SourceCard`. The mode that would map them does not.
+ *
+ * CALLING ANY OF THE LAST THREE "not built" WOULD BE FALSE, and falser than the
+ * generic word it replaces: it would tell a reader a capability they can
+ * literally see on the same screen does not exist.
+ */
+const MODE_UNAVAILABLE_REASONS: Readonly<Partial<Record<MapMode, ModeUnavailableReason>>> = {
+  SITUATIONS: 'NOT_BUILT',
+  WATCH: 'NOT_CONNECTED',
+  CHANGE: 'NOT_CONNECTED',
+  SOURCES: 'NOT_CONNECTED',
+};
+
+/** The reason a mode cannot answer, or null when it can. */
+export function modeUnavailableReason(mode: MapMode): ModeUnavailableReason | null {
+  if (modeAvailability(mode) === 'live') return null;
+
+  /*
+    A mode that is not live and has no declared reason is a GAP, not a default.
+    Returning NOT_BUILT here would quietly invent an explanation for a mode
+    someone added without deciding what it is, so the honest answer is the
+    transient one — it is the only reason that promises nothing.
+  */
+  return MODE_UNAVAILABLE_REASONS[mode] ?? 'TEMPORARILY_UNAVAILABLE';
+}
+
 /** Part II §3. A closed range is a user-chosen window. */
 export type MapPeriod = 'NOW' | '24H' | '7D' | '30D';
 

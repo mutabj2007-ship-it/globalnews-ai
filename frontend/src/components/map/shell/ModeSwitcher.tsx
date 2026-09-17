@@ -1,6 +1,13 @@
 'use client';
 
-import { LIVE_MAP_MODES, MAP_MODES, type MapMode, modeAvailability } from '@/lib/map/state/mapState';
+import {
+  LIVE_MAP_MODES,
+  MAP_MODES,
+  type MapMode,
+  type ModeUnavailableReason,
+  modeAvailability,
+  modeUnavailableReason,
+} from '@/lib/map/state/mapState';
 import { BAND_CLASS, BAND_UNBUILT_MARKER, bandFor } from '@/lib/map/spatial/controlBands';
 
 /**
@@ -34,7 +41,18 @@ import { BAND_CLASS, BAND_UNBUILT_MARKER, bandFor } from '@/lib/map/spatial/cont
 export interface ModeSwitcherLabels {
   readonly group: string;
   readonly modes: Readonly<Record<MapMode, string>>;
+  /**
+   * The generic fallback. Retained because a surface may still have nothing
+   * more specific to say, but it is now the EXCEPTION rather than the answer
+   * for every unbuilt mode — see `unavailableReasons`.
+   */
   readonly unavailable: string;
+  /**
+   * CHECKPOINT E — why THIS mode cannot answer. Four modes shared one word for
+   * four different reasons, which told the reader a capability was absent while
+   * saying nothing about whether it was coming, broken, empty here, or gated.
+   */
+  readonly unavailableReasons: Readonly<Record<ModeUnavailableReason, string>>;
   readonly beta: string;
 }
 
@@ -77,6 +95,14 @@ export function ModeSwitcher({
           const isLive = availability === 'live';
           const isActive = mode === active;
           const disabled = !isLive || (pinned && !isActive);
+          /*
+            CHECKPOINT E — the stated reason. A pinned surface keeps its own
+            explanation, which is about THIS surface rather than about the mode.
+          */
+          const reason = modeUnavailableReason(mode);
+          const unavailableText =
+            reason === null ? labels.unavailable : labels.unavailableReasons[reason];
+          const disabledReason = pinned && !isActive ? pinnedReason : unavailableText;
 
           return (
             <button
@@ -88,8 +114,9 @@ export function ModeSwitcher({
               data-gn="map-mode"
               data-gn-mode={mode}
               data-gn-availability={availability}
-              title={disabled ? (pinned ? pinnedReason : labels.unavailable) : undefined}
-              aria-label={disabled ? `${labels.modes[mode]} — ${pinned ? pinnedReason : labels.unavailable}` : undefined}
+              title={disabled ? disabledReason : undefined}
+              aria-label={disabled ? `${labels.modes[mode]} — ${disabledReason}` : undefined}
+              data-gn-unavailable-reason={disabled && reason !== null ? reason : undefined}
               onClick={() => {
                 if (disabled) return;
                 onModeChange(mode);

@@ -1272,6 +1272,25 @@ export const en = {
           SOURCES: 'Sources',
         },
         unavailable: 'Unavailable',
+        /*
+          CHECKPOINT E — FIVE REASONS, BECAUSE THEY ARE NOT INTERCHANGEABLE.
+
+          Four modes shared one word for four different situations, which told a
+          reader a capability was absent while saying nothing about whether it
+          was coming, broken, empty here, or gated.
+
+          NOT_CONNECTED is the honest word for Watch, Change and Sources:
+          Watchboard, ChangeStrip and SourceCard all render elsewhere on this
+          very screen, so calling them "not built" would be FALSER than the
+          generic word it replaces.
+        */
+        unavailableReasons: {
+          NOT_BUILT: 'Not built yet',
+          NOT_CONNECTED: 'Built, but not connected to the map yet',
+          NO_DATA_FOR_GEOGRAPHY: 'No data for this geography',
+          TIER_RESTRICTED: 'Not included in your access',
+          TEMPORARILY_UNAVAILABLE: 'Temporarily unavailable',
+        },
         beta: 'Beta',
       },
       layers: {
