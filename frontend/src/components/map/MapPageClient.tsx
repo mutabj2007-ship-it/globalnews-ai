@@ -162,13 +162,41 @@ const MAP_FEED_ARTICLE_CAP = 12;
  * backend/src/main.ts. A request for 60 is therefore rejected with HTTP 400
  * before any provider runs; getJson() turns that into a NewsApiError, the
  * fail-soft .catch() below leaves `globalFeed` null, and the world view shows
- * no ranked geography at all. 50 is the largest value the accepted contract
- * admits, so this asks for the most the backend will ever give.
+ * no ranked geography at all. 50 remains the largest value the accepted
+ * contract admits.
  *
  * The frontend is the side that moves. The DTO is a backend-owned contract and
  * is deliberately NOT widened to fit this caller.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * B-2A CORRECTION - MAP OPEN ASKS FOR THE GOVERNED HOME CORPUS WIDTH, NOT 50.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * P6 asked for "the most the backend will ever give", and the cost of that was
+ * invisible from here: `NewsService.buildHomeNewsCacheKey` keys the shared Home
+ * corpus as `${limit}:${lang}`, so Home warming `24:en` and the Map asking for
+ * `50:en` are TWO ENTRIES FOR ONE CORPUS. Map open therefore executed a live
+ * provider retrieval no matter how warm Home was - and Home missed again
+ * afterwards, because the fragmentation runs in both directions.
+ *
+ * THE WIDTH ISOLATION IS CORRECT AND IS NOT WHAT CHANGED. C7 of
+ * news.service.home-cache.spec.ts states that a different retrieval width is a
+ * different corpus and must not be served from the cache. That contract stands
+ * untouched: a warm corpus of 12 genuinely cannot answer a request for 24, and
+ * the cache is right to refuse. The fix is that this caller STOPS ASKING FOR A
+ * DIFFERENT WIDTH, not that the cache starts blurring widths together.
+ *
+ * WHY 24 COSTS THE MAP NOTHING IT WAS DEMONSTRABLY USING. Enrichment is capped
+ * at GLOBAL_FEED_ENRICH_CAP = 24 immediately below, so items 25-50 were never
+ * resolved to a geography and never became finer-grained records. They reached
+ * only `globalEvidenceSet`, as country-level entries for countries the first 24
+ * articles very largely already name.
+ *
+ * IF THE MAP EVER GENUINELY NEEDS ITEMS 25-50, that must be an EXPLICIT later
+ * retrieval - a pagination or "load more" action the reader takes - and not a
+ * cost hidden inside opening the map. CTO ruling, B-2A.
  */
-const GLOBAL_FEED_LIMIT = 50;
+const GLOBAL_FEED_LIMIT = 24;
 const GLOBAL_FEED_ENRICH_CAP = 24;
 
 /** Shared empty filter set — an unfiltered selection allocates nothing. */
