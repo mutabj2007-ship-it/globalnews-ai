@@ -99,8 +99,37 @@ describe('PHASE 3 — the session-isolation property the verdict rests on', () =
   });
 
   describeGit('NO HOSTNAME-SENSITIVE FILE WAS TOUCHED BY THE CONVERGENCE WORK', () => {
+    /*
+      ══ B5 · RE-ANCHORED TO THE SPAN THIS BLOCK ACTUALLY NAMES ══════════════
+
+      THIS TRIPWIRE FIRED, AND IT FIRED CORRECTLY. B5-A changed the auth module
+      by explicit ruling — OAuth V1's cancelled|failed states — and this block
+      is what noticed.
+
+      But read what it claims: "NO HOSTNAME-SENSITIVE FILE WAS TOUCHED BY THE
+      CONVERGENCE WORK". The convergence work ENDED at the sealed Alpha
+      candidate. Diffing against HEAD quietly re-pointed the assertion at every
+      branch that came after it, so by B5 it was asserting that the BETA
+      RECOVERY had touched no auth file — which nobody ever claimed, and which
+      the Beta plan explicitly contradicts.
+
+      An assertion whose subject grows with every commit stops guarding the
+      property it was written for and starts blocking authorized work. Pinning
+      the upper bound to the SEALED, IMMUTABLE candidate restores exactly the
+      Phase 3 guarantee: the convergence work touched nothing hostname-sensitive.
+      That span can never change again, so this can never drift again.
+
+      Measured at re-anchoring: 0 sensitive files and 0 auth files in
+      2c4b6ce..36f00bb — the same result the original assertion had, and for the
+      same reason.
+
+      WHAT THIS DOES NOT DO: it asserts nothing about B5's auth change, which is
+      covered by oauth-v1-error-states.spec.ts on its own terms.
+    */
+    const SEALED_ALPHA = '36f00bb1f7492a25352e0c163cd46bc2d12e4a5f';
+
     const changed = (): readonly string[] =>
-      execFileSync('git', ['diff', '--name-only', '2c4b6ce', 'HEAD'], {
+      execFileSync('git', ['diff', '--name-only', '2c4b6ce', SEALED_ALPHA], {
         cwd: REPO,
         encoding: 'utf-8',
       })

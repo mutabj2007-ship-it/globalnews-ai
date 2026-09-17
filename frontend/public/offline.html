@@ -122,15 +122,63 @@
         border-radius: 50%;
         background: var(--ink-dim);
       }
+      /*
+        LANG-UI-7 — Arabic typography for this standalone document.
+        This page has no access to the app stylesheet and no access to
+        next/font, so the family, the AR-MICROTYPE-1 11px floor and the
+        1.35 / 1.55 line-heights are declared here directly. They are
+        scoped to :root[lang="ar"], so no other locale is affected.
+      */
+      :root[lang="ar"] body {
+        font-family: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+      }
+      :root[lang="ar"] .status {
+        font-family: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+        font-size: max(11px, 0.6875rem);
+        line-height: 1.35;
+        letter-spacing: 0;
+        text-transform: none;
+      }
+      :root[lang="ar"] p,
+      :root[lang="ar"] h1 {
+        line-height: 1.55;
+        letter-spacing: 0;
+      }
+      :root[lang="ar"] p {
+        font-size: max(11px, 1rem);
+      }
+      /*
+        D7 — the Support sentence. A dedicated element, not a clause appended to
+        .distinction, because the two say different things: .distinction is about
+        what this page is NOT (a statement about world events); this is about one
+        specific surface the reader may have been trying to reach. It is quieter
+        than .distinction and carries no rule or accent, so it reads as a footnote
+        to the page rather than a second warning.
+      */
+      .support-note {
+        margin: 18px auto 0;
+        max-width: 34rem;
+        color: var(--ink-dim);
+        font-size: 0.8125rem;
+        text-align: start;
+      }
+
+      .fallback-note {
+        margin: 18px auto 0;
+        max-width: 46ch;
+        font-size: 0.8125rem;
+        opacity: 0.75;
+      }
+
       .distinction {
         margin: 26px auto 0;
         padding: 14px 18px;
         max-width: 30rem;
-        border-left: 2px solid var(--signal);
+        border-inline-start: 2px solid var(--signal);
         background: var(--surface);
         color: var(--ink-dim);
         font-size: 0.875rem;
-        text-align: left;
+        text-align: start;
       }
       button {
         margin-top: 26px;
@@ -185,7 +233,7 @@
         <circle cx="20" cy="20" r="4.6" fill="rgba(34,211,238,0.45)" />
       </svg>
 
-      <div data-language="en">
+      <div data-language="en" data-offline-fallback>
         <p class="status">No network connection</p>
         <h1>You are offline</h1>
         <p>
@@ -196,6 +244,10 @@
           This is a connectivity problem on this device — not a statement about world events, and
           not a report from our sources. GlobalNews AI does not store news for offline reading, so
           no headline here could be trusted as current. Reconnect to see live reporting.
+        </p>
+        <p class="support-note" data-support-note>
+          Support requests need a connection — you can open, read and reply to them once you are
+          back online. Nothing you have already sent is lost.
         </p>
         <button type="button" data-retry>Try again</button>
       </div>
@@ -214,14 +266,80 @@
           offline, więc żaden nagłówek nie mógłby tu uchodzić za aktualny. Połącz się ponownie, aby
           zobaczyć relacje na żywo.
         </p>
+        <p class="support-note" data-support-note>
+          Zgłoszenia do wsparcia wymagają połączenia — otworzysz je, przeczytasz i odpowiesz na
+          nie, gdy wrócisz do sieci. Nic, co już wysłano, nie ginie.
+        </p>
         <button type="button" data-retry>Spróbuj ponownie</button>
       </div>
+      <p class="fallback-note" data-fallback-note hidden></p>
     </main>
 
     <script>
       (function () {
         var COOKIE_NAME = 'globalnews-ai-language';
-        var ACTIVE = ['en', 'pl'];
+
+        /*
+          LANG-UI-7 — direction comes from a table, not from a guess, and it is
+          the same fact DISPLAY_LOCALE_META carries in the app: `ar` is the only
+          RTL member of the seven contracted locales.
+        */
+        var DIRECTION = { en: 'ltr', pl: 'ltr', fr: 'ltr', de: 'ltr', es: 'ltr', pt: 'ltr', ar: 'rtl' };
+
+        /*
+          ACTIVE is DERIVED from the content blocks this document actually
+          contains, rather than hard-coded. A hard-coded list is a second place
+          to forget: it could claim a locale whose block was never written, and
+          a reader would get English text under their own language tag. Deriving
+          it means the list cannot disagree with the document.
+        */
+        var ACTIVE = (function () {
+          var found = [];
+          var nodes = document.querySelectorAll('[data-language]');
+          for (var i = 0; i < nodes.length; i += 1) {
+            found.push(nodes[i].getAttribute('data-language'));
+          }
+          return found;
+        })();
+
+        /*
+          THE OFFLINE NOTICE CATALOGUE — A DIFFERENT CATALOGUE FROM THE CONTENT
+          BLOCKS ABOVE, AND DELIBERATELY SO.
+
+          A locale can have a translated NOTICE without having a translated
+          PAGE, and the two expand independently: a notice is one sentence, a
+          page is the whole document. That separation is not hypothetical here —
+          it is the current state. All seven display locales have a notice; only
+          `en` and `pl` have a page. A reader who asks for Arabic is told, in
+          Arabic, that the page is in English.
+
+          COPY AUTHORITY: L-LANG-OFFLINE-COPY-1
+          b8e91b9d6a418a611e478af711380343ae560c626bef4b337a1e8796029c46ae
+
+          These seven strings are AUTHORED, not composed. Each already names
+          English, inflected correctly for its own language — Polish needs the
+          adverbial `po angielsku`, Arabic the `بـ` prefix — which is exactly
+          what a runtime template could not have produced, and why the earlier
+          revision's interpolated locale codes were not product copy at all.
+          Nothing here is interpolated; nothing here may be machine-translated
+          or re-cased. Change them only through L.
+        */
+        var NOTICE_CATALOGUE = {
+          en: 'This page is shown in English. Your language choice has not changed.',
+          pl: 'Ta strona jest wyświetlana po angielsku. Twój wybór języka nie zmienił się.',
+          fr: 'Cette page est affichée en anglais. Votre choix de langue n\'a pas changé.',
+          de: 'Diese Seite wird auf Englisch angezeigt. Ihre Sprachwahl wurde nicht geändert.',
+          es: 'Esta página se muestra en inglés. Su elección de idioma no ha cambiado.',
+          pt: 'Esta página é exibida em inglês. A sua escolha de idioma não mudou.',
+          ar: 'تُعرض هذه الصفحة بالإنجليزية. ولم يتغيّر اختيارك للغة.'
+        };
+
+        /*
+          The notice language that is always available. A test asserts it exists
+          in NOTICE_CATALOGUE, so this is a checked fact about the catalogue
+          rather than an assumption about English.
+        */
+        var NOTICE_LAST_RESORT = 'en';
 
         function readLanguageCookie() {
           try {
@@ -229,26 +347,194 @@
               return entry.indexOf(COOKIE_NAME + '=') === 0;
             })[0];
             var value = match ? match.split('=')[1] : undefined;
-            return value && ACTIVE.indexOf(value) !== -1 ? value : 'en';
+            return value && DIRECTION[value] ? value : 'en';
           } catch (error) {
             return 'en';
           }
         }
 
-        var language = readLanguageCookie();
-        document.documentElement.lang = language;
+        /*
+          LANG-OFFLINE-PWA-1 — THE REQUESTED LOCALE AND THE RENDERED LOCALE ARE
+          TWO DIFFERENT FACTS, AND ONLY ONE OF THEM MAY DESCRIBE THE DOCUMENT.
+
+          THE DEFECT THIS REPLACES. `lang` and `dir` were taken from the
+          REQUESTED locale while the content fell back to a block that actually
+          exists. A reader whose cookie said `ar` therefore got
+          `lang="ar" dir="rtl"` wrapped around English prose. That is not a
+          cosmetic mismatch: `lang` is a promise to assistive technology, so a
+          screen reader switches to an Arabic voice and reads English aloud with
+          Arabic phonology, and `dir="rtl"` mirrors a layout whose text runs
+          left to right. Four of the five affected locales — fr, de, es, pt —
+          are LTR, so direction never gives the problem away; only `lang` is
+          wrong, silently.
+
+          THE RULE, which is the accepted shared contract's rule — see
+          `resolveContentLocale` and `documentLanguageOf` in
+          `shared/src/language/index.ts`: `lang` and `dir` derive from the
+          EFFECTIVE content locale and from nothing else. This page cannot
+          import that module — it is a static file that must work with the
+          network down and no bundler — so it implements the same rule, and
+          `offlineLocaleIntegrity.spec.ts` drives this script against the
+          contract's own functions so the two cannot drift apart unnoticed.
+
+          THE PREFERENCE IS NOT TOUCHED. The requested locale survives as the
+          persisted preference and as the subject of the notice. Nothing here
+          writes the cookie: a reader who asked for Arabic and was served
+          English has not changed their mind, and rewriting their choice would
+          make them re-make it every time a catalogue is missing.
+
+          THE FALLBACK LOCALE IS DECLARED, NOT INFERRED FROM ORDERING. An
+          earlier revision used ACTIVE[0]. That mirrors the shared contract,
+          which falls back to `renderable[0]` and makes the caller responsible
+          for the order — but inside THIS document the index would be the only
+          thing carrying the meaning, and a reviewer reordering two blocks for
+          editorial reasons would silently move the fallback. Array position is
+          not an authority anyone can read. So the block that IS the fallback
+          says so: `data-offline-fallback`. The attribute is the authority;
+          ACTIVE is only the set of locales that exist, and a test asserts
+          exactly one block declares it and that the declared locale is in
+          ACTIVE, so the two cannot disagree.
+        */
+        var FALLBACK_LOCALE = (function () {
+          var declared = document.querySelector('[data-offline-fallback][data-language]');
+          return declared ? declared.getAttribute('data-language') : ACTIVE[0];
+        })();
+
+        var requestedDisplayLocale = readLanguageCookie();
+        var effectiveContentLocale =
+          ACTIVE.indexOf(requestedDisplayLocale) !== -1 ? requestedDisplayLocale : FALLBACK_LOCALE;
+        var fellBack = effectiveContentLocale !== requestedDisplayLocale;
+
+        document.documentElement.lang = effectiveContentLocale;
+        document.documentElement.dir = DIRECTION[effectiveContentLocale] || 'ltr';
+
+        /*
+          Both facts stay OBSERVABLE rather than merely unwritten, so a test can
+          prove the preference was not quietly rewritten to the served locale and
+          a later revision can localize further without changing any of the
+          fallback semantics around it.
+        */
+        document.documentElement.setAttribute('data-requested-locale', requestedDisplayLocale);
+        document.documentElement.setAttribute('data-content-locale', effectiveContentLocale);
+        document.documentElement.setAttribute('data-fell-back', fellBack ? 'true' : 'false');
+
+        if (fellBack) {
+          var note = document.querySelector('[data-fallback-note]');
+          if (note) {
+            /*
+              NOTICE SELECTION KEEPS BOTH LOCALES. The requested locale is tried
+              FIRST, because a reader who asked for Arabic should be told so in
+              Arabic — even while the page around it is still English. That is
+              not a contradiction: the notice and the page are different pieces
+              of content and may legitimately be in different languages.
+
+              With all seven display locales now authored, the requested branch
+              matches for every locale a reader can actually request. The other
+              two arms are not dead code: they are what a new locale added to
+              DIRECTION, ahead of its notice, would fall through to.
+            */
+            var noticeLocale = NOTICE_CATALOGUE[requestedDisplayLocale]
+              ? requestedDisplayLocale
+              : NOTICE_CATALOGUE[effectiveContentLocale]
+                ? effectiveContentLocale
+                : NOTICE_LAST_RESORT;
+
+            /*
+              AND THE ELEMENT DECLARES THE LANGUAGE IT IS ACTUALLY IN — the same
+              rule as the document's, one level down. This is what lets an Arabic
+              notice sit inside an English page honestly: the page stays
+              lang="en", the notice carries lang="ar" dir="rtl", and each element
+              describes itself. Without it the Arabic sentence would inherit
+              lang="en" and be announced as though it were English.
+            */
+            note.setAttribute('lang', noticeLocale);
+            note.setAttribute('dir', DIRECTION[noticeLocale] || 'ltr');
+            note.setAttribute('data-notice-locale', noticeLocale);
+
+            /*
+              The substitution is retained deliberately and is a NO-OP on every
+              authored notice: L's strings carry no token, and String.replace
+              with an absent literal returns the string unchanged. It stays
+              because the reserved label pairs — AMB-OFF-1, held back from this
+              release by CTO ruling — are the interpolation points, and removing
+              the call would be a code change this revision is not authorized to
+              make. A test asserts the rendered text is character-identical to
+              the catalogue entry, which is what proves nothing was injected.
+            */
+            note.textContent = NOTICE_CATALOGUE[noticeLocale]
+              .replace('{requested}', requestedDisplayLocale)
+              .replace('{effective}', effectiveContentLocale);
+            note.hidden = false;
+          }
+        }
 
         var blocks = document.querySelectorAll('[data-language]');
         for (var index = 0; index < blocks.length; index += 1) {
-          blocks[index].hidden = blocks[index].getAttribute('data-language') !== language;
+          blocks[index].hidden =
+            blocks[index].getAttribute('data-language') !== effectiveContentLocale;
         }
 
+        function retry() {
+          window.location.reload();
+        }
+
+        /*
+          D-ALPHA A-2 — THE MANUAL CONTROL IS UNCHANGED AND STAYS THE PRIMARY
+          ROUTE OFF THIS PAGE. Everything below only removes the case where a
+          reader has to notice the button at all.
+        */
         var retries = document.querySelectorAll('[data-retry]');
         for (var button = 0; button < retries.length; button += 1) {
-          retries[button].addEventListener('click', function () {
-            window.location.reload();
-          });
+          retries[button].addEventListener('click', retry);
         }
+
+        /*
+          RECOVERY, EVENT-DRIVEN, NEVER POLLED.
+
+          THE DEFECT THIS CLOSES. This page had exactly one way out: the button.
+          On a phone that is the wrong number. A reader loses signal in a lift,
+          sees this page, regains signal, switches back to the app — and the page
+          is still asserting "You are offline" about a device that is online. The
+          claim was true when it was made and has outlived its truth, which is
+          the same failure this whole lane exists to prevent, arrived at from the
+          other direction.
+
+          TWO EVENTS, AND NOTHING ELSE. No setInterval, no setTimeout, no fetch,
+          no retry counter, no backoff schedule. Both listeners are passive until
+          the browser tells us something changed.
+
+            'online'          - the browser's own report of a transition from
+                                offline to online. That IS the genuine signal, so
+                                it retries directly.
+            'visibilitychange'- the reader has come back to the page. The return
+                                itself is not evidence of connectivity, so this
+                                one is gated.
+
+          WHY navigator.onLine IS CONSULTED HERE AND NOWHERE ELSE. It is a weak
+          signal: `true` only means a network interface exists, so it stays true
+          behind a captive portal or a dead uplink. That makes it useless for
+          TELLING a reader anything, and this page never uses it to. It is used
+          only to answer "is a retry worth attempting", where being wrong costs
+          one document request that lands the reader back here, and where the
+          copy above is never altered on the strength of it. `false` is the only
+          value treated as decisive, because `false` is the one thing the browser
+          reports reliably; `true` and `undefined` both mean "worth a try".
+
+          NO RELOAD LOOP IS POSSIBLE. `online` fires only on a transition, and a
+          reload that fails lands on a fresh copy of this page whose listeners
+          start over — with the page already visible, so visibilitychange does
+          not fire again on its own.
+        */
+        function retryIfConnectivityLooksRestored() {
+          if (navigator.onLine === false) return;
+          retry();
+        }
+
+        window.addEventListener('online', retry);
+
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) retryIfConnectivityLooksRestored();
+        });
       })();
     </script>
   </body>

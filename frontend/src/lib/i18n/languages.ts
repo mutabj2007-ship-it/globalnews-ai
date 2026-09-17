@@ -1,4 +1,5 @@
 import type { LanguageCode, DisplayLocale } from '@globalnews-ai/shared';
+import { isDisplayLocale } from '@globalnews-ai/shared';
 
 /**
  * Milestone #47 — every language the shared LanguageCode type knows
@@ -40,8 +41,46 @@ export const ACTIVE_LANGUAGES: LanguageCode[] = ['en', 'pl'];
  * is contracted, and this is the deployment fact — a subset of
  * `DISPLAY_LOCALES`, which a test asserts it can never widen beyond.
  */
-export const SELECTABLE_LOCALES: readonly DisplayLocale[] =
-  ACTIVE_LANGUAGES as readonly DisplayLocale[];
+/*
+ * ── B5-C · THE CAST IS GONE. TYPE-GUARDED FILTER, NEVER A CAST ────────────
+ *
+ * B4-A wrote `ACTIVE_LANGUAGES as readonly DisplayLocale[]`. That was SOUND BY
+ * VALUE and UNSOUND BY TYPE, and the difference is not academic.
+ *
+ * `ACTIVE_LANGUAGES` is `LanguageCode[]`, and LanguageCode includes 'sw' and
+ * 'rw' — which are NOT DisplayLocales. The cast asserted membership the
+ * compiler had not checked, so the day somebody added 'sw' to ACTIVE_LANGUAGES
+ * it would have become a DisplayLocale SILENTLY, with no error anywhere, and
+ * this registry would have started claiming a display locale the shared
+ * contract does not define.
+ *
+ * The filter cannot do that. `isDisplayLocale` is the shared contract's own
+ * type guard, so a LanguageCode that is not a DisplayLocale is dropped here
+ * rather than admitted by assertion — which is exactly the ruling that sw, rw,
+ * uk and ru are not to be forced into the display-locale type for symmetry.
+ *
+ * STILL DERIVED, NEVER RE-AUTHORED. Writing ['en','pl'] a second time would
+ * create two registries that agree only by discipline, and the next language
+ * would be added to one of them.
+ */
+export const SELECTABLE_LOCALES: readonly DisplayLocale[] = ACTIVE_LANGUAGES.filter(
+  /*
+    THE INTERSECTION IS LOAD-BEARING, and it is worth a line because the obvious
+    form does not compile and the obvious repair is another cast.
+
+    `filter` narrows only to a SUBTYPE of the array's element type, and
+    DisplayLocale is not a subtype of LanguageCode — the two sets OVERLAP
+    without either containing the other (LanguageCode has sw and rw;
+    DisplayLocale has de and pt). So `filter(isDisplayLocale)` on its own leaves
+    the result as LanguageCode[] and the assignment fails.
+
+    `LanguageCode & DisplayLocale` IS a subtype of both, so the narrowing is
+    legitimate and the compiler checks it. The RUNTIME test is still
+    isDisplayLocale — the shared contract's own guard — so nothing is asserted
+    here that is not also checked.
+  */
+  (code): code is LanguageCode & DisplayLocale => isDisplayLocale(code),
+);
 
 export const LANGUAGE_NATIVE_LABELS: Record<LanguageCode, string> = {
   en: 'English',

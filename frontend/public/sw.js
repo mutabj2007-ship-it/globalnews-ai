@@ -60,9 +60,56 @@
  * depth only — the boundary is the allowlist.
  */
 
-const VERSION = 'gna-pwa-v1';
+/*
+ * D-ALPHA — the version is 'v2' because the two corrections below are BOTH
+ * invisible to an already-installed client unless this string changes.
+ *
+ * `sw.js` had not changed a byte since 21 August, so the browser's byte
+ * comparison of the fetched script against the installed one always matched
+ * and install/activate never re-ran on any client that already had the worker.
+ * Cache Storage was therefore never reset, and the six precached files — one
+ * of which is offline.html, which A-2 edits — were frozen at whatever a client
+ * fetched on its first visit. Changing this literal changes the script's bytes,
+ * which is the whole mechanism: the browser installs, activates, deletes every
+ * bucket that is not gna-pwa-v2-*, and re-precaches the shell from this
+ * deployment.
+ */
+const VERSION = 'gna-pwa-v7';
 const PRECACHE = VERSION + '-precache';
 const RUNTIME = VERSION + '-runtime';
+
+/*
+  RCB-1 — THE RUNTIME BUCKET IS BOUNDED. THE PRECACHE IS NOT.
+
+  D-BETA-3 was left unimplemented for a long time because the cost looked like
+  untidiness: dead content-hashed chunks accumulating until the next generation
+  purge. Measurement in a real browser changed that, and the reason for this cap
+  is not disk.
+
+  install() calls cache.addAll(PRECACHE_URLS) and REJECTS if it fails, so that a
+  half-precached generation never activates. activate() is what purges the old
+  generation. activate only runs after a successful install. So a runtime bucket
+  that has reached the storage quota closes a loop:
+
+      addAll rejects -> install rejects -> activate never runs
+        -> the purge that would free the space never runs -> repeat
+
+  The reader is then frozen on a generation that can never be replaced, and by
+  D-PWA-PA-1 that means no future offline.html reaches them — including the
+  tombstone, which is itself published as a new worker. Measured: 0.95 MB per
+  deploy for a reader who visits ONE route, because a one-line source edit
+  rehashes about three quarters of the built static bytes.
+
+  WHY A COUNT AND NOT A BYTE BUDGET. With gzip negotiated, as a browser actually
+  asks, the chunks arrive with no Content-Length, so a byte budget would have to
+  read every stored entry back to size it — a full-body read per maintenance
+  pass, in this file. 100 entries is about 3.2 MB at the measured mean.
+
+  WHY FIFO AND NOT LRU. LRU needs per-entry access times, which is state, in the
+  one file that must not acquire any. cache.keys() already returns insertion
+  order, so FIFO costs nothing and stores nothing.
+*/
+const RUNTIME_MAX_ENTRIES = 100;
 
 /*
  * Precached at install. Small, versioned by the cache name, and — this
@@ -109,8 +156,75 @@ const STALE_WHILE_REVALIDATE_PREFIXES = ['/images/'];
  *
  * /sw.js must never be served from a cache or the update path can trap a
  * user on an old worker forever.
+ *
+ * /api/ IS THE ACCOUNT BOUNDARY, AND IT IS LISTED HERE RATHER THAN LEFT TO
+ * DEFAULT DENY. next.config.mjs rewrites six authenticated route families —
+ * auth, users, history, follows, support, admin — onto THIS origin's /api
+ * path, so that a SameSite=Lax session cookie is first-party. That repair is
+ * correct and this file does not touch it. But it removed two of the three
+ * things that used to stand between those responses and Cache Storage:
+ *
+ *   - the same-origin check no longer fires, because they ARE same-origin now;
+ *   - isCacheable()'s `type !== 'basic'` rejection no longer fires, for the
+ *     same reason.
+ *
+ * AND THE HEADER HALF OF isCacheable() IS ALREADY INERT AGAINST THEM. Measured
+ * at this commit: helmet 7.2.0's default set contains no Cache-Control, and
+ * neither Cache-Control nor Vary is set anywhere in backend/src. Those
+ * responses arrive with no Cache-Control, no Vary and type 'basic', so every
+ * condition in isCacheable() passes. Widening the allowlist by one prefix was
+ * enough to cache and replay /api/users/me and /api/admin/users — one line, in
+ * this file, with no second guard behind it.
+ *
+ * Listing /api/ here is not the same as it merely failing to match a prefix.
+ * This check runs BEFORE the navigate branch and before every allowlist, so:
+ *
+ *   - caching account, history, follows, support or admin data stops being one
+ *     careless edit away and becomes structurally unreachable;
+ *   - AUTHENTICATION NAVIGATIONS BYPASS THIS WORKER ENTIRELY. accountSignInUrl()
+ *     renders <a href="/api/auth/google?returnTo=…">, which is a same-origin
+ *     top-level navigation and was therefore being handled by
+ *     documentNetworkOnly(). Sign-in must not depend on this file: it should
+ *     not acquire an offline-page substitution, an opaque-redirect hop, or a
+ *     dependency on how Next's rewrite proxy reports an unreachable backend.
+ *
+ * A reviewer adding offline support later reads a line that says these paths
+ * are off limits, instead of inferring it from an absence.
  */
-const NEVER_HANDLED_PREFIXES = ['/_next/image', '/sw.js'];
+/*
+ * ── B5-B · Δ4 RE-DERIVED AGAINST THIS LINEAGE'S OWN REWRITE SET ───────────
+ *
+ * /news/ AND /geo/ ARE HERE FOR A DIFFERENT REASON THAN /api/, and the two
+ * reasons are recorded separately so a later reader can tell which prefix is
+ * here for which rule rather than inferring one from the other.
+ *
+ *   /api/   is excluded because it is AUTHENTICATED. A per-user response must
+ *           never be stored. (The reasoning above.)
+ *
+ *   /news/  and /geo/ carry NO SESSION, so the authentication argument does not
+ *   /geo/   apply to them at all. They are excluded because THEY ARE REPORTING:
+ *           /news/ is news JSON and /geo/map-feed is news-derived geography.
+ *           Caching either stores reporting and lets it be REPLAYED AS CURRENT
+ *           — the one rule this file exists to enforce, and the same reason no
+ *           HTML document is ever cached.
+ *
+ * Both families are same-origin and are rewritten to the backend by
+ * next.config.mjs (sources /news/:path* and /geo/:path*), so without naming
+ * them here they would be protected by default-deny alone.
+ *
+ * ── AND WHY THE LICENSING BOUNDARY IS ALREADY CLOSED ──────────────────────
+ *
+ * '/_next/image' is the only same-origin path that can return a PUBLISHER's
+ * image: Next's optimizer proxies an external URL through this origin, which
+ * would otherwise make third-party evidence imagery look like a first-party
+ * asset to this file. It is never handled, so that cannot happen.
+ *
+ * '/images/' below is stale-while-revalidate, and that remains correct: it
+ * holds only this product's own bundled static files. Article and evidence
+ * imagery arrives from the publisher's own origin, which this worker never
+ * touches because the fetch handler leaves cross-origin requests alone.
+ */
+const NEVER_HANDLED_PREFIXES = ['/_next/image', '/sw.js', '/api/', '/news/', '/geo/'];
 
 const PRECACHE_PATHS = new Set(PRECACHE_URLS);
 
@@ -144,14 +258,73 @@ function isCacheable(response) {
   return true;
 }
 
+/*
+  FIFO maintenance for the runtime bucket, and NOTHING ELSE.
+
+  This function's only inputs are the bucket name and the POSITION of a key. It
+  does not open a stored entry, read a header, or look at a path beyond the
+  bucket it was handed. That is deliberate and it is the security property, not
+  a simplification: an eviction rule that chose WHAT to keep would make the set
+  of stored entries depend on the nature of what was fetched, and a cache whose
+  contents vary with the nature of a record is a presence/absence oracle over
+  those records. Coarsening at the rendering layer would succeed and the storage
+  metadata would defeat it. FIFO cannot become that, because position is all it
+  knows.
+
+  It is also entirely swallowed. Maintenance runs after a response has already
+  been handed back, and a failure here must be invisible to the reader — the
+  same rule the D-BETA-1 and D-BETA-2 guards established for the write itself.
+*/
+async function trimRuntimeCache(cacheName) {
+  if (cacheName !== RUNTIME) return;
+  try {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    let over = keys.length - RUNTIME_MAX_ENTRIES;
+    let index = 0;
+    while (over > 0 && index < keys.length) {
+      await cache.delete(keys[index]);
+      index += 1;
+      over -= 1;
+    }
+  } catch (error) {
+    /* Maintenance is best effort. The reader has already been served. */
+  }
+}
+
 async function cacheFirst(request, cacheName) {
   const cached = await caches.match(request);
   if (cached) return cached;
 
   const response = await fetch(request);
   if (isCacheable(response)) {
-    const cache = await caches.open(cacheName);
-    await cache.put(request, response.clone());
+    /*
+      D-BETA-1 — A CACHE WRITE FAILURE MUST NOT DESTROY A DELIVERED RESPONSE.
+
+      This whole function runs inside the promise handed to respondWith, so an
+      uncaught rejection here IS the user's answer. Before this guard, a
+      QuotaExceededError from cache.put rejected a response the network had
+      already returned in full. On this arm the request is a /_next/static/
+      chunk, so the visible result was a failed script or stylesheet — a broken
+      page caused by a storage problem, not a network one.
+
+      The cache is an optimisation. The response is the product. When the two
+      disagree, the response wins.
+
+      Deliberately NOT done here: no purge, no retry, no telemetry. RCB-1 added
+      a bound on the runtime bucket, and it is deliberately NOT in this catch —
+      a failed write is not the moment to run maintenance, and putting policy
+      inside an error handler puts it where nobody would look for it. The trim
+      is invoked below, after a write that SUCCEEDED, and is not awaited.
+    */
+    try {
+      const cache = await caches.open(cacheName);
+      await cache.put(request, response.clone());
+      void trimRuntimeCache(cacheName);
+    } catch (error) {
+      /* Storage refused. Nothing is stored — a failed put writes no partial
+         entry — and the response continues to the caller untouched. */
+    }
   }
   return response;
 }
@@ -162,8 +335,30 @@ async function staleWhileRevalidate(request, cacheName) {
   const network = fetch(request)
     .then(async (response) => {
       if (isCacheable(response)) {
-        const cache = await caches.open(cacheName);
-        await cache.put(request, response.clone());
+        /*
+          D-BETA-2 — A CACHE FAILURE MUST NEVER BE REPORTED AS A NETWORK FAILURE.
+
+          The outer .catch below exists for GENUINE transport failure and turns
+          it into `undefined`, which the tail of this function reports as
+          'offline and not cached'. Before this guard, a QuotaExceededError from
+          cache.put fell into that same .catch — so a reader whose device was
+          ONLINE, whose request the network had ANSWERED, was told they were
+          offline. That is not merely a failure; it is a false diagnosis, and it
+          is the one thing this file exists to never do.
+
+          Catching the write here keeps the two causes apart: a storage problem
+          returns the response, a transport problem still reaches the .catch.
+
+          The message below is NOT reworded. It was reachable in a case where it
+          was false; this removes that case, and it becomes true again.
+        */
+        try {
+          const cache = await caches.open(cacheName);
+          await cache.put(request, response.clone());
+          void trimRuntimeCache(cacheName);
+        } catch (error) {
+          /* Storage refused. The response is still good, so return it. */
+        }
       }
       return response;
     })
