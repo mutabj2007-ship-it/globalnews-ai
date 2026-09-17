@@ -136,6 +136,9 @@ export const pl: Dictionary = {
     showingPrefix: 'Wy\u015bwietlanie:',
     itemForms: ['pozycja', 'pozycje', 'pozycji'] as [string, string, string],
     noItemsInDimension: 'Brak pozycji w tym wymiarze dla tej analizy',
+    /* J-2 — dwie r\u00f3\u017cne przyczyny pustego wymiaru. Zobacz en.ts. */
+    noGroundedItemsInDimension: 'Brak ugruntowanych pozycji potwierdzonych przez bie\u017c\u0105ce materia\u0142y',
+    nothingReportedInDimension: 'Bie\u017c\u0105ce materia\u0142y nic nie podaj\u0105 dla tego wymiaru',
     regionNotInThisBuild: 'Widok szczeg\u00f3\u0142owy tego wymiaru nie jest dost\u0119pny w tej wersji',
     fullAnalysisBelow:
       'Pe\u0142na analiza \u2014 wszystkie twierdzenia, cytowania i \u017ar\u00f3d\u0142a \u2014 znajduje si\u0119 poni\u017cej.',

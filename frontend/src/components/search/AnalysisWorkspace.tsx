@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
 import { buildAnalysisWorkspaceModel, PRIMARY_DIMENSION_KEYS } from './analysisDimensions';
 import type { PrimaryDimensionKey } from './analysisDimensions';
+import { dimensionEmptyLabelKey, dimensionEmptyReason } from './dimensionEmptiness';
 import { AnalysisIndex, dimensionLabel } from './AnalysisIndex';
 import { ANALYSIS_VIEWPORT_ID, AnalysisViewport } from './AnalysisViewport';
 import { AnalysisTelemetry } from './AnalysisTelemetry';

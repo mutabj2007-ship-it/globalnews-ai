@@ -36,6 +36,11 @@ import {
   extractEvidenceAttributions,
   findContradictionsAgainst,
 } from './entity-role-geography.util';
+import {
+  buildCensus,
+  type DimensionGroundingCensus,
+  type DimensionGroundingReport,
+} from './dimension-grounding-census';
 
 export class AnalysisValidationError extends Error {
   constructor(message: string) {
@@ -164,6 +169,13 @@ interface EvidenceContext {
   evidenceAttributions: RoleAttribution[];
   /** Milestone #40 — trusted, request-local assessmentId -> validated assessment map. Never exposed downstream; see resolveRelationalSupport. */
   assessmentsById: Map<string, RelationalEvidenceAssessment>;
+  /**
+   * J-2 — per-dimension generated/accepted counts, written as a SIDE EFFECT of
+   * validation rather than returned, so not one of this file's many call sites
+   * has to change shape. Nothing reads it during validation; it is collected at
+   * result assembly.
+   */
+  groundingCensus: Map<string, DimensionGroundingCensus>;
 }
 
 function validateSourcedClaims(
@@ -174,6 +186,13 @@ function validateSourcedClaims(
   if (!Array.isArray(candidate)) {
     throw new AnalysisValidationError(`Expected "${field}" to be an array.`);
   }
+
+  /*
+    J-2 — the raw count, taken BEFORE any rule runs. Every `continue` below is a
+    rejection the reader currently cannot distinguish from the model having
+    proposed nothing at all.
+  */
+  const generated = candidate.length;
 
   const result: SourcedClaim[] = [];
   for (const entry of candidate) {
@@ -220,6 +239,10 @@ function validateSourcedClaims(
       ...(relationalSupport ? { relationalSupport } : {}),
     });
   }
+
+  /* J-2 — record, never re-decide. No entry is admitted or re-scored here. */
+  ctx.groundingCensus.set(field, buildCensus(generated, result.length));
+
   return result;
 }
 
@@ -664,6 +687,8 @@ export function validateAnalysisResult(
     evidenceTextMap,
     assessmentsById,
     evidenceAttributions,
+    /* J-2 — filled as a side effect of each dimension's validation. */
+    groundingCensus: new Map<string, DimensionGroundingCensus>(),
   };
 
   if (!isNonEmptyString(obj.headline)) {
@@ -805,6 +830,18 @@ export function validateAnalysisResult(
     context: contextClaims,
     relevance: relevanceClaims,
     affectedParties: affectedPartiesResult,
+    /*
+      J-2 — the census, attached only when a dimension actually reported one.
+      An empty map yields an omitted field rather than an empty object, so a
+      result that validated nothing looks exactly as it always did.
+    */
+    ...(evidenceCtx.groundingCensus.size > 0
+      ? {
+          dimensionGrounding: Object.fromEntries(
+            evidenceCtx.groundingCensus,
+          ) as DimensionGroundingReport,
+        }
+      : {}),
     immediateImpacts: immediateImpactsClaims,
     spilloverImplications: spilloverImplicationsClaims,
     significance: significanceResult,

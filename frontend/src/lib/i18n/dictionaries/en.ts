@@ -166,6 +166,19 @@ export const en = {
     showingPrefix: 'Showing',
     itemForms: ['item', 'items', 'items'] as [string, string, string],
     noItemsInDimension: 'No items in this dimension for this analysis',
+    /*
+      J-2 — AN EMPTY DIMENSION HAS TWO CAUSES AND THEY ARE OPPOSITE FACTS.
+
+      `noItemsInDimension` above stays the honest FALLBACK, for when the product
+      cannot tell which occurred: a result produced before the grounding census
+      existed carries no counts, and guessing would be worse than a generic line.
+
+      Neither sentence names a count. A reader needs to know whether the
+      reporting was silent or whether it did not support what was drafted;
+      "3 generated, 0 accepted" is diagnostics, not an answer.
+    */
+    noGroundedItemsInDimension: 'No grounded items supported by the current evidence',
+    nothingReportedInDimension: 'The current evidence reports nothing for this dimension',
     regionNotInThisBuild: 'Detailed view for this dimension is not in this build',
     fullAnalysisBelow:
       'The complete analysis \u2014 every claim, citation and source \u2014 is shown below.',

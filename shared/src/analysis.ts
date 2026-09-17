@@ -538,6 +538,25 @@ export interface NewsAnalysisResult {
   affectedParties: AffectedParty[];
 
   /**
+   * J-2 — WHY A DIMENSION IS EMPTY, WHEN THE BACKEND KNOWS.
+   *
+   * An empty dimension has two causes and they are opposite facts about the
+   * evidence: either the model proposed nothing (the reporting is silent), or
+   * it proposed entries and every one failed grounding (the reporting did not
+   * support what was drafted). A bare zero tells the reader neither and quietly
+   * implies the first.
+   *
+   * Keyed by response field name, e.g. `relevance`, `immediateImpacts`.
+   * OPTIONAL, so every pre-existing consumer and every hand-built test double is
+   * unaffected: absent means "this result was produced before the census
+   * existed", which readers already handle as "no reason available".
+   *
+   * DIAGNOSTIC, NOT COPY. These counts must never be rendered to a reader as
+   * numbers; a surface derives a truthful sentence from them.
+   */
+  dimensionGrounding?: Record<string, { generated: number; accepted: number; rejected: number }>;
+
+  /**
    * Milestone #62 Phase 2 — direct, already-occurring effects the
    * supplied evidence explicitly states, using the SAME SourcedClaim
    * model as context/relevance. Always an array; empty means no
