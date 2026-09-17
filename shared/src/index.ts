@@ -43,6 +43,14 @@ export * from './source-provenance';
   fact (lib/i18n/languages.ts), and it remains ['en','pl'].
 */
 export * from './language';
+
+/*
+  B4-A — the governed Economy read model. C55 promoted it into shared/src to
+  settle the C36 Gate 4 conflict (Option 1), adopting the backend value-semantics
+  vocabulary with a TOTAL, transitional ECONOMY_LEGACY_UI_* map for the old
+  frontend names. Both lanes bind here; neither declares its own axes.
+*/
+export * from './economy';
 export * from './signals';
 export * from './support';
 export * from './follows';

@@ -212,10 +212,29 @@ describe('B3.1 — what is still NOT cleared', () => {
     expect(gate).toContain('export const WATCH_RUNTIME_ACTIVE = false;');
   });
 
-  it('no Economy implementation file was recovered', () => {
-    expect(existsSync(join(SHARED_SRC, 'economy'))).toBe(false);
-    expect(existsSync(join(REPO, 'frontend', 'src', 'lib', 'economy'))).toBe(false);
-    expect(existsSync(join(REPO, 'backend', 'src', 'modules', 'economy'))).toBe(false);
+  it('the Economy SUBSTRATE is now recovered — B4-A', () => {
+    /*
+      SUPERSEDED BY B4-A. B3.1 asserted the substrate was absent and named the
+      two prerequisites blocking it; both were cleared and B4-A recovered it.
+      Updated rather than deleted so the transition stays visible.
+    */
+    expect(existsSync(join(SHARED_SRC, 'economy'))).toBe(true);
+    expect(existsSync(join(REPO, 'frontend', 'src', 'lib', 'economy'))).toBe(true);
+    expect(existsSync(join(REPO, 'backend', 'src', 'modules', 'economy'))).toBe(true);
+  });
+
+  it('but NO Economy runtime was activated', () => {
+    /*
+      The half that still matters, and the reason the checkpoint is
+      "substrate recovered" rather than "Economy ready": recovering contracts is
+      not wiring a product.
+    */
+    const appModule = readFileSync(
+      join(REPO, 'backend', 'src', 'app.module.ts'),
+      'utf-8',
+    );
+
+    expect(appModule).not.toContain('EconomyModule');
   });
 
   it('no Economy route exists', () => {

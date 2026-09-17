@@ -172,14 +172,35 @@ describe('B2 — the recovered platform is domain-neutral', () => {
       }
     });
 
-    it('the five non-Conflict domains receive the platform default', () => {
+    it('the domains with no ratified ceiling receive the platform default', () => {
       /*
-        The proof that the seam is a CONFIG and not a branch: B1 added three
-        domains and none of them needed an entry.
+        SUPERSEDED BY B4-A, AND THE SUPERSESSION IS THE POINT.
+
+        B2 asserted that FIVE non-Conflict domains took the default, and B3.1
+        predicted this exact test would have to change when Economy's ceiling
+        landed: "that test will fail, correctly, and must be updated in the same
+        change — not before it." B4-A is that change.
+
+        What the test protects is unaltered: the seam is a CONFIGURATION table,
+        not a branch. A domain with no entry still gets the default, and adding
+        one is still a one-line data edit rather than code. Only the membership
+        moved — from five to four.
       */
-      for (const domain of SPECIALIST_DOMAIN_IDS.filter((d) => d !== 'CONFLICT')) {
+      const configured: readonly SpecialistDomainId[] = ['CONFLICT', 'ECONOMY'];
+
+      for (const domain of SPECIALIST_DOMAIN_IDS.filter((d) => !configured.includes(d))) {
         expect(indicatorMaxFor(domain)).toBe(INDICATOR_SOFT_MAX);
       }
+    });
+
+    it('and Economy carries the ceiling its accepted design requires', () => {
+      /*
+        SEVEN is the CEILING, not the count. Part VI is six cells at 1360 and
+        seven at 1512+, which is width-derived; `visibleIndicatorCount` carries
+        that, and this constant only bounds it. Raising this alone would have
+        given Economy a fixed seven at every width — not its accepted contract.
+      */
+      expect(indicatorMaxFor('ECONOMY')).toBe(7);
     });
 
     it('and Conflict keeps its ratified seven, which the default does not become', () => {

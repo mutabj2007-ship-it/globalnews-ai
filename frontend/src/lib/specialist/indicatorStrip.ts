@@ -49,10 +49,49 @@ export const INDICATOR_SOFT_MAX = 5;
  */
 export const INDICATOR_MAX_BY_DOMAIN: Readonly<Partial<Record<SpecialistDomainId, number>>> = {
   CONFLICT: 7,
+  /*
+    B4-A — ECONOMY'S CEILING IS SEVEN, AND THE NUMBER IS THE SMALL HALF.
+
+    Part VI's accepted geometry is SIX cells at 1360 and SEVEN at 1512 and above
+    (`ECONOMY_BREAKPOINTS`). This constant is the CEILING — the most Economy may
+    ever show — and `visibleCount` below is what expresses the width-derived
+    figure. Raising this alone would have given Economy a fixed seven at every
+    width, which is not its accepted contract.
+  */
+  ECONOMY: 7,
 };
 
 export function indicatorMaxFor(domain: SpecialistDomainId): number {
   return INDICATOR_MAX_BY_DOMAIN[domain] ?? INDICATOR_SOFT_MAX;
+}
+
+/**
+ * ── B4-A · THE RESPONSIVE COUNT, BOUNDED BY THE DOMAIN CEILING ────────────
+ *
+ * The platform gap Gate B3.1 recorded as R-1b: the shared ceiling is a per-domain
+ * CONSTANT, and Economy's accepted count is WIDTH-DERIVED — 6 at 1360, 7 at 1512
+ * and above. No existing prop could express "fewer cells at a narrower width";
+ * `variant` is `RAIL | FULL_WIDTH`, which is a shape and not a count.
+ *
+ * A caller supplies the count its own breakpoint table produced. This clamps it
+ * into `[1, indicatorMaxFor(domain)]` so a domain can never exceed its ratified
+ * ceiling by passing a larger number — the ceiling stays the contract, and the
+ * count is a request within it.
+ *
+ * `undefined` means "no responsive rule", and every indicator is shown. That is
+ * the behaviour every existing consumer already has, so adding this prop changes
+ * nothing for them.
+ */
+export function visibleIndicatorCount(
+  domain: SpecialistDomainId,
+  requested: number | undefined,
+  available: number,
+): number {
+  const ceiling = Math.min(indicatorMaxFor(domain), available);
+
+  if (requested === undefined) return ceiling;
+
+  return Math.max(1, Math.min(requested, ceiling));
 }
 
 /**

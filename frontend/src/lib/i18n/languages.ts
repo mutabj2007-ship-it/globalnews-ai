@@ -1,4 +1,4 @@
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { LanguageCode, DisplayLocale } from '@globalnews-ai/shared';
 
 /**
  * Milestone #47 — every language the shared LanguageCode type knows
@@ -18,6 +18,30 @@ export const ALL_LANGUAGES: LanguageCode[] = ['en', 'pl', 'sw', 'fr', 'es', 'ar'
  * "supported" merely because the type or a menu label exists.
  */
 export const ACTIVE_LANGUAGES: LanguageCode[] = ['en', 'pl'];
+
+/**
+ * ── B4-A · THE SELECTABLE REGISTRY, AS A DisplayLocale VIEW ───────────────
+ *
+ * Economy reads `SELECTABLE_LOCALES` — the LANG-UI-7 name for "what this
+ * deployment actually offers a reader today". Canonical declared all SEVEN
+ * display locales here.
+ *
+ * THIS DEPLOYMENT OFFERS TWO, AND RECOVERY MUST NOT WIDEN THAT. The CTO ruling
+ * is explicit — DisplayLocale may be recovered only in a way that preserves the
+ * current visible EN/PL runtime — so this is NOT canonical's list. It is the
+ * same deployment fact `ACTIVE_LANGUAGES` already states, expressed in the type
+ * the shared contract uses.
+ *
+ * DERIVED, NEVER RE-AUTHORED. Writing `['en','pl']` a second time would create
+ * two registries that agree only by discipline, and the next language would be
+ * added to one of them. This maps the existing one, so they cannot drift.
+ *
+ * The three-set model holds: `LanguageCode` is representable, `DisplayLocale`
+ * is contracted, and this is the deployment fact — a subset of
+ * `DISPLAY_LOCALES`, which a test asserts it can never widen beyond.
+ */
+export const SELECTABLE_LOCALES: readonly DisplayLocale[] =
+  ACTIVE_LANGUAGES as readonly DisplayLocale[];
 
 export const LANGUAGE_NATIVE_LABELS: Record<LanguageCode, string> = {
   en: 'English',

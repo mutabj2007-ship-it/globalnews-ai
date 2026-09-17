@@ -6,6 +6,7 @@ import {
   magnitudeFraction,
   risingCount,
   stripIsValid,
+  visibleIndicatorCount,
   type IndicatorStrip,
   type ObservedIndicator,
 } from '@/lib/specialist/indicatorStrip';
@@ -52,6 +53,26 @@ export interface ObservedIndicatorStripProps {
   readonly staleAfterMs?: number;
   readonly onShowAll?: () => void;
   readonly variant?: 'RAIL' | 'FULL_WIDTH';
+  /**
+   * B4-A — how many cells this width may show, from the caller's own breakpoint
+   * table. Clamped into the domain ceiling; omit it to show everything.
+   */
+  readonly visibleCount?: number;
+  /**
+   * B4-A — per-cell selection (Gate B3.1 R-2). Part VI needs it: Economy's cells
+   * answer "which indicators deserve attention" and drive the detail view.
+   *
+   * Optional, so a strip rendered without it is exactly the accepted read-only
+   * strip and its cells stay non-interactive.
+   */
+  readonly onSelectIndicator?: (indicator: ObservedIndicator) => void;
+  readonly selectedIndicatorId?: string;
+  /**
+   * B4-A — the cell growth cap. Part VI: "Indicator cells grow to this and then
+   * stop; surplus goes to the mini-map." Without it the cells would absorb all
+   * spare width and the mini-map beside them would never reach its size.
+   */
+  readonly cellMaxPx?: number;
 }
 
 const ARROW: Readonly<Record<ObservedIndicator['direction'], string>> = {
@@ -68,6 +89,10 @@ export function ObservedIndicatorStrip({
   staleAfterMs = 1000 * 60 * 60 * 24 * 30,
   onShowAll,
   variant = 'RAIL',
+  visibleCount,
+  onSelectIndicator,
+  selectedIndicatorId,
+  cellMaxPx,
 }: ObservedIndicatorStripProps): JSX.Element {
   /*
     AN OVER-LENGTH STRIP IS REFUSED, NOT TRUNCATED. Silently dropping the tail
@@ -83,6 +108,23 @@ export function ObservedIndicatorStrip({
   }
 
   const { rising, total } = risingCount(strip);
+
+  /*
+    ── NO SILENT SLICING ─────────────────────────────────────────────────────
+
+    The Economy-local strip did `indicators.slice(0, cellCount)` and said
+    nothing, so at 1360 a reader saw six of seven observations and had no way to
+    know a seventh existed. That is the same failure as hiding a stale cell,
+    arriving through layout instead of filtering.
+
+    The cells are limited, and the remainder is STATED — `withheld` drives the
+    existing show-all affordance, which is already the strip's own answer to
+    "there is more than this". A reader is never told the world has fewer moving
+    parts than it has.
+  */
+  const shown = visibleIndicatorCount(strip.domain, visibleCount, strip.indicators.length);
+  const visible = strip.indicators.slice(0, shown);
+  const withheld = strip.indicators.length - visible.length;
 
   return (
     <section data-gn="indicator-strip" data-gn-domain={strip.domain} data-gn-cells={total}>
@@ -104,7 +146,7 @@ export function ObservedIndicatorStrip({
           'flex gap-px overflow-x-auto ' + (variant === 'FULL_WIDTH' ? 'w-full' : '')
         }
       >
-        {strip.indicators.map((indicator) => {
+        {visible.map((indicator) => {
           const stale = indicatorIsStale(indicator, nowMs, staleAfterMs);
           const fraction = magnitudeFraction(indicator);
 
@@ -116,18 +158,55 @@ export function ObservedIndicatorStrip({
               data-gn-direction={indicator.direction}
               data-gn-stale={stale ? 'true' : 'false'}
               title={`${labels.indicators[indicator.indicatorId] ?? indicator.label} · ${indicator.window}`}
+              /*
+                THE CAP IS A MAXIMUM, NOT A WIDTH. Cells still flex to share the
+                row; they simply stop growing at the cap so the surplus is
+                available to whatever sits beside the strip.
+              */
+              style={cellMaxPx === undefined ? undefined : { maxWidth: `${cellMaxPx}px` }}
+              data-gn-selected={
+                selectedIndicatorId === indicator.indicatorId ? 'true' : undefined
+              }
               className={
-                'min-w-0 flex-1 bg-sp-panel px-[6px] py-[6px] ' + (stale ? 'opacity-50' : '')
+                'min-w-0 flex-1 bg-sp-panel px-[6px] py-[6px] ' +
+                (stale ? 'opacity-50 ' : '') +
+                (selectedIndicatorId === indicator.indicatorId ? 'outline outline-1 outline-sp-cyan ' : '')
               }
             >
-              <p className="flex items-baseline gap-[3px] text-[11px] leading-none text-sp-ink">
-                <span aria-hidden="true" className="text-sp-ink-2">
-                  {ARROW[indicator.direction]}
-                </span>
-                <span data-gn="indicator-value" className="truncate">
-                  {indicator.value}
-                </span>
-              </p>
+              {/*
+                B4-A — THE CELL BECOMES A CONTROL ONLY WHEN A CALLER ASKS.
+
+                Without `onSelectIndicator` this renders exactly the accepted
+                read-only cell. With it, the cell is a real button carrying
+                `aria-pressed`, because Part VI's cells answer "which indicators
+                deserve attention" and drive the detail view — a div with a click
+                handler would be that affordance with the keyboard removed.
+              */}
+              {onSelectIndicator === undefined ? (
+                <p className="flex items-baseline gap-[3px] text-[11px] leading-none text-sp-ink">
+                  <span aria-hidden="true" className="text-sp-ink-2">
+                    {ARROW[indicator.direction]}
+                  </span>
+                  <span data-gn="indicator-value" className="truncate">
+                    {indicator.value}
+                  </span>
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  data-gn="indicator-select"
+                  aria-pressed={selectedIndicatorId === indicator.indicatorId}
+                  onClick={() => onSelectIndicator(indicator)}
+                  className="flex w-full items-baseline gap-[3px] text-start text-[11px] leading-none text-sp-ink outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-sp-cyan"
+                >
+                  <span aria-hidden="true" className="text-sp-ink-2">
+                    {ARROW[indicator.direction]}
+                  </span>
+                  <span data-gn="indicator-value" className="truncate">
+                    {indicator.value}
+                  </span>
+                </button>
+              )}
               {/*
                 3px MAGNITUDE BAR, SCALED AGAINST ITS OWN DECLARED BASIS.
                 Absent basis renders NO BAR rather than a full or empty one —
@@ -154,10 +233,22 @@ export function ObservedIndicatorStrip({
         })}
       </ul>
 
+      {/*
+        B4-A — THE WITHHELD COUNT IS STATED, NOT IMPLIED.
+
+        `data-gn-withheld` carries how many observations the width is holding
+        back, so "no silent slicing" is machine-checkable rather than a claim in
+        a comment. It is 0 whenever every indicator is shown, which is every
+        existing consumer.
+
+        The label itself is unchanged: this affordance already meant "there is
+        more than this", and it is not re-worded here — wording is design's.
+      */}
       {onShowAll && (
         <button
           type="button"
           data-gn="indicator-show-all"
+          data-gn-withheld={withheld}
           onClick={onShowAll}
           className="mt-[8px] min-h-[44px] w-full text-start font-gn-mono text-[9.5px] uppercase tracking-[0.14em] text-sp-ui-idle hover:text-sp-ui-hover"
         >
