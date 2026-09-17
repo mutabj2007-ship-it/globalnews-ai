@@ -96,3 +96,22 @@ export function createGeographyResolver(
     return answers;
   };
 }
+
+/**
+ * ── CHECKPOINT C · THE RESOLVER OUTLIVES THE COMPONENT ────────────────────
+ *
+ * The map is a route. Opening Analysis unmounts it and Back remounts it, so a
+ * resolver held in a `useRef` lost its memo exactly when returning to the map
+ * needed it most — every headline had to be resolved again to rebuild a view
+ * the reader already had.
+ *
+ * Module scope gives the memo the lifetime of the tab rather than the lifetime
+ * of one mount. Nothing else about it changes: it still deduplicates, it still
+ * batches the misses through `fetchMapFeedBatch`, and it still refuses to
+ * remember a failure.
+ *
+ * `createGeographyResolver` remains exported and unchanged, because a test that
+ * shared this instance would leak resolutions between cases and make a
+ * "resolved without a request" assertion pass for the wrong reason.
+ */
+export const sharedGeographyResolver: GeographyResolver = createGeographyResolver();

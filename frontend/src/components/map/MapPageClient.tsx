@@ -32,7 +32,19 @@ import {
   mapFeedRequestKey,
   type MapEvidenceGeography,
 } from '@/lib/api/mapFeedApi';
-import { createGeographyResolver } from '@/lib/map/evidence/geographyResolver';
+import { sharedGeographyResolver } from '@/lib/map/evidence/geographyResolver';
+import {
+  globalFeedKey,
+  retainCountryCorpus,
+  retainCountryGeography,
+  retainGlobalFeed,
+  retainGlobalGeography,
+  retainedCountryCorpora,
+  retainedCountryGeographies,
+  retainedGlobalFeed,
+  retainedGlobalGeography,
+  type ResolvedArticleGeography,
+} from '@/lib/map/state/retainedMapState';
 import {
   applyCardFilters,
   categoryDistribution,
@@ -108,28 +120,16 @@ const GlobalMapShell = dynamic(
 
 type CachedByCountry = Record<string, CountryNewsResponse>;
 
-/**
- * ── ONE ARTICLE'S GEOGRAPHY, AS G'S ROUTE RETURNED IT ─────────────────────
- *
- * `feed` is stored WHOLE and unmodified. The four states live inside it, and
- * flattening it here into "the place" would be the reconstruction G's contract
- * asks the frontend not to do — a contested projection would lose the fact
- * that it is contested the moment it were reduced to a nullable place.
- */
-interface ResolvedArticleGeography {
-  readonly recordId: string;
-  readonly feed: MapEvidenceGeography;
-  readonly observedAt: string;
-  readonly headline: string;
-  readonly sourceCount: number;
-  /** Carried so block 06's filter can narrow the markers, not only the list. */
-  readonly category: NewsCategory;
-  /**
-   * The country of the ARTICLE that produced this headline. It is the join-key
-   * expectation, so a resolution landing elsewhere is discarded, not drawn.
-   */
-  readonly countryIso3: string;
-}
+/*
+  ── ONE ARTICLE'S GEOGRAPHY, AS G'S ROUTE RETURNED IT ─────────────────────
+
+  CHECKPOINT C — THIS TYPE NOW LIVES IN `retainedMapState`, WHICH HOLDS IT.
+
+  `feed` is still stored WHOLE and unmodified; the reasoning is unchanged and
+  now lives beside the store that keeps it. The declaration moved rather than
+  being duplicated because the store cannot import from a page component
+  without a cycle, and two structurally identical interfaces would drift.
+*/
 
 /**
  * HOW MANY ARTICLES PER COUNTRY ARE SENT TO THE RESOLVER.
@@ -401,7 +401,19 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
   /* Nothing may be written to the URL until the URL has been read, or the
      first render would erase the very selection it is meant to restore. */
   const [restored, setRestored] = useState(false);
-  const [cache, setCache] = useState<CachedByCountry>({});
+  /*
+    ── CHECKPOINT C · THE MAP REMEMBERS WHAT IT WAS SHOWING ─────────────────
+
+    Opening Analysis is a route navigation, so this component UNMOUNTS and Back
+    REMOUNTS it. Initialising from the retained store is what makes returning a
+    restore rather than a rebuild: the corpora, the resolved geographies and the
+    world feed are all already here on the first render, so no effect below
+    finds a gap it needs to fill by retrieving.
+
+    The store is module-scope with a TTL mirroring the backend's own freshness
+    window, so a restored corpus can never outlive what the server would serve.
+  */
+  const [cache, setCache] = useState<CachedByCountry>(() => retainedCountryCorpora());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hovered, setHovered] = useState<HoveredCountry | null>(null);
@@ -420,7 +432,7 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     per country would destroy exactly that.
   */
   const [geography, setGeography] = useState<Record<string, readonly ResolvedArticleGeography[]>>(
-    {},
+    () => retainedCountryGeographies(),
   );
 
   /*
@@ -451,9 +463,22 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     `null` until the first response lands — distinct from an empty response,
     which is a real answer and renders as one.
   */
-  const [globalFeed, setGlobalFeed] = useState<NewsResponse | null>(null);
-  const [globalGeography, setGlobalGeography] = useState<readonly ResolvedArticleGeography[]>([]);
-  const globalEnrichmentDone = useRef(false);
+  const [globalFeed, setGlobalFeed] = useState<NewsResponse | null>(() =>
+    retainedGlobalFeed(globalFeedKey(GLOBAL_FEED_LIMIT, language)),
+  );
+  const [globalGeography, setGlobalGeography] = useState<readonly ResolvedArticleGeography[]>(
+    () => retainedGlobalGeography(globalFeedKey(GLOBAL_FEED_LIMIT, language)) ?? [],
+  );
+  /*
+    CHECKPOINT C — A RESTORED ENRICHMENT IS A COMPLETED ENRICHMENT.
+
+    This flag is what stops the global enrichment effect running twice. If it
+    started false after a restore, Back would re-resolve every headline the map
+    had already resolved — which is the exact cost this checkpoint removes.
+  */
+  const globalEnrichmentDone = useRef(
+    retainedGlobalGeography(globalFeedKey(GLOBAL_FEED_LIMIT, language)) !== null,
+  );
 
   const [cardFilters, setCardFilters] = useState<ReadonlySet<NewsCategory>>(EMPTY_CATEGORY_FILTERS);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -542,6 +567,8 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
           lang: language,
         });
         setCache((current) => ({ ...current, [key]: response }));
+        /* Refused if empty — a failed or empty retrieval never displaces a good corpus. */
+        retainCountryCorpus(key, response);
       } catch (err) {
         setError(
           err instanceof CountryNewsApiError
@@ -612,11 +639,39 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     explicitly asked for.
   */
   useEffect(() => {
+    /*
+      ── CHECKPOINT C · RETAINED FIRST, RETRIEVAL ONLY IF THERE IS NOTHING ───
+
+      On Back this returns before touching the network. It also covers a
+      LANGUAGE CHANGE back to a language already retained, which the mount-time
+      initialiser above cannot: that runs once, for the language present at
+      mount.
+    */
+    const feedKey = globalFeedKey(GLOBAL_FEED_LIMIT, language);
+    const retained = retainedGlobalFeed(feedKey);
+
+    if (retained !== null) {
+      setGlobalFeed(retained);
+
+      const retainedGeography = retainedGlobalGeography(feedKey);
+
+      if (retainedGeography !== null) {
+        setGlobalGeography(retainedGeography);
+        globalEnrichmentDone.current = true;
+      }
+
+      return;
+    }
+
     let cancelled = false;
 
     void fetchTopHeadlines(GLOBAL_FEED_LIMIT, language)
       .then((response) => {
-        if (!cancelled) setGlobalFeed(response);
+        if (cancelled) return;
+
+        setGlobalFeed(response);
+        /* Refused if empty — see retainGlobalFeed. A bad moment is not evidence. */
+        retainGlobalFeed(feedKey, response);
       })
       .catch(() => {
         /* Left null. The world view says what it can and claims nothing. */
@@ -654,8 +709,12 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     ask again. Only real resolutions are remembered, so a later render retries
     exactly the ones that did not land.
   */
-  const resolveGeographiesRef = useRef(createGeographyResolver());
-  const resolveGeographies = resolveGeographiesRef.current;
+  /*
+    CHECKPOINT C — module-scope, so the resolution memo survives the unmount
+    that opening Analysis causes. A per-mount resolver lost its memo exactly
+    when returning to the map needed it most.
+  */
+  const resolveGeographies = sharedGeographyResolver;
 
   /*
     The global headlines go through the SAME resolver, the SAME article gate and
@@ -719,9 +778,12 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
       .then((entries) => {
         if (cancelled) return;
 
-        setGlobalGeography(
-          entries.filter((entry): entry is ResolvedArticleGeography => entry !== null),
+        const resolved = entries.filter(
+          (entry): entry is ResolvedArticleGeography => entry !== null,
         );
+
+        setGlobalGeography(resolved);
+        retainGlobalGeography(globalFeedKey(GLOBAL_FEED_LIMIT, language), resolved);
       })
       .catch(() => {
         globalEnrichmentDone.current = false;
@@ -812,6 +874,7 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
           setGeography((current) =>
             current[iso3] === undefined ? { ...current, [iso3]: resolved } : current,
           );
+          retainCountryGeography(iso3, resolved);
         })
         .catch(() => {
           /*
