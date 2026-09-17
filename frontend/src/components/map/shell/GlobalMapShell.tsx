@@ -69,6 +69,7 @@ import { EvidenceLegend } from './EvidenceLegend';
 import { PlaceSearch } from './PlaceSearch';
 import { BreadcrumbZoomNavigator } from './BreadcrumbZoomNavigator';
 import {
+  cityParentIso3,
   scopeForJumpTarget,
   type GeographyScope,
 } from '@/lib/map/navigation/geographyScope';
@@ -406,17 +407,29 @@ export function GlobalMapShell({
     },
     [onSelectionChange],
   );
-  const onGesture = useCallback((camera: CameraState) => {
-    /*
-      DRAGGING AWAY FROM A CHOSEN PLACE IS LEAVING IT. The scope described a
-      place the reader asked for; once they pan or zoom by hand the camera is
-      once again the only thing that knows where they are, so context returns
-      to `resolveCameraPlace`. Without this the ladder would keep naming
-      AFRICA while the reader had dragged to South America.
-    */
-    setViewScope(null);
-    dispatch({ kind: 'gesture', camera });
-  }, []);
+  /*
+    ── A2 LIFECYCLE CORRECTION · PANNING IS NOT DESELECTING ─────────────────
+
+    CTO ruling: *"Do not clear explicit geography selection merely because the
+    user pans or zooms the camera. AFRICA, EAST AFRICA, COUNTRY and CITY
+    selections must survive ordinary camera manipulation."*
+
+    An earlier revision of this file cleared the scope here, on the reasoning
+    that dragging away from a place is leaving it. That was wrong, and the
+    reason it was wrong is worth keeping: it confused MOVING THE VIEW with
+    CHANGING THE SUBJECT. Examining the neighbourhood of a selected geography is
+    the most ordinary thing a reader does on a map, and it is not a request to
+    stop looking at that geography. Clearing on gesture made the explicit
+    selection survive only until the reader touched the map.
+
+    The scope is now cleared ONLY by a semantically explicit transition:
+    another geography selection (handled by precedence in `ladderScope`), or
+    Reset World, which is this product's declared "unselected map" action.
+  */
+  const onGesture = useCallback(
+    (camera: CameraState) => dispatch({ kind: 'gesture', camera }),
+    [],
+  );
 
   /*
     PO-1/PO-3 — THE ENGINE'S REAL ZOOM FLOOR.
@@ -527,15 +540,35 @@ export function GlobalMapShell({
     mapping between them is exactly the inference this checkpoint removes.
   */
   const ladderScope = useMemo<GeographyScope | null>(() => {
-    if (selection !== null && selection.kind === 'COUNTRY') {
-      return { rung: 'COUNTRY', id: selection.id };
+    const countryScope: GeographyScope | null =
+      selection !== null && selection.kind === 'COUNTRY'
+        ? { rung: 'COUNTRY', id: selection.id }
+        : selection === null && typeof selectedIso3 === 'string' && selectedIso3.length > 0
+          ? { rung: 'COUNTRY', id: selectedIso3 }
+          : null;
+
+    /*
+      A CITY REFINES A COMPATIBLE COUNTRY — IT DOES NOT COMPETE WITH IT.
+
+      `onJump` deliberately does NOT clear a country selection when moving to
+      the city rung, because Kigali sits inside Rwanda and clearing Rwanda would
+      destroy a correct, compatible state. Precedence has to honour that: if the
+      country selection were allowed to win here, jumping to Kigali while Rwanda
+      is selected would collapse the CITY identity back into its parent — the
+      exact failure the ruling asks to be proven against.
+
+      The compatibility test is the city's DECLARED parent from the gazetteer,
+      never the camera. An incompatible pair (Kigali scoped while Poland is
+      selected) is a genuine conflict, and there the explicit country selection
+      wins, because it is the more recent deliberate statement about subject.
+    */
+    if (viewScope !== null && viewScope.rung === 'CITY') {
+      const parent = cityParentIso3(viewScope.id);
+
+      if (countryScope === null || parent === countryScope.id) return viewScope;
     }
 
-    if (selection === null && typeof selectedIso3 === 'string' && selectedIso3.length > 0) {
-      return { rung: 'COUNTRY', id: selectedIso3 };
-    }
-
-    return viewScope;
+    return countryScope ?? viewScope;
   }, [selection, selectedIso3, viewScope]);
 
   useEffect(() => {

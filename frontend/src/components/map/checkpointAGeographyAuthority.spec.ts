@@ -51,15 +51,32 @@ describe('CHECKPOINT A — the explicit scope actually reaches the ladder', () =
       expect(shell).toContain('scope={ladderScope}');
     });
 
-    it('a COUNTRY selection outranks any view scope', () => {
+    it('a COUNTRY selection outranks a CONTINENT or SUBREGION view scope', () => {
       const memo = shell.slice(
         shell.indexOf('const ladderScope = useMemo'),
         shell.indexOf('}, [selection, selectedIso3, viewScope]);'),
       );
 
       expect(memo).toContain("selection.kind === 'COUNTRY'");
-      expect(memo).toContain("return { rung: 'COUNTRY', id: selection.id };");
-      expect(memo).toContain('return viewScope;');
+      expect(memo).toContain('const countryScope: GeographyScope | null =');
+      expect(memo).toContain('return countryScope ?? viewScope;');
+    });
+
+    it('a CITY view scope REFINES a compatible country selection instead of losing to it', () => {
+      /*
+        `onJump` deliberately does not clear a country selection when moving to
+        the city rung. If precedence let the country win, jumping to Kigali
+        while Rwanda is selected would collapse the CITY identity into its
+        parent — the exact failure the A2 ruling asks to be proven against.
+      */
+      const memo = shell.slice(
+        shell.indexOf('const ladderScope = useMemo'),
+        shell.indexOf('}, [selection, selectedIso3, viewScope]);'),
+      );
+
+      expect(memo).toContain("viewScope.rung === 'CITY'");
+      expect(memo).toContain('const parent = cityParentIso3(viewScope.id);');
+      expect(memo).toContain('if (countryScope === null || parent === countryScope.id) return viewScope;');
     });
 
     it('recomputes when any of its three inputs change', () => {
@@ -92,14 +109,21 @@ describe('CHECKPOINT A — the explicit scope actually reaches the ladder', () =
       expect(breadcrumbs).not.toContain('scope:');
     });
 
-    it('a user gesture clears the scope, returning to honest camera context', () => {
+    it('A2 — a user gesture does NOT clear the scope: panning is not deselecting', () => {
+      /*
+        CTO A2 ruling: *"Do not clear explicit geography selection merely because
+        the user pans or zooms the camera."* An earlier revision cleared it here,
+        which made an explicit selection survive only until the reader touched
+        the map. Examining the neighbourhood of a selected geography is ordinary
+        map use, not a request to change subject.
+      */
       const gesture = shell.slice(
         shell.indexOf('const onGesture = useCallback'),
         shell.indexOf('const [engineMinZoom'),
       );
 
-      expect(gesture).toContain('setViewScope(null);');
-      expect(gesture).toContain("dispatch({ kind: 'gesture', camera });");
+      expect(gesture).not.toContain('setViewScope');
+      expect(gesture).toContain("dispatch({ kind: 'gesture', camera })");
     });
 
     it('Reset World clears the scope as well as the selection — one button, both promises', () => {
@@ -130,6 +154,13 @@ describe('CHECKPOINT A — the explicit scope actually reaches the ladder', () =
 
       expect(clearCount).toBe(1);
       expect(resetBranch).toContain('setViewScope(null);');
+
+      /*
+        A2 — and it is the ONLY clear in the whole component. If a second one
+        appears anywhere, an explicit selection has gained a way to vanish
+        without a semantically explicit transition.
+      */
+      expect((shell.match(/setViewScope\(null\)/g) ?? []).length).toBe(1);
     });
   });
 

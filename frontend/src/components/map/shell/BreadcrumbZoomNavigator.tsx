@@ -104,7 +104,23 @@ export function BreadcrumbZoomNavigator({
     scale, not a generic stand-in for one.
   */
   const visibleRungs: { entry: BreadcrumbRung; name: string | null }[] = ladder
-    .map((entry) => ({ entry, name: rungName(entry.rung, place, entry.reached) }))
+    /*
+      A2 LIFECYCLE CORRECTION — A SELECTION IS SHOWN BECAUSE IT WAS SELECTED.
+
+      The zoom gate exists to stop the camera CLAIMING a place it has not
+      reached, and for camera-derived context it still does exactly that. But an
+      explicit scope is not a claim about the camera: the reader asked for
+      AFRICA, so zooming out past continent scale must not silently un-name it.
+
+      Passing `reached` as true when a scope exists is safe precisely because
+      `placeForScope` leaves every rung it does not determine as null, and a
+      null name is still dropped below. So a CONTINENT scope shows AFRICA and
+      nothing beneath it, at any zoom, with no country to invent.
+    */
+    .map((entry) => ({
+      entry,
+      name: rungName(entry.rung, place, entry.reached || scope !== null),
+    }))
     .filter(({ entry, name }) => name !== null || entry.rung === 'WORLD');
 
   return (

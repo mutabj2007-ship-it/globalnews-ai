@@ -280,6 +280,115 @@ describe('CHECKPOINT A — the camera may not redefine an explicit geography sel
     });
   });
 
+  /* ══ A2 LIFECYCLE CORRECTION — SELECTIONS SURVIVE CAMERA MANIPULATION ══ */
+  describe('A2 — an explicit selection survives ordinary pan and zoom', () => {
+    /*
+      CTO A2 ruling: *"Do not clear explicit geography selection merely because
+      the user pans or zooms the camera. AFRICA, EAST AFRICA, COUNTRY and CITY
+      selections must survive ordinary camera manipulation."*
+
+      A pan/zoom sequence is modelled as the camera actually moving — a drag
+      across continents and a zoom range from world scale to street scale. The
+      scope is held constant because the corrected lifecycle no longer clears it
+      on gesture; each test asserts the resolved geography never moves with the
+      camera.
+    */
+    const panAndZoomSequence: readonly CameraState[] = [
+      at(17, 1.24, 3),       // where it started
+      at(21, 6.6, 5),        // panned onto Central African Republic
+      at(19, 15.4, 6),       // panned onto Chad
+      at(-58, -12, 4),       // panned to another continent entirely
+      at(-150, 5, 9),        // panned to open ocean, zoomed in
+      at(30.06, -1.94, 11),  // zoomed to street scale over Kigali
+      at(0, 0, 0.5),         // zoomed all the way out, below continent scale
+    ];
+
+    const stableAcross = (scope: GeographyScope) =>
+      panAndZoomSequence.map((camera) => resolveLadderPlace(camera, scope));
+
+    it('A2-1 — select AFRICA, pan and zoom: still AFRICA, never an arbitrary country', () => {
+      const answers = stableAcross(AFRICA);
+
+      for (const answer of answers) {
+        expect(answer.continent).toBe('Africa');
+        expect(answer.country).toBeNull();
+        expect(answer.countryIso3).toBeNull();
+        expect(answer.city).toBeNull();
+      }
+    });
+
+    it('A2-2 — select EAST AFRICA, pan over Chad and CAF: still EAST AFRICA', () => {
+      const answers = stableAcross(EAST_AFRICA);
+
+      for (const answer of answers) {
+        expect(answer.subregion).toBe('East Africa');
+        expect(answer.continent).toBe('Africa');
+        expect(answer.country).toBeNull();
+      }
+    });
+
+    it('A2-3 — select Poland, pan and zoom: the selected intelligence geography remains Poland', () => {
+      const answers = stableAcross(POLAND);
+
+      for (const answer of answers) {
+        expect(answer.country).toBe('Poland');
+        expect(answer.countryIso3).toBe('POL');
+        expect(answer.continent).toBe('Europe');
+      }
+    });
+
+    it('A2-4 — select Kigali, manipulate the camera: CITY identity does not collapse into the camera-centre country', () => {
+      const answers = stableAcross(KIGALI);
+
+      for (const answer of answers) {
+        expect(answer.city).toBe('Kigali');
+        expect(answer.country).toBe('Rwanda');
+        expect(answer.countryIso3).toBe('RWA');
+      }
+    });
+
+    it('A2-5 — Reset World clears explicit geography: a null scope returns camera context', () => {
+      /*
+        Reset World sets the scope to null. That is what makes the ladder go
+        back to describing the camera, and it must be EXACTLY the old behaviour
+        so that "Reset World still works" means what it used to mean.
+      */
+      for (const camera of panAndZoomSequence) {
+        expect(resolveLadderPlace(camera, null)).toEqual(resolveCameraPlace(camera));
+      }
+    });
+
+    it('A2-6 — Previous View restores explicit geography and camera coherently', () => {
+      /*
+        Previous View restores a camera from history and does NOT clear the
+        scope (asserted in the wiring suite). Coherent therefore means: the
+        restored pair names the selected geography, not the restored camera.
+        Walking back through several cameras must not change the answer.
+      */
+      const walkBack = [...panAndZoomSequence].reverse();
+
+      for (const scope of [AFRICA, EAST_AFRICA, POLAND, KIGALI]) {
+        const answers = walkBack.map((camera) => resolveLadderPlace(camera, scope));
+
+        for (const answer of answers) expect(answer).toEqual(answers[0]);
+      }
+    });
+
+    it('A2-7 — a scoped rung is not zoom-gated, so zooming out does not un-name the selection', () => {
+      /*
+        `rungName` drops a rung the camera has not reached. The navigator now
+        passes reached=true when a scope exists, because the gate exists to stop
+        the CAMERA claiming a place — not to stop the ladder naming what the
+        reader explicitly chose. At zoom 0.5 the CONTINENT rung is unreached.
+      */
+      const zoomedOut = resolveLadderPlace(at(0, 0, 0.5), AFRICA);
+
+      expect(rungName('CONTINENT', zoomedOut, false)).toBeNull();
+      expect(rungName('CONTINENT', zoomedOut, true)).toBe('Africa');
+      expect(rungName('COUNTRY', zoomedOut, true)).toBeNull();
+    });
+  });
+
   /* ── THE RULING'S EXPLICIT PROHIBITION ────────────────────────────────── */
   describe('NO SPECIAL-CASING — the defect class is removed, not two of its symptoms', () => {
     const source = readFileSync(join(__dirname, 'geographyScope.ts'), 'utf-8');

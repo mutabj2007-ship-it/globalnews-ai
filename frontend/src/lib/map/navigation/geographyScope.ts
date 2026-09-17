@@ -76,18 +76,39 @@ import {
  * Membership is READ here and never written. `declaredProductRegions.ts`
  * remains the only place a member list may exist.
  *
- * ─── WHAT THIS DELIBERATELY DOES NOT DO ───────────────────────────────────
+ * ─── THE ZOOM GATE, AND WHY A SCOPE IS ALLOWED PAST IT ────────────────────
  *
- * It does not decide WHICH rungs are visible. `breadcrumbLadder()` still does
- * that from zoom alone, and `rungName()` still refuses to name a rung the
- * camera has not reached. So the original "you are in Rwanda while the camera
- * is over the Pacific" lie remains impossible: this module changes what a
- * REACHED rung is called, never whether it is shown.
+ * `breadcrumbLadder()` still derives WHICH rungs exist from zoom alone, and for
+ * CAMERA-DERIVED context `rungName()` still refuses to name a rung the camera
+ * has not reached. That is what keeps the original "you are in Rwanda while the
+ * camera is over the Pacific" lie impossible, and it is untouched.
  *
- * It is not an intelligence selection either. A scope is the SELECTED
- * INTELLIGENCE GEOGRAPHY as the ladder must describe it; `MapSelection`
- * remains what makes an evidence claim, and a CONTINENT or SUBREGION scope
- * still carries no evidence claim at all.
+ * A SCOPED rung is not subject to that gate, and the distinction is the whole
+ * point. The gate exists to stop the CAMERA claiming a place it has not
+ * reached. A scope is not a claim about the camera — it is what the reader
+ * asked for — so zooming out past continent scale must not silently un-name
+ * AFRICA. Letting a scope past the gate is safe because `placeForScope` leaves
+ * every rung it does not determine as null, and a null name is dropped by the
+ * navigator regardless: a CONTINENT scope shows AFRICA and nothing beneath it,
+ * at any zoom, with no country available to invent.
+ *
+ * ─── A SCOPE IS NOT AN INTELLIGENCE SELECTION ─────────────────────────────
+ *
+ * A scope is the SELECTED INTELLIGENCE GEOGRAPHY as the ladder must describe
+ * it. `MapSelection` remains what makes an evidence claim, and a CONTINENT or
+ * SUBREGION scope still carries no evidence claim at all.
+ *
+ * ─── LIFECYCLE (A2 CORRECTION) ────────────────────────────────────────────
+ *
+ * CTO ruling: *"Do not clear explicit geography selection merely because the
+ * user pans or zooms the camera."* An earlier revision cleared the scope on any
+ * gesture, which confused MOVING THE VIEW with CHANGING THE SUBJECT — examining
+ * the neighbourhood of a selected geography is the most ordinary thing a reader
+ * does on a map, and it is not a request to stop looking at that geography.
+ *
+ * The scope survives ordinary camera manipulation and is replaced or cleared
+ * only by a semantically explicit transition: another geography selection, or
+ * Reset World.
  */
 
 /**
@@ -189,6 +210,15 @@ function placeForCountry(iso3: string): ResolvedPlace {
  * without the city identity collapsing into whatever country the camera is
  * centred on.
  */
+export function cityParentIso3(id: string): string | null {
+  const wanted = normalise(id);
+  const seed = REFERENCE_PLACE_SEEDS.find(
+    (place) => place.kind === 'city' && normalise(place.name) === wanted,
+  );
+
+  return seed?.iso3 ?? null;
+}
+
 function placeForCity(id: string): ResolvedPlace {
   const wanted = normalise(id);
   const seed = REFERENCE_PLACE_SEEDS.find(
