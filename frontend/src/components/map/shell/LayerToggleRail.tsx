@@ -173,7 +173,21 @@ export function LayerToggleRail({
               type="button"
               role="switch"
               aria-checked={on}
-              disabled={!layer.available}
+              /*
+                E-2 — THE SAME DEFECT THE MODE CHIPS HAD, IN THE SAME CHECKPOINT.
+
+                This carried the HTML `disabled` attribute, which removes the
+                control from the tab order and denies it pointer events. The
+                reason below travels on `aria-label` and `title` — and a
+                KEYBOARD user could never focus the control to hear it, while a
+                TOUCH user had no hover with which to summon it. The explanation
+                existed in the markup and was unreachable in the product.
+
+                `aria-disabled` keeps the control focusable so its reason can be
+                read; the click handler still refuses to toggle an unbuilt layer,
+                so nothing becomes switchable that has no data behind it.
+              */
+              aria-disabled={!layer.available || undefined}
               data-gn="layer-toggle"
               data-gn-layer={layer.id}
               data-gn-class={layer.class}
@@ -189,6 +203,7 @@ export function LayerToggleRail({
               aria-label={reason ? `${labels.layers[layer.id] ?? layer.id} — ${reason}` : (labels.layers[layer.id] ?? layer.id)}
               title={reason ? `${labels.layers[layer.id] ?? layer.id} — ${reason}` : (labels.layers[layer.id] ?? layer.id)}
               onClick={() => {
+                /* Unbuilt stays unbuilt — the refusal is unchanged, only reachable. */
                 if (!layer.available) return;
                 onToggle(layer.id, !on);
               }}

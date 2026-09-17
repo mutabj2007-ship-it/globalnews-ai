@@ -155,7 +155,23 @@ describe('E-1 — mode availability carries a reason', () => {
     });
 
     it('a disabled mode still does not act on click', () => {
-      expect(switcher).toContain('if (disabled) return;');
+      /*
+        E-2 changed HOW the refusal is expressed, not WHETHER there is one. The
+        handler still returns before `onModeChange`, so no unbuilt mode can be
+        entered; it now records the reason on its way out.
+
+        Both halves are asserted, because losing either is a regression: without
+        the return an unbuilt mode becomes enterable, and without the record the
+        refusal goes silent again for every reader who is not hovering a mouse.
+      */
+      expect(switcher).toMatch(
+        /if \(disabled\) \{\s*setRequestedReason\(disabledReason \?\? null\);\s*return;\s*\}/,
+      );
+    });
+
+    it('and a successful mode change clears the refusal', () => {
+      /* The reason describes a refusal; once the mode changes there is none. */
+      expect(switcher).toMatch(/setRequestedReason\(null\);\s*onModeChange\(mode\);/);
     });
 
     it('the beta marker is still rendered', () => {
