@@ -203,7 +203,7 @@ export function cityAt(lon: number, lat: number, zoom: number): string | null {
  * country, the FIRST declared one wins — the table's order is itself a
  * governed decision, so this function does not invent a tie-break of its own.
  */
-function declaredRegionFor(iso3: string): string | null {
+export function declaredRegionFor(iso3: string): string | null {
   for (const region of DECLARED_PRODUCT_REGIONS) {
     /*
       `membersFor` returns an EMPTY LIST, not null, for a BACKEND_PUBLISHED

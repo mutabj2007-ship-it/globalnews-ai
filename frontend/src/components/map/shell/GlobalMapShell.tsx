@@ -68,6 +68,10 @@ import { readBasemapConfiguration } from '@/lib/map/basemap/basemapSource';
 import { EvidenceLegend } from './EvidenceLegend';
 import { PlaceSearch } from './PlaceSearch';
 import { BreadcrumbZoomNavigator } from './BreadcrumbZoomNavigator';
+import {
+  scopeForJumpTarget,
+  type GeographyScope,
+} from '@/lib/map/navigation/geographyScope';
 import { IntelligenceRightRail } from './IntelligenceRightRail';
 import { EvidenceSelectionCard, type FollowRelationship } from './EvidenceSelectionCard';
 import { ContextSummaryPanel } from './ContextSummaryPanel';
@@ -356,6 +360,27 @@ export function GlobalMapShell({
   const [session, dispatch] = useReducer(cameraReducer, initialCamera, initialCameraSession);
 
   /*
+    ── CHECKPOINT A · THE EXPLICIT VIEW SCOPE ───────────────────────────────
+
+    CTO ruling: *"explicit user geography selection is authoritative; camera
+    state must not redefine it."*
+
+    This is the SELECTED INTELLIGENCE GEOGRAPHY as the ladder must describe it,
+    and it is deliberately NOT a `MapSelection`: a continent or a subregion
+    makes no evidence claim, so putting one in `selection` would hand the rail
+    an aggregate RSC-1 refuses. Keeping the two apart is the distinction the
+    ruling asks for, expressed as two pieces of state rather than one overloaded
+    one.
+
+    It is CLEARED BY A USER GESTURE, and that is the "when appropriate" the
+    ruling preserves: once the reader drags away from the place they chose, they
+    are navigating freely and camera context is the honest answer again. It is
+    NOT cleared by Previous View or a control move, so walking back out of a
+    jump restores the scope that belongs to the view being restored.
+  */
+  const [viewScope, setViewScope] = useState<GeographyScope | null>(null);
+
+  /*
     ── RESET WORLD HAS TWO PROMISES, AND BOTH MUST REACH THE ROUTE ──────────
 
     Part I §C: "Reset world returns to the global view AND CLEARS THE
@@ -371,13 +396,27 @@ export function GlobalMapShell({
   */
   const onIntent = useCallback(
     (intent: CameraIntent) => {
-      if (intent.kind === 'reset-world') onSelectionChange?.(null);
+      if (intent.kind === 'reset-world') {
+        onSelectionChange?.(null);
+        /* Part I §C: Reset World clears the selection. A scope is a selection. */
+        setViewScope(null);
+      }
 
       dispatch(intent);
     },
     [onSelectionChange],
   );
-  const onGesture = useCallback((camera: CameraState) => dispatch({ kind: 'gesture', camera }), []);
+  const onGesture = useCallback((camera: CameraState) => {
+    /*
+      DRAGGING AWAY FROM A CHOSEN PLACE IS LEAVING IT. The scope described a
+      place the reader asked for; once they pan or zoom by hand the camera is
+      once again the only thing that knows where they are, so context returns
+      to `resolveCameraPlace`. Without this the ladder would keep naming
+      AFRICA while the reader had dragged to South America.
+    */
+    setViewScope(null);
+    dispatch({ kind: 'gesture', camera });
+  }, []);
 
   /*
     PO-1/PO-3 — THE ENGINE'S REAL ZOOM FLOOR.
@@ -468,6 +507,37 @@ export function GlobalMapShell({
   */
   const selectionToken = selection === null ? (selectedIso3 ?? null) : selection.id;
 
+  /*
+    ── CHECKPOINT A · THE SCOPE THE LADDER ACTUALLY DESCRIBES ───────────────
+
+    PRECEDENCE, AND WHY IT IS THIS WAY ROUND:
+
+      1  a COUNTRY selection, from ANY path — map click, search, context panel
+         or a validation-state jump. This is the strongest statement the reader
+         can make about geography, so nothing may override it. It is read from
+         `selection` rather than from the jump, so that a country CLICKED on
+         the map names itself on the ladder too, not only a country jumped to.
+      2  `selectedIso3`, the same fact arriving by the other route channel.
+      3  the explicit view scope from a CONTINENT / SUBREGION / CITY jump.
+      4  null — free navigation, and ONLY here may the camera name the place.
+
+    A REGION selection deliberately falls through to case 3. Its id is the
+    canonical geographyId namespace (`region:eastern-africa`), which is not the
+    declared-product-region namespace (`region:east-africa`), and inventing a
+    mapping between them is exactly the inference this checkpoint removes.
+  */
+  const ladderScope = useMemo<GeographyScope | null>(() => {
+    if (selection !== null && selection.kind === 'COUNTRY') {
+      return { rung: 'COUNTRY', id: selection.id };
+    }
+
+    if (selection === null && typeof selectedIso3 === 'string' && selectedIso3.length > 0) {
+      return { rung: 'COUNTRY', id: selectedIso3 };
+    }
+
+    return viewScope;
+  }, [selection, selectedIso3, viewScope]);
+
   useEffect(() => {
     dispatch({ kind: 'selection', selection: selectionToken });
   }, [selectionToken]);
@@ -546,6 +616,14 @@ export function GlobalMapShell({
 
   const onJump = useCallback(
     (target: JumpTarget) => {
+      /*
+        CHECKPOINT A — RECORD WHAT WAS CHOSEN, BEFORE ANYTHING MOVES.
+        `scopeForJumpTarget` reads the EXISTING target; no jump definition is
+        modified, per the CTO ruling that the bounds-only AFRICA and EAST
+        AFRICA entries are correct as they stand.
+      */
+      setViewScope(scopeForJumpTarget(target));
+
       /*
         ══ C911-V2 — A JUMP MOVES THE CAMERA *AND* THE SELECTION ═══════════
 
@@ -1533,6 +1611,7 @@ export function GlobalMapShell({
           <div data-gn-hud-reserve className={`${HUD_ISLAND} absolute left-[12px] top-[12px] z-20`}>
             <BreadcrumbZoomNavigator
               camera={session.camera}
+              scope={ladderScope}
               onJump={onJump}
               labels={spatial.breadcrumbs}
             />

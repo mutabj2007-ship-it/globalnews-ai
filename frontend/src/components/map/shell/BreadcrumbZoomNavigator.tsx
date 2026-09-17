@@ -9,7 +9,11 @@ import {
 } from '@/lib/map/navigation/breadcrumbs';
 import type { CameraState } from '@/lib/map/camera/cameraState';
 import { BAND_ACTIVE, BAND_AVAILABLE } from '@/lib/map/spatial/controlBands';
-import { resolveCameraPlace, rungName } from '@/lib/map/navigation/resolvedLadder';
+import { rungName } from '@/lib/map/navigation/resolvedLadder';
+import {
+  resolveLadderPlace,
+  type GeographyScope,
+} from '@/lib/map/navigation/geographyScope';
 
 /**
  * SPATIAL M2 — THE BREADCRUMB SCALE LADDER, FROM DESIGN PART I §E.
@@ -54,6 +58,15 @@ export interface BreadcrumbLabels {
 
 export interface BreadcrumbZoomNavigatorProps {
   readonly camera: CameraState;
+  /**
+   * CHECKPOINT A — THE EXPLICIT GEOGRAPHY SELECTION, WHICH OUTRANKS THE CAMERA.
+   *
+   * `null` means the reader is navigating freely and the camera may supply
+   * view context. A scope means they explicitly chose a place, and a camera
+   * centre may not rename it — see `geographyScope.ts` for why that inversion
+   * was the defect.
+   */
+  readonly scope?: GeographyScope | null;
   readonly onJump: (target: JumpTarget) => void;
   readonly labels: BreadcrumbLabels;
   readonly targets?: readonly JumpTarget[];
@@ -62,6 +75,7 @@ export interface BreadcrumbZoomNavigatorProps {
 
 export function BreadcrumbZoomNavigator({
   camera,
+  scope = null,
   onJump,
   labels,
   targets = DEPLOYMENT_JUMP_TARGETS,
@@ -80,7 +94,7 @@ export function BreadcrumbZoomNavigator({
     impossible, because a name is only ever printed for a place the camera is
     measurably inside.
   */
-  const place = resolveCameraPlace(camera);
+  const place = resolveLadderPlace(camera, scope);
 
   /*
     PO RULING C — a rung with no resolved place is DROPPED, not relabelled.
