@@ -77,6 +77,17 @@ export const COUNTRY_RETRIEVAL_REASONS: readonly CountryRetrievalReason[] = [
  */
 export const FORBIDDEN_RETRIEVAL_TRIGGERS: readonly string[] = [
   'REGION_SELECTION',
+  /*
+    CITY_SELECTION joins the prohibition alongside the CITY selection kind.
+
+    §11 makes it a release gate — "zero executing-provider calls for CITY
+    selection" — and it is also the honest outcome. The evidence ceiling is
+    COUNTRY, so retrieving Rwanda's articles because a reader looked at Kigali
+    would spend a provider call on a country they did not choose, and then show
+    the result under the city's name. The city card NAMES Rwanda as the
+    evidence geography instead; naming is not retrieving.
+  */
+  'CITY_SELECTION',
   'CAMERA_MOTION',
   'MAP_CENTERING',
   'HYDRATION',

@@ -39,15 +39,26 @@ describe('R2 · only a deliberate country action may authorize retrieval', () =>
 
   it('EVERY forbidden trigger is inadmissible', () => {
     /*
-      The ruling's list, asserted rather than assumed. Region selection, camera
-      motion, map centering, hydration, URL reconciliation, breadcrumb
-      reconstruction, zoom, pan and positional geography.
+      The ruling's list, asserted rather than assumed. Region selection, CITY
+      selection, camera motion, map centering, hydration, URL reconciliation,
+      breadcrumb reconstruction, zoom, pan and positional geography.
+
+      CITY_SELECTION arrived with the CITY selection kind: §11 of the map
+      convergence ruling makes "zero executing-provider calls for CITY
+      selection" a release gate, and the evidence ceiling stays at COUNTRY, so
+      retrieving Rwanda because a reader looked at Kigali would spend a call on
+      a country they never chose.
+
+      The count moves 9 -> 10 with it, and it stays pinned for the reason it
+      always was: a trigger must not be able to leave this list quietly.
+      Growing it is a deliberate act; shrinking it fails here.
     */
     for (const trigger of FORBIDDEN_RETRIEVAL_TRIGGERS) {
       expect(isCountryRetrievalReason(trigger)).toBe(false);
     }
 
-    expect(FORBIDDEN_RETRIEVAL_TRIGGERS).toHaveLength(9);
+    expect(FORBIDDEN_RETRIEVAL_TRIGGERS).toContain('CITY_SELECTION');
+    expect(FORBIDDEN_RETRIEVAL_TRIGGERS).toHaveLength(10);
   });
 
   it('and the two sets cannot overlap', () => {
