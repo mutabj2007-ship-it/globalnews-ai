@@ -135,16 +135,41 @@ export function worldCameraForPane(paneWidth: number, paneHeight: number): Camer
 /**
  * Does this camera ask for the world view?
  *
- * Compares the CENTRE only, and deliberately. `WORLD_CAMERA.zoom` is a
- * constant the state layer still carries, but the zoom the engine should use
- * for it depends on the pane — so the question "is this a reset to world" must
- * not be asked about the zoom, or a reset would stop being recognised the
- * moment it was correctly reframed.
+ * ── MAP-ZOOM-IN-CONTROL-1 · WHY THE ZOOM IS NOW PART OF THE QUESTION ──────
+ *
+ * This compared the CENTRE ONLY, and the note that stood here explained why:
+ * *"the zoom the engine should use for it depends on the pane — so the question
+ * must not be asked about the zoom, or a reset would stop being recognised the
+ * moment it was correctly reframed."*
+ *
+ * The reasoning was sound; the consequence was not. `EvidenceMapCanvas` uses
+ * this predicate to REPLACE the requested zoom with the pane's framing floor,
+ * so centre-only matching meant that **every** camera centred on the golden
+ * world centre had its zoom overwritten — including one the reader had just
+ * asked for by pressing `+`.
+ *
+ * Measured: at the world view `+` produced `zoom + ZOOM_STEP` in the reducer,
+ * this predicate returned true, the engine was told the floor instead,
+ * `moveend` committed the floor, and the URL went back to where it started.
+ * Two presses, same floor. The control looked enabled and did nothing, while
+ * the identical control worked away from the world centre — which is what
+ * localised the fault here rather than in the handler or the HUD isolation.
+ *
+ * A RESET IS STILL RECOGNISED, because a reset is dispatched as the canonical
+ * `WORLD_CAMERA` and therefore carries `WORLD_CAMERA.zoom` exactly.
+ *
+ * AND A REFRAMED RESET STILL BEHAVES. Once framing has been applied the
+ * committed camera carries the floor zoom and no longer matches — so the
+ * substitution does not fire on the re-application, and the camera is applied
+ * with its own zoom, which IS the floor. The same frame, arrived at honestly.
+ * Resize is unaffected: `EvidenceMapCanvas` preserves centre and zoom on every
+ * later resize and never re-frames through this predicate.
  */
 export function isWorldCameraRequest(camera: CameraState): boolean {
   return (
     Math.abs(camera.center[0] - WORLD_CAMERA.center[0]) < 1e-4 &&
     Math.abs(camera.center[1] - WORLD_CAMERA.center[1]) < 1e-4 &&
+    Math.abs(camera.zoom - WORLD_CAMERA.zoom) < 1e-9 &&
     camera.bearing === WORLD_CAMERA.bearing &&
     camera.pitch === WORLD_CAMERA.pitch
   );

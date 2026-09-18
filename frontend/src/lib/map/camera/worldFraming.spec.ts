@@ -104,10 +104,49 @@ describe('4 · RESET WORLD lands on the golden composition', () => {
     expect(framed.zoom).toBe(effectiveMinZoom(1016, 700));
   });
 
-  it('recognises a reset by its CENTRE, so a correctly reframed reset is still a reset', () => {
-    expect(isWorldCameraRequest({ ...WORLD_CAMERA, zoom: 4.2 })).toBe(true);
+  it('recognises a reset by the CANONICAL world camera, zoom included', () => {
+    /*
+      ── MAP-ZOOM-IN-CONTROL-1 · THIS ASSERTION USED TO LOCK THE DEFECT IN ───
+
+      It read:
+
+          expect(isWorldCameraRequest({ ...WORLD_CAMERA, zoom: 4.2 })).toBe(true);
+
+      — a camera centred on the world at ANY zoom counted as "a reset". This
+      predicate decides whether `EvidenceMapCanvas` REPLACES the requested zoom
+      with the pane's framing floor, so that made every world-centred camera
+      unzoomable: pressing `+` at the world view produced a new zoom in the
+      reducer, had it overwritten with the floor at the engine boundary, and
+      committed back to where it started. The control looked enabled and did
+      nothing.
+
+      The behaviour the old test protected is kept and restated below: a reset
+      is dispatched as the canonical `WORLD_CAMERA` and still matches, while a
+      REFRAMED reset no longer needs to — it already carries the floor zoom, so
+      applying it unchanged produces exactly the same frame.
+    */
     expect(isWorldCameraRequest(WORLD_CAMERA)).toBe(true);
+
+    /* A reader-chosen zoom at the world centre is NOT a reset request. */
+    expect(isWorldCameraRequest({ ...WORLD_CAMERA, zoom: 4.2 })).toBe(false);
+    expect(isWorldCameraRequest({ ...WORLD_CAMERA, zoom: WORLD_CAMERA.zoom + 0.75 })).toBe(false);
+
+    /* Centre still governs: the right zoom elsewhere is still not a reset. */
     expect(isWorldCameraRequest({ ...WORLD_CAMERA, center: [30.06, -1.94] })).toBe(false);
+  });
+
+  it('a REFRAMED world camera applies its own zoom, and that is the same frame', () => {
+    /*
+      The case the old comment was worried about, made explicit. After framing,
+      the committed camera carries `effectiveMinZoom`. It no longer matches the
+      predicate — and it does not need to, because `framedZoom` falls through to
+      `target.zoom`, which is already the floor. Substituting or not substituting
+      produces an identical camera, so nothing regresses.
+    */
+    const framed = worldCameraForPane(1016, 700);
+
+    expect(framed.zoom).toBe(effectiveMinZoom(1016, 700));
+    expect(isWorldCameraRequest(framed)).toBe(framed.zoom === WORLD_CAMERA.zoom);
   });
 });
 
