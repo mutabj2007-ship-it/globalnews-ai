@@ -128,7 +128,30 @@ export function BreadcrumbZoomNavigator({
       data-gn="map-breadcrumbs"
       data-gn-hud=""
       aria-label={labels.group}
-      className={`flex max-w-[60%] flex-wrap items-center gap-[5px] ${className}`}
+      /*
+        ══ THE WIDTH CAP MOVED TO THE ISLAND — MAP-UPPER-LEFT-OVERLAP ════════
+
+        This was `max-w-[60%]`, and a percentage here was the wrong place for
+        the rule twice over.
+
+        IT WAS AMBIGUOUS. The parent is an absolutely positioned island with no
+        width of its own, so it shrink-wraps this element — and this element's
+        percentage then resolves against the width its own content produced.
+        That is circular, and browsers break the cycle by resolving against the
+        containing block instead, which is the CANVAS. So "60% of my parent"
+        silently meant "60% of the whole map".
+
+        IT COULD NOT SEE THE OTHER ISLAND. The top-right stack caps at 46% of
+        that same canvas. 60 + 46 is 106, before either gutter, so the two
+        overlapped by arithmetic rather than by timing — see the island's own
+        comment in `GlobalMapShell` for the measured figures.
+
+        `max-w-full` here, and the real cap on the island where it is stated
+        once against the canvas and can be reasoned about alongside its
+        opposite number. This element still wraps; it now wraps inside a box
+        that is guaranteed not to reach the other one.
+      */
+      className={`flex max-w-full flex-wrap items-center gap-[5px] ${className}`}
     >
       {/*
         THE SCALE LADDER — NOT LINKS. These are rungs, not destinations, and

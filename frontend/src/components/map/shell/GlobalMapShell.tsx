@@ -1931,8 +1931,46 @@ export function GlobalMapShell({
           map. `data-gn-hud-reserve` is untouched: the label placer still reads
           these rectangles to keep country labels out from under the HUD.
         */}
+        {/*
+          ══ THE TOP ROW IS TWO ISLANDS THAT MUST NOT MEET ═══════════════════
+
+          MAP-UPPER-LEFT-OVERLAP. The trail capped itself at 60% of the canvas
+          and the stack opposite caps at 46%. Nothing reconciled the two, and
+          106% does not fit in 100%:
+
+              FULL at a 1440 viewport   52px layer rail + 372px right rail
+                                        leaves a 1016px CANVAS
+              trail, at its cap         610px
+              stack, at its cap         467px
+              gutters                    24px
+              required                 1101px      OVERLAP 85px
+
+          It is worse in Polish, where the jump targets are longer words, and
+          it is worse again on a compact viewport, because BOTH caps are
+          percentages and shrink together while the chips inside them do not.
+
+          THE FIX IS TO MAKE THE TWO CAPS COMPLEMENTARY RATHER THAN TO SHRINK
+          ONE. 54% and 46% are the whole canvas, so each cap subtracts half of
+          the 36px that the two gutters and a 12px separation need:
+
+              left   calc(54% - 18px)
+              right  calc(46% - 18px)
+              sum    100% - 36px, inside a 100% - 24px box
+
+          That leaves a 12px gap AT EVERY WIDTH rather than at the one width
+          someone checked, which is what makes it a fix and not a tuning.
+
+          THE TRAIL WRAPS INTO THE SPACE IT HAS. It has always been
+          `flex-wrap`; it simply never had a boundary to wrap against. Chips
+          are `whitespace-nowrap` individually, so a narrow canvas produces
+          more rows rather than a broken word.
+        */}
         {hud.breadcrumbs && (
-          <div data-gn-hud-reserve className={`${HUD_ISLAND} absolute left-[12px] top-[12px] z-20`}>
+          <div
+            data-gn-hud-reserve
+            data-gn="map-upper-left-island"
+            className={`${HUD_ISLAND} absolute left-[12px] top-[12px] z-20 max-w-[calc(54%-18px)]`}
+          >
             <BreadcrumbZoomNavigator
               camera={session.camera}
               scope={ladderScope}
@@ -2006,7 +2044,14 @@ export function GlobalMapShell({
         {hud.interactive && (
         <div
           data-gn-hud-reserve
-          className={`${HUD_ISLAND} absolute right-[12px] top-[12px] z-20 flex max-w-[46%] flex-col items-end gap-[6px]`}
+          data-gn="map-upper-right-stack"
+          /*
+            THE OTHER HALF OF THE PAIR — see the upper-left island's comment.
+            46% was already the intent; the `- 18px` is this island's share of
+            the two gutters plus the 12px separation, so the two caps can be
+            added up and shown to fit.
+          */
+          className={`${HUD_ISLAND} absolute right-[12px] top-[12px] z-20 flex max-w-[calc(46%-18px)] flex-col items-end gap-[6px]`}
         >
           <div className="pointer-events-none w-full">
             <ChangeStrip
