@@ -144,6 +144,22 @@ export function PlaceSearch({
     listId,
     onCommit: (result) => {
       onSelectResult(result);
+      /*
+        ══ COMMITTING DISMISSES THE FIELD — MAP-SEARCH-DROPDOWN-DISMISSAL ════
+
+        `setOpen(false)` alone was not dismissal, and the reopen path is plain
+        in this component: `showList` is `open && query.trim().length > 0`, and
+        `onFocus` sets `open` back to true. A committed query therefore left
+        the list one focus event away from returning — over the map the commit
+        had just moved, and over the rail identity it had just established.
+
+        Committing a row ANSWERS the question the field was asking. The place
+        the reader chose is now named in the rail and in the breadcrumbs, so
+        the query has nothing left to say and the field is ready for the next
+        one. Escape still closes WITHOUT clearing, because that means the
+        opposite — see `onDismiss`.
+      */
+      setQuery('');
       setOpen(false);
     },
     onDismiss: () => setOpen(false),

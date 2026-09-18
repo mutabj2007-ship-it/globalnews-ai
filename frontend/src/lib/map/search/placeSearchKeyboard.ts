@@ -94,9 +94,29 @@ export interface PlaceSearchKeyboardOptions {
   readonly showList: boolean;
   /** The listbox's own id — option ids are derived from it, so they match. */
   readonly listId: string;
-  /** Commit a row. The SAME callback the row's own button calls. */
+  /**
+   * Commit a row. The SAME callback the row's own button calls.
+   *
+   * ── MAP-SEARCH-DROPDOWN-DISMISSAL ────────────────────────────────────────
+   *
+   * A COMMITTING CALLER MUST CLEAR ITS QUERY AS WELL AS CLOSING ITS LIST, and
+   * this hook cannot do it for them because the query is their state, not
+   * this hook's.
+   *
+   * Closing alone is not dismissal. Both fields compute `showList` as
+   * `open && query.trim().length > 0` and both reopen on focus, so a committed
+   * query that survives leaves the list one focus event away from covering the
+   * map the commit just moved. `placeSearchDismissal.spec.ts` asserts every
+   * caller does both, because there are two fields and a rule kept in two
+   * places is a rule that drifts.
+   */
   readonly onCommit: (result: PlaceResult) => void;
-  /** Close the list without erasing the query. */
+  /**
+   * Close the list WITHOUT erasing the query — the deliberate opposite of
+   * commit. Escape means "I did not mean to open this", and erasing what
+   * someone typed is the behaviour `onKeyDown` already calls `preventDefault`
+   * to stop the browser doing.
+   */
   readonly onDismiss: () => void;
 }
 

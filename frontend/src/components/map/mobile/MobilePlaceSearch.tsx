@@ -120,6 +120,19 @@ export function MobilePlaceSearch({
     listId,
     onCommit: (result) => {
       onSelectResult(result);
+      /*
+        MAP-SEARCH-DROPDOWN-DISMISSAL — the identical rule, and identical on
+        purpose. This field had the identical keyboard defect before the logic
+        was lifted into `usePlaceSearchKeyboard`, for the identical reason: a
+        behaviour kept in two components is a behaviour that drifts. The query
+        is each field's own state so the hook cannot clear it, and
+        `placeSearchDismissal.spec.ts` asserts BOTH call sites do.
+
+        It matters more here, not less: on a phone the dropdown covers most of
+        the map, so a list that returns on focus hides the place that was just
+        selected.
+      */
+      setQuery('');
       setOpen(false);
     },
     onDismiss: () => setOpen(false),
