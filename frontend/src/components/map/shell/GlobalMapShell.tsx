@@ -1724,6 +1724,36 @@ export function GlobalMapShell({
           layers={
             <LayersControl
               state={layers}
+              /*
+                ══ THE MISSING RENDER CONNECTION — MAP-GRID-CONTROL-1 AND
+                   MAP-COUNTRY-EVIDENCE-LAYER-TOGGLE-1, ONE CAUSE ═══════════
+
+                MEASURED LIVE: SIATKA WSPÓŁRZĘDNYCH did nothing, and DOWODY
+                KRAJOWE stayed OFF however many times it was clicked.
+
+                `LayersControl.onToggle` is OPTIONAL, and this call site never
+                passed it. The component then renders
+                `onClick={live && onToggle ? … : undefined}` — so every LIVE row
+                in this panel was an enabled-looking button, carrying
+                `aria-pressed`, wired to nothing. Not a disabled control and not
+                a gated capability: an interactive-looking control with no
+                handler, which is exactly the "dead handler / missing render
+                connection" case the ruling asks to be told apart from a genuine
+                dependency.
+
+                IT IS NOT DUPLICATE STATE, AND THAT SHAPES THE FIX. There has
+                only ever been ONE layer state — `layers`, held here and already
+                passed to this panel for display. The left rail has always
+                written to it through `onToggleLayer`. The panel could read and
+                could not write. Passing the SAME callback is what makes the two
+                controls one canonical state rather than two kept in step.
+
+                THE CAPABILITIES ARE REAL, so nothing here is faked. `graticule`
+                is generated client-side with no dataset and no request;
+                `countryEvidence` is backed by `/geo/map-feed`. Layers that are
+                NOT built stay disabled by `live` and keep their status badge.
+              */
+              onToggle={onToggleLayer}
               labels={{
                 title: shell.layersTitle,
                 layers: spatial.layers.layers,

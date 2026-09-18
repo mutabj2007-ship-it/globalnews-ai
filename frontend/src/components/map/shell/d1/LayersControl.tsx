@@ -84,9 +84,27 @@ export function LayersControl({ state, labels, onToggle, layers }: LayersControl
                     : 'flex min-h-[44px] w-full cursor-not-allowed items-center gap-2 px-1 text-left font-gn-mono text-[11px] uppercase tracking-[0.12em] text-[#54687f]'
                 }
               >
-                <span aria-hidden="true" className="inline-block h-[8px] w-[8px] shrink-0 rounded-[2px] border border-current">
-                  {on ? '' : ''}
-                </span>
+                {/*
+                  ══ MAP-COUNTRY-EVIDENCE-LAYER-TOGGLE-1 — THE STATE INDICATOR ══
+
+                  MEASURED LIVE: "DOWODY KRAJOWE clicked repeatedly — checkbox
+                  remained OFF." It was never going to look otherwise. This span
+                  rendered `{on ? '' : ''}` — two empty strings — inside a fixed
+                  8px outlined box, so the ON and OFF states produced
+                  BYTE-IDENTICAL markup. A reader could not have seen a change
+                  even once the click was wired, and neither could a screenshot.
+
+                  The box is FILLED when on and hollow when off. `aria-pressed`
+                  above was always correct; this is the visible half catching up
+                  to it, and `data-gn-layer-state` is what a probe can read.
+                */}
+                <span
+                  aria-hidden="true"
+                  data-gn-layer-state={live ? (on ? 'on' : 'off') : 'unavailable'}
+                  className={`inline-block h-[8px] w-[8px] shrink-0 rounded-[2px] border border-current ${
+                    on ? 'bg-current' : 'bg-transparent'
+                  }`}
+                />
                 <span className="min-w-0 truncate">{name}</span>
                 {live ? null : (
                   <span className="ml-auto shrink-0 rounded-[4px] border border-[#22303f] px-1 text-[10px] tracking-[0.1em]">
