@@ -50,8 +50,25 @@ export interface RegionCardLabels {
   readonly noDefinitionSelected: string;
   readonly evidenceScopeHeading: string;
   readonly evidenceScopeBody: string;
+  /**
+   * THE SUBNATIONAL VARIANT, AND IT IS NOT A STYLE CHOICE.
+   *
+   * `evidenceScopeBody` says evidence is retained per country and that this
+   * product does not add those together. Said about a province, which sits
+   * inside exactly ONE country, that sentence describes an arithmetic problem
+   * the reader does not have and never names the country they are actually
+   * being shown. This variant states the ceiling the way the city card does.
+   */
+  readonly evidenceScopeBodySubnational: string;
   readonly cameraHeld: string;
   readonly noBoundary: string;
+  /**
+   * `noBoundary` explains itself with "a member-country union is not a border",
+   * which is true of a supranational region and meaningless about a province.
+   * A subdivision needs the other half of the same honesty: the view IS framed
+   * from published bounds, and that frame is a camera target, not a border.
+   */
+  readonly noBoundarySubnational: string;
   readonly unresolvedHeading: string;
   readonly unresolvedBody: string;
   readonly clear: string;
@@ -65,8 +82,23 @@ export interface RegionIdentityCardProps {
    * state: the client fails soft and says what it has.
    */
   readonly region: RegionSelection | null;
-  /** Always present. The selection's id, shown verbatim when nothing resolved. */
+  /**
+   * Always present.
+   *
+   * Shown verbatim in the UNRESOLVED state, where the identifier is the only
+   * true thing there is to show. In the resolved state it is DIAGNOSTIC
+   * METADATA and nothing more: it rides on `data-gn-geography-id` so support
+   * and the regression suite can still read it, and it is not reader-facing
+   * copy. A resolved region is named, not spelled.
+   */
   readonly geographyId: string;
+  /**
+   * The evidence country's display name, for a SUBNATIONAL region. Resolved by
+   * the shell from `region.withinCountryIso3` against the same country registry
+   * the city card uses, so "Rwanda" is one name in one place. Absent for a
+   * supranational region, which has no single evidence country.
+   */
+  readonly withinCountryName?: string;
   readonly labels: RegionCardLabels;
   readonly onClearSelection?: () => void;
 }
@@ -81,6 +113,7 @@ const Row = ({ heading, children }: { heading: string; children: React.ReactNode
 export function RegionIdentityCard({
   region,
   geographyId,
+  withinCountryName,
   labels,
   onClearSelection,
 }: RegionIdentityCardProps) {
@@ -110,10 +143,20 @@ export function RegionIdentityCard({
   const capability = regionCapability(region);
 
   return (
+    /*
+      THE RAW ID, DEMOTED — MAP-KIGALI-REGION-RESOLUTION.
+
+      In the unresolved branch above the identifier is RENDERED, because it is
+      the only true thing available. Here it is an attribute: readable by
+      support and by the regression suite, never read by the reader. A resolved
+      region is named, not spelled.
+    */
     <div
       data-gn="region-card"
       data-gn-region-resolved="true"
       data-gn-region-type={region.regionType}
+      data-gn-region-scale={region.scale}
+      data-gn-geography-id={region.geographyId}
       data-gn-evidence-scope={REGIONAL_EVIDENCE_SCOPE}
       className="text-sp-ink"
     >
@@ -144,15 +187,49 @@ export function RegionIdentityCard({
         )}
       </Row>
 
-      <Row heading={labels.membersHeading}>
-        {/* `null` is UNKNOWN and renders as such. It is never printed as 0. */}
-        <p data-gn="region-members">
-          {region.memberCount === null ? labels.membersUnknown : String(region.memberCount)}
-        </p>
-      </Row>
+      {/*
+        MEMBERS IS A SUPRANATIONAL QUESTION, SO IT IS ASKED ONLY THERE.
+
+        The row counts member COUNTRIES. Measured on the live node, a province
+        carries `bounds.members: 2` — two SETTLEMENTS, which is how G derived
+        its bbox — so this row would not have rendered an empty state for
+        Kigali. It would have rendered "2", under a heading that means member
+        countries. `regionSelection.ts` refuses to carry that number at all and
+        the row is omitted here, which is the same treatment this card already
+        gives every other claim it cannot make.
+      */}
+      {region.scale === 'SUPRANATIONAL' && (
+        <Row heading={labels.membersHeading}>
+          {/* `null` is UNKNOWN and renders as such. It is never printed as 0. */}
+          <p data-gn="region-members">
+            {region.memberCount === null ? labels.membersUnknown : String(region.memberCount)}
+          </p>
+        </Row>
+      )}
 
       <Row heading={labels.evidenceScopeHeading}>
-        <p data-gn="region-evidence-scope">{labels.evidenceScopeBody}</p>
+        {/*
+          THE CEILING, NAMED — the same two facts the city card holds apart.
+
+              SELECTED SEMANTIC GEOGRAPHY   Kigali    REGION (province)
+              EVIDENCE GEOGRAPHY / CEILING  Rwanda    COUNTRY
+
+          A subnational selection does not lower the ceiling and does not raise
+          it. Naming the country here is what stops a reader from assuming the
+          figures elsewhere on the surface are the province's.
+        */}
+        {region.scale === 'SUBNATIONAL' ? (
+          <>
+            {withinCountryName !== undefined && (
+              <p data-gn="region-evidence-geography" className="text-sp-ink">
+                {withinCountryName}
+              </p>
+            )}
+            <p data-gn="region-evidence-scope">{labels.evidenceScopeBodySubnational}</p>
+          </>
+        ) : (
+          <p data-gn="region-evidence-scope">{labels.evidenceScopeBody}</p>
+        )}
       </Row>
 
       {/*
@@ -165,7 +242,7 @@ export function RegionIdentityCard({
         what happened rather than asserting a rule the reader did not experience.
       */}
       <p data-gn="region-no-boundary" className="mt-3 text-[11px] leading-[1.45] text-sp-ink-3">
-        {labels.noBoundary}
+        {region.scale === 'SUBNATIONAL' ? labels.noBoundarySubnational : labels.noBoundary}
       </p>
       {!capability.cameraTargetDerivable && (
         <p data-gn="region-camera-held" className="mt-1 text-[11px] leading-[1.45] text-sp-ink-3">

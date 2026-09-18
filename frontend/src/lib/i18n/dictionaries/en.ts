@@ -1814,6 +1814,8 @@ export const en = {
           OPERATIONAL: 'In common use \u00b7 membership is disputed',
           GOVERNED:
             'Product coverage region \u00b7 membership declared by GlobalNews AI for this deployment',
+          ADMINISTRATIVE:
+            'Administrative subdivision \u00b7 defined by the ISO 3166-2 standard',
           UNDEFINED: 'No definition is encoded for this region',
         },
         definitionHeading: 'Definition',
@@ -1823,10 +1825,14 @@ export const en = {
         evidenceScopeHeading: 'Evidence',
         evidenceScopeBody:
           'Regional scope, with no regional claim. Evidence is retained per country at its own precision, and this product does not add those together \u2014 a combined regional figure would have a precision nobody could state.',
+        evidenceScopeBodySubnational:
+          'This is the country the reporting is retained against. GlobalNews AI resolves evidence at country level, so the figures beside this selection are the country\u2019s and not this subdivision\u2019s.',
         cameraHeld:
           'The camera did not move, because no agreed extent is published for this region. The selection is still real.',
         noBoundary:
           'No regional boundary is drawn. A member-country union is not a border, and none is published here.',
+        noBoundarySubnational:
+          'No boundary is drawn for this subdivision. The view is framed from published bounds, which is a camera target and not a border.',
         unresolvedHeading: 'This region could not be resolved',
         unresolvedBody:
           'The geography service did not return this identifier, so nothing about it can be stated. The identifier is shown exactly as it arrived.',

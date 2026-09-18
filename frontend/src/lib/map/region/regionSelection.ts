@@ -1,7 +1,13 @@
 import {
   navigatorCameraTarget,
+  navigatorCountryIso3,
   type NavigatorPlace,
 } from '@/lib/api/geoNavigatorApi';
+import {
+  regionScaleFor,
+  subnationalExtentFor,
+  type RegionScale,
+} from '@/lib/map/geography/semanticGeography';
 import type { Bounds } from '@/lib/map/camera/cameraState';
 import {
   DECLARED_PRODUCT_REGION,
@@ -89,12 +95,23 @@ import {
  * false of one carrying an explicit member list.
  *
  * So this is a fifth type rather than the nearest wrong one.
+ *
+ * ADMINISTRATIVE joins it for the same reason — MAP-KIGALI-REGION-RESOLUTION.
+ *
+ * All five above describe a SUPRANATIONAL region: how an outside body, a
+ * standard, common usage or a Product Owner arrived at a set of member
+ * COUNTRIES. A province is none of those. `admittedBy` for `admin1:RW-01` is
+ * `iso3166-2`, which fell to the default arm, and the rail then told the reader
+ * "No definition is encoded for this region" about a subdivision that a
+ * published international standard defines by name. The fail-safe default was
+ * doing its job; the vocabulary simply had no word for this node.
  */
 export type RegionType =
   | 'INSTITUTIONAL'
   | 'STATISTICAL'
   | 'OPERATIONAL'
   | 'GOVERNED'
+  | 'ADMINISTRATIVE'
   | 'UNDEFINED';
 
 export const REGION_TYPES: readonly RegionType[] = [
@@ -102,6 +119,7 @@ export const REGION_TYPES: readonly RegionType[] = [
   'STATISTICAL',
   'OPERATIONAL',
   'GOVERNED',
+  'ADMINISTRATIVE',
   'UNDEFINED',
 ];
 
@@ -137,6 +155,15 @@ export function regionTypeFrom(admittedBy: string): RegionType {
       return 'STATISTICAL';
     case 'contested-membership':
       return 'OPERATIONAL';
+    /*
+      An ISO 3166-2 subdivision. It carries a published definition — the standard
+      itself — so the UNDEFINED arm stated the opposite of the truth about it.
+      This grants no capability the default arm withheld: membership is still
+      not enumerable and no boundary is still drawn. It only lets the card say
+      what the node is.
+    */
+    case 'iso3166-2':
+      return 'ADMINISTRATIVE';
     default:
       return 'UNDEFINED';
   }
@@ -158,6 +185,27 @@ export interface RegionSelection {
   readonly name: string;
   readonly regionType: RegionType;
   /**
+   * SUPRANATIONAL or SUBNATIONAL. Decides how the region may be framed and what
+   * the card is allowed to claim about it. Conflating the two is what let a
+   * province be asked how many member countries it has.
+   */
+  readonly scale: RegionScale;
+  /**
+   * THE EVIDENCE CEILING FOR A SUBNATIONAL REGION, and `null` for every
+   * supranational one.
+   *
+   * A province sits inside exactly one country, and that country is where
+   * evidence resolves — the same ceiling `CitySelection.countryIso3` carries
+   * and for the same reason. Read from G's published hierarchy via
+   * `navigatorCountryIso3`; nothing is parsed out of the geographyId, which the
+   * navigator contract calls opaque.
+   *
+   * `null` on a supranational region is a category statement, not a gap: a
+   * region spanning eleven countries has no single evidence country, which is
+   * exactly why `REGIONAL_EVIDENCE_SCOPE` exists.
+   */
+  readonly withinCountryIso3: string | null;
+  /**
    * The published basis, verbatim — G's `provenance.dataset`. For an
    * OPERATIONAL region this is the sentence that says WHY there is no agreed
    * membership, and rendering it is the difference between honest-and-empty and
@@ -177,36 +225,109 @@ export interface RegionSelection {
 }
 
 /**
- * A navigator node as a region selection, or `null` when it is not a region.
+ * A navigator node as a region selection, or `null` when it is not one.
  *
  * A country is selected through the existing evidence-geography path; routing
  * one through here would give a country a region's treatment — no highlight, no
- * evidence claim — which would be a regression dressed as a contract.
+ * evidence claim — which would be a regression dressed as a contract. A city
+ * goes to `citySelectionFrom`, which carries the ceiling. Both still return
+ * `null` here.
+ *
+ * ═══ SUBNATIONAL NODES RESOLVE TOO — MAP-KIGALI-REGION-RESOLUTION ═════════
+ *
+ * THE DEFECT WAS AN ASYMMETRY, NOT A MISSING FEATURE.
+ *
+ * The semantic-selection work gave a subnational search row a REGION identity,
+ * so committing "Kigali REGION" correctly produced `sel=region:admin1:RW-01`
+ * and the address was right. This function was left rejecting the very node
+ * that selection names:
+ *
+ *     if (place.kind !== 'region') return null;
+ *
+ * So the restore path asked for the node, GOT it, and threw it away. Measured
+ * against the deployed Alpha backend:
+ *
+ *     GET /geo/place?id=admin1:RW-01
+ *       found            true
+ *       name             "Kigali"
+ *       kind/precision   admin1 / PROVINCE
+ *       hierarchy        … country:RWA "Rwanda" RWA
+ *       bounds           published
+ *       admittedBy       iso3166-2   (dataset iso3166-2-db@2.3.11)
+ *
+ * Every field the rail needed was already in hand. What the reader saw was
+ * "Nie udało się rozpoznać tego regionu" over a raw identifier — the product
+ * holding the answer and reporting a failure.
+ *
+ * WHAT THE OLD GUARD WAS PROTECTING, AND WHY WIDENING IT IS SAFE. It kept the
+ * supranational contract honest: no confident frame around a region whose
+ * membership is disputed. That rule is about CONTESTED MEMBERSHIP, it is
+ * preserved below unchanged for supranational nodes, and it does not transfer
+ * to an ISO 3166-2 province — nobody disputes which province Kigali is, and G
+ * publishes its bounds.
+ *
+ * NOTHING IS MINTED. The id, the name, the bounds, the attribution and the
+ * parent country all arrive on the node G returned. `scale` is derived by
+ * `regionScaleFor`, the single place the ladder is classified.
  */
 export function regionSelectionFrom(place: NavigatorPlace): RegionSelection | null {
-  if (place.kind !== 'region') return null;
+  const scale = regionScaleFor(place.kind);
+
+  if (scale === null) return null;
 
   const regionType = regionTypeFrom(place.admittedBy);
+  const subnational = scale === 'SUBNATIONAL';
 
   return {
     geographyId: place.geographyId,
     name: place.name,
     regionType,
+    scale,
+    withinCountryIso3: subnational ? (navigatorCountryIso3(place) ?? null) : null,
     definition: place.datasetAttribution,
     /*
-      TWO INDEPENDENT GUARDS AGAINST ONE FAILURE.
+      TWO INDEPENDENT GUARDS AGAINST ONE FAILURE, FOR SUPRANATIONAL REGIONS.
 
       G does not publish bounds for a region with no agreed membership, and this
       refuses them anyway for OPERATIONAL and UNDEFINED. Duplicated on purpose:
       the failure — flying the camera to a confident frame around a region whose
       membership is disputed — is a claim the product would be making in the
       most persuasive medium it has, which is the map itself.
+
+      A SUBNATIONAL region is framed from its own published bounds, via
+      `subnationalExtentFor`, whose header carries the reasoning. That is not a
+      relaxation of the rule above: it is the rule stated by scale. And it still
+      invents nothing — a subdivision with no published bounds is not framed,
+      exactly as a contested supranational region is not.
     */
-    extent:
-      regionType === 'INSTITUTIONAL' || regionType === 'STATISTICAL'
+    extent: subnational
+      ? subnationalExtentFor(place)
+      : regionType === 'INSTITUTIONAL' || regionType === 'STATISTICAL'
         ? navigatorCameraTarget(place)
         : null,
-    memberCount: place.memberCount,
+    /*
+      MEMBER COUNT MEANS TWO DIFFERENT THINGS ON THE WIRE, AND ONLY ONE OF THEM
+      IS A MEMBERSHIP.
+
+      `memberCount` is read from `bounds.members`, and G publishes that field
+      for every node that has an extent. What it COUNTS is named alongside it in
+      `bounds.source`, and the two measured payloads differ:
+
+          region:eastern-africa   members 18   derived-from-member-country-extents
+          admin1:RW-01            members  2   derived-from-settlements
+
+      Eighteen is a membership: eighteen countries. Two is the number of
+      settlements G had coordinates for when it derived Kigali province's
+      bounding box. Passing the second through to a row headed "Members" would
+      not have rendered an empty state — it would have rendered the NUMBER 2,
+      under a heading that says member countries, about a province of Rwanda.
+
+      That is a fabricated figure, which is the one failure class this file's
+      header treats as unrecoverable. So membership is carried only where it is
+      a membership, and the card omits the row entirely for SUBNATIONAL rather
+      than printing "Not published" — see `RegionIdentityCard`.
+    */
+    memberCount: subnational ? null : place.memberCount,
     definitionId: null,
   };
 }
@@ -254,6 +375,9 @@ export function declaredRegionSelection(
     geographyId: declared.id,
     name: declared.label,
     regionType: 'GOVERNED',
+    /* A declared coverage region is a set of member countries, by definition. */
+    scale: 'SUPRANATIONAL',
+    withinCountryIso3: null,
     definition: `${declared.authority} (${declared.authorityVersion})`,
     extent,
     memberCount: declared.members === null ? null : declared.members.length,

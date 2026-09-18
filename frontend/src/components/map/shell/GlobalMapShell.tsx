@@ -1435,6 +1435,19 @@ export function GlobalMapShell({
           )
           }
           geographyId={selection.id}
+          /*
+            THE EVIDENCE COUNTRY FOR A SUBNATIONAL REGION, resolved exactly as
+            the city branch above resolves it — same registry, same fallback to
+            the code when the registry does not hold it. One name, one place.
+            `withinCountryIso3` is null for every supranational region, so this
+            is `undefined` there and the card renders the regional wording.
+          */
+          withinCountryName={
+            region?.withinCountryIso3
+              ? (COUNTRIES.find((candidate) => candidate.iso3 === region.withinCountryIso3)?.name ??
+                region.withinCountryIso3)
+              : undefined
+          }
           labels={spatial.region}
           onClearSelection={onSelectionChange ? () => onSelectionChange(null) : undefined}
         />

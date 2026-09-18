@@ -1512,6 +1512,8 @@ export const pl: Dictionary = {
           OPERATIONAL: 'W powszechnym u\u017cyciu \u00b7 cz\u0142onkostwo jest sporne',
           GOVERNED:
             'Regionalny zakres produktu \u00b7 cz\u0142onkostwo zadeklarowane przez GlobalNews AI dla tego wdro\u017cenia',
+          ADMINISTRATIVE:
+            'Jednostka administracyjna \u00b7 zdefiniowana przez norm\u0119 ISO 3166-2',
           UNDEFINED: 'Dla tego regionu nie zakodowano definicji',
         },
         definitionHeading: 'Definicja',
@@ -1521,10 +1523,14 @@ export const pl: Dictionary = {
         evidenceScopeHeading: 'Dowody',
         evidenceScopeBody:
           'Zakres regionalny, bez twierdze\u0144 o regionie. Dowody s\u0105 przechowywane dla poszczeg\u00f3lnych kraj\u00f3w z ich w\u0142asn\u0105 precyzj\u0105, a ten produkt ich nie sumuje \u2014 wsp\u00f3lna liczba regionalna mia\u0142aby precyzj\u0119, kt\u00f3rej nikt nie potrafi\u0142by okre\u015bli\u0107.',
+        evidenceScopeBodySubnational:
+          'To jest kraj, wzgl\u0119dem kt\u00f3rego przechowywane s\u0105 doniesienia. GlobalNews AI rozstrzyga dowody na poziomie kraju, wi\u0119c liczby obok tego wyboru nale\u017c\u0105 do kraju, a nie do tej jednostki.',
         cameraHeld:
           'Kamera nie zosta\u0142a przesuni\u0119ta, poniewa\u017c dla tego regionu nie opublikowano uzgodnionego zasi\u0119gu. Wyb\u00f3r pozostaje rzeczywisty.',
         noBoundary:
           'Nie rysujemy granicy regionu. Unia kraj\u00f3w cz\u0142onkowskich nie jest granic\u0105, a \u017cadna nie zosta\u0142a tu opublikowana.',
+        noBoundarySubnational:
+          'Nie rysujemy granicy tej jednostki. Kadr pochodzi z opublikowanych zasi\u0119g\u00f3w, kt\u00f3re s\u0105 celem kamery, a nie granic\u0105.',
         unresolvedHeading: 'Nie uda\u0142o si\u0119 rozpozna\u0107 tego regionu',
         unresolvedBody:
           'Us\u0142uga geograficzna nie zwr\u00f3ci\u0142a tego identyfikatora, wi\u0119c nie mo\u017cna nic o nim stwierdzi\u0107. Identyfikator pokazano dok\u0142adnie w takiej formie, w jakiej dotar\u0142.',
