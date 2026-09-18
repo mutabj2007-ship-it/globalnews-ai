@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { SupportTicketSummary } from '@globalnews-ai/shared';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
@@ -12,6 +12,7 @@ import { NewSupportRequestForm } from './NewSupportRequestForm';
 import { SupportThread } from './SupportThread';
 import { accountSignInUrl } from '@/lib/api/accountBase';
 import { SupportConversation } from './conversation/SupportConversation';
+import { createNoTransportAdapter } from '@/lib/support/conversation/noTransportAdapter';
 
 /*
   M-ALPHA-AUTH — the defect the user actually reported was here: signing in from
@@ -77,6 +78,13 @@ export function SupportScreen({
   */
   const [showTickets, setShowTickets] = useState(false);
 
+  /*
+    Built once per mount. The adapter is stateless, but `SupportConversation`
+    subscribes to `onOperatorTurn` keyed on its identity, and a new object every
+    render would re-subscribe on every render.
+  */
+  const conversationAdapter = useMemo(() => createNoTransportAdapter(), []);
+
   // A null path means "do not fetch": there is no session, or the reader has
   // not asked for their earlier requests, so there is nothing to load and
   // nothing worth a 401.
@@ -136,7 +144,29 @@ export function SupportScreen({
               the server must also hold — the browser's gate is a courtesy, the
               route guard is the control.
             */}
-            {user && <SupportConversation t={t} locale={language} />}
+            {/*
+              ALPHA-VISUAL-SUPPORT-FIXTURE-ISOLATION-R2 — THE LIVE ADAPTER,
+              NAMED HERE.
+
+              This line used to be `<SupportConversation t={t} locale={language} />`
+              and the missing prop is what made the defect. `SupportConversation`
+              defaulted the adapter to `createMockConversationAdapter()`, so the
+              live surface answered from checked-in fixtures without any file in
+              the live path ever mentioning them. Both "Jak działa GlobalNews AI?"
+              and "How does GlobalNews AI work?" contain `news`, matched the
+              mock's ANALYSIS route, and came back as a fabricated news finding
+              citing two publishers that do not exist.
+
+              The adapter is now required and is written out here, which is the
+              point: the only implementation this file can reach is the one it
+              imports. Until a real grounded Support transport exists that is
+              `createNoTransportAdapter` — it answers every turn with F's one
+              approved WITHHELD text and reaches nothing. Swapping it for the
+              real transport is an edit to this line and to nothing else.
+            */}
+            {user && (
+              <SupportConversation t={t} locale={language} adapter={conversationAdapter} />
+            )}
 
             {user && (
               <>

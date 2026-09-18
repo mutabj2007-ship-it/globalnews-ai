@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SupportDictionary } from '@/lib/i18n/dictionaries/supportEn';
 import type { SupportConversationAdapter } from '@/lib/support/conversation/adapter';
-import { createMockConversationAdapter } from '@/lib/support/conversation/mockAdapter';
 import { project } from '@/lib/support/conversation/projection';
 import { advance, userMayWrite } from '@/lib/support/conversation/stateMachine';
 import {
@@ -22,11 +21,26 @@ import {
  * is — what a conversation BECOMES when it escalates.
  *
  * NOTHING HERE TALKS TO A BACKEND. Every behaviour below runs against
- * `SupportConversationAdapter`, and the implementation wired in by default is
- * the deterministic fixture set. There is no fetch, no provider, no
+ * `SupportConversationAdapter`. There is no fetch, no provider, no
  * `SUPPORT_AI_ENABLED`, and no invented route. When Main defines the real
- * contract, a second implementation of that interface replaces the mock and
- * this file does not change — which is the whole reason the seam exists.
+ * contract, a second implementation of that interface replaces the one the
+ * page passes in and this file does not change — the whole reason the seam
+ * exists.
+ *
+ * `adapter` IS REQUIRED, AND THAT IS THE SAFETY PROPERTY
+ * (ALPHA-VISUAL-SUPPORT-FIXTURE-ISOLATION-R2). It used to be optional and to
+ * fall back to `createMockConversationAdapter()`. A caller that forgot to pass
+ * one therefore did not fail — it silently served checked-in fixtures, which is
+ * exactly what the live `SupportScreen` did, and a live reader asking how the
+ * product works was answered with an invented news story citing publishers that
+ * do not exist. An omission must not be able to select an implementation.
+ *
+ * Every caller now names the adapter it wants, in code, and the compiler is
+ * what checks it. This file no longer imports the mock at all, so the fixture
+ * set is not reachable from here however the props are filled in. NODE_ENV is
+ * deliberately NOT the boundary: an environment flag is a runtime value a build
+ * can get wrong, and it leaves the fixtures in the production bundle either
+ * way. A required prop is a compile error and an absent import.
  *
  * THE STATE MACHINE IS NOT IN THIS FILE. `stateMachine.ts` owns the seven
  * states and refuses the three prohibited transitions; this component asks it
@@ -53,18 +67,18 @@ export interface SupportConversationProps {
   t: SupportDictionary;
   locale: 'en' | 'pl';
   /**
-   * Injected by tests and by the evidence harness. Production wiring uses the
-   * fixture adapter because the backend contract does not exist yet.
+   * REQUIRED. The live page passes `createNoTransportAdapter()`; tests, stories
+   * and the evidence harness pass `createMockConversationAdapter()` by writing
+   * its name. There is no default, so there is no implementation that can
+   * arrive by accident.
    */
-  adapter?: SupportConversationAdapter;
+  adapter: SupportConversationAdapter;
 }
 
 export function SupportConversation({ t, locale, adapter }: SupportConversationProps): JSX.Element {
   const c = t.conversation;
-  const resolvedAdapter = useMemo(
-    () => adapter ?? createMockConversationAdapter({ locale }),
-    [adapter, locale],
-  );
+  // No resolution step, and no `??`. The adapter is the one that was passed.
+  const resolvedAdapter = adapter;
 
   const [state, setState] = useState<ConversationState>('OPEN_AI');
   const [turns, setTurns] = useState<readonly Turn[]>([]);

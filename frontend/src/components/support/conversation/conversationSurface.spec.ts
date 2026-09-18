@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { createMockConversationAdapter } from '@/lib/support/conversation/mockAdapter';
 import { supportEn } from '@/lib/i18n/dictionaries/supportEn';
 import { supportPl } from '@/lib/i18n/dictionaries/supportPl';
 import type { Turn } from '@/lib/support/conversation/types';
@@ -31,9 +32,24 @@ const code = (path: string): string =>
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
     .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
+/*
+  ALPHA-VISUAL-SUPPORT-FIXTURE-ISOLATION-R2 — THE MOCK, IMPORTED ON PURPOSE.
+
+  `adapter` is now required, and this spec passes the FIXTURE adapter by name
+  because that is what these assertions are about: the fifteen reviewable UI
+  states the mock exists to reach. That is exactly the permitted case — a test
+  may reach the fixtures deliberately. What may not happen is a LIVE file
+  reaching them, and `fixtureIsolation.spec.ts` is the gate for that, reasoning
+  over the import graph from `app/support/page.tsx` rather than over the
+  repository, so this import does not and must not trip it.
+*/
 function renderSurface(locale: 'en' | 'pl'): string {
   return renderToStaticMarkup(
-    createElement(SupportConversation, { t: locale === 'pl' ? supportPl : supportEn, locale }),
+    createElement(SupportConversation, {
+      t: locale === 'pl' ? supportPl : supportEn,
+      locale,
+      adapter: createMockConversationAdapter({ locale, thinkMs: 0 }),
+    }),
   );
 }
 
@@ -253,8 +269,24 @@ describe('the surface makes no network call, and reaches no flag', () => {
     }
   });
 
-  it('the default adapter is the fixture adapter, named as such', () => {
-    expect(code(join(HERE, 'SupportConversation.tsx'))).toContain('createMockConversationAdapter');
+  /*
+    ALPHA-VISUAL-SUPPORT-FIXTURE-ISOLATION-R2 §1 — THIS ASSERTION IS INVERTED,
+    AND THE INVERSION IS THE CORRECTION.
+
+    It used to read "the default adapter is the fixture adapter, named as such"
+    and it passed, because the surface defaulted to
+    `createMockConversationAdapter()` when no adapter was passed — which the
+    live `SupportScreen` never did. The test was therefore GUARDING the defect:
+    it asserted that the live component knew the mock's name. The CTO ruling
+    makes the opposite the requirement, so the requirement is written as the
+    opposite here rather than deleted.
+  */
+  it('§1 — the surface has NO default adapter and does not know the mock exists', () => {
+    const source = code(join(HERE, 'SupportConversation.tsx'));
+    expect(source).not.toContain('createMockConversationAdapter');
+    expect(source).not.toContain('mockAdapter');
+    expect(source).toContain('adapter: SupportConversationAdapter');
+    expect(source).not.toMatch(/adapter\s*\?\?/);
   });
 
   it('POSITIVE CONTROL — the network guard fires', () => {
