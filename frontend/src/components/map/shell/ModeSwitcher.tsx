@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   LIVE_MAP_MODES,
@@ -116,6 +116,29 @@ export function ModeSwitcher({
   */
   const [requestedReason, setRequestedReason] = useState<string | null>(null);
 
+  /*
+    ══ MAP-BETA-STATUS-BANNER-PERSISTS-1 — THE REFUSAL OUTLIVED ITS MOMENT ══
+
+    MEASURED LIVE: clicking a Beta tab published "JESZCZE NIE ZBUDOWANE" and the
+    line then STAYED. The only thing that cleared it was clicking a different,
+    enabled mode — so panning, zooming, selecting a country or changing the
+    period all left a refusal on screen describing an interaction the reader had
+    long since moved on from.
+
+    A refusal describes A MOMENT. Two things end that moment, and both clear it:
+
+      · the active mode changes, however it changed — including from outside
+        this component, which the click handler alone could never see;
+      · focus leaves the mode row, which is the reader moving on.
+
+    WHAT IS NOT DONE: the line is not put on a timer. A status that vanishes
+    while it is being read, or before a screen reader reaches it, is worse than
+    one that stays — and a timer would be an invented duration nobody specified.
+  */
+  useEffect(() => {
+    setRequestedReason(null);
+  }, [active]);
+
   return (
     <div data-gn="map-mode-switcher" className={`flex min-w-0 flex-col ${className}`}>
       <div
@@ -128,6 +151,16 @@ export function ModeSwitcher({
           not by a visible track.
         */
         className="flex min-w-0 flex-1 gap-[2px] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        /*
+          The reader has moved on. `relatedTarget` is checked so moving between
+          two mode buttons — still inside the row — does not clear a reason the
+          reader may not have finished reading.
+        */
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+            setRequestedReason(null);
+          }
+        }}
       >
         {modes.map((mode) => {
           const availability = modeAvailability(mode);

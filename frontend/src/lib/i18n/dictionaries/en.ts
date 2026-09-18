@@ -1333,6 +1333,22 @@ export const en = {
         */
         notInMode: 'Not shown in this mode',
         outOfRange: 'Not at this zoom',
+        codes: {
+          countryEvidence: 'EVID',
+          evidencePoints: 'PTS',
+          sourceDensity: 'SRC',
+          watch: 'WATCH',
+          situations: 'SITU',
+          hydrography: 'WATER',
+          rivers: 'RIVER',
+          labels: 'LABEL',
+          graticule: 'GRID',
+          base: 'LAND',
+          admin0: 'ADM0',
+          admin1: 'ADM1',
+          admin2: 'ADM2',
+          places: 'CITY',
+        },
         layers: {
           base: 'Land & ocean',
           admin0: 'Country borders',

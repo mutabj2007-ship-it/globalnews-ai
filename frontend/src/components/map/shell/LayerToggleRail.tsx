@@ -80,7 +80,28 @@ const GLYPH: Readonly<Record<string, string>> = {
   places: '·',
 };
 
-/** The prototype's short technical codes. Falls back to the layer id. */
+/**
+ * ══ MAP-PL-MIXED-LANGUAGE-CHROME-1 — THE CODES ARE COPY, AND MOVED OUT ═══
+ *
+ * This table used to be the only source of the visible code, in English, for
+ * every locale. It is kept ONLY as the fallback for a layer the dictionary has
+ * no code for; the rendered value now comes from `labels.codes`.
+ *
+ * WHY THE EARLIER CLASSIFICATION WAS WRONG. A first pass called all seven
+ * visible tokens "accepted compact abbreviations". EVID, SRC, WATCH and SITU
+ * are truncations, but WATER, LABEL and GRID are ORDINARY ENGLISH WORDS — a
+ * 52px rail does not make a word an abbreviation.
+ *
+ * AND NO AUTHORITY MAKES ANY OF THEM LANGUAGE-INVARIANT. The repository was
+ * searched for a Design or spec authority defining these as fixed compact
+ * codes and there is none — the only provenance was this comment's own
+ * "prototype's short technical codes", which is not an authority. The product
+ * settles it in the other direction: it already localises its mode vocabulary
+ * (EVIDENCE -> "Dowody", SOURCES -> "Źródła", WATCH -> "Obserwowane"), so
+ * leaving the rail in English was inconsistent with the product's own copy.
+ *
+ * The internal layer id is untouched. Only the visible label is localised.
+ */
 const CODE: Readonly<Record<string, string>> = {
   countryEvidence: 'EVID',
   evidencePoints: 'PTS',
@@ -101,6 +122,8 @@ const CODE: Readonly<Record<string, string>> = {
 export interface LayerToggleRailLabels {
   readonly group: string;
   readonly layers: Readonly<Record<string, string>>;
+  /** MAP-PL-MIXED-LANGUAGE-CHROME-1 — the localised compact codes. */
+  readonly codes?: Readonly<Record<string, string>>;
   readonly reference: string;
   readonly evidence: string;
   /**
@@ -194,7 +217,13 @@ export function LayerToggleRail({
                 : on
                   ? 'on'
                   : 'off';
-          const code = CODE[layer.id] ?? layer.id.slice(0, 5).toUpperCase();
+          /*
+            The localised code, falling back to the English table and then to
+            the id — so a layer added without copy still renders something
+            readable rather than nothing.
+          */
+          const code =
+            labels.codes?.[layer.id] ?? CODE[layer.id] ?? layer.id.slice(0, 5).toUpperCase();
           const reason = !layer.available
             ? /*
                 The SPECIFIC reason, derived from the registry's own runtime

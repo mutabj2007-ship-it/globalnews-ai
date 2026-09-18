@@ -142,65 +142,125 @@ describe('a governed region is named by the dictionary, not by its declaration',
    MAP-PL-MIXED-LANGUAGE-CHROME-1 — CLASSIFICATION, NOT BLIND TRANSLATION
    ══════════════════════════════════════════════════════════════════════════ */
 
-describe('§7 — every visible chrome token is classified, and only defects are corrected', () => {
+describe('§7 — the chrome tokens, classified individually and corrected', () => {
   /*
-    THE RULING ASKS FOR A CLASSIFICATION BEFORE A CORRECTION, and explicitly
-    warns against translating established product labels. This is that
-    classification, asserted rather than asserted-in-prose:
+    ══ THE CORRECTED CLASSIFICATION ═══════════════════════════════════════
 
-      EVID SRC WATCH SITU WATER LABEL GRID
-        ACCEPTED COMPACT ABBREVIATION. A 52px rail cannot hold a sentence. The
-        registry calls these "the prototype's short technical codes"; each is a
-        fixed-width code, and the FULL LOCALISED NAME travels with the control
-        in `aria-label` and `title`, so a Polish reader and a screen reader both
-        get the translated label. Translating the codes would produce SIAT /
-        JEZI / ETYK, which is less legible and not more Polish.
+    A first pass grouped all seven visible rail tokens as "accepted compact
+    abbreviations". That was wrong and the CTO rejected it. EVID, SRC, WATCH
+    and SITU are truncations; WATER, LABEL and GRID are ORDINARY ENGLISH
+    WORDS, and appearing in a 52px rail does not make a word an abbreviation.
 
-      Region / Miasto in search
-        NOT A DEFECT. `search.kinds` is fully translated in PL —
-        `CITY: 'Miasto'` — and `REGION` is itself a Polish word with the same
-        spelling. Nothing to correct.
+    THE CITE-OR-LOCALISE TEST WAS APPLIED, AND NOTHING COULD BE CITED. The
+    repository holds no Design or spec authority defining any of these as
+    fixed, language-invariant compact codes:
 
-      EAST AFRICA on the active chip and in the rail
-        UNTRANSLATED DEFECT. A place name with an existing PL translation that
-        the secondary control was already using. Corrected above.
+      · the only provenance was a code comment calling them "the prototype's
+        short technical codes" — a comment, not an authority;
+      · `golden-authority.manifest.json` contains no rail code (its three
+        "EVID" hits are the word EVIDENCE matching as a substring);
+      · and the product settles it the other way, because it ALREADY localises
+        its own mode vocabulary: EVIDENCE -> "Dowody", SOURCES -> "Źródła",
+        WATCH -> "Obserwowane".
+
+    So all seven are treated as PL display-language leakage and the VISIBLE
+    label is localised. The internal layer id is untouched, which is what keeps
+    the registry, the canvas and the canonical layer state unaffected.
+
+    ADM0 / ADM1 / ADM2 remain identical in both locales DELIBERATELY: those are
+    international administrative-level codes, not English words.
+
+    REGION in Polish search remains accepted as linguistically valid.
   */
-  const RAIL_CODES = ['EVID', 'SRC', 'WATCH', 'SITU', 'WATER', 'LABEL', 'GRID'];
 
-  it('the rail codes are a declared code table, not leaked identifiers', () => {
-    const rail = raw('components', 'map', 'shell', 'LayerToggleRail.tsx');
+  it('no Design or spec authority defines the rail codes as language-invariant', () => {
+    const manifest = readFileSync(
+      join(SRC, '..', '..', 'scripts', 'spatial-visual', 'golden-authority.manifest.json'),
+      'utf-8',
+    );
 
-    expect(rail).toContain("The prototype's short technical codes");
-    for (const codeToken of RAIL_CODES) expect(rail).toContain(`'${codeToken}'`);
-  });
-
-  it('and every one of them carries a FULL LOCALISED name to the reader', () => {
-    const rail = code('components', 'map', 'shell', 'LayerToggleRail.tsx');
-
-    // The accessible name and tooltip are the dictionary label, never the code.
-    expect(rail).toContain('aria-label={reason ? `${labels.layers[layer.id]');
-    expect(rail).toContain('title={reason ? `${labels.layers[layer.id]');
-
-    // And those labels really are translated.
-    const ids = ['countryEvidence', 'graticule', 'hydrography', 'labels'] as const;
-
-    for (const id of ids) {
-      const enLabel = en.map.spatial.layers.layers[id];
-      const plLabel = pl.map.spatial.layers.layers[id];
-
-      expect(typeof plLabel).toBe('string');
-      expect(plLabel.length).toBeGreaterThan(0);
-      expect(plLabel).not.toBe(enLabel);
+    for (const token of ['"GRID"', '"WATER"', '"LABEL"', '"SITU"', '"SRC"']) {
+      expect(manifest).not.toContain(token);
     }
   });
 
-  it('the search taxonomy is already Polish — no blind translation was applied', () => {
+  it('the product already localises its mode vocabulary, so the rail must follow', () => {
+    expect(pl.map.spatial.modes.modes.EVIDENCE).toBe('Dowody');
+    expect(pl.map.spatial.modes.modes.SOURCES).toBe('Źródła');
+    expect(pl.map.spatial.modes.modes.WATCH).toBe('Obserwowane');
+    expect(pl.map.spatial.modes.modes.EVIDENCE).not.toBe(en.map.spatial.modes.modes.EVIDENCE);
+  });
+
+  it('the ORDINARY ENGLISH WORDS are localised — WATER, LABEL, GRID', () => {
+    expect(en.map.spatial.layers.codes.hydrography).toBe('WATER');
+    expect(en.map.spatial.layers.codes.labels).toBe('LABEL');
+    expect(en.map.spatial.layers.codes.graticule).toBe('GRID');
+
+    expect(pl.map.spatial.layers.codes.hydrography).toBe('WODA');
+    expect(pl.map.spatial.layers.codes.labels).toBe('NAZWY');
+    expect(pl.map.spatial.layers.codes.graticule).toBe('SIATKA');
+
+    for (const id of ['hydrography', 'labels', 'graticule'] as const) {
+      expect(pl.map.spatial.layers.codes[id]).not.toBe(en.map.spatial.layers.codes[id]);
+    }
+  });
+
+  it('the truncated product codes are localised too, since none could be cited', () => {
+    expect(pl.map.spatial.layers.codes.countryEvidence).toBe('DOWODY');
+    expect(pl.map.spatial.layers.codes.sourceDensity).toBe('ŹRÓDŁA');
+    expect(pl.map.spatial.layers.codes.watch).toBe('OBSERW.');
+    expect(pl.map.spatial.layers.codes.situations).toBe('SYTUAC.');
+  });
+
+  it('no invented bare truncation — a shortened form carries the Polish abbreviation period', () => {
+    /*
+      JEZI / ETYK were explicitly ruled out. Where no short whole word exists
+      ("Obserwowane" is 11 characters, "Sytuacje" 8, against a 38px control at
+      8px mono) the conventional Polish trailing-period abbreviation is used
+      instead of a bare clipped stem. FLAGGED FOR L: these two are abbreviation
+      forms rather than whole words.
+    */
+    const plCodes = pl.map.spatial.layers.codes;
+
+    for (const [id, value] of Object.entries(plCodes)) {
+      if (['admin0', 'admin1', 'admin2'].includes(id)) continue;
+      // Either a whole word, or an explicit abbreviation.
+      expect(value.endsWith('.') || /^[A-ZĄĆĘŁŃÓŚŹŻ]+$/.test(value)).toBe(true);
+      expect(value).not.toBe('JEZI');
+      expect(value).not.toBe('ETYK');
+    }
+  });
+
+  it('the administrative-level codes stay identical in both locales, by intent', () => {
+    for (const id of ['admin0', 'admin1', 'admin2'] as const) {
+      expect(pl.map.spatial.layers.codes[id]).toBe(en.map.spatial.layers.codes[id]);
+    }
+  });
+
+  it('the rail renders the localised code and keeps the internal id untouched', () => {
+    const rail = code('components', 'map', 'shell', 'LayerToggleRail.tsx');
+
+    expect(rail).toContain('labels.codes?.[layer.id]');
+    // The registry id is still what drives state and the canvas.
+    expect(rail).toContain('onToggle(layer.id, !on)');
+  });
+
+  it('every layer still carries a FULL LOCALISED name in its accessible name', () => {
+    const rail = code('components', 'map', 'shell', 'LayerToggleRail.tsx');
+
+    expect(rail).toContain('aria-label={reason ? `${labels.layers[layer.id]');
+    expect(rail).toContain('title={reason ? `${labels.layers[layer.id]');
+
+    const ids = ['countryEvidence', 'graticule', 'hydrography', 'labels'] as const;
+
+    for (const id of ids) {
+      expect(pl.map.spatial.layers.layers[id]).not.toBe(en.map.spatial.layers.layers[id]);
+    }
+  });
+
+  it('the search taxonomy is already Polish — REGION is valid, not a defect', () => {
     expect(pl.map.spatial.search.kinds.CITY).toBe('Miasto');
     expect(pl.map.spatial.search.kinds.COUNTRY).toBe('Kraj');
-    /*
-      REGION is spelled identically in both languages. Asserted so a future
-      reviewer does not "fix" a token that is already correct.
-    */
     expect(pl.map.spatial.search.kinds.REGION).toBe('Region');
     expect(en.map.spatial.search.kinds.REGION).toBe('Region');
   });
