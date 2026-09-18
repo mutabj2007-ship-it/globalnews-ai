@@ -1405,7 +1405,16 @@ export function GlobalMapShell({
                 city.countryIso3)
               : undefined
           }
-          labels={spatial.city}
+          /*
+            ONE VOCABULARY FOR ONE PRECISION. The kind token beside the evidence
+            country is the SAME string the search dropdown badges a country row
+            with. Composed here rather than duplicated into `spatial.city`, so
+            there is no second copy of the word to translate differently.
+          */
+          labels={{
+            ...spatial.city,
+            evidenceCeilingKindLabel: spatial.search.kinds.COUNTRY,
+          }}
           onClearSelection={onSelectionChange ? () => onSelectionChange(null) : undefined}
         />
       ) : selection.kind === 'REGION' ? (

@@ -146,7 +146,11 @@ describe('the right rail identifies the selected geography, per kind', () => {
           },
           geographyId: KIGALI_CITY_ID,
           countryName: 'Rwanda',
-          labels: dict.map.spatial.city,
+          /* Composed exactly as the shell composes it — see GlobalMapShell. */
+          labels: {
+            ...dict.map.spatial.city,
+            evidenceCeilingKindLabel: dict.map.spatial.search.kinds.COUNTRY,
+          },
         }),
       );
 
@@ -196,7 +200,10 @@ describe('the right rail identifies the selected geography, per kind', () => {
           provenance: '',
         },
         geographyId: 'city:XXX:nowhere@0,0',
-        labels: en.map.spatial.city,
+        labels: {
+          ...en.map.spatial.city,
+          evidenceCeilingKindLabel: en.map.spatial.search.kinds.COUNTRY,
+        },
       }),
     );
 

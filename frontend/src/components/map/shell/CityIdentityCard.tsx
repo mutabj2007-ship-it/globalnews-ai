@@ -40,6 +40,23 @@ export interface CityCardLabels {
    * its own and it is merely hidden.
    */
   readonly evidenceCeilingBody: string;
+  /**
+   * THE KIND TOKEN BESIDE THE EVIDENCE COUNTRY — "Rwanda · Country".
+   *
+   * The primary block states its own kind in the kicker above the name, so
+   * "Kigali" sits under "City" and needs nothing inline. The secondary kicker
+   * has a different job: it names the RELATIONSHIP ("Evidence geography"), so
+   * the precision has nowhere to go but beside the value.
+   *
+   * Without it the card reads as two place names of equal standing, which is
+   * the one impression this component exists to prevent.
+   *
+   * SUPPLIED BY THE SHELL FROM `map.spatial.search.kinds`, the vocabulary the
+   * search dropdown badges already use. A second copy of the word "Country"
+   * would be a second place for it to be translated differently, and a reader
+   * would then meet the same precision under two names on one screen.
+   */
+  readonly evidenceCeilingKindLabel: string;
   readonly noCountryHeading: string;
   readonly noCountryBody: string;
   readonly unresolvedHeading: string;
@@ -97,10 +114,22 @@ export function CityIdentityCard({
     );
   }
 
+  /*
+    THE RAW ID, DEMOTED — MAP-CITY-RAIL-HIERARCHY.
+
+    The unresolved branch above RENDERS the identifier, because when nothing
+    resolved it is the only true thing there is to show. Here it was rendered
+    too, and `city:RWA:kigali@30.06,-1.95` is a long monospace string in a small
+    card: it drew the eye away from the two facts the card exists to state, and
+    it is not something a reader can do anything with. It is now an attribute —
+    still readable by support and by the regression suite, never reader-facing
+    copy. The region card carries the same treatment for the same reason.
+  */
   return (
     <section
       data-gn="map-city-card"
       data-gn-state="resolved"
+      data-gn-geography-id={city.geographyId}
       className="flex flex-col gap-3 rounded-[6px] border border-gn-line-card p-3"
     >
       <div className="flex flex-col gap-1">
@@ -128,8 +157,23 @@ export function CityIdentityCard({
           <p className="text-[12px] text-gn-ink-secondary">{labels.noCountryBody}</p>
         ) : (
           <>
-            <p data-gn="city-evidence-geography" className="text-[13px] text-gn-ink-primary">
-              {countryName ?? city.countryIso3}
+            {/*
+              NAME AND PRECISION ON ONE LINE, and the precision deliberately in
+              the same muted mono face the kickers use. "Rwanda" is the answer;
+              "Country" is the label on the answer, and typing them alike would
+              restate the equal-standing problem this line was added to fix.
+            */}
+            <p
+              data-gn="city-evidence-geography"
+              className="flex flex-wrap items-baseline gap-1.5 text-[13px] text-gn-ink-primary"
+            >
+              <span>{countryName ?? city.countryIso3}</span>
+              <span
+                data-gn="city-evidence-kind"
+                className="font-gn-mono text-[10px] uppercase tracking-[0.08em] text-gn-ink-secondary"
+              >
+                · {labels.evidenceCeilingKindLabel}
+              </span>
             </p>
             <p className="text-[12px] text-gn-ink-secondary">{labels.evidenceCeilingBody}</p>
           </>
@@ -144,8 +188,6 @@ export function CityIdentityCard({
           <p className="text-[11px] text-gn-ink-secondary">{city.provenance}</p>
         </div>
       )}
-
-      <MachineReadable>{city.geographyId}</MachineReadable>
 
       {onClearSelection && (
         <button
