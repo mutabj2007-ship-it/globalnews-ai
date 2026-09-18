@@ -37,35 +37,37 @@ const mapClient = stripComments(
 
 describe('B-2C — the region path never reaches country retrieval', () => {
   describe('COUNTRY RETRIEVAL HAS EXACTLY ONE ENTRY POINT', () => {
-    it('fetchCountryNews is called from one place only — loadCountry', () => {
+    it('COUNTRY RETRIEVAL HAS NO ENTRY POINT ON THE MAP AT ALL', () => {
       /*
-        If a second call site ever appears, every classification below becomes
-        incomplete and this assertion is what says so.
+        ══ SUPERSEDED — ONE ENTRY POINT BECAME NONE ═══════════════════════════
+
+        The block was titled "COUNTRY RETRIEVAL HAS EXACTLY ONE ENTRY POINT" and
+        it was right to insist on that: with one call site, every classification
+        beneath it was complete. Live acceptance then showed that one site
+        executing GNews from a plain country click, and the CTO ruling makes
+        passive map navigation provider-free.
+
+        Zero entry points makes the classification below trivially complete
+        rather than merely verifiable.
       */
-      expect(mapClient.split('fetchCountryNews(').length - 1).toBe(1);
+      expect(mapClient.split('fetchCountryNews(').length - 1).toBe(0);
+      expect(mapClient).not.toContain('@/lib/api/countryApi');
     });
 
-    it('that one call site is inside loadCountry', () => {
-      const loadCountry = mapClient.slice(
-        mapClient.indexOf('const loadCountry = useCallback'),
-        mapClient.indexOf('const loadCountry = useCallback') + 1600,
-      );
-
-      expect(loadCountry).toContain('await fetchCountryNews(');
+    it('and the retrieval function is gone, not merely unreferenced', () => {
+      expect(mapClient).not.toContain('const loadCountry = useCallback');
     });
 
-    it('loadCountry returns early when the corpus is already retained', () => {
+    it('country selection reads the RETAINED corpus instead — the guard became the whole path', () => {
       /*
-        This is the retained-state guard: country selection does NOT implicitly
-        mean live retrieval. The key is country + category + language.
+        The old guard said "country selection does NOT implicitly mean live
+        retrieval" and enforced it with a cache key checked before the fetch.
+        That sentence is now the entire behaviour: there is no fetch to guard,
+        and the retained corpus seeded at mount is what a selected country
+        shows.
       */
-      const loadCountry = mapClient.slice(
-        mapClient.indexOf('const loadCountry = useCallback'),
-        mapClient.indexOf('setIsLoading(true)'),
-      );
-
-      expect(loadCountry).toContain('const key = cacheKey(country.iso3, requestedCategory, language)');
-      expect(loadCountry).toContain('if (cache[key]) return;');
+      expect(mapClient).toContain('retainedCountryCorpora()');
+      expect(mapClient).not.toContain('if (cache[key]) return;');
     });
   });
 
@@ -97,8 +99,14 @@ describe('B-2C — the region path never reaches country retrieval', () => {
       expect(handler.indexOf("selection.kind === 'REGION'")).toBeLessThan(
         handler.indexOf('const country = COUNTRIES.find'),
       );
+      /*
+        The second half used to compare against `loadCountry`. Nothing retrieves
+        any more, so the term is the scope setter — the ordering property is
+        unchanged and is still what stops a region selection from resolving a
+        country before the early return can stop it.
+      */
       expect(handler.indexOf("selection.kind === 'REGION'")).toBeLessThan(
-        handler.indexOf('loadCountry'),
+        handler.indexOf('selectCountryScope'),
       );
     });
 

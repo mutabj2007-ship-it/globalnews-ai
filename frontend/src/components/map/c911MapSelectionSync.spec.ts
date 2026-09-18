@@ -161,14 +161,27 @@ describe('C911-V2 -- a validation-state jump selects, it does not only fly', () 
         .toBeGreaterThanOrEqual(1);
     });
 
-    it('a COUNTRY selection triggers the retrieval that fills the rail', () => {
+    it('a COUNTRY selection establishes SCOPE, and retrieves nothing', () => {
+      /*
+        SUPERSEDED, AND THIS IS THE ASSERTION THE RULING IS ABOUT.
+
+        It used to require that selecting a country TRIGGER THE RETRIEVAL that
+        fills the rail — which is exactly what live acceptance caught executing
+        GNews for KEN and RWA. The rail is still filled; what fills it is the
+        RETAINED corpus, seeded at mount, rather than a purchase made on the
+        reader's behalf.
+
+        C911-V2's real property is untouched: the jump must still resolve the
+        country and set it, so the rail stops describing somewhere else.
+      */
       const handler = page.slice(
         page.indexOf('function handleSpatialSelection'),
         page.indexOf('function handleCategoryChange'),
       );
 
       expect(handler).toContain('COUNTRIES.find');
-      expect(handler).toContain('void loadCountry(country, ');
+      expect(handler).toContain('selectCountryScope(country)');
+      expect(handler).not.toContain('loadCountry');
     });
 
     it('a null selection clears the country, so no stale evidence survives', () => {

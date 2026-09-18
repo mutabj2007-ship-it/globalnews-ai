@@ -49,29 +49,33 @@ const loadCountry = mapClient.slice(
 
 describe('B-2D — retained evidence is preferred over live retrieval', () => {
   describe('THE REFERENCE PATH — AN EVIDENCE ROW REACHES NO BACKEND', () => {
-    it('a non-country selection falls out of the handler before loadCountry', () => {
+    it('a non-country selection falls out of the handler before ANY country work', () => {
       /*
-        The order is the guarantee: the country lookup, then the null return,
-        then and only then loadCountry.
+        The ordering guarantee survives; only its last term changed. It used to
+        read "lookup, null return, then and only then loadCountry". There is no
+        loadCountry any more, so the term is the scope setter — which costs
+        nothing, and that is the point.
       */
       const lookup = handler.indexOf('const country = COUNTRIES.find');
       const nullReturn = handler.indexOf('if (country === null) return;');
-      const retrieval = handler.indexOf('loadCountry');
+      const scope = handler.indexOf('selectCountryScope');
 
       expect(lookup).toBeGreaterThan(-1);
       expect(nullReturn).toBeGreaterThan(lookup);
-      expect(retrieval).toBeGreaterThan(nullReturn);
+      expect(scope).toBeGreaterThan(nullReturn);
     });
 
     it('the handler has no EVIDENCE, SITUATION or SOURCE retrieval branch at all', () => {
       /*
         Zero-backend is structural rather than guarded: there is nothing in the
-        handler that could retrieve for these kinds even if it wanted to.
+        handler that could retrieve for these kinds even if it wanted to. That
+        is now true of COUNTRY as well — the handler sets scope and stops.
       */
       expect(handler).not.toContain("kind === 'EVIDENCE'");
       expect(handler).not.toContain("kind === 'SITUATION'");
       expect(handler).not.toContain("kind === 'SOURCE'");
-      expect(handler.split('loadCountry').length - 1).toBe(1);
+      expect(handler).not.toContain('loadCountry');
+      expect(handler.split('selectCountryScope').length - 1).toBe(1);
     });
 
     it('selecting a row clears card filters and the item id — state only, no fetch', () => {
@@ -84,17 +88,36 @@ describe('B-2D — retained evidence is preferred over live retrieval', () => {
     });
   });
 
-  describe('SUFFICIENT RETAINED STATE SHORT-CIRCUITS RETRIEVAL', () => {
-    it('loadCountry returns before any fetch when the corpus is retained', () => {
-      const guardIndex = loadCountry.indexOf('if (cache[key]) return;');
-      const fetchIndex = loadCountry.indexOf('await fetchCountryNews(');
+  describe('RETAINED STATE IS NOW THE ONLY STATE — NOTHING SHORT-CIRCUITS, BECAUSE NOTHING RUNS', () => {
+    /*
+      ══ SUPERSEDED, AND THE TITLE IS THE WHOLE CHANGE ══════════════════════
 
-      expect(guardIndex).toBeGreaterThan(-1);
-      expect(fetchIndex).toBeGreaterThan(guardIndex);
+      This block proved that a retained corpus SHORT-CIRCUITED retrieval: the
+      cache-key guard sat before the fetch, and the key carried every dimension
+      that could change the corpus. Both assertions were correct.
+
+      They described a fast path around a purchase. The CTO ruling removes the
+      purchase, so there is no path to go around: the Map reads the retained
+      store and never retrieves. "Preferred over live retrieval" has become
+      "instead of live retrieval", which is what this suite was always reaching
+      for.
+    */
+    it('the retained corpus seeds the cache at mount', () => {
+      expect(mapClient).toContain('useState<CachedByCountry>(() => retainedCountryCorpora())');
     });
 
-    it('the retained key carries every dimension that changes the corpus', () => {
-      expect(loadCountry).toContain('cacheKey(country.iso3, requestedCategory, language)');
+    it('and there is no retrieval left for it to short-circuit', () => {
+      expect(mapClient).not.toContain('fetchCountryNews');
+      expect(mapClient).not.toContain('const loadCountry = useCallback');
+    });
+
+    it('a country with NO retained corpus is simply empty — it does not go and buy one', () => {
+      /*
+        The honest cold state. Nothing in the client reacts to a cache miss by
+        retrieving, because there is nothing to retrieve with.
+      */
+      expect(mapClient).not.toContain('if (cache[key]) return;');
+      expect(mapClient).not.toMatch(/\bfetch\s*\(/);
     });
   });
 
@@ -106,16 +129,25 @@ describe('B-2D — retained evidence is preferred over live retrieval', () => {
         already had — the same class of defect as caching an empty response,
         which NewsService.rememberHomeNews refuses for the same reason.
       */
-      /* Bounded to the catch block itself — a greedy slice reaches unrelated code. */
-      const failure = loadCountry.slice(
-        loadCountry.indexOf('} catch (err) {'),
-        loadCountry.indexOf('} finally {'),
-      );
+      /*
+        ══ SUPERSEDED — THERE IS NO PROVIDER FAILURE PATH LEFT TO GUARD ══════
 
-      expect(failure).toContain('setError(');
-      expect(failure).not.toContain('setCache');
-      expect(failure).not.toContain('setGeography');
-      expect(failure).not.toContain('setGlobalFeed');
+        The reasoning above is still right and is why it is kept verbatim: a
+        failed retrieval must never blank evidence the reader already had. It
+        described the catch block inside the country fetch.
+
+        The Map no longer performs that fetch, so it has no catch block, no
+        error state to set and no way for a provider hiccup to touch the
+        retained corpus at all. The protection is now structural rather than
+        conditional — which is the strongest version of what this test wanted.
+
+        The equivalent guard for the WORLD feed, which the Map does still read,
+        is asserted immediately below and is unchanged.
+      */
+      expect(mapClient).not.toContain('fetchCountryNews');
+      expect(mapClient).not.toContain('} catch (err) {');
+      /* And nothing anywhere clears the retained corpus. */
+      expect(mapClient).not.toContain('retainCountryCorpus(');
     });
 
     it('a failed global feed leaves the map as it was rather than blanking it', () => {
@@ -162,10 +194,21 @@ describe('B-2D — retained evidence is preferred over live retrieval', () => {
         If `period` entered loadCountry's dependency list, changing the window
         would rebuild the callback and could re-trigger retrieval effects.
       */
-      const deps = loadCountry.slice(loadCountry.lastIndexOf('[cache, language'));
+      /*
+        ══ SUPERSEDED — THERE IS NO RETRIEVAL CALLBACK TO DEPEND ON ANYTHING ══
 
-      expect(deps).toContain('[cache, language, t.genericFetchError]');
-      expect(deps).not.toContain('period');
+        The property was: `period` must not be a dependency of the retrieval
+        callback, because rebuilding it on every period change could re-trigger
+        retrieval — which would make 24h/7d/30d cost money.
+
+        With the callback gone the property holds absolutely rather than by
+        dependency hygiene: changing the period cannot re-trigger a retrieval
+        that does not exist. The test above this one still proves the period
+        control is a bare state setter, which is the half that remains
+        observable.
+      */
+      expect(mapClient).not.toContain('const loadCountry = useCallback');
+      expect(mapClient).not.toContain('t.genericFetchError');
     });
 
     it('Open Sources is a DOM scroll — it touches no network and no state', () => {
@@ -185,14 +228,14 @@ describe('B-2D — retained evidence is preferred over live retrieval', () => {
         A provider-consuming call appearing here unannounced fails this, which
         is the same guard c911RequestEconomy already applies.
 
-        R5 — the world corpus moved to the NON-EXECUTING route, so these counts
-        now also state which of the two can cost anything: the country
-        retrieval can, and it is reached only by an explicit country action.
-        The world call cannot, at any frequency.
+        R5 moved the world corpus to the NON-EXECUTING route, leaving one call
+        that could cost something — the country retrieval. The provider-boundary
+        ruling removes that one too, so the count is now simply: ONE entry
+        point, and it cannot execute a provider at any frequency.
       */
       expect(mapClient.split('fetchRetainedTopHeadlines(').length - 1).toBe(1);
       expect(mapClient.split('fetchTopHeadlines(').length - 1).toBe(0);
-      expect(mapClient.split('fetchCountryNews(').length - 1).toBe(1);
+      expect(mapClient.split('fetchCountryNews(').length - 1).toBe(0);
       expect(mapClient).not.toContain('fetchSearchNews(');
     });
   });

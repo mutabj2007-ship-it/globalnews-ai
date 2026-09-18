@@ -86,14 +86,27 @@ describe('C911-R6 -- provider request economy', () => {
       expect(countOf(mapClient, 'fetchTopHeadlines(')).toBe(0);
     });
 
-    it('issues exactly one fetchCountryNews call site', () => {
-      expect(countOf(mapClient, 'fetchCountryNews(')).toBe(1);
+    it('issues NO fetchCountryNews call site at all', () => {
+      /*
+        SUPERSEDED: "exactly one" -> NONE.
+
+        One guarded call site was the right budget while a country selection was
+        allowed to retrieve. Live acceptance showed that budget being spent by a
+        plain country click, and the CTO ruling makes passive map navigation
+        provider-free. A budget of zero needs no guard.
+      */
+      expect(countOf(mapClient, 'fetchCountryNews(')).toBe(0);
     });
 
-    it('the country fetch is guarded by a client cache key before it is spent', () => {
-      // iso3 + category + language. Re-selecting a loaded country costs nothing.
-      expect(mapClient).toContain('const key = cacheKey(country.iso3, requestedCategory, language)');
-      expect(mapClient).toContain('if (cache[key]) return;');
+    it('the cache is READ at mount, which is what replaces the guarded fetch', () => {
+      /*
+        The cache key guard is gone with the fetch it guarded. What survives is
+        the half that costs nothing and does the useful work: the retained
+        corpus seeds the cache at mount, so selecting a country the reader has
+        already analysed shows its evidence immediately and spends nothing.
+      */
+      expect(mapClient).toContain('retainedCountryCorpora()');
+      expect(mapClient).not.toContain('const key = cacheKey(country.iso3, requestedCategory, language)');
     });
 
     it('global enrichment runs at most once, guarded by a ref', () => {
@@ -128,7 +141,8 @@ describe('C911-R6 -- provider request economy', () => {
         countOf(mapClient, 'fetchCountryNews(') +
         countOf(mapClient, 'fetchNewsSearch(');
 
-      expect(callSites).toBe(2);
+      /* 2 -> 1: the country retrieval is gone; the retained world read remains. */
+      expect(callSites).toBe(1);
     });
 
     it('and exactly ONE of them can spend quota — the explicit country retrieval', () => {
@@ -146,8 +160,18 @@ describe('C911-R6 -- provider request economy', () => {
         countOf(mapClient, 'fetchCountryNews(') +
         countOf(mapClient, 'fetchNewsSearch(');
 
-      expect(canSpend).toBe(1);
-      expect(countOf(mapClient, 'fetchCountryNews(')).toBe(1);
+      /*
+        THE BUDGET IS NOW ZERO, AND THAT IS THE WHOLE RULING.
+
+        The comment above still holds — counting call sites treats every entry
+        point as equally costly, and splitting by cost is what made the budget
+        stateable. The split now states something stronger than "one": the Map
+        has NO call that can execute a provider, and one that cannot execute
+        anything at all.
+      */
+      expect(canSpend).toBe(0);
+      expect(countOf(mapClient, 'fetchCountryNews(')).toBe(0);
+      expect(countOf(mapClient, 'fetchRetainedTopHeadlines(')).toBe(1);
     });
 
     it('no retry loop was introduced around a provider call', () => {

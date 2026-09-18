@@ -95,7 +95,16 @@ describe('the read happens once, from the address bar itself', () => {
     expect(mount).not.toContain('loadCountry');
     expect(mount).toContain('setSelectedCountry(country)');
     expect(mount).toContain('setSpatialSelection');
-    expect(CODE.split('fetchCountryNews(').length - 1).toBe(1);
+    /*
+      SUPERSEDED: "exactly one retrieval entry point" -> NONE.
+
+      Restoring a country from the address bar was already forbidden from
+      retrieving; the ruling extends that to the selection itself, so the file
+      has no country-retrieval entry point left to count. Hydration restoring
+      scope without spending anything is now the whole of the behaviour rather
+      than the exception to it.
+    */
+    expect(CODE.split('fetchCountryNews(').length - 1).toBe(0);
     expect(CODE).not.toMatch(/fetch\(|new Request/);
   });
 });

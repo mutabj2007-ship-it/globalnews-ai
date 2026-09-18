@@ -47,24 +47,41 @@ import type { MapSelection } from '@/lib/map/state/mapState';
  */
 
 /**
- * The ONLY reasons that may authorize `GET /news/country/:iso3`.
+ * ══ THE BOUNDARY MOVED — SELECTION IS NO LONGER A RETRIEVAL REASON ════════
  *
- * Each names a deliberate act in which the reader chose A COUNTRY. If a new
- * entry is ever needed, adding it is a governance decision, which is precisely
- * the friction this type exists to create.
+ * WHAT LIVE ACCEPTANCE PROVED. Selecting Kenya and Rwanda on the Map issued
+ * `GET /news/country/KEN` and `GET /news/country/RWA`, and the backend log
+ * showed GNews Search executing for each. That was PERMITTED by the three
+ * reasons this type used to carry — MAP_COUNTRY_CLICK,
+ * EXPLICIT_COUNTRY_SELECTION and CATEGORY_CHANGE_ON_SELECTED_COUNTRY — so it
+ * was not a defect against the old authority. It is a defect against the
+ * product's explicit-cost direction, and the CTO ruling moves the line:
+ *
+ *     NAVIGATION AND SELECTION ARE PROVIDER-FREE.
+ *     EXTERNAL RETRIEVAL HAPPENS ONLY BEHIND AN EXPLICIT READER ACTION.
+ *
+ * So all three old reasons are RETIRED, and they join the forbidden list below
+ * by name rather than merely vanishing — a reason that disappears quietly is a
+ * reason someone re-adds.
+ *
+ * WHAT A COUNTRY SELECTION DOES NOW: establishes semantic COUNTRY scope, frames
+ * the camera, writes the URL, opens the rail, and shows RETAINED corpus and
+ * `/geo/map-feed` evidence if either is already held. None of that touches a
+ * provider.
+ *
+ * WHAT STILL RETRIEVES: an explicitly labelled research action. Deliberate
+ * country analysis is NOT removed — it moves entirely behind the reader's own
+ * request.
  */
 export type CountryRetrievalReason =
-  /** The reader clicked a country on the map itself. */
-  | 'MAP_COUNTRY_CLICK'
-  /** The reader committed a COUNTRY result from place search or a jump target. */
-  | 'EXPLICIT_COUNTRY_SELECTION'
-  /** A country is already selected and the reader changed its category filter. */
-  | 'CATEGORY_CHANGE_ON_SELECTED_COUNTRY';
+  /** The reader pressed Open Analysis, or submitted an Ask AI question. */
+  | 'EXPLICIT_ANALYSIS_REQUEST'
+  /** Another explicitly labelled research / retrieval control. */
+  | 'EXPLICIT_RETRIEVAL_ACTION';
 
 export const COUNTRY_RETRIEVAL_REASONS: readonly CountryRetrievalReason[] = [
-  'MAP_COUNTRY_CLICK',
-  'EXPLICIT_COUNTRY_SELECTION',
-  'CATEGORY_CHANGE_ON_SELECTED_COUNTRY',
+  'EXPLICIT_ANALYSIS_REQUEST',
+  'EXPLICIT_RETRIEVAL_ACTION',
 ];
 
 /**
@@ -76,6 +93,17 @@ export const COUNTRY_RETRIEVAL_REASONS: readonly CountryRetrievalReason[] = [
  * above — so the two sets can never overlap.
  */
 export const FORBIDDEN_RETRIEVAL_TRIGGERS: readonly string[] = [
+  /*
+    THE THREE RETIRED REASONS, NAMED RATHER THAN DELETED. Live acceptance
+    showed each of them executing GNews from an act the reader understood as
+    navigation. They are prohibitions now, and keeping the old spellings here
+    is what makes a re-introduction fail a test instead of passing review.
+  */
+  'COUNTRY_SELECTION',
+  'MAP_COUNTRY_CLICK',
+  'EXPLICIT_COUNTRY_SELECTION',
+  'CATEGORY_CHANGE_ON_SELECTED_COUNTRY',
+  'SEARCH_COUNTRY_COMMIT',
   'REGION_SELECTION',
   /*
     CITY_SELECTION joins the prohibition alongside the CITY selection kind.

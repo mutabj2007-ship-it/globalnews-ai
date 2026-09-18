@@ -199,16 +199,22 @@ describe('D — the AI action is visible, and the source action is not an AI act
       expect(handler).not.toContain('analyzeNews');
     });
 
-    it('the map still calls exactly the two known news entry points', () => {
+    it('the map calls exactly ONE news entry point, and it cannot cost anything', () => {
       /*
-        R5 — the world corpus is read through `fetchRetainedTopHeadlines`, a
-        route that cannot execute a provider. Two entry points as before; only
-        one of them can now cost anything, and it is the explicit country
-        retrieval.
+        SUPERSEDED BY THE PROVIDER-BOUNDARY RULING, AND STRICTLY STRENGTHENED.
+
+        This used to allow TWO entry points, noting that "only one of them can
+        now cost anything, and it is the explicit country retrieval". Live
+        acceptance showed that one executing GNews from a plain country click,
+        which the CTO ruling now forbids: passive map navigation is
+        provider-free.
+
+        So the count moves 1 -> 0. What remains is the RETAINED world corpus,
+        which is served from a route that cannot execute a provider at all.
       */
       expect(mapClient.split('fetchRetainedTopHeadlines(').length - 1).toBe(1);
       expect(mapClient.split('fetchTopHeadlines(').length - 1).toBe(0);
-      expect(mapClient.split('fetchCountryNews(').length - 1).toBe(1);
+      expect(mapClient.split('fetchCountryNews(').length - 1).toBe(0);
     });
   });
 

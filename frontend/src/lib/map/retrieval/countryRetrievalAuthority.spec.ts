@@ -29,12 +29,12 @@ const CLIENT = readFileSync(
 const CLIENT_CODE = CLIENT.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
 describe('R2 · only a deliberate country action may authorize retrieval', () => {
-  it('POSITIVE CONTROL — the three real reasons are admissible', () => {
+  it('POSITIVE CONTROL — the explicit-action reasons are admissible', () => {
     for (const reason of COUNTRY_RETRIEVAL_REASONS) {
       expect(isCountryRetrievalReason(reason)).toBe(true);
     }
 
-    expect(COUNTRY_RETRIEVAL_REASONS).toHaveLength(3);
+    expect(COUNTRY_RETRIEVAL_REASONS).toHaveLength(2);
   });
 
   it('EVERY forbidden trigger is inadmissible', () => {
@@ -58,7 +58,24 @@ describe('R2 · only a deliberate country action may authorize retrieval', () =>
     }
 
     expect(FORBIDDEN_RETRIEVAL_TRIGGERS).toContain('CITY_SELECTION');
-    expect(FORBIDDEN_RETRIEVAL_TRIGGERS).toHaveLength(10);
+    /*
+      9 -> 10 with CITY_SELECTION, then 10 -> 15 when the country-selection
+      ruling retired MAP_COUNTRY_CLICK, EXPLICIT_COUNTRY_SELECTION and
+      CATEGORY_CHANGE_ON_SELECTED_COUNTRY and added COUNTRY_SELECTION and
+      SEARCH_COUNTRY_COMMIT beside them. The retired reasons are kept here BY
+      NAME so re-adding one fails a test rather than passing review.
+    */
+    for (const retired of [
+      'COUNTRY_SELECTION',
+      'MAP_COUNTRY_CLICK',
+      'EXPLICIT_COUNTRY_SELECTION',
+      'CATEGORY_CHANGE_ON_SELECTED_COUNTRY',
+      'SEARCH_COUNTRY_COMMIT',
+    ]) {
+      expect(FORBIDDEN_RETRIEVAL_TRIGGERS).toContain(retired);
+    }
+
+    expect(FORBIDDEN_RETRIEVAL_TRIGGERS).toHaveLength(15);
   });
 
   it('and the two sets cannot overlap', () => {
@@ -86,61 +103,54 @@ describe('R2 · only a deliberate country action may authorize retrieval', () =>
   });
 });
 
-describe('R2 · loadCountry is the single gate, and it consumes the reason', () => {
-  it('there is still exactly ONE fetchCountryNews call site', () => {
-    expect(CLIENT_CODE.split('fetchCountryNews(').length - 1).toBe(1);
+describe('THE GATE IS GONE, BECAUSE THE DOOR IS GONE', () => {
+  /*
+    ══ SUPERSEDED, AND BY SOMETHING STRICTLY STRONGER ══════════════════════
+
+    This block used to prove that loadCountry was the SINGLE gate: exactly
+    one fetchCountryNews call site, one guard, the guard before every mutation,
+    every caller naming a reason. Those assertions were correct and they held.
+
+    Live acceptance then showed the thing they were protecting was the wrong
+    thing. Selecting Kenya issued GET /news/country/KEN and the backend
+    executed GNews — PERMITTED by the gate, because MAP_COUNTRY_CLICK was a
+    legitimate reason. The CTO ruling moves the boundary: navigation and
+    selection are provider-free, and retrieval happens only behind an explicit
+    reader action.
+
+    So the Map no longer has a gate, because it no longer has a door. The
+    function is deleted, the client is not imported, and the assertions below
+    are the stronger form of the old ones: not "one guarded call site" but NONE.
+  */
+
+  it('the Map has NO country-retrieval call site at all', () => {
+    expect(CLIENT_CODE.split('fetchCountryNews(').length - 1).toBe(0);
   });
 
-  it('loadCountry takes a reason and REFUSES without one', () => {
+  it('and cannot acquire one by accident — the client is not even imported', () => {
+    expect(CLIENT_CODE).not.toContain('@/lib/api/countryApi');
+    expect(CLIENT_CODE).not.toContain('fetchCountryNews');
+  });
+
+  it('the retrieval function itself is gone, not merely unreferenced', () => {
     /*
-      Consumed, not decorative: if a future edit drops the guard, this fails
-      even though the signature still looks right.
+      Left dormant behind a stricter reason it would be the obvious thing for a
+      future handler to reach for. Deleted, it cannot be.
     */
-    expect(CLIENT_CODE).toContain('reason: CountryRetrievalReason');
-    expect(CLIENT_CODE).toContain('if (!isCountryRetrievalReason(reason)) return;');
+    expect(CLIENT_CODE).not.toContain('const loadCountry = useCallback');
   });
 
-  it('R3.1 — the refusal precedes EVERY STATE MUTATION, not just the fetch', () => {
-    /*
-      THE ORDERING R3 PROVED INSUFFICIENT.
-
-      R2 placed this guard after `setSelectedCountry`, so an unauthorised
-      caller was stopped from retrieving but still moved the right rail and
-      highlighted a country the reader never chose. Blocking the spend while
-      letting the wrong country appear is a quieter version of the same defect.
-
-      The guard must therefore come before the FIRST mutation in the function,
-      not merely before the network call.
-    */
-    const body = CLIENT_CODE.slice(CLIENT_CODE.indexOf('const loadCountry = useCallback'));
-    const guard = body.indexOf('if (!isCountryRetrievalReason(reason)) return;');
-    const setCountry = body.indexOf('setSelectedCountry(country);');
-    const setErr = body.indexOf('setError(null);');
-    const fetchAt = body.indexOf('await fetchCountryNews(');
-
-    expect(guard).toBeGreaterThan(0);
-    expect(setCountry).toBeGreaterThan(guard);
-    expect(setErr).toBeGreaterThan(guard);
-    expect(fetchAt).toBeGreaterThan(guard);
+  it('selection now sets scope only, and says so at the call sites', () => {
+    expect(CLIENT_CODE).toContain('selectCountryScope');
+    expect(CLIENT_CODE).toContain('setSelectedCountry(country)');
   });
 
-  it('and there is exactly ONE guard, so it cannot be half-moved', () => {
-    const body = CLIENT_CODE.slice(CLIENT_CODE.indexOf('const loadCountry = useCallback'));
-    const occurrences = body.split('if (!isCountryRetrievalReason(reason)) return;').length - 1;
-
-    expect(occurrences).toBe(1);
+  it('the Map names no executing news endpoint', () => {
+    expect(CLIENT_CODE).not.toContain('/news/country');
   });
 
-  it('every call site names a reason — none calls with two arguments', () => {
-    const calls = [...CLIENT_CODE.matchAll(/loadCountry\(([^)]*)\)/g)].map((m) => m[1]);
-
-    expect(calls.length).toBeGreaterThan(0);
-
-    for (const args of calls) {
-      /* signature declaration aside, each invocation must pass three arguments */
-      if (args.includes(':')) continue;
-      expect(args.split(',').length).toBe(3);
-    }
+  it('retained evidence still seeds the cache, so selection still SHOWS what is held', () => {
+    expect(CLIENT_CODE).toContain('retainedCountryCorpora()');
   });
 });
 

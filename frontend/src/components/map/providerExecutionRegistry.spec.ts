@@ -115,12 +115,51 @@ describe('the layer-toggle path executes no provider', () => {
 });
 
 describe('the retrieval authority still admits only deliberate country acts', () => {
-  it('the three allowed reasons are unchanged', () => {
+  it('the allowed reasons are EXPLICIT ACTIONS ONLY', () => {
+    /*
+      SUPERSEDED. The three old reasons were all PASSIVE: clicking a country,
+      committing a country from search, and moving a category filter. Live
+      acceptance showed each of them executing GNews from an act the reader
+      understood as navigation.
+
+      A NOTE ON THE NAME, because it misled once already: the retired
+      `EXPLICIT_COUNTRY_SELECTION` was not explicit RETRIEVAL. It contained the
+      word "explicit" because the SELECTION was deliberate — the reader really
+      did choose that country — but choosing a place on a map is navigation, and
+      navigation is now provider-free. Only an action whose purpose IS retrieval
+      qualifies.
+    */
     expect([...COUNTRY_RETRIEVAL_REASONS].sort()).toEqual([
-      'CATEGORY_CHANGE_ON_SELECTED_COUNTRY',
-      'EXPLICIT_COUNTRY_SELECTION',
-      'MAP_COUNTRY_CLICK',
+      'EXPLICIT_ANALYSIS_REQUEST',
+      'EXPLICIT_RETRIEVAL_ACTION',
     ]);
+  });
+
+  it('every retired PASSIVE trigger is permanently forbidden by name', () => {
+    /*
+      Kept by name rather than deleted: a reason that merely disappears is a
+      reason someone re-adds, and this defect class has already returned twice.
+    */
+    for (const retired of [
+      'COUNTRY_SELECTION',
+      'MAP_COUNTRY_CLICK',
+      'EXPLICIT_COUNTRY_SELECTION',
+      'CATEGORY_CHANGE_ON_SELECTED_COUNTRY',
+      'SEARCH_COUNTRY_COMMIT',
+      'CITY_SELECTION',
+      'REGION_SELECTION',
+      'CAMERA_MOTION',
+      'MAP_CENTERING',
+      'HYDRATION',
+      'URL_RECONCILIATION',
+      'BREADCRUMB_RECONSTRUCTION',
+      'ZOOM',
+      'PAN',
+      'POSITIONAL_GEOGRAPHY',
+    ]) {
+      expect(FORBIDDEN_RETRIEVAL_TRIGGERS).toContain(retired);
+      expect(COUNTRY_RETRIEVAL_REASONS as readonly string[]).not.toContain(retired);
+    }
   });
 
   it('a layer toggle is not among them, and neither is any navigation selection', () => {

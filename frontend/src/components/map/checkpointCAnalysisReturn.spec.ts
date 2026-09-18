@@ -245,7 +245,21 @@ describe('C — Poland Map → Analysis → Back', () => {
 
     it('every successful retrieval writes through to the store', () => {
       expect(source).toContain('retainGlobalFeed(feedKey, response);');
-      expect(source).toContain('retainCountryCorpus(key, response);');
+      /*
+        SUPERSEDED BY THE PROVIDER-BOUNDARY RULING.
+
+        This asserted that every successful country retrieval wrote through to
+        the retained store. The Map performs NO country retrieval any more, so
+        there is no write to assert — and asserting one would require restoring
+        the fetch this ruling removed.
+
+        WHAT STILL MATTERS, AND IS ASSERTED INSTEAD: the Map still READS the
+        retained store, which is what lets a previously analysed country show
+        its corpus the moment it is selected, at zero cost. The write now
+        happens where the retrieval happens — the Analysis surface.
+      */
+      expect(source).toContain('retainedCountryCorpora()');
+      expect(source).not.toContain('retainCountryCorpus(');
       expect(source).toContain('retainCountryGeography(iso3, resolved);');
       expect(source).toContain(
         'retainGlobalGeography(globalFeedKey(GLOBAL_FEED_LIMIT, language), resolved);',

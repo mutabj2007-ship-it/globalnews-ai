@@ -35,7 +35,6 @@ import {
 import { sharedGeographyResolver } from '@/lib/map/evidence/geographyResolver';
 import {
   globalFeedKey,
-  retainCountryCorpus,
   retainCountryGeography,
   retainGlobalFeed,
   retainGlobalGeography,
@@ -62,12 +61,15 @@ import { CountryPanel } from '@/components/map/CountryPanel';
 import { MapTooltip } from '@/components/map/MapTooltip';
 import { CoverageLegend } from '@/components/map/CoverageLegend';
 import type { CategoryFilterValue } from '@/components/map/CategoryFilterBar';
-import { fetchCountryNews, CountryNewsApiError } from '@/lib/api/countryApi';
-import {
-  countryParamFor,
-  isCountryRetrievalReason,
-  type CountryRetrievalReason,
-} from '@/lib/map/retrieval/countryRetrievalAuthority';
+/*
+  THE COUNTRY NEWS CLIENT IS DELIBERATELY NOT IMPORTED HERE ANY MORE.
+
+  `fetchCountryNews` executes GNews. With the import gone the Map has no way to
+  reach it, which is a stronger guarantee than a rule about who may call it —
+  and it is why the provider registry can assert the absence of a symbol rather
+  than the correctness of a guard.
+*/
+import { countryParamFor } from '@/lib/map/retrieval/countryRetrievalAuthority';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { readLanguageCookie } from '@/lib/i18n/languages';
 
@@ -419,7 +421,12 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     window, so a restored corpus can never outlive what the server would serve.
   */
   const [cache, setCache] = useState<CachedByCountry>(() => retainedCountryCorpora());
-  const [isLoading, setIsLoading] = useState(false);
+  /*
+    Retained-only: nothing on this surface loads asynchronously any more, so the
+    country panel is never in a loading state. Kept as a constant rather than
+    removed from the panel's contract, which other surfaces still use.
+  */
+  const isLoading = false;
   const [error, setError] = useState<string | null>(null);
   const [hovered, setHovered] = useState<HoveredCountry | null>(null);
   /*
@@ -546,88 +553,28 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
 
   const t = getDictionary(language).map;
 
-  const loadCountry = useCallback(
-    async (
-      country: CountryMeta,
-      requestedCategory: CategoryFilterValue,
-      /*
-        ══ MAP-GNEWS-QUOTA-REGRESSION-1 · THE AUTHORITY ARGUMENT ═══════════
+  /*
+    ══ THE MAP NO LONGER RETRIEVES AT ALL ═══════════════════════════════════
 
-        THIS IS THE ONLY FUNCTION IN THE ROUTE THAT CAN SPEND PROVIDER QUOTA,
-        and it now refuses to run without a caller naming the deliberate user
-        action it is acting on.
+    `loadCountry` used to live here: it set the selected country AND called
+    `GET /news/country/:iso3`, which executes GNews. Live acceptance caught it
+    doing exactly that for KEN and RWA from an act the reader understood as
+    navigation.
 
-        Measured live: 4 country retrievals, 0 cache hits, 4 provider
-        executions, one returning "[rate-limited] GNews rate limit exceeded" —
-        and THREE of the four were countries the reader never selected.
+    It is DELETED rather than left dormant behind a stricter reason. A fetch
+    path that nothing calls today is how this defect returns: the guard gets
+    relaxed, or a new handler reaches for the convenient function already in
+    the file. With the function gone, the Map has no way to execute a news
+    provider, which is a stronger guarantee than a rule about who may.
 
-        A REASON, NOT A BOOLEAN. A boolean is something a future caller passes
-        `true` to because the compiler asked for an argument. Only the three
-        named reasons satisfy this type, each created at a real event handler,
-        so "may this spend quota?" is answered by construction rather than by a
-        check that could be forgotten — which is what this defect class walked
-        around twice already.
-      */
-      reason: CountryRetrievalReason,
-    ) => {
-      /*
-        ══ R3.1 · GUARD FIRST. BEFORE ANY STATE MUTATION WHATSOEVER. ═══════
+    RETRIEVAL STILL EXISTS, on the surface that is about retrieval: Open
+    Analysis carries the selection to /search, which retrieves under
+    EXPLICIT_ANALYSIS_REQUEST. Deliberate country analysis is unaffected.
 
-        THE WEAKNESS THIS CLOSES WAS MINE, AND R3 PROVED IT.
-
-        R2 put this check 26 lines lower, after `setSelectedCountry`. An
-        unauthorised caller was therefore stopped from RETRIEVING but still
-        changed the selected country — which moves the right rail, highlights
-        the polygon and, through the semantic gate, can reach the URL. Blocking
-        the spend while letting the wrong country appear is not a fix; it is a
-        quieter version of the same defect, and it matches what the Product
-        Owner saw on screen.
-
-        Authorization now precedes every effect this function can have. An
-        unauthorised path cannot change selectedCountry, cannot highlight a
-        country, cannot write country=, cannot write sel=country:*, and cannot
-        call /news/country/*.
-      */
-      if (!isCountryRetrievalReason(reason)) return;
-
-      setSelectedCountry(country);
-      setError(null);
-
-      const key = cacheKey(country.iso3, requestedCategory, language);
-
-      /*
-        NO GEOGRAPHY REQUEST HERE ANY MORE.
-
-        The previous shape asked a country endpoint for a country's places
-        before any article had arrived. G's route resolves TEXT, so the
-        enrichment cannot run until there is text to resolve — it now runs from
-        the effect below, once the country feed has landed. The country feed
-        still waits on nothing.
-      */
-
-      if (cache[key]) return; // already loaded for this country+category+language
-
-      setIsLoading(true);
-      try {
-        const response = await fetchCountryNews(country.iso3, {
-          category: requestedCategory === 'all' ? undefined : requestedCategory,
-          lang: language,
-        });
-        setCache((current) => ({ ...current, [key]: response }));
-        /* Refused if empty — a failed or empty retrieval never displaces a good corpus. */
-        retainCountryCorpus(key, response);
-      } catch (err) {
-        setError(
-          err instanceof CountryNewsApiError
-            ? err.message
-            : t.genericFetchError,
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [cache, language, t.genericFetchError],
-  );
+    RETAINED EVIDENCE IS UNAFFECTED TOO — `cache` is still seeded from
+    `retainedCountryCorpora()`, so a country the reader has already analysed
+    still shows its corpus the moment it is selected.
+  */
 
   /*
     ══ THE MAP FEED, ON THE LIVE PATH ═══════════════════════════════════════
@@ -1102,10 +1049,41 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     router.replace(query.length > 0 ? `/map?${query}` : '/map', { scroll: false });
   }, [restored, selectedCountry, category, camera, mode, period, spatialSelection, router]);
 
+  /*
+    ══ SELECTION ESTABLISHES SCOPE. IT DOES NOT RETRIEVE. ═══════════════════
+
+    THE BOUNDARY THE CTO MOVED. Live acceptance showed `GET /news/country/KEN`
+    and `/RWA` executing GNews from an act the reader understood as choosing a
+    place on a map. The old authority permitted it; the product's explicit-cost
+    direction does not.
+
+    So this is the whole of what selecting a country now does:
+
+      · sets the semantic COUNTRY scope (which the single URL writer persists)
+      · clears the previous error
+      · shows the RETAINED corpus for that country if one is already held
+
+    No fetch. No provider. `/geo/map-feed` enrichment is unaffected — it runs
+    from its own effect over articles that are already present, and it is not a
+    news provider.
+
+    WHAT DID NOT HAPPEN HERE: the ability to analyse a country deliberately was
+    not removed. It moved behind the reader's own request — Open Analysis
+    carries the selection to the research surface, which retrieves under
+    EXPLICIT_ANALYSIS_REQUEST.
+  */
+  const selectCountryScope = useCallback(
+    (country: CountryMeta): void => {
+      setSelectedCountry(country);
+      setError(null);
+    },
+    [],
+  );
+
   function handleSelectFromSearch(country: CountryMeta): void {
     setCategory('all');
-    /* The reader committed a COUNTRY result from place search. */
-    void loadCountry(country, 'all', 'EXPLICIT_COUNTRY_SELECTION');
+    /* The reader committed a COUNTRY result from place search. Scope only. */
+    selectCountryScope(country);
   }
 
   function handleSelectFromMap(feature: CountryFeature): void {
@@ -1113,8 +1091,8 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     if (!country) return; // geometry feature we don't have metadata for yet
     setCategory('all');
     setSpatialSelection({ kind: 'COUNTRY', id: country.iso3 });
-    /* The reader clicked the country's own fill on the map. */
-    void loadCountry(country, 'all', 'MAP_COUNTRY_CLICK');
+    /* The reader clicked the country's own fill. Scope only — no provider. */
+    selectCountryScope(country);
   }
 
   /*
@@ -1178,15 +1156,20 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
       REGION branch above has already returned, and a selection whose id is not
       a known country returned before this line.
     */
-    void loadCountry(country, 'all', 'EXPLICIT_COUNTRY_SELECTION');
+    selectCountryScope(country);
   }
 
+  /*
+    A CATEGORY FILTER NARROWS WHAT IS HELD; IT DOES NOT GO AND GET MORE.
+
+    It used to retrieve under CATEGORY_CHANGE_ON_SELECTED_COUNTRY, which meant
+    moving a filter could spend provider quota. With selection no longer
+    retrieving there is nothing to "re-fetch" either: the filter now applies to
+    the retained corpus, and an empty result is an honest empty rather than a
+    reason to buy more.
+  */
   function handleCategoryChange(value: CategoryFilterValue): void {
     setCategory(value);
-    /* A country is already selected and the reader narrowed it. */
-    if (selectedCountry) {
-      void loadCountry(selectedCountry, value, 'CATEGORY_CHANGE_ON_SELECTED_COUNTRY');
-    }
   }
 
   const activeResponse = selectedCountry ? cache[cacheKey(selectedCountry.iso3, category, language)] : null;
