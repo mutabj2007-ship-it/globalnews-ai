@@ -89,12 +89,35 @@ describe('R2 · loadCountry is the single gate, and it consumes the reason', () 
     expect(CLIENT_CODE).toContain('if (!isCountryRetrievalReason(reason)) return;');
   });
 
-  it('the refusal precedes the fetch, which is the only ordering that matters', () => {
-    const guard = CLIENT_CODE.indexOf('if (!isCountryRetrievalReason(reason)) return;');
-    const fetchAt = CLIENT_CODE.indexOf('await fetchCountryNews(');
+  it('R3.1 — the refusal precedes EVERY STATE MUTATION, not just the fetch', () => {
+    /*
+      THE ORDERING R3 PROVED INSUFFICIENT.
+
+      R2 placed this guard after `setSelectedCountry`, so an unauthorised
+      caller was stopped from retrieving but still moved the right rail and
+      highlighted a country the reader never chose. Blocking the spend while
+      letting the wrong country appear is a quieter version of the same defect.
+
+      The guard must therefore come before the FIRST mutation in the function,
+      not merely before the network call.
+    */
+    const body = CLIENT_CODE.slice(CLIENT_CODE.indexOf('const loadCountry = useCallback'));
+    const guard = body.indexOf('if (!isCountryRetrievalReason(reason)) return;');
+    const setCountry = body.indexOf('setSelectedCountry(country);');
+    const setErr = body.indexOf('setError(null);');
+    const fetchAt = body.indexOf('await fetchCountryNews(');
 
     expect(guard).toBeGreaterThan(0);
+    expect(setCountry).toBeGreaterThan(guard);
+    expect(setErr).toBeGreaterThan(guard);
     expect(fetchAt).toBeGreaterThan(guard);
+  });
+
+  it('and there is exactly ONE guard, so it cannot be half-moved', () => {
+    const body = CLIENT_CODE.slice(CLIENT_CODE.indexOf('const loadCountry = useCallback'));
+    const occurrences = body.split('if (!isCountryRetrievalReason(reason)) return;').length - 1;
+
+    expect(occurrences).toBe(1);
   });
 
   it('every call site names a reason — none calls with two arguments', () => {

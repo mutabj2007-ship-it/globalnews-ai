@@ -570,6 +570,26 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
       */
       reason: CountryRetrievalReason,
     ) => {
+      /*
+        ══ R3.1 · GUARD FIRST. BEFORE ANY STATE MUTATION WHATSOEVER. ═══════
+
+        THE WEAKNESS THIS CLOSES WAS MINE, AND R3 PROVED IT.
+
+        R2 put this check 26 lines lower, after `setSelectedCountry`. An
+        unauthorised caller was therefore stopped from RETRIEVING but still
+        changed the selected country — which moves the right rail, highlights
+        the polygon and, through the semantic gate, can reach the URL. Blocking
+        the spend while letting the wrong country appear is not a fix; it is a
+        quieter version of the same defect, and it matches what the Product
+        Owner saw on screen.
+
+        Authorization now precedes every effect this function can have. An
+        unauthorised path cannot change selectedCountry, cannot highlight a
+        country, cannot write country=, cannot write sel=country:*, and cannot
+        call /news/country/*.
+      */
+      if (!isCountryRetrievalReason(reason)) return;
+
       setSelectedCountry(country);
       setError(null);
 
@@ -586,17 +606,6 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
       */
 
       if (cache[key]) return; // already loaded for this country+category+language
-
-      /*
-        The reason is consumed here so it cannot be an unused ornament: if a
-        future edit drops it from a call site, this file stops compiling rather
-        than quietly resuming unauthorized retrieval.
-
-        Hydration, URL reconciliation, camera motion, region selection and
-        positional geography have NO reason they can pass. They reach the
-        retained corpus above and stop there — free, and correct.
-      */
-      if (!isCountryRetrievalReason(reason)) return;
 
       setIsLoading(true);
       try {
