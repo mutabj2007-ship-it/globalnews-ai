@@ -63,6 +63,11 @@ import { MapTooltip } from '@/components/map/MapTooltip';
 import { CoverageLegend } from '@/components/map/CoverageLegend';
 import type { CategoryFilterValue } from '@/components/map/CategoryFilterBar';
 import { fetchCountryNews, CountryNewsApiError } from '@/lib/api/countryApi';
+import {
+  countryParamFor,
+  isCountryRetrievalReason,
+  type CountryRetrievalReason,
+} from '@/lib/map/retrieval/countryRetrievalAuthority';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { readLanguageCookie } from '@/lib/i18n/languages';
 
@@ -542,7 +547,29 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
   const t = getDictionary(language).map;
 
   const loadCountry = useCallback(
-    async (country: CountryMeta, requestedCategory: CategoryFilterValue) => {
+    async (
+      country: CountryMeta,
+      requestedCategory: CategoryFilterValue,
+      /*
+        ══ MAP-GNEWS-QUOTA-REGRESSION-1 · THE AUTHORITY ARGUMENT ═══════════
+
+        THIS IS THE ONLY FUNCTION IN THE ROUTE THAT CAN SPEND PROVIDER QUOTA,
+        and it now refuses to run without a caller naming the deliberate user
+        action it is acting on.
+
+        Measured live: 4 country retrievals, 0 cache hits, 4 provider
+        executions, one returning "[rate-limited] GNews rate limit exceeded" —
+        and THREE of the four were countries the reader never selected.
+
+        A REASON, NOT A BOOLEAN. A boolean is something a future caller passes
+        `true` to because the compiler asked for an argument. Only the three
+        named reasons satisfy this type, each created at a real event handler,
+        so "may this spend quota?" is answered by construction rather than by a
+        check that could be forgotten — which is what this defect class walked
+        around twice already.
+      */
+      reason: CountryRetrievalReason,
+    ) => {
       setSelectedCountry(country);
       setError(null);
 
@@ -559,6 +586,17 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
       */
 
       if (cache[key]) return; // already loaded for this country+category+language
+
+      /*
+        The reason is consumed here so it cannot be an unused ornament: if a
+        future edit drops it from a call site, this file stops compiling rather
+        than quietly resuming unauthorized retrieval.
+
+        Hydration, URL reconciliation, camera motion, region selection and
+        positional geography have NO reason they can pass. They reach the
+        retained corpus above and stop there — free, and correct.
+      */
+      if (!isCountryRetrievalReason(reason)) return;
 
       setIsLoading(true);
       try {
@@ -931,7 +969,30 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
         statement and may name a non-country selection.
       */
       setSpatialSelection((current) => current ?? { kind: 'COUNTRY', id: country.iso3 });
-      void loadCountry(country, restoredCategory);
+
+      /*
+        ══ HYDRATION RESTORES. IT DOES NOT RETRIEVE. ═══════════════════════
+
+        THIS LINE WAS THE QUOTA LEAK. It read `?country=` and called
+        `loadCountry` unconditionally, so every load, reload, restore and
+        shared link spent provider quota for whatever ISO-3 happened to be in
+        the address bar — with no user in the loop at all.
+
+        That is what made a single wrong frame permanent. A camera-derived
+        country reached `selectedCountry`, the URL writer persisted it, and
+        from then on the mistake re-spent quota on every visit. It is also
+        exactly why three of the four measured retrievals were countries the
+        reader never selected.
+
+        WHAT REPLACES IT IS NOT "NOTHING". The retained corpus is already
+        seeded into `cache` at mount, so a country whose evidence is still
+        within the 300s TTL renders immediately — a shared link keeps working,
+        warm Home->Map reuse is untouched, and none of it costs a request.
+
+        What a cold link no longer does is silently buy fresh evidence. The
+        reader selects the country to ask for that, which is the deliberate act
+        the authority contract requires.
+      */
     }
     setRestored(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -970,7 +1031,29 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
   useEffect(() => {
     if (!restored) return;
     const params = new URLSearchParams();
-    if (selectedCountry) params.set('country', selectedCountry.iso3);
+
+    /*
+      ══ MAP-EAST-AFRICA-REGION-COLLAPSE-1 · SEMANTIC SELECTION DECIDES ════
+
+      `country=` used to be written from `selectedCountry` ALONE, so the two
+      layers could disagree in the address bar:
+      `?country=CAN&sel=region:eastern-africa` — the panel describing Canada,
+      the rail describing Eastern Africa, and a shared link restoring both.
+
+      The semantic selection is now the authority: the country parameter is
+      written ONLY when the selection IS that country. A REGION selection
+      therefore cannot leave a country in the URL, which is what stopped the
+      East Africa collapse from being persisted — and, with hydration no longer
+      retrieving, from being re-spent.
+
+      THE CAMERA IS UNTOUCHED BY THIS. It keeps its own parameters below and
+      describes the viewport, which is the separation the ruling requires:
+      camera-centre lookup may DESCRIBE what is on screen, and may never
+      REWRITE what the reader selected.
+    */
+    const countryParam = countryParamFor(spatialSelection, selectedCountry?.iso3 ?? null);
+
+    if (countryParam !== null) params.set('country', countryParam);
     if (category !== 'all') params.set('category', category);
     const withMapState = searchParamsWithMapState(params, {
       mode,
@@ -983,7 +1066,8 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
 
   function handleSelectFromSearch(country: CountryMeta): void {
     setCategory('all');
-    void loadCountry(country, 'all');
+    /* The reader committed a COUNTRY result from place search. */
+    void loadCountry(country, 'all', 'EXPLICIT_COUNTRY_SELECTION');
   }
 
   function handleSelectFromMap(feature: CountryFeature): void {
@@ -991,7 +1075,8 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     if (!country) return; // geometry feature we don't have metadata for yet
     setCategory('all');
     setSpatialSelection({ kind: 'COUNTRY', id: country.iso3 });
-    void loadCountry(country, 'all');
+    /* The reader clicked the country's own fill on the map. */
+    void loadCountry(country, 'all', 'MAP_COUNTRY_CLICK');
   }
 
   /*
@@ -1050,12 +1135,20 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     if (country === null) return;
 
     setCategory('all');
-    void loadCountry(country, 'all');
+    /*
+      Reached ONLY from the COUNTRY branch of the single selection funnel; the
+      REGION branch above has already returned, and a selection whose id is not
+      a known country returned before this line.
+    */
+    void loadCountry(country, 'all', 'EXPLICIT_COUNTRY_SELECTION');
   }
 
   function handleCategoryChange(value: CategoryFilterValue): void {
     setCategory(value);
-    if (selectedCountry) void loadCountry(selectedCountry, value);
+    /* A country is already selected and the reader narrowed it. */
+    if (selectedCountry) {
+      void loadCountry(selectedCountry, value, 'CATEGORY_CHANGE_ON_SELECTED_COUNTRY');
+    }
   }
 
   const activeResponse = selectedCountry ? cache[cacheKey(selectedCountry.iso3, category, language)] : null;

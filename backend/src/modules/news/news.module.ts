@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProviderExecutionRegistry } from './telemetry/provider-execution.registry';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NewsController } from './news.controller';
 import { NewsService } from './news.service';
@@ -171,6 +172,12 @@ function buildProviderSelectionInput(
   imports: [ConfigModule],
   controllers: [NewsController, CountryNewsController],
   providers: [
+    /*
+      MAP-GNEWS-QUOTA-REGRESSION-1 — one instance per process, shared by
+      NewsService and CountryNewsService so cache decisions and provider
+      invocations are counted against the same registry.
+    */
+    ProviderExecutionRegistry,
     NewsService,
     CountryNewsService,
     ArticlePersistenceService,
@@ -255,6 +262,7 @@ function buildProviderSelectionInput(
   // about provider selection, registration or behaviour changes: these
   // two entries make the existing factories' results visible to a
   // consuming module, and nothing else in this file was touched.
-  exports: [NewsService, CountryNewsService, NEWS_PROVIDERS, ALL_NEWS_PROVIDERS],
+  exports: [
+    ProviderExecutionRegistry,NewsService, CountryNewsService, NEWS_PROVIDERS, ALL_NEWS_PROVIDERS],
 })
 export class NewsModule {}

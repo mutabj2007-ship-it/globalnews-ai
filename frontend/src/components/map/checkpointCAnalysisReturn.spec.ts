@@ -270,7 +270,14 @@ describe('C — Poland Map → Analysis → Back', () => {
       */
       expect(source).toContain('searchParamsWithMapState(params, {');
       expect(source).toContain('searchParamsWithCamera(withMapState, camera)');
-      expect(source).toContain("params.set('country', selectedCountry.iso3)");
+      /*
+        SUPERSEDED BY R2. The country is still URL-borne — that is what this
+        block checks — but it is now written through the semantic gate, because
+        writing it from `selectedCountry` alone is what let a region selection
+        leave a country behind in the address bar.
+      */
+      expect(source).toContain('countryParamFor(spatialSelection');
+      expect(source).toContain("params.set('country', countryParam)");
     });
   });
 });

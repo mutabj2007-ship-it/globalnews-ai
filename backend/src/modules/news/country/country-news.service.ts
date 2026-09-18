@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { ProviderExecutionRegistry } from '../telemetry/provider-execution.registry';
 import { ConfigService } from '@nestjs/config';
 import {
   resolveCountryByAnyIdentifier,
@@ -56,6 +57,17 @@ function resolvesToADifferentCountry(
 export class CountryNewsService {
   private readonly logger = new Logger(CountryNewsService.name);
   private readonly cache = new Map<string, CacheEntry>();
+
+  /*
+    MAP-GNEWS-QUOTA-REGRESSION-1 — the counter that ends duration-guessing,
+    recorded where the cache decision is actually made.
+
+    A DEFAULTED FIELD rather than a constructor parameter, for the reason
+    news.service.ts records: adding a parameter to a service that tests
+    construct directly breaks them all, and a telemetry change must not be able
+    to alter the behaviour it observes.
+  */
+  private executions: ProviderExecutionRegistry = new ProviderExecutionRegistry();
 
   constructor(
     private readonly newsService: NewsService,
@@ -125,6 +137,12 @@ export class CountryNewsService {
     const cached = this.getCached(cacheKey);
 
     if (cached) {
+      /* Served without reaching a provider. No quota spent. */
+      try {
+        this.executions?.recordCacheHit('country-news');
+      } catch {
+        /* Same rule: a counter may never change a cache decision. */
+      }
       this.logger.debug(`Serving cached country news for ${country.iso3}`);
 
       return cached;

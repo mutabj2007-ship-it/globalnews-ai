@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ProviderExecutionRegistry } from './telemetry/provider-execution.registry';
 import { logWithRequestId } from '../../observability/log-with-request-id';
 import type {
   LanguageCode,
@@ -335,6 +336,21 @@ export class NewsService {
    */
   private readonly homeNewsCache = new Map<string, HomeNewsCacheEntry>();
 
+  /*
+    MAP-GNEWS-QUOTA-REGRESSION-1 — provider-execution telemetry.
+
+    A FIELD WITH A DEFAULT, NOT A LEADING CONSTRUCTOR PARAMETER. My first cut
+    put it first in the constructor, which silently shifted every positional
+    argument in the dozen suites that construct this service directly — 13
+    backend suites went red at once, and none of them was about telemetry.
+
+    Nest still injects the shared instance through the property below when the
+    module resolves it; a direct `new NewsService(providers, …)` in a test gets
+    a private registry and behaves exactly as it did before. A counter must
+    never be able to change what it is counting.
+  */
+  private executions: ProviderExecutionRegistry = new ProviderExecutionRegistry();
+
   constructor(
     @Inject(NEWS_PROVIDERS)
     providers: NewsProvider[],
@@ -554,11 +570,40 @@ export class NewsService {
       );
     }
 
-    const searchOperation = (provider: NewsProvider) =>
-      provider.search(query, {
+    const searchOperation = (provider: NewsProvider) => {
+      /*
+        ══ MAP-GNEWS-QUOTA-REGRESSION-1 · THE QUOTA-BEARING EVENT ══════════
+
+        Counted HERE, at the invocation, and deliberately NOT at the outcome.
+        A call that fails, times out or is rate-limited has still been spent —
+        the live SWZ retrieval proved it, taking 8272ms to consume GNews (which
+        answered "rate limit exceeded"), then two fallbacks, then a GDELT
+        cooldown. Counting successes would have reported that as zero.
+      */
+      /*
+        SELF-CATCHING, AND THAT IS NOT DEFENSIVE PADDING.
+
+        My first cut called this bare and eight NewsService tests changed
+        behaviour: a throw here landed inside the caller's provider-failure
+        handling, so a FAILING provider was recorded as having RESPONDED and
+        `response.providers` grew from [] to [one]. The counter had altered the
+        thing it was counting, which is the one outcome telemetry may never
+        produce.
+
+        Wrapped, the worst case is a lost count. Unwrapped, the worst case is a
+        changed answer.
+      */
+      try {
+        this.executions?.recordExecution(provider.id, 'search');
+      } catch {
+        /* A counter must never decide what a provider did. */
+      }
+
+      return provider.search(query, {
         limit,
         lang: provider.id === 'gnews' ? gnewsSearchLang : options?.lang,
       });
+    };
 
     /*
      * R1 — THE ADMISSION RULE, BUILT FROM THE AUTHORITIES THAT WILL JUDGE

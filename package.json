@@ -26,7 +26,8 @@
     "test:frontend": "npm run test --workspace=frontend",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
-    "verify:file-inclusion": "node scripts/verify-release-file-inclusion.mjs"
+    "verify:file-inclusion": "node scripts/verify-release-file-inclusion.mjs",
+    "test:request-economy": "node scripts/map-request-economy-probe.mjs"
   },
   "engines": {
     "node": ">=20.0.0",

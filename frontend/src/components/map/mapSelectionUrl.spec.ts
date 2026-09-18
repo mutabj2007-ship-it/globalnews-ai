@@ -27,7 +27,21 @@ const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ')
 
 describe('the selection is carried in the URL', () => {
   it('the country and the category are written to the address bar', () => {
-    expect(CODE).toMatch(/params\.set\('country', selectedCountry\.iso3\)/);
+    /*
+      ══ SUPERSEDED BY R2 — AND THIS TRIPWIRE FIRED CORRECTLY ═══════════════
+
+      It pinned `params.set('country', selectedCountry.iso3)`, which is exactly
+      the line MAP-EAST-AFRICA-REGION-COLLAPSE-1 required be changed: writing
+      the country from `selectedCountry` ALONE is what allowed
+      `?country=CAN&sel=region:eastern-africa` — the panel describing one place
+      and the rail another.
+
+      THE PROPERTY IT PROTECTS IS UNCHANGED and is re-asserted below: the
+      country IS still written to the address bar. What changed is that the
+      SEMANTIC SELECTION now decides whether it may be.
+    */
+    expect(CODE).toMatch(/countryParamFor\(spatialSelection/);
+    expect(CODE).toMatch(/params\.set\('country', countryParam\)/);
     expect(CODE).toMatch(/params\.set\('category', category\)/);
   });
 
@@ -56,7 +70,32 @@ describe('the read happens once, from the address bar itself', () => {
   });
 
   it('restoring reuses the EXISTING load path — no new fetch, no new contract', () => {
-    expect(CODE).toMatch(/void loadCountry\(country, restoredCategory\)/);
+    /*
+      ══ SUPERSEDED BY R2 — THIS ASSERTION PINNED THE QUOTA LEAK ════════════
+
+      It required the mount effect to call `loadCountry`, which is precisely
+      what MAP-GNEWS-QUOTA-REGRESSION-1 measured: hydration retrieved whatever
+      `?country=` was in the address bar, with no user in the loop, so every
+      load, reload and shared link spent provider quota.
+
+      A test that pins a defect makes the defect load-bearing, so the
+      expectation MOVES WITH THE FIX rather than being deleted.
+
+      The property this block really guards — that restore reuses the EXISTING
+      path and introduces no second contract — is re-asserted: the mount effect
+      still restores both layers of the selection, and there is still exactly
+      one retrieval entry point in the file.
+    */
+    const mount = CODE.slice(
+      CODE.indexOf('const params = new URLSearchParams(window.location.search)'),
+      CODE.indexOf('setRestored(true);'),
+    );
+
+    expect(mount.length).toBeGreaterThan(0);
+    expect(mount).not.toContain('loadCountry');
+    expect(mount).toContain('setSelectedCountry(country)');
+    expect(mount).toContain('setSpatialSelection');
+    expect(CODE.split('fetchCountryNews(').length - 1).toBe(1);
     expect(CODE).not.toMatch(/fetch\(|new Request/);
   });
 });
@@ -170,7 +209,21 @@ describe('FOLLOW IS PERMITTED, WATCH IS NOT — the second retired exclusion', (
 
 describe('THE PROTECTIONS THE RULING REQUIRES TO SURVIVE THE AMENDMENT', () => {
   it('PATCH B URL persistence is still functional', () => {
-    expect(CODE).toMatch(/params\.set\('country', selectedCountry\.iso3\)/);
+    /*
+      ══ SUPERSEDED BY R2 — AND THIS TRIPWIRE FIRED CORRECTLY ═══════════════
+
+      It pinned `params.set('country', selectedCountry.iso3)`, which is exactly
+      the line MAP-EAST-AFRICA-REGION-COLLAPSE-1 required be changed: writing
+      the country from `selectedCountry` ALONE is what allowed
+      `?country=CAN&sel=region:eastern-africa` — the panel describing one place
+      and the rail another.
+
+      THE PROPERTY IT PROTECTS IS UNCHANGED and is re-asserted below: the
+      country IS still written to the address bar. What changed is that the
+      SEMANTIC SELECTION now decides whether it may be.
+    */
+    expect(CODE).toMatch(/countryParamFor\(spatialSelection/);
+    expect(CODE).toMatch(/params\.set\('country', countryParam\)/);
     expect(CODE).toMatch(/params\.set\('category', category\)/);
     expect(CODE).toMatch(/if \(!restored\) return;/);
     expect((CODE.match(/router\.replace\(/g) ?? []).length).toBe(1);
