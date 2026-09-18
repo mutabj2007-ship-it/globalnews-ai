@@ -53,10 +53,22 @@ function renderSurface(locale: 'en' | 'pl'): string {
   );
 }
 
+/*
+  R2-1 — these assertions are about the FIXTURE world, where a handoff really
+  is delivered (the mock produces the operator turn it promises), so turns are
+  rendered with `handoffAvailable: true`. The live, no-transport counterpart —
+  where the promise would be false and the action is not offered at all — is
+  asserted in humanHandoffTruthfulness.spec.ts.
+*/
 function renderTurn(turn: Turn, locale: 'en' | 'pl' = 'en'): string {
   const dictionary = locale === 'pl' ? supportPl : supportEn;
   return renderToStaticMarkup(
-    createElement(TranscriptTurn, { turn, t: dictionary.conversation, authors: dictionary.authors }),
+    createElement(TranscriptTurn, {
+      turn,
+      t: dictionary.conversation,
+      authors: dictionary.authors,
+      handoffAvailable: true,
+    }),
   );
 }
 

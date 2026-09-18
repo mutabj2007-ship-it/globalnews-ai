@@ -69,10 +69,12 @@ function AgentTurnView({
   turn,
   t,
   authors,
+  handoffAvailable,
 }: {
   turn: AgentTurn;
   t: Conversation;
   authors: Authors;
+  handoffAvailable: boolean;
 }): JSX.Element {
   const body = authoredBody(turn, t);
   const isAnalysisAnswer = turn.outcome === 'ANSWER' && turn.source === 'ANALYSIS';
@@ -123,8 +125,25 @@ function AgentTurnView({
         conversation stays open, and a person can take it. The route is always
         STATED; whether it is automatically TAKEN is the triggers' business.
       */}
+      {/*
+        R2-1 — F-5's TWO FACTS, BUT ONLY THE TRUE VERSION OF THE SECOND.
+
+        F `04` F-5 requires every non-answer to end by stating that the
+        conversation stays open and that a person can take it. WHICH SENTENCE
+        states it depends on whether a handoff can actually be delivered:
+
+          handoffAvailable   "say so and I will pass it on" — a promise of
+                             delivery, true only where something delivers.
+          no transport       the conversation reaches nobody, and the route to
+                             a person is the support request on this page.
+
+        The route is still always STATED, which is what F-5 requires. What
+        changed is that it is now stated accurately.
+      */}
       {(turn.outcome === 'WITHHELD' || turn.outcome === 'UNAVAILABLE') && (
-        <p className="mt-3 text-sm text-ink-secondary">{t.escalation.offer}</p>
+        <p className="mt-3 text-sm text-ink-secondary">
+          {handoffAvailable ? t.escalation.offer : t.escalation.noHandoff}
+        </p>
       )}
     </article>
   );
@@ -166,16 +185,24 @@ export function TranscriptTurn({
   turn,
   t,
   authors,
+  handoffAvailable,
 }: {
   turn: Turn;
   t: Conversation;
   authors: Authors;
+  /**
+   * R2-1 — REQUIRED, and required on purpose. A default would decide, for a
+   * caller that forgot, whether the reader is promised a handoff. That is the
+   * same defaulting mistake R2 removed from the adapter prop, and it is not
+   * reintroduced one component lower.
+   */
+  handoffAvailable: boolean;
 }): JSX.Element {
   switch (turn.kind) {
     case 'USER':
       return <UserTurnView turn={turn} authors={authors} />;
     case 'AGENT':
-      return <AgentTurnView turn={turn} t={t} authors={authors} />;
+      return <AgentTurnView turn={turn} t={t} authors={authors} handoffAvailable={handoffAvailable} />;
     case 'OPERATOR':
       return <OperatorTurnView turn={turn} authors={authors} />;
     case 'SYSTEM':

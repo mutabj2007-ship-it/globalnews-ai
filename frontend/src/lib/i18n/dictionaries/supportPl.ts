@@ -172,9 +172,14 @@ export const supportPl: SupportDictionary = {
     },
 
     escalation: {
-      /* C-9 */
+      /* C-9 — renderowane tylko tam, gdzie transport przekazania istnieje. */
       offer: 'Może się tym zająć człowiek — napisz o tym, a rozmowa zostanie przekazana dalej.',
       action: 'Poproś o człowieka',
+
+      /* R2-1 — genderless, no number, no promise of time. */
+      noHandoff:
+        'Ta rozmowa nie jest nikomu przesyłana i nikt nie jest powiadamiany o tym, że tu piszesz. Aby skontaktować się z osobą z zespołu, załóż zgłoszenie na tej stronie — zgłoszenie trafia do zespołu wsparcia.',
+      openRequest: 'Załóż zgłoszenie do wsparcia',
     },
 
     transition: {

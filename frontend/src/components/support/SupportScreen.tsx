@@ -165,7 +165,32 @@ export function SupportScreen({
               real transport is an edit to this line and to nothing else.
             */}
             {user && (
-              <SupportConversation t={t} locale={language} adapter={conversationAdapter} />
+              <SupportConversation
+                t={t}
+                locale={language}
+                adapter={conversationAdapter}
+                /*
+                  R2-1 — THE ONE REAL ROUTE TO A PERSON, MADE REACHABLE.
+
+                  The no-transport adapter cannot deliver a handoff, so the
+                  conversation offers no "ask for a person" control and points
+                  here instead. This opens the request surface and the new
+                  request form together, because the reader's goal is to reach
+                  somebody, not to browse what they filed before — and a route
+                  that is two unexplained clicks deep is not a route.
+
+                  Nothing is submitted here. The reader writes their own
+                  subject, chooses their own category and sends it themselves,
+                  through the existing POST /support/tickets contract, which
+                  opens the ticket in AWAITING_ADMIN server-side. That
+                  transition is the measurable backend state change the
+                  invariant asks for, and it happens because a person chose it.
+                */
+                onOpenRequestSurface={() => {
+                  setShowTickets(true);
+                  setComposing(true);
+                }}
+              />
             )}
 
             {user && (

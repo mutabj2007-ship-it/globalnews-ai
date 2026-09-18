@@ -317,6 +317,16 @@ export function createMockConversationAdapter(
     analysisAvailable,
 
     /*
+      R2-1 — TRUE FOR THE MOCK, AND ONLY BECAUSE THE MOCK IS A SIMULATION.
+      `requestHandoff` below really does produce the operator turn this adapter
+      promises, so within the fixture world the escalation copy is accurate and
+      the HANDOFF_PENDING -> HUMAN states stay reachable for review. Nothing
+      about that is true of a live surface, which is why the live adapter
+      reports false. Routing is untouched.
+    */
+    handoffAvailable: true,
+
+    /*
       E1 C-8 — the bound is reported as the backend would report it: a BOOLEAN,
       never a count, because the limiter's shape is not disclosable (C-28, F
       Q-5). The request arriving here has ALREADY been bounded by the

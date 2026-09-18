@@ -73,6 +73,22 @@ export function createNoTransportAdapter(
     */
     analysisAvailable: false,
 
+    /*
+      R2-1 — THE BLOCKING DEFECT, AND ITS CORRECTION.
+
+      `requestHandoff` used to resolve here. That was a no-op wearing the shape
+      of a success: the surface took the resolved promise as delivery, appended
+      the QUEUED turn and moved to HANDOFF_PENDING, so the reader was told in
+      C-10's words that the conversation was "now with the human Support team".
+      No row was written. No queue received anything. Nobody was notified.
+
+      There is no handoff transport to report, so this reports none. The
+      surface reads this field and does not offer the action at all — it routes
+      the reader to the Support request surface on the same page, which is the
+      one path that does reach a person.
+    */
+    handoffAvailable: false,
+
     async respond(_request: AgentRequest): Promise<AgentReply> {
       await new Promise((resolve) => setTimeout(resolve, thinkMs));
 
@@ -117,13 +133,25 @@ export function createNoTransportAdapter(
     },
 
     /*
-      `02` H-1 — the reader's request for a person is accepted on the turn it is
-      made and is never argued with. It is not answered here, because answering
-      it is not this seam's job: delivery belongs to the transport, and the
-      surface's own escalation state is what the reader sees.
+      IT THROWS. This is deliberate and is the whole correction.
+
+      `02` H-1 makes a request for a person absolute, so the one thing this
+      method may not do is FAIL QUIETLY. Resolving would mean reporting success
+      for something that did not happen, and the surface has no way to tell the
+      two apart — `Promise<void>` carries no outcome. Throwing makes the
+      impossible case impossible to mistake for the possible one.
+
+      Nothing calls this. `handoffAvailable: false` is what the surface reads,
+      and it neither renders the action nor calls this method. The throw exists
+      for the case where someone wires it up anyway: a loud failure on the turn
+      it happens, rather than a reader told that somebody has been told.
     */
-    async requestHandoff(): Promise<void> {
-      return;
+    async requestHandoff(): Promise<never> {
+      throw new Error(
+        'noTransportAdapter: there is no Support handoff transport. ' +
+          'Check adapter.handoffAvailable before offering or performing a handoff; ' +
+          'the reader must be routed to the Support request surface instead.',
+      );
     },
 
     /*

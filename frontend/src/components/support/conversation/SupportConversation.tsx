@@ -73,12 +73,36 @@ export interface SupportConversationProps {
    * arrive by accident.
    */
   adapter: SupportConversationAdapter;
+  /**
+   * R2-1 — HOW THE READER ACTUALLY REACHES A PERSON WHEN NO HANDOFF TRANSPORT
+   * EXISTS. Opens the real Support request surface on the page, which is the
+   * one path that writes a row a person sees. Optional because the demo and
+   * evidence harnesses render this component outside that page; where it is
+   * absent the route is stated in words and the control is not offered, which
+   * is still truthful.
+   */
+  onOpenRequestSurface?: () => void;
 }
 
-export function SupportConversation({ t, locale, adapter }: SupportConversationProps): JSX.Element {
+export function SupportConversation({
+  t,
+  locale,
+  adapter,
+  onOpenRequestSurface,
+}: SupportConversationProps): JSX.Element {
   const c = t.conversation;
   // No resolution step, and no `??`. The adapter is the one that was passed.
   const resolvedAdapter = adapter;
+
+  /*
+    R2-1 — READ ONCE, AND EVERY HANDOFF DECISION BELOW ASKS IT.
+
+    `requestHandoff` returns `Promise<void>`, so a resolved promise and a
+    delivered handoff are the same value. This flag is the only thing that
+    tells them apart, which is why it is consulted BEFORE the call rather than
+    interpreted after it.
+  */
+  const handoffAvailable = resolvedAdapter.handoffAvailable;
 
   const [state, setState] = useState<ConversationState>('OPEN_AI');
   const [turns, setTurns] = useState<readonly Turn[]>([]);
@@ -148,10 +172,21 @@ export function SupportConversation({ t, locale, adapter }: SupportConversationP
     */
     if (projection.atConversationCeiling) {
       setConversationTooLong(true);
-      await resolvedAdapter.requestHandoff('H-8');
-      setTurns((current) => [...current, systemTurn('QUEUED')]);
-      setState(advance('AI_WORKING', { type: 'HANDOFF' }).state);
-      return;
+
+      /*
+        R2-1 — H-8 ASSUMES SOMEWHERE TO HAND OFF TO. Where there is none, the
+        ceiling is still REPORTED (it is true, and the reader is entitled to
+        it) but no handoff is claimed: no QUEUED turn, no HANDOFF_PENDING, and
+        no call into an adapter that cannot deliver. The turn falls through to
+        the ordinary path below and is answered like any other, which under the
+        no-transport adapter means F's withheld text and the route to a person.
+      */
+      if (handoffAvailable) {
+        await resolvedAdapter.requestHandoff('H-8');
+        setTurns((current) => [...current, systemTurn('QUEUED')]);
+        setState(advance('AI_WORKING', { type: 'HANDOFF' }).state);
+        return;
+      }
     }
 
     const reply = await resolvedAdapter.respond({
@@ -174,7 +209,14 @@ export function SupportConversation({ t, locale, adapter }: SupportConversationP
     const resolved = advance('AI_WORKING', resolution);
     setState(resolved.state);
 
-    if (reply.escalate) {
+    /*
+      R2-1 — an adapter that cannot deliver must not set `escalate`; the
+      no-transport adapter never does. The guard is here because a trigger
+      arriving from an adapter that reports no transport is a contradiction,
+      and the safe reading of a contradiction is the one that does not promise
+      the reader anything.
+    */
+    if (reply.escalate && handoffAvailable) {
       await resolvedAdapter.requestHandoff(reply.escalate);
       setTurns((current) => [...current, systemTurn('QUEUED')]);
       setState(advance(resolved.state, { type: 'HANDOFF' }).state);
@@ -188,6 +230,12 @@ export function SupportConversation({ t, locale, adapter }: SupportConversationP
     with no confirmation step.
   */
   async function handleAskForPerson(): Promise<void> {
+    /*
+      R2-1 — UNREACHABLE WHEN THERE IS NOTHING TO ASK. The control that calls
+      this is not rendered unless `handoffAvailable`; this guard is the second
+      lock, so that a future caller cannot reach the promise by another route.
+    */
+    if (!handoffAvailable) return;
     await resolvedAdapter.requestHandoff('H-1');
     setTurns((current) => [...current, systemTurn('QUEUED')]);
     setState((current) => advance(current, { type: 'HANDOFF' }).state);
@@ -212,8 +260,16 @@ export function SupportConversation({ t, locale, adapter }: SupportConversationP
     composerRef.current?.focus();
   }
 
+  /*
+    R2-1 — ABSENT, NOT DISABLED, when no handoff can be delivered. E1 C-9 sets
+    the precedent for this surface: a control the product cannot honour is
+    removed rather than greyed out, because a disabled button still tells the
+    reader the capability exists and is merely unavailable right now. It does
+    not exist.
+  */
   const showEscalationAction =
-    state === 'OPEN_AI' || state === 'AI_WITHHELD' || state === 'AI_UNAVAILABLE';
+    handoffAvailable &&
+    (state === 'OPEN_AI' || state === 'AI_WITHHELD' || state === 'AI_UNAVAILABLE');
 
   return (
     <section className="flex w-full max-w-full flex-col gap-5">
@@ -247,10 +303,49 @@ export function SupportConversation({ t, locale, adapter }: SupportConversationP
         </aside>
       )}
 
+      {/*
+        R2-1 — THE ROUTE TO A PERSON, WHERE THE AGENT CANNOT PROVIDE ONE.
+
+        The CTO's instruction is to direct the reader ONLY to the existing real
+        Support request surface. That surface is on this same page and reaches
+        a real backend, so this states where it is and offers a control that
+        opens it. It appears before the first send and stays, for the same
+        reason the disclosure does: a reader who learns this after writing has
+        learned it too late.
+
+        It promises nothing. No reference, no queue position, no waiting time,
+        no acknowledgement — nothing has been sent, so there is nothing to
+        acknowledge. The button does not submit anything either; it opens the
+        request form, where the reader writes their own subject and chooses
+        their own category, and the submission is theirs.
+      */}
+      {!handoffAvailable && (
+        <aside
+          aria-label={c.escalation.openRequest}
+          className="rounded-lg border border-cyan-500/25 p-4"
+        >
+          <p className="text-sm text-ink-secondary">{c.escalation.noHandoff}</p>
+          {onOpenRequestSurface && (
+            <button
+              type="button"
+              onClick={onOpenRequestSurface}
+              className="mt-3 inline-flex min-h-[44px] items-center rounded-full border border-cyan-500/40 px-5 text-sm text-ink-primary hover:border-cyan-400/70"
+            >
+              {c.escalation.openRequest}
+            </button>
+          )}
+        </aside>
+      )}
+
       <ol aria-label={c.transcript.label} className="flex list-none flex-col gap-3 p-0">
         {turns.map((turn) => (
           <li key={turn.id}>
-            <TranscriptTurn turn={turn} t={c} authors={t.authors} />
+            <TranscriptTurn
+              turn={turn}
+              t={c}
+              authors={t.authors}
+              handoffAvailable={handoffAvailable}
+            />
           </li>
         ))}
       </ol>

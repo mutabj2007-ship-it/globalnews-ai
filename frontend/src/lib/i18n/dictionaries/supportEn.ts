@@ -240,9 +240,27 @@ export const supportEn = {
     },
 
     escalation: {
-      /* C-9 — an explicit, always-honoured route. No negotiation. */
+      /* C-9 — an explicit, always-honoured route. No negotiation.
+
+         THESE TWO ARE TRUE ONLY WHERE A HANDOFF TRANSPORT EXISTS. "I will pass
+         it on" is a promise that something is delivered, and the surface may
+         render it only when the adapter reports `handoffAvailable`. With the
+         no-transport adapter nothing is delivered, so the surface renders
+         `noHandoff` in their place and offers `openRequest` instead of
+         `action`. See R2-1. */
       offer: 'A person can take this — say so and I will pass it on.',
       action: 'Ask for a person',
+
+      /* R2-1 — the truthful route while no handoff transport exists.
+
+         It states two facts and promises nothing: this conversation reaches
+         nobody, and the way to reach a person is the support request on this
+         page, which does go to the team. No ticket number, no queue position,
+         no waiting time, no acknowledgement — there is nothing to acknowledge,
+         because nothing has been sent. */
+      noHandoff:
+        'This conversation is not sent to anyone, and nobody is notified that you wrote here. To reach a person, open a support request on this page — a request does go to the Support team.',
+      openRequest: 'Open a support request',
     },
 
     transition: {

@@ -71,7 +71,13 @@ async function askLive(locale: 'en' | 'pl'): Promise<string> {
   });
   const d = dictionary(locale);
   return renderToStaticMarkup(
-    createElement(TranscriptTurn, { turn: reply.turn, t: d.conversation, authors: d.authors }),
+    createElement(TranscriptTurn, {
+      turn: reply.turn,
+      t: d.conversation,
+      authors: d.authors,
+      // R2-1 — rendered as the LIVE surface renders it: no handoff transport.
+      handoffAvailable: adapter.handoffAvailable,
+    }),
   );
 }
 
@@ -128,13 +134,21 @@ describe('§4 — the withheld state, for both questions, in both locales', () =
         expect(html).not.toContain('no-authored-match');
       });
 
-      it('the human-handoff path remains available on the withheld turn', async () => {
+      it('R2-1 — the withheld turn states the route to a person, TRUTHFULLY', async () => {
         const html = await askLive(locale);
-        // F `04` F-5 — every non-answer ends by stating the route to a person.
-        expect(html).toContain(dictionary(locale).conversation.escalation.offer);
+        const c = dictionary(locale).conversation;
+
+        // F `04` F-5 — the route is still always stated.
+        expect(html).toContain(c.escalation.noHandoff);
+
+        /*
+          R2-1 — and it is no longer the sentence that promises delivery.
+          "say so and I will pass it on" was false: nothing passed anything on.
+        */
+        expect(html).not.toContain(c.escalation.offer);
       });
 
-      it('the surface offers the "ask for a person" control, and the composer stays open', () => {
+      it('R2-1 — the "ask for a person" control is ABSENT, and the composer stays open', () => {
         const d = dictionary(locale);
         const html = renderToStaticMarkup(
           createElement(SupportConversation, {
@@ -143,9 +157,25 @@ describe('§4 — the withheld state, for both questions, in both locales', () =
             adapter: createNoTransportAdapter({ thinkMs: 0 }),
           }),
         );
-        expect(html).toContain(d.conversation.escalation.action);
+        // Absent, not disabled — a greyed-out control still claims the
+        // capability exists. It does not.
+        expect(html).not.toContain(d.conversation.escalation.action);
         expect(html).toContain('id="support-conversation-composer"');
         expect(html).not.toContain('disabled=""');
+      });
+
+      it('R2-1 — the real Support request route is offered instead', () => {
+        const d = dictionary(locale);
+        const html = renderToStaticMarkup(
+          createElement(SupportConversation, {
+            t: d,
+            locale,
+            adapter: createNoTransportAdapter({ thinkMs: 0 }),
+            onOpenRequestSurface: () => undefined,
+          }),
+        );
+        expect(html).toContain(d.conversation.escalation.noHandoff);
+        expect(html).toContain(d.conversation.escalation.openRequest);
       });
     });
   }
@@ -181,6 +211,14 @@ describe('the live adapter has no routing table to get wrong', () => {
     expect(createNoTransportAdapter().analysisAvailable).toBe(false);
   });
 
+  it('R2-1 — reports no handoff transport, and refuses to pretend otherwise', async () => {
+    const adapter = createNoTransportAdapter({ thinkMs: 0 });
+    expect(adapter.handoffAvailable).toBe(false);
+    // It THROWS rather than resolving: a resolved promise is indistinguishable
+    // from a delivered handoff, and that ambiguity is the defect R2-1 fixes.
+    await expect(adapter.requestHandoff('H-1')).rejects.toThrow(/no Support handoff transport/i);
+  });
+
   it('never escalates on its own — no conversation is announced as handed over', async () => {
     const adapter = createNoTransportAdapter({ thinkMs: 0 });
     const reply = await adapter.respond({
@@ -196,8 +234,17 @@ describe('the live adapter has no routing table to get wrong', () => {
       const adapter = createNoTransportAdapter({ thinkMs: 0 });
       const seen: unknown[] = [];
       const unsubscribe = adapter.onOperatorTurn((turn) => seen.push(turn));
-      await adapter.requestHandoff('H-1');
+
+      /*
+        R2-1 — this used to be `await adapter.requestHandoff('H-1')`, and it
+        used to RESOLVE. That resolution was the blocking defect: the surface
+        read it as delivery. It now throws, so the attempt is made here and the
+        rejection is the assertion — no timer is armed either way, and no
+        operator is ever produced.
+      */
+      await expect(adapter.requestHandoff('H-1')).rejects.toThrow(/no Support handoff transport/i);
       jest.advanceTimersByTime(600_000);
+
       expect(seen).toEqual([]);
       expect(typeof unsubscribe).toBe('function');
       unsubscribe();

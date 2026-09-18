@@ -114,10 +114,44 @@ export interface SupportConversationAdapter {
   respond(request: AgentRequest): Promise<AgentReply>;
 
   /**
+   * R2-1 — WHETHER A REQUEST FOR A PERSON CAN ACTUALLY BE DELIVERED.
+   *
+   * A capability of the environment, exactly like `analysisAvailable` above,
+   * and for the same reason: it is a property of what exists, not of any one
+   * turn. It is declared here rather than inferred by the surface because the
+   * surface cannot know — `requestHandoff` returns `Promise<void>`, and a
+   * promise that resolves is indistinguishable from a promise that DID
+   * something. That ambiguity is what shipped: the no-transport adapter
+   * resolved, the surface believed it, and the reader was told the
+   * conversation was now with the human Support team when no row had been
+   * written and nobody had been notified.
+   *
+   * THE RULE THIS FIELD CARRIES:
+   *
+   *   false  the surface must NOT offer a handoff action, must NOT call
+   *          `requestHandoff`, and must never enter HANDOFF_PENDING. It routes
+   *          the reader to the real Support request surface instead, and says
+   *          so in words that promise no delivery.
+   *   true   `requestHandoff` corresponds to a real state change, and the
+   *          escalation copy that promises to pass the conversation on is
+   *          true.
+   *
+   * An implementation that returns true without a backing transition is
+   * lying in one place instead of three, which is the point: there is now
+   * exactly one field to check against reality.
+   */
+  readonly handoffAvailable: boolean;
+
+  /**
    * `02` H-1 — absolute, honoured on the turn it is made, never argued with.
    * Returns nothing because the handoff produces a SYSTEM turn the surface
    * composes from the dictionary: a free-text escalation message from the
    * transport would be an invented operational fact (`04` F-6).
+   *
+   * MAY ONLY BE CALLED WHEN `handoffAvailable` IS TRUE. An implementation that
+   * cannot deliver must THROW here rather than resolve, so that a miswiring
+   * fails loudly on the turn it happens instead of silently promising the
+   * reader that somebody has been told.
    */
   requestHandoff(trigger: HandoffTrigger): Promise<void>;
 
