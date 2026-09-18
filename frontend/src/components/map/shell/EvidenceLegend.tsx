@@ -46,6 +46,7 @@ export function EvidenceLegend({
   return (
     <div
       data-gn="map-evidence-legend"
+      data-gn-hud=""
       data-gn-open={open}
       className={`border border-sp-line bg-sp-panel/[0.86] px-[11px] py-[9px] backdrop-blur-[6px] ${className}`}
     >

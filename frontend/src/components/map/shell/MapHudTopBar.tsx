@@ -71,6 +71,7 @@ export function MapHudTopBar({
   return (
     <div
       data-gn="map-hud-top-bar"
+      data-gn-hud=""
       /* The prototype's 44px top row: brand · modes · search · period. */
       className={`flex h-[44px] items-center gap-[14px] border-b border-sp-line bg-gradient-to-b from-sp-top-a to-sp-top-b px-[12px] ${className}`}
     >

@@ -43,6 +43,7 @@ export function IntelligenceRightRail({
   return (
     <aside
       data-gn="map-intelligence-rail"
+      data-gn-hud=""
       data-gn-drawer={asDrawer}
       aria-label={label}
       className={`${

@@ -223,3 +223,36 @@
     text-align-last: auto;
   }
 }
+
+/*
+ * ════════════════════════════════════════════════════════════════════════════
+ * MAP HUD — A CONTROL CLUSTER ABSORBS ITS OWN CLICKS
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * `MAP-WORLD-COUNTRY-RETRIEVAL-1`, and the root cause of the NER, CAF and DZA
+ * reports.
+ *
+ * `HUD_ISLAND` makes each floating box `pointer-events: none` and re-enables
+ * only `a`, `button`, `input`, `select` and `textarea`. That keeps the map
+ * draggable around the chrome, which is right — but it also means the GAPS
+ * between controls, their padding and the cluster's own background are
+ * pointer-TRANSPARENT.
+ *
+ * MEASURED: the geography chips are 52x26px with a 5px gap. Clicking that gap,
+ * from East Africa view at 1680x1050, passed the event through to the map and
+ * selected NIGER — issuing `GET /news/country/NER`. At other viewports the same
+ * five pixels produced Algeria and Mali. The reader aimed at WORLD, missed by
+ * three pixels, and bought news for a country they had never heard the product
+ * mention.
+ *
+ * So an INTERACTIVE CLUSTER absorbs its own clicks. The marker that already
+ * declares "this is chrome" is the same thing that makes it opaque, so the two
+ * can never disagree — and a new HUD surface is covered by carrying the marker
+ * its siblings carry.
+ *
+ * THE MAP IS STILL DRAGGABLE. Only the marked clusters are opaque; the empty
+ * area of each positioning island stays transparent exactly as before.
+ */
+[data-gn-hud] {
+  pointer-events: auto;
+}

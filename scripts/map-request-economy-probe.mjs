@@ -174,7 +174,81 @@ for (const [label, query] of [
   record(label, countryReqs().length === 0, `country reqs=${countryReqs().length}`);
 }
 
-console.log('\n=== D · POSITIVE CONTROL — ONE EXPLICIT COUNTRY ===\n');
+console.log('\n=== D · CLICK-THROUGH — THE HAZARD ITSELF ===\n');
+
+/*
+  THE DECISIVE TEST, AND THE REASON THE HUD-ORIGIN CONTRACT EXISTS.
+
+  R3.1 proved that a pointer event landing on the map beneath a HUD control
+  selects whatever country is under that pixel: clicking the WORLD button's own
+  centre, with the button made click-through, selected ALGERIA and bought its
+  news. Niger, CAF and Algeria were one defect wearing three countries.
+
+  This drives exactly that. It disables the control's pointer capture so the
+  event reaches the map surface, then clicks the control's own coordinate. The
+  guard must reject it — the event still BEGAN on chrome — while a genuine
+  canvas click elsewhere must still select, which section E proves.
+*/
+async function clickThroughAt(id) {
+  await openMap();
+
+  /* Put the map over land, so the pixel beside the control is a real country. */
+  await clickTopRow('eastAfrica');
+
+  const el = await page.waitForSelector(TOP_ROW(id), { timeout: 15000 }).catch(() => null);
+  const next = await page.$(TOP_ROW('africa'));
+  if (el === null || next === null) return null;
+
+  const a = await el.boundingBox();
+  const b = await next.boundingBox();
+
+  /*
+    THE GAP, NOT A pointer-events HACK.
+
+    My first version set pointer-events:none on the control, which REMOVES it
+    from the composed path — so the event genuinely became a canvas click and
+    the origin guard was right to allow it. That tested nothing.
+
+    The real hazard is the reader missing a 52x26px chip by a few pixels. The
+    gap between chips is 5px, and HUD_ISLAND left it pointer-transparent, so
+    that near-miss reached the map and selected whatever country lay beneath —
+    NER at 1680x1050, DZA and MLI at others.
+  */
+  const x = Math.round((a.x + a.width + b.x) / 2);
+  const y = Math.round(a.y + a.height / 2);
+
+  reset();
+  await page.mouse.click(x, y);
+  await page.waitForTimeout(5000);
+
+  return { x, y, url: page.url(), reqs: countryReqs() };
+}
+
+for (const [w, h] of [[1780, 1210], [1920, 1080], [1680, 1050]]) {
+  await page.setViewportSize({ width: w, height: h });
+
+  const r = await clickThroughAt('world');
+
+  if (r === null) {
+    record(`HUD gap click ${w}x${h}`, false, 'INCONCLUSIVE — control not found');
+  } else {
+    const rejected =
+      r.reqs.length === 0 &&
+      !r.url.includes('country=') &&
+      !/sel=country(%3A|:)/.test(r.url);
+
+    record(
+      `HUD gap click ${w}x${h}`,
+      rejected,
+      `at (${r.x},${r.y}) country reqs=${r.reqs.length}` +
+        (r.reqs.length ? ' ' + r.reqs.map((u) => u.split('/news/country/')[1]).join(',') : ''),
+    );
+  }
+}
+
+await page.setViewportSize({ width: 1600, height: 1000 });
+
+console.log('\n=== E · POSITIVE CONTROL — ONE EXPLICIT COUNTRY ===\n');
 
 /*
   WITHOUT THIS every zero above passes vacuously on a build that simply never
@@ -184,6 +258,9 @@ await openMap();
 reset();
 
 const rwandaOk = await clickTopRow('rwanda');
+
+/* The URL is written by an effect; wait for it rather than for a clock. */
+await page.waitForFunction(() => window.location.search.includes('country='), { timeout: 15000 }).catch(() => {});
 
 if (!rwandaOk) {
   record('POSITIVE CONTROL rwanda', false, 'INCONCLUSIVE — control not found');

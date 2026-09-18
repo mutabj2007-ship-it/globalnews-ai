@@ -296,6 +296,7 @@ export function LayerToggleRail({
   return (
     <div
       data-gn="map-layer-rail"
+      data-gn-hud=""
       data-gn-orientation={orientation}
       aria-label={labels.group}
       role="group"

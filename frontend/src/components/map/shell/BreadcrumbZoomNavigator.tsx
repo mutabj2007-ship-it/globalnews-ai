@@ -126,6 +126,7 @@ export function BreadcrumbZoomNavigator({
   return (
     <nav
       data-gn="map-breadcrumbs"
+      data-gn-hud=""
       aria-label={labels.group}
       className={`flex max-w-[60%] flex-wrap items-center gap-[5px] ${className}`}
     >

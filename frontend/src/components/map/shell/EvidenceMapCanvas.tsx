@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { eventOriginatesFromMapHud } from '@/lib/map/interaction/mapHudOrigin';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { CountryFeature } from '@/lib/map/countryGeometry';
@@ -1383,6 +1384,27 @@ export function EvidenceMapCanvas({
     });
 
     map.on('click', FILL_LAYER_ID, (event: maplibregl.MapLayerMouseEvent) => {
+      /*
+        ══ HUD ORIGIN · CHROME IS NOT GEOGRAPHY ════════════════════════════
+
+        FIRST, BEFORE THE FEATURE IS EVEN READ.
+
+        The HUD is not beside the map, it is ON it: every geography jump, rail
+        button, layer toggle and camera control is a DOM descendant of the map
+        canvas region, with live country polygons underneath. R3.1 measured the
+        consequence — clicking the WORLD control's own pixel, with the button
+        made click-through, selected ALGERIA and bought its news.
+
+        Niger, Central African Republic and Algeria were one defect wearing
+        three countries. So this rejects by ORIGIN, not by coordinate and not on
+        a timer: a pointer event that began on chrome is an interaction with
+        that chrome, whatever the browser later resolves its target to.
+
+        THE CANVAS REMAINS SELECTABLE. An event that did not begin on chrome
+        falls straight through to the selection below, unchanged.
+      */
+      if (eventOriginatesFromMapHud(event)) return;
+
       const feature = event.features?.[0] as CountryFeature | undefined;
 
       if (feature === undefined) return;

@@ -173,6 +173,7 @@ export function ContextSummaryPanel({
     return (
       <div
         data-gn="map-context-summary"
+      data-gn-hud=""
         data-gn-mode={mode}
         data-gn-period={period}
         data-gn-queue-domain={queue.domain}
@@ -293,7 +294,8 @@ export function ContextSummaryPanel({
   }
 
   return (
-    <div data-gn="map-context-summary" data-gn-mode={mode} data-gn-period={period} className={className}>
+    <div data-gn="map-context-summary"
+      data-gn-hud="" data-gn-mode={mode} data-gn-period={period} className={className}>
       <Section gn="context-header" title={labels.heading} aside={labels.periods[period]}>
         <h2 data-gn="context-title" className="text-[20px] font-semibold leading-tight tracking-[0.01em] text-sp-ink">
           {labels.worldView}

@@ -156,6 +156,7 @@ export function SelectionCallout({
     <aside
       ref={measureRef}
       data-gn="selection-callout"
+      data-gn-hud=""
       data-gn-geography={geographyId}
       data-gn-side={placement.side}
       data-gn-parked={placement.parked ? 'true' : 'false'}

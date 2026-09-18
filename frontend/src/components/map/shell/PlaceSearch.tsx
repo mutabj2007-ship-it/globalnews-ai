@@ -154,6 +154,7 @@ export function PlaceSearch({
   return (
     <div
       data-gn="map-place-search"
+      data-gn-hud=""
       /* The prototype's own sizing: `flex:0 1 290px; min-width:158px`. */
       className={`relative w-[290px] min-w-[158px] shrink ${className}`}
     >

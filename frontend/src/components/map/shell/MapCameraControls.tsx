@@ -125,6 +125,7 @@ export function MapCameraControls({
     */
     <div
       data-gn="map-camera-controls"
+      data-gn-hud=""
       role="group"
       aria-label={labels.group}
       /* M11 — the column passes the pointer through; its controls do not. */
