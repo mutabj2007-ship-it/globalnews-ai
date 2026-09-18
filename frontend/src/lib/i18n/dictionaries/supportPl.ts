@@ -108,13 +108,13 @@ export const supportPl: SupportDictionary = {
     heading: 'Pomoc',
     /* C-1 */
     intro:
-      'Zapytaj o GlobalNews AI: jak coś działa, gdzie to znaleźć albo o napotkany problem. Odpowiedź otrzymasz tutaj, a gdy będzie to potrzebne, przejmie to człowiek. Wszystko zostaje w tej rozmowie.',
+      'Zapytaj o GlobalNews AI: jak coś działa, gdzie to znaleźć albo o napotkany problem. Odpowiedzi w tej rozmowie pochodzą od agenta automatycznego i nie zawsze są dostępne.',
 
     disclosure: {
       heading: 'Zanim napiszesz',
       /* C-2 */
       beforeFirstSend:
-        'Aby odpowiadać na pytania o wydarzenia, GlobalNews AI przesyła tę rozmowę — wszystko, co w niej piszesz, nie tylko ostatnią wiadomość — do zewnętrznego dostawcy modelu. Odpowiedzi o samym produkcie są napisane przez ludzi z GlobalNews AI i nie są nigdzie wysyłane. Nie wpisuj tutaj haseł, danych płatniczych ani dokumentów. Jeśli rozmowa trafi do człowieka, ktoś z GlobalNews AI może ją przeczytać.',
+        'Aby odpowiadać na pytania o wydarzenia, GlobalNews AI przesyła tę rozmowę — wszystko, co w niej piszesz, nie tylko ostatnią wiadomość — do zewnętrznego dostawcy modelu. Odpowiedzi o samym produkcie są napisane przez ludzi z GlobalNews AI i nie są nigdzie wysyłane. Nie wpisuj tutaj haseł, danych płatniczych ani dokumentów. Jeśli założysz zgłoszenie do wsparcia, informacje przesłane w tym zgłoszeniu może przeczytać zespół wsparcia GlobalNews AI.',
       /* C-3 */
       compact:
         'Pytania o wydarzenia wysyłają tę rozmowę do zewnętrznego dostawcy modelu. Odpowiedzi o produkcie — nie.',
@@ -136,7 +136,7 @@ export const supportPl: SupportDictionary = {
     /* C-4 — genderless in Polish, deliberately. See the finding in `05` §3. */
     withheld: {
       body:
-        'Nie mam tutaj odpowiedzi, za którą można ręczyć. To stwierdzenie o tym, co da się potwierdzić, a nie o tym, czy Twoje pytanie ma odpowiedź. Nie ma tu zgadywania — pewnie brzmiąca odpowiedź bez pokrycia byłaby gorsza niż jej brak. Ta rozmowa pozostaje otwarta, a osoba z zespołu wsparcia może się nią zająć.',
+        'Nie mam tutaj odpowiedzi, za którą można ręczyć. To stwierdzenie o tym, co da się potwierdzić, a nie o tym, czy Twoje pytanie ma odpowiedź. Nie ma tu zgadywania — pewnie brzmiąca odpowiedź bez pokrycia byłaby gorsza niż jej brak.',
     },
 
     /* C-5 — genderless in Polish. */
@@ -201,7 +201,7 @@ export const supportPl: SupportDictionary = {
       limitReached:
         'Ta rozmowa jest już na tyle długa, że jej najwcześniejsze części nie są uwzględniane przy przygotowywaniu odpowiedzi. Rozpoczęcie nowej rozmowy daje czysty początek.',
       tooLong:
-        'Ta rozmowa osiągnęła limit długości, więc nic więcej nie zostanie tu odpowiedziane automatycznie. Rozpocznij nową rozmowę, aby pytać dalej, albo niech zajmie się tą osoba z zespołu wsparcia.',
+        'Ta rozmowa osiągnęła limit długości, więc nic więcej nie zostanie tu odpowiedziane automatycznie. Rozpocznij nową rozmowę, aby pytać dalej.',
     },
 
     /* C-13 */

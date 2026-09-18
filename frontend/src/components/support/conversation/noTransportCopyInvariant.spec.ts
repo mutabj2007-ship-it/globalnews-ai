@@ -177,7 +177,26 @@ const CLAIMS: readonly Claim[] = [
     locale: 'pl',
     pattern: /(kto[śs]|osob[aąęy]|cz[łl]owiek)[^.!?]*(przeczyta|odpowie|odbierze|zajmie\s+si[ęe])/i,
     catches: 'Ktoś z zespołu przeczyta tę rozmowę.',
-    allows: 'Aby skontaktować się z osobą z zespołu, załóż zgłoszenie.',
+    /*
+      L-2 — THE REQUEST-SCOPED CASE, ADDED BECAUSE F+L MEASURED IT.
+
+      This claim's two siblings already carried a request-scoped `allows`; this
+      one did not, and F+L showed what that costs: the otherwise-natural
+      "osoba z zespołu wsparcia przeczyta przesłane informacje" is CORRECT under
+      the new architecture — scoped to the request, naming no conversation — and
+      this pattern rejects it. The shipped wording uses `zespół wsparcia
+      GlobalNews AI` and is clear of the pattern, so nothing is blocked today;
+      the constraint was accidental rather than stated. It is stated now.
+
+      NOT NARROWED, deliberately. F+L also recommended excluding sentences whose
+      object is `zgłoszeni*`, which would let `osoba … przeczyta` through when it
+      speaks about a request. That is a change to what the gate DETECTS, and a
+      sentence naming both a request and the conversation would slip out with it.
+      Recorded as an open recommendation to its owner rather than taken here —
+      the shipped sentence below is what this `allows` pins.
+    */
+    allows:
+      'Jeśli założysz zgłoszenie do wsparcia, informacje przesłane w tym zgłoszeniu może przeczytać zespół wsparcia GlobalNews AI.',
   },
   {
     id: 'pl/moze-przeczytac',
@@ -217,6 +236,73 @@ const CLAIMS: readonly Claim[] = [
     pattern: /zajmie\s+si[ęe][^.!?]*(rozmow|ni[ąa]|t[ąa]\s|tym\s)|(rozmow|ni[ąa])[^.!?]*zajmie\s+si[ęe]/i,
     catches: 'Rozpocznij nową rozmowę, aby pytać dalej, albo niech zajmie się tą osoba z zespołu wsparcia.',
     allows: 'Zespół wsparcia zajmie się Twoim zgłoszeniem.',
+  },
+
+  /* ================================================================
+     A-6, AS SUPERSEDED BY THE CTO — THE OTHER DIRECTION.
+
+     F's accepted A-6 read "the deleted disclosure sentence has no
+     replacement", and it existed to stop a reassurance about internal access
+     being added later by someone being helpful. F's reason for it is still
+     correct and still binding:
+
+         "No one at GlobalNews AI will read this conversation" is a claim
+         nobody has measured. Silence about internal access is truthful; a
+         reassurance about it is not.
+
+     The CTO ruling supersedes the FORM of A-6, not that reasoning. The new
+     invariant is symmetric:
+
+         No copy may make a positive or negative claim about who can read the
+         current automatic conversation. A privacy statement scoped solely to
+         information deliberately submitted through a separate Support request
+         is permitted and required.
+
+     The POSITIVE direction was already covered here — en/can-read-it,
+     pl/moze-przeczytac, pl/ktos-przeczyta. The NEGATIVE direction was covered
+     nowhere in this tree once A-6's own wording was retired, so it is added
+     below. Superseding A-6 must not mean losing half of it.
+
+     Both carry the shipped request-scoped disclosure sentence as their
+     `allows`, because that sentence is exactly what the ruling PERMITS AND
+     REQUIRES, and a guard that caught it would forbid the thing it was written
+     to protect.
+     ================================================================ */
+  {
+    id: 'en/a6-no-one-reads-reassurance',
+    locale: 'en',
+    pattern: /\b(no one|no-one|nobody)\b[^.!?]*\b(read|reads|sees|see)\b/i,
+    catches: 'No one at GlobalNews AI will read this conversation.',
+    allows:
+      'If you open a Support request, the information you submit in that request can be read by GlobalNews AI Support staff.',
+  },
+  {
+    id: 'en/a6-conversation-not-read',
+    locale: 'en',
+    pattern: /\b(this|your|the)\s+conversation\b[^.!?]*\b(is|are)\s+(never\s+)?not\s+(read|seen)\b|\bnever\s+read\s+by\b/i,
+    catches: 'This conversation is not read by anyone at GlobalNews AI.',
+    allows: 'This conversation is not sent to anyone, and nobody is notified that you wrote here.',
+  },
+  {
+    id: 'pl/a6-nikt-nie-przeczyta',
+    locale: 'pl',
+    /*
+      `nikt` and `nie` are NOT adjacent in the sentence this catches — "Nikt z
+      GlobalNews AI nie przeczyta…" puts the whole attribution between them. The
+      first draft required `nikt\s+nie` and silently never fired; the positive
+      control caught it, for the third time in this file.
+    */
+    pattern: /nikt[^.!?]*\bnie\s+(przeczyta|czyta|zobaczy|odczyta)/i,
+    catches: 'Nikt z GlobalNews AI nie przeczyta tej rozmowy.',
+    allows: 'Ta rozmowa nie jest nikomu przesyłana i nikt nie jest powiadamiany o tym, że tu piszesz.',
+  },
+  {
+    id: 'pl/a6-rozmowa-nie-jest-czytana',
+    locale: 'pl',
+    pattern: /rozmow[aęy][^.!?]*nie\s+jest\s+(czytan|odczytywan|przegl[ąa]dan)/i,
+    catches: 'Ta rozmowa nie jest czytana przez zespół wsparcia.',
+    allows:
+      'Jeśli założysz zgłoszenie do wsparcia, informacje przesłane w tym zgłoszeniu może przeczytać zespół wsparcia GlobalNews AI.',
   },
 ];
 

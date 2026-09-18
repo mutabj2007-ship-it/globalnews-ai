@@ -168,7 +168,7 @@ export const supportEn = {
     /* C-1 — describes a conversation, promises an answer here, names that a
        person may take over, promises nothing about speed. */
     intro:
-      'Ask about GlobalNews AI: how something works, where to find it, or a problem you are having. You get an answer here, and a person can take over when one is needed. Everything stays in this conversation.',
+      'Ask about GlobalNews AI: how something works, where to find it, or a problem you are having. Answers here come from an automatic agent, and they are not always available.',
 
     disclosure: {
       heading: 'Before you write',
@@ -177,7 +177,7 @@ export const supportEn = {
          provider; says authored answers are sent nowhere; makes no retention,
          training or deletion claim; names no vendor. */
       beforeFirstSend:
-        'To answer questions about the news, GlobalNews AI sends this conversation — everything you write in it, not only your latest message — to an external model provider. Answers about the product itself are written by people at GlobalNews AI and are sent nowhere. Please do not write passwords, payment details or documents here. If the conversation goes to a person, someone at GlobalNews AI can read it.',
+        'To answer questions about the news, GlobalNews AI sends this conversation — everything you write in it, not only your latest message — to an external model provider. Answers about the product itself are written by people at GlobalNews AI and are sent nowhere. Please do not write passwords, payment details or documents here. If you open a Support request, the information you submit in that request can be read by GlobalNews AI Support staff.',
       /* C-3 — persistent after the first turn; keeps the two-source distinction. */
       compact:
         'Questions about the news send this conversation to an external model provider. Answers about the product do not.',
@@ -201,7 +201,7 @@ export const supportEn = {
        agent's position, never about the world. */
     withheld: {
       body:
-        'I do not have an answer here that I am able to stand behind. That is about what I can support, not about whether your question has an answer. I have not guessed, because a confident-sounding answer with nothing behind it would be worse than none. This conversation stays open, and a person from Support can take it.',
+        'I do not have an answer here that I am able to stand behind. That is about what I can support, not about whether your question has an answer. I have not guessed, because a confident-sounding answer with nothing behind it would be worse than none.',
     },
 
     /* C-5 — ONE text for the whole UNAVAILABLE kind. Identical for flag-off,
@@ -288,7 +288,7 @@ export const supportEn = {
       limitReached:
         'This conversation has grown long enough that its earliest parts are no longer included when an answer is prepared. Starting a new conversation gives a clean one.',
       tooLong:
-        'This conversation has reached its length limit, so nothing further here will be answered automatically. Start a new conversation to keep asking, or a person from Support can take this one.',
+        'This conversation has reached its length limit, so nothing further here will be answered automatically. Start a new conversation to keep asking.',
     },
 
     /* C-13 — the only user-side control over how much is exported, stated as a

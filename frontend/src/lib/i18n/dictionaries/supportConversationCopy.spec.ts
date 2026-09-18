@@ -53,9 +53,56 @@ describe('C-12 — the disclosure conveys four facts, all of them true', () => {
     expect(pl.disclosure.beforeFirstSend).toMatch(/napisane przez ludzi/i);
   });
 
-  it('4 · a person may read it if it is escalated', () => {
-    expect(en.disclosure.beforeFirstSend).toMatch(/can read it/i);
-    expect(pl.disclosure.beforeFirstSend).toMatch(/może ją przeczytać/i);
+  /*
+    FACT 4 CHANGED ITS SUBJECT, NOT ITS EXISTENCE — R2-3, applying
+    F-L-SUPPORT-NO-TRANSPORT-COPY-R3-1 `01` verbatim.
+
+    The retired assertion was:
+
+        it('4 · a person may read it if it is escalated', () => {
+          expect(en.disclosure.beforeFirstSend).toMatch(/can read it/i);
+          expect(pl.disclosure.beforeFirstSend).toMatch(/może ją przeczytać/i);
+        });
+
+    Both of its patterns were about THE CONVERSATION, and the Polish one said so
+    grammatically: `ją` is feminine accusative and its antecedent is `rozmowa`,
+    so the Polish named the conversation where the English merely said "it". Its
+    title asserted escalation, which under the no-transport architecture cannot
+    occur. It therefore did not merely fail — it REQUIRED the copy to make a
+    claim the architecture forbids, which is why replacing it was a
+    precondition of the copy change and not a consequence of it.
+
+    This describe block stays at FOUR facts. Facts 1–3 are untouched, and the
+    disclosure's first three sentences are byte-identical to what shipped, so
+    the privacy semantics of those facts are preserved rather than re-litigated.
+  */
+  it('4 · the privacy fact is about the SEPARATE Support request, not this conversation', () => {
+    expect(en.disclosure.beforeFirstSend).toMatch(/you open a Support request/i);
+    expect(en.disclosure.beforeFirstSend).toMatch(/can be read by GlobalNews AI Support staff/i);
+    expect(pl.disclosure.beforeFirstSend).toMatch(/założysz zgłoszenie do wsparcia/);
+    expect(pl.disclosure.beforeFirstSend).toMatch(/może przeczytać zespół wsparcia GlobalNews AI/);
+  });
+
+  it('4b · and it does NOT say this conversation is readable by a person', () => {
+    const disclosures = [en.disclosure.beforeFirstSend, pl.disclosure.beforeFirstSend];
+
+    assertNoneMatch(/conversation goes to a person/i, disclosures);
+    assertNoneMatch(/can read (it|this conversation|your conversation)/i, disclosures);
+    assertNoneMatch(/rozmowa trafi do/i, disclosures);
+    assertNoneMatch(/może (ją|tę rozmowę) przeczytać/, disclosures);
+  });
+
+  it('4c · POSITIVE CONTROL — the conversation-readability guard fires on the OLD sentence', () => {
+    expect(() =>
+      assertNoneMatch(/can read (it|this conversation|your conversation)/i, [
+        'If the conversation goes to a person, someone at GlobalNews AI can read it.',
+      ]),
+    ).toThrow();
+    expect(() =>
+      assertNoneMatch(/może (ją|tę rozmowę) przeczytać/, [
+        'Jeśli rozmowa trafi do człowieka, ktoś z GlobalNews AI może ją przeczytać.',
+      ]),
+    ).toThrow();
   });
 
   it('THE SENTENCE E1 CALLS FALSE never appears anywhere', () => {
