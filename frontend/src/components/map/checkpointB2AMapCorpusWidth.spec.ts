@@ -88,9 +88,18 @@ describe('B-2A — the Map and Home share one corpus identity', () => {
       CTO ruling: if the Map ever genuinely needs items 25-50, that must be an
       EXPLICIT later retrieval action and not a cost hidden inside opening the
       map. There is exactly one top-headlines call on this surface.
+
+      R5 — AND IT IS NOW THE NON-EXECUTING ONE. The ruling's principle was
+      about hidden cost, and R4 found the cost was hidden in the OPENING
+      itself rather than in the width: every mount reached the executing route
+      and paid on any cache miss. The map reads the same governed 24 through
+      `/news/top-headlines/retained`, which cannot reach a provider.
     */
-    expect(mapClient.split('fetchTopHeadlines(').length - 1).toBe(1);
-    expect(mapClient).toContain('fetchTopHeadlines(GLOBAL_FEED_LIMIT, language)');
+    expect(mapClient.split('fetchRetainedTopHeadlines(').length - 1).toBe(1);
+    expect(mapClient).toContain('fetchRetainedTopHeadlines(GLOBAL_FEED_LIMIT, language)');
+
+    /* The executing client is not reachable from this surface at all. */
+    expect(mapClient.split('fetchTopHeadlines(').length - 1).toBe(0);
   });
 
   it('Home still issues exactly one top-headlines call', () => {
@@ -104,7 +113,7 @@ describe('B-2A — the Map and Home share one corpus identity', () => {
       of these two callers would silently restore one-retrieval-per-render
       while still looking, in review, like a cached path.
     */
-    expect(mapClient).toContain('fetchTopHeadlines(GLOBAL_FEED_LIMIT, language)');
+    expect(mapClient).toContain('fetchRetainedTopHeadlines(GLOBAL_FEED_LIMIT, language)');
     expect(homeFeed).toMatch(/fetchTopHeadlines\(\d+,\s*language\)/);
   });
 });

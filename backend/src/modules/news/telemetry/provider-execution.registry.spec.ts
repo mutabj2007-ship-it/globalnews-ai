@@ -124,15 +124,96 @@ describe('R2 · the counter is wired where the decisions actually happen', () =>
   });
 
   it('the execution is recorded at the provider INVOCATION, not at its result', () => {
+    /*
+      ── R5 · THIS ASSERTION WAS REWRITTEN, AND THE RULE GOT STRONGER ───────
+
+      As written in R2 this compared FILE POSITIONS: the `recordExecution`
+      call had to appear before `return provider.search(query, {`. That was a
+      proxy for "counted at invocation", and it held only because the counter
+      lived inside `search()`'s own operation — which is precisely the defect
+      R4 found. `topHeadlines()` passes through a different operation and was
+      never counted at all, so the one endpoint draining the quota was the one
+      endpoint this file could not see.
+
+      Recording now happens in `callProviderSet`, the single place every
+      provider invocation in this service passes through, so the two positions
+      it used to compare no longer sit in the same function. The intent is
+      asserted directly instead: the counter runs BEFORE the awaited
+      operation, inside the fan-out all three endpoint classes share.
+    */
+    /*
+      COMMENTS ARE STRIPPED FIRST, and that is not fastidiousness: the comment
+      explaining this rule quotes `await operation(provider)`, so a raw
+      indexOf found the PROSE before the code and failed an assertion that was
+      actually satisfied. A source test that can be broken by its own
+      documentation is measuring the wrong thing.
+    */
+    const news = src('news.service.ts')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+
+    const fanOut = news.slice(news.indexOf('const settleOne = async (provider: NewsProvider)'));
+
+    const record = fanOut.indexOf('this.executions?.recordExecution(provider.id, capability)');
+    const call = fanOut.indexOf('await operation(provider)');
+
+    expect(record).toBeGreaterThan(-1);
+    expect(call).toBeGreaterThan(record);
+  });
+
+  it('and it is NOT confined to the search path, which is what R4 found', () => {
+    /*
+      The regression that matters. A counter that only ever sees `search` will
+      report zero while the map spends a provider call on every mount, and the
+      next investigation gets run with a stopwatch again.
+    */
     const news = src('news.service.ts');
 
-    expect(news).toContain('this.executions?.recordExecution(provider.id');
+    /* The capability label is threaded in, never hard-coded to one endpoint. */
+    expect(news).toContain('capability: NewsProviderCapability');
+    expect(news).not.toContain("this.executions?.recordExecution(provider.id, 'search')");
+  });
 
-    const record = news.indexOf('this.executions?.recordExecution(provider.id');
-    const call = news.indexOf('return provider.search(query, {');
+  it('cache hits AND misses are both recorded for the home corpus', () => {
+    /*
+      R2 recorded a hit in the country path and nothing else — no miss, ever,
+      anywhere. A registry that reports when the cache SAVED a call but never
+      when it failed to cannot answer a quota question.
+    */
+    const news = src('news.service.ts');
 
-    expect(record).toBeGreaterThan(0);
-    expect(call).toBeGreaterThan(record);
+    expect(news).toContain("this.executions?.recordCacheHit('top-headlines')");
+    expect(news).toContain("this.executions?.recordCacheMiss('top-headlines')");
+  });
+
+  it('the registry is INJECTED as a shared singleton, not instantiated privately', () => {
+    /*
+      THE DEFECT R4 NAMED. A bare field initialiser is not property injection:
+      Nest assigns only a property carrying `@Inject()`, so each service held
+      its own registry and the module's provider was never used.
+
+      `@Optional()` is required alongside it — a bare `@Inject()` makes this a
+      mandatory dependency, and every test module that omits the registry then
+      stops resolving. That turned 19 suites red on the first R5 cut.
+    */
+    for (const parts of [['news.service.ts'], ['country', 'country-news.service.ts']]) {
+      expect(src(...parts)).toContain('@Optional()\n  @Inject(ProviderExecutionRegistry)');
+    }
+  });
+
+  it('and something actually READS it, behind the admin guard', () => {
+    /*
+      R2 shipped a write-only counter: nothing outside this spec ever called
+      `snapshot()` or `totalExecutions()`. A number nobody can read is not
+      observability.
+    */
+    const admin = readFileSync(
+      join(__dirname, '..', '..', 'admin', 'news', 'admin-news.service.ts'),
+      'utf-8',
+    );
+
+    expect(admin).toContain('this.executions?.snapshot()');
+    expect(admin).toContain('this.executions?.totalExecutions()');
   });
 });
 

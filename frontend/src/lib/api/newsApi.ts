@@ -72,6 +72,41 @@ export function fetchTopHeadlines(limit = 12, lang?: LanguageCode): Promise<News
   return getJson<NewsResponse>(`/news/top-headlines?${params.toString()}`);
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * R5 · THE NON-EXECUTING READ OF THE SAME CORPUS — WHAT THE MAP USES
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * **Product invariant: opening or navigating the Map must never execute GNews
+ * merely to obtain the global corpus.**
+ *
+ * `GET /news/top-headlines/retained` reads the SAME `limit:language` corpus as
+ * `fetchTopHeadlines` above, from the same backend cache, but through a route
+ * that is structurally incapable of calling a provider. On a miss it answers
+ * `dataMode: 'unavailable'` with no articles, and the map renders its honest
+ * empty world rather than buying one.
+ *
+ * ── WHY THE PARAMETERS MUST MATCH `fetchTopHeadlines` EXACTLY ─────────────
+ *
+ * The backend key is `limit:language`. Home warms it through the executing
+ * route; the map reads it through this one. If the two ever disagreed about
+ * width or language — `24` vs `12`, `en` vs absent — the map would miss a warm
+ * entry on every open and, because this route cannot retrieve, would show an
+ * empty world **while Home showed a full one**, with nothing reporting the
+ * disagreement. `ALPHA-TOPHEADLINES-KEY-DIVERGENCE-1` is that hazard, and it is
+ * pinned by tests rather than by this comment.
+ *
+ * Deliberately a SEPARATE function rather than a flag on the one above: the map
+ * must be UNABLE to reach the executing path, not merely instructed to avoid
+ * it. R4 measured what call-site discipline is worth here — the map spent quota
+ * on every mount for months without anyone intending it to.
+ */
+export function fetchRetainedTopHeadlines(limit = 12, lang?: LanguageCode): Promise<NewsResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (lang) params.set('lang', lang);
+  return getJson<NewsResponse>(`/news/top-headlines/retained?${params.toString()}`);
+}
+
 export function searchNews(query: string, limit = 8): Promise<NewsResponse> {
   const normalized = query.trim().replace(/\s+/g, ' ');
   const params = new URLSearchParams({ q: normalized, limit: String(limit) });

@@ -120,7 +120,7 @@ describe('B-2D — retained evidence is preferred over live retrieval', () => {
 
     it('a failed global feed leaves the map as it was rather than blanking it', () => {
       const globalFetch = mapClient.slice(
-        mapClient.indexOf('void fetchTopHeadlines(GLOBAL_FEED_LIMIT, language)'),
+        mapClient.indexOf('void fetchRetainedTopHeadlines(GLOBAL_FEED_LIMIT, language)'),
       );
       const catchBlock = globalFetch.slice(0, globalFetch.indexOf('return () => {'));
 
@@ -180,12 +180,18 @@ describe('B-2D — retained evidence is preferred over live retrieval', () => {
       expect(openSources).not.toContain('setCache');
     });
 
-    it('the map surface calls exactly the three known news entry points, and no more', () => {
+    it('the map surface calls exactly the known news entry points, and no more', () => {
       /*
-        A fourth provider-consuming call appearing here unannounced fails this,
-        which is the same guard c911RequestEconomy already applies.
+        A provider-consuming call appearing here unannounced fails this, which
+        is the same guard c911RequestEconomy already applies.
+
+        R5 — the world corpus moved to the NON-EXECUTING route, so these counts
+        now also state which of the two can cost anything: the country
+        retrieval can, and it is reached only by an explicit country action.
+        The world call cannot, at any frequency.
       */
-      expect(mapClient.split('fetchTopHeadlines(').length - 1).toBe(1);
+      expect(mapClient.split('fetchRetainedTopHeadlines(').length - 1).toBe(1);
+      expect(mapClient.split('fetchTopHeadlines(').length - 1).toBe(0);
       expect(mapClient.split('fetchCountryNews(').length - 1).toBe(1);
       expect(mapClient).not.toContain('fetchSearchNews(');
     });

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ProviderExecutionRegistry } from './telemetry/provider-execution.registry';
 import { logWithRequestId } from '../../observability/log-with-request-id';
 import type {
@@ -337,18 +337,45 @@ export class NewsService {
   private readonly homeNewsCache = new Map<string, HomeNewsCacheEntry>();
 
   /*
-    MAP-GNEWS-QUOTA-REGRESSION-1 — provider-execution telemetry.
+    ══ R5 · PROVIDER-EXECUTION TELEMETRY, NOW ACTUALLY SHARED ═══════════════
 
-    A FIELD WITH A DEFAULT, NOT A LEADING CONSTRUCTOR PARAMETER. My first cut
-    put it first in the constructor, which silently shifted every positional
-    argument in the dozen suites that construct this service directly — 13
-    backend suites went red at once, and none of them was about telemetry.
+    R2 SHIPPED THIS AS A CLAIM THAT WAS NOT TRUE, AND R4 FOUND IT. The comment
+    that stood here said "Nest still injects the shared instance through the
+    property below". It did not. A bare field initialiser is not property
+    injection — Nest assigns only a property carrying `@Inject()` — so
+    `NewsService` and `CountryNewsService` each held their OWN private
+    registry, the module's provider was never used, and no reader existed
+    anywhere. A quota counter that nothing shares and nothing reads is
+    decoration.
 
-    Nest still injects the shared instance through the property below when the
-    module resolves it; a direct `new NewsService(providers, …)` in a test gets
-    a private registry and behaves exactly as it did before. A counter must
-    never be able to change what it is counting.
+    `@Inject()` is what makes it real. The initialiser STAYS: a direct
+    `new NewsService(providers, …)` in a test gets a private registry and
+    behaves exactly as before, while Nest overwrites the property with the
+    module singleton in the running application.
+
+    ── AND `@Optional()` IS NOT DECORATION EITHER ─────────────────────────
+
+    My first R5 cut used a bare `@Inject()`, which makes this a REQUIRED
+    dependency: every `Test.createTestingModule` that assembles NewsService
+    without the registry in its provider list stopped resolving, and **19
+    suites went red** with "Nest can't resolve dependencies of the NewsService
+    … make sure the 'executions' property is available". I had traded R2's
+    constructor-argument shifting for a DI resolution failure — the same
+    mistake wearing a different decorator.
+
+    `@Optional()` means an unresolved token yields `undefined` instead of a
+    failure, which is why every use of this field is `this.executions?.` and
+    why a lost count is the worst case. Telemetry must be unable to break
+    assembly, exactly as it must be unable to change a provider's answer.
+
+    It is still not a constructor parameter: making it the leading one
+    silently shifted every positional argument in the dozen suites that
+    construct this service directly, turning 13 suites red during R2.
+
+    A counter must never be able to change what it is counting.
   */
+  @Optional()
+  @Inject(ProviderExecutionRegistry)
   private executions: ProviderExecutionRegistry = new ProviderExecutionRegistry();
 
   constructor(
@@ -572,33 +599,13 @@ export class NewsService {
 
     const searchOperation = (provider: NewsProvider) => {
       /*
-        ══ MAP-GNEWS-QUOTA-REGRESSION-1 · THE QUOTA-BEARING EVENT ══════════
+        R5 — THE COUNTER THAT STOOD HERE HAS MOVED, NOT DISAPPEARED.
 
-        Counted HERE, at the invocation, and deliberately NOT at the outcome.
-        A call that fails, times out or is rate-limited has still been spent —
-        the live SWZ retrieval proved it, taking 8272ms to consume GNews (which
-        answered "rate limit exceeded"), then two fallbacks, then a GDELT
-        cooldown. Counting successes would have reported that as zero.
+        R2 recorded the execution at this one call site, which is why the
+        registry saw `search` and nothing else. It is now recorded centrally in
+        `callProviderSet`, through which this operation and every other one
+        passes. Counting in both places would double every search.
       */
-      /*
-        SELF-CATCHING, AND THAT IS NOT DEFENSIVE PADDING.
-
-        My first cut called this bare and eight NewsService tests changed
-        behaviour: a throw here landed inside the caller's provider-failure
-        handling, so a FAILING provider was recorded as having RESPONDED and
-        `response.providers` grew from [] to [one]. The counter had altered the
-        thing it was counting, which is the one outcome telemetry may never
-        produce.
-
-        Wrapped, the worst case is a lost count. Unwrapped, the worst case is a
-        changed answer.
-      */
-      try {
-        this.executions?.recordExecution(provider.id, 'search');
-      } catch {
-        /* A counter must never decide what a provider did. */
-      }
-
       return provider.search(query, {
         limit,
         lang: provider.id === 'gnews' ? gnewsSearchLang : options?.lang,
@@ -799,6 +806,7 @@ export class NewsService {
         const rescueCall = await this.callProviderSet(
           fallbacks,
           searchOperation,
+          'search',
           /*
            * R1 — THE RESCUE OBEYS THE SAME CORRECTED RULE. It is the second
            * path that consults the fallback tier, and a peer tail there costs
@@ -1037,8 +1045,19 @@ export class NewsService {
       const cached = this.readFreshHomeNews(cacheKey);
 
       if (cached) {
+        this.recordCache('hit');
+
         return cached;
       }
+
+      /*
+        R5 — A MISS IS RECORDED BEFORE IT BECOMES AN EXECUTION, because the
+        gap between the two is the whole subject of R4: a miss on this path
+        will spend quota, a miss on the cache-only path never will, and a
+        registry that only ever saw hits could not tell the reader which
+        happened.
+      */
+      this.recordCache('miss');
     }
 
     const providerCall = await this.callAllProviders(
@@ -1141,6 +1160,114 @@ export class NewsService {
       ),
       failures,
     );
+  }
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * R5 · THE NON-EXECUTING READ OF THE SAME `limit:language` CORPUS
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * **This method cannot spend quota. That is its entire purpose.**
+   *
+   * ── THE INVARIANT IT ENFORCES ──────────────────────────────────────────
+   *
+   * *Opening or navigating the Map must never execute GNews merely to obtain
+   * the global corpus.*
+   *
+   * R4 measured why one was needed. The map acquires its world-view corpus on
+   * every MOUNT — cold open, hard reload, a language refresh — and each of
+   * those reached `topHeadlines()`, which executes a provider on any cache
+   * miss. Navigation was already free; ARRIVAL was not, and a 300-second
+   * window was the only thing standing between a visual-testing session and
+   * the quota. Reading the map's corpus through this method removes the map
+   * from the executing path **by construction**, at any frequency, forever.
+   *
+   * ── WHAT IT DOES, EXHAUSTIVELY ─────────────────────────────────────────
+   *
+   *   - reads the SAME `homeNewsCache` under the SAME `limit:language` key
+   *     that `topHeadlines()` writes, so a warm Home genuinely serves the Map;
+   *   - returns that corpus unchanged when it is fresh;
+   *   - returns a truthful "nothing retained" envelope when it is not.
+   *
+   * ── AND WHAT IT WILL NEVER DO ──────────────────────────────────────────
+   *
+   *   - never calls `callAllProviders`, so no provider of any tier can run;
+   *   - never reaches GNews, and never reaches a FALLBACK provider merely
+   *     because the cache is empty — an empty cache is not a provider failure
+   *     and must not be treated as one;
+   *   - never reads the stored-article pool. `findRecent()` costs no quota, so
+   *     serving it would have been defensible, but the ruling asks for a
+   *     "retained-unavailable" result and stored reporting is a different
+   *     claim from a retained corpus. Offering it here is a product decision
+   *     and is left to the CTO rather than taken silently;
+   *   - never writes to the cache. A read that can populate is a retrieval
+   *     wearing a different name.
+   *
+   * ── THE MISS ENVELOPE, AND WHY IT CARRIES NO `fallbackReason` ──────────
+   *
+   * `dataMode: 'unavailable'` with **no** `fallbackReason`. Both members of
+   * `NewsFallbackReason` — `no-live-results` and `provider-error` — assert
+   * something about a provider that was consulted, and nothing was consulted
+   * here. Attaching either would be the response telling the reader a
+   * retrieval failed when no retrieval was attempted. The absence IS the
+   * statement: nothing is retained, and nothing was bought to find out.
+   *
+   * No new `NewsDataMode` member is introduced; the shared contract is
+   * unchanged.
+   *
+   * ── TTL ────────────────────────────────────────────────────────────────
+   *
+   * Untouched. `DEFAULT_HOME_NEWS_CACHE_TTL_SECONDS` is still 300. Extending
+   * it was forbidden and would in any case only have lengthened the blind
+   * spot rather than closed the path.
+   */
+  topHeadlinesCacheOnly(limit?: number, options?: { lang?: string }): NewsResponse {
+    const cacheKey = this.buildHomeNewsCacheKey(limit, options);
+
+    /*
+      A null key means "not Home traffic" — today only a `q`-bearing analysis
+      call. Such a call has no shared corpus to read, and this method has no
+      way to obtain one, so it reports nothing retained rather than falling
+      through to anything that could retrieve.
+    */
+    if (cacheKey !== null) {
+      const cached = this.readFreshHomeNews(cacheKey);
+
+      if (cached) {
+        this.recordCache('hit');
+
+        return cached;
+      }
+    }
+
+    this.recordCache('miss');
+
+    return {
+      articles: [],
+      totalResults: 0,
+      providers: [],
+      dataMode: 'unavailable',
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * R5 — the one place a cache decision on the Home corpus is counted.
+   *
+   * Wrapped, for the rule this service already follows everywhere else: a
+   * counter may never change the decision it is observing. The worst case here
+   * is a lost count.
+   */
+  private recordCache(outcome: 'hit' | 'miss'): void {
+    try {
+      if (outcome === 'hit') {
+        this.executions?.recordCacheHit('top-headlines');
+      } else {
+        this.executions?.recordCacheMiss('top-headlines');
+      }
+    } catch {
+      /* Never let telemetry decide what the cache did. */
+    }
   }
 
   /**
@@ -1405,7 +1532,7 @@ export class NewsService {
      * would change the behaviour of every ordinary request in the product to
      * fix a problem none of them has.
      */
-    const primaryCall = await this.callProviderSet(primaries, operation);
+    const primaryCall = await this.callProviderSet(primaries, operation, capability);
 
     const primaryArticleCount = primaryCall.results.reduce(
       (total, result) => total + result.articles.length,
@@ -1425,6 +1552,7 @@ export class NewsService {
     const fallbackCall = await this.callProviderSet(
       fallbacks,
       operation,
+      capability,
       this.peerTailFor(capability, fallbacks, peerTail),
     );
 
@@ -1511,6 +1639,13 @@ export class NewsService {
     providers: readonly NewsProvider[],
     operation: (provider: NewsProvider) => Promise<NewsArticle[]>,
     /**
+     * R5 — WHAT CLASS OF WORK THIS FAN-OUT IS, so the one place every provider
+     * invocation passes through can classify it. Required rather than
+     * optional: an unlabelled execution is an execution nobody can attribute,
+     * and R4 spent an investigation on exactly that.
+     */
+    capability: NewsProviderCapability,
+    /**
      * R1 — ABSENT MEANS "BEHAVE EXACTLY AS BEFORE". Every existing call site
      * omits it: the primary fan-out, topHeadlines and category all reach the
      * identical `Promise.allSettled` they always did. Only the SEARCH fallback
@@ -1566,6 +1701,34 @@ export class NewsService {
     };
 
     const settleOne = async (provider: NewsProvider): Promise<void> => {
+      /*
+        ══ R5 · THE QUOTA-BEARING EVENT, COUNTED IN THE ONE PLACE IT HAPPENS ══
+
+        Every provider invocation in this service — top-headlines, search,
+        category, primary tier and fallback tier alike — passes through the
+        `await operation(provider)` below. Counting HERE is what makes the
+        registry complete, and it is why R2's per-call-site counter was not:
+        that one sat inside `search()`'s operation only, so `topHeadlines()` —
+        the endpoint R4 was asked to investigate — recorded nothing at all.
+
+        BEFORE the await, deliberately. A call that fails, times out or is
+        rate-limited has still been spent; counting at the outcome would report
+        the live SWZ retrieval (GNews rate-limited, two fallbacks, a GDELT
+        cooldown) as zero.
+
+        SELF-CATCHING, AND THAT IS NOT DEFENSIVE PADDING. My first cut of the
+        R2 counter called this bare and eight NewsService tests changed
+        behaviour: a throw here landed inside the caller's provider-failure
+        handling, so a FAILING provider was recorded as having RESPONDED and
+        `response.providers` grew from [] to [one]. The counter had altered the
+        thing it was counting. Wrapped, the worst case is a lost count.
+      */
+      try {
+        this.executions?.recordExecution(provider.id, capability);
+      } catch {
+        /* A counter must never decide what a provider did. */
+      }
+
       try {
         const articles = await operation(provider);
 

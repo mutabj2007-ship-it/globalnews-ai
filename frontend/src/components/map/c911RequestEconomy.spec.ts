@@ -67,8 +67,23 @@ describe('C911-R6 -- provider request economy', () => {
   });
 
   describe('/map -- one world call, one call per DISTINCT country', () => {
-    it('issues exactly one fetchTopHeadlines call for the world view', () => {
-      expect(countOf(mapClient, 'fetchTopHeadlines(')).toBe(1);
+    it('issues exactly one world-corpus call, and it is the NON-EXECUTING one', () => {
+      /*
+        R5 — THIS ASSERTION GOT STRONGER, NOT WEAKER.
+
+        It used to count `fetchTopHeadlines(`, which guarded the NUMBER of
+        world calls but said nothing about their COST. R4 measured the
+        consequence: one call per map mount, each executing a provider whenever
+        the backend's 300s window had lapsed, with zero country retrievals
+        involved — the Product Owner's dashboard moved and nothing in this file
+        could have caught it.
+
+        The map now reads the same `limit:language` corpus through
+        `/news/top-headlines/retained`, which cannot reach a provider. The count
+        is still one; the second expectation is the one that now matters.
+      */
+      expect(countOf(mapClient, 'fetchRetainedTopHeadlines(')).toBe(1);
+      expect(countOf(mapClient, 'fetchTopHeadlines(')).toBe(0);
     });
 
     it('issues exactly one fetchCountryNews call site', () => {
@@ -105,14 +120,34 @@ describe('C911-R6 -- provider request economy', () => {
   });
 
   describe('NOTHING PROVIDER-COSTING IS ADDED BY C911', () => {
-    it('the map client still calls only the three known news entry points', () => {
-      // A fourth provider-consuming call appearing here unannounced fails this.
+    it('the map client still calls only the known news entry points', () => {
+      // A provider-consuming call appearing here unannounced fails this.
       const callSites =
         countOf(mapClient, 'fetchTopHeadlines(') +
+        countOf(mapClient, 'fetchRetainedTopHeadlines(') +
         countOf(mapClient, 'fetchCountryNews(') +
         countOf(mapClient, 'fetchNewsSearch(');
 
       expect(callSites).toBe(2);
+    });
+
+    it('and exactly ONE of them can spend quota — the explicit country retrieval', () => {
+      /*
+        R5 — THE DISTINCTION THIS FILE WAS MISSING.
+
+        Counting call sites treats every news entry point as equally costly,
+        which is how a world-corpus fetch on every mount passed this suite for
+        months. Split by cost, the map's budget is now stateable in one line:
+        ONE call that can execute a provider, reached only by an explicit
+        country selection, and one that cannot execute anything at all.
+      */
+      const canSpend =
+        countOf(mapClient, 'fetchTopHeadlines(') +
+        countOf(mapClient, 'fetchCountryNews(') +
+        countOf(mapClient, 'fetchNewsSearch(');
+
+      expect(canSpend).toBe(1);
+      expect(countOf(mapClient, 'fetchCountryNews(')).toBe(1);
     });
 
     it('no retry loop was introduced around a provider call', () => {

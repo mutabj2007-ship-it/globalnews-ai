@@ -200,7 +200,14 @@ describe('D — the AI action is visible, and the source action is not an AI act
     });
 
     it('the map still calls exactly the two known news entry points', () => {
-      expect(mapClient.split('fetchTopHeadlines(').length - 1).toBe(1);
+      /*
+        R5 — the world corpus is read through `fetchRetainedTopHeadlines`, a
+        route that cannot execute a provider. Two entry points as before; only
+        one of them can now cost anything, and it is the explicit country
+        retrieval.
+      */
+      expect(mapClient.split('fetchRetainedTopHeadlines(').length - 1).toBe(1);
+      expect(mapClient.split('fetchTopHeadlines(').length - 1).toBe(0);
       expect(mapClient.split('fetchCountryNews(').length - 1).toBe(1);
     });
   });

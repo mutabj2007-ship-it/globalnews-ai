@@ -80,8 +80,36 @@ export interface ProviderStatus {
 }
 
 export function providerStatusFrom(response: CountryNewsResponse): ProviderStatus {
+  /*
+    ── R5 · SELECTION-INTELLIGENCE-UNGUARDED-TRIM-1 ─────────────────────────
+
+    `providerDisplayName` is REQUIRED by `CountryNewsResponse`, and that
+    requirement is not weakened here: the shared contract still declares it
+    `string`, the backend still always sends it, and nothing downstream is
+    given permission to omit it.
+
+    What changes is the blast radius when an envelope arrives malformed
+    anyway. The bare `response.providerDisplayName.trim()` that stood here
+    threw `TypeError: Cannot read properties of undefined (reading 'trim')` on
+    a response missing the field, React followed with #310, and **the entire
+    map shell unmounted** — a blank page where one panel should have said it
+    did not know the provider. That was measured against the deployed Alpha
+    build during R3.2 validation.
+
+    An unreadable provider name is a fact about one panel. It is not a reason
+    to take the map away from the reader, and `providerName: null` is a state
+    this type already models and every consumer already handles.
+
+    NOT a coercion: a non-string is treated as ABSENT, never stringified into
+    a label like "undefined" that would be shown to a reader as if a provider
+    had been named.
+  */
+  const rawProviderName = response.providerDisplayName;
+
   const providerName =
-    response.providerDisplayName.trim().length > 0 ? response.providerDisplayName : null;
+    typeof rawProviderName === 'string' && rawProviderName.trim().length > 0
+      ? rawProviderName
+      : null;
 
   switch (response.dataMode) {
     case 'live':

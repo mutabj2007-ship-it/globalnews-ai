@@ -1,8 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { ProviderHealthStatus } from '@globalnews-ai/shared';
 import type { NewsProvider } from '../../news/interfaces';
 import { ALL_NEWS_PROVIDERS, NEWS_PROVIDERS } from '../../news/providers/provider.tokens';
 import { NewsService } from '../../news/news.service';
+import { ProviderExecutionRegistry } from '../../news/telemetry/provider-execution.registry';
 import type {
   AdminNewsProvidersResponse,
   AdminProviderHealth,
@@ -41,6 +42,27 @@ export class AdminNewsService {
     private readonly activeProviders: NewsProvider[],
     @Inject(ALL_NEWS_PROVIDERS)
     private readonly registeredProviders: NewsProvider[],
+    /**
+     * R5 — THE READER THE REGISTRY NEVER HAD.
+     *
+     * R2 shipped `ProviderExecutionRegistry` and nothing outside its own spec
+     * ever called `snapshot()` or `totalExecutions()`, so R4 had to answer a
+     * quota question with a spy. This is the one place it is read, and it sits
+     * behind the admin guard for the reason the registry's own header gives:
+     * execution counts let a caller watch quota drain in real time.
+     *
+     * `@Optional()`, AND LAST. Nest resolves it from NewsModule, which exports
+     * it; a suite that constructs this service directly with three arguments,
+     * or assembles a test module without the registry, keeps working and
+     * simply reports empty counters.
+     *
+     * Both halves of that are lessons paid for: adding a REQUIRED constructor
+     * parameter to a service tests construct by hand turned 13 suites red in
+     * R2, and a bare `@Inject()` on a property turned 19 suites red in R5.
+     * Telemetry may not break assembly.
+     */
+    @Optional()
+    private readonly executions?: ProviderExecutionRegistry,
   ) {}
 
   async providers(): Promise<AdminNewsProvidersResponse> {
@@ -54,6 +76,13 @@ export class AdminNewsService {
       ]),
     );
 
+    /*
+      Read, never reset. This route reports what the process has spent; a read
+      that cleared the counters would make two operators looking at the same
+      deployment see different numbers and neither of them the truth.
+    */
+    const buckets = this.executions?.snapshot() ?? [];
+
     return {
       providers: statuses.map((status) =>
         projectProviderHealth(status, {
@@ -61,6 +90,16 @@ export class AdminNewsService {
           providerKind: kinds.get(status.providerId) ?? 'UNKNOWN',
         }),
       ),
+      execution: {
+        buckets: buckets.map((bucket) => ({
+          provider: bucket.provider,
+          endpointClass: bucket.endpointClass,
+          cacheHits: bucket.cacheHits,
+          cacheMisses: bucket.cacheMisses,
+          executions: bucket.executions,
+        })),
+        totalExecutions: this.executions?.totalExecutions() ?? 0,
+      },
       generatedAt: new Date().toISOString(),
     };
   }

@@ -169,6 +169,28 @@ export interface AdminProviderHealth {
   geoResolutionSuccessRate?: number;
 }
 
+/**
+ * R5 — ONE BUCKET OF PROVIDER-EXECUTION TELEMETRY.
+ *
+ * Three scalars and two labels. No query text, no country, no article, no URL,
+ * no user — a counter that accumulated the places a reader looked would be a
+ * behavioural log wearing a metrics costume.
+ *
+ * `provider` is `'cache'` for the two cache buckets and the real provider id
+ * for an execution bucket, so one list carries both halves of the question
+ * without a second shape to keep in step.
+ */
+export interface AdminProviderExecutionBucket {
+  provider: string;
+  endpointClass: string;
+  /** Backend requests served without reaching any provider. */
+  cacheHits: number;
+  /** Backend requests that fell through the cache. */
+  cacheMisses: number;
+  /** **The quota-bearing number.** Provider invocations actually issued. */
+  executions: number;
+}
+
 export interface AdminNewsProvidersResponse {
   /**
    * Every REGISTERED provider, each one marked with whether it is
@@ -178,5 +200,27 @@ export interface AdminNewsProvidersResponse {
    * that every row was serving traffic. Both are now visible at once.
    */
   providers: AdminProviderHealth[];
+
+  /**
+   * R5 — WHAT THIS DEPLOYMENT HAS ACTUALLY SPENT, per provider and operation.
+   *
+   * R2 added the registry and R4 found that nothing read it, so a quota
+   * question still had to be answered with a stopwatch. This is the reader.
+   *
+   * ADMIN-ONLY, DELIBERATELY. `GET /news/providers/health` is anonymous;
+   * execution counts are an operational signal about spend and capacity, and
+   * publishing them would let an unauthenticated caller watch quota drain in
+   * real time and time requests against a limit. This route already sits
+   * behind the admin guard and the analytics.view capability.
+   *
+   * In-memory and per-instance, matching the caches it measures: it resets
+   * when the process does, which is honest, because the caches reset then too.
+   */
+  execution: {
+    buckets: AdminProviderExecutionBucket[];
+    /** Total invocations across every provider — the headline quota figure. */
+    totalExecutions: number;
+  };
+
   generatedAt: string;
 }

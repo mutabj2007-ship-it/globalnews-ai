@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ProviderExecutionRegistry } from '../telemetry/provider-execution.registry';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -59,14 +59,26 @@ export class CountryNewsService {
   private readonly cache = new Map<string, CacheEntry>();
 
   /*
-    MAP-GNEWS-QUOTA-REGRESSION-1 — the counter that ends duration-guessing,
-    recorded where the cache decision is actually made.
+    R5 — the counter that ends duration-guessing, recorded where the cache
+    decision is actually made, and now genuinely SHARED with NewsService.
 
-    A DEFAULTED FIELD rather than a constructor parameter, for the reason
-    news.service.ts records: adding a parameter to a service that tests
-    construct directly breaks them all, and a telemetry change must not be able
-    to alter the behaviour it observes.
+    R2 left this as a bare field initialiser and asserted that Nest would
+    inject the module singleton into it. Nest does not: only a property
+    carrying `@Inject()` is assigned, so this service and NewsService each
+    counted into a private registry nobody read. R4 found it.
+
+    The initialiser stays as the test fallback — a direct
+    `new CountryNewsService(...)` gets its own registry and behaves exactly as
+    before — while the decorator makes the running application share one.
+
+    `@Optional()` is load-bearing: a bare `@Inject()` makes this a REQUIRED
+    dependency and every test module that assembles this service without the
+    registry stops resolving. That is how my first R5 cut turned 19 suites
+    red. Unresolved now yields `undefined`, every use is `?.`-guarded, and the
+    worst case is a lost count rather than a service that will not build.
   */
+  @Optional()
+  @Inject(ProviderExecutionRegistry)
   private executions: ProviderExecutionRegistry = new ProviderExecutionRegistry();
 
   constructor(
@@ -146,6 +158,18 @@ export class CountryNewsService {
       this.logger.debug(`Serving cached country news for ${country.iso3}`);
 
       return cached;
+    }
+
+    /*
+      R5 — THE MISS, RECORDED TOO. R2 counted only the hit here, so the
+      registry could report how often the cache saved a call and never how
+      often it failed to — which is the half that costs money. Same wrapping,
+      same rule: a counter may never change a cache decision.
+    */
+    try {
+      this.executions?.recordCacheMiss('country-news');
+    } catch {
+      /* Never let telemetry decide what the cache did. */
     }
 
     const fetchLimit = Math.max(resolvedLimit * 2, 20);

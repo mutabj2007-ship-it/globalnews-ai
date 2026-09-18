@@ -27,7 +27,7 @@ import {
 import type { MapMode, MapPeriod, MapSelection } from '@/lib/map/state/mapState';
 import { countryEvidenceSet, mapFeedRecordsFrom, mergeEvidenceSets } from '@/lib/map/evidence/evidenceFeed';
 import { globalEvidenceSet, placeableArticles } from '@/lib/map/evidence/globalEvidenceFeed';
-import { fetchTopHeadlines } from '@/lib/api/newsApi';
+import { fetchRetainedTopHeadlines } from '@/lib/api/newsApi';
 import {
   mapFeedRequestKey,
   type MapEvidenceGeography,
@@ -684,6 +684,35 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     country path is untouched and still loads on selection, because a world
     view that could not load is no reason to withhold a country the reader
     explicitly asked for.
+
+    ══ R5 · AND IT NOW READS A CORPUS IT CANNOT BUY ═════════════════════════
+
+    **Product invariant: opening or navigating the Map must never execute
+    GNews merely to obtain the global corpus.**
+
+    WHAT R4 MEASURED. The effect above was keyed on language, so no navigation
+    re-ran it — World to East Africa and back cost nothing, and still costs
+    nothing. But EVERY MOUNT ran it: a cold open, a hard reload, a
+    `LanguageSync` refresh. Each of those reached `fetchTopHeadlines`, whose
+    route executes a provider on any cache miss, and the only thing standing
+    between a visual-testing session and the quota was a 300-second window.
+    The Product Owner's dashboard moved 22 → 25 with ZERO country retrievals,
+    which is exactly what three cache-cold arrivals look like.
+
+    `fetchRetainedTopHeadlines` reads the SAME `limit:language` corpus from the
+    SAME backend cache through `GET /news/top-headlines/retained`, a route that
+    cannot call a provider at all. So the frequency question disappears: this
+    effect may now run on every mount forever at zero quota.
+
+    AND IF NOTHING IS RETAINED, NOTHING IS BOUGHT. The response comes back
+    `dataMode: 'unavailable'` with no articles, and the world view renders the
+    honest empty state it already had for the failure case. There is no retry,
+    no timer and no fallback to the executing route — a silent upgrade to a
+    retrieving call is precisely the defect being closed.
+
+    HOME IS UNCHANGED and still uses the executing route, which is what keeps
+    this corpus warm for the map to find. That asymmetry is the whole design:
+    one surface pays for the corpus deliberately, the other only ever reads it.
   */
   useEffect(() => {
     /*
@@ -712,7 +741,7 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
 
     let cancelled = false;
 
-    void fetchTopHeadlines(GLOBAL_FEED_LIMIT, language)
+    void fetchRetainedTopHeadlines(GLOBAL_FEED_LIMIT, language)
       .then((response) => {
         if (cancelled) return;
 

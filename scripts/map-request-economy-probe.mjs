@@ -28,15 +28,46 @@ import { chromium } from 'playwright';
 
 const BASE = process.env.PROBE_BASE_URL ?? 'http://127.0.0.1:3990';
 
+/*
+  ── PROBE-FIXTURE-INCOMPLETE-ENVELOPE-1 · THE FIXTURE IS THE CONTRACT ──────
+
+  THIS USED TO BE A FOUR-FIELD OBJECT, AND IT PRODUCED A FALSE PASS.
+
+  `CountryNewsResponse` (shared/src/news.ts:459) REQUIRES `providers`,
+  `feedTier`, `providerDisplayName` and `generatedAt`. Without them,
+  `providerStatusFrom` called `.trim()` on an undefined `providerDisplayName`,
+  React threw #310, and the entire map shell unmounted — so every later
+  assertion measured a page that no longer existed. Controls read as "not
+  found", the URL was never written, and a run against the deployed Alpha
+  build reported the positive control as a failure for reasons that had
+  nothing to do with the product.
+
+  A stub that is not a valid envelope tests the stub. The `assertAlive()`
+  check below exists so that this can never again be mistaken for a result:
+  a crashed shell now FAILS LOUDLY instead of passing quietly.
+*/
 const COUNTRY_FIXTURE = {
   countryCode: 'RWA',
   countryName: 'Rwanda',
   articles: [],
-  dataMode: 'cached',
   totalResults: 0,
+  providers: [],
+  dataMode: 'cached',
+  feedTier: 'live',
+  providerDisplayName: 'Stored reporting',
+  fallbackReason: 'no-live-results',
+  generatedAt: new Date().toISOString(),
 };
 
-const HEADLINES_FIXTURE = { articles: [], dataMode: 'cached', totalResults: 0 };
+const HEADLINES_FIXTURE = {
+  articles: [],
+  totalResults: 0,
+  providers: [],
+  dataMode: 'cached',
+  feedTier: 'live',
+  providerDisplayName: 'Stored reporting',
+  generatedAt: new Date().toISOString(),
+};
 
 const TOP_ROW = (id) => `[data-gn="breadcrumb-jump"][data-gn-target="${id}"]`;
 
@@ -50,6 +81,34 @@ function record(name, passed, detail = '') {
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
 const page = await context.newPage();
+
+/*
+  ── A CRASHING FIXTURE MUST NEVER PRODUCE A FALSE PASS AGAIN ──────────────
+
+  Every uncaught page error is collected, and `assertAlive()` below checks
+  BOTH that nothing threw and that the shell is still mounted. Zero requests
+  from a page that unmounted is not evidence of request economy; it is
+  evidence of a corpse.
+*/
+const pageErrors = [];
+page.on('pageerror', (error) => pageErrors.push(String(error).slice(0, 200)));
+
+async function assertAlive(label) {
+  const mounted = (await page.$$('[data-gn="global-map-shell"]')).length === 1;
+  const alive = mounted && pageErrors.length === 0;
+
+  if (!alive) {
+    record(
+      `SHELL ALIVE · ${label}`,
+      false,
+      mounted
+        ? `page error: ${pageErrors[0]}`
+        : 'THE MAP SHELL IS NOT MOUNTED — every zero above is meaningless',
+    );
+  }
+
+  return alive;
+}
 
 const observed = [];
 
@@ -262,6 +321,13 @@ const rwandaOk = await clickTopRow('rwanda');
 /* The URL is written by an effect; wait for it rather than for a clock. */
 await page.waitForFunction(() => window.location.search.includes('country='), { timeout: 15000 }).catch(() => {});
 
+/*
+  THE CRASH POINT, CHECKED AT THE CRASH POINT. A country response is the one
+  thing that reaches `providerStatusFrom`, so this is where an incomplete
+  envelope took the shell down. Asserted here, before the counts are read.
+*/
+await assertAlive('after an explicit country selection');
+
 if (!rwandaOk) {
   record('POSITIVE CONTROL rwanda', false, 'INCONCLUSIVE — control not found');
 } else {
@@ -286,6 +352,13 @@ if (failed.length > 0) {
   console.log('  FAILED:');
   for (const f of failed) console.log(`    - ${f.name}  ${f.detail}`);
 }
+console.log(`  uncaught page errors: ${pageErrors.length}`);
+for (const error of [...new Set(pageErrors)]) console.log(`    ${error}`);
 console.log('================================================================\n');
 
-process.exit(failed.length === 0 ? 0 : 1);
+/*
+  A page error fails the run even if every count was zero. That is the whole
+  point of PROBE-FIXTURE-INCOMPLETE-ENVELOPE-1: the previous version would
+  have exited 0 with a dead page.
+*/
+process.exit(failed.length === 0 && pageErrors.length === 0 ? 0 : 1);
