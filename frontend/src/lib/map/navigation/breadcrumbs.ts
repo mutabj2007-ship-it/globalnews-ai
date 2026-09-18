@@ -242,6 +242,28 @@ export function governedRegionExtent(regionId: string): Bounds | null {
   return target?.bounds ?? null;
 }
 
+/**
+ * ══ MAP-PL-ACTIVE-REGION-LABEL-1 — THE DICTIONARY KEY FOR A GOVERNED REGION ══
+ *
+ * A declared product region carries a `label` ("East Africa"), and that label
+ * is DATA: it names the region in the declaration that owns its membership, in
+ * one language. It is not display copy, and rendering it to a Polish reader is
+ * how "EAST AFRICA" appeared on the active chip while the secondary control
+ * beside it read "AFRYKA WSCHODNIA".
+ *
+ * Every string a reader sees comes from the dictionary keyed by jump-target id
+ * — the rule this table's own header states — and the PL dictionary already
+ * holds `eastAfrica: 'Afryka Wschodnia'`. This returns that key so the surface
+ * can look the name up instead of printing the declaration's.
+ *
+ * `null` when no jump target names the region, in which case the caller keeps
+ * whatever G published. Nothing is invented and no translation is performed
+ * here; this only says WHICH key to read.
+ */
+export function governedRegionLabelKey(regionId: string): string | null {
+  return DEPLOYMENT_JUMP_TARGETS.find((target) => target.regionId === regionId)?.id ?? null;
+}
+
 export function assertGovernedJumpRegions(
   targets: readonly JumpTarget[] = DEPLOYMENT_JUMP_TARGETS,
 ): readonly string[] {

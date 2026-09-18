@@ -48,6 +48,7 @@ import type { PlaceResult } from '@/lib/map/search/placeSearch';
 import { regionMayFrame, REGIONAL_EVIDENCE_SCOPE } from '@/lib/map/region/regionSelection';
 import { useResolvedRegion } from '@/lib/map/region/useResolvedRegion';
 import { useResolvedCity } from '@/lib/map/geography/useResolvedCity';
+import { localisedGovernedRegion } from '@/lib/map/region/governedRegionLabel';
 import { CityIdentityCard } from './CityIdentityCard';
 import { RegionIdentityCard } from '@/components/map/shell/RegionIdentityCard';
 import { EvidenceMapCanvas } from './EvidenceMapCanvas';
@@ -1418,7 +1419,21 @@ export function GlobalMapShell({
           the measured wrong version rendered.
         */
         <RegionIdentityCard
-          region={region}
+          /*
+            MAP-PL-ACTIVE-REGION-LABEL-1 — THE NAME COMES FROM THE DICTIONARY.
+
+            `region.name` is the DECLARATION's label, which is data in one
+            language. For a governed product region the reader-facing name lives
+            in the breadcrumb targets, already localised, and that is what is
+            shown. A region G resolved keeps G's published name, which is the
+            correct behaviour for a gazetteer node.
+          */
+          region={localisedGovernedRegion(
+            region,
+            selection.id,
+            spatial.breadcrumbs.targets,
+          )
+          }
           geographyId={selection.id}
           labels={spatial.region}
           onClearSelection={onSelectionChange ? () => onSelectionChange(null) : undefined}
@@ -1700,8 +1715,40 @@ export function GlobalMapShell({
           all `true`, so their DOM is unchanged — FULL included, which is
           why this is a gate rather than a redesign.
         */}
+        {/*
+          ══ THE LOWER-LEFT CORNER IS ONE COLUMN — MAP-LAYERS-EVIDENCE-GRAMMAR-
+             COLLISION-1 ══════════════════════════════════════════════════════
+
+          It used to be three islands pinned to the same bottom edge at 16px,
+          104px and 128px, each growing upward. The layers panel is taller than
+          112px, so it grew through the scale bar and the legend, and the
+          legend's z-20 drew over it — which is the collision the live
+          inspection reported.
+
+          `flex-col-reverse` keeps the SHIPPED visual order exactly: the
+          control cluster stays nearest the bottom edge, the scale bar sits
+          above it, the legend above that. Nothing is re-ordered, nothing moves
+          corner, and the panels can no longer overlap because they are now
+          siblings in a flow rather than three things racing the same edge.
+
+          ONE DELIBERATE 4px CHANGE, DECLARED: the legend and scale bar were
+          inset `left-[12px]` while the cluster was `left-4` (16px). A single
+          column has one inset, and 16px is the one that keeps the cluster where
+          it has always been.
+
+          `items-start` so a narrow panel does not stretch, and
+          `max-h`/`overflow-y-auto` so the column can never run off the top of a
+          short viewport — which is what keeps compact viable and keeps the map
+          visible behind it.
+        */}
+        <div
+          data-gn="map-lower-left-stack"
+          data-gn-hud-reserve
+          className={`${HUD_ISLAND} absolute bottom-4 left-4 z-20 flex max-h-[calc(100%-96px)] flex-col-reverse items-start gap-2 overflow-y-auto`}
+        >
         {hud.interactive && (
         <MapControlCluster
+          positioned={false}
           label={shell.lowerLeftControlsLabel}
           globeLocator={
             <GlobeLocator
@@ -1776,6 +1823,28 @@ export function GlobalMapShell({
           }
         />
         )}
+
+        {/*
+          THE SCALE BAR AND THE LEGEND JOIN THE SAME COLUMN.
+
+          They are written AFTER the cluster in source order and `flex-col-reverse`
+          renders them ABOVE it, which is exactly where they have always been
+          drawn. Their own `absolute bottom-[104px] / bottom-[128px] left-[12px]`
+          anchors are gone: a flow needs no anchors, and those two numbers were
+          the collision.
+        */}
+        {hud.scaleBar && (
+          <div data-gn="map-scale-island">
+            <MapScaleBar camera={session.camera} />
+          </div>
+        )}
+
+        {hud.legend && (
+          <div data-gn="map-legend-island">
+            <EvidenceLegend labels={spatial.legend} open={legendOpen} onToggle={setLegendOpen} />
+          </div>
+        )}
+        </div>
 
         {/*
           THE SELECTION CALLOUT — inside the canvas region, so it is placed in
@@ -1931,17 +2000,7 @@ export function GlobalMapShell({
         </div>
         )}
 
-        {hud.legend && (
-          <div data-gn-hud-reserve className={`${HUD_ISLAND} absolute bottom-[128px] left-[12px] z-20`}>
-            <EvidenceLegend labels={spatial.legend} open={legendOpen} onToggle={setLegendOpen} />
-          </div>
-        )}
-
-        {hud.scaleBar && (
-          <div data-gn-hud-reserve className={`${HUD_ISLAND} absolute bottom-[104px] left-[12px] z-20`}>
-            <MapScaleBar camera={session.camera} />
-          </div>
-        )}
+        
 
         {/*
           ── R3 · TWO BOTTOM ISLANDS CANNOT SHARE A 261px ROW ───────────────
