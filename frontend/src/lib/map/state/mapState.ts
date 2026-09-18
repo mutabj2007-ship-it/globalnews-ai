@@ -230,7 +230,65 @@ export function hudProfile(density: MapDensity): HudProfile {
  * (`region:eastern-africa`). Changing that touches surfaces beyond RSC-1, so
  * every consumer branches on `kind` — which it must do anyway.
  */
-export type SelectionKind = 'COUNTRY' | 'EVIDENCE' | 'SITUATION' | 'SOURCE' | 'REGION';
+/**
+ * ══ MAP-SEARCH-CITY-SEMANTIC-SELECTION-1 — CITY JOINS THE UNION ═══════════
+ *
+ * Checkpoint G refused a city selection, and its reason was sound at the time:
+ * "a city is not a selectable evidence geography, and the evidence ceiling is
+ * COUNTRY, so Rwanda genuinely IS the evidence geography for a report in
+ * Kigali." A reader committing the Kigali row therefore moved the camera and
+ * selected nothing — which is exactly what the live inspection measured: a
+ * camera jump, `cam=` alone in the URL, and a rail still reading World.
+ *
+ * THE CTO RULING SUPERSEDES THAT REFUSAL FOR SELECTION ONLY, AND SAYS SO:
+ * CITY becomes a selectable semantic/navigation geography, and the evidence
+ * ceiling is explicitly NOT superseded.
+ *
+ * So the three things this product had collapsed into one are now three:
+ *
+ *     SEMANTIC SELECTION SCOPE     what the reader chose      Kigali CITY
+ *     EVIDENCE RESOLUTION CEILING  where evidence resolves    Rwanda COUNTRY
+ *     CAMERA STATE                 where the viewport is      lon/lat/zoom
+ *
+ * Adding CITY here is what stops the first from silently becoming the second.
+ * Nothing in this change lowers the ceiling: `EVIDENCE_CEILING_KIND` below
+ * states that rule once, so it cannot be re-decided per surface.
+ */
+export type SelectionKind =
+  | 'COUNTRY'
+  | 'CITY'
+  | 'EVIDENCE'
+  | 'SITUATION'
+  | 'SOURCE'
+  | 'REGION';
+
+/**
+ * THE EVIDENCE CEILING, AS ONE EXPORTED FACT.
+ *
+ * Evidence resolves at COUNTRY and no finer. A CITY selection therefore names
+ * where the READER is, never where the EVIDENCE is, and any surface showing
+ * evidence while a city is selected must say whose evidence it is showing.
+ * Stated once, here, because a ceiling re-derived at each call site is a
+ * ceiling that will differ at one of them.
+ */
+export const EVIDENCE_CEILING_KIND = 'COUNTRY' as const;
+
+/**
+ * Geography selections a reader NAVIGATES to, as opposed to evidence records
+ * they open. The distinction matters at exactly one place — whether committing
+ * the selection may trigger retrieval — and §11 makes it a release gate: a
+ * navigation selection must execute no provider.
+ */
+export const NAVIGATION_SELECTION_KINDS: readonly SelectionKind[] = [
+  'COUNTRY',
+  'CITY',
+  'REGION',
+];
+
+/** True when a selection names a place the reader navigated to. */
+export function isNavigationSelection(kind: SelectionKind): boolean {
+  return NAVIGATION_SELECTION_KINDS.includes(kind);
+}
 
 export interface MapSelection {
   readonly kind: SelectionKind;

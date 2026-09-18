@@ -1474,12 +1474,28 @@ export const pl: Dictionary = {
         },
         drawerClose: 'Zamknij panel',
       },
+      city: {
+        heading: 'Miasto',
+        evidenceCeilingHeading: 'Geografia dowodów',
+        evidenceCeilingBody:
+          'To kraj, względem którego przechowywane są doniesienia. GlobalNews AI ustala dowody na poziomie kraju, więc dane obok tego wyboru dotyczą kraju, a nie miasta.',
+        noCountryHeading: 'Geografia dowodów',
+        noCountryBody:
+          'Dla tego miejsca nie opublikowano kraju, więc nie ma geografii, względem której można przechowywać dowody.',
+        unresolvedHeading: 'Nie udało się rozpoznać tego miejsca',
+        unresolvedBody:
+          'Wybór pozostaje w mocy i jest zapisany w adresie. Słownik geograficzny nie odpowiedział dla tego identyfikatora, więc nic więcej o nim nie twierdzimy.',
+        provenanceHeading: 'Źródło',
+        clear: 'Wyczyść wybór',
+      },
       region: {
         heading: 'Region',
         types: {
           INSTITUTIONAL: 'Instytucjonalny \u00b7 opublikowany organ okre\u015bla cz\u0142onk\u00f3w',
           STATISTICAL: 'Statystyczny \u00b7 opublikowany standard okre\u015bla cz\u0142onk\u00f3w',
           OPERATIONAL: 'W powszechnym u\u017cyciu \u00b7 cz\u0142onkostwo jest sporne',
+          GOVERNED:
+            'Regionalny zakres produktu \u00b7 cz\u0142onkostwo zadeklarowane przez GlobalNews AI dla tego wdro\u017cenia',
           UNDEFINED: 'Dla tego regionu nie zakodowano definicji',
         },
         definitionHeading: 'Definicja',

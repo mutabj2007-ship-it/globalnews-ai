@@ -100,13 +100,40 @@ describe('C911-V2 -- a validation-state jump selects, it does not only fly', () 
     });
 
     it('a COUNTRY target does NOT also focus -- one camera commit, one history entry', () => {
+      /*
+        THE SLICE IS NARROWED TO THE BRANCH IT NAMES — R1 semantic convergence.
+
+        It used to run from the COUNTRY test all the way to the CITY clearing
+        test, which was the same span until a THIRD branch was added between
+        them for the governed region. The assertion then failed on a
+        `focus-bounds` belonging to a branch it was never about.
+
+        The invariant is unchanged and is what still matters: selecting a
+        country must not ALSO focus, because the selection-fit effect frames it
+        and two commits put Previous View on a frame nobody saw. So the slice
+        now ends where the COUNTRY branch actually ends.
+      */
+      const countryBranchStart = body.indexOf("target.rung === 'COUNTRY'");
       const countryBranch = body.slice(
-        body.indexOf("target.rung === 'COUNTRY'"),
-        body.indexOf('if (target.rung !== '),
+        countryBranchStart,
+        body.indexOf('if (target.regionId !== undefined)', countryBranchStart),
       );
 
       expect(countryBranch).not.toContain('focus-bounds');
       expect(countryBranch).toContain('return;');
+    });
+
+    it('MAP-REGION-STATE-PRESENTATION-1 — a governed region SELECTS and focuses exactly once', () => {
+      const regionBranch = body.slice(
+        body.indexOf('if (target.regionId !== undefined)'),
+        body.indexOf('if (target.rung !== '),
+      );
+
+      // It establishes scope...
+      expect(regionBranch).toContain("onSelectionChange?.({ kind: 'REGION', id: target.regionId })");
+      // ...and moves the camera exactly once, then returns.
+      expect(regionBranch.match(/focus-bounds/g)).toHaveLength(1);
+      expect(regionBranch).toContain('return;');
     });
 
     it('a target above country scale CLEARS an incompatible selection', () => {

@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { lookupNavigatorPlace } from '@/lib/api/geoNavigatorApi';
-import { regionSelectionFrom, type RegionSelection } from '@/lib/map/region/regionSelection';
+import {
+  declaredRegionSelection,
+  regionSelectionFrom,
+  type RegionSelection,
+} from '@/lib/map/region/regionSelection';
+import { governedRegionExtent } from '@/lib/map/navigation/breadcrumbs';
 import type { MapSelection } from '@/lib/map/state/mapState';
 
 /**
@@ -72,6 +77,36 @@ export function useResolvedRegion(selection: MapSelection | null | undefined): {
     }
 
     if (heldRef.current === selectedRegionId) return;
+
+    /*
+      ══ LOCAL FIRST — A PRODUCT-GOVERNED REGION IS NOT IN THE GAZETTEER ═════
+
+      MEASURED against the deployed Alpha backend:
+
+          GET /geo/place?id=region:east-africa -> {"found":false,"node":null}
+
+      That is correct rather than broken: `region:east-africa` is a coverage
+      region the Product Owner declared, deliberately not the East African
+      Community and not a UN M49 grouping, so no gazetteer holds it and none
+      should.
+
+      Without this branch, selecting East Africa would set the scope correctly
+      and the rail would then render "This region could not be resolved" — the
+      URL right and the reader told nothing. Resolved SYNCHRONOUSLY, so no
+      render shows the unresolved state for a region the product itself
+      declares, and no request is spent asking G about one.
+    */
+    const governed = declaredRegionSelection(
+      selectedRegionId,
+      governedRegionExtent(selectedRegionId),
+    );
+
+    if (governed !== null) {
+      heldRef.current = selectedRegionId;
+      setRegion(governed);
+
+      return;
+    }
 
     let live = true;
 

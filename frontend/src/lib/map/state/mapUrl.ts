@@ -55,6 +55,7 @@ export function decodePeriod(raw: string | null | undefined): MapPeriod | null {
 
 const SELECTION_KINDS: readonly SelectionKind[] = [
   'COUNTRY',
+  'CITY',
   'EVIDENCE',
   'SITUATION',
   'SOURCE',
@@ -92,6 +93,85 @@ const unfoldRegionId = (folded: string): string =>
   folded.startsWith(REGION_ID_PREFIX) ? folded : `${REGION_ID_PREFIX}${folded}`;
 
 /**
+ * ══ THE CHARSET, WIDENED TO WHAT G ACTUALLY PUBLISHES ═════════════════════
+ *
+ * Verbatim from the live Alpha navigator, `/geo/search?q=Kigali`:
+ *
+ *     city:RWA:kigali@-1.94995,30.05885
+ *     admin1:RW-01
+ *     admin3:RW:nisr:1103
+ *     region:eastern-africa
+ *
+ * Two consequences, neither optional:
+ *
+ * 1. THE ID IS OPAQUE. `NavigatorPlace.geographyId` is documented "Join and
+ *    look up by it; never parse it." So the codec carries it whole. It does not
+ *    split the country out of it, does not read the coordinates off the end,
+ *    and does not reconstruct it from parts. The fold below removes a prefix it
+ *    provably put back; that is the only structural claim made about an id.
+ *
+ * 2. THE CHARSET MUST ADMIT `:`, `@` AND `,`. It did not, so a city selection
+ *    could not survive the URL at all — `decodeSelection` would have refused
+ *    the very value `encodeSelection` produced, and the selection would have
+ *    been dropped on every reload. The guard is WIDENED, not removed: `/`,
+ *    whitespace and `%` are still refused, which is what keeps a hand-edited
+ *    parameter from reaching a lookup looking like a path or an escape. The
+ *    three characters added are the ones G publishes and no others.
+ */
+const SELECTION_ID_PATTERN = /^[A-Za-z0-9._:@,-]+$/;
+
+const SELECTION_ID_MAX = 128;
+
+/** Shared by both halves of the codec so they cannot drift apart. */
+function selectionIdIsWellFormed(id: string): boolean {
+  return id.length > 0 && id.length <= SELECTION_ID_MAX && SELECTION_ID_PATTERN.test(id);
+}
+
+const CITY_ID_PREFIX = 'city:';
+
+/**
+ * ══ THE FOLD IS PER KIND, BECAUSE ONE RULE CANNOT BE SYMMETRIC FOR BOTH ═══
+ *
+ * A first attempt at this used one fold for everything and was WRONG in a way
+ * worth recording, because it corrupts silently rather than failing:
+ *
+ *     region:admin1:RW-01  --decode-->  id "admin1:RW-01"
+ *                          --unfold-->  "region:admin1:RW-01"   <- a node that
+ *                                                                  does not exist
+ *
+ * The asymmetry is that a REGION selection carries TWO shapes of id — G's
+ * supranational `region:eastern-africa`, which owns the `region:` prefix, and a
+ * subnational `admin1:RW-01`, which owns a different one. A decoder cannot tell
+ * a folded id from an unfolded one by inspection, so the rule is fixed per kind
+ * instead of guessed:
+ *
+ *   REGION  fold `region:` when present. Unfold ONLY when the decoded id
+ *           contains no `:` at all — `eastern-africa` unfolds, `admin1:RW-01`
+ *           is already whole and is left exactly as it arrived.
+ *
+ *   CITY    fold `city:` and always restore it. Every city id G publishes is in
+ *           the `city:` namespace, so the prefix is known rather than inferred,
+ *           and folding keeps `sel=city:RWA:kigali@…` from reading
+ *           `sel=city:city:RWA:kigali@…`.
+ *
+ * Both directions are exercised against the REAL ids the live navigator returns
+ * in `mapUrl.spec.ts`; a fold that is not round-trip tested is a fold that will
+ * be wrong on the one id nobody tried.
+ */
+const foldCityId = (id: string): string =>
+  id.startsWith(CITY_ID_PREFIX) ? id.slice(CITY_ID_PREFIX.length) : id;
+
+const unfoldCityId = (folded: string): string =>
+  folded.startsWith(CITY_ID_PREFIX) ? folded : `${CITY_ID_PREFIX}${folded}`;
+
+/**
+ * A subnational region id carries its own namespace prefix and must not be
+ * given a second one. `eastern-africa` has none and is G's folded supranational
+ * form; `admin1:RW-01` has one and is whole.
+ */
+const regionIdIsWhole = (folded: string): boolean => folded.includes(':');
+
+/**
  * `kind:id`, e.g. `country:RWA`.
  *
  * TYPED IN THE URL, not a bare id. A selection is `{kind, id}` in the state
@@ -100,7 +180,12 @@ const unfoldRegionId = (folded: string): string =>
  * time an evidence id looked like an ISO3.
  */
 export function encodeSelection(selection: MapSelection): string {
-  const id = selection.kind === 'REGION' ? foldRegionId(selection.id) : selection.id;
+  const id =
+    selection.kind === 'REGION'
+      ? foldRegionId(selection.id)
+      : selection.kind === 'CITY'
+        ? foldCityId(selection.id)
+        : selection.id;
 
   return `${selection.kind.toLowerCase()}:${id}`;
 }
@@ -151,22 +236,25 @@ export function decodeSelection(raw: string | null | undefined): MapSelection | 
   if (!(SELECTION_KINDS as readonly string[]).includes(kind)) return null;
 
   /*
-    Unfolded BEFORE the charset check, so the check runs on the folded form and
-    a colon in the middle of a hand-typed region id is still refused.
+    THE CHARSET IS CHECKED ON THE FOLDED FORM, BEFORE ANY UNFOLDING, so what is
+    validated is exactly what the URL carried.
   */
-  if (kind === 'REGION') {
-    if (id.length === 0 || id.length > 96 || !/^[A-Za-z0-9._-]+$/.test(id)) return null;
-
-    return { kind: 'REGION', id: unfoldRegionId(id) };
-  }
+  if (!selectionIdIsWellFormed(id)) return null;
 
   /*
-    A conservative id charset. Ids in this product are ISO codes, gazetteer
-    keys and record uuids; nothing legitimate needs a slash, a space or a
-    percent, and refusing them keeps a hand-edited parameter from reaching a
-    lookup as something that looks like a path.
+    REGION UNFOLDS; NOTHING ELSE DOES. `region:eastern-africa` was folded to
+    `eastern-africa` by the encoder and is restored here. A subnational region
+    id — `admin1:RW-01` — was NOT folded, still carries its own prefix, and is
+    returned untouched: unfolding it would mint `region:admin1:RW-01`, a node
+    that does not exist.
   */
-  if (id.length === 0 || id.length > 96 || !/^[A-Za-z0-9._-]+$/.test(id)) return null;
+  if (kind === 'REGION') {
+    return { kind: 'REGION', id: regionIdIsWhole(id) ? id : unfoldRegionId(id) };
+  }
+
+  if (kind === 'CITY') {
+    return { kind: 'CITY', id: unfoldCityId(id) };
+  }
 
   return { kind: kind as SelectionKind, id };
 }

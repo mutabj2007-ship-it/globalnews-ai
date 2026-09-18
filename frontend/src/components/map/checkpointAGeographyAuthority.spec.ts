@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { assertGovernedJumpRegions } from '@/lib/map/navigation/breadcrumbs';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -89,12 +90,29 @@ describe('CHECKPOINT A — the explicit scope actually reaches the ladder', () =
       expect(shell).toContain('setViewScope(scopeForJumpTarget(target));');
     });
 
-    it('the jump reads the EXISTING target — no jump definition was modified', () => {
+    it('the jump target keeps its EXACT bounds, and East Africa gains a governed identity', () => {
       /*
-        The CTO ruling holds the bounds-only AFRICA and EAST AFRICA entries
-        correct and unchangeable. `scopeForJumpTarget` is a reader; if the scope
-        were ever stored ON the target instead, this assertion is where that
-        would surface.
+        ══ SUPERSEDED IN PART, AND THE PART THAT SURVIVES IS THE IMPORTANT ONE ══
+
+        This assertion used to read "no jump definition was modified" and rested
+        on an earlier ruling that held the bounds-only AFRICA and EAST AFRICA
+        entries "correct and unchangeable".
+
+        The current CTO ruling reverses that for East Africa specifically, and
+        for a reason this test cannot see: with no identity on the target, the
+        jump could only ever be a camera command, so the live map flew to East
+        Africa while the right rail went on reading World and the URL carried
+        `cam=` alone. MAP-REGION-STATE-PRESENTATION-1 requires the selection to
+        establish durable governed scope.
+
+        WHAT THE ASSERTION STILL PROTECTS, UNCHANGED: the BOUNDS. Adding an
+        identity must not re-frame the jump — §10 protects the existing East
+        Africa camera move as live-PASS — so the exact tuple is still pinned
+        here, and AFRICA, which gained nothing, is still pinned whole.
+
+        And the identity may only name a region the product GOVERNS:
+        `assertGovernedJumpRegions` refuses any other, which is what keeps this
+        from becoming the alias trap RSC-1 warns about.
       */
       const breadcrumbs = stripComments(
         readFileSync(join(__dirname, '..', '..', 'lib', 'map', 'navigation', 'breadcrumbs.ts'), 'utf-8'),
@@ -103,9 +121,13 @@ describe('CHECKPOINT A — the explicit scope actually reaches the ladder', () =
       expect(breadcrumbs).toContain(
         "{ id: 'africa', rung: 'CONTINENT', bounds: [-18, -35, 52, 37] },",
       );
-      expect(breadcrumbs).toContain(
-        "{ id: 'eastAfrica', rung: 'SUBREGION', bounds: [28.8, -11.8, 42, 5.5] },",
-      );
+      /* The bounds tuple, byte for byte — the jump is not re-framed. */
+      expect(breadcrumbs).toContain('bounds: [28.8, -11.8, 42, 5.5],');
+      /* And the identity it now carries is the governed one, not a minted alias. */
+      expect(breadcrumbs).toContain("GOVERNED_EAST_AFRICA_ID = 'region:east-africa'");
+      expect(breadcrumbs).toContain('regionId: GOVERNED_EAST_AFRICA_ID,');
+      expect(assertGovernedJumpRegions()).toEqual([]);
+
       expect(breadcrumbs).not.toContain('scope:');
     });
 

@@ -5,6 +5,7 @@ import {
 import type { Bounds } from '@/lib/map/camera/cameraState';
 import {
   DECLARED_PRODUCT_REGION,
+  declaredProductRegion,
   isDeclaredProductRegion,
   type RegionalScope,
 } from './declaredProductRegions';
@@ -76,13 +77,31 @@ import {
  * `OPERATIONAL` rather than `CONTESTED` is Main's deliberate choice: it keeps
  * `CONTESTED` for source-location provenance and `DISPUTED` for the R2 Watch
  * change state, so the R2-10 token collision cannot re-enter through this door.
+ *
+ * GOVERNED joins the union — MAP-REGION-STATE-PRESENTATION-1.
+ *
+ * The four existing types all describe how an OUTSIDE authority admitted a
+ * region: a published body, a published standard, common use, or nothing. A
+ * product-governed coverage region fits none of them, and forcing it into the
+ * nearest one would misdescribe it in the reader's own words — OPERATIONAL
+ * renders as "membership is disputed", which is false of a baseline the Product
+ * Owner declared, and UNDEFINED renders as "no definition is encoded", which is
+ * false of one carrying an explicit member list.
+ *
+ * So this is a fifth type rather than the nearest wrong one.
  */
-export type RegionType = 'INSTITUTIONAL' | 'STATISTICAL' | 'OPERATIONAL' | 'UNDEFINED';
+export type RegionType =
+  | 'INSTITUTIONAL'
+  | 'STATISTICAL'
+  | 'OPERATIONAL'
+  | 'GOVERNED'
+  | 'UNDEFINED';
 
 export const REGION_TYPES: readonly RegionType[] = [
   'INSTITUTIONAL',
   'STATISTICAL',
   'OPERATIONAL',
+  'GOVERNED',
   'UNDEFINED',
 ];
 
@@ -200,6 +219,48 @@ export function regionSelectionFrom(place: NavigatorPlace): RegionSelection | nu
  * still selects — identity and rail intact — and the camera stays exactly where
  * the reader put it.
  */
+/**
+ * ══ A PRODUCT-GOVERNED REGION RESOLVES LOCALLY, BECAUSE G DOES NOT HOLD IT ══
+ *
+ * MEASURED against the deployed Alpha backend:
+ *
+ *     GET /geo/place?id=region:east-africa  ->  {"found":false,"node":null}
+ *
+ * That is correct, not broken. `region:east-africa` is a PRODUCT_GOVERNED
+ * coverage region declared by the Product Owner in `declaredProductRegions.ts`;
+ * it is deliberately not the East African Community and not a UN M49 grouping,
+ * so no gazetteer holds it and none should.
+ *
+ * Without this, selecting East Africa would set the scope correctly and then
+ * render "This region could not be resolved" in the rail — the URL right, the
+ * reader told nothing. The product owns this identity, so the product resolves
+ * it.
+ *
+ * NOTHING IS INVENTED HERE. The name, the membership count and the provenance
+ * all come from the declaration. The extent is the deployment's own published
+ * jump bounds for the same region, which the map already flies to — a camera
+ * frame, not a boundary. The card continues to state separately that no
+ * regional boundary is drawn, because none is.
+ */
+export function declaredRegionSelection(
+  id: string,
+  extent: Bounds | null = null,
+): RegionSelection | null {
+  const declared = declaredProductRegion(id);
+
+  if (declared === undefined) return null;
+
+  return {
+    geographyId: declared.id,
+    name: declared.label,
+    regionType: 'GOVERNED',
+    definition: `${declared.authority} (${declared.authorityVersion})`,
+    extent,
+    memberCount: declared.members === null ? null : declared.members.length,
+    definitionId: null,
+  };
+}
+
 export function regionMayFrame(region: RegionSelection): boolean {
   return region.extent !== null;
 }

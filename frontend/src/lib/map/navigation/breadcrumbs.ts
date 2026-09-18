@@ -1,4 +1,5 @@
 import type { Bounds, CameraState } from '@/lib/map/camera/cameraState';
+import { isDeclaredProductRegion } from '@/lib/map/region/declaredProductRegions';
 
 /**
  * SPATIAL M2 — THE BREADCRUMB SCALE LADDER, FROM DESIGN PART I §E.
@@ -90,7 +91,42 @@ export interface JumpTarget {
    * selection handler, exactly as a map click is.
    */
   readonly countryIso3?: string;
+
+  /**
+   * ══ MAP-REGION-STATE-PRESENTATION-1 — THE GOVERNED REGION THIS TARGET IS ══
+   *
+   * The same repair `countryIso3` made, one rung up, for the same measured
+   * reason: a jump target carried bounds and nothing else, so a jump could only
+   * ever move a camera. East Africa flew the viewport, wrote `cam=` alone, and
+   * left the right rail reading World.
+   *
+   * WHY THE COMMENT ABOVE SAYS `eastAfrica` CARRIES NO IDENTITY, AND WHY THAT
+   * IS NO LONGER THE WHOLE STORY. The rule it rests on — "a supranational
+   * region is not a selectable evidence geography" — STILL STANDS. This id does
+   * not make East Africa an evidence geography, nothing aggregates member
+   * evidence because of it, and the regional rail card remains the one that
+   * refuses to answer "what is retained HERE?".
+   *
+   * What changed is that the product now GOVERNS a region by this name.
+   * `declaredProductRegions.ts` publishes `region:east-africa` with an approved
+   * membership and a named authority, so binding to it is not minting an
+   * identity from a label key — the alias trap RSC-1 warns about — it is naming
+   * one the Product Owner already declared.
+   *
+   * ONLY A DECLARED PRODUCT REGION MAY APPEAR HERE, and that is enforced rather
+   * than asked for: `assertGovernedJumpRegions()` refuses anything else, so a
+   * future target cannot acquire a region identity merely by being written next
+   * to one that has it.
+   */
+  readonly regionId?: string;
 }
+
+/**
+ * The governed product region `eastAfrica` names. Declared as a named constant
+ * so the id cannot drift from the declaration that owns its membership, and so
+ * a reader of the table below sees a bound identity rather than a bare string.
+ */
+export const GOVERNED_EAST_AFRICA_ID = 'region:east-africa';
 
 /**
  * The deployment's jump targets.
@@ -105,7 +141,18 @@ export interface JumpTarget {
 export const DEPLOYMENT_JUMP_TARGETS: readonly JumpTarget[] = [
   { id: 'world', rung: 'WORLD', bounds: [-180, -60, 180, 78] },
   { id: 'africa', rung: 'CONTINENT', bounds: [-18, -35, 52, 37] },
-  { id: 'eastAfrica', rung: 'SUBREGION', bounds: [28.8, -11.8, 42, 5.5] },
+  /*
+    THE ONE TARGET WITH A GOVERNED IDENTITY. The bounds are UNCHANGED — this is
+    not a re-framing, and §10 protects the existing East Africa camera move —
+    and `regionId` is what makes the jump establish scope rather than only
+    moving the viewport.
+  */
+  {
+    id: 'eastAfrica',
+    rung: 'SUBREGION',
+    bounds: [28.8, -11.8, 42, 5.5],
+    regionId: GOVERNED_EAST_AFRICA_ID,
+  },
   { id: 'europe', rung: 'CONTINENT', bounds: [-11, 35, 40, 71] },
   { id: 'rwanda', rung: 'COUNTRY', bounds: [28.86, -2.84, 30.9, -1.05], countryIso3: 'RWA' },
   { id: 'kenya', rung: 'COUNTRY', bounds: [33.9, -4.7, 41.9, 5.5], countryIso3: 'KEN' },
@@ -166,4 +213,39 @@ export function breadcrumbLadder(camera: CameraState): readonly BreadcrumbRung[]
     reached: SCALE_RUNGS.indexOf(rung) <= SCALE_RUNGS.indexOf(active),
     active: rung === active,
   }));
+}
+
+/**
+ * EVERY `regionId` IN THE TABLE IS A DECLARED PRODUCT REGION — CHECKED, NOT ASKED.
+ *
+ * RSC-1's alias trap is that a plausible-looking region id gets minted from a
+ * label key and then travels through the URL as though a gazetteer held it.
+ * This refuses that at the source: a jump target may only name a region the
+ * product has actually declared, with a membership and an authority behind it.
+ *
+ * Returns the offending entries rather than throwing, so a spec can assert on
+ * an empty list and a failure names what is wrong instead of crashing an
+ * import that half the map depends on.
+ */
+/**
+ * The camera frame the deployment already publishes for a governed region.
+ *
+ * A CAMERA TARGET, NOT A BOUNDARY. These are the same bounds the jump has
+ * always flown to, so using them as the region's extent asserts nothing new —
+ * the regional card continues to state separately that no regional boundary is
+ * drawn, because none is. `null` for any id the table does not name, so a
+ * region without published bounds is not framed.
+ */
+export function governedRegionExtent(regionId: string): Bounds | null {
+  const target = DEPLOYMENT_JUMP_TARGETS.find((candidate) => candidate.regionId === regionId);
+
+  return target?.bounds ?? null;
+}
+
+export function assertGovernedJumpRegions(
+  targets: readonly JumpTarget[] = DEPLOYMENT_JUMP_TARGETS,
+): readonly string[] {
+  return targets
+    .filter((target) => target.regionId !== undefined && !isDeclaredProductRegion(target.regionId))
+    .map((target) => `${target.id} -> ${String(target.regionId)}`);
 }

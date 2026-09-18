@@ -1776,12 +1776,28 @@ export const en = {
         region selection makes no evidence claim, and copy is where that rule is
         either honoured or quietly broken.
       */
+      city: {
+        heading: 'City',
+        evidenceCeilingHeading: 'Evidence geography',
+        evidenceCeilingBody:
+          'This is the country the reporting is retained against. GlobalNews AI resolves evidence at country level, so the figures beside this selection are the country’s and not the city’s.',
+        noCountryHeading: 'Evidence geography',
+        noCountryBody:
+          'No country is published for this place, so there is no geography to retain evidence against.',
+        unresolvedHeading: 'This place could not be resolved',
+        unresolvedBody:
+          'The selection is still real and is kept in the address. The gazetteer did not answer for this identifier, so nothing further is claimed about it.',
+        provenanceHeading: 'Source',
+        clear: 'Clear selection',
+      },
       region: {
         heading: 'Region',
         types: {
           INSTITUTIONAL: 'Institutional \u00b7 a published body defines the members',
           STATISTICAL: 'Statistical \u00b7 a published standard defines the members',
           OPERATIONAL: 'In common use \u00b7 membership is disputed',
+          GOVERNED:
+            'Product coverage region \u00b7 membership declared by GlobalNews AI for this deployment',
           UNDEFINED: 'No definition is encoded for this region',
         },
         definitionHeading: 'Definition',

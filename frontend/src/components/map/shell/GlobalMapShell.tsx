@@ -47,6 +47,8 @@ import { validationStates, type JumpTarget } from '@/lib/map/navigation/breadcru
 import type { PlaceResult } from '@/lib/map/search/placeSearch';
 import { regionMayFrame, REGIONAL_EVIDENCE_SCOPE } from '@/lib/map/region/regionSelection';
 import { useResolvedRegion } from '@/lib/map/region/useResolvedRegion';
+import { useResolvedCity } from '@/lib/map/geography/useResolvedCity';
+import { CityIdentityCard } from './CityIdentityCard';
 import { RegionIdentityCard } from '@/components/map/shell/RegionIdentityCard';
 import { EvidenceMapCanvas } from './EvidenceMapCanvas';
 import { SelectionCallout, CALLOUT_WIDTH, CALLOUT_MAX_HEIGHT } from './SelectionCallout';
@@ -79,6 +81,7 @@ import {
 import { IntelligenceRightRail } from './IntelligenceRightRail';
 import { EvidenceSelectionCard, type FollowRelationship } from './EvidenceSelectionCard';
 import { ContextSummaryPanel } from './ContextSummaryPanel';
+import { selectionForPlaceResult } from '@/lib/map/geography/semanticGeography';
 import { MapReadout, MapScaleBar } from './MapReadout';
 import { RailDrawer } from './monetization/RailDrawer';
 import { WatchComposer } from './monetization/WatchComposer';
@@ -508,6 +511,12 @@ export function GlobalMapShell({
     search-commit path: the node is already in hand, so nothing is requested.
   */
   const { region, adopt: adoptRegion } = useResolvedRegion(selection);
+  /*
+    MAP-SEARCH-CITY/REGION-RIGHT-RAIL. The same shape as the region hook above,
+    for the same reason: a committed row adopts what it already holds, and only
+    a cold restore from `sel=city:…` costs a lookup.
+  */
+  const { city } = useResolvedCity(selection);
 
   /*
     Publish the camera upward, but never on the first render: emitting the
@@ -718,6 +727,32 @@ export function GlobalMapShell({
         return;
       }
 
+      /*
+        ══ MAP-REGION-STATE-PRESENTATION-1 — EAST AFRICA ESTABLISHES SCOPE ═══
+
+        MEASURED LIVE: the camera flew to East Africa, the chip read EAST
+        AFRICA, and the right rail went on reading "Widok świata" with `cam=`
+        alone in the URL. The jump was a camera command and nothing else,
+        because the target carried bounds and no identity.
+
+        It now carries one — `regionId`, bound to the DECLARED product region
+        `region:east-africa` and refused by `assertGovernedJumpRegions` if it
+        ever names anything ungoverned. So the jump SELECTS, the single URL
+        writer upstream serialises `sel=region:east-africa`, and a reload
+        restores the scope rather than a bare viewport.
+
+        THE CAMERA STILL MOVES, AND STILL ONLY ONCE. `focus-bounds` below is
+        unchanged and remains the only camera commit on this path, so Previous
+        View keeps landing on a frame the reader actually saw. Camera state and
+        semantic scope are now two facts instead of one.
+      */
+      if (target.regionId !== undefined) {
+        onSelectionChange?.({ kind: 'REGION', id: target.regionId });
+        dispatch({ kind: 'focus-bounds', bounds: target.bounds });
+
+        return;
+      }
+
       if (target.rung !== 'CITY' && selection !== null && selection !== undefined) {
         onSelectionChange?.(null);
       }
@@ -880,6 +915,45 @@ export function GlobalMapShell({
         A supranational region carries no `countryIso3`, so it is never
         contained, and the M16 clearing it exists for is untouched.
       */
+      /*
+        ══ MAP-SEARCH-CITY/REGION-SEMANTIC-SELECTION-1 ══════════════════════
+
+        CHECKPOINT G's PARAGRAPH ABOVE IS SUPERSEDED FOR SELECTION, AND ONLY
+        FOR SELECTION. It reads: "It does not select the city — a city is not a
+        selectable evidence geography, and the evidence ceiling is COUNTRY, so
+        Rwanda genuinely IS the evidence geography for a report in Kigali."
+
+        The second half of that sentence is STILL TRUE and is not touched here.
+        The first half is what the CTO ruling reverses: CITY becomes a
+        selectable semantic/navigation geography, because "what the reader
+        chose" and "where evidence resolves" are two facts and the product was
+        storing only the second.
+
+        MEASURED LIVE, both rows: camera jumped (PASS), dropdown closed (PASS),
+        URL carried `cam=` alone, right rail read World, no semantic identity.
+        The cause was that neither row produced a selection at all —
+        `result.region` is populated only for SUPRANATIONAL nodes, so the
+        admin-1 "Kigali REGION" row fell through here exactly as the city row
+        did, despite being displayed as REGION.
+
+        `selectionForPlaceResult` is now the one place that decision is made,
+        so CITY and REGION cannot be patched independently and drift.
+
+        WHAT THIS DOES NOT DO: it does not lower the evidence ceiling, does not
+        aggregate anything, and does not fabricate city-level evidence. A CITY
+        selection names Kigali; the rail names Rwanda as the evidence geography
+        beside it.
+      */
+      const semantic = selectionForPlaceResult(result);
+
+      if (semantic !== undefined && semantic !== null) {
+        onSelectionChange?.(semantic);
+
+        if (result.bounds) dispatch({ kind: 'focus-bounds', bounds: result.bounds });
+
+        return;
+      }
+
       const containedInSelection =
         selection?.kind === 'COUNTRY' &&
         result.countryIso3 !== undefined &&
@@ -1313,6 +1387,25 @@ export function GlobalMapShell({
           jumpTargets={validationStates()}
           onJump={onJump}
           labels={spatial.context}
+        />
+      ) : selection.kind === 'CITY' ? (
+        /*
+          THE CITY CARD — the reader's scope and the evidence ceiling, side by
+          side. Placed BEFORE the region branch only because the kinds are
+          disjoint and this reads in selection order; neither can shadow the
+          other.
+        */
+        <CityIdentityCard
+          city={city}
+          geographyId={selection.id}
+          countryName={
+            city?.countryIso3
+              ? (COUNTRIES.find((candidate) => candidate.iso3 === city.countryIso3)?.name ??
+                city.countryIso3)
+              : undefined
+          }
+          labels={spatial.city}
+          onClearSelection={onSelectionChange ? () => onSelectionChange(null) : undefined}
         />
       ) : selection.kind === 'REGION' ? (
         /*
