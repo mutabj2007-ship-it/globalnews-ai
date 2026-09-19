@@ -149,7 +149,21 @@ const en: HumStrings = {
   },
   coverage: {
     BASELINE_VALIDATED: 'Baseline validated', DELAYED: 'Delayed', STALE: 'Stale', COVERAGE_GAP: 'Coverage gap',
-    assertedFromAbsence: 'Gap asserted from absence of evidence — shared coverage authority not yet wired',
+    /*
+      THE IMPLEMENTATION CLAUSE IS GONE; THE HONEST HALF IS NOT.
+
+      This read `… — shared coverage authority not yet wired`. The Product Owner's
+      data-neutral ruling forbids that register on a reader screen, and names the
+      family exactly: *"schema missing", "internal reader unavailable", "provider
+      disabled"* belong in engineering/admin evidence. `not yet wired` is the same
+      sentence in different words.
+
+      What survives is the half a reader must have: the gap is asserted FROM ABSENCE
+      OF EVIDENCE. Without it, a coverage gap reads as a measured finding of no need,
+      which is the single most dangerous misreading available on this surface, and
+      `notZeroNeed` below exists to prevent exactly it.
+    */
+    assertedFromAbsence: 'Gap asserted from absence of evidence',
     notZeroNeed: 'Silence here is a gap in coverage. It is not an assessment of no need.',
     whatWouldClose: 'What would close the gap',
   },
@@ -170,10 +184,24 @@ const en: HumStrings = {
       'We do not hold the rights to show this. Material on it may exist and may already have been assessed — what is missing is our permission to show it, not the assessment.',
     RIGHTS_RESTRICTED:
       'We may show this only at a coarser precision than the one you are looking at. That is a limit on what we may display here, not a statement about what has been assessed.',
-    AWAITING_SHARED_CONTRACT: 'Awaiting a shared contract — dependency recorded for Main',
+    /* `— dependency recorded for Main` named an internal lane to a reader. The
+       dependency is still recorded; it is recorded in the engineering disclosure. */
+    AWAITING_SHARED_CONTRACT: 'Awaiting a shared contract',
     NOT_PRODUCIBLE_AT_THIS_PRECISION: 'Not producible at this precision',
+    /*
+      THE MIDDLE SENTENCE WAS THE ONLY ENGINEERING ONE, AND IT IS THE ONE THAT WENT.
+
+      `the change states that would express it have no producer on this baseline`
+      describes our pipeline. The first and last sentences describe the reader's
+      situation and the inference they must not draw, and the last one is the whole
+      reason this string is long: without *"not a finding that nothing changed"*, a
+      reader completes the sentence themselves and completes it wrongly.
+
+      `humContract.spec.ts` asserts this string carries no numeral, and it still
+      carries none.
+    */
     STATE_NOT_DERIVABLE:
-      'Whether this changed cannot be established from what we hold. The change states that would express it have no producer on this baseline, so none can be derived here. This is a limit in what we can compute — not a finding that nothing changed.',
+      'Whether this changed cannot be established from what we hold. This is a limit in what we can show — not a finding that nothing changed.',
   },
   spatial: {
     degraded: 'Spatial substrate — degraded',
@@ -199,11 +227,15 @@ const en: HumStrings = {
     title: 'Analysis', storedFree: 'Stored navigation · zero user-metered AI',
     costUnavailable: 'Cost unavailable — cannot invoke',
     deepAnalysis: 'Deep analysis', crossDomain: 'Cross-domain references',
-    referenceCountOnly: 'Count only — the reference renderer is unmounted.',
+    /* `the reference renderer is unmounted` is implementation state. What a reader
+       needs is what they will and will not get: a count, and not the records. */
+    referenceCountOnly: 'Count only — the referenced records are not shown here.',
   },
   timeline: {
     title: 'Timeline', historyOfUnderstanding: 'History of the understanding',
-    unavailable: 'Revision history unavailable — the assessment revision schema does not exist yet.',
+    /* `the assessment revision schema does not exist yet` is the forbidden "schema
+       missing" verbatim. Availability is the reader-facing fact. */
+    unavailable: 'Revision history is not yet available.',
   },
   queue: {
     title: 'Attention queue', cap: 'Capped at 5 · surplus opens in a drawer',

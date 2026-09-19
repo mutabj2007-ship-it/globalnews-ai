@@ -197,19 +197,47 @@ export function AreaLabel({ area, precision, t }: {
   );
 }
 
-/** A dependency this lane cannot satisfy, named on screen rather than left blank. */
+/**
+ * A dependency this lane cannot satisfy — STILL NAMED, NO LONGER RESIDENT.
+ *
+ * It was a bordered, filled panel on the primary frame, and every word in it was true:
+ * *"Shared coverage authority, Assessment Revision schema, population facet and the
+ * sensitive-location classifier are all absent. Each is recorded for Main."* It is also
+ * the exact register the Product Owner's data-neutral ruling sends to engineering/admin
+ * evidence — a named internal lane, a named absent schema, and a statement about which
+ * team owes what.
+ *
+ * SO IT COLLAPSES RATHER THAN DISAPPEARS. `<details>` is the whole mechanism: closed it is
+ * one dim line at the foot of a region, open it is exactly what it always said. Nothing is
+ * deleted, nothing moves to another file, and a lane that needs the dependency can still
+ * read it on the surface it applies to.
+ *
+ * WHY `<details>` AND NOT A DRAWER. R08's drawer model is for sustained investigation and
+ * this is a footnote; a drawer kind for it would put an engineering concern into the
+ * reader's navigation, which is the thing being corrected. `<details>` is also keyboard
+ * reachable and announces its own state without a line of script.
+ */
 export function Dependency({ text, t }: { text: string; t: HumStrings }): JSX.Element {
   return (
-    <div
-      data-hum="dependency"
-      style={{
-        border: `1px solid ${HUM_LINE.border}`, padding: '10px 12px',
-        display: 'flex', flexDirection: 'column', gap: '5px', background: HUM_SURFACE.raised,
-      }}
-    >
-      <span style={microLabel}>{t.common.dependencyRecorded}</span>
-      <span style={{ fontSize: HUM_TYPE.body, color: HUM_INK.secondary, lineHeight: 'var(--ar-lh, 1.45)' }}>{text}</span>
-    </div>
+    <details data-hum="dependency" style={{ marginBlockStart: '2px' }}>
+      <summary
+        data-hum="dependency-control"
+        style={{
+          ...microLabel, color: HUM_INK.tertiary, cursor: 'pointer',
+          listStyle: 'none', paddingBlock: '6px',
+        }}
+      >
+        {t.common.dependencyRecorded}
+      </summary>
+      <div
+        style={{
+          border: `1px solid ${HUM_LINE.border}`, padding: '10px 12px', marginBlockStart: '6px',
+          display: 'flex', flexDirection: 'column', gap: '5px', background: HUM_SURFACE.raised,
+        }}
+      >
+        <span style={{ fontSize: HUM_TYPE.body, color: HUM_INK.secondary, lineHeight: 'var(--ar-lh, 1.45)' }}>{text}</span>
+      </div>
+    </details>
   );
 }
 
