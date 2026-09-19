@@ -164,8 +164,38 @@ describe('this change alters no existing provider boundary', () => {
     expect(changed.filter((f) => f.startsWith('frontend/'))).toEqual([]);
   });
 
-  it('and the only shared/ change is the promoted contract and its barrel line', () => {
-    const sharedChanges = changed.filter((f) => f.startsWith('shared/')).sort();
+  /*
+    ── ORIGINALLY THIS ASSERTED THE WORKING TREE, AND THAT WAS A MISTAKE ──────
+
+    It read: "the only shared/ change is the contract and its barrel line", against
+    `git diff HEAD`. True while the work was uncommitted, and FALSE the moment it was
+    committed — a test that passes only before you commit is a test that fails for
+    everyone afterwards, for no reason anybody can act on.
+
+    What the assertion was actually FOR is durable, so it is restated against the
+    commit that introduced this capability rather than against whatever happens to be
+    uncommitted right now: the snapshot store touched two shared files and no more.
+  */
+  it('and the commit that introduced this capability touched exactly two shared files', () => {
+    const introducing = git(
+      'log',
+      '--format=%H',
+      '-1',
+      '--',
+      'shared/src/official-data/snapshot.ts',
+    )
+      .trim()
+      .split('\n')[0];
+
+    // Before the capability is committed there is nothing to check, and saying so is
+    // better than pretending to have checked.
+    if (introducing === undefined || introducing === '') return;
+
+    const sharedChanges = git('show', '--name-only', '--format=', introducing)
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((f) => f.startsWith('shared/'))
+      .sort();
 
     expect(sharedChanges).toEqual(['shared/src/index.ts', 'shared/src/official-data/snapshot.ts']);
   });
