@@ -62,27 +62,27 @@ function stripComments(src: string): string {
 /** GN-CD-145 — desktop: θ, anchor, card edge, length, bow, path. */
 const DESKTOP_TABLE: Record<string, [string, string, string, string, number, string]> = {
   'world-intelligence': ['90.0', '620.0,143.0', '620.0,87.0', '56.0', 0, 'M620.0 143.0L620.0 87.0'],
-  'ai-research': ['159.3', '519.9,212.1', '358.4,151.0', '172.7', 0, 'M519.9 212.1L358.4 151.0'],
+  'security': ['159.3', '519.9,212.1', '358.4,151.0', '172.7', 0, 'M519.9 212.1L358.4 151.0'],
   'country-intelligence': ['20.7', '720.1,212.1', '881.6,151.0', '172.7', 0, 'M720.1 212.1L881.6 151.0'],
-  evidence: ['180.0', '513.0,250.0', '340.0,250.0', '173.0', 0, 'M513.0 250.0L340.0 250.0'],
+  politics: ['180.0', '513.0,250.0', '340.0,250.0', '173.0', 0, 'M513.0 250.0L340.0 250.0'],
   market: ['0.0', '727.0,250.0', '900.0,250.0', '173.0', 0, 'M727.0 250.0L900.0 250.0'],
   economy: ['-159.3', '519.9,287.9', '358.4,349.0', '172.7', 0, 'M519.9 287.9L358.4 349.0'],
-  timeline: ['-20.7', '720.1,287.9', '881.6,349.0', '172.7', 0, 'M720.1 287.9L881.6 349.0'],
+  humanitarian: ['-20.7', '720.1,287.9', '881.6,349.0', '172.7', 0, 'M720.1 287.9L881.6 349.0'],
   conflict: ['-130.1', '551.1,331.9', '464.5,435.0', '134.7', 0, 'M551.1 331.9L464.5 435.0'],
-  forecast: ['-49.9', '688.9,331.9', '775.5,435.0', '134.7', 0, 'M688.9 331.9L775.5 435.0'],
+  energy: ['-49.9', '688.9,331.9', '775.5,435.0', '134.7', 0, 'M688.9 331.9L775.5 435.0'],
 };
 
 /** GN-CD-145 — mobile. Evidence and Market are the two bowed links. */
 const MOBILE_TABLE: Record<string, [string, string, string, string, number, string]> = {
   'world-intelligence': ['90.0', '155.0,141.0', '155.0,68.0', '73.0', 0, 'M155.0 141.0L155.0 68.0'],
-  'ai-research': ['144.7', '128.1,154.9', '95.6,132.0', '39.7', 0, 'M128.1 154.9L95.6 132.0'],
+  'security': ['144.7', '128.1,154.9', '95.6,132.0', '39.7', 0, 'M128.1 154.9L95.6 132.0'],
   'country-intelligence': ['35.3', '181.9,154.9', '214.4,132.0', '39.7', 0, 'M181.9 154.9L214.4 132.0'],
-  evidence: ['180.0', '122.0,174.0', '109.0,174.0', '13.0', 11, 'M122.0 174.0Q115.5 185.0 109.0 174.0'],
+  politics: ['180.0', '122.0,174.0', '109.0,174.0', '13.0', 11, 'M122.0 174.0Q115.5 185.0 109.0 174.0'],
   market: ['0.0', '188.0,174.0', '201.0,174.0', '13.0', 11, 'M188.0 174.0Q194.5 163.0 201.0 174.0'],
   economy: ['-144.7', '128.1,193.1', '95.6,216.0', '39.7', 0, 'M128.1 193.1L95.6 216.0'],
-  timeline: ['-35.3', '181.9,193.1', '214.4,216.0', '39.7', 0, 'M181.9 193.1L214.4 216.0'],
+  humanitarian: ['-35.3', '181.9,193.1', '214.4,216.0', '39.7', 0, 'M181.9 193.1L214.4 216.0'],
   conflict: ['-114.8', '141.1,203.9', '106.0,280.0', '83.8', 0, 'M141.1 203.9L106.0 280.0'],
-  forecast: ['-65.2', '168.9,203.9', '204.0,280.0', '83.8', 0, 'M168.9 203.9L204.0 280.0'],
+  energy: ['-65.2', '168.9,203.9', '204.0,280.0', '83.8', 0, 'M168.9 203.9L204.0 280.0'],
 };
 
 /** GN-CD-146 §16c — the released filler coordinates, both viewports. */
@@ -139,7 +139,13 @@ describe('M66.5 — the released connector geometry is REPRODUCED, never transcr
 
   it('exactly two links bow, they are Evidence and Market on mobile, and they sit 13px from the hub', () => {
     const bowed = ringEngine(ENGINE_MOBILE).filter((link) => link.bow > 0);
-    expect(bowed.map((link) => link.id).sort()).toEqual(['evidence', 'market']);
+    /*
+      ENGINE-CONVERGENCE-R1 — the SLOT that bows is unchanged; only its key is.
+      `evidence` became `politics` in the same ring position with the same
+      coordinates, so the released "exactly two links bow" fact is untouched.
+      The pair is re-sorted because the new spelling sorts differently.
+    */
+    expect(bowed.map((link) => link.id).sort()).toEqual(['market', 'politics']);
     for (const link of bowed) {
       expect(Number(link.length.toFixed(1))).toBeCloseTo(13.0, 1);
       expect(link.bow).toBe(BOW_DEPTH);
@@ -231,7 +237,7 @@ describe('M66.5 — the three node populations, exactly as released', () => {
     const anchors = new Map(ringEngine(ENGINE_DESKTOP).map((link) => [key(link.anchor), link.id]));
     expect(anchors.get(filler[0])).toBe('market');
     expect(anchors.get(filler[6])).toBe('world-intelligence');
-    expect(anchors.get(filler[12])).toBe('evidence');
+    expect(anchors.get(filler[12])).toBe('politics');
     expect(anchors.has(filler[18])).toBe(false);
     expect(filler[18]).toBe(`${ENGINE_DESKTOP.cx.toFixed(1)},${(ENGINE_DESKTOP.cy + ENGINE_DESKTOP.r).toFixed(1)}`);
     // All 24 are still emitted; the coincidence removes nothing.
@@ -363,14 +369,14 @@ describe('M66.5 — the released compositions and their invariants', () => {
   it('CTO decision D-9 A — DOM and tab order follow the released geometry order, not the registry order', () => {
     expect([...RING_ORDER]).toEqual([
       'world-intelligence',
-      'ai-research',
+      'security',
       'country-intelligence',
-      'evidence',
+      'politics',
       'market',
       'economy',
-      'timeline',
+      'humanitarian',
       'conflict',
-      'forecast',
+      'energy',
     ]);
     expect(ENGINE_DESKTOP.items.map((item) => item.id)).toEqual([...RING_ORDER]);
     expect(ENGINE_MOBILE.items.map((item) => item.id)).toEqual([...RING_ORDER]);
@@ -393,15 +399,15 @@ describe('M66.5 — the released compositions and their invariants', () => {
 
 describe('M66.5 — released identity colours and mobile icons (CTO decision D-4 A)', () => {
   it('the nine identity colours are the GN-CD-148 literals, held locally to this family', () => {
-    expect(MODULE_IDENTITY['ai-research'].hex).toBe('#fbbf24');
-    expect(MODULE_IDENTITY.evidence.hex).toBe('#c4b5fd');
+    expect(MODULE_IDENTITY['security'].hex).toBe('#fbbf24');
+    expect(MODULE_IDENTITY.politics.hex).toBe('#c4b5fd');
     expect(MODULE_IDENTITY.economy.hex).toBe('#34d399');
     expect(MODULE_IDENTITY.conflict.hex).toBe('#f87171');
     expect(MODULE_IDENTITY['world-intelligence'].hex).toBe('#34d399');
     expect(MODULE_IDENTITY['country-intelligence'].hex).toBe('#60a5fa');
     expect(MODULE_IDENTITY.market.hex).toBe('#22d3ee');
-    expect(MODULE_IDENTITY.timeline.hex).toBe('#c4b5fd');
-    expect(MODULE_IDENTITY.forecast.hex).toBe('#fbbf24');
+    expect(MODULE_IDENTITY.humanitarian.hex).toBe('#c4b5fd');
+    expect(MODULE_IDENTITY.energy.hex).toBe('#fbbf24');
   });
 
   it('each rgb triple is the same colour as its hex — one property drives border, fill, glow, text and stroke', () => {
@@ -416,7 +422,7 @@ describe('M66.5 — released identity colours and mobile icons (CTO decision D-4
 
   it('UNRESOLVED-015 is reproduced as released, not silently de-duplicated', () => {
     expect(MODULE_IDENTITY.economy.hex).toBe(MODULE_IDENTITY['world-intelligence'].hex);
-    expect(MODULE_IDENTITY.evidence.hex).toBe(MODULE_IDENTITY.timeline.hex);
+    expect(MODULE_IDENTITY.politics.hex).toBe(MODULE_IDENTITY.humanitarian.hex);
     // ...and status is therefore NEVER carried by colour alone (GN-CD-307):
     // every card renders a text badge. Asserted in intelligenceEngineCanvas.spec.ts.
   });

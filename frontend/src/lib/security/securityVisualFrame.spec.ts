@@ -502,9 +502,66 @@ describe('geometry and route posture follow the authority', () => {
     expect(existsSync(join(SRC, 'app', 'security'))).toBe(false);
   });
 
-  it('Security has no home card — a card asserts the product exists', async () => {
+  it('the Security card opens the preview, and never claims the product route is open', async () => {
+    /*
+      ══ AN AUTHORITY CONFLICT, RESOLVED AS FAR AS I MAY AND REPORTED FOR THE REST ══
+
+      MAIN-SECURITY-PARTIX-FINAL-VISUAL-AUTHORITY-R1 rules that the Security
+      preview carries **no `intelligenceModules.ts` home card**, and gives the
+      reason: *"a card on the home surface asserts the product exists."* This
+      test asserted exactly that, by name.
+
+      FINAL-9-MODULE-ENGINE-CONVERGENCE-R1 §2 and §4, from the Product Owner,
+      then named Security Intelligence as one of the nine visible specialist
+      cards and gave it the slot `AI Research Assistant` vacated.
+
+      I DO NOT GET TO PICK BETWEEN THEM. What I can do is keep Main's rule in
+      the strongest form that survives the newer instruction, and escalate the
+      remainder — which is what this test now is:
+
+        the card exists, because the Product Owner named it;
+        it is never ACTIVE, so it never claims to be a working surface;
+        it carries NO destination, so nothing on Home navigates to it;
+        no file in the registry mentions the preview address at all.
+
+      The mechanism Main's rule protects — that Home must not send a reader to a
+      Security surface, or imply one is open — is therefore intact. The residual
+      disagreement is whether the CARD ITSELF, badged PREVIEW and unreachable,
+      is the assertion Main forbids. That is a Product Owner question and is
+      raised in the round's README, not answered here. If the ruling is Main's
+      text as written, the card is one line to remove and this test returns to
+      its previous form.
+    */
+    /*
+      ══ AND R2 §2 RULED IT ═════════════════════════════════════════════════
+
+      *"The Product Owner's final-nine instruction supersedes the older
+      pre-implementation 'no home card' condition. Security now has an actual
+      Alpha preview deployed by Code … make the card clickable to the verified
+      Security preview route."*
+
+      Two things had to be true for that to be safe, and both are asserted
+      rather than taken on trust:
+
+        the card is PREVIEW, never ACTIVE — it claims a surface to inspect,
+        not a working product;
+        `/security` itself stays 404 and unactivated — checked in the test
+        above, which is Main's own tripwire and is untouched.
+
+      So the rule that survives from Main's authority is the narrow one that
+      always mattered: Home must not tell a reader that Security is OPEN. It
+      now tells them there is something to look at, which is true and which the
+      Product Owner has ruled they may look at.
+    */
     const mod = (await import('../intelligenceModules')) as typeof import('../intelligenceModules');
-    expect(mod.INTELLIGENCE_MODULES.some((m) => m.id === 'security')).toBe(false);
+    const security = mod.INTELLIGENCE_MODULES.find((m) => m.id === 'security');
+    expect(security).toBeDefined();
+    expect(security?.state).toBe('preview');
+    expect(security?.destination).toBe('/security-visual-preview');
+    expect(mod.isModuleNavigable(security!)).toBe(true);
+    /* the card opens the PREVIEW and never the unactivated product route */
+    expect(security?.destination).not.toBe('/security');
+    expect(existsSync(join(SRC, 'app', 'security'))).toBe(false);
   });
 
   it('English is the only registered locale and the fallback is disclosed', async () => {

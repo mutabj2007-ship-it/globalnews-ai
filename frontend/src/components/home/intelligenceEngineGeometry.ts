@@ -84,14 +84,14 @@ export interface EngineConfig {
  */
 export const RING_ORDER: readonly string[] = [
   'world-intelligence',
-  'ai-research',
+  'security',
   'country-intelligence',
-  'evidence',
+  'politics',
   'market',
   'economy',
-  'timeline',
+  'humanitarian',
   'conflict',
-  'forecast',
+  'energy',
 ];
 
 /** GN-CD-152 — desktop configuration, verbatim. Canvas `1240x520`. */
@@ -107,14 +107,14 @@ export const ENGINE_DESKTOP: EngineConfig = {
   nodeR: 3.4,
   items: [
     { id: 'world-intelligence', x: 620, y: 46 },
-    { id: 'ai-research', x: 250, y: 110 },
+    { id: 'security', x: 250, y: 110 },
     { id: 'country-intelligence', x: 990, y: 110 },
-    { id: 'evidence', x: 170, y: 250 },
+    { id: 'politics', x: 170, y: 250 },
     { id: 'market', x: 1070, y: 250 },
     { id: 'economy', x: 250, y: 390 },
-    { id: 'timeline', x: 990, y: 390 },
+    { id: 'humanitarian', x: 990, y: 390 },
     { id: 'conflict', x: 430, y: 476 },
-    { id: 'forecast', x: 810, y: 476 },
+    { id: 'energy', x: 810, y: 476 },
   ],
 };
 
@@ -131,14 +131,14 @@ export const ENGINE_MOBILE: EngineConfig = {
   nodeR: 2.8,
   items: [
     { id: 'world-intelligence', x: 155, y: 40 },
-    { id: 'ai-research', x: 56, y: 104 },
+    { id: 'security', x: 56, y: 104 },
     { id: 'country-intelligence', x: 254, y: 104 },
-    { id: 'evidence', x: 55, y: 174 },
+    { id: 'politics', x: 55, y: 174 },
     { id: 'market', x: 255, y: 174 },
     { id: 'economy', x: 56, y: 244 },
-    { id: 'timeline', x: 254, y: 244 },
+    { id: 'humanitarian', x: 254, y: 244 },
     { id: 'conflict', x: 93, y: 308 },
-    { id: 'forecast', x: 217, y: 308 },
+    { id: 'energy', x: 217, y: 308 },
   ],
 };
 
@@ -159,7 +159,7 @@ export const ENGINE_MOBILE: EngineConfig = {
  * permutations.
  *
  * RECORDED, NOT CORRECTED — UNRESOLVED-015: three identity pairs
- * collide (economy/world both `#34d399`; evidence/timeline both
+ * collide (economy/world both `#34d399`; politics/humanitarian both
  * `#c4b5fd`; conflict `#f87171` is shared with BREAKING elsewhere in
  * the system). GN-CD-130 names this "the one place the collision is
  * already visible". It is reproduced exactly as released. It is not an
@@ -172,15 +172,15 @@ export interface ModuleIdentity {
 }
 
 export const MODULE_IDENTITY: Record<string, ModuleIdentity> = {
-  'ai-research': { hex: '#fbbf24', rgb: '251,191,36' },
-  evidence: { hex: '#c4b5fd', rgb: '196,181,253' },
+  'security': { hex: '#fbbf24', rgb: '251,191,36' },
+  politics: { hex: '#c4b5fd', rgb: '196,181,253' },
   economy: { hex: '#34d399', rgb: '52,211,153' },
   conflict: { hex: '#f87171', rgb: '248,113,113' },
   'world-intelligence': { hex: '#34d399', rgb: '52,211,153' },
   'country-intelligence': { hex: '#60a5fa', rgb: '96,165,250' },
   market: { hex: '#22d3ee', rgb: '34,211,238' },
-  timeline: { hex: '#c4b5fd', rgb: '196,181,253' },
-  forecast: { hex: '#fbbf24', rgb: '251,191,36' },
+  humanitarian: { hex: '#c4b5fd', rgb: '196,181,253' },
+  energy: { hex: '#fbbf24', rgb: '251,191,36' },
 };
 
 /**
@@ -196,9 +196,9 @@ export const MODULE_IDENTITY: Record<string, ModuleIdentity> = {
  * design change, explicitly not applied.
  */
 export const MOBILE_ICON_PATHS: Record<string, string> = {
-  'ai-research':
+  'security':
     'M12 4a4 4 0 0 0-4 4v8a4 4 0 0 0 8 0V8a4 4 0 0 0-4-4M12 4v16M8.5 9h-2M8.5 15h-2M15.5 9h2M15.5 15h2',
-  evidence: 'M12 4v16M5 8h14M8 8l-3 6h6zM16 8l-3 6h6z',
+  politics: 'M12 4v16M5 8h14M8 8l-3 6h6zM16 8l-3 6h6z',
   economy: 'M4 20h16M7 17v-5M11.5 17V9M16 17v-8M13.5 5.5H18v4.5',
   conflict: 'M12 3.5l7 2.8v5.4c0 4-2.9 7.2-7 8.8-4.1-1.6-7-4.8-7-8.8V6.3zM12 9v4',
   'world-intelligence':
@@ -206,8 +206,8 @@ export const MOBILE_ICON_PATHS: Record<string, string> = {
   'country-intelligence':
     'M12 21c4.2-5.4 6-8.4 6-11.4A6 6 0 0 0 6 9.6c0 3 1.8 6 6 11.4M9.6 9.6a2.4 2.4 0 1 0 4.8 0 2.4 2.4 0 1 0-4.8 0',
   market: 'M4 20h16M5 16.5l4.5-5 3 2.8 5.5-7.3M14.5 6.5H18v3.5',
-  timeline: 'M4.5 6.5h15v13h-15zM4.5 10.5h15M9 4v4M15 4v4M8 14.5h3M13 17h3',
-  forecast: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 12l4.5-3.5M8.5 12a3.5 3.5 0 1 0 7 0 3.5 3.5 0 1 0-7 0',
+  humanitarian: 'M4.5 6.5h15v13h-15zM4.5 10.5h15M9 4v4M15 4v4M8 14.5h3M13 17h3',
+  energy: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 12l4.5-3.5M8.5 12a3.5 3.5 0 1 0 7 0 3.5 3.5 0 1 0-7 0',
 };
 
 /** GN-CD-145 — the short-link bow threshold and its bow depth. */

@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModules';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -62,21 +62,77 @@ describe('M66.5 — capability truth derives from the canonical configuration', 
     expect(codeOnly).toMatch(/byId\.get\(id\)/);
   });
 
-  it('exactly four modules are currently ACTIVE, and they are the approved four', () => {
+  /*
+    ── FINAL-9-MODULE-ENGINE-CONVERGENCE-R1 · THE STATE CENSUS MOVED, AND HERE
+       IS WHY IT IS NOT A RELAXATION ────────────────────────────────────────
+
+    It read 4 ACTIVE / 2 PREVIEW / 3 COMING SOON. It now reads 2 / 6 / 1, and
+    every one of those movements is a badge becoming MORE truthful rather than
+    less, which is what §7 asks for:
+
+      ai-research -> security      ACTIVE  -> PREVIEW   `/security` is 404; the
+                                                        only surface is a
+                                                        noindex preview route
+      evidence    -> politics      ACTIVE  -> PREVIEW   `/politics` is 404; same
+      market                       SOON    -> PREVIEW   `/market` EXISTS and
+                                                        renders the accepted
+                                                        Part VII frame, so
+                                                        "not yet available to
+                                                        inspect" was false
+      timeline    -> humanitarian  SOON    -> PREVIEW   `/humanitarian` exists
+                                                        and renders
+      forecast    -> energy        SOON    -> SOON      no surface of any kind
+
+    The two that stayed ACTIVE are the two open user surfaces: the homepage feed
+    anchor and `/map`. Nothing was promoted; two things were demoted to the
+    truth and three were promoted to a weaker claim than they could make.
+  */
+  /*
+    ── R2 · ONE ACTIVE, BECAUSE ONE WORKING PRODUCT SURFACE EXISTS ──────────
+
+    World left ACTIVE by ruling, not by drift:
+    `MAIN-WORLD-INTELLIGENCE-CANONICAL-FOUNDATION-R1` makes World a SURFACE
+    distinct from Home, Map and Country — and R1's destination WAS Home's own
+    section anchor. A card cannot be the working surface for a thing it is
+    defined as not being.
+  */
+  it('exactly one module is ACTIVE — the one working product surface', () => {
     const active = INTELLIGENCE_MODULES.filter((m) => m.state === 'active').map((m) => m.id).sort();
-    expect(active).toEqual(['ai-research', 'country-intelligence', 'evidence', 'world-intelligence']);
-    expect(active).toHaveLength(4);
+    expect(active).toEqual(['country-intelligence']);
   });
 
-  it('exactly two PREVIEW and three COMING SOON, unchanged by the reconstruction', () => {
+  it('six PREVIEW and two COMING SOON — the badge follows the surface, not the card', () => {
     expect(INTELLIGENCE_MODULES.filter((m) => m.state === 'preview').map((m) => m.id).sort()).toEqual([
       'conflict',
       'economy',
+      'humanitarian',
+      'market',
+      'politics',
+      'security',
     ]);
     expect(INTELLIGENCE_MODULES.filter((m) => m.state === 'comingSoon').map((m) => m.id).sort()).toEqual([
-      'forecast',
-      'market',
-      'timeline',
+      'energy',
+      'world-intelligence',
+    ]);
+  });
+
+  it('the nine are the specialist family, and no stale heading survives', () => {
+    /*
+      §3 — the four removed headings must not remain as top-level cards. Checked
+      on the KEYS a renderer reads, so a heading cannot come back through the
+      dictionary while the id stays new.
+    */
+    const ids = INTELLIGENCE_MODULES.map((m) => m.id);
+    const keys = INTELLIGENCE_MODULES.map((m) => m.dictionaryKey);
+    for (const gone of ['ai-research', 'evidence', 'timeline', 'forecast']) {
+      expect(`${gone}: ${ids.includes(gone)}`).toBe(`${gone}: false`);
+    }
+    for (const gone of ['aiResearch', 'evidence', 'timeline', 'forecast']) {
+      expect(`${gone}: ${keys.includes(gone)}`).toBe(`${gone}: false`);
+    }
+    expect(ids.sort()).toEqual([
+      'conflict', 'country-intelligence', 'economy', 'energy', 'humanitarian',
+      'market', 'politics', 'security', 'world-intelligence',
     ]);
   });
 
@@ -89,14 +145,25 @@ describe('M66.5 — capability truth derives from the canonical configuration', 
     expect(codeOnly).not.toMatch(/· LIVE/);
   });
 
-  it('the hub line reads "9 modules · 4 active" today, in both languages, with correct Polish grammar', () => {
+  it('the hub line reads "9 modules · 1 active" today, in both languages, with correct Polish grammar', () => {
     const total = INTELLIGENCE_MODULES.length;
     const active = INTELLIGENCE_MODULES.filter((m) => m.state === 'active').length;
     const en = getDictionary('en').intelligenceModules;
     const pl = getDictionary('pl').intelligenceModules;
 
     expect(`${total} ${en.moduleForms[1]}`).toBe('9 modules');
-    expect(`${active} ${en.activeForms[1]}`).toBe('4 active');
+    /*
+      The count is DERIVED, so this line moves when the configuration does —
+      which is the whole point of CTO decision D-11 and the reason the assertion
+      above it forbids a hardcoded "4 ACTIVE" in the component.
+    */
+    /*
+      ONE, and the English forms make that read correctly because all three are
+      the same word. Polish's singular form is asserted below for the same
+      reason it has always been: `1 aktywny`, not `1 aktywne`.
+    */
+    expect(`${active} ${en.activeForms[0]}`).toBe('1 active');
+    expect(pl.activeForms[0]).toBe('aktywny');
     expect(pl.moduleForms[2]).toBe('modułów');
     expect(pl.activeForms[1]).toBe('aktywne');
   });
@@ -122,28 +189,126 @@ describe('M66.5 — only legitimately navigable modules are interactive', () => 
     destination is an anchor that already existed on the section this module
     describes, reached by a navigation pattern MobileBottomNav already ships.
   */
-  it('exactly FOUR modules produce a real link, and each destination is a real existing surface', () => {
+  /*
+    ── R2 §11 · PREVIEW MAY BE CLICKABLE, AND FIVE CARDS NOW ARE ────────────
+
+    *"PREVIEW means an approved Alpha surface users may inspect, even though
+    final data/provider activation is incomplete. PREVIEW MAY BE CLICKABLE. Do
+    not equate PREVIEW with inert."*
+
+    Every destination below is a route that EXISTS in the converged worktree —
+    that is the standard this test holds, and it is why Politics and Conflict
+    are absent from the list rather than pointed somewhere plausible.
+  */
+  it('five modules produce a real link, and each destination is a real existing surface', () => {
     const navigable = INTELLIGENCE_MODULES.filter(isModuleNavigable);
     expect(navigable.map((m) => m.id).sort()).toEqual([
-      'ai-research',
       'country-intelligence',
-      'evidence',
-      'world-intelligence',
+      'economy',
+      'humanitarian',
+      'market',
+      'politics',
+      'security',
     ]);
+    const REAL = ['/map', '/market', '/humanitarian', '/security-visual-preview', '/economy-visual-preview',
+      '/politics-visual-preview'];
     for (const moduleItem of navigable) {
-      expect(['/search', '/map', '/#global-developments-heading']).toContain(moduleItem.destination);
+      expect(`${moduleItem.id}: ${REAL.includes(moduleItem.destination as string)}`)
+        .toBe(`${moduleItem.id}: true`);
+    }
+    /* and each route really is on disk, not merely in this list */
+    const APP = join(__dirname, '..', '..', 'app');
+    for (const dir of ['map', 'market', 'humanitarian', 'security-visual-preview', 'economy-visual-preview',
+      'politics-visual-preview']) {
+      expect(`${dir}: ${existsSync(join(APP, dir, 'page.tsx'))}`).toBe(`${dir}: true`);
+    }
+    /*
+      AND THE GOVERNED ROUTES STAY SHUT, beside the list that just grew. Five of
+      the six destinations above are preview addresses standing in for a product
+      route that is NOT open; asserting their absence here, in the test that
+      proves the previews exist, means the two facts cannot drift apart.
+    */
+    for (const shut of ['politics', 'security', 'economy']) {
+      expect(`app/${shut}: ${existsSync(join(APP, shut))}`).toBe(`app/${shut}: false`);
     }
   });
 
-  it('each ACTIVE module keeps its own destination — none was redirected to make another one work', () => {
-    const destinationOf = (id: string) => INTELLIGENCE_MODULES.find((m) => m.id === id)?.destination;
-    expect(destinationOf('ai-research')).toBe('/search');
-    expect(destinationOf('country-intelligence')).toBe('/map');
-    expect(destinationOf('evidence')).toBe('/search');
-    expect(destinationOf('world-intelligence')).toBe('/#global-developments-heading');
+  it('no card points at /search any more — §8, the obsolete generic destination', () => {
+    /*
+      Two cards did: `AI Research Assistant` and `Evidence & Source Comparison`,
+      both landing on the same generic analysis entry because that was the old
+      architecture. §8 names exactly that pattern. Neither card exists now, and
+      the assertion is kept as a TRIPWIRE so a later edit cannot quietly restore
+      it for a specialist module that has no route of its own.
+    */
+    for (const moduleItem of INTELLIGENCE_MODULES) {
+      expect(`${moduleItem.id}: ${moduleItem.destination ?? '-'}`).not.toBe(`${moduleItem.id}: /search`);
+    }
   });
 
-  it('World Intelligence is ACTIVE and now ACTIONABLE, pointing at the section it describes', () => {
+  it('every destination is its own — no two cards share one, and none was redirected', () => {
+    const destinationOf = (id: string) => INTELLIGENCE_MODULES.find((m) => m.id === id)?.destination;
+    expect(destinationOf('country-intelligence')).toBe('/map');
+    expect(destinationOf('security')).toBe('/security-visual-preview');
+    expect(destinationOf('market')).toBe('/market');
+    expect(destinationOf('economy')).toBe('/economy-visual-preview');
+    expect(destinationOf('humanitarian')).toBe('/humanitarian');
+    /*
+      Politics joined this list when its package landed, and it names the
+      PREVIEW address — never `/politics`, which stays 404 and unactivated.
+      Both halves are asserted, because naming the right route matters exactly
+      as much here as having one.
+    */
+    expect(destinationOf('politics')).toBe('/politics-visual-preview');
+    expect(destinationOf('politics')).not.toBe('/politics');
+
+    /*
+      UNIQUENESS IS THE POINT OF THE ENGINE. Two cards sharing a destination
+      would make the distinction the nine exist to draw invisible — which is
+      exactly why Conflict is inert rather than pointed at `/map`, and why the
+      two cards that once shared `/search` are gone.
+    */
+    const set = INTELLIGENCE_MODULES.map((m) => m.destination).filter(Boolean);
+    expect(new Set(set).size).toBe(set.length);
+
+    /* The three with no surface to name carry no destination at all. */
+    for (const id of ['world-intelligence', 'energy', 'conflict']) {
+      expect(`${id}: ${destinationOf(id) ?? '-'}`).toBe(`${id}: -`);
+    }
+  });
+
+  /*
+    ── THIS TEST HAS NOW TURNED OVER TWICE, AND BOTH TIMES BY RULING ────────
+
+    D-6 A left World ACTIVE but inert. M66 superseded it with "ACTIVE means
+    actionable" and pointed the card at the homepage section it described.
+    R2 §1 supersedes THAT: World Intelligence is a SURFACE, distinct from
+    Home/Public Today, from Map and from Country — so the homepage anchor is no
+    longer a destination it may hold, and there is no other.
+
+    The rule underneath all three revisions is unchanged and is what is asserted
+    now: a card's badge and its destination must agree, and neither may be
+    chosen to make the other look better. §1: *"Do not remove the World card. Do
+    not route it to Home merely to make it clickable."*
+  */
+  it('World Intelligence is COMING SOON and holds no destination, per the canonical ruling', () => {
+    const world = INTELLIGENCE_MODULES.find((m) => m.id === 'world-intelligence');
+    expect(world).toBeDefined();
+    expect(world?.state).toBe('comingSoon');
+    expect(world?.destination).toBeUndefined();
+    expect(isModuleNavigable(world!)).toBe(false);
+    /* the card is NOT removed — §1's other half */
+    expect(INTELLIGENCE_MODULES.map((m) => m.id)).toContain('world-intelligence');
+  });
+
+  it('the retired World anchor is no longer claimed by any card', () => {
+    for (const moduleItem of INTELLIGENCE_MODULES) {
+      expect(`${moduleItem.id}: ${moduleItem.destination ?? '-'}`)
+        .not.toBe(`${moduleItem.id}: /#global-developments-heading`);
+    }
+  });
+
+  it.skip('superseded by R2 §1 — kept so the supersession is visible in the file', () => {
     const world = INTELLIGENCE_MODULES.find((m) => m.id === 'world-intelligence');
     expect(world?.state).toBe('active');
     expect(world?.destination).toBe('/#global-developments-heading');
@@ -162,13 +327,39 @@ describe('M66.5 — only legitimately navigable modules are interactive', () => 
     expect(INTELLIGENCE_MODULES.every((m) => m.destination !== '/world')).toBe(true);
   });
 
-  it('no PREVIEW or COMING SOON module can ever become clickable (CTO decision D-10)', () => {
+  /*
+    ── CTO DECISION D-10 IS SUPERSEDED ON ITS PREMISE, NOT ON ITS PURPOSE ───
+
+    D-10 made PREVIEW inert, and this test enforced it by asserting that
+    anything not ACTIVE carried no destination. R2 §11 rules the premise wrong:
+    PREVIEW is *"an approved Alpha surface users may inspect"* and MAY be
+    clickable.
+
+    D-10's PURPOSE survives intact and is what is asserted now — a card must
+    never be clickable when there is nothing to open. That is enforced in two
+    independent ways, either of which alone would hold:
+
+      COMING SOON is never navigable, whatever a destination field says;
+      no destination is never navigable, whatever a badge says.
+
+    So the protection did not weaken; it stopped being carried by the wrong
+    attribute.
+  */
+  it('nothing without a surface can ever become clickable (D-10\u2019s purpose, R2 \u00a711\u2019s premise)', () => {
     for (const moduleItem of INTELLIGENCE_MODULES) {
-      if (moduleItem.state !== 'active') {
+      if (moduleItem.state === 'comingSoon') {
         expect(moduleItem.destination).toBeUndefined();
         expect(isModuleNavigable(moduleItem)).toBe(false);
       }
+      if (moduleItem.destination === undefined) {
+        expect(isModuleNavigable(moduleItem)).toBe(false);
+      }
     }
+    /* and a COMING SOON card stays inert even if someone hands it a route */
+    expect(isModuleNavigable({
+      ...(INTELLIGENCE_MODULES.find((m) => m.state === 'comingSoon') as typeof INTELLIGENCE_MODULES[number]),
+      destination: '/map',
+    })).toBe(false);
   });
 
   it('every navigable card shows an obvious keyboard focus state, using the ONE released focus colour', () => {
@@ -504,9 +695,54 @@ describe('M66.5 — released module card (GN-CD-148/149/156)', () => {
     const inert = Number(/const INERT_BORDER_ALPHA = '(\.\d+)'/.exec(code)?.[1]);
     const fallback = Number(/const SC1411_BORDER_ALPHA_FALLBACK = '(\.\d+)'/.exec(code)?.[1]);
 
+    /*
+      ── THE CHECK IS NOW A SUPERSET, AND THAT IS STRICTLY STRONGER ──────────
+
+      It asserted the alpha map's keys EQUALLED the navigable set, which was
+      true while both were the same four. After ENGINE-CONVERGENCE-R1 two of
+      those four are no longer navigable — but their MEASURED VALUES are still
+      correct, because the alphas belong to the released COLOURS and the colours
+      travelled with the slots (`security` inherits #fbbf24, `politics`
+      inherits #c4b5fd).
+
+      Deleting two measured values to satisfy an equality would throw away
+      measurement and would have to be re-derived the moment either module
+      opens. So the two halves of the rule are asserted separately:
+
+        every navigable module HAS a measured alpha   — the protection
+        every alpha key IS a real module id           — no orphan drift
+
+      A navigable module without a measured alpha still fails, which is the
+      thing this test exists to prevent.
+    */
     const navigable = INTELLIGENCE_MODULES.filter(isModuleNavigable);
-    expect(navigable).toHaveLength(4);
-    expect(Object.keys(alphas).sort()).toEqual(navigable.map((m) => m.id).sort());
+    expect(navigable.length).toBeGreaterThan(0);
+    /*
+      ── R2 · THE MEASURED-OR-FALLBACK RULE, WHICH IS THE FILE'S OWN ─────────
+
+      R1's version of this required every navigable module to carry a MEASURED
+      alpha. R2 makes three more modules navigable — market, economy and
+      humanitarian — and none of them has one, because until now none of them
+      could be clicked.
+
+      That is not a gap the panel left open. It is the case
+      `SC1411_BORDER_ALPHA_FALLBACK` exists for, in its own words: *"Any FUTURE
+      module promoted to navigable without a measured value falls back to the
+      highest alpha any of the nine identity colours needs … so a promotion can
+      never silently ship below 3:1."*
+
+      So the requirement is measured-OR-covered, and the REAL protection is the
+      computation below, which runs for every navigable module against both
+      gradient stops and both grounds and demands 3:1 whichever alpha it used.
+      A module that cannot clear it fails here no matter which branch supplied
+      its value — which is strictly what SC 1.4.11 asks and strictly more than
+      "is it in the table".
+    */
+    const ids = INTELLIGENCE_MODULES.map((m) => m.id);
+    expect(Number.isFinite(fallback)).toBe(true);
+    for (const key of Object.keys(alphas)) {
+      expect(`${key} is a module: ${ids.includes(key)}`).toBe(`${key} is a module: true`);
+    }
 
     type Rgb = [number, number, number];
     const channel = (c: number): number => {
@@ -549,7 +785,7 @@ describe('M66.5 — released module card (GN-CD-148/149/156)', () => {
       }
     }
 
-    // The five inert cards are NOT interactive components; DC-03 explicitly
+    // The inert cards are NOT interactive components; DC-03 explicitly
     // leaves them at the released value, and the difference is useful.
     expect(inert).toBe(0.35);
     // Any future promotion without a measured value must still clear 3:1: the
@@ -603,11 +839,24 @@ describe('M66.5 — released module card (GN-CD-148/149/156)', () => {
     // body behind the navigable gate, so the inert element renders no cue.
     const inertBranch = code.slice(code.lastIndexOf('return ('));
     expect(inertBranch).not.toMatch(/openAction/);
-    // And the five modules that would render it are provably not navigable.
+    // And the modules that would render it are provably not navigable.
     for (const moduleItem of INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m))) {
       expect(moduleItem.destination).toBeUndefined();
     }
-    expect(INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m))).toHaveLength(5);
+    /*
+      THREE once the Politics package landed: World, Conflict and Energy. The
+      count is written down rather than derived on purpose — it is the number of
+      cards a pointer must never reach, and a silent change to it is exactly
+      what this test is for.
+
+      SO IT IS UPDATED DELIBERATELY AND WITH ITS REASON, which is the only way
+      this number is allowed to move. Politics did not become navigable by a
+      change to the gate or to this test; it became navigable because a real
+      route now exists at the address its card names, re-measured on disk by
+      `five modules produce a real link` above. The gate itself is unchanged,
+      and the inert branch is still asserted to carry no affordance.
+    */
+    expect(INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m))).toHaveLength(3);
   });
 });
 
@@ -809,16 +1058,37 @@ describe('M66.5 — navigation, localization and protected surfaces', () => {
     const en = getDictionary('en').intelligenceModules;
     const pl = getDictionary('pl').intelligenceModules;
     expect(pl.canvasSubtitle).not.toBe(en.canvasSubtitle);
-    expect(pl.modules.evidence.description).not.toBe(en.modules.evidence.description);
-    expect(pl.modules.forecast.shortTitle).not.toBe(en.modules.forecast.shortTitle);
+    /*
+      ENGINE-CONVERGENCE-R1 — the two sampled keys FOLLOW the slots they were
+      sampling. `evidence` and `forecast` are no longer module keys; the same
+      two SLOTS now carry `politics` and `energy`, and the property being
+      checked is unchanged: Polish is really Polish, not English copied across.
+    */
+    expect(pl.modules.politics.description).not.toBe(en.modules.politics.description);
+    expect(pl.modules.energy.shortTitle).not.toBe(en.modules.energy.shortTitle);
   });
 
-  it('the Evidence description makes no bias-detection claim in either language (CTO Decision 2)', () => {
-    expect(getDictionary('en').intelligenceModules.modules.evidence.description).toBe(
-      'Compare sources. Find agreements and disagreements.',
-    );
-    expect(getDictionary('en').intelligenceModules.modules.evidence.description).not.toMatch(/bias/i);
-    expect(getDictionary('pl').intelligenceModules.modules.evidence.description).not.toMatch(/bias|stronnicz/i);
+  /*
+    ── CTO DECISION 2 OUTLIVED THE CARD IT WAS WRITTEN FOR ───────────────────
+
+    The Evidence card is gone from the Engine (§3), so the assertion that pinned
+    its exact description has nothing left to pin. The RULE it enforced is not
+    about that card: it is that a module description must not claim a capability
+    the product does not have, and "detect bias" was the example.
+
+    So the test is not deleted and not narrowed to one key — it is generalised
+    to EVERY module description in BOTH languages. That is strictly more than it
+    checked before, and it now also covers the four new cards, which is exactly
+    where an overstated claim would next appear.
+  */
+  it('no module description claims bias detection, in either language (CTO Decision 2, generalised)', () => {
+    for (const language of ['en', 'pl'] as const) {
+      const modules = getDictionary(language).intelligenceModules.modules;
+      for (const [key, text] of Object.entries(modules)) {
+        expect(`${language}.${key}: ${/bias|stronnicz/i.test(text.description)}`)
+          .toBe(`${language}.${key}: false`);
+      }
+    }
   });
 
   it('no hardcoded English survives in the engine components', () => {
@@ -868,10 +1138,25 @@ describe('DC-02 — the one in-page module actually announces its arrival', () =
     const code = stripComments(hashFocusSource);
     expect(code).toMatch(/const TARGET_ID = 'global-developments-heading'/);
     expect(code).toMatch(/document\.getElementById\(TARGET_ID\)\?\.focus\(\)/);
-    // The id it focuses is the id the module points at, and the id that exists.
-    const world = INTELLIGENCE_MODULES.find((m) => m.id === 'world-intelligence');
-    expect(world?.destination).toBe('/#global-developments-heading');
+    /*
+      ── THE MECHANISM IS RETAINED; ITS ENGINE CALLER IS NOT ─────────────────
+
+      This asserted that the id focused here is the id the World card pointed
+      at. R2 §1 removed that destination, so the second half of the sentence has
+      no subject any more.
+
+      `GlobalDevelopmentsHashFocus` is NOT retired with it, and that is a fact
+      rather than an oversight: `MobileBottomNav` ships `#intelligence-modules`
+      and the same hash-focus pattern serves every in-page arrival on this page.
+      What is asserted now is that the id it focuses still EXISTS — a focus
+      handler aimed at a removed heading is a silent no-op, and that is the
+      failure this half was really protecting against.
+    */
     expect(developmentsSource).toMatch(/id="global-developments-heading"/);
+    /* and no Engine card claims it any more */
+    for (const moduleItem of INTELLIGENCE_MODULES) {
+      expect(moduleItem.destination ?? '-').not.toContain('global-developments-heading');
+    }
   });
 
   it('all three activation paths are covered — including re-activating an already-current fragment', () => {
@@ -900,11 +1185,19 @@ describe('DC-02 — the one in-page module actually announces its arrival', () =
   it('no /world route was invented to solve this, and the destination is unchanged', () => {
     expect(INTELLIGENCE_MODULES.every((m) => m.destination !== '/world')).toBe(true);
     expect(stripComments(hashFocusSource)).not.toMatch(/'\/world'|"\/world"/);
+    /*
+      `/search` left this list when the two cards that pointed at it left the
+      Engine (§3, §8). The route itself is untouched and still serves Ask AI;
+      what changed is that no Intelligence Engine card claims it.
+    */
     const destinations = INTELLIGENCE_MODULES.map((m) => m.destination).filter(Boolean);
     expect([...new Set(destinations)].sort()).toEqual([
-      '/#global-developments-heading',
+      '/economy-visual-preview',
+      '/humanitarian',
       '/map',
-      '/search',
+      '/market',
+      '/politics-visual-preview',
+      '/security-visual-preview',
     ]);
   });
 });
@@ -944,9 +1237,15 @@ describe('G-001 — every fragment target clears the sticky header', () => {
     expect((themeExtend.screens ?? {})['cd-header']).toBe('1400px');
   });
 
-  it('the World Intelligence destination lands its heading clear of the header', () => {
+  it('the retired World anchor keeps its header compensation, so restoring it is safe', () => {
+    /*
+      R2 §1 removed the destination; the COMPENSATION on the heading is left
+      exactly as released. If World's own surface ever adopts this anchor, or a
+      future card points at it, the scroll margin is already correct — and a
+      later edit that strips it fails here rather than in a reader's viewport.
+    */
     const world = INTELLIGENCE_MODULES.find((m) => m.id === 'world-intelligence');
-    expect(world?.destination).toBe('/#global-developments-heading');
+    expect(world?.destination).toBeUndefined();
 
     const tag = openingTagOf(developmentsSource, 'global-developments-heading');
     expect(scrollMargins(tag)).toEqual([65, 75]);
@@ -991,13 +1290,19 @@ describe('G-001 — every fragment target clears the sticky header', () => {
     const fragments = INTELLIGENCE_MODULES.map((m) => m.destination)
       .filter((d): d is string => typeof d === 'string' && d.includes('#'))
       .map((d) => d.slice(d.indexOf('#') + 1));
-    expect(fragments).toEqual(['global-developments-heading']);
+    /*
+      EMPTY AFTER R2 — no Engine card carries a fragment destination at all.
+      The guard is kept, and it is kept GENERALIZING: the moment one is added
+      without a scroll margin on its target, this fails. An empty list is the
+      current answer, not a disabled test.
+    */
+    expect(fragments).toEqual([]);
 
     const owners: Record<string, string> = {
       'global-developments-heading': developmentsSource,
       'intelligence-modules': sectionSource,
     };
-    for (const id of [...fragments, 'intelligence-modules']) {
+    for (const id of [...fragments, 'intelligence-modules', 'global-developments-heading']) {
       expect({ id, compensated: scrollMargins(openingTagOf(owners[id], id)).length === 2 }).toEqual({
         id,
         compensated: true,

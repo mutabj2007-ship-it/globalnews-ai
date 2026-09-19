@@ -212,8 +212,25 @@ describe('no preview surface can reach an external provider', () => {
    * second one — of any kind — fails this assertion rather than arriving quietly.
    */
   it('the account read is the only network module reachable, and it is same-origin', () => {
+    /*
+      `.replace(/\\/g, '/')` — A PLATFORM FIX, NOT A WEAKENING OF THIS GUARD.
+
+      `join` yields `\` on Windows, so this comparison read
+      `\lib\api\accountFetch.ts` against a POSIX literal and FAILED on every
+      Windows run — for the separator alone, while naming the correct single
+      file. A guard that can only ever be red on a platform is not protecting
+      anything there; it teaches its reader to skip it.
+
+      What is normalised is the SPELLING of the path and nothing else. The set
+      itself is untouched: still every module in the reachable graph containing
+      a network call, still required to be exactly one file, still that file.
+      A second network site appearing would fail here exactly as before.
+
+      This is the same normalisation H's own newer `politicsVisualFrame.spec.ts`
+      §12 applies for the same reason.
+    */
     const sites = GRAPH.filter((f) => /\bfetch\s*\(|XMLHttpRequest|\buseSWR\b|\baxios\b|EventSource/.test(code(f)))
-      .map((f) => f.slice(SRC.length));
+      .map((f) => f.slice(SRC.length).replace(/\\/g, '/'));
     expect(sites.sort()).toEqual(['/lib/api/accountFetch.ts']);
 
     const src = code(join(SRC, 'lib', 'api', 'accountFetch.ts'));
@@ -362,14 +379,43 @@ describe('the visual preview does not open the governed Economy route', () => {
     }
   });
 
-  it('neither domain is navigable from Home', async () => {
+  /*
+    ── R2 §3 AND §4 OPENED THESE TWO CARDS, AND THE RULE THEY GUARD IS INTACT ─
+
+    This asserted that neither Economy nor Market was reachable from Home. The
+    Product Owner has since verified both Alpha surfaces and ruled their cards
+    clickable, and R2 §11 rules that PREVIEW may be clickable at all.
+
+    THE THING THIS TEST ACTUALLY PROTECTS IS UNCHANGED AND IS ASSERTED HARDER:
+    the GOVERNED `/economy` route must not be opened, and no card may reach for
+    it. Economy's card points at the PREVIEW; `app/economy` still does not
+    exist, asserted above and in `b4aEconomySubstrate.spec.ts`; and both routes
+    remain `noindex`, asserted directly above.
+
+    `noindex` and clickable are not in tension: `robots` addresses a search
+    engine, a card addresses a reader. Neither route's metadata is touched by
+    the change that made these two cards open.
+  */
+  it('both cards open their PREVIEW surface, and neither reaches the governed /economy route', async () => {
     const mod = (await import('../intelligenceModules')) as typeof import('../intelligenceModules');
     const byId = new Map(mod.INTELLIGENCE_MODULES.map((m) => [m.id, m]));
+
+    const expected: Record<string, string> = {
+      economy: '/economy-visual-preview',
+      market: '/market',
+    };
     for (const id of ['economy', 'market']) {
       const entry = byId.get(id);
       expect(`${id}: ${entry !== undefined}`).toBe(`${id}: true`);
-      expect(`${id} navigable: ${mod.isModuleNavigable(entry!)}`).toBe(`${id} navigable: false`);
-      expect(`${id} destination: ${entry!.destination ?? 'none'}`).toBe(`${id} destination: none`);
+      expect(`${id} state: ${entry!.state}`).toBe(`${id} state: preview`);
+      expect(`${id} destination: ${entry!.destination ?? 'none'}`).toBe(`${id} destination: ${expected[id]}`);
+      expect(`${id} navigable: ${mod.isModuleNavigable(entry!)}`).toBe(`${id} navigable: true`);
     }
+
+    /* THE TRIPWIRE: no card anywhere may name the gated route. */
+    for (const entry of mod.INTELLIGENCE_MODULES) {
+      expect(`${entry.id}: ${entry.destination ?? '-'}`).not.toBe(`${entry.id}: /economy`);
+    }
+    expect(existsSync(join(SRC, 'app', 'economy'))).toBe(false);
   });
 });

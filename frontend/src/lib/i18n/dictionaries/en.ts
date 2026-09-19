@@ -2086,30 +2086,64 @@ export const en = {
         Approved by the CTO under decision D-5 A. All nine fit in two lines
         or fewer; none clips.
       */
-      aiResearch: {
-        title: 'AI Research Assistant',
-        shortTitle: 'AI Research',
-        description: 'Ask a question and get an evidence-grounded answer built from real sources.',
+      /*
+        ENGINE-CONVERGENCE-R1 §4 — this slot now carries Security Intelligence.
+
+        The Ask AI / AI Research capability is NOT gone: §9 requires it stay
+        reachable, and it does — the global Ask dock over every route, the
+        mobile bottom-nav "Ask AI" tab, the map HUD control and `/search`
+        itself. Its dictionary home is `askAi`, which is untouched. What ended
+        is its occupancy of a specialist-dashboard slot.
+      */
+      security: {
+        title: 'Security Intelligence',
+        shortTitle: 'Security Intel',
+        description: 'Early-stage: security conditions and exposure, with what has not been assessed stated plainly.',
       },
       worldIntelligence: {
         title: 'World Intelligence',
         shortTitle: 'World Intel',
-        description: 'Global developments organized by relevance, recency, and source diversity.',
+        /*
+          R2 §1 — A COPY CHANGE FORCED BY THE ROUTE CHANGE, AND FLAGGED AS ONE.
+
+          This sentence described the homepage feed, because that is what the
+          card pointed at. `MAIN-WORLD-INTELLIGENCE-CANONICAL-FOUNDATION-R1`
+          rules World a SURFACE distinct from Home/Public Today, Map and
+          Country, so a description of Home is now a description of something
+          this module is defined as not being.
+
+          R2 is scoped to route and status. Leaving the old sentence beside a
+          COMING SOON badge would have shipped stale copy of exactly the kind
+          R1 §14 forbids, so it is replaced with the intended PURPOSE in the
+          house voice for an unavailable module — and nothing about the
+          dashboard is invented. One line to revert if the Product Owner reads
+          this as outside R2's scope.
+        */
+        description: 'Planned: a world-level view of what is changing, as its own intelligence surface.',
       },
       countryIntelligence: {
         title: 'Country Intelligence',
         shortTitle: 'Country Intel',
         description: 'Explore coverage, categories, and freshness for any country on the map.',
       },
-      evidence: {
-        title: 'Evidence & Source Comparison',
-        shortTitle: 'Evidence & Source',
-        // M65.1 — CTO Decision 2: the approved reference's own wording
-        // included "Detect bias", which overstates what this product
-        // does. SourceDiversity's own contract states it cannot prove
-        // editorial independence or bias. This is the approved truthful
-        // replacement.
-        description: 'Compare sources. Find agreements and disagreements.',
+      /*
+        ENGINE-CONVERGENCE-R1 §4 — this slot now carries Politics Intelligence.
+
+        §10 — evidence comparison is a SHARED capability and keeps every part of
+        itself: source comparison, provenance, citations, the Sources Dock, the
+        Complete Analysis Record. None of those files is touched by this round;
+        what is removed is a top-level card that named a platform capability as
+        if it were a specialist dashboard.
+
+        The description avoids the one thing Politics must never do. Part VIII's
+        neutrality rule forbids endorsing, ranking or implying a preferred
+        outcome, so the card says what the dashboard covers and adds the
+        commitment rather than a characterisation.
+      */
+      politics: {
+        title: 'Politics Intelligence',
+        shortTitle: 'Politics Intel',
+        description: 'Early-stage: governments, institutions and political events, presented without taking a side.',
       },
       economy: {
         title: 'Economy Intelligence',
@@ -2124,17 +2158,42 @@ export const en = {
       market: {
         title: 'Market Intelligence',
         shortTitle: 'Market Intel',
-        description: 'Planned: dedicated market and pricing data is not yet connected.',
+        /*
+          ENGINE-CONVERGENCE-R1 §7 — the badge moved from COMING SOON to
+          PREVIEW because the Part VII Alpha visual frame exists and renders, so
+          the copy moves with it. "Planned" would now be false; the route is
+          prepared and its data is not connected, which is what this says.
+        */
+        description: 'Early-stage: market and pricing coverage, ahead of its dedicated data.',
       },
-      timeline: {
-        title: 'Timeline Intelligence',
-        shortTitle: 'Timeline Intel',
-        description: 'Planned: structured event timelines are not yet available.',
+      /*
+        ENGINE-CONVERGENCE-R1 §4 — this slot now carries Humanitarian Intelligence.
+
+        §3 — the timeline capability stays where it is used: the Assessment
+        Timeline in the map's Part IV surfaces and the Timeline sub-view in the
+        analysis workspace. Neither is touched.
+      */
+      humanitarian: {
+        title: 'Humanitarian Intelligence',
+        shortTitle: 'Humanitarian',
+        description: 'Early-stage: humanitarian needs, access and response, where the evidence supports it.',
       },
-      forecast: {
-        title: 'Forecast & Watchlist',
-        shortTitle: 'Forecast & Watchlist',
-        description: 'Planned: monitored risks and indicators are not yet available.',
+      /*
+        ENGINE-CONVERGENCE-R1 §4 — this slot now carries Energy Intelligence.
+
+        §11 — Watch is NOT what left. Watch/Follow remains the shared Part IV
+        mechanism and keeps its own surfaces; no alert system is created here
+        and none is renamed. What left is a card that read as a second,
+        forecast-shaped monitoring product beside it.
+
+        The only module with no surface of any kind, so the description states
+        the intended purpose and the badge states that it cannot be opened —
+        which is exactly what §15 asks of an unavailable module.
+      */
+      energy: {
+        title: 'Energy Intelligence',
+        shortTitle: 'Energy Intel',
+        description: 'Planned: energy supply, infrastructure and price signals are not yet available.',
       },
     },
   },

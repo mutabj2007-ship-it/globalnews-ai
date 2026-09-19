@@ -418,7 +418,22 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       for (const name of readdirSync(dir)) {
         const full = join(dir, name);
         if (statSync(full).isDirectory()) walk(full);
-        else if (name === 'page.tsx') pages.push(full.slice(APP.length).replace(/[\\/]page\.tsx$/, '') || '/');
+        /*
+          `.replace(/\\/g, '/')` — A PLATFORM FIX, NOT A WEAKENING OF N10.
+
+          The trailing `[\\/]page.tsx` was already stripped either way, but the
+          REMAINING separators were not: on Windows a nested route arrived here
+          as `\market\compact`, so every multi-segment path failed its
+          membership check for the separator alone. The route-COUNT assertion
+          was unaffected and has always been measuring correctly; the
+          named-route checks below were the ones that could only be red here.
+
+          Only the spelling changes. The walk, the set of files it finds and
+          every assertion made about them are identical.
+        */
+        else if (name === 'page.tsx') {
+          pages.push(full.slice(APP.length).replace(/[\\/]page\.tsx$/, '').replace(/\\/g, '/') || '/');
+        }
       }
     };
     walk(APP);
@@ -467,8 +482,12 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
 
         - both declare `robots: { index: false, follow: false }`, so nothing here becomes
           indexable and the SEO surface this file guards is unchanged;
-        - `intelligenceModules.ts` still carries `market` as `state: 'comingSoon'` with no
-          `destination`, so neither route is reachable from Home navigation;
+        - [SUPERSEDED — see PART VIII below] this line read *"`intelligenceModules.ts`
+          still carries `market` as `state: 'comingSoon'` with no `destination`, so neither
+          route is reachable from Home navigation"*. `FINAL-9-MODULE-ENGINE-CONVERGENCE-R2`
+          badges Market PREVIEW and points its card at `/market`, so that sentence is no
+          longer true and is corrected rather than left standing. What it was protecting —
+          that nothing here becomes INDEXABLE — is the bullet above, and is unaffected;
         - they are internally available for integration testing, which is exactly the
           posture the activation asked for and the reason they exist before the read
           endpoint does.
@@ -494,9 +513,14 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
           passes, unchanged, alongside this count;
         - both declare `robots: { index: false, follow: false }`, so the SEO surface this
           file guards is unchanged;
-        - `intelligenceModules.ts` still carries `economy` as `state: 'preview'` with no
-          `destination`, and `isModuleNavigable` requires `active` AND a destination, so
-          neither route is reachable from Home navigation.
+        - [SUPERSEDED — see PART VIII below] this line read *"`intelligenceModules.ts`
+          still carries `economy` as `state: 'preview'` with no `destination`, and
+          `isModuleNavigable` requires `active` AND a destination"*. Both halves have since
+          changed: the Engine R2 card points at `/economy-visual-preview`, and
+          `isModuleNavigable` now requires NOT-comingSoon AND a destination. Corrected here
+          rather than left standing. THE ONE THAT MATTERS IS UNCHANGED AND IS ASSERTED
+          BELOW: the card points at the PREVIEW address, never at `/economy`, which stays
+          absent — inspecting a layout still is not a reason to open the governed route.
 
       THE COUNT MOVING IS THE DISCLOSURE. A preview route that did not move this number
       would be a route nobody had to decide about.
@@ -510,15 +534,52 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       because *"a card on the home surface asserts the product exists"*, and *"reuses the
       eventual Part IX components … no component exists only for the preview."*
 
+      The "no home card" half has since been ruled on: the Product Owner's final-nine
+      instruction supersedes it, and `securityVisualFrame.spec.ts` records the conflict and
+      the ruling in full rather than quietly dropping Main's sentence. The half that was
+      always load-bearing survives untouched and is asserted below.
+
       Main's own tripwire travels with them and is asserted below: `frontend/src/app/security`
       does not exist, and `/security` stays 404.
 
-      37 -> 39 ON THIS LINEAGE. H's delivered file reads 41 because H's lineage also carries
-      `/politics-visual-preview` and its compact twin, which this lineage does not have. The
-      Part IX delta was applied on its own rather than taking H's count wholesale — adopting
-      41 here would have asserted two Politics routes into existence that no file provides.
+      37 -> 39 ON THIS LINEAGE, applied as its own delta rather than by adopting H's count.
     */
-    expect(pages).toHaveLength(39);
+    /*
+      PART VIII · TWO MORE ROUTES — AND THE FIRST PAIR WHOSE CARD ACTUALLY OPENS.
+
+      `/politics-visual-preview` and `/politics-visual-preview/compact`, landed by
+      `H-POLITICS-ALPHA-VISUAL-CONVERGENCE-R2`.
+
+      39 -> 41 ON THIS LINEAGE, DERIVED HERE RATHER THAN COPIED. H's Politics package ships
+      no `seoFoundation.spec.ts` at all, and the Engine package ships none either, so there
+      was no delivered number to take. 41 is 39 — this lineage's own measured count, which
+      already includes Security, Market, Economy and Humanitarian — plus exactly the two
+      route files the Politics package adds, and the walk above is what proves it.
+
+      WHAT IS GENUINELY NEW HERE, AND WHY IT STILL DOES NOT WEAKEN N10. Every preview pair
+      above justified itself partly on being unreachable from Home. After
+      `FINAL-9-MODULE-ENGINE-CONVERGENCE-R2` that reason is gone for five of them,
+      Politics included: `isModuleNavigable` now gates on NOT-comingSoon AND a destination,
+      so Politics, Security, Market, Economy and Humanitarian are all clickable cards.
+
+      SO THE PROTECTION HAD TO MOVE TO WHERE IT ALWAYS BELONGED — the address, not the
+      reachability:
+
+        - both routes declare `robots: { index: false, follow: false }`, so the SEO surface
+          this file guards is unchanged, and a card cannot change that: `robots` addresses a
+          crawler and a card addresses a reader;
+        - the card points at `/politics-visual-preview` and never at `/politics`, which
+          stays ABSENT — asserted below in the shut-routes list, and independently by
+          `politicsVisualFrame.spec.ts` §12 against the filesystem;
+        - Politics stays badged PREVIEW, never ACTIVE, so Home says there is something to
+          inspect and never that the product is open;
+        - no provider is reachable from either route — G-POLITICS-CAP-1 measured producer
+          coverage at 0 of 24 and nothing here changes it.
+
+      THE COUNT MOVING IS STILL THE DISCLOSURE. A route that did not move this number would
+      be a route nobody had to decide about.
+    */
+    expect(pages).toHaveLength(41);
     expect(pages).toContain('/');
     /*
       AND `/economy` IS ASSERTED ABSENT, HERE, BESIDE THE COUNT.
@@ -528,13 +589,14 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       reading of the same fact, in the file that would notice a route appearing. The two
       would have to be defeated together.
     */
-    for (const shut of ['/economy', '/economy/compact', '/security']) {
+    for (const shut of ['/economy', '/economy/compact', '/security', '/politics', '/politics/compact']) {
       expect(`${shut}: ${pages.includes(shut)}`).toBe(`${shut}: false`);
     }
     /* and the new ones are present, so a later removal is caught as loudly as an addition */
     for (const added of ['/market', '/market/compact',
       '/economy-visual-preview', '/economy-visual-preview/compact',
-      '/security-visual-preview', '/security-visual-preview/compact']) {
+      '/security-visual-preview', '/security-visual-preview/compact',
+      '/politics-visual-preview', '/politics-visual-preview/compact']) {
       expect(`${added}: ${pages.includes(added)}`).toBe(`${added}: true`);
     }
     for (const known of ['/map', '/search', '/privacy', '/terms', '/source-policy', '/support', '/workspace', '/history']) {

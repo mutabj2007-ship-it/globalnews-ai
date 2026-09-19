@@ -29,9 +29,9 @@ import { MOBILE_ICON_PATHS, MODULE_IDENTITY } from '@/components/home/intelligen
  *
  *   module                 worst @ .35   shipped   worst @ shipped
  *   world-intelligence          1.85       .54          3.08
- *   ai-research                 1.97       .51          3.12
+ *   security   (was ai-research)  1.97       .51          3.12
  *   country-intelligence        1.64       .63          3.09
- *   evidence                    1.91       .53          3.11
+ *   politics   (was evidence)     1.91       .53          3.11
  *
  * (This worst case includes the bright centre stop of the section radial, so
  * the guarantee holds at every position a card can occupy, not only where the
@@ -54,9 +54,9 @@ const SC1411_BORDER_ALPHA_FALLBACK = '.66';
 
 const SC1411_BORDER_ALPHA: Record<string, string> = {
   'world-intelligence': '.54',
-  'ai-research': '.51',
+  'security': '.51',
   'country-intelligence': '.63',
-  evidence: '.53',
+  politics: '.53',
 };
 
 interface IntelligenceModulePanelProps {

@@ -1743,27 +1743,38 @@ export const pl: Dictionary = {
         because "alerts" would imply a notification capability this product
         does not have.
       */
-      aiResearch: {
-        title: 'Asystent badawczy AI',
-        shortTitle: 'Badania AI',
-        description: 'Zadaj pytanie i otrzymaj odpowiedź opartą na dowodach z rzeczywistych źródeł.',
+      /*
+        ENGINE-CONVERGENCE-R1 §4 — patrz en.ts.
+
+        NAZWY IDĄ ZA PRZYJĘTYM WZORCEM, NIE SĄ WYMYŚLONE. Ta lista nazywa
+        moduły według jednego, zatwierdzonego schematu — `Analiza świata`,
+        `Analiza krajów`, `Analiza gospodarcza`, `Analiza konfliktów`,
+        `Analiza rynkowa` — i cztery nowe moduły idą dokładnie za nim.
+        Opisy używają tych samych dwóch zwrotów stanu, które ten plik już
+        niesie: `Wczesny etap:` dla zapowiedzi i `Planowane:` dla `Wkrótce`.
+        Do przeglądu przez L.
+      */
+      security: {
+        title: 'Analiza bezpieczeństwa',
+        shortTitle: 'Bezpieczeństwo',
+        description: 'Wczesny etap: warunki bezpieczeństwa i narażenie, z wyraźnym wskazaniem tego, czego nie oceniono.',
       },
       worldIntelligence: {
         title: 'Analiza świata',
         shortTitle: 'Analiza świata',
-        description: 'Globalne wydarzenia uporządkowane według trafności, aktualności i różnorodności źródeł.',
+        // R2 §1 — patrz en.ts. Zwrot stanu `Planowane:` jest tym, którego ten
+        // plik już używa dla modułów niedostępnych.
+        description: 'Planowane: ogólnoświatowy widok zmian jako osobny moduł analityczny.',
       },
       countryIntelligence: {
         title: 'Analiza krajów',
         shortTitle: 'Analiza krajów',
         description: 'Przeglądaj zasięg, kategorie i aktualność relacji dla dowolnego kraju na mapie.',
       },
-      evidence: {
-        title: 'Dowody i porównanie źródeł',
-        shortTitle: 'Dowody i źródła',
-        // M65.1 — decyzja CTO nr 2: bez deklaracji wykrywania
-        // stronniczości; opis oddaje rzeczywistą funkcję produktu.
-        description: 'Porównuj źródła. Znajduj zgodności i rozbieżności.',
+      politics: {
+        title: 'Analiza polityczna',
+        shortTitle: 'Polityka',
+        description: 'Wczesny etap: rządy, instytucje i wydarzenia polityczne, przedstawiane bez opowiadania się po żadnej stronie.',
       },
       economy: {
         title: 'Analiza gospodarcza',
@@ -1778,17 +1789,18 @@ export const pl: Dictionary = {
       market: {
         title: 'Analiza rynkowa',
         shortTitle: 'Analiza rynkowa',
-        description: 'Planowane: dedykowane dane rynkowe i cenowe nie są jeszcze podłączone.',
+        // ENGINE-CONVERGENCE-R1 §7 — patrz en.ts: odznaka i opis idą razem.
+        description: 'Wczesny etap: relacje rynkowe i cenowe, przed dedykowanymi danymi.',
       },
-      timeline: {
-        title: 'Oś czasu wydarzeń',
-        shortTitle: 'Oś czasu wydarzeń',
-        description: 'Planowane: uporządkowane osie czasu wydarzeń nie są jeszcze dostępne.',
+      humanitarian: {
+        title: 'Analiza humanitarna',
+        shortTitle: 'Pomoc humanitarna',
+        description: 'Wczesny etap: potrzeby humanitarne, dostęp i reakcja — tam, gdzie pozwalają na to dowody.',
       },
-      forecast: {
-        title: 'Prognozy i lista obserwowanych',
-        shortTitle: 'Prognozy i obserwacje',
-        description: 'Planowane: monitorowane ryzyka i wskaźniki nie są jeszcze dostępne.',
+      energy: {
+        title: 'Analiza energetyczna',
+        shortTitle: 'Energetyka',
+        description: 'Planowane: dostawy energii, infrastruktura i sygnały cenowe nie są jeszcze dostępne.',
       },
     },
   },
