@@ -302,9 +302,9 @@ describe('the absence vocabulary is closed and its floor is the most ignorant st
   });
 
   it('the fallback is the member that claims least', () => {
-    expect(SECURITY_ABSENCE_FALLBACK).toBe('SEC_NOT_ASSESSED');
+    expect(SECURITY_ABSENCE_FALLBACK).toBe('NOT_ASSESSED');
     /* And it carries its own disclaimer — the sentence that makes it N-11. */
-    expect(securityAbsenceLabel('SEC_NOT_ASSESSED')).toMatch(/not a statement that conditions are safe/i);
+    expect(securityAbsenceLabel('NOT_ASSESSED')).toMatch(/not a statement that conditions are safe/i);
   });
 
   it('degradation travels only toward ignorance', () => {
@@ -313,14 +313,14 @@ describe('the absence vocabulary is closed and its floor is the most ignorant st
       "We checked and found nothing admissible" is a stronger claim than "we did not check",
       and the difference is the one a reader would act on.
     */
-    expect(securityAbsenceDegradesTo('SEC_ASSESSED_NO_QUALIFYING_INCIDENT', false)).toBe('SEC_NOT_ASSESSED');
-    expect(securityAbsenceDegradesTo('SEC_NO_VERIFIED_EVIDENCE', false)).toBe('SEC_NOT_ASSESSED');
-    expect(securityAbsenceDegradesTo('SEC_COVERAGE_GAP', true)).toBe('SEC_COVERAGE_GAP');
+    expect(securityAbsenceDegradesTo('SEC_ASSESSED_NO_QUALIFYING_INCIDENT', false)).toBe('NOT_ASSESSED');
+    expect(securityAbsenceDegradesTo('NO_QUALIFYING_EVIDENCE', false)).toBe('NOT_ASSESSED');
+    expect(securityAbsenceDegradesTo('COVERAGE_GAP', true)).toBe('COVERAGE_GAP');
   });
 
   it('only one member is reachable at Alpha, and the frame renders that one', () => {
     const reachableNow = SECURITY_ABSENCE_STATES.filter((s) => SECURITY_ABSENCE_REACHABLE_AT_ALPHA[s]);
-    expect(reachableNow).toEqual(['SEC_NOT_ASSESSED']);
+    expect(reachableNow).toEqual(['NOT_ASSESSED']);
     for (const f of COMPONENTS) {
       const src = code(f);
       for (const unreachable of SECURITY_ABSENCE_STATES.filter((s) => !SECURITY_ABSENCE_REACHABLE_AT_ALPHA[s])) {

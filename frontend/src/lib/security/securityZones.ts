@@ -54,35 +54,35 @@ export interface SecurityZone {
  */
 export const SECURITY_ZONES: readonly SecurityZone[] = [
   /* ── REGION A · state bar · 8 zones ──────────────────────────────────── */
-  { id: 'A0', existence: 'YES_REQUIRED', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'A0', existence: 'YES_REQUIRED', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
   { id: 'A1', existence: 'YES', neutralState: 'NA', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'A2', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'A3', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'A4', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'A5', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'A2', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'A3', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'A4', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'A5', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
   { id: 'A6', existence: 'YES', neutralState: 'NA', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'A7', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'A7', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
 
   /* ── REGION B · attention queue · 4 zones ────────────────────────────── */
   { id: 'B1', existence: 'YES', neutralState: 'NA', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'B2', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'B2', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
   { id: 'B3', existence: 'NO_REQUIRES_DATA', neutralState: 'NOT_RENDERED', personRule: 'NA_REGION_NOT_RENDERED' },
-  { id: 'B4', existence: 'YES_REQUIRED', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'B4', existence: 'YES_REQUIRED', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
 
   /* ── REGION C · substrate · 13 zones ─────────────────────────────────── */
   { id: 'C0', existence: 'YES', neutralState: 'NA', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'C1', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'C2', existence: 'YES_REQUIRED', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'C3', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'C4', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'C5', existence: 'YES_GENERIC_LABEL_ONLY', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'C1', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'C2', existence: 'YES_REQUIRED', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'C3', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'C4', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'C5', existence: 'YES_GENERIC_LABEL_ONLY', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
   { id: 'C6', existence: 'NO_NOT_RENDERED', neutralState: 'NOT_RENDERED', personRule: 'NA_REGION_NOT_RENDERED' },
-  { id: 'C7', existence: 'YES_GENERIC_LABEL_ONLY', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'C7', existence: 'YES_GENERIC_LABEL_ONLY', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
   { id: 'C8', existence: 'NO_NOT_RENDERED', neutralState: 'NOT_RENDERED', personRule: 'NA_REGION_NOT_RENDERED' },
   { id: 'C9', existence: 'NO_REQUIRES_DATA', neutralState: 'NOT_RENDERED', personRule: 'NA_REGION_NOT_RENDERED' },
-  { id: 'C10', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'C11', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_GATE_REQUIRED' },
-  { id: 'C12', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'C10', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'C11', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_GATE_REQUIRED' },
+  { id: 'C12', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
 
   /* ── REGION D · context bar · 5 zones ────────────────────────────────── */
   { id: 'D1', existence: 'YES', neutralState: 'NA', personRule: 'NO_SLOT_ABSENT' },
@@ -92,10 +92,10 @@ export const SECURITY_ZONES: readonly SecurityZone[] = [
   { id: 'D5', existence: 'YES', neutralState: 'NA', personRule: 'NO_SLOT_ABSENT' },
 
   /* ── DETENTS · 4 zones ───────────────────────────────────────────────── */
-  { id: 'P1', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'P2', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'P3', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
-  { id: 'P4', existence: 'YES', neutralState: 'SEC_NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'P1', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'P2', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'P3', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
+  { id: 'P4', existence: 'YES', neutralState: 'NOT_ASSESSED', personRule: 'NO_SLOT_ABSENT' },
 
   /* ── WITHHELD · 8 zones · enumerated so they are not rebuilt by accident ─ */
   { id: 'X1', existence: 'NO_NOT_RENDERED', neutralState: 'NOT_RENDERED', personRule: 'NA_REGION_NOT_RENDERED' },

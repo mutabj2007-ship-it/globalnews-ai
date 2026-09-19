@@ -150,6 +150,26 @@ export * from './security/absence';
 export * from './observation/domain-observation';
 
 /*
+  ── M08 · THE DOMAIN-NEUTRAL ABSENCE AUTHORITY ──────────────────────────────
+
+  `MAIN-SHARED-ABSENCE-M08-CLOSEOUT-R1`. Seven internal states, one LITERAL
+  floor, and a deliberately lossy reader projection: the seven reach a reader
+  as three, so a protected withhold is indistinguishable from an ordinary
+  absence. That non-injectivity is the anti-oracle property, and it is the
+  reason this must never grow one reader label per internal state.
+
+  It is exported from the OBSERVATION layer rather than from any domain because
+  the measurement that opened M08 found exactly one absence vocabulary in the
+  repository — Security's — and a second domain needing the same semantics is
+  what turns a domain vocabulary into a shared one. Security now ALIASES into
+  this union rather than declaring a parallel five; Energy will consume it and
+  mint no `ENE_*` twins.
+
+  It imports nothing, which is why it can sit above every domain module here.
+*/
+export * from './observation/absence';
+
+/*
   CF-D1 · THE SPATIAL PRECISION AUTHORITY — ONE OWNER, NO COMPATIBILITY DUPLICATE.
 
   `MAIN-CONFLICT-CANONICAL-FOUNDATION-R2`, landed byte-identical. This is the promotion the

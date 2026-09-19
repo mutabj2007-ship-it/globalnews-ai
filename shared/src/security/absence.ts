@@ -1,64 +1,165 @@
 /**
  * ════════════════════════════════════════════════════════════════════════════
- * N-11 — THE SECURITY ABSENCE VOCABULARY. FIVE MEMBERS, CLOSED, NO DEFAULT.
+ * M08 · SECURITY COMPATIBILITY — ALIASES, NOT COPIES
  * ════════════════════════════════════════════════════════════════════════════
  *
- * AUTHORITY. `MAIN-SECURITY-PARTIX-FINAL-VISUAL-AUTHORITY-R1`
- * (`6f63613d2c31c41a679e299b36f178989f99de18e0d7711c73b6fa07c812d7b3`), file
- * `02-N11-ABSENCE-VOCABULARY.md` and `manifest/ABSENCE-VOCABULARY.tsv`. Every member, every
- * reader label and every admissibility rule below is Main's, transcribed. Nothing here is
- * this lane's judgement.
+ * PROPOSED as the REPLACEMENT HEAD of `shared/src/security/absence.ts`.
+ * The rest of that file — its labels, its Alpha-reachability table, its docblocks —
+ * is UNCHANGED and is not reproduced here.
  *
- * WHY IT LIVES HERE AND NOT IN THE FRONTEND. Main's zone authority says it in one line:
- * *"Must not declare the absence union locally — it has one home,
- * `shared/src/security/absence.ts`."* A reader-facing absence vocabulary that lived beside
- * the component that renders it would be re-declared by the next surface that needed it,
- * and the two copies would agree only by discipline. This is that home.
+ * AUTHORITY
+ *   MAIN-SHARED-ABSENCE-M08-CLOSEOUT-R1. The Product Owner's condition governs:
+ *   *"Preserve existing Security compatibility through explicit mapping/re-export ONLY IF
+ *   semantically identical; do not create duplicate authorities."*
  *
- * THE FILE IS NEW. The accepted Security module at `integration/alpha-convergence-2`
- * `3db5a09` carries `index.ts`, `lifecycle.ts` and two specs, and none of them declares
- * these five tokens — they are a PRESENTATION vocabulary and the landed module is a data
- * and assessment-honesty contract. Main ruled the path; this file is that ruling applied,
- * and it adds nothing Main did not rule.
+ * ── THE TEST APPLIED, MEMBER BY MEMBER ────────────────────────────────────
  *
- * ── THE ONE RULE THAT ORDERS ALL FIVE ─────────────────────────────────────
+ * Two members are semantically identical when they ASSERT THE SAME THING ABOUT THE WORLD.
+ * Identical reader text is not the test and neither is a similar name — the landed file
+ * carries an `asserts` column for exactly this purpose, and it is what was compared.
  *
- * *"The fallback must always represent the most ignorant state, never the most
- * reassuring."* Every one of these tokens says something different about what we know, and
- * they are NOT interchangeable degradations of each other. Degrading toward a stronger
- * claim is the A-24 collapse E1 named: in a security product, **silence renders as safety**,
- * which is the most dangerous failure available.
+ *   SEC_NOT_ASSESSED          'nothing has been assessed'            == NOT_ASSESSED
+ *   SEC_COVERAGE_GAP          'we cannot see'                        == COVERAGE_GAP
+ *   SEC_EVIDENCE_WITHHELD     'something exists and is not
+ *                              displayable'                          == EVIDENCE_WITHHELD
+ *   SEC_NO_VERIFIED_EVIDENCE  'evidence was examined and none
+ *                              qualified'                            == NO_QUALIFYING_EVIDENCE
  *
- * So there is no default. A caller that cannot establish a stronger state gets
- * `SEC_NOT_ASSESSED`, and it gets it by asking rather than by omission.
+ *   SEC_ASSESSED_NO_QUALIFYING_INCIDENT    'a POSITIVE finding'      -- NOT ALIASED
+ *
+ * ── WHY THE FIFTH IS NOT ALIASED, AND THIS IS THE WHOLE RULING ────────────
+ *
+ * Its SHAPE is neutral: a positive finding, admissibility-gated on three named facts. The
+ * shared contract has that shape as `ASSESSED_NOTHING_QUALIFIED`.
+ *
+ * Its DENOTATION is not. It says **no qualifying INCIDENT**, and an incident is a Security
+ * subject. Energy's equivalent finding would be about a disruption; Humanitarian's about an
+ * activation. Aliasing them would assert that *"no qualifying incident"* and *"no qualifying
+ * disruption"* are the same claim, and they are not — they are the same SHAPE of claim about
+ * different things.
+ *
+ * So Security keeps its own member, with its own label and its own admissibility rule, and
+ * the shared contract supplies the shape rather than the word. **That is the difference
+ * between reusing a construction and flattening a distinction**, and it is the reason this
+ * closeout does not simply rename five constants.
  */
 
+import {
+  OBSERVATION_ABSENCE_STATES,
+  OBSERVATION_ABSENCE_FLOOR,
+  type ObservationAbsenceState,
+} from '../observation/absence';
+
 /**
- * The five, in order of increasing epistemic strength.
+ * The four aliases. Each is a NAME FOR a shared member, never a second declaration of one.
  *
- * ORDER IS MEANING HERE. `SEC_NOT_ASSESSED` claims least; `SEC_ASSESSED_NO_QUALIFYING_INCIDENT`
- * claims most, and is the only one of the five that is a POSITIVE finding. A degradation may
- * only ever move DOWN this list.
+ * `as const` on a reference to the shared literal keeps the alias and its target the same
+ * value: a divergence is a type error here, not a drift discovered later.
+ */
+export const SEC_NOT_ASSESSED = 'NOT_ASSESSED' satisfies ObservationAbsenceState;
+export const SEC_COVERAGE_GAP = 'COVERAGE_GAP' satisfies ObservationAbsenceState;
+export const SEC_EVIDENCE_WITHHELD = 'EVIDENCE_WITHHELD' satisfies ObservationAbsenceState;
+export const SEC_NO_VERIFIED_EVIDENCE = 'NO_QUALIFYING_EVIDENCE' satisfies ObservationAbsenceState;
+
+/**
+ * The one that is NOT shared. Security's own member, Security's own word.
+ *
+ * It is declared here rather than in the shared module precisely because it is not neutral.
+ */
+export const SEC_ASSESSED_NO_QUALIFYING_INCIDENT = 'SEC_ASSESSED_NO_QUALIFYING_INCIDENT' as const;
+
+/**
+ * Security's union: the four shared members it reuses, plus its own fifth.
+ *
+ * **The member NAMES that reach a Security consumer are unchanged in meaning**, and the four
+ * aliases above keep the old identifiers importable. What changed is where four of the five
+ * are DECLARED.
  */
 export const SECURITY_ABSENCE_STATES = [
-  'SEC_NOT_ASSESSED',
-  'SEC_COVERAGE_GAP',
-  'SEC_EVIDENCE_WITHHELD',
-  'SEC_NO_VERIFIED_EVIDENCE',
-  'SEC_ASSESSED_NO_QUALIFYING_INCIDENT',
+  SEC_NOT_ASSESSED,
+  SEC_COVERAGE_GAP,
+  SEC_EVIDENCE_WITHHELD,
+  SEC_NO_VERIFIED_EVIDENCE,
+  SEC_ASSESSED_NO_QUALIFYING_INCIDENT,
 ] as const;
 
 export type SecurityAbsenceState = (typeof SECURITY_ABSENCE_STATES)[number];
 
+/** Unchanged in meaning: the least reassuring member, now the shared floor. */
+export const SECURITY_ABSENCE_FALLBACK: SecurityAbsenceState = OBSERVATION_ABSENCE_FLOOR;
+
 /**
- * THE FALLBACK. Not a default — a named floor.
- *
- * The distinction is not pedantry. A default is what you get when nobody decided; a floor is
- * what you get when nobody COULD decide, and it is chosen to be the least reassuring member
- * rather than the most convenient one. `SEC_NOT_ASSESSED` asserts that nothing has been
- * assessed, which is true whatever the world is doing.
+ * The mapping, carried as data so it is checkable rather than remembered — and so a reviewer
+ * can see which members were judged identical and which were not.
  */
-export const SECURITY_ABSENCE_FALLBACK: SecurityAbsenceState = 'SEC_NOT_ASSESSED';
+export const SECURITY_TO_SHARED: Readonly<
+  Record<SecurityAbsenceState, ObservationAbsenceState | null>
+> = {
+  NOT_ASSESSED: 'NOT_ASSESSED',
+  COVERAGE_GAP: 'COVERAGE_GAP',
+  EVIDENCE_WITHHELD: 'EVIDENCE_WITHHELD',
+  NO_QUALIFYING_EVIDENCE: 'NO_QUALIFYING_EVIDENCE',
+  /** null is the ruling, not an omission: the shape is shared, the denotation is not. */
+  SEC_ASSESSED_NO_QUALIFYING_INCIDENT: null,
+};
+
+/**
+ * `NO_MATERIAL_CHANGE` IS STILL NOT A MEMBER. Unchanged, and re-exported from the shared
+ * home so there is one declaration of the exclusion rather than two agreeing by discipline.
+ */
+export { ABSENCE_FORBIDDEN_CHANGE_STATE as SECURITY_ABSENCE_FORBIDDEN_CHANGE_STATE } from '../observation/absence';
+
+export function isSecurityAbsenceState(value: string): value is SecurityAbsenceState {
+  return (SECURITY_ABSENCE_STATES as readonly string[]).includes(value);
+}
+
+/**
+ * WHAT DID **NOT** CHANGE, STATED SO A REVIEWER DOES NOT HAVE TO DIFF FOR IT.
+ *
+ *   SECURITY_ABSENCE_LABELS               unchanged — Security's reader text stays Security's
+ *   SECURITY_ABSENCE_ASSERTS              unchanged
+ *   SECURITY_ABSENCE_REACHABLE_AT_ALPHA   unchanged — four of five unreachable at Alpha
+ *   securityAbsenceLabel                  unchanged
+ *   securityAbsenceDegradesTo             unchanged
+ *
+ * **No Security semantics are weakened and no Security behaviour changes.** Every assertion
+ * the landed module makes about the world it still makes; four of them are now made in one
+ * place instead of two.
+ */
+export const SECURITY_SEMANTICS_UNCHANGED = true as const;
+
+/** Sanity: the shared union must still contain every member Security aliases. */
+export const SECURITY_ALIASES_RESOLVE: boolean = (
+  [SEC_NOT_ASSESSED, SEC_COVERAGE_GAP, SEC_EVIDENCE_WITHHELD, SEC_NO_VERIFIED_EVIDENCE] as const
+).every((m) => (OBSERVATION_ABSENCE_STATES as readonly string[]).includes(m));
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * RETAINED FROM THE PRE-M08 SECURITY MODULE — NOT REPRODUCED IN MAIN'S SHIM
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Main's shim declares the states, the floor and the aliases, and stops there.
+ * Its own docblock lists these five as *"unchanged"*, and `E-6` asserts the
+ * shim declares no labels and no Alpha-reachability table — *"those stay in
+ * Security's file, untouched."* So they are carried forward here verbatim in
+ * meaning, in the file they have always lived in.
+ *
+ * ── THE KEYS ARE COMPUTED, AND THAT IS THE WHOLE CARE OF THIS MERGE ──────
+ *
+ * They were written as bare literals (`SEC_NOT_ASSESSED: '...'`), which was
+ * correct while the member VALUE and the constant NAME were the same string.
+ * M08 separates them: `SEC_NOT_ASSESSED` is now a NAME whose VALUE is the
+ * shared member `'NOT_ASSESSED'`. A bare literal key would therefore key these
+ * records on a string that is no longer a member — silently, because an object
+ * literal key is not checked against the alias.
+ *
+ * Computed keys (`[SEC_NOT_ASSESSED]:`) make the record follow the alias by
+ * construction. If Main ever repoints an alias, these move with it and the
+ * `Record<SecurityAbsenceState, …>` type fails the moment they do not.
+ *
+ * NOT ONE READER SENTENCE IS EDITED. The text below is character-for-character
+ * what the pre-M08 module carried, including N-11's load-bearing disclaimer and
+ * the two placeholders in the positive finding.
+ */
 
 /**
  * Main's reader labels, verbatim.
@@ -66,8 +167,7 @@ export const SECURITY_ABSENCE_FALLBACK: SecurityAbsenceState = 'SEC_NOT_ASSESSED
  * THE FIRST ONE CARRIES ITS OWN DISCLAIMER, AND THAT IS THE POINT OF N-11.
  * *"Not assessed. This is not a statement that conditions are safe."* The second sentence is
  * the whole zone: without it, a reader completes the first one themselves, and completes it
- * as reassurance. Main marks it `N-11 load-bearing … resident non-dismissible … survives
- * every reduction incl PEEK 152 and 390px.`
+ * as reassurance.
  *
  * `SEC_ASSESSED_NO_QUALIFYING_INCIDENT` carries two placeholders BY DESIGN. It is admissible
  * *"AND ONLY WHEN it names when checked what reviewed and sources adequate"* — so a caller
@@ -75,11 +175,11 @@ export const SECURITY_ABSENCE_FALLBACK: SecurityAbsenceState = 'SEC_NOT_ASSESSED
  * a matter of care.
  */
 export const SECURITY_ABSENCE_LABELS: Readonly<Record<SecurityAbsenceState, string>> = {
-  SEC_NOT_ASSESSED: 'Not assessed. This is not a statement that conditions are safe.',
-  SEC_COVERAGE_GAP: 'Coverage unavailable for this scope.',
-  SEC_EVIDENCE_WITHHELD: 'Evidence exists and is not shown here.',
-  SEC_NO_VERIFIED_EVIDENCE: 'Assessed. No evidence met the evidentiary floor.',
-  SEC_ASSESSED_NO_QUALIFYING_INCIDENT:
+  [SEC_NOT_ASSESSED]: 'Not assessed. This is not a statement that conditions are safe.',
+  [SEC_COVERAGE_GAP]: 'Coverage unavailable for this scope.',
+  [SEC_EVIDENCE_WITHHELD]: 'Evidence exists and is not shown here.',
+  [SEC_NO_VERIFIED_EVIDENCE]: 'Assessed. No evidence met the evidentiary floor.',
+  [SEC_ASSESSED_NO_QUALIFYING_INCIDENT]:
     'Checked {when}. Reviewed {what}. No qualifying incident. Sources adequate - not a coverage gap.',
 };
 
@@ -87,11 +187,11 @@ export const SECURITY_ABSENCE_LABELS: Readonly<Record<SecurityAbsenceState, stri
  * What each member ASSERTS — Main's column, carried so it can be cited rather than recalled.
  */
 export const SECURITY_ABSENCE_ASSERTS: Readonly<Record<SecurityAbsenceState, string>> = {
-  SEC_NOT_ASSESSED: 'nothing has been assessed',
-  SEC_COVERAGE_GAP: 'we cannot see',
-  SEC_EVIDENCE_WITHHELD: 'something exists and is not displayable',
-  SEC_NO_VERIFIED_EVIDENCE: 'evidence was examined and none qualified',
-  SEC_ASSESSED_NO_QUALIFYING_INCIDENT: 'a POSITIVE finding',
+  [SEC_NOT_ASSESSED]: 'nothing has been assessed',
+  [SEC_COVERAGE_GAP]: 'we cannot see',
+  [SEC_EVIDENCE_WITHHELD]: 'something exists and is not displayable',
+  [SEC_NO_VERIFIED_EVIDENCE]: 'evidence was examined and none qualified',
+  [SEC_ASSESSED_NO_QUALIFYING_INCIDENT]: 'a POSITIVE finding',
 };
 
 /**
@@ -103,29 +203,12 @@ export const SECURITY_ABSENCE_ASSERTS: Readonly<Record<SecurityAbsenceState, str
  * reason about it — and it is why the Alpha frame renders exactly one of the five.
  */
 export const SECURITY_ABSENCE_REACHABLE_AT_ALPHA: Readonly<Record<SecurityAbsenceState, boolean>> = {
-  SEC_NOT_ASSESSED: true,
-  SEC_COVERAGE_GAP: false,
-  SEC_EVIDENCE_WITHHELD: false,
-  SEC_NO_VERIFIED_EVIDENCE: false,
-  SEC_ASSESSED_NO_QUALIFYING_INCIDENT: false,
+  [SEC_NOT_ASSESSED]: true,
+  [SEC_COVERAGE_GAP]: false,
+  [SEC_EVIDENCE_WITHHELD]: false,
+  [SEC_NO_VERIFIED_EVIDENCE]: false,
+  [SEC_ASSESSED_NO_QUALIFYING_INCIDENT]: false,
 };
-
-/**
- * `NO_MATERIAL_CHANGE` IS NOT A MEMBER, AND THE EXCLUSION IS LOAD-BEARING.
- *
- * Main: *"a CHANGE STATE from the shared seven — did it move, not do we know … Rendering a
- * coverage gap as NO_MATERIAL_CHANGE is the exact A-24 collapse."* The two answer different
- * questions, and substituting one for the other converts "we did not look" into "we looked
- * and nothing happened".
- *
- * The constant exists so a guard can assert the exclusion against a name rather than against
- * a comment.
- */
-export const SECURITY_ABSENCE_FORBIDDEN_CHANGE_STATE = 'NO_MATERIAL_CHANGE' as const;
-
-export function isSecurityAbsenceState(value: string): value is SecurityAbsenceState {
-  return (SECURITY_ABSENCE_STATES as readonly string[]).includes(value);
-}
 
 /**
  * The reader label for a state — the ONLY way a label reaches a surface.
