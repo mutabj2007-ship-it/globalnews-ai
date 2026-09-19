@@ -54,7 +54,18 @@ import type { NewsCategory } from './news';
  * ask each surface for its own watches could not be one list; a subject that
  * knows its own surface makes the single list filterable without asking anyone.
  */
-export type WatchSurface = 'MAP' | 'ECONOMY' | 'MARKET' | 'CONFLICT' | 'SECURITY';
+/*
+  PL-B6(b) · POLITICS IS ONE MEMBER ON THE SHARED UNION, AND NOTHING ELSE.
+
+  `MAIN-POLITICS-PLATFORM-PROMOTION-R3`. The absence of `POLITICS` was a decision and not
+  a stale table — `SECURITY` was added and `POLITICS` was not — so this is that decision
+  being made, not a table being tidied.
+
+  NO POLITICS-SPECIFIC WATCH SYSTEM IS CREATED. Politics adds one member and reuses the
+  shared Watch entirely: no Politics alert mechanism, notification channel, delivery rule,
+  scope model or counting rule. It is the same refusal Part IX makes for Security.
+*/
+export type WatchSurface = 'MAP' | 'ECONOMY' | 'MARKET' | 'CONFLICT' | 'SECURITY' | 'POLITICS';
 
 /**
  * SECURITY IS A ROUTING NAMESPACE, NOT A SECOND WATCH SYSTEM.
@@ -139,6 +150,33 @@ export const WATCH_SUBJECT_TYPES_BY_SURFACE: Readonly<
   MARKET: ['INSTRUMENT', 'COMMODITY', 'ISSUER', 'EXPOSURE'],
   CONFLICT: ['FRONT', 'ACTOR', 'CORRIDOR', 'INCIDENT_CLASS'],
   SECURITY: ['SITUATION', 'CAMPAIGN', 'INFRASTRUCTURE_ASSET'],
+  /*
+    POLITICS · THE SURFACE EXISTS AND REGISTERS NO SUBJECT TYPE. THE ROW IS EMPTY ON
+    PURPOSE, AND IT IS NOT AN OVERSIGHT.
+
+    `WATCH_SURFACES` is DERIVED from these keys, so adding `POLITICS` to the union without
+    a row here would leave the derivation and the union disagreeing — and the accepted
+    Security assertion that `WATCH_SURFACES` is exactly this table's keys would stop
+    holding. The row is required by the shape.
+
+    WHAT IT MUST NOT CONTAIN is the six types
+    `POLITICS_WATCH_REGISTRATION_PROPOSAL` proposes — ELECTION, LEGISLATIVE_SUBJECT,
+    PROTEST_CAMPAIGN, POLITICAL_ACTOR, GOVERNANCE_STATE, POLITICAL_THEME. That is a
+    PROPOSAL, and the promoted contract ships
+    `PoliticsWatchSubjectTypeIsNotRegistered` as a compile-time reminder that it is not a
+    registration. Main's instruction is that the reminder must keep compiling AS a
+    reminder rather than being "fixed", so registering those types here would delete the
+    very control that says they are unregistered.
+
+    The proposal's own `blockedBy` list says why they cannot be registered yet: no
+    composite Watch scope exists, no subject persistence is declared, and the entitlement
+    model has no runtime to reconcile composite counting against. An empty row states
+    exactly that — the surface is nameable, and nothing is watchable on it.
+
+    `WATCH_SUBJECT_TYPES` is a de-duplicated flatten of these values, so an empty row adds
+    no type to the platform vocabulary either.
+  */
+  POLITICS: [],
 };
 
 /*

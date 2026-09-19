@@ -127,3 +127,36 @@ export * from './humanitarian/authority-cadence';
 */
 export * from './security';
 export * from './security/absence';
+
+/*
+  THE GENERIC NON-NUMERIC OBSERVATION CONTRACT — MAIN-POLITICS-PLATFORM-PROMOTION-R3 #1.
+
+  Landed byte-identical. It is exported here rather than inside a domain because it is not
+  Politics' to own: Politics is its FIRST CONSUMER, not its author, and the type parameter
+  is what keeps the generic record from becoming a catch-all.
+
+  ── WHY `./politics` AND `./relationships` ARE NOT EXPORTED HERE YET ───────
+
+  Steps #3 to #5 of the promotion are on HOLD, and the blocker is measured rather than
+  assumed. The accepted `MAIN-POLITICS-PLATFORM-1-R2` sources were verified byte-identical
+  against that package's manifest and compiled against this lineage; two imports do not
+  resolve:
+
+      shared/src/politics/index.ts       `SpatialPrecision`     from '../news'
+      shared/src/relationships/index.ts  `LocationProvenance`   from '../news'
+
+  Neither is declared anywhere in `shared/src` on this lineage. Both exist at canonical
+  `3db5a09:shared/src/news.ts`, so this is a RECOVERY question — but it is not this lane's
+  recovery to perform: **CF-D1 assigns promoting exactly these two symbols to Main and H,
+  together with a ruling on widening `PRODUCIBLE_SPATIAL_PRECISION`.** Recovering the C39
+  declarations here would pre-empt a ruling that is in flight and that the Conflict lane is
+  also waiting on.
+
+  Main's §1.1 is explicit for this case — "STOP and report — do not stub it. A stubbed
+  provenance type is a second evidence system arriving by the back door" — and
+  `LocationProvenance` is precisely a provenance type.
+
+  So the move is prepared and withheld rather than half-landed. #1 and #2 are independent
+  of it by Main's own landing order and are landed.
+*/
+export * from './observation/domain-observation';
