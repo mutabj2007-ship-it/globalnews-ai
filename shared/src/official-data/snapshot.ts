@@ -45,13 +45,38 @@
  * 5. NOT public. Nothing here is served. `SNAPSHOT_EXPOSURE` is a constant, not a config.
  */
 
+import type { SnapshotAdmissionRecord } from './snapshot-admission';
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * 1 · CONTENT ADDRESS — IDENTITY IS THE BYTES
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
- * Lowercase hex SHA-256 of the exact bytes as received, BEFORE any parsing,
- * decompression-at-the-application-layer, re-encoding or normalisation.
+ * SR-1 (R2) · Lowercase hex SHA-256 of the DECODED bytes — the body AFTER transport
+ * `Content-Encoding` removal AND AFTER NOTHING ELSE. No parsing, no re-encoding, no
+ * charset transcoding, no whitespace handling, no JSON canonicalisation.
+ *
+ * ── WHY THIS SENTENCE WAS REWRITTEN ───────────────────────────────────────
+ *
+ * R1 said "the exact bytes as received, BEFORE any parsing, decompression-at-the-
+ * application-layer, re-encoding or normalisation" — and that one sentence carries
+ * BOTH readings. "Before application-layer decompression" excludes only
+ * `Content-Type`-level compression and leaves `Content-Encoding` removal inside the
+ * boundary; "the exact bytes as received" excludes both. Two careful readers resolved
+ * it differently, which makes it a defect whatever was meant.
+ *
+ * THE READING THAT DECIDES IT is not that gzip is nondeterministic — it is that under
+ * wire-byte identity SR-4 and SR-5 are UNSOUND. Both were written assuming bytes ==
+ * content. Under `Content-Encoding: gzip` a publisher that changes zlib version or
+ * compression level re-serves IDENTICAL DATA UNDER A NEW ADDRESS: a false edition
+ * change, in a contract that exists because real edition changes are dangerous. A
+ * retention layer that manufactures spurious ones is worse than no edition detection,
+ * because the spurious ones look exactly like the real ones.
+ *
+ * BLAST RADIUS IS THE GZIP PATH AND NOTHING ELSE — SNAP-R2-2. Under
+ * `Content-Encoding: identity` the decoded bytes ARE the wire bytes, so every capture
+ * already taken keeps its address. That is the difference between an amendment and a
+ * migration, and it is why this file needs no backfill.
  *
  * Branded so a caller cannot pass an arbitrary string where an address is required.
  */
@@ -120,8 +145,19 @@ export interface OfficialDataRequestIdentity {
  * into evidence storage that outlives every rotation.
  */
 const CREDENTIAL_PARAMETER_NAMES = [
-  'apikey', 'api_key', 'key', 'token', 'access_token', 'auth', 'authorization',
-  'password', 'secret', 'signature', 'sig', 'sessionid', 'session_id',
+  'apikey',
+  'api_key',
+  'key',
+  'token',
+  'access_token',
+  'auth',
+  'authorization',
+  'password',
+  'secret',
+  'signature',
+  'sig',
+  'sessionid',
+  'session_id',
 ];
 
 export function assertRequestCarriesNoCredential(request: OfficialDataRequestIdentity): void {
@@ -226,7 +262,7 @@ export interface RetainedPayload {
   readonly contentAddress: SnapshotContentAddress;
   readonly byteLength: number;
   readonly mediaType: string;
-  /** The retained bytes, exactly as received. */
+  /** The retained bytes — DECODED, exactly as SR-1 (R2) defines them. */
   readonly bytes: Uint8Array;
 }
 
@@ -279,18 +315,43 @@ export interface OfficialDataSnapshotStore {
    * THE STORE COMPUTES THE ADDRESS. A caller may not supply one — that is the other half
    * of the no-forge property.
    */
+  /*
+    ── R2 · THE PORT CARRIES THE ADMISSION VERDICT, AND IT HAD TO ────────────
+
+    The R2 delta added `admission` to the STORE's own input type and, at first, only
+    there. That left this port — the one every consumer actually holds — declaring the
+    R1 shape, and the consequence was not cosmetic:
+
+      `Pick<OfficialDataSnapshotStore, 'retain'>` is the narrowed port the Market
+      adapters consume, and E1's item E says it must remain the only snapshot seam.
+      With `admission` absent from this signature, that seam let a caller retain a
+      capture WITH NO VERDICT AT ALL and still typecheck. The implementation would
+      throw — at runtime, inside a scheduled job.
+
+    S-1's default-deny is a property of the SEAM or it is not a property at all.
+    TypeScript's method-parameter bivariance meant the mismatch compiled silently, so
+    nothing pointed at it: the port was simply weaker than the thing behind it, which
+    is the one direction a port must never be.
+  */
   retain(input: {
     readonly retrievalId: string;
     readonly request: OfficialDataRequestIdentity;
     readonly retrievedAt: string;
     readonly httpStatus: number;
     readonly mediaType: string;
+    /** R2 · SR-1 — the DECODED bytes: `Content-Encoding` removal and nothing else. */
     readonly bytes: Uint8Array;
     readonly completeness: SnapshotCompleteness;
     readonly rights: SnapshotRightsState;
     readonly editionAnnotations: Readonly<Record<string, string>>;
     readonly publisherReleasedAt?: string;
     readonly publisherChangedAt?: string;
+    /**
+     * R2 · REQUIRED. An optional verdict defaults to absent, and absent is not
+     * `REFUSED` — it is a third state no constraint describes. Required HERE means a
+     * consumer holding only `Pick<…, 'retain'>` still cannot retain without deciding.
+     */
+    readonly admission: SnapshotAdmissionRecord;
   }): Promise<OfficialDataRetrieval>;
 
   /** Re-open retained bytes. `null` when the payload was never retained or was collected. */
@@ -353,32 +414,27 @@ export function assertProviderScoped(
   }
 }
 
-/**
- * What a retrieval must satisfy before anything derived from it may be published.
+/*
+ * ── R2 · SNAP-R2-7 — THE PUBLISHABILITY PREDICATE MOVED, AND THERE IS NOW ONE ──
  *
- * `payloadRetentionPermitted === false` is NOT an error here — it is a permitted and
- * sometimes required state. But it means the figure cannot be re-proved from our own
- * bytes, and combined with a publisher that does not version, it means the figure cannot
- * be re-proved AT ALL. That consequence is surfaced, never swallowed.
+ * R1 declared `assertRetrievalIsPublishable(retrieval)` here, checking four things:
+ * completeness, a 2xx status, a present address and a non-empty body.
+ *
+ * R2's admission gate checks all four AND SEVEN MORE — provenance host, media type,
+ * charset, encoding, size, decompression bound, JSON shape, envelope, secret scan —
+ * and the database enforces the verdict through a composite foreign key that
+ * application code cannot route around.
+ *
+ * KEEPING BOTH WOULD LEAVE TWO PUBLISHABILITY PREDICATES THAT CAN DISAGREE, and the
+ * one in application code is the one that gets edited. So R1's checks did not vanish:
+ * they became ordered refusal steps inside the gate, and the predicate now lives in
+ * `./snapshot-admission` as a statement about the gate's verdict and nothing else.
+ *
+ * `SNAPSHOT_PUBLISHABLE_COMPLETENESS` above is retained and still true — it is what
+ * `assertAdmissionRecordIsCoherent`'s COH-4 enforces, which is where that check went.
+ *
+ * Import `assertRetrievalIsPublishable` from `./snapshot-admission`.
  */
-export function assertRetrievalIsPublishable(retrieval: OfficialDataRetrieval): void {
-  if (retrieval.completeness !== SNAPSHOT_PUBLISHABLE_COMPLETENESS) {
-    throw new Error(
-      `SNAPSHOT_NOT_COMPLETE: completeness is '${retrieval.completeness}'. ` +
-        `A partial or failed response is not evidence.`,
-    );
-  }
-  if (retrieval.httpStatus < 200 || retrieval.httpStatus >= 300) {
-    throw new Error(`SNAPSHOT_NON_SUCCESS_STATUS: ${retrieval.httpStatus}.`);
-  }
-  if (retrieval.contentAddress === undefined) {
-    throw new Error('SNAPSHOT_NO_CONTENT_ADDRESS: nothing was retained to prove this figure.');
-  }
-  if (retrieval.byteLength <= 0) {
-    throw new Error('SNAPSHOT_EMPTY_BODY.');
-  }
-  assertRequestCarriesNoCredential(retrieval.request);
-}
 
 /** True when a cited figure can be re-proved from bytes we hold. */
 export function retrievalIsReproducible(retrieval: OfficialDataRetrieval): boolean {
@@ -429,6 +485,17 @@ export const SNAPSHOT_RETENTION_CLASSES = [
   'COLLECTED',
   /** Never retained, because the publisher's terms forbid it. */
   'NOT_RETAINED_BY_RIGHTS',
+  /**
+   * R2 · SNAP-R2-12 — never retained, because the body contained a configured secret.
+   *
+   * A DISTINCT ABSENCE, and A-24 is why. "Collected under policy P", "the publisher's
+   * terms forbade retention", "a secret was found in the body" and "there is no
+   * snapshot" are four different facts, and collapsing any two loses the one a later
+   * reader actually needs. Provider error bodies routinely echo the request — including
+   * our own key — so the very retention this contract permits for audit is where a
+   * credential would come to rest, in a table nobody thinks of as secret-bearing.
+   */
+  'NOT_RETAINED_BY_QUARANTINE',
 ] as const;
 
 export type SnapshotRetentionClass = (typeof SNAPSHOT_RETENTION_CLASSES)[number];

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -6,12 +6,12 @@ import { join } from 'node:path';
  * MIGRATION VALIDATION — SCHEMA ↔ SQL ↔ ROLLBACK CONFORMANCE
  * ════════════════════════════════════════════════════════════════════════════
  *
- * WHY THIS EXISTS RATHER THAN A DATABASE TEST. Applying the migration to a real
- * PostgreSQL would prove more, and it is the right thing to do before deploying.
- * It could not be done here: Docker was not running in this environment and no
- * disposable database was reachable, and the brief authorises no destructive
- * operation against any Alpha or Production database. That limit is recorded
- * rather than worked around — see the package's DEPLOYMENT-AND-MIGRATION note.
+ * WHY THIS EXISTS ALONGSIDE A DATABASE TEST. Applying the migration to a real
+ * PostgreSQL proves more, and R2 does exactly that in
+ * `official-data-snapshot.live-postgres.spec.ts`. This suite remains useful because
+ * it runs WITHOUT a database, so a schema/SQL divergence is caught in every CI run
+ * rather than only where Postgres is available — and because it reads the ROLLBACK,
+ * which no forward-applying test exercises.
  *
  * WHAT THIS DOES PROVE, MECHANICALLY, AND IT IS NOT NOTHING.
  *
@@ -59,6 +59,19 @@ const MODELS = [
   'SnapshotTombstone',
 ] as const;
 
+/** Prisma's scalar types. A field of any other type is a relation, not a column. */
+const PRISMA_SCALARS = new Set([
+  'String',
+  'Boolean',
+  'Int',
+  'BigInt',
+  'Float',
+  'Decimal',
+  'DateTime',
+  'Json',
+  'Bytes',
+]);
+
 /** The fields each model declares in schema.prisma, excluding relation fields. */
 function schemaFieldsOf(model: string): string[] {
   const body = new RegExp(`^model ${model} \\{([\\s\\S]*?)^\\}`, 'm').exec(schema)?.[1] ?? '';
@@ -70,10 +83,17 @@ function schemaFieldsOf(model: string): string[] {
       .filter((line) => line !== '' && !line.startsWith('@@') && !line.startsWith('///'))
       .map((line) => line.split(/\s+/))
       .filter((parts) => parts.length >= 2)
-      // relation fields name another model as their type; they are not columns
-      .filter(
-        (parts) => !MODELS.includes(parts[1]!.replace(/[?[\]]/g, '') as (typeof MODELS)[number]),
-      )
+      /*
+        RELATION FIELDS ARE NOT COLUMNS, and the first version of this filter named
+        the four snapshot models explicitly — which stopped working the moment R2
+        gave SnapshotRetrieval a back-relation to MarketObservation, a model outside
+        that list.
+
+        Filtering by SCALAR TYPE instead is the durable form: a field is a column
+        when its type is a Prisma scalar, and a relation to any model — named today
+        or added later — is excluded without this list needing to know about it.
+      */
+      .filter((parts) => PRISMA_SCALARS.has(parts[1]!.replace(/[?[\]]/g, '')))
       .map((parts) => parts[0]!)
   );
 }
@@ -103,6 +123,34 @@ describe('P-2 · the four models Main named, and only those four', () => {
 });
 
 describe('every schema field reaches the SQL', () => {
+  /*
+    ── R2 · THIS NOW SPANS THE MIGRATION SET, AND THAT IS THE POINT ───────────
+
+    Originally it read ONE migration's CREATE TABLE. Correct while a model lived in a
+    single migration, and wrong the moment R2 added columns in a second:
+    `contentEncoding` is declared in schema.prisma and created by `20260919050000`, so
+    checking only the R1 file reports it missing.
+
+    That is almost certainly the shape of the report raised under E1 item D. Read
+    against the R1 migration alone, `contentEncoding` genuinely is absent — and the
+    conclusion "the migration does not create it" follows honestly from that reading.
+    Measured against the migration SET it is present, created at the first ALTER of
+    the R2 file.
+
+    So the assertion is WIDENED rather than weakened: a column must appear in some
+    migration, whether in a CREATE TABLE or a later ADD COLUMN. A column declared in
+    the schema and created by no migration is invisible until a deploy — the failure
+    this exists to prevent — and it can no longer hide behind a second file either.
+  */
+  const allMigrationSql = readdirSync(join(REPO, 'backend', 'prisma', 'migrations'))
+    .filter((d) => /^\d{14}_/.test(d))
+    .sort()
+    .map((d) => {
+      const file = join(REPO, 'backend', 'prisma', 'migrations', d, 'migration.sql');
+      return existsSync(file) ? readFileSync(file, 'utf8').replace(/^\s*--.*$/gm, '') : '';
+    })
+    .join('\n');
+
   it.each([...MODELS])('%s', (model) => {
     const createTable = new RegExp(`CREATE TABLE "${model}" \\(([\\s\\S]*?)\\n\\);`).exec(
       upCode,
@@ -110,11 +158,28 @@ describe('every schema field reaches the SQL', () => {
 
     expect(createTable).toBeDefined();
 
-    const columns = [...createTable!.matchAll(/^\s+"(\w+)"/gm)].map((m) => m[1]!);
+    const created = [...createTable!.matchAll(/^\s+"(\w+)"/gm)].map((m) => m[1]!);
+
+    // Columns added to this table by ANY migration, in any file.
+    const altered = [
+      ...allMigrationSql.matchAll(new RegExp(`ALTER TABLE "${model}"([\\s\\S]*?);`, 'g')),
+    ]
+      .flatMap((m) => [...m[1]!.matchAll(/ADD COLUMN\s+"(\w+)"/g)])
+      .map((m) => m[1]!);
+
+    const columns = new Set([...created, ...altered]);
 
     for (const field of schemaFieldsOf(model)) {
-      expect([model, field, columns.includes(field)]).toEqual([model, field, true]);
+      expect([model, field, columns.has(field)]).toEqual([model, field, true]);
     }
+  });
+
+  it('E1-D · the column reported missing IS created, and the test says by which file', () => {
+    // Named explicitly so the answer lives in the test output rather than in a report.
+    expect(upCode).not.toMatch(/"contentEncoding"/); // absent from the R1 migration — as reported
+    expect(allMigrationSql).toMatch(
+      /ADD COLUMN\s+"contentEncoding" TEXT NOT NULL DEFAULT 'identity'/,
+    );
   });
 
   it('and the SQL introduces no column the schema does not declare', () => {

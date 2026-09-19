@@ -90,3 +90,4 @@ export * from './specialist-claim';
 export * from './conflict';
 export * from './market';
 export * from './official-data/snapshot';
+export * from './official-data/snapshot-admission';

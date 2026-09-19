@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import {
+  assertAdmissionRecordIsCoherent,
   assertProviderScoped,
   assertRequestCarriesNoCredential,
   snapshotContentAddress,
@@ -8,6 +9,7 @@ import {
   type OfficialDataRetrieval,
   type OfficialDataSnapshotStore,
   type RetainedPayload,
+  type SnapshotAdmissionRecord,
   type SnapshotCompleteness,
   type SnapshotContentAddress,
   type SnapshotPinReason,
@@ -74,7 +76,12 @@ export class SnapshotStoreError extends Error {
 }
 
 /** The storage dispositions the payload table holds. PINNED is not one — it is derived. */
-export type SnapshotStorageState = 'RETAINED' | 'COLLECTED' | 'NOT_RETAINED_BY_RIGHTS';
+export type SnapshotStorageState =
+  | 'RETAINED'
+  | 'COLLECTED'
+  | 'NOT_RETAINED_BY_RIGHTS'
+  /** R2 · SNAP-R2-12 — a secret was found in the body, so no byte was committed. */
+  | 'NOT_RETAINED_BY_QUARANTINE';
 
 export interface RetainInput {
   readonly retrievalId: string;
@@ -82,12 +89,32 @@ export interface RetainInput {
   readonly retrievedAt: string;
   readonly httpStatus: number;
   readonly mediaType: string;
+  /**
+   * R2 · SR-1 — THE DECODED BYTES. The caller supplies the body after transport
+   * `Content-Encoding` removal and after nothing else, and the store hashes what it
+   * is handed. The decode is the capture client's, because the store has no response
+   * to decode; the store's job is to refuse an incoherent record, and it can do that
+   * today.
+   */
   readonly bytes: Uint8Array;
   readonly completeness: SnapshotCompleteness;
   readonly rights: SnapshotRightsState;
   readonly editionAnnotations: Readonly<Record<string, string>>;
   readonly publisherReleasedAt?: string;
   readonly publisherChangedAt?: string;
+
+  /**
+   * R2 · THE ADMISSION VERDICT. REQUIRED, NOT OPTIONAL, AND THAT IS S-1.
+   *
+   * An optional verdict defaults to ABSENT, and absent is not `REFUSED` — it is a
+   * third state no constraint describes and every reader would have to guess about.
+   * Required means a caller cannot retain a capture without having decided, which is
+   * the default-deny property expressed in a type rather than in a default value.
+   *
+   * The transport evidence rides with it: `admission.transport` carries the
+   * `contentEncoding` as received and the wire length. Neither is an identity.
+   */
+  readonly admission: SnapshotAdmissionRecord;
 }
 
 export interface CollectInput {
@@ -131,8 +158,37 @@ export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotSt
     // BEFORE anything is written, not cleaned up afterwards.
     assertRequestCarriesNoCredential(input.request);
 
+    /*
+      R2 · SNAP-R2-8, AT THE SAME POINT AND FOR THE SAME REASON.
+
+      An incoherent verdict — a refusal with no key, an admission with a refusal key,
+      an admission of a TRUNCATED capture, an admission with no parser — is refused
+      BEFORE anything is written. The database CHECK enforces the same pairings and is
+      the guarantee; this is the error message, and it names which clause failed
+      instead of which constraint did.
+    */
+    assertAdmissionRecordIsCoherent(input.admission, input.httpStatus);
+
     const address = snapshotContentAddress(computeSha256Hex(input.bytes));
     const byteLength = input.bytes.byteLength;
+
+    /*
+      R2 · SNAP-R2-12 — QUARANTINE PRODUCES NO PAYLOAD AND NO ADDRESS.
+
+      A capture refused for SECRET_DETECTED writes the metadata row and SKIPS THE
+      PAYLOAD UPSERT ENTIRELY. The address computed above is deliberately discarded
+      rather than recorded, and the reason is sharper than "we did not keep the bytes":
+      the hash of a body KNOWN to contain a specific secret is itself a confirmation
+      oracle. Anyone holding a candidate secret could construct the body, hash it, and
+      read the answer out of our evidence table.
+
+      Provider error bodies routinely echo the request — including our own key — so
+      this is not a hypothetical: the very retention SR-8 permits for audit is exactly
+      where a credential would come to rest.
+    */
+    const quarantined =
+      input.admission.admissibility === 'REFUSED' &&
+      input.admission.refusalKey === 'SECRET_DETECTED';
 
     const retrieval: OfficialDataRetrieval = {
       retrievalId: input.retrievalId,
@@ -141,7 +197,7 @@ export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotSt
       httpStatus: input.httpStatus,
       mediaType: input.mediaType,
       byteLength,
-      contentAddress: address,
+      ...(quarantined ? {} : { contentAddress: address }),
       completeness: input.completeness,
       rights: input.rights,
       editionAnnotations: input.editionAnnotations,
@@ -170,19 +226,21 @@ export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotSt
       : 'NOT_RETAINED_BY_RIGHTS';
 
     await this.db.$transaction(async (tx: SnapshotTransactionClient) => {
-      await tx.snapshotPayload.upsert({
-        where: { contentAddress: address },
-        create: {
-          contentAddress: address,
-          bytes: storageState === 'RETAINED' ? input.bytes : null,
-          byteLength,
-          mediaType: input.mediaType,
-          storageState,
-        },
-        // EMPTY ON PURPOSE — SR-4. A second sighting of the same bytes changes
-        // nothing about the payload; it produces a retrieval row and no more.
-        update: {},
-      });
+      if (!quarantined) {
+        await tx.snapshotPayload.upsert({
+          where: { contentAddress: address },
+          create: {
+            contentAddress: address,
+            bytes: storageState === 'RETAINED' ? input.bytes : null,
+            byteLength,
+            mediaType: input.mediaType,
+            storageState,
+          },
+          // EMPTY ON PURPOSE — SR-4. A second sighting of the same bytes changes
+          // nothing about the payload; it produces a retrieval row and no more.
+          update: {},
+        });
+      }
 
       await tx.snapshotRetrieval.create({
         data: {
@@ -196,7 +254,16 @@ export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotSt
           httpStatus: input.httpStatus,
           mediaType: input.mediaType,
           byteLength,
-          contentAddress: address,
+          contentAddress: quarantined ? null : address,
+          contentEncoding: input.admission.transport.contentEncoding,
+          wireByteLength: input.admission.transport.wireByteLength,
+          admissibility: input.admission.admissibility,
+          refusalKey: input.admission.refusalKey ?? null,
+          refusalClass: input.admission.refusalClass ?? null,
+          parserId: input.admission.parse?.parserId ?? null,
+          parserVersion: input.admission.parse?.parserVersion ?? null,
+          parsedAt:
+            input.admission.parse === undefined ? null : new Date(input.admission.parse.parsedAt),
           completeness: input.completeness,
           rightsGrade: input.rights.grade,
           rightsInstrumentRef: input.rights.instrumentRef,

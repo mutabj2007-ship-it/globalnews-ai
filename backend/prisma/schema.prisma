@@ -803,14 +803,26 @@ model SnapshotPayload {
   /// inferred from an extension and never from the body.
   mediaType String
 
-  /// STORAGE DISPOSITION — three values: RETAINED, COLLECTED,
-  /// NOT_RETAINED_BY_RIGHTS.
+  /// STORAGE DISPOSITION — R2 · FOUR values: RETAINED, COLLECTED,
+  /// NOT_RETAINED_BY_RIGHTS, NOT_RETAINED_BY_QUARANTINE.
   ///
-  /// PINNED IS DELIBERATELY NOT ONE OF THEM. The contract's fourth retention
+  /// PINNED IS DELIBERATELY NOT ONE OF THEM. The contract's PINNED retention
   /// class is DERIVED from the pin table at read time, because a denormalised
   /// PINNED flag can drift out of step with the pins that justify it — and a
   /// payload wrongly believed unpinned is exactly the byte that gets collected.
   /// See `retentionClassOf()` in the store.
+  ///
+  /// R2 · SNAP-R2-12 adds NOT_RETAINED_BY_QUARANTINE, and A-24 is why it is a
+  /// FOURTH value rather than being folded into NOT_RETAINED_BY_RIGHTS. "The
+  /// publisher's terms forbade retention" and "the body contained a configured
+  /// secret" are different facts with different remedies: the first is a rights
+  /// position that may change, the second is an incident. A reader who cannot
+  /// tell them apart cannot act on either.
+  ///
+  /// NOTE THAT A QUARANTINED CAPTURE USUALLY HAS NO PAYLOAD ROW AT ALL — the
+  /// scan runs before any byte is committed. This value exists for the case
+  /// where an address was already known from an earlier clean capture of the
+  /// same bytes.
   storageState String @default("RETAINED")
 
   /// When these bytes were first seen. A second, identical fetch does not
@@ -866,16 +878,75 @@ model SnapshotRetrieval {
   /// `parseRetained()`.
   mediaType String
 
+  /// R2 · the DECODED length — SR-1 (R2). The wire length is transport evidence
+  /// and lives in `wireByteLength` below.
   byteLength Int
 
-  /// Absent only when completeness is FAILED and no bytes arrived at all.
+  /// R2 · Absent when no bytes arrived (completeness FAILED) OR when the capture
+  /// was QUARANTINED — SNAP-R2-12.
+  ///
+  /// A body containing a configured secret is never committed, and NO ADDRESS IS
+  /// RECORDED for bytes that were discarded. Two reasons, and the second is the
+  /// sharper one: an address over bytes we do not hold is the same unverifiable
+  /// claim SNAP-R2-3 refuses for the wire digest — with the added hazard that
+  /// THE HASH OF A BODY KNOWN TO CONTAIN A SPECIFIC SECRET IS ITSELF A
+  /// CONFIRMATION ORACLE.
   contentAddress String?
   payload        SnapshotPayload? @relation(fields: [contentAddress], references: [contentAddress])
 
-  /// COMPLETE, TRUNCATED or FAILED. Only COMPLETE may stand behind a published
-  /// figure — SR-16. TRUNCATED exists because the streaming byte cap aborts
-  /// mid-body, and a capped response must never be mistaken for a short one.
+  /// COMPLETE, TRUNCATED or FAILED. TRUNCATED exists because the streaming byte
+  /// cap aborts mid-body, and a capped response must never be mistaken for a
+  /// short one.
+  ///
+  /// R2 · SNAP-R2-5 — THIS IS E1's `captureOutcome`, UNDER THE NAME IT ALREADY
+  /// HAD. It is not renamed and no second column is added beside it: that would
+  /// record one fact under two names. The pair (completeness, admissibility)
+  /// satisfies E1's structural requirement exactly, because neither is inferable
+  /// from the other — a COMPLETE capture can be REFUSED for host mismatch, and a
+  /// TRUNCATED capture is always REFUSED.
   completeness String
+
+  // ── R2 · TRANSPORT EVIDENCE — SNAP-R2-3. NEVER AN IDENTITY. ──────────────
+
+  /// As received: 'identity' or 'gzip'. Recorded because the wire shape is the
+  /// only way to notice a transport-layer surprise afterwards.
+  contentEncoding String @default("identity")
+
+  /// Octets ON THE WIRE, before decode. Equals `byteLength` under identity.
+  ///
+  /// AND THERE IS NO WIRE DIGEST — a ruling, not an omission. A hash over bytes
+  /// the store does not retain can never be re-verified, which is the exact
+  /// inverse of SR-11's no-forge property wearing its clothes.
+  wireByteLength Int?
+
+  // ── R2 · THE ADMISSION VERDICT — E1 S-1/S-2/S-3 ──────────────────────────
+
+  /// REFUSED or ADMITTED, and it lives HERE rather than on the payload —
+  /// SNAP-R2-6.
+  ///
+  /// ADMISSIBILITY IS A PROPERTY OF A CAPTURE, NOT OF BYTES. Two providers can
+  /// serve byte-identical JSON and one may fail the provenance check; on the
+  /// payload, one provider's admission would launder the other's refusal.
+  ///
+  /// DEFAULT 'REFUSED' IS THE POINT OF S-1, NOT A CONVENIENCE: there is no path
+  /// where the ABSENCE of a refusal produces admission.
+  admissibility String @default("REFUSED")
+
+  /// Present exactly when REFUSED. One of the thirteen contract keys.
+  refusalKey String?
+
+  /// PERMANENT or TRANSIENT — S-5, and ONLY TRANSIENT MAY RETRY. G measured the
+  /// failure this prevents: a 404 is a permanent configuration error, and on a
+  /// retry loop it reports as a transient provider outage.
+  refusalClass String?
+
+  // ── R2 · THE PARSE RECORD — P-4/P-5 ──────────────────────────────────────
+
+  /// Present exactly when ADMITTED; nothing else is parsed. Without the version
+  /// a parser upgrade changes MEANING without changing BYTES, undetectably.
+  parserId      String?
+  parserVersion String?
+  parsedAt      DateTime?
 
   // RIGHTS, FROZEN AT RETRIEVAL — SR-18.
 
@@ -906,9 +977,21 @@ model SnapshotRetrieval {
 
   createdAt DateTime @default(now())
 
+  observations MarketObservation[]
+
+  /// R2 · S-3 — THE COMPOSITE KEY AN OBSERVATION REFERENCES.
+  ///
+  /// `retrievalId` is already unique on its own, so this index adds no row-level
+  /// constraint. Its whole job is to be a VALID FOREIGN-KEY TARGET for the pair
+  /// (retrievalId, admissibility) — which is what lets an observation table pin
+  /// its own column to 'ADMITTED' and have the database refuse the join to a
+  /// REFUSED capture. Without this index the foreign key cannot be declared at
+  /// all, and the guarantee would fall back to application code.
+  @@unique([retrievalId, admissibility])
   @@index([contentAddress, retrievedAt])
   @@index([providerId, endpointId, retrievedAt])
   @@index([retrievedAt])
+  @@index([admissibility, retrievedAt])
 }
 
 /// SR-19 · WHAT MAKES THIS AN EVIDENCE STORE RATHER THAN A CACHE.
@@ -1131,9 +1214,45 @@ model MarketObservation {
   /// that finds an address and no payload has learned something true — the
   /// tombstone says what happened to it.
   ///
-  /// Mandatory for a publisher that does not version its past data. Eurostat's own
-  /// rights record states exactly that.
+  /// R2 · AND IT IS NO LONGER SUFFICIENT ON ITS OWN. See `snapshotRetrievalId`.
   snapshotContentAddress String?
+
+  /// ══════════════════════════════════════════════════════════════════════
+  /// R2 · S-3 — AN OBSERVATION REFERENCES AN ADMITTED **CAPTURE**, NOT BYTES
+  /// ══════════════════════════════════════════════════════════════════════
+  ///
+  /// THE DEFECT THIS CLOSES. Under R1 a Market observation cited
+  /// `snapshotContentAddress` alone. Admissibility is a property of a CAPTURE and
+  /// not of BYTES — SNAP-R2-6 — so an address-only citation BYPASSES THE ADMISSION
+  /// VERDICT ENTIRELY: two providers can serve byte-identical JSON, one of them
+  /// failing the provenance check, and a figure citing those bytes could not be
+  /// told apart from a figure citing the admitted capture. The refused provider's
+  /// capture would be laundered by the admitted one's address.
+  ///
+  /// So a real observation now names the RETRIEVAL, and the pair below is a
+  /// composite foreign key onto `SnapshotRetrieval(retrievalId, admissibility)`.
+  ///
+  /// NULLABLE, because not every Market observation is snapshot-backed — SI-10.4
+  /// makes the snapshot mandatory only for a publisher that does not version its
+  /// past data. But an observation that DOES cite one cites an admitted one, and
+  /// the database is what enforces that rather than a comment.
+  snapshotRetrievalId String?
+
+  /// PINNED TO 'ADMITTED' BY A CHECK CONSTRAINT, AND THAT IS THE MECHANISM.
+  ///
+  /// It is not a copy of the retrieval's verdict that could drift: it is the
+  /// second half of the composite key. Because this column can only ever hold
+  /// 'ADMITTED', the foreign key can only ever resolve to a row whose
+  /// `admissibility` IS 'ADMITTED'. A REFUSED capture is not rejected by a
+  /// trigger here — it is UNREFERENCEABLE.
+  ///
+  /// Combined with the assign-once trigger on the retrieval, a refused capture
+  /// can never be promoted after the fact either. The two together are what make
+  /// "a refused capture cannot back a published figure" a property of the
+  /// database rather than a property of the code that happens to write to it.
+  snapshotAdmissibility String?
+
+  snapshotRetrieval SnapshotRetrieval? @relation(fields: [snapshotRetrievalId, snapshotAdmissibility], references: [retrievalId, admissibility])
 
   runId String
   run   MarketIngestRun @relation(fields: [runId], references: [id])
@@ -1150,5 +1269,6 @@ model MarketObservation {
   @@index([providerId, subjectClass, ingestedAt])
   @@index([seriesId, periodId])
   @@index([snapshotContentAddress])
+  @@index([snapshotRetrievalId])
   @@index([runId])
 }

@@ -1,10 +1,16 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
   assertCollectable,
   assertPayloadMatchesItsAddress,
+  assertAdmissionRecordIsCoherent,
   assertRetrievalIsPublishable,
+  refusalClassFor,
+  refusalIsSecurityClass,
+  sniffRefusal,
+  refusalMayRetry,
+  retrievalIsPublishable,
   parseRetained,
   retrievalIsReproducible,
   retrievalMaySupplyValues,
@@ -13,6 +19,8 @@ import {
   type OfficialDataRequestIdentity,
   type OfficialDataRetrieval,
   type RetainedPayload,
+  type SnapshotAdmissionRecord,
+  type SnapshotRefusalKey,
   type SnapshotContentAddress,
 } from '@globalnews-ai/shared';
 
@@ -36,12 +44,15 @@ import {
  * real collision.
  *
  * What the fake does NOT do is re-implement Postgres. The SQL-level half of each
- * guarantee — the CHECK constraints, the five triggers, the foreign keys — is
- * stated in the migration and is proven against a real PostgreSQL 16 when one is
- * available. Docker was not running in this environment, and that limit is
- * recorded in the package rather than papered over: the TypeScript half is
- * proven here, the SQL half is proven by inspection of the migration and is
- * listed as an outstanding validation step.
+ * guarantee — the CHECK constraints, the triggers, the composite foreign key — is
+ * proven in `official-data-snapshot.live-postgres.spec.ts`, which executes the real
+ * migrations against a real PostgreSQL 17 in a disposable schema.
+ *
+ * R2 UPDATE, AND IT IS WORTH READING TWICE: that suite found a defect this one
+ * could not. R1's `CHECK (contentAddress IS NOT NULL OR completeness = 'FAILED')`
+ * makes R2's quarantine rule UNREPRESENTABLE — a secret-bearing capture is COMPLETE
+ * and has no address. The contradiction is between two CHECK constraints, and
+ * nothing but Postgres evaluates those. A fake would have accepted the migration.
  *
  * THE EUROSTAT BYTES ARE REAL. `fixtures/eurostat-une_rt_m-D2.body` is the exact
  * 3601-byte response captured under ECON-EUROSTAT-BYTE-CAPTURE-D2-R1, whose
@@ -293,6 +304,16 @@ const retainInput = (over: Record<string, unknown> = {}) => ({
     grade: 'E-5',
     instrumentRef: 'https://ec.europa.eu/eurostat/about-us/policies/copyright',
     payloadRetentionPermitted: true,
+  },
+  admission: {
+    captureOutcome: 'COMPLETE' as const,
+    admissibility: 'ADMITTED' as const,
+    transport: { contentEncoding: 'identity' as const, wireByteLength: 3601 },
+    parse: {
+      parserId: 'eurostat-jsonstat',
+      parserVersion: '1.0.0',
+      parsedAt: '2026-09-19T02:51:53.000Z',
+    },
   },
   editionAnnotations: {
     UPDATE_DATA: '2026-09-17T23:00:00+0200',
@@ -593,59 +614,110 @@ describe('D · a parser cannot mint a reference for bytes that never passed thro
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 describe('E · failed and partial responses are retained as evidence, never as figures', () => {
-  const publishableBase = (): OfficialDataRetrieval => ({
-    retrievalId: 'r-1',
-    request: eurostatRequest(),
-    retrievedAt: '2026-09-19T02:51:52.000Z',
-    httpStatus: 200,
-    mediaType: 'application/json',
-    byteLength: 3601,
-    contentAddress: snapshotContentAddress(EUROSTAT_SHA),
-    completeness: 'COMPLETE',
-    rights: { grade: 'E-5', instrumentRef: 'ref', payloadRetentionPermitted: true },
-    editionAnnotations: {},
+  /*
+    ── R2 · THESE SEVEN TESTS CHANGED SHAPE, AND THE REASON IS SNAP-R2-7 ──────
+
+    Under R1 they called assertRetrievalIsPublishable(retrieval) and asserted four
+    separate refusals: completeness, status, address, emptiness. R2 removes that
+    predicate — not because those checks were wrong, but because the admission gate
+    now performs all four AND SEVEN MORE, and keeping both would leave two
+    publishability predicates that can disagree. The one in application code is the
+    one that gets edited.
+
+    So each check did not disappear; it MOVED. The gate refuses the capture at
+    capture time with a named key, and the predicate became a statement about the
+    verdict. The tests follow the checks to where they now live: what used to be
+    completeness: 'TRUNCATED' reaching a publishability call is now a TRUNCATED
+    capture that cannot be ADMITTED at all, refused by COH-4.
+  */
+  const admitted = (): SnapshotAdmissionRecord => ({
+    captureOutcome: 'COMPLETE',
+    admissibility: 'ADMITTED',
+    transport: { contentEncoding: 'identity', wireByteLength: 3601 },
+    parse: {
+      parserId: 'eurostat-jsonstat',
+      parserVersion: '1.0.0',
+      parsedAt: '2026-09-19T02:51:53.000Z',
+    },
   });
 
-  it('a COMPLETE 200 with bytes is publishable — the positive control', () => {
-    expect(() => assertRetrievalIsPublishable(publishableBase())).not.toThrow();
+  it('an ADMITTED capture is publishable — the positive control', () => {
+    expect(() => assertRetrievalIsPublishable(admitted())).not.toThrow();
+    expect(retrievalIsPublishable(admitted())).toBe(true);
   });
 
-  it('TRUNCATED is refused — a capped stream is not a short dataset — SR-16', () => {
+  it('a REFUSED capture is not, and the message names the key', () => {
+    const refused: SnapshotAdmissionRecord = {
+      captureOutcome: 'COMPLETE',
+      admissibility: 'REFUSED',
+      refusalKey: 'PROVENANCE_HOST_MISMATCH',
+      refusalClass: 'PERMANENT',
+      transport: { contentEncoding: 'identity', wireByteLength: 3601 },
+    };
+
+    expect(() => assertRetrievalIsPublishable(refused)).toThrow(/SNAPSHOT_NOT_ADMITTED/);
+    expect(() => assertRetrievalIsPublishable(refused)).toThrow(/PROVENANCE_HOST_MISMATCH/);
+    expect(retrievalIsPublishable(refused)).toBe(false);
+  });
+
+  it('TRUNCATED cannot be ADMITTED — a capped stream is not a short dataset', () => {
     expect(() =>
-      assertRetrievalIsPublishable({ ...publishableBase(), completeness: 'TRUNCATED' }),
-    ).toThrow(/SNAPSHOT_NOT_COMPLETE/);
+      assertAdmissionRecordIsCoherent({ ...admitted(), captureOutcome: 'TRUNCATED' }),
+    ).toThrow(/SNAP-R2-COH-4/);
   });
 
-  it('FAILED is refused', () => {
+  it('FAILED cannot be ADMITTED either', () => {
     expect(() =>
-      assertRetrievalIsPublishable({ ...publishableBase(), completeness: 'FAILED' }),
-    ).toThrow(/SNAPSHOT_NOT_COMPLETE/);
+      assertAdmissionRecordIsCoherent({ ...admitted(), captureOutcome: 'FAILED' }),
+    ).toThrow(/SNAP-R2-COH-4/);
   });
 
-  it('a non-2xx status is refused even when bytes arrived', () => {
-    // The D-2 404 is a real one: 144 bytes of Eurostat error JSON.
+  it('a refusal with no key cannot be classified, and is refused as incoherent', () => {
     expect(() =>
-      assertRetrievalIsPublishable({
-        ...publishableBase(),
-        httpStatus: 404,
-        byteLength: EUROSTAT_404_BYTES.byteLength,
+      assertAdmissionRecordIsCoherent({
+        captureOutcome: 'COMPLETE',
+        admissibility: 'REFUSED',
+        transport: { contentEncoding: 'identity', wireByteLength: 10 },
       }),
-    ).toThrow(/SNAPSHOT_NON_SUCCESS_STATUS/);
+    ).toThrow(/SNAP-R2-COH-1/);
   });
 
-  it('a retrieval with no content address is refused', () => {
-    const noAddress = { ...publishableBase() } as Record<string, unknown>;
-    delete noAddress.contentAddress;
-
+  it('an admitted capture carries no refusal key, and was parsed', () => {
     expect(() =>
-      assertRetrievalIsPublishable(noAddress as unknown as OfficialDataRetrieval),
-    ).toThrow(/SNAPSHOT_NO_CONTENT_ADDRESS/);
+      assertAdmissionRecordIsCoherent({
+        ...admitted(),
+        refusalKey: 'STATUS_NOT_OK',
+        refusalClass: 'PERMANENT',
+      }),
+    ).toThrow(/SNAP-R2-COH-3/);
+
+    const noParse = { ...admitted() } as Record<string, unknown>;
+    delete noParse.parse;
+    expect(() =>
+      assertAdmissionRecordIsCoherent(noParse as unknown as SnapshotAdmissionRecord),
+    ).toThrow(/SNAP-R2-COH-5/);
   });
 
-  it('an empty body is refused', () => {
-    expect(() => assertRetrievalIsPublishable({ ...publishableBase(), byteLength: 0 })).toThrow(
-      /SNAPSHOT_EMPTY_BODY/,
-    );
+  it('a refused capture was never parsed — P-1, parse once, after the gate', () => {
+    expect(() =>
+      assertAdmissionRecordIsCoherent({
+        captureOutcome: 'COMPLETE',
+        admissibility: 'REFUSED',
+        refusalKey: 'PARSE_FAILED',
+        refusalClass: 'PERMANENT',
+        transport: { contentEncoding: 'identity', wireByteLength: 10 },
+        parse: { parserId: 'x', parserVersion: '1', parsedAt: '2026-09-19T00:00:00.000Z' },
+      }),
+    ).toThrow(/SNAP-R2-COH-2/);
+  });
+
+  it('only TRANSIENT may retry, and a 404 is PERMANENT — the failure G measured', () => {
+    expect(refusalMayRetry('STATUS_NOT_OK', 404)).toBe(false);
+    expect(refusalMayRetry('STATUS_NOT_OK', 503)).toBe(true);
+    expect(refusalMayRetry('STATUS_NOT_OK', 429)).toBe(true);
+    expect(refusalMayRetry('PARSE_FAILED')).toBe(false);
+    expect(refusalMayRetry('BODY_NOT_JSON_SHAPED')).toBe(true);
+    expect(() => refusalClassFor('STATUS_NOT_OK')).toThrow(/SNAP-R2-CLASS-1/);
   });
 
   it('but the failed response is still RETAINED — the failure is evidence too', async () => {
@@ -667,7 +739,25 @@ describe('E · failed and partial responses are retained as evidence, never as f
   });
 
   it('reproducibility is reported, not assumed — SR-17', () => {
-    const base = publishableBase();
+    /*
+      `retrievalIsReproducible` IS UNCHANGED BY R2 and still takes a retrieval, not an
+      admission record — the two answer different questions. Publishability asks "may
+      this capture stand behind a figure"; reproducibility asks "can that figure be
+      re-proved from bytes we hold", and a capture can be admitted and still
+      irreproducible when the publisher's terms forbade retention.
+    */
+    const base: OfficialDataRetrieval = {
+      retrievalId: 'r-1',
+      request: eurostatRequest(),
+      retrievedAt: '2026-09-19T02:51:52.000Z',
+      httpStatus: 200,
+      mediaType: 'application/json',
+      byteLength: 3601,
+      contentAddress: snapshotContentAddress(EUROSTAT_SHA),
+      completeness: 'COMPLETE',
+      rights: { grade: 'E-5', instrumentRef: 'ref', payloadRetentionPermitted: true },
+      editionAnnotations: {},
+    };
 
     expect(retrievalIsReproducible(base)).toBe(true);
     expect(
@@ -1046,5 +1136,266 @@ describe('a retention is atomic', () => {
     expect(fake.tables.payloads).toHaveLength(1);
     expect(fake.tables.payloads[0]!.contentAddress).toBe(EUROSTAT_SHA);
     expect(fake.tables.retrievals).toHaveLength(1);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * E1 R2 SECURITY RE-REVIEW · ITEM C — THE SNIFF USES ONE OFFSET
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('E1-C · leading whitespace does not change which refusal a body earns', () => {
+  const ws = (prefix: string, body: number[]): Uint8Array =>
+    new Uint8Array([...Buffer.from(prefix), ...body]);
+
+  const GZIP = [0x1f, 0x8b, 0x08, 0x00];
+  const ZIP = [0x50, 0x4b, 0x03, 0x04];
+  const BOM = [0xef, 0xbb, 0xbf];
+  const HTML = [...Buffer.from('<!DOCTYPE html><html>')];
+  const JSON_OBJ = [...Buffer.from('{"value":{"0":3.1}}')];
+  const JSON_ARR = [...Buffer.from('[1,2,3]')];
+
+  it('the whitespace-prefixed HTML control is refused as not-JSON-shaped', () => {
+    /*
+      E1's required control. An HTML error page served as application/json with HTTP
+      200 is the most common way official data silently becomes wrong, and a leading
+      newline must not change the verdict.
+    */
+    for (const prefix of ['', ' ', '\n', '\r\n\t  ', '   \n\n   ']) {
+      expect([prefix, sniffRefusal(ws(prefix, HTML))]).toEqual([prefix, 'BODY_NOT_JSON_SHAPED']);
+    }
+  });
+
+  it('the whitespace-prefixed valid-JSON control is NOT refused', () => {
+    // The other half of the pair: normalising the offset must not start refusing
+    // bodies that are fine. A pipeline that refuses everything passes every negative
+    // control ever written for it.
+    for (const prefix of ['', ' ', '\n', '\r\n\t  ', '   \n\n   ']) {
+      expect([prefix, sniffRefusal(ws(prefix, JSON_OBJ))]).toEqual([prefix, null]);
+      expect([prefix, sniffRefusal(ws(prefix, JSON_ARR))]).toEqual([prefix, null]);
+    }
+  });
+
+  it('THE DEFECT: whitespace-prefixed gzip is ENCODING_NOT_ALLOWED, not the retryable key', () => {
+    /*
+      THIS IS THE ONE THAT MATTERED. Before the fix the magic bytes were read at index
+      0 while the JSON character was read at the first non-space byte. One space in
+      front of a gzip body therefore skipped the gzip arm entirely and fell through to
+      BODY_NOT_JSON_SHAPED — WHICH IS TRANSIENT. A body that must be refused
+      permanently was instead refused retryably, so the fetch would repeat on a
+      schedule.
+
+      The misclassification mattered more than the miss: this function only refuses,
+      so neither answer admits anything. What differed was the retry semantics, which
+      is item B's territory reached through item C's bug.
+    */
+    for (const prefix of ['', ' ', '\n', '  \t']) {
+      expect([prefix, sniffRefusal(ws(prefix, GZIP))]).toEqual([prefix, 'ENCODING_NOT_ALLOWED']);
+    }
+
+    // And the consequence, stated as the thing that actually protects the system.
+    expect(refusalMayRetry('ENCODING_NOT_ALLOWED')).toBe(false);
+    expect(refusalMayRetry('BODY_NOT_JSON_SHAPED')).toBe(true);
+  });
+
+  it('whitespace-prefixed ZIP is ARCHIVE_NOT_ALLOWED at every offset', () => {
+    for (const prefix of ['', ' ', '\n\n', '\t']) {
+      expect([prefix, sniffRefusal(ws(prefix, ZIP))]).toEqual([prefix, 'ARCHIVE_NOT_ALLOWED']);
+    }
+  });
+
+  it('a BOM is REFUSED rather than skipped, wherever the whitespace ends', () => {
+    // A BOM is content. Content that should not be there is a refusal, not something
+    // to quietly step over — which is exactly why it is not in the whitespace set.
+    for (const prefix of ['', ' ', '\n ']) {
+      expect([prefix, sniffRefusal(ws(prefix, [...BOM, ...JSON_OBJ]))]).toEqual([
+        prefix,
+        'BODY_NOT_JSON_SHAPED',
+      ]);
+    }
+  });
+
+  it('an all-whitespace body is refused, not treated as an empty success', () => {
+    expect(sniffRefusal(new Uint8Array(Buffer.from('   \n\t  ')))).toBe('BODY_NOT_JSON_SHAPED');
+    expect(sniffRefusal(new Uint8Array(0))).toBe('BODY_NOT_JSON_SHAPED');
+  });
+
+  it('only the four JSON whitespace bytes are skipped — a NUL is not whitespace', () => {
+    expect(sniffRefusal(new Uint8Array([0x00, ...JSON_OBJ]))).toBe('BODY_NOT_JSON_SHAPED');
+    expect(sniffRefusal(new Uint8Array([0x0b, ...JSON_OBJ]))).toBe('BODY_NOT_JSON_SHAPED');
+  });
+
+  it('and the retained bytes are never rewritten — the sniff only reads', () => {
+    const body = ws('  \n', JSON_OBJ);
+    const before = Buffer.from(body).toString('hex');
+
+    sniffRefusal(body);
+
+    expect(Buffer.from(body).toString('hex')).toBe(before);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * E1 R2 SECURITY RE-REVIEW · ITEM B — THE DOMAIN HALF
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('E1-B · a security refusal cannot be recorded retryable', () => {
+  const securityRefusal = (
+    key: SnapshotRefusalKey,
+    refusalClass: 'PERMANENT' | 'TRANSIENT',
+  ): SnapshotAdmissionRecord => ({
+    captureOutcome: 'COMPLETE',
+    admissibility: 'REFUSED',
+    refusalKey: key,
+    refusalClass,
+    transport: { contentEncoding: 'identity', wireByteLength: 10 },
+  });
+
+  it.each([
+    'SECRET_DETECTED',
+    'PROVENANCE_HOST_MISMATCH',
+    'DECOMPRESSION_BOUND_EXCEEDED',
+    'ARCHIVE_NOT_ALLOWED',
+    'ENCODING_NOT_ALLOWED',
+  ] as const)('%s declared TRANSIENT is refused', (key) => {
+    expect(refusalIsSecurityClass(key)).toBe(true);
+    expect(() => assertAdmissionRecordIsCoherent(securityRefusal(key, 'TRANSIENT'))).toThrow(
+      /SNAP-R2-SEC-B-1/,
+    );
+    expect(() => assertAdmissionRecordIsCoherent(securityRefusal(key, 'PERMANENT'))).not.toThrow();
+  });
+
+  it('THE EXACT STATE E1 PROVED POSSIBLE is now unrepresentable', () => {
+    /*
+      "E1 proved the current model can record SECRET_DETECTED while classifying the
+      refusal as retryable/transient. That could resend a request known to have leaked
+      a credential."
+    */
+    expect(() =>
+      assertAdmissionRecordIsCoherent(securityRefusal('SECRET_DETECTED', 'TRANSIENT')),
+    ).toThrow(/never retryable/);
+    expect(refusalMayRetry('SECRET_DETECTED')).toBe(false);
+  });
+
+  it('and a class that merely disagrees with the table is refused too, security or not', () => {
+    // PARSE_FAILED is PERMANENT and not a security key, so it exercises SEC-B-2 alone.
+    expect(() =>
+      assertAdmissionRecordIsCoherent({
+        captureOutcome: 'COMPLETE',
+        admissibility: 'REFUSED',
+        refusalKey: 'PARSE_FAILED',
+        refusalClass: 'TRANSIENT',
+        transport: { contentEncoding: 'identity', wireByteLength: 10 },
+      }),
+    ).toThrow(/SNAP-R2-SEC-B-2/);
+  });
+
+  it('an operational refusal may still be TRANSIENT — the guard is targeted, not blanket', () => {
+    expect(refusalIsSecurityClass('BODY_NOT_JSON_SHAPED')).toBe(false);
+    expect(() =>
+      assertAdmissionRecordIsCoherent({
+        captureOutcome: 'COMPLETE',
+        admissibility: 'REFUSED',
+        refusalKey: 'BODY_NOT_JSON_SHAPED',
+        refusalClass: 'TRANSIENT',
+        transport: { contentEncoding: 'identity', wireByteLength: 10 },
+      }),
+    ).not.toThrow();
+  });
+
+  it('STATUS_NOT_OK is classified by the status, and 404 is PERMANENT', () => {
+    const rec = (refusalClass: 'PERMANENT' | 'TRANSIENT'): SnapshotAdmissionRecord => ({
+      captureOutcome: 'COMPLETE',
+      admissibility: 'REFUSED',
+      refusalKey: 'STATUS_NOT_OK',
+      refusalClass,
+      transport: { contentEncoding: 'identity', wireByteLength: 10 },
+    });
+
+    expect(() => assertAdmissionRecordIsCoherent(rec('TRANSIENT'), 404)).toThrow(/SNAP-R2-SEC-B-2/);
+    expect(() => assertAdmissionRecordIsCoherent(rec('PERMANENT'), 404)).not.toThrow();
+    expect(() => assertAdmissionRecordIsCoherent(rec('TRANSIENT'), 503)).not.toThrow();
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * E1 R2 SECURITY RE-REVIEW · ITEM E — ONE SNAPSHOT PORT, AND MARKET USES IT
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('E1-E · there is no Market-specific snapshot architecture', () => {
+  const marketDir = join(__dirname, '..', 'market-ingest');
+
+  const marketSources = (): Array<[string, string]> =>
+    readdirSync(marketDir)
+      .filter((f) => f.endsWith('.ts'))
+      .map(
+        (f) =>
+          [
+            f,
+            readFileSync(join(marketDir, f), 'utf8')
+              .replace(/\/\*[\s\S]*?\*\//g, ' ')
+              .replace(/(^|[^:])\/\/[^\n]*/g, '$1 '),
+          ] as [string, string],
+      );
+
+  it('Market declares no snapshot store, payload table or content-address helper', () => {
+    for (const [name, src] of marketSources()) {
+      for (const forbidden of [
+        'MarketSnapshot',
+        'MarketPayload',
+        'marketContentAddress',
+        'computeSha256Hex',
+        'SnapshotPayload',
+      ]) {
+        expect([name, forbidden, src.includes(forbidden)]).toEqual([name, forbidden, false]);
+      }
+    }
+  });
+
+  it('and it holds no bytes of its own — no Bytes column, no Buffer storage', () => {
+    for (const [name, src] of marketSources()) {
+      expect([name, /Bytes\b|Buffer\.from\(.*body|payloadBytes/i.test(src)]).toEqual([name, false]);
+    }
+  });
+
+  it('the Market observation cites a RETRIEVAL, not bytes alone — the R2 reconciliation', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const model = /model MarketObservation \{([\s\S]*?)^\}/m.exec(schema)?.[1] ?? '';
+
+    // Both halves of the citation, and the composite relation that binds them.
+    expect(model).toMatch(/snapshotRetrievalId\s+String\?/);
+    expect(model).toMatch(/snapshotAdmissibility\s+String\?/);
+    expect(model).toMatch(
+      /@relation\(fields: \[snapshotRetrievalId, snapshotAdmissibility\], references: \[retrievalId, admissibility\]\)/,
+    );
+  });
+
+  it('the store port remains the only seam a consumer needs', () => {
+    /*
+      G's Market R3 convergence consumes `Pick<OfficialDataSnapshotStore, 'retain'>`,
+      which is exactly right: the narrowest possible view of the one port. This
+      asserts the port still HAS that shape, so narrowing it stays possible.
+    */
+    const store = new PostgresOfficialDataSnapshotStore(
+      {
+        $transaction: () => undefined,
+        snapshotPayload: { findUnique: () => {}, upsert: () => {}, update: () => {} },
+        snapshotRetrieval: { create: () => {}, findMany: () => {} },
+        snapshotPin: {
+          upsert: () => {},
+          findFirst: () => {},
+          findMany: () => {},
+          update: () => {},
+        },
+        snapshotTombstone: { create: () => {}, findUnique: () => {} },
+      },
+      ['eurostat'],
+    );
+
+    const narrowed: Pick<typeof store, 'retain'> = store;
+
+    expect(typeof narrowed.retain).toBe('function');
   });
 });

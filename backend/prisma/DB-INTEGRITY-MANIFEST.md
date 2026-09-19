@@ -256,3 +256,73 @@ Identical in shape to A5, and with the same single gap: `prisma validate` passes
 `prisma generate` produces the three delegates, the DDL is generator-produced, and the
 migration is additive-only — but **it has not been applied to a real PostgreSQL**, so the
 CHECK constraints and the two triggers are proven by inspection rather than by execution.
+
+---
+
+# ADDENDUM — ALPHA-OFFICIAL-DATA-SNAPSHOT-POSTGRES-R2
+
+**Migration `20260919050000_snapshot_admission_r2`.** The R2 admission delta, from
+`MAIN-SNAPSHOT-HUMANITARIAN-RECONCILIATION-R2` (package sha256 `eb57f615…3a060`,
+CTO-approved) with E1's R2 security re-review applied.
+
+## C1 · EXACT HASHES
+
+```
+sha256  69c076d44b49f39097af5e79b12cf59d4c6a4e69028d2185f28d807f8311dcdf   52340 B
+        backend/prisma/schema.prisma
+
+sha256  b52054409c23388bb63370663a341ca4d28593444808f79869d3db8e4b4b4b2e   12733 B
+        backend/prisma/migrations/20260919050000_snapshot_admission_r2/migration.sql
+
+sha256  f174385888cfdb82b5ec93a84caf7d59829c5d0c44b0a421ef783fd482f3bdb4    5079 B
+        backend/prisma/migrations/20260919050000_snapshot_admission_r2/DOWN.sql
+```
+
+## C2 · MIGRATION IDENTITY
+
+```
+NAME      20260919050000_snapshot_admission_r2
+POSITION  immediately after 20260919040000_add_market_scheduled_ingest
+CLASS     ADDITIVE, with THREE deliberate constraint replacements (C3)
+APPLIED   never to Alpha or Production. APPLIED AND EXERCISED against a
+          disposable local database — see C4.
+```
+
+## C3 · THE THREE NON-ADDITIVE STATEMENTS, EACH WITH ITS REASON
+
+Postgres cannot extend a `CHECK`, so a constraint whose value set grows must be
+dropped and recreated. Each below reproduces its original arms unchanged and adds one:
+
+| constraint | change | why |
+|---|---|---|
+| `SnapshotRetrieval_address_required_unless_failed` | +1 arm: `refusalKey = 'SECRET_DETECTED'` | **Found by executing the migration against a real Postgres.** R1's two-arm form makes R2's quarantine rule UNREPRESENTABLE: a secret-bearing capture is `COMPLETE` (the body arrived intact) and has NO address (the bytes were discarded). Under R1 the only ways to record it were to invent an address — a confirmation oracle — or to call it `FAILED`, which is a lie about the transport and corrupts every transport-health figure |
+| `SnapshotPayload_storageState_bytes_agree` | +1 arm: `NOT_RETAINED_BY_QUARANTINE` | A-24 · four distinguishable absences, and collapsing any two loses the one a reader needs |
+| — new — `SnapshotRetrieval_security_refusal_is_permanent` | added | E1 item B. `SECRET_DETECTED` + `TRANSIENT` was representable, which would licence a retry loop re-sending a request known to have leaked a credential |
+
+## C4 · THIS MIGRATION HAS BEEN APPLIED — TO A DISPOSABLE LOCAL DATABASE ONLY
+
+The gap recorded in A5 and B5 is **closed for the forward path**:
+
+```
+database   snapshot_r2_validate        created locally, empty at creation
+host       localhost:5432              PostgreSQL 17.10
+credential read from the repo's own backend/.env, host verified local before use
+isolation  a temporary schema per run, DROP SCHEMA ... CASCADE afterwards
+```
+
+**No Railway, Alpha or Production database was contacted.** The provisioning script
+refuses any non-local host outright rather than relying on the caller to pass the right
+one.
+
+All three migrations apply cleanly in order, and **32 live assertions pass** —
+T-17 … T-20, T-23, E1 items A, B and D, plus the R1 triggers re-proven under R2.
+
+**Still not executed:** `DOWN.sql` for any of the three migrations. The rollback path
+remains proven by conformance assertion rather than by execution, and it is the one
+outstanding database step.
+
+## C5 · THE OPERATOR HAZARD IS UNCHANGED AND NOW SHARPER
+
+None of the three migrations has been applied to a **deployed** database, so all three
+remain editable. After the first `prisma migrate deploy`, none may be edited again —
+including a comment.
