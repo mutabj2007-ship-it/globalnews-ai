@@ -279,14 +279,38 @@ describe('the Conflict domain is not implemented on this lineage', () => {
  * implementation — which is a design act, not a visual convergence. This asserts the
  * absence so that the HOLD is measurable and a later arrival is deliberate.
  */
-describe('Security Intelligence is not implemented on this lineage', () => {
-  it('no Security domain directory exists', () => {
-    for (const absent of [
+describe('Security Intelligence is a preview surface, and the live route is still shut', () => {
+  /*
+    ── THIS TRIPWIRE FIRED, AND IT IS RETIRED DELIBERATELY ───────────────────
+
+    It previously asserted that NONE of four Security paths existed, and the comment above
+    states its purpose: to make the HOLD measurable "so that a later arrival is
+    deliberate." Part IX has now been converged from
+    `MAIN-SECURITY-PARTIX-FINAL-VISUAL-AUTHORITY-R1` (42-row zone authority, six PO
+    rulings) and `H-SECURITY-PARTIX-ALPHA-VISUAL-R2`, so three of the four paths exist on
+    purpose and this assertion fired exactly as designed. The arrival is the deliberate one
+    it was waiting for.
+
+    It is REPLACED WITH A PRESENCE ASSERTION CARRYING THE SAME TEETH, never deleted — the
+    discipline Main set for the Economy tripwire, and the reason a control does not quietly
+    become nothing the moment the thing it guarded arrives.
+
+    THE HALF THAT STILL MATTERS IS THE FOURTH PATH. `app/security` is the LIVE route; it is
+    not authorised, and it is asserted absent below with the same force the whole set used
+    to carry. A preview surface existing is not the route opening, and this is where that
+    distinction is enforced.
+  */
+  it('the three implemented Security paths exist, deliberately', () => {
+    for (const present of [
       join(SRC, 'lib', 'security'),
       join(SRC, 'components', 'security'),
-      join(SRC, 'app', 'security'),
       join(SRC, 'app', 'security-visual-preview'),
-    ]) expect(`${absent}: ${existsSync(absent)}`).toBe(`${absent}: false`);
+    ]) expect(`${present}: ${existsSync(present)}`).toBe(`${present}: true`);
+  });
+
+  it('and the LIVE Security route does NOT — app/security is still absent', () => {
+    const live = join(SRC, 'app', 'security');
+    expect(`${live}: ${existsSync(live)}`).toBe(`${live}: false`);
   });
 
   it('SECURITY is a vocabulary member with no configuration and no surface', async () => {

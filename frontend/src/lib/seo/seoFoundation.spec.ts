@@ -501,7 +501,24 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       THE COUNT MOVING IS THE DISCLOSURE. A preview route that did not move this number
       would be a route nobody had to decide about.
     */
-    expect(pages).toHaveLength(37);
+    /*
+      PART IX · TWO MORE ROUTES, NAMED BY MAIN'S OWN AUTHORITY.
+
+      `/security-visual-preview` and `/security-visual-preview/compact`, landed by
+      H-SECURITY-PARTIX-ALPHA-VISUAL-R2. `MAIN-SECURITY-PARTIX-FINAL-VISUAL-AUTHORITY-R1`
+      names the address and its terms: `noindex`, no `intelligenceModules.ts` home card
+      because *"a card on the home surface asserts the product exists"*, and *"reuses the
+      eventual Part IX components … no component exists only for the preview."*
+
+      Main's own tripwire travels with them and is asserted below: `frontend/src/app/security`
+      does not exist, and `/security` stays 404.
+
+      37 -> 39 ON THIS LINEAGE. H's delivered file reads 41 because H's lineage also carries
+      `/politics-visual-preview` and its compact twin, which this lineage does not have. The
+      Part IX delta was applied on its own rather than taking H's count wholesale — adopting
+      41 here would have asserted two Politics routes into existence that no file provides.
+    */
+    expect(pages).toHaveLength(39);
     expect(pages).toContain('/');
     /*
       AND `/economy` IS ASSERTED ABSENT, HERE, BESIDE THE COUNT.
@@ -511,12 +528,13 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       reading of the same fact, in the file that would notice a route appearing. The two
       would have to be defeated together.
     */
-    for (const shut of ['/economy', '/economy/compact']) {
+    for (const shut of ['/economy', '/economy/compact', '/security']) {
       expect(`${shut}: ${pages.includes(shut)}`).toBe(`${shut}: false`);
     }
     /* and the new ones are present, so a later removal is caught as loudly as an addition */
     for (const added of ['/market', '/market/compact',
-      '/economy-visual-preview', '/economy-visual-preview/compact']) {
+      '/economy-visual-preview', '/economy-visual-preview/compact',
+      '/security-visual-preview', '/security-visual-preview/compact']) {
       expect(`${added}: ${pages.includes(added)}`).toBe(`${added}: true`);
     }
     for (const known of ['/map', '/search', '/privacy', '/terms', '/source-policy', '/support', '/workspace', '/history']) {

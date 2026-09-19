@@ -100,3 +100,28 @@ export * from './official-data/admission-evaluator';
 export * from './humanitarian/spatial-geometry';
 export * from './humanitarian/geometry-authority';
 export * from './humanitarian/authority-cadence';
+
+/*
+  SECURITY — THE ACCEPTED PART IX CONTRACT, CONVERGED ONTO THIS LINEAGE.
+
+  The module is the accepted authority from `integration/alpha-convergence-2` `3db5a09`
+  (`MAIN-SECURITY-PLATFORM-1-R1`), landed byte-identical except for ONE repointed import.
+  H measured two blockers that stopped it compiling here, and both are closed:
+
+    A · `security/index.ts` imported `EvidenceRole · SourceProvenance · SourceType` from
+        `'../sourceModel'`, a module this lineage split into `source-provenance.ts` and
+        `source-type.ts`. The import now names the two current owners. `sourceModel` was
+        NOT recreated — see the note at that import.
+
+    B · Re-exporting the module through this barrel collided on those three names, which
+        this barrel already exports from their owning modules above. The Security module's
+        convenience re-export was withdrawn rather than the owners being renamed or
+        duplicated, so each semantic type keeps EXACTLY ONE authoritative export. See the
+        note at that site.
+
+  `absence.ts` is the N-11 presentation vocabulary at the path Main ruled. It is kept as
+  its own file and exported beside the contract, never folded into it: it carries Main's
+  reader labels verbatim and must have exactly one definition in the tree.
+*/
+export * from './security';
+export * from './security/absence';
