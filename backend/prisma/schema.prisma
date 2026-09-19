@@ -740,3 +740,227 @@ model SituationShadowDecision {
   @@index([decidedAt])
   @@index([candidateSituationId])
 }
+
+// ============================================================================
+// OFFICIAL-DATA SNAPSHOT RETENTION — P-2, THE FOUR PERSISTENCE MODELS.
+//
+// Contract: shared/src/official-data/snapshot.ts (SR-1 … SR-22).
+// Substrate: Postgres `Bytes`, by Product Owner decision P-1.
+//
+// FOUR MODELS, AND THE NAMES ARE MAIN'S, NOT CHOSEN HERE. P-2 of
+// MAIN-OFFICIAL-DATA-SNAPSHOT-RETENTION-R1 §2 names them exactly:
+// SnapshotPayload, SnapshotRetrieval, SnapshotPin, SnapshotTombstone.
+//
+// WHY FOUR TABLES AND NOT ONE. Postgres could hold all of this in one row, and
+// that is precisely the shape the contract refuses. The four concerns have
+// different cardinalities and different lifetimes:
+//
+//   bytes          one per DISTINCT BODY        immutable, sometimes collected
+//   retrieval      one per FETCH                append-only, never deleted
+//   pin            one per CITATION             created and released, not deleted
+//   tombstone      one per COLLECTION           terminal, never deleted
+//
+// Collapsing them loses SR-3/SR-4 outright: "fetch the same unchanged dataset
+// twice" must cost one row and zero bytes, and it cannot if the bytes live on
+// the retrieval row.
+//
+// WHERE REQUEST IDENTITY LIVES, AND WHY IT IS NOT A FIFTH TABLE. Main's
+// contract nests `OfficialDataRequestIdentity` INSIDE `OfficialDataRetrieval`
+// — one fetch is one request — and P-2 names four models, not five. So the
+// request is carried as columns on SnapshotRetrieval. It is still structure and
+// never a URL: providerId, endpointId and a provider-relative path are separate
+// columns, and the parameters are an ORDERED JSON ARRAY of {key,value} pairs
+// rather than a query string. SR-22's credential refusal operates on that
+// structure, which is what makes it enforceable at all.
+// ============================================================================
+
+/// SR-1 · IDENTITY IS THE BYTES. One row per DISTINCT BODY, addressed by the
+/// lowercase-hex SHA-256 of the exact bytes as received.
+///
+/// THE ADDRESS IS THE PRIMARY KEY, not a uuid with a unique index beside it.
+/// That is what makes SR-4 free: a second fetch of unchanged bytes collides on
+/// the key and writes nothing, rather than needing a lookup-then-insert race.
+model SnapshotPayload {
+  /// 64 lowercase hex characters. Computed BY THE STORE from the bytes it
+  /// holds — SR-2 — never supplied by a caller.
+  contentAddress String @id
+
+  /// THE RETAINED BYTES. Nullable, and the two reasons it may be null are
+  /// different facts kept distinct by `storageState` below:
+  ///   - NOT_RETAINED_BY_RIGHTS — the publisher's terms forbade retention, so
+  ///     the bytes were hashed and measured but never written;
+  ///   - COLLECTED — the bytes were removed under a named policy, and a
+  ///     SnapshotTombstone records that they existed.
+  /// "There is no snapshot" is a third and much weaker fact, and it is the one
+  /// this column is shaped never to be confused with.
+  bytes Bytes?
+
+  /// Byte length of the bytes that produced the address. Survives collection,
+  /// so a tombstoned payload still reports how big the evidence was.
+  byteLength Int
+
+  /// The media type the publisher returned, verbatim from the header. Never
+  /// inferred from an extension and never from the body.
+  mediaType String
+
+  /// STORAGE DISPOSITION — three values: RETAINED, COLLECTED,
+  /// NOT_RETAINED_BY_RIGHTS.
+  ///
+  /// PINNED IS DELIBERATELY NOT ONE OF THEM. The contract's fourth retention
+  /// class is DERIVED from the pin table at read time, because a denormalised
+  /// PINNED flag can drift out of step with the pins that justify it — and a
+  /// payload wrongly believed unpinned is exactly the byte that gets collected.
+  /// See `retentionClassOf()` in the store.
+  storageState String @default("RETAINED")
+
+  /// When these bytes were first seen. A second, identical fetch does not
+  /// change it — that is what `retrievals` is for.
+  firstRetainedAt DateTime @default(now())
+
+  retrievals SnapshotRetrieval[]
+  pins       SnapshotPin[]
+  tombstone  SnapshotTombstone?
+
+  @@index([storageState, firstRetainedAt])
+}
+
+/// SR-3 · ONE FETCH, ONE ROW. Every retrieval is its own record even when it
+/// produced bytes that were already held.
+///
+/// NO CASCADE FROM THE PAYLOAD, ON PURPOSE. Section 4 of the retention policy
+/// forbids deleting a retrieval row at all, so there is no delete for a cascade
+/// to follow; collection nulls the bytes and leaves every row standing.
+model SnapshotRetrieval {
+  /// Caller-supplied and unique per fetch — the contract's `retrievalId`.
+  retrievalId String @id
+
+  // REQUEST IDENTITY — SR-22 operates on these.
+
+  /// As the official-source registry names it. NEVER a hostname.
+  providerId String
+
+  /// The provider's own endpoint/dataflow identifier, verbatim.
+  endpointId String
+
+  /// Provider-relative. No scheme, no host, no query — refused if it contains
+  /// either, because a URL here would smuggle parameters past the credential
+  /// check that only reads `parameters`.
+  requestPath String
+
+  /// ORDERED array of {key, value}. An array rather than an object so the
+  /// order sent is the order recorded, and pairs rather than a query string so
+  /// a later reader sees exactly what was pinned.
+  parameters Json
+
+  /// When the request was dispatched.
+  requestedAt DateTime
+
+  // RESULT.
+
+  /// When the response completed or failed.
+  retrievedAt DateTime
+
+  httpStatus Int
+
+  /// The type the publisher returned. Cross-checked against the payload's in
+  /// `parseRetained()`.
+  mediaType String
+
+  byteLength Int
+
+  /// Absent only when completeness is FAILED and no bytes arrived at all.
+  contentAddress String?
+  payload        SnapshotPayload? @relation(fields: [contentAddress], references: [contentAddress])
+
+  /// COMPLETE, TRUNCATED or FAILED. Only COMPLETE may stand behind a published
+  /// figure — SR-16. TRUNCATED exists because the streaming byte cap aborts
+  /// mid-body, and a capped response must never be mistaken for a short one.
+  completeness String
+
+  // RIGHTS, FROZEN AT RETRIEVAL — SR-18.
+
+  /// The lane's rights grade for this provider AT THE TIME OF THIS FETCH.
+  rightsGrade String
+
+  /// The citable instrument the grade rests on. A grade without its instrument
+  /// is an opinion.
+  rightsInstrumentRef String
+
+  /// Whether the publisher's terms permitted retaining the bytes. `false` is
+  /// legitimate and has consequences — `retrievalIsReproducible()` reports them
+  /// rather than swallowing them.
+  payloadRetentionPermitted Boolean
+
+  // PUBLISHER EDITION METADATA — SR-9, SR-10.
+
+  /// VERBATIM AND OPAQUE. For Eurostat this carries UPDATE_DATA, OBS_COUNT,
+  /// OBS_PERIOD_OVERALL_LATEST and DOI. The platform stores them and NEVER
+  /// interprets them: which edition is newer is provider semantics — SR-13.
+  editionAnnotations Json
+
+  /// Where the publisher declares one. ABSENT rather than guessed.
+  publisherReleasedAt DateTime?
+
+  /// Where the publisher declares one. ABSENT rather than guessed.
+  publisherChangedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([contentAddress, retrievedAt])
+  @@index([providerId, endpointId, retrievedAt])
+  @@index([retrievedAt])
+}
+
+/// SR-19 · WHAT MAKES THIS AN EVIDENCE STORE RATHER THAN A CACHE.
+///
+/// A payload is PINNED while any unreleased pin cites it. `citedBy` is an
+/// observation lineage key and NEVER free text: a pin whose reason is prose
+/// cannot be re-derived, and a pin that cannot be re-derived cannot be safely
+/// released.
+model SnapshotPin {
+  id String @id @default(uuid())
+
+  contentAddress String
+  payload        SnapshotPayload @relation(fields: [contentAddress], references: [contentAddress])
+
+  /// The observation lineage key of the published figure that cites these
+  /// bytes.
+  citedBy String
+
+  pinnedAt DateTime
+
+  /// RELEASED, NOT DELETED. Un-publishing makes a payload eligible after the
+  /// grace window rather than collected on the spot, so republishing inside the
+  /// window costs nothing and a mistaken un-publish is recoverable. A deleted
+  /// pin row would erase the very timestamp the grace period is measured from.
+  releasedAt DateTime?
+
+  /// One citation pins once. Re-citing the same figure is idempotent, not a
+  /// second pin that must later be released twice.
+  @@unique([contentAddress, citedBy])
+  @@index([contentAddress, releasedAt])
+}
+
+/// SR-20 · COLLECTION REMOVES BYTES, NEVER THE RECORD.
+///
+/// So a later reader learns "evidence existed, was this size and this type, and
+/// was collected under policy P on date D" — a different and far more useful
+/// fact than "there is no snapshot".
+model SnapshotTombstone {
+  /// One collection per payload, so the address is the key.
+  contentAddress String          @id
+  payload        SnapshotPayload @relation(fields: [contentAddress], references: [contentAddress])
+
+  /// Carried on the tombstone as well as the payload, so the record is
+  /// self-describing if it is ever read alone.
+  byteLength Int
+  mediaType  String
+
+  collectedAt DateTime
+
+  /// The NAMED policy that authorised it. Never free text, and there is no
+  /// `force` anywhere in this contract.
+  policyId String
+
+  @@index([collectedAt])
+}

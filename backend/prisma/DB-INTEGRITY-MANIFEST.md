@@ -119,3 +119,74 @@ dependency order (ClusterMember → Cluster → Snapshot → Situation; ShadowDe
   `features`, `reason` and `discriminatorBasis`. The module declares no controller, no file
   in the namespace carries an HTTP decorator, and `app.module.ts` is the only importer
   anywhere — all asserted by `situationWriteGate.spec.ts`.
+
+---
+
+# ADDENDUM — ALPHA-OFFICIAL-DATA-SNAPSHOT-POSTGRES-R1
+
+**Migration `20260919030000_add_official_data_snapshot_store`.** P-1 (Postgres `Bytes`) and
+P-2 (the four persistence models) of `MAIN-OFFICIAL-DATA-SNAPSHOT-RETENTION-R1`.
+
+## A1 · EXACT HASHES
+
+```
+sha256  75082a2d6c3b75798f44f0daca54dd22db7e6aee8b8fa64cedd4a5c7ab970e8c   37665 B
+        backend/prisma/schema.prisma
+
+sha256  611a6db246631b1c2c5ae00c992997e148f8346179b7506a4d3aed8cb9d8be50   18552 B
+        backend/prisma/migrations/20260919030000_add_official_data_snapshot_store/migration.sql
+
+sha256  24307732d379f94a3de4b85be511c52a3ea480d7a7271c0532141de5b9947fc3    3566 B
+        backend/prisma/migrations/20260919030000_add_official_data_snapshot_store/DOWN.sql
+```
+
+`schema.prisma` was `9d2507760af86d4aedb2f1890191af775605517e45d2ec68a5016823a6c0d1f4` (28406 B)
+before this addendum. The change is **purely additive**: 224 appended lines declaring four new
+models. No existing model, field, index or attribute was edited, and a diff confirms the first
+742 lines are byte-identical.
+
+## A2 · MIGRATION IDENTITY
+
+```
+NAME      20260919030000_add_official_data_snapshot_store
+POSITION  immediately after 20260901050000_add_situation_memory
+CLASS     ADDITIVE — four new tables; no existing table altered, dropped or renamed
+APPLIED   never (no deployment has occurred)
+```
+
+The `CREATE TABLE` / `CREATE INDEX` / `ADD FOREIGN KEY` section was **generated** by
+`prisma migrate diff --from-schema <pre> --to-schema <post> --script`, so the table shapes are
+the generator's rather than hand-typed. The CHECK constraints and the nine triggers below them
+are hand-written, exactly as they were for the Situation migration, because Prisma cannot
+express them.
+
+## A3 · THE SAME OPERATOR HAZARD AS BEFORE
+
+Prisma records a checksum of the WHOLE migration file, comments included. This one has **never
+been applied to any database**, so it is still editable. **After the first
+`prisma migrate deploy`, neither `migration.sql` nor its comments may be edited again for any
+reason** — Prisma would fail with a modified-migration error.
+
+## A4 · ONE HAZARD THAT IS NEW, AND IT IS THE MORE SERIOUS ONE
+
+`DOWN.sql` for this migration **destroys retained evidence**. Every pinned payload it drops is
+the bytes behind a figure the product has published, and — by the finding that motivates the
+whole capability, that publishers serve different editions of the same dataset and do not
+version past data — **those bytes cannot be re-fetched**. They are recoverable only from a
+database backup.
+
+The script therefore opens with a guard that **refuses to run while any unreleased
+`SnapshotPin` exists**. That guard is asserted by
+`official-data-snapshot.migration.spec.ts`, not merely written.
+
+## A5 · WHAT IS VALIDATED, AND WHAT IS NOT
+
+| gate | state |
+|---|---|
+| `prisma validate` | **passes** |
+| `prisma generate` | **passes** — the four delegates are produced |
+| generator-produced DDL | **yes**, via `migrate diff` |
+| schema ↔ SQL column conformance, both directions | **asserted**, 41 tests |
+| DOWN drops every function UP creates | **asserted** |
+| additive-only (no ALTER/DROP/RENAME of an existing object) | **asserted** |
+| **applied to a real PostgreSQL** | **NOT DONE.** Docker was not running in this environment and no disposable database was reachable; no destructive operation against an Alpha or Production database is authorised. The CHECK constraints and triggers are therefore proven by inspection and by conformance assertions, **not by execution** — and that is the one outstanding validation step before deployment |
