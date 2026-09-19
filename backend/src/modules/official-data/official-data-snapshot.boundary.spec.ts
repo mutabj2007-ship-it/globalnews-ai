@@ -56,19 +56,54 @@ describe('the snapshot module reaches into no other domain', () => {
     },
   );
 
-  it('opens no evidence pipeline of its own — nothing here fetches', () => {
+  it('constructs no HTTP client anywhere in the module', () => {
     /*
-      THE STORE IS HANDED BYTES; IT DOES NOT GO AND GET THEM. Every fetch that
-      feeds it passes the accepted safe-fetch order of operations first, and a
-      second retrieval path inside the store would bypass every one of those
-      controls while looking like part of an approved capability.
+      ── RESTATED BY THE CANONICAL ADMISSION WORK, AND HERE IS WHY ───────────
+
+      It read "nothing here fetches", matched with /\bfetch\(/. That was exactly right
+      while this module was a STORE — handed bytes, never going to get them.
+
+      The module now also contains the CANONICAL TRANSPORT PORT, whose entire job is to
+      be the one place official-data reaches a network. Its port method is CALLED
+      `fetch`, so the old pattern matched a method name and reported a boundary violation
+      that had not happened.
+
+      Loosening the regex to let `fetch` through would have thrown the control away. So
+      the rule is restated as the thing it was protecting, which has not changed: NO HTTP
+      CLIENT IS IMPORTED OR CONSTRUCTED HERE. A second retrieval path inside this module
+      would bypass every step of the accepted safe-fetch order of operations while
+      looking like part of an approved capability — and building one requires a client.
     */
     for (const [name, src] of files) {
-      expect([name, /\bfetch\(|axios|HttpService|https?\.request|node:https/i.test(src)]).toEqual([
+      expect([
         name,
-        false,
-      ]);
+        /axios|HttpService|node:https?|require\(['"]https?['"]\)|https?\.request\(|new XMLHttpRequest/i.test(
+          src,
+        ),
+      ]).toEqual([name, false]);
     }
+  });
+
+  it('and the transport reaches the network ONLY through an injected function', () => {
+    /*
+      The other half, and the half that makes the rule above more than a naming
+      convention. The transport is allowed to be the network SEAM; it is not allowed to
+      BE the network. It holds an injected `WireFetch` and can do nothing that function
+      does not do for it — so this package still contains no path to a real request,
+      which is what "no provider activation" means structurally rather than as a promise.
+    */
+    const transport = files.find(([n]) => n === 'official-data-transport.node.ts');
+    expect(transport).toBeDefined();
+
+    const src = transport![1];
+
+    expect(/type WireFetch =/.test(src)).toBe(true);
+    expect(/private readonly wireFetch: WireFetch/.test(src)).toBe(true);
+
+    // The only call it makes is to the injected function — never to a global `fetch`.
+    expect(/this\.wireFetch\(/.test(src)).toBe(true);
+    expect(/(?:await|=|return)\s+fetch\(/.test(src)).toBe(false);
+    expect(/globalThis\.fetch/.test(src)).toBe(false);
   });
 
   it('reads no secret and activates no provider', () => {
@@ -93,12 +128,30 @@ describe('the snapshot module reaches into no other domain', () => {
   });
 
   it('and the product source being scanned is not empty (positive control)', () => {
+    /*
+      THIS PINNED AN EXACT FILE LIST, AND THAT WAS THE SAME MISTAKE TWICE OVER.
+
+      The list froze the two files the module happened to contain when it was written, so
+      adding the canonical transport and the Market binding — both squarely inside this
+      module's remit — failed a control whose actual job is to prove THE SCAN IS LOOKING
+      AT SOMETHING. The shared/ boundary assertion in this same suite was corrected for
+      precisely this reason one revision earlier; the lesson evidently needed applying
+      here too.
+
+      Restated as the property: the scanned product set is non-empty and still contains
+      the files the rules above are about. A future file is covered automatically, which
+      is what a boundary control is for — it should make new code prove itself, not
+      require permission to exist.
+    */
     const product = files.filter(([n]) => !n.endsWith('.spec.ts')).map(([n]) => n);
 
-    expect(product.sort()).toEqual([
-      'official-data-snapshot.prisma-port.ts',
+    expect(product.length).toBeGreaterThanOrEqual(2);
+    for (const required of [
       'official-data-snapshot.store.ts',
-    ]);
+      'official-data-snapshot.prisma-port.ts',
+    ]) {
+      expect([required, product.includes(required)]).toEqual([required, true]);
+    }
   });
 
   it('schedules nothing — there is still no scheduler in this backend', () => {
