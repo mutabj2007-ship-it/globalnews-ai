@@ -20,6 +20,7 @@ import { WatchCta, type WatchCtaLabels } from './monetization/WatchCta';
 import { AssessmentTimelineStrip, type TimelineLabels } from './monetization/AssessmentTimeline';
 import { watchCtaIsSolePrimary, type WatchCtaStage } from '@/lib/map/monetization/watchCtaLadder';
 import { MachineReadable } from '@/lib/typography/runBoundary';
+import { continentDisplayName } from '@/lib/map/geography/displayName';
 import type { LocationProvenance } from '@/lib/spatial/spatialPrecision';
 
 /**
@@ -69,6 +70,19 @@ export interface EvidenceSelectionCardLabels {
   readonly provenanceLabel: string;
   readonly provenanceValues: Readonly<Record<LocationProvenance, string>>;
   readonly levels: Readonly<Record<DisplayPrecision, string>>;
+  /**
+   * THE FIVE REGISTRY GROUPINGS, LOCALISED — MAP-DISPLAY-NAME-CENTRALISATION.
+   *
+   * `identity.region` is the country registry's own English grouping, and the
+   * identity line rendered it raw: a Polish reader met `KEN · AFRICA`. It
+   * arrives here as DATA and is localised at the edge that shows it, which is
+   * why this record lives in the labels rather than the value being translated
+   * upstream in `MapPageClient`.
+   *
+   * Shared with `SelectionCallout`, which is handed this same label block, so
+   * the two surfaces cannot disagree about what continent a country is in.
+   */
+  readonly continents: Readonly<Record<string, string>>;
   readonly verifiedReports: string;
   readonly unverifiedQualifier: string;
   readonly noEvidenceTitle: string;
@@ -384,7 +398,9 @@ export function EvidenceSelectionCard({
             {identity.region && (
               <>
                 {' · '}
-                <span data-gn="card-region">{identity.region}</span>
+                <span data-gn="card-region">
+                  {continentDisplayName(identity.region, labels.continents)}
+                </span>
               </>
             )}
           </>

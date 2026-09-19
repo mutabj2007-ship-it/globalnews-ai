@@ -11,6 +11,7 @@ import { accountSignInUrl } from '@/lib/api/accountBase';
 import { rememberMapStateForSignIn } from '@/lib/map/state/signInReturnState';
 import type { EvidenceSelectionCardLabels, FollowRelationship } from './EvidenceSelectionCard';
 import { MachineReadable } from '@/lib/typography/runBoundary';
+import { continentDisplayName } from '@/lib/map/geography/displayName';
 import type { LocationProvenance } from '@/lib/spatial/spatialPrecision';
 
 /**
@@ -195,7 +196,9 @@ export function SelectionCallout({
               className="mt-[2px] font-gn-mono text-[8.5px] uppercase tracking-[0.14em] text-sp-ink-3"
             >
               <MachineReadable>{identity.iso3}</MachineReadable>
-              {identity.region && <> {'·'} {identity.region}</>}
+              {identity.region && (
+                <> {'·'} {continentDisplayName(identity.region, labels.continents)}</>
+              )}
             </p>
           )}
         </div>

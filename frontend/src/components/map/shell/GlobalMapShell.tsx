@@ -113,6 +113,8 @@ import {
 import { accountSignInUrl } from '@/lib/api/accountBase';
 /* CHECKPOINT F — the product's ONE language persistence path, reused. */
 import { persistLanguageSelection } from '@/lib/i18n/languages';
+/* MAP-DISPLAY-NAME-CENTRALISATION — the one reader-facing place-name path. */
+import { localisedCountryName } from '@/lib/map/geography/displayName';
 
 /*
   The same released sign-in path the accepted anonymous Follow state already
@@ -1037,6 +1039,27 @@ export function GlobalMapShell({
   const selectedProvenance: LocationProvenance | undefined = undefined;
 
   /*
+    ══ THE SHELL'S COUNTRY-NAME FALLBACK CHAIN, WRITTEN ONCE ════════════════
+
+    MAP-DISPLAY-NAME-CENTRALISATION. Four places on this surface needed "the
+    reader's name for this ISO-3", and all four had written their own version
+    of it against the English-only registry.
+
+    `localisedCountryName` supplies no fallback on purpose, so the chain is
+    stated here — localised name, then the registry's English, then nothing —
+    and each call site decides what "nothing" means for it. The rail falls back
+    to the id because a title must render something; the city and region cards
+    fall back to the ISO-3 they were given.
+  */
+  const countryNameFor = useCallback(
+    (iso3: string): string | null =>
+      localisedCountryName(iso3, language) ??
+      COUNTRIES.find((country) => country.iso3 === iso3)?.name ??
+      null,
+    [language],
+  );
+
+  /*
     ── THE CARD SHOWS A NAME, NOT AN IDENTIFIER ─────────────────────────────
 
     Found by the browser run: selecting a country with no retained evidence
@@ -1065,7 +1088,22 @@ export function GlobalMapShell({
         */
         selection.kind === 'REGION'
         ? (region?.name ?? selection.id)
-        : (COUNTRIES.find((country) => country.iso3 === selection.id)?.name ?? selection.id));
+        : /*
+            ══ THE NAME IS RESOLVED IN ONE PLACE — MAP-DISPLAY-NAME-CENTRALISATION
+
+            This read `COUNTRIES.find(...)?.name`, and the comment above it
+            claimed "the registry already holds the name, in the reader's
+            language". IT DOES NOT. `COUNTRIES` is English-only — `name:
+            'Kenya'`, `region: 'Africa'` — so a Polish reader met "Kenya" here,
+            "Kenya" in the callout and "Kenya" beside a city, from four copies
+            of this same line.
+
+            `localisedCountryName` is now the one place that ISO-3 to
+            reader-facing-name bridge is written. It applies NO fallback of its
+            own, so this surface keeps the two it already had: the registry
+            name, then the id for a code the registry does not hold.
+          */
+          (countryNameFor(selection.id) ?? selection.id));
 
   /*
     ══ THE SELECTION CALLOUT ════════════════════════════════════════════════
@@ -1399,11 +1437,9 @@ export function GlobalMapShell({
         <CityIdentityCard
           city={city}
           geographyId={selection.id}
+          /* One bridge, same as the rail title and the region card. */
           countryName={
-            city?.countryIso3
-              ? (COUNTRIES.find((candidate) => candidate.iso3 === city.countryIso3)?.name ??
-                city.countryIso3)
-              : undefined
+            city?.countryIso3 ? (countryNameFor(city.countryIso3) ?? undefined) : undefined
           }
           /*
             ONE VOCABULARY FOR ONE PRECISION. The kind token beside the evidence
@@ -1453,8 +1489,7 @@ export function GlobalMapShell({
           */
           withinCountryName={
             region?.withinCountryIso3
-              ? (COUNTRIES.find((candidate) => candidate.iso3 === region.withinCountryIso3)?.name ??
-                region.withinCountryIso3)
+              ? (countryNameFor(region.withinCountryIso3) ?? region.withinCountryIso3)
               : undefined
           }
           labels={spatial.region}

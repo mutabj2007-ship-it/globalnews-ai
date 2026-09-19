@@ -55,7 +55,7 @@ import {
 import type { SelectionDetail } from '@/components/map/shell/GlobalMapShell';
 import { useCountryFollows } from '@/components/home/useCountryFollows';
 import type { EvidenceGeography } from '@/lib/map/evidence/evidenceModel';
-import { getLocalizedCountryName } from '@globalnews-ai/shared';
+import { localisedCountryName as localisedCountryNameForIso3 } from '@/lib/map/geography/displayName';
 import { CountrySearchBox } from '@/components/map/CountrySearchBox';
 import { CountryPanel } from '@/components/map/CountryPanel';
 import { MapTooltip } from '@/components/map/MapTooltip';
@@ -254,10 +254,19 @@ interface MapPageClientProps {
  * already caught once.
  */
 function localisedCountryName(iso3: string, fallback: string, language: LanguageCode): string {
-  const meta = COUNTRIES.find((country) => country.iso3 === iso3);
+  /*
+    MAP-DISPLAY-NAME-CENTRALISATION — the bridge moved, the fallback did not.
 
-  const source = sourceLanguageFor(language);
-  return (meta && source ? getLocalizedCountryName(meta.iso2, source) : undefined) ?? fallback;
+    This function used to spell out the ISO-3 to ISO-2 to `sourceLanguageFor`
+    to `getLocalizedCountryName` sequence itself, and `labelSources` spelled out
+    the identical sequence a second time. It is now in one module and both
+    callers use it.
+
+    The fallback STAYS HERE, because it is this surface's answer and not a
+    general one: the backend's own `countryName`, never the code. A card headed
+    "RWA" is the defect the browser run already caught once.
+  */
+  return localisedCountryNameForIso3(iso3, language) ?? fallback;
 }
 
 /*

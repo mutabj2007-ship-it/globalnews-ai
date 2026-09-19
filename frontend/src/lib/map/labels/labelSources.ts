@@ -1,5 +1,5 @@
-import { COUNTRIES, getLocalizedCountryName, type LanguageCode } from '@globalnews-ai/shared';
-import { sourceLanguageFor } from '@/lib/i18n/sourceLanguage';
+import { COUNTRIES, type LanguageCode } from '@globalnews-ai/shared';
+import { localisedCountryName as localisedCountryNameForIso3 } from '@/lib/map/geography/displayName';
 import { computeFeatureBounds, getCountryFeatureCollection, type CountryFeature } from '@/lib/map/countryGeometry';
 import { type LabelCandidate, countryLabelVisible, estimateLabelBox } from './labelPlacement';
 import { REFERENCE_PLACE_SEEDS } from './referencePlaces';
@@ -522,11 +522,19 @@ export function referenceLabelCandidates(input: ReferenceLabelInput): readonly L
     if (point === null) continue;
 
     const meta = seed.iso3 === undefined ? undefined : COUNTRIES.find((country) => country.iso3 === seed.iso3);
-    const source = sourceLanguageFor(input.language);
+    /*
+      MAP-DISPLAY-NAME-CENTRALISATION — the same three-step bridge
+      `MapPageClient` used to spell out, now called rather than repeated. The
+      fallback is unchanged and is this surface's own: a map label falls back to
+      the registry's English name, because a label with no text is simply not
+      drawn.
+    */
     const text =
       seed.nameKey !== undefined
         ? input.territoryNames[seed.nameKey]
-        : ((meta && source ? getLocalizedCountryName(meta.iso2, source) : undefined) ?? meta?.name);
+        : ((seed.iso3 === undefined
+            ? undefined
+            : localisedCountryNameForIso3(seed.iso3, input.language)) ?? meta?.name);
 
     if (text === undefined) continue;
 

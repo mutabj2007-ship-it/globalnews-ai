@@ -1493,6 +1493,31 @@ export const en = {
           INTERPRETED: 'Interpreted \u2014 unverified',
           CONTESTED: 'Contested between sources',
         },
+        /*
+          THE COUNTRY REGISTRY'S FIVE GROUPINGS — MAP-DISPLAY-NAME-CENTRALISATION.
+
+          Keyed by the registry's own English values, because that is what
+          arrives on `identity.region`. `KEN · AFRICA` rendered that value raw
+          in every language.
+
+          DELIBERATELY NOT `map.spatial.continents`, which already exists one
+          level up and is a DIFFERENT SET: that block is canvas LABEL copy keyed
+          `africa / northAmerica / southAmerica / …` — six landmasses, with the
+          Americas split the way a map draws them. The registry groups countries
+          into five and keeps the Americas together, so a lookup against the
+          label block would miss `Americas` and render the English through the
+          gap.
+
+          Part I §E block 01: this is NOT a REGION-precision record, which is
+          why it is not folded into `levels` below.
+        */
+        continents: {
+          Americas: 'Americas',
+          Europe: 'Europe',
+          Asia: 'Asia',
+          Africa: 'Africa',
+          Oceania: 'Oceania',
+        },
         levels: {
           EXACT: 'Exact location',
           CITY: 'City',

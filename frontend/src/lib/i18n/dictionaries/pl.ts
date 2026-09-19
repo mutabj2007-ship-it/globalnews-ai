@@ -1227,6 +1227,23 @@ export const pl: Dictionary = {
           INTERPRETED: 'Zinterpretowana \u2014 niepotwierdzona',
           CONTESTED: 'Sporna mi\u0119dzy \u017ar\u00f3d\u0142ami',
         },
+        /*
+          MAP-DISPLAY-NAME-CENTRALISATION — the country registry's five
+          groupings, keyed by its own English values.
+
+          See `en.ts`: this is deliberately NOT the same set as
+          `map.spatial.continents` one level up, which is canvas label copy
+          keyed by six landmasses with the Americas split in two. And per
+          Part I §E block 01 it is not a REGION-precision record, which is why
+          it is not folded into `levels` below.
+        */
+        continents: {
+          Americas: 'Ameryki',
+          Europe: 'Europa',
+          Asia: 'Azja',
+          Africa: 'Afryka',
+          Oceania: 'Oceania',
+        },
         levels: {
           EXACT: 'Dok\u0142adna lokalizacja',
           CITY: 'Miasto',
