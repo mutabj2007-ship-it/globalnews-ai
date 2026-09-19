@@ -1040,6 +1040,25 @@ describe('ECON-UI-CONTRACT-ADAPT-1 · gap-slot integration', () => {
       expect(gapReason(s.latest)).toBe('NO_PRODUCER');
     }
   });
+
+  /*
+    ALPHA-ECONOMY-READINESS-R1 — AND IT STATES NO CADENCE EITHER.
+
+    The same rule as the assessment, applied to the one field that was still guessing. The
+    contract carries it in the doc comment on both the type and the field — "ABSENT rather than
+    guessed" — and UNDETERMINED freshness is the supported consequence, not a degraded one.
+
+    The literal is forbidden at the SOURCE as well as in the value, because a later edit that
+    reintroduces it would otherwise only be caught if someone happened to read the six objects.
+    Fixtures keep theirs: `fixtures.ts` is a self-declaring demo whose cadences are authored
+    deliberately and vary per series, which is exactly what a producer supplies.
+  */
+  it('and it states NO CADENCE, because no publisher states one', () => {
+    for (const s of PRODUCTION_SHAPED_SUBJECT.indicators) {
+      expect([s.model.seriesId, s.model.cadence]).toEqual([s.model.seriesId, undefined]);
+    }
+    expect(code(join(__dirname, 'productionSubject.ts'))).not.toMatch(/cadence:\s*'[A-Z]+'/);
+  });
 });
 
 describe('ECON-UI-CONTRACT-ADAPT-1 · release / value / freshness / assessment / corridor', () => {

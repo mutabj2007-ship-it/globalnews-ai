@@ -56,7 +56,26 @@ function structuralSeries(id: string, name: string, shortLabel: string, unit: st
       economyIso2: 'ZZ',
       unit,
       category,
-      cadence: 'MONTHLY',
+      /*
+        ALPHA-ECONOMY-READINESS-R1 — NO CADENCE IS STATED, BECAUSE NO PUBLISHER STATES ONE.
+
+        This previously read `cadence: 'MONTHLY'` on all six structural series. That is the same
+        defect the assessment correction below removed: a real finding asserted over zero
+        evidence. The shared contract says so twice — on the type, "The publisher's stated
+        release cadence. ABSENT rather than guessed", and on the field itself, "Absent rather
+        than guessed — freshness is UNDETERMINED without it".
+
+        It was also WRONG, measurably, and not merely unfounded. Against the resolved Eurostat
+        series catalogue two of these six are not monthly at all: GROWTH_GDP (`namq_10_gdp`) is
+        QUARTERLY and PUBLIC_DEBT_FISCAL (`gov_10dd_edpt1`) is ANNUAL. A uniform MONTHLY would
+        have made a healthy annual debt figure read as overdue the moment a producer was wired —
+        the freshness false-alarm the gap-closure round named as a blocking prerequisite.
+
+        Omitting it is the supported state, not a hole: freshness resolves to UNDETERMINED,
+        which the contract defines as "we hold no cadence for this Series, so age cannot be
+        judged". That is exactly true of a subject bound to no economy (`economyIso2: 'ZZ'`)
+        and no producer. A real cadence arrives with the Series a real producer supplies.
+      */
     },
     shortLabel,
     // FLAT is the no-movement value, and the arrow is suppressed entirely while observations
