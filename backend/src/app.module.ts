@@ -28,6 +28,10 @@ import { TelemetryModule } from './modules/telemetry/telemetry.module';
 import { SituationModule } from './modules/situation/situation.module';
 import { ConflictClaimModule } from './modules/conflict-claim/conflict-claim.module';
 import { TelemetryInterceptor } from './modules/telemetry/telemetry.interceptor';
+import {
+  humanitarianModuleImports,
+  HUMANITARIAN_PROVISIONING,
+} from './modules/humanitarian/humanitarian.registration';
 
 @Module({
   imports: [
@@ -160,6 +164,27 @@ import { TelemetryInterceptor } from './modules/telemetry/telemetry.interceptor'
       canonical backend file was copied.
     */
     ConflictClaimModule,
+
+    /*
+      HUMANITARIAN — AUTHORITY VALIDATION AT STARTUP, ACQUISITION STILL OFF.
+
+      ALPHA-HUMANITARIAN-BOOT-INTAKE-R1 part B, wiring G's R1.2 composition root into
+      the real module lifecycle. HumanitarianAuthorityBootstrap implements OnModuleInit,
+      so the governed rows are read, digested and verified BEFORE this process serves
+      anything — and a failure refuses the start rather than degrading.
+
+      SPREAD, NOT IMPORTED DIRECTLY, and the difference is the control. Humanitarian
+      runs only where its authority store is provisioned; where it is not, the module is
+      absent entirely and nothing Humanitarian serves. The state that cannot be
+      expressed here is "provisioned, validation failed, carry on" — see
+      modules/humanitarian/humanitarian.registration.ts.
+
+      Importing this buys the authority load and the capability registry. It registers
+      no controller and no route, and buys nothing that can reach a publisher:
+      COPERNICUS_PRODUCER_ENABLED is the literal false, and boot refuses to start if it
+      ever is not.
+    */
+    ...humanitarianModuleImports(HUMANITARIAN_PROVISIONING),
   ],
   controllers: [AppController],
   providers: [
