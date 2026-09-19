@@ -422,7 +422,23 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       }
     };
     walk(APP);
-    expect(pages).toHaveLength(30);
+    /*
+      R2-B §9 — 31. ONE ROUTE WAS ADDED, DELIBERATELY AND UNDER A RULING.
+
+      This assertion's name is "no route was added", and it is doing exactly
+      its job by failing: the CTO rights ruling of 2026-09-19 requires a
+      reachable third-party notices surface, so /third-party-notices was added
+      and the count moves with it rather than the assertion being relaxed.
+
+      A NOTE ON THE FAILURE THIS TEST ALREADY HAD. On Windows the loop below
+      compares "\\map" against "/map", because the path is sliced with the host
+      separator and never normalised. That is why seoFoundation sits in the
+      carried baseline set; it is a defect in this spec's path handling and not
+      in any route. It is left alone here, per the standing instruction not to
+      change implementation to clear a carried failure, and recorded so nobody
+      reads this correction as having fixed it.
+    */
+    expect(pages).toHaveLength(31);
     expect(pages).toContain('/');
     for (const known of ['/map', '/search', '/privacy', '/terms', '/source-policy', '/support', '/workspace', '/history']) {
       expect(`${known}: ${pages.includes(known)}`).toBe(`${known}: true`);

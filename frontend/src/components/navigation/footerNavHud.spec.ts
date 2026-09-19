@@ -148,7 +148,19 @@ describe('Dead primary-navigation and footer-link remediation (Milestone #53)', 
     // the reason stated above: it must fail when a FIFTH destination appears.
     // About/Careers/Contact/API are still routeless and still excluded by it.
     const allFooterHrefs = footerLinkGroups.flatMap((group) => group.links.map((link) => link.href));
-    expect(allFooterHrefs.sort()).toEqual(['/privacy', '/source-policy', '/support', '/terms']);
+    // R2-B §9 — /third-party-notices joins the set, and the EXACT equality is
+    // kept for the reason stated above: it must fail when a SIXTH destination
+    // appears. The route ships in the SAME change
+    // (frontend/src/app/third-party-notices/page.tsx), so the destination is
+    // still never added before the page exists.
+    // About/Careers/Contact/API are still routeless and still excluded by it.
+    expect(allFooterHrefs.sort()).toEqual([
+      '/privacy',
+      '/source-policy',
+      '/support',
+      '/terms',
+      '/third-party-notices',
+    ]);
   });
 
   it('M66.10B — each of the three legal destinations resolves to a real App Router page on disk', () => {

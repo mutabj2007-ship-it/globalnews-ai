@@ -986,6 +986,7 @@ export const en = {
       '/privacy': 'Privacy Policy',
       '/terms': 'Terms of Service',
       '/source-policy': 'Source Policy',
+      '/third-party-notices': 'Third-Party Notices',
       '/api': 'API',
     } as Record<string, string>,
     comingSoon: 'Coming soon',
@@ -2233,6 +2234,49 @@ export const en = {
    *
    * Same shape as privacyPage/termsPage — no new i18n mechanism.
    */
+  /*
+    R2-B §9 — THIRD-PARTY NOTICES.
+
+    HEADINGS ARE PRODUCT COPY AND ARE LOCALISED. The licence BODIES are not:
+    they are rendered from `thirdPartyNotices.generated.ts`, verbatim from the
+    installed packages, and the CTO ruling is explicit — "Do not translate
+    license texts. Product/UI headings around them may be localized; license
+    bodies remain exact."
+
+    `dataAttribution` is the upstream notice string itself and is therefore
+    NOT translated either, exactly as `map.spatial.attribution` is not.
+  */
+  thirdPartyNoticesPage: {
+    title: 'Third-party notices',
+    intro:
+      'GlobalNews AI includes open-source software and third-party geographic data. The notices below are reproduced from the licences of the versions actually shipped, so they can be read here rather than found inside a build artefact.',
+    softwareHeading: 'Open-source software',
+    softwareIntro:
+      'Reproduced exactly as published by each project. The MapLibre notice also carries the notices MapLibre itself is required to pass on, for mapbox-gl-js, glfx.js and d3-color.',
+    licenceLabel: 'Licence',
+    licenceUnstated: 'Not stated by the package',
+    dataHeading: 'Map and geography data',
+    dataIntro:
+      'The map draws on published geographic datasets. The notice below is the attribution published with that data and is shown wherever the data appears, including on the map itself.',
+    dataAttribution: 'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT).',
+    dataSources: [
+      {
+        name: 'GeoNames',
+        licence: 'CC BY 4.0',
+        note: 'Place names, coordinates and hierarchy. Reached through the GlobalNews AI geography service. The licence and its address are stated in the notice above.',
+      },
+      {
+        name: 'iso3166-2-db 2.3.11',
+        licence: 'MIT',
+        note: 'Country subdivision codes and names, used to build the geography service. The package is consumed by that build rather than shipped in this application, so its full notice text is not reproduced here; it is named with its licence as published in the build record.',
+      },
+      {
+        name: 'Natural Earth 1:50m',
+        licence: 'Public domain',
+        note: 'Lakes, rivers, sub-national boundary lines and populated places, bundled with the map. Natural Earth places no attribution requirement on its data; it is named here as a courtesy.',
+      },
+    ],
+  },
   sourcePolicyPage: {
     title: 'Source Policy',
     lastUpdatedLabel: 'Last updated',

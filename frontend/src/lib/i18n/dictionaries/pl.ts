@@ -799,6 +799,7 @@ export const pl: Dictionary = {
       '/privacy': 'Polityka prywatności',
       '/terms': 'Regulamin',
       '/source-policy': 'Polityka źródeł',
+      '/third-party-notices': 'Noty stron trzecich',
       '/api': 'API',
     } as Record<string, string>,
     comingSoon: 'Wkrótce',
@@ -1880,6 +1881,44 @@ export const pl: Dictionary = {
    * names and are never localized, consistent with the M47/M48
    * treatment of "GNews" elsewhere in this file.
    */
+  /*
+    R2-B \u00a79 \u2014 NOTY DOTYCZ\u0104CE OPROGRAMOWANIA STRON TRZECICH.
+
+    Nag\u0142\u00f3wki to tekst produktu i s\u0105 t\u0142umaczone. TRE\u015aCI LICENCJI NIE S\u0104:
+    pochodz\u0105 wprost z zainstalowanych pakiet\u00f3w i pozostaj\u0105 w oryginale.
+    dataAttribution to nota licencyjna, wi\u0119c r\u00f3wnie\u017c nie jest t\u0142umaczona.
+  */
+  thirdPartyNoticesPage: {
+    title: 'Noty dotycz\u0105ce stron trzecich',
+    intro:
+      'GlobalNews AI korzysta z oprogramowania open source oraz z danych geograficznych stron trzecich. Poni\u017csze noty pochodz\u0105 z licencji tych wersji, kt\u00f3re s\u0105 rzeczywi\u015bcie dostarczane, aby mo\u017cna je by\u0142o przeczyta\u0107 tutaj, a nie szuka\u0107 we wn\u0119trzu artefakt\u00f3w kompilacji.',
+    softwareHeading: 'Oprogramowanie open source',
+    softwareIntro:
+      'Odtworzone dok\u0142adnie w formie opublikowanej przez ka\u017cdy projekt. Nota MapLibre zawiera tak\u017ce noty, kt\u00f3re MapLibre ma obowi\u0105zek przekaza\u0107 dalej \u2014 dla mapbox-gl-js, glfx.js i d3-color.',
+    licenceLabel: 'Licencja',
+    licenceUnstated: 'Nie podano w pakiecie',
+    dataHeading: 'Dane mapy i geografii',
+    dataIntro:
+      'Mapa korzysta z opublikowanych zbior\u00f3w danych geograficznych. Poni\u017csza nota jest atrybucj\u0105 opublikowan\u0105 wraz z tymi danymi i jest pokazywana wsz\u0119dzie tam, gdzie dane te wyst\u0119puj\u0105, tak\u017ce na samej mapie.',
+    dataAttribution: 'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT).',
+    dataSources: [
+      {
+        name: 'GeoNames',
+        licence: 'CC BY 4.0',
+        note: 'Nazwy miejsc, wsp\u00f3\u0142rz\u0119dne i hierarchia. Udost\u0119pniane przez us\u0142ug\u0119 geograficzn\u0105 GlobalNews AI. Licencj\u0119 i jej adres podano w nocie powy\u017cej.',
+      },
+      {
+        name: 'iso3166-2-db 2.3.11',
+        licence: 'MIT',
+        note: 'Kody i nazwy jednostek podzia\u0142u kraj\u00f3w, u\u017cyte do zbudowania us\u0142ugi geograficznej. Pakiet jest u\u017cywany podczas tego budowania, a nie dostarczany z t\u0105 aplikacj\u0105, wi\u0119c pe\u0142na tre\u015b\u0107 jego noty nie jest tu odtworzona; podano nazw\u0119 i licencj\u0119 zgodnie z zapisem w rejestrze budowania.',
+      },
+      {
+        name: 'Natural Earth 1:50m',
+        licence: 'Public domain',
+        note: 'Jeziora, rzeki, linie granic wewn\u0119trznych i miejscowo\u015bci, do\u0142\u0105czone do mapy. Natural Earth nie wymaga atrybucji dla swoich danych; wymieniono je tutaj przez uprzejmo\u015b\u0107.',
+      },
+    ],
+  },
   sourcePolicyPage: {
     title: 'Polityka źródeł',
     lastUpdatedLabel: 'Ostatnia aktualizacja',

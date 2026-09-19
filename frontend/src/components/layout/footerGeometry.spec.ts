@@ -245,6 +245,14 @@ describe('M66.7 — ROUTE TRUTH (CTO decision D-6 A)', () => {
     // proven on disk by the filesystem-backed assertion below, which is the
     // member of this family that cannot be edited into a lie.
     '/support',
+    /*
+      R2-B §9 — a real App Router page
+      (frontend/src/app/third-party-notices/page.tsx), proven on disk by the
+      filesystem-backed assertion below. Added under the CTO rights ruling,
+      which requires the third-party notices to be reachable without digging
+      into node_modules or a build artefact.
+    */
+    '/third-party-notices',
   ];
 
   it('links derive entirely from footerLinkGroups — this component has no destination list', () => {
@@ -261,7 +269,14 @@ describe('M66.7 — ROUTE TRUTH (CTO decision D-6 A)', () => {
     // that when Help was added. /support is vetted — a real page on disk
     // (asserted below) — so the count moves rather than the assertion being
     // loosened to a membership check.
-    expect(footerLinkGroups.flatMap((group) => group.links)).toHaveLength(4);
+    /*
+      R2-B §9 — FIVE, not four. The count stays EXACT for the reason recorded
+      when Help moved it from three: its value is that it fails when an
+      UNVETTED destination appears, and it has now done that twice.
+      /third-party-notices is vetted — a real page on disk, asserted below — so
+      the count moves rather than the assertion being loosened.
+    */
+    expect(footerLinkGroups.flatMap((group) => group.links)).toHaveLength(5);
     for (const link of footerLinkGroups.flatMap((group) => group.links)) {
       expect(REAL_ROUTES).toContain(link.href);
     }
@@ -324,9 +339,24 @@ describe('M66.7 — ROUTE TRUTH (CTO decision D-6 A)', () => {
     // SUPPORT CLOSURE — the legal set itself is UNCHANGED and still asserted
     // whole; the footer now also carries Help, so the full destination set is
     // checked alongside it. Dropping a legal route still fails here.
-    const LEGAL_ROUTES = ['/privacy', '/source-policy', '/terms'];
+    /*
+      R2-B §9 — /third-party-notices JOINS THE LEGAL SET, not merely the footer.
+
+      It is a legal surface: it carries licence notices the product is relying
+      on to discharge upstream obligations. So it is held to the same two
+      requirements as the other three — a real localized label in both
+      languages, and no authentication — rather than being waved through as a
+      fourth link.
+    */
+    const LEGAL_ROUTES = ['/privacy', '/source-policy', '/terms', '/third-party-notices'];
     const hrefs = footerLinkGroups.flatMap((group) => group.links).map((link) => link.href).sort();
-    expect(hrefs).toEqual(['/privacy', '/source-policy', '/support', '/terms']);
+    expect(hrefs).toEqual([
+      '/privacy',
+      '/source-policy',
+      '/support',
+      '/terms',
+      '/third-party-notices',
+    ]);
     for (const route of LEGAL_ROUTES) {
       expect(hrefs).toContain(route);
     }

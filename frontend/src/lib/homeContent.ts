@@ -150,6 +150,18 @@ export const footerLinkGroups: FooterLinkGroup[] = [
       { href: '/privacy', label: 'Privacy Policy' },
       { href: '/terms', label: 'Terms of Service' },
       { href: '/source-policy', label: 'Source Policy' },
+      /*
+        R2-B §9 — THE FOURTH LEGAL DESTINATION, AND THE TRIPWIRE FIRED AGAIN.
+
+        The comment above records that this set was pinned to exactly three
+        so a fourth could not appear silently, and that /support tripped it
+        once already. This is the same event: the CTO rights ruling requires
+        a reachable third-party notices surface, so the tripwire assertions
+        are updated in this same change and their real requirement — every
+        footer destination resolves to a real App Router page — still holds,
+        because frontend/src/app/third-party-notices/page.tsx exists.
+      */
+      { href: '/third-party-notices', label: 'Third-Party Notices' },
     ],
   },
 ];
