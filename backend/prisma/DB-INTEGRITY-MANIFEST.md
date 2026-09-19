@@ -190,3 +190,69 @@ The script therefore opens with a guard that **refuses to run while any unreleas
 | DOWN drops every function UP creates | **asserted** |
 | additive-only (no ALTER/DROP/RENAME of an existing object) | **asserted** |
 | **applied to a real PostgreSQL** | **NOT DONE.** Docker was not running in this environment and no disposable database was reachable; no destructive operation against an Alpha or Production database is authorised. The CHECK constraints and triggers are therefore proven by inspection and by conformance assertions, **not by execution** — and that is the one outstanding validation step before deployment |
+
+---
+
+# ADDENDUM — ALPHA-MARKET-SCHEDULED-INGEST-PLATFORM-R1
+
+**Migration `20260919040000_add_market_scheduled_ingest`.** MKT-PLAT-2 of the Market
+scheduled-ingest platform.
+
+## B1 · EXACT HASHES
+
+```
+sha256  e10a25cfc421e593607a971f0dab1287d5e69ebbf95e8725db006db48f02ad63   45407 B
+        backend/prisma/schema.prisma
+
+sha256  47ff00c0df8ae229dc952aa8dc48d21ed27aec0a2aba16815bf45d3d338cefb7   8219 B
+        backend/prisma/migrations/20260919040000_add_market_scheduled_ingest/migration.sql
+
+sha256  d7c970128fdf721bd60e7f2ae9ac5b4f433f4144b5a254caa592c5a7bc2c31e3    1811 B
+        backend/prisma/migrations/20260919040000_add_market_scheduled_ingest/DOWN.sql
+```
+
+`schema.prisma` was `75082a2d6c3b75798f44f0daca54dd22db7e6aee8b8fa64cedd4a5c7ab970e8c` (37665 B)
+before this addendum — the snapshot-store state recorded above. This change is again
+**purely additive**: 188 appended lines declaring three new models, with the first 966
+lines byte-identical.
+
+## B2 · MIGRATION IDENTITY
+
+```
+NAME      20260919040000_add_market_scheduled_ingest
+POSITION  immediately after 20260919030000_add_official_data_snapshot_store
+CLASS     ADDITIVE — three new tables; no existing table altered, dropped or renamed
+APPLIED   never (no deployment has occurred)
+```
+
+The `CREATE TABLE` / `CREATE INDEX` / `ADD FOREIGN KEY` section was **generated** by
+`prisma migrate diff`. The seven CHECK constraints and two triggers below it are
+hand-written, because Prisma cannot express them.
+
+## B3 · THE TWO MIGRATIONS ARE INDEPENDENT, AND THAT IS DELIBERATE
+
+`MarketObservation.snapshotContentAddress` is a **pointer, not a foreign key**, to
+`SnapshotPayload`. So:
+
+- the snapshot store can be deployed without the Market tables, and vice versa;
+- rolling back Market **does not touch a single byte of retained evidence**, and does not
+  unpin anything — the pointer direction is what makes that true;
+- the snapshot store's PIN remains the retention guarantee. An FK would have added a
+  second, weaker one and coupled two migrations that are separately deployable.
+
+## B4 · ROLLBACK HAZARD — LOWER HERE, AND WORTH CONTRASTING
+
+`DOWN.sql` for the **snapshot store** refuses to run while anything is pinned, because
+those bytes cannot be re-fetched from the publisher.
+
+`DOWN.sql` for **Market** needs no such guard: `MarketObservation` holds PARSED READINGS,
+and if the bytes they came from are still retained they are re-derivable by re-parsing.
+What is lost is the ingest run history — the only trace that a fetch was attempted and how
+it ended. Take a backup if that matters.
+
+## B5 · WHAT IS VALIDATED, AND WHAT IS NOT
+
+Identical in shape to A5, and with the same single gap: `prisma validate` passes,
+`prisma generate` produces the three delegates, the DDL is generator-produced, and the
+migration is additive-only — but **it has not been applied to a real PostgreSQL**, so the
+CHECK constraints and the two triggers are proven by inspection rather than by execution.

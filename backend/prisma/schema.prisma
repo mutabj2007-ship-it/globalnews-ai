@@ -964,3 +964,191 @@ model SnapshotTombstone {
 
   @@index([collectedAt])
 }
+
+// ============================================================================
+// MARKET SCHEDULED INGEST — MKT-PLAT-2, THE MINIMAL PERSISTENCE SET.
+//
+// Contract: MAIN-MARKET-LINEAGE-SCHEDULED-INGEST-R1 · SI-6, SI-7, SI-9, SI-10, SI-16.
+// Declarations: G-MARKET-DATA-ACQUISITION-R2.
+//
+// THREE MODELS, AND DELIBERATELY NOT A FOURTH. Main's D-10 needs a run record, a
+// lease and an observation. It does NOT need a Market payload table, and adding
+// one would be the duplication the brief warns against:
+//
+//   Economy's SnapshotPayload holds RAW PROVIDER BYTES so a published figure can
+//   be re-proved. That is a platform capability with its own rights, retention and
+//   pinning rules, and it was built once.
+//
+//   MarketObservation holds a PARSED READING. Different purpose, different
+//   lifetime, different consumer.
+//
+// So Market does not get its own byte store: a MarketObservation POINTS AT a
+// snapshot content address when its adapter retained one. Two tables for one
+// concern would mean two answers to "which bytes is this figure from".
+//
+// AND NO MARKET OBSERVATION VOCABULARY IS CREATED. SI-7.1 reuses ECON-CONTRACT-1's
+// Series -> Period -> Observation spine, and the accepted C51 guard forbids
+// MarketSeries, MarketPeriod, MarketObservation-as-a-TYPE, MarketReleaseStatus,
+// MarketValueKind and MarketFreshness. The TABLE below is storage for readings
+// acquired by the Market lane; the SEMANTICS are Economy's, unchanged.
+// ============================================================================
+
+/// SI-6.1 · ONE RUN PER (provider, subjectClass, cadenceWindow, triggerKind).
+///
+/// The run record is what makes a scheduled system auditable: it says a fetch was
+/// attempted, what triggered it, and how it ended — including the endings that
+/// produced nothing.
+model MarketIngestRun {
+  id String @id @default(uuid())
+
+  /// The length-prefixed encoding of the four identity parts. UNIQUE, and that
+  /// uniqueness IS the idempotency guarantee — re-running a window collides here
+  /// rather than relying on the caller to check first.
+  runKey String @unique
+
+  providerId   String
+  subjectClass String
+
+  /// SI-6.1 — the window this run is for. A window, never a wall-clock instant:
+  /// idempotency keyed on time would make two runs a millisecond apart distinct.
+  cadenceWindow String
+
+  /// SCHEDULED · MANUAL_AUTHORISED · BACKFILL · RETRY.
+  /// There is NO user-request kind, by SI-1.2, and none can be added here without
+  /// changing the scheduler's own union.
+  triggerKind String
+
+  /// Required for MANUAL_AUTHORISED. An unattributed manual run is not authorised.
+  authorisedBy String?
+
+  startedAt  DateTime
+  finishedAt DateTime?
+
+  /// SI-16.2, the closed set: SUCCEEDED · NO_NEW_DATA · DEFERRED · TIMED_OUT ·
+  /// TRANSPORT_FAILED · VALIDATION_FAILED · RIGHTS_REFUSED · PROVIDER_DISABLED ·
+  /// CIRCUIT_OPEN.
+  ///
+  /// NO_NEW_DATA IS NOT NO_MATERIAL_CHANGE. A run that observed nothing and a run
+  /// that observed no change are different facts, and collapsing them makes an
+  /// outage indistinguishable from a quiet month.
+  outcome String?
+
+  attempts             Int @default(0)
+  observationsWritten  Int @default(0)
+
+  /// Why, in the outcome's own terms. Never a stack trace, never free prose that
+  /// a later reader has to interpret.
+  detail String?
+
+  observations MarketObservation[]
+
+  createdAt DateTime @default(now())
+
+  @@index([providerId, subjectClass, startedAt])
+  @@index([outcome, startedAt])
+  @@index([startedAt])
+}
+
+/// SI-6.3 · THE LEASE. One owner works a run at a time, and a crashed owner's
+/// lease EXPIRES rather than requiring manual clearing.
+///
+/// WHY EXPIRY RATHER THAN A CLEANUP JOB. A lease that needs a janitor has two
+/// failure modes: the worker dies, and the janitor dies. An expiry timestamp has
+/// one, and it is checked by the only query that hands out the lease.
+model MarketIngestLease {
+  id String @id @default(uuid())
+
+  /// One live lease per run key. The unique index is the mutual exclusion; the
+  /// expiry is what makes it recoverable.
+  runKey String @unique
+
+  /// Which process holds it. Recorded so a stuck lease can be attributed rather
+  /// than merely observed.
+  owner String
+
+  acquiredAt DateTime
+  /// Heartbeated while work continues, so a long legitimate run is not stolen from.
+  expiresAt  DateTime
+
+  /// Set when released cleanly. A row with releasedAt is a historical record, not
+  /// a live lease — kept because "this run was worked and finished" is evidence.
+  releasedAt DateTime?
+
+  @@index([expiresAt])
+  @@index([owner, acquiredAt])
+}
+
+/// SI-7 · A READING, WITH ITS THREE TIMESTAMPS KEPT APART.
+///
+/// The semantics are ECON-CONTRACT-1's. This table stores what the Market lane
+/// acquired; it invents no vocabulary and re-declares no axis.
+model MarketObservation {
+  id String @id @default(uuid())
+
+  /// SI-7.2 — the encoded (series, period) key PLUS the provider's own key
+  /// dimensions. Length-prefixed, because Comext keys on six parts whose values
+  /// contain underscores and digit strings of mixed length — the exact collision
+  /// shape the accepted `eco:1` encoding exists to fix.
+  ///
+  /// SI-7.3 — identity is NEVER derived from a value. Two observations with the
+  /// same number are not the same observation.
+  observationKey String
+
+  seriesId String
+  periodId String
+
+  providerId   String
+  subjectClass String
+
+  /// Null is a real reading state — a published gap — not a missing row.
+  value Float?
+  unit  String
+
+  /// SI-9.1 — THREE TIMESTAMPS, NEVER COLLAPSED.
+  /// publisherVintage   when the publisher says the reading is FOR
+  /// publisherChangedAt when the publisher says the record CHANGED
+  /// ingestedAt         when WE saw it
+  publisherVintage   DateTime?
+  publisherChangedAt DateTime?
+  ingestedAt         DateTime
+
+  /// SI-9.2 — which of the three the value is actually carrying.
+  /// PUBLISHER_VINTAGE · PUBLISHER_CHANGED_AT · INGEST_SNAPSHOT.
+  /// Bound at write from the provider's seam declaration, never inferred at read.
+  /// This is E1 condition M-1 and this column is where it becomes enforceable.
+  vintageProvenance String
+
+  /// SI-8.2 — the accepted release-status vocabulary, reused unchanged.
+  /// WITHDRAWN is a first-class state and NOT a delete: a withdrawn figure must
+  /// stay visible as withdrawn.
+  releaseStatus String
+
+  /// SI-10.4 — THE POINTER TO THE RETAINED BYTES, AND IT IS A POINTER ON PURPOSE.
+  ///
+  /// Not a foreign key to SnapshotPayload. The snapshot store's PIN is what
+  /// guarantees those bytes survive; an FK would add a second, weaker guarantee
+  /// and would couple two migrations that are deployable independently. A reader
+  /// that finds an address and no payload has learned something true — the
+  /// tombstone says what happened to it.
+  ///
+  /// Mandatory for a publisher that does not version its past data. Eurostat's own
+  /// rights record states exactly that.
+  snapshotContentAddress String?
+
+  runId String
+  run   MarketIngestRun @relation(fields: [runId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  /// SI-6.2 — RE-RUNNING A WINDOW MUST NOT CREATE A SECOND OBSERVATION.
+  /// Idempotency keyed on observation identity, never on wall-clock time.
+  ///
+  /// A REVISION IS NOT A COLLISION: SI-8.1 says a revision APPENDS, and a revised
+  /// reading carries a different publisherChangedAt, so it is a different row
+  /// under this key. The prior value stays exactly where it was.
+  @@unique([observationKey, vintageProvenance, publisherChangedAt])
+  @@index([providerId, subjectClass, ingestedAt])
+  @@index([seriesId, periodId])
+  @@index([snapshotContentAddress])
+  @@index([runId])
+}
