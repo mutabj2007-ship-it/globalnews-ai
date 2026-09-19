@@ -121,7 +121,9 @@ describe('the refusal vocabulary is closed, and matches what the runtime throws'
 
   it('the retired codes are out of the vocabulary and each carries its reason', () => {
     const retired = Object.entries(GEOMETRY_RETIRED_REFUSAL_CODES);
-    expect(retired.length).toBe(8);
+    // Was 8. GEOMETRY_RING_NOT_CLOSED was un-retired when Main's R5 began throwing it
+    // for real -- a retirement is a claim about the code, and claims about code expire.
+    expect(retired.length).toBe(7);
 
     for (const [code, reason] of retired) {
       // Retired means retired: classifying one must land in the residual.
@@ -184,7 +186,9 @@ describe('the refusal vocabulary is closed, and matches what the runtime throws'
     expect(refusalCodeOf(new Error('GEOMETRY_48_25_11_5: nothing to see'))).toBe(
       UNCLASSIFIED_REFUSAL_CODE,
     );
-    expect(refusalCodeOf(new Error('GEOMETRY_RING_NOT_CLOSED: stale name'))).toBe(
+    // GEOMETRY_RING_NOT_CLOSED was un-retired when R5 began throwing it, so the stale-name
+    // probe uses one that is still retired.
+    expect(refusalCodeOf(new Error('GEOMETRY_CRS_NOT_SUPPORTED: stale name'))).toBe(
       UNCLASSIFIED_REFUSAL_CODE,
     );
   });

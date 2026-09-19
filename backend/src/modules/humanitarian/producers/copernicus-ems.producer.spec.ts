@@ -98,10 +98,7 @@ const feature = (over: Partial<EmsDelineationFeature> = {}): EmsDelineationFeatu
 });
 
 /** The authority system's keying, stubbed. The producer computes neither value. */
-const keying = (
-  partitionKey = 'PART-LIGHT',
-  protectionClassId?: string,
-): GovernedRecordKeying => ({
+const keying = (partitionKey = 'PART-LIGHT', protectionClassId?: string): GovernedRecordKeying => ({
   keyFor: ({ sourceGeometryId }) => ({
     recordKey: `rec:${sourceGeometryId}`,
     presentationPartitionKey: partitionKey,
@@ -399,7 +396,13 @@ describe('HP-1 · source-native geometry preservation', () => {
       and this assertion is the same test with its expectation reversed. The producer
       still has no ring rule of its own; it gained the behaviour by delegating.
     */
-    const unclosed = [[[11, 48], [11.5, 48], [11.5, 48.5]]]; // first vertex never repeated
+    const unclosed = [
+      [
+        [11, 48],
+        [11.5, 48],
+        [11.5, 48.5],
+      ],
+    ]; // first vertex never repeated
     const { emitted, withheld } = produceInundationExtents(
       { features: [feature({ coordinates: unclosed })] },
       keying(),
@@ -422,7 +425,15 @@ describe('HP-1 · source-native geometry preservation', () => {
   it('the forbidden coercions are absent BY CONSTRUCTION', () => {
     const code = executableOnly(producerSource());
 
-    for (const word of ['centroid', 'radius', 'halo', 'simplif', 'reproject', 'bufferBy', 'pointOnSurface']) {
+    for (const word of [
+      'centroid',
+      'radius',
+      'halo',
+      'simplif',
+      'reproject',
+      'bufferBy',
+      'pointOnSurface',
+    ]) {
       expect(new RegExp(word, 'i').test(code)).toBe(false);
     }
     // There is no branch that emits a DERIVED origin at all.
@@ -487,7 +498,12 @@ describe('HP-3 · the producer supplies evidence and decides no protection', () 
     */
     const exec = executableOnly(producerSource());
 
-    for (const forbidden of ['protection_class_id', 'presentation_partition_key', 'hum_authority', 'geometry_record']) {
+    for (const forbidden of [
+      'protection_class_id',
+      'presentation_partition_key',
+      'hum_authority',
+      'geometry_record',
+    ]) {
       expect(exec.includes(forbidden)).toBe(false);
     }
     for (const forbidden of ['prisma', 'PrismaClient', 'INSERT', 'repository']) {
@@ -503,7 +519,15 @@ describe('HP-3 · the producer supplies evidence and decides no protection', () 
 describe('HP-4 · only what the source publishes', () => {
   it('there is no field and no code for population, severity, access, impact or classification', () => {
     const exec = executableOnly(producerSource());
-    for (const invented of ['population', 'severity', 'affectedCount', 'impact', 'casualt', 'classification', 'confidence']) {
+    for (const invented of [
+      'population',
+      'severity',
+      'affectedCount',
+      'impact',
+      'casualt',
+      'classification',
+      'confidence',
+    ]) {
       expect(new RegExp(invented, 'i').test(exec)).toBe(false);
     }
     // positive control: the fields it DOES read are present
@@ -539,7 +563,15 @@ describe('HP-6 · implemented and disabled', () => {
 
   it('NO PROVIDER EXECUTION IS POSSIBLE · the module has no transport and no schedule', () => {
     const exec = executableOnly(producerSource());
-    for (const forbidden of ['fetch(', 'http', 'axios', 'Cron', 'setInterval', 'schedule', 'request(']) {
+    for (const forbidden of [
+      'fetch(',
+      'http',
+      'axios',
+      'Cron',
+      'setInterval',
+      'schedule',
+      'request(',
+    ]) {
       expect(exec.toLowerCase().includes(forbidden.toLowerCase())).toBe(false);
     }
     // And nothing reader-facing can reach it.
@@ -583,7 +615,10 @@ describe('HP-7 · GA-33 recompute-at-load, through the real root', () => {
     const drifting = new CountingStore((n) =>
       n === 1
         ? ROWS
-        : { classes: [{ ...CLASS_ROW, basis: 'edited after sealing' }], partitions: [PARTITION_ROW] },
+        : {
+            classes: [{ ...CLASS_ROW, basis: 'edited after sealing' }],
+            partitions: [PARTITION_ROW],
+          },
     );
 
     await expect(
@@ -677,9 +712,9 @@ describe('HP-8 · no producer-local duplicate vocabulary', () => {
     expect(src.includes('GEOMETRY_CRS_UNSUPPORTED')).toBe(true);
     expect(src.includes('RECORD_NOT_KEYED_BY_AUTHORITY')).toBe(true);
     // and it would bite on a near-miss reintroduced
-    expect(new RegExp('\\bGEOMETRY_CRS_NOT_SUPPORTED\\b').test(`${src} GEOMETRY_CRS_NOT_SUPPORTED`)).toBe(
-      true,
-    );
+    expect(
+      new RegExp('\\bGEOMETRY_CRS_NOT_SUPPORTED\\b').test(`${src} GEOMETRY_CRS_NOT_SUPPORTED`),
+    ).toBe(true);
   });
 
   it('A GENUINE SOURCE DEFECT DOES NOT PAGE AN OPERATOR — which R1 would have', () => {
@@ -782,10 +817,26 @@ describe('HP-9 · structural validity is delegated, never re-implemented', () =>
 
   it('GX-24 · the ring rules refuse, one fixture per rule, and repair none of them', () => {
     const cases: readonly { readonly label: string; readonly coordinates: unknown }[] = [
-      { label: 'ring of three positions', coordinates: [[[11, 48], [11.5, 48], [11.5, 48.5]]] },
+      {
+        label: 'ring of three positions',
+        coordinates: [
+          [
+            [11, 48],
+            [11.5, 48],
+            [11.5, 48.5],
+          ],
+        ],
+      },
       {
         label: 'four positions that do not close',
-        coordinates: [[[11, 48], [11.5, 48], [11.5, 48.5], [11, 48.5]]],
+        coordinates: [
+          [
+            [11, 48],
+            [11.5, 48],
+            [11.5, 48.5],
+            [11, 48.5],
+          ],
+        ],
       },
       { label: 'position of one component', coordinates: [[[11], [11.5], [11.5], [11]]] },
       { label: 'polygon with no ring at all', coordinates: [] },
@@ -803,7 +854,10 @@ describe('HP-9 · structural validity is delegated, never re-implemented', () =>
   });
 
   it('GX-25 · a declared kind that disagrees with the coordinate TREE is refused', () => {
-    const cases: readonly { readonly label: string; readonly over: Partial<EmsDelineationFeature> }[] = [
+    const cases: readonly {
+      readonly label: string;
+      readonly over: Partial<EmsDelineationFeature>;
+    }[] = [
       { label: 'POLYGON carrying MultiPolygon-shaped coordinates', over: { coordinates: MULTI } },
       {
         label: 'MULTIPOLYGON carrying Polygon-shaped coordinates',
@@ -836,8 +890,24 @@ describe('HP-9 · structural validity is delegated, never re-implemented', () =>
     */
     expect(POLYGON_WINDING_VALIDATION).toBe('OUTSIDE_ALPHA_VALIDATION');
 
-    const cw = [[[11, 48], [11, 48.5], [11.5, 48.5], [11.5, 48], [11, 48]]];
-    const ccw = [[[11, 48], [11.5, 48], [11.5, 48.5], [11, 48.5], [11, 48]]];
+    const cw = [
+      [
+        [11, 48],
+        [11, 48.5],
+        [11.5, 48.5],
+        [11.5, 48],
+        [11, 48],
+      ],
+    ];
+    const ccw = [
+      [
+        [11, 48],
+        [11.5, 48],
+        [11.5, 48.5],
+        [11, 48.5],
+        [11, 48],
+      ],
+    ];
 
     for (const ring of [cw, ccw]) {
       const { emitted, withheld } = run({ coordinates: ring });
@@ -857,8 +927,19 @@ describe('HP-9 · structural validity is delegated, never re-implemented', () =>
       guard nobody will believe the second time.
     */
     for (const word of [
-      'ring', 'closure', 'closed', 'winding', 'orientation', 'signedArea',
-      'nesting', 'depth', 'splice', 'reverse', 'sort(', 'concat', 'slice',
+      'ring',
+      'closure',
+      'closed',
+      'winding',
+      'orientation',
+      'signedArea',
+      'nesting',
+      'depth',
+      'splice',
+      'reverse',
+      'sort(',
+      'concat',
+      'slice',
     ]) {
       const anchored = new RegExp(`\\b${word.replace('(', '\\(')}`, 'i');
       expect([word, anchored.test(exec)]).toEqual([word, false]);
@@ -876,9 +957,9 @@ describe('HP-9 · structural validity is delegated, never re-implemented', () =>
     expect([...new Set(pushes)].sort()).toEqual(['emitted.push(', 'withheld.push(']);
 
     // positive control: the scan bites on a local rule written the way one really would be
-    expect(
-      /\bring/i.test(`${exec}\nif (ring[0] !== ring.at(-1)) throw new Error('open');`),
-    ).toBe(true);
+    expect(/\bring/i.test(`${exec}\nif (ring[0] !== ring.at(-1)) throw new Error('open');`)).toBe(
+      true,
+    );
     // and it does NOT fire on the word it used to trip over
     expect(/\bring/i.test('const code: string = x;')).toBe(false);
 
@@ -915,29 +996,66 @@ describe('HP-10 · G-R12-C1 · measured, reported, and NOT worked around', () =>
     assertion below fails and says so — which is the pin working, exactly as HP-B2's did.
   */
 
-  it('all six structural codes are in NEITHER governed list', () => {
+  it('THE PIN HAS FIRED · all six structural codes are now GOVERNED', () => {
+    /*
+      This assertion was written to INVERT, and it has. The governed lists were amended
+      by ALPHA-HUMANITARIAN-SELF-CONTAINED-R2 after the bidirectional vocabulary gate
+      failed from a clean checkout naming exactly these six.
+
+      All six are DATA_DEFECT: a ring a publisher did not close is a fault on the far
+      side of the trust boundary, routine and expected, and must not page anyone. That
+      was the consequence G measured -- an unclosed ring paging at programming-mistake
+      severity -- and it is what closing the gap fixes.
+    */
     for (const code of POLYGON_RING_REFUSAL_CODES) {
-      expect([code, GEOMETRY_DATA_DEFECT_CODES.includes(code)]).toEqual([code, false]);
+      expect([code, GEOMETRY_DATA_DEFECT_CODES.includes(code)]).toEqual([code, true]);
       expect([code, GEOMETRY_PROGRAMMING_MISTAKE_CODES.includes(code)]).toEqual([code, false]);
     }
   });
 
-  it('so a structural refusal reaches the producer UNGOVERNED — and alarms', () => {
+  it('so a structural refusal now reaches the producer GOVERNED — and does NOT alarm', () => {
     const { withheld } = produceInundationExtents(
-      { features: [feature({ coordinates: [[[11, 48], [11.5, 48], [11.5, 48.5], [11, 48.5]]] })] },
+      {
+        features: [
+          feature({
+            coordinates: [
+              [
+                [11, 48],
+                [11.5, 48],
+                [11.5, 48.5],
+                [11, 48.5],
+              ],
+            ],
+          }),
+        ],
+      },
       keying(),
     );
 
-    expect(withheld[0]!.code).toBe(UNCLASSIFIED_REFUSAL_CODE);
-    expect(withheld[0]!.codeOrigin).toBe('UNGOVERNED');
-    expect(classifyRefusal(withheld[0]!.code)).toBe('UNCLASSIFIED');
-    expect(refusalClassAlarms(classifyRefusal(withheld[0]!.code))).toBe(true);
+    // The operability defect G measured, closed: the commonest real source defect no
+    // longer pages anyone, and it arrives under its own name.
+    expect(withheld[0]!.code).toBe('GEOMETRY_RING_NOT_CLOSED');
+    expect(classifyRefusal(withheld[0]!.code)).toBe('DATA_DEFECT');
+    expect(refusalClassAlarms(classifyRefusal(withheld[0]!.code))).toBe(false);
   });
 
   it('and six distinguishable defects arrive as one code — the A-24 collapse, one layer up', () => {
     const shapes: readonly unknown[] = [
-      [[[11, 48], [11.5, 48], [11.5, 48.5]]], // too few positions
-      [[[11, 48], [11.5, 48], [11.5, 48.5], [11, 48.5]]], // not closed
+      [
+        [
+          [11, 48],
+          [11.5, 48],
+          [11.5, 48.5],
+        ],
+      ], // too few positions
+      [
+        [
+          [11, 48],
+          [11.5, 48],
+          [11.5, 48.5],
+          [11, 48.5],
+        ],
+      ], // not closed
       [[[11], [11.5], [11.5], [11]]], // position arity
       [], // empty polygon
       MULTI, // structure disagrees with kind
@@ -947,24 +1065,31 @@ describe('HP-10 · G-R12-C1 · measured, reported, and NOT worked around', () =>
     const codes = new Set(
       shapes.map(
         (coordinates) =>
-          produceInundationExtents({ features: [feature({ coordinates })] }, keying())
-            .withheld[0]!.code,
+          produceInundationExtents({ features: [feature({ coordinates })] }, keying()).withheld[0]!
+            .code,
       ),
     );
 
-    // Six inputs, six DIFFERENT messages inside the contract, ONE code out here.
-    expect(codes.size).toBe(1);
-    expect([...codes]).toEqual([UNCLASSIFIED_REFUSAL_CODE]);
+    /*
+      THE A-24 COLLAPSE IS UNDONE. Six distinguishable defects arrived as one word while
+      the codes were ungoverned; now each keeps its own name, which is the whole reason
+      the structural contract bothered to name six.
+    */
+    expect(codes.size).toBeGreaterThan(1);
+    expect([...codes]).not.toContain(UNCLASSIFIED_REFUSAL_CODE);
   });
 
-  it("the retired-codes note for GEOMETRY_RING_NOT_CLOSED is now false", () => {
+  it('and the retired-codes note for GEOMETRY_RING_NOT_CLOSED has been withdrawn', () => {
     /*
       A smaller, separate consequence worth recording: `GEOMETRY_RETIRED_REFUSAL_CODES`
       documents `GEOMETRY_RING_NOT_CLOSED` as *"never thrown. The real code is
       GEOMETRY_COORDINATES_NOT_CLOSED."* GX-24 throws it. A reader who follows that note
       is sent to the wrong code, and the note is in accepted authority.
     */
-    expect(GEOMETRY_RETIRED_REFUSAL_CODES).toHaveProperty('GEOMETRY_RING_NOT_CLOSED');
+    // The note was correct against R3 and became false against R5. It is withdrawn, and
+    // the code is governed -- a retirement is a claim about the code, and such claims expire.
+    expect(GEOMETRY_RETIRED_REFUSAL_CODES).not.toHaveProperty('GEOMETRY_RING_NOT_CLOSED');
+    expect(GEOMETRY_DATA_DEFECT_CODES).toContain('GEOMETRY_RING_NOT_CLOSED');
     expect(POLYGON_RING_REFUSAL_CODES).toContain('GEOMETRY_RING_NOT_CLOSED');
   });
 });

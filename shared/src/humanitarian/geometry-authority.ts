@@ -368,6 +368,37 @@ export const GEOMETRY_PROGRAMMING_MISTAKE_CODES: readonly string[] = Object.free
  * control working.
  */
 export const GEOMETRY_DATA_DEFECT_CODES: readonly string[] = Object.freeze([
+  /*
+    ── MAIN'S R5 STRUCTURAL-VALIDITY CODES ────────────────────────────────
+
+    Landed with the R5 contract and governed here. All six are faults in geometry a
+    PUBLISHER sent — a ring that does not close, a position with one component, an empty
+    polygon. Routine, expected, and they must not wake anybody: a Copernicus product
+    with a malformed ring is the control working, not our code misbehaving.
+
+    Found by the bidirectional gate the moment R5 landed, which is what it is for. The
+    forward direction failed naming exactly these, from a clean checkout.
+  */
+  'GEOMETRY_COORDINATE_STRUCTURE_DISAGREES_WITH_KIND',
+  'GEOMETRY_POLYGON_EMPTY',
+  'GEOMETRY_POLYGON_STRUCTURE_INVALID',
+  'GEOMETRY_POSITION_TOO_FEW_COMPONENTS',
+  'GEOMETRY_RING_TOO_FEW_POSITIONS',
+  /*
+    UN-RETIRED, AND THE REVERSAL IS WORTH THE LINE.
+
+    The GX-14 security patch retired `GEOMETRY_RING_NOT_CLOSED` as an invented name —
+    "never thrown; the real code is GEOMETRY_COORDINATES_NOT_CLOSED". That was true of
+    the R3 contract and is false of R5: Main's structural rules throw it for real, on a
+    ring whose first and last positions differ.
+
+    So a name that was correctly retired as fiction has become fact. The retirement was
+    not wrong when it was made; it stopped being right when the contract moved. That is
+    exactly why the vocabulary gate reads the source at run time rather than trusting
+    either list — a retirement is a claim about the code, and claims about code expire.
+  */
+  'GEOMETRY_RING_NOT_CLOSED',
+
   'GEOMETRY_ANONYMOUS',
   'GEOMETRY_COORDINATE_LEAF_NOT_FINITE',
   'GEOMETRY_COORDINATE_TYPE_DISAGREES',
@@ -402,7 +433,6 @@ export const GEOMETRY_RETIRED_REFUSAL_CODES: Readonly<Record<string, string>> = 
     'never thrown. R3 refuses an empty sourceId as GEOMETRY_ANONYMOUS.',
   GEOMETRY_COORDINATES_FIELD_SET_OPEN:
     'never thrown. The closed-coordinates check refuses as GEOMETRY_COORDINATES_NOT_AN_OBJECT.',
-  GEOMETRY_RING_NOT_CLOSED: 'never thrown. The real code is GEOMETRY_COORDINATES_NOT_CLOSED.',
   GEOMETRY_DERIVATION_PARENT_MISMATCH:
     'never thrown. R3 distinguishes GEOMETRY_DERIVATION_PARENT_ID_DISAGREES from ' +
     '..._KIND_DISAGREES, and collapsing them lost the distinction.',
