@@ -1244,6 +1244,8 @@ export const en = {
       layersTitle: 'Layers',
       threeD: '3D view',
       threeDUnavailable: 'No terrain source is configured for this deployment',
+      /* R2-B §8 — on, but the 10° grid may place no line in this viewport. */
+      layerOutOfScale: 'Not at this scale',
       layerStatusLive: 'Available',
       layerStatusGated: 'Not yet available',
       layerStatusNotImplemented: 'Not built',

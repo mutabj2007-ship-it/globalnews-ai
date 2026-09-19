@@ -55,6 +55,9 @@ const CANVAS = code('components', 'map', 'shell', 'EvidenceMapCanvas.tsx');
 const labelsFor = (dict: typeof en) => ({
   title: dict.map.shell.layersTitle,
   layers: dict.map.spatial.layers.layers,
+  /* R2-B section 8 — the GRID row's scale note. No zoom is passed in this
+     file, so the note is never raised here and these renders are unchanged. */
+  outOfScale: dict.map.shell.layerOutOfScale,
   status: {
     LIVE: dict.map.shell.layerStatusLive,
     GATED: dict.map.shell.layerStatusGated,

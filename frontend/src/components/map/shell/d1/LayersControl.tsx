@@ -1,6 +1,10 @@
 'use client';
 
 import { railLayers, type LayerDefinition } from '@/lib/map/layers/layerRegistry';
+import {
+  GRATICULE_RAIL_KEY,
+  graticuleGuaranteedAtZoom,
+} from '@/lib/map/reference/graticule';
 
 /**
  * THE LAYERS CONTROL — lower-left cluster, second control (specification §3d).
@@ -29,6 +33,18 @@ export interface LayersControlLabels {
   readonly title: string;
   readonly layers: Readonly<Record<string, string>>;
   readonly status: Readonly<Record<string, string>>;
+  /**
+   * "On, but not guaranteed to be visible at this scale" — R2-B §8.
+   *
+   * The GRID reported as dead is not dead. It draws under the land and over
+   * the ocean, at 10° spacing, so a reader zoomed to a country is looking at a
+   * viewport that is nearly all land and may not contain a single line. The
+   * control worked; the map simply had nothing to show them.
+   *
+   * See `graticule.ts` for why none of that is changed and a note is issued
+   * instead.
+   */
+  readonly outOfScale: string;
 }
 
 export interface LayersControlProps {
@@ -37,9 +53,23 @@ export interface LayersControlProps {
   readonly onToggle?: (layerId: string, next: boolean) => void;
   /** Test seam. Defaults to the registry's own rail set. */
   readonly layers?: readonly LayerDefinition[];
+  /**
+   * The camera's current zoom, for the scale note above.
+   *
+   * Optional, and its absence means NO NOTE rather than a guessed one: a
+   * surface that does not pass a camera has not told this control anything
+   * about scale, and inventing one would be worse than staying quiet.
+   */
+  readonly zoom?: number;
 }
 
-export function LayersControl({ state, labels, onToggle, layers }: LayersControlProps): JSX.Element {
+export function LayersControl({
+  state,
+  labels,
+  onToggle,
+  layers,
+  zoom,
+}: LayersControlProps): JSX.Element {
   const rows = layers ?? railLayers();
 
   return (
@@ -58,6 +88,20 @@ export function LayersControl({ state, labels, onToggle, layers }: LayersControl
           const on = live && state[layer.id] === true;
           const statusLabel = labels.status[layer.runtime] ?? layer.runtime;
           const name = labels.layers[layer.id] ?? layer.id;
+          /*
+            R2-B §8 — THE ONE LAYER WITH A SCALE CONTRACT.
+
+            Keyed off the graticule's own rail key rather than a list kept
+            here, so the module that owns the contract is the module that says
+            which layer has one. Only raised when the layer is ON: a reader who
+            has not turned it on is not owed an explanation of where it would
+            have appeared.
+          */
+          const outOfScale =
+            on &&
+            layer.id === GRATICULE_RAIL_KEY &&
+            zoom !== undefined &&
+            !graticuleGuaranteedAtZoom(zoom);
 
           return (
             <li key={layer.id}>
@@ -76,7 +120,14 @@ export function LayersControl({ state, labels, onToggle, layers }: LayersControl
                   unexplained to a keyboard or screen-reader user, and this is
                   precisely the population most likely to be told "nothing here".
                 */
-                aria-label={live ? name : `${name} — ${statusLabel}: ${layer.runtimeEvidence}`}
+                data-gn-layer-scale={outOfScale ? 'out-of-scale' : undefined}
+                aria-label={
+                  live
+                    ? outOfScale
+                      ? `${name} — ${labels.outOfScale}`
+                      : name
+                    : `${name} — ${statusLabel}: ${layer.runtimeEvidence}`
+                }
                 title={live ? name : `${name} — ${statusLabel}`}
                 className={
                   live
@@ -106,6 +157,21 @@ export function LayersControl({ state, labels, onToggle, layers }: LayersControl
                   }`}
                 />
                 <span className="min-w-0 truncate">{name}</span>
+                {/*
+                  STATED, NOT WHISPERED. The reason travels in the accessible
+                  name above as well as in this chip, for the same reason the
+                  disabled rows' reasons do: an explanation only a mouse can
+                  reach is no explanation for the readers most likely to be
+                  told "nothing happened".
+                */}
+                {outOfScale && (
+                  <span
+                    data-gn="layer-out-of-scale"
+                    className="ml-auto shrink-0 rounded-[4px] border border-[#22303f] px-1 text-[10px] tracking-[0.1em] text-[#54687f]"
+                  >
+                    {labels.outOfScale}
+                  </span>
+                )}
                 {live ? null : (
                   <span className="ml-auto shrink-0 rounded-[4px] border border-[#22303f] px-1 text-[10px] tracking-[0.1em]">
                     {statusLabel}

@@ -135,6 +135,99 @@ export function buildGraticule(): FeatureCollection<MultiLineString> {
   };
 }
 
+/**
+ * ══ THE SUPPORTED-ZOOM CONTRACT — R2-B §8 ═════════════════════════════════
+ *
+ * MAP-GRID-RENDERING
+ *
+ * THE REPORT: "GRID clicked; no change." THE FINDING: nothing is broken. The
+ * source exists, the layer exists, `apply(GRATICULE_LAYER_ID, …)` sets its
+ * visibility, and the toggle has worked since the R1 correction. The grid was
+ * drawing exactly where this file says it draws — and that is nowhere a reader
+ * looking at a country can see it.
+ *
+ * THREE FACTS COMPOUND, AND ALL THREE ARE DELIBERATE:
+ *
+ *   IT IS UNDER THE LAND. Stroked after the ocean fill and before the land
+ *   base, because that is the prototype's draw order and what the golden world
+ *   frame shows. So it reads across open water and is COVERED BY LAND. A
+ *   reader zoomed to Kenya, Rwanda or Poland is looking at a viewport that is
+ *   almost entirely land, and there is nothing for the grid to show through.
+ *
+ *   THE CELL IS BIGGER THAN THE VIEW. At 10°, a cell is about 1,100 km. Past
+ *   the zoom computed below, a typical viewport fits INSIDE one cell and
+ *   contains no line at all — so the layer is visible, painting correctly, and
+ *   has nothing in frame to paint.
+ *
+ *   IT IS 7.5% ALPHA AT 0.6 px. Subtle by design — v1.5 raised it from 5%
+ *   precisely so it would clear the noise floor — but never assertive.
+ *
+ * ── WHAT IS NOT CHANGED, AND WHY ──────────────────────────────────────────
+ *
+ * None of the three. The draw order is C907 §4 and is measured against the
+ * golden frame; the 10° step is d3's `geoGraticule10` and was confirmed
+ * independently at 33 px per meridian on the golden capture; the colour and
+ * width are design tokens. Moving the grid above the land, tightening the step
+ * or raising the alpha would each change governed geometry to fix a reporting
+ * problem, and would make the map disagree with the reference it was measured
+ * against.
+ *
+ * So the contract is DECLARED rather than the geometry adjusted: the product
+ * states where this layer can be seen, and the rail tells the reader when they
+ * are outside it instead of leaving them clicking a control that cannot
+ * answer.
+ */
+
+/**
+ * The zoom past which a viewport can contain NO graticule line.
+ *
+ * Derived, not chosen. Web Mercator shows `360 / 2^zoom` degrees across a
+ * 512 px tile, so a viewport of `w` pixels spans
+ *
+ *     degrees = 360 · w / (512 · 2^zoom)
+ *
+ * and at least one line is guaranteed in frame only while `degrees >= 10`.
+ * For a 1000 px map pane — the desktop canvas after the layer rail and the
+ * right rail are taken out of a 1440 px window — that gives
+ *
+ *     2^zoom <= 360 · 1000 / (512 · 10) = 70.3      zoom <= 6.13
+ *
+ * Rounded DOWN to 6, because the guarantee has to hold at the stated value
+ * rather than near it.
+ *
+ * It is a GUARANTEE THRESHOLD, not a cut-off. Above it a line may still be in
+ * view — the reader may simply be near one — and the layer is never disabled
+ * or hidden on account of zoom. Nothing here changes what is drawn.
+ */
+export const GRATICULE_GUARANTEED_ZOOM = 6;
+
+/** The reference pane width the threshold above is computed for. */
+export const GRATICULE_REFERENCE_PANE_PX = 1000;
+
+/**
+ * Degrees of longitude across a map pane at a given zoom.
+ *
+ * Exported so the threshold can be re-derived by a test rather than restated
+ * by one. A constant a spec merely repeats back is a constant nothing checks.
+ */
+export function graticuleDegreesAcross(zoom: number, panePx: number): number {
+  return (360 * panePx) / (512 * 2 ** zoom);
+}
+
+/**
+ * Whether a line is GUARANTEED to be in frame at this zoom.
+ *
+ * `false` does not mean the grid is off or broken. It means the product
+ * cannot promise the reader will see it, which is exactly the sentence the
+ * rail needs in order to stop a working control from reading as a dead one.
+ */
+export function graticuleGuaranteedAtZoom(
+  zoom: number,
+  panePx: number = GRATICULE_REFERENCE_PANE_PX,
+): boolean {
+  return graticuleDegreesAcross(zoom, panePx) >= GRATICULE_STEP_DEGREES;
+}
+
 export const GRATICULE_SOURCE_ID = 'gn-graticule';
 export const GRATICULE_LAYER_ID = 'gn-graticule-line';
 

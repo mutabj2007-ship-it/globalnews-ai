@@ -15,6 +15,8 @@ const WORLD = { west: -180, south: -85, east: 180, north: 85 };
 const LABELS = {
   title: 'Layers',
   layers: Object.fromEntries(LAYER_REGISTRY.map((l) => [l.id, l.id.toUpperCase()])),
+  /* R2-B section 8. No zoom is passed here, so the note is never raised. */
+  outOfScale: 'NOT AT THIS SCALE',
   status: {
     LIVE: 'LIVE',
     GATED: 'GATED',

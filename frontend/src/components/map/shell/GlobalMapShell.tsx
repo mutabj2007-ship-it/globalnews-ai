@@ -1858,9 +1858,12 @@ export function GlobalMapShell({
                 NOT built stay disabled by `live` and keep their status badge.
               */
               onToggle={onToggleLayer}
+              /* R2-B §8 — so the GRID row can say when it is out of scale. */
+              zoom={session.camera.zoom}
               labels={{
                 title: shell.layersTitle,
                 layers: spatial.layers.layers,
+                outOfScale: shell.layerOutOfScale,
                 status: {
                   LIVE: shell.layerStatusLive,
                   GATED: shell.layerStatusGated,

@@ -1012,6 +1012,8 @@ export const pl: Dictionary = {
       layersTitle: 'Warstwy',
       threeD: 'Widok 3D',
       threeDUnavailable: 'Dla tego wdrożenia nie skonfigurowano źródła terenu',
+      /* R2-B §8 — włączona, ale siatka 10° może nie mieć linii w tym kadrze. */
+      layerOutOfScale: 'Nie w tej skali',
       layerStatusLive: 'Dostępna',
       layerStatusGated: 'Jeszcze niedostępna',
       layerStatusNotImplemented: 'Niezbudowana',
