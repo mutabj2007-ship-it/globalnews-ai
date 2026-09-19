@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/modules/economy/**/*.ts"],
+  "exclude": ["**/*.spec.ts"],
+  "compilerOptions": { "noEmit": true }
+}
