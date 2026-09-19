@@ -132,9 +132,25 @@ describe('I — PL survives a refresh on the map, not only on the homepage', () 
 describe('I — the selected geography survives sign-in, without touching returnTo', () => {
   describe('THE SECURITY CONTRACT IS NOT WIDENED', () => {
     it('every map sign-in link still returns to the bare allowlisted path', () => {
+      /*
+        ══ TWO SURFACES NOW, NOT THREE — R2-B §5 ══════════════════════════
+
+        The callout carried a third sign-in link because it carried a Follow
+        control. The 2026-09-19 ruling removes Follow from the map popup and
+        makes it a compact selection anchor, so the link went with it.
+
+        THE CONTRACT IS UNCHANGED AND IS ASSERTED ON WHAT REMAINS. Fewer
+        sign-in entry points is a smaller attack surface, not a weaker rule —
+        and the assertion below proves the callout has no sign-in URL of any
+        shape rather than trusting that it has none.
+      */
       expect(shell).toContain("const FOLLOW_RETURN_DESTINATION = '/map';");
       expect(card).toContain("const FOLLOW_RETURN_DESTINATION = '/map';");
-      expect(callout).toContain("const CALLOUT_RETURN_DESTINATION = '/map';");
+    });
+
+    it('and the compact anchor holds no sign-in path at all', () => {
+      expect(callout).not.toContain('RETURN_DESTINATION');
+      expect(callout).not.toContain('accountSignInUrl');
     });
 
     it('no map sign-in URL carries a query string', () => {
@@ -143,7 +159,8 @@ describe('I — the selected geography survives sign-in, without touching return
         refused — it silently degrades to the homepage, which would be worse
         than the defect being fixed.
       */
-      for (const surface of [shell, card, callout]) {
+      /* The callout no longer has a sign-in link — see the assertion above. */
+      for (const surface of [shell, card]) {
         expect(surface).not.toMatch(/accountSignInUrl\([^)]*\?/);
         expect(surface).not.toMatch(/RETURN_DESTINATION = '\/map\?/);
       }
@@ -155,10 +172,19 @@ describe('I — the selected geography survives sign-in, without touching return
       expect(returnState).toContain('window.sessionStorage.setItem(KEY, search);');
     });
 
-    it('all three map sign-in affordances remember before navigating', () => {
-      for (const surface of [shell, card, callout]) {
+    it('both remaining map sign-in affordances remember before navigating', () => {
+      /*
+        SUPERSEDED BY R2-B §5 — three became two when the compact anchor lost
+        its Follow control. The rule is untouched for every surface that still
+        navigates to sign-in.
+      */
+      for (const surface of [shell, card]) {
         expect(surface).toContain('rememberMapStateForSignIn(window.location.search)');
       }
+    });
+
+    it('and the anchor does not navigate anywhere, so it has nothing to remember', () => {
+      expect(callout).not.toContain('rememberMapStateForSignIn');
     });
 
     it('the route’s own query string is copied verbatim, never re-encoded', () => {

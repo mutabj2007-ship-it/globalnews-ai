@@ -1912,24 +1912,33 @@ export function GlobalMapShell({
           <SelectionCallout
             geographyId={selection.id}
             displayName={selectionName}
-            total={selectedTotal}
-            provenance={selectedProvenance}
-            availableGeometry={availableGeometry}
             identity={selectionDetail?.identity}
-            providerStatus={selectionDetail?.providerStatus}
-            coverage={selectionDetail?.coverage}
-            /* THE SAME OBJECT THE RAIL IS GIVEN. Not a copy, not a mirror. */
-            follow={follow}
+            /*
+              ══ A COMPACT ANCHOR, NOT A SECOND ACTION SURFACE ══════════════
+
+              R2-B §5. The rail beside this is presenting the SAME selected
+              geography — that is not a coincidence here, it is the render
+              condition: `calloutVisible` requires `hud.rightRail`, and the
+              rail renders whatever `selection` holds. So the ruling's
+              condition is always met and the anchor is always compact.
+
+              WHAT IS NO LONGER PASSED IS THE POINT. No `total`, no
+              `providerStatus`, no `coverage`, no `follow`, and none of the
+              three action handlers. The rail keeps every one of them and
+              remains the authoritative detailed/action surface; the anchor
+              cannot render an action it is not given a handler for, and cannot
+              be given one without this call changing.
+            */
+            continents={spatial.card.continents}
             placement={calloutPlacement}
             measureRef={measureCallout}
-            language={language}
-            labels={spatial.card}
             calloutLabels={spatial.callout}
-            /* ONE BOOLEAN. It touches no selection and no rail. */
+            /*
+              SELECTION-LOCAL DISMISSAL. One key, not a preference: closing the
+              anchor hides it for THIS geography, and selecting another shows
+              that one's. Nothing is persisted and no settings contract exists.
+            */
             onDismiss={() => setCalloutDismissedFor(selection.id)}
-            onFocus={onResetEvidence}
-            onOpenAnalysis={onOpenAnalysis ? () => onOpenAnalysis(selection) : undefined}
-            onOpenSources={onOpenSources ? () => onOpenSources(selection) : undefined}
           />
         )}
 

@@ -266,9 +266,26 @@ describe('H — no surface prints a number nobody supplied', () => {
     expect(card).toContain("{value ?? '—'}");
   });
 
-  it('the callout does too', () => {
-    expect(callout).toContain('[total.publisherCount, labels.sources');
-    expect(callout).toContain("{value ?? '—'}");
+  it('the callout prints no figure at all, which is the stronger form', () => {
+    /*
+      ══ SUPERSEDED BY R2-B §5 — THE COUNT IS GONE, NOT THE DASH ════════════
+
+      This asserted that the callout read `publisherCount` and rendered a null
+      as an em dash, never as a fabricated zero. It was right, and it was the
+      correct assertion for a surface that printed counts.
+
+      The 2026-09-19 ruling makes the callout a COMPACT SELECTION ANCHOR: name,
+      identity, close. It prints no report count, no publisher count and no
+      new-since count, because the right rail beside it — which is still
+      covered by the assertion above — is the authoritative surface for all
+      three.
+
+      So the property is now absolute rather than careful: a surface that
+      renders no figure cannot render a wrong one.
+    */
+    expect(callout).not.toContain('publisherCount');
+    expect(callout).not.toContain('reportCount');
+    expect(callout).not.toContain('newSinceLastVisit');
   });
 
   it('and the mobile shell no longer falls back to zero', () => {
