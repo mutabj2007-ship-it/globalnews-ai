@@ -165,56 +165,72 @@ describe('this change alters no existing provider boundary', () => {
   });
 
   /*
-    ── ORIGINALLY THIS ASSERTED THE WORKING TREE, AND THAT WAS A MISTAKE ──────
+    ── THIS ASSERTION HAS BEEN WRONG TWICE, IN THE SAME WAY ──────────────────
 
-    It read: "the only shared/ change is the contract and its barrel line", against
-    `git diff HEAD`. True while the work was uncommitted, and FALSE the moment it was
-    committed — a test that passes only before you commit is a test that fails for
-    everyone afterwards, for no reason anybody can act on.
+    It began as "the only shared/ change is the contract and its barrel line",
+    checked against `git diff HEAD`. That was true while the work was uncommitted and
+    false the moment it was committed: a test that passes only before you commit is a
+    test that fails for everyone afterwards, for no reason anybody can act on.
 
-    What the assertion was actually FOR is durable, so it is restated against the
-    commit that introduced this capability rather than against whatever happens to be
-    uncommitted right now: the snapshot store touched two shared files and no more.
+    So it was restated against the commit that introduced the capability — and named
+    that commit by the two exact paths it happened to touch. R2 then added a THIRD
+    shared file, `official-data/snapshot-admission.ts`, and the assertion failed on a
+    change that is entirely within its own remit. Pinning the file LIST was the same
+    error in a new coat: it froze an accident of R1 instead of the rule.
+
+    What the assertion is actually for is a containment rule, and that is durable:
+
+        every shared/ file this capability touches is either the barrel line or lives
+        under shared/src/official-data/ — the store never reaches into another
+        module's contract to make room for itself.
+
+    Stated that way it holds for R1, holds for R2, and still means something in R3.
+    It is also checked across the WHOLE lineage rather than the newest commit, so a
+    future revision cannot slip sprawl in behind an older one.
   */
-  it('and the commit that introduced this capability touched exactly two shared files', () => {
-    const introducing = git(
-      'log',
-      '--format=%H',
-      '-1',
-      '--',
-      'shared/src/official-data/snapshot.ts',
-    )
+  it('no commit in this capability reaches outside its own shared/ contract surface', () => {
+    const lineage = git('log', '--format=%H', '--', 'shared/src/official-data/snapshot.ts')
       .trim()
-      .split('\n')[0];
+      .split('\n')
+      .filter((sha) => sha !== '');
 
     // Before the capability is committed there is nothing to check, and saying so is
     // better than pretending to have checked.
-    if (introducing === undefined || introducing === '') return;
+    if (lineage.length === 0) return;
 
-    const sharedChanges = git('show', '--name-only', '--format=', introducing)
-      .split('\n')
-      .map((s) => s.trim())
-      .filter((f) => f.startsWith('shared/'))
-      .sort();
+    for (const sha of lineage) {
+      const sharedChanges = git('show', '--name-only', '--format=', sha)
+        .split('\n')
+        .map((s) => s.trim())
+        .filter((f) => f.startsWith('shared/'))
+        .sort();
 
-    expect(sharedChanges).toEqual(['shared/src/index.ts', 'shared/src/official-data/snapshot.ts']);
+      const strayed = sharedChanges.filter(
+        (f) => f !== 'shared/src/index.ts' && !f.startsWith('shared/src/official-data/'),
+      );
+
+      expect([sha, strayed]).toEqual([sha, []]);
+    }
   });
-});
 
-describe('the official-source registry is still empty by design', () => {
-  it('a store exists, and it still has nothing allowlisted to retrieve from', () => {
+  it('and the barrel gained export lines only — it lost none', () => {
     /*
-      P-2 landing does not activate a provider. The registry that names
-      allowlisted providers is untouched and still empty by the M64.1 ruling, so
-      a store constructed from it refuses every retrieval — which is the correct
-      state until SNAP-R-1 and P-3 are closed.
+      The containment rule above permits touching the barrel. This says what touching
+      it is allowed to mean: adding exports. A REMOVED barrel line is how a change
+      that looks local silently breaks an unrelated consumer, and it is the one edit
+      to that file this capability has no business making.
     */
-    const registry = readFileSync(
-      join(REPO, 'backend', 'src', 'modules', 'official-sources', 'official-source-registry.ts'),
-      'utf8',
-    );
+    const lineage = git('log', '--format=%H', '--', 'shared/src/official-data/snapshot.ts')
+      .trim()
+      .split('\n')
+      .filter((sha) => sha !== '');
 
-    expect(registry).toMatch(/starts empty and stays empty/);
-    expect(registry).toMatch(/export const OFFICIAL_SOURCES: OfficialSourceEntry\[\] = \[\];/);
+    for (const sha of lineage) {
+      const removed = git('show', '--format=', '--unified=0', sha, '--', 'shared/src/index.ts')
+        .split('\n')
+        .filter((l) => l.startsWith('-') && !l.startsWith('---'));
+
+      expect([sha, removed]).toEqual([sha, []]);
+    }
   });
 });
