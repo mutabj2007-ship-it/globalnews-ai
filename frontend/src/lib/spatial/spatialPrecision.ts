@@ -1,4 +1,9 @@
-import type { NewsArticle } from '@globalnews-ai/shared';
+import type {
+  NewsArticle,
+  SpatialPrecision,
+  LocationProvenance,
+  LegacyGeographicPrecision,
+} from '@globalnews-ai/shared';
 import {
   type DisplayPrecision,
   displayPrecisionFor,
@@ -55,17 +60,24 @@ import {
  * produced by nothing.
  */
 
-export type SpatialPrecision =
-  | 'EXACT'
-  | 'CITY'
-  | 'SECTOR'
-  | 'DISTRICT'
-  | 'PROVINCE'
-  | 'COUNTRY'
-  | 'REGION'
-  | 'UNKNOWN';
+/*
+  ── CF-D1 · THE LADDER IS NO LONGER DECLARED HERE. IT IS RE-EXPORTED. ──────
 
-export type LegacyGeographicPrecision = 'country' | 'region' | 'city' | 'coordinate' | 'unknown';
+  `MAIN-CONFLICT-CANONICAL-FOUNDATION-R2` promoted the ladder into
+  `shared/src/spatial/precision.ts` as the single canonical authority, and its integration
+  note is explicit: when that lands, this file "re-exports from shared rather than
+  redeclaring".
+
+  WHAT IS DELETED IS THE DUPLICATED LADDER, NOT THIS FILE. The DISPLAY half below —
+  `PRODUCIBLE_SPATIAL_PRECISION`, the ceilings, `evidenceDisplayCeiling` and
+  `precisionExceedsGeometry` — STAYS, and stays frontend-owned on purpose: the backend must
+  never learn what a precision looks like.
+
+  A second list that happens to agree today is exactly the drift this promotion ends, so
+  `spatialPrecisionSingleAuthority.spec.ts` pins the two BY IDENTITY rather than by
+  content. A content check would still pass on the day the two diverged by one rung.
+*/
+export type { SpatialPrecision, LegacyGeographicPrecision } from '@globalnews-ai/shared';
 
 /**
  * SPATIAL PRODUCTION PORT — the optional article field, as a FRONTEND-LOCAL
@@ -83,7 +95,9 @@ export type ArticleWithProvenance = NewsArticle & {
   readonly locationProvenance?: LocationProvenance;
 };
 
-export type LocationProvenance = 'STATED' | 'INTERPRETED' | 'CONTESTED';
+/* CF-D1 · re-exported, not redeclared. PRECISION IS NOT PROVENANCE: one says how finely a
+   location is known, this says who said so — and both now have one authority. */
+export type { LocationProvenance } from '@globalnews-ai/shared';
 
 export const PRODUCIBLE_SPATIAL_PRECISION: readonly SpatialPrecision[] = [
   'COUNTRY',

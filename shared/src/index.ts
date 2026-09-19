@@ -135,28 +135,62 @@ export * from './security/absence';
   Politics' to own: Politics is its FIRST CONSUMER, not its author, and the type parameter
   is what keeps the generic record from becoming a catch-all.
 
-  ── WHY `./politics` AND `./relationships` ARE NOT EXPORTED HERE YET ───────
+  ── THE R1 HOLD, NOW CLOSED ───────────────────────────────────────────────
 
-  Steps #3 to #5 of the promotion are on HOLD, and the blocker is measured rather than
-  assumed. The accepted `MAIN-POLITICS-PLATFORM-1-R2` sources were verified byte-identical
-  against that package's manifest and compiled against this lineage; two imports do not
-  resolve:
+  The Politics R1 landing held steps #3–#5 because `shared/src/politics/index.ts` and
+  `shared/src/relationships/index.ts` imported `SpatialPrecision` and `LocationProvenance`
+  from `'../news'`, and neither was declared anywhere in `shared/src` on this lineage.
+  Recovering the C39 declarations by hand would have pre-empted CF-D1, which assigned that
+  promotion to Main WITH A RULING attached.
 
-      shared/src/politics/index.ts       `SpatialPrecision`     from '../news'
-      shared/src/relationships/index.ts  `LocationProvenance`   from '../news'
-
-  Neither is declared anywhere in `shared/src` on this lineage. Both exist at canonical
-  `3db5a09:shared/src/news.ts`, so this is a RECOVERY question — but it is not this lane's
-  recovery to perform: **CF-D1 assigns promoting exactly these two symbols to Main and H,
-  together with a ruling on widening `PRODUCIBLE_SPATIAL_PRECISION`.** Recovering the C39
-  declarations here would pre-empt a ruling that is in flight and that the Conflict lane is
-  also waiting on.
-
-  Main's §1.1 is explicit for this case — "STOP and report — do not stub it. A stubbed
-  provenance type is a second evidence system arriving by the back door" — and
-  `LocationProvenance` is precisely a provenance type.
-
-  So the move is prepared and withheld rather than half-landed. #1 and #2 are independent
-  of it by Main's own landing order and are landed.
+  `MAIN-CONFLICT-CANONICAL-FOUNDATION-R2` made the ruling and delivered
+  `shared/src/spatial/precision.ts`. Both imports are repointed at that one canonical
+  authority — not recovered, not stubbed, not duplicated — and the move is landed.
 */
 export * from './observation/domain-observation';
+
+/*
+  CF-D1 · THE SPATIAL PRECISION AUTHORITY — ONE OWNER, NO COMPATIBILITY DUPLICATE.
+
+  `MAIN-CONFLICT-CANONICAL-FOUNDATION-R2`, landed byte-identical. This is the promotion the
+  Politics R1 landing was held on: `SpatialPrecision` and `LocationProvenance` now have a
+  canonical home in `shared/`, so nothing has to be recovered by hand from `3db5a09` and no
+  provenance type arrives stubbed.
+
+  PRECISION IS NOT GEOMETRY, IS NOT DENOTATION, AND IS NOT PROVENANCE. The ladder says how
+  finely a location is known; the geometry says what shape was drawn; the denotation says
+  what that shape is claimed to BE; the provenance says who said so. This module owns the
+  first and the last and deliberately owns neither of the middle two.
+
+  THE DISPLAY HALF STAYS IN THE FRONTEND. `PRODUCIBLE_SPATIAL_PRECISION`, the ceilings and
+  `precisionExceedsGeometry` are NOT promoted here — the backend must never learn what a
+  precision looks like. What is deleted is the duplicated ladder, not the frontend file.
+*/
+export * from './spatial/precision';
+
+/* POLITICS — steps #3-#5 of MAIN-POLITICS-PLATFORM-PROMOTION-R3, landed now that CF-D1 is
+   closed. Byte-identical from MAIN-POLITICS-PLATFORM-1-R2 apart from two repointed
+   imports, each documented at its site. MERGED into this barrel, never overwritten by
+   R2's 23-export C39 copy. */
+export * from './politics';
+export * from './relationships';
+
+/* THE CANONICAL CONFLICT OBSERVATION — identity, ownership resolver, severity authority,
+   geography and revision semantics. A DIFFERENT module from  beside it, which
+   carries the display vocabulary; both are exported and neither shadows the other. */
+export * from './conflict/observation';
+
+/*
+  THE CANONICAL CONFLICT OBSERVATION — including the ownership resolver.
+
+  `conflict/observation.ts` is a DIFFERENT module from `conflict.ts` beside it: the older
+  file carries the Conflict display vocabulary (states, severities, indicators, watch
+  scopes), this one the observation model, identity and ownership rule. Both are exported
+  and neither shadows the other.
+
+  `resolveConflictEventOwner` lands here rather than being written by Code. It is the M-2
+  closure over ONE canonical occurrence, and `CONFLICT_EVENT_OWNERS` already contains
+  `POLITICS`, so a Politics producer calls it instead of declaring a second ownership
+  vocabulary.
+*/
+
