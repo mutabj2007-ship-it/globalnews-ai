@@ -120,11 +120,33 @@ describe('AS-E1-1 · a reader cannot mint an authority', () => {
       This spec and the composition root are the allowed callers. The spec is allowed
       because a control nobody can test is a control nobody can trust.
     */
+    /*
+      ── IT MATCHED A MENTION, NOT AN IMPORT, AND IT CRIED WOLF ──────────────
+
+      The first version tested `source.includes('geometry-authority.loader')`. When the
+      producer lane landed `copernicus-ems.producer.spec.ts`, this guard named it as an
+      offender — and that spec is INNOCENT. Its two occurrences of the string are its
+      OWN boundary assertions:
+
+          expect(root).toContain('geometry-authority.loader');
+          expect(producerSource().includes('geometry-authority.loader')).toBe(false);
+
+      That is another lane independently enforcing AS-E1-1, and this guard reported it
+      as a violation of AS-E1-1. A guard that fires on the file enforcing the same rule
+      is worse than no guard: the next person to see it fire will assume it is noise.
+
+      The property is IMPORTS, so the test now matches imports — `from '…loader'` and
+      `require('…loader')` — rather than any appearance of the name. A file may discuss
+      the module; it may not pull it in.
+    */
     const ALLOWED = ['gx14-authority.spec.ts', 'humanitarian-authority.loader.ts'];
     const roots = [
       join(__dirname, '..', '..', '..', 'src'),
       join(__dirname, '..', '..', '..', '..', 'frontend', 'src'),
     ];
+
+    const IMPORTS_LOADER =
+      /(?:from\s*|require\(\s*)['"][^'"]*geometry-authority\.loader(?:\.js)?['"]/;
 
     const offenders: string[] = [];
     const walk = (dir: string): void => {
@@ -136,7 +158,7 @@ describe('AS-E1-1 · a reader cannot mint an authority', () => {
         }
         if (!/\.tsx?$/.test(entry)) continue;
         if (ALLOWED.includes(entry)) continue;
-        if (readFileSync(full, 'utf8').includes('geometry-authority.loader')) {
+        if (IMPORTS_LOADER.test(readFileSync(full, 'utf8'))) {
           offenders.push(entry);
         }
       }
@@ -144,6 +166,34 @@ describe('AS-E1-1 · a reader cannot mint an authority', () => {
     for (const root of roots) walk(root);
 
     expect(offenders).toEqual([]);
+  });
+
+  it('and the import matcher actually fires (mutation control)', () => {
+    /*
+      Narrowing a guard is the moment to prove it still bites. Without this, "matches
+      imports rather than mentions" could quietly become "matches nothing".
+    */
+    const IMPORTS_LOADER =
+      /(?:from\s*|require\(\s*)['"][^'"]*geometry-authority\.loader(?:\.js)?['"]/;
+
+    // Real imports in every shape a caller would write.
+    for (const smuggle of [
+      `import { sealProtectionAuthority } from '../../shared/src/humanitarian/geometry-authority.loader';`,
+      `import x from "@globalnews-ai/shared/dist/humanitarian/geometry-authority.loader";`,
+      `const l = require('../humanitarian/geometry-authority.loader.js');`,
+      `export * from './geometry-authority.loader';`,
+    ]) {
+      expect([smuggle, IMPORTS_LOADER.test(smuggle)]).toEqual([smuggle, true]);
+    }
+
+    // And the innocent shapes the old matcher condemned.
+    for (const innocent of [
+      `expect(root).toContain('geometry-authority.loader');`,
+      `// the minting door lives in geometry-authority.loader`,
+      `expect(src.includes('geometry-authority.loader')).toBe(false);`,
+    ]) {
+      expect([innocent, IMPORTS_LOADER.test(innocent)]).toEqual([innocent, false]);
+    }
   });
 
   it('the loader token is issued ONCE per process', () => {
@@ -487,12 +537,38 @@ describe('AS-E1-7 · unknown codes are UNCLASSIFIED and they alarm', () => {
   });
 
   it('the two known sets still classify, so the gate is not simply refusing everything', () => {
+    /*
+      ── THIS TEST WAS ASSERTING THE DEFECT, AND PASSED WHILE DOING IT ────────
+
+      It read:
+
+          classifyRefusal('RENDERER_CANNOT_DRAW_KIND')            -> DATA_DEFECT
+          refusalCodeOf('GEOMETRY_CRS_NOT_SUPPORTED: ...')        -> GEOMETRY_CRS_NOT_SUPPORTED
+
+      Both passed, because both names were in R1's governed list. NEITHER IS EVER
+      THROWN. `RENDERER_CANNOT_DRAW_KIND` is a GeometryWithheldReason — an outcome on a
+      presented record — and `GEOMETRY_CRS_NOT_SUPPORTED` is a misspelling of the real
+      `GEOMETRY_CRS_UNSUPPORTED`.
+
+      A test written from the same invented list as the code it checks agrees with it
+      perfectly and measures nothing. That is the failure this whole patch is about, and
+      it is worth leaving the evidence of it here rather than quietly swapping the
+      strings: the vocabulary gate in `gx14-refusal-vocabulary.spec.ts` is what makes
+      this class of agreement impossible now, because it reads the SOURCE rather than
+      the list.
+    */
     expect(classifyRefusal('GEOMETRY_PROJECTION_WITHOUT_COORDINATES')).toBe('PROGRAMMING_MISTAKE');
-    expect(classifyRefusal('RENDERER_CANNOT_DRAW_KIND')).toBe('DATA_DEFECT');
+    expect(classifyRefusal('GEOMETRY_CRS_UNSUPPORTED')).toBe('DATA_DEFECT');
     expect(refusalClassAlarms('DATA_DEFECT')).toBe(false);
 
-    const real = new Error('GEOMETRY_CRS_NOT_SUPPORTED: EPSG:3857 is not admitted');
-    expect(refusalCodeOf(real)).toBe('GEOMETRY_CRS_NOT_SUPPORTED');
+    const real = new Error('GEOMETRY_CRS_UNSUPPORTED: EPSG:3857 is not admitted');
+    expect(refusalCodeOf(real)).toBe('GEOMETRY_CRS_UNSUPPORTED');
+
+    // And the two retired names are now refused, which is the behaviour change.
+    expect(classifyRefusal('RENDERER_CANNOT_DRAW_KIND')).toBe('UNCLASSIFIED');
+    expect(refusalCodeOf(new Error('GEOMETRY_CRS_NOT_SUPPORTED: stale'))).toBe(
+      UNCLASSIFIED_REFUSAL_CODE,
+    );
   });
 
   it('a non-Error throw is UNCLASSIFIED rather than interpolated', () => {

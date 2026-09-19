@@ -460,6 +460,150 @@ describeLive('GX-14 · the authority store, measured as the actual roles', () =>
     );
   });
 
+  it('GA-43a · E1 REPRODUCTION — the producer cannot declassify or re-cohort a record', async () => {
+    /*
+      THE TWO STATEMENTS E1 RAN, VERBATIM. Both succeeded under R1's table-level UPDATE
+      grant, which is the defect this patch exists to close.
+
+      Neither touches a declaration table. That is the whole point of the finding: the
+      security decision FOR A RECORD lives in two columns ON THE RECORD, and R1's GA-43
+      guarded the declaration tables while leaving those two columns writable.
+    */
+    await asRole(ROLE('hum_producer_role'), async (producer) => {
+      for (const statement of [
+        `UPDATE ${AUTH_SCHEMA}.geometry_record SET protection_class_id = NULL`,
+        `UPDATE ${AUTH_SCHEMA}.geometry_record SET presentation_partition_key = 'PART-LIGHT'`,
+      ]) {
+        expect([statement, await sqlstateOf(producer, statement)]).toEqual([
+          statement,
+          INSUFFICIENT_PRIVILEGE,
+        ]);
+      }
+    });
+
+    // And the protected record is still protected and still in its dark cohort —
+    // asserted as the OWNER, because the producer cannot read its own failure.
+    const after = await owner.query(
+      `SELECT protection_class_id, presentation_partition_key
+         FROM ${AUTH_SCHEMA}.geometry_record WHERE record_key = 'rec-dark'`,
+    );
+    expect(after.rows[0]).toEqual({
+      protection_class_id: 'CLASS-P',
+      presentation_partition_key: 'PART-DARK',
+    });
+  });
+
+  it('GA-43b · the refusal holds for every shape of the same attack', async () => {
+    /*
+      A column grant refuses the STATEMENT, not the column, so hiding a security column
+      among legitimate ones does not smuggle it through. Worth measuring rather than
+      assuming: "UPDATE the allowed columns AND one forbidden one" is exactly what
+      someone writes when the simple form starts failing.
+    */
+    await asRole(ROLE('hum_producer_role'), async (producer) => {
+      for (const statement of [
+        // Targeted at one row rather than the table.
+        `UPDATE ${AUTH_SCHEMA}.geometry_record SET protection_class_id = NULL WHERE record_key = 'rec-dark'`,
+        // Mixed with a legitimate producer-owned column.
+        `UPDATE ${AUTH_SCHEMA}.geometry_record SET source_id = 'S2', protection_class_id = NULL`,
+        `UPDATE ${AUTH_SCHEMA}.geometry_record SET crs = 'EPSG:4326', presentation_partition_key = 'PART-LIGHT'`,
+        // Re-keying a record is re-identifying it, and is not producer-owned either.
+        `UPDATE ${AUTH_SCHEMA}.geometry_record SET record_key = 'rec-renamed' WHERE record_key = 'rec-dark'`,
+        // Deleting a record outright removes it from the dark cohort just as well.
+        `DELETE FROM ${AUTH_SCHEMA}.geometry_record WHERE record_key = 'rec-dark'`,
+      ]) {
+        expect([statement, await sqlstateOf(producer, statement)]).toEqual([
+          statement,
+          INSUFFICIENT_PRIVILEGE,
+        ]);
+      }
+    });
+  });
+
+  it('GA-43c · POSITIVE CONTROL — legitimate producer updates still succeed', async () => {
+    /*
+      Without this the patch is indistinguishable from revoking the producer's write
+      access entirely, which would pass every assertion above and break ingestion. Each
+      producer-owned column is updated individually, so a single over-broad REVOKE
+      cannot hide behind one representative field.
+    */
+    await asRole(ROLE('hum_producer_role'), async (producer) => {
+      const updates: Array<[string, string]> = [
+        ['source_id', `'SYNTHETIC-SRC-2'`],
+        ['source_geometry_id', `'SYN-GEOM-9'`],
+        ['emitting_domain_id', `'DOM-2'`],
+        ['kind', `'POINT'`],
+        ['denotation', `'AFFECTED_AREA'`],
+        ['origin', `'SOURCE_NATIVE'`],
+        ['crs', `'EPSG:4326'`],
+        ['relation_to_assertion', `'CONTEXT'`],
+        ['coordinates', `'{"type":"Point","coordinates":[1,2]}'::jsonb`],
+      ];
+
+      for (const [column, value] of updates) {
+        const statement = `UPDATE ${AUTH_SCHEMA}.geometry_record SET ${column} = ${value} WHERE record_key = 'rec-bright'`;
+        expect([column, await sqlstateOf(producer, statement)]).toEqual([column, null]);
+      }
+
+      // And a producer can still insert, which is its actual job.
+      const inserted = await sqlstateOf(
+        producer,
+        `INSERT INTO ${AUTH_SCHEMA}.geometry_record
+           (record_key, protection_class_id, presentation_partition_key, emitting_domain_id,
+            kind, denotation, origin, crs, coordinates, source_id, relation_to_assertion)
+         VALUES ('rec-positive', NULL, 'PART-LIGHT', 'DOM-1', 'POINT', 'AFFECTED_AREA',
+                 'SOURCE_NATIVE', 'EPSG:4326', '{"type":"Point","coordinates":[3,4]}'::jsonb,
+                 'SYNTHETIC-SRC-1', 'THE_ASSERTION')`,
+      );
+      expect(inserted).toBeNull();
+    });
+
+    await owner.query(
+      `DELETE FROM ${AUTH_SCHEMA}.geometry_record WHERE record_key = 'rec-positive'`,
+    );
+  });
+
+  it('GA-43d MUTATION · restoring the table-level grant makes GA-43a FAIL', async () => {
+    /*
+      E1's control 1: at least one assertion shown failing under a deliberate mutation,
+      in the same run that reports the others passing. The mutation here is the R1 grant
+      itself — restore it and the defect returns, exactly as E1 measured it.
+    */
+    await owner.query(
+      `GRANT UPDATE ON ${AUTH_SCHEMA}.geometry_record TO ${ROLE('hum_producer_role')}`,
+    );
+    try {
+      await asRole(ROLE('hum_producer_role'), async (producer) => {
+        const code = await sqlstateOf(
+          producer,
+          `UPDATE ${AUTH_SCHEMA}.geometry_record SET protection_class_id = NULL WHERE record_key = 'rec-dark'`,
+        );
+        // The defect, reproduced: it SUCCEEDS.
+        expect(code).toBeNull();
+      });
+    } finally {
+      await owner.query(
+        `REVOKE UPDATE ON ${AUTH_SCHEMA}.geometry_record FROM ${ROLE('hum_producer_role')}`,
+      );
+      await owner.query(`GRANT UPDATE (
+        emitting_domain_id, kind, denotation, origin, crs, coordinates,
+        source_id, source_geometry_id, relation_to_assertion
+      ) ON ${AUTH_SCHEMA}.geometry_record TO ${ROLE('hum_producer_role')}`);
+      await owner.query(
+        `UPDATE ${AUTH_SCHEMA}.geometry_record SET protection_class_id = 'CLASS-P' WHERE record_key = 'rec-dark'`,
+      );
+    }
+
+    // The control is restored — a mutation must not leave the gate open behind it.
+    await asRole(ROLE('hum_producer_role'), async (producer) => {
+      const code = await sqlstateOf(
+        producer,
+        `UPDATE ${AUTH_SCHEMA}.geometry_record SET protection_class_id = NULL WHERE record_key = 'rec-dark'`,
+      );
+      expect(code).toBe(INSUFFICIENT_PRIVILEGE);
+    });
+  });
+
   it('the safe projection REMAINS AVAILABLE to the reader — one dark, one bright', async () => {
     /*
       The negative control's counterpart. A configuration that refused the reader

@@ -177,10 +177,56 @@ GRANT SELECT ON ALL TABLES IN SCHEMA hum_authority TO hum_projection_writer;
 GRANT USAGE ON SCHEMA hum_reader TO hum_reader_role;
 GRANT SELECT ON hum_reader.reader_row TO hum_reader_role;
 
--- THE PRODUCER: writes geometry, and cannot touch a declaration.
--- E1: "A producer that could declare a class could un-declare one."
+-- ── THE PRODUCER — COLUMN-LEVEL, AFTER E1 BROKE THE TABLE-LEVEL VERSION ────
+--
+-- R1 granted `SELECT, INSERT, UPDATE ON hum_authority.geometry_record`. E1 executed,
+-- as hum_producer_role:
+--
+--     UPDATE geometry_record SET protection_class_id = NULL
+--     UPDATE geometry_record SET presentation_partition_key = 'PART-LIGHT'
+--
+-- Both succeeded. A producer could therefore declassify any protected record and move
+-- any record out of a dark cohort — without touching a declaration table at all.
+--
+-- R1's GA-43 test asserted the producer could not write `protected_class` or
+-- `protected_partition`, and passed. It was testing THE WRONG OBJECT: the security
+-- decision for a record does not live in the declaration tables, it lives in two
+-- columns ON THE RECORD. The declaration says which classes are dark; these two columns
+-- say which class and cohort this record is in, and that is the half that was open.
+--
+-- Table-level UPDATE is replaced by a column list. In PostgreSQL a column-level UPDATE
+-- grant is enforced per column, so a statement touching an ungranted column is refused
+-- outright — the whole statement, not the column. The producer cannot reach the
+-- security fields even in the same statement as a legitimate one.
+--
+-- THE TWO SECURITY-OWNED COLUMNS ARE ABSENT FROM THIS LIST, and their absence is the
+-- control: `protection_class_id` and `presentation_partition_key` are the authority's.
+-- `record_key` is also absent — re-keying a record is re-identifying it, which is not
+-- a producer-owned act either.
 GRANT USAGE ON SCHEMA hum_authority TO hum_producer_role;
-GRANT SELECT, INSERT, UPDATE ON hum_authority.geometry_record TO hum_producer_role;
+GRANT SELECT ON hum_authority.geometry_record TO hum_producer_role;
+
+GRANT UPDATE (
+  emitting_domain_id,
+  kind,
+  denotation,
+  origin,
+  crs,
+  coordinates,
+  source_id,
+  source_geometry_id,
+  relation_to_assertion
+) ON hum_authority.geometry_record TO hum_producer_role;
+
+-- INSERT is left table-level DELIBERATELY, and this is a known open item rather than
+-- an oversight. See 05-UNRESOLVED.md: restricting it to the same column list would make
+-- every producer insert arrive with `protection_class_id = NULL`, which is FAIL-OPEN,
+-- and the only fail-closed default available — a sentinel "unadjudicated" partition —
+-- would be a cohort not derivable from any published register, breaking AS-E1-5. The
+-- correct resolution belongs with the producer composition root that GA-33 is waiting
+-- on, and inventing one here to close a row on a checklist would trade a measured gap
+-- for an unmeasured rule violation.
+GRANT INSERT ON hum_authority.geometry_record TO hum_producer_role;
 
 -- Stated explicitly rather than left to absence. Absence is the correct mechanism, but
 -- an explicit REVOKE is what a reviewer can read, and it survives someone later adding

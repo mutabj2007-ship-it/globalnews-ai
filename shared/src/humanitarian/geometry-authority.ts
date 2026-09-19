@@ -246,29 +246,171 @@ export type GeometryRefusalClass = (typeof GEOMETRY_REFUSAL_CLASSES)[number];
  * "Coordinates cannot ride it; integers can." A closed vocabulary is membership, not a
  * pattern, so both lists below are enumerated and anything else is UNCLASSIFIED.
  */
+/*
+  ── R1's VOCABULARY WAS INVENTED, AND E1 MEASURED IT ──────────────────────
+
+  E1: 39 refusal codes thrown by runtime, 30 absent from the governed vocabulary,
+  7 governed codes never thrown. Re-measured across this whole module: 56 thrown,
+  46 absent, 8 governed-but-never-thrown.
+
+  The cause is worth stating exactly, because the shape of the mistake is more
+  instructive than its size. R1's two lists were written from PLAUSIBLE NAMES rather
+  than from what the code actually throws. Seven of the eight are near-misses of real
+  codes — `GEOMETRY_CRS_NOT_SUPPORTED` for the real `GEOMETRY_CRS_UNSUPPORTED`,
+  `GEOMETRY_RING_NOT_CLOSED` for `GEOMETRY_COORDINATES_NOT_CLOSED`. They read correctly
+  and matched nothing.
+
+  IT FAILED LOUD, NOT SILENT, and that is the only reason this was a defect rather than
+  an incident: an unrecognised code becomes UNCLASSIFIED, which alarms. But consider
+  what that means in operation — EVERY genuine source-side data defect pages an
+  operator. The alarm becomes noise, somebody mutes it, and the one alarm that mattered
+  is muted with it. A control that cries wolf is a control that has been removed, just
+  more slowly.
+
+  ── HOW THE LISTS BELOW WERE BUILT ────────────────────────────────────────
+
+  By extracting every code this module throws and classifying each one deliberately —
+  NOT by pasting a grep, which would make the vocabulary a mirror of the code and its
+  classification meaningless. The test that keeps them honest is bidirectional and
+  reads the source at run time, so a new `throw` fails the suite until somebody decides
+  which side of the boundary it belongs on.
+
+  ── WHAT THE TWO CLASSES MEAN, STATED PRECISELY ───────────────────────────
+
+  E1's classes are closed at three, and adding a fourth would be a redesign nobody
+  asked for. So the labels are read at their functional meaning, which is ALARM or NOT:
+
+    DATA_DEFECT          a fault on the FAR side of the trust boundary. A source sent
+                         something malformed. Expected, routine, does not alarm.
+
+    PROGRAMMING_MISTAKE  a fault on OUR side — our code, or our governed configuration.
+                         Not expected. Always alarms.
+
+  A malformed partition declaration is not literally a programming mistake; it is a
+  governance authoring error. It sits in the second list because the question the class
+  actually answers is "must a human be woken up", and the answer for a malformed
+  governed declaration is yes. The widening is deliberate and recorded rather than
+  silently assumed.
+*/
+
 export const GEOMETRY_PROGRAMMING_MISTAKE_CODES: readonly string[] = Object.freeze([
-  'GEOMETRY_PROTECTIVE_DERIVATION_ON_READER_PATH',
+  /* Coercion and derivation guards — GX-10/GX-11. Our pipeline reshaping geometry. */
+  'GEOMETRY_AGGREGATE_OVER_INCOMPLETE_SET',
+  'GEOMETRY_COARSENING_COINCIDENT_WITH_PARENT_VERTEX',
+  'GEOMETRY_COARSENING_NOT_COARSER',
+  'GEOMETRY_COARSENING_WITHOUT_MEASURE',
+  'GEOMETRY_COERCION_BASELINE_NOT_NATIVE',
+  'GEOMETRY_COERCION_SOURCE_DISAGREES',
   'GEOMETRY_PRESENTED_DERIVATION_NOT_MARKED',
+  'GEOMETRY_REPRESENTATIVE_POINT_NOT_MARKED_DERIVED',
+  'GEOMETRY_SILENT_RESHAPE',
+  'GEOMETRY_SOURCE_CENTROID_IS_NOT_OURS',
+
+  /* Reader-path and projection guards. A reader nearly saw something it must not. */
+  'GEOMETRY_PROJECTION_FIELD_SET_OPEN',
   'GEOMETRY_PROJECTION_REFUSES_INTERNAL_DERIVATION',
   'GEOMETRY_PROJECTION_WITHOUT_COORDINATES',
+  'GEOMETRY_PROTECTIVE_DERIVATION_ON_READER_PATH',
   'GEOMETRY_SURFACE_NOT_DECLARED',
+
+  /* Governed partition declarations — authoring errors in the authority itself. */
+  'GEOMETRY_PARTITION_BESPOKE',
+  'GEOMETRY_PARTITION_CLASS_UNDECLARED',
+  'GEOMETRY_PARTITION_COVERS_NOTHING',
+  'GEOMETRY_PARTITION_DECLARED_TWICE',
+  'GEOMETRY_PARTITION_ELIGIBILITY_SHORT',
+  'GEOMETRY_PARTITION_FINER_THAN_CLASS',
+  'GEOMETRY_PARTITION_MIGRATION_NOOP',
+  'GEOMETRY_PARTITION_MIGRATION_UNDATED',
+  'GEOMETRY_PARTITION_MINIMUM_TOO_SMALL',
+  'GEOMETRY_PARTITION_UNDATED',
+
+  /* Authority lifecycle. Every one of these means the process must not serve. */
+  /*
+    GA-33's runtime code, governed here although it is thrown by the backend composition
+    root rather than by this module. It means the governed rows changed underneath a
+    sealed authority — the single condition GA-33 exists to detect — so it must alarm and
+    the process must not continue.
+
+    It was found by the vocabulary gate failing to see it, which is why the gate now
+    scrapes the backend Humanitarian module as well as `shared/`. A vocabulary scoped
+    more narrowly than the runtime is a vocabulary with a blind spot.
+  */
+  'GEOMETRY_AUTHORITY_DIGEST_DRIFTED',
+  'GEOMETRY_AUTHORITY_DIGEST_INVALID',
+  'GEOMETRY_AUTHORITY_EMPTY',
+  'GEOMETRY_AUTHORITY_EPOCH_INVALID',
+  'GEOMETRY_AUTHORITY_EPOCH_REGRESSED',
+  'GEOMETRY_AUTHORITY_NOT_INSTALLED',
   'GEOMETRY_AUTHORITY_NOT_THE_INSTALLED_INSTANCE',
+  'GEOMETRY_AUTHORITY_TOKEN_ALREADY_ISSUED',
+  'GEOMETRY_AUTHORITY_TOKEN_REQUIRED',
+  'GEOMETRY_AUTHORITY_UNDATED',
+
+  /* AS-6 / AS-7 governance. A cadence or cohort rule was broken. */
+  'GEOMETRY_CADENCE_EPOCH_NOT_UNIFORM',
+  'GEOMETRY_CADENCE_GAP_TOO_LARGE',
+  'GEOMETRY_CADENCE_LAG_VIOLATED',
+  'GEOMETRY_CADENCE_RUN_MISSING',
+  'GEOMETRY_COHORT_DERIVATION_INCOMPLETE',
+  'GEOMETRY_COHORT_DERIVATION_OBSERVES_US',
+  'GEOMETRY_EMERGENCY_COHORT_NOT_ALREADY_DARK',
+  'GEOMETRY_EMERGENCY_TARGET_MISSING',
 ]);
 
+/**
+ * The far side of the trust boundary. A source sent something malformed, which is a
+ * routine condition in official data and must NOT wake anybody.
+ *
+ * Note what is deliberately here rather than above: the parent-disagreement and
+ * derivation-shape codes. A record arriving with a derivation that does not match its
+ * parent is bad INPUT, not our pipeline misbehaving — the pipeline refusing it is the
+ * control working.
+ */
 export const GEOMETRY_DATA_DEFECT_CODES: readonly string[] = Object.freeze([
-  'GEOMETRY_KIND_NOT_DECLARED',
-  'GEOMETRY_CRS_NOT_SUPPORTED',
-  'GEOMETRY_COORDINATES_MISSING',
-  'GEOMETRY_SOURCE_ID_EMPTY',
+  'GEOMETRY_ANONYMOUS',
+  'GEOMETRY_COORDINATE_LEAF_NOT_FINITE',
+  'GEOMETRY_COORDINATE_TYPE_DISAGREES',
+  'GEOMETRY_COORDINATES_NOT_AN_OBJECT',
+  'GEOMETRY_COORDINATES_NOT_CLOSED',
+  'GEOMETRY_CRS_UNSUPPORTED',
+  'GEOMETRY_DERIVATION_PARENT_ID_DISAGREES',
+  'GEOMETRY_DERIVATION_PARENT_KIND_DISAGREES',
+  'GEOMETRY_DERIVED_WITHOUT_METHOD',
   'GEOMETRY_DOMAIN_NOT_REGISTERED',
-  'GEOMETRY_COORDINATES_FIELD_SET_OPEN',
-  'GEOMETRY_RING_NOT_CLOSED',
-  'GEOMETRY_DERIVATION_PARENT_MISMATCH',
-  'GEOMETRY_COERCION_BASELINE_NOT_NATIVE',
-  'GEOMETRY_PARTITION_FINER_THAN_CLASS',
-  'GEOMETRY_PARTITION_ELIGIBILITY_SHORT',
-  'RENDERER_CANNOT_DRAW_KIND',
+  'GEOMETRY_KIND_NOT_DECLARED_BY_DOMAIN',
+  'GEOMETRY_MISSING_COORDINATES',
+  'GEOMETRY_NATIVE_WITH_DERIVATION',
+  'GEOMETRY_NONE_WITH_COORDINATES',
 ]);
+
+/**
+ * R1's invented codes, retired with the reason each one was wrong.
+ *
+ * Kept rather than deleted because E1's bidirectional test requires every governed code
+ * to be either reachable or "explicitly reserved/deprecated with documented reason" —
+ * and because a name that was once in a contract will be searched for again. A reader
+ * who finds `GEOMETRY_RING_NOT_CLOSED` in an old document should land here and be told
+ * what it became, not find nothing and assume it was removed for a reason.
+ */
+export const GEOMETRY_RETIRED_REFUSAL_CODES: Readonly<Record<string, string>> = Object.freeze({
+  GEOMETRY_KIND_NOT_DECLARED:
+    'never thrown. Invented in R1; the real code is GEOMETRY_KIND_NOT_DECLARED_BY_DOMAIN.',
+  GEOMETRY_CRS_NOT_SUPPORTED: 'never thrown. The real code is GEOMETRY_CRS_UNSUPPORTED.',
+  GEOMETRY_COORDINATES_MISSING: 'never thrown. The real code is GEOMETRY_MISSING_COORDINATES.',
+  GEOMETRY_SOURCE_ID_EMPTY:
+    'never thrown. R3 refuses an empty sourceId as GEOMETRY_ANONYMOUS.',
+  GEOMETRY_COORDINATES_FIELD_SET_OPEN:
+    'never thrown. The closed-coordinates check refuses as GEOMETRY_COORDINATES_NOT_AN_OBJECT.',
+  GEOMETRY_RING_NOT_CLOSED: 'never thrown. The real code is GEOMETRY_COORDINATES_NOT_CLOSED.',
+  GEOMETRY_DERIVATION_PARENT_MISMATCH:
+    'never thrown. R3 distinguishes GEOMETRY_DERIVATION_PARENT_ID_DISAGREES from ' +
+    '..._KIND_DISAGREES, and collapsing them lost the distinction.',
+  RENDERER_CANNOT_DRAW_KIND:
+    'CATEGORY ERROR, not a near-miss. This is a GeometryWithheldReason — an OUTCOME on a ' +
+    'presented record — and never a thrown refusal code. R1 put an outcome in a vocabulary ' +
+    'of exceptions.',
+});
 
 /**
  * Neither list is a restatement of the other, and the residual is the third class.
