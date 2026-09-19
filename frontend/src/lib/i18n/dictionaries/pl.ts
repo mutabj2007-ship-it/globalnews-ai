@@ -931,8 +931,11 @@ export const pl: Dictionary = {
     tooltipLoaded: 'WCZYTANO',
     tooltipReady: 'GOTOWE',
     tooltipStories: 'Materiały',
-    tooltipRefreshAction: 'Kliknij, aby odświeżyć i zobaczyć najnowsze materiały.',
-    tooltipLoadAction: 'Kliknij, aby wczytać bieżące wiadomości dla tego kraju.',
+    /* MAIN-COUNTRY-READER-RETRIEVAL-CONTRACT-R1 §7.1 — patrz en.ts. Klikniecie
+       WYBIERA kraj; od czasu naprawy limitu nie pobiera niczego w zadnym wariancie.
+       Poprawione sa OBA zdania akcji, nie tylko nazwane przez Main. Do przegladu przez L. */
+    tooltipRefreshAction: 'Kliknij, aby wybrać ten kraj. Pobranie analizy to osobne działanie w panelu.',
+    tooltipLoadAction: 'Kliknij, aby wybrać ten kraj. Nic nie zostanie pobrane, dopóki nie poprosisz o to w panelu.',
     badge: {
       livePrefix: 'NA ŻYWO \u00b7 OBSŁUGIWANE PRZEZ ',
       delayedPrefix: 'OPÓŹNIONY KANAŁ \u00b7 OBSŁUGIWANY PRZEZ ',
@@ -1294,6 +1297,28 @@ export const pl: Dictionary = {
           unfollow: 'Przesta\u0144 obserwowa\u0107',
           openAnalysis: 'Otw\u00f3rz analiz\u0119',
           openSources: 'Otw\u00f3rz \u017ar\u00f3d\u0142a',
+        },
+        /*
+          ── THE EXPLICIT COUNTRY READ · patrz en.ts ──────────────────
+
+          Ten sam podział: wybór na mapie WYBIERA kraj, a osobna kontrolka
+          POBIERA dane. Zadne z tych zdan nie obiecuje danych na zywo przed
+          wykonaniem zapytania.
+
+          'noCoverage' jest WYNIKIEM, nie stanem pustym — Sprawdzono niesie
+          caly ciezar zdania. 'failed' jest jedynym zdaniem dla kazdej klasy
+          bledu; kod statusu i komunikat trafiaja wylacznie do telemetrii.
+
+          Do przegladu przez L.
+        */
+        countryRead: {
+          heading: 'Analiza kraju',
+          notLoaded: 'Kraj jest wybrany. Nic nie zostało jeszcze pobrane.',
+          loading: 'Pobieranie bieżących doniesień dla tego kraju…',
+          noCoverage: 'Sprawdzono. Brak zweryfikowanych doniesień dla tego kraju w tym okresie.',
+          failed: 'Nie udało się teraz pobrać doniesień. Możesz spróbować ponownie.',
+          load: 'Pobierz analizę kraju',
+          reload: 'Pobierz ponownie',
         },
         /* ── DESIGN REVISION 1.2 · THE RESTORED SELECTED-COUNTRY BLOCKS ─── */
         identityHeading: 'To\u017csamo\u015b\u0107',

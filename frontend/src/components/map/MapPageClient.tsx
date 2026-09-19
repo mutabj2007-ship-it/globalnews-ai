@@ -72,6 +72,19 @@ import type { CategoryFilterValue } from '@/components/map/CategoryFilterBar';
   than the correctness of a guard.
 */
 import { countryParamFor } from '@/lib/map/retrieval/countryRetrievalAuthority';
+/*
+  THE MAP STILL DOES NOT IMPORT THE NEWS CLIENT. It imports the ONE governed
+  action, which cannot run without a `CountryReadRequest` — see
+  `countryReadAction.ts` for what changed class and why it is stated rather
+  than hidden.
+*/
+import {
+  classifyCountryReadFailure,
+  performCountryRead,
+  type CountryReadFailure,
+} from '@/lib/map/retrieval/countryReadAction';
+import { countryReadRequestFor, countryReadState } from '@/lib/map/retrieval/countryReadRequest';
+import { countryReadPresentationFrom } from '@/lib/map/retrieval/countryReadPresentation';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { readLanguageCookie } from '@/lib/i18n/languages';
 
@@ -434,6 +447,30 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
 
   const [selectedCountry, setSelectedCountry] = useState<CountryMeta | null>(null);
   const [category, setCategory] = useState<CategoryFilterValue>('all');
+
+  /*
+    ── THE EXPLICIT COUNTRY READ — STATE ONLY, NEVER AN EFFECT ──────────────
+
+    `MAIN-COUNTRY-READER-RETRIEVAL-CONTRACT-R1` §2. This is deliberately plain
+    `useState` and deliberately NOT a `useEffect` keyed on the selection: an
+    effect that watches the selected country is precisely the chain that
+    produced `MAP-GNEWS-QUOTA-REGRESSION-1`, where *"step 3 is where the money
+    was spent, and it is the step that had no user in it at all."*
+
+    Nothing in this file writes `countryRead.response` except the handler below,
+    and the handler runs only from the reader's own press.
+
+    `iso3` IS PART OF THE STATE, not a separate ref, because it is what makes a
+    late response safe: a read that returns after the reader has moved on is
+    discarded by comparing it, so one country's articles can never appear under
+    another country's name.
+  */
+  const [countryRead, setCountryRead] = useState<{
+    readonly iso3: string | null;
+    readonly isLoading: boolean;
+    readonly failure: CountryReadFailure | null;
+    readonly response: CountryNewsResponse | null;
+  }>({ iso3: null, isLoading: false, failure: null, response: null });
   /* Nothing may be written to the URL until the URL has been read, or the
      first render would erase the very selection it is meant to restore. */
   const [restored, setRestored] = useState(false);
@@ -612,6 +649,111 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     condition is a selected subject, and this entry carries no `sel`.
   */
   const d1 = bindConflictD1(domainEntry, mapVariant, t.spatial.conflictQueue);
+
+  /*
+    ══ THE EXPLICIT COUNTRY READ — THE ONE PRODUCTION CALLER ════════════════
+
+    `MAIN-COUNTRY-READER-RETRIEVAL-CONTRACT-R1` §2, and the answer to its §8
+    G-2: `EXPLICIT_RETRIEVAL_ACTION` had **0** production call sites. This is
+    the one, and there is deliberately only one.
+
+    THE REQUEST IS BUILT, NOT ASSUMED. `countryReadRequestFor` is handed the
+    semantic selection AND the iso3, and refuses six ways — no selection,
+    camera-derived, REGION, CITY, a selection naming a different country, or no
+    iso3. So this handler cannot read a country the reader did not choose even
+    if something upstream is confused about where the map is pointing. A `null`
+    request is not an error to report; it is the guard doing its job, and the
+    control is not offered in those states anyway.
+  */
+  const requestForCurrentSelection = countryReadRequestFor(
+    spatialSelection,
+    selectedCountry?.iso3 ?? null,
+    category === 'all' ? null : category,
+    language,
+  );
+
+  /*
+    THE READ IS ONLY THIS COUNTRY'S READ — derived, not reset by an effect.
+
+    A `useEffect` that cleared the response when the selection changed would be
+    a second writer of this state and would run one render late, which is
+    exactly long enough to paint the previous country's articles under the new
+    country's name. Comparing instead means the stale case cannot be rendered
+    at all, because it is never selected in the first place.
+  */
+  const activeRead =
+    countryRead.iso3 !== null && countryRead.iso3 === (selectedCountry?.iso3 ?? null)
+      ? countryRead
+      : { iso3: null, isLoading: false, failure: null, response: null };
+
+  const handleCountryRead = useCallback(() => {
+    const request = countryReadRequestFor(
+      spatialSelection,
+      selectedCountry?.iso3 ?? null,
+      category === 'all' ? null : category,
+      language,
+    );
+    /* Refused — the reader has not chosen this country. Nothing is spent. */
+    if (request === null) return;
+
+    const iso3 = request.iso3;
+    setCountryRead({ iso3, isLoading: true, failure: null, response: null });
+
+    void performCountryRead(request)
+      .then((response) => {
+        setCountryRead((prev) =>
+          /* Late answer for a country the reader has left: discard, never render. */
+          prev.iso3 === iso3 ? { iso3, isLoading: false, failure: null, response } : prev,
+        );
+      })
+      .catch((error: unknown) => {
+        const failure = classifyCountryReadFailure(error);
+        /*
+          THE DIAGNOSTIC STAYS HERE. It goes to the console for whoever has to
+          find out why, and the reader is shown one governed sentence chosen by
+          the surface. §5.1: a reader never reads a stack, a status code or a
+          provider's own words.
+        */
+        console.error('[country-read] failed', {
+          iso3,
+          failureClass: failure.failureClass,
+          status: failure.status,
+          diagnostic: failure.diagnostic,
+        });
+        setCountryRead((prev) =>
+          prev.iso3 === iso3 ? { iso3, isLoading: false, failure, response: null } : prev,
+        );
+      });
+  }, [spatialSelection, selectedCountry, category, language]);
+
+  /*
+    THE READER STATE, DERIVED BY MAIN'S OWN FUNCTION — not re-implemented here.
+
+    `countryReadState` tests `isLoading` before `failure` and `failure` before
+    `!response`, and that order is load-bearing. Deriving it locally would be a
+    second copy of a rule that already exists, and the two would disagree the
+    first time one of them was edited.
+
+    `selected` is the REQUEST, not merely a country being present: if the
+    semantic selection does not authorise a read, the reader is UNSELECTED for
+    this purpose and the control is not offered — the same predicate that
+    guards the read itself, so the offer and the action cannot disagree.
+  */
+  const countryReadStateValue = countryReadState({
+    selected: requestForCurrentSelection !== null,
+    isLoading: activeRead.isLoading,
+    error: activeRead.failure,
+    response: activeRead.response,
+  });
+
+  const countryReadPresentation = countryReadPresentationFrom({
+    state: countryReadStateValue,
+    response: activeRead.response,
+    period,
+    language,
+    now: Date.now(),
+    onLoad: handleCountryRead,
+  });
 
   /*
     ══ THE MAP NO LONGER RETRIEVES AT ALL ═══════════════════════════════════
@@ -1654,6 +1796,12 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
               path through this line is the path that was already here.
             */
             contextQueue={contextPanelQueueFor(d1)}
+            /*
+              THE EXPLICIT COUNTRY READ. Selection remains scope only — this
+              prop carries a STATE and an ACTION, and the action is the only
+              thing in the modern shell that may spend an API_ORIGIN_READ.
+            */
+            countryRead={countryReadPresentation}
             /*
               FULL — Part II §1 calls this surface "the reference
               implementation ... Intentionally absent: NOTHING". The shell

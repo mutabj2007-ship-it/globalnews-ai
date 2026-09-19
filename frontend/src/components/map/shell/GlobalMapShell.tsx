@@ -83,6 +83,7 @@ import { IntelligenceRightRail } from './IntelligenceRightRail';
 import { EvidenceSelectionCard, type FollowRelationship } from './EvidenceSelectionCard';
 import { ContextSummaryPanel } from './ContextSummaryPanel';
 import type { AttentionQueue } from '@/lib/specialist/attentionQueue';
+import type { CountryReadPresentation } from '@/lib/map/retrieval/countryReadPresentation';
 import { selectionForPlaceResult } from '@/lib/map/geography/semanticGeography';
 import { MapReadout, MapScaleBar } from './MapReadout';
 import { RailDrawer } from './monetization/RailDrawer';
@@ -197,6 +198,20 @@ export interface GlobalMapShellProps {
    * D1 components, and that the panel already declares, defaults and gates it.
    */
   readonly contextQueue?: AttentionQueue | null;
+  /**
+   * The explicit country read — state, action, and the blocks a completed read
+   * populates.
+   *
+   * THE SHELL DOES NOT RETRIEVE, AND MUST NOT. Which country the reader chose
+   * is a selection fact and whether they asked for it is an interaction fact;
+   * both belong to the route that owns the URL and the state. This component
+   * receives a result and an action to call, exactly as it does for the camera
+   * and the context queue.
+   *
+   * Optional, so a host with no read to show — and every existing caller —
+   * renders precisely today's card.
+   */
+  readonly countryRead?: CountryReadPresentation;
   /**
    * The camera to open with — decoded from the URL by the caller, which owns
    * routing. The shell does not read `window.location`: a component that
@@ -355,6 +370,7 @@ export function GlobalMapShell({
   language,
   /* Country's own configuration is the default, so an omitted prop is today. */
   contextQueue = null,
+  countryRead,
   selectionDetail,
   initialCamera = WORLD_CAMERA,
   onCameraChange,
@@ -1530,6 +1546,27 @@ export function GlobalMapShell({
           availableGeometry={availableGeometry}
           provenance={selectedProvenance}
           follow={follow}
+          /*
+            ── THE EXPLICIT COUNTRY READ, FORWARDED WHOLE ────────────────────
+
+            This branch is the COUNTRY branch — CITY and REGION are handled
+            above and `null` below — which is precisely the scope a country
+            read is authorised for. Forwarding it here rather than at the top
+            of the rail is what keeps a country action out of the city, region
+            and no-selection cards without anyone having to remember to.
+
+            The five data blocks are spread rather than named one by one
+            because they ARE the card's own props, unchanged: this adds no new
+            rendering vocabulary, it fills in blocks Design Revision 1.2
+            already specified and the card already renders.
+          */
+          countryReadState={countryRead?.state}
+          onLoadCountry={countryRead?.onLoad}
+          providerStatus={countryRead?.providerStatus}
+          coverage={countryRead?.coverage}
+          categories={countryRead?.categories}
+          items={countryRead?.items}
+          topics={countryRead?.topics}
           /*
             PART IV — the Watch block. Supplied only where the rail renders, so
             the callout and every other consumer of this card is untouched.

@@ -1163,8 +1163,29 @@ export const en = {
     tooltipLoaded: 'LOADED',
     tooltipReady: 'READY',
     tooltipStories: 'Stories',
-    tooltipRefreshAction: 'Click to refresh and explore the latest coverage.',
-    tooltipLoadAction: 'Click to load live news coverage for this country.',
+    /*
+      ── A MAP CLICK SELECTS. IT HAS NOT LOADED ANYTHING SINCE THE QUOTA FIX ──
+
+      `MAIN-COUNTRY-READER-RETRIEVAL-CONTRACT-R1` §7.1 names `tooltipLoadAction`
+      as false, and it is: *"Click to load live news coverage for this
+      country"* promises retrieval from a click, and `MAP-GNEWS-QUOTA-REGRESSION-1`
+      removed retrieval from selection entirely. It also promised "live"
+      before any request had been made.
+
+      REPORTED, AND CORRECTED TOO: §7.1 rules `tooltipRefreshAction` still
+      truthful because it *"describes a country that already has a response"*.
+      Its STATE description is fine; its VERB is not. It said *"Click to
+      refresh"*, and a click does not refresh in either variant — the same
+      false promise in the other branch. `explored` is `knownStoryCount !==
+      null`, which means a RETAINED count exists, not that the reader loaded
+      anything, so the branch does not even mean what the sentence assumed.
+
+      Both now say what a click does, and point at where loading actually
+      lives. The two badges above — LOADED / READY — are state labels, not
+      action promises, and are left exactly as §7.1 leaves them.
+    */
+    tooltipRefreshAction: 'Click to select this country. Retrieving its intelligence is a separate action in the panel.',
+    tooltipLoadAction: 'Click to select this country. Nothing is retrieved until you ask for it in the panel.',
     badge: {
       livePrefix: 'LIVE \u00b7 POWERED BY ',
       delayedPrefix: 'DELAYED FEED \u00b7 POWERED BY ',
@@ -1594,6 +1615,44 @@ export const en = {
           unfollow: 'Unfollow',
           openAnalysis: 'Open analysis',
           openSources: 'Open sources',
+        },
+        /*
+          ── THE EXPLICIT COUNTRY READ · PHASE G's REQUIRED SEMANTICS ───────
+
+          The ruling names the split these strings have to carry:
+
+              map / search action  = SELECT a country
+              explicit control     = LOAD country intelligence
+
+          So not one of these words is "click", and not one of them promises
+          "live" anything before a request has been made. The map's own tooltip
+          keeps that promise separately; what this block owes is the other half
+          — naming the action that actually costs something.
+
+          `notLoaded` REPLACES THE FALSE SENTENCE IN SPIRIT, IN THE RIGHT
+          COMPONENT. Main §7.2 reports that the legacy panel's `!response`
+          branch tells a reader to *"select one on the map"* in a slot only
+          reachable once they HAVE selected one. The modern card must not
+          repeat it: this says the country is selected and that nothing has
+          been retrieved yet, which is what is true.
+
+          `noCoverage` IS A RESULT. "Checked" is the word doing the work — it
+          says a request was made and answered. Anything shaped like "no news"
+          would state something about the world that an empty provider response
+          is not evidence for.
+
+          `failed` IS THE ONLY SENTENCE ANY FAILURE PRODUCES — a 502, a
+          timeout, an abort and a rate-limit are one sentence to a reader. The
+          class, the status and the message go to telemetry.
+        */
+        countryRead: {
+          heading: 'Country intelligence',
+          notLoaded: 'This country is selected. Nothing has been retrieved yet.',
+          loading: 'Retrieving current reporting for this country…',
+          noCoverage: 'Checked. No verified reporting for this country in this period.',
+          failed: 'Could not retrieve reporting just now. You can try again.',
+          load: 'Load country intelligence',
+          reload: 'Retrieve again',
         },
         /* ── DESIGN REVISION 1.2 · THE RESTORED SELECTED-COUNTRY BLOCKS ─── */
         identityHeading: 'Identity',

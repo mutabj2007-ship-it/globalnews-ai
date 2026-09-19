@@ -30,6 +30,38 @@ import {
  *
  * WHY THAT IS STRONGER THAN A SPY. A spy proves one run did not call a thing. A
  * missing import proves no run can.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * THE GUARANTEE HAS CHANGED CLASS, AND THIS FILE SAYS SO RATHER THAN PASSING
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Everything above remains true of the PASSIVE scenarios and is still asserted
+ * unchanged. What is no longer true is the sentence this header used to rest
+ * on — *"the Map has no way to reach it"*.
+ *
+ * `MAIN-COUNTRY-READER-RETRIEVAL-CONTRACT-R1` measured the cost of that
+ * sentence: the door was locked and **no handle was fitted**, so a reader could
+ * select a country and had no way to ask for anything about it.
+ * `EXPLICIT_RETRIEVAL_ACTION` existed in the authority and in three spec suites
+ * and in **zero** production call sites, and the Engine's reader-facing ACTIVE
+ * label was overstated because of it.
+ *
+ * The handle is now fitted, in ONE place. So:
+ *
+ *     WAS   STRUCTURAL — the symbol was unreachable from the route
+ *     IS    GATED      — the symbol is reachable through exactly one function
+ *                        that cannot be invoked without a `CountryReadRequest`
+ *
+ * A gated guarantee is weaker than an absent one. Saying otherwise, or leaving
+ * this file green on the technicality that `MapPageClient` no longer contains
+ * the literal string, would be the worst available outcome: a passing test
+ * asserting something false. The literal assertions are KEPT — an ad-hoc direct
+ * call would still fail them — and the reachability is asserted BESIDE them, so
+ * the file now proves the shape rather than the absence.
+ *
+ * The teeth that matter are unchanged and are all still here: every passive
+ * scenario reaches nothing, the request cannot be built from a country the
+ * reader did not choose, and the retired trigger names remain prohibited.
  */
 
 const SRC = resolve(__dirname, '..', '..');
@@ -44,6 +76,36 @@ const code = (...parts: string[]): string =>
 
 const CLIENT = code('components', 'map', 'MapPageClient.tsx');
 const SHELL = code('components', 'map', 'shell', 'GlobalMapShell.tsx');
+
+/**
+ * Every first-party module the Map surface is built from, as repo-relative
+ * paths with forward slashes.
+ *
+ * A CENSUS, NOT A LIST. The point of the executing-module assertion is that a
+ * SECOND executor would be caught, and a hand-written list cannot catch a file
+ * nobody thought to add to it. Specs are excluded because they are not shipped.
+ */
+const MAP_CLOSURE: readonly string[] = (function walk(dir: string): string[] {
+  const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
+  const out: string[] = [];
+  for (const name of readdirSync(join(SRC, dir))) {
+    const rel = `${dir}/${name}`;
+    if (statSync(join(SRC, rel)).isDirectory()) out.push(...walk(rel));
+    else if (/\.tsx?$/.test(name) && !/\.spec\.tsx?$/.test(name)) out.push(rel);
+  }
+  return out;
+})('lib/map').concat(
+  (function walk(dir: string): string[] {
+    const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
+    const out: string[] = [];
+    for (const name of readdirSync(join(SRC, dir))) {
+      const rel = `${dir}/${name}`;
+      if (statSync(join(SRC, rel)).isDirectory()) out.push(...walk(rel));
+      else if (/\.tsx?$/.test(name) && !/\.spec\.tsx?$/.test(name)) out.push(rel);
+    }
+    return out;
+  })('components/map'),
+);
 
 /** Anything whose presence would mean a provider could run. */
 const EXECUTING = [
@@ -96,9 +158,76 @@ describe('every passive Map scenario is provider-free', () => {
     });
   }
 
-  it('the Map imports no news client at all — the guarantee is structural', () => {
+  it('the Map still imports no news client, and holds no ad-hoc loader', () => {
+    /*
+      KEPT, AND STILL MEANINGFUL — but no longer the whole guarantee. See the
+      header. A direct `fetchCountryNews` call or a resurrected `loadCountry`
+      effect in the route would fail here exactly as before; what has changed is
+      that passing this alone no longer proves a provider is unreachable, which
+      is why the assertions below exist.
+    */
     expect(CLIENT).not.toContain('@/lib/api/countryApi');
     expect(CLIENT).not.toContain('const loadCountry = useCallback');
+  });
+
+  it('EXACTLY ONE module in the Map closure may execute, and it is the governed one', () => {
+    /*
+      The replacement for the structural absence, and it is deliberately a
+      CENSUS rather than a check on one file: any second module that imported
+      the news client would appear here and fail, which is the property the
+      missing import used to give for free.
+    */
+    const executors = MAP_CLOSURE.filter((rel) => code(...rel.split('/')).includes('@/lib/api/countryApi'));
+    expect(executors).toEqual(['lib/map/retrieval/countryReadAction.ts']);
+  });
+
+  it('that module cannot run without a request only an explicit action can build', () => {
+    const action = code('lib', 'map', 'retrieval', 'countryReadAction.ts');
+    /*
+      THE GATE IS THE SIGNATURE. `performCountryRead` takes the REQUEST, not
+      `(iso3, category, language)` — a function taking the parts could be called
+      with a country the reader is merely near. And the request type's `reason`
+      is narrowed by Main's contract to the single explicit token, so it cannot
+      be constructed with the Analysis reason either.
+    */
+    expect(action).toContain('export async function performCountryRead(\n  request: CountryReadRequest,\n)');
+    const contract = code('lib', 'map', 'retrieval', 'countryReadRequest.ts');
+    expect(contract).toContain("Extract<CountryRetrievalReason, 'EXPLICIT_RETRIEVAL_ACTION'>");
+
+    /* and the six refusals are the contract's own, re-measured at their source */
+    for (const refusal of [
+      'if (selectedIso3 === null || selection === null) return null;',
+      "if (selection.kind !== 'COUNTRY') return null;",
+      'if (selection.id !== selectedIso3) return null;',
+    ]) {
+      expect(`${refusal}: ${contract.includes(refusal)}`).toBe(`${refusal}: true`);
+    }
+  });
+
+  it('the route reaches it ONLY from a reader press — no effect, no hydration path', () => {
+    /*
+      THE DEFECT THIS REPLACES THE OLD GUARANTEE AGAINST. `MAP-GNEWS-QUOTA-
+      REGRESSION-1`'s step 3 was *"hydration reads `country=` and retrieves
+      UNCONDITIONALLY"* — an effect keyed on the selected country. So the
+      prohibition is on the SHAPE that produced it: `performCountryRead` may not
+      appear inside any `useEffect` in the route.
+    */
+    const effects = CLIENT.split('useEffect(');
+    const inEffect = effects.slice(1).some((chunk) => {
+      /* the effect body ends at its dependency array — scan only that far */
+      const end = chunk.indexOf('}, [');
+      return chunk.slice(0, end === -1 ? chunk.length : end).includes('performCountryRead');
+    });
+    expect(`performCountryRead inside a useEffect: ${inEffect}`)
+      .toBe('performCountryRead inside a useEffect: false');
+
+    /* POSITIVE CONTROL — the scan does find it when it IS in an effect body. */
+    const planted = 'useEffect(() => { void performCountryRead(r); }, [r]);'.split('useEffect(');
+    const plantedHit = planted.slice(1).some((chunk) => {
+      const end = chunk.indexOf('}, [');
+      return chunk.slice(0, end === -1 ? chunk.length : end).includes('performCountryRead');
+    });
+    expect(plantedHit).toBe(true);
   });
 
   it('and the shell it renders names no executing endpoint either', () => {

@@ -13,6 +13,7 @@ import type {
   RetainedItem,
 } from '@/lib/map/selection/selectionIntelligence';
 import { applyCardFilters } from '@/lib/map/selection/selectionIntelligence';
+import { loadActionIsOffered, type CountryReadState } from '@/lib/map/retrieval/countryReadRequest';
 import { FollowControl, type FollowControlLabels } from '@/components/map/shell/FollowControl';
 import { SourceCard } from '@/components/map/shell/SourceCard';
 import { accountSignInUrl } from '@/lib/api/accountBase';
@@ -102,6 +103,31 @@ export interface EvidenceSelectionCardLabels {
     readonly unfollow: string;
     readonly openAnalysis: string;
     readonly openSources: string;
+  };
+  /**
+   * ── THE EXPLICIT READ, IN WORDS ───────────────────────────────────────
+   *
+   * Five sentences for five states, because §5 forbids collapsing them: not
+   * loaded, loading, no verified coverage, a failure, and a completed read are
+   * five different things to tell a reader and only one of them is about the
+   * world.
+   *
+   * `failed` IS THE ONLY SENTENCE A FAILURE EVER PRODUCES. §5.1: the call site
+   * maps every failure class onto one governed statement and never forwards a
+   * message it did not author — no status code, no provider name, no stack.
+   *
+   * `noCoverage` IS A RESULT, NOT AN EMPTY STATE. "We asked and there was
+   * nothing verified" is an answer; "no news = nothing happening" is a claim
+   * the product has no basis for and must not make.
+   */
+  readonly countryRead: {
+    readonly heading: string;
+    readonly notLoaded: string;
+    readonly loading: string;
+    readonly noCoverage: string;
+    readonly failed: string;
+    readonly load: string;
+    readonly reload: string;
   };
   /* ── DESIGN REVISION 1.2 · THE FIVE RESTORED BLOCKS ──────────────────── */
   /** 01 identity — the line under the name: ISO and geographic region. */
@@ -246,6 +272,21 @@ export interface EvidenceSelectionCardProps {
   readonly situationsAvailable?: boolean;
   /** 10 topics. */
   readonly topics?: readonly string[];
+  /**
+   * ── THE EXPLICIT COUNTRY READ ─────────────────────────────────────────
+   *
+   * `MAIN-COUNTRY-READER-RETRIEVAL-CONTRACT-R1` §5. The card RENDERS a state
+   * and OFFERS an action; it decides neither. `countryReadState` is derived by
+   * Main's own `countryReadState()` at the owner, and `onLoadCountry` is the
+   * only thing on this card that may spend an `API_ORIGIN_READ`.
+   *
+   * Both optional, like every other block on this card: a host with no read to
+   * show renders exactly today's card, and the CITY, REGION and no-selection
+   * cards never receive them, because the shell forwards them only in the
+   * COUNTRY branch.
+   */
+  readonly countryReadState?: CountryReadState;
+  readonly onLoadCountry?: () => void;
   readonly onFocus?: () => void;
   readonly onOpenAnalysis?: () => void;
   readonly onOpenSources?: () => void;
@@ -363,6 +404,8 @@ export function EvidenceSelectionCard({
   situationsAvailable = false,
   topics,
   onFocus,
+  countryReadState,
+  onLoadCountry,
   onOpenAnalysis,
   onOpenSources,
   onClearSelection,
@@ -555,6 +598,146 @@ export function EvidenceSelectionCard({
   /* ══ 07b · SECONDARY ACTIONS — r1.4 block 07, two-column grid ══════════
      "Open analysis (primary), Focus evidence, Sources." Below the follow
      control, per block 11's own note about why it sits above them. */
+  /* ══ THE EXPLICIT COUNTRY READ — STATE, THEN THE ACTION ═══════════════════
+
+     WHAT IS NEW HERE, STATED PLAINLY: Design Revision 1.2 numbers this card's
+     blocks 01-12 and names five actions, and a country READ is not among them.
+     The CTO round that adds it supplies the semantics — "explicit control =
+     load/retrieve country intelligence" — and this uses the card's OWN button
+     idiom and the existing action area rather than inventing a visual language
+     for it. Placement, wording, size and icon remain Design's to ratify; what
+     is asserted here is only that the control exists, is labelled, and is the
+     single thing that starts a read.
+
+     THE STATE LINE IS RENDERED SEPARATELY FROM THE BUTTON, and that separation
+     is the point of §5. A reader who has not asked yet, a reader waiting, a
+     reader who asked and got nothing verified, and a reader whose request
+     failed are four different situations. One control with four captions would
+     collapse them back together. */
+  const countryReadBlock =
+    countryReadState === undefined || countryReadState === 'UNSELECTED' ? null : (
+      <Section gn="card-country-read">
+        <div
+          data-gn="country-read"
+          data-gn-state={countryReadState}
+          className="border border-sp-line bg-sp-field px-[9px] py-[8px]"
+        >
+          <p className="font-gn-mono text-[9px] uppercase tracking-[0.14em] text-sp-muted">
+            {labels.countryRead.heading}
+          </p>
+          <p
+            data-gn="country-read-statement"
+            className="mt-[4px] text-[11px] leading-[1.45] text-sp-ink-2"
+            /*
+              LOADING IS ANNOUNCED, AND ONLY LOADING. `role="status"` with a
+              polite live region is the accepted pattern for a transient
+              progress statement. The FAILED sentence is deliberately NOT an
+              `alert`: it is governed copy offering a retry, not an emergency,
+              and `role="alert"` is what made the legacy panel read a thrown
+              message out loud.
+            */
+            {...(countryReadState === 'LOADING'
+              ? { role: 'status' as const, 'aria-live': 'polite' as const }
+              : {})}
+          >
+            {countryReadState === 'LOADING'
+              ? labels.countryRead.loading
+              : countryReadState === 'FAILED'
+                ? labels.countryRead.failed
+                : countryReadState === 'READY_NO_COVERAGE'
+                  ? labels.countryRead.noCoverage
+                  : countryReadState === 'SELECTED_NOT_LOADED'
+                    ? labels.countryRead.notLoaded
+                    : null}
+          </p>
+          {/*
+            OFFERED IN FOUR STATES OF SIX — never while LOADING, never when
+            UNSELECTED. `loadActionIsOffered` is Main's function and the single
+            authority for that rule; deciding it again here with a different
+            condition is how the two would drift apart.
+          */}
+          {onLoadCountry && loadActionIsOffered(countryReadState) && (
+            <button
+              type="button"
+              data-gn="card-action"
+              data-gn-action="load-country"
+              onClick={onLoadCountry}
+              className="mt-[7px] w-full cursor-pointer rounded-[2px] border border-sp-cyan bg-sp-cyan px-[8px] py-[9px] font-gn-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-sp-cyan-on transition-colors hover:bg-sp-cyan-hover"
+            >
+              {countryReadState === 'READY' || countryReadState === 'READY_NO_COVERAGE'
+                ? labels.countryRead.reload
+                : labels.countryRead.load}
+            </button>
+          )}
+        </div>
+      </Section>
+    );
+
+  /* ══ 09 · RETAINED REPORTING — EXTRACTED SO BOTH CARD PATHS CAN SHOW IT ══
+
+     MOVED AS A WHOLE EXPRESSION, which is the pattern this file already uses
+     for `followBlock` and `secondaryActions` and for the same stated reason:
+     built once, referenced twice, so there is no second reporting list and no
+     copied markup to drift.
+
+     WHY IT HAD TO MOVE. The NO-EVIDENCE path returns early, and this block
+     used to live only in the main path. A country with no RETAINED map
+     evidence therefore had nowhere to render a completed explicit read: the
+     reader pressed the control, the state reached READY, and the articles that
+     came back were unreachable. Measured on Kenya against the live Alpha
+     backend — provider status rendered, 0 source cards.
+
+     The two corpora stay distinct and the no-evidence sentence is NOT
+     weakened: it still says nothing was RETAINED in this period, which is true
+     and is about the map's evidence set. What follows it is what the reader
+     just asked for and received, which is a different question with a
+     different answer. */
+  /* Hoisted with `retainedBlock`: the filtered view the block renders, needed
+     before it rather than after. `activeFilters` is already above both. */
+  const shownItems = applyCardFilters(items ?? [], activeFilters);
+
+  const retainedBlock = (
+    <>
+    {/* ══ 09 · RETAINED REPORTING ═══════════════════════════════════════
+        Source cards. The heading states SHOWN of TOTAL, so an active filter
+        never looks like a shrunken feed. */}
+    {items && items.length > 0 && (
+      <Section
+        gn="card-retained"
+        title={labels.retainedHeading}
+        aside={`${shownItems.length} / ${items.length}`}
+      >
+        {shownItems.length === 0 ? (
+          <p data-gn="retained-filtered-empty" className="text-[11px] leading-[1.45] text-sp-ink-3">
+            {labels.retainedFilteredEmpty}
+          </p>
+        ) : (
+          shownItems.map((item) => (
+            <SourceCard
+              key={item.id}
+              item={item}
+              selected={item.id === selectedItemId}
+              language={language}
+              labels={{
+                categories: labels.categories,
+                levels: labels.levels,
+                openSource: labels.openSource,
+                askAbout: labels.askAbout,
+                askAiShort: labels.askAiShort,
+                seenPrefix: labels.coverage.seenPrefix,
+                publishedPrefix: labels.coverage.publishedPrefix,
+              }}
+              onSelect={onSelectItem}
+              onOpenSource={onOpenSource}
+              onAskAbout={onAskAbout}
+            />
+          ))
+        )}
+      </Section>
+    )}
+    </>
+  );
+
   const secondaryActions = (
     <Section gn="card-actions">
       <div className="grid grid-cols-2 gap-[6px]">
@@ -636,6 +819,21 @@ export function EvidenceSelectionCard({
         </Section>
         {watchBlock}
         {followBlock}
+        {countryReadBlock}
+        {/*
+          WHAT THE READER JUST ASKED FOR, EVEN HERE — especially here.
+
+          This is the no-RETAINED-evidence card, and it is exactly the country
+          for which an explicit read matters most: the map holds nothing, so
+          the only reporting the reader can get is the reporting they request.
+          Rendering the control and then dropping its result would be the
+          cruellest version of this surface.
+
+          The no-evidence sentence above is untouched and still true — it is
+          about the retained evidence set in this period. This is the answer to
+          a different question, placed after it rather than instead of it.
+        */}
+        {retainedBlock}
         {secondaryActions}
       </div>
     );
@@ -644,7 +842,6 @@ export function EvidenceSelectionCard({
   const drawnCoarser = isFinerThan(total.finestPrecision, availableGeometry);
   const style = markerStyleFor(total.finestPrecision, provenance);
   const unverified = total.reportCount - total.verifiedReportCount;
-  const shownItems = applyCardFilters(items ?? [], activeFilters);
 
   return (
     <div
@@ -881,7 +1078,8 @@ export function EvidenceSelectionCard({
           screen, with the category bars and the story list directly beneath. */}
       {watchBlock}
       {followBlock}
-      {secondaryActions}
+      {countryReadBlock}
+        {secondaryActions}
 
             {/* ══ 08 · CATEGORY DISTRIBUTION, AS FILTERS ═══════════════════
                 "Each bar is a filter: activating one narrows blocks 07–09 AND
@@ -943,43 +1141,7 @@ export function EvidenceSelectionCard({
                 )}
               </div>
             )}
-      {/* ══ 09 · RETAINED REPORTING ═══════════════════════════════════════
-          Source cards. The heading states SHOWN of TOTAL, so an active filter
-          never looks like a shrunken feed. */}
-      {items && items.length > 0 && (
-        <Section
-          gn="card-retained"
-          title={labels.retainedHeading}
-          aside={`${shownItems.length} / ${items.length}`}
-        >
-          {shownItems.length === 0 ? (
-            <p data-gn="retained-filtered-empty" className="text-[11px] leading-[1.45] text-sp-ink-3">
-              {labels.retainedFilteredEmpty}
-            </p>
-          ) : (
-            shownItems.map((item) => (
-              <SourceCard
-                key={item.id}
-                item={item}
-                selected={item.id === selectedItemId}
-                language={language}
-                labels={{
-                  categories: labels.categories,
-                  levels: labels.levels,
-                  openSource: labels.openSource,
-                  askAbout: labels.askAbout,
-                  askAiShort: labels.askAiShort,
-                  seenPrefix: labels.coverage.seenPrefix,
-                  publishedPrefix: labels.coverage.publishedPrefix,
-                }}
-                onSelect={onSelectItem}
-                onOpenSource={onOpenSource}
-                onAskAbout={onAskAbout}
-              />
-            ))
-          )}
-        </Section>
-      )}
+      {retainedBlock}
 
       {/* ══ 10 · SITUATIONS ══════════════════════════════════════════════
           "Named situations and their state, WHEN THE SITUATION MODEL HAS ANY."
