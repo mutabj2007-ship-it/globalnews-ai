@@ -138,9 +138,15 @@ export type GeometryCrs = typeof GEOMETRY_CRS;
  * verbatim. Reproduced in this lane — a synthetic `exactSiteName` rode all the way
  * to the wire.
  *
- * This is a SHAPE check and nothing more. It defines no coordinate algebra, no
+ * This is a STRUCTURE check and nothing more. It defines no coordinate algebra, no
  * winding rule, no simplification and no reprojection. Those remain out of scope and
  * belong to the first consumer that needs one.
+ *
+ * GX-24 · R4 widened "structure" by exactly one step: for the kinds whose GeoJSON type
+ * is polygonal, a linear ring must be a linear ring. Closure is an equality between two
+ * positions the source already published; it computes nothing, rounds nothing and
+ * reverses nothing, so it is not the coordinate algebra this paragraph excludes. Winding
+ * still is, and stays excluded — see GX-24 and POLYGON_WINDING_VALIDATION.
  */
 export interface GeometryCoordinateValue {
   readonly type: string;
@@ -166,9 +172,277 @@ function everyLeafIsFinite(value: unknown, depth = 0): boolean {
   return false;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 1a · GX-24 · A LINEAR RING IS A RING — SOURCE-NATIVE STRUCTURAL VALIDITY
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * R3 shipped `assertCoordinatesAreClosed`, and the name says CLOSED because the
+ * property it enforced was a closed OBJECT — exactly `type` and `coordinates`, because
+ * an extra property is a channel. It said nothing about a closed RING, and the first
+ * Copernicus producer reported the consequence (HP-B2) rather than inventing a local
+ * rule to cover it. Reproduced against the accepted R3 bytes: an unclosed exterior ring,
+ * an unclosed interior ring, a two-position ring, a polygon with no rings, an unclosed
+ * BBOX, a position of one number, a ring that is not an array, and the scalar
+ * `coordinates: 7` all satisfied `assertGeometryIsWellFormed` and presented as
+ * RENDER_NATIVE.
+ *
+ * The rule added here is drawn from RFC 7946 and takes only its MUSTs:
+ *
+ *   MUST   a linear ring has four or more positions          §3.1.6
+ *   MUST   the first and last positions are equivalent       §3.1.6
+ *   MUST   a position has two or more numbers                §3.1.1
+ *   SHOULD exterior rings are counterclockwise               §3.1.6  — NOT enforced
+ *   SHOULD a position carries at most three numbers          §3.1.1  — NOT enforced
+ *
+ * Taking the MUSTs and leaving the SHOULDs is one rule rather than a list of tastes,
+ * and it is what makes the winding answer a derivation instead of a preference.
+ *
+ * WHICH KINDS. Nothing here names POLYGON, MULTIPOLYGON or BBOX. The dispatch reads the
+ * GeoJSON type that COORDINATE_TYPE_FOR_KIND already requires for the kind, so BBOX is
+ * covered because its type is 'Polygon', and a kind added later is covered the moment it
+ * is given a polygonal type. A second list of polygonal kinds would drift from the first
+ * one the day a kind was added, invisibly, because both would look correct in isolation.
+ *
+ * NO REPAIR. A ring that does not close is refused, never closed for the publisher. An
+ * appended coordinate is a coordinate the source never published, and a geometry we
+ * completed is indistinguishable downstream from one that arrived complete. The refusal
+ * codes below are ordinary GEOMETRY_* codes, so the accepted per-record catch in
+ * `presentGeometrySet` turns each into WITHHELD / RECORD_REFUSED and the reader sees
+ * NOT_SHOWN — the same absence a protected or undrawable record produces, which is GX-1.
+ *
+ * ── GX-25 · THE KIND AND THE COORDINATE STRUCTURE MUST AGREE ──────────────────────
+ *
+ * A declared kind is a claim about the SHAPE of the coordinate tree, and R3 checked only
+ * half of that claim: `GEOMETRY_COORDINATE_TYPE_DISAGREES` compares the carrier's `type`
+ * string with the kind, and nothing compared the NESTING. A MULTIPOLYGON carrying
+ * Polygon-shaped coordinates therefore passed the type check and then met the ring rules
+ * one level too shallow.
+ *
+ * Measured against the R4 bytes before this rule was written: every such mismatch was
+ * already REFUSED — nothing leaked — but each was reported as a RING defect. That is a
+ * false statement about the data. The rings were correct; the nesting was not.
+ *
+ * So the depth check runs FIRST, and has its own code. Four normalisations are named and
+ * refused, each because it would make a record that is a defect indistinguishable from a
+ * record that arrived correct:
+ *
+ *   appending a closure point   a coordinate we added that the source never published
+ *   dropping a ring             a hole silently filled in, and GX-5 says a hole is a position
+ *   selecting the largest part  a MULTIPOLYGON reduced to a POLYGON, which is a different
+ *                               claim about the world made in our voice
+ *   changing the kind           the declaration rewritten to match the bytes, so the
+ *                               disagreement that IS the defect is erased by recording it
+ *
+ * None of the four is implemented anywhere in this module, and the proofs assert their
+ * absence by behaviour rather than by search.
+ */
+
+/** GX-24 · RFC 7946 §3.1.6. Three distinct positions and a repeat of the first. */
+export const MINIMUM_LINEAR_RING_POSITIONS = 4;
+
+/** GX-24 · RFC 7946 §3.1.1. Longitude and latitude. A third number is tolerated. */
+export const MINIMUM_POSITION_COMPONENTS = 2;
+
+/**
+ * GX-24 · WINDING IS INTENTIONALLY OUTSIDE ALPHA VALIDATION, AND THIS CONSTANT IS THE
+ * DECLARATION OF THAT — IT IS NOT A CONTROL.
+ *
+ * Read with GX-15: a constant that records a decision may not be cited as enforcement.
+ * It is exported so that the decision is visible to a reader of the module rather than
+ * only to a reader of a review document, exactly as PROTECTIVE_COARSENING_PRESENTATION
+ * records a capability that is held rather than absent.
+ *
+ * Four reasons, in the order they decide it:
+ *
+ *   1. RFC 7946 §3.1.6 states the right-hand rule as SHOULD, and then instructs parsers
+ *      not to reject polygons that do not follow it. Refusing on winding would be
+ *      stricter than the format the data is published in.
+ *   2. Deciding a ring's winding requires a signed area — arithmetic over the
+ *      coordinates, with a sign convention and a zero case. That is the coordinate
+ *      algebra GX-12 excludes; ring closure is an equality between two published
+ *      positions and is not.
+ *   3. The two available responses are both refused elsewhere in this contract. Reversing
+ *      a ring is a silent repair. Withholding on winding discards source-faithful data
+ *      over a convention that changes no coordinate.
+ *   4. It would be unreachable. MAP_ALPHA is ['NONE','POINT'] and MAP_RICH is not
+ *      mounted, so no polygon reaches a reader surface today; an Alpha winding rule would
+ *      be a rule no proof could exercise. Ring closure is reachable — the producer path
+ *      and INTERNAL_AUDIT both exercise it.
+ *
+ * If a renderer ever needs a winding guarantee it is that surface's normalisation to
+ * make and to declare, on a derived geometry marked DERIVED, never a source-native
+ * admission gate.
+ */
+export const POLYGON_WINDING_VALIDATION = 'OUTSIDE_ALPHA_VALIDATION' as const;
+
+/**
+ * GX-24 · the refusal codes this rule can produce. Five distinguishable defects, not one
+ * collapsed MALFORMED, because A-24 holds here too: an absence that is a source that
+ * published no ring is not an absence that is a source that published an open one.
+ *
+ * None is a PROGRAMMING_MISTAKE. Each is a statement about bytes a publisher sent, so
+ * each classifies as DATA_DEFECT under the accepted authority contract's default — which
+ * is the safety rule this round was asked for, and it needs no edit there to hold.
+ */
+export const POLYGON_RING_REFUSAL_CODES = Object.freeze([
+  'GEOMETRY_POLYGON_STRUCTURE_INVALID',
+  'GEOMETRY_POLYGON_EMPTY',
+  'GEOMETRY_COORDINATE_STRUCTURE_DISAGREES_WITH_KIND',
+  'GEOMETRY_RING_TOO_FEW_POSITIONS',
+  'GEOMETRY_POSITION_TOO_FEW_COMPONENTS',
+  'GEOMETRY_RING_NOT_CLOSED',
+] as const);
+
+export type PolygonRingRefusalCode = (typeof POLYGON_RING_REFUSAL_CODES)[number];
+
+/**
+ * One ring. Every message names indices and lengths only: no coordinate value is ever
+ * interpolated into a refusal, because AS-13 measured a thrown message carrying
+ * coordinates out of a lane's own fixture.
+ */
+function assertRingIsALinearRing(ring: unknown, where: string): void {
+  if (!Array.isArray(ring)) {
+    if (typeof ring === 'number') {
+      // The declared kind expects a ring here and the source supplied a coordinate.
+      // The coordinates are one nesting level SHALLOWER than the kind declares.
+      throw new Error(
+        `GEOMETRY_COORDINATE_STRUCTURE_DISAGREES_WITH_KIND: ${where} is a number, not a ` +
+          'ring. The coordinates are nested one level shallower than the declared kind ' +
+          'requires. The kind is not rewritten to match the coordinates.',
+      );
+    }
+    throw new Error(
+      `GEOMETRY_POLYGON_STRUCTURE_INVALID: ${where} is not an array of positions.`,
+    );
+  }
+
+  /* GX-25 · DEPTH BEFORE RING RULES.
+   *
+   * Every element of a ring must be a POSITION — an array whose own elements are
+   * numbers. Checking that first is what makes the ring codes truthful: a MULTIPOLYGON
+   * whose coordinates are Polygon-shaped has perfectly good rings at the wrong depth,
+   * and reporting it as GEOMETRY_RING_TOO_FEW_POSITIONS sends an operator to look for a
+   * ring defect that does not exist. A-24 again: two distinguishable defects must not
+   * collapse into one code, and the wrong one of the two is worse than a coarse one. */
+  for (let i = 0; i < ring.length; i += 1) {
+    const position: unknown = ring[i];
+    if (!Array.isArray(position)) {
+      if (typeof position === 'number') {
+        throw new Error(
+          `GEOMETRY_COORDINATE_STRUCTURE_DISAGREES_WITH_KIND: ${where} element ${i} is a ` +
+            'number where a position is required. The coordinates are nested one level ' +
+            'shallower than the declared kind requires.',
+        );
+      }
+      throw new Error(
+        `GEOMETRY_POLYGON_STRUCTURE_INVALID: ${where} position ${i} is not an array.`,
+      );
+    }
+    for (let c = 0; c < position.length; c += 1) {
+      if (Array.isArray(position[c])) {
+        throw new Error(
+          `GEOMETRY_COORDINATE_STRUCTURE_DISAGREES_WITH_KIND: ${where} position ${i} ` +
+            `component ${c} is itself an array. The coordinates are nested at least one ` +
+            'level deeper than the declared kind requires. The kind is not rewritten to ' +
+            'match the coordinates, and no ring is dropped to make them fit.',
+        );
+      }
+    }
+  }
+
+  if (ring.length < MINIMUM_LINEAR_RING_POSITIONS) {
+    throw new Error(
+      `GEOMETRY_RING_TOO_FEW_POSITIONS: ${where} has ${ring.length} positions; a linear ` +
+        `ring has at least ${MINIMUM_LINEAR_RING_POSITIONS}.`,
+    );
+  }
+  for (let i = 0; i < ring.length; i += 1) {
+    const position = ring[i] as readonly unknown[];
+    if (position.length < MINIMUM_POSITION_COMPONENTS) {
+      throw new Error(
+        `GEOMETRY_POSITION_TOO_FEW_COMPONENTS: ${where} position ${i} carries ` +
+          `${position.length}; a position carries at least ${MINIMUM_POSITION_COMPONENTS}.`,
+      );
+    }
+  }
+  const first = ring[0] as readonly unknown[];
+  const last = ring[ring.length - 1] as readonly unknown[];
+  if (first.length !== last.length) {
+    throw new Error(
+      `GEOMETRY_RING_NOT_CLOSED: ${where} opens with ${first.length} components and ` +
+        `closes with ${last.length}.`,
+    );
+  }
+  for (let c = 0; c < first.length; c += 1) {
+    if (first[c] !== last[c]) {
+      throw new Error(
+        `GEOMETRY_RING_NOT_CLOSED: ${where} does not close — component ${c} of the last ` +
+          'position differs from the first. The contract does not append the first ' +
+          'position to close it: a coordinate we added is a coordinate the source never ' +
+          'published.',
+      );
+    }
+  }
+}
+
+/** One polygon: a non-empty list of rings, each independently valid. */
+function assertPolygonIsLinearRings(polygon: unknown, where: string): void {
+  if (!Array.isArray(polygon)) {
+    throw new Error(
+      `GEOMETRY_POLYGON_STRUCTURE_INVALID: ${where}coordinates are not an array of rings.`,
+    );
+  }
+  if (polygon.length === 0) {
+    throw new Error(
+      `GEOMETRY_POLYGON_EMPTY: ${where}carries no ring. A record that means "no geometry" ` +
+        'declares kind NONE; an empty coordinate array is a second, undeclared way to say it.',
+    );
+  }
+  for (let i = 0; i < polygon.length; i += 1) {
+    assertRingIsALinearRing(polygon[i], `${where}ring ${i}`);
+  }
+}
+
+/**
+ * GX-24 · dispatch on the GeoJSON type the kind already requires. A non-polygonal type
+ * returns without a rule: a LineString is not a ring and must not be asked to close.
+ */
+function assertPolygonalStructure(geoJsonType: string, coordinates: unknown): void {
+  if (geoJsonType === 'Polygon') {
+    assertPolygonIsLinearRings(coordinates, '');
+    return;
+  }
+  if (geoJsonType === 'MultiPolygon') {
+    if (!Array.isArray(coordinates)) {
+      throw new Error(
+        'GEOMETRY_POLYGON_STRUCTURE_INVALID: coordinates are not an array of polygons.',
+      );
+    }
+    if (coordinates.length === 0) {
+      throw new Error(
+        'GEOMETRY_POLYGON_EMPTY: carries no polygon. A record that means "no geometry" ' +
+          'declares kind NONE; an empty coordinate array is a second, undeclared way to say it.',
+      );
+    }
+    for (let i = 0; i < coordinates.length; i += 1) {
+      assertPolygonIsLinearRings(coordinates[i], `polygon ${i} `);
+    }
+  }
+}
+
 /**
  * GX-12. Exactly the own properties `type` and `coordinates`, `type` agreeing with
  * `kind`, every leaf a finite number. Anything else is refused.
+ *
+ * GX-24. And, for a polygonal type, every ring in every polygon is a linear ring. The
+ * check lives HERE rather than beside it, and is not separately exported, so there is no
+ * function a caller can reach that validates a polygon's coordinates and skips its rings.
+ * A rule that lives in a second function cannot be forgotten only by a caller who read
+ * the comment; a rule that lives in the only entry point cannot be forgotten at all.
+ *
+ * ORDER IS PRESERVED. The ring check runs LAST, after the finite-leaf check, so every
+ * value R3 refused is still refused with the code R3 used. This function's existing
+ * behaviour is a strict subset of its new behaviour.
  */
 export function assertCoordinatesAreClosed(kind: SourceGeometryKind, value: unknown): void {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -193,6 +467,7 @@ export function assertCoordinatesAreClosed(kind: SourceGeometryKind, value: unkn
       'GEOMETRY_COORDINATE_LEAF_NOT_FINITE: every coordinate leaf must be a finite number.',
     );
   }
+  assertPolygonalStructure(expected, v.coordinates);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
