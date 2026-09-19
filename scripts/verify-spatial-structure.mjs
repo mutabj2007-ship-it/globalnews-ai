@@ -739,6 +739,22 @@ check(
    than the rules, so it needs no ESLint and no node_modules, and it runs inside
    `next build` like the rest of Part A. */
 
+/* ── THE SET IS DERIVED NOW, NOT FROZEN ────────────────────────────────────
+   This was a hard-coded list of the plugins `next/core-web-vitals` supplies, and
+   the check's own message says it fires when a directive names a rule "for a
+   plugin the frontend does not declare". The list could not see a declaration,
+   so once the frontend DID declare one the gate went on reporting an offender
+   that no longer existed — the guard measuring its own stale copy of reality
+   rather than reality.
+
+   The next-supplied names still have to be written down: they arrive through a
+   shared config and are not in the frontend's own `plugins` array. What is added
+   is everything the frontend explicitly declares, read from the same
+   `.eslintrc.json` ESLint itself reads.
+
+   THE TEETH ARE UNCHANGED, which is the part that matters. A directive naming a
+   plugin nobody declares still fails, because it will still break `next lint`.
+   All that changed is that "declared" now means declared. */
 const lintPluginPrefixes = new Set([
   /* supplied by eslint-config-next / next/core-web-vitals */
   '@next/next',
@@ -747,6 +763,24 @@ const lintPluginPrefixes = new Set([
   'jsx-a11y',
   'import',
 ]);
+
+{
+  const eslintrcPath = join(ROOT, 'frontend', '.eslintrc.json');
+  if (existsSync(eslintrcPath)) {
+    try {
+      const declared = JSON.parse(readFileSync(eslintrcPath, 'utf8')).plugins;
+      if (Array.isArray(declared)) {
+        for (const plugin of declared) {
+          if (typeof plugin === 'string') lintPluginPrefixes.add(plugin);
+        }
+      }
+    } catch {
+      /* A malformed eslintrc is not this gate's business to report — ESLint will
+         say so far more clearly. The frozen set stands, so the check still runs
+         and still fails closed rather than passing on a parse error. */
+    }
+  }
+}
 
 const directiveFiles = [];
 const collectSources = (dir) => {

@@ -95,3 +95,4 @@ export * from './official-data/json-strict';
 export * from './official-data/transport';
 export * from './official-data/parser-registry';
 export * from './official-data/admission-evaluator';
+export * from './humanitarian/spatial-geometry';

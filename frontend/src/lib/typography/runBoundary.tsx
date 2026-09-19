@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { DISPLAY_LOCALE_META, type DisplayLocale } from '@globalnews-ai/shared';
 
 /**
  * LANG-UI-7 — THE RUN / SCRIPT BOUNDARY.
@@ -94,12 +95,67 @@ const ISLAND_STYLE: CSSProperties = {
   letterSpacing: 'var(--latin-ls, normal)',
 };
 
+export type ArabicRunStep = 'chrome' | 'wrapping';
+
+interface ArabicRunProps {
+  locale: DisplayLocale;
+  /**
+   * AR-MICROTYPE-1 line-height step. `chrome` is single-line (1.35);
+   * `wrapping` is running text (1.55 minimum). The marker selects the step;
+   * the step declares the policy. Values are per-step, never per-element.
+   */
+  step?: ArabicRunStep;
+  as?: 'span' | 'div' | 'p';
+  className?: string;
+  children: ReactNode;
+}
+
 /**
  * Marks human-readable content in the resolved locale.
  *
  * For a non-Arabic locale this renders a plain element with NO marker and no
  * policy variables, so every Latin locale is byte-identical to today. The
  * component is safe to place unconditionally; it is inert outside Arabic.
+ */
+export function ScriptRun({
+  locale,
+  step = 'chrome',
+  as: Tag = 'span',
+  className,
+  children,
+}: ArabicRunProps): JSX.Element {
+  if (DISPLAY_LOCALE_META[locale].direction !== 'rtl') {
+    return <Tag className={className}>{children}</Tag>;
+  }
+  return (
+    <Tag
+      data-run={step === 'wrapping' ? 'ar-human-wrap' : 'ar-human'}
+      style={RUN_ENTRY_STYLE}
+      className={className}
+    >
+      {children}
+    </Tag>
+  );
+}
+
+/**
+ * A machine-readable Latin value inside any run.
+ *
+ * SEMANTICS — the escape is EXPLICIT and never inferred. A component marks an
+ * island because the VALUE is machine-readable: geographyId, SituationId, ISO
+ * codes, coordinates and bbox tuples, evidence and provenance refs, version
+ * strings, hashes, URLs, timestamps, non-localized codes, symbol-form units.
+ * There is no content sniffing and no "looks like Latin" heuristic, because a
+ * heuristic would be wrong for the first value nobody anticipated.
+ *
+ * Spelled localized units and short human prose are NOT islands: they take the
+ * Arabic floor and policy like any other human text.
+ *
+ * THE STORED VALUE IS NEVER ALTERED. `dir="ltr"` plus `unicode-bidi: isolate`
+ * change rendering only. This is correctness, not cosmetics: unisolated Latin
+ * inside an RTL run reorders punctuation and adjacent digits, so a copied
+ * identifier round-trips WRONG. Before LANG-UI-7 the product had zero bidi
+ * isolation of any kind.
  */
 export function MachineReadable({
   as: Tag = 'span',

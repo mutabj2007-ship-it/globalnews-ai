@@ -438,7 +438,23 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       change implementation to clear a carried failure, and recorded so nobody
       reads this correction as having fixed it.
     */
-    expect(pages).toHaveLength(31);
+    /*
+      R3-HUM · TWO MORE ROUTES WERE ADDED, AND THE COUNT MOVES AGAIN.
+
+      `/humanitarian` and `/humanitarian/compact`, landed by
+      ALPHA-HUMANITARIAN-R3-CANONICAL-CONVERGENCE-R1 as H's accepted checkpoint-4
+      bytes. Same treatment as `/third-party-notices` above, and for the reason this
+      assertion already gives: the count moves with the tree rather than the assertion
+      being relaxed.
+
+      THIS DOES NOT CLEAR THE CARRIED FAILURE, and is not an attempt to. The Windows
+      path-separator defect described above is untouched, so this spec stays in the
+      carried baseline set exactly as before — confirmed by the failing-test-NAME set
+      being identical across this convergence. Moving the count keeps the number
+      honest; leaving it at 31 would have made it wrong for two unrelated reasons at
+      once, and a later reader could not tell which.
+    */
+    expect(pages).toHaveLength(33);
     expect(pages).toContain('/');
     for (const known of ['/map', '/search', '/privacy', '/terms', '/source-policy', '/support', '/workspace', '/history']) {
       expect(`${known}: ${pages.includes(known)}`).toBe(`${known}: true`);

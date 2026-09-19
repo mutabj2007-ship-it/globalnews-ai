@@ -134,11 +134,31 @@ describe('B3 — the two shared-contract prerequisites are still open', () => {
       expect(source).toMatch(/DisplayLocale|DISPLAY_LOCALES/);
     });
 
-    it('the Economy route pages need ScriptRun, which this tree does not export', () => {
+    it('the Economy route pages need ScriptRun — CLOSED by the Humanitarian R3 convergence', () => {
       /*
-        The route pages are out of scope anyway — B3 forbids registering a live
-        Economy route — so this collision is confined to files that must not be
-        recovered yet. Recorded so it is not rediscovered at wiring time.
+        ── THIS RECORDED A GAP, AND THE GAP HAS CLOSED ────────────────────────
+
+        It read: "the Economy route pages need ScriptRun, which this tree does not
+        export", and its own note said *"recorded so it is not rediscovered at wiring
+        time"*. That is what it was — a RECORD of a known collision, not an invariant
+        to defend. Wiring time arrived from an unexpected direction.
+
+        ALPHA-HUMANITARIAN-R3-CANONICAL-CONVERGENCE-R1 landed H's accepted Humanitarian
+        routes, which import `ScriptRun` for exactly the same reason Economy's do, so
+        `runBoundary.tsx` was restored to the accepted checkpoint-4 bytes. That restore
+        is strictly ADDITIVE — `diff` against the trimmed file reports zero removed
+        lines — and `MachineReadable` is untouched.
+
+        The reason the trim existed is also gone. The Map route records it: importing
+        `ScriptRun` "would mean pulling C55's shared language machinery forward", namely
+        `DISPLAY_LOCALE_META` and the `DisplayLocale` union from shared `language/`.
+        That module is now present in this lineage, so the import costs nothing that is
+        not already here — the note in `app/map/page.tsx` is stale, and this is the
+        entry that says so.
+
+        WHAT HAS NOT CHANGED, AND IS STILL ASSERTED BELOW: B3 still forbids registering
+        a live Economy route, and no Economy route exists. Closing the ScriptRun
+        collision removes an obstacle to wiring; it does not authorise the wiring.
       */
       const page = git('show', `${CANONICAL}:frontend/src/app/economy/page.tsx`);
 
@@ -149,7 +169,14 @@ describe('B3 — the two shared-contract prerequisites are still open', () => {
         'utf-8',
       );
 
-      expect(runBoundary).not.toContain('export function ScriptRun');
+      // The collision is closed: the symbol Economy's pages need is now exported here.
+      expect(runBoundary).toContain('export function ScriptRun');
+
+      // And the trim's stated cost is now free — the shared language module is present.
+      expect(runBoundary).toContain("from '@globalnews-ai/shared'");
+
+      // B3 STILL HOLDS. No Economy route is registered in this tree.
+      expect(existsSync(join(REPO, 'frontend', 'src', 'app', 'economy'))).toBe(false);
     });
 
     it('only one Economy file has no imports at all', () => {

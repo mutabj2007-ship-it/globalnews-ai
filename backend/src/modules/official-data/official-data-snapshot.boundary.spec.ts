@@ -183,35 +183,77 @@ describe('the snapshot module reaches into no other domain', () => {
 });
 
 describe('this change alters no existing provider boundary', () => {
-  /**
-   * The diff against the commit this work started from. If a future edit inside
-   * this capability touches Map, Support, news or the analysis pipeline, this
-   * fails and names the file — which is the whole point of asserting it here
-   * rather than remembering it in a report.
-   */
-  const changed = git('diff', '--name-only', 'HEAD')
-    .split('\n')
-    .concat(git('ls-files', '--others', '--exclude-standard').split('\n'))
-    .map((s) => s.trim())
-    .filter((s) => s !== '');
+  /*
+    ── THE THIRD TIME THIS FILE READ THE WORKING TREE, AND THE LAST ───────────
 
-  it('the working tree touches no Map file', () => {
+    These four assertions were built on `git diff HEAD` plus untracked files — the
+    WHOLE working tree, whoever put it there. That is not "this capability's
+    changes"; it is "everything currently uncommitted in this checkout", and the two
+    are the same thing only while nobody else is working.
+
+    It held until the Humanitarian R3 convergence landed twenty frontend files in a
+    different lane. This suite then failed, reporting that the SNAPSHOT STORE had
+    acquired a frontend surface. It had not. The store was not involved at all.
+
+    That is a false report, and a false report from a boundary guard is worse than no
+    guard: the next person to see it fires will assume it is noise, and one day it
+    will not be.
+
+    The lineage form is used instead — the same correction the shared/ containment
+    rule below already carries. `changed` is now every path touched by every commit
+    that built this capability, which is what the assertions were always trying to
+    say, and it is independent of what any other lane is doing right now.
+  */
+  const capabilityCommits = git(
+    'log',
+    '--format=%H',
+    '--',
+    'shared/src/official-data',
+    'backend/src/modules/official-data',
+  )
+    .trim()
+    .split('\n')
+    .filter((sha) => sha !== '');
+
+  const changed = [
+    ...new Set(
+      capabilityCommits.flatMap((sha) =>
+        git('show', '--name-only', '--format=', sha)
+          .split('\n')
+          .map((s) => s.trim())
+          .filter((s) => s !== ''),
+      ),
+    ),
+  ];
+
+  it('scans a non-empty commit set (positive control)', () => {
+    /*
+      Without this, every assertion below is satisfied by an empty list — which is
+      exactly what would happen if the path filter were ever mistyped. A guard that
+      passes because it looked at nothing is the failure mode these four exist to
+      avoid, so it is checked rather than assumed.
+    */
+    expect(capabilityCommits.length).toBeGreaterThan(0);
+    expect(changed.length).toBeGreaterThan(0);
+  });
+
+  it('no commit in this capability touches a Map file', () => {
     expect(changed.filter((f) => /\/map\/|MapPage|GlobalMapShell/.test(f))).toEqual([]);
   });
 
-  it('the working tree touches no Support file', () => {
+  it('no commit in this capability touches a Support file', () => {
     expect(changed.filter((f) => /\/support\/|SupportScreen|supportEn|supportPl/.test(f))).toEqual(
       [],
     );
   });
 
-  it('the working tree touches no news or analysis provider file', () => {
+  it('no commit in this capability touches a news or analysis provider file', () => {
     expect(
       changed.filter((f) => /modules\/news\/|modules\/analysis\/|modules\/signals\//.test(f)),
     ).toEqual([]);
   });
 
-  it('the working tree touches no frontend file at all', () => {
+  it('no commit in this capability touches a frontend file at all', () => {
     // This capability is backend and shared only. A frontend change here would
     // mean the store had acquired a surface, which SR-21 forbids.
     expect(changed.filter((f) => f.startsWith('frontend/'))).toEqual([]);
