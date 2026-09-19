@@ -21,6 +21,7 @@ export * from './query-normalization';
 export * from './geo-fuzzy-resolver';
 export * from './countryDisplayName';
 export * from './officialSources';
+export * from './rights/source-rights';
 /*
   PUBLISHER FEEDS RECOVERY R1 — the recovered C55 `SourceType`, plus the one
   corroboration rule the ruling requires. Placed beside './officialSources'
@@ -93,6 +94,7 @@ export * from './conflict';
 export * from './market';
 export * from './official-data/snapshot';
 export * from './official-data/snapshot-admission';
+export * from './official-data/json-numeric';
 export * from './official-data/json-strict';
 export * from './official-data/transport';
 export * from './official-data/parser-registry';

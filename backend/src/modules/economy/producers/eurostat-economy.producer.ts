@@ -1,4 +1,8 @@
 import {
+  JsonNumericTokenMalformed,
+  classifyJsonNumericToken,
+  economyValueOrRefusal,
+  type ClassifiedNumericToken,
   resolveParserBinding,
   type EconomyFigureGapReason,
   type EconomyObservation,
@@ -160,6 +164,39 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 /** The period labels the publisher itself declared, in its own index order. */
+/**
+ * A STRING IN THE VALUE SLOT IS TWO DIFFERENT FACTS, AND THEY MUST NOT BE CONFLATED.
+ *
+ * After the parse-boundary delta, a string reaching this producer is USUALLY a numeral the
+ * classifier preserved as characters — `12345678901234567890`, `1e400`. But the strict
+ * parser passes ordinary JSON STRINGS through untouched too, so a publisher cell holding
+ * `"not a number"` also arrives as a string.
+ *
+ * `classifyJsonNumericToken` throws `ECON-NUM-1` on a non-literal, and it is right to:
+ * Main's rule is that a malformed NUMERIC TOKEN is a caller defect and classifying it
+ * would hide which. But an ordinary string in a value slot is not a malformed numeric
+ * token at all — it is a publisher cell that is not a number, and there is already a code
+ * for exactly that.
+ *
+ * Landing §1.3's snippet unguarded let that throw escape `produceSeriesCell`, which does
+ * not gap one cell — it aborts the whole set, so one odd cell in one series would take the
+ * other three rows down with it. Measured by EA-10, not predicted.
+ *
+ * So: a non-literal string resolves to `null`, which `economyValueOrRefusal` reports as
+ * `ECON-VALUE-NOT-NUMERIC` — the honest code. The distinction Main protects is kept, since
+ * nothing here classifies a malformed token; it declines to treat a non-numeral as one.
+ *
+ * REPORTED TO MAIN as an integration finding against §1.3.
+ */
+function classifyRetainedToken(token: string): ClassifiedNumericToken | null {
+  try {
+    return classifyJsonNumericToken(token);
+  } catch (error) {
+    if (error instanceof JsonNumericTokenMalformed) return null;
+    throw error;
+  }
+}
+
 function timePeriods(dataset: JsonStatDataset): readonly string[] {
   const time = dataset.dimension?.['time'];
   if (!isRecord(time)) return [];
@@ -401,12 +438,35 @@ export async function produceSeriesCell(
   */
   const lastKey = keys[keys.length - 1] as string;
   const raw = values[lastKey];
-  if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+  /*
+    ECON-NUMERIC-LEXICAL-SEAM-1 — THE CANONICAL CLASSIFIER DECIDES, NOT THIS MODULE.
+
+    The old test was `typeof raw !== 'number' || !Number.isFinite(raw)`, and it answered
+    one question with one code. Three unlike facts collapsed onto `ECON-VALUE-NOT-FINITE`:
+    a value a double carries exactly but spells differently (`1.0`), a value a double
+    cannot carry (a 20-digit integer), and a value that is not finite at all (`1e400`).
+    Only the third was ever what that code said.
+
+    THIS MODULE PERFORMS NO NUMERIC COERCION. There is no `Number(...)` here and there
+    must not be: after the parser delta, a `PRECISION_SENSITIVE` or `NOT_FINITE_AS_DOUBLE`
+    token arrives as a STRING carrying its original characters, and re-deriving its class
+    is deterministic and character-identical — so the parse path and this path cannot
+    disagree about a token. `economyValueOrRefusal` maps the class to one of three codes.
+  */
+  const classified =
+    typeof raw === 'number'
+      ? { token: String(raw), numericClass: 'EXACT_AS_DOUBLE' as const, value: raw }
+      : typeof raw === 'string'
+        ? classifyRetainedToken(raw)
+        : null;
+  const resolved = economyValueOrRefusal(classified);
+  if (!resolved.ok) {
     return {
-      cell: gap(series.seriesId, 'WITHHELD', 'ECON-VALUE-NOT-FINITE'),
+      cell: gap(series.seriesId, 'WITHHELD', resolved.code),
       dispatched: [url],
     };
   }
+  const value = resolved.value;
   const periodId = periods[Number(lastKey)] ?? periods[periods.length - 1] as string;
 
 
@@ -462,7 +522,13 @@ export async function produceSeriesCell(
     periodId,
     /* Returned by the contract so the value and its basis cannot disagree. */
     vintage: economyVintageOf(retrieval),
-    value: raw,
+    /*
+      The value the CLASSIFIER resolved, never the raw slot. `raw` may be a string here —
+      that is the whole shape of the seam — and publishing it would put characters into a
+      numeric field. `resolved.value` is non-null exactly when the class is
+      EXACT_AS_DOUBLE, so this is the only value the contract permits to be published.
+    */
+    value,
     unit: series.unit,
     semantics: {
       releaseStatus: 'FINAL',

@@ -45,6 +45,9 @@
  * visual item was already true when the route was correctly shut.
  */
 
+/* ECON-RIGHTS-BINDING-1 — E4B is derived from these axes, never asserted by a caller. */
+import { evaluateSourceRights, type SourceActivationEvidence } from '../rights/source-rights';
+
 /**
  * The seven conditions, closed. `E-4` is split because registration and activation were
  * the two halves being conflated, and a condition that can be half-true is a condition
@@ -87,8 +90,24 @@ export interface EconomyRouteEvidence {
   readonly figuresWithOverstatedVintage: number;
   /** Source ids registered in the official-source registry. */
   readonly registeredSourceIds: readonly string[];
-  /** Source ids that are enabled, have an ingestion method, and carry a recorded rights grade with an instrument. */
-  readonly activatedSourceIds: readonly string[];
+  /**
+   * ECON-RIGHTS-BINDING-1 — EVIDENCE, NOT IDS.
+   *
+   * `activatedSourceIds: readonly string[]` was DELETED rather than deprecated. It asked a
+   * deployment to assert "these are activated with rights", and the predicate had nothing
+   * to check that claim against — the rights grade E4B is defined in terms of was not
+   * reachable from the registry at all. An id list makes E4B nominal.
+   *
+   * Deleting rather than leaving it beside the replacement is deliberate: a reachable id
+   * list is a reachable defect, and the old call site should fail to COMPILE rather than
+   * keep working with a weaker meaning.
+   *
+   * Each entry carries the four independent axes and `evaluateSourceRights` derives the
+   * verdict. Note what `SourceActivationEvidence` deliberately has NO field for:
+   * transport. Rights approval cannot imply a successful fetch, because the evaluator
+   * cannot see one — the implication is unstatable rather than merely false.
+   */
+  readonly activatedSources: readonly SourceActivationEvidence[];
   /** Whether a figure with no observation still renders as a stated gap. */
   readonly gapPathPreserved: boolean;
   /** Whether page load executes any provider or any AI. Must be false. */
@@ -108,12 +127,19 @@ export function economyRouteBlockers(
   if (evidence.figuresWithOverstatedVintage !== 0) blockers.push('E3_HONEST_VINTAGE_BASIS');
   if (evidence.registeredSourceIds.length < 1) blockers.push('E4A_SOURCE_REGISTERED');
 
-  /* Activation is checked as a SUBSET relation, not a count. An activated id that is not
-     registered is not a stronger state — it is an id nothing can resolve to a host, which
-     is how a figure ends up attributed to an institution the registry has never heard of. */
+  /* Activation is still checked as a SUBSET relation, not a count — an activated source
+     that is not registered is not a stronger state, it is an id nothing can resolve to a
+     host, which is how a figure ends up attributed to an institution the registry has
+     never heard of.
+
+     What changed is the second half: registration is no longer enough to be counted. Each
+     candidate must also PROVE activation-with-rights through the four axes, so E4B is
+     derived rather than asserted. */
   const registered = new Set(evidence.registeredSourceIds);
-  const activatedAndRegistered = evidence.activatedSourceIds.filter((id) => registered.has(id));
-  if (activatedAndRegistered.length < 1) blockers.push('E4B_SOURCE_ACTIVATED_WITH_RIGHTS');
+  const proven = evidence.activatedSources.filter(
+    (s) => registered.has(s.sourceId) && evaluateSourceRights(s).activatedWithRights,
+  );
+  if (proven.length < 1) blockers.push('E4B_SOURCE_ACTIVATED_WITH_RIGHTS');
 
   if (!evidence.gapPathPreserved) blockers.push('E5_GAP_PATH_PRESERVED');
   if (evidence.executesOnLoad) blockers.push('E6_NO_EXECUTION_ON_LOAD');

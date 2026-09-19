@@ -38,20 +38,33 @@
  */
 
 import type { SnapshotRefusalKey } from './snapshot-admission';
+/* ECON-NUMERIC-LEXICAL-SEAM-1 — the single classification point for numeric tokens. */
+import { classifyJsonNumericToken, type JsonNumericClass } from './json-numeric';
 
 /** Depth and node ceilings. E1 · §3 per-type row, asserted by T-12. */
 export const STRICT_JSON_MAX_DEPTH = 64;
 export const STRICT_JSON_MAX_NODES = 200_000;
 
 /**
- * A numeric token kept as characters because `Number` could not round-trip it.
+ * A numeric token kept as characters because a `double` cannot carry it faithfully.
  * Its presence is a FACT ABOUT THE CAPTURE, recorded rather than smoothed away.
+ *
+ * ECON-NUMERIC-LEXICAL-SEAM-1 — the test is no longer `String(Number(t)) === t`. That
+ * predicate answered "does this token render back to itself", which is a question about
+ * JavaScript's formatter, not about whether the value is representable. It sent `1.0`
+ * down this path alongside `1e400`, and the two are not the same fact.
  */
 export interface LexicalNumberToken {
   /** A JSON-Pointer-shaped path, for an operator reading an audit row. */
   readonly path: string;
   /** The token exactly as it appeared in the bytes. */
   readonly token: string;
+  /**
+   * WHICH of the two remaining conditions was hit — `PRECISION_SENSITIVE` or
+   * `NOT_FINITE_AS_DOUBLE`. An operator reading an audit row should not have to
+   * re-derive it, and the two call for different decisions.
+   */
+  readonly numericClass: JsonNumericClass;
 }
 
 export type StrictJsonResult =
@@ -342,20 +355,30 @@ export function parseStrictJson(bytes: Uint8Array): StrictJsonResult {
     const token = s.slice(start, i);
 
     /*
-      E1 · P-3 / T-13 — THE LEXICAL ROUND-TRIP.
+      E1 · P-3 / T-13 — REPRESENTABILITY, NOT ROUND-TRIP.  (ECON-NUMERIC-LEXICAL-SEAM-1)
 
-      If the characters do not survive a trip through `Number` unchanged, the number this
-      process would hold is NOT the number the publisher sent. The token is kept as
-      characters instead. `1e400` (becomes Infinity), a 30-digit decimal (rounds) and
-      `1.0` (renders as "1") all take this path — the last is harmless and is still
-      recorded, because a rule with exceptions is a rule someone argues about later.
+      The question that matters is whether a `double` can carry the publisher's value
+      EXACTLY, and that is decided here by exact decimal comparison rather than by asking
+      whether `String(Number(t))` reproduces the original spelling.
+
+      The old predicate conflated two unlike facts. `1e400` becomes Infinity and a 30-digit
+      decimal rounds — those are unrepresentable. `1.0` is exactly 1 in a double and merely
+      renders as "1"; keeping it as characters recorded a formatting difference as if it
+      were a loss of information, and downstream that became a withheld figure.
+
+      Classification runs INSIDE the single parse, so the parse-once rule is preserved. It
+      is also the ONLY place a token is classified: `value !== null` iff
+      `EXACT_AS_DOUBLE`, which is what makes a downstream `Number()` unnecessary and
+      therefore forbidden.
     */
-    const asNumber = Number(token);
-    if (String(asNumber) !== token) {
-      lexicalNumberTokens.push({ path: path === '' ? '/' : path, token });
-      return token;
-    }
-    return asNumber;
+    const classified = classifyJsonNumericToken(token);
+    if (classified.numericClass === 'EXACT_AS_DOUBLE') return classified.value;
+    lexicalNumberTokens.push({
+      path: path === '' ? '/' : path,
+      token,
+      numericClass: classified.numericClass,
+    });
+    return token;
   }
 
   const root = parseValue(1, '');

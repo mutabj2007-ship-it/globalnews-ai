@@ -15,6 +15,7 @@ import {
   economyVintageOf,
   snapshotContentAddress,
   type EconomyRouteEvidence,
+  type SourceActivationEvidence,
   type OfficialDataRetrieval,
   type OfficialDataSnapshotStore,
   type OfficialDataTransport,
@@ -633,13 +634,46 @@ describe('EA-7 · ECON-CL-1 · the axis is subtracted by the contract', () => {
 /* ── 8 · ROUTE ELIGIBILITY ────────────────────────────────────────────────── */
 
 describe('EA-8 · what this producer contributes to route eligibility', () => {
+  /**
+   * A fully-proven activation, used only where a test needs E4B to hold. It is spelled
+   * out rather than imported so this file asserts the SHAPE the contract requires, and so
+   * a future weakening of any axis shows up here as a diff.
+   *
+   * Note what it does not and cannot contain: any transport fact. There is no field for
+   * one, which is how "do not infer rights from successful HTTP access" is enforced by the
+   * signature rather than by a review comment.
+   */
+  const PROVEN_EUROSTAT: SourceActivationEvidence = {
+    sourceId: 'eurostat',
+    registered: true,
+    binding: { rightsAuthorityId: 'ECONOMY_ACQUISITION_RIGHTS', rightsRecordKey: 'EUROSTAT' },
+    resolvedRecord: {
+      rightsRecordKey: 'EUROSTAT',
+      rightsClass: 'E-5',
+      instrument:
+        'Commission Decision 2011/833/EU on the reuse of Commission documents, as applied ' +
+        'by the Eurostat copyright/licence policy notice. Recorded in ' +
+        'G-ECONOMY-RIGHTS-TRANSPORT-R7.',
+      productConditions: [],
+      publisherRetainsHistory: false,
+    },
+    enabled: true,
+    ingestionMethod: 'api',
+  };
+
   /** Today's measured deployment, stated as the contract's evidence shape. */
   const TODAY: EconomyRouteEvidence = {
     publishableObservationCount: 0, // no admitted bytes exist for any eligible series
     publishedFiguresWithoutLineage: 0,
     figuresWithOverstatedVintage: 0,
     registeredSourceIds: [], // OFFICIAL_SOURCES is empty — P-2
-    activatedSourceIds: [],
+    /*
+      ECON-RIGHTS-BINDING-1 — `activatedSourceIds` was DELETED from the contract and this
+      call site stopped compiling, which is what Main intended: an id list let a caller
+      ASSERT activation-with-rights, and the predicate had nothing to check it against.
+      Activation is now proven from the four axes instead.
+    */
+    activatedSources: [],
     gapPathPreserved: true, // every cell renders a stated gap with a reason
     executesOnLoad: false, // the producer has no route and no page-load path
     copyLanguages: ['en', 'pl'],
@@ -661,21 +695,43 @@ describe('EA-8 · what this producer contributes to route eligibility', () => {
       'E4B_SOURCE_ACTIVATED_WITH_RIGHTS',
     ]);
 
+    /*
+      FULLY PROVEN ACTIVATION — all four axes, not a claim. Under the deleted id list this
+      block only had to name an id; now it has to supply a resolved record with a grade
+      that permits activation and a non-empty instrument, which is the point.
+    */
     const activated: EconomyRouteEvidence = {
       ...registeredOnly,
-      activatedSourceIds: ['eurostat'],
+      activatedSources: [PROVEN_EUROSTAT],
     };
     expect(economyRouteBlockers(activated)).toEqual(['E1_PUBLISHABLE_OBSERVATION']);
   });
 
-  it('an activated id that is not registered is not a stronger state', () => {
+  it('an activated source that is not registered is not a stronger state', () => {
     const unregisteredActivation: EconomyRouteEvidence = {
-      ...TODAY,
-      activatedSourceIds: ['eurostat'],
+      ...TODAY, // registeredSourceIds stays empty
+      activatedSources: [PROVEN_EUROSTAT],
     };
     expect(economyRouteBlockers(unregisteredActivation)).toContain(
       'E4B_SOURCE_ACTIVATED_WITH_RIGHTS',
     );
+  });
+
+  it('E4A HOLDS WHILE E4B DOES NOT — registration never implies activation', () => {
+    /*
+      The independence assertion Main asks for by name. A registered source with NO rights
+      binding clears E4A and is refused by E4B, and the refusal names why.
+    */
+    const registeredUnbound: EconomyRouteEvidence = {
+      ...TODAY,
+      registeredSourceIds: ['eurostat'],
+      activatedSources: [
+        { ...PROVEN_EUROSTAT, binding: null, resolvedRecord: null, enabled: false, ingestionMethod: 'none' },
+      ],
+    };
+    const blockers = economyRouteBlockers(registeredUnbound);
+    expect(blockers).not.toContain('E4A_SOURCE_REGISTERED');
+    expect(blockers).toContain('E4B_SOURCE_ACTIVATED_WITH_RIGHTS');
   });
 
   it('this producer already satisfies the conditions that are its own', () => {
@@ -773,5 +829,108 @@ describe('EA-9 · ECON-CL-2 · a pin the publisher never declared is refused', (
     const exec = withoutComments(producerSource());
     expect(exec).toContain("query['lastTimePeriod'] = '1'");
     expect(exec).not.toMatch(/key:\s*'lastTimePeriod'/);
+  });
+});
+
+/* ── 10 · ECON-NUMERIC-LEXICAL-SEAM-1 · THE THREE REFUSALS, AND THE ONE THAT LEFT ── */
+
+describe('EA-10 · the producer refuses by class and coerces nothing', () => {
+  const SERIES = alphaSeries('eurostat:prc_hicp_minr:PL:RCH_A:TOTAL');
+
+  /** A minimal JSON-stat body carrying one value literal, verbatim. */
+  const bodyWith = (literal: string): Uint8Array =>
+    utf8(
+      JSON.stringify({
+        version: '2.0', class: 'dataset', label: 'probe',
+        id: ['freq', 'unit', 'coicop18', 'geo', 'time'], size: [1, 1, 1, 1, 1],
+        dimension: {
+          freq: { category: { index: { M: 0 } } },
+          unit: { category: { index: { RCH_A: 0 } } },
+          coicop18: { category: { index: { TOTAL: 0 } } },
+          geo: { category: { index: { PL: 0 } } },
+          time: { category: { index: { '2026-08': 0 } } },
+        },
+        extension: { annotation: [{ type: 'UPDATE_DATA', date: '2026-09-17T11:00:00+0200' }] },
+        value: { 0: 0 },
+      }).replace('"value":{"0":0}', `"value":{"0":${literal}}`),
+    );
+
+  const outcomeFor = async (literal: string) => {
+    const { cell } = await produceSeriesCell(SERIES, ports(new RecordingTransport(bodyWith(literal))));
+    return cell;
+  };
+
+  it('1.0 REACHES NONE OF THEM — it publishes, which is the whole acceptance condition', async () => {
+    const cell = await outcomeFor('1.0');
+    expect(cell.kind).toBe('OBSERVATION');
+    if (cell.kind === 'OBSERVATION') {
+      expect(cell.observation.value).toBe(1);
+      expect(typeof cell.observation.value).toBe('number');
+    }
+  });
+
+  it('a precision-sensitive integer refuses as ECON-VALUE-PRECISION-SENSITIVE', async () => {
+    const cell = await outcomeFor('12345678901234567890');
+    expect(cell.kind).toBe('GAP');
+    if (cell.kind === 'GAP') expect(cell.detail).toBe('ECON-VALUE-PRECISION-SENSITIVE');
+  });
+
+  it('an overflowing exponent still refuses as ECON-VALUE-NOT-FINITE — narrowed, not retired', async () => {
+    const cell = await outcomeFor('1e400');
+    expect(cell.kind).toBe('GAP');
+    if (cell.kind === 'GAP') expect(cell.detail).toBe('ECON-VALUE-NOT-FINITE');
+  });
+
+  it('a non-numeric cell refuses as ECON-VALUE-NOT-NUMERIC', async () => {
+    const cell = await outcomeFor('"not a number"');
+    expect(cell.kind).toBe('GAP');
+    if (cell.kind === 'GAP') expect(cell.detail).toBe('ECON-VALUE-NOT-NUMERIC');
+  });
+
+  it('THE PRODUCER PERFORMS NO INDEPENDENT NUMERIC COERCION', () => {
+    /*
+      The rule that makes the classifier the single authority. A `Number(...)` here would
+      re-derive a value the contract deliberately refused to produce, and it would do so
+      without the class that explains why.
+    */
+    const exec = withoutComments(producerSource());
+
+    /*
+      SCOPED TO THE VALUE, NOT TO THE WHOLE FILE. A first version asserted that `Number(`
+      appeared nowhere, and it failed on `periods[Number(lastKey)]` and on the index
+      comparator in `timePeriods` — both convert an INDEX POSITION, never a publisher
+      value. Banning those would have been a rule about the wrong thing.
+
+      What must never happen is the OBSERVED VALUE being coerced, so that is what is
+      asserted.
+    */
+    expect(exec).not.toMatch(/\bNumber\s*\(\s*raw\b/);
+    expect(exec).not.toMatch(/parseFloat\s*\(|parseInt\s*\(/);
+    expect(exec).not.toMatch(/\+\s*raw\b|raw\s*\*\s*1\b/);
+    expect(exec).toContain('economyValueOrRefusal');
+
+    /*
+      AND THE PUBLISHED FIELD IS THE RESOLVED VALUE — scoped to the OBSERVATION literal.
+
+      A whole-file `value:\s*raw` scan flagged Main's own §1.3 line, which builds the
+      classified token from an already-numeric slot (`{ token: String(raw), numericClass:
+      'EXACT_AS_DOUBLE', value: raw }`). That construction is correct and required; what
+      must never happen is `raw` reaching the OBSERVATION, where it could be a string.
+    */
+    const obs = exec.slice(exec.indexOf('const observation: EconomyObservation'));
+    const literal = obs.slice(0, obs.indexOf('\n  };'));
+    expect(literal).not.toMatch(/value:\s*raw\b/);
+    expect(literal).toMatch(/^\s*value,\s*$/m);
+  });
+
+  it('POSITIVE CONTROL · the scans find a coercion and a raw publish when present', () => {
+    expect(/\bNumber\s*\(\s*raw\b/.test('const v = Number(raw);')).toBe(true);
+    expect(/value:\s*raw\b/.test('const o = { value: raw };')).toBe(true);
+  });
+
+  it('and the index conversions it deliberately permits are still there', () => {
+    /* A control on the narrowing: if these vanished the scan above would pass for a
+       different reason than the one stated. */
+    expect(withoutComments(producerSource())).toMatch(/Number\s*\(\s*lastKey\s*\)/);
   });
 });

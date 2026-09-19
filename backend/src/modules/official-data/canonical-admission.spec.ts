@@ -398,7 +398,15 @@ describe('the strict parser refuses what JSON.parse accepts', () => {
 
     const value = (r.value as { value: Record<string, unknown> }).value['0'];
     expect(value).toBe('1e400');
-    expect(r.lexicalNumberTokens).toEqual([{ path: '/value/0', token: '1e400' }]);
+    /*
+      ECON-NUMERIC-LEXICAL-SEAM-1 — the entry now also carries WHICH condition was hit.
+      `1e400` is NOT_FINITE_AS_DOUBLE: it overflows, so nothing was rounded and nothing
+      could be. T-13's substance is unchanged — the token is still kept as characters and
+      still never coerced — and the class is what makes the audit row say why.
+    */
+    expect(r.lexicalNumberTokens).toEqual([
+      { path: '/value/0', token: '1e400', numericClass: 'NOT_FINITE_AS_DOUBLE' },
+    ]);
   });
 
   it('an ordinary number is still a number — the rule does not swallow everything', () => {
@@ -411,26 +419,41 @@ describe('the strict parser refuses what JSON.parse accepts', () => {
     expect(r.lexicalNumberTokens).toEqual([]);
   });
 
-  it('EXPONENT FORM is kept as characters, because the rule is lexical and it must be', () => {
+  it('EXPONENT AND TRAILING-ZERO FORMS ARE NUMBERS — the rule is representability', () => {
     /*
-      `1e3` is exactly 1000 — no precision is lost — and it is STILL kept as characters,
-      because `String(Number('1e3'))` is `'1000'` and the token does not survive the
-      round trip.
+      ── THIS ASSERTION WAS INVERTED BY ECON-NUMERIC-LEXICAL-SEAM-1 ───────────
 
-      This looks over-strict until you ask what the alternative rule would be. "Keep the
-      number when the VALUE is equal" cannot distinguish `1e3` (exact) from a 30-digit
-      decimal that quietly rounded to something that also compares equal to itself. The
-      lexical test is the only one that can be applied without already knowing the answer,
-      so E1 states it lexically and this implements it lexically. The cost is that an
-      exact exponent is carried as characters; nothing is lost and nothing is claimed.
+      It previously required `1e3` and `1.0` to be kept as CHARACTERS, and its reasoning
+      was explicit about the cost: "the lexical test is the only one that can be applied
+      without already knowing the answer", so an exact exponent was carried as characters.
+
+      Main's ruling refutes exactly that premise. EXACT BIGINT DECIMAL COMPARISON can
+      distinguish `1e3` — exactly 1000, nothing lost — from a 30-digit decimal that
+      quietly rounded, without knowing the answer in advance. So the alternative rule the
+      old comment could not construct does exist, and the test moves with the contract.
+
+      The old rule's real cost was not theoretical: `1.0` arriving as a string is what
+      withheld Poland's GDP figure from a correct capture.
     */
-    const r = parseStrictJson(utf8('{"c":1e3,"d":1.0}'));
+    const r = parseStrictJson(utf8('{"c":1e3,"d":1.0,"e":-2.50,"f":100e-2}'));
     expect(r.ok).toBe(true);
     if (!r.ok) throw new Error('unreachable');
-    expect(r.value).toEqual({ c: '1e3', d: '1.0' });
+    expect(r.value).toEqual({ c: 1000, d: 1, e: -2.5, f: 1 });
+    expect(r.lexicalNumberTokens).toEqual([]);
+  });
+
+  it('AND THE TEETH ARE KEPT — a token a double cannot carry is still characters', () => {
+    /*
+      The paired control for the inversion above. If widening the rule had swallowed the
+      precision case too, the change would have been a coercion dressed as a fix.
+    */
+    const r = parseStrictJson(utf8('{"big":12345678901234567890,"over":1e400}'));
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error('unreachable');
+    expect(r.value).toEqual({ big: '12345678901234567890', over: '1e400' });
     expect(r.lexicalNumberTokens).toEqual([
-      { path: '/c', token: '1e3' },
-      { path: '/d', token: '1.0' },
+      { path: '/big', token: '12345678901234567890', numericClass: 'PRECISION_SENSITIVE' },
+      { path: '/over', token: '1e400', numericClass: 'NOT_FINITE_AS_DOUBLE' },
     ]);
   });
 });

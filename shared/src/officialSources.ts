@@ -34,6 +34,9 @@ export type OfficialSourceClass =
  */
 export type OfficialSourceIngestionMethod = 'api' | 'rss' | 'manual' | 'none';
 
+/* ECON-RIGHTS-BINDING-1 — the promoted binding vocabulary. Records live with the lane. */
+import type { OfficialSourceRightsBinding } from './rights/source-rights';
+
 export interface OfficialSourceEntry {
   /** Stable slug, e.g. 'iebc-kenya'. */
   id: string;
@@ -54,4 +57,22 @@ export interface OfficialSourceEntry {
 
   /** Who added this entry and on what basis — an audit trail for the registry itself, not for the institution it describes. */
   provenanceNote: string;
+
+  /**
+   * ECON-RIGHTS-BINDING-1 — A REFERENCE TO A RIGHTS RECORD, NOT THE RECORD ITSELF.
+   *
+   * REQUIRED AND NULLABLE, and the difference is the whole point. An OPTIONAL field lets
+   * the absence of a rights binding be an oversight nobody has to notice. A required
+   * nullable one makes it a STATEMENT: every entry literal has to decide, and `null` says
+   * "this entry has no rights binding" out loud.
+   *
+   * `null` is a REFUSAL, not a permission — SI-17: absence of a rights record is a
+   * refusal. A source bound to `null` cannot satisfy E4B, and that is the correct outcome
+   * rather than a gap to be filled with a plausible record.
+   *
+   * The VOCABULARY is promoted here; the RECORDS stay with the domain lane that read the
+   * instrument. This field carries a key, never a grade — so nothing can acquire a rights
+   * class by being edited in the registry.
+   */
+  readonly rights: OfficialSourceRightsBinding | null;
 }

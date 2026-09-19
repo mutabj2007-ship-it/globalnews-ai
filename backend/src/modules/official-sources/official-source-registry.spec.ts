@@ -21,20 +21,59 @@ function buildEntry(overrides: Partial<OfficialSourceEntry> = {}): OfficialSourc
     enabled: true,
     ingestionMethod: 'none',
     provenanceNote: 'Added for a unit test fixture.',
+    /*
+      ECON-RIGHTS-BINDING-1 — the field is REQUIRED and nullable, so this fixture has to
+      decide. `null` is the honest value for a test entry: it has no rights record, and
+      that is a refusal rather than a permission. A fixture defaulting to a plausible
+      binding would let a test satisfy E4B with no rights reading behind it.
+    */
+    rights: null,
     ...overrides,
   };
 }
 
-describe('M64.1 scope lock — OFFICIAL_SOURCES starts and stays empty this milestone', () => {
-  it('the real registry has zero entries — no hardcoded institutions yet, per explicit CTO instruction', () => {
-    expect(OFFICIAL_SOURCES).toHaveLength(0);
+describe('E-4a · the registry holds exactly one entry, and it is NOT enabled', () => {
+  /*
+    ── THE M64.1 SCOPE LOCK FIRED, AND IS RETIRED DELIBERATELY ───────────────
+
+    It asserted `OFFICIAL_SOURCES` was empty, because M64.1 reserved seeding real entries
+    for "a later round … with their own provenance/reliability review". That round is
+    MAIN-ECONOMY-CANONICAL-CLOSEOUT-R1, whose §2.2 specifies this entry, so the lock fired
+    exactly as designed: the first real registration could not happen quietly.
+
+    It is REPLACED WITH ASSERTIONS CARRYING THE SAME TEETH, never deleted. The lock's real
+    purpose was that nothing is registered without a decision, and the sharper statement of
+    that is now: exactly one entry, it is the one that was reviewed, and it is SWITCHED
+    OFF. A second entry appearing, or this one acquiring `enabled: true`, fails here.
+  */
+  it('exactly one entry, and it is the reviewed Eurostat registration', () => {
+    expect(OFFICIAL_SOURCES).toHaveLength(1);
+    expect(OFFICIAL_SOURCES[0]?.id).toBe('eurostat');
+    expect(OFFICIAL_SOURCES[0]?.authorityClass).toBe('OFFICIAL_STATISTICS');
   });
 
-  it('every zero-arg lookup function returns an empty/undefined result against the real, empty registry', () => {
+  it('REGISTERED IS NOT ACTIVATED — nothing in this registry is enabled', () => {
+    /* The half that matters most. Registration resolves a host and an authority class; it
+       grants no permission to fetch, and four successful captures do not change that. */
+    expect(getEnabledOfficialSources()).toHaveLength(0);
+    expect(OFFICIAL_SOURCES.every((s) => s.enabled === false)).toBe(true);
+  });
+
+  it('it carries a rights KEY, never a grade — a class cannot be acquired by editing here', () => {
+    const rights = OFFICIAL_SOURCES[0]?.rights;
+    expect(rights).not.toBeNull();
+    expect(rights?.rightsAuthorityId).toBe('ECONOMY_ACQUISITION_RIGHTS');
+    expect(rights?.rightsRecordKey).toBe('EUROSTAT');
+    /* no grade, no instrument, no permission anywhere in the entry itself */
+    expect(JSON.stringify(OFFICIAL_SOURCES[0])).not.toMatch(/E-5|rightsClass|instrument/);
+  });
+
+  it('the zero-arg lookups still behave against the real registry', () => {
     expect(getOfficialSourceById('anything')).toBe(undefined);
+    expect(getOfficialSourceById('eurostat')?.name).toBe('Eurostat');
     expect(getOfficialSourcesForCountry('KE')).toHaveLength(0);
     expect(getOfficialSourcesByClass('GOVERNMENT')).toHaveLength(0);
-    expect(getEnabledOfficialSources()).toHaveLength(0);
+    expect(getOfficialSourcesByClass('OFFICIAL_STATISTICS')).toHaveLength(1);
   });
 });
 
