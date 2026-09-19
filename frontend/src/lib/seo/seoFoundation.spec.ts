@@ -454,8 +454,34 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       honest; leaving it at 31 would have made it wrong for two unrelated reasons at
       once, and a later reader could not tell which.
     */
-    expect(pages).toHaveLength(33);
+    /*
+      PART VII · TWO MORE ROUTES, AND THE COUNT MOVES AGAIN — FOR A REASON THAT IS
+      NARROWER THAN THE LAST ONE.
+
+      `/market` and `/market/compact`, landed by H-MARKET-PARTVII-ALPHA-VISUAL-R1. Same
+      treatment as `/third-party-notices` and the two Humanitarian routes above: the count
+      moves with the tree rather than the assertion being relaxed.
+
+      WHAT MAKES THESE TWO DIFFERENT FROM AN ORDINARY ROUTE ADDITION, and why moving the
+      number does not weaken what N10 is for:
+
+        - both declare `robots: { index: false, follow: false }`, so nothing here becomes
+          indexable and the SEO surface this file guards is unchanged;
+        - `intelligenceModules.ts` still carries `market` as `state: 'comingSoon'` with no
+          `destination`, so neither route is reachable from Home navigation;
+        - they are internally available for integration testing, which is exactly the
+          posture the activation asked for and the reason they exist before the read
+          endpoint does.
+
+      So N10 still does its job: a route appeared, a human decided it should, and the
+      decision is written down beside the number instead of inside a commit message.
+    */
+    expect(pages).toHaveLength(35);
     expect(pages).toContain('/');
+    /* and the two new ones are present, so a later removal is caught as loudly as an addition */
+    for (const added of ['/market', '/market/compact']) {
+      expect(`${added}: ${pages.includes(added)}`).toBe(`${added}: true`);
+    }
     for (const known of ['/map', '/search', '/privacy', '/terms', '/source-policy', '/support', '/workspace', '/history']) {
       expect(`${known}: ${pages.includes(known)}`).toBe(`${known}: true`);
     }
