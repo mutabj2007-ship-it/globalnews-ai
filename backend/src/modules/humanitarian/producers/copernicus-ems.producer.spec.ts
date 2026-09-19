@@ -11,12 +11,18 @@ import {
   GEOMETRY_RETIRED_REFUSAL_CODES,
   POLYGON_RING_REFUSAL_CODES,
   POLYGON_WINDING_VALIDATION,
+  presentGeometrySet,
+  readerAbsenceTokenFor,
+  readerProjection,
   precisionAndGeometryAreIndependent,
   PROHIBITED_GEOMETRY_COERCIONS,
   refusalClassAlarms,
   refusalCodeOf,
   UNCLASSIFIED_REFUSAL_CODE,
+  type DomainGeometryRegistry,
   type GeometryCoordinateValue,
+  type KeyedGeometry,
+  type PresentationContext,
   type ProtectedClassDeclaration,
   type ProtectedPartitionDeclaration,
   type SourceAssertedGeometry,
@@ -973,27 +979,24 @@ describe('HP-9 · structural validity is delegated, never re-implemented', () =>
 
 /* ── 10 · G-R12-C1 · THE STRUCTURAL CODES ARE NOT IN THE GOVERNED VOCABULARY ─ */
 
-describe('HP-10 · G-R12-C1 · measured, reported, and NOT worked around', () => {
+describe('HP-10 · G-R12-C1 · reported, then CLOSED by ratification', () => {
   /*
-    ── THE FINDING ─────────────────────────────────────────────────────────
+    ── THE FINDING, AND ITS CLOSURE ────────────────────────────────────────
 
-    GX-24/GX-25 throw six codes. NONE of them is in `GEOMETRY_DATA_DEFECT_CODES` or
-    `GEOMETRY_PROGRAMMING_MISTAKE_CODES`, so AS-13's deliberately CLOSED extractor
-    collapses all six to `GEOMETRY_UNCLASSIFIED_REFUSAL` — and AS-E1-7 rules that
-    UNCLASSIFIED alarms at the same severity as a programming mistake.
+    R1.2 measured it: GX-24/GX-25 threw six codes that were in NEITHER governed list, so
+    AS-13's deliberately closed extractor collapsed all six to
+    `GEOMETRY_UNCLASSIFIED_REFUSAL` — and AS-E1-7 rules that UNCLASSIFIED alarms at the
+    same severity as a programming mistake. An unclosed ring from a publisher, the
+    commonest real source defect there is, paged an operator.
 
-    Consequence, in one sentence: an unclosed ring from a publisher — the commonest real
-    source defect there is — currently pages an operator at programming-mistake severity,
-    and six distinguishable defects arrive as one word.
+    G did not special-case the six; a producer that did would be the producer-local
+    vocabulary R1.1 was opened to remove. It reported, and it pinned — writing every
+    assertion here to INVERT the day the governed lists were amended.
 
-    Neither package is wrong alone. `geometry-authority.ts` is right to close the
-    extractor; the structural contract is right to name six codes. The lists simply have
-    not been told about each other, and amending them is Main's and E1's, not a
-    producer's: a producer that special-cased these six would be the producer-local
-    vocabulary R1.1 was opened to remove.
-
-    THESE TESTS ARE WRITTEN TO INVERT. When the governed lists are amended, every
-    assertion below fails and says so — which is the pin working, exactly as HP-B2's did.
+    THE PINS HAVE FIRED. `MAIN-HUMANITARIAN-STRUCTURAL-REFUSAL-VOCAB-RATIFICATION-R1`
+    ratified the six as governed `DATA_DEFECT`, and the assertions below are the same
+    tests with their expectations reversed. The pin inverting is the pin working — the
+    third time in this lane, after HP-B2 and the ring-closure gap that produced GX-24.
   */
 
   it('THE PIN HAS FIRED · all six structural codes are now GOVERNED', () => {
@@ -1037,9 +1040,21 @@ describe('HP-10 · G-R12-C1 · measured, reported, and NOT worked around', () =>
     expect(withheld[0]!.code).toBe('GEOMETRY_RING_NOT_CLOSED');
     expect(classifyRefusal(withheld[0]!.code)).toBe('DATA_DEFECT');
     expect(refusalClassAlarms(classifyRefusal(withheld[0]!.code))).toBe(false);
+
+    /*
+      RESTORED, INVERTED — it had been dropped rather than flipped.
+
+      `codeOrigin` is the producer's own honesty mechanism: `originOf` measures which
+      vocabulary a code belongs to instead of asserting it. Deleting the assertion
+      removes the control that the label still agrees with the lists it describes, which
+      is the one thing that stops `codeOrigin` drifting back into decoration. It read
+      'UNGOVERNED' while the gap was open; it must now read 'GOVERNED'.
+    */
+    expect(withheld[0]!.codeOrigin).toBe('GOVERNED');
+    expect(originOf(withheld[0]!.code)).toBe('GOVERNED');
   });
 
-  it('and six distinguishable defects arrive as one code — the A-24 collapse, one layer up', () => {
+  it('and six distinguishable defects now arrive as SIX codes — the A-24 collapse undone', () => {
     const shapes: readonly unknown[] = [
       [
         [
@@ -1071,11 +1086,13 @@ describe('HP-10 · G-R12-C1 · measured, reported, and NOT worked around', () =>
     );
 
     /*
-      THE A-24 COLLAPSE IS UNDONE. Six distinguishable defects arrived as one word while
-      the codes were ungoverned; now each keeps its own name, which is the whole reason
-      the structural contract bothered to name six.
+      THE A-24 COLLAPSE IS UNDONE, and the assertion says SIX rather than "more than
+      one". `toBeGreaterThan(1)` is satisfied by two, and two would mean four defects
+      still collapsed — the property being measured is that each of the six keeps its
+      own name, which is the whole reason the structural contract bothered to name six.
     */
-    expect(codes.size).toBeGreaterThan(1);
+    expect(codes.size).toBe(6);
+    expect([...codes].sort()).toEqual([...POLYGON_RING_REFUSAL_CODES].sort());
     expect([...codes]).not.toContain(UNCLASSIFIED_REFUSAL_CODE);
   });
 
@@ -1091,5 +1108,266 @@ describe('HP-10 · G-R12-C1 · measured, reported, and NOT worked around', () =>
     expect(GEOMETRY_RETIRED_REFUSAL_CODES).not.toHaveProperty('GEOMETRY_RING_NOT_CLOSED');
     expect(GEOMETRY_DATA_DEFECT_CODES).toContain('GEOMETRY_RING_NOT_CLOSED');
     expect(POLYGON_RING_REFUSAL_CODES).toContain('GEOMETRY_RING_NOT_CLOSED');
+  });
+});
+
+/* ── 11 · CL-5 · THE CANONICAL REFUSAL CODE SURVIVES THE PRODUCER ─────────── */
+
+describe('HP-11 · CL-5 · structural refusals keep their governed identity', () => {
+  /*
+    ── WHAT CL-5 ASKED FOR, AND WHAT WAS ALREADY TRUE ──────────────────────
+
+    CL-5 describes the producer as catching structural failures and substituting
+    `GEOMETRY_MALFORMED` before the governed vocabulary can see the real code. That was
+    R1's producer. R1.1 replaced the unbound catch with the accepted shared mechanism —
+    `refusalCodeOf(e)` — and the frozen R1.2 bytes carry it, so the substitution CL-5
+    describes is not present and no producer change was needed to close it.
+
+    What WAS broken was one layer below, and G reported it as G-R12-C1: the six codes
+    were ungoverned, so `refusalCodeOf` itself collapsed them. Ratification fixed that.
+
+    The tests below are the standing proof of the end-to-end chain CL-5 requires, for
+    EVERY canonical structural refusal rather than one of them:
+
+        source fails structural validation
+          -> producer preserves the canonical code
+          -> governed vocabulary classifies DATA_DEFECT
+          -> reader remains NOT_SHOWN
+          -> no programming or security alarm
+  */
+
+  /** One fixture per canonical structural refusal. The code is the EXPECTATION. */
+  const STRUCTURAL: readonly { readonly code: string; readonly coordinates: unknown }[] = [
+    {
+      code: 'GEOMETRY_RING_TOO_FEW_POSITIONS',
+      coordinates: [
+        [
+          [11, 48],
+          [11.5, 48],
+          [11.5, 48.5],
+        ],
+      ],
+    },
+    {
+      code: 'GEOMETRY_RING_NOT_CLOSED',
+      coordinates: [
+        [
+          [11, 48],
+          [11.5, 48],
+          [11.5, 48.5],
+          [11, 48.5],
+        ],
+      ],
+    },
+    { code: 'GEOMETRY_POSITION_TOO_FEW_COMPONENTS', coordinates: [[[11], [11.5], [11.5], [11]]] },
+    { code: 'GEOMETRY_POLYGON_EMPTY', coordinates: [] },
+    { code: 'GEOMETRY_COORDINATE_STRUCTURE_DISAGREES_WITH_KIND', coordinates: MULTI },
+    { code: 'GEOMETRY_POLYGON_STRUCTURE_INVALID', coordinates: 7 },
+  ];
+
+  it('the fixture set covers EVERY canonical structural code, and no other', () => {
+    // Without this, a code added to the contract would silently go unproven below.
+    expect([...STRUCTURAL.map((c) => c.code)].sort()).toEqual([...POLYGON_RING_REFUSAL_CODES].sort());
+    expect(STRUCTURAL).toHaveLength(6);
+  });
+
+  it('CL-5 CHAIN · every structural refusal: preserved → DATA_DEFECT → no alarm', () => {
+    for (const { code, coordinates } of STRUCTURAL) {
+      const { emitted, withheld } = produceInundationExtents(
+        { features: [feature({ coordinates })] },
+        keying(),
+      );
+
+      // withheld rather than emitted — validation is not weakened anywhere
+      expect([code, emitted.length]).toEqual([code, 0]);
+      expect([code, withheld.length]).toEqual([code, 1]);
+
+      const w = withheld[0]!;
+
+      // 1 · the canonical code SURVIVES the producer, unsubstituted
+      expect([code, w.code]).toEqual([code, code]);
+      // 2 · and it is the governed vocabulary's, measured rather than claimed
+      expect([code, w.codeOrigin]).toEqual([code, 'GOVERNED']);
+      expect([code, originOf(w.code)]).toEqual([code, 'GOVERNED']);
+      expect([code, GEOMETRY_DATA_DEFECT_CODES.includes(w.code)]).toEqual([code, true]);
+      // 3 · classified DATA_DEFECT
+      expect([code, classifyRefusal(w.code)]).toEqual([code, 'DATA_DEFECT']);
+      // 4 · and therefore NO programming or security alarm
+      expect([code, refusalClassAlarms(classifyRefusal(w.code))]).toEqual([code, false]);
+      expect([code, GEOMETRY_PROGRAMMING_MISTAKE_CODES.includes(w.code)]).toEqual([code, false]);
+      expect([code, w.code]).not.toEqual([code, UNCLASSIFIED_REFUSAL_CODE]);
+    }
+  });
+
+  it('NO REPAIR · the refused source geometry is untouched after every one of them', () => {
+    for (const { code, coordinates } of STRUCTURAL) {
+      const before = JSON.stringify(coordinates);
+      produceInundationExtents({ features: [feature({ coordinates })] }, keying());
+      expect([code, JSON.stringify(coordinates)]).toEqual([code, before]);
+    }
+  });
+
+  /* ── the reader half ──────────────────────────────────────────────────── */
+
+  const CONTEXT: PresentationContext = {
+    protectedClasses: { declarations: [] },
+    protectedPartitions: { declarations: [] },
+    domains: {
+      domains: [{ domainId: 'HUMANITARIAN', emits: ['NONE', 'POINT', 'POLYGON', 'MULTIPOLYGON'] }],
+    } satisfies DomainGeometryRegistry,
+  };
+
+  const keyed = (recordKey: string, geometry: SourceAssertedGeometry): KeyedGeometry => ({
+    recordKey,
+    geometry,
+    emittingDomainId: 'HUMANITARIAN',
+    presentationPartitionKey: 'PART-LIGHT',
+  });
+
+  it('READER · the producer emits nothing, so there is no record to show', () => {
+    for (const { code, coordinates } of STRUCTURAL) {
+      const { emitted } = produceInundationExtents(
+        { features: [feature({ coordinates })] },
+        keying(),
+      );
+      expect([code, presentGeometrySet(emitted, 'MAP_ALPHA', CONTEXT)]).toEqual([code, []]);
+    }
+  });
+
+  it('READER · and forced through presentation, GX-19 yields NOT_SHOWN for every one', () => {
+    /*
+      The producer already withheld these, so this measures the SECOND door: if such a
+      record reached the accepted reader entry point by any other path, the reader must
+      still see plain absence. GX-19 isolates the per-record throw as
+      WITHHELD / RECORD_REFUSED, and `readerAbsenceTokenFor` maps that to NOT_SHOWN.
+    */
+    expect(readerAbsenceTokenFor('RECORD_REFUSED')).toBe('NOT_SHOWN');
+
+    for (const { code, coordinates } of STRUCTURAL) {
+      const record = keyed(`rec:${code}`, sourceNativeShape({ type: 'Polygon', coordinates }));
+      const [outcome] = presentGeometrySet([record], 'INTERNAL_AUDIT', CONTEXT);
+
+      expect([code, outcome!.outcome.outcome]).toEqual([code, 'WITHHELD']);
+      expect([code, readerProjection(outcome!)]).toEqual([
+        code,
+        { recordKey: `rec:${code}`, withheld: 'NOT_SHOWN' },
+      ]);
+    }
+  });
+
+  it('READER · NOT_SHOWN is not NOT_DRAWABLE_HERE — the two absences stay distinct', () => {
+    /*
+      GX-1's point. On MAP_ALPHA a perfectly VALID polygon is NOT_DRAWABLE_HERE — the
+      surface draws only NONE and POINT — while a structurally broken one is NOT_SHOWN.
+      If a structural defect leaked out as "not drawable here", the reader would be told
+      something false about the source, and an operator reading the same token would
+      look at the renderer instead of the publisher.
+    */
+    const broken = keyed('rec:broken', sourceNativeShape({ type: 'Polygon', coordinates: MULTI }));
+    const valid = keyed('rec:valid', sourceNativeShape({ type: 'Polygon', coordinates: RING }));
+
+    const out = presentGeometrySet([broken, valid], 'MAP_ALPHA', CONTEXT);
+
+    expect(readerProjection(out[0]!)).toEqual({ recordKey: 'rec:broken', withheld: 'NOT_SHOWN' });
+    expect(readerProjection(out[1]!)).toEqual({
+      recordKey: 'rec:valid',
+      withheld: 'NOT_DRAWABLE_HERE',
+    });
+
+    // GX-19 · and one bad record did not take the other one with it.
+    expect(out).toHaveLength(2);
+  });
+
+  /* ── the residual must still be loud ──────────────────────────────────── */
+
+  it('UNKNOWN codes are STILL UNCLASSIFIED and still alarm', () => {
+    /*
+      Ratification widened the governed lists; it did not widen the DEFAULT. A code
+      nobody declared is still the loud case, because a vocabulary that classifies
+      everything has stopped being a vocabulary.
+    */
+    for (const unknown of [
+      'GEOMETRY_TOTALLY_MADE_UP',
+      'GEOMETRY_RING_NOT_CLOSED_X', // a near-miss of a real one
+      'GEOMETRY_MALFORMED', // R1's invented word
+      'NOT_A_GEOMETRY_CODE_AT_ALL',
+    ]) {
+      const extracted = refusalCodeOf(new Error(`${unknown}: synthetic`));
+      expect([unknown, extracted]).toEqual([unknown, UNCLASSIFIED_REFUSAL_CODE]);
+      expect([unknown, classifyRefusal(extracted)]).toEqual([unknown, 'UNCLASSIFIED']);
+      expect([unknown, refusalClassAlarms(classifyRefusal(extracted))]).toEqual([unknown, true]);
+      expect([unknown, originOf(unknown)]).toEqual([unknown, 'UNGOVERNED']);
+    }
+  });
+
+  /* ── the negative control CL-5 asked for ──────────────────────────────── */
+
+  it('NEGATIVE CONTROL · the old GEOMETRY_MALFORMED substitution WOULD fail this suite', () => {
+    /*
+      CL-5 asks for a control proving the substitution it describes would not pass. The
+      old catch is reproduced here as a function and run against the same six fixtures,
+      beside the current path, so the difference is measured rather than argued.
+
+      This is a CONTROL, not a fallback: nothing in the producer calls it, and a scan
+      below proves the producer's executable text does not contain the word at all.
+    */
+    const OLD_SUBSTITUTE = 'GEOMETRY_MALFORMED';
+
+    // 1 · the substituted word is in neither governed list, and alarms
+    expect(GEOMETRY_DATA_DEFECT_CODES).not.toContain(OLD_SUBSTITUTE);
+    expect(GEOMETRY_PROGRAMMING_MISTAKE_CODES).not.toContain(OLD_SUBSTITUTE);
+    expect(classifyRefusal(OLD_SUBSTITUTE)).toBe('UNCLASSIFIED');
+    expect(refusalClassAlarms(classifyRefusal(OLD_SUBSTITUTE))).toBe(true);
+    expect(originOf(OLD_SUBSTITUTE)).toBe('UNGOVERNED');
+
+    // 2 · run both catch strategies over the same six defects
+    const oldPath = new Set<string>();
+    const currentPath = new Set<string>();
+
+    for (const { coordinates } of STRUCTURAL) {
+      const geometry = sourceNativeShape({ type: 'Polygon', coordinates });
+      try {
+        assertGeometryIsWellFormed(geometry);
+        throw new Error('FIXTURE_DID_NOT_REFUSE');
+      } catch (error) {
+        oldPath.add(OLD_SUBSTITUTE); // `catch { code: 'GEOMETRY_MALFORMED' }`
+        currentPath.add(refusalCodeOf(error)); // `catch (error) { refusalCodeOf(error) }`
+      }
+    }
+
+    // THE CONTROL: the old path fails every CL-5 assertion the current path passes.
+    expect(oldPath.size).toBe(1);
+    expect([...oldPath]).toEqual([OLD_SUBSTITUTE]);
+    expect(currentPath.size).toBe(6);
+    expect([...currentPath].sort()).toEqual([...POLYGON_RING_REFUSAL_CODES].sort());
+
+    for (const code of oldPath) {
+      expect(classifyRefusal(code)).not.toBe('DATA_DEFECT');
+      expect(refusalClassAlarms(classifyRefusal(code))).toBe(true);
+    }
+    for (const code of currentPath) {
+      expect(classifyRefusal(code)).toBe('DATA_DEFECT');
+      expect(refusalClassAlarms(classifyRefusal(code))).toBe(false);
+    }
+
+    // 3 · and the substitution is absent from the producer, not merely unused
+    const src = withoutComments(producerSource());
+    expect(src.includes(OLD_SUBSTITUTE)).toBe(false);
+    // positive control: the scan would see it if it came back
+    expect(`${src}\ncode: '${OLD_SUBSTITUTE}',`.includes(OLD_SUBSTITUTE)).toBe(true);
+  });
+
+  it('the fix uses the ACCEPTED shared mechanism, and adds no second list', () => {
+    const src = withoutComments(producerSource());
+
+    // the governed extractor is what the catch calls
+    expect(src).toMatch(/catch\s*\(\s*error\s*\)/);
+    expect(src).toContain('refusalCodeOf(error)');
+
+    // and no producer-local enum grew beside it: still exactly one declared local state
+    expect(PRODUCER_SPECIFIC_WITHHELD_CODES).toEqual(['RECORD_NOT_KEYED_BY_AUTHORITY']);
+    for (const code of POLYGON_RING_REFUSAL_CODES) {
+      expect([code, src.includes(code)]).toEqual([code, false]);
+    }
   });
 });
