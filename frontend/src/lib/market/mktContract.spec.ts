@@ -379,7 +379,25 @@ describe('/market/compact is not the desktop screen', () => {
   it('both frames wire the drawer pattern completely', () => {
     for (const f of ['MarketScreen.tsx', 'MarketCompactScreen.tsx']) {
       const src = read(join(DOMAIN_COMPONENTS, f));
-      expect(src).toContain("const DRAWERS: readonly Drawer[] = ['CAPABILITY', 'ANALYSIS']");
+      /*
+        THE DOCK LIST IS NOW A SUBSET OF THE DRAWER SET, AND THE GUARD SAYS WHICH.
+
+        It read `DRAWERS === ['CAPABILITY', 'ANALYSIS']`, which asserted two things at once:
+        that the drawer pattern is wired, and that every drawer is docked. The second stopped
+        being true when the readiness substrate moved behind a secondary control, so the
+        assertion is split rather than relaxed: the dock carries exactly the two reader
+        affordances, and READINESS is a drawer that the dock must NOT carry.
+
+        Asserting the exclusion is the half that matters. A later change that quietly docks
+        the readiness drawer again would restore the engineering console one button at a
+        time, and this is where it fails.
+      */
+      expect(src).toContain("const DOCKED: readonly Drawer[] = ['PROVENANCE', 'ANALYSIS']");
+      expect(src).toMatch(/type Drawer =\s*'PROVENANCE' \| 'ANALYSIS' \| 'READINESS'/);
+      expect(src).not.toMatch(/DOCKED[^\n]*READINESS/);
+      /* and it is reachable, from a control that is not a dock cell */
+      expect(src).toContain('data-mkt="open-readiness"');
+      expect(src).toContain("dispatch({ k: 'OPEN', v: 'READINESS' })");
       expect(src).toContain('data-mkt="dock-button"');
       expect(src).toContain('data-mkt-dock={d}');
       expect(src).toContain("dispatch({ k: 'OPEN', v: d })");
@@ -447,8 +465,9 @@ describe('the Polish catalogue does not register as complete', () => {
     /*
       ══ L'S AUTHORING QUEUE, PINNED ══════════════════════════════════════════
       
-      The Alpha reader surface added 46 leaves and this lane authored NONE of their
-      Polish, deliberately: F's ownership line is unchanged — *"H wires, L authors the six
+      The Alpha reader surface added 46 leaves, and the final visual frames added five
+      more — `reader.awaitingData`, `coverage`, `change` and `readinessControl`.
+      This lane authored NONE of their Polish, deliberately: F's ownership line is unchanged — *"H wires, L authors the six
       other locales"* — and a lane that invents Polish to make its own guard pass has
       written the defect L exists to prevent.
       
@@ -464,12 +483,14 @@ describe('the Polish catalogue does not register as complete', () => {
       'freshness.DELAYED', 'freshness.LAST_CLOSE', 'freshness.LATEST_PUBLISHED',
       'freshness.LIVE', 'freshness.STALE', 'freshness.UNAVAILABLE',
       'labels.observationBadgeHeld', 'labels.observationBadgeZero', 'labels.observationBody',
-      'reader.capability', 'reader.capabilityActivation', 'reader.capabilityNone',
-      'reader.capabilityRights', 'reader.freshness', 'reader.headline',
+      'reader.awaitingData', 'reader.capability', 'reader.capabilityActivation',
+      'reader.capabilityNone', 'reader.capabilityRights', 'reader.change',
+      'reader.coverage', 'reader.freshness', 'reader.headline',
       'reader.headlineNone', 'reader.observations', 'reader.period',
       'reader.providerNotActivated', 'reader.provisionalRetention',
       'reader.readNoActivatedProvider', 'reader.readNoDisplayable', 'reader.readNoEndpoint',
-      'reader.readNoObservation', 'reader.seriesIdentifier', 'reader.seriesNameNotCarried',
+      'reader.readNoObservation', 'reader.readinessControl', 'reader.seriesIdentifier',
+      'reader.seriesNameNotCarried',
       'reader.showCapability', 'reader.showProvenance', 'reader.source',
       'reader.sourceClass', 'reader.unit', 'reader.value', 'reader.vintage',
       'reader.vintageChanged', 'reader.vintageNone', 'reader.vintagePublisher',

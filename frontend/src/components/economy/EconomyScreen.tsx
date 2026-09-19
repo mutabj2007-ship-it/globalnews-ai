@@ -13,7 +13,12 @@ import {
 import type {
   EconomyAiConfig, EconomyDataCapability, SpatialCapability, WatchRuntimeCapability,
 } from '@/lib/economy/economyConfig';
-import { FixtureBanner, NoObservationData, observationMode } from './DataAvailability';
+import {
+  FixtureBanner, NoObservationData, ObservationAbsenceDetail, observationMode,
+} from './DataAvailability';
+import {
+  GeographyKeys, PeriodContext, ProvenanceLine, QuietPlot, QuietStatement, QuietTriad,
+} from './QuietFrame';
 import { EconomicStateHeader } from './EconomicStateHeader';
 import { AttentionQueue } from './AttentionQueue';
 /*
@@ -222,7 +227,7 @@ export function EconomyScreen({
                 {showFigures ? (
                   <IntelligenceStatement text={subject.assessment.statement} />
                 ) : (
-                  <NoObservationData locale={locale} subjectName={subject.name} />
+                  <QuietStatement locale={locale} />
                 )}
                 <div style={{ display: 'flex', gap: '1px', background: ECON_LINE.structure, flex: '1 1 auto', minHeight: 0 }}>
                   <CorridorPanel
@@ -231,27 +236,62 @@ export function EconomyScreen({
                   />
                 </div>
               </>
-            ) : !showFigures ? (
-              <NoObservationData
-                locale={locale}
-                subjectName={subject.name}
-                seriesNames={subject.indicators.slice(0, bp.indicatorCells).map((s) => s.shortLabel)}
-              />
             ) : (
+              /*
+                ONE COMPOSITION, TWO VALUE STATES — NOT TWO LAYOUTS.
+
+                This branch used to fork into a populated frame and a no-observation panel
+                that REPLACED it, so the dashboard the Product Owner is asked to approve
+                existed only on the fixture route. It is now the same region in both
+                states: the same caption row, the same statement slot at the same size and
+                measure, the same triad geometry, the same plot well. Only the figure is
+                withheld, and the note beside it says why.
+
+                Regions D and E — the governed geography keys and the period/frequency
+                context — are resident in BOTH states, because `geo` and `freq` are pinned
+                dimensions of the series identity rather than properties of an observation.
+                A reader can see which geography a figure would belong to before one exists,
+                and that is the whole point of the distinction the contract draws.
+              */
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'baseline', flexWrap: 'wrap' }}>
                   <span style={microLabel}>{t.seriesLabel} · {primary ? seriesName(primary) : subject.name}</span>
                   <span style={{ ...microLabel, fontSize: 'max(var(--ar-fs-min, 0px), 9px)' }}>{bp.seriesWindowMonths}M window</span>
                 </div>
-                <IntelligenceStatement text={subject.assessment.statement} sizePx={hudOpen ? 22 : 24} />
-                {primary?.triad && (
-                  <Triad
-                    triad={primary.triad} locale={locale}
-                    selected={hudOpen} showSurprise={!hudOpen}
-                    cellBasisPx={effectiveWidth >= 1512 ? 150 : 130}
+                {showFigures ? (
+                  <IntelligenceStatement text={subject.assessment.statement} sizePx={hudOpen ? 22 : 24} />
+                ) : (
+                  <QuietStatement locale={locale} sizePx={hudOpen ? 22 : 24} />
+                )}
+                {showFigures ? (
+                  primary?.triad && (
+                    <Triad
+                      triad={primary.triad} locale={locale}
+                      selected={hudOpen} showSurprise={!hudOpen}
+                      cellBasisPx={effectiveWidth >= 1512 ? 150 : 130}
+                    />
+                  )
+                ) : (
+                  <QuietTriad locale={locale} cellBasisPx={effectiveWidth >= 1512 ? 150 : 130} />
+                )}
+                {showFigures ? (
+                  primary && <SeriesChart series={primary} windowMonths={bp.seriesWindowMonths} locale={locale} />
+                ) : (
+                  <QuietPlot
+                    locale={locale}
+                    caption={primary ? seriesName(primary) : subject.name}
+                    windowMonths={bp.seriesWindowMonths}
                   />
                 )}
-                {primary && <SeriesChart series={primary} windowMonths={bp.seriesWindowMonths} locale={locale} />}
+                <div
+                  data-econ="identity-context"
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 28px', alignItems: 'flex-end', minWidth: 0 }}
+                >
+                  <div style={{ flex: '1 1 260px', minWidth: 0 }}><GeographyKeys locale={locale} /></div>
+                  <PeriodContext locale={locale} />
+                  <ProvenanceLine locale={locale} onOpenSources={() => openDrawer('SOURCES')} />
+                </div>
+                {!showFigures && <NoObservationData locale={locale} subjectName={subject.name} />}
               </>
             )}
           </div>
@@ -264,7 +304,12 @@ export function EconomyScreen({
             }}
           >
             <div style={{ background: ECON_SURFACE.panel, padding: `13px ${bp.gutterPx}px`, display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
-              <span style={{ ...microLabel, fontSize: 'max(var(--ar-fs-min, 0px), 9px)' }}>{t.indicatorsTitle}</span>
+              {/*
+                THE HEADING WAS PRINTED TWICE. This span rendered `Indicators`, and the
+                shared strip renders `labels.heading` — the same string — in its own
+                `<header>` immediately below. One region, one name; the strip's own heading
+                is the one that keeps the rising count beside it, so this outer copy goes.
+              */}
               <ObservedIndicatorStrip
                 strip={economyIndicatorStrip({
                   series: subject.indicators,
@@ -275,13 +320,32 @@ export function EconomyScreen({
                     arrow describes a movement that was never observed.
                   */
                   observationsAvailable: showFigures,
-                  window: t.indicatorsTitle,
+                  /*
+                    THE WINDOW IS THE PERIOD A CELL'S FIGURE BELONGS TO, and it was being fed
+                    the section heading — so every cell read `CPI` over `Indicators ·`, which
+                    is not a period and is not anything. With no observation there is no
+                    period, so the cell carries the absent glyph here too.
+                  */
+                  window: showFigures ? `${bp.seriesWindowMonths}M` : '—',
                 })}
                 labels={{
                   heading: t.indicatorsTitle,
-                  risingOf: '{rising}/{total}',
+                  /*
+                    `0/6 RISING` IS A CLAIM, AND WITH NO OBSERVATIONS IT IS A FALSE ONE.
+
+                    The template is domain-supplied, and the shared component fills it from
+                    `risingCount(strip)`. Fed a strip of absent figures it renders `0/6`,
+                    which a reader parses as *none of the six is rising* — a statement about
+                    six economies that nothing measured. The count is a fact about a SET OF
+                    OBSERVATIONS; with no observations the set is empty and the honest
+                    rendering of a count over nothing is the absent glyph.
+
+                    The template returns the moment figures do, because `showFigures` is the
+                    same flag that decides whether the cells carry values at all.
+                  */
+                  risingOf: showFigures ? '{rising}/{total}' : '—',
                   showAll: t.miniMapExpand,
-                  noneObserved: t.indicatorsTitle,
+                  noneObserved: t.noObservationTitle,
                   staleSuffix: '',
                   directions: { RISING: '↑', FALLING: '↓', FLAT: '→', UNKNOWN: '·' },
                   indicators: {},
@@ -317,7 +381,16 @@ export function EconomyScreen({
 
         {/* ---- SECONDARY REGION: the attention queue, OR the drawer that replaces it ---- */}
         {drawer === null ? (
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          /*
+            THE COLUMN CARRIES ITS OWN FILL.
+
+            Without it the grid's 1px `ECON_LINE.structure` background showed through
+            wherever this column's content stopped short of the row height — a pale block
+            several hundred pixels tall under the Watch region, which reads as an unpainted
+            panel rather than as a structural rule. The rule is 1px everywhere it belongs;
+            this is the surface it separates.
+          */
+          <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, background: ECON_SURFACE.ground }}>
             <AttentionQueue
               rows={subject.attention} locale={locale}
               selectedId={selectedAttentionId} onSelect={selectAttention}
@@ -346,6 +419,16 @@ export function EconomyScreen({
             {drawer === 'WATCH_CONFIG' && <WatchConfiguration scope={subject.watch} locale={locale} runtime={watchRuntime} />}
             {drawer === 'TIMELINE' && timeline && <EconomyTimeline entries={timeline} />}
             {drawer === 'POLICY_EVENT' && <PolicyEventDetail events={subject.policyLane} locale={locale} />}
+            {/*
+              The two paragraphs that used to sit on the first viewport. R08's model is
+              that sustained explanation is a drawer, and this is the drawer the zoning
+              model already named.
+            */}
+            {drawer === 'SOURCES' && (
+              <div style={{ padding: '16px 18px' }}>
+                <ObservationAbsenceDetail locale={locale} />
+              </div>
+            )}
           </EconomyDrawer>
         )}
       </div>
@@ -384,6 +467,7 @@ function drawerTitle(kind: DrawerKind, t: ReturnType<typeof economyStrings>): st
     case 'TRANSMISSION_CHAIN': return t.chainTitle;
     case 'WATCH_CONFIG': return t.watchConfigTitle;
     case 'TIMELINE': return t.timelineTitle;
+    case 'SOURCES': return t.sharedObservationBase;
     default: return t.watchNextStep;
   }
 }

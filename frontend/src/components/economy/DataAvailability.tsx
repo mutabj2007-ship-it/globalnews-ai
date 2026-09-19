@@ -2,40 +2,53 @@ import type { EconomyLocale } from '@/lib/economy/strings';
 import { economyStrings } from '@/lib/economy/strings';
 import type { EconomyDataCapability } from '@/lib/economy/economyConfig';
 import { ECON_INK, ECON_LINE, ECON_MONO, ECON_SURFACE } from './econTokens';
-import { PROSE_MAX_CH, STATEMENT_MAX_CH } from '@/lib/economy/economyConfig';
+import { PROSE_MAX_CH } from '@/lib/economy/economyConfig';
 
 /**
- * ECON-UI-1 — THE HONEST UNAVAILABLE STATE (ECON-DATA-1).
+ * ECON-UI-1 — THE HONEST UNAVAILABLE STATE (ECON-DATA-1), NOW SUBORDINATE.
  *
  * ECON-DATA-1 measured the producer surface: there is NO CURRENT NUMERIC ECONOMIC
  * TIME-SERIES PRODUCER. No live CPI, GDP, policy-rate, debt or trade observation exists
- * to consume.
+ * to consume. That has not changed, and neither has the prohibition it carries: the
+ * design's illustrative Rwanda / Kenya / Poland figures may not be promoted onto a
+ * production path to make the surface "look finished".
  *
- * The design frames are figure-bearing throughout, and the tempting move is to keep them
- * populated with the design's illustrative Rwanda / Kenya / Poland numbers so the surface
- * "looks finished". That would publish fabricated economic facts. This component is the
- * alternative the ruling requires: when no observation source exists, the production-shaped
- * UI renders an honest UNAVAILABLE / NO OBSERVATION DATA state.
+ * WHAT CHANGED IS THIS COMPONENT'S RANK, AND A RULE IT USED TO CARRY.
  *
- * What it deliberately does NOT do:
- *   - print a zero, a dash-with-a-trend, or a "0.0%" placeholder that reads as a value;
- *   - keep the triad, the chart or the surprise cell present-but-empty, which would imply
- *     an observation exists and merely failed to load;
- *   - carry release status, value kind or freshness. All three describe an OBSERVATION.
- *     With no observation, none of the three axes applies, and showing an axis chip with
- *     nothing behind it is the same lie in smaller type.
+ * It was the PRIMARY substrate under `NO_SOURCE`: `flex: 1 1 auto`, a 20px headline, three
+ * paragraphs and a second copy of the indicator structure, rendered INSTEAD of the frame.
+ * The Product Owner ruled that missing data may be visually silenced so the intended final
+ * dashboard can be inspected, and that *"missing data must not dominate the page"*. A panel
+ * that replaces the dashboard is the definition of dominating it.
  *
- * What it DOES do: keep the frame's structure visible and labelled, so the reader can see
- * what this surface will report, and say plainly that the figures are absent rather than
- * zero.
+ * So the frame now renders its own final geometry with the figure withheld (`QuietFrame`),
+ * and this is one quiet note beside it: the subject, the availability state, and the one
+ * sentence that stops an empty economy page reading as a calm economy. The two paragraphs
+ * of explanation moved to `ObservationAbsenceDetail`, reachable in a drawer.
+ *
+ * THE RULE THAT WAS RETIRED, AND WHY IT IS SAFE TO RETIRE.
+ *
+ * This header previously forbade keeping *"the triad, the chart or the surprise cell
+ * present-but-empty, which would imply an observation exists and merely failed to load"*.
+ * That reasoning was sound while nothing on the frame said otherwise — a dashed triad
+ * alone is indistinguishable from a failed fetch. It is answered, not ignored:
+ *
+ *   - this note is RESIDENT beside the geometry, not behind a control, so the reason for
+ *     the absence is on screen wherever an absent figure is;
+ *   - the quiet cells carry NO release status, value kind or freshness axis, so nothing
+ *     claims an observation was formed;
+ *   - the SURPRISE cell is still not drawn, because it is derived from two absences;
+ *   - the plot well draws no line, baseline or gridline, so no series is implied to have
+ *     been flat.
+ *
+ * What survives unchanged: no zero, no `0.0%`, no dash-with-a-trend, and no unit-bearing
+ * placeholder that reads as a value.
  */
 export function NoObservationData({
-  locale, subjectName, seriesNames = [],
+  locale, subjectName,
 }: {
   locale: EconomyLocale;
   subjectName: string;
-  /** Structure only — the names of the series this surface reports, never their values. */
-  seriesNames?: readonly string[];
 }): JSX.Element {
   const t = economyStrings(locale);
   return (
@@ -44,72 +57,53 @@ export function NoObservationData({
       data-observation-source="absent"
       aria-live="polite"
       style={{
-        flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', gap: '14px',
+        flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '6px',
         border: `1px solid ${ECON_LINE.structure}`, background: ECON_SURFACE.panel, padding: '20px',
       }}
     >
       <span
+        data-econ="no-observation-title"
         style={{
           fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 10px)', letterSpacing: 'calc(0.1em * var(--ar-ls-mul, 1))',
           textTransform: 'uppercase', color: ECON_INK.secondary,
         }}
       >
-        {t.noObservationTitle}
+        {subjectName} · {t.noObservationTitle}
       </span>
 
       <p
         data-econ="no-observation-statement"
-        style={{
-          margin: 0, fontSize: 'max(var(--ar-fs-min, 0px), 20px)', lineHeight: 'var(--ar-lh, 1.3)', letterSpacing: 'calc(-0.012em * var(--ar-ls-mul, 1))', fontWeight: 500,
-          color: ECON_INK.primary, maxWidth: `${STATEMENT_MAX_CH}ch`,
-        }}
+        style={{ margin: 0, fontSize: 'max(var(--ar-fs-min, 0px), 13px)', lineHeight: 'var(--ar-lh, 1.55)', color: ECON_INK.tertiary, maxWidth: `${PROSE_MAX_CH}ch` }}
       >
-        {subjectName} — {t.noObservationTitle.toLowerCase()}
-      </p>
-
-      <p style={{ margin: 0, fontSize: 'max(var(--ar-fs-min, 0px), 13px)', lineHeight: 'var(--ar-lh, 1.55)', color: ECON_INK.secondary, maxWidth: `${PROSE_MAX_CH}ch` }}>
         {t.noObservationBody}
       </p>
-
-      {/* The three axes are named and explicitly withheld — never rendered as empty chips. */}
-      <p
-        data-econ="no-observation-axes"
-        style={{ margin: 0, fontSize: 'max(var(--ar-fs-min, 0px), 12px)', lineHeight: 'var(--ar-lh, 1.55)', color: ECON_INK.tertiary, maxWidth: `${PROSE_MAX_CH}ch` }}
-      >
-        {t.noObservationAxes}
-      </p>
-
-      {seriesNames.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
-          <span style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 9px)', letterSpacing: 'calc(0.08em * var(--ar-ls-mul, 1))', textTransform: 'uppercase', color: ECON_INK.label }}>
-            {t.noObservationStructure}
-          </span>
-          <ul
-            data-econ="no-observation-structure"
-            style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexWrap: 'wrap', gap: '1px', background: ECON_LINE.hairline }}
-          >
-            {seriesNames.map((name) => (
-              <li
-                key={name}
-                data-econ="no-observation-cell"
-                style={{
-                  flex: '1 1 120px', minWidth: 0, background: ECON_SURFACE.raised, padding: '10px 12px',
-                  display: 'flex', flexDirection: 'column', gap: '5px',
-                }}
-              >
-                <span style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 9px)', letterSpacing: 'calc(0.08em * var(--ar-ls-mul, 1))', textTransform: 'uppercase', color: ECON_INK.label }}>
-                  {name}
-                </span>
-                {/* The absent-figure glyph. Not a zero, and it carries no axis line. */}
-                <span aria-label={t.noObservationTitle} style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 15px)', color: ECON_INK.reduced }}>
-                  —
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </section>
+  );
+}
+
+/**
+ * THE EXPLANATION THAT IS NO LONGER RESIDENT.
+ *
+ * `noObservationAxes` and `noObservationStructure` are the two paragraphs that used to sit
+ * on the primary frame beside the note above. Both are true, both are worth reading once,
+ * and neither is what a reader opened the dashboard for. R08's own model puts sustained
+ * explanation in a drawer, so that is where they went — reachable, not resident.
+ *
+ * They are exported rather than inlined at the call site so there is exactly one place
+ * where this copy is composed, and a later surface cannot quietly promote it back onto the
+ * first viewport.
+ */
+export function ObservationAbsenceDetail({ locale }: { locale: EconomyLocale }): JSX.Element {
+  const t = economyStrings(locale);
+  const prose = {
+    margin: 0, fontSize: 'max(var(--ar-fs-min, 0px), 13px)', lineHeight: 'var(--ar-lh, 1.55)',
+    color: ECON_INK.secondary, maxWidth: `${PROSE_MAX_CH}ch`,
+  };
+  return (
+    <div data-econ="absence-detail" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <p data-econ="no-observation-axes" style={prose}>{t.noObservationAxes}</p>
+      <p data-econ="no-observation-structure" style={prose}>{t.noObservationStructure}</p>
+    </div>
   );
 }
 

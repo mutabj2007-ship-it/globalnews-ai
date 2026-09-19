@@ -476,10 +476,47 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       So N10 still does its job: a route appeared, a human decided it should, and the
       decision is written down beside the number instead of inside a commit message.
     */
-    expect(pages).toHaveLength(35);
+    /*
+      PART VI · TWO MORE ROUTES — AND THESE TWO ARE NOT A PRODUCT SURFACE AT ALL.
+
+      `/economy-visual-preview` and `/economy-visual-preview/compact`, landed by
+      H-SPECIALIST-DASHBOARDS-ALPHA-VISUAL-R1. They exist so the Product Owner can inspect
+      the final Economy composition before the governed `/economy` route opens, and the
+      reason they are at this address rather than that one is the whole point of them:
+
+        - `shared/src/economy/route-eligibility.ts` holds eight conditions and `/economy`
+          fails three, all of them DATA conditions. Main's accepted entry is explicit that
+          *"not one of the eight is visual readiness"*, so inspecting a layout is not a
+          reason to open that route;
+        - `b4aEconomySubstrate.spec.ts` asserts `existsSync(app/economy) === false`, and
+          that tripwire is *"retired and replaced by a presence assertion with the same
+          teeth, never deleted"* — only when the transition conditions hold. It still
+          passes, unchanged, alongside this count;
+        - both declare `robots: { index: false, follow: false }`, so the SEO surface this
+          file guards is unchanged;
+        - `intelligenceModules.ts` still carries `economy` as `state: 'preview'` with no
+          `destination`, and `isModuleNavigable` requires `active` AND a destination, so
+          neither route is reachable from Home navigation.
+
+      THE COUNT MOVING IS THE DISCLOSURE. A preview route that did not move this number
+      would be a route nobody had to decide about.
+    */
+    expect(pages).toHaveLength(37);
     expect(pages).toContain('/');
-    /* and the two new ones are present, so a later removal is caught as loudly as an addition */
-    for (const added of ['/market', '/market/compact']) {
+    /*
+      AND `/economy` IS ASSERTED ABSENT, HERE, BESIDE THE COUNT.
+
+      The B4-A tripwire already asserts the DIRECTORY does not exist. This asserts the
+      ROUTE does not, from the walk this test already performs — a second, independent
+      reading of the same fact, in the file that would notice a route appearing. The two
+      would have to be defeated together.
+    */
+    for (const shut of ['/economy', '/economy/compact']) {
+      expect(`${shut}: ${pages.includes(shut)}`).toBe(`${shut}: false`);
+    }
+    /* and the new ones are present, so a later removal is caught as loudly as an addition */
+    for (const added of ['/market', '/market/compact',
+      '/economy-visual-preview', '/economy-visual-preview/compact']) {
       expect(`${added}: ${pages.includes(added)}`).toBe(`${added}: true`);
     }
     for (const known of ['/map', '/search', '/privacy', '/terms', '/source-policy', '/support', '/workspace', '/history']) {

@@ -49,14 +49,15 @@ import {
 } from '@/lib/market/mktTokens';
 import { Heading, Identifier, Verdict, edge, micro } from './MktParts';
 import {
-  CapabilityList, MarketStatus, ObservationCard, ReadUnavailable,
+  CapabilityList, ChangeContext, CoverageStrip, MarketStatus, ObservationCard,
+  ProvenanceAffordance, ProvenanceDetail, ReadUnavailable, SubstratePanel,
 } from './MktReader';
 import {
   CHANGE_STATES_NOT_DERIVABLE, CHANGE_STATE_GAPS, DATA_READINESS,
   MARKET_FIGURE_GAP_REASON, MARKET_SURFACE_DECLARES_NO_SCORER, SUBJECT_READINESS,
 } from '@/lib/market/mktReadiness';
 import { MARKET_CAPABILITY, type MarketReadResult } from '@/lib/market/mktReadModel';
-import { resolveMktStrings, type MktLocale } from '@/lib/market/mktStrings';
+import { resolveMktStrings, type MktLocale, type MktStrings } from '@/lib/market/mktStrings';
 import { economyStrings } from '@/lib/economy/strings';
 
 /**
@@ -68,8 +69,27 @@ import { economyStrings } from '@/lib/economy/strings';
  * stack"* — for the two things a reader may want to sustain: where a figure came from, and
  * what the platform can observe at all.
  */
-type Drawer = 'CAPABILITY' | 'ANALYSIS';
-const DRAWERS: readonly Drawer[] = ['CAPABILITY', 'ANALYSIS'];
+type Drawer = 'PROVENANCE' | 'ANALYSIS' | 'READINESS';
+
+/**
+ * THE DOCK CARRIES TWO OF THE THREE, AND THE THIRD IS WHY THIS LIST EXISTS SEPARATELY.
+ *
+ * `READINESS` is reachable and is not docked. The activation is explicit that the readiness
+ * substrate must sit *"behind a secondary developer/readiness control"* and *"must not be
+ * the normal reader experience"*, and a dock button beside the reader's own affordances is
+ * precisely the normal reader experience. It opens from a subdued control in the footer
+ * instead — same drawer, same contents, one rung quieter.
+ */
+const DOCKED: readonly Drawer[] = ['PROVENANCE', 'ANALYSIS'];
+
+/** One definition, read by the dock, the drawer header and the drawer's accessible name. */
+function drawerTitle(d: Drawer, t: MktStrings): string {
+  switch (d) {
+    case 'PROVENANCE': return t.reader.showProvenance;
+    case 'READINESS': return t.reader.showCapability;
+    default: return t.drawers.ANALYSIS;
+  }
+}
 
 interface View { readonly drawer: Drawer | null }
 type Action = { k: 'OPEN'; v: Drawer } | { k: 'CLOSE' };
@@ -152,8 +172,21 @@ export function MarketScreen({ locale, read }: {
           display: 'flex', gap: '16px', justifyContent: 'space-between',
           alignItems: 'baseline', flexWrap: 'wrap',
         }}>
+          {/*
+            REGION A · THE SURFACE IS CALLED THE SAME THING IN BOTH STATES.
+
+            The headline used to flip to `headlineNone` — *"No market observations are
+            held"* — whenever the read was empty, which made the page's largest type a
+            statement about our own holdings. A dashboard is named for what it reports, not
+            for what it currently has: `/economy` does not retitle itself either.
+
+            The fact is not dropped. It is the status badge beside this line, which F
+            ratified for exactly this job and worded so it cannot be read as a claim about
+            the market — `OBSERVATIONS HELD` counts records, `NO OBSERVATIONS HELD` counts
+            zero of them, and neither says anything about prices.
+          */}
           <h1 style={{ margin: 0, fontSize: MKT_TYPE.title, fontWeight: 600, color: MKT_INK.primary }}>
-            {read.kind === 'OBSERVATIONS' ? t.reader.headline : t.reader.headlineNone}
+            {t.reader.headline}
           </h1>
           <MarketStatus held={held} t={t} />
         </div>
@@ -161,17 +194,32 @@ export function MarketScreen({ locale, read }: {
 
       {view.drawer === null ? (
         /*
-          ZONE C ABSORBS SURPLUS; ZONE D IS CAPPED — R13, AND THE ANSWER TO EMPTY SPACE.
+          ════════════════════════════════════════════════════════════════════
+          THE FINAL PART VII COMPOSITION — R11's ZONES, IN R11's ORDER
+          ════════════════════════════════════════════════════════════════════
 
-          The first pass capped the whole body at a reading measure and left it against the
-          left edge, so at 1512px more than half the viewport was canvas and the surface
-          read as unfinished rather than as calm. R13 already says what to do with surplus
-          width: it goes to zone C, and the context rail stays capped at 336px and never
-          grows. So the body is a two-column grid — substrate, then capped rail — and the
-          rail is where capability lives.
+          What this replaced was an honest surface with the wrong shape. Its first
+          screenful was the unavailable notice and a column of provider cards, so the two
+          loudest things on a market dashboard were a paragraph about our plumbing and a
+          list of sources that are not running. Every word was true and the composite was
+          an engineering console.
 
-          At narrow widths the grid collapses to one column and the rail follows the
-          substrate, which is the same ordering the compact composition uses.
+          The Product Owner's ruling is that *"missing data may be visually silenced so the
+          Product Owner can inspect and approve the intended final dashboard"*, and that a
+          surface must not *"show an engineering-readiness console merely because data is
+          absent"*. So the zones are all present and all quiet:
+
+            B  coverage strip      R11 Z1 · resident, low height, `—` per subject kind
+            C  substrate panel     R11 Z4 · resident, absorbs surplus, draws no line
+            D  change / freshness  R11 Z2's context · freshness from the governed set
+            E  provenance          reader affordance; the taxonomy opens in a drawer
+            F  capability          demoted to a subordinate line at the foot of the rail
+            G  readiness           not here at all — behind the footer control
+
+          THE GRID IS R13's AND IS UNCHANGED. Zone C absorbs surplus width as 1fr; the
+          context rail stays capped at 336px and never grows; the body caps at 1240px and
+          centres. At narrow widths the grid collapses to one column and the rail follows
+          the substrate, which is the ordering the compact composition already uses.
         */
         <div data-mkt="body" style={{
           position: 'relative', flex: '1 1 auto', overflow: 'auto', padding: '20px',
@@ -179,34 +227,86 @@ export function MarketScreen({ locale, read }: {
           gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 336px)',
           maxWidth: '1240px', width: '100%', margin: '0 auto',
         }}>
-          {/*
-            PRIMARY. Observations, or the truthful unavailable state — never both, and
-            never readiness rows standing in for either.
-          */}
-          {read.kind === 'OBSERVATIONS' ? (
-            <section data-mkt="observations" style={{
-              gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '12px',
-            }}>
-              <Heading>{t.reader.observations}</Heading>
-              {read.observations.map((o) => (
-                <ObservationCard key={o.observationKey} o={o} t={t} />
-              ))}
-            </section>
-          ) : (
-            <div style={{ gridColumn: '1' }}>
-              <ReadUnavailable reason={read.reason} t={t} />
-            </div>
-          )}
+          <div style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0 }}>
+            {/* ── REGION B ── */}
+            <CoverageStrip t={t} />
+
+            {/* ── REGION C ── one substrate at a time; observations occupy this panel. */}
+            {read.kind === 'OBSERVATIONS' ? (
+              <SubstratePanel t={t}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {read.observations.map((o) => (
+                    <ObservationCard key={o.observationKey} o={o} t={t} />
+                  ))}
+                </div>
+              </SubstratePanel>
+            ) : (
+              <SubstratePanel t={t} />
+            )}
+
+            {/* ── REGION D ── */}
+            <ChangeContext t={t} />
+
+            {/*
+              THE ONE SENTENCE THAT STOPS THE INFERENCE, KEPT AND DEMOTED.
+
+              F's ratified copy — *"That describes what we hold — it is not a statement
+              about the market"* — is the reason an empty market surface is safe to show a
+              reader at all, so it stays resident. What changed is its rank: it was the
+              region, and it is now a note below the region it explains. It renders only
+              when there is genuinely nothing held.
+            */}
+            {read.kind !== 'OBSERVATIONS' && <ReadUnavailable reason={read.reason} t={t} />}
+
+            {/* ── REGION E ── */}
+            <ProvenanceAffordance t={t} onOpen={() => dispatch({ k: 'OPEN', v: 'PROVENANCE' })} />
+
+            {/*
+              ── REGION G ── THE READINESS SUBSTRATE, BEHIND A SECONDARY CONTROL.
+
+              `mktReadiness.ts` is untouched and still measures the contract; what moved is
+              where a reader meets it. It was the CAPABILITY drawer, opened from a
+              full-width dock button beside the reader's own affordances, so the platform's
+              opinion of its own plumbing was one equal click from the dashboard. The
+              activation asks for it *"behind a secondary developer/readiness control"* that
+              *"must not be the normal reader experience"*.
+
+              IT LIVES INSIDE THE SCROLLING COLUMN, NOT IN A STRIP ABOVE THE DOCK. The first
+              build put it in its own full-width row between the body and the dock, and the
+              capture showed why that was wrong twice over: the row was squeezed against the
+              dock and its label clipped, and the floating Ask AI affordance sat on top of
+              it. At the end of the left column it is simply the last thing in the reading
+              order, which is what "secondary" means here.
+            */}
+            <button type="button" data-mkt="open-readiness"
+              onClick={() => dispatch({ k: 'OPEN', v: 'READINESS' })}
+              style={{
+                ...micro, minHeight: `${MKT_HIT_TARGET_PX}px`, padding: '0 2px',
+                border: 'none', background: 'transparent', color: MKT_INK.tertiary,
+                cursor: 'pointer', letterSpacing: mktTracking(0.07),
+                alignSelf: 'flex-start', textAlign: 'start',
+              }}>{t.reader.readinessControl}</button>
+          </div>
 
           {/*
-            SECONDARY. Which sources this surface may use, and whether any is running.
-            Two facts per provider, never one verdict — SI-18.5.
+            ── REGION F ── SUBORDINATE, AND STILL TWO FACTS PER PROVIDER.
+
+            It was a headed section at the top of the rail with a bordered card per
+            provider, which the activation rules out: the capability rail *"must no longer
+            visually dominate the intelligence canvas"* and the surface must *"not lead with
+            provider execution status"*. It is now a compact list at the FOOT of the rail,
+            below the substrate in reading order at every width.
+
+            SI-18.5 survives the demotion intact. Rights and activation are still two
+            independent facts and are still never collapsed into one availability pill —
+            that collapse is how a surface ends up implying a provider with rights is live,
+            and it would be no less wrong in small type.
           */}
           <section data-mkt="capability-summary" style={{
-            gridColumn: '2', display: 'flex', flexDirection: 'column', gap: '10px',
-            alignSelf: 'start',
+            gridColumn: '2', display: 'flex', flexDirection: 'column', gap: '8px',
+            alignSelf: 'end', minWidth: 0,
           }}>
-            <Heading level="secondary">{t.reader.capability}</Heading>
+            <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.capability}</span>
             <CapabilityList rows={MARKET_CAPABILITY} t={t} />
           </section>
         </div>
@@ -216,7 +316,7 @@ export function MarketScreen({ locale, read }: {
           is no popup-on-popup anywhere in this composition.
         */
         <div data-mkt="drawer" data-mkt-drawer-open={view.drawer} role="region"
-          aria-label={view.drawer === 'CAPABILITY' ? t.reader.showCapability : t.drawers.ANALYSIS}
+          aria-label={drawerTitle(view.drawer, t)}
           style={{
             position: 'relative', flex: '1 1 auto', overflow: 'auto', padding: '20px',
             display: 'flex', flexDirection: 'column', gap: '16px',
@@ -224,7 +324,7 @@ export function MarketScreen({ locale, read }: {
           }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
             <Heading>
-              {view.drawer === 'CAPABILITY' ? t.reader.showCapability : t.drawers.ANALYSIS}
+              {drawerTitle(view.drawer, t)}
             </Heading>
             <button type="button" data-mkt="drawer-close" onClick={() => dispatch({ k: 'CLOSE' })}
               style={{
@@ -234,7 +334,9 @@ export function MarketScreen({ locale, read }: {
               }}>{t.labels.close}</button>
           </div>
 
-          {view.drawer === 'CAPABILITY' && (
+          {view.drawer === 'PROVENANCE' && <ProvenanceDetail t={t} />}
+
+          {view.drawer === 'READINESS' && (
             <>
               {/* The readiness substrate, in the place it belongs. */}
               <Heading level="secondary" note={t.labels.contractSays}>{t.labels.sourceReadiness}</Heading>
@@ -329,7 +431,7 @@ export function MarketScreen({ locale, read }: {
         position: 'relative', flex: '0 0 auto', borderTop: edge, background: MKT_NAV.inactiveFill,
         display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, 232px), 1fr))`,
       }}>
-        {DRAWERS.map((d) => (
+        {DOCKED.map((d) => (
           <button key={d} type="button" data-mkt="dock-button" data-mkt-dock={d}
             onClick={() => dispatch({ k: 'OPEN', v: d })}
             style={{
@@ -339,7 +441,7 @@ export function MarketScreen({ locale, read }: {
               color: view.drawer === d ? MKT_LICENSED.cyan : MKT_INK.secondary,
               cursor: 'pointer', whiteSpace: 'normal', overflowWrap: 'anywhere',
             }}>
-            {d === 'CAPABILITY' ? t.reader.showCapability : t.drawers.ANALYSIS}
+            {drawerTitle(d, t)}
           </button>
         ))}
       </nav>

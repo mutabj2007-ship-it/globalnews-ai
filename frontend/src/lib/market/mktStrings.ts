@@ -38,7 +38,8 @@ export interface MktStrings {
     | 'capability' | 'capabilityRights' | 'capabilityActivation' | 'capabilityNone'
     | 'providerNotActivated'
     | 'readNoEndpoint' | 'readNoActivatedProvider' | 'readNoObservation' | 'readNoDisplayable'
-    | 'showCapability' | 'showProvenance', string>>;
+    | 'showCapability' | 'showProvenance'
+    | 'awaitingData' | 'coverage' | 'change' | 'readinessControl', string>>;
 
   /**
    * READINESS LABELS — lifted out of the two screens.
@@ -138,14 +139,33 @@ const en: MktStrings = {
     capability: 'Sources and capability',
     capabilityRights: 'Rights permit use',
     capabilityActivation: 'Activated',
-    capabilityNone: 'No source is activated, so no source is running.',
-    providerNotActivated: 'Rights permit use. Not activated, so it is not running.',
-    readNoEndpoint: 'No internal read is connected to this surface yet, so nothing can be shown here.',
-    readNoActivatedProvider: 'No source is activated, so nothing has been collected to show.',
-    readNoObservation: 'Nothing has been recorded for this view.',
-    readNoDisplayable: 'What is recorded cannot be shown without a source and a unit.',
+    capabilityNone: 'No source is currently active.',
+    providerNotActivated: 'Not currently active',
+    readNoEndpoint: 'Data not yet available.',
+    readNoActivatedProvider: 'Source not currently active.',
+    readNoObservation: 'Awaiting verified observation.',
+    readNoDisplayable: 'Awaiting a verified unit and source.',
     showCapability: 'Sources and capability',
     showProvenance: 'Where this came from',
+    /*
+      THE DATA-NEUTRAL VOCABULARY.
+
+      The Product Owner's ruling allows a slot with no figure to read `—` or a restrained
+      `Awaiting verified data`, and forbids the register these five replaced: *"no internal
+      read is connected", "provider not running", "endpoint not implemented", "rights permit
+      use but not activated"*. Those sentences described our implementation. These describe
+      AVAILABILITY, which is the only thing a reader can act on, and they are short enough
+      that a slot carrying one does not become the loudest thing in its region.
+
+      The engineering register is not deleted — it moved. `absence`, `readiness` and
+      `labels.contractSays` still say `Not runtime-enabled — the contract lists no enabled
+      subject`, and they still mean it, inside the developer readiness disclosure where a
+      lane can read the constant that produced the verdict.
+    */
+    awaitingData: 'Awaiting verified data',
+    coverage: 'Coverage',
+    change: 'Change',
+    readinessControl: 'Readiness detail',
   },
   readiness: {
     equityOrIndex: 'Equity or index source qualified',

@@ -63,6 +63,29 @@ export function AttentionQueue({
         data-econ="attention-list"
         style={{ flex: '1 1 auto', overflow: 'hidden', display: 'flex', flexDirection: 'column', listStyle: 'none', margin: 0, padding: 0 }}
       >
+        {/*
+          AN EMPTY RAIL IS A 372px COLUMN OF NOTHING, AND IT READS AS A BUG.
+
+          A9 is why the rail is empty and the reasoning is sound: `attentionRank` comes from
+          data, and with no producer there is no rank, so `subject.attention` is `[]` and no
+          row may be invented to hold one. None of that is changed here — this adds no row,
+          no rank and no ordering.
+
+          What it adds is the same absent glyph every other slot on the frame carries, so the
+          rail states its own emptiness instead of leaving a reader to guess whether the
+          queue failed to load. It renders only when there is genuinely nothing to order.
+        */}
+        {ordered.length === 0 && (
+          <li data-econ="attention-empty" style={{ padding: '13px 16px' }}>
+            <span
+              data-econ="figure-absent"
+              aria-label={t.noObservationTitle}
+              style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 14px)', color: ECON_INK.reduced }}
+            >
+              —
+            </span>
+          </li>
+        )}
         {ordered.map((row, i) => {
           const active = row.id === selectedId;
           const promoted = row.changeState === 'SIGNIFICANT_CHANGE' || row.changeState === 'NEW';

@@ -318,10 +318,17 @@ describe('the primary frame does not read like a console', () => {
       */
       const bodyAt = src.indexOf(f.startsWith('MarketCompact')
         ? 'data-mkt="compact-body"' : 'data-mkt="body"');
-      const drawerAt = src.indexOf("view.drawer === 'CAPABILITY'");
+      const drawerAt = src.indexOf("view.drawer === 'READINESS'");
       expect(bodyAt).toBeGreaterThan(0);
       expect(drawerAt).toBeGreaterThan(bodyAt);
       const primary = src.slice(bodyAt, drawerAt);
+      /*
+        THE WINDOW MOVED WITH THE DRAWER. It closed at `view.drawer === 'CAPABILITY'`, the
+        branch that used to hold the readiness substrate; that branch is now `READINESS`,
+        and `CAPABILITY` no longer exists as a drawer id. Following the rename keeps the
+        window measuring the same thing — everything a reader meets before touching a
+        control — rather than silently measuring to the end of the file.
+      */
       expect(primary).not.toContain('DATA_READINESS.map');
       expect(primary).not.toContain('SUBJECT_READINESS.map');
       expect(primary).not.toContain('CHANGE_STATES_NOT_DERIVABLE');

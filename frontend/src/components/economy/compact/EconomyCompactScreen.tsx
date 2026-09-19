@@ -21,6 +21,7 @@ import type {
   EconomyAiConfig, EconomyDataCapability, SpatialCapability, WatchRuntimeCapability,
 } from '@/lib/economy/economyConfig';
 import { FixtureBanner, NoObservationData, observationMode } from '../DataAvailability';
+import { GeographyKeys, PeriodContext, QuietTriad } from '../QuietFrame';
 
 /**
  * ECON-UI-1 — THE COMPACT ECONOMY SURFACE (375–430px, reference 390px).
@@ -159,12 +160,16 @@ export function EconomyCompactScreen({
             </span>
           )}
         </div>
+        {/*
+          THE WITHHELD BRANCH PRINTS NOTHING — the same correction as the desktop header,
+          and it matters more at 390px. The sentence is 24 words; it was the header, and it
+          was repeated verbatim by the resident note two hundred pixels below. On a phone
+          that is a third of the first screenful spent saying one thing twice.
+        */}
         {showFigures ? (
           <IntelligenceStatement text={subject.assessment.statement} sizePx={17} />
         ) : (
-          <p data-econ="assessment-withheld" style={{ margin: 0, fontSize: 'max(var(--ar-fs-min, 0px), 13px)', lineHeight: 'var(--ar-lh, 1.5)', color: ECON_INK.secondary }}>
-            {t.noObservationBody}
-          </p>
+          <span data-econ="assessment-withheld" hidden />
         )}
       </header>
 
@@ -183,21 +188,27 @@ export function EconomyCompactScreen({
       )}
 
       {/*
-        2 · HORIZONTAL INDICATOR RAIL.
+        2 · HORIZONTAL INDICATOR RAIL — RESIDENT IN BOTH VALUE STATES.
 
-        ECON-DATA-1: with no observation source the rail is REPLACED by the honest state
-        rather than filled with dashes. A scrollable rail of empty cells still reads as
-        "the data is here, somewhere" on a 390px frame.
+        This used to be REPLACED by the no-observation panel when no source was connected,
+        and the reason given was a real one: *"a scrollable rail of empty cells still reads
+        as 'the data is here, somewhere' on a 390px frame."* On a phone that risk is larger
+        than on desktop, and it is why the answer here is different from simply keeping the
+        rail.
+
+        THE ANSWER IS THE NOTE DIRECTLY BENEATH IT, NOT THE RAIL ALONE. The rail carries the
+        six series this surface reports with the absent glyph in each cell — `EconomyFigure`
+        renders a GAP slot as an em-dash with no axes line, so no cell claims a release
+        status, a value kind or a freshness — and the sentence that states why sits
+        immediately below, inside the same bordered region, where a reader reaches it in the
+        same glance rather than by scrolling.
+
+        The Product Owner's ruling is what permits the rail to stay: the intended final
+        compact dashboard has to be inspectable, and a compact frame whose primary region is
+        a paragraph is not that dashboard. Nothing here is a squeezed desktop — the desktop
+        frame has no horizontal rail, and this one keeps its own vertical order:
+        assessment → rail → attention.
       */}
-      {!showFigures ? (
-        <div style={{ flex: '0 0 auto', padding: '14px', borderBottom: `1px solid ${ECON_LINE.structure}` }}>
-          <NoObservationData
-            locale={locale}
-            subjectName={subject.name}
-            seriesNames={subject.indicators.map((s: Series) => s.shortLabel)}
-          />
-        </div>
-      ) : (
       <div
         data-econ="compact-indicator-rail"
         style={{ flex: '0 0 auto', borderBottom: `1px solid ${ECON_LINE.structure}`, background: ECON_SURFACE.panel, padding: '12px 0 12px 14px', overflowX: 'auto' }}
@@ -236,8 +247,20 @@ export function EconomyCompactScreen({
             );
           })}
         </div>
+        {!showFigures && (
+          <div data-econ="compact-absence" style={{ padding: '12px 14px 0 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <NoObservationData locale={locale} subjectName={subject.name} />
+            {/*
+              Regions D and E, compact. `geo` and `freq` are pinned dimensions of the series
+              identity, not properties of an observation, so they are honest at 390px for the
+              same reason they are honest at 1512px — and the geography distinction is the one
+              thing a narrow frame must not collapse.
+            */}
+            <GeographyKeys locale={locale} />
+            <PeriodContext locale={locale} />
+          </div>
+        )}
       </div>
-      )}
 
       {/* 3 · ATTENTION FEED */}
       <div data-econ="compact-attention" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
@@ -249,6 +272,24 @@ export function EconomyCompactScreen({
             attentionRank
           </span>
         </div>
+        {/*
+          THE SAME ABSENT GLYPH THE DESKTOP RAIL CARRIES, for the same reason and with more
+          force at 390px: the attention feed is the LAST region in the compact order, so an
+          empty one is several hundred pixels of nothing at the bottom of the scroll. A9 is
+          untouched — no row, no rank, no ordering is invented — the region simply states
+          its own emptiness instead of leaving a reader to decide whether it failed.
+        */}
+        {subject.attention.length === 0 && (
+          <div data-econ="compact-attention-empty" style={{ padding: '12px 14px' }}>
+            <span
+              data-econ="figure-absent"
+              aria-label={t.noObservationTitle}
+              style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 14px)', color: ECON_INK.reduced }}
+            >
+              —
+            </span>
+          </div>
+        )}
         {orderByAttentionRank(subject.attention).map((r: AttentionRow, i) => (
           <button
             key={r.id}
@@ -318,15 +359,22 @@ export function EconomyCompactScreen({
             </div>
           )}
           {/*
-            ECON-DATA-1 — the triad is three OBSERVATION cells. With no observation source
-            the inspect sheet says so rather than presenting an empty actual/expected/
-            previous frame, which reads as a load failure instead of an absent source.
+            ECON-DATA-1 — the triad is three OBSERVATION cells. The sheet used to replace
+            them with the absence panel, on the reasoning that an empty actual/expected/
+            previous frame reads as a load failure rather than an absent source. It renders
+            the final triad geometry now, with the note kept beside it so the reason is
+            never inferred: `QuietTriad` draws no axes line, no release chip and no surprise
+            cell, so nothing on it claims an observation was formed and failed to arrive.
           */}
           {surface.kind === 'INSPECT' && (
             showFigures && subject.primarySeries?.triad ? (
               <Triad triad={subject.primarySeries.triad} locale={locale} cellBasisPx={100} showSurprise={false} />
             ) : (
-              <NoObservationData locale={locale} subjectName={subject.primarySeries ? seriesName(subject.primarySeries) : subject.name} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <QuietTriad locale={locale} cellBasisPx={100} />
+                <PeriodContext locale={locale} />
+                <NoObservationData locale={locale} subjectName={subject.primarySeries ? seriesName(subject.primarySeries) : subject.name} />
+              </div>
             )
           )}
           {surface.kind === 'WATCH' && <WatchConfiguration scope={subject.watch} locale={locale} runtime={watchRuntime} />}

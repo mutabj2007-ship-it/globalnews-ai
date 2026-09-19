@@ -61,21 +61,48 @@ export function EconomicStateHeader({
             {subject.name}
           </span>
           <span style={tagRest}>{subject.scopeLabel}</span>
-          <span style={tagRest}>{subject.contextLabel}</span>
+          {/*
+            THE CONTEXT TAG IS WITHHELD WHEN IT WOULD BE THE THIRD WAY OF SAYING ONE THING.
+
+            `contextLabel` is `No observation source` on the production-shaped subject, and
+            the `assessment-unavailable` badge on the right of this same header already says
+            `No observation data`. Two tags, one fact, forty pixels apart. The tag returns
+            the moment the subject carries a real context, because then it says something the
+            badge does not.
+          */}
+          {observationsAvailable && <span style={tagRest}>{subject.contextLabel}</span>}
         </div>
         {/*
           The standing assessment sentence. Capped at the prose measure so it never runs
           the frame width, at 1920 or anywhere else.
         */}
-        <p
-          data-econ={observationsAvailable ? 'assessment-sentence' : 'assessment-withheld'}
-          style={{
-            margin: 0, fontSize: 'max(var(--ar-fs-min, 0px), 15px)', lineHeight: 'var(--ar-lh, 1.5)', color: ECON_INK.secondary,
-            maxWidth: `${PROSE_MAX_CH}ch`,
-          }}
-        >
-          {observationsAvailable ? a.statement : t.noObservationBody}
-        </p>
+        {/*
+          THE WITHHELD BRANCH PRINTS NOTHING, AND THAT IS THE CORRECTION.
+
+          It used to print `noObservationBody` here. The same sentence is now resident in
+          the substrate, beside the geometry it explains, so printing it in the header too
+          put the page's longest sentence about our own plumbing at the top of the first
+          viewport and repeated it forty pixels lower. The `assessment-unavailable` tag on
+          the right of this header already states the availability; the explanation belongs
+          once, next to the absent figures.
+
+          The `assessment-withheld` hook is preserved on an empty element rather than
+          dropped: it is how a guard distinguishes "no assessment was formed" from "an
+          assessment was formed and is blank", and that distinction is not cosmetic.
+        */}
+        {observationsAvailable ? (
+          <p
+            data-econ="assessment-sentence"
+            style={{
+              margin: 0, fontSize: 'max(var(--ar-fs-min, 0px), 15px)', lineHeight: 'var(--ar-lh, 1.5)', color: ECON_INK.secondary,
+              maxWidth: `${PROSE_MAX_CH}ch`,
+            }}
+          >
+            {a.statement}
+          </p>
+        ) : (
+          <span data-econ="assessment-withheld" hidden />
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>

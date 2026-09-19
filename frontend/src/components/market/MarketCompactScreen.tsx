@@ -35,13 +35,16 @@ import {
   MKT_SURFACE, MKT_TYPE, mktTracking,
 } from '@/lib/market/mktTokens';
 import { Heading, Identifier, Verdict, edge, micro } from './MktParts';
-import { CapabilityList, MarketStatus, ObservationCard, ReadUnavailable } from './MktReader';
+import {
+  CapabilityList, ChangeContext, CoverageStrip, MarketStatus, ObservationCard,
+  ProvenanceDetail, ReadUnavailable, SubstratePanel,
+} from './MktReader';
 import {
   CHANGE_STATES_NOT_DERIVABLE, DATA_READINESS,
   MARKET_FIGURE_GAP_REASON, SUBJECT_READINESS,
 } from '@/lib/market/mktReadiness';
 import { MARKET_CAPABILITY, type MarketReadResult } from '@/lib/market/mktReadModel';
-import { resolveMktStrings, type MktLocale } from '@/lib/market/mktStrings';
+import { resolveMktStrings, type MktLocale, type MktStrings } from '@/lib/market/mktStrings';
 import { economyStrings } from '@/lib/economy/strings';
 
 /**
@@ -51,12 +54,36 @@ import { economyStrings } from '@/lib/economy/strings';
  * it is one disabled control and three sentences. A detent that opens to the wrong height
  * is how a sheet stops reading as a sheet.
  */
-type Drawer = 'CAPABILITY' | 'ANALYSIS';
-const DRAWERS: readonly Drawer[] = ['CAPABILITY', 'ANALYSIS'];
+type Drawer = 'PROVENANCE' | 'ANALYSIS' | 'READINESS';
+
+/**
+ * THE DOCK CARRIES TWO; THE THIRD OPENS FROM THE FOOTER.
+ *
+ * Same split as the desktop frame and for the same reason — the readiness substrate must
+ * not be the normal reader experience — and it matters more here. A phone dock has two
+ * cells of thumb-reachable screen; spending one of them on the contract's opinion of itself
+ * is the compact version of leading with provider execution status.
+ */
+const DOCKED: readonly Drawer[] = ['PROVENANCE', 'ANALYSIS'];
 const DETENT: Readonly<Record<Drawer, 'HALF' | 'FULL'>> = {
-  CAPABILITY: 'FULL',
+  /*
+    `READINESS` is FULL because it is a list a reader scrolls; `PROVENANCE` and `ANALYSIS`
+    are HALF because each is a short labelled set. A detent that opens to the wrong height
+    is how a sheet stops reading as a sheet.
+  */
+  READINESS: 'FULL',
+  PROVENANCE: 'HALF',
   ANALYSIS: 'HALF',
 };
+
+/** One definition, read by the dock, the sheet header and the sheet's accessible name. */
+function drawerTitle(d: Drawer, t: MktStrings): string {
+  switch (d) {
+    case 'PROVENANCE': return t.reader.showProvenance;
+    case 'READINESS': return t.reader.showCapability;
+    default: return t.drawers.ANALYSIS;
+  }
+}
 const DETENT_VH: Readonly<Record<'HALF' | 'FULL', number>> = { HALF: 42, FULL: 68 };
 
 interface View { readonly drawer: Drawer | null }
@@ -127,7 +154,7 @@ export function MarketCompactScreen({ locale, read }: {
         <h1 style={{
           margin: 0, fontSize: MKT_TYPE.title, fontWeight: 600, color: MKT_INK.primary,
           whiteSpace: 'normal', overflowWrap: 'anywhere',
-        }}>{read.kind === 'OBSERVATIONS' ? t.reader.headline : t.reader.headlineNone}</h1>
+        }}>{t.reader.headline}</h1>
         <MarketStatus held={held} t={t} />
       </header>
 
@@ -135,17 +162,70 @@ export function MarketCompactScreen({ locale, read }: {
         position: 'relative', flex: '1 1 auto', overflow: 'auto',
         padding: '14px', display: 'flex', flexDirection: 'column', gap: '14px',
       }}>
+        {/*
+          ════════════════════════════════════════════════════════════════════
+          THE FINAL COMPACT COMPOSITION — R11's COMPACT ORDER, NOT A SQUEEZE
+          ════════════════════════════════════════════════════════════════════
+
+          R11's compact rule is *"not a shrunken desktop — compact entry is attention-first,
+          one substrate at a time, chosen explicitly"*, and the detents run
+          PEEK → HALF → FULL → WORKSPACE with *"material change count, top attention subject,
+          freshness state"* at PEEK.
+
+          So the vertical order here is NOT the desktop grid stacked. Coverage leads, because
+          at PEEK height it is the only thing visible and it is what PEEK is specified to
+          carry. The substrate follows as ONE panel. The change and freshness context is a
+          single wrapping line rather than the desktop's spread row. The capability region is
+          LAST in the column — the desktop puts it in a side rail, and a side rail has no
+          compact equivalent that is not simply "further down".
+
+          WHAT COMPACT DOES NOT DROP: the coverage cells keep their full subject names and
+          wrap rather than truncate, and the freshness state keeps its governed label. A
+          truncated subject name is a different subject.
+        */}
+        <CoverageStrip t={t} />
+
         {read.kind === 'OBSERVATIONS' ? (
-          <section data-mkt="compact-observations" style={{
-            display: 'flex', flexDirection: 'column', gap: '10px',
-          }}>
-            {read.observations.map((o) => (
-              <ObservationCard key={o.observationKey} o={o} t={t} />
-            ))}
-          </section>
+          <SubstratePanel t={t}>
+            <div data-mkt="compact-observations" style={{
+              display: 'flex', flexDirection: 'column', gap: '10px',
+            }}>
+              {read.observations.map((o) => (
+                <ObservationCard key={o.observationKey} o={o} t={t} />
+              ))}
+            </div>
+          </SubstratePanel>
         ) : (
-          <ReadUnavailable reason={read.reason} t={t} />
+          <SubstratePanel t={t} />
         )}
+
+        <ChangeContext t={t} />
+
+        {read.kind !== 'OBSERVATIONS' && <ReadUnavailable reason={read.reason} t={t} />}
+
+        {/*
+          THE CAPABILITY REGION, LAST AND QUIET. Same three rows as the desktop rail, same
+          two independent facts per provider, at the bottom of the scroll where a reader
+          arrives only after the market itself.
+        */}
+        <section data-mkt="compact-capability" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <span style={{ ...micro, color: MKT_INK.label, whiteSpace: 'normal' }}>{t.reader.capability}</span>
+          <CapabilityList rows={MARKET_CAPABILITY} t={t} />
+        </section>
+
+        {/*
+          REGION G, COMPACT. Text weight, tertiary ink, no dock cell, at the end of the
+          scroll — the quietest control on the surface, and the only way to the readiness
+          substrate.
+        */}
+        <button type="button" data-mkt="open-readiness"
+          onClick={() => dispatch({ k: 'OPEN', v: 'READINESS' })}
+          style={{
+            ...micro, minHeight: `${MKT_HIT_TARGET_PX}px`, padding: '0 4px',
+            border: 'none', background: 'transparent', color: MKT_INK.tertiary,
+            cursor: 'pointer', letterSpacing: mktTracking(0.07), alignSelf: 'flex-start',
+            whiteSpace: 'normal', overflowWrap: 'anywhere',
+          }}>{t.reader.readinessControl}</button>
       </div>
 
       {/*
@@ -155,16 +235,14 @@ export function MarketCompactScreen({ locale, read }: {
       */}
       {view.drawer !== null && detent !== null && (
         <section data-mkt="compact-drawer" data-mkt-detent={detent} role="region"
-          aria-label={view.drawer === 'CAPABILITY' ? t.reader.showCapability : t.drawers.ANALYSIS}
+          aria-label={drawerTitle(view.drawer, t)}
           style={{
             position: 'relative', flex: '0 0 auto', height: `${DETENT_VH[detent]}vh`,
             overflow: 'auto', borderTop: edge, background: MKT_SURFACE.panel,
             padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px',
           }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
-            <Heading>
-              {view.drawer === 'CAPABILITY' ? t.reader.showCapability : t.drawers.ANALYSIS}
-            </Heading>
+            <Heading>{drawerTitle(view.drawer, t)}</Heading>
             <button type="button" data-mkt="drawer-close" onClick={() => dispatch({ k: 'CLOSE' })}
               style={{
                 ...micro, minHeight: `${MKT_HIT_TARGET_PX}px`, padding: '0 14px',
@@ -173,9 +251,10 @@ export function MarketCompactScreen({ locale, read }: {
               }}>{t.labels.close}</button>
           </div>
 
-          {view.drawer === 'CAPABILITY' && (
+          {view.drawer === 'PROVENANCE' && <ProvenanceDetail t={t} />}
+
+          {view.drawer === 'READINESS' && (
             <>
-              <CapabilityList rows={MARKET_CAPABILITY} t={t} />
               <Heading level="secondary" note={t.labels.contractSays}>{t.labels.sourceReadiness}</Heading>
               <div>
                 {DATA_READINESS.map((f) => (
@@ -238,7 +317,7 @@ export function MarketCompactScreen({ locale, read }: {
         position: 'relative', flex: '0 0 auto', borderTop: edge, background: MKT_NAV.inactiveFill,
         display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
       }}>
-        {DRAWERS.map((d) => (
+        {DOCKED.map((d) => (
           <button key={d} type="button" data-mkt="dock-button" data-mkt-dock={d}
             onClick={() => dispatch({ k: 'OPEN', v: d })}
             style={{
@@ -250,7 +329,7 @@ export function MarketCompactScreen({ locale, read }: {
               /* WRAP, NEVER TRUNCATE — a clipped label is a different label. */
               whiteSpace: 'normal', overflowWrap: 'anywhere',
             }}>
-            {d === 'CAPABILITY' ? t.reader.showCapability : t.drawers.ANALYSIS}
+            {drawerTitle(d, t)}
           </button>
         ))}
       </nav>

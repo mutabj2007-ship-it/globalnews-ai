@@ -18,9 +18,19 @@ import { ECON_INK, ECON_LINE, ECON_MONO, ECON_SURFACE } from './econTokens';
  * Width is per-content (460–620px) and is FIXED at every breakpoint — a wider screen
  * widens the substrate, not the drawer.
  */
+/**
+ * `SOURCES` IS A ROUTING TARGET THE REGISTER ALREADY NAMED.
+ *
+ * The first-viewport zoning model lists what is *"Not resident, always reachable"* and
+ * sources is one of the four. The implementation had drawers for the other three —
+ * timeline, relationships (the transmission chain) and evidence of revision — and none for
+ * sources, so the source and observation-base explanation had nowhere to go but the first
+ * viewport. Adding the member builds a target the accepted register specifies; it is not a
+ * new region and nothing about the zoning changes.
+ */
 export type DrawerKind =
   | 'REVISION_TRACK' | 'COMPETING_READINGS' | 'TRANSMISSION_CHAIN'
-  | 'POLICY_EVENT' | 'WATCH_CONFIG' | 'TIMELINE' | 'INDICATOR_CARD';
+  | 'POLICY_EVENT' | 'WATCH_CONFIG' | 'TIMELINE' | 'INDICATOR_CARD' | 'SOURCES';
 
 /** Widths the Phase 2 board fixes per drawer content. */
 export const DRAWER_WIDTH_PX: Readonly<Record<DrawerKind, number>> = {
@@ -31,6 +41,9 @@ export const DRAWER_WIDTH_PX: Readonly<Record<DrawerKind, number>> = {
   POLICY_EVENT: 520,
   WATCH_CONFIG: 520,
   TIMELINE: 520,
+  // Prose, at the same width the other prose drawers use. A wider screen widens the
+  // substrate, never this.
+  SOURCES: 520,
 };
 
 export function EconomyDrawer({
