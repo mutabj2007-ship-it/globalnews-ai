@@ -283,7 +283,23 @@ describe('C — Poland Map → Analysis → Back', () => {
         moving selection into the store would duplicate a working contract.
       */
       expect(source).toContain('searchParamsWithMapState(params, {');
-      expect(source).toContain('searchParamsWithCamera(withMapState, camera)');
+      /*
+        ── MAIN-CONFLICT-DISTINCT-ENTRY-SEAM-R1 §2 ADDED ONE LINK TO THIS CHAIN ─
+
+        This pinned `searchParamsWithCamera(withMapState, camera)` — the camera
+        composed directly over the map state. The seam composes the specialist
+        domain entry in between, so the literal moved while the PROPERTY this
+        test names did not: selection, camera and period are still URL-borne,
+        still written by the same single writer, and still composed in the same
+        order.
+
+        MOVED, NOT RELAXED — and the replacement is stronger. It pins the whole
+        chain rather than one link of it, so the domain link cannot later be
+        dropped (which would silently turn a Conflict deep link into the Country
+        entry) and the camera cannot be composed before it.
+      */
+      expect(source).toContain('searchParamsWithDomainEntry(withMapState, domainEntry)');
+      expect(source).toContain('searchParamsWithCamera(withDomain, camera)');
       /*
         SUPERSEDED BY R2. The country is still URL-borne — that is what this
         block checks — but it is now written through the semantic gate, because

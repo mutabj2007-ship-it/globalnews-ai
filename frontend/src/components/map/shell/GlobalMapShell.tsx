@@ -82,6 +82,7 @@ import {
 import { IntelligenceRightRail } from './IntelligenceRightRail';
 import { EvidenceSelectionCard, type FollowRelationship } from './EvidenceSelectionCard';
 import { ContextSummaryPanel } from './ContextSummaryPanel';
+import type { AttentionQueue } from '@/lib/specialist/attentionQueue';
 import { selectionForPlaceResult } from '@/lib/map/geography/semanticGeography';
 import { MapReadout, MapScaleBar } from './MapReadout';
 import { RailDrawer } from './monetization/RailDrawer';
@@ -179,6 +180,23 @@ const WATCH_TOPICS: readonly string[] = [
 
 export interface GlobalMapShellProps {
   readonly language: LanguageCode;
+  /**
+   * MAIN-CONFLICT-D1-DOMAIN-BIND-R1 §2 — the attention queue for
+   * `ContextSummaryPanel`, decided by the caller's bind and passed straight
+   * through.
+   *
+   * THE SHELL DOES NOT BIND, AND MUST NOT. Which domain the reader asked for
+   * is a URL fact, and this component deliberately does not read the URL — the
+   * same rule `initialCamera` above states for the camera. So the caller binds
+   * and hands the result down; the shell stays a renderer.
+   *
+   * OPTIONAL, DEFAULTING TO `null`, WHICH IS COUNTRY'S OWN CONFIGURATION. Every
+   * existing caller that passes nothing keeps exactly today's behaviour, which
+   * is why this is additive rather than a change to the frozen panel: §4 of the
+   * bind authority records that this prop is the only difference across all 35
+   * D1 components, and that the panel already declares, defaults and gates it.
+   */
+  readonly contextQueue?: AttentionQueue | null;
   /**
    * The camera to open with — decoded from the URL by the caller, which owns
    * routing. The shell does not read `window.location`: a component that
@@ -335,6 +353,8 @@ export const HUD_ISLAND =
 
 export function GlobalMapShell({
   language,
+  /* Country's own configuration is the default, so an omitted prop is today. */
+  contextQueue = null,
   selectionDetail,
   initialCamera = WORLD_CAMERA,
   onCameraChange,
@@ -1408,6 +1428,13 @@ export function GlobalMapShell({
           ranked={totals}
           noEvidence={noEvidenceGeography}
           watch={watch}
+          /*
+            MAIN-CONFLICT-D1-DOMAIN-BIND-R1 §4 — "as today, receiving one prop".
+            The panel already declares `queue`, already defaults it to `null`
+            and already gates every specialist row behind `queue !== null`, so
+            passing it here adds no branch and changes no layout.
+          */
+          queue={contextQueue}
           onSelectGeography={(geographyId) =>
             onSelectionChange?.({ kind: 'COUNTRY', id: geographyId })
           }

@@ -1039,6 +1039,21 @@ export const pl: Dictionary = {
         'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT). Base geography: Natural Earth, public domain.',
       railLabel: 'Panel wywiadowczy',
       resetEvidence: 'Poka\u017c wszystkie dowody',
+      /*
+        MAIN-CONFLICT-D1-DOMAIN-BIND-R1 \u00a76 \u2014 patrz en.ts.
+
+        `holdingLabel` jest WYNIKIEM, nie stanem pustym: czynnoscia, za ktora
+        placi czytelnik, jest sprawdzenie. `orderedBy` stwierdza, ze zadne
+        porzadkowanie nie zostalo wykonane \u2014 nazwanie tutaj reguly rankingu
+        oznaczaloby powolanie sie na regule, ktorej produkt nie zastosowal.
+
+        Do przegladu przez L.
+      */
+      conflictQueue: {
+        headerLabel: 'Uwaga: konflikty',
+        holdingLabel: 'Sprawdzono. Nic nie przekracza progu uwagi.',
+        orderedBy: 'Bez uporz\u0105dkowania \u2014 dla tej dziedziny nie wykonano rankingu.',
+      },
       topBar: {
         brand: 'GlobalNews AI',
         brandSub: 'Inteligencja przestrzenna',

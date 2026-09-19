@@ -94,8 +94,42 @@
  *   Energy        unchanged. No surface of any kind.
  *
  * The totals follow the matrix rather than the other way round: 1 ACTIVE,
- * 6 PREVIEW, 2 COMING SOON — 5 clickable, 4 inert.
+ * 6 PREVIEW, 2 COMING SOON — see the variant note below for the clickable count.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * R3 — CONFLICT ENTRY. ONE DESTINATION, AND IT IS A FUNCTION.
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `MAIN-CONFLICT-DISTINCT-ENTRY-SEAM-R1` resolved the one seam R2 reported
+ * PENDING. Conflict's entry is `/map?domain=conflict`, and its destination is
+ * derived from the map shell variant rather than written down:
+ *
+ *   shell   -> '/map?domain=conflict'     the card opens the D1 workspace
+ *   legacy  -> undefined                  the card is inert, through the gate
+ *
+ * NOTHING ELSE CHANGED. States, labels, geometry, slots, order, the other eight
+ * destinations and every navigation rule are exactly as R2 governed them, and
+ * `isModuleNavigable` is not touched.
+ *
+ * SO THE CLICKABLE TOTAL IS VARIANT-DEPENDENT, AND HONESTLY SO. On THIS
+ * lineage — which, unlike H's R3 baseline, also carries the landed Politics
+ * entry — the two variants are:
+ *
+ *   NEXT_PUBLIC_MAP_SHELL off   6 clickable · 3 inert  (world, energy, conflict)
+ *   NEXT_PUBLIC_MAP_SHELL on    7 clickable · 2 inert  (world, energy)
+ *
+ * H's R3 README states 5/4 and 6/3 for the same two variants. That is not a
+ * disagreement: their baseline had no Politics destination, and this one does.
+ * The number is derived from the array in both cases, which is why it moved on
+ * its own rather than needing to be re-agreed.
+ *
+ * THE FLAG IS NOT CHANGED HERE. Turning it on or off is a Product Owner
+ * configuration decision, and the Alpha environment's current value was read,
+ * not set, before this shipped.
  */
+
+import { mapShellVariant } from '@/lib/map/mapShellFlag';
+import { specialistEntryHref } from '@/lib/map/state/mapDomainEntry';
 
 export type IntelligenceModuleState = 'active' | 'preview' | 'comingSoon';
 
@@ -273,25 +307,44 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     destination: '/economy-visual-preview',
   },
   /*
-    ── R2 §7 · CONFLICT DISTINCT ENTRY SEAM = PENDING ──────────────────────
+    ── R3 · THE SEAM IS RESOLVED, AND THE DESTINATION IS A FUNCTION ────────
 
-    §7 asks whether a DETERMINISTIC entry state opens Conflict rather than
-    merely opening the same generic `/map` experience Country already uses.
-    MEASURED, in `lib/map/state/mapState.ts`:
+    R2 §7 reported this PENDING and left the card inert, because there was no
+    deterministic entry distinct from Country's generic `/map`. That was a
+    measurement of what existed, not a rule, and
+    `MAIN-CONFLICT-DISTINCT-ENTRY-SEAM-R1` has since answered it: the canonical
+    Conflict entry is `/map?domain=conflict`, carried by a new pure codec and
+    NOT by a `MapMode` member.
 
-      MAP_MODES        WORLD · EVIDENCE · SITUATIONS · WATCH · CHANGE · SOURCES
-      LIVE_MAP_MODES   WORLD · EVIDENCE
+    MAIN MEASURED WHY `mode=conflict` IS WRONG rather than merely unfashionable:
+    it is the Gate-B1 merge that ruling forbids (`MapMode` is a set of
+    projections, `SpecialistDomainId` a set of domains, and their intersection
+    is zero), `ModeSwitcher` computes `disabled = !isLive || …` without
+    consulting `isActive` so the chip would render checked AND disabled — a
+    one-way door — and the missing `MODE_UNAVAILABLE_REASONS` entry falls
+    through to `TEMPORARILY_UNAVAILABLE`, the one reason that tells a reader to
+    retry something that will never work. `MAP_MODES` and `LIVE_MAP_MODES` are
+    therefore unchanged, and no `/conflict` route exists.
 
-    There is no CONFLICT mode. `SITUATIONS` is the nearest concept and it is not
-    live — the accepted rule is that *"a mode with no data is UNAVAILABLE rather
-    than empty."* The accepted D1 Conflict workspace reaches the reader through
-    the Spatial map shell, which is behind `NEXT_PUBLIC_MAP_SHELL` and defaults
-    OFF. And `/map` without a distinguishing parameter IS the Country entry, so
-    pointing Conflict there would give two cards one destination and make the
-    distinction the Engine exists to draw invisible.
+    THE DESTINATION IS VARIANT-AWARE, AND THAT MAKES THE WRONG THING
+    UNREPRESENTABLE. With `NEXT_PUBLIC_MAP_SHELL` off, `/map` mounts the legacy
+    `WorldMap`: no D1 composition, no HUD, no mode row. A `?domain=conflict`
+    link into that would be a URL claiming Conflict while showing Country —
+    exactly the outcome this round forbids. So `specialistEntryHref` returns
+    `undefined` on `legacy` and the card is inert through the gate that already
+    exists.
 
-    So PREVIEW is preserved and the card is left INERT, per §7's own second
-    branch. No route is invented to make it clickable.
+    NO RENDERER CHANGE AND NO THIRD LOCK. `isModuleNavigable`'s second lock —
+    `Boolean(module.destination)` — does the whole job. Worth recording: Main
+    measured this against baseline `6352d35`, where the gate still read
+    `state === 'active' && …`; under THAT gate a PREVIEW card would have been
+    inert on both variants. R2's widening is what lets this seam land as Main
+    intended, with Conflict PREVIEW and clickable only where the surface can
+    actually answer.
+
+    AND COUNTRY IS UNAFFECTED BY CONSTRUCTION. COUNTRY is not a member of
+    `SpecialistDomainId`, so it cannot acquire the parameter; `/map` is the
+    Country entry precisely because the key is absent.
   */
   {
     id: 'conflict',
@@ -300,6 +353,14 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     accent: 'red',
     icon: 'ShieldAlert',
     state: 'preview',
+    /*
+      Main's INTEGRATION §3, verbatim. Evaluated once at module load, which is
+      correct rather than incidental: `mapShellVariant()` reads the literal
+      `process.env.NEXT_PUBLIC_MAP_SHELL`, and Next inlines that at BUILD time —
+      so this is a build constant, not a runtime branch, and no renderer has to
+      learn about variants.
+    */
+    destination: specialistEntryHref('CONFLICT', mapShellVariant()),
   },
   /*
     ── SLOT 7 · MARKET · COMING SOON -> PREVIEW, AND THE DESTINATION STAYS OFF ─

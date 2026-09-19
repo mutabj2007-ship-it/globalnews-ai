@@ -19,6 +19,8 @@ import type { CountryFeature } from '@/lib/map/countryGeometry';
 import type { HoveredCountry } from '@/components/map/WorldMap';
 import { mapShellVariant } from '@/lib/map/mapShellFlag';
 import { CAMERA_QUERY_KEY, cameraFromSearchParams, searchParamsWithCamera } from '@/lib/map/camera/cameraUrl';
+import { domainEntryFromSearchParams, searchParamsWithDomainEntry } from '@/lib/map/state/mapDomainEntry';
+import { bindConflictD1, contextPanelQueueFor } from '@/lib/map/d1/conflictDomainBind';
 import type { CameraState } from '@/lib/map/camera/cameraState';
 import {
   mapStateFromSearchParams,
@@ -406,6 +408,24 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
       typeof window === 'undefined' ? null : new URLSearchParams(window.location.search),
     ),
   );
+  /*
+    ── MAIN-CONFLICT-DISTINCT-ENTRY-SEAM-R1 §2 · THE READ ────────────────────
+
+    Which specialist intelligence the reader asked for, if any. Same
+    `useState` initialiser discipline and the same `window.location.search` as
+    the decode directly above, for the reason that paragraph already gives:
+    `useSearchParams()` is empty on the first client render unless the route is
+    wrapped in Suspense.
+
+    READ-ONLY IN THIS SEAM. Nothing here sets it. Absent or unreadable decodes
+    to `null`, which IS the Country entry — `'no parameter' and 'the default'
+    are the same thing in both directions`.
+  */
+  const [domainEntry] = useState(() =>
+    domainEntryFromSearchParams(
+      typeof window === 'undefined' ? null : new URLSearchParams(window.location.search),
+    ),
+  );
   const [mode, setMode] = useState<MapMode>(initialMapState.mode);
   const [period, setPeriod] = useState<MapPeriod>(initialMapState.period);
   const [spatialSelection, setSpatialSelection] = useState<MapSelection | null>(
@@ -561,6 +581,37 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
   }, [follows, selectedCountry, watchSet]);
 
   const t = getDictionary(language).map;
+
+  /*
+    ── MAIN-CONFLICT-D1-DOMAIN-BIND-R1 §2 · THE WHOLE OF THE RUNTIME BIND ────
+
+    One call. `domainEntry` is the seam's read above, `mapVariant` the build
+    constant, and the three labels come from the dictionary because the bind
+    refuses to write its own copy.
+
+    THE THREE OUTCOMES, AND WHY NONE OF THEM BRANCHES HERE:
+
+      shell  + domain=conflict   BOUND      the D1 workspace exactly as today,
+                                            plus the Conflict queue in the
+                                            frozen panel
+      shell  + no domain         NO_DOMAIN  Country's /map, unchanged
+      legacy + domain=conflict   REFUSED    D1_WORKSPACE_NOT_MOUNTED — no
+                                            Conflict presentation at all
+
+    `contextPanelQueueFor` returns `null` for BOTH `NO_DOMAIN` and `REFUSED`,
+    which is the value the panel's own docblock calls *"the World/Country
+    domain's own configuration"*. Main's instruction is explicit that no branch
+    on `d1.kind` may choose a panel, and this is why: a caller that forgets the
+    refusal FAILS CLOSED. It renders Country — which is what it actually has —
+    rather than Conflict, which it does not.
+
+    Nothing else about the workspace changes. Mode stays WORLD, the camera does
+    not move, no selection is made, and no Conflict layer is added:
+    `specialistDomain('CONFLICT')` is `null`, so there is no config to draw one
+    from. The assessment rail stays `NOT_MOUNTED_NO_SUBJECT` — its mount
+    condition is a selected subject, and this entry carries no `sel`.
+  */
+  const d1 = bindConflictD1(domainEntry, mapVariant, t.spatial.conflictQueue);
 
   /*
     ══ THE MAP NO LONGER RETRIEVES AT ALL ═══════════════════════════════════
@@ -1054,9 +1105,33 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
       period,
       selection: spatialSelection,
     });
-    const query = searchParamsWithCamera(withMapState, camera).toString();
+    /*
+      ── MAIN-CONFLICT-DISTINCT-ENTRY-SEAM-R1 §2 · THE WRITE ─────────────────
+
+      ONE LINK IN THE EXISTING CHAIN, AND IT ADDS NO WRITER. This is a pure
+      function over `URLSearchParams` — no router, no history — so the rule
+      `c2RuntimeDefects.spec.ts` pins still holds: exactly one writer of the URL
+      on the map route. *"Adding a parameter never adds a writer."*
+
+      AND IT IS NOT OPTIONAL. The writer builds a FRESH `URLSearchParams` above
+      and re-adds only what it is given, so without this line the first writer
+      pass erases `domain` and the Conflict deep link silently becomes the
+      Country entry. Main measured it both ways — 3/3 round-trips survive with
+      the line, 0/3 without — and that control is reproduced in this tree in
+      `conflictEntry.spec.ts`.
+    */
+    const withDomain = searchParamsWithDomainEntry(withMapState, domainEntry);
+    const query = searchParamsWithCamera(withDomain, camera).toString();
     router.replace(query.length > 0 ? `/map?${query}` : '/map', { scroll: false });
-  }, [restored, selectedCountry, category, camera, mode, period, spatialSelection, router]);
+    /*
+      `domainEntry` is listed because the rule is right to ask for it, and
+      listing it changes nothing: it comes from a `useState` whose setter is
+      never destructured, so the value is referentially stable for the
+      component's lifetime and this effect cannot re-fire on its account. The
+      alternative — suppressing the rule — would hide a real dependency to
+      avoid a warning that costs nothing to satisfy honestly.
+    */
+  }, [restored, selectedCountry, category, camera, mode, period, spatialSelection, router, domainEntry]);
 
   /*
     ══ SELECTION ESTABLISHES SCOPE. IT DOES NOT RETRIEVE. ═══════════════════
@@ -1572,6 +1647,13 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
             initialCamera={initialCamera}
             initialCameraRestored={initialCameraRestored}
             onCameraChange={handleCameraChange}
+            /*
+              MAIN-CONFLICT-D1-DOMAIN-BIND-R1 §2 — the one prop, and the whole
+              of what the D1 workspace changes. `null` on NO_DOMAIN and on
+              REFUSED, which is Country's own configuration, so the default
+              path through this line is the path that was already here.
+            */
+            contextQueue={contextPanelQueueFor(d1)}
             /*
               FULL — Part II §1 calls this surface "the reference
               implementation ... Intentionally absent: NOTHING". The shell

@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { INTELLIGENCE_MODULES, isModuleNavigable } from './intelligenceModules';
+import { mapShellVariant } from '@/lib/map/mapShellFlag';
+import { specialistEntryHref } from '@/lib/map/state/mapDomainEntry';
 
 describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', () => {
   it('contains exactly the 9 approved modules', () => {
@@ -64,12 +66,12 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
   });
 
   /*
-    THE THREE INERT CARDS, AND THE REASON EACH IS INERT — stated so that making
-    one clickable requires changing a sentence, not just a field.
+    THE INERT CARDS, AND THE REASON EACH IS INERT — stated so that making one
+    clickable requires changing a sentence, not just a field.
 
       world-intelligence   its surface is not designed yet
       energy               its surface is not designed yet
-      conflict             no deterministic entry distinct from the generic /map
+      conflict             ONLY ON THE LEGACY VARIANT — see below
 
     POLITICS LEFT THIS LIST, AND THE SENTENCE IS WHY. Its reason read *"its
     routes are ABSENT from the converged worktree"* — a MEASUREMENT, and the
@@ -77,13 +79,39 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     `H-POLITICS-ALPHA-VISUAL-CONVERGENCE-R2` answered it: both routes are
     present and `no fake navigation` below re-measures them on disk.
 
-    The other three reasons are unchanged and unanswered, so the three cards
-    stay inert. That is the discipline this list exists for — a card becomes
-    clickable when its stated reason stops being true, and not before.
+    ── CONFLICT IS NOW VARIANT-DEPENDENT, AND THIS TEST SAYS SO OUT LOUD ─────
+
+    `MAIN-CONFLICT-DISTINCT-ENTRY-SEAM-R1` gave Conflict a destination derived
+    from `mapShellVariant()`, which Next inlines from
+    `process.env.NEXT_PUBLIC_MAP_SHELL` at BUILD time. Under Jest that variable
+    is unset, so this module loaded on the LEGACY variant and Conflict is inert
+    here.
+
+    THAT MAKES THE LIST BELOW A FACT ABOUT THIS BUILD, NOT ABOUT THE PRODUCT,
+    and writing it as though it were fixed would be the dishonest version: the
+    Alpha environment builds with the flag ON, where Conflict is clickable and
+    only two cards are inert. So the list is asserted against the variant this
+    build actually has, the variant is named in the failure message, and the
+    OTHER variant is asserted through the pure function — which is the only
+    part of this that a test process can observe both ways.
   */
-  it('three cards are inert, and none of them names a destination', () => {
+  it('the inert cards are exactly those with no surface, for THIS build variant', () => {
+    const variant = mapShellVariant();
     const inert = INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m)).map((m) => m.id).sort();
-    expect(inert).toEqual(['conflict', 'energy', 'world-intelligence']);
+    const expected = variant === 'shell'
+      ? ['energy', 'world-intelligence']
+      : ['conflict', 'energy', 'world-intelligence'];
+    expect(`${variant}: ${inert.join(',')}`).toBe(`${variant}: ${expected.join(',')}`);
+
+    /*
+      BOTH VARIANTS, THROUGH THE PURE FUNCTION. This is variant-independent and
+      therefore the real guard: the shell entry is the distinct Conflict
+      address, and the legacy entry is nothing at all — never `/map`, which
+      would collapse Conflict into Country.
+    */
+    expect(specialistEntryHref('CONFLICT', 'shell')).toBe('/map?domain=conflict');
+    expect(specialistEntryHref('CONFLICT', 'legacy')).toBeUndefined();
+    expect(specialistEntryHref('CONFLICT', 'shell')).not.toBe('/map');
     for (const moduleConfig of INTELLIGENCE_MODULES) {
       if (!isModuleNavigable(moduleConfig)) expect(moduleConfig.destination).toBeUndefined();
     }
@@ -242,13 +270,22 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     moved position during the convergence.
   */
   it('the full nine-row truth: slot order, identity, state and destination', () => {
+    /*
+      Conflict's row is the one that reads differently per build — `-` on
+      legacy, `/map?domain=conflict` on shell. Everything else in this matrix
+      is fixed, so the variant is substituted into the single row that depends
+      on it rather than the whole assertion being loosened.
+    */
+    const conflictRow = mapShellVariant() === 'shell'
+      ? 'conflict:preview:/map?domain=conflict'
+      : 'conflict:preview:-';
     expect(INTELLIGENCE_MODULES.map((m) => `${m.id}:${m.state}:${m.destination ?? '-'}`)).toEqual([
       'security:preview:/security-visual-preview',
       'world-intelligence:comingSoon:-',
       'country-intelligence:active:/map',
       'politics:preview:/politics-visual-preview',
       'economy:preview:/economy-visual-preview',
-      'conflict:preview:-',
+      conflictRow,
       'market:preview:/market',
       'humanitarian:preview:/humanitarian',
       'energy:comingSoon:-',
@@ -260,23 +297,32 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     R2 §12: *"Do not preserve R1's 2 ACTIVE / 2 CLICKABLE count merely because it
     was previously measured. The count must follow the corrected reality."*
   */
-  it('the totals follow the matrix: 1 active, 6 preview, 2 coming soon, 6 clickable', () => {
+  it('the totals follow the matrix, and the clickable count follows the variant', () => {
     /*
-      CLICKABLE MOVED 5 -> 6, AND NOTHING ELSE DID. Landing the Politics package
-      gave an existing PREVIEW card a destination; it did not add a module,
-      change a badge, or open a product route. So the state census is untouched
-      and only the derived clickable count follows — which is exactly the shape
-      R2 §12 asks for: the count follows the corrected reality rather than being
-      preserved because it was previously measured.
+      THE STATE CENSUS IS FIXED; ONLY THE DERIVED CLICKABLE COUNT MOVES.
+
+      Two rounds have now moved it, and neither touched a badge. Politics took
+      it 5 -> 6 by gaining a destination for a surface that already existed.
+      Conflict makes it variant-dependent: 6 on legacy, 7 on shell, because
+      `specialistEntryHref` returns `undefined` where the D1 workspace is not
+      mounted.
+
+      1 ACTIVE / 6 PREVIEW / 2 COMING SOON is true on both variants, which is
+      the point — the badge describes the DATA and never the navigation, so a
+      build flag cannot move it.
     */
     const by = (state: string): number => INTELLIGENCE_MODULES.filter((m) => m.state === state).length;
     expect({
       active: by('active'),
       preview: by('preview'),
       comingSoon: by('comingSoon'),
-      clickable: INTELLIGENCE_MODULES.filter(isModuleNavigable).length,
       total: INTELLIGENCE_MODULES.length,
-    }).toEqual({ active: 1, preview: 6, comingSoon: 2, clickable: 6, total: 9 });
+    }).toEqual({ active: 1, preview: 6, comingSoon: 2, total: 9 });
+
+    const variant = mapShellVariant();
+    const clickable = INTELLIGENCE_MODULES.filter(isModuleNavigable).length;
+    expect(`${variant}: ${clickable} clickable`)
+      .toBe(`${variant}: ${variant === 'shell' ? 7 : 6} clickable`);
   });
 
   it('every module has a dictionaryKey — no hardcoded English title/description in the config itself', () => {

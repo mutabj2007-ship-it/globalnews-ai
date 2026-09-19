@@ -1290,6 +1290,29 @@ export const en = {
         'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT). Base geography: Natural Earth, public domain.',
       railLabel: 'Intelligence panel',
       resetEvidence: 'Reset evidence',
+      /*
+        ── MAIN-CONFLICT-D1-DOMAIN-BIND-R1 §6 · THE THREE STRINGS THE BIND OWES ─
+
+        The bind refuses to invent copy: a `lib/` module writing its own English
+        would be a second copy authority with no Polish half. So the three
+        labels live here, beside every other string this surface speaks.
+
+        `holdingLabel` IS A RESULT, NEVER AN EMPTY STATE. Shared Specialist
+        Addendum §15, and `attentionQueue.ts` fixes `emptyIsResult: true` so a
+        domain cannot configure it back. "Nothing yet" would turn the product's
+        paid output into an absence; what the reader bought is the checking.
+
+        `orderedBy` MUST NOT NAME A RANKING RULE THE PRODUCT DID NOT APPLY.
+        `MAIN-CONFLICT-RUNTIME-CONTRACT-R1` refused MCR-15 (`attentionRank`) —
+        no producer exists — so this says that no upstream ordering ran. Naming
+        "severity, then change recency" here would cite a rule nothing executed,
+        which is precisely the claim §6 forbids.
+      */
+      conflictQueue: {
+        headerLabel: 'Conflict attention',
+        holdingLabel: 'Checked. Nothing meets the attention threshold.',
+        orderedBy: 'Not ordered — no upstream ranking has run for this domain.',
+      },
       topBar: {
         brand: 'GlobalNews AI',
         brandSub: 'Spatial intelligence',
