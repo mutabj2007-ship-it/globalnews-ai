@@ -1844,6 +1844,8 @@ export const en = {
           UNDEFINED: 'No definition is encoded for this region',
         },
         definitionHeading: 'Definition',
+        /* R2-B §7 — a product declaration is not a published definition. */
+        declaredByHeading: 'Declared by',
         membersHeading: 'Members',
         membersUnknown: 'Not published',
         noDefinitionSelected: 'No definition is asserted',

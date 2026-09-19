@@ -45,6 +45,18 @@ export interface RegionCardLabels {
   readonly heading: string;
   readonly types: Readonly<Record<RegionType, string>>;
   readonly definitionHeading: string;
+  /**
+   * THE BASIS ROW'S OTHER HEADING — R2-B §7.
+   *
+   * `definitionHeading` reads "Definition", and for a published region the
+   * value beneath it is G's own dataset attribution: an EXTERNAL authority's
+   * published basis. A product-governed region puts
+   * "GlobalNews AI Alpha regional coverage baseline (alpha-1)" in the same
+   * slot, and under that heading it reads as though some outside body of that
+   * name had defined the region. It is the product's own declaration, and the
+   * heading now says so.
+   */
+  readonly declaredByHeading: string;
   readonly membersHeading: string;
   readonly membersUnknown: string;
   readonly noDefinitionSelected: string;
@@ -168,7 +180,28 @@ export function RegionIdentityCard({
         {labels.types[region.regionType]}
       </p>
 
-      <Row heading={labels.definitionHeading}>
+      {/*
+        ══ A DECLARATION IS NOT A PUBLISHED DEFINITION — R2-B §7 ════════════
+
+        The same row carries two different kinds of claim, and until now it
+        labelled both "Definition":
+
+            STATISTICAL   "UN Statistics Division … (M49)"   an outside standard
+            GOVERNED      "GlobalNews AI Alpha regional      this product's own
+                           coverage baseline (alpha-1)"      declaration
+
+        The second is not a definition anyone published. It is the Product
+        Owner's coverage baseline for Alpha, and naming it under "Definition"
+        borrows the authority of the first. The type line above already
+        classifies the region correctly; this makes the row beneath it agree.
+      */}
+      <Row
+        heading={
+          region.regionType === 'GOVERNED'
+            ? labels.declaredByHeading
+            : labels.definitionHeading
+        }
+      >
         {/*
           G'S OWN SENTENCE, VERBATIM AND UNEDITED.
 
@@ -179,8 +212,25 @@ export function RegionIdentityCard({
           paraphrasing it here would put words in a source's mouth.
         */}
         <p data-gn="region-definition">{region.definition}</p>
-        {/* RSC-1.1: absent is a state, and it is stated rather than left blank. */}
-        {region.definitionId === null && (
+        {/*
+          RSC-1.1: absent is a state, and it is stated rather than left blank.
+
+          ── BUT ONLY WHERE THERE IS SOMETHING TO CHOOSE — R2-B §7 ──────────
+
+          "No definition is asserted" means NO ONE OF THE PUBLISHED ALTERNATIVES
+          HAS BEEN SELECTED. That sentence needs alternatives to be true, and
+          G-REG-3 supplies them only for supranational regions an outside
+          authority admitted.
+
+          A GOVERNED region has an explicit declared member list and nothing to
+          choose between, and an ADMINISTRATIVE one is a single ISO 3166-2
+          subdivision — there is no second reading of what Kigali Province is.
+          Printing the line for either told the reader that something was
+          missing when nothing was.
+        */}
+        {region.definitionId === null &&
+          region.regionType !== 'GOVERNED' &&
+          region.regionType !== 'ADMINISTRATIVE' && (
           <p data-gn="region-definition-absent" className="mt-1 text-sp-ink-3">
             {labels.noDefinitionSelected}
           </p>

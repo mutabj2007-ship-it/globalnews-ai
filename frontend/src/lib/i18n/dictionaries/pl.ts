@@ -1534,6 +1534,8 @@ export const pl: Dictionary = {
           UNDEFINED: 'Dla tego regionu nie zakodowano definicji',
         },
         definitionHeading: 'Definicja',
+        /* R2-B §7 — deklaracja produktu to nie opublikowana definicja. */
+        declaredByHeading: 'Zadeklarowane przez',
         membersHeading: 'Cz\u0142onkowie',
         membersUnknown: 'Nieopublikowane',
         noDefinitionSelected: 'Nie przyj\u0119to \u017cadnej definicji',
