@@ -96,3 +96,5 @@ export * from './official-data/transport';
 export * from './official-data/parser-registry';
 export * from './official-data/admission-evaluator';
 export * from './humanitarian/spatial-geometry';
+export * from './humanitarian/geometry-authority';
+export * from './humanitarian/authority-cadence';

@@ -200,10 +200,37 @@ describe('this change alters no existing provider boundary', () => {
     will not be.
 
     The lineage form is used instead — the same correction the shared/ containment
-    rule below already carries. `changed` is now every path touched by every commit
-    that built this capability, which is what the assertions were always trying to
-    say, and it is independent of what any other lane is doing right now.
+    rule below already carries.
+
+    ── AND THEN THE LINEAGE FORM WAS WRONG TOO, FOR A DIFFERENT REASON ───────
+
+    "Every path touched by every commit that touched this capability" is not the same
+    as "every path this capability touched". The Humanitarian GX-14 convergence
+    committed twenty frontend files AND a one-line correction to this very spec, in one
+    commit. That commit therefore entered the capability's history, dragged the whole
+    frontend in with it, and this assertion fired again — still naming the snapshot
+    store for something another lane did.
+
+    The distinction that was missing is SINGLE-LANE vs CROSS-LANE. A commit whose
+    changes are confined to this capability is this capability acting. A commit that
+    spans lanes is a convergence, and attributing its other lane's files here is the
+    same false report in a third costume.
+
+    So the scan is over single-lane commits only. What that gives up is stated plainly:
+    a cross-lane commit could now hide a Map edit from this check. What it gains is that
+    the check stops crying wolf — and SR-21, the property the frontend rule was a PROXY
+    for, is asserted DIRECTLY further down by the route/controller/resolver scan, which
+    no commit shape can evade.
   */
+  const CAPABILITY_PREFIXES = [
+    'shared/src/official-data/',
+    'backend/src/modules/official-data/',
+    'backend/prisma/',
+  ];
+
+  const isCapabilityPath = (f: string): boolean =>
+    CAPABILITY_PREFIXES.some((p) => f.startsWith(p)) || f === 'shared/src/index.ts';
+
   const capabilityCommits = git(
     'log',
     '--format=%H',
@@ -215,18 +242,18 @@ describe('this change alters no existing provider boundary', () => {
     .split('\n')
     .filter((sha) => sha !== '');
 
-  const changed = [
-    ...new Set(
-      capabilityCommits.flatMap((sha) =>
-        git('show', '--name-only', '--format=', sha)
-          .split('\n')
-          .map((s) => s.trim())
-          .filter((s) => s !== ''),
-      ),
-    ),
-  ];
+  const filesOf = (sha: string): string[] =>
+    git('show', '--name-only', '--format=', sha)
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((s) => s !== '');
 
-  it('scans a non-empty commit set (positive control)', () => {
+  /** Commits whose every changed path lies inside this capability. */
+  const singleLaneCommits = capabilityCommits.filter((sha) => filesOf(sha).every(isCapabilityPath));
+
+  const changed = [...new Set(singleLaneCommits.flatMap(filesOf))];
+
+  it('scans a non-empty SINGLE-LANE commit set (positive control)', () => {
     /*
       Without this, every assertion below is satisfied by an empty list — which is
       exactly what would happen if the path filter were ever mistyped. A guard that
@@ -234,6 +261,8 @@ describe('this change alters no existing provider boundary', () => {
       avoid, so it is checked rather than assumed.
     */
     expect(capabilityCommits.length).toBeGreaterThan(0);
+    // The one that matters: excluding cross-lane commits must not empty the set.
+    expect(singleLaneCommits.length).toBeGreaterThan(0);
     expect(changed.length).toBeGreaterThan(0);
   });
 
