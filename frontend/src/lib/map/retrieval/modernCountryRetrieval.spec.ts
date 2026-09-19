@@ -97,7 +97,12 @@ describe('D · the governed authority has a production caller — G-2', () => {
     expect(action).toContain("COUNTRY_READ_COST_CLASS !== 'API_ORIGIN_READ'");
     /* the browser calls OUR api and nothing else */
     const client = executable(raw('lib', 'api', 'countryApi.ts'));
-    expect(client).toContain('${API_BASE_URL}/news/country/');
+    /*
+      The base is now resolved per execution context rather than being one
+      module constant — see `countryApiBase` and the guard below. The endpoint
+      this asserts is unchanged, and it is still OUR path.
+    */
+    expect(client).toContain('${countryApiBase()}/news/country/');
     for (const forbidden of ['openai', 'gnews.io', '/analysis/news']) {
       expect(`${forbidden}: ${client.toLowerCase().includes(forbidden)}`).toBe(`${forbidden}: false`);
     }
@@ -349,5 +354,40 @@ describe('G · select is select, and load is load', () => {
         .toBe(`${key} present in both: true`);
       expect(`${key} differs: ${en[key] !== pl[key]}`).toBe(`${key} differs: true`);
     }
+  });
+});
+
+/* ═══ THE REQUEST MUST ACTUALLY REACH OUR API FROM A BROWSER ═════════════ */
+
+describe('C · the browser sends the read to an origin that exists', () => {
+  const api = raw('lib', 'api', 'countryApi.ts');
+
+  it('an explicitly configured origin still wins, in every context', () => {
+    /*
+      The case that already worked must keep working identically — this is the
+      whole reason the fix is a precedence change rather than a replacement.
+    */
+    expect(api).toContain('if (typeof configured === \'string\' && configured.length > 0) return configured;');
+  });
+
+  it('with no configured origin, the BROWSER goes same-origin and the SERVER does not', () => {
+    /*
+      MEASURED ON ALPHA, which sets no `NEXT_PUBLIC_API_URL`: the old constant
+      put `http://localhost:4000` into the built browser chunk, so a reader
+      pressing the control would have called their own machine. The server
+      default is untouched, because on the server that default is correct.
+    */
+    expect(api).toContain("return typeof window === 'undefined' ? 'http://localhost:4000' : '';");
+  });
+
+  it('and the same-origin path is a real route, not an assumption', () => {
+    /*
+      `/news/:path*` is an existing rewrite in `next.config.mjs` — the same one
+      that serves `/news/country/KEN` on Alpha today. If it were ever removed,
+      the browser branch above would 404 and this assertion is what would say
+      why.
+    */
+    const config = readFileSync(join(SRC, '..', 'next.config.mjs'), 'utf-8');
+    expect(config).toContain("source: '/news/:path*'");
   });
 });
