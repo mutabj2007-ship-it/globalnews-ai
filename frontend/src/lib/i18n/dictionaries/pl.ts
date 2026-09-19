@@ -1031,9 +1031,11 @@ export const pl: Dictionary = {
       /*
         NIE T\u0141UMACZONE. To jest nota licencyjna CC BY 4.0, a nie tekst
         interfejsu \u2014 przet\u0142umaczona nota nie jest not\u0105, o kt\u00f3r\u0105 prosi licencja.
+
+        R2-B \u00a79 \u2014 przywr\u00f3cono URI licencji, kt\u00f3rego brakowa\u0142o. Patrz `en.ts`.
       */
       attribution:
-        'Contains data from the GeoNames geographical database, licensed CC BY 4.0. Subdivision data from iso3166-2-db (MIT). Base geography: Natural Earth, public domain.',
+        'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT). Base geography: Natural Earth, public domain.',
       railLabel: 'Panel wywiadowczy',
       resetEvidence: 'Poka\u017c wszystkie dowody',
       topBar: {

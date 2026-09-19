@@ -1264,9 +1264,29 @@ export const en = {
         CC BY 4.0 REQUIRES THIS WHEREVER THE DATA IS PRESENTED. G's §8 supplies
         the string; it is reproduced rather than paraphrased, because a licence
         notice that has been reworded is not the notice the licence asked for.
+
+        ── R2-B §9 — THE URI WAS MISSING, AND THE COMMENT ABOVE SAID WHY THAT
+           MATTERED ──────────────────────────────────────────────────────────
+
+        Compared against the publisher's own string, fetched from the deployed
+        backend while classifying the licences:
+
+            published   "... licensed CC BY 4.0
+                         (https://creativecommons.org/licenses/by/4.0/).
+                         Subdivision data from iso3166-2-db (MIT)."
+            rendered    "... licensed CC BY 4.0. Subdivision data from
+                         iso3166-2-db (MIT). ..."
+
+        CC BY 4.0 §3(a)(1)(v) asks for "a URI or hyperlink to the Public
+        License to the extent reasonably practicable", and dropping it is
+        exactly the rewording this comment already forbade. Restored verbatim.
+
+        The Natural Earth sentence is an ADDITION to G's string, not an edit of
+        it: Natural Earth is public domain and owes no notice, and naming it is
+        courtesy rather than compliance.
       */
       attribution:
-        'Contains data from the GeoNames geographical database, licensed CC BY 4.0. Subdivision data from iso3166-2-db (MIT). Base geography: Natural Earth, public domain.',
+        'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT). Base geography: Natural Earth, public domain.',
       railLabel: 'Intelligence panel',
       resetEvidence: 'Reset evidence',
       topBar: {
