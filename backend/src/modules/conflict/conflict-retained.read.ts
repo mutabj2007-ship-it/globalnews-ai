@@ -108,6 +108,7 @@ export class ConflictRetainedReadService {
       countryIso3: countryIso3 ?? null,
       requestedDays: days ?? null,
       observations,
+      mapEvents: visible,
       matchedBeforeLimit,
       truncated: matchedBeforeLimit > observations.length,
     };
