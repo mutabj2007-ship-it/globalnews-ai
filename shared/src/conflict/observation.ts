@@ -605,9 +605,31 @@ export const CONFLICT_OBSERVATION_CARRIES_NO_NARRATIVE: ConflictObservationCarri
  * without this contract changing. `UCDP_GED` appears once, as an AUTHORITY IDENTIFIER
  * for namespacing identity — which is not a field shape and is not a claim about one.
  */
+/**
+ * CF-D4 CLOSED on Alpha, 2026-09-20.
+ *
+ * Captured directly from UCDP Candidate GED 26.0.7 over HTTPS:
+ *   Content-Type  text/csv
+ *   bytes         1,357,690
+ *   sha256        9fc2c6dd85eee91845512e8ef1055281d9fd028fb98748a6f2a27c6e8aa8c562
+ *   columns       49
+ *
+ * The provider adapter pins the exact captured header; this flag therefore means
+ * "real bytes measured", not "the codebook looked plausible".
+ */
+export const CONFLICT_SCHEMA_CAPTURE_EVIDENCE = Object.freeze({
+  UCDP_GED: Object.freeze({
+    datasetVersion: '26.0.7',
+    capturedAt: '2026-09-20',
+    byteLength: 1_357_690,
+    sha256: '9fc2c6dd85eee91845512e8ef1055281d9fd028fb98748a6f2a27c6e8aa8c562',
+    columnCount: 49,
+  }),
+});
+
 export const CONFLICT_SCHEMA_CONFIRMED_BY_CAPTURE: Readonly<
   Record<ConflictUpstreamAuthority, boolean>
-> = Object.freeze({ UCDP_GED: false });
+> = Object.freeze({ UCDP_GED: true });
 
 export class ConflictSchemaNotConfirmed extends Error {}
 
