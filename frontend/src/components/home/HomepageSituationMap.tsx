@@ -108,15 +108,7 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
             {/* Vignette — darkened edge falloff so the map reads as a layered intelligence surface, not a flat rectangle. */}
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(2,7,13,0.55)_100%)]" aria-hidden="true" />
 
-            {/* Category legend — CTO Frontend Visual Revision, Section 16. Real taxonomy only. */}
-            <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1 rounded-lg border border-cyan-500/25 bg-void/85 px-3 py-2 backdrop-blur-sm">
-              {Object.entries(CATEGORY_COLORS).map(([category, colorClass]) => (
-                <span key={category} className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wide text-ink-tertiary">
-                  <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${colorClass}`} />
-                  {categoryLabels[category] ?? category}
-                </span>
-              ))}
-            </div>
+
           </div>
 
           <div className="relative flex flex-col overflow-hidden rounded-2xl border border-cyan-500/25 bg-surface/90 p-5 backdrop-blur-sm">
