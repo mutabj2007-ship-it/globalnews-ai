@@ -1,0 +1,98 @@
+import type { JSX } from 'react';
+import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { ScriptRun } from '@/lib/typography/runBoundary';
+import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
+import type { LanguageCode } from '@globalnews-ai/shared';
+import { EnergyShell } from '@/components/energy/EnergyShell';
+import { ENERGY_GOVERNED_FRAME } from '@/lib/energy/energyGoverned';
+import { ENERGY_DESIGN_FIXTURE_FRAME } from '@/lib/energy/energyFixtures';
+import { energyStateFromSearchParams } from '@/lib/energy/energyUrl';
+import { energyStrings, type EnergyLocale } from '@/lib/energy/energyStrings';
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * H01 — `/energy`, AND THERE IS NO SECOND ENERGY ROUTE
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ *   "implement ONE ROUTE FAMILY (`/energy`) with substrate, subject and window
+ *    as URL-encoded state — NOT /energy-a, /energy-b, /energy-c, /energy-d."
+ *
+ * The 25 board states resolve to one shell, three substrates, one HUD, one
+ * drawer, one lens, one sheet and two overlays. This file is the only Energy
+ * page in the tree, and `energyVisualFrame.spec.ts` asserts that by walking the
+ * route directory rather than by trusting this comment.
+ *
+ * ── ZERO PROVIDERS AND ZERO MODELS, BY CONSTRUCTION ──────────────────────
+ *
+ * This Server Component AWAITS NOTHING AND FETCHES NOTHING. There is no read
+ * model, no provider client, no model call and no `fetch` anywhere in the
+ * Energy module graph — the data is two static modules, and the substrate's
+ * geometry is a bundled import rather than a tile request. So
+ *
+ *     "entering /energy must execute 0 providers and 0 models"
+ *
+ * is a property of the module graph, not a discipline applied to it. The
+ * measured proof ships in the package; the guard suite walks the graph and
+ * fails on the first network-capable import.
+ *
+ * ── WHY THE PAGE IS `noindex` ────────────────────────────────────────────
+ *
+ * The Engine card for Energy is COMING SOON and this lane does not change it —
+ * card state is an acceptance decision, not an implementation one. An
+ * indexable page would be a public claim that Energy Intelligence is open,
+ * which is precisely the claim the card is currently and correctly refusing to
+ * make. Market's route made the same choice for the same reason.
+ */
+export const metadata: Metadata = {
+  title: 'Energy Intelligence',
+  robots: { index: false, follow: false },
+};
+
+function energyLanguage(): LanguageCode {
+  const cookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
+  return cookie !== undefined && isActiveLanguageCode(cookie) ? cookie : 'en';
+}
+
+/**
+ * Read the cookie once, express it in each type. `LanguageCode` carries `sw`
+ * and `rw`; `DisplayLocale` carries `de` and `pt`; neither contains the other,
+ * and `SELECTABLE_LOCALES` is already the derived intersection. The pattern is
+ * the platform's, reused rather than reinvented.
+ */
+function energyLocale(): EnergyLocale {
+  const language = energyLanguage();
+  return (SELECTABLE_LOCALES.find((locale) => locale === language) ?? 'en') as EnergyLocale;
+}
+
+export default function EnergyPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}): JSX.Element {
+  const params = new URLSearchParams();
+  Object.entries(searchParams ?? {}).forEach(([key, value]) => {
+    if (typeof value === 'string') params.set(key, value);
+    else if (Array.isArray(value) && value.length > 0) params.set(key, value[0]);
+  });
+
+  const urlState = energyStateFromSearchParams(params);
+  const locale = energyLocale();
+
+  /*
+    WHICH DATA SET FEEDS THE ONE FRAME.
+
+    `governed` is the default and therefore what `/energy` alone serves: no
+    Energy source is active, no Energy record has landed, and every zone states
+    its own absence. The design's fixtures are reachable only by asking for them
+    explicitly, and the frame then carries the DESIGN FIXTURE DATA banner for as
+    long as they are on screen.
+  */
+  const data = urlState.frame === 'design-fixture' ? ENERGY_DESIGN_FIXTURE_FRAME : ENERGY_GOVERNED_FRAME;
+
+  return (
+    <ScriptRun locale={locale} step="wrapping" as="div">
+      <EnergyShell data={data} strings={energyStrings(locale)} urlState={urlState} locale={locale} />
+    </ScriptRun>
+  );
+}

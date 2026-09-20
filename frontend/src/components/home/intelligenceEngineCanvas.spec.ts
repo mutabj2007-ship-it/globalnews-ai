@@ -101,17 +101,23 @@ describe('M66.5 — capability truth derives from the canonical configuration', 
     expect(active).toEqual(['country-intelligence']);
   });
 
-  it('six PREVIEW and two COMING SOON — the badge follows the surface, not the card', () => {
+  it('seven PREVIEW and one COMING SOON — the badge follows the surface, not the card', () => {
     expect(INTELLIGENCE_MODULES.filter((m) => m.state === 'preview').map((m) => m.id).sort()).toEqual([
       'conflict',
       'economy',
+      'energy',
       'humanitarian',
       'market',
       'politics',
       'security',
     ]);
+    /*
+      Energy moved COMING SOON -> PREVIEW with H-ENERGY-PARTXI-IMPLEMENTATION-R4.
+      That is the one direction a badge may move on its own: COMING SOON asserts
+      no surface exists, and one now does. World is the last card for which that
+      assertion is still true.
+    */
     expect(INTELLIGENCE_MODULES.filter((m) => m.state === 'comingSoon').map((m) => m.id).sort()).toEqual([
-      'energy',
       'world-intelligence',
     ]);
   });
@@ -205,13 +211,14 @@ describe('M66.5 — only legitimately navigable modules are interactive', () => 
     expect(navigable.map((m) => m.id).sort()).toEqual([
       'country-intelligence',
       'economy',
+      'energy',
       'humanitarian',
       'market',
       'politics',
       'security',
     ]);
     const REAL = ['/map', '/market', '/humanitarian', '/security-visual-preview', '/economy-visual-preview',
-      '/politics-visual-preview'];
+      '/politics-visual-preview', '/energy'];
     for (const moduleItem of navigable) {
       expect(`${moduleItem.id}: ${REAL.includes(moduleItem.destination as string)}`)
         .toBe(`${moduleItem.id}: true`);
@@ -219,7 +226,7 @@ describe('M66.5 — only legitimately navigable modules are interactive', () => 
     /* and each route really is on disk, not merely in this list */
     const APP = join(__dirname, '..', '..', 'app');
     for (const dir of ['map', 'market', 'humanitarian', 'security-visual-preview', 'economy-visual-preview',
-      'politics-visual-preview']) {
+      'politics-visual-preview', 'energy']) {
       expect(`${dir}: ${existsSync(join(APP, dir, 'page.tsx'))}`).toBe(`${dir}: true`);
     }
     /*
@@ -271,8 +278,9 @@ describe('M66.5 — only legitimately navigable modules are interactive', () => 
     const set = INTELLIGENCE_MODULES.map((m) => m.destination).filter(Boolean);
     expect(new Set(set).size).toBe(set.length);
 
-    /* The three with no surface to name carry no destination at all. */
-    for (const id of ['world-intelligence', 'energy', 'conflict']) {
+    /* The two with no surface to name carry no destination at all. Energy left
+       this list when R4 supplied /energy; World and Conflict have not. */
+    for (const id of ['world-intelligence', 'conflict']) {
       expect(`${id}: ${destinationOf(id) ?? '-'}`).toBe(`${id}: -`);
     }
   });
@@ -856,7 +864,7 @@ describe('M66.5 — released module card (GN-CD-148/149/156)', () => {
       `five modules produce a real link` above. The gate itself is unchanged,
       and the inert branch is still asserted to carry no affordance.
     */
-    expect(INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m))).toHaveLength(3);
+    expect(INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m))).toHaveLength(2);
   });
 });
 
@@ -1193,6 +1201,7 @@ describe('DC-02 — the one in-page module actually announces its arrival', () =
     const destinations = INTELLIGENCE_MODULES.map((m) => m.destination).filter(Boolean);
     expect([...new Set(destinations)].sort()).toEqual([
       '/economy-visual-preview',
+      '/energy',
       '/humanitarian',
       '/map',
       '/market',

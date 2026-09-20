@@ -2275,7 +2275,24 @@ export const en = {
       energy: {
         title: 'Energy Intelligence',
         shortTitle: 'Energy Intel',
-        description: 'Planned: energy supply, infrastructure and price signals are not yet available.',
+        /*
+          PRICE IS MARKET'S REFERENCE, NOT ENERGY'S — and the card must not claim it.
+
+          The previous sentence named pricing as one of Energy's three subjects.
+          Part XI gives Energy supply, infrastructure and flow; PRICE reference
+          semantics are Market-owned, and a second card claiming them would put
+          two modules in front of one number.
+
+          The banned phrase is deliberately NOT quoted here. Energy's own guard
+          scans this entry as raw text, so writing the words down — even to
+          explain their removal — would re-introduce exactly what it forbids,
+          and would leave them sitting one uncomment away from being true again.
+
+          The badge also moves COMING SOON -> PREVIEW with this landing, so the
+          sentence stops saying 'not yet available' about a surface that now
+          opens. What is still absent is the DATA, which is what it now says.
+        */
+        description: 'Early-stage: energy supply, infrastructure and flow, ahead of its dedicated data.',
       },
     },
   },

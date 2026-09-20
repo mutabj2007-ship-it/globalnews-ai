@@ -579,7 +579,34 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       THE COUNT MOVING IS STILL THE DISCLOSURE. A route that did not move this number would
       be a route nobody had to decide about.
     */
-    expect(pages).toHaveLength(41);
+    /*
+      PART XI · ONE MORE ROUTE — AND THE FIRST PREVIEW THAT IS THE PRODUCT ADDRESS.
+
+      `/energy`, landed by `H-ENERGY-PARTXI-IMPLEMENTATION-R4`.
+
+      41 -> 42 ON THIS LINEAGE, DERIVED FROM THE WALK ABOVE, not adopted from a delivered
+      file. R4 ships no `seoFoundation.spec.ts`, so there was no count to take; 42 is this
+      lineage's own 41 plus the single route file Energy adds.
+
+      WHAT MAKES THIS ONE DIFFERENT FROM EVERY PREVIEW PAIR ABOVE. Security, Economy and
+      Politics each hold a governed product route SHUT behind data conditions and point their
+      card at a `-visual-preview` address instead. Energy has no such split: `/energy` IS the
+      product address, opened directly as a provider-free PREVIEW. So there is no second
+      address here, and no `/energy-visual-preview` twin was invented to manufacture symmetry.
+
+      THAT IS SAFE BECAUSE THE FRAME CARRIES NO DATA AND NO WAY TO GET ANY:
+
+        - 0 provider · 0 model · 0 external tile, asserted by H's 129 carried guards, which
+          pass unchanged on the landed bytes here;
+        - the card is PREVIEW and never ACTIVE, so Home says there is something to inspect and
+          never that an Energy intelligence is working;
+        - Energy providers stay dormant — nothing in this landing activates one, and the
+          route renders governed absence rather than an empty dataset.
+
+      `robots` is the Energy route's own and is asserted by H's guards rather than restated
+      here, which is where that assertion already lives.
+    */
+    expect(pages).toHaveLength(42);
     expect(pages).toContain('/');
     /*
       AND `/economy` IS ASSERTED ABSENT, HERE, BESIDE THE COUNT.
@@ -596,7 +623,10 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
     for (const added of ['/market', '/market/compact',
       '/economy-visual-preview', '/economy-visual-preview/compact',
       '/security-visual-preview', '/security-visual-preview/compact',
-      '/politics-visual-preview', '/politics-visual-preview/compact']) {
+      '/politics-visual-preview', '/politics-visual-preview/compact',
+      /* Energy has no compact twin route — its compact behaviour is one route rendering
+         responsively, which H's guards measure at 390px rather than at a second address. */
+      '/energy']) {
       expect(`${added}: ${pages.includes(added)}`).toBe(`${added}: true`);
     }
     for (const known of ['/map', '/search', '/privacy', '/terms', '/source-policy', '/support', '/workspace', '/history']) {

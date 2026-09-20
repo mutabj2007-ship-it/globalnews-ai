@@ -49,20 +49,29 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     expect(activeIds).toEqual(['country-intelligence']);
   });
 
-  it('six modules are preview', () => {
+  it('seven modules are preview', () => {
     const previewIds = INTELLIGENCE_MODULES.filter((m) => m.state === 'preview')
       .map((m) => m.id)
       .sort();
     expect(previewIds).toEqual(
-      ['conflict', 'economy', 'humanitarian', 'market', 'politics', 'security'],
+      ['conflict', 'economy', 'energy', 'humanitarian', 'market', 'politics', 'security'],
     );
   });
 
-  it('two modules are comingSoon — the two with no surface of any kind', () => {
+  it('ONE module is comingSoon — the last with no surface of any kind', () => {
     const comingSoonIds = INTELLIGENCE_MODULES.filter((m) => m.state === 'comingSoon')
       .map((m) => m.id)
       .sort();
-    expect(comingSoonIds).toEqual(['energy', 'world-intelligence']);
+    /*
+      ENERGY LEFT THIS LIST, AND THE SENTENCE IS WHY. Its reason read that it
+      had 'no surface of any kind: no route, no preview'. That was a
+      MEASUREMENT, and H-ENERGY-PARTXI-IMPLEMENTATION-R4 answered it — /energy
+      exists in this commit and 'no fake navigation' below re-measures it on
+      disk. World's reason is unchanged and unanswered: its surface is still
+      not designed, and MAIN-WORLD-INTELLIGENCE-CANONICAL-FOUNDATION-R1 rules
+      out pointing it at Home.
+    */
+    expect(comingSoonIds).toEqual(['world-intelligence']);
   });
 
   /*
@@ -70,8 +79,11 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     clickable requires changing a sentence, not just a field.
 
       world-intelligence   its surface is not designed yet
-      energy               its surface is not designed yet
       conflict             ONLY ON THE LEGACY VARIANT — see below
+
+    ENERGY LEFT THIS LIST TOO, for the same kind of reason Politics did: its
+    entry read 'no surface of any kind', and H-ENERGY-PARTXI-IMPLEMENTATION-R4
+    supplied one. World's reason is the only one still unanswered.
 
     POLITICS LEFT THIS LIST, AND THE SENTENCE IS WHY. Its reason read *"its
     routes are ABSENT from the converged worktree"* — a MEASUREMENT, and the
@@ -99,8 +111,8 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     const variant = mapShellVariant();
     const inert = INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m)).map((m) => m.id).sort();
     const expected = variant === 'shell'
-      ? ['energy', 'world-intelligence']
-      : ['conflict', 'energy', 'world-intelligence'];
+      ? ['world-intelligence']
+      : ['conflict', 'world-intelligence'];
     expect(`${variant}: ${inert.join(',')}`).toBe(`${variant}: ${expected.join(',')}`);
 
     /*
@@ -172,6 +184,15 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
         this list and this test would fail.
       */
       '/politics-visual-preview',
+      /*
+        `/energy` — and note it is the PRODUCT address, not a `-visual-preview`
+        twin. Energy differs from Security, Economy and Politics here: each of
+        those has a governed route held shut behind DATA conditions, so its card
+        points at a preview address instead. Energy's route IS this one, opened
+        as a provider-free PREVIEW, so there is no second address to point at
+        and inventing one would be the fake navigation this list exists to stop.
+      */
+      '/energy',
     ];
     for (const moduleConfig of INTELLIGENCE_MODULES) {
       if (moduleConfig.destination) {
@@ -288,7 +309,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       conflictRow,
       'market:preview:/market',
       'humanitarian:preview:/humanitarian',
-      'energy:comingSoon:-',
+      'energy:preview:/energy',
     ]);
   });
 
@@ -317,12 +338,20 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       preview: by('preview'),
       comingSoon: by('comingSoon'),
       total: INTELLIGENCE_MODULES.length,
-    }).toEqual({ active: 1, preview: 6, comingSoon: 2, total: 9 });
+    }).toEqual({ active: 1, preview: 7, comingSoon: 1, total: 9 });
 
+    /*
+      ENERGY TOOK IT 7 -> 8 ON SHELL AND 6 -> 7 ON LEGACY, and — unlike Politics
+      and Conflict before it — it moved the BADGE as well, COMING SOON to
+      PREVIEW. That is the one case where a badge may move: COMING SOON asserts
+      no surface exists, and after R4 one does. It did NOT move to ACTIVE, which
+      would assert a working intelligence behind it; the frame is provider-free
+      and renders governed absence.
+    */
     const variant = mapShellVariant();
     const clickable = INTELLIGENCE_MODULES.filter(isModuleNavigable).length;
     expect(`${variant}: ${clickable} clickable`)
-      .toBe(`${variant}: ${variant === 'shell' ? 7 : 6} clickable`);
+      .toBe(`${variant}: ${variant === 'shell' ? 8 : 7} clickable`);
   });
 
   it('every module has a dictionaryKey — no hardcoded English title/description in the config itself', () => {

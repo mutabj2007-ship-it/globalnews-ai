@@ -426,10 +426,29 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     not one of those files is touched. Forecast, if it returns, follows its own
     governed semantics and is not the Watch mechanism wearing another name.
 
-    COMING SOON. This is the one module with no surface of any kind: no route,
-    no preview, and Claude Design still owns the Energy dashboard. §12 is
-    explicit that the card takes its final title and its slot now and stays
-    honestly unavailable — and that this convergence is not blocked on Design.
+    COMING SOON -> PREVIEW, AND THE MEASUREMENT THAT HELD IT BACK IS ANSWERED.
+
+    This slot read *"the one module with no surface of any kind: no route, no
+    preview, and Claude Design still owns the Energy dashboard."* Like Politics
+    before it, that was a MEASUREMENT of what existed, not a rule — and
+    `H-ENERGY-PARTXI-IMPLEMENTATION-R4` supplies the surface. `/energy` is
+    present in this commit and its 129 guards pass here.
+
+    THE BADGE MOVES TO PREVIEW AND NO FURTHER. Energy is NOT active, and the
+    distance is not cosmetic: the frame is provider-free by construction — 0
+    provider, 0 model, 0 external tile, asserted by H's carried guards — and
+    it renders governed absence rather than data. ACTIVE would assert a working
+    intelligence surface behind it, and there is none.
+
+    WHAT PREVIEW COSTS A READER: nothing. Opening it activates no provider and
+    spends no quota, which is the same posture Security, Market, Economy,
+    Humanitarian and Politics already hold.
+
+    R4 rather than R3, deliberately. R3 carried the hydration defect; R4 closes
+    it by injecting the two token stylesheets through `dangerouslySetInnerHTML`
+    instead of a text child, so the server stops escaping `"` to `&quot;` in
+    `[lang|="ar"]`. The accepted §E CSS is byte-identical to R3 — the injection
+    changed, not the stylesheet.
   */
   {
     id: 'energy',
@@ -438,7 +457,8 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     // M65.1 — realigned to the approved reference (amber, not lime).
     accent: 'amber',
     icon: 'Radar',
-    state: 'comingSoon',
+    state: 'preview',
+    destination: '/energy',
   },
 ];
 

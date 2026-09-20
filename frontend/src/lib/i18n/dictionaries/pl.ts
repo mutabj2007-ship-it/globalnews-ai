@@ -1840,7 +1840,8 @@ export const pl: Dictionary = {
       energy: {
         title: 'Analiza energetyczna',
         shortTitle: 'Energetyka',
-        description: 'Planowane: dostawy energii, infrastruktura i sygnały cenowe nie są jeszcze dostępne.',
+        /* Patrz en.ts: ceny należą do Analizy rynkowej, nie energetycznej. Do przeglądu przez L. */
+        description: 'Wczesny etap: dostawy energii, infrastruktura i przesył, przed dedykowanymi danymi.',
       },
     },
   },
