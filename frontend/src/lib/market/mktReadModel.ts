@@ -57,6 +57,8 @@
  * proved and this surface keeps.
  */
 
+import { resolveApiBaseUrl } from '@/lib/api/apiBase';
+
 /* ───────────────────────────────────────────────────────────────────────────
  * 1 · THE CONTRACT FIELD NAMES, AS A VALUE
  * ─────────────────────────────────────────────────────────────────────────── */
@@ -237,20 +239,26 @@ export type MarketReadResult =
  */
 type MarketObservationReader = () => Promise<readonly MarketStoredObservation[]>;
 
+const MARKET_READ_PATH = '/market-data/observations';
+
+function marketReadUrl(): string {
+  if (typeof window !== 'undefined') return MARKET_READ_PATH;
+  return `${resolveApiBaseUrl()}/market/observations`;
+}
+
 async function retainedObservationReader(): Promise<readonly MarketStoredObservation[]> {
   /*
-   * Same-origin INTERNAL reader only. This URL is a Next rewrite to the
-   * backend's MarketReadModule, whose dependency graph contains no scheduler,
-   * provider registry, transport or adapter. A page load can read what is
-   * already retained but cannot make a publisher request.
+   * Same-deployment INTERNAL reader only. Browser execution uses the relative
+   * /market-data rewrite; this Server Component uses the deployment's internal
+   * backend base because Node has no document against which to resolve a
+   * relative path. The backend target imports no scheduler or provider.
    */
-  const response = await fetch('http://localhost/market-data/observations', {
+  const response = await fetch(marketReadUrl(), {
     cache: 'no-store',
+    headers: { accept: 'application/json' },
   });
 
-  if (!response.ok) {
-    throw new Error(`Market retained reader responded with ${response.status}.`);
-  }
+  if (!response.ok) return [];
 
   const payload: unknown = await response.json();
   return Array.isArray(payload) ? (payload as MarketStoredObservation[]) : [];
@@ -272,7 +280,12 @@ export const MARKET_READ_ABSENCE: MarketReadUnavailableReason = 'NO_READ_ENDPOIN
  * substrate proved, preserved rather than re-earned.
  */
 export async function readMarketObservations(): Promise<MarketReadResult> {
-  const stored = await MARKET_OBSERVATION_READER();
+  let stored: readonly MarketStoredObservation[];
+  try {
+    stored = await MARKET_OBSERVATION_READER();
+  } catch {
+    return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_STORED' };
+  }
   if (stored.length === 0) {
     return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_STORED' };
   }
