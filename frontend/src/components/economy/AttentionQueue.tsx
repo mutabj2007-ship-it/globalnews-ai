@@ -23,13 +23,14 @@ export function orderByAttentionRank(rows: readonly AttentionRow[]): AttentionRo
 }
 
 export function AttentionQueue({
-  rows, locale, selectedId, onSelect, railPx,
+  rows, locale, selectedId, onSelect, railPx, emptyMessage,
 }: {
   rows: readonly AttentionRow[];
   locale: EconomyLocale;
   selectedId?: string;
   onSelect?: (row: AttentionRow) => void;
   railPx: number;
+  emptyMessage?: string;
 }): JSX.Element {
   const t = economyStrings(locale);
   const ordered = orderByAttentionRank(rows);
@@ -78,11 +79,15 @@ export function AttentionQueue({
         {ordered.length === 0 && (
           <li data-econ="attention-empty" style={{ padding: '13px 16px' }}>
             <span
-              data-econ="figure-absent"
-              aria-label={t.noObservationTitle}
-              style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 14px)', color: ECON_INK.reduced }}
+              style={{
+                fontFamily: ECON_MONO,
+                fontSize: 'max(var(--ar-fs-min, 0px), 10px)',
+                lineHeight: 'var(--ar-lh, 1.55)',
+                letterSpacing: 'calc(0.05em * var(--ar-ls-mul, 1))',
+                color: ECON_INK.reduced,
+              }}
             >
-              —
+              {emptyMessage ?? 'No ranked attention items.'}
             </span>
           </li>
         )}
