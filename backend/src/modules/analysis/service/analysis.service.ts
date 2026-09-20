@@ -3059,25 +3059,32 @@ export class AnalysisService {
   }
 
   private async retrieveRetainedForRegion(members: readonly CountryMeta[]): Promise<NewsArticle[]> {
-    const collected: NewsArticle[] = [];
+    /*
+     * Retained reads are local database work, not provider work. Running them
+     * serially made a throttled eleven-country region pay N round trips after
+     * live retrieval had already degraded. Fan them out together; each member
+     * still fails independently and no failure can erase another member's
+     * retained evidence.
+     */
+    const perMember = await Promise.all(
+      members.map(async (member): Promise<NewsArticle[]> => {
+        try {
+          return await this.newsService.findRetainedByCountry(
+            member.iso2,
+            RETAINED_PER_MEMBER_LIMIT,
+            RETAINED_MAX_AGE_MINUTES,
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Retained lookup failed for ${member.iso3}; continuing without it`,
+            error instanceof Error ? error : undefined,
+          );
+          return [];
+        }
+      }),
+    );
 
-    for (const member of members) {
-      try {
-        const retained = await this.newsService.findRetainedByCountry(
-          member.iso2,
-          RETAINED_PER_MEMBER_LIMIT,
-          RETAINED_MAX_AGE_MINUTES,
-        );
-        collected.push(...retained);
-      } catch (error) {
-        this.logger.warn(
-          `Retained lookup failed for ${member.iso3}; continuing without it`,
-          error instanceof Error ? error : undefined,
-        );
-      }
-    }
-
-    return deduplicateArticles(collected);
+    return deduplicateArticles(perMember.flat());
   }
 
   private toRetrievalContext(
