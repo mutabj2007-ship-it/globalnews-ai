@@ -27,6 +27,7 @@ jobs:
           npm test --workspace=frontend -- --runInBand src/lib/map/d1/conflictDomainBind.spec.ts
           npm test --workspace=frontend -- --runInBand src/components/map/checkpointELayerReasons.spec.ts
           npm test --workspace=frontend -- --runInBand src/lib/map/reference/referenceGeography.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/energy/energyVisualFrame.spec.ts
       - name: Frontend build
         run: npm run build:frontend
       - name: Backend build
