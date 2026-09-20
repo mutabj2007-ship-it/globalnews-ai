@@ -359,7 +359,12 @@ describe('NewsService', () => {
     expect(fallback.searchCalls).toBe(0);
     expect(articlePersistence.findRecent).toHaveBeenCalled();
     expect(response.dataMode).toBe('cached');
-    expect(response.articles).toEqual([cachedArticle]);
+    expect(response.articles).toHaveLength(1);
+    expect(response.articles[0]).toMatchObject({
+      id: cachedArticle.id,
+      title: cachedArticle.title,
+      geographicPrecision: 'unknown',
+    });
   });
 
   it('does not persist mock news as real evidence', async () => {
