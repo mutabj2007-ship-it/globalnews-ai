@@ -92,8 +92,12 @@ export function RetainedObservationPanel({
                   style={{ fontSize: 30, lineHeight: 1.1, color: ECON_INK.primary, fontVariantNumeric: 'tabular-nums' }}
                 >
                   {o.value}
-                  /* LOGICAL, NOT PHYSICAL — `marginLeft` here was a real RTL defect the
-                       Economy layout guard caught. */
+                  {/*
+                    LOGICAL, NOT PHYSICAL. `marginLeft` here was a real RTL defect the Economy
+                    layout guard caught — and this comment was a SECOND one: written
+                    without braces it was not a comment at all, it was a JSX text child,
+                    so the panel printed its own source code beside the figure.
+                  */}
                   <span style={{ fontSize: 16, marginInlineStart: 3 }}>
                     {o.unit === 'PERCENT' ? '%' : ` ${o.unit}`}
                   </span>
