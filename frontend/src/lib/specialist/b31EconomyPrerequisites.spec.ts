@@ -1,4 +1,3 @@
-import { execFileSync } from 'child_process';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -28,13 +27,32 @@ import type { SourceProvenance, EvidenceRole, SourceType } from '@globalnews-ai/
 const REPO = join(__dirname, '..', '..', '..', '..');
 const SHARED_SRC = join(REPO, 'shared', 'src');
 
-const hasGit = existsSync(join(REPO, '.git')) || existsSync(join(REPO, '.git', 'HEAD'));
-const describeGit = hasGit ? describe : describe.skip;
+/*
+  ── THE `git show 3db5a09:…` DEPENDENCY IS GONE, AND WHY ───────────────────
 
-const git = (...args: string[]): string =>
-  execFileSync('git', args, { cwd: REPO, encoding: 'utf-8' });
+  Three assertions below read their evidence out of commit `3db5a09` with
+  `git show`. That commit lives only on a LOCAL branch
+  (`integration/alpha-convergence-2`) and is on no remote, so a fresh clone of
+  the release branch could not run them — they failed rather than skipped,
+  because `describeGit` gated on `.git` EXISTING, which it does in any clone.
 
+  Each one was re-read to ask what it actually proves. All three assert
+  properties of files that are PRESENT in this tree and still carry them, so
+  the historical read was never the point: it recorded that C55 once adopted a
+  vocabulary, where the thing worth defending is that the vocabulary is still
+  adopted NOW.
+
+  So they assert the CURRENT files. That is strictly stronger — a historical
+  comparison passes forever no matter what the product does today, while these
+  fail the moment the property is lost. No fixture was needed, because no byte
+  baseline was being defended.
+*/
 const barrel = readFileSync(join(SHARED_SRC, 'index.ts'), 'utf-8');
+const economyIndex = readFileSync(join(SHARED_SRC, 'economy', 'index.ts'), 'utf-8');
+const economyStrings = readFileSync(
+  join(REPO, 'frontend', 'src', 'lib', 'economy', 'strings.ts'),
+  'utf-8',
+);
 
 describe('B3.1 — DisplayLocale: recovered, activating nothing', () => {
   it('declares the seven contracted display locales, in contract order', () => {
@@ -166,39 +184,56 @@ describe('B3.1 — SourceProvenance: recovered without a duplicate export', () =
   });
 });
 
-describeGit('B3.1 — the two BLOCKED rulings, and whether they still bind', () => {
-  it('C55 adopted the BACKEND value-semantics vocabulary, resolving Gate 4', () => {
+describe('B3.1 — the two BLOCKED rulings, and whether they still bind', () => {
+  it('the BACKEND value-semantics vocabulary is adopted — Gate 4, still resolved', () => {
     /*
       The C36 package STOPped because the frontend and backend Economy lanes
       declared conflicting axes. C55 took its Option 1 — promote a read model
       into shared/src — and adopted the backend's members.
+
+      SEMANTIC INVARIANT. Asserted on the shared module as it stands, so losing
+      a member fails here instead of passing against a frozen 2026 commit.
     */
-    const economy = git('show', '3db5a09:shared/src/economy/index.ts');
+    for (const member of ["'SCHEDULED'", "'PRELIMINARY'", "'ACTUAL'", "'FRESH'", "'ROUTE_SUPPORTED'"]) {
+      expect(`${member}: ${economyIndex.includes(member)}`).toBe(`${member}: true`);
+    }
 
-    expect(economy).toContain("'SCHEDULED'");
-    expect(economy).toContain("'PRELIMINARY'");
-    expect(economy).toContain("'ACTUAL'");
-    expect(economy).toContain("'FRESH'");
-    expect(economy).toContain("'ROUTE_SUPPORTED'");
+    /* NEGATIVE CONTROL — the scan is reading the real file, not an empty string. */
+    expect(economyIndex.length).toBeGreaterThan(500);
+    expect(economyIndex.includes("'NO_SUCH_ECONOMY_MEMBER'")).toBe(false);
   });
 
-  it('with a TOTAL, transitional mapping for the old frontend vocabulary', () => {
-    const economy = git('show', '3db5a09:shared/src/economy/index.ts');
+  it('the TOTAL, transitional mapping for the old frontend vocabulary is still there', () => {
+    /*
+      SEMANTIC INVARIANT. The mapping's existence is the property; it is what
+      lets the old UI vocabulary resolve without a second axis being minted.
+    */
+    expect(economyIndex).toContain('ECONOMY_LEGACY_UI_RELEASE_STATUS');
+    expect(economyIndex).toMatch(/PRELIM: 'PRELIMINARY'/);
+    /* and it still declares itself transitional rather than quietly becoming canon */
+    expect(economyIndex).toMatch(/THEY ARE TRANSITIONAL/);
 
-    expect(economy).toContain('ECONOMY_LEGACY_UI_RELEASE_STATUS');
-    expect(economy).toMatch(/PRELIM: 'PRELIMINARY'/);
-    expect(economy).toMatch(/THEY ARE TRANSITIONAL/);
+    /* MUTATION CONTROL — the same matcher fails on a string that lacks the mapping. */
+    expect(/PRELIM: 'PRELIMINARY'/.test('export const OTHER = {};')).toBe(false);
   });
 
-  it('and C55 re-aliased EconomyLocale to DisplayLocale, resolving Gate 5', () => {
+  it('EconomyLocale is DisplayLocale, not LanguageCode — Gate 5, still resolved', () => {
     /*
       The C36 package STOPped because EconomyLocale aliased LanguageCode — the
-      analysis set — while controlling user-facing display language.
-    */
-    const strings = git('show', '3db5a09:frontend/src/lib/economy/strings.ts');
+      ANALYSIS set — while controlling user-facing DISPLAY language. The two
+      sets differ, and the alias is the whole fix.
 
-    expect(strings).toContain('export type EconomyLocale = DisplayLocale;');
-    expect(strings).toContain("import type { DisplayLocale } from '@globalnews-ai/shared';");
+      SEMANTIC INVARIANT, and the sharper of the three: if someone re-pointed
+      this alias at LanguageCode tomorrow, a historical read would still pass
+      and this fails.
+    */
+    expect(economyStrings).toContain('export type EconomyLocale = DisplayLocale;');
+    expect(economyStrings).toContain("import type { DisplayLocale } from '@globalnews-ai/shared';");
+
+    /* NEGATIVE CONTROL — the regression it guards against is detectable. */
+    expect(economyStrings).not.toMatch(/export type EconomyLocale = LanguageCode;/);
+    expect(/export type EconomyLocale = LanguageCode;/
+      .test('export type EconomyLocale = LanguageCode;')).toBe(true);
   });
 });
 

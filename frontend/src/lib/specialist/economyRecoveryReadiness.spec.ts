@@ -1,4 +1,3 @@
-import { execFileSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -37,13 +36,34 @@ import { join } from 'path';
  */
 
 const REPO = join(__dirname, '..', '..', '..', '..');
-const CANONICAL = '3db5a09';
 
-const hasGit = existsSync(join(REPO, '.git')) || existsSync(join(REPO, '.git', 'HEAD'));
-const describeGit = hasGit ? describe : describe.skip;
+/*
+  ── THE HISTORICAL COMMIT READ IS GONE, AND EACH CASE WAS CLASSIFIED ───────
 
-const git = (...args: string[]): string =>
-  execFileSync('git', args, { cwd: REPO, encoding: 'utf-8' });
+  Three assertions below read commit `3db5a09` with `git show`. That commit is
+  on a LOCAL branch only and on no remote, so a fresh clone of the release
+  branch could not run them. They FAILED rather than skipped, because the
+  `describeGit` gate tested whether `.git` exists — which is true in any clone
+  — rather than whether the object is reachable.
+
+  What each was actually proving:
+
+    shared/src/economy/index.ts carries SourceProvenance + DisplayLocale
+      SEMANTIC INVARIANT — the file is present and still carries both, so it is
+      asserted on the current tree.
+
+    econTokens.ts imports nothing
+      SEMANTIC INVARIANT — same; the property is what matters, not the 2026
+      bytes, and it is the reason that file is recoverable in isolation.
+
+    app/economy/page.tsx imports ScriptRun
+      OBSOLETE HISTORICAL COUPLING. The test's own note calls it *"a RECORD of
+      a known collision, not an invariant to defend"*, and the collision has
+      since closed. The route does not exist in this tree and B3 forbids
+      creating one, so there is nothing current to read and nothing left to
+      record. Dropped — the LIVE half of that test, which proves the collision
+      is closed and the route still absent, is kept and is what mattered.
+*/
 
 const sharedFile = (name: string): string | null => {
   const path = join(REPO, 'shared', 'src', name);
@@ -126,12 +146,20 @@ describe('B3 — the two shared-contract prerequisites are still open', () => {
     });
   });
 
-  describeGit('AND THE CANONICAL SIDE STILL SAYS WHAT B3 MEASURED', () => {
-    it('shared/src/economy/index.ts needs both missing symbols', () => {
-      const source = git('show', `${CANONICAL}:shared/src/economy/index.ts`);
+  describe('AND THE CANONICAL SIDE STILL SAYS WHAT B3 MEASURED', () => {
+    it('shared/src/economy/index.ts still carries both once-missing symbols', () => {
+      /*
+        SEMANTIC INVARIANT. B3 recorded these as MISSING and therefore blocking;
+        the recovery landed them. Asserting the current file means a later
+        removal fails here, where the historical read would have kept passing.
+      */
+      const source = readFileSync(join(REPO, 'shared', 'src', 'economy', 'index.ts'), 'utf-8');
 
       expect(source).toContain('SourceProvenance');
       expect(source).toMatch(/DisplayLocale|DISPLAY_LOCALES/);
+
+      /* NEGATIVE CONTROL — the matcher is capable of not matching. */
+      expect(/DisplayLocale|DISPLAY_LOCALES/.test('export const X = 1;')).toBe(false);
     });
 
     it('the Economy route pages need ScriptRun — CLOSED by the Humanitarian R3 convergence', () => {
@@ -160,10 +188,19 @@ describe('B3 — the two shared-contract prerequisites are still open', () => {
         a live Economy route, and no Economy route exists. Closing the ScriptRun
         collision removes an obstacle to wiring; it does not authorise the wiring.
       */
-      const page = git('show', `${CANONICAL}:frontend/src/app/economy/page.tsx`);
+      /*
+        THE HISTORICAL READ IS REMOVED HERE, AND ONLY HERE.
 
-      expect(page).toContain("import { ScriptRun } from '@/lib/typography/runBoundary'");
+        It asserted that the 2026 Economy page imported `ScriptRun` — the record
+        of the collision. Both halves of that record have expired: the collision
+        is closed (asserted immediately below, on the live file), and the page it
+        read does not exist in this tree and must not, because B3 forbids
+        registering an Economy route. Keeping it would have meant preserving a
+        historical artifact whose only purpose was to describe a problem that no
+        longer exists.
 
+        What remains is the part that was always the invariant.
+      */
       const runBoundary = readFileSync(
         join(REPO, 'frontend', 'src', 'lib', 'typography', 'runBoundary.tsx'),
         'utf-8',
@@ -179,10 +216,25 @@ describe('B3 — the two shared-contract prerequisites are still open', () => {
       expect(existsSync(join(REPO, 'frontend', 'src', 'app', 'economy'))).toBe(false);
     });
 
-    it('only one Economy file has no imports at all', () => {
-      const tokens = git('show', `${CANONICAL}:frontend/src/components/economy/econTokens.ts`);
+    it('econTokens.ts still imports nothing at all', () => {
+      /*
+        SEMANTIC INVARIANT, and the reason it is worth keeping: a token module
+        with no imports is recoverable in isolation. The moment it acquires one,
+        that stops being true — which the historical read could never have
+        noticed.
+      */
+      const tokens = readFileSync(
+        join(REPO, 'frontend', 'src', 'components', 'economy', 'econTokens.ts'),
+        'utf-8',
+      );
 
       expect(tokens).not.toContain("from '");
+      expect(tokens).not.toMatch(/require\(/);
+
+      /* POSITIVE CONTROL — the scan detects an import when one is present. */
+      expect("import { x } from './y';".includes("from '")).toBe(true);
+      /* and it is reading a real file, not an empty one */
+      expect(tokens.length).toBeGreaterThan(200);
     });
   });
 });
