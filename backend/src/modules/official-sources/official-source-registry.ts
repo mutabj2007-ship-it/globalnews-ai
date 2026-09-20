@@ -73,6 +73,103 @@ export const OFFICIAL_SOURCES: OfficialSourceEntry[] = [
       'is E-4b and requires a resolved rights record, which the economy lane owns.',
     rights: { rightsAuthorityId: 'ECONOMY_ACQUISITION_RIGHTS', rightsRecordKey: 'EUROSTAT' },
   },
+
+  /*
+    ════════════════════════════════════════════════════════════════════════════
+    RW-NISR · NATIONAL INSTITUTE OF STATISTICS OF RWANDA — REGISTERED, NOT ACTIVATED.
+    ════════════════════════════════════════════════════════════════════════════
+
+    Registered under MAIN-EAST-AFRICA-SOURCE-RIGHTS-REGISTRY-CLOSEOUT-R1 ruling F, which
+    derived exactly two rows at `R6_RIGHTS_PERMITTING` across eleven countries. This is
+    one of them. Ruling F also names what registration does NOT settle, and every one of
+    those gates is still open below.
+
+    `enabled: false` AND `ingestionMethod: 'none'`, and the pair is deliberate. Ruling F's
+    remaining gates are: registration (this entry) · a RESOLVING rights record · host
+    identity under ruling I's evidence floor · transport · and PO AUTHORIZATION BY SOURCE
+    ID. Only the first is done here. This is the first source in the programme to stand at
+    a permitting grade, so it is also the first time `enabled: false` is load-bearing
+    rather than incidental — see Main's own note that every prior round's safety rested
+    partly on there being nothing to activate.
+
+    ── THE HOST IS THE APEX, AND THE SCOPE OF THE GRANT IS WHY ───────────────
+
+    `baseUrl` is the BARE APEX. NISR publishes the CC BY 4.0 grant at `statistics.gov.rw`,
+    and G measured that the grant does NOT travel to its own subdomains:
+
+      socioeconomic.statistics.gov.rw   "© 2025 NISR. All rights reserved."
+      microdata.statistics.gov.rw       data requires registration
+      the ArcGIS geospatial hub         16 datasets, not one stating CC BY 4.0
+
+    A reservation on a subdomain of the granting host is the carve-out ruling F records as
+    `F-RW-1`. So the registered host is the apex and NOTHING BELOW IT, and a resolver that
+    treats this entry as authority over `*.statistics.gov.rw` would be extending a grant
+    the publisher declined to extend.
+
+    ── AND THE APEX IS ALSO THE ONLY ONE THAT SERVES TLS ─────────────────────
+
+    Measured 2026-09-20, twice, from this runtime:
+
+      https://statistics.gov.rw/        HTTP 200, ssl_verify_result=0, 197.243.19.196
+      https://www.statistics.gov.rw/    TLS failure, curl 60 — certificate does not
+                                        match the name
+
+    The publisher links `www.`, `alpha.`, `beta.` and bare-apex variants interchangeably
+    (G's item 9), so a producer that normalises toward `www.` fails closed on a
+    certificate error at a host that is not the registered one anyway.
+
+    THIS IS NOT A WORKAROUND, and the distinction matters because `R-EA-TR-7` forbids
+    routing around a TLS failure. Nothing is routed around: the apex is the host the
+    rights instrument names, it presents a VALID certificate that verifies normally, and
+    TLS verification is not relaxed anywhere in this round. Main's ruling A makes the same
+    observation from the other side — `rw-nisr` is its named example that TLS and identity
+    are orthogonal axes, since a certificate proves control of a name and never who
+    controls it.
+
+    ── RIGHTS: A KEY THAT DOES NOT RESOLVE, ON PURPOSE ───────────────────────
+
+    CC BY 4.0 is a named, versioned, public-URI licence whose grantee class is anyone, and
+    the CPI artifact carries `License: CC BY 4.0` in its own imprint — so the rights
+    position travels with the bytes rather than living only on a page that can change.
+    That is the strongest instrument the programme has read.
+
+    It still buys nothing here. `rights` carries a KEY, never a grade, and
+    `EAST_AFRICA_ACQUISITION_RIGHTS` has no resolver, so `evaluateSourceRights` refuses
+    with RIGHTS-RECORD-UNRESOLVED. The authority id names the EAST AFRICA lane rather than
+    the economy lane because ruling B places records with the lane that READ the
+    instrument, and G read this one. Writing a plausible record here to make the refusal
+    go away is the move ruling F exists to prevent.
+  */
+  {
+    id: 'rw-nisr',
+    name: 'National Institute of Statistics of Rwanda',
+    countryCode: 'RW',
+    /* OBSERVED, not declared. G measured three language editions per release as separate
+       files; ruling C makes observed the authority and the declared tag never trusted. */
+    languages: ['en', 'fr', 'rw'],
+    authorityClass: 'OFFICIAL_STATISTICS',
+    baseUrl: 'https://statistics.gov.rw',
+    reliabilityNote:
+      'National statistical authority under Law N° 53 bis/2013 of 28/06/2013. Publishes CPI ' +
+      'monthly on the 10th, in English, French and Kinyarwanda as separate files. Grant is CC BY ' +
+      '4.0 at the apex host only; socioeconomic./microdata. subdomains and the ArcGIS hub reserve ' +
+      'rights or require registration. No revision or finality markers are published on the CPI ' +
+      'series — no provisional/revised/preliminary/final vocabulary appears in the artifacts, so ' +
+      'this deployment records that metadata as ABSENT rather than inferring it. Verified against ' +
+      'the retrieved artifact itself (sha256 4ba5193b…, 1,727,902 bytes): zero occurrences of ' +
+      'provisional/revised/revision/preliminary/final, the imprint reads "Licensed under CC BY ' +
+      '4.0", and the stated publication date 10 September 2026 agrees with the Last-Modified ' +
+      'header the same response carried.',
+    enabled: false,
+    ingestionMethod: 'none',
+    provenanceNote:
+      'Registered under MAIN-EAST-AFRICA-SOURCE-RIGHTS-REGISTRY-CLOSEOUT-R1 ruling F (one of two ' +
+      'rows derived from 42 at the permitting rung). Published licence terms read by G via the ' +
+      'research path; host identity NOT established under ruling I tier A, and not claimed here. ' +
+      'REGISTRATION ONLY — activation additionally requires a resolving rights record, a tier-A ' +
+      'identity verification with a timestamp, and PO authorization by source id.',
+    rights: { rightsAuthorityId: 'EAST_AFRICA_ACQUISITION_RIGHTS', rightsRecordKey: 'RW_NISR' },
+  },
 ];
 
 export function getOfficialSourceByIdFrom(

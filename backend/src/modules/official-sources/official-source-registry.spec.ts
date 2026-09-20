@@ -32,24 +32,54 @@ function buildEntry(overrides: Partial<OfficialSourceEntry> = {}): OfficialSourc
   };
 }
 
-describe('E-4a · the registry holds exactly one entry, and it is NOT enabled', () => {
+/*
+  EVERY REGISTRATION, AND THE ROUND THAT AUTHORISED IT.
+
+  This is the retired scope lock's teeth, re-keyed. The lock said "exactly one entry"; a
+  bare count is the cardinality defect Main ruled on in `R-EA-LIN-4`, and bumping 1 to 2
+  would reinstate it one round later. So the registry is compared against a NAMED SET
+  instead: an entry that appears without being added here, with its authorising round,
+  fails — which is the property the lock actually defended.
+*/
+const REVIEWED_REGISTRATIONS: ReadonlyArray<{ id: string; authorisedBy: string }> = [
+  { id: 'eurostat', authorisedBy: 'MAIN-ECONOMY-CANONICAL-CLOSEOUT-R1 §2.2' },
+  { id: 'rw-nisr', authorisedBy: 'MAIN-EAST-AFRICA-SOURCE-RIGHTS-REGISTRY-CLOSEOUT-R1 ruling F' },
+];
+
+describe('E-4a · every registry entry is a reviewed registration, and NONE is enabled', () => {
   /*
-    ── THE M64.1 SCOPE LOCK FIRED, AND IS RETIRED DELIBERATELY ───────────────
+    ── THE M64.1 SCOPE LOCK FIRED TWICE, AND IS RETIRED DELIBERATELY ─────────
 
-    It asserted `OFFICIAL_SOURCES` was empty, because M64.1 reserved seeding real entries
-    for "a later round … with their own provenance/reliability review". That round is
-    MAIN-ECONOMY-CANONICAL-CLOSEOUT-R1, whose §2.2 specifies this entry, so the lock fired
-    exactly as designed: the first real registration could not happen quietly.
+    It first asserted `OFFICIAL_SOURCES` was empty, and fired when Eurostat was registered.
+    It was then rewritten as "exactly one entry", and FIRED AGAIN when rw-nisr was
+    registered under the East Africa closeout. Both firings are the lock working: a real
+    registration cannot happen quietly.
 
-    It is REPLACED WITH ASSERTIONS CARRYING THE SAME TEETH, never deleted. The lock's real
-    purpose was that nothing is registered without a decision, and the sharper statement of
-    that is now: exactly one entry, it is the one that was reviewed, and it is SWITCHED
-    OFF. A second entry appearing, or this one acquiring `enabled: true`, fails here.
+    It is REPLACED WITH ASSERTIONS CARRYING THE SAME TEETH, never deleted — and this time
+    without a number in it. A new entry appearing, or any entry acquiring `enabled: true`,
+    still fails here.
   */
-  it('exactly one entry, and it is the reviewed Eurostat registration', () => {
-    expect(OFFICIAL_SOURCES).toHaveLength(1);
-    expect(OFFICIAL_SOURCES[0]?.id).toBe('eurostat');
-    expect(OFFICIAL_SOURCES[0]?.authorityClass).toBe('OFFICIAL_STATISTICS');
+  it('the registry is exactly the reviewed set — no entry appears without an authorising round', () => {
+    expect(OFFICIAL_SOURCES.map((s) => s.id).sort()).toEqual(
+      REVIEWED_REGISTRATIONS.map((r) => r.id).sort(),
+    );
+
+    // Non-vacuity: an empty registry must not satisfy the comparison above for free.
+    expect(OFFICIAL_SOURCES.length).toBeGreaterThan(0);
+
+    // Negative control: an unreviewed entry is detected.
+    const smuggled = [...OFFICIAL_SOURCES.map((s) => s.id), 'smuggled-source'].sort();
+    expect(smuggled).not.toEqual(REVIEWED_REGISTRATIONS.map((r) => r.id).sort());
+  });
+
+  it('each reviewed registration is present, classed, and carries its authorising round', () => {
+    for (const { id, authorisedBy } of REVIEWED_REGISTRATIONS) {
+      const entry = getOfficialSourceById(id);
+      expect(entry).toBeDefined();
+      expect(entry?.authorityClass).toBe('OFFICIAL_STATISTICS');
+      // The entry itself must cite the round that authorised it, not just this test.
+      expect(entry?.provenanceNote).toContain(authorisedBy.split(' ')[0]);
+    }
   });
 
   it('REGISTERED IS NOT ACTIVATED — nothing in this registry is enabled', () => {
@@ -59,21 +89,51 @@ describe('E-4a · the registry holds exactly one entry, and it is NOT enabled', 
     expect(OFFICIAL_SOURCES.every((s) => s.enabled === false)).toBe(true);
   });
 
-  it('it carries a rights KEY, never a grade — a class cannot be acquired by editing here', () => {
-    const rights = OFFICIAL_SOURCES[0]?.rights;
-    expect(rights).not.toBeNull();
-    expect(rights?.rightsAuthorityId).toBe('ECONOMY_ACQUISITION_RIGHTS');
-    expect(rights?.rightsRecordKey).toBe('EUROSTAT');
-    /* no grade, no instrument, no permission anywhere in the entry itself */
-    expect(JSON.stringify(OFFICIAL_SOURCES[0])).not.toMatch(/E-5|rightsClass|instrument/);
+  it('every entry carries a rights KEY, never a grade — a class cannot be acquired by editing here', () => {
+    /* Was indexed at [0], which silently tested only the first entry and would have let a
+       second entry ship a grade unexamined. Now every entry is checked. */
+    expect(OFFICIAL_SOURCES.length).toBeGreaterThan(0);
+
+    for (const entry of OFFICIAL_SOURCES) {
+      expect(entry.rights).not.toBeNull();
+      expect(entry.rights?.rightsAuthorityId).toBeTruthy();
+      expect(entry.rights?.rightsRecordKey).toBeTruthy();
+      /* no grade, no instrument, no permission anywhere in the entry itself */
+      expect(JSON.stringify(entry)).not.toMatch(/E-5|rightsClass|instrument/);
+    }
+
+    /* The records live with the lane that READ the instrument (ruling B), so the two
+       entries deliberately point at DIFFERENT authorities. Neither resolves. */
+    expect(getOfficialSourceById('eurostat')?.rights).toEqual({
+      rightsAuthorityId: 'ECONOMY_ACQUISITION_RIGHTS',
+      rightsRecordKey: 'EUROSTAT',
+    });
+    expect(getOfficialSourceById('rw-nisr')?.rights).toEqual({
+      rightsAuthorityId: 'EAST_AFRICA_ACQUISITION_RIGHTS',
+      rightsRecordKey: 'RW_NISR',
+    });
+
+    // Negative control: the grade scan does fire on a grade.
+    expect(JSON.stringify({ rightsClass: 'E-5' })).toMatch(/E-5|rightsClass|instrument/);
   });
 
   it('the zero-arg lookups still behave against the real registry', () => {
     expect(getOfficialSourceById('anything')).toBe(undefined);
     expect(getOfficialSourceById('eurostat')?.name).toBe('Eurostat');
+    expect(getOfficialSourceById('rw-nisr')?.name).toBe('National Institute of Statistics of Rwanda');
     expect(getOfficialSourcesForCountry('KE')).toHaveLength(0);
     expect(getOfficialSourcesByClass('GOVERNMENT')).toHaveLength(0);
-    expect(getOfficialSourcesByClass('OFFICIAL_STATISTICS')).toHaveLength(1);
+
+    /* Derived, not typed out — the defect Main ruled on was a hand-written count beside a
+       list that no longer matched it. */
+    expect(getOfficialSourcesByClass('OFFICIAL_STATISTICS')).toHaveLength(
+      OFFICIAL_SOURCES.filter((s) => s.authorityClass === 'OFFICIAL_STATISTICS').length,
+    );
+
+    /* Eurostat carries NO countryCode: the admitted series are Polish, but the SUBJECT of
+       the data is not the AUTHORITY that published it. NISR does carry one. */
+    expect(getOfficialSourcesForCountry('RW').map((s) => s.id)).toEqual(['rw-nisr']);
+    expect(getOfficialSourceById('eurostat')?.countryCode).toBeUndefined();
   });
 });
 

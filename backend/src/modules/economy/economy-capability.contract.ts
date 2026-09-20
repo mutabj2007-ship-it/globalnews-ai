@@ -21,12 +21,16 @@ import { OFFICIAL_SOURCES } from '../official-sources/official-source-registry';
  * values, and the reason is the same for all of them: THERE IS NO NUMERIC
  * ECONOMIC TIME-SERIES PRODUCER IN THIS CODEBASE.
  *
- *   - `OFFICIAL_SOURCES` names four institutions - National Bank of Rwanda,
- *     Central Bank of Kenya, Narodowy Bank Polski, Glowny Urzad Statystyczny.
- *     ALL FOUR ship `enabled: false` and `ingestionMethod: 'none'`, and each
- *     entry's own note says "Ingestion not implemented or enabled." Measured:
- *     4 entries, 0 enabled, 0 with an ingestion method. The registry is a
- *     HOST-LOOKUP table for provenance, by its own file header - not a source.
+ *   - `OFFICIAL_SOURCES` is a HOST-LOOKUP TABLE FOR PROVENANCE, by its own file
+ *     header - not a source. Its entries are registered, and registration is
+ *     neither activation nor rights approval. No entry is enabled.
+ *
+ *     THIS BULLET USED TO NAME FOUR INSTITUTIONS AND COUNT THEM, and every word
+ *     of that was stale: the four named central banks and statistics offices
+ *     were never in the registry, so the count described nothing. It is replaced
+ *     by a qualitative claim, and the counting is done by the code below and by
+ *     a test that reads the registry - see `cardinality` and `R-EA-LIN-4`. A
+ *     count written into a comment cannot be kept true by anything.
  *
  *   - The providers are news (GNews, GDELT DOC, RSS, mock), signals (GDELT,
  *     Event Registry) and analysis (OpenAI, mock). None returns a statistical
@@ -90,84 +94,136 @@ export interface EconomyCapabilityFact {
 
 const REGISTERED = new Set(OFFICIAL_SOURCES.map((s) => s.id));
 
-/** Only ids that are actually in the registry, so the table cannot drift from it. */
+/**
+ * Keeps only ids that are actually in the registry.
+ *
+ * `R-EA-LIN-6` — THIS COMMENT USED TO SAY "so the table cannot drift from it", AND THAT
+ * WAS HALF TRUE IN THE DANGEROUS DIRECTION. The ARRAY cannot drift. Everything WRITTEN
+ * BESIDE the array drifted freely, and did: four ids were filtered away silently, and the
+ * hand-written `state` and `evidence` next to them went on describing the four for a full
+ * release cycle. A filter that silently discards is drift PREVENTION for the value and
+ * drift CONCEALMENT for every claim about the value.
+ *
+ * So the filter stays, and nothing hand-written is allowed to describe its output. See
+ * `deriveState` and `cardinality` below.
+ */
 function registered(...ids: readonly string[]): readonly string[] {
   return ids.filter((id) => REGISTERED.has(id));
 }
 
-const NO_SERIES_PRODUCER =
-  'No numeric economic time-series producer exists at this baseline. The registered central ' +
-  'banks and statistics offices are all enabled:false / ingestionMethod:none, and no provider ' +
-  'returns indicator, period or vintage data.';
+/**
+ * `R-EA-LIN-4` — THE STATE IS COMPUTED FROM THE ARRAY IT DESCRIBES, so the two cannot
+ * disagree. This is the whole repair in one function.
+ *
+ * The union's own docstrings define the split and it is not a judgement call:
+ * `UNAVAILABLE_SOURCE_DISABLED` means "a source IS registered that could supply it", and
+ * `UNAVAILABLE_NO_PRODUCER` means "no producer exists in this deployment". An empty
+ * candidate list is the second one. Written by hand, four rows claimed the first while
+ * carrying an empty list.
+ */
+function deriveState(candidateSourceIds: readonly string[]): EconomyCapabilityState {
+  return candidateSourceIds.length > 0 ? 'UNAVAILABLE_SOURCE_DISABLED' : 'UNAVAILABLE_NO_PRODUCER';
+}
 
-export const ECONOMY_CAPABILITY_FACTS: readonly EconomyCapabilityFact[] = [
+/**
+ * The cardinality sentence, INTERPOLATED FROM THE DERIVED ARRAY — never typed out.
+ *
+ * `R-EA-LIN-4`: a cardinality assertion is derived and printed before it is written, or
+ * it is not written. The prose beside each row is now generated from the same array the
+ * row carries, which is why it cannot say "four" while the array holds none.
+ */
+export function candidateCardinalitySentence(ids: readonly string[]): string {
+  if (ids.length === 0) return 'No candidate publisher is registered for this category.';
+  return (
+    `${ids.length} candidate publisher${ids.length === 1 ? ' is' : 's are'} registered for this ` +
+    `category (${ids.join(', ')}); ${ids.length === 1 ? 'it is' : 'all are'} disabled.`
+  );
+}
+
+const NO_SERIES_PRODUCER =
+  'No numeric economic time-series producer exists at this baseline. Every registered official ' +
+  'source ships enabled:false, and no provider returns indicator, period or vintage data.';
+
+/**
+ * The declared half of each row: everything that is a JUDGEMENT rather than a measurement.
+ *
+ * `state` and the cardinality half of `evidence` are absent here BY CONSTRUCTION — they
+ * are not fields a table author can fill in wrongly, because they are not fields.
+ */
+interface EconomyCapabilityDeclaration {
+  readonly category: EconomyCategory;
+  readonly gapReason: EconomyFigureGapReason;
+  readonly candidateSourceIds: readonly string[];
+  /** Qualitative only. MUST NOT contain a count — `candidateCardinalitySentence()` supplies those. */
+  readonly evidenceNote: string;
+}
+
+const ECONOMY_CAPABILITY_DECLARATIONS: readonly EconomyCapabilityDeclaration[] = [
   {
     category: 'INFLATION_CPI',
-    state: 'UNAVAILABLE_SOURCE_DISABLED',
     gapReason: 'NO_PRODUCER',
-    candidateSourceIds: registered('rw-bnr', 'ke-cbk', 'pl-nbp', 'pl-gus'),
-    evidence:
-      NO_SERIES_PRODUCER +
-      ' Four candidate publishers are registered for CPI and monetary statistics; all disabled.',
+    /* rw-nisr registered 2026-09-20 under the East Africa closeout; it is the honest CPI
+       publisher for Rwanda and the artifact this round rehearsed against. The central
+       banks stay out: registration is a provenance act, not a memory act (ruling G). */
+    candidateSourceIds: registered('rw-nisr', 'rw-bnr', 'ke-cbk', 'pl-nbp', 'pl-gus'),
+    evidenceNote:
+      'Registration is not ingestion: the rights record does not resolve, host identity is not ' +
+      'established to tier A, and no PO authorization by source id exists.',
   },
   {
     category: 'POLICY_RATE',
-    state: 'UNAVAILABLE_SOURCE_DISABLED',
     gapReason: 'NO_PRODUCER',
     candidateSourceIds: registered('rw-bnr', 'ke-cbk', 'pl-nbp'),
-    evidence:
-      NO_SERIES_PRODUCER +
-      ' The three registered central banks are the honest publishers of a policy rate; all disabled.',
+    evidenceNote:
+      'A policy rate is a central-bank figure, and no central bank is registered. A statistics ' +
+      'office is not a substitute publisher for it.',
   },
   {
     category: 'GROWTH_GDP',
-    state: 'UNAVAILABLE_SOURCE_DISABLED',
     gapReason: 'NO_PRODUCER',
-    candidateSourceIds: registered('pl-gus'),
-    evidence:
-      NO_SERIES_PRODUCER +
-      ' Only one national statistics office is registered, and it is disabled. No national ' +
-      'accounts publisher is registered for Rwanda or Kenya at all.',
+    candidateSourceIds: registered('rw-nisr', 'pl-gus'),
+    evidenceNote:
+      'National accounts are published by a statistics office; the registered publisher is ' +
+      'disabled, and its release is annual rather than monthly.',
   },
   {
     category: 'EMPLOYMENT',
-    state: 'UNAVAILABLE_NO_PRODUCER',
     gapReason: 'NO_PRODUCER',
     candidateSourceIds: registered('pl-gus'),
-    evidence:
-      NO_SERIES_PRODUCER +
-      ' Labour-force statistics have no registered publisher beyond the single disabled ' +
-      'statistics office, and no labour-market concept exists anywhere in the backend.',
+    evidenceNote:
+      'No labour-market concept exists anywhere in the backend, independently of which publisher ' +
+      'is registered.',
   },
   {
     category: 'PUBLIC_DEBT_FISCAL',
-    state: 'UNAVAILABLE_NO_PRODUCER',
     gapReason: 'NO_PRODUCER',
     candidateSourceIds: [],
-    evidence:
-      NO_SERIES_PRODUCER +
-      ' No finance ministry or debt-management office is registered for any country.',
+    evidenceNote: 'No finance ministry or debt-management office is registered for any country.',
   },
   {
     category: 'TRADE_EXTERNAL_BALANCE',
-    state: 'UNAVAILABLE_NO_PRODUCER',
     gapReason: 'NO_PRODUCER',
     candidateSourceIds: [],
-    evidence:
-      NO_SERIES_PRODUCER +
-      ' No customs, revenue or trade-statistics authority is registered for any country.',
+    evidenceNote:
+      'No customs, revenue or trade-statistics authority is registered for any country.',
   },
   {
     category: 'FX_CONDITIONS',
-    state: 'UNAVAILABLE_SOURCE_DISABLED',
     gapReason: 'NO_PRODUCER',
     candidateSourceIds: registered('rw-bnr', 'ke-cbk', 'pl-nbp'),
-    evidence:
-      NO_SERIES_PRODUCER +
-      ' The registered central banks publish exchange-rate statistics - the National Bank of ' +
-      'Rwanda entry says so explicitly - but all are disabled and no rate is retrieved.',
+    evidenceNote:
+      'Exchange-rate statistics are a central-bank publication, and no central bank is registered.',
   },
 ];
+
+export const ECONOMY_CAPABILITY_FACTS: readonly EconomyCapabilityFact[] =
+  ECONOMY_CAPABILITY_DECLARATIONS.map((d) => ({
+    category: d.category,
+    state: deriveState(d.candidateSourceIds),
+    gapReason: d.gapReason,
+    candidateSourceIds: d.candidateSourceIds,
+    evidence: `${NO_SERIES_PRODUCER} ${candidateCardinalitySentence(d.candidateSourceIds)} ${d.evidenceNote}`,
+  }));
 
 export function economyCapability(category: EconomyCategory): EconomyCapabilityFact {
   const fact = ECONOMY_CAPABILITY_FACTS.find((f) => f.category === category);

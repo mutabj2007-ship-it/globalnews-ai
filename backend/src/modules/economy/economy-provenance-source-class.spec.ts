@@ -2,10 +2,13 @@
   ── B4-A · DATA-PENDING TESTS ─────────────────────────────────────────────
 
   The `it.skip` entries below are not failures of the recovered Economy
-  substrate. They assert against official-source registry entries that canonical
-  seeded and this deployment deliberately does not: OFFICIAL_SOURCES is empty by
-  design, and the whole point of the Economy data finding is that no
-  central-bank or statistics producer exists yet.
+  substrate. They assert against official-source registry FIELDS this deployment
+  does not yet populate.
+
+  CORRECTED 2026-09-20: this header used to read "OFFICIAL_SOURCES is empty by
+  design". It is not empty - it holds eurostat and rw-nisr, both registered and
+  both disabled. Registration is not ingestion, so the Economy data finding is
+  unchanged: no central-bank or statistics PRODUCER exists yet.
 
   They are skipped with a stated reason rather than satisfied with invented
   fixtures, because a seeded fake would turn "we have no data" into "we have
@@ -25,12 +28,13 @@ import {
   AVAILABLE_ECONOMY_CATEGORIES,
   assertCategoryProducible,
   economyCapability,
+  candidateCardinalitySentence,
   economyDeploymentHasObservationSource,
 } from './economy-capability.contract';
 import { economySourceProvenance } from './economy-source-class.adapter';
 
 describe('ADAPT-1 Gate 4 - source class attaches to the claim, not the institution', () => {
-  /* B4-A DATA-PENDING — asserts against a SEEDED official-source registry. Canonical seeded 4 entries; this deployment seeds 0 by design ("OFFICIAL_SOURCES starts empty and stays empty this milestone"). Seeding fake entries to make this pass is exactly the fabrication the ruling forbids. It will pass when G seeds the registry, and must not before. */
+  /* B4-A DATA-PENDING — asserts against official-source registry FIELDS this deployment does not yet populate. The registry is NO LONGER EMPTY (eurostat, rw-nisr), so the old rationale here — "this deployment seeds 0 by design" — was stale and is corrected. What is still absent is the per-claim evidence-role and language data these assert against. Seeding fake entries to make them pass is exactly the fabrication the ruling forbids. */
   it.skip('the SAME institution yields different evidence roles for different claims', () => {
     const decision = economySourceProvenance({
       claimKind: 'POLICY_DECISION_RECORD',
@@ -71,7 +75,7 @@ describe('ADAPT-1 Gate 4 - source class attaches to the claim, not the instituti
     expect(p.institution).toBeUndefined();
   });
 
-  /* B4-A DATA-PENDING — asserts against a SEEDED official-source registry. Canonical seeded 4 entries; this deployment seeds 0 by design ("OFFICIAL_SOURCES starts empty and stays empty this milestone"). Seeding fake entries to make this pass is exactly the fabrication the ruling forbids. It will pass when G seeds the registry, and must not before. */
+  /* B4-A DATA-PENDING — asserts against official-source registry FIELDS this deployment does not yet populate. The registry is NO LONGER EMPTY (eurostat, rw-nisr), so the old rationale here — "this deployment seeds 0 by design" — was stale and is corrected. What is still absent is the per-claim evidence-role and language data these assert against. Seeding fake entries to make them pass is exactly the fabrication the ruling forbids. */
   it.skip('source language is preserved and nothing is translated', () => {
     const p = economySourceProvenance({
       claimKind: 'STATISTICAL_RELEASE',
@@ -184,19 +188,89 @@ describe('ADAPT-1 Gate 2 - capability stays G-owned and uses the SHARED gap/avai
     }
   });
 
-  /* B4-A DATA-PENDING — asserts against a SEEDED official-source registry. Canonical seeded 4 entries; this deployment seeds 0 by design ("OFFICIAL_SOURCES starts empty and stays empty this milestone"). Seeding fake entries to make this pass is exactly the fabrication the ruling forbids. It will pass when G seeds the registry, and must not before. */
-  it.skip('the measured reason holds: every registered source is disabled with no ingestion', () => {
-    expect(OFFICIAL_SOURCES).toHaveLength(4);
-    expect(OFFICIAL_SOURCES.filter((s) => s.enabled)).toHaveLength(0);
-    expect(OFFICIAL_SOURCES.filter((s) => s.ingestionMethod !== 'none')).toHaveLength(0);
+  /*
+    RETIRED TRIPWIRE, REPLACED WITH EQUAL TEETH - NOT DELETED.
+
+    This was `it.skip` with the note "canonical seeded 4 entries; this deployment seeds 0
+    by design". Both halves were stale: the registry now holds real entries, and the
+    original assertion would fail for the wrong reason anyway - eurostat carries
+    `ingestionMethod: 'api'`, which with `enabled: false` reads "an API source that is
+    switched off" and is the true statement rather than a violation.
+
+    So the teeth are preserved where they actually bite: NOTHING IS ENABLED. That is the
+    activation gate, it is the property the skipped test was reaching for, and unlike the
+    original it is asserted against a NON-EMPTY registry.
+  */
+  it('the registry is non-empty, and not one registered source is enabled', () => {
+    // Non-vacuity first: an empty registry would satisfy the loop below for free.
+    expect(OFFICIAL_SOURCES.length).toBeGreaterThan(0);
+    expect(OFFICIAL_SOURCES.filter((s) => s.enabled)).toEqual([]);
+
+    // Positive control: the predicate can see an enabled source when one exists.
+    const enabledProbe = [...OFFICIAL_SOURCES, { ...OFFICIAL_SOURCES[0], id: 'probe', enabled: true }];
+    expect(enabledProbe.filter((s) => s.enabled)).toHaveLength(1);
   });
 
   it('every candidate source id names a source that actually exists in the registry', () => {
     const ids = new Set(OFFICIAL_SOURCES.map((s) => s.id));
 
+    /*
+      R-EA-LIN-5 - NON-VACUITY CONTROL. This loop is the one that passed while every array
+      it iterated was empty: `R-B`, an empty set satisfies every "every member is X"
+      assertion. Asserting that at least one row names a real publisher is what gives the
+      loop something to do, so emptying the table can no longer be mistaken for passing.
+    */
+    const named = ECONOMY_CAPABILITY_FACTS.flatMap((f) => f.candidateSourceIds);
+    expect(named.length).toBeGreaterThan(0);
+    expect(named).toContain('rw-nisr');
+
     for (const fact of ECONOMY_CAPABILITY_FACTS) {
       for (const id of fact.candidateSourceIds) expect(ids.has(id)).toBe(true);
     }
+  });
+
+  /*
+    R-EA-LIN-4 - THE ASSERTION THE ROUND ACTUALLY NEEDED, and the one that has something
+    to say when an array is empty. `state` is a claim ABOUT `candidateSourceIds`; this
+    checks the claim against the thing it claims about, in both directions.
+  */
+  it('every declared state agrees with the array it describes, in both directions', () => {
+    for (const fact of ECONOMY_CAPABILITY_FACTS) {
+      if (fact.candidateSourceIds.length > 0) {
+        expect(fact.state).toBe('UNAVAILABLE_SOURCE_DISABLED');
+      } else {
+        expect(fact.state).toBe('UNAVAILABLE_NO_PRODUCER');
+      }
+    }
+
+    // Both branches are actually exercised - otherwise the test above is half-vacuous.
+    const withCandidates = ECONOMY_CAPABILITY_FACTS.filter((f) => f.candidateSourceIds.length > 0);
+    const without = ECONOMY_CAPABILITY_FACTS.filter((f) => f.candidateSourceIds.length === 0);
+    expect(withCandidates.length).toBeGreaterThan(0);
+    expect(without.length).toBeGreaterThan(0);
+  });
+
+  it('no evidence string carries a hand-written cardinality that could contradict its array', () => {
+    /*
+      The failure mode this closes, verbatim from the defect: "Four candidate publishers
+      are registered for CPI" printed beside an empty array. Number words are banned from
+      the prose precisely because they are the form the lie took.
+    */
+    const NUMBER_WORDS = /\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/i;
+
+    for (const fact of ECONOMY_CAPABILITY_FACTS) {
+      const generated = candidateCardinalitySentence(fact.candidateSourceIds);
+      const handWritten = fact.evidence.replace(generated, '');
+      expect(handWritten).not.toMatch(NUMBER_WORDS);
+    }
+
+    // Positive control: the matcher does detect a number word when one is present.
+    expect('Four candidate publishers are registered').toMatch(NUMBER_WORDS);
+
+    // And the interpolated half DOES state the count - it is derived, so it may.
+    const cpi = economyCapability('INFLATION_CPI');
+    expect(cpi.evidence).toContain(String(cpi.candidateSourceIds.length));
+    expect(cpi.evidence).toContain('rw-nisr');
   });
 
   it('serving a value for an unavailable category is refused, not degraded', () => {
