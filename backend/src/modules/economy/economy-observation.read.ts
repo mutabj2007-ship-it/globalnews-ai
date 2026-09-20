@@ -32,22 +32,22 @@
 
 import { Injectable } from '@nestjs/common';
 
-import {
-  makeNisrCpiDecoder,
-  snapshotContentAddress,
-  type EconomyFigureSlot,
-  type NisrCpiDecoded,
-  type OfficialDataRetrieval,
-  type SourceProvenance,
-} from '@globalnews-ai/shared';
+/*
+  TYPES ONLY FROM SHARED, AND THAT IS A RULE RATHER THAN A STYLE.
 
-import { PrismaService } from '../../database/prisma.service';
-import { PostgresOfficialDataSnapshotStore } from '../official-data/official-data-snapshot.store';
-import {
-  NISR_CPI_EXTRACTOR_ID,
-  NISR_CPI_EXTRACTOR_VERSION,
-  NISR_CPI_PRODUCTION_EXTRACTOR,
-} from '../official-data/nisr/nisr-cpi-pdf.extractor';
+  `economy-implementation-boundary.spec.ts` Gate 6 states it: Economy may consume the
+  shared ECONOMY contract at runtime and may take TYPES from the platform’s provenance
+  model, but *"may not reach into any OTHER shared runtime domain"*.
+
+  An earlier draft of this file imported `makeNisrCpiDecoder` and
+  `snapshotContentAddress` — official-data VALUES — and that guard failed it. It was
+  right: deciding which decoder may read a NISR artifact is an official-data question,
+  and Economy asking it was Economy behaving as part of another domain. The runtime
+  moved to `RetainedNisrCpiReader`; the list was not widened to accommodate this file.
+*/
+import type { EconomyFigureSlot, SourceProvenance } from '@globalnews-ai/shared';
+
+import { RetainedNisrCpiReader } from '../official-data/nisr/nisr-cpi-retained.reader';
 import {
   nisrCpiEditionOrderFor,
   readNisrCpiNationalFigureSlot,
@@ -110,56 +110,40 @@ export interface EconomyObservationView {
 
 @Injectable()
 export class EconomyObservationReadService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  private store(): PostgresOfficialDataSnapshotStore {
-    return new PostgresOfficialDataSnapshotStore(this.prisma, [PROVIDER_ID]);
-  }
+  constructor(private readonly retained: RetainedNisrCpiReader) {}
 
   /**
    * The retained NISR CPI observation, or a GAP saying why there is none.
    *
    * Every refusal below is a `GAP` with a reason, and the reason distinguishes OUR gap
-   * from the publisher's: `NO_PRODUCER` is a fact about this deployment, `WITHHELD` is a
+   * from the publisher’s: `NO_PRODUCER` is a fact about this deployment, `WITHHELD` is a
    * fact about the document. A surface must never report one as the other.
+   *
+   * THE MAPPING IS EXPLICIT AND DELIBERATELY LOSSY IN ONE DIRECTION ONLY. The reader
+   * distinguishes five refusals; four of them are facts about US — nothing captured,
+   * the payload no longer retained, no lineage, or an extractor this deployment cannot
+   * reproduce — and all four become `NO_PRODUCER`, which is the slot vocabulary’s name
+   * for exactly that. `PARSE_FAILED` is the one that is a claim about the DOCUMENT, so
+   * it is not folded in with them: it is reported to the caller as its own gap and
+   * never as a publisher silence.
    */
   async readNisrHeadlineCpi(): Promise<EconomyObservationView> {
-    const gap = (reason: EconomyFigureSlot extends never ? never : 'NO_PRODUCER' | 'WITHHELD'): EconomyObservationView => ({
+    const gap = (reason: 'NO_PRODUCER' | 'WITHHELD'): EconomyObservationView => ({
       slot: { kind: 'GAP', seriesId: 'rw-nisr:cpi:all-rwanda', periodId: 'UNKNOWN', reason },
       publishable: false,
     });
 
-    /* The most recent ADMITTED capture of the governed endpoint. Nothing else is read. */
-    const row = await this.prisma.snapshotRetrieval.findFirst({
-      where: { providerId: PROVIDER_ID, endpointId: ENDPOINT_ID, admissibility: 'ADMITTED' },
-      orderBy: { retrievedAt: 'desc' },
-    });
-    if (row === null || row.contentAddress === null) return gap('NO_PRODUCER');
-
-    /*
-      THE RECORDED EXTRACTOR IS THE ONE THAT MUST DO THE READING.
-
-      If this deployment's extractor is not the one the row says produced the figure, the
-      honest answer is that this deployment cannot reproduce it — not a figure decoded by
-      something else and presented under the recorded identity.
-    */
-    if (
-      row.extractorId !== null &&
-      (row.extractorId !== NISR_CPI_EXTRACTOR_ID || row.extractorVersion !== NISR_CPI_EXTRACTOR_VERSION)
-    ) {
-      return gap('NO_PRODUCER');
+    const held = await this.retained.read(PROVIDER_ID, ENDPOINT_ID);
+    if (held.kind === 'NONE') {
+      /*
+        A PARSE REFUSAL IS EVIDENCE ABOUT THE ARTIFACT AND IS NOT LAUNDERED INTO ONE
+        ABOUT US — nor the reverse. `WITHHELD` says the document supplied no figure;
+        the other four say this deployment could not produce one.
+      */
+      return gap(held.refusal === 'PARSE_FAILED' ? 'WITHHELD' : 'NO_PRODUCER');
     }
 
-    const address = snapshotContentAddress(row.contentAddress);
-    const payload = await this.store().open(address);
-    if (payload === null) return gap('NO_PRODUCER');
-
-    const decodeResult = makeNisrCpiDecoder(NISR_CPI_PRODUCTION_EXTRACTOR)(payload.bytes);
-    if (!decodeResult.ok) return gap('NO_PRODUCER');
-    const decoded: NisrCpiDecoded = decodeResult.value;
-
-    const retrieval = await this.retrievalOf(address);
-    if (retrieval === null) return gap('NO_PRODUCER');
+    const { decoded, retrieval, contentAddress, lineage, priorContentAddresses } = held;
 
     const provenance: SourceProvenance = {
       sourceType: 'PUBLIC_DATA',
@@ -173,9 +157,7 @@ export class EconomyObservationReadService {
 
     /* Ruling D: an artifact that cannot be ordered against what we already hold supplies
        no values. The store is the authority on what was already seen. */
-    const all = await this.store().retrievalsFor(address);
-    const seen = all.slice(0, -1).map((r) => r.contentAddress ?? '');
-    const editionOrder = nisrCpiEditionOrderFor(seen, address as string);
+    const editionOrder = nisrCpiEditionOrderFor(priorContentAddresses, contentAddress);
 
     const read = readNisrCpiNationalFigureSlot({ decoded, retrieval, provenance, editionOrder });
     if (read.slot.kind !== 'OBSERVATION') {
@@ -192,22 +174,25 @@ export class EconomyObservationReadService {
         jurisdiction: 'RW',
         licence: decoded.licenceToken,
         retrievedAt: retrieval.retrievedAt,
-        contentAddress: address as string,
-        parserId: row.parserId ?? '',
-        parserVersion: row.parserVersion ?? '',
-        extractorId: row.extractorId ?? decoded.extractorId,
-        extractorVersion: row.extractorVersion ?? decoded.extractorVersion,
-        referencePeriod: row.referencePeriod ?? decoded.referencePeriod,
-        sourceLanguage: row.sourceLanguage ?? decoded.sourceLanguage,
+        contentAddress,
+        parserId: lineage.parserId ?? '',
+        parserVersion: lineage.parserVersion ?? '',
+        /*
+          THE PERSISTED IDENTITY LEADS, AND THE DECODE IS ONLY THE FALLBACK.
+
+          What B-3.1 persisted these columns FOR is the ability to say what read the
+          artifact at capture time. A fresh decode’s self-description is a different
+          fact wearing the same name, so it is used only where the column is NULL —
+          which, by ruling A, is exactly the pre-migration rows.
+        */
+        extractorId: lineage.extractorId ?? decoded.extractorId,
+        extractorVersion: lineage.extractorVersion ?? decoded.extractorVersion,
+        referencePeriod: lineage.referencePeriod ?? decoded.referencePeriod,
+        sourceLanguage: lineage.sourceLanguage ?? decoded.sourceLanguage,
         basePeriod: decoded.basePeriod,
         /* From the ARTIFACT, at the artifact’s own precision. See the field note. */
         publicationDateStated: decoded.publicationDate,
       },
     };
-  }
-
-  private async retrievalOf(address: ReturnType<typeof snapshotContentAddress>): Promise<OfficialDataRetrieval | null> {
-    const all = await this.store().retrievalsFor(address);
-    return all.length === 0 ? null : all[all.length - 1]!;
   }
 }

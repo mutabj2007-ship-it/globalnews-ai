@@ -114,6 +114,18 @@ describe('ECON-DATA-1 Gate 6 - what this module may not do', () => {
         ];
 
       for (const [, clause] of sharedImports) {
+        /*
+          A STATEMENT-LEVEL `import type` CARRIES NO VALUE BINDING, BY SYNTAX.
+
+          This clause used to be scanned binding by binding, which understands
+          `{ type Foo }` and not `import type { Foo }` — so the guard reported the
+          STRONGER of the two forms as a violation, and would have pushed a file
+          towards the weaker one to stay quiet. `import type` cannot import a value
+          even by mistake, so a statement in that form satisfies this rule outright
+          and there is nothing left to check in it.
+        */
+        if (/^\s*type\s/.test(clause)) continue;
+
         // Every VALUE binding (one not prefixed `type`) must be a declared
         // Economy-contract runtime member.
         const bindings = [...clause.matchAll(/(?:^|[{,])\s*(type\s+)?([A-Za-z_][A-Za-z0-9_]*)/g)]
@@ -126,6 +138,32 @@ describe('ECON-DATA-1 Gate 6 - what this module may not do', () => {
         }
       }
     }
+  });
+
+  /*
+    THE POSITIVE CONTROLS THAT SKIP HAD BETTER NOT SWALLOW.
+
+    A `continue` added to a scanner is how a scanner stops scanning. These three
+    run the same clause logic over synthetic sources and assert that the exemption
+    covers exactly the statement-level form and nothing adjacent to it.
+  */
+  it('the import-type exemption covers that form alone (positive control)', () => {
+    const valueBindingsIn = (clause: string): string[] => {
+      if (/^\s*type\s/.test(clause)) return [];
+      return [...clause.matchAll(/(?:^|[{,])\s*(type\s+)?([A-Za-z_][A-Za-z0-9_]*)/g)]
+        .filter((m) => m[1] === undefined)
+        .map((m) => m[2] as string)
+        .filter((n) => n !== 'import' && n !== 'type');
+    };
+
+    /* exempt: nothing in it can be a value */
+    expect(valueBindingsIn('type { EconomyFigureSlot, SourceProvenance } ')).toEqual([]);
+    /* NOT exempt: a mixed clause still reports its value bindings */
+    expect(valueBindingsIn('{ type EconomyFigureSlot, makeNisrCpiDecoder } ')).toEqual([
+      'makeNisrCpiDecoder',
+    ]);
+    /* NOT exempt: a plain value clause is untouched by the change */
+    expect(valueBindingsIn('{ snapshotContentAddress } ')).toEqual(['snapshotContentAddress']);
   });
 
   it('reaches into no OTHER shared runtime domain', () => {
