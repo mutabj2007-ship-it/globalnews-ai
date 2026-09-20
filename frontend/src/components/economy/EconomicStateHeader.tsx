@@ -132,7 +132,7 @@ export function EconomicStateHeader({
           {t.changeState[changeState]}
         </span>
         )}
-        {observationsAvailable && (
+        {observationsAvailable && a.model && (
         <span data-econ="confidence" style={{ ...tagRest, padding: '4px 8px' }}>
           {t.confidence[a.confidence]}
         </span>
