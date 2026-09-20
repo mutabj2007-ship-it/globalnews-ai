@@ -170,12 +170,16 @@ describe('TEST A · the typed question resolves EAST AFRICA as request scope', (
       expect(members).toContain(dropped);
     }
 
-    /* 11 members at width 6 is two batches, not one truncation. */
+    /*
+      The Alpha repair tightens only CONCURRENCY, never membership. Eleven
+      members at width two become six batches; every member remains reachable.
+    */
     const width = MAX_CONCURRENT_REGION_REQUESTS;
     const batches: number[] = [];
     for (let i = 0; i < members.length; i += width) batches.push(members.slice(i, i + width).length);
 
-    expect(batches).toEqual([6, 5]);
+    expect(width).toBe(2);
+    expect(batches).toEqual([2, 2, 2, 2, 2, 1]);
   });
 
   it('evidence is NEVER a reason to stop early; a rate limit is the only one', () => {
