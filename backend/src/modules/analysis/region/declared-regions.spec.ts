@@ -7,6 +7,7 @@ import {
   EAST_AFRICA,
   MAX_CONCURRENT_REGION_REQUESTS,
   detectDeclaredRegion,
+  prioritizeRegionMembers,
   resolveRegionMembers,
 } from './declared-regions';
 import { buildRegionScope, memberIso3WithEvidence, retrievalOutcome } from './region-coverage';
@@ -120,6 +121,24 @@ describe('TEST A · the typed question resolves EAST AFRICA as request scope', (
       `location` is undefined and the anchored branch is not reached.
     */
     expect(serviceSource).toMatch(/declaredRegion !== undefined\s*\?\s*undefined\s*:\s*\(storyAnchoredLocation/);
+  });
+
+  it('explicitly named region members move first without changing declared membership', () => {
+    const members = resolveRegionMembers(EAST_AFRICA);
+    const rwanda = members.find((member) => member.iso3 === 'RWA');
+    const drCongo = members.find((member) => member.iso3 === 'COD');
+
+    expect(rwanda).toBeDefined();
+    expect(drCongo).toBeDefined();
+
+    const prioritized = prioritizeRegionMembers(
+      EAST_AFRICA,
+      [rwanda, drCongo].filter((member): member is NonNullable<typeof member> => member !== undefined),
+    );
+
+    expect(prioritized.slice(0, 2).map((member) => member.iso3)).toEqual(['RWA', 'COD']);
+    expect(prioritized).toHaveLength(EAST_AFRICA.members.length);
+    expect(new Set(prioritized.map((member) => member.iso3))).toEqual(new Set(EAST_AFRICA.members));
   });
 
   it('THE BOUND IS ON CONCURRENCY, NOT ON MEMBERSHIP', () => {
