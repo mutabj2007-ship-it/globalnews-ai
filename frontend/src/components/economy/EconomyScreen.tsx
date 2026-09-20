@@ -180,7 +180,7 @@ export function EconomyScreen({
 
   const primary = subject.primarySeries;
   const observedIndicatorCount = subject.indicators.filter((series) => figureIsObservation(series.latest)).length;
-  const hasRevisionTrack = (revisionVintages?.length ?? 0) > 1 && revisionEffects !== undefined;
+  const hasRevisionTrack = (revisionVintages?.length ?? 0) > 0 && revisionEffects !== undefined;
   const hasCompetingReadings = competing !== undefined;
   const hasTransmissionChain = (chain?.length ?? 0) > 0;
   const hasTimeline = (timeline?.length ?? 0) > 0;
