@@ -45,7 +45,7 @@ import {
 import {
   MAX_CONCURRENT_REGION_REQUESTS,
   detectDeclaredRegion,
-  resolveRegionMembers,
+  prioritizeRegionMembers,
   type DeclaredRegion,
 } from '../region/declared-regions';
 
@@ -75,6 +75,16 @@ const RETAINED_PER_MEMBER_LIMIT = 6;
  * about now, and the disclosure says RETAINED, not RECENT.
  */
 const RETAINED_MAX_AGE_MINUTES = 48 * 60;
+
+/**
+ * Only the first two region members may spend the slow live fallback tier.
+ *
+ * They are the explicitly named countries when the reader supplied them,
+ * because prioritizeRegionMembers() moves those first. Every other region member
+ * still gets a primary-provider attempt and remains eligible for retained
+ * reporting, but cannot multiply GDELT's serial/slow fallback eleven times.
+ */
+const REGION_LIVE_FALLBACK_MEMBER_LIMIT = 2;
 
 import { computeSourceDiversity } from '../duplicates/compute-source-diversity.util';
 import {
@@ -881,6 +891,7 @@ export class AnalysisService {
           const regional = await this.retrieveDeclaredRegionEvidence(
             declaredRegion,
             requestedLanguage,
+            classification.countries,
           );
 
           articles = regional.articles;
@@ -2828,6 +2839,7 @@ export class AnalysisService {
   private async retrieveMemberEvidence(
     member: CountryMeta,
     requestedLanguage: LanguageCode,
+    allowFallback = true,
   ): Promise<{
     articles: NewsArticle[];
     providers: string[];
@@ -2851,8 +2863,12 @@ export class AnalysisService {
 
     try {
       const response = isPolish
-        ? await this.newsService.topHeadlines(SEARCH_POOL_SIZE, { lang: 'pl', q: sent })
-        : await this.newsService.search(sent, SEARCH_POOL_SIZE);
+        ? await this.newsService.topHeadlines(SEARCH_POOL_SIZE, {
+            lang: 'pl',
+            q: sent,
+            allowFallback,
+          })
+        : await this.newsService.search(sent, SEARCH_POOL_SIZE, undefined, { allowFallback });
 
       const failureKinds = readProviderFailures(response).map((failure) => failure.kind);
 
@@ -2925,6 +2941,7 @@ export class AnalysisService {
   private async retrieveDeclaredRegionEvidence(
     region: DeclaredRegion,
     requestedLanguage: LanguageCode,
+    explicitlyNamedCountries: readonly CountryMeta[] = [],
   ): Promise<{
     articles: NewsArticle[];
     retrievalContext: AnalysisRetrievalContext;
@@ -2933,7 +2950,16 @@ export class AnalysisService {
     live: Set<string>;
     unavailable: Set<string>;
   }> {
-    const members = resolveRegionMembers(region);
+    /*
+     * Explicit countries inside a regional question are retrieval priorities,
+     * never extra region members. This is what makes "East Africa ... Rwanda
+     * and DR Congo" attempt Rwanda + DRC before a provider throttle can cut the
+     * second batch off.
+     */
+    const members = prioritizeRegionMembers(region, explicitlyNamedCountries);
+    const fallbackEligible = new Set(
+      members.slice(0, REGION_LIVE_FALLBACK_MEMBER_LIMIT).map((member) => member.iso3),
+    );
 
     const collected: NewsArticle[] = [];
     const providers = new Set<string>();
@@ -2959,7 +2985,13 @@ export class AnalysisService {
         cannot reject the batch and lose the others' evidence.
       */
       const results = await Promise.all(
-        batch.map((member) => this.retrieveMemberEvidence(member, requestedLanguage)),
+        batch.map((member) =>
+          this.retrieveMemberEvidence(
+            member,
+            requestedLanguage,
+            fallbackEligible.has(member.iso3),
+          ),
+        ),
       );
 
       results.forEach((result, index) => {
