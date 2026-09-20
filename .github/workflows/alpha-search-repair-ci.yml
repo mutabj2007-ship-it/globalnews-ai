@@ -29,9 +29,10 @@ jobs:
       - name: Build shared package
         run: npm run build:shared
 
-      - name: Lint backend (baseline diagnostic)
+      - name: Lint backend (baseline diagnostic, no auto-fix)
         continue-on-error: true
-        run: npm run lint --workspace=backend
+        working-directory: backend
+        run: npx eslint "{src,test}/**/*.ts"
 
       - name: Build backend
         run: npm run build:backend
