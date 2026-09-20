@@ -150,6 +150,8 @@ export const SNAPSHOT_REFUSAL_KEYS = [
     before any decoder ran. This is the missing half.
   */
   'BODY_NOT_PDF_SHAPED',
+  /* UCDP Candidate GED R1 · text/csv has its own shape refusal. */
+  'BODY_NOT_CSV_SHAPED',
   'ARCHIVE_NOT_ALLOWED',
   'PARSE_FAILED',
   'ENVELOPE_NOT_RECOGNISED',
@@ -191,6 +193,9 @@ const REFUSAL_CLASS_BY_KEY: Readonly<Record<SnapshotRefusalKey, RefusalClass | '
       had asked for, which is not a property of an interstitial.
     */
     BODY_NOT_PDF_SHAPED: 'TRANSIENT',
+    /* Same operational class as JSON/PDF shape mismatch: a gateway/WAF body served
+       under the expected content type may clear without the artifact changing. */
+    BODY_NOT_CSV_SHAPED: 'TRANSIENT',
     ARCHIVE_NOT_ALLOWED: 'PERMANENT',
     PARSE_FAILED: 'PERMANENT',
     ENVELOPE_NOT_RECOGNISED: 'PERMANENT',
@@ -412,6 +417,21 @@ export const MEDIA_ADMISSION_ROWS: readonly MediaAdmissionRow[] = Object.freeze(
     decodedByteCap: SNAPSHOT_DECODED_BYTE_CAP,
     containerIsArchive: false,
   }),
+  /*
+    UCDP Candidate GED R1 · the first governed CSV row.
+    CSV is textual, so charset rules apply. It has no magic prefix; structural validity
+    belongs to its governed decoder and exact captured-header envelope. The sniff below
+    only refuses an obvious HTML body and never widens acceptance.
+  */
+  Object.freeze({
+    mediaType: 'text/csv',
+    charsetApplies: true,
+    leadingBytes: null,
+    shapeRefusalKey: 'BODY_NOT_CSV_SHAPED' as SnapshotRefusalKey,
+    wireByteCap: SNAPSHOT_WIRE_BYTE_CAP,
+    decodedByteCap: SNAPSHOT_DECODED_BYTE_CAP,
+    containerIsArchive: false,
+  }),
 ]);
 
 /** The bare type, parameters stripped, lower-cased. One parse, used by every reader. */
@@ -583,6 +603,16 @@ export function sniffRefusal(
     for (let k = 0; k < magic.length; k += 1) {
       if (decoded[i + k] !== magic[k]) return row.shapeRefusalKey;
     }
+    return null;
+  }
+
+  /*
+    UCDP Candidate GED R1 · refuse an obvious HTML/interstitial served as CSV.
+    This is refuse-only. A body that does not begin with '<' is NOT admitted here; it
+    merely proceeds to the governed CSV decoder and exact-header envelope.
+  */
+  if (type === 'text/csv') {
+    if (decoded[i] === 0x3c /* < */) return 'BODY_NOT_CSV_SHAPED';
     return null;
   }
 
