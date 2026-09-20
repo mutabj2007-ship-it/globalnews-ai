@@ -203,6 +203,7 @@ const nextConfig = {
         and is not integration.
       */
       { source: '/economy/:path*', destination: `${backendOrigin}/economy/:path*` },
+      { source: '/conflict/:path*', destination: `${backendOrigin}/conflict/:path*` },
     ];
   },
 
