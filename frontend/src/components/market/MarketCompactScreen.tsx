@@ -30,6 +30,7 @@
  */
 
 import { useReducer, type JSX } from 'react';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import {
   MKT_CANVAS, MKT_HIT_TARGET_PX, MKT_INK, MKT_LICENSED, MKT_LINE, MKT_NAV,
   MKT_SURFACE, MKT_TYPE, mktTracking,
@@ -150,7 +151,11 @@ export function MarketCompactScreen({ locale, read }: {
         background: MKT_SURFACE.panel, borderBottom: edge,
         display: 'flex', flexDirection: 'column', gap: '8px',
       }}>
-        <span style={{ ...micro, whiteSpace: 'normal' }}>GlobalNews AI · {t.domain}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          {/* ALPHA FINAL DATA-FED CONVERGENCE R2 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+          <ReturnControl language={locale} variant="microline" iconOnly />
+          <span style={{ ...micro, whiteSpace: 'normal' }}>GlobalNews AI · {t.domain}</span>
+        </div>
         <h1 style={{
           margin: 0, fontSize: MKT_TYPE.title, fontWeight: 600, color: MKT_INK.primary,
           whiteSpace: 'normal', overflowWrap: 'anywhere',

@@ -1,3 +1,4 @@
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { economyStrings } from '@/lib/economy/strings';
 import type { EconomySubject } from '@/lib/economy/types';
@@ -57,6 +58,8 @@ export function EconomicStateHeader({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* ALPHA FINAL DATA-FED CONVERGENCE R2 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+          <ReturnControl language={locale} variant="microline" />
           <span style={{ fontSize: 'max(var(--ar-fs-min, 0px), 20px)', fontWeight: 600, letterSpacing: 'calc(-0.01em * var(--ar-ls-mul, 1))', color: ECON_INK.primary }}>
             {subject.name}
           </span>

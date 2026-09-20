@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { economyStrings } from '@/lib/economy/strings';
 import type { AttentionRow, EconomySubject, Series } from '@/lib/economy/types';
@@ -142,7 +143,11 @@ export function EconomyCompactScreen({
         style={{ flex: '0 0 auto', padding: '14px', borderBottom: `1px solid ${ECON_LINE.structure}`, background: ECON_SURFACE.panel, display: 'flex', flexDirection: 'column', gap: '8px' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-          <span style={{ fontSize: 'max(var(--ar-fs-min, 0px), 19px)', fontWeight: 600, color: ECON_INK.primary }}>{subject.name}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            {/* ALPHA FINAL DATA-FED CONVERGENCE R2 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+            <ReturnControl language={locale} variant="microline" iconOnly />
+            <span style={{ fontSize: 'max(var(--ar-fs-min, 0px), 19px)', fontWeight: 600, color: ECON_INK.primary, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{subject.name}</span>
+          </div>
           {showFigures && changeState ? (
             <span
               data-econ="change-state"

@@ -5,7 +5,6 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { EconomyScreen } from '@/components/economy/EconomyScreen';
-import { ECONOMY_DATA_CAPABILITY } from '@/lib/economy/economyConfig';
 import { PRODUCTION_SHAPED_SUBJECT } from '@/lib/economy/productionSubject';
 import { AlphaVisualPreviewMarker } from '@/components/economy/AlphaVisualPreview';
 import { RetainedObservationPanel } from '@/components/economy/RetainedObservationPanel';
@@ -53,8 +52,12 @@ import { economyCapabilityFrom, readEconomyObservations } from '@/lib/economy/ec
  *
  * `FIXTURE_DATA_CAPABILITY` is not imported, and `data` is passed explicitly rather than
  * defaulted, so there is no omission, flag or default parameter by which this page could
- * arrive at the design's illustrative Rwanda, Kenya or Poland figures. The capability it
- * passes is the measured one: NO_OBSERVATION_SOURCE.
+ * arrive at the design's illustrative Rwanda, Kenya or Poland figures.
+ *
+ * THE CAPABILITY IS NO LONGER A LITERAL, AND IT NO LONGER READS `NO_OBSERVATION_SOURCE`.
+ * It is `economyCapabilityFrom(read)` — the answer to the retained-observation read —
+ * so it says OBSERVED exactly when something was observed and NO_OBSERVATION_SOURCE
+ * otherwise. Neither branch can reach a fixture: no branch of that function returns one.
  *
  * ── ZERO EXTERNAL CALLS ───────────────────────────────────────────────────
  *

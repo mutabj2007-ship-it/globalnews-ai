@@ -5,7 +5,6 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { EconomyCompactScreen } from '@/components/economy/compact/EconomyCompactScreen';
-import { ECONOMY_DATA_CAPABILITY } from '@/lib/economy/economyConfig';
 import { PRODUCTION_SHAPED_SUBJECT } from '@/lib/economy/productionSubject';
 import { AlphaVisualPreviewMarker } from '@/components/economy/AlphaVisualPreview';
 import { RetainedObservationPanel } from '@/components/economy/RetainedObservationPanel';

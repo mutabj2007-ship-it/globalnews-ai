@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import {
   ENERGY_GATES,
   ENERGY_SHEET_STAGES,
@@ -167,6 +168,32 @@ export function EnergyShell({ data, strings, urlState, locale }: EnergyShellProp
     return () => window.removeEventListener('keydown', onKeyDown);
   });
 
+  /**
+   * THE RETURN LADDER — ENERGY’S OWN ORDER, REUSED RATHER THAN REINVENTED.
+   *
+   * The shared control asks this first, and leaves the route only when it
+   * answers `false`. What it walks is the SAME precedence the Escape handler
+   * directly above fixes — HUD → drawer → lens → Ask, then the subject, then
+   * the substrate — so pressing Back and pressing Escape can never disagree
+   * about which surface is topmost.
+   *
+   * WHY THIS REPLACED A BESPOKE ARROW. The compact bar carried its own
+   * `← {crumb}` button, and it was the ONE return affordance H found across
+   * fourteen surfaces — compact only. It did two things by position rather
+   * than by rule (`subject === null ? substrate : subject`) and it could never
+   * leave `/energy` at all, so a reader who arrived by direct link had no exit.
+   * Both are fixed here: the ladder is explicit, and its `false` branch hands
+   * the press to the shared control’s governed fallback.
+   */
+  const clearEnergySubState = (): boolean => {
+    if (askOpen) { setAskOpen(false); return true; }
+    if (lensOpen) { setLensOpen(false); return true; }
+    if (hudId !== null) { setHudId(null); return true; }
+    if (urlState.subject !== null) { setSubject(null); return true; }
+    if (urlState.substrate !== 'spatial') { setSubstrate('spatial'); return true; }
+    return false;
+  };
+
   /* ── THE WINDOW, AND M05'S EXPLICIT FALLBACK ──────────────────────────── */
   const fallingBack = windowFallsBackToSevenDay(urlState.window, data.hasVisitCheckpoint);
   const activeWindow = effectiveWindow(urlState.window, data.hasVisitCheckpoint);
@@ -245,13 +272,20 @@ export function EnergyShell({ data, strings, urlState, locale }: EnergyShellProp
             gap: '10px',
           }}
         >
-          <button
-            type="button"
-            onClick={() => (subject === null ? setSubstrate('spatial') : setSubject(null))}
-            style={{ ...mono(11, ENERGY_SEMANTIC.cyan), background: 'none', border: 'none', minWidth: '44px', minHeight: '44px', textAlign: 'left', cursor: 'pointer' }}
-          >
-            ← {subject === null ? strings.returnToEnergy : strings.substrateCrumb[urlState.substrate]}
-          </button>
+          {/* ALPHA FINAL DATA-FED CONVERGENCE R2 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+          <ReturnControl
+            language={locale}
+            variant="microline"
+            iconOnly
+            onClearSubState={clearEnergySubState}
+          />
+          {/*
+            THE CRUMB SURVIVES THE ARROW. It said where the press would land and it
+            still does; what it no longer owns is the glyph or the navigation.
+          */}
+          <span style={{ ...mono(11, ENERGY_SEMANTIC.cyan), minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {subject === null ? strings.returnToEnergy : strings.substrateCrumb[urlState.substrate]}
+          </span>
           <div style={{ flex: 1, minWidth: 0 }} />
           <TierChip tier={tier} strings={strings} onToggle={() => setTier(tier === 'free' ? 'professional' : 'free')} short />
         </div>
@@ -389,6 +423,8 @@ export function EnergyShell({ data, strings, urlState, locale }: EnergyShellProp
           gap: '16px',
         }}
       >
+        {/* ALPHA FINAL DATA-FED CONVERGENCE R2 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+        <ReturnControl language={locale} variant="microline" onClearSubState={clearEnergySubState} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flex: 'none' }}>
           <div style={{ width: '18px', height: '18px', border: `1.5px solid ${ENERGY_SEMANTIC.cyan}`, borderRadius: '3px' }} />
           <span style={{ fontSize: '14px', fontWeight: 600, letterSpacing: '-.01em', color: ENERGY_INK.primary }}>{strings.moduleName}</span>

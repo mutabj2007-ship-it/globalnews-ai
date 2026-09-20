@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { COUNTRIES, NEWS_CATEGORIES } from '@globalnews-ai/shared';
 import type { CountryMeta, CountryNewsResponse, LanguageCode, NewsCategory, NewsResponse } from '@globalnews-ai/shared';
 /*
@@ -1331,6 +1332,34 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     second, parallel selection is how a card ends up describing a country the
     panel beneath it is not showing.
   */
+  /**
+   * `/map` ONLY — H’S FIRST-RETURN SEMANTICS, AND NOTHING WIDER.
+   *
+   * The contract authorises exactly one deviation on this route: *"a reader who
+   * selected a country expects the first return to undo the SELECTION and stay
+   * on the route; only a second press leaves it."* So this answers `true` only
+   * while a selection exists. With none, it answers `false` and the press falls
+   * through to the shared control’s ordinary back/fallback pair — the control is
+   * never inert on this route either.
+   *
+   * THE GOVERNED PATH, NOT A SECOND ONE. It clears through
+   * `handleSpatialSelection(null)`, which the comment below calls *"the single
+   * handler every selection path goes through"*. That is what keeps the spatial
+   * selection, the route’s country, the card filters and the selected item from
+   * disagreeing after a Back press, and it is why this function sets no state of
+   * its own.
+   *
+   * AND IT RETRIEVES NOTHING. The null branch of that handler clears state and
+   * returns; the country read is gated on `requestForCurrentSelection !== null`,
+   * which a cleared selection makes false. Pressing Back on `/map` spends no
+   * GNews quota — the boundary item 9 protects.
+   */
+  function clearMapSelection(): boolean {
+    if (spatialSelection === null && selectedCountry === null) return false;
+    handleSpatialSelection(null);
+    return true;
+  }
+
   function handleSpatialSelection(selection: MapSelection | null): void {
     setSpatialSelection(selection);
     /*
@@ -1940,7 +1969,15 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
       <div className="mb-8 max-w-2xl">
-        <span className="font-mono text-xs uppercase tracking-widest text-signal-bright">{t.exploreLabel}</span>
+        <div className="flex min-w-0 items-center gap-[10px]">
+          {/* ALPHA FINAL DATA-FED CONVERGENCE R2 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+          <ReturnControl
+            language={language}
+            variant="microline"
+            onClearSubState={clearMapSelection}
+          />
+          <span className="font-mono text-xs uppercase tracking-widest text-signal-bright">{t.exploreLabel}</span>
+        </div>
         <h1 className="mt-2 font-display text-2xl font-medium text-ink-primary sm:text-3xl">{t.headline}</h1>
         <p className="mt-3 text-sm leading-relaxed text-ink-secondary">{t.intro}</p>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useReducer, type JSX } from 'react';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { resolveSecStrings, type SecLocale } from '@/lib/security/securityStrings';
 import { SECURITY_DETENTS } from '@/lib/security/securityZones';
 import {
@@ -79,9 +80,13 @@ export function SecurityCompactScreen({ locale }: { locale: SecLocale }): JSX.El
 
       <header data-sec="region" data-sec-region="A"
         className="flex shrink-0 flex-col gap-[6px] border-b border-sp-line bg-sp-panel px-[14px] py-[10px]">
-        <Zone id="A1">
-          <h1 className="text-[16px] font-semibold text-sp-ink">{t.zoneLabels.A1}</h1>
-        </Zone>
+        <div className="flex min-w-0 items-center gap-[8px]">
+          {/* ALPHA FINAL DATA-FED CONVERGENCE R2 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+          <ReturnControl language={locale} variant="microline" iconOnly />
+          <Zone id="A1">
+            <h1 className="text-[16px] font-semibold text-sp-ink">{t.zoneLabels.A1}</h1>
+          </Zone>
+        </div>
         <Zone id="A2">
           <span className={`${SEC_MICRO} break-words text-sp-ink-2`}>{t.zoneLabels.A2}</span>
         </Zone>

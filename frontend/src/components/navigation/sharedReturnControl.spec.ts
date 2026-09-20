@@ -45,28 +45,180 @@ const codeOnly = (s: string): string =>
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
-/** The accepted hosts, as landed. */
-const HOST_FILES = [
-  'components/navigation/NavBar.tsx',
-  'components/market/MarketScreen.tsx',
-  'components/politics/PoliticsScreen.tsx',
-  'components/politics/PoliticsCompactScreen.tsx',
-  'components/humanitarian/HumanitarianScreen.tsx',
-  'components/security/SecurityScreen.tsx',
-] as const;
+/**
+ * THE ACCEPTED HOSTS, AS LANDED — H’S MEASURED INVENTORY, NOW COMPLETE.
+ *
+ * The major convergence landed six. The remaining seven are the Economy, Energy,
+ * Map and compact surfaces H named, and each `controls` count is the number of
+ * `<ReturnControl` OCCURRENCES IN THE FILE, which is one per host except where a
+ * file holds two mutually exclusive viewport branches. A READER still sees exactly
+ * one on every surface at every width — that is what the count is protecting, and
+ * why it is declared per file with a reason rather than assumed to be 1.
+ */
+const HOSTS: ReadonlyArray<{ file: string; controls: number; why?: string }> = [
+  { file: 'components/navigation/NavBar.tsx', controls: 1 },
+  { file: 'components/market/MarketScreen.tsx', controls: 1 },
+  { file: 'components/market/MarketCompactScreen.tsx', controls: 1 },
+  { file: 'components/politics/PoliticsScreen.tsx', controls: 1 },
+  { file: 'components/politics/PoliticsCompactScreen.tsx', controls: 1 },
+  { file: 'components/humanitarian/HumanitarianScreen.tsx', controls: 1 },
+  { file: 'components/humanitarian/HumanitarianCompactScreen.tsx', controls: 1 },
+  { file: 'components/security/SecurityScreen.tsx', controls: 1 },
+  { file: 'components/security/SecurityCompactScreen.tsx', controls: 1 },
+  { file: 'components/economy/EconomicStateHeader.tsx', controls: 1 },
+  { file: 'components/economy/compact/EconomyCompactScreen.tsx', controls: 1 },
+  { file: 'components/map/MapPageClient.tsx', controls: 1 },
+  {
+    file: 'components/energy/EnergyShell.tsx',
+    controls: 2,
+    why:
+      'one file, two mutually exclusive viewport branches — `if (compact) return (…)` and the desktop return below it. A reader is inside exactly one.',
+  },
+];
 
+const HOST_FILES = HOSTS.map((h) => h.file);
+
+/**
+ * The body of a named function, matched by braces rather than by a character
+ * count, so an assertion about what it does cannot read a neighbour’s code.
+ */
+function bodyOf(code: string, marker: string): string {
+  const at = code.indexOf(marker);
+  if (at < 0) throw new Error(`marker not found: ${marker}`);
+  const open = code.indexOf('{', at);
+  let depth = 0;
+  for (let i = open; i < code.length; i += 1) {
+    if (code[i] === '{') depth += 1;
+    else if (code[i] === '}') {
+      depth -= 1;
+      if (depth === 0) return code.slice(at, i + 1);
+    }
+  }
+  throw new Error(`unbalanced body: ${marker}`);
+}
+
+/** The two surfaces H authorises to answer a first press without leaving. */
+const SUB_STATE_EXITS = [
+  { file: 'components/map/MapPageClient.tsx', marker: 'function clearMapSelection' },
+  { file: 'components/energy/EnergyShell.tsx', marker: 'const clearEnergySubState' },
+] as const;
 const ARROW = '\u2190';
 
 /* ── 1 · ONE CONTROL PER SURFACE, AND IT IS THE SHARED ONE ───────────────── */
 
-describe('GUARD 1 — every host renders exactly one shared control', () => {
-  it.each(HOST_FILES)('%s renders the shared component exactly once', (rel) => {
+describe('GUARD 1 — every host renders the shared control, and its declared count', () => {
+  it.each(HOSTS.map((h) => [h.file, h.controls] as const))(
+    '%s renders the shared component %i time(s)',
+    (rel, controls) => {
     const code = codeOnly(readFileSync(join(SRC, rel), 'utf8'));
     const rendered = code.match(/<ReturnControl\b/g) ?? [];
-    expect(rendered).toHaveLength(1);
+    expect(rendered).toHaveLength(controls);
     /* and it is IMPORTED, never redeclared locally */
     expect(code).toMatch(/import \{ ReturnControl \} from '@\/components\/navigation\/ReturnControl'/);
     expect(code).not.toMatch(/function ReturnControl\b/);
+    },
+  );
+
+  /*
+    THE COUNT ABOVE IS ONLY WORTH ANYTHING IF THE LIST IS THE WHOLE LIST. This
+    sweeps the tree and asserts the set equality: a surface that starts rendering
+    the control without being declared a host fails here, which is how a second
+    control arrives on a page nobody measured.
+  */
+  it('no file outside the declared inventory renders the control', () => {
+    const walkAll = (dir: string, out: string[] = []): string[] => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) walkAll(full, out);
+        else if (/\.tsx$/.test(name)) out.push(full);
+      }
+      return out;
+    };
+    const rendering = walkAll(SRC)
+      .filter((f) => !f.endsWith('ReturnControl.tsx'))
+      .filter((f) => /<ReturnControl\b/.test(codeOnly(readFileSync(f, 'utf8'))))
+      .map((f) => f.slice(SRC.length + 1).replace(/\\/g, '/'))
+      .sort();
+    expect(rendering).toEqual([...HOST_FILES].sort());
+  });
+
+  /*
+    THE TWO AUTHORIZED SUB-STATE HOSTS, NAMED. `onClearSubState` makes the first
+    press stay on the route, so a surface acquiring it quietly is a surface whose
+    Back button stopped going back. H authorises it on `/map`; Energy earns it by
+    REPLACING a bespoke arrow that could never leave the route at all.
+  */
+  it('only the two authorized surfaces pass a sub-state exit', () => {
+    const withSubState = HOST_FILES.filter((rel) =>
+      /onClearSubState=/.test(codeOnly(readFileSync(join(SRC, rel), 'utf8'))),
+    ).sort();
+    expect(withSubState).toEqual([
+      'components/energy/EnergyShell.tsx',
+      'components/map/MapPageClient.tsx',
+    ]);
+  });
+
+  /*
+    AND EACH SUB-STATE EXIT HAS A FALSE BRANCH, which is what stops it being a
+    Back button that can never leave. Both return `false` when there is nothing
+    left to undo, and the press then falls through to back/fallback.
+  */
+  it('each sub-state exit can answer false, so the control is never trapped', () => {
+    for (const { file, marker } of SUB_STATE_EXITS) {
+      const body = bodyOf(codeOnly(readFileSync(join(SRC, file), 'utf8')), marker);
+      expect([file, /return false;/.test(body)]).toEqual([file, true]);
+      expect([file, /return true;/.test(body)]).toEqual([file, true]);
+    }
+  });
+
+  /*
+    ITEM 9 — THE QUOTA BOUNDARY, ASSERTED ON THE RETURN PATH ITSELF.
+
+    Pressing Back on `/map` with a country selected runs one of these bodies. If
+    either could start a retrieval, a reader tapping Back repeatedly would spend
+    GNews quota per press — the exact boundary this round protects. Neither may
+    contain a call, and neither may set the selection itself: the map body clears
+    through the single governed handler, which gates the country read on a
+    non-null request.
+  */
+  it('neither sub-state exit can start a retrieval', () => {
+    for (const { file, marker } of SUB_STATE_EXITS) {
+      const body = bodyOf(codeOnly(readFileSync(join(SRC, file), 'utf8')), marker);
+      for (const rx of [
+        /\bfetch\s*\(/,
+        /fetchTopHeadlines|fetchCountryNews|retainedGlobalFeed|analysisApi/,
+        /axios|XMLHttpRequest|EventSource|WebSocket/,
+        /https?:\/\//,
+      ]) {
+        expect([file, rx.source, rx.test(body)]).toEqual([file, rx.source, false]);
+      }
+    }
+  });
+
+  it('the map exit clears through the single governed selection handler, not by hand', () => {
+    const body = bodyOf(
+      codeOnly(readFileSync(join(SRC, 'components/map/MapPageClient.tsx'), 'utf8')),
+      'function clearMapSelection',
+    );
+    expect(body).toMatch(/handleSpatialSelection\(null\)/);
+    /* it sets no state of its own — that is what keeps the two layers agreeing */
+    expect(body).not.toMatch(/setSelectedCountry|setSpatialSelection|setCardFilters|setCategory/);
+  });
+
+  it('MUTATION CONTROL — bodyOf reads the function it names and stops at its brace', () => {
+    const sample = [
+      'function a(): boolean {',
+      '  return false;',
+      '}',
+      'function b(): void {',
+      '  void fetch(String(1));',
+      '}',
+    ].join(String.fromCharCode(10));
+    const a = bodyOf(sample, 'function a');
+    expect(a).toMatch(/return false;/);
+    /* the neighbouring retrieval is NOT swept in — the property under test */
+    expect(a).not.toMatch(/fetch\(/);
+    expect(bodyOf(sample, 'function b')).toMatch(/fetch\(/);
   });
 
   it('MUTATION CONTROL — the counter detects a second control on one surface', () => {

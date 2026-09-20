@@ -13,6 +13,7 @@
  * undo, rather than hidden with CSS, which one could.
  */
 import { useReducer, type JSX } from 'react';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { HUM_CANVAS, HUM_INK, HUM_LINE, HUM_NAV, HUM_SURFACE, HUM_TYPE, humTracking } from '@/lib/humanitarian/humTokens';
 import { HUM_DETENT_GEOMETRY, HUM_HIT_TARGET_PX } from '@/lib/humanitarian/humConfig';
 import {
@@ -71,7 +72,11 @@ export function HumanitarianCompactScreen({ locale }: { locale: HumLocale }): JS
         position: 'relative', flex: '0 0 auto', padding: '14px', background: HUM_SURFACE.header, borderBottom: panelEdge,
         display: 'flex', flexDirection: 'column', gap: '8px',
       }}>
-        <span style={microLabel}>{t.domain} · {view.region}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          {/* ALPHA FINAL DATA-FED CONVERGENCE R2 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+          <ReturnControl language={locale} variant="microline" iconOnly />
+          <span style={microLabel}>{t.domain} · {view.region}</span>
+        </div>
         <h1 style={{ margin: 0, fontSize: HUM_TYPE.title, fontWeight: 600, color: HUM_INK.primary }}>
           {view.jurisdiction}
         </h1>
