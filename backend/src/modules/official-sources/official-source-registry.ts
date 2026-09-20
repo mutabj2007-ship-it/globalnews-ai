@@ -75,6 +75,35 @@ export const OFFICIAL_SOURCES: OfficialSourceEntry[] = [
   },
 
   /*
+    UCDP CANDIDATE GED · CAPTURED, REGISTERED, MANUAL-ONLY.
+
+    CF-D4 is now closed by a real Alpha capture of Candidate GED 26.0.7. Registration
+    supplies the governed host for safe-fetch and a reader-facing institution name.
+    It does NOT activate recurring acquisition: enabled=false and ingestionMethod=manual.
+
+    The UCDP download centre publishes current datasets under CC BY 4.0. The first Alpha
+    retained capture is performed as a separately authorised one-shot; a scheduled
+    producer remains off until its own activation/rights binding is promoted.
+  */
+  {
+    id: 'ucdp-ged',
+    name: 'Uppsala Conflict Data Program',
+    languages: ['en'],
+    authorityClass: 'RESEARCH',
+    baseUrl: 'https://ucdp.uu.se',
+    reliabilityNote:
+      'UCDP Candidate GED 26.0.7 schema captured on Alpha on 2026-09-20 from the public ' +
+      'download endpoint: text/csv, 1,357,690 bytes, 49 columns, sha256 ' +
+      '9fc2c6dd85eee91845512e8ef1055281d9fd028fb98748a6f2a27c6e8aa8c562.',
+    enabled: false,
+    ingestionMethod: 'manual',
+    provenanceNote:
+      'Registered after CF-D4 real-byte capture. Public UCDP download centre states CC BY 4.0. ' +
+      'Manual retained-data proof only; no scheduler and no recurring provider activation.',
+    rights: null,
+  },
+
+  /*
     ════════════════════════════════════════════════════════════════════════════
     RW-NISR · NATIONAL INSTITUTE OF STATISTICS OF RWANDA — REGISTERED, NOT ACTIVATED.
     ════════════════════════════════════════════════════════════════════════════
