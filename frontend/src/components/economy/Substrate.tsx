@@ -57,6 +57,38 @@ export function SeriesChart({
   */
   const values = window.filter(figureIsObservation).map((o) => o.observation.value);
   if (values.length === 0) return null;
+
+  /*
+    A single retained period is a point, not a trend. Rendering it as one full-width
+    bar makes the eye read a time series that does not exist, so state the limitation
+    instead and keep the chart geometry out until a second observed period arrives.
+  */
+  if (values.length < 2) {
+    const only = window.find(figureIsObservation);
+    return (
+      <div
+        data-econ="series-single-period"
+        style={{
+          minHeight: '96px',
+          border: `1px solid ${ECON_LINE.structure}`,
+          background: ECON_SURFACE.panel,
+          padding: '14px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          gap: '8px',
+        }}
+      >
+        <span style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 9px)', letterSpacing: 'calc(0.08em * var(--ar-ls-mul, 1))', textTransform: 'uppercase', color: ECON_INK.label }}>
+          {t.seriesLabel} · {seriesName(series)}
+        </span>
+        <span style={{ fontSize: 'max(var(--ar-fs-min, 0px), 13px)', color: ECON_INK.secondary }}>
+          One retained period ({only ? slotPeriodLabel(only) : 'current'}) · trend not available yet
+        </span>
+      </div>
+    );
+  }
+
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
