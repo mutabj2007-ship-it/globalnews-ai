@@ -1,6 +1,7 @@
 import type { SnapshotRefusalKey } from './snapshot-admission';
 import { parseStrictJson } from './json-strict';
 import { NISR_CPI_BINDING } from './providers/nisr-cpi.decoder';
+import { UCDP_CANDIDATE_GED_BINDING } from './providers/ucdp-ged-csv.decoder';
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * THE PARSER REGISTRY — SERVER-OWNED PARSER IDENTITY
@@ -289,6 +290,16 @@ const REGISTRY: readonly ParserRegistryRow[] = Object.freeze([
     providerId: 'rw-nisr',
     endpointMatches: (endpointId: string) => endpointId === 'cpi-monthly-en',
     binding: erasedParserBinding(NISR_CPI_BINDING),
+  },
+  /*
+    Conflict CF-D4 closure. This row binds only the exact Candidate GED release whose
+    bytes were captured and whose 49-column header is pinned by the decoder.
+    A later monthly release is a new measured row/version, never a wildcard.
+  */
+  {
+    providerId: 'ucdp-ged',
+    endpointMatches: (endpointId: string) => endpointId === 'candidate-ged-26.0.7',
+    binding: erasedParserBinding(UCDP_CANDIDATE_GED_BINDING),
   },
 ]);
 
