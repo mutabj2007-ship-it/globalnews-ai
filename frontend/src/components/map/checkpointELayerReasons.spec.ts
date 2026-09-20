@@ -133,7 +133,11 @@ describe('E-3 — an unavailable layer says which kind of unavailable', () => {
     });
 
     it('a layer that worked and stopped promises nothing', () => {
-      const failed = { ...layerById('admin1')!, runtime: 'FAILED_MEASUREMENT' as const };
+      const failed = {
+        ...layerById('admin1')!,
+        runtime: 'FAILED_MEASUREMENT' as const,
+        available: false,
+      };
 
       expect(layerUnavailableReason(failed)).toBe('TEMPORARILY_UNAVAILABLE');
     });
