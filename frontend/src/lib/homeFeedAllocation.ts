@@ -7,9 +7,70 @@ export interface HomeFeedAllocation {
   inFocus: NewsArticle[];
   /** A further set of stories for exploration, guaranteed distinct from both `featured` and `inFocus` by article id. */
   discovery: NewsArticle[];
-  /** The complete set, sorted by publishedAt descending. Unlike the other three roles, this MAY legitimately repeat a story already shown in featured/inFocus/discovery — it represents "everything, in time order," not a curated subset. */
+  /**
+   * The chronological stream, sorted by publishedAt descending.
+   *
+   * ALPHA POST-CUTOVER R1 — GOVERNED BY `streamPolicy`, NOT BY A STANDING
+   * EXEMPTION. This field previously declared a blanket permission to repeat a
+   * story already shown in featured/inFocus/discovery. That permission is
+   * withdrawn as the DEFAULT: under `'exclusive'` (the default) a story placed
+   * in a rail role is not shown again here, so one story occupies exactly one
+   * governed Home placement. The chronological-stream reading is preserved and
+   * still reachable, but only when a caller asks for it BY NAME — see
+   * `HomeFeedStreamPolicy`.
+   */
   latestUpdates: NewsArticle[];
 }
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ALPHA POST-CUTOVER R1 — HOW THE STREAM RELATES TO THE RAIL, STATED EXPLICITLY
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * THE CARRIED DEFECT. The Model-A cutover measurement found `homeFeed` and
+ * `homeFeedAllocation` failing together, and they are one product defect: a
+ * story consumed by a rail role (featured / inFocus / discovery) reappeared in
+ * the main Home feed. The two suites were not disagreeing with each other —
+ * they were both stating the same governed placement rule the allocator had
+ * stopped honouring. The defect predates the cutover; the cutover measured it.
+ *
+ * WHY THE PREVIOUS BEHAVIOUR WAS NOT SIMPLY "THE C907 RULING". C907 withdrew
+ * cross-surface subtraction because subtracting twelve rail-consumed records
+ * from a TWELVE-record response emptied the stream, and the hero panel then
+ * reported a healthy provider as unavailable. That arithmetic no longer holds:
+ * `getHomeFeed` retrieves 24, the rail consumes 1 + 5 + 6 = 12, and the stream
+ * receives the remaining 12. The emptiness C907 was correcting is not produced
+ * by exclusivity at the released retrieval width — so the blanket exemption no
+ * longer pays for itself, and it costs a visible duplicate on every load.
+ *
+ * WHAT IS THEREFORE ENCODED HERE. Exclusivity is the governed default, and the
+ * chronological-stream reading survives as an EXPLICIT CONTRACT a caller opts
+ * into by name rather than as an unstated property of the return shape. "Not
+ * repeated across governed Home placements unless an explicit contract permits
+ * it" is the rule; this type is that contract, made addressable so that the
+ * permission can never again be the silent default.
+ *
+ * NOTHING ABOUT RETRIEVAL CHANGES. Both policies read the SAME single, already
+ * fetched response. Neither issues a request, and this module still performs no
+ * I/O of any kind.
+ */
+export type HomeFeedStreamPolicy =
+  /**
+   * DEFAULT. A story placed in featured / inFocus / discovery is not repeated
+   * in `latestUpdates`. Within the stream itself a story still appears at most
+   * once, on the same normalized-url identity the rail roles use.
+   */
+  | 'exclusive'
+  /**
+   * THE EXPLICIT PERMISSION. `latestUpdates` is the complete chronological
+   * record and MAY carry a story the rail roles also surfaced. Still
+   * deduplicated WITHIN itself — two provider records of one story collapse to
+   * one row under either policy, because that half was never a placement
+   * question but a truthfulness one.
+   */
+  | 'chronological-inclusive';
+
+export const DEFAULT_STREAM_POLICY: HomeFeedStreamPolicy = 'exclusive';
 
 /**
  * R4 — the key the allocator treats as "the same story".
@@ -47,12 +108,16 @@ const DEFAULT_DISCOVERY_COUNT = 6;
  * this function does not introduce any new request.
  *
  * `featured`, `inFocus`, and `discovery` are guaranteed to contain no
- * duplicate article (by `id`) across the three of them — an article
- * selected as `featured` can never also appear in `inFocus` or
- * `discovery`, and an article in `inFocus` can never also appear in
- * `discovery`. `latestUpdates` is deliberately exempt from this
- * exclusivity: it is the complete chronological record and is
- * expected to naturally include stories already surfaced above it.
+ * duplicate article across the three of them — an article selected as
+ * `featured` can never also appear in `inFocus` or `discovery`, and an
+ * article in `inFocus` can never also appear in `discovery`.
+ *
+ * ALPHA POST-CUTOVER R1 — `latestUpdates` IS NO LONGER EXEMPT BY DEFAULT.
+ * Under the default `streamPolicy` of `'exclusive'` the stream is held to
+ * the SAME governed-placement rule as the three rail roles, so one story
+ * occupies one Home placement and the reader is never shown it twice.
+ * `'chronological-inclusive'` restores the complete-record reading, and a
+ * caller must request it by name — see `HomeFeedStreamPolicy`.
  *
  * Never mutates the input array or any article object within it —
  * `latestUpdates` is sorted on the NEW array `filter()` returns, never
@@ -68,6 +133,7 @@ export function allocateHomeFeed(
   articles: NewsArticle[],
   inFocusCount: number = DEFAULT_IN_FOCUS_COUNT,
   discoveryCount: number = DEFAULT_DISCOVERY_COUNT,
+  streamPolicy: HomeFeedStreamPolicy = DEFAULT_STREAM_POLICY,
 ): HomeFeedAllocation {
   const featured = articles[0] ?? null;
   // R4 — keyed on STORY identity, not on `id` alone. Two records of one
@@ -100,45 +166,55 @@ export function allocateHomeFeed(
 
   /*
     ════════════════════════════════════════════════════════════════════════
-    C907 CORRECTION 1 — GLOBAL INTELLIGENCE IS A STREAM, NOT A REMAINDER.
+    ALPHA POST-CUTOVER R1 — THE GOVERNED PLACEMENT RULE, RESTORED AS DEFAULT.
     ════════════════════════════════════════════════════════════════════════
 
-    THE RULING, VERBATIM IN SUBSTANCE: *"featured / inFocus / discovery =
-    editorial-curation roles = mutually exclusive WITH EACH OTHER; Global
-    Intelligence / latestUpdates = chronological live/current stream = MAY
-    contain a story also surfaced editorially."*
+    THE DEFECT THIS CLOSES, EXACTLY. `latestUpdates` was built from the whole
+    response unconditionally, so every story the rail had already placed was
+    published a second time in the main Home feed directly beneath it. At the
+    released retrieval width of 24 that is 12 stories shown twice on a single
+    render — the duplication `homeFeed` and `homeFeedAllocation` both measured.
 
-    WHAT WAS HERE BEFORE, AND WHY IT WAS WRONG. The previous implementation
-    built `latestUpdates` by REMOVING every key the three editorial roles had
-    already consumed. The three roles consume 1 + 5 + 6 = 12 by themselves, so
-    an ordinary ten- or twelve-record live response left the Global
-    Intelligence stream EMPTY while the provider was perfectly healthy — and
-    the hero panel then rendered "live feed temporarily unavailable" over a
-    successful retrieval. A subtraction was presenting itself as a fault.
+    WHAT CHANGED, AND WHAT DID NOT. The subtraction below is back, but it is no
+    longer unconditional in the other direction either: it is what the DEFAULT
+    policy does, and `'chronological-inclusive'` still produces the complete
+    record for any caller that names it. Both branches share one identity
+    function and one sort, so the two readings cannot drift on what counts as
+    one story or on what order stories come in.
 
-    That subtraction was not merely a bug in this function: it contradicted
-    this module's OWN published contract. `HomeFeedAllocation.latestUpdates`
-    has stated since Phase B that it "MAY legitimately repeat a story already
-    shown in featured/inFocus/discovery — it represents 'everything, in time
-    order,' not a curated subset". The declaration was right; the code had
-    drifted from it. The declaration is what is restored here.
+    WHY THIS NO LONGER EMPTIES THE STREAM — the concern C907 raised, answered
+    with arithmetic rather than with a rule change. `getHomeFeed` retrieves 24
+    and the rail consumes 1 + 5 + 6 = 12, so the stream receives 12. The
+    twelve-in/zero-out case that made a healthy provider look unavailable
+    required a twelve-record retrieval, and that is not the released width.
+    THE WIDTH IS LOAD-BEARING AGAIN: see the note in homeFeed.ts before
+    reducing it.
 
-    WHAT IS AND IS NOT DEDUPLICATED. One STORY still appears at most once
-    WITHIN this stream — `allocationKey` is the same normalized-url identity
-    the editorial roles use, so two provider records of one story collapse to
-    one row. What is no longer removed is a story that the editorial roles also
-    chose. Those are two different claims, and only the first one was ever a
-    truthfulness requirement: showing one story twice in one list is a
-    duplicate; a chronological stream that includes the lead story is a
-    chronological stream.
+    AND THE SURFACE STILL DOES NOT DIAGNOSE. Even at zero this function makes
+    no claim about the provider — `HeroLiveFeedPanel` is where "never infer
+    provider failure from latestUpdates.length === 0" is enforced, and that
+    enforcement is untouched by this correction.
 
     NO SECOND REQUEST. Nothing here fetches. This is the same single response
-    the editorial roles were allocated from, read a second way.
+    the rail roles were allocated from, read a second way.
   */
   const streamKeys = new Set<string>();
   const latestUpdates = articles
     .filter((article) => {
       const key = allocationKey(article);
+
+      /*
+        The governed-placement half. Under the default policy a key the rail
+        already consumed is not eligible for the stream at all; under the
+        explicit permission it is, and only the within-stream duplicate check
+        below applies.
+      */
+      if (streamPolicy === 'exclusive' && usedKeys.has(key)) return false;
+
+      /*
+        The truthfulness half, binding under BOTH policies: however many
+        provider records carry one story, the stream shows it once.
+      */
       if (streamKeys.has(key)) return false;
       streamKeys.add(key);
       return true;

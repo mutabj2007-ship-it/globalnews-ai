@@ -70,25 +70,30 @@ export async function getHomeFeed(language?: LanguageCode): Promise<HomeFeed> {
     /*
       ONE request, of width 24.
 
-      C907 CORRECTION 1 — THE RATIONALE RECORDED HERE HAS CHANGED; THE NUMBER
-      HAS NOT. This comment used to justify 24 by visible-surface exclusivity:
-      once a story could appear only once, the twelve editorial roles consumed
-      a twelve-article response entirely and the Global Intelligence stream
-      received nothing. That exclusivity rule is superseded — `latestUpdates`
-      is now the whole chronological stream and would be correctly populated
-      from a response of any size — so 24 is no longer REQUIRED by an
-      invariant.
+      ALPHA POST-CUTOVER R1 — THE NUMBER STILL HAS NOT CHANGED, AND IT IS
+      LOAD-BEARING AGAIN. C907 recorded 24 as no longer REQUIRED by an
+      invariant, because `latestUpdates` had been made the whole chronological
+      stream and would be populated from a response of any size. That is no
+      longer the governing rule: the allocator's default `streamPolicy` is
+      `'exclusive'`, so a story the rail places is not repeated in the main
+      Home feed, and the stream is once again what REMAINS after the rail.
 
-      IT IS KEPT ANYWAY, AND DELIBERATELY NOT REDUCED. Lowering the single
-      request back to 12 would shrink the corpus every homepage surface draws
-      from, and no ruling asks for that. Reducing retrieval width is a product
-      decision, not a side effect of a feed-allocation correction, so the
-      width is left exactly as released and the change is reported to CTO
-      rather than made quietly.
+      THE ARITHMETIC, WHICH IS THE WHOLE REASON THIS IS SAFE. The rail consumes
+      1 + 5 + 6 = 12. At width 24 the stream therefore receives 12 — a full
+      feed, not a subtraction artefact. The twelve-in/zero-out case that once
+      made a healthy provider look unavailable required a TWELVE-record
+      retrieval, and that has not been the released width since C907.
+
+      SO DO NOT REDUCE IT. Lowering this back to 12 would empty the Global
+      Intelligence stream under the governed placement rule and reintroduce
+      exactly the defect C907 was correcting. Reducing retrieval width is a
+      product decision and must be taken as one, with the allocator's policy
+      considered at the same time — never as a side effect of tuning.
 
       Still exactly one call per invocation: the single-request architecture is
       unchanged. Nothing in this module issues a second provider request under
-      any outcome, empty responses included.
+      any outcome, empty responses included, and no policy branch in the
+      allocator fetches anything.
     */
     const response = await fetchTopHeadlines(24, language);
     const { featured, inFocus, discovery, latestUpdates } = allocateHomeFeed(response.articles);
@@ -103,8 +108,9 @@ export async function getHomeFeed(language?: LanguageCode): Promise<HomeFeed> {
       instant shown in the DATA STATUS row — and the two are not conflated:
       one describes a render, the other bounds a retrieval window.
 
-      No new request, no new route, no new client. The corpus width is
-      unchanged at 12 (CTO decision D5).
+      No new request, no new route, no new client. Today reads the SAME
+      response the rail and the stream are allocated from, at the retrieval
+      width documented above.
     */
     const observedAt = new Date().toISOString();
 

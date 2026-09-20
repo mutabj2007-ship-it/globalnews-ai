@@ -117,24 +117,42 @@ describe('MANDATORY 11 — one semantic article cannot take two Global Developme
     expect(railItems(allocation).map((item) => item.id)).toEqual(['no-url-1', 'no-url-2']);
   });
 
-  it('latestUpdates carries the story even when the rail placed it — C907', () => {
+  it('the rail placing a story keeps it OUT of the stream by default — ALPHA POST-CUTOVER R1', () => {
     const articles = [
       makeArticle({ id: 'a', url: 'https://watchesnews.example/u60' }),
       makeArticle({ id: 'b', url: 'https://watchesnews.example/u60?utm_source=x' }),
     ];
 
     /*
-      AMENDED UNDER THE C907 RULING, WHICH SUPERSEDES THE C905 VISIBLE-SURFACE
-      EXCLUSIVITY RULING THIS TEST PREVIOUSLY ENCODED.
+      RE-AMENDED UNDER THE ALPHA POST-CUTOVER R1 CLOSEOUT.
 
-      The two records are ONE story by `allocationKey`, so the stream still
-      collapses them to a single row — that half is unchanged and is the R4
-      guard this file exists for. What changed is that `featured` taking the
-      story no longer REMOVES it: *"Global Intelligence / latestUpdates =
-      chronological live/current stream = MAY contain a story also surfaced
-      editorially."* The previous expectation here was `toHaveLength(0)`.
+      HISTORY, SO THE NEXT READER DOES NOT REVERSE THIS BY ACCIDENT. C905 ruled
+      for visible-surface exclusivity and this expectation was 0. C907 withdrew
+      that widening and the expectation became 1. The carried-defect closeout
+      restores the governed placement rule as the DEFAULT — one story, one Home
+      placement — so it is 0 again, but for a reason neither earlier ruling
+      had: the permission C907 granted is not gone, it is now something a
+      caller must ask for BY NAME. See the `chronological-inclusive` block
+      below, where every behaviour C907 specified is still asserted.
+
+      THE HALF THAT HAS NEVER MOVED. The two records are ONE story by
+      `allocationKey`, and no policy has ever let a stream show it twice. That
+      is the R4 guard this file exists for, and it is asserted under both
+      policies.
     */
     const allocation = allocateHomeFeed(articles);
+
+    expect(allocation.featured?.id).toBe('a');
+    expect(allocation.latestUpdates).toHaveLength(0);
+  });
+
+  it('and carries it when a caller names the explicit contract', () => {
+    const articles = [
+      makeArticle({ id: 'a', url: 'https://watchesnews.example/u60' }),
+      makeArticle({ id: 'b', url: 'https://watchesnews.example/u60?utm_source=x' }),
+    ];
+
+    const allocation = allocateHomeFeed(articles, 5, 6, 'chronological-inclusive');
 
     expect(allocation.latestUpdates).toHaveLength(1);
     expect(allocation.latestUpdates[0].id).toBe('a');
@@ -209,31 +227,38 @@ describe('MUTATION GUARD — the allocator guard cannot be removed silently', ()
 
 /*
   ════════════════════════════════════════════════════════════════════════════
-  C907 CORRECTION 1 — THE HOMEPAGE GLOBAL INTELLIGENCE FEED
+  ALPHA POST-CUTOVER R1 — THE HOMEPAGE GLOBAL INTELLIGENCE FEED
   ════════════════════════════════════════════════════════════════════════════
 
-  THIS BLOCK REPLACES `visible-surface exclusivity — one story is shown once`,
-  and the replacement is a REVERSAL, not a refinement. That block was written
-  under the C905 ruling that widened exclusivity to every simultaneously
-  visible surface. The C907 ruling withdraws that widening by name:
+  THE CARRIED DEFECT, AND WHY IT IS ONE DEFECT AND NOT TWO DISAGREEING SUITES.
+  The Model-A cutover measured `homeFeed` and `homeFeedAllocation` failing
+  together. Both were asserting the same thing: a story consumed by a rail role
+  must not reappear in the main Home feed. The allocator had stopped honouring
+  it, because the block this one replaces encoded a BLANKET, DEFAULT permission
+  to repeat:
 
-      "featured / inFocus / discovery = editorial-curation roles = mutually
-       exclusive WITH EACH OTHER; Global Intelligence / latestUpdates =
-       chronological live/current stream = MAY contain a story also surfaced
-       editorially."
+      "Global Intelligence / latestUpdates = chronological live/current stream
+       = MAY contain a story also surfaced editorially."
 
-  WHAT THE OLD RULE COST, MEASURED. The three editorial roles consume
-  1 + 5 + 6 = 12 records. Subtracting them from the stream meant a live
-  response of twelve distinct stories produced `latestUpdates = []` — and the
-  hero panel, which branched on emptiness alone, then told the reader the live
-  feed was unavailable. A healthy provider was being reported as a failure by
-  arithmetic. The first test below is the ruling's own named regression case.
+  WHAT THE CLOSEOUT CHANGES — SCOPE, NOT EXISTENCE. That permission is not
+  deleted. It is demoted from an unconditional property of the return shape to
+  an EXPLICIT CONTRACT (`HomeFeedStreamPolicy`) that a caller requests by name.
+  The default is `'exclusive'`: one story occupies one governed Home placement.
 
-  WHAT SURVIVES UNCHANGED. One STORY still appears at most once within any one
-  surface, keyed on the normalized url — the R4 guard above. Two records of one
-  story are still collapsed. Only cross-surface subtraction is withdrawn.
+  WHY THE C907 CONCERN NO LONGER BITES, MEASURED. C907 withdrew exclusivity
+  because 1 + 5 + 6 = 12 rail-consumed records subtracted from a TWELVE-record
+  response emptied the stream, and the hero panel reported a healthy provider as
+  unavailable. `getHomeFeed` retrieves 24. The stream receives 12 — asserted in
+  `homeFeed.spec.ts`, and the allocator arithmetic is asserted directly below.
+  The failure mode C907 named is therefore closed by width, not by permission.
+
+  WHAT SURVIVES UNCHANGED, AND IS STILL ASSERTED HERE IN FULL. One STORY appears
+  at most once within any one surface, keyed on the normalized url — the R4
+  guard. Ordering is newest-first. The allocator fetches nothing and mutates
+  nothing. Every C907 behaviour is re-asserted below under the explicit policy,
+  so demoting the default did not cost a single unit of coverage.
 */
-describe('C907 — Global Intelligence is a chronological stream, not a remainder', () => {
+describe('ALPHA POST-CUTOVER R1 — governed placement is the DEFAULT', () => {
   const distinct = (count: number): NewsArticle[] =>
     Array.from({ length: count }, (_, index) =>
       makeArticle({
@@ -244,54 +269,83 @@ describe('C907 — Global Intelligence is a chronological stream, not a remainde
       }),
     );
 
-  it('THE RULING REGRESSION — 12 live distinct articles fill the stream, not empty it', () => {
+  it('THE CLOSEOUT REGRESSION — no story taken by the rail is repeated in the stream', () => {
     /*
-      The exact case the ruling specifies: *"Add regression test: 12 live
-      distinct articles."* Under the superseded rule this produced zero.
+      The defect itself, reproduced at the released retrieval width. Before the
+      correction every one of these twelve rail stories appeared a second time.
     */
-    const allocation = allocateHomeFeed(distinct(12));
+    const allocation = allocateHomeFeed(distinct(24));
+    const rail = new Set(railItems(allocation).map((a) => normalizeArticleUrl(a.url)));
+    const repeated = allocation.latestUpdates.filter((a) => rail.has(normalizeArticleUrl(a.url)));
 
-    expect(allocation.latestUpdates).toHaveLength(12);
+    expect(rail.size).toBe(12);
+    expect(repeated).toEqual([]);
+  });
+
+  it('the stream is what REMAINS — 24 retrieved, 12 placed by the rail, 12 streamed', () => {
+    const allocation = allocateHomeFeed(distinct(24));
+
     expect(allocation.featured?.id).toBe('story-0');
     expect(allocation.inFocus).toHaveLength(5);
     expect(allocation.discovery).toHaveLength(6);
+    expect(allocation.latestUpdates).toHaveLength(12);
+
+    /* Every governed placement across the whole homepage is a distinct story. */
+    const everywhere = [...railItems(allocation), ...allocation.latestUpdates].map((a) =>
+      normalizeArticleUrl(a.url),
+    );
+    expect(new Set(everywhere).size).toBe(24);
+  });
+
+  it('a twelve-record response gives the rail everything and the stream nothing — and that is arithmetic, not a diagnosis', () => {
+    /*
+      The case C907 named. It is retained deliberately: the outcome is real and
+      the allocator states it plainly. What it is NOT is a provider claim —
+      "never infer provider failure from latestUpdates.length === 0" is enforced
+      at the surface that would otherwise make that claim, in
+      HeroLiveFeedPanel.spec.ts, and this closeout does not touch it. The
+      released retrieval width is 24, so this is not the shipped shape.
+    */
+    const allocation = allocateHomeFeed(distinct(12));
+
+    expect(railItems(allocation)).toHaveLength(12);
+    expect(allocation.latestUpdates).toHaveLength(0);
+  });
+
+  it('an undersupplied day is short, not padded, and still never repeats', () => {
+    /* Nine articles is what the live Alpha retrieved on the reported day. */
+    const allocation = allocateHomeFeed(distinct(9));
+
+    expect(allocation.discovery).toHaveLength(3);
+    expect(railItems(allocation)).toHaveLength(9);
+    expect(allocation.latestUpdates).toHaveLength(0);
   });
 
   it('the editorial roles remain mutually exclusive WITH EACH OTHER', () => {
-    /* The half of the old rule the ruling keeps, asserted on its own. */
-    const allocation = allocateHomeFeed(distinct(12));
+    const allocation = allocateHomeFeed(distinct(24));
     const editorial = railItems(allocation).map((a) => normalizeArticleUrl(a.url));
 
     expect(editorial).toHaveLength(12);
     expect(new Set(editorial).size).toBe(12);
   });
 
-  it('the stream MAY repeat what the editorial roles surfaced, and here it does', () => {
-    const allocation = allocateHomeFeed(distinct(12));
-    const editorial = new Set(railItems(allocation).map((a) => normalizeArticleUrl(a.url)));
-    const overlap = allocation.latestUpdates.filter((a) =>
-      editorial.has(normalizeArticleUrl(a.url)),
-    );
-
-    expect(overlap).toHaveLength(12);
-  });
-
   it('a story is never repeated WITHIN the stream, however many records carry it', () => {
-    /* The R4 identity guard, still binding on the stream itself. */
+    /* The R4 identity guard, binding on the stream under the default policy. */
     const articles = [
-      makeArticle({ id: 'a', url: 'https://watchesnews.example/u60' }),
-      makeArticle({ id: 'b', url: 'https://watchesnews.example/u60?utm_source=x' }),
-      makeArticle({ id: 'c', url: 'https://watchesnews.example/u60#gallery' }),
       ...distinct(12),
+      makeArticle({ id: 'x', url: 'https://watchesnews.example/u60' }),
+      makeArticle({ id: 'y', url: 'https://watchesnews.example/u60?utm_source=x' }),
+      makeArticle({ id: 'z', url: 'https://watchesnews.example/u60#gallery' }),
     ];
     const keys = allocateHomeFeed(articles).latestUpdates.map((a) => normalizeArticleUrl(a.url));
 
+    /* The rail took the twelve distinct stories; one story remains, once. */
     expect(new Set(keys).size).toBe(keys.length);
-    expect(keys).toHaveLength(13);
+    expect(keys).toHaveLength(1);
   });
 
   it('the stream is ordered newest first', () => {
-    const times = allocateHomeFeed(distinct(12)).latestUpdates.map((a) =>
+    const times = allocateHomeFeed(distinct(24)).latestUpdates.map((a) =>
       new Date(a.publishedAt).getTime(),
     );
 
@@ -299,22 +353,7 @@ describe('C907 — Global Intelligence is a chronological stream, not a remainde
     expect(times[0]).toBeGreaterThan(times[times.length - 1]);
   });
 
-  it('an undersupplied day is short, not empty, and is never padded', () => {
-    /* Nine articles is what the live Alpha retrieved on the reported day. */
-    const allocation = allocateHomeFeed(distinct(9));
-
-    expect(allocation.latestUpdates).toHaveLength(9);
-    expect(allocation.discovery).toHaveLength(3);
-  });
-
   it('a genuinely empty response yields an empty stream and asserts nothing about the provider', () => {
-    /*
-      The allocator's job here is arithmetic, not diagnosis. It returns an
-      empty stream and says nothing at all about why — the ruling's *"never
-      infer provider failure from latestUpdates.length === 0"* is enforced at
-      the surface that would otherwise make that claim, and is asserted in
-      HeroLiveFeedPanel.spec.ts.
-    */
     const allocation = allocateHomeFeed([]);
 
     expect(allocation.latestUpdates).toEqual([]);
@@ -323,12 +362,21 @@ describe('C907 — Global Intelligence is a chronological stream, not a remainde
 
   it('allocation stays deterministic across repeated runs', () => {
     const runs = [0, 1, 2, 3, 4].map(() =>
-      allocateHomeFeed(distinct(12)).latestUpdates.map((a) => a.id),
+      allocateHomeFeed(distinct(24)).latestUpdates.map((a) => a.id),
     );
     runs.forEach((run) => expect(run).toEqual(runs[0]));
   });
 
-  it('no second request is issued — the allocator is pure and fetches nothing', () => {
+  it('the input array is never mutated', () => {
+    const articles = distinct(24);
+    const before = articles.map((a) => a.id);
+
+    allocateHomeFeed(articles);
+
+    expect(articles.map((a) => a.id)).toEqual(before);
+  });
+
+  it('no second request is issued — the allocator is pure and fetches nothing under EITHER policy', () => {
     const source = readFileSync(join(__dirname, 'homeFeedAllocation.ts'), 'utf8');
 
     expect(source).not.toMatch(/\bfetch\(/);
@@ -336,18 +384,121 @@ describe('C907 — Global Intelligence is a chronological stream, not a remainde
 
     /* And the one caller still makes exactly one call per invocation. */
     const feedSource = readFileSync(join(__dirname, 'homeFeed.ts'), 'utf8');
-    const codeOnly = feedSource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const codeOnly = feedSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
     expect((codeOnly.match(/fetchTopHeadlines\(/g) ?? []).length).toBe(1);
+  });
+
+  it('MUTATION GUARD — exclusivity is the DEFAULT and cannot be flipped silently', () => {
+    /*
+      The permission may be granted, but only by name. If a future edit makes
+      `'chronological-inclusive'` the default again, this fails rather than
+      quietly reinstating the duplication the cutover measured.
+    */
+    const source = readFileSync(join(__dirname, 'homeFeedAllocation.ts'), 'utf8');
+
+    expect(source).toMatch(/DEFAULT_STREAM_POLICY:\s*HomeFeedStreamPolicy\s*=\s*'exclusive'/);
+    expect(source).toMatch(/streamPolicy:\s*HomeFeedStreamPolicy\s*=\s*DEFAULT_STREAM_POLICY/);
+  });
+});
+
+/*
+  ────────────────────────────────────────────────────────────────────────────
+  THE EXPLICIT CONTRACT — every C907 behaviour, preserved and still asserted.
+  ────────────────────────────────────────────────────────────────────────────
+
+  These are the C907 assertions verbatim in substance. They did not become
+  wrong; they became conditional. A caller that names the contract gets exactly
+  the chronological stream C907 specified, which is why demoting the default
+  removed no coverage and no capability.
+*/
+describe('C907, under the explicit chronological-inclusive contract', () => {
+  const distinct = (count: number): NewsArticle[] =>
+    Array.from({ length: count }, (_, index) =>
+      makeArticle({
+        id: `story-${index}`,
+        title: `Story ${index}`,
+        url: `https://watchesnews.example/story-${index}`,
+        publishedAt: new Date(Date.UTC(2026, 7, 25, 9, 0, index)).toISOString(),
+      }),
+    );
+
+  const inclusive = (articles: NewsArticle[]) =>
+    allocateHomeFeed(articles, 5, 6, 'chronological-inclusive');
+
+  it('THE C907 REGRESSION — 12 live distinct articles fill the stream, not empty it', () => {
+    const allocation = inclusive(distinct(12));
+
+    expect(allocation.latestUpdates).toHaveLength(12);
+    expect(allocation.featured?.id).toBe('story-0');
+    expect(allocation.inFocus).toHaveLength(5);
+    expect(allocation.discovery).toHaveLength(6);
+  });
+
+  it('the stream MAY repeat what the editorial roles surfaced, and here it does', () => {
+    const allocation = inclusive(distinct(12));
+    const editorial = new Set(railItems(allocation).map((a) => normalizeArticleUrl(a.url)));
+    const overlap = allocation.latestUpdates.filter((a) =>
+      editorial.has(normalizeArticleUrl(a.url)),
+    );
+
+    expect(overlap).toHaveLength(12);
+  });
+
+  it('the editorial roles remain mutually exclusive WITH EACH OTHER', () => {
+    const allocation = inclusive(distinct(12));
+    const editorial = railItems(allocation).map((a) => normalizeArticleUrl(a.url));
+
+    expect(editorial).toHaveLength(12);
+    expect(new Set(editorial).size).toBe(12);
+  });
+
+  it('a story is never repeated WITHIN the stream, however many records carry it', () => {
+    const articles = [
+      makeArticle({ id: 'a', url: 'https://watchesnews.example/u60' }),
+      makeArticle({ id: 'b', url: 'https://watchesnews.example/u60?utm_source=x' }),
+      makeArticle({ id: 'c', url: 'https://watchesnews.example/u60#gallery' }),
+      ...distinct(12),
+    ];
+    const keys = inclusive(articles).latestUpdates.map((a) => normalizeArticleUrl(a.url));
+
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys).toHaveLength(13);
+  });
+
+  it('the stream is ordered newest first', () => {
+    const times = inclusive(distinct(12)).latestUpdates.map((a) =>
+      new Date(a.publishedAt).getTime(),
+    );
+
+    expect(times).toEqual([...times].sort((a, b) => b - a));
+    expect(times[0]).toBeGreaterThan(times[times.length - 1]);
+  });
+
+  it('an undersupplied day is short, not empty, and is never padded', () => {
+    const allocation = inclusive(distinct(9));
+
+    expect(allocation.latestUpdates).toHaveLength(9);
+    expect(allocation.discovery).toHaveLength(3);
+  });
+
+  it('a genuinely empty response yields an empty stream and asserts nothing about the provider', () => {
+    const allocation = inclusive([]);
+
+    expect(allocation.latestUpdates).toEqual([]);
+    expect(allocation.featured).toBeNull();
+  });
+
+  it('allocation stays deterministic across repeated runs', () => {
+    const runs = [0, 1, 2, 3, 4].map(() => inclusive(distinct(12)).latestUpdates.map((a) => a.id));
+    runs.forEach((run) => expect(run).toEqual(runs[0]));
   });
 
   it('the input array is never mutated', () => {
     const articles = distinct(12);
     const before = articles.map((a) => a.id);
 
-    allocateHomeFeed(articles);
+    inclusive(articles);
 
     expect(articles.map((a) => a.id)).toEqual(before);
   });

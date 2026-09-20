@@ -1172,7 +1172,22 @@ export function AnalysisFrame({
                     brief dimension states its own absence.
                   */
                   <div data-paf="brief-withheld" className="mt-3 flex max-w-[70ch] flex-col gap-[0.6em]">
-                    <p className="font-gn-mono text-[11px] uppercase tracking-[0.08em] text-[#f0b866]">
+                    {/*
+                      ALPHA POST-CUTOVER R1 — C2 COMPACT TYPOGRAPHY.
+
+                      This label shipped with a BARE 11px size, so it rendered
+                      at 11px on phones as well as desktop. DESIGN-C2 LOCK 4
+                      sets the Surface-B phone floor at 12px and allows 11px
+                      only from md upward; C2-16 measured this one declaration
+                      as the lane's only violation.
+
+                      The correction is the pattern every other eyebrow label
+                      in this file already uses — 12px compact, 11px from md —
+                      so the accepted desktop Analysis layout is byte-identical
+                      and only the compact rendering moves up to the floor.
+                      Nothing about the withheld-brief semantics changes.
+                    */}
+                    <p className="font-gn-mono text-[12px] md:text-[11px] uppercase tracking-[0.08em] text-[#f0b866]">
                       {t.briefWithheldHeading}
                     </p>
                     <p className="font-gn-sans text-[16px] leading-[1.6] text-[#d5e1ee] md:text-[15px] md:leading-[1.65]">
