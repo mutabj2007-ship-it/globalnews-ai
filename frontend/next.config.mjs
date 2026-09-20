@@ -203,6 +203,15 @@ const nextConfig = {
         and is not integration.
       */
       { source: '/economy/:path*', destination: `${backendOrigin}/economy/:path*` },
+
+      /*
+        MARKET — RETAINED READ ONLY.
+
+        Same-origin public reader over observations already stored by the backend.
+        This rewrite cannot activate a Market provider: the backend target is the
+        reader-only MarketReadModule, which imports no scheduler or transport.
+      */
+      { source: '/market-data/:path*', destination: `${backendOrigin}/market/:path*` },
     ];
   },
 
