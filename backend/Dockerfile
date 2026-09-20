@@ -79,6 +79,10 @@ COPY --from=build /app/backend/dist ./backend/dist
 COPY backend/prisma ./backend/prisma
 COPY backend/prisma.config.ts ./backend/prisma.config.ts
 
+# OPS ONE-SHOT ONLY: copy the reviewed UCDP schema-capture proof into the
+# ephemeral operator image. The release branch never carries this line.
+COPY backend/tooling/conflict-ucdp-capture/ucdp-capture.proof.mjs ./backend/tooling/conflict-ucdp-capture/ucdp-capture.proof.mjs
+
 EXPOSE 4000
 # Milestone #54 (final runtime correction) — `&&` is deliberate: if
 # `prisma migrate deploy` fails (unreachable database, a migration
