@@ -9,6 +9,7 @@ import { HealthModule } from './health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { NewsModule } from './modules/news/news.module';
 import { EconomyModule } from './modules/economy/economy.module';
+import { ConflictModule } from './modules/conflict/conflict.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { SignalsModule } from './modules/signals/signals.module';
 import { CorsStartupValidator } from './security/cors-startup-validator';
@@ -64,6 +65,7 @@ import {
       consumes no GNews quota.
     */
     EconomyModule,
+    ConflictModule,
     /*
       GEO — the PUBLIC geographic resolution routes (E1-GEO-PUBLIC-REWRITE-REVIEW-1).
 
