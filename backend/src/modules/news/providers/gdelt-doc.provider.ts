@@ -213,6 +213,19 @@ export class GdeltDocProvider implements NewsProvider {
   /** Serialises the spacing wait, so N concurrent callers queue rather than race. */
   private spacingChain: Promise<void> = Promise.resolve();
 
+  /**
+   * Serialises COMPLETE requests, not only their start times.
+   *
+   * Live Alpha exposed a hole in the old spacing-only queue: six different
+   * regional queries all passed the cooldown check before the first request
+   * timed out. They were spaced 5.5 seconds apart, but each still opened a
+   * socket, so one outage became a train of slow timeouts. A provider that has
+   * asked us for one request every five seconds is safer with at most one
+   * request in flight; once that request times out and opens cooldown, queued
+   * callers fail fast without touching the network.
+   */
+  private executionChain: Promise<void> = Promise.resolve();
+
   /** Epoch ms until which the circuit is open. 0 means closed. */
   private cooldownUntil = 0;
 
@@ -508,17 +521,23 @@ export class GdeltDocProvider implements NewsProvider {
       throw new GdeltDocProviderError('GDELT DOC is not enabled.', undefined, 'unknown');
     }
 
-    /*
-     * COOLDOWN IS CHECKED BEFORE THE SPACING WAIT, so an open circuit
-     * costs nothing at all — no queueing, no timer, no socket.
-     */
-    if (Date.now() < this.cooldownUntil) {
-      throw this.cooldownRefusal();
-    }
+    return this.runSerialized(async () => {
+      /*
+       * COOLDOWN IS CHECKED TWICE: once after acquiring the complete-request
+       * lease and again after the spacing wait. The second check is load-bearing:
+       * another request can open the circuit while this caller is queued.
+       */
+      if (Date.now() < this.cooldownUntil) {
+        throw this.cooldownRefusal();
+      }
 
-    await this.awaitRequestSlot();
+      await this.awaitRequestSlot();
 
-    const url = new URL(GDELT_DOC_URL);
+      if (Date.now() < this.cooldownUntil) {
+        throw this.cooldownRefusal();
+      }
+
+      const url = new URL(GDELT_DOC_URL);
     url.searchParams.set('query', expression);
     url.searchParams.set('mode', 'ArtList');
     url.searchParams.set('format', 'json');
@@ -639,10 +658,33 @@ export class GdeltDocProvider implements NewsProvider {
 
     const articles = this.normalize(payload);
 
-    this.lastSuccessAt = new Date().toISOString();
-    this.rateLimitState = 'ok';
+      this.lastSuccessAt = new Date().toISOString();
+      this.rateLimitState = 'ok';
 
-    return articles;
+      return articles;
+    });
+  }
+
+  /**
+   * Runs one COMPLETE GDELT request at a time. The queue itself never throws:
+   * each holder releases in finally, so one failing request cannot wedge every
+   * future caller behind it.
+   */
+  private async runSerialized<T>(operation: () => Promise<T>): Promise<T> {
+    let release: (() => void) | undefined;
+    const previous = this.executionChain;
+
+    this.executionChain = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+
+    try {
+      return await operation();
+    } finally {
+      release?.();
+    }
   }
 
   /**
