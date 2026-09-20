@@ -1,6 +1,7 @@
 'use client';
 
 import { useReducer, type JSX } from 'react';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import {
   COMPACT_CHANGE_STRIP_PX, COMPACT_CHROME_HARD_MAX, COMPACT_TOP_BAR_PX,
 } from '@/lib/specialist/hudGrammar';
@@ -77,7 +78,11 @@ export function PoliticsCompactScreen({ locale }: { locale: PolLocale }): JSX.El
       <header data-pol="compact-chrome" data-pol-chrome-max={COMPACT_CHROME_HARD_MAX}
         className="flex shrink-0 flex-col border-b border-sp-line bg-sp-panel">
         <div style={{ height: `${COMPACT_TOP_BAR_PX}px` }} className="flex items-center justify-between gap-[10px] px-[14px]">
-          <span className="text-[15px] font-semibold text-sp-ink">{t.domain}</span>
+          <div className="flex min-w-0 items-center gap-[8px]">
+            {/* ALPHA MAJOR CONVERGENCE R1 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+            <ReturnControl language={locale} variant="microline" iconOnly />
+            <span className="text-[15px] font-semibold text-sp-ink">{t.domain}</span>
+          </div>
           <span className={POL_MICRO}>{t.labels.notAssessed}</span>
         </div>
         {/*

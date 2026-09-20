@@ -604,7 +604,7 @@ describe('12 · the package is self-contained against the current lineage', () =
     .map((f) => f.slice(SRC.length + 1).replace(/\\/g, '/'))
     .sort();
 
-  it('reaches exactly five modules outside its own tree, and every one already exists', () => {
+  it('reaches exactly the accepted modules outside its own tree, and every one already exists', () => {
     /*
       MEASURED ON `Worktrees/beta-recovery-r1/frontend/src`, the convergence
       lineage, and all five are PRESENT there:
@@ -617,11 +617,41 @@ describe('12 · the package is self-contained against the current lineage', () =
 
       So landing this package adds NO new dependency to the lineage. That is the
       claim the convergence rests on, and it is pinned here exactly rather than
-      as a count, because "five" would still pass if one were swapped.
+      as a count, because a count would still pass if one were swapped.
+
+      ── ALPHA MAJOR CONVERGENCE R1 — FOUR ENTRIES ADDED, DELIBERATELY ───────
+
+      The shared Back/Return primitive lands on this surface as HOST B, so this
+      ledger legitimately grows. It is EXTENDED, not relaxed: the list is still
+      pinned exactly, every added module is named, and a fifth arrival still
+      fails this assertion.
+
+        components/navigation/ReturnControl.tsx   the one shared control
+        lib/navigation/returnDepth.ts             the history signal
+        lib/navigation/returnFallback.ts          the governed fallback
+        lib/navigation/returnStrings.ts           its self-contained vocabulary
+
+      WHAT THIS LEDGER CAUGHT, AND WHY THE CONTROL WAS REBUILT TO SATISFY IT.
+      The first landing imported `getDictionary` and `intelligenceModules`,
+      which dragged the entire product string table plus the route authority
+      into this closure — nine further modules, and with them the `https://`
+      literals and provider names that this file's OWN provider-reachability
+      guards then reported. Those guards were right. The control was rebuilt to
+      carry its own six-string vocabulary and an import-free fallback, so the
+      four modules above are the whole cost. See `lib/navigation/returnStrings.ts`.
+
+      All four are NEW files in this convergence rather than pre-existing
+      lineage members, which is why they are listed separately from the five
+      above: the five prove the package needed nothing new, the four record
+      exactly what the accepted shared-nav round added on top.
     */
     expect(EXTERNAL).toEqual([
+      'components/navigation/ReturnControl.tsx',
       'components/specialist/SpecialistHudLine.tsx',
       'lib/i18n/languages.ts',
+      'lib/navigation/returnDepth.ts',
+      'lib/navigation/returnFallback.ts',
+      'lib/navigation/returnStrings.ts',
       'lib/specialist/hudGrammar.ts',
       'lib/specialist/specialistDomain.ts',
       'lib/typography/runBoundary.tsx',

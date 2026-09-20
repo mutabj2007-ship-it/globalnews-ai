@@ -43,6 +43,7 @@
  */
 
 import { useReducer, type JSX } from 'react';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import {
   MKT_CANVAS, MKT_HIT_TARGET_PX, MKT_INK, MKT_LICENSED, MKT_LINE, MKT_NAV,
   MKT_SURFACE, MKT_TYPE, mktTracking,
@@ -167,7 +168,11 @@ export function MarketScreen({ locale, read }: {
         background: MKT_SURFACE.panel, borderBottom: edge,
         display: 'flex', flexDirection: 'column', gap: '10px',
       }}>
-        <span style={micro}>GlobalNews AI · {t.domain}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+          {/* ALPHA MAJOR CONVERGENCE R1 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+          <ReturnControl language={locale} variant="microline" />
+          <span style={micro}>GlobalNews AI · {t.domain}</span>
+        </div>
         <div style={{
           display: 'flex', gap: '16px', justifyContent: 'space-between',
           alignItems: 'baseline', flexWrap: 'wrap',

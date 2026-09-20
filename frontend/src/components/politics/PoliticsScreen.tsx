@@ -1,6 +1,7 @@
 'use client';
 
 import { useReducer, type JSX } from 'react';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { SpecialistHudLine } from '@/components/specialist/SpecialistHudLine';
 import { HUD_LINE_PX } from '@/lib/specialist/hudGrammar';
 import type { HudLine } from '@/lib/specialist/hudGrammar';
@@ -123,7 +124,11 @@ export function PoliticsScreen({ locale }: { locale: PolLocale }): JSX.Element {
       <header data-pol="zone-header" className="flex flex-col gap-[12px] border-b border-sp-line bg-sp-panel px-[20px] py-[16px]">
         <div className="flex flex-wrap items-baseline justify-between gap-[12px]">
           <div className="flex flex-col gap-[6px]">
-            <span className={POL_MICRO}>GlobalNews AI · {t.domain}</span>
+            <div className="flex min-w-0 items-center gap-[10px]">
+              {/* ALPHA MAJOR CONVERGENCE R1 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+              <ReturnControl language={locale} variant="microline" />
+              <span className={POL_MICRO}>GlobalNews AI · {t.domain}</span>
+            </div>
             <h1 className="text-[22px] font-semibold text-sp-ink">{t.zones.HEADER}</h1>
           </div>
           {/*

@@ -94,8 +94,40 @@ export function CountrySearchBox({ onSelectCountry, language = 'en' }: CountrySe
     }
   }
 
+  /*
+    ══════════════════════════════════════════════════════════════════════════
+    ALPHA MAJOR CONVERGENCE R1 — THE SEARCH BOX TAKES ITS RANK IN THE LADDER.
+    ══════════════════════════════════════════════════════════════════════════
+
+    THE MEASURED DEFECT. On a computer the suggestion list below could not be
+    clicked AT ALL. The list carries `z-10` inside this wrapper, which had no
+    rank of its own, so the list competed at this wrapper's rank — below the
+    map column's `lg:z-40` (MapPageClient). At `lg:` and up the map painted
+    over the open list; below `lg:` the map column is `hidden`, `lg:z-40` never
+    applies, and the list was reachable. That is why the same click worked on a
+    phone and timed out at 30s on desktop, and why asking the page which element
+    occupies the option's own centre returned `canvas.maplibregl-canvas`
+    instead of the option.
+
+    THE GOVERNED LADDER, which already existed and which this joins:
+
+        NavBar.tsx           z-50   header
+        MapPageClient.tsx    z-40   map column
+        THIS FILE            z-45   country search overlay   <- the missing rank
+        CountryPanel.tsx     z-30   panel shelf
+
+    WHY 45 AND NOT 50. `z-50` would tie the NavBar and win on DOM order, so the
+    suggestion list would paint OVER the header. 45 is the only value that clears
+    the map without touching the header, and the list still passes UNDER the
+    NavBar when the page scrolls. The tree already uses arbitrary z values
+    (NavBar.tsx's `z-[70]`), so this introduces no new idiom.
+
+    NOTHING ELSE MOVES. No geometry, no layout, no new stacking system, and the
+    map column's sticky behaviour is untouched — z-index is not what makes
+    `sticky` work. Keyboard selection already worked and is unaffected.
+  */
   return (
-    <div className="relative w-full max-w-sm">
+    <div className="relative z-[45] w-full max-w-sm">
       <label htmlFor="country-search-input" className="sr-only">
         {t.searchLabel}
       </label>

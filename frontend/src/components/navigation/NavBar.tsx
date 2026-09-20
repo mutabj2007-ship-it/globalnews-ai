@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { Logo } from '@/components/ui/Logo';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { NAV_MODEL, type NavModelEntry } from '@/lib/navModel';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { persistLanguageSelection } from '@/lib/i18n/languages';
@@ -195,6 +196,16 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
         as authorization §12 requires.
       */}
       <div className="cd-canvas mx-auto hidden h-[62px] max-w-cd-page items-center gap-7 px-[26px] cd-header:flex">
+        {/*
+          ALPHA MAJOR CONVERGENCE R1 — HOST A OF THE SHARED RETURN CONTROL.
+
+          The leading position of the EXISTING 62px row, before the home link.
+          The row already renders and already has that height, so no chrome is
+          added: h-[62px] is unchanged and is asserted byte-identical by the
+          shared-nav guard. The control is the one shared primitive - this
+          header does not own a bespoke arrow.
+        */}
+        <ReturnControl language={language} variant="navbar" />
         <Link href="/" className="flex shrink-0 items-center" aria-label={t.homeAriaLabel}>
           {/* GN-CD-021 — released 30px emblem box and 11px lockup gap. */}
           <Logo size={30} gapPx={11} />

@@ -15,6 +15,7 @@
  * become a calm blank.
  */
 import { useReducer, type JSX } from 'react';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { HUM_CANVAS, HUM_INK, HUM_LICENSED, HUM_LINE, HUM_NAV, HUM_SURFACE, HUM_TYPE, humTracking } from '@/lib/humanitarian/humTokens';
 import { HUM_HIT_TARGET_PX, HUM_QUEUE_CAP, HUM_RAIL_PX } from '@/lib/humanitarian/humConfig';
 import {
@@ -82,7 +83,11 @@ export function HumanitarianScreen({ locale }: { locale: HumLocale }): JSX.Eleme
       >
         <div style={{ display: 'flex', gap: '14px', alignItems: 'baseline', flexWrap: 'wrap', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-            <span style={{ ...microLabel }}>{t.domain} · {view.region}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+              {/* ALPHA MAJOR CONVERGENCE R1 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+              <ReturnControl language={locale} variant="microline" />
+              <span style={{ ...microLabel }}>{t.domain} · {view.region}</span>
+            </div>
             <h1 style={{
               margin: 0, fontSize: HUM_TYPE.title, fontWeight: 600,
               letterSpacing: humTracking(-0.01), color: HUM_INK.primary,

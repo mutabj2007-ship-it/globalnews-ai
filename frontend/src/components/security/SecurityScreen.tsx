@@ -1,6 +1,7 @@
 'use client';
 
 import type { JSX } from 'react';
+import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { resolveSecStrings, type SecLocale } from '@/lib/security/securityStrings';
 import { SECURITY_GEOMETRY } from '@/lib/security/securityZones';
 import {
@@ -83,9 +84,13 @@ export function SecurityScreen({ locale }: { locale: SecLocale }): JSX.Element {
         className="flex shrink-0 items-center justify-between gap-[20px] border-b border-sp-line bg-sp-panel px-[20px]"
       >
         <div className="flex min-w-0 flex-col gap-[4px]">
-          <Zone id="A1">
-            <h1 className="text-[18px] font-semibold text-sp-ink">{t.zoneLabels.A1}</h1>
-          </Zone>
+          <div className="flex min-w-0 items-center gap-[10px]">
+            {/* ALPHA MAJOR CONVERGENCE R1 — HOST B: leading item of the EXISTING top micro-line. No row is added; this line already renders at its own height. */}
+            <ReturnControl language={locale} variant="microline" />
+            <Zone id="A1">
+              <h1 className="text-[18px] font-semibold text-sp-ink">{t.zoneLabels.A1}</h1>
+            </Zone>
+          </div>
           {/*
             A2 · a FIXED label that binds nothing. It must not fabricate an incident, a
             threat, a jurisdiction, a protected asset or a monitored person or group — and

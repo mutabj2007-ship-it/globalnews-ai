@@ -13,6 +13,7 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildRootMetadataBase } from '@/lib/seo/metadata';
 import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
 import { AskAiDock } from '@/components/ask/AskAiDock';
+import { ReturnDepthTracker } from '@/components/navigation/ReturnDepthTracker';
 import './globals.css';
 
 /**
@@ -279,6 +280,15 @@ export default function RootLayout({
 
           It issues no request on mount and none on open; see AskAiDock.
         */}
+        {/*
+          ALPHA MAJOR CONVERGENCE R1 — the in-app navigation counter for the
+          shared return control. Mounted here for the same reason AskAiDock is:
+          it must exist on every route, exactly once. It renders NULL — no
+          element, no text node, no class — so it adds nothing to the document
+          and cannot move any frozen geometry or chrome budget. It issues no
+          request on mount and none on navigation.
+        */}
+        <ReturnDepthTracker />
         <AskAiDock language={language} />
       </body>
     </html>

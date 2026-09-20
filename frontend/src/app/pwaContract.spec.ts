@@ -552,6 +552,26 @@ describe('PWA-1 §5 — M66.13 localization is preserved exactly', () => {
       .replace(/\{\s*\}/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    expect(bodyInner).toBe('<ServiceWorkerRegistrar /> {children} <AskAiDock language={language} />');
+    //
+    // ── AND BY ONE MORE, FOR THE SAME REASON ────────────────────────────
+    //
+    // ALPHA MAJOR CONVERGENCE R1 mounts <ReturnDepthTracker /> here, and this
+    // assertion is again UPDATED RATHER THAN RELAXED. Both hazards the lock
+    // exists to catch remain caught: the registrar is still pinned to exactly
+    // one mount above, and the equality below is still EXACT, so the next
+    // unplanned addition to <body> still fails here.
+    //
+    // The tracker qualifies on the same two grounds the dock did. It is a
+    // SIBLING that follows {children} rather than a wrapper around it, so
+    // nothing is interposed between <body> and the Claude Design tree. And it
+    // returns null — asserted in sharedReturnControl.spec.ts, which also pins
+    // that the file emits no element at all — so it adds no node, no text and
+    // no class to the document and enters no released GN-CD geometry.
+    //
+    // It is mounted for the reason AskAiDock is: it must exist on every route,
+    // exactly once. It issues no request on mount and none on navigation.
+    expect(bodyInner).toBe(
+      '<ServiceWorkerRegistrar /> {children} <ReturnDepthTracker /> <AskAiDock language={language} />',
+    );
   });
 });
