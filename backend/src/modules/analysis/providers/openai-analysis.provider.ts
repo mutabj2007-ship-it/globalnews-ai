@@ -99,6 +99,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     responseLanguage,
     repairDirective,
     developmentBreadth,
+    signal,
   }: AnalysisProviderInput): Promise<unknown> {
     const config = this.analysisConfig.get();
 
@@ -133,8 +134,22 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     let lastError: OpenAiAnalysisError | undefined;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      if (signal?.aborted) {
+        throw new OpenAiAnalysisError(
+          'OpenAI analysis was cancelled because the response deadline expired.',
+          'provider-timeout',
+          false,
+        );
+      }
+
       try {
-        const result = await this.attemptOnce(system, user, config, developmentBreadth);
+        const result = await this.attemptOnce(
+          system,
+          user,
+          config,
+          developmentBreadth,
+          signal,
+        );
         const latencyMs = Date.now() - startedAt;
 
         // Milestone #30 §J: capture latency/model/token-usage for later
@@ -205,8 +220,21 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     // assessBriefCompliance will judge the answer against. It selects the brief's
     // schema shape; it is never re-derived here.
     developmentBreadth?: AnalysisDevelopmentBreadth,
+    callerSignal?: AbortSignal,
   ): Promise<AttemptResult> {
     const controller = new AbortController();
+    let callerAborted = callerSignal?.aborted === true;
+    const abortFromCaller = (): void => {
+      callerAborted = true;
+      controller.abort();
+    };
+
+    if (callerAborted) {
+      controller.abort();
+    } else {
+      callerSignal?.addEventListener('abort', abortFromCaller, { once: true });
+    }
+
     const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
 
     let response: Response;
@@ -240,12 +268,13 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       });
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        // Deliberately NOT retryable: each attempt already spends the
-        // full configured timeout budget, so retrying a timeout would
-        // silently multiply total latency past ANALYSIS_TIMEOUT_MS
-        // rather than respecting it (Milestone #30 §E.5).
+        // Deliberately NOT retryable. A caller-abort means the product can no
+        // longer deliver this answer; an internal abort means the provider used
+        // its full attempt budget. Neither case may spend another attempt.
         throw new OpenAiAnalysisError(
-          'OpenAI request timed out.',
+          callerAborted
+            ? 'OpenAI request cancelled because the analysis response deadline expired.'
+            : 'OpenAI request timed out.',
           'provider-timeout',
           false,
           error,
@@ -257,6 +286,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       throw new OpenAiAnalysisError('Failed to reach OpenAI.', 'provider-unavailable', true, error);
     } finally {
       clearTimeout(timeout);
+      callerSignal?.removeEventListener('abort', abortFromCaller);
     }
 
     if (response.status === 401 || response.status === 403) {
