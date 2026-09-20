@@ -7,7 +7,6 @@ import type { EconomyLocale } from '@/lib/economy/strings';
 import { EconomyScreen } from '@/components/economy/EconomyScreen';
 import { economySubjectFromRead } from '@/lib/economy/economyRetainedSubject';
 import { AlphaVisualPreviewMarker } from '@/components/economy/AlphaVisualPreview';
-import { RetainedObservationPanel } from '@/components/economy/RetainedObservationPanel';
 import { economyCapabilityFrom, readEconomyObservations } from '@/lib/economy/economyObservationRead';
 
 /**
@@ -122,11 +121,11 @@ export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
           read happens in this SERVER component, so the browser issues no request on
           load and no provider is contacted at any point.
         */}
-        <RetainedObservationPanel read={read} />
         <EconomyScreen
           subject={subject}
           locale={locale}
           data={economyCapabilityFrom(read)}
+          retainedObservation={read.kind === 'OBSERVATIONS' ? read.observations[0] : undefined}
         />
       </main>
     </ScriptRun>
