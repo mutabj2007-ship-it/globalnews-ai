@@ -160,34 +160,36 @@ export const ANALYSIS_CLIENT_TIMEOUT_MS =
  */
 
 /**
- * THE CEILING ON ANY SERVER DEADLINE, for a client that is already built.
+ * THE FIRST-PARTY PROXY IS ALSO A DEADLINE.
  *
- * The client waits `ANALYSIS_CLIENT_TIMEOUT_MS` and needs
- * `ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS` of that for the wire, so the last
- * moment the server may still be working is the difference between them. That
- * difference is exactly `ANALYSIS_TOTAL_BUDGET_MS`, by construction — the
- * derivation above built the client deadline from precisely these two terms.
+ * Live Alpha measured Next's same-origin rewrite closing /api/analysis/news at
+ * ~30,032 ms with "socket hang up". The backend's previous legal deadline was
+ * 32,000 ms, so a correctly classified backend 504 could never reach the
+ * browser: the proxy converted it into a generic 500 first.
  *
- * SO THE CEILING EQUALS THE DEFAULT, AND THAT IS THE POINT, NOT AN OVERSIGHT.
- * There is no headroom above the shipped budget to hand an operator, because
- * the client was compiled with none. Stated as a consequence rather than as a
- * convenience:
- *
- *   ANALYSIS_TOTAL_BUDGET_MS may be LOWERED at runtime, freely. A stricter
- *   server deadline can never outlive a client that waits longer.
- *
- *   It cannot be RAISED at runtime, at all. Raising it requires changing this
- *   file and shipping a new frontend build — which is the correct and
- *   deliberately inconvenient way to change a number the client has compiled in.
- *
- * Written as the subtraction rather than as an alias for
- * `ANALYSIS_TOTAL_BUDGET_MS`, because it is a DIFFERENT FACT that happens to
- * share the value today: this one is "what the client can still tolerate", and
- * if the margin ever changes independently, this must follow the margin and not
- * the budget.
+ * This is an infrastructure contract now because Analysis intentionally routes
+ * through the first-party proxy to preserve session-tier and CSRF semantics.
+ * Two seconds is reserved for the backend response to traverse that proxy before
+ * its measured cutoff. The server therefore must settle no later than 28s.
  */
-export const ANALYSIS_MAX_SERVER_BUDGET_MS =
-  ANALYSIS_CLIENT_TIMEOUT_MS - ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS;
+export const ANALYSIS_FIRST_PARTY_PROXY_CUTOFF_MS = 30_000;
+export const ANALYSIS_PROXY_RESPONSE_MARGIN_MS = 2_000;
+
+/**
+ * THE CEILING ON ANY SERVER DEADLINE.
+ *
+ * Two independent consumers bound it:
+ *   1. the compiled browser client, which needs its transport margin; and
+ *   2. the first-party Next proxy, which must still be alive to relay the
+ *      backend's success or truthful 504.
+ *
+ * The smaller ceiling wins. Runtime overrides may still LOWER this value, but
+ * cannot raise it past either consumer.
+ */
+export const ANALYSIS_MAX_SERVER_BUDGET_MS = Math.min(
+  ANALYSIS_CLIENT_TIMEOUT_MS - ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS,
+  ANALYSIS_FIRST_PARTY_PROXY_CUTOFF_MS - ANALYSIS_PROXY_RESPONSE_MARGIN_MS,
+);
 
 /**
  * Resolves a candidate total-budget value into one that is safe to arm a
