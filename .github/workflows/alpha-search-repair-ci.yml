@@ -5,6 +5,10 @@ on:
     branches:
       - fix/alpha-search-retrieval-convergence-r1
 
+concurrency:
+  group: alpha-search-retrieval-repair
+  cancel-in-progress: true
+
 jobs:
   validate-search-repair:
     runs-on: ubuntu-latest
