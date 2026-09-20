@@ -2318,14 +2318,22 @@ export class AnalysisService {
       operation, so a concurrent identical request still joins it rather than
       starting a second analysis. Only what THIS caller awaits is raced.
 
-      THE WORK IS NOT CANCELLED, AND THIS COMMENT WILL NOT PRETEND OTHERWISE.
-      On deadline the operation continues, completes and populates the cache —
-      which is a genuine benefit, because the next identical request is then
-      served in about a millisecond. What is bounded here is the RESPONSE, not
-      the spend. See the honest split in the report:
+      CANCELLATION IS NOW SPLIT BY COST AND OWNERSHIP.
 
-          synchronous RESPONSE deadline .......... BOUNDED (this code)
-          abandoned provider work cancellation ... OPEN (unwired; next correction)
+      The fresh/originating request owns `responseAbort`. If its authoritative
+      deadline fires, an in-flight OpenAI fetch is aborted and no late provider
+      response is cached. If the deadline fires during NEWS retrieval, those
+      already-dispatched news calls may still settle, but the operation checks
+      the signal before starting OpenAI and stops there.
+
+      A JOINER'S personal deadline deliberately does NOT abort the shared
+      operation: the originator or another joiner may still be entitled to the
+      result. So the honest state is:
+
+          synchronous RESPONSE deadline .......... BOUNDED
+          abandoned OpenAI generation ............ CANCELLED for originator
+          already-dispatched news retrieval ...... may still settle
+          joiner timeout .......................... never cancels shared work
     */
     return this.withResponseDeadline(
       settledInFlightOperation,
@@ -2361,11 +2369,10 @@ export class AnalysisService {
       tests by an omission rather than by a decision.
 
       `resolveServerBudgetMs` is the shared authority's own resolver: an absent
-      or nonsensical value becomes ANALYSIS_TOTAL_BUDGET_MS, and an excessive one
-      is clamped to the ceiling the compiled client can tolerate. Both directions
-      end at a REAL enforced deadline, so this is a hardening of the boundary and
-      not a relaxation of it — there is no input for which this method now
-      declines to arm a deadline.
+      or nonsensical value becomes the safe default, already clamped to the
+      smaller of browser and first-party-proxy tolerance; an excessive value is
+      clamped to that same ceiling. Every direction ends at a REAL enforced
+      deadline, so there is no input for which this method declines to arm one.
 
       Production is unaffected: AnalysisConfigService already clamps through this
       same function, so the value arriving here is a positive number at or below
@@ -2389,9 +2396,8 @@ export class AnalysisService {
 
         this.logger.warn(
           `Analysis exceeded the total synchronous budget of ${resolvedBudgetMs} ms. ` +
-            'Responding with a deadline error; the operation continues and will populate the ' +
-            'cache, so an identical retry is served from it. Provider work is NOT cancelled — ' +
-            'see ANALYSIS CANCELLATION, OPEN.',
+            'Responding with a deadline error. Fresh-request OpenAI work is cancelled; ' +
+            'already-dispatched news retrieval may still settle. A timed-out result is not cached.',
         );
 
         /* After this rejection nobody awaits the operation. Keep its eventual
