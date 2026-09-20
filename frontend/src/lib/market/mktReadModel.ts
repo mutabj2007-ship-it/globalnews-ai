@@ -237,16 +237,30 @@ export type MarketReadResult =
  */
 type MarketObservationReader = () => Promise<readonly MarketStoredObservation[]>;
 
-function activatedObservationReader(): MarketObservationReader | null {
-  return null;
+async function retainedObservationReader(): Promise<readonly MarketStoredObservation[]> {
+  /*
+   * Same-origin INTERNAL reader only. This URL is a Next rewrite to the
+   * backend's MarketReadModule, whose dependency graph contains no scheduler,
+   * provider registry, transport or adapter. A page load can read what is
+   * already retained but cannot make a publisher request.
+   */
+  const response = await fetch('http://localhost/market-data/observations', {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Market retained reader responded with ${response.status}.`);
+  }
+
+  const payload: unknown = await response.json();
+  return Array.isArray(payload) ? (payload as MarketStoredObservation[]) : [];
 }
 
-const MARKET_OBSERVATION_READER: MarketObservationReader | null = activatedObservationReader();
+const MARKET_OBSERVATION_READER: MarketObservationReader = retainedObservationReader;
 
 /**
- * The reason the surface reports while no reader is wired. It names the PLATFORM gap —
- * the ingest module ships a scheduler, a repository and two adapters but no controller —
- * rather than implying the market itself is quiet.
+ * Kept as an exported compatibility sentinel for older guards. The read endpoint
+ * now exists; when it returns no rows the reader reports NO_OBSERVATION_STORED.
  */
 export const MARKET_READ_ABSENCE: MarketReadUnavailableReason = 'NO_READ_ENDPOINT';
 
@@ -258,9 +272,6 @@ export const MARKET_READ_ABSENCE: MarketReadUnavailableReason = 'NO_READ_ENDPOIN
  * substrate proved, preserved rather than re-earned.
  */
 export async function readMarketObservations(): Promise<MarketReadResult> {
-  if (MARKET_OBSERVATION_READER === null) {
-    return { kind: 'UNAVAILABLE', reason: MARKET_READ_ABSENCE };
-  }
   const stored = await MARKET_OBSERVATION_READER();
   if (stored.length === 0) {
     return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_STORED' };
