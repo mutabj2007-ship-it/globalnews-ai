@@ -234,7 +234,7 @@ export class GNewsProvider implements NewsProvider {
    */
   private executionChain: Promise<void> = Promise.resolve();
   private cooldownUntil = 0;
-  private cooldownKind: 'quota' | 'rate-limited' | undefined;
+  private cooldownKind: 'quota' | 'rate-limited' | 'timeout' | 'transport' | undefined;
 
   constructor(private readonly config: ConfigService) {}
 
@@ -446,8 +446,10 @@ export class GNewsProvider implements NewsProvider {
         response = await fetch(url, { signal: controller.signal });
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
+          this.openCooldown('timeout');
           throw new GNewsProviderError('GNews request timed out.', error, 'timeout');
         }
+        this.openCooldown('transport');
         throw new GNewsProviderError('Failed to reach GNews.', error, 'unreachable');
       } finally {
         clearTimeout(timeout);
@@ -538,23 +540,41 @@ export class GNewsProvider implements NewsProvider {
     }
   }
 
-  private openCooldown(kind: 'quota' | 'rate-limited'): void {
+  private openCooldown(
+    kind: 'quota' | 'rate-limited' | 'timeout' | 'transport',
+  ): void {
     this.cooldownUntil = Date.now() + GNEWS_COOLDOWN_MS;
     this.cooldownKind = kind;
   }
 
   private cooldownRefusal(): GNewsProviderError {
-    return this.cooldownKind === 'quota'
-      ? new GNewsProviderError(
+    switch (this.cooldownKind) {
+      case 'quota':
+        return new GNewsProviderError(
           'GNews request allowance is exhausted; this provider is in cooldown.',
           undefined,
           'quota',
-        )
-      : new GNewsProviderError(
+        );
+      case 'timeout':
+        return new GNewsProviderError(
+          'GNews is in cooldown after a request timeout.',
+          undefined,
+          'timeout',
+        );
+      case 'transport':
+        return new GNewsProviderError(
+          'GNews is in cooldown after a connection failure.',
+          undefined,
+          'unreachable',
+        );
+      case 'rate-limited':
+      default:
+        return new GNewsProviderError(
           'GNews is in cooldown after a rate-limit response.',
           undefined,
           'rate-limited',
         );
+    }
   }
 
   /**
