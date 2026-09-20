@@ -46,6 +46,7 @@ import {
 } from './DrawerContents';
 import { CorridorPanel, IntelligenceStatement, MiniMap, SeriesChart, Triad } from './Substrate';
 import { ECON_INK, ECON_LINE, ECON_MONO, ECON_SANS, ECON_SURFACE } from './econTokens';
+import { ObservedIdentityContext } from './ObservedIdentityContext';
 
 /**
  * ECON-UI-1 — THE DESKTOP ECONOMY SURFACE.
@@ -283,14 +284,21 @@ export function EconomyScreen({
                     windowMonths={bp.seriesWindowMonths}
                   />
                 )}
-                <div
-                  data-econ="identity-context"
-                  style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 28px', alignItems: 'flex-end', minWidth: 0 }}
-                >
-                  <div style={{ flex: '1 1 260px', minWidth: 0 }}><GeographyKeys locale={locale} /></div>
-                  <PeriodContext locale={locale} />
-                  <ProvenanceLine locale={locale} onOpenSources={() => openDrawer('SOURCES')} />
-                </div>
+                {mode === 'OBSERVED' && primary ? (
+                  <ObservedIdentityContext
+                    series={primary}
+                    onOpenSources={() => openDrawer('SOURCES')}
+                  />
+                ) : (
+                  <div
+                    data-econ="identity-context"
+                    style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 28px', alignItems: 'flex-end', minWidth: 0 }}
+                  >
+                    <div style={{ flex: '1 1 260px', minWidth: 0 }}><GeographyKeys locale={locale} /></div>
+                    <PeriodContext locale={locale} />
+                    <ProvenanceLine locale={locale} onOpenSources={() => openDrawer('SOURCES')} />
+                  </div>
+                )}
                 {!showFigures && <NoObservationData locale={locale} subjectName={subject.name} />}
               </>
             )}
