@@ -156,14 +156,14 @@ export function EconomyCompactScreen({
             >
               {t.changeState[changeState]}
             </span>
-          ) : (
+          ) : !showFigures ? (
             <span
               data-econ="assessment-unavailable"
               style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 9px)', letterSpacing: 'calc(0.09em * var(--ar-ls-mul, 1))', textTransform: 'uppercase', color: ECON_INK.label, border: `1px solid ${ECON_LINE.border}`, padding: '3px 7px' }}
             >
               {t.noObservationTitle}
             </span>
-          )}
+          ) : null}
         </div>
         {/*
           THE WITHHELD BRANCH PRINTS NOTHING — the same correction as the desktop header,
