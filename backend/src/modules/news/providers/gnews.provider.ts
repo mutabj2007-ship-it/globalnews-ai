@@ -546,7 +546,7 @@ export class GNewsProvider implements NewsProvider {
   private cooldownRefusal(): GNewsProviderError {
     return this.cooldownKind === 'quota'
       ? new GNewsProviderError(
-          'GNews is in cooldown after the request allowance was exhausted.',
+          'GNews request allowance is exhausted; this provider is in cooldown.',
           undefined,
           'quota',
         )
