@@ -106,6 +106,31 @@ export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
   const locale = economyLocale();
   const read = await readEconomyObservations();
   const subject = economySubjectFromRead(read);
+  const primaryObservation =
+    subject.primarySeries?.latest.kind === 'OBSERVATION'
+      ? subject.primarySeries.latest.observation
+      : undefined;
+  const revisionVintages = subject.primarySeries ? [subject.primarySeries.latest] : undefined;
+  const revisionEffects =
+    primaryObservation === undefined
+      ? undefined
+      : {
+          [`${primaryObservation.seriesId}:${primaryObservation.vintage}`]:
+            'Current retained vintage · no earlier revision is retained.',
+        };
+  const retained = read.kind === 'OBSERVATIONS' ? read.observations[0] : undefined;
+  const timeline =
+    retained === undefined
+      ? undefined
+      : [
+          {
+            id: `rw-nisr-cpi-${retained.periodId}`,
+            dateLabel: retained.provenance.publicationDateStated,
+            body: `NISR published headline CPI at ${retained.value}${retained.unit === 'PERCENT' ? '%' : ` ${retained.unit}`} for ${retained.periodId}.`,
+            meta: 'CURRENT RETAINED VINTAGE',
+            isCurrent: true,
+          },
+        ];
   return (
     /*
       D7-AR-ADOPTION — the step canonical's Economy routes declare, for the same reason:
@@ -125,7 +150,10 @@ export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
           subject={subject}
           locale={locale}
           data={economyCapabilityFrom(read)}
-          retainedObservation={read.kind === 'OBSERVATIONS' ? read.observations[0] : undefined}
+          retainedObservation={retained}
+          revisionVintages={revisionVintages}
+          revisionEffects={revisionEffects}
+          timeline={timeline}
         />
       </main>
     </ScriptRun>
