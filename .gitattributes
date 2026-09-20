@@ -1,0 +1,36 @@
+# ════════════════════════════════════════════════════════════════════════════
+# LINE ENDINGS ARE PART OF THE CONTRACT IN THIS REPOSITORY
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Measured during the release-branch reproduction: a fresh clone on a client
+# with `core.autocrlf=true` checked `shared/src/conflict/observation.ts` out at
+# 33,015 B while the stored blob is 32,380 B — 635 lines, one added CR each.
+# Every BYTE-IDENTITY guard then failed on a correct commit:
+#
+#     sha256 of the landed module equals the sha256 of the package contract
+#       expected 8cba6ef0…   received c2c955a0…
+#
+# Those guards are load-bearing here. Main delivers contracts that must land
+# byte-for-byte, and the proof is a sha256 of the file on disk. A checkout that
+# silently rewrites bytes makes that proof platform-dependent — it passed on
+# the authoring workstation and on Linux, and failed on a Windows clone, for a
+# commit that was in every respect correct.
+#
+# `eol=lf` pins the working-tree form so every checkout, on every platform,
+# reproduces the stored bytes. It changes no blob: the objects are already LF.
+#
+# This is a normalisation, NOT an ignore. It conceals nothing and excludes no
+# file from review.
+* text=auto eol=lf
+
+# Binary assets must never be transformed.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pbf binary
+*.zip binary

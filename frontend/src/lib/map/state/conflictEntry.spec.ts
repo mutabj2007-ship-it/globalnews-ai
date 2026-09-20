@@ -300,7 +300,14 @@ describe('6 · the rest of the Engine did not move', () => {
       'economy:preview:/economy-visual-preview',
       'market:preview:/market',
       'humanitarian:preview:/humanitarian',
-      'energy:comingSoon:-',
+      /*
+        Energy moved COMING SOON -> PREVIEW with H-ENERGY-PARTXI-IMPLEMENTATION-R4,
+        in the commit before this one. Same shape as the Politics correction above:
+        the row is updated because the CARD moved for its own reason, not because
+        the Conflict entry disturbed it. All eight rows are still pinned by full
+        string, so any drift in any of them still fails here.
+      */
+      'energy:preview:/energy',
     ]);
     /*
       AND THE ONE THING CONFLICT MUST NEVER DO TO COUNTRY, asserted beside the
@@ -322,9 +329,24 @@ describe('6 · the rest of the Engine did not move', () => {
         expect(isModuleNavigable(m)).toBe(false);
       }
     }
-    /* and a COMING SOON card stays inert even if handed the Conflict entry */
-    const energy = INTELLIGENCE_MODULES.find((m) => m.id === 'energy');
-    expect(isModuleNavigable({ ...energy!, destination: '/map?domain=conflict' })).toBe(false);
+    /*
+      AND A COMING SOON CARD STAYS INERT EVEN IF HANDED THE CONFLICT ENTRY.
+
+      The exemplar was `energy`, which is no longer COMING SOON —
+      H-ENERGY-PARTXI-IMPLEMENTATION-R4 moved it to PREVIEW with a real route,
+      so handing it a destination now correctly makes it navigable and the
+      assertion inverted. The PROPERTY is unchanged and still worth asserting;
+      it needs a card that is actually in the state it names, and
+      `world-intelligence` is the last one.
+
+      Chosen deliberately rather than by convenience: World is COMING SOON for
+      a reason that no package can answer — MAIN-WORLD-INTELLIGENCE-CANONICAL-
+      FOUNDATION-R1 rules it a surface that does not exist yet — so it will not
+      quietly stop being the right exemplar the way Energy did.
+    */
+    const world = INTELLIGENCE_MODULES.find((m) => m.id === 'world-intelligence');
+    expect(world?.state).toBe('comingSoon');
+    expect(isModuleNavigable({ ...world!, destination: '/map?domain=conflict' })).toBe(false);
   });
 
   it('the nine, their order and their slots are untouched', () => {
