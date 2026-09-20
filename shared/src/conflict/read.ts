@@ -56,5 +56,7 @@ export interface ConflictMapEvent {
   readonly eventEndedAt?: string;
   readonly severity: ConflictObservation['severity'];
   readonly sourceReference: ConflictObservation['sourceReference'];
+  /** Publisher-reported count of distinct source records, where parseable. */
+  readonly sourceCount: number | null;
   readonly revision: ConflictObservation['revision'];
 }
