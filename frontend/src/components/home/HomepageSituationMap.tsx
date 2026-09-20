@@ -3,12 +3,9 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowUpRight } from 'lucide-react';
-import type { CountryNewsResponse, LanguageCode } from '@globalnews-ai/shared';
+import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
-import { formatRelativeTime } from '@/lib/formatRelativeTime';
-import { pluralWithForms } from '@/lib/i18n/pluralize';
-import { fetchCountryNews } from '@/lib/api/countryApi';
 import type { HoveredCountry } from '@/components/map/WorldMap';
 
 /**
@@ -48,65 +45,22 @@ interface HomepageSituationMapProps {
   language?: LanguageCode;
 }
 
-/** CTO Frontend Visual Revision, Section 16 — restrained, consistent per-category color for the map legend/summary. Uses only the real, existing GlobalNews AI category taxonomy (world/politics/business/technology/science/health) — no reference-mockup categories the classifier doesn't actually support. */
-const CATEGORY_COLORS: Record<string, string> = {
-  world: 'bg-blue-400',
-  politics: 'bg-violet-400',
-  business: 'bg-amber-400',
-  technology: 'bg-cyan-400',
-  science: 'bg-emerald-400',
-  health: 'bg-rose-400',
-};
-
-function computeSummary(response: CountryNewsResponse) {
-  const articles = response.articles;
-  const publisherCount = new Set(articles.map((a) => a.sourceId)).size;
-  const latest = articles.reduce<string | null>((latestSoFar, article) => {
-    if (!latestSoFar) return article.publishedAt;
-    return new Date(article.publishedAt).getTime() > new Date(latestSoFar).getTime()
-      ? article.publishedAt
-      : latestSoFar;
-  }, null);
-  const categoryCounts = new Map<string, number>();
-  for (const article of articles) {
-    categoryCounts.set(article.category, (categoryCounts.get(article.category) ?? 0) + 1);
-  }
-  const primaryCategory = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-
-  return { storyCount: articles.length, publisherCount, latest, primaryCategory };
-}
-
 export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapProps): JSX.Element {
   const t = getDictionary(language).situationMap;
-  const categoryLabels = getDictionary(language).map.categories;
   const [countryStoryCounts] = useState<Record<string, number>>({});
   const [, setHovered] = useState<HoveredCountry | null>(null);
   const [selectedIso3, setSelectedIso3] = useState<string | null>(null);
   const [selectedName, setSelectedName] = useState<{ iso2: string; name: string } | null>(null);
-  const [response, setResponse] = useState<CountryNewsResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  async function handleSelectCountry(feature: {
+  function handleSelectCountry(feature: {
     properties: { country?: { iso3: string; iso2: string; name: string } };
-  }): Promise<void> {
+  }): void {
     const country = feature.properties.country;
     if (!country) return;
-
     setSelectedIso3(country.iso3);
     setSelectedName({ iso2: country.iso2, name: country.name });
-    setIsLoading(true);
-
-    try {
-      const result = await fetchCountryNews(country.iso3, { limit: 8, lang: language });
-      setResponse(result);
-    } catch {
-      setResponse(null);
-    } finally {
-      setIsLoading(false);
-    }
   }
 
-  const summary = response ? computeSummary(response) : null;
   const displayName = selectedName ? getCountryDisplayName(selectedName.iso2, language, selectedName.name) : null;
 
   return (
@@ -198,44 +152,13 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
                   </div>
                 </dl>
               </div>
-            ) : isLoading ? (
-              <p className="text-sm text-ink-tertiary" role="status" aria-live="polite">
-                {t.loadingLabel}
-              </p>
-            ) : summary && summary.storyCount > 0 ? (
-              <>
-                <h3 className="font-display text-lg font-medium text-ink-primary">{displayName}</h3>
-                <dl className="mt-3 flex flex-col gap-2 text-sm">
-                  <div className="flex justify-between">
-                    <dt className="text-ink-tertiary">{pluralWithForms(summary.storyCount, language, t.storyForms)}</dt>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-ink-tertiary">
-                      {pluralWithForms(summary.publisherCount, language, t.publisherForms)}
-                    </dt>
-                  </div>
-                  {summary.latest && (
-                    <div className="flex justify-between">
-                      <dt className="text-ink-tertiary">{t.latestLabel}</dt>
-                      <dd className="text-ink-primary">{formatRelativeTime(summary.latest, language)}</dd>
-                    </div>
-                  )}
-                  {summary.primaryCategory && (
-                    <div className="flex items-center justify-between">
-                      <dt className="text-ink-tertiary">{t.primaryTopicLabel}</dt>
-                      <dd className="flex items-center gap-1.5 text-ink-primary">
-                        <span
-                          aria-hidden="true"
-                          className={`h-1.5 w-1.5 rounded-full ${CATEGORY_COLORS[summary.primaryCategory] ?? 'bg-ink-tertiary'}`}
-                        />
-                        {summary.primaryCategory}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </>
             ) : (
-              <p className="text-sm text-ink-secondary">{t.noCoverageLabel}</p>
+              <div className="flex flex-1 flex-col gap-3">
+                <h3 className="font-display text-lg font-medium text-ink-primary">{displayName}</h3>
+                <p className="text-sm text-ink-secondary">
+                  Selection changes geographic scope only. Open the full map to inspect retained evidence or explicitly request country intelligence.
+                </p>
+              </div>
             )}
 
             {/* Open Full Map CTA — integrated into this same HUD panel frame rather than sitting in the section header, per the reference's single-context-block composition. */}
