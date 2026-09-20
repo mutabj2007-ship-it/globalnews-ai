@@ -24,6 +24,8 @@ export type ConflictReadResult =
       readonly countryIso3: string | null;
       readonly requestedDays: number | null;
       readonly observations: readonly ConflictObservation[];
+      /** Rendering projection over the same limited set; never a second event authority. */
+      readonly mapEvents: readonly ConflictMapEvent[];
       readonly matchedBeforeLimit: number;
       readonly truncated: boolean;
     }
