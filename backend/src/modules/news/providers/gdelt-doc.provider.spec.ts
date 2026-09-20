@@ -478,12 +478,14 @@ describe('GdeltDocProvider — U and V: request spacing and concurrency collapse
       );
       global.fetch = fetchMock as unknown as typeof fetch;
 
-      const first = provider.search('alpha query');
-      const second = provider.search('beta query');
+      const settled = Promise.allSettled([
+        provider.search('alpha query'),
+        provider.search('beta query'),
+      ]);
 
       await jest.advanceTimersByTimeAsync(8_100);
 
-      const [firstResult, secondResult] = await Promise.allSettled([first, second]);
+      const [firstResult, secondResult] = await settled;
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(firstResult.status).toBe('rejected');
