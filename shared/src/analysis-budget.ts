@@ -216,7 +216,7 @@ export const ANALYSIS_MAX_SERVER_BUDGET_MS = Math.min(
  */
 export function resolveServerBudgetMs(candidateMs: number | undefined): number {
   if (candidateMs === undefined || !Number.isFinite(candidateMs) || candidateMs <= 0) {
-    return ANALYSIS_TOTAL_BUDGET_MS;
+    return Math.min(ANALYSIS_TOTAL_BUDGET_MS, ANALYSIS_MAX_SERVER_BUDGET_MS);
   }
 
   return Math.min(candidateMs, ANALYSIS_MAX_SERVER_BUDGET_MS);
