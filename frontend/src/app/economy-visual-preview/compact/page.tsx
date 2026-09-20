@@ -5,7 +5,7 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { EconomyCompactScreen } from '@/components/economy/compact/EconomyCompactScreen';
-import { PRODUCTION_SHAPED_SUBJECT } from '@/lib/economy/productionSubject';
+import { economySubjectFromRead } from '@/lib/economy/economyRetainedSubject';
 import { AlphaVisualPreviewMarker } from '@/components/economy/AlphaVisualPreview';
 import { RetainedObservationPanel } from '@/components/economy/RetainedObservationPanel';
 import { economyCapabilityFrom, readEconomyObservations } from '@/lib/economy/economyObservationRead';
@@ -52,6 +52,7 @@ function economyLocale(): EconomyLocale {
 export default async function EconomyVisualPreviewCompactPage(): Promise<JSX.Element> {
   const locale = economyLocale();
   const read = await readEconomyObservations();
+  const subject = economySubjectFromRead(read);
   return (
     <ScriptRun locale={locale} step="wrapping" as="div">
       <main style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -64,7 +65,7 @@ export default async function EconomyVisualPreviewCompactPage(): Promise<JSX.Ele
         <RetainedObservationPanel read={read} />
         <div style={{ flex: '1 1 auto', minHeight: 0 }}>
           <EconomyCompactScreen
-            subject={PRODUCTION_SHAPED_SUBJECT}
+            subject={subject}
             locale={locale}
             data={economyCapabilityFrom(read)}
           />
