@@ -52,6 +52,9 @@ COPY scripts ./scripts
 RUN npx prisma generate --config backend/prisma.config.ts
 RUN npm run build:shared
 RUN npm run build --workspace=backend
+# OPS ONE-SHOT ONLY: compile the already-reviewed NISR manual proof to plain Node JS.
+# This branch is never a release authority; the proof remains outside backend/dist.
+RUN npx tsc -p backend/tooling/nisr-rehearsal/tsconfig.proof.json
 
 # ---- Production ----
 FROM node:20-alpine AS production
@@ -67,6 +70,8 @@ COPY backend/package*.json ./backend/
 RUN npm ci --omit=dev
 COPY --from=build /app/shared/dist ./shared/dist
 COPY --from=build /app/backend/dist ./backend/dist
+# OPS ONE-SHOT ONLY: make the compiled manual proof available to the pre-deploy container.
+COPY --from=build /app/backend/.proof-dist ./backend/.proof-dist
 # Milestone #54 (final runtime correction) — the compiled dist/ output
 # above does NOT include the Prisma schema/migrations/config, so a
 # fresh database was never actually receiving the tracked migrations
