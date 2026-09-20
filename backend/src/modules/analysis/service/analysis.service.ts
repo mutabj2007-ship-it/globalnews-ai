@@ -557,6 +557,15 @@ export class AnalysisService {
       };
     }
 
+    /*
+     * The fresh operation owns one cancellation signal. Joiners never receive
+     * this controller: a joiner's personal response deadline must not cancel
+     * provider work that the originator (or another joiner) can still receive.
+     * Only the originator's authoritative response deadline aborts the shared
+     * expensive model request.
+     */
+    const responseAbort = new AbortController();
+
     const inFlightOperation: Promise<AnalysisApiResponse> =
       (async (): Promise<AnalysisApiResponse> => {
         /**
@@ -1924,6 +1933,19 @@ export class AnalysisService {
           articles = [anchorArticle, ...withoutAnchor];
         }
 
+        /*
+         * If the response deadline expired while retrieval was still running,
+         * stop here before caching a late empty result or starting any model
+         * work. News-provider calls that were already in flight are not
+         * retroactively cancellable on this lane, but expensive AI work is.
+         */
+        if (responseAbort.signal.aborted) {
+          throw new AnalysisDeadlineExceededError(
+            resolveServerBudgetMs(config.totalBudgetMs),
+            cacheKey,
+          );
+        }
+
         if (articles.length === 0) {
           const empty: AnalysisApiResponse = {
             query: originalQuery,
@@ -2036,6 +2058,7 @@ export class AnalysisService {
               no change to what happens to a non-compliant answer.
             */
             developmentBreadth,
+            signal: responseAbort.signal,
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;
@@ -2241,6 +2264,19 @@ export class AnalysisService {
           };
         }
 
+        /*
+         * A deadline-aborted provider result is not a cache entry. The reader
+         * never received it, and replaying a synthetic "provider failed" result
+         * on retry would turn cancellation into a sticky failure. Let the
+         * underlying operation reject and disappear from the in-flight map.
+         */
+        if (responseAbort.signal.aborted) {
+          throw new AnalysisDeadlineExceededError(
+            resolveServerBudgetMs(config.totalBudgetMs),
+            cacheKey,
+          );
+        }
+
         this.setCached(cacheKey, response, this.cacheTtlFor(response, config));
 
         return response;
@@ -2291,7 +2327,12 @@ export class AnalysisService {
           synchronous RESPONSE deadline .......... BOUNDED (this code)
           abandoned provider work cancellation ... OPEN (unwired; next correction)
     */
-    return this.withResponseDeadline(settledInFlightOperation, config.totalBudgetMs, cacheKey);
+    return this.withResponseDeadline(
+      settledInFlightOperation,
+      config.totalBudgetMs,
+      cacheKey,
+      () => responseAbort.abort(),
+    );
   }
 
   /**
@@ -2307,6 +2348,7 @@ export class AnalysisService {
     operation: Promise<T>,
     budgetMs: number | undefined,
     cacheKey: string,
+    onDeadline?: () => void,
   ): Promise<T> {
     /*
       REV B — RESOLVE BEFORE ARMING, ALWAYS.
@@ -2335,6 +2377,16 @@ export class AnalysisService {
 
     const deadline = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(() => {
+        try {
+          onDeadline?.();
+        } catch {
+          /*
+           * Deadline enforcement must never be blocked by cancellation cleanup.
+           * The response still fails closed even if a provider-specific abort
+           * hook itself misbehaves.
+           */
+        }
+
         this.logger.warn(
           `Analysis exceeded the total synchronous budget of ${resolvedBudgetMs} ms. ` +
             'Responding with a deadline error; the operation continues and will populate the ' +
