@@ -1,10 +1,18 @@
 # ALPHA DATA CONVERGENCE MATRIX
 
-**Round:** ALPHA MAJOR CONVERGENCE R1
+**Round:** ALPHA FINAL DATA-FED CONVERGENCE R2 *(supersedes ALPHA MAJOR CONVERGENCE R1)*
 **Branch:** `integration/alpha-major-convergence-r1`
-**Parent release:** `daf2bd97045fc3f74d894f01f943c85d92ef910e` (`release/alpha-m08-integrated-r1`)
+**Required remote parent:** `0552c3c7865c644716af64a28f1c743dd08d20e7`
+**Watched release:** `daf2bd97045fc3f74d894f01f943c85d92ef910e` (`release/alpha-m08-integrated-r1`) — **UNCHANGED, not merged into, not pushed**
 **Authority:** H-SHARED-NAV-DATA-BINDING-READINESS-R1 §3, verified against this tree
 **Date:** 2026-09-20
+
+> **WHAT CHANGED SINCE R1, IN ONE LINE.** Economy stopped being a literal. One real
+> NISR CPI observation — All Rwanda, year on year, **15.9 PERCENT** for **2026-08**,
+> published **2026-09-10** — is durably retained and served to the Economy frontend at
+> both widths, with its licence, index base, content address, parser and extractor
+> beside it. **Seven of the eight surfaces are unchanged and still truthful.** No card
+> anywhere was filled to look populated.
 
 ---
 
@@ -62,11 +70,14 @@ duplicate path the contract forbids. Logged as debt; not a defect against this r
 | | |
 |---|---|
 | **owner component** | `components/economy/EconomyScreen.tsx` · `components/economy/compact/EconomyCompactScreen.tsx` |
-| **current source** | `ECONOMY_DATA_CAPABILITY = { numericObservations: 'NO_OBSERVATION_SOURCE' }`, a **literal**, with `PRODUCTION_SHAPED_SUBJECT` (`iso2: 'ZZ'`, `scopeLabel: 'No subject bound'`) |
-| **canonical read expected** | an economy observation reader on the Market shape, returning `OBSERVATIONS \| UNAVAILABLE(reason)`; `numericObservations` becomes a *derived* capability rather than a constant. Target model: `EconomySeries`, category `INFLATION_CPI` |
-| **the seam** | `lib/economy/economyConfig.ts` — the literal becomes the return of a nullable reader |
-| **empty-state truth** | `hasObservationSource(c)` exists and answers false. `FIXTURE_DATA_CAPABILITY` exists and is **never assigned** — guard `ECON-UI-1`: *"fixtures are illustrative, never production facts"* |
-| **class** | **CANONICAL MODEL ONLY** |
+| **current source** | **a live read of retained evidence.** `GET /economy/observations/rw-nisr-cpi` opens the NISR CPI artifact the snapshot store already holds, decodes it with the recorded extractor, and returns one observation plus its provenance. `readEconomyObservations()` calls it from the **server component**, so the browser issues no request on load |
+| **canonical read expected** | **landed.** The reader is the nullable function on the Market shape, returning `OBSERVATIONS \| UNAVAILABLE(reason)` with **three distinguishable absences** — no reader · none retained · none displayable. `numericObservations` is now `economyCapabilityFrom(read)`, **derived**, so it cannot say OBSERVED unless something was observed |
+| **the seam** | `lib/economy/economyConfig.ts` → `lib/economy/economyObservationRead.ts`. **The seam did not move**: it is still a nullable function, and setting it back to `null` restores the previous behaviour with no other change |
+| **what the reader actually sees** | **All Rwanda headline CPI, year on year, 15.9 PERCENT, reference period 2026-08, published 2026-09-10**, with institution, licence (`CC BY 4.0`), index base (`Feb 2014=100`), edition language, artifact `sha256 4ba5193b…`, and the parser and extractor that read it. At 1512px and at 390px |
+| **what was NOT populated, deliberately** | GDP, unemployment, debt, the change-state chip, the assessment, the triad, the corridor. **Only the semantically-corresponding card is filled.** Every other card renders the governed absence it rendered before |
+| **empty-state truth** | unchanged and still governed. `FIXTURE_DATA_CAPABILITY` exists and is **still never assigned** — `ECON-UI-1`: *"fixtures are illustrative, never production facts"* — and no branch of the derived capability can return it |
+| **and `/economy` is still not open** | `app/economy/` does not exist, the eligibility predicate still returns **NOT ELIGIBLE** on three DATA conditions, and the tripwire asserting the directory’s absence is untouched and still passes. The Product Owner sees this on the preview routes |
+| **class** | **REAL DATA BOUND** (one series; the rest of the surface is CANONICAL MODEL ONLY and says so) |
 
 ---
 
@@ -173,7 +184,7 @@ is `[]`, now asserted as empty with a mutation control proving the guard fails i
 |---|---|
 | Country | **REAL DATA BOUND** (modern shell, explicit action) |
 | Market | **READ MODEL READY — NO PROVIDER** |
-| Economy | CANONICAL MODEL ONLY |
+| Economy | **REAL DATA BOUND** (headline CPI; the rest of the surface unchanged) |
 | Humanitarian | CANONICAL MODEL ONLY |
 | Conflict | CANONICAL MODEL ONLY |
 | Politics | CANONICAL MODEL ONLY |
@@ -183,11 +194,17 @@ is `[]`, now asserted as empty with a mutation control proving the guard fails i
 ### The shape of the remaining work
 
 ```
+seam is BOUND to real retained evidence ............. Economy  <- this round
 seam is FINISHED and only the reader is null ........ Market
 seam is WRITTEN but the legacy shell cannot reach it  Country (debt), Conflict
-seam is a LITERAL that must become a reader ......... Economy, Energy
+seam is a LITERAL that must become a reader ......... Energy
 seam is a MISSING PROP at the route call site ....... Humanitarian, Politics, Security
 ```
+
+**Economy is now the worked example for the other four.** It went from a literal to a
+derived capability without a redesign, without a new absence vocabulary and without a
+fixture: one nullable reader, one server-component call, one backend route over bytes
+already retained. The remaining surfaces need that same shape and a source with rights.
 
 **Five of the eight need the same one-line change**: a nullable reader called from the
 server component, returning a discriminated result whose absence branch names the
@@ -216,6 +233,9 @@ No surface in this matrix was given a fixture to make its seam look finished.
 | Map movement or country *selection* alone triggers GNews | **NO** — `loadCountry()` is deleted |
 | Energy / Market / Humanitarian / Politics / Security previews trigger a provider | **NO** |
 | The shared Back/Return control issues any request | **NO** — no fetch on mount, render or press |
+| Pressing Back on `/map` with a country selected triggers GNews | **NO** — it clears through the single governed selection handler, and the country read is gated on a non-null request |
+| Pressing Back on `/energy` triggers a provider | **NO** — the ladder is pure state, and its `false` branch navigates |
+| Rendering the Economy surface (either width, any number of times) reaches NISR | **NO** — the read opens retained bytes; there is no transport in its dependency graph |
 | Anything auto-fetches on mount to make an empty preview look populated | **NO** |
 
 Only explicit governed retrieval actions may initiate provider work. Where a surface has
@@ -234,7 +254,66 @@ no data, it renders a truthful *unavailable / not-assessed* state.
 | PDF reaching `BODY_NOT_JSON_SHAPED` | **impossible** — the leading-byte sniff is media-aware |
 | JSON allowlist | **not widened** — `ALPHA_ADMITTED_MEDIA_TYPES = ['application/json']` |
 | XLS / XLSX / CSV | **unavailable** — no governed decoder exists, so no row is registered |
-| NISR normalized observation | **WAITING ON ACCEPTED G PARSER** — no CPI value is manufactured |
+| NISR normalized observation | **LANDED AND DURABLY RETAINED** — 15.9 PERCENT, 2026-08, from the artifact, never a literal |
+| production PDF text extractor (synchronous, in process, no OCR, no subprocess) | **LANDED** — `pdf-sync-text.ts` + `nisr-cpi-pdf.extractor.ts` |
+| production safe-fetch wire driver (`dns.resolve4`/`resolve6`, address-bound connect, governed SNI/Host) | **LANDED** — `safe-wire-fetch.node.ts`, and it has **no call site under `src/`** |
+| lineage persistence (referencePeriod, sourceLanguage, extractorId, extractorVersion) | **LANDED** — one additive migration, four `ADD COLUMN`, zero `UPDATE`, zero destructive DDL, existing rows NULL |
+| boot gate — a missing extractor refuses to become runnable *before* any fetch | **LANDED** — runs before `NestFactory.create` |
+| `rw-nisr` activation | **DORMANT** — `enabled: false`, `ingestionMethod: none`, no scheduler, asserted by 19 CI tests |
+| any other official source | **NONE ACTIVATED** — `eurostat` remains `enabled: false`; NISR is the only real-data pipeline |
+
+---
+
+## SHARED BACK / RETURN — H’S MEASURED HOST INVENTORY, COMPLETE
+
+H probed fourteen surfaces across two viewports and found **one** return affordance —
+Energy, compact only, and bespoke. The major convergence landed six hosts; this round
+landed the remaining seven, and removed the bespoke one rather than leaving it beside
+the shared control.
+
+| host | variant | notes |
+|---|---|---|
+| `navigation/NavBar.tsx` | navbar | host A — the existing 62px desktop row, unchanged |
+| `market/MarketScreen.tsx` | microline | R1 |
+| `market/MarketCompactScreen.tsx` | microline · icon only | **R2** |
+| `politics/PoliticsScreen.tsx` | microline | R1 |
+| `politics/PoliticsCompactScreen.tsx` | microline · icon only | R1 |
+| `humanitarian/HumanitarianScreen.tsx` | microline | R1 |
+| `humanitarian/HumanitarianCompactScreen.tsx` | microline · icon only | **R2** |
+| `security/SecurityScreen.tsx` | microline | R1 |
+| `security/SecurityCompactScreen.tsx` | microline · icon only | **R2** |
+| `economy/EconomicStateHeader.tsx` | microline | **R2** — the desktop state-header row |
+| `economy/compact/EconomyCompactScreen.tsx` | microline · icon only | **R2** |
+| `energy/EnergyShell.tsx` | microline ×2 | **R2** — two mutually exclusive viewport branches; a reader sees one |
+| `map/MapPageClient.tsx` | microline · sub-state exit | **R2** — H’s authorised first-return semantics |
+
+**Measured on the running server:** every one of twelve routes serves **exactly one**
+`microline` control, and the surfaces that carry the NavBar serve its `navbar` control
+beside it. **No surface gained a row** — each control is the leading item of a row that
+already rendered, and the control declares no height, padding or margin of its own.
+
+**No bespoke arrows remain in a host.** The glyph is declared once, as
+`RETURN_GLYPH` in `ReturnControl.tsx`; a guard sweeps every host for a local arrow
+literal, and a second guard asserts set equality between the declared inventory and
+every `.tsx` in the tree that renders the control.
+
+**Two surfaces may answer a first press without leaving, and only two.** `/map` clears
+the selection; `/energy` walks its own Escape ladder — HUD → drawer → lens → Ask →
+subject → substrate. Both have a reachable `false` branch, so neither is a Back button
+that can never leave, and neither can start a retrieval.
+
+---
+
+## WHAT THIS ROUND DID NOT DO
+
+| | |
+|---|---|
+| deploy anything | **NO** — production is on HOLD, no Railway change was made |
+| touch `release/alpha-m08-integrated-r1` | **NO** — not merged into, not pushed, unchanged |
+| activate a second data source | **NO** — NISR is the only real-data pipeline |
+| promote coverage accounting (0/11 or otherwise) | **NO** — East Africa evidence is preserved and unchanged; no coverage claim is made from it |
+| integrate Imihigo R2 | **NOT PRESENT** — no Imihigo R2 implementation exists in this repository or on any branch reachable from it. The existing Imihigo vocabulary (domain mapping, workspace copy, platform-neutrality guard, capability tree) is preserved byte-for-byte |
+| manufacture a figure to fill a card | **NO** |
 
 ```
 ALPHA DATA CONVERGENCE MATRIX = RECORDED
