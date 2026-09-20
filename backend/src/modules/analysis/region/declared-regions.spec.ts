@@ -131,10 +131,11 @@ describe('TEST A · the typed question resolves EAST AFRICA as request scope', (
     expect(rwanda).toBeDefined();
     expect(drCongo).toBeDefined();
 
-    const prioritized = prioritizeRegionMembers(
-      EAST_AFRICA,
-      [rwanda, drCongo].filter((member): member is NonNullable<typeof member> => member !== undefined),
-    );
+    if (!rwanda || !drCongo) {
+      throw new Error('East Africa fixture must resolve Rwanda and DR Congo');
+    }
+
+    const prioritized = prioritizeRegionMembers(EAST_AFRICA, [rwanda, drCongo]);
 
     expect(prioritized.slice(0, 2).map((member) => member.iso3)).toEqual(['RWA', 'COD']);
     expect(prioritized).toHaveLength(EAST_AFRICA.members.length);
