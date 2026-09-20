@@ -7,7 +7,6 @@ import type { EconomyLocale } from '@/lib/economy/strings';
 import { EconomyCompactScreen } from '@/components/economy/compact/EconomyCompactScreen';
 import { economySubjectFromRead } from '@/lib/economy/economyRetainedSubject';
 import { AlphaVisualPreviewMarker } from '@/components/economy/AlphaVisualPreview';
-import { RetainedObservationPanel } from '@/components/economy/RetainedObservationPanel';
 import { economyCapabilityFrom, readEconomyObservations } from '@/lib/economy/economyObservationRead';
 
 /**
@@ -62,7 +61,6 @@ export default async function EconomyVisualPreviewCompactPage(): Promise<JSX.Ele
           the provenance grid collapses to one column below 240px of free width — so no
           chrome budget moves and nothing is added to the frozen top bar.
         */}
-        <RetainedObservationPanel read={read} />
         <div style={{ flex: '1 1 auto', minHeight: 0 }}>
           <EconomyCompactScreen
             subject={subject}
