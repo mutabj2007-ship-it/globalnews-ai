@@ -39,7 +39,12 @@ jobs:
 
       - name: Run focused retrieval regression tests
         run: |
-          npm test --workspace=backend -- --runInBand             src/modules/analysis/query/query-intent.util.spec.ts             src/modules/analysis/region/declared-regions.spec.ts             src/modules/analysis/providers/openai-analysis.provider.spec.ts             src/modules/news/news.service.spec.ts             src/modules/news/providers/gdelt-doc.provider.spec.ts             src/modules/news/providers/gnews.provider.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/analysis/query/query-intent.util.spec.ts -t "ALPHA SEARCH REPAIR"
+          npm test --workspace=backend -- --runInBand src/modules/analysis/region/declared-regions.spec.ts -t "explicitly named region members|THE BOUND IS ON CONCURRENCY|NO MEMBER IS PERMANENTLY EXCLUDED"
+          npm test --workspace=backend -- --runInBand src/modules/news/news.service.spec.ts -t "regional callers can suppress the live fallback tier"
+          npm test --workspace=backend -- --runInBand src/modules/news/providers/gdelt-doc.provider.spec.ts -t "timeout opens cooldown before a queued different query"
+          npm test --workspace=backend -- --runInBand src/modules/news/providers/gnews.provider.spec.ts -t "one 429 stops concurrently queued different searches"
+          npm test --workspace=backend -- --runInBand src/modules/analysis/providers/openai-analysis.provider.spec.ts -t "cancels an in-flight OpenAI request"
 
       - name: Run shared budget tests
         run: npm test --workspace=shared -- --runInBand src/analysis-budget.spec.ts
