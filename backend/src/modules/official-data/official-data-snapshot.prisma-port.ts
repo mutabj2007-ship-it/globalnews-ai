@@ -68,6 +68,18 @@ export interface SnapshotRetrievalRow {
   editionAnnotations: unknown;
   publisherReleasedAt: Date | null;
   publisherChangedAt: Date | null;
+  /**
+   * NISR PRODUCTIONIZATION R1 · rulings A and B-3.1.
+   *
+   * `string | null`, NEVER `string | null | undefined`. The port’s declared surface
+   * is what makes the store’s obligations checkable, and admitting `undefined` here
+   * would let a caller omit the field and still typecheck — which is the difference
+   * between a column that is always written and one that is sometimes forgotten.
+   */
+  referencePeriod: string | null;
+  sourceLanguage: string | null;
+  extractorId: string | null;
+  extractorVersion: string | null;
 }
 
 export interface SnapshotPinRow {
@@ -151,6 +163,11 @@ export interface SnapshotRetrievalDelegate {
       editionAnnotations: unknown;
       publisherReleasedAt: Date | null;
       publisherChangedAt: Date | null;
+      /* NISR PRODUCTIONIZATION R1 · A-7. `string | null`, never `| undefined`. */
+      referencePeriod: string | null;
+      sourceLanguage: string | null;
+      extractorId: string | null;
+      extractorVersion: string | null;
     };
   }): Promise<SnapshotRetrievalRow>;
 

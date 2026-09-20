@@ -594,7 +594,25 @@ export function makeNisrCpiDecoder(
       detail: `${key}:${detail}`,
     });
 
-    const layer = extractor.extract(bytes);
+    /*
+      NISR PRODUCTIONIZATION R1 · B-2.3 — A THROWING EXTRACTOR IS A REFUSAL, NOT A CRASH.
+
+      The adapter is required to catch everything and return `null`, and the production
+      one does. This is the second half of that rule, held where it cannot be forgotten
+      by whoever writes the NEXT adapter: an exception escaping here would surface as an
+      unhandled producer error rather than a governed refusal, and a governed refusal is
+      the only outcome the admission evaluator can classify.
+
+      It does not relax the refusing default — `NISR_CPI_NO_EXTRACTOR_INSTALLED` still
+      returns `null` by returning `null`. It closes the case where an installed extractor
+      breaks its own contract.
+    */
+    let layer: NisrCpiTextLayer | null;
+    try {
+      layer = extractor.extract(bytes);
+    } catch {
+      return refuse('NISR_PDF_NO_TEXT_LAYER', 'EXTRACTOR_THREW');
+    }
     if (layer === null) return refuse('NISR_PDF_NO_TEXT_LAYER', 'NO_TEXT_LAYER');
 
     /* THE LICENCE TRAVELS WITH THE BYTES, AND THE STRING AROUND IT VARIES. August reads

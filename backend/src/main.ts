@@ -10,6 +10,7 @@ import { createProxyChainDiagnostic } from './security/proxy-chain-diagnostic';
 import { createAuthenticatedCacheHeaders } from './security/authenticated-cache-headers';
 import { createPublicCacheHeaders } from './security/public-cache-headers';
 import { resolveAuthSecretsMode } from './security/auth-secrets.config';
+import { assertNisrDocumentProducerIsRunnable } from './modules/official-data/official-data.boot';
 
 /**
  * S1 — explicit request body-size limit.
@@ -54,6 +55,23 @@ async function bootstrap(): Promise<void> {
     OAUTH_CLIENT_SECRET: process.env.OAUTH_CLIENT_SECRET,
     OAUTH_FLOW_SECRET: process.env.OAUTH_FLOW_SECRET,
   });
+
+  /*
+    NISR PRODUCTIONIZATION R1 · ruling B-4.2 layer 1 — THE SAME TIMING, AND THE SAME
+    REASON, AS THE AUTH GATE ABOVE: before the port opens.
+
+    If the official-source registry has the NISR document provider ENABLED and no governed
+    PDF text-layer extractor is installed, the deployment does not start. Without this a
+    forgotten wiring would not merely read no NISR figures — it would write a PERMANENT
+    PARSE_FAILED verdict against every NISR artifact it saw, and wiring the extractor
+    afterwards would not clear them. A deployment fault must not be recorded as an artifact
+    fault.
+
+    In the canonical tree `rw-nisr` is `enabled: false`, so this installs nothing, returns
+    DORMANT_NOT_RUNNABLE, and changes no behaviour at all. Wiring an extractor is not
+    activating a provider, and the coupling here is what keeps that true.
+  */
+  assertNisrDocumentProducerIsRunnable();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 

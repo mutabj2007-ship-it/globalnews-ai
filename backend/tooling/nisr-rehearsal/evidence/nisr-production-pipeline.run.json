@@ -1,0 +1,295 @@
+{
+  "ranAt": "2026-09-20T14:39:04.783Z",
+  "dns": {
+    "configuredBefore": [
+      "127.0.0.1"
+    ],
+    "operatorDeclared": [
+      "9.9.9.9"
+    ],
+    "reason": "the machine resolver is a local stub c-ares cannot query; the driver is unchanged and still never uses dns.lookup",
+    "inUse": [
+      "9.9.9.9"
+    ],
+    "probe": {
+      "ok": true,
+      "addresses": [
+        "197.243.19.196"
+      ]
+    }
+  },
+  "authorisation": {
+    "authorised": true,
+    "reason": "DORMANT_SOURCE_UNDER_ONE_TIME_MANUAL_PROOF"
+  },
+  "providerId": "rw-nisr",
+  "endpointId": "cpi-monthly-en",
+  "configuredHost": "statistics.gov.rw",
+  "sourceEnabled": false,
+  "ingestionMethod": "none",
+  "snapshotExposure": "INTERNAL_ONLY",
+  "durablePersistence": true,
+  "transport": {
+    "driver": "makeSafeWireFetch (production)",
+    "status": 200,
+    "finalUrl": "https://statistics.gov.rw/sites/default/files/documents/2026-09/CONSUMER%20PRICE%20INDEX%20%20%28CPI%29%20AUGUST%202026.pdf",
+    "redirectHops": 0,
+    "wireByteLength": 1727902,
+    "fetchWallMs": 3137,
+    "capturedHeaders": {
+      "content-type": "application/pdf",
+      "content-length": "1727902",
+      "etag": "\"1a5d9e-65b1c178a40c0\"",
+      "last-modified": "Thu, 10 Sep 2026 07:41:12 GMT",
+      "date": "Sun, 20 Sep 2026 14:39:06 GMT"
+    },
+    "policy": {
+      "wireByteCap": 4194304,
+      "maxRedirectHops": 3,
+      "admittedScheme": "https:",
+      "ownOriginsDeclared": 1
+    }
+  },
+  "mediaRow": {
+    "mediaType": "application/pdf",
+    "charsetApplies": false,
+    "leadingBytes": [
+      37,
+      80,
+      68,
+      70,
+      45
+    ],
+    "shapeRefusalKey": "BODY_NOT_PDF_SHAPED",
+    "wireByteCap": 4194304,
+    "decodedByteCap": 8388608,
+    "containerIsArchive": false
+  },
+  "admission": {
+    "admissibility": "ADMITTED",
+    "parserId": "nisr.cpi.pdf",
+    "parserVersion": "1.0.0",
+    "admissionWallMs": 154
+  },
+  "decoded": {
+    "referencePeriod": "2026-08",
+    "publicationDate": "2026-09-10",
+    "sourceLanguage": "en",
+    "basePeriod": "Feb 2014=100",
+    "issueOrdinal": 8,
+    "licenceToken": "Licensed under CC BY 4.0",
+    "geographiesPresent": [
+      "URBAN",
+      "RURAL",
+      "ALL_RWANDA"
+    ],
+    "extractorId": "nisr.cpi.pdfsynctext.positional",
+    "extractorVersion": "1.0.0",
+    "rowCount": 54
+  },
+  "retention": {
+    "substrate": "PostgresOfficialDataSnapshotStore (production)",
+    "contentAddress": "4ba5193b1ef224143a2caa8370ca5ca197b1bfbb4cb04526e6d6a726fe4d6117",
+    "byteLength": 1727902,
+    "retentionWallMs": 138,
+    "payloadReopened": true,
+    "payloadByteLength": 1727902,
+    "retrievalsForThisArtifact": 1,
+    "referencePeriodReadBack": "2026-08",
+    "sourceLanguageReadBack": "en",
+    "editionAnnotations": {},
+    "publisherReleasedAt": "2026-09-10",
+    "pinned": true
+  },
+  "observation": {
+    "editionOrder": "ADVANCED",
+    "seriesId": "eco:1:up:7:rw-nisr20:Consumer Price Index0:5:basis6:annual6:coicop2:009:geography10:All Rwanda",
+    "seriesLabel": "Rwanda headline CPI, year on year (All Rwanda)",
+    "category": "INFLATION_CPI",
+    "economyIso2": "RW",
+    "periodId": "2026-08",
+    "periodStart": "2026-08-01",
+    "periodEnd": "2026-08-31",
+    "vintage": "2026-09-10",
+    "value": 15.9,
+    "unit": "PERCENT",
+    "semantics": {
+      "releaseStatus": null,
+      "valueKind": "ACTUAL",
+      "freshness": "FRESH"
+    },
+    "observationKey": "eco:1:94:eco:1:up:7:rw-nisr20:Consumer Price Index0:5:basis6:annual6:coicop2:009:geography10:All Rwanda7:2026-0810:2026-09-10",
+    "lineage": {
+      "datasetCode": "Consumer Price Index",
+      "dimensions": [
+        {
+          "key": "geography",
+          "value": "All Rwanda"
+        },
+        {
+          "key": "coicop",
+          "value": "00"
+        },
+        {
+          "key": "basis",
+          "value": "annual"
+        }
+      ],
+      "contentAddress": "4ba5193b1ef224143a2caa8370ca5ca197b1bfbb4cb04526e6d6a726fe4d6117",
+      "referencePeriod": "2026-08",
+      "sourceLanguage": "en"
+    }
+  },
+  "internalRead": {
+    "exposure": "INTERNAL_ONLY",
+    "kind": "OBSERVATION",
+    "publishable": true,
+    "value": 15.9,
+    "unit": "PERCENT"
+  },
+  "parseProvenance": {
+    "contentAddress": "4ba5193b1ef224143a2caa8370ca5ca197b1bfbb4cb04526e6d6a726fe4d6117",
+    "parserId": "nisr.cpi.pdf",
+    "parserVersion": "1.0.0",
+    "extractorId": "nisr.cpi.pdfsynctext.positional",
+    "extractorVersion": "1.0.0",
+    "referencePeriod": "2026-08",
+    "sourceLanguage": "en",
+    "publicationDate": "2026-09-10"
+  },
+  "finalState": {
+    "sourceEnabled": false,
+    "ingestionMethod": "none",
+    "schedulerOff": true,
+    "recurringFetch": false,
+    "deploymentExecuted": false,
+    "railwayChanged": false
+  },
+  "checks": [
+    {
+      "name": "AUTHORISED_MANUAL_ONE_SHOT",
+      "ok": true,
+      "detail": "DORMANT_SOURCE_UNDER_ONE_TIME_MANUAL_PROOF"
+    },
+    {
+      "name": "SOURCE_IS_DORMANT",
+      "ok": true
+    },
+    {
+      "name": "NO_INGESTION_METHOD",
+      "ok": true
+    },
+    {
+      "name": "GOVERNED_HOST_FROM_REGISTRY",
+      "ok": true
+    },
+    {
+      "name": "EXPOSURE_IS_INTERNAL_ONLY",
+      "ok": true
+    },
+    {
+      "name": "HTTP_200",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "FINAL_URL_IS_GOVERNED_HOST",
+      "ok": true
+    },
+    {
+      "name": "BYTE_LENGTH_MATCHES_RETAINED",
+      "ok": true,
+      "detail": "1727902"
+    },
+    {
+      "name": "PDF_MEDIA_ROW",
+      "ok": true
+    },
+    {
+      "name": "PDF_SHAPE_KEY",
+      "ok": true
+    },
+    {
+      "name": "ADMITTED",
+      "ok": true
+    },
+    {
+      "name": "PARSER_FROM_REGISTRY",
+      "ok": true
+    },
+    {
+      "name": "PRODUCTION_EXTRACTOR_PRODUCED_IT",
+      "ok": true
+    },
+    {
+      "name": "REFERENCE_PERIOD",
+      "ok": true,
+      "detail": "2026-08"
+    },
+    {
+      "name": "PUBLICATION_DATE",
+      "ok": true,
+      "detail": "2026-09-10"
+    },
+    {
+      "name": "NATIONAL_ROW_PRESENT",
+      "ok": true
+    },
+    {
+      "name": "NATIONAL_VALUE",
+      "ok": true,
+      "detail": "15.9"
+    },
+    {
+      "name": "CONTENT_ADDRESS_MATCHES_RETAINED",
+      "ok": true,
+      "detail": "4ba5193b1ef224143a2caa8370ca5ca197b1bfbb4cb04526e6d6a726fe4d6117"
+    },
+    {
+      "name": "PAYLOAD_REOPENED",
+      "ok": true
+    },
+    {
+      "name": "LINEAGE_REFERENCE_PERIOD_PERSISTED",
+      "ok": true
+    },
+    {
+      "name": "LINEAGE_SOURCE_LANGUAGE_PERSISTED",
+      "ok": true
+    },
+    {
+      "name": "NORMALIZED",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "OBSERVATION_IS_THE_ARTIFACT_CELL",
+      "ok": true
+    },
+    {
+      "name": "NO_RELEASE_STATUS_INFERRED",
+      "ok": true
+    },
+    {
+      "name": "INTERNAL_READ_IS_AN_OBSERVATION",
+      "ok": true
+    },
+    {
+      "name": "INTERNAL_READ_PUBLISHABLE",
+      "ok": true
+    },
+    {
+      "name": "PAYLOAD_PINNED_BY_THE_FIGURE",
+      "ok": true
+    },
+    {
+      "name": "PROVENANCE_ADDRESS_COPIED",
+      "ok": true
+    },
+    {
+      "name": "STILL_DORMANT_AFTERWARDS",
+      "ok": true
+    }
+  ],
+  "verdict": "PASS"
+}

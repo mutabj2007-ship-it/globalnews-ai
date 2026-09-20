@@ -1,0 +1,96 @@
+-- OFFICIAL-DATA SNAPSHOT — RETRIEVAL LINEAGE FIELDS.
+--
+-- Contract: MAIN-NISR-PRODUCTIONIZATION-FINAL-R1 · ruling A (two columns) and
+--           ruling B-3.1 (two further columns, separate requirement, same migration).
+-- Against:  20260919030000_add_official_data_snapshot_store
+--           20260919040000_add_market_scheduled_ingest
+--           20260919050000_snapshot_admission_r2
+--
+-- FOUR `ADD COLUMN` STATEMENTS ON ONE EXISTING MODEL. THAT IS THE ENTIRE DIFF.
+--
+-- Ruling A-3 states the boundary and this file is inside it:
+--   no DROP, no ALTER COLUMN, no rename, no retype of any existing column;
+--   no new table, no new model, no new relation, no new enum;
+--   no index on either new column (A-6); no CHECK constraint on either (A-1);
+--   no change to the snapshot_payload_append_only trigger or any other trigger;
+--   no change to SnapshotPayload, SnapshotPin, SnapshotTombstone or MarketObservation.
+--
+-- If this file ever contains a verb other than ADD COLUMN, it is outside ruling A.
+--
+-- THE COLUMN COUNT, STATED SO NEITHER NUMBER CAN BE QUOTED AS THE OTHER:
+--   counted against ruling A ......... 2   (referencePeriod, sourceLanguage)
+--   counted against ruling B-3.1 ..... 2   (extractorId, extractorVersion)
+--   counted against THIS FILE ........ 4
+--
+-- NO BACKFILL — A-4. THIS FILE REWRITES NO ROW, NOW OR EVER.
+--
+-- A-7 verifies that by grepping this file for the row-rewriting verb and finding zero
+-- occurrences, so the word itself is deliberately absent from these comments too: a
+-- reviewer running the ruling's own grep must get 0, and a comment that says "contains
+-- none" would be the one hit that makes them look twice at a file that is in fact clean.
+--
+-- `NULL` is not a placeholder standing in for a value that exists somewhere. Every row
+-- that exists on the day this runs is a retrieval whose artifact genuinely did not state
+-- these facts, or whose parser genuinely did not read them. NULL is the correct, final,
+-- truthful value for all of them. A backfill would manufacture values: the request path
+-- carries "AUGUST 2026" in the filename and "2026-09" in the upload folder — the
+-- reference period and a month that is not it, both forbidden by R-AID-1 — and
+-- re-parsing retained bytes would write a lineage that the row's recorded parserVersion
+-- did not produce. If bytes are to be re-read, that is a NEW retrieval row.
+--
+-- `ADD COLUMN … NULL` with no default is not a table rewrite in any supported Postgres
+-- version, so this migration is metadata-only and takes no long lock. That is a
+-- consequence of choosing nullable-without-default, not a separate requirement.
+--
+-- ROLLBACK: DOWN.sql beside this file.
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 1 · RULING A — THE TWO LINEAGE COLUMNS
+-- ─────────────────────────────────────────────────────────────────────────
+--
+-- `referencePeriod` IS TEXT, NOT `DateTime` AND NOT `DATE`. THIS IS THE ONE DECISION IN
+-- THIS FILE THAT MUST NOT BE "IMPROVED".
+--
+-- The observed value is `2026-08` — a MONTH. A timestamp column cannot store a month; it
+-- manufactures `2026-08-01T00:00:00Z`, a day the publisher never stated, and no reader
+-- downstream can tell a manufactured day from a stated one. A `DATE` column has the same
+-- defect one unit down. VARCHAR carries the publisher's own precision unchanged, and a
+-- publisher who someday states `2026-Q3` stores that, at that precision, without a schema
+-- change and without a lie. THE STORAGE TYPE MUST NEVER BE MORE PRECISE THAN THE FACT.
+--
+-- Length 32 is a sanity bound, not a format parser: generous for any ISO-8601 period
+-- designator including a full `2026-08-01/2026-08-31` range form. NO CHECK CONSTRAINT AND
+-- NO FORMAT VALIDATION AT THE COLUMN — what shapes are admissible is the governed
+-- parser's ruling, and a second format rule at the database is the two-tables drift that
+-- lets the two disagree.
+--
+-- Length 35 on `sourceLanguage` is the BCP-47 registry's own maximum tag length. Same
+-- reasoning: a bound, not a validator.
+
+-- AlterTable
+ALTER TABLE "SnapshotRetrieval" ADD COLUMN     "referencePeriod" VARCHAR(32),
+ADD COLUMN     "sourceLanguage" VARCHAR(35);
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 2 · RULING B-3.1 — EXTRACTOR IDENTITY, WHICH WAS COMPUTED AND THEN DISCARDED
+-- ─────────────────────────────────────────────────────────────────────────
+--
+-- A SEPARATE ADDITIVE REQUIREMENT FOR A DIFFERENT REASON, landing in the same migration.
+--
+-- The extractor seam exists so that an injected extraction cannot change what a parser
+-- MEANS without the change being detectable — E1 · P-4's hazard, arriving through the one
+-- seam the registry does not own. Before this migration `extractorId` and
+-- `extractorVersion` reached `NisrCpiDecoded`, a transient decode result, and were then
+-- thrown away: zero occurrences in this schema, zero non-spec consumers.
+--
+-- An extractor that states who it is to a value that is discarded has not stated
+-- anything, and P-4's hazard is an AFTER-THE-FACT hazard — so the answer has to survive
+-- the request.
+--
+-- Nullable for the same reason as the two above: A JSON PARSE HAS NO EXTRACTOR, and NULL
+-- is the truthful value for every Eurostat and TED retrieval, forever. This is the same
+-- class `parserId` / `parserVersion` / `parsedAt` already belong to.
+
+-- AlterTable
+ALTER TABLE "SnapshotRetrieval" ADD COLUMN     "extractorId" VARCHAR(128),
+ADD COLUMN     "extractorVersion" VARCHAR(64);

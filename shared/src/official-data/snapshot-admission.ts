@@ -620,6 +620,27 @@ export interface SnapshotParseRecord {
   readonly parserId: string;
   readonly parserVersion: string;
   readonly parsedAt: string;
+  /**
+   * NISR PRODUCTIONIZATION R1 · ruling B-3.1 — WHICH EXTRACTION PRODUCED THE VALUE THE
+   * PARSER READ.
+   *
+   * Present exactly when the parse required an INJECTED extractor, and ABSENT for JSON,
+   * which needs none. Optional for the reason the publisher timestamps are optional:
+   * absence is a measurement about the parse, not a gap to be filled.
+   *
+   * P-4 states the hazard for the parser — "a parser upgrade changes MEANING without
+   * changing BYTES, and without the version that change is undetectable after the
+   * fact". It applies to an injected extractor word for word, and it is an
+   * AFTER-THE-FACT hazard, so the answer has to survive the request rather than living
+   * in a transient decode result. That is why these two are here and not only on the
+   * decoder’s own output type.
+   *
+   * NEVER folded into `parserVersion`. Two identities laundered into one string make
+   * `parserVersion` uncomparable, and turn the registry’s SERVER-OWNED value into a
+   * string the extractor can influence.
+   */
+  readonly extractorId?: string;
+  readonly extractorVersion?: string;
 }
 
 export interface SnapshotAdmissionRecord {

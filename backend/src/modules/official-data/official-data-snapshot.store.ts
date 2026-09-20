@@ -110,8 +110,9 @@ export interface RetainInput {
    * implementation describe the same row — the R2 lesson about `admission`, applied
    * before it can be relearned.
    *
-   * THIS STORE CANNOT PERSIST THEM YET, AND IT SAYS SO RATHER THAN DROPPING THEM.
-   * See `assertLineageFieldsArePersistable` below.
+   * PERSISTED since `20260920140000_snapshot_retrieval_lineage_fields` (ruling A).
+   * `undefined` here means the artifact stated nothing, and it is written as SQL NULL
+   * rather than as an empty string, so the two stay distinguishable on read-back.
    */
   readonly referencePeriod?: string;
   readonly sourceLanguage?: string;
@@ -143,68 +144,26 @@ export function computeSha256Hex(bytes: Uint8Array): string {
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * NISR FIRST REAL DATA R1 · TWO LINEAGE FIELDS WITH NO COLUMN, AND A REFUSAL
- *                            RATHER THAN A SILENT DROP
+ * NISR PRODUCTIONIZATION R1 · THE GUARD THAT SAID THIS COULD NOT BE PERSISTED
+ *                             IS GONE, BECAUSE IT NOW CAN BE
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * `OfficialDataRetrieval` now carries `referencePeriod` and `sourceLanguage`, because
- * Main's ruling C places them on the retrieval and `R-NUM-2` forbids the alternative:
- * *"NO ECONOMY FIELD IS ADDED … they arrive through `lineage.retrieval`."* The types
- * landed. THE COLUMNS DID NOT, AND THIS ROUND DID NOT ADD THEM.
+ * `assertLineageFieldsArePersistable` stood here and threw
+ * `SNAPSHOT_LINEAGE_FIELD_HAS_NO_COLUMN` for any retrieval carrying `referencePeriod`
+ * or `sourceLanguage`. That was correct while there were no columns: dropping lineage
+ * silently would have let a figure cite evidence the table could not reproduce.
  *
- * ── WHAT WAS LOOKED FOR FIRST ─────────────────────────────────────────────
+ * Ruling A ratified the fix the refusal itself named, the migration
+ * `20260920140000_snapshot_retrieval_lineage_fields` added the columns, and the guard
+ * is DELETED IN THE SAME COMMIT rather than left in place. A guard that says a thing
+ * cannot be persisted, standing beside code that persists it, is a document that has
+ * become false — and the next reader will believe the guard, not the code.
  *
- * The instruction was to use existing metadata storage if it could carry them.
- * `SnapshotRetrieval` has exactly two JSON columns and NEITHER MAY HOLD THESE:
- *
- *   `parameters`          the request parameters, in the order sent. A parse-derived
- *                         fact is not something we asked for.
- *   `editionAnnotations`  "VERBATIM AND OPAQUE … the platform stores them and NEVER
- *                         interprets them". `R-AID-6`: it holds what the PUBLISHER
- *                         stated, and NISR states nothing — "an empty record is a
- *                         MEASUREMENT, not a missing field to fill". Writing our own
- *                         parse output there would destroy that measurement and put a
- *                         derived value into the one field defined as underived.
- *
- * So there is no existing home, and two nullable TEXT columns would be a schema
- * migration. Ruling D refuses to design one and the instruction says to STOP and
- * report rather than invent it. REPORTED, NOT INVENTED — and the report is this
- * function, because a note in a document is not a guard.
- *
- * ── WHY IT THROWS INSTEAD OF IGNORING THEM ────────────────────────────────
- *
- * A store that accepted these and wrote them nowhere would return a retrieval that
- * carried them and hand back one that did not on the next `retrievalsFor()` — the
- * figure would cite a lineage the evidence table cannot reproduce, which is the exact
- * property `assertRetrievalIsProvable` exists to prevent, arriving through a field
- * nobody checked. Silence is the failure mode worth refusing.
- *
- * NOTHING ELSE IS BLOCKED BY THIS. Retaining PDF BYTES needs no migration — `R-STO-1`,
- * measured and ratified — so the artifact, its address, its retrieval row and its
- * admission verdict all persist here today. It is the two lineage fields, and only
- * those, that have nowhere to go.
+ * Its 69-line spec suite is deleted with it, and replaced by
+ * `official-data-lineage-roundtrip.live-postgres.spec.ts`: the suite that proved the
+ * refusal fires becomes the suite that proves the round trip holds. A deletion with no
+ * replacement coverage would be a reduction in what is measured.
  */
-export function assertLineageFieldsArePersistable(input: {
-  readonly referencePeriod?: string;
-  readonly sourceLanguage?: string;
-}): void {
-  const unpersistable: string[] = [];
-  if (input.referencePeriod !== undefined) unpersistable.push('referencePeriod');
-  if (input.sourceLanguage !== undefined) unpersistable.push('sourceLanguage');
-  if (unpersistable.length === 0) return;
-
-  throw new SnapshotStoreError(
-    `SNAPSHOT_LINEAGE_FIELD_HAS_NO_COLUMN: ${unpersistable.join(' and ')} cannot be ` +
-      'persisted — SnapshotRetrieval has no column for either, and neither `parameters` ' +
-      'nor `editionAnnotations` may hold them (R-AID-6: editionAnnotations is the ' +
-      'publisher\u2019s VERBATIM record, and NISR\u2019s emptiness is a measurement). Adding two ' +
-      'nullable columns is a schema migration, which MAIN-\u2026-R2 ruling D declines to ' +
-      'design and this round was instructed to report rather than invent. The fields are ' +
-      'refused here rather than dropped silently, because a figure citing a lineage the ' +
-      'evidence table cannot reproduce is worse than a figure that will not be written.',
-  );
-}
-
 export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotStore {
   private readonly db: SnapshotPrismaPort;
 
@@ -246,9 +205,6 @@ export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotSt
     */
     assertAdmissionRecordIsCoherent(input.admission, input.httpStatus);
 
-    /* Before any byte is written: this store cannot keep these two, and says so. */
-    assertLineageFieldsArePersistable(input);
-
     const address = snapshotContentAddress(computeSha256Hex(input.bytes));
     const byteLength = input.bytes.byteLength;
 
@@ -287,6 +243,8 @@ export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotSt
       ...(input.publisherChangedAt === undefined
         ? {}
         : { publisherChangedAt: input.publisherChangedAt }),
+      ...(input.referencePeriod === undefined ? {} : { referencePeriod: input.referencePeriod }),
+      ...(input.sourceLanguage === undefined ? {} : { sourceLanguage: input.sourceLanguage }),
     };
 
     // SR-13's sibling rule from the integration boundary: this store is for
@@ -353,6 +311,22 @@ export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotSt
             input.publisherReleasedAt === undefined ? null : new Date(input.publisherReleasedAt),
           publisherChangedAt:
             input.publisherChangedAt === undefined ? null : new Date(input.publisherChangedAt),
+
+          /*
+            NISR PRODUCTIONIZATION R1 · A-5 and B-3.1 — `?? null`, NEVER `?? ''`.
+
+            Prisma reads `undefined` in a `data` literal as "do not mention this column"
+            and `null` as "write SQL NULL". For an INSERT into a nullable column the two
+            coincide, and that is exactly why the distinction is not left to coincidence:
+            the explicit `null` states the intent at the site, as the three adjacent
+            optionals already do. An empty string would collapse "the document stated
+            nothing" into "the document stated the empty string", and no later reader
+            could separate them.
+          */
+          referencePeriod: input.referencePeriod ?? null,
+          sourceLanguage: input.sourceLanguage ?? null,
+          extractorId: input.admission.parse?.extractorId ?? null,
+          extractorVersion: input.admission.parse?.extractorVersion ?? null,
         },
       });
     });
@@ -615,6 +589,21 @@ function toRetrieval(row: SnapshotRetrievalRow): OfficialDataRetrieval {
     ...(row.publisherChangedAt === null
       ? {}
       : { publisherChangedAt: row.publisherChangedAt.toISOString() }),
+
+    /*
+      NISR PRODUCTIONIZATION R1 · A-6 — THE CONDITIONAL-SPREAD IDIOM, NOT A COALESCE.
+
+      This is the idiom `contentAddress` and the two publisher timestamps above already
+      use, and it is what keeps ABSENT distinct from PRESENT-AND-EMPTY across the round
+      trip. `referencePeriod: row.referencePeriod ?? undefined` would also "work" today
+      and would be the wrong instruction: it makes the property
+      present-with-value-undefined, which is a THIRD state — it serialises differently,
+      compares differently, and answers `in` differently. The round-trip property this
+      establishes is that a retrieval written with the field absent reads back with the
+      property absent, and no third state is reachable.
+    */
+    ...(row.referencePeriod === null ? {} : { referencePeriod: row.referencePeriod }),
+    ...(row.sourceLanguage === null ? {} : { sourceLanguage: row.sourceLanguage }),
   };
 }
 

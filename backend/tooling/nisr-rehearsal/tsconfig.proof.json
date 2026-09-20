@@ -1,0 +1,17 @@
+{
+  "//": "Compiles the one-shot proof to plain JavaScript so it runs on NODE, not on a test runner and not on a TypeScript loader.",
+  "//2": "MEASURED: under both jest and ts-node, dns.resolve4 times out against every nameserver — each wraps the process in a way that breaks c-ares' UDP channel — while the identical call succeeds on plain node. Ruling C-1 forbids relaxing the driver to dns.lookup, so the PROOF changes runtime rather than the DRIVER changing policy. It is also what R-EA-TR-4 asks for: the actual producer runtime, not a research tool.",
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "../../.proof-dist",
+    "rootDir": "../..",
+    "declaration": false,
+    "sourceMap": false,
+    "incremental": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["nisr-production-pipeline.proof.ts"],
+  "exclude": []
+}

@@ -975,6 +975,48 @@ model SnapshotRetrieval {
   /// Where the publisher declares one. ABSENT rather than guessed.
   publisherChangedAt DateTime?
 
+  /// NISR PRODUCTIONIZATION R1 · ruling A. The interval the artifact is ABOUT, as
+  /// the ARTIFACT ITSELF stated it, AT THE PUBLISHER’S OWN PRECISION.
+  ///
+  /// TEXT, NOT DateTime, AND THIS IS THE LOAD-BEARING DECISION. The observed value
+  /// is `2026-08` — a MONTH. A timestamp column cannot hold a month: it manufactures
+  /// `2026-08-01T00:00:00Z`, a day the publisher never stated, and no reader
+  /// downstream can tell a manufactured day from a stated one. VARCHAR carries the
+  /// publisher’s own precision unchanged.
+  ///
+  /// NULL = the document did not state one, which is the truthful and FINAL value
+  /// for every JSON dataflow forever — a Eurostat response carries a whole time
+  /// axis, not one period. Never a filename, never an upload folder (R-AID-1).
+  referencePeriod String? @db.VarChar(32)
+
+  /// NISR PRODUCTIONIZATION R1 · ruling A. The language of the artifact EDITION, as
+  /// OBSERVED from the bytes — never a declared locale tag, an hreflang or a locale
+  /// in a path, all of which are CLAIMS a publisher makes about a file.
+  ///
+  /// 35 is BCP-47’s own maximum tag length: a bound, not a validator. NULL = not
+  /// established.
+  sourceLanguage String? @db.VarChar(35)
+
+  /// NISR PRODUCTIONIZATION R1 · ruling B-3.1. WHICH EXTRACTION PRODUCED THE LAYER
+  /// THE PARSER READ — `nisr.cpi.<library>.<strategy>`.
+  ///
+  /// The extractor seam exists so an injected extraction cannot change what a parser
+  /// MEANS without the change being detectable. Before this column the identity was
+  /// computed and then discarded, which made the seam’s central promise decorative:
+  /// P-4’s hazard is an AFTER-THE-FACT hazard, so the answer has to survive the
+  /// request.
+  ///
+  /// NULL for every JSON parse — a JSON parse has no extractor. Same class as
+  /// parserId / parserVersion / parsedAt above.
+  extractorId String? @db.VarChar(128)
+
+  /// NISR PRODUCTIONIZATION R1 · ruling B-3.1. The extraction implementation’s own
+  /// version, ASSERTED AT BOOT rather than declared: the composition root refuses to
+  /// install an extractor whose declared version does not match the integrity of the
+  /// code that produces the layer, so a change without a version bump fails the
+  /// deployment instead of mis-attributing rows.
+  extractorVersion String? @db.VarChar(64)
+
   createdAt DateTime @default(now())
 
   observations MarketObservation[]

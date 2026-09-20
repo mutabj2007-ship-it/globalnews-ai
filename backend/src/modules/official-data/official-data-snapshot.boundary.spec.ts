@@ -74,13 +74,50 @@ describe('the snapshot module reaches into no other domain', () => {
       would bypass every step of the accepted safe-fetch order of operations while
       looking like part of an approved capability — and building one requires a client.
     */
+    /*
+      ── RESTATED AGAIN BY THE PRODUCTION DRIVER, AND HERE IS WHY ────────────
+
+      NISR PRODUCTIONIZATION R1 ruling C required the landed safe-fetch POLICY to gain
+      a driver, and a driver is by definition the thing that opens the socket. So there
+      is now exactly one file in this module that constructs an HTTP client, and
+      `node:https` appearing in it is the round’s deliverable rather than a violation.
+
+      LOOSENING THE PATTERN WOULD HAVE THROWN THE CONTROL AWAY. What the rule protects
+      is unchanged: "a SECOND retrieval path inside this module would bypass every step
+      of the accepted safe-fetch order of operations while looking like part of an
+      approved capability". So the rule is now NARROWER than before, not weaker — it
+      names the ONE file permitted to hold a client, and every other file in the module
+      must still be free of one. A second driver fails here.
+
+      And the permitted file is not trusted on its word: `safe-wire-fetch.node.spec.ts`
+      C-P13 asserts, by source inspection, that it re-implements NO policy — no scheme
+      literal, no denylist, no private-range arithmetic, no cap arithmetic, no hop
+      comparison — so the one file that may reach the network is the one file that may
+      decide nothing.
+    */
+    const THE_ONE_DRIVER = 'safe-wire-fetch.node.ts';
+    expect(files.some(([n]) => n === THE_ONE_DRIVER)).toBe(true);
+
     for (const [name, src] of files) {
+      if (name === THE_ONE_DRIVER) continue;
+      if (name.endsWith('.spec.ts')) continue; // see the note on spec files below
       expect([
         name,
         /axios|HttpService|node:https?|require\(['"]https?['"]\)|https?\.request\(|new XMLHttpRequest/i.test(
           src,
         ),
       ]).toEqual([name, false]);
+    }
+  });
+
+  it('and the ONE driver reaches the network only through the landed adjudicators', () => {
+    /* The other half of the narrowed rule. A driver that opened a socket without
+       obeying the policy would satisfy the exclusion above and defeat its purpose. */
+    const driver = files.find(([n]) => n === 'safe-wire-fetch.node.ts');
+    expect(driver).toBeDefined();
+    const src = driver![1];
+    for (const adjudicator of ['assertUrlIsFetchable', 'classifyResolvedSet', 'adjudicateRedirect', 'adjudicateContentLength', 'credentialHeadersFor', 'finalUrlFor']) {
+      expect([adjudicator, src.includes(adjudicator)]).toEqual([adjudicator, true]);
     }
   });
 
@@ -155,7 +192,18 @@ describe('the snapshot module reaches into no other domain', () => {
   });
 
   it('schedules nothing — there is still no scheduler in this backend', () => {
+    /*
+      SPEC FILES ARE EXCLUDED, AND THE REASON IS GENERAL RATHER THAN CONVENIENT: a suite
+      that asserts the ABSENCE of a pattern necessarily CONTAINS that pattern, as a
+      string or a regex literal. `safe-wire-fetch.node.spec.ts` carries
+      `/setInterval|setTimeout\(|cron|schedule/i` precisely to prove the driver has no
+      scheduler in it — and scanning that assertion reported it as a scheduler.
+
+      This is the same exclusion the edition-annotation rule below already makes, for
+      the same reason. The rule still binds on every production file in the module.
+    */
     for (const [name, src] of files) {
+      if (name.endsWith('.spec.ts')) continue;
       expect([
         name,
         /@Cron|@Interval|ScheduleModule|setInterval|node-cron|bullmq?/i.test(src),
