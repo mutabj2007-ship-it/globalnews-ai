@@ -6,7 +6,6 @@ import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { EnergyShell } from '@/components/energy/EnergyShell';
 import { ENERGY_GOVERNED_FRAME } from '@/lib/energy/energyGoverned';
-import { ENERGY_DESIGN_FIXTURE_FRAME } from '@/lib/energy/energyFixtures';
 import { energyStateFromSearchParams } from '@/lib/energy/energyUrl';
 import { energyStrings, type EnergyLocale } from '@/lib/energy/energyStrings';
 
@@ -80,15 +79,20 @@ export default function EnergyPage({
   const locale = energyLocale();
 
   /*
-    WHICH DATA SET FEEDS THE ONE FRAME.
+    ALPHA DATA-HONESTY CORRECTION.
 
-    `governed` is the default and therefore what `/energy` alone serves: no
-    Energy source is active, no Energy record has landed, and every zone states
-    its own absence. The design's fixtures are reachable only by asking for them
-    explicitly, and the frame then carries the DESIGN FIXTURE DATA banner for as
-    long as they are on screen.
+    The public Home Intelligence Engine links directly to /energy. That makes
+    this route a reader-reachable Alpha surface, not an inspector-only design
+    address. A query parameter must therefore never be able to replace governed
+    absence with illustrative design values: URLs are user-controlled, can be
+    shared, bookmarked and indexed independently of the Home card, and a banner
+    is not an authorization boundary.
+
+    The design fixture module remains in source for visual regression tests and
+    Claude Design comparison, but this public route always renders the governed
+    frame. No provider or model is activated by this correction.
   */
-  const data = urlState.frame === 'design-fixture' ? ENERGY_DESIGN_FIXTURE_FRAME : ENERGY_GOVERNED_FRAME;
+  const data = ENERGY_GOVERNED_FRAME;
 
   return (
     <ScriptRun locale={locale} step="wrapping" as="div">
