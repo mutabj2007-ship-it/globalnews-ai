@@ -357,7 +357,36 @@ export function mediaTypeIsAdmitted(contentTypeHeader: string): boolean {
  * is content, and content that should not be there is a refusal, not something to
  * quietly step over.
  */
-export function sniffRefusal(decoded: Uint8Array): SnapshotRefusalKey | null {
+/*
+  ── ALPHA MAJOR CONVERGENCE R1 · THE SNIFF IS NOW MEDIA-AWARE ─────────────
+
+  THE REQUIREMENT: *"A PDF must never reach BODY_NOT_JSON_SHAPED."*
+
+  Two of the four arms below are UNIVERSAL container facts and stay that way for
+  every media type: gzip-within-gzip is still ENCODING_NOT_ALLOWED, and a ZIP
+  local-file header is still ARCHIVE_NOT_ALLOWED. Those describe the envelope the
+  bytes arrived in, not what the bytes are supposed to be.
+
+  The other two are JSON-SPECIFIC CLAIMS — "a BOM is present" and "this does not
+  begin with { or [" — and they are only meaningful when the governed media type
+  for this capture IS JSON. Applied to a PDF they would refuse `%PDF-` as
+  BODY_NOT_JSON_SHAPED, which is both the wrong vocabulary and, because that key
+  is TRANSIENT, the wrong retry semantics: a correctly-delivered PDF would be
+  re-fetched on a schedule forever.
+
+  `mediaType` is the type already adjudicated at STEP 3 against the allowlist, so
+  this reads a decided fact rather than sniffing a second opinion. It is optional
+  and defaults to the JSON behaviour, so every existing caller keeps byte-
+  identical semantics.
+
+  STILL REFUSE-ONLY. This function admits nothing under any media type; it can
+  only return a refusal or null.
+*/
+export function sniffRefusal(
+  decoded: Uint8Array,
+  mediaType: string = 'application/json',
+): SnapshotRefusalKey | null {
+  const expectsJson = mediaType.trim().toLowerCase() === 'application/json';
   let i = 0;
   while (
     i < decoded.length &&
@@ -366,7 +395,7 @@ export function sniffRefusal(decoded: Uint8Array): SnapshotRefusalKey | null {
     i += 1;
   }
 
-  if (i >= decoded.length) return 'BODY_NOT_JSON_SHAPED';
+  if (i >= decoded.length) return expectsJson ? 'BODY_NOT_JSON_SHAPED' : 'PARSE_FAILED';
 
   // Every magic-byte test now reads from the SAME offset the JSON test uses.
   if (decoded[i] === 0x1f && decoded[i + 1] === 0x8b) return 'ENCODING_NOT_ALLOWED'; // gzip within gzip
@@ -378,6 +407,11 @@ export function sniffRefusal(decoded: Uint8Array): SnapshotRefusalKey | null {
   ) {
     return 'ARCHIVE_NOT_ALLOWED';
   }
+  /* The two JSON-specific arms. A non-JSON artifact is decoded by its own
+     governed decoder, which is the authority on whether its bytes are its own
+     kind of thing. */
+  if (!expectsJson) return null;
+
   if (decoded[i] === 0xef && decoded[i + 1] === 0xbb && decoded[i + 2] === 0xbf) {
     return 'BODY_NOT_JSON_SHAPED'; // BOM refused, never stripped
   }

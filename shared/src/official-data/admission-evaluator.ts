@@ -379,7 +379,7 @@ export class CanonicalOfficialDataAdmissionEvaluator {
       where T-3, the headline case, is caught: HTTP 200 + application/json + an HTML
       error page body.
     */
-    const sniffed = sniffRefusal(decoded);
+    const sniffed = sniffRefusal(decoded, (evidence.contentTypeHeader.split(';')[0] ?? '').trim().toLowerCase());
     if (sniffed !== null) {
       return refuse(sniffed, `SNIFF_${sniffed}`);
     }
@@ -400,8 +400,17 @@ export class CanonicalOfficialDataAdmissionEvaluator {
       return refuse('ENVELOPE_NOT_RECOGNISED', 'NO_GOVERNED_PARSER_BINDING');
     }
 
-    /* ── STEP 9 · STRICT PARSE, ONCE ───────────────────────────────────── */
-    const parse = parseStrictJson(decoded);
+    /* ── STEP 9 · DECODE, ONCE, THROUGH THE BINDING ────────────────────── */
+    /*
+      ALPHA MAJOR CONVERGENCE R1 — this used to read `parseStrictJson(decoded)`.
+      The decoder is now supplied BY THE ROW, so the media type a binding claims
+      and the operation actually performed on the bytes cannot disagree. For the
+      two JSON rows `binding.decode` IS `parseStrictJson`, so this line is
+      byte-identical in behaviour for every capture Alpha performs today.
+
+      Still exactly once. E1 · P-1 is unchanged: downstream reuses this result.
+    */
+    const parse = binding.decode(decoded);
     if (!parse.ok) {
       return refuse(parse.refusalKey, parse.detail);
     }
@@ -442,9 +451,41 @@ export class CanonicalOfficialDataAdmissionEvaluator {
       admission,
       retainableBytes: decoded,
       parsed: parse.value,
-      lexicalNumberTokens: parse.lexicalNumberTokens,
+      /*
+        ALPHA MAJOR CONVERGENCE R1 — read through a NARROWING GUARD rather than
+        off the generic result.
+
+        `lexicalNumberTokens` is a fidelity artifact of the STRICT JSON decoder:
+        it records the exact number tokens as they appeared in the text, so a
+        downstream numeric model never has to trust a float round-trip. It is
+        meaningless for a table extract or any other media class.
+
+        Putting it on `ArtifactDecodeResult<T>` would make every future decoder
+        pretend to a JSON-only concept, which is the same category error as the
+        crossed envelope this dispatch contract exists to forbid. So the generic
+        result stays pure and the evaluator ASKS whether this decoder happened to
+        produce them. A decoder that does not is simply absent from the field,
+        which the record already allows — `lexicalNumberTokens` is optional.
+      */
+      lexicalNumberTokens: lexicalNumberTokensOf(parse),
     };
   }
+}
+
+/**
+ * Reads the strict-JSON decoder's lexical number tokens when the decoder that ran
+ * produced them, and `undefined` otherwise.
+ *
+ * A structural check, not a cast: it asks whether the value carries the field with
+ * the right shape. A decoder for another media class simply does not, and gets
+ * `undefined` without the evaluator knowing which decoder ran.
+ */
+function lexicalNumberTokensOf(result: {
+  readonly ok: true;
+  readonly value: unknown;
+}): readonly LexicalNumberToken[] | undefined {
+  const candidate = (result as { readonly lexicalNumberTokens?: unknown }).lexicalNumberTokens;
+  return Array.isArray(candidate) ? (candidate as readonly LexicalNumberToken[]) : undefined;
 }
 
 /** Lowercased host, or `null` when the URL will not parse — which is itself a mismatch. */

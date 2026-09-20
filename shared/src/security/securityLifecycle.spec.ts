@@ -554,7 +554,95 @@ describe('R1 · the canonical allowed-value collections are derived, not restate
     for (const s of ['MAP', 'ECONOMY', 'MARKET', 'CONFLICT']) {
       expect(WATCH_SURFACES as readonly string[]).toContain(s);
     }
-    expect(WATCH_SURFACES.length).toBe(5);
+    /*
+      ── ALPHA MAJOR CONVERGENCE R1 · THE COUNT IS DERIVED, NOT RESTATED ────
+
+      THIS LINE READ `toBe(5)` AND WAS FAILING, and it had been failing unseen:
+      the shared package’s own spec files executed in NO jest project before this
+      round — backend roots at backend/src, frontend at frontend/src, and shared
+      had no runner at all. Wiring the shared runner is what surfaced it.
+
+      The cause is the defect this very describe block is named after. POLITICS
+      was added to `WATCH_SUBJECT_TYPES_BY_SURFACE` as a deliberately EMPTY row,
+      which is correct and documented at length in watch.ts: the surface is
+      nameable and nothing on it is watchable. The derived assertion above
+      absorbed that correctly. A hand-written `5` could not, because it is
+      exactly the "restated" second copy this file exists to forbid.
+
+      So the count is now derived from the table too. The assertion still has
+      teeth — it pins that the union and the table agree on SIZE, not merely on
+      membership — and it can no longer go stale when a governed row is added.
+    */
+    expect(WATCH_SURFACES.length).toBe(Object.keys(WATCH_SUBJECT_TYPES_BY_SURFACE).length);
+
+    /*
+      AND THE EMPTY POLITICS ROW IS ASSERTED AS EMPTY, which is the property
+      that actually matters and which the stale count was silently standing in
+      for. The surface may be named; nothing may be watched on it.
+    */
+    expect(WATCH_SURFACES as readonly string[]).toContain('POLITICS');
+    expect(WATCH_SUBJECT_TYPES_BY_SURFACE.POLITICS).toEqual([]);
+  });
+
+  /*
+    ═══════════════════════════════════════════════════════════════════════════
+    §12 · THE WATCH COMPILE-TIME CONTROL — PROVED TO FAIL IF ELECTION LANDS
+    ═══════════════════════════════════════════════════════════════════════════
+
+    Main's ruling B requires that registering an election subject type on the
+    Watch platform is caught, not merely discouraged by a comment. The Imihigo /
+    Kenya Elections work is landed for PRESERVATION ONLY: no Watch registration,
+    no candidate ranking, no electability. These cases are the enforcement.
+
+    They assert on the REAL table, so they fail the moment any of the six
+    proposed Politics types is registered — which is the guard actually having
+    teeth rather than a note asking future readers not to.
+  */
+  it('§12 GUARD — no election subject type is registered on ANY surface', () => {
+    const PROPOSED_BUT_UNREGISTERED = [
+      'ELECTION',
+      'LEGISLATIVE_SUBJECT',
+      'PROTEST_CAMPAIGN',
+      'POLITICAL_ACTOR',
+      'GOVERNANCE_STATE',
+      'POLITICAL_THEME',
+    ] as const;
+
+    for (const proposed of PROPOSED_BUT_UNREGISTERED) {
+      /* not in the platform vocabulary */
+      expect(WATCH_SUBJECT_TYPES as readonly string[]).not.toContain(proposed);
+      /* and not on any surface row, including POLITICS */
+      for (const surface of WATCH_SURFACES) {
+        expect(
+          WATCH_SUBJECT_TYPES_BY_SURFACE[surface] as readonly string[],
+        ).not.toContain(proposed);
+      }
+    }
+  });
+
+  it('§12 MUTATION CONTROL — the guard DOES fail when ELECTION is registered', () => {
+    /*
+      The proof that the guard is load-bearing. A copy of the real table with
+      ELECTION registered on POLITICS is run through the SAME two checks, and
+      both must report it. If a future edit made these checks vacuous — by
+      reading a stale copy, or by iterating an empty list — this case fails
+      while the case above would keep passing.
+    */
+    const mutated: Record<string, readonly string[]> = {
+      ...(WATCH_SUBJECT_TYPES_BY_SURFACE as unknown as Record<string, readonly string[]>),
+      POLITICS: ['ELECTION'],
+    };
+    const mutatedUnion = new Set<string>();
+    for (const surface of Object.keys(mutated)) {
+      for (const t of mutated[surface]!) mutatedUnion.add(t);
+    }
+
+    expect([...mutatedUnion]).toContain('ELECTION');
+    expect(mutated.POLITICS).toContain('ELECTION');
+
+    /* and the real table is untouched by the mutation */
+    expect(WATCH_SUBJECT_TYPES_BY_SURFACE.POLITICS).toEqual([]);
+    expect(WATCH_SUBJECT_TYPES as readonly string[]).not.toContain('ELECTION');
   });
 
   it('WATCH_SUBJECT_TYPES is the de-duplicated union of every row', () => {

@@ -1,3 +1,5 @@
+import type { SnapshotRefusalKey } from './snapshot-admission';
+import { parseStrictJson } from './json-strict';
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * THE PARSER REGISTRY — SERVER-OWNED PARSER IDENTITY
@@ -31,19 +33,87 @@
  */
 
 /** What the bytes must structurally exhibit for this provider. E1 · §4.4, step 10. */
-export type EnvelopeAssertion = (parsed: unknown) => true | string;
+export type EnvelopeAssertion<T = unknown> = (parsed: T) => true | string;
 
-export interface ParserBinding {
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ALPHA MAJOR CONVERGENCE R1 — THE PARSER DISPATCH CONTRACT
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * MAIN'S RULING A, LANDED. The binding now carries the DECODE OPERATION
+ * ITSELF, not merely a media-type label beside an envelope assertion.
+ *
+ * WHAT WAS WRONG BEFORE, AND IT WAS A TYPE-LEVEL HOLE RATHER THAN A BUG. The
+ * evaluator hardwired `parseStrictJson(decoded)` at step 9 and then handed the
+ * result to `binding.assertEnvelope`. The binding declared a `mediaType`, so it
+ * could SAY `application/pdf` — and the evaluator would still have run the JSON
+ * decoder over the bytes and then asserted a PDF envelope against a JSON value.
+ * Nothing in the type system objected, because `assertEnvelope` took `unknown`.
+ * A media type that the pipeline could name but could not honour is a label,
+ * not a gate.
+ *
+ * THE TWO INVARIANTS THIS SHAPE ENFORCES AT COMPILE TIME:
+ *
+ *   1. A BINDING WITH NO DECODER DOES NOT COMPILE. `decode` is required, so the
+ *      pre-convergence binding literal — parserId, parserVersion, mediaType,
+ *      assertEnvelope — is now a type error. There is no binding that the
+ *      evaluator must guess how to read.
+ *
+ *   2. A PDF BINDING WIRED TO `parseStrictJson` DOES NOT COMPILE. `ParserBinding`
+ *      is generic in the decoded type `T`, and `decode` and `assertEnvelope` are
+ *      tied to the SAME `T`. `parseStrictJson` produces
+ *      `ArtifactDecodeResult<unknown>`; a PDF row is `ParserBinding<PdfTableExtract>`
+ *      and needs `ArtifactDecoder<PdfTableExtract>`. `unknown` is not assignable
+ *      to `PdfTableExtract`, so the crossed wiring is rejected by the compiler
+ *      rather than by a runtime check nobody runs.
+ *
+ * Both are proved, as compilations that must fail, in
+ * `parser-dispatch-mutation.spec.ts`.
+ *
+ * THE JSON PATH IS BYTE-IDENTICAL. `parseStrictJson` already returns
+ * `{ ok: true, value: unknown, ... }` / `{ ok: false, refusalKey, detail, ... }`,
+ * which satisfies `ArtifactDecoder<unknown>` WITH NO CHANGE TO THAT FUNCTION.
+ * The JSON rows below simply name it. Same bytes, same refusal keys, same
+ * offsets, same `lexicalNumberTokens` reaching the record.
+ *
+ * NO DOMAIN PARSING LIVES HERE. A decoder turns bytes into the KIND OF THING
+ * the endpoint returns — a JSON value, a table extract. What the numbers MEAN
+ * stays with Economy and Market, and no provider-specific extraction belongs in
+ * the generic evaluator.
+ */
+
+/**
+ * The result of turning retained bytes into a typed artifact.
+ *
+ * Deliberately shaped like `StrictJsonResult` so the landed strict-JSON decoder
+ * satisfies it unchanged, and deliberately carrying a `SnapshotRefusalKey` so a
+ * decoder refuses in the SAME vocabulary every other step refuses in — a new
+ * media type cannot invent its own failure language.
+ */
+export type ArtifactDecodeResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly refusalKey: SnapshotRefusalKey; readonly detail: string };
+
+/** Bytes in, typed artifact out. The step the evaluator used to hardwire. */
+export type ArtifactDecoder<T> = (decoded: Uint8Array) => ArtifactDecodeResult<T>;
+
+export interface ParserBinding<T = unknown> {
   readonly parserId: string;
   readonly parserVersion: string;
   /**
-   * The media type this binding is authorised for. Alpha admits exactly one
-   * (`application/json`), and the field exists so that adding a second type is a NEW ROW
-   * with its own parser — E1 · §1, "adding a media type is an amendment with its own
-   * per-type row, not a config change".
+   * The media type this binding is authorised for. Adding a second type is a NEW
+   * ROW with its own decoder — E1 · §1, "adding a media type is an amendment
+   * with its own per-type row, not a config change". The row now has to SUPPLY
+   * that decoder, which is what makes the rule structural.
    */
   readonly mediaType: string;
-  readonly assertEnvelope: EnvelopeAssertion;
+  /**
+   * The decode operation for THIS media type. Required: a row that cannot say
+   * how its bytes become a value is not a governed row.
+   */
+  readonly decode: ArtifactDecoder<T>;
+  /** Asserted against the decoder's OWN output type, never against `unknown`. */
+  readonly assertEnvelope: EnvelopeAssertion<T>;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -123,6 +193,9 @@ const REGISTRY: readonly ParserRegistryRow[] = Object.freeze([
       parserId: 'eurostat.jsonstat',
       parserVersion: '1.0.0',
       mediaType: 'application/json',
+      /* The LANDED strict decoder, named rather than reimplemented. Same bytes,
+         same refusal keys, same offsets — see the dispatch note above. */
+      decode: parseStrictJson,
       assertEnvelope: assertEurostatJsonStatEnvelope,
     }),
   },
@@ -133,6 +206,7 @@ const REGISTRY: readonly ParserRegistryRow[] = Object.freeze([
       parserId: 'ted.notices',
       parserVersion: '1.0.0',
       mediaType: 'application/json',
+      decode: parseStrictJson,
       assertEnvelope: assertTedNoticesEnvelope,
     }),
   },
