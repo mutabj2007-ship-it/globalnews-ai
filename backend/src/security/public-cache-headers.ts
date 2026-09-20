@@ -64,7 +64,7 @@ import type { NextFunction, Request, Response } from 'express';
   the authenticated classification's primitive and adding it here would
   fragment a public cache on a header the response does not depend on.
 */
-export const PUBLIC_API_FAMILIES: readonly string[] = Object.freeze(['/news', '/geo']);
+export const PUBLIC_API_FAMILIES: readonly string[] = Object.freeze(['/news', '/geo', '/conflict']);
 
 /** Explicit public classification; freshness policy deliberately deferred. */
 export const PUBLIC_CACHE_CONTROL = 'public, max-age=0, must-revalidate';
