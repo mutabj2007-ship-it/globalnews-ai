@@ -251,9 +251,9 @@ describe('GUARD 6 — the fallback is derived, not a second table', () => {
     const navigable = INTELLIGENCE_MODULES.filter(isModuleNavigable);
     expect(navigable.length).toBeGreaterThan(0);
 
-    for (const module of navigable) {
-      expect(typeof module.destination).toBe('string');
-      expect(module.destination!.startsWith('/')).toBe(true);
+    for (const entry of navigable) {
+      expect(typeof entry.destination).toBe('string');
+      expect(entry.destination!.startsWith('/')).toBe(true);
     }
 
     /*
@@ -261,15 +261,15 @@ describe('GUARD 6 — the fallback is derived, not a second table', () => {
       lives on `/`. So the route that leads to any of them is `/`, which is
       exactly what `returnFallbackFor` returns.
     */
-    for (const module of navigable) {
-      expect(returnFallbackFor(module.destination!)).toBe(PRODUCT_ROOT);
+    for (const entry of navigable) {
+      expect(returnFallbackFor(entry.destination!)).toBe(PRODUCT_ROOT);
     }
   });
 
   it('a comingSoon module is never treated as a fallback destination', () => {
     const coming = INTELLIGENCE_MODULES.filter((m) => m.state === 'comingSoon');
-    for (const module of coming) {
-      expect(isModuleNavigable(module)).toBe(false);
+    for (const entry of coming) {
+      expect(isModuleNavigable(entry)).toBe(false);
     }
   });
 
