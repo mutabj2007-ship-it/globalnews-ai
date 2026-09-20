@@ -87,7 +87,15 @@ function toIndicator(series: Series, input: EconomyStripInput): ObservedIndicato
       (ECONOMY-STRIP-MAGNITUDE-BAR-1), not something to settle by supplying a
       basis here.
     */
-    direction: observed ? DIRECTION[series.direction] : 'UNKNOWN',
+    /*
+      One retained period cannot establish movement. Do not turn the presentation
+      default FLAT into a claim that CPI was unchanged; direction becomes knowable
+      only when at least two observed history slots exist.
+    */
+    direction:
+      observed && series.history.filter(figureIsObservation).length >= 2
+        ? DIRECTION[series.direction]
+        : 'UNKNOWN',
     window: input.window,
     observedAt: observation === null ? null : observation.vintage,
     provenanceRef: [],
