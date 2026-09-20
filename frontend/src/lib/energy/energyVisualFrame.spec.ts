@@ -142,7 +142,6 @@ describe('0 · the walk reaches what it claims to reach', () => {
       'energyStrings.ts',
       'energyModel.ts',
       'energyGoverned.ts',
-      'energyFixtures.ts',
       'energyTokens.ts',
       'EnergyShell.tsx',
       'EnergyParts.tsx',
@@ -657,10 +656,17 @@ describe('13 · a gate stops the one feature it governs', () => {
 
 /* ═══ 14 · THE FIXTURE FRAME IS LABELLED, AND IS NOT THE DEFAULT ══════════ */
 
-describe('14 · design fixtures are labelled and never served by default', () => {
+describe('14 · design fixtures are labelled and never served by the public route', () => {
   it('/energy alone serves the governed frame', () => {
     expect(energyStateFromSearchParams(new URLSearchParams('')).frame).toBe('governed');
     expect(ENERGY_DEFAULT_URL_STATE.frame).toBe('governed');
+  });
+
+  it('a hand-authored frame=design-fixture URL cannot put fixture data on the reader route', () => {
+    const route = code(ROUTE);
+    expect(route).toContain('const data = ENERGY_GOVERNED_FRAME;');
+    expect(route).not.toContain('ENERGY_DESIGN_FIXTURE_FRAME');
+    expect(GRAPH.some((file) => file.endsWith('energyFixtures.ts'))).toBe(false);
   });
 
   it('the banner is derived from the data set and cannot be suppressed', () => {
