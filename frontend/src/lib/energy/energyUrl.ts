@@ -48,42 +48,17 @@ import {
 export const SUBSTRATE_QUERY_KEY = 'substrate';
 export const SUBJECT_QUERY_KEY = 'subject';
 export const WINDOW_QUERY_KEY = 'window';
-export const FRAME_QUERY_KEY = 'frame';
-
-/**
- * WHICH DATA SET FEEDS THE ONE FRAME — not a second route and not a second
- * implementation.
- *
- * `governed` (the default, and therefore ABSENT from the query) renders what
- * the platform actually holds today: 0 sources READY, four unlanded imports,
- * and consequently every zone in its correct absence state.
- *
- * `design-fixture` renders the frozen design's OWN fixtures — carried from the
- * authority archive, never authored here — so the populated geometry of every
- * zone can be compared against the frozen shell. The design labels that mode
- * itself, permanently, with `DESIGN FIXTURE DATA`, and Part XI states the rule
- * this obeys: "Every value in this package is a DESIGN FIXTURE, not an
- * intelligence finding."
- *
- * Both feed the SAME components. Contract item 11 permits "a preview route only
- * if you need one — the route can be `/energy` behind a flag instead"; this is
- * that flag, expressed in the state mechanism the route already has.
- */
-export type EnergyFrameSource = 'governed' | 'design-fixture';
-export const ENERGY_DEFAULT_FRAME_SOURCE: EnergyFrameSource = 'governed';
 
 export interface EnergyUrlState {
   readonly substrate: EnergySubstrate;
   readonly subject: string | null;
   readonly window: EnergyWindow;
-  readonly frame: EnergyFrameSource;
 }
 
 export const ENERGY_DEFAULT_URL_STATE: EnergyUrlState = {
   substrate: ENERGY_DEFAULT_SUBSTRATE,
   subject: null,
   window: ENERGY_DEFAULT_WINDOW,
-  frame: ENERGY_DEFAULT_FRAME_SOURCE,
 };
 
 /* ── DECODERS ─────────────────────────────────────────────────────────────
@@ -117,10 +92,6 @@ export function decodeSubjectId(raw: string | null | undefined): string | null {
   return /^[a-z0-9][a-z0-9_-]*$/i.test(raw) ? raw : null;
 }
 
-export function decodeFrameSource(raw: string | null | undefined): EnergyFrameSource {
-  return raw === 'design-fixture' ? 'design-fixture' : ENERGY_DEFAULT_FRAME_SOURCE;
-}
-
 export function energyStateFromSearchParams(
   params: URLSearchParams | null | undefined,
 ): EnergyUrlState {
@@ -128,7 +99,6 @@ export function energyStateFromSearchParams(
     substrate: decodeSubstrate(params?.get(SUBSTRATE_QUERY_KEY)),
     subject: decodeSubjectId(params?.get(SUBJECT_QUERY_KEY)),
     window: decodeWindow(params?.get(WINDOW_QUERY_KEY)),
-    frame: decodeFrameSource(params?.get(FRAME_QUERY_KEY)),
   };
 }
 
@@ -156,7 +126,10 @@ export function searchParamsWithEnergyState(
   put(SUBSTRATE_QUERY_KEY, state.substrate, state.substrate === ENERGY_DEFAULT_SUBSTRATE);
   put(SUBJECT_QUERY_KEY, state.subject, state.subject === null);
   put(WINDOW_QUERY_KEY, state.window, state.window === ENERGY_DEFAULT_WINDOW);
-  put(FRAME_QUERY_KEY, state.frame, state.frame === ENERGY_DEFAULT_FRAME_SOURCE);
+  /*
+    No frame/data-source key is written. Design fixtures are test inputs, not
+    reader state, so the address bar cannot select them.
+  */
 
   return params;
 }
