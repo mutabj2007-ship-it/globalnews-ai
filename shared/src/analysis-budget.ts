@@ -125,11 +125,12 @@ export const ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS = 8_000;
  * than merely declared: no successful response can be produced after
  * `ANALYSIS_TOTAL_BUDGET_MS`, so none can arrive after the client deadline.
  *
- * WHAT THIS DOES NOT BOUND, STATED PLAINLY: provider work that has already
- * started. The deadline bounds the RESPONSE. Cancellation is unwired, so an
- * abandoned generation runs to completion and spends its tokens — and then
- * populates the cache, which is why an identical retry is served in about a
- * millisecond. Response time: bounded. Cost: not yet.
+ * CANCELLATION SCOPE, STATED PLAINLY: the fresh Analysis request now threads
+ * its response-deadline signal into the AI provider, so an abandoned OpenAI
+ * generation is aborted and its late result is not cached. News retrieval calls
+ * already dispatched before the deadline are not yet signal-aware and may still
+ * settle. Response time is bounded; the highest-cost model work is now bounded
+ * too, while news-provider cancellation remains a separate open seam.
  */
 export const ANALYSIS_CLIENT_TIMEOUT_MS =
   ANALYSIS_TOTAL_BUDGET_MS + ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS;
@@ -195,7 +196,7 @@ export const ANALYSIS_MAX_SERVER_BUDGET_MS = Math.min(
  * Resolves a candidate total-budget value into one that is safe to arm a
  * deadline with. Every path returns a real, enforced deadline.
  *
- *   absent / non-finite / <= 0  ->  ANALYSIS_TOTAL_BUDGET_MS
+ *   absent / non-finite / <= 0  ->  min(default total, safe server ceiling)
  *   above the ceiling           ->  ANALYSIS_MAX_SERVER_BUDGET_MS
  *   anything else               ->  the candidate, unchanged
  *
