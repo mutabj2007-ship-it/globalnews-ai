@@ -52,7 +52,9 @@ function figureStyle(axes: FigureAxes): CSSProperties {
 export function figureText(slot: FigureSlot): string {
   if (figureIsGap(slot)) return '—';
   const o = slot.observation;
-  const body = `${o.value}${o.unit}`;
+  const displayUnit = o.unit === 'PERCENT' ? '%' : o.unit;
+  const unitSeparator = displayUnit === '' || displayUnit === '%' ? '' : ' ';
+  const body = `${o.value}${unitSeparator}${displayUnit}`;
   if (o.semantics.valueKind === 'FORECAST') return `[${body}]`;
   if (o.semantics.valueKind === 'DERIVED') return `~${body}`;
   return body;
