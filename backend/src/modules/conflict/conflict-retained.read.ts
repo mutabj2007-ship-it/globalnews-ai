@@ -56,7 +56,7 @@ export class ConflictRetainedReadService {
     if (!parse.ok) return unavailable('PARSE_FAILED');
 
     const normalized = normalizeUcdpCandidateGed(parse.value, {
-      snapshotRetrievalId: retrieval.id,
+      snapshotRetrievalId: retrieval.retrievalId,
       retrievedAt: retrieval.retrievedAt.toISOString(),
     });
 
