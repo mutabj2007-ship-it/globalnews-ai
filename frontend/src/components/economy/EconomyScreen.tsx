@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { economyStrings } from '@/lib/economy/strings';
 import type { AttentionRow, EconomySubject, Series } from '@/lib/economy/types';
+import type { RetainedObservation } from '@/lib/economy/economyObservationRead';
+import { figureIsObservation } from '@/lib/economy/economyAdapters';
 import { seriesId, seriesName } from '@/lib/economy/types';
 import {
   ATTENTION_RAIL_PX, ECONOMY_BREAKPOINTS, ECONOMY_PAGE_CAP_PX,
@@ -102,6 +104,8 @@ export interface EconomyScreenProps {
   chain?: Parameters<typeof TransmissionChain>[0]['links'];
   timeline?: Parameters<typeof EconomyTimeline>[0]['entries'];
   onRequestWorkspace?: (actionId: string) => void;
+  /** The one retained observation backing this preview, for truthful source disclosure. */
+  retainedObservation?: RetainedObservation;
 }
 
 /** The breakpoint row for a width. Never interpolated — these are rulings, not a curve. */
@@ -120,7 +124,7 @@ export function EconomyScreen({
   initialDrawer = null,
   initialHudOpen = false,
   revisionVintages, revisionEffects, competing, chain, timeline,
-  onRequestWorkspace,
+  onRequestWorkspace, retainedObservation,
 }: EconomyScreenProps): JSX.Element {
   const t = economyStrings(locale);
 
@@ -175,7 +179,20 @@ export function EconomyScreen({
   }, []);
 
   const primary = subject.primarySeries;
+  const observedIndicatorCount = subject.indicators.filter((series) => figureIsObservation(series.latest)).length;
+  const hasRevisionTrack = (revisionVintages?.length ?? 0) > 1 && revisionEffects !== undefined;
+  const hasCompetingReadings = competing !== undefined;
+  const hasTransmissionChain = (chain?.length ?? 0) > 0;
+  const hasTimeline = (timeline?.length ?? 0) > 0;
+  const hasPolicyEvent = subject.policyLane.length > 0;
+  const watchAvailable = watchRuntime.acceptsLifecycleTriggers;
+  const analysisAvailable = showFigures && onRequestWorkspace !== undefined;
   const drawerWidth = drawer ? DRAWER_WIDTH_PX[drawer] : ATTENTION_RAIL_PX;
+
+  const triadExplanation =
+    primary?.triad && figureIsObservation(primary.triad.actual)
+      ? 'Actual is the retained official observation. Expected and previous values are not retained, so no surprise or comparative assessment is shown.'
+      : 'No observation triad is available for this subject.';
 
   const microLabel = {
     fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 10px)', letterSpacing: 'calc(0.1em * var(--ar-ls-mul, 1))',
@@ -351,7 +368,7 @@ export function EconomyScreen({
                     The template returns the moment figures do, because `showFigures` is the
                     same flag that decides whether the cells carry values at all.
                   */
-                  risingOf: showFigures ? '{rising}/{total}' : '—',
+                  risingOf: mode === 'OBSERVED' ? `OBSERVED ${observedIndicatorCount}/${subject.indicators.length}` : showFigures ? '{rising}/{total}' : '—',
                   showAll: t.miniMapExpand,
                   noneObserved: t.noObservationTitle,
                   staleSuffix: '',
@@ -403,9 +420,13 @@ export function EconomyScreen({
               rows={subject.attention} locale={locale}
               selectedId={selectedAttentionId} onSelect={selectAttention}
               railPx={ATTENTION_RAIL_PX}
+              emptyMessage="No attention ranking has been formed — no assessment producer is active."
             />
             <WatchAndNextStep
               subject={subject} locale={locale}
+              watchAvailable={watchAvailable}
+              timelineAvailable={hasTimeline}
+              chainAvailable={hasTransmissionChain}
               onOpenWatch={() => openDrawer('WATCH_CONFIG')}
               onOpenTimeline={() => openDrawer('TIMELINE')}
               onOpenChain={() => openDrawer('TRANSMISSION_CHAIN')}
@@ -417,25 +438,29 @@ export function EconomyScreen({
             locale={locale}
             onClose={() => setDrawer(null)}
           >
-            {drawer === 'REVISION_TRACK' && revisionVintages && revisionEffects && (
-              <RevisionTrack vintages={revisionVintages} locale={locale} assessmentEffects={revisionEffects} />
+            {drawer === 'REVISION_TRACK' && (
+              hasRevisionTrack && revisionVintages && revisionEffects ? (
+                <RevisionTrack vintages={revisionVintages} locale={locale} assessmentEffects={revisionEffects} />
+              ) : <UnavailableDrawerMessage text="No revision history is retained for this series yet." />
             )}
-            {drawer === 'COMPETING_READINGS' && competing && (
-              <CompetingReadings set={competing} locale={locale} ai={ai} onCompare={() => onRequestWorkspace?.('COMPARE_FORECASTS')} />
+            {drawer === 'COMPETING_READINGS' && (
+              competing
+                ? <CompetingReadings set={competing} locale={locale} ai={ai} onCompare={() => onRequestWorkspace?.('COMPARE_FORECASTS')} />
+                : <UnavailableDrawerMessage text="No competing reading set is retained for this observation." />
             )}
-            {drawer === 'TRANSMISSION_CHAIN' && chain && <TransmissionChain links={chain} locale={locale} />}
+            {drawer === 'TRANSMISSION_CHAIN' && (chain && chain.length > 0 ? <TransmissionChain links={chain} locale={locale} /> : <UnavailableDrawerMessage text="No economic relationship chain has been formed from retained evidence." />)}
             {drawer === 'WATCH_CONFIG' && <WatchConfiguration scope={subject.watch} locale={locale} runtime={watchRuntime} />}
-            {drawer === 'TIMELINE' && timeline && <EconomyTimeline entries={timeline} />}
-            {drawer === 'POLICY_EVENT' && <PolicyEventDetail events={subject.policyLane} locale={locale} />}
+            {drawer === 'TIMELINE' && (timeline && timeline.length > 0 ? <EconomyTimeline entries={timeline} /> : <UnavailableDrawerMessage text="No economy timeline has been formed for this subject yet." />)}
+            {drawer === 'POLICY_EVENT' && (subject.policyLane.length > 0 ? <PolicyEventDetail events={subject.policyLane} locale={locale} /> : <UnavailableDrawerMessage text="No policy event is retained for this observation." />)}
             {/*
               The two paragraphs that used to sit on the first viewport. R08's model is
               that sustained explanation is a drawer, and this is the drawer the zoning
               model already named.
             */}
             {drawer === 'SOURCES' && (
-              <div style={{ padding: '16px 18px' }}>
-                <ObservationAbsenceDetail locale={locale} />
-              </div>
+              retainedObservation
+                ? <RetainedSourceDetails observation={retainedObservation} />
+                : <div style={{ padding: '16px 18px' }}><ObservationAbsenceDetail locale={locale} /></div>
             )}
           </EconomyDrawer>
         )}
@@ -446,7 +471,7 @@ export function EconomyScreen({
         <div style={{ position: 'absolute', insetInlineEnd: `${ATTENTION_RAIL_PX + 24}px`, insetBlockStart: '160px', zIndex: 10 }}>
           <AnchoredHud
             title={t.hudTitle}
-            body="Actual is the first publication for this period and revision is expected. Expected is a derived consensus benchmark, not an observation, so it carries no release status."
+            body={triadExplanation}
             locale={locale}
             onDismiss={() => setHudOpen(false)}
             footNotes={['Anchored beside triad', 'No stacking · no metered action']}
@@ -458,12 +483,51 @@ export function EconomyScreen({
       <EconomyFooterLane
         subject={subject} locale={locale} ai={ai} gutterPx={bp.gutterPx}
         observationsAvailable={showFigures}
+        triadAvailable={primary?.triad !== null && primary?.triad !== undefined}
+        revisionAvailable={hasRevisionTrack}
+        competingAvailable={hasCompetingReadings}
+        policyAvailable={hasPolicyEvent}
+        analysisAvailable={analysisAvailable}
         onOpenPolicy={() => openDrawer('POLICY_EVENT')}
         onOpenHud={() => setHudOpen(true)}
         onOpenRevision={() => openDrawer('REVISION_TRACK')}
         onOpenCompeting={() => openDrawer('COMPETING_READINGS')}
         onRequestWorkspace={onRequestWorkspace}
       />
+    </div>
+  );
+}
+
+
+function UnavailableDrawerMessage({ text }: { readonly text: string }): JSX.Element {
+  return (
+    <div style={{ padding: '16px 18px', fontSize: 'max(var(--ar-fs-min, 0px), 12px)', lineHeight: 'var(--ar-lh, 1.6)', color: ECON_INK.label }}>
+      {text}
+    </div>
+  );
+}
+
+function RetainedSourceDetails({ observation }: { readonly observation: RetainedObservation }): JSX.Element {
+  const p = observation.provenance;
+  const row = (label: string, value: string) => (
+    <div key={label} style={{ display: 'grid', gridTemplateColumns: '116px 1fr', gap: '10px', paddingBlock: '7px', borderBottom: `1px solid ${ECON_LINE.hairline}` }}>
+      <span style={{ fontFamily: ECON_MONO, fontSize: '10px', letterSpacing: '0.07em', textTransform: 'uppercase', color: ECON_INK.label }}>{label}</span>
+      <span style={{ fontSize: '12px', lineHeight: '1.5', color: ECON_INK.secondary, overflowWrap: 'anywhere' }}>{value}</span>
+    </div>
+  );
+  return (
+    <div data-econ="retained-source-details" style={{ padding: '16px 18px' }}>
+      {row('Source', p.institution)}
+      {row('Jurisdiction', p.jurisdiction)}
+      {row('Reference period', p.referencePeriod)}
+      {row('Published', p.publicationDateStated)}
+      {row('Retrieved', p.retrievedAt)}
+      {row('Licence', p.licence)}
+      {row('Index base', p.basePeriod)}
+      {row('Language', p.sourceLanguage)}
+      {row('Artifact', `sha256 ${p.contentAddress}`)}
+      {row('Parser', `${p.parserId} ${p.parserVersion}`)}
+      {row('Extractor', `${p.extractorId} ${p.extractorVersion}`)}
     </div>
   );
 }
@@ -482,10 +546,14 @@ function drawerTitle(kind: DrawerKind, t: ReturnType<typeof economyStrings>): st
 
 /** Watch & next step (Q5). What is monitored, including checked-no-change. */
 function WatchAndNextStep({
-  subject, locale, onOpenWatch, onOpenTimeline, onOpenChain,
+  subject, locale, watchAvailable, timelineAvailable, chainAvailable,
+  onOpenWatch, onOpenTimeline, onOpenChain,
 }: {
   subject: EconomySubject;
   locale: EconomyLocale;
+  watchAvailable: boolean;
+  timelineAvailable: boolean;
+  chainAvailable: boolean;
   onOpenWatch: () => void;
   onOpenTimeline: () => void;
   onOpenChain: () => void;
@@ -520,9 +588,9 @@ function WatchAndNextStep({
         ))}
       </div>
       <div style={{ paddingTop: '9px', borderTop: `1px solid ${ECON_LINE.hairline}`, display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
-        <button type="button" style={action} onClick={onOpenWatch}>{t.watchTitle}</button>
-        <button type="button" style={action} onClick={onOpenTimeline}>{t.timelineTitle}</button>
-        <button type="button" style={action} onClick={onOpenChain}>{t.chainTitle}</button>
+        <button type="button" style={{ ...action, ...(!watchAvailable ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }} disabled={!watchAvailable} title={watchAvailable ? undefined : 'Shared Watch lifecycle binding is not active.'} onClick={onOpenWatch}>{t.watchTitle}</button>
+        <button type="button" style={{ ...action, ...(!timelineAvailable ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }} disabled={!timelineAvailable} title={timelineAvailable ? undefined : 'No timeline is retained yet.'} onClick={onOpenTimeline}>{t.timelineTitle}</button>
+        <button type="button" style={{ ...action, ...(!chainAvailable ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }} disabled={!chainAvailable} title={chainAvailable ? undefined : 'No relationship chain is retained yet.'} onClick={onOpenChain}>{t.chainTitle}</button>
       </div>
     </div>
   );
@@ -537,6 +605,7 @@ function WatchAndNextStep({
  */
 function EconomyFooterLane({
   subject, locale, ai, gutterPx, observationsAvailable,
+  triadAvailable, revisionAvailable, competingAvailable, policyAvailable, analysisAvailable,
   onOpenPolicy, onOpenHud, onOpenRevision, onOpenCompeting, onRequestWorkspace,
 }: {
   subject: EconomySubject;
@@ -557,6 +626,11 @@ function EconomyFooterLane({
    * it is a charge for nothing.
    */
   observationsAvailable: boolean;
+  triadAvailable: boolean;
+  revisionAvailable: boolean;
+  competingAvailable: boolean;
+  policyAvailable: boolean;
+  analysisAvailable: boolean;
   onOpenPolicy: () => void;
   onOpenHud: () => void;
   onOpenRevision: () => void;
@@ -565,8 +639,7 @@ function EconomyFooterLane({
 }): JSX.Element {
   const t = economyStrings(locale);
   const cost = meteredActionCost(ai, 'DRIVER_DECOMPOSITION');
-  const gatedTitle = observationsAvailable ? undefined : t.noObservationBody;
-  const gated = observationsAvailable ? {} : { opacity: 0.45, cursor: 'not-allowed' as const };
+  const disabledStyle = { opacity: 0.45, cursor: 'not-allowed' as const };
   const action = {
     fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 9px)', letterSpacing: 'calc(0.07em * var(--ar-ls-mul, 1))', textTransform: 'uppercase' as const,
     color: ECON_INK.secondary, border: `1px solid ${ECON_LINE.border}`, background: 'transparent',
@@ -590,20 +663,20 @@ function EconomyFooterLane({
         ))}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', alignItems: 'center' }}>
-        <button type="button" style={{ ...action, ...gated }} disabled={!observationsAvailable} title={gatedTitle} onClick={onOpenHud}>Explain triad</button>
-        <button type="button" style={{ ...action, ...gated }} disabled={!observationsAvailable} title={gatedTitle} onClick={onOpenRevision}>Revisions</button>
-        <button type="button" style={{ ...action, ...gated }} disabled={!observationsAvailable} title={gatedTitle} onClick={onOpenCompeting}>Competing readings</button>
-        <button type="button" style={action} onClick={onOpenPolicy}>Policy event</button>
+        <button type="button" style={{ ...action, ...(!triadAvailable ? disabledStyle : {}) }} disabled={!triadAvailable} title={triadAvailable ? undefined : 'No observation triad is available.'} onClick={onOpenHud}>Explain triad</button>
+        <button type="button" style={{ ...action, ...(!revisionAvailable ? disabledStyle : {}) }} disabled={!revisionAvailable} title={revisionAvailable ? undefined : 'No revision history is retained yet.'} onClick={onOpenRevision}>Revisions</button>
+        <button type="button" style={{ ...action, ...(!competingAvailable ? disabledStyle : {}) }} disabled={!competingAvailable} title={competingAvailable ? undefined : 'No competing reading set is retained yet.'} onClick={onOpenCompeting}>Competing readings</button>
+        <button type="button" style={{ ...action, ...(!policyAvailable ? disabledStyle : {}) }} disabled={!policyAvailable} title={policyAvailable ? undefined : 'No policy event is retained for this observation.'} onClick={onOpenPolicy}>Policy event</button>
         {cost !== null && (
           <button
             type="button"
             data-econ="metered-action"
             data-sand-cost={cost}
-            data-gated={observationsAvailable ? 'false' : 'true'}
-            disabled={!observationsAvailable}
-            title={gatedTitle}
+            data-gated={analysisAvailable ? 'false' : 'true'}
+            disabled={!analysisAvailable}
+            title={analysisAvailable ? undefined : observationsAvailable ? 'Analysis workspace handoff is not connected on this preview.' : t.noObservationBody}
             onClick={() => onRequestWorkspace?.('DRIVER_DECOMPOSITION')}
-            style={{ ...action, color: ECON_INK.primary, border: `1px solid ${ECON_LINE.emphasis}`, background: ECON_SURFACE.selected, ...gated }}
+            style={{ ...action, color: ECON_INK.primary, border: `1px solid ${ECON_LINE.emphasis}`, background: ECON_SURFACE.selected, ...(!analysisAvailable ? disabledStyle : {}) }}
           >
             Run analysis · {cost} sand · {t.remainingAllowance} {ai.remainingSand}
           </button>
