@@ -125,11 +125,12 @@ export const ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS = 8_000;
  * than merely declared: no successful response can be produced after
  * `ANALYSIS_TOTAL_BUDGET_MS`, so none can arrive after the client deadline.
  *
- * WHAT THIS DOES NOT BOUND, STATED PLAINLY: provider work that has already
- * started. The deadline bounds the RESPONSE. Cancellation is unwired, so an
- * abandoned generation runs to completion and spends its tokens — and then
- * populates the cache, which is why an identical retry is served in about a
- * millisecond. Response time: bounded. Cost: not yet.
+ * CANCELLATION SCOPE, STATED PLAINLY: the fresh Analysis request now threads
+ * its response-deadline signal into the AI provider, so an abandoned OpenAI
+ * generation is aborted and its late result is not cached. News retrieval calls
+ * already dispatched before the deadline are not yet signal-aware and may still
+ * settle. Response time is bounded; the highest-cost model work is now bounded
+ * too, while news-provider cancellation remains a separate open seam.
  */
 export const ANALYSIS_CLIENT_TIMEOUT_MS =
   ANALYSIS_TOTAL_BUDGET_MS + ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS;
@@ -160,40 +161,42 @@ export const ANALYSIS_CLIENT_TIMEOUT_MS =
  */
 
 /**
- * THE CEILING ON ANY SERVER DEADLINE, for a client that is already built.
+ * THE FIRST-PARTY PROXY IS ALSO A DEADLINE.
  *
- * The client waits `ANALYSIS_CLIENT_TIMEOUT_MS` and needs
- * `ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS` of that for the wire, so the last
- * moment the server may still be working is the difference between them. That
- * difference is exactly `ANALYSIS_TOTAL_BUDGET_MS`, by construction — the
- * derivation above built the client deadline from precisely these two terms.
+ * Live Alpha measured Next's same-origin rewrite closing /api/analysis/news at
+ * ~30,032 ms with "socket hang up". The backend's previous legal deadline was
+ * 32,000 ms, so a correctly classified backend 504 could never reach the
+ * browser: the proxy converted it into a generic 500 first.
  *
- * SO THE CEILING EQUALS THE DEFAULT, AND THAT IS THE POINT, NOT AN OVERSIGHT.
- * There is no headroom above the shipped budget to hand an operator, because
- * the client was compiled with none. Stated as a consequence rather than as a
- * convenience:
- *
- *   ANALYSIS_TOTAL_BUDGET_MS may be LOWERED at runtime, freely. A stricter
- *   server deadline can never outlive a client that waits longer.
- *
- *   It cannot be RAISED at runtime, at all. Raising it requires changing this
- *   file and shipping a new frontend build — which is the correct and
- *   deliberately inconvenient way to change a number the client has compiled in.
- *
- * Written as the subtraction rather than as an alias for
- * `ANALYSIS_TOTAL_BUDGET_MS`, because it is a DIFFERENT FACT that happens to
- * share the value today: this one is "what the client can still tolerate", and
- * if the margin ever changes independently, this must follow the margin and not
- * the budget.
+ * This is an infrastructure contract now because Analysis intentionally routes
+ * through the first-party proxy to preserve session-tier and CSRF semantics.
+ * Two seconds is reserved for the backend response to traverse that proxy before
+ * its measured cutoff. The server therefore must settle no later than 28s.
  */
-export const ANALYSIS_MAX_SERVER_BUDGET_MS =
-  ANALYSIS_CLIENT_TIMEOUT_MS - ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS;
+export const ANALYSIS_FIRST_PARTY_PROXY_CUTOFF_MS = 30_000;
+export const ANALYSIS_PROXY_RESPONSE_MARGIN_MS = 2_000;
+
+/**
+ * THE CEILING ON ANY SERVER DEADLINE.
+ *
+ * Two independent consumers bound it:
+ *   1. the compiled browser client, which needs its transport margin; and
+ *   2. the first-party Next proxy, which must still be alive to relay the
+ *      backend's success or truthful 504.
+ *
+ * The smaller ceiling wins. Runtime overrides may still LOWER this value, but
+ * cannot raise it past either consumer.
+ */
+export const ANALYSIS_MAX_SERVER_BUDGET_MS = Math.min(
+  ANALYSIS_CLIENT_TIMEOUT_MS - ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS,
+  ANALYSIS_FIRST_PARTY_PROXY_CUTOFF_MS - ANALYSIS_PROXY_RESPONSE_MARGIN_MS,
+);
 
 /**
  * Resolves a candidate total-budget value into one that is safe to arm a
  * deadline with. Every path returns a real, enforced deadline.
  *
- *   absent / non-finite / <= 0  ->  ANALYSIS_TOTAL_BUDGET_MS
+ *   absent / non-finite / <= 0  ->  min(default total, safe server ceiling)
  *   above the ceiling           ->  ANALYSIS_MAX_SERVER_BUDGET_MS
  *   anything else               ->  the candidate, unchanged
  *
@@ -214,7 +217,7 @@ export const ANALYSIS_MAX_SERVER_BUDGET_MS =
  */
 export function resolveServerBudgetMs(candidateMs: number | undefined): number {
   if (candidateMs === undefined || !Number.isFinite(candidateMs) || candidateMs <= 0) {
-    return ANALYSIS_TOTAL_BUDGET_MS;
+    return Math.min(ANALYSIS_TOTAL_BUDGET_MS, ANALYSIS_MAX_SERVER_BUDGET_MS);
   }
 
   return Math.min(candidateMs, ANALYSIS_MAX_SERVER_BUDGET_MS);

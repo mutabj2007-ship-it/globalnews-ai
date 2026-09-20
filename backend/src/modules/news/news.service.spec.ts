@@ -85,6 +85,15 @@ class FakeHealthyProvider implements NewsProvider {
   }
 }
 
+class CountingHealthyProvider extends FakeHealthyProvider {
+  public searchCalls = 0;
+
+  override async search(): Promise<NewsArticle[]> {
+    this.searchCalls += 1;
+    return super.search();
+  }
+}
+
 class FakeFailingProvider implements NewsProvider {
   readonly id = 'fake-failing';
   readonly displayName = 'Fake Failing Provider';
@@ -300,6 +309,7 @@ describe('NewsService', () => {
   async function buildService(
     providers: NewsProvider[],
     allProviders: NewsProvider[] = providers,
+    fallbackProviders: NewsProvider[] = [],
   ): Promise<NewsService> {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -313,10 +323,10 @@ describe('NewsService', () => {
           useValue: allProviders,
         },
         {
-          // R4 GDELT — no fallback-tier provider in this fixture, so the
-          // tiered path collapses to the pre-R4 single-pass fan-out.
+          // R4 GDELT — callers opt into a fallback fixture explicitly.
+          // Empty preserves the pre-R4 single-pass fan-out for every existing test.
           provide: FALLBACK_NEWS_PROVIDERS,
-          useValue: [],
+          useValue: fallbackProviders,
         },
         {
           provide: ArticlePersistenceService,
@@ -327,6 +337,35 @@ describe('NewsService', () => {
 
     return module.get<NewsService>(NewsService);
   }
+
+  it('regional callers can suppress the live fallback tier while still using retained reporting', async () => {
+    const primary = new FakeFailingProvider();
+    const fallback = new CountingHealthyProvider();
+    const cachedArticle = makeArticle({
+      id: 'cached-regional-1',
+      title: 'Retained regional reporting',
+    });
+
+    articlePersistence.findRecent.mockResolvedValueOnce([cachedArticle]);
+
+    const service = await buildService(
+      [primary, fallback],
+      [primary, fallback],
+      [fallback],
+    );
+
+    const response = await service.search('Ceuta', 5, undefined, { allowFallback: false });
+
+    expect(fallback.searchCalls).toBe(0);
+    expect(articlePersistence.findRecent).toHaveBeenCalled();
+    expect(response.dataMode).toBe('cached');
+    expect(response.articles).toHaveLength(1);
+    expect(response.articles[0]).toMatchObject({
+      id: cachedArticle.id,
+      title: cachedArticle.title,
+      geographicPrecision: 'unknown',
+    });
+  });
 
   it('does not persist mock news as real evidence', async () => {
     const service = await buildService([new FakeMockProvider()]);

@@ -450,6 +450,58 @@ describe('GdeltDocProvider — U and V: request spacing and concurrency collapse
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('U — a timeout opens cooldown before a queued different query can open another socket', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const provider = buildProvider();
+      const fetchMock = jest.fn().mockImplementation(
+        (_url: string | URL | Request, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+
+            if (!signal) {
+              reject(new Error('test expected an AbortSignal'));
+              return;
+            }
+
+            signal.addEventListener(
+              'abort',
+              () => {
+                const error = new Error('The operation was aborted');
+                error.name = 'AbortError';
+                reject(error);
+              },
+              { once: true },
+            );
+          }),
+      );
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      const settled = Promise.allSettled([
+        provider.search('alpha query'),
+        provider.search('beta query'),
+      ]);
+
+      await jest.advanceTimersByTimeAsync(8_100);
+
+      const [firstResult, secondResult] = await settled;
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(firstResult.status).toBe('rejected');
+      expect(secondResult.status).toBe('rejected');
+
+      if (firstResult.status === 'rejected') {
+        expect(firstResult.reason).toMatchObject({ kind: 'timeout' });
+      }
+      if (secondResult.status === 'rejected') {
+        expect(secondResult.reason).toMatchObject({ kind: 'timeout' });
+      }
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('U — two different queries are spaced at least 5 seconds apart', async () => {
     jest.useFakeTimers();
 

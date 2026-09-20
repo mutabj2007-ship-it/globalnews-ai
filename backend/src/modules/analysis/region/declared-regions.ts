@@ -107,8 +107,16 @@ export const DECLARED_REGIONS: readonly DeclaredRegion[] = [EAST_AFRICA];
  * requests may be IN FLIGHT AT ONCE, not how many countries exist. A broad
  * regional question attempts the whole declared membership in batches of this
  * size, and the only thing that stops it early is the provider itself.
+ *
+ * ALPHA RETRIEVAL CONVERGENCE — the ceiling is now TIGHTENED from 6 to 2.
+ * Live Railway evidence showed a six-member burst hitting GNews 429s while the
+ * fallback provider queued slow requests behind its own spacing rule. "Up to
+ * six" was a ceiling, never a requirement to burst six requests. Two keeps all
+ * eleven members eligible, preserves the batching contract, and materially
+ * reduces quota pressure while still allowing explicitly named country pairs
+ * (for example Rwanda + DR Congo) to be attempted together.
  */
-export const MAX_CONCURRENT_REGION_REQUESTS = 6;
+export const MAX_CONCURRENT_REGION_REQUESTS = 2;
 
 /**
  * The declared region a typed question names, or undefined.
@@ -147,4 +155,43 @@ export function resolveRegionMembers(region: DeclaredRegion): CountryMeta[] {
   }
 
   return resolved;
+}
+
+/**
+ * Moves countries the reader EXPLICITLY named to the front of a declared-region
+ * retrieval without changing membership.
+ *
+ * This closes the live Alpha failure where a question asking specifically about
+ * Rwanda and DR Congo also named East Africa: the region route won (correctly),
+ * but the fixed declaration order put Rwanda in batch two. A provider throttle
+ * in batch one therefore prevented the explicitly requested country from ever
+ * being attempted.
+ *
+ * The function can only REORDER members already declared in the region. A named
+ * country outside the region is ignored here rather than smuggled into the
+ * region, and every remaining member keeps the declaration order. No member is
+ * added, removed, duplicated or inferred.
+ */
+export function prioritizeRegionMembers(
+  region: DeclaredRegion,
+  explicitlyNamed: readonly CountryMeta[],
+): CountryMeta[] {
+  const members = resolveRegionMembers(region);
+  const memberIds = new Set(members.map((member) => member.iso3));
+  const seen = new Set<string>();
+  const prioritized: CountryMeta[] = [];
+
+  for (const country of explicitlyNamed) {
+    if (!memberIds.has(country.iso3) || seen.has(country.iso3)) continue;
+    seen.add(country.iso3);
+    prioritized.push(country);
+  }
+
+  for (const member of members) {
+    if (seen.has(member.iso3)) continue;
+    seen.add(member.iso3);
+    prioritized.push(member);
+  }
+
+  return prioritized;
 }

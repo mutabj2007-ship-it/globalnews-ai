@@ -1,0 +1,57 @@
+name: Alpha Search Retrieval Repair CI
+
+on:
+  push:
+    branches:
+      - fix/alpha-search-retrieval-convergence-r1
+
+concurrency:
+  group: alpha-search-retrieval-repair
+  cancel-in-progress: true
+
+jobs:
+  validate-search-repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --config backend/prisma.config.ts
+
+      - name: Build shared package
+        run: npm run build:shared
+
+      - name: Lint backend (baseline diagnostic, no auto-fix)
+        continue-on-error: true
+        working-directory: backend
+        run: npx eslint "{src,test}/**/*.ts"
+
+      - name: Build backend
+        run: npm run build:backend
+
+      - name: Run focused retrieval regression tests
+        run: |
+          npm test --workspace=backend -- --runInBand src/modules/analysis/query/query-intent.util.spec.ts -t "ALPHA SEARCH REPAIR"
+          npm test --workspace=backend -- --runInBand src/modules/analysis/region/declared-regions.spec.ts -t "explicitly named region members|THE BOUND IS ON CONCURRENCY|NO MEMBER IS PERMANENTLY EXCLUDED"
+          npm test --workspace=backend -- --runInBand src/modules/news/news.service.spec.ts -t "regional callers can suppress the live fallback tier"
+          npm test --workspace=backend -- --runInBand src/modules/news/providers/gdelt-doc.provider.spec.ts -t "timeout opens cooldown before a queued different query"
+          npm test --workspace=backend -- --runInBand src/modules/news/providers/gnews.provider.spec.ts -t "one 429 stops concurrently queued different searches|one timeout stops concurrently queued different searches"
+          npm test --workspace=backend -- --runInBand src/modules/analysis/providers/openai-analysis.provider.spec.ts -t "cancels an in-flight OpenAI request"
+
+      - name: Run shared budget tests
+        run: npm test --workspace=shared -- --runInBand src/analysis-budget.spec.ts
+
+      - name: Build frontend
+        run: npm run build:frontend

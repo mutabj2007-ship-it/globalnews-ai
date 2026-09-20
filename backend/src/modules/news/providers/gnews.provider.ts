@@ -14,6 +14,17 @@ const GNEWS_BASE_URL = 'https://gnews.io/api/v4';
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
 const REQUEST_TIMEOUT_MS = 8000;
+
+/**
+ * A live 429/403 is a provider-side stop signal for this process.
+ *
+ * Alpha regional fan-out previously sent the same exhausted/rate-limited
+ * provider several more requests in the same millisecond. Sixty seconds is a
+ * conservative circuit window: it does not guess the provider's daily reset,
+ * but it is long enough that one user request and the next immediate retry do
+ * not keep spending calls into a condition we already observed.
+ */
+const GNEWS_COOLDOWN_MS = 60_000;
 /**
  * Query-limit correction — GNews's own documented search `q` parameter
  * maximum. This is an UNCONDITIONAL, last-resort defensive backstop —
@@ -216,6 +227,15 @@ export class GNewsProvider implements NewsProvider {
 
   private readonly logger = new Logger(GNewsProvider.name);
 
+  /**
+   * One complete GNews request at a time. The region layer may ask several
+   * country questions concurrently; the provider boundary is the one place
+   * that knows they all consume the same upstream rate limit.
+   */
+  private executionChain: Promise<void> = Promise.resolve();
+  private cooldownUntil = 0;
+  private cooldownKind: 'quota' | 'rate-limited' | 'timeout' | 'transport' | undefined;
+
   constructor(private readonly config: ConfigService) {}
 
   /**
@@ -413,88 +433,148 @@ export class GNewsProvider implements NewsProvider {
   }
 
   private async request(url: string): Promise<GNewsApiResponse> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-    let response: Response;
-    try {
-      response = await fetch(url, { signal: controller.signal });
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new GNewsProviderError('GNews request timed out.', error, 'timeout');
+    return this.runSerialized(async () => {
+      if (Date.now() < this.cooldownUntil) {
+        throw this.cooldownRefusal();
       }
-      throw new GNewsProviderError('Failed to reach GNews.', error, 'unreachable');
-    } finally {
-      clearTimeout(timeout);
-    }
 
-    /*
-     * R4 GDELT — 401 AND 403 ARE NOT THE SAME CONDITION, AND CONFLATING
-     * THEM MISLED AN OPERATOR DURING A LIVE OUTAGE.
-     *
-     * Both used to raise 'GNews rejected the configured API key.' When the
-     * Free plan reached 100/100 requests the live host received 403, and
-     * that sentence went to the log and to Admin. It sent the operator to
-     * rotate a credential that was perfectly valid, while the real
-     * condition — the daily allowance is spent and resets on its own —
-     * was not represented anywhere.
-     *
-     * 403 = QUOTA IS EVIDENCE FROM THIS DEPLOYMENT, NOT A RULE ABOUT HTTP.
-     * It is what the live host observed on THIS GNews plan. HTTP 403 means
-     * "forbidden" generally, and plenty of APIs use it for authorization
-     * failures. No other provider may copy this mapping without its own
-     * evidence, and if GNews changes plans this mapping must be
-     * re-verified rather than assumed to have carried over.
-     *
-     * The message still never echoes the key or GNews's raw body, which
-     * may contain it.
-     */
-    if (response.status === 401) {
-      throw new GNewsProviderError('GNews rejected the configured API key.', undefined, 'auth');
-    }
-    if (response.status === 403) {
-      throw new GNewsProviderError(
-        'GNews returned 403. On this plan that indicates the request allowance is exhausted; ' +
-          'the API key itself is not implicated.',
-        undefined,
-        'quota',
-      );
-    }
-    if (response.status === 429) {
-      throw new GNewsProviderError(
-        'GNews rate limit exceeded. Try again shortly.',
-        undefined,
-        'rate-limited',
-      );
-    }
-    if (!response.ok) {
-      throw new GNewsProviderError(
-        `GNews responded with status ${response.status}.`,
-        undefined,
-        'unknown',
-      );
-    }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    let payload: unknown;
+      let response: Response;
+      try {
+        response = await fetch(url, { signal: controller.signal });
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          this.openCooldown('timeout');
+          throw new GNewsProviderError('GNews request timed out.', error, 'timeout');
+        }
+        this.openCooldown('transport');
+        throw new GNewsProviderError('Failed to reach GNews.', error, 'unreachable');
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      /*
+       * R4 GDELT — 401 AND 403 ARE NOT THE SAME CONDITION, AND CONFLATING
+       * THEM MISLED AN OPERATOR DURING A LIVE OUTAGE.
+       *
+       * 403 is observed as exhausted allowance on the deployed GNews plan;
+       * 429 is a shorter rate-limit condition. Both now open a short local
+       * circuit so one observed upstream stop signal cannot become a burst.
+       */
+      if (response.status === 401) {
+        throw new GNewsProviderError(
+          'GNews rejected the configured API key.',
+          undefined,
+          'auth',
+        );
+      }
+      if (response.status === 403) {
+        this.openCooldown('quota');
+        throw new GNewsProviderError(
+          'GNews returned 403. On this plan that indicates the request allowance is exhausted; ' +
+            'the API key itself is not implicated.',
+          undefined,
+          'quota',
+        );
+      }
+      if (response.status === 429) {
+        this.openCooldown('rate-limited');
+        throw new GNewsProviderError(
+          'GNews rate limit exceeded. Try again shortly.',
+          undefined,
+          'rate-limited',
+        );
+      }
+      if (!response.ok) {
+        throw new GNewsProviderError(
+          `GNews responded with status ${response.status}.`,
+          undefined,
+          'unknown',
+        );
+      }
+
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        throw new GNewsProviderError(
+          'GNews returned a malformed (non-JSON) response.',
+          error,
+          'malformed',
+        );
+      }
+
+      if (
+        !payload ||
+        typeof payload !== 'object' ||
+        !Array.isArray((payload as GNewsApiResponse).articles)
+      ) {
+        throw new GNewsProviderError('GNews response did not match the expected shape.');
+      }
+
+      return payload as GNewsApiResponse;
+    });
+  }
+
+  /**
+   * Serialises the whole request. The queue releases in finally, so a failure
+   * cannot wedge future callers; a caller queued behind a 429/403 observes the
+   * newly-opened circuit before it opens another socket.
+   */
+  private async runSerialized<T>(operation: () => Promise<T>): Promise<T> {
+    let release: (() => void) | undefined;
+    const previous = this.executionChain;
+
+    this.executionChain = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+
     try {
-      payload = await response.json();
-    } catch (error) {
-      throw new GNewsProviderError(
-        'GNews returned a malformed (non-JSON) response.',
-        error,
-        'malformed',
-      );
+      return await operation();
+    } finally {
+      release?.();
     }
+  }
 
-    if (
-      !payload ||
-      typeof payload !== 'object' ||
-      !Array.isArray((payload as GNewsApiResponse).articles)
-    ) {
-      throw new GNewsProviderError('GNews response did not match the expected shape.');
+  private openCooldown(
+    kind: 'quota' | 'rate-limited' | 'timeout' | 'transport',
+  ): void {
+    this.cooldownUntil = Date.now() + GNEWS_COOLDOWN_MS;
+    this.cooldownKind = kind;
+  }
+
+  private cooldownRefusal(): GNewsProviderError {
+    switch (this.cooldownKind) {
+      case 'quota':
+        return new GNewsProviderError(
+          'GNews request allowance is exhausted; this provider is in cooldown.',
+          undefined,
+          'quota',
+        );
+      case 'timeout':
+        return new GNewsProviderError(
+          'GNews is in cooldown after a request timeout.',
+          undefined,
+          'timeout',
+        );
+      case 'transport':
+        return new GNewsProviderError(
+          'GNews is in cooldown after a connection failure.',
+          undefined,
+          'unreachable',
+        );
+      case 'rate-limited':
+      default:
+        return new GNewsProviderError(
+          'GNews is in cooldown after a rate-limit response.',
+          undefined,
+          'rate-limited',
+        );
     }
-
-    return payload as GNewsApiResponse;
   }
 
   /**

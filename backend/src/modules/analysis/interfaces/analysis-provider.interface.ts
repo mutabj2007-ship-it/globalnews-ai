@@ -85,6 +85,17 @@ export interface AnalysisProviderInput {
   developmentBreadth?: AnalysisDevelopmentBreadth;
 
   /**
+   * Optional caller cancellation. AnalysisService uses this only for the
+   * authoritative response deadline: when the reader can no longer receive a
+   * result, an in-flight model request must not keep spending tokens merely to
+   * populate a cache nobody asked for.
+   *
+   * Providers that do not perform network work may ignore it. A real provider
+   * must refuse/abort promptly when it is already aborted.
+   */
+  signal?: AbortSignal;
+
+  /**
    * @deprecated EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — NOT SUPPLIED
    * BY ANY CALLER. The synchronous repair was removed by Alpha Budget R1
    * (`shared/src/analysis-budget.ts` derives the total WITHOUT it), so

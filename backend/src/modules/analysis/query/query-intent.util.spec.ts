@@ -63,6 +63,16 @@ describe('CLASS multi-entity — a question naming two countries is answered abo
     expect(names('What is happening between Ukraine and Russia?')).toEqual(['Ukraine', 'Russia']);
     expect(names('What is happening between Russia and Ukraine?')).toEqual(['Russia', 'Ukraine']);
   });
+
+  it('ALPHA SEARCH REPAIR — the reported East Africa question preserves Rwanda and DR Congo as explicit countries', () => {
+    const result = classifyQueryIntent(
+      'indicate me a full story happening in the East African region, economically, politically. ' +
+        'include conflicts occurrences between Rwanda and DR congo and their current development',
+    );
+
+    expect(result.countries.map((country) => country.iso3)).toEqual(['RWA', 'COD']);
+    expect(result.sides.map((country) => country.iso3)).toEqual(['RWA', 'COD']);
+  });
 });
 
 /* ------------------------------------------------------------------ *

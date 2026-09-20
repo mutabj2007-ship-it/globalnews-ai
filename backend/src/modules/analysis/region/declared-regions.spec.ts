@@ -7,6 +7,7 @@ import {
   EAST_AFRICA,
   MAX_CONCURRENT_REGION_REQUESTS,
   detectDeclaredRegion,
+  prioritizeRegionMembers,
   resolveRegionMembers,
 } from './declared-regions';
 import { buildRegionScope, memberIso3WithEvidence, retrievalOutcome } from './region-coverage';
@@ -122,6 +123,25 @@ describe('TEST A · the typed question resolves EAST AFRICA as request scope', (
     expect(serviceSource).toMatch(/declaredRegion !== undefined\s*\?\s*undefined\s*:\s*\(storyAnchoredLocation/);
   });
 
+  it('explicitly named region members move first without changing declared membership', () => {
+    const members = resolveRegionMembers(EAST_AFRICA);
+    const rwanda = members.find((member) => member.iso3 === 'RWA');
+    const drCongo = members.find((member) => member.iso3 === 'COD');
+
+    expect(rwanda).toBeDefined();
+    expect(drCongo).toBeDefined();
+
+    if (!rwanda || !drCongo) {
+      throw new Error('East Africa fixture must resolve Rwanda and DR Congo');
+    }
+
+    const prioritized = prioritizeRegionMembers(EAST_AFRICA, [rwanda, drCongo]);
+
+    expect(prioritized.slice(0, 2).map((member) => member.iso3)).toEqual(['RWA', 'COD']);
+    expect(prioritized).toHaveLength(EAST_AFRICA.members.length);
+    expect(new Set(prioritized.map((member) => member.iso3))).toEqual(new Set(EAST_AFRICA.members));
+  });
+
   it('THE BOUND IS ON CONCURRENCY, NOT ON MEMBERSHIP', () => {
     /*
       The rejected first implementation was `members.slice(0, 6)` over the
@@ -150,12 +170,16 @@ describe('TEST A · the typed question resolves EAST AFRICA as request scope', (
       expect(members).toContain(dropped);
     }
 
-    /* 11 members at width 6 is two batches, not one truncation. */
+    /*
+      The Alpha repair tightens only CONCURRENCY, never membership. Eleven
+      members at width two become six batches; every member remains reachable.
+    */
     const width = MAX_CONCURRENT_REGION_REQUESTS;
     const batches: number[] = [];
     for (let i = 0; i < members.length; i += width) batches.push(members.slice(i, i + width).length);
 
-    expect(batches).toEqual([6, 5]);
+    expect(width).toBe(2);
+    expect(batches).toEqual([2, 2, 2, 2, 2, 1]);
   });
 
   it('evidence is NEVER a reason to stop early; a rate limit is the only one', () => {

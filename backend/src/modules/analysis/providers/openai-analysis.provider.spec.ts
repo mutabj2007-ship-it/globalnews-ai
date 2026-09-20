@@ -208,6 +208,34 @@ describe('OpenAiAnalysisProvider', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('cancels an in-flight OpenAI request when the caller response deadline aborts, with no retry', async () => {
+    fetchMock.mockImplementation(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener('abort', () => {
+            const abortError = new Error('The operation was aborted.');
+            abortError.name = 'AbortError';
+            reject(abortError);
+          });
+        }),
+    );
+
+    const provider = new OpenAiAnalysisProvider(
+      makeConfigService({ timeoutMs: 5_000, retryAttempts: 2 }),
+    );
+    const controller = new AbortController();
+    const pending = provider.analyzeNews({ ...makeInput(), signal: controller.signal });
+
+    await Promise.resolve();
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({
+      failureReason: 'provider-timeout',
+      retryable: false,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('classifies a non-JSON HTTP body as malformed-output', async () => {
     fetchMock.mockResolvedValue({
       ok: true,

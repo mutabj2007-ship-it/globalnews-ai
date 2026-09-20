@@ -45,7 +45,7 @@ import {
 import {
   MAX_CONCURRENT_REGION_REQUESTS,
   detectDeclaredRegion,
-  resolveRegionMembers,
+  prioritizeRegionMembers,
   type DeclaredRegion,
 } from '../region/declared-regions';
 
@@ -75,6 +75,16 @@ const RETAINED_PER_MEMBER_LIMIT = 6;
  * about now, and the disclosure says RETAINED, not RECENT.
  */
 const RETAINED_MAX_AGE_MINUTES = 48 * 60;
+
+/**
+ * Only the first two region members may spend the slow live fallback tier.
+ *
+ * They are the explicitly named countries when the reader supplied them,
+ * because prioritizeRegionMembers() moves those first. Every other region member
+ * still gets a primary-provider attempt and remains eligible for retained
+ * reporting, but cannot multiply GDELT's serial/slow fallback eleven times.
+ */
+const REGION_LIVE_FALLBACK_MEMBER_LIMIT = 2;
 
 import { computeSourceDiversity } from '../duplicates/compute-source-diversity.util';
 import {
@@ -547,6 +557,15 @@ export class AnalysisService {
       };
     }
 
+    /*
+     * The fresh operation owns one cancellation signal. Joiners never receive
+     * this controller: a joiner's personal response deadline must not cancel
+     * provider work that the originator (or another joiner) can still receive.
+     * Only the originator's authoritative response deadline aborts the shared
+     * expensive model request.
+     */
+    const responseAbort = new AbortController();
+
     const inFlightOperation: Promise<AnalysisApiResponse> =
       (async (): Promise<AnalysisApiResponse> => {
         /**
@@ -881,6 +900,7 @@ export class AnalysisService {
           const regional = await this.retrieveDeclaredRegionEvidence(
             declaredRegion,
             requestedLanguage,
+            classification.countries,
           );
 
           articles = regional.articles;
@@ -1913,6 +1933,19 @@ export class AnalysisService {
           articles = [anchorArticle, ...withoutAnchor];
         }
 
+        /*
+         * If the response deadline expired while retrieval was still running,
+         * stop here before caching a late empty result or starting any model
+         * work. News-provider calls that were already in flight are not
+         * retroactively cancellable on this lane, but expensive AI work is.
+         */
+        if (responseAbort.signal.aborted) {
+          throw new AnalysisDeadlineExceededError(
+            resolveServerBudgetMs(config.totalBudgetMs),
+            cacheKey,
+          );
+        }
+
         if (articles.length === 0) {
           const empty: AnalysisApiResponse = {
             query: originalQuery,
@@ -2025,6 +2058,7 @@ export class AnalysisService {
               no change to what happens to a non-compliant answer.
             */
             developmentBreadth,
+            signal: responseAbort.signal,
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;
@@ -2230,6 +2264,19 @@ export class AnalysisService {
           };
         }
 
+        /*
+         * A deadline-aborted provider result is not a cache entry. The reader
+         * never received it, and replaying a synthetic "provider failed" result
+         * on retry would turn cancellation into a sticky failure. Let the
+         * underlying operation reject and disappear from the in-flight map.
+         */
+        if (responseAbort.signal.aborted) {
+          throw new AnalysisDeadlineExceededError(
+            resolveServerBudgetMs(config.totalBudgetMs),
+            cacheKey,
+          );
+        }
+
         this.setCached(cacheKey, response, this.cacheTtlFor(response, config));
 
         return response;
@@ -2271,16 +2318,29 @@ export class AnalysisService {
       operation, so a concurrent identical request still joins it rather than
       starting a second analysis. Only what THIS caller awaits is raced.
 
-      THE WORK IS NOT CANCELLED, AND THIS COMMENT WILL NOT PRETEND OTHERWISE.
-      On deadline the operation continues, completes and populates the cache —
-      which is a genuine benefit, because the next identical request is then
-      served in about a millisecond. What is bounded here is the RESPONSE, not
-      the spend. See the honest split in the report:
+      CANCELLATION IS NOW SPLIT BY COST AND OWNERSHIP.
 
-          synchronous RESPONSE deadline .......... BOUNDED (this code)
-          abandoned provider work cancellation ... OPEN (unwired; next correction)
+      The fresh/originating request owns `responseAbort`. If its authoritative
+      deadline fires, an in-flight OpenAI fetch is aborted and no late provider
+      response is cached. If the deadline fires during NEWS retrieval, those
+      already-dispatched news calls may still settle, but the operation checks
+      the signal before starting OpenAI and stops there.
+
+      A JOINER'S personal deadline deliberately does NOT abort the shared
+      operation: the originator or another joiner may still be entitled to the
+      result. So the honest state is:
+
+          synchronous RESPONSE deadline .......... BOUNDED
+          abandoned OpenAI generation ............ CANCELLED for originator
+          already-dispatched news retrieval ...... may still settle
+          joiner timeout .......................... never cancels shared work
     */
-    return this.withResponseDeadline(settledInFlightOperation, config.totalBudgetMs, cacheKey);
+    return this.withResponseDeadline(
+      settledInFlightOperation,
+      config.totalBudgetMs,
+      cacheKey,
+      () => responseAbort.abort(),
+    );
   }
 
   /**
@@ -2296,6 +2356,7 @@ export class AnalysisService {
     operation: Promise<T>,
     budgetMs: number | undefined,
     cacheKey: string,
+    onDeadline?: () => void,
   ): Promise<T> {
     /*
       REV B — RESOLVE BEFORE ARMING, ALWAYS.
@@ -2308,11 +2369,10 @@ export class AnalysisService {
       tests by an omission rather than by a decision.
 
       `resolveServerBudgetMs` is the shared authority's own resolver: an absent
-      or nonsensical value becomes ANALYSIS_TOTAL_BUDGET_MS, and an excessive one
-      is clamped to the ceiling the compiled client can tolerate. Both directions
-      end at a REAL enforced deadline, so this is a hardening of the boundary and
-      not a relaxation of it — there is no input for which this method now
-      declines to arm a deadline.
+      or nonsensical value becomes the safe default, already clamped to the
+      smaller of browser and first-party-proxy tolerance; an excessive value is
+      clamped to that same ceiling. Every direction ends at a REAL enforced
+      deadline, so there is no input for which this method declines to arm one.
 
       Production is unaffected: AnalysisConfigService already clamps through this
       same function, so the value arriving here is a positive number at or below
@@ -2324,11 +2384,20 @@ export class AnalysisService {
 
     const deadline = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(() => {
+        try {
+          onDeadline?.();
+        } catch {
+          /*
+           * Deadline enforcement must never be blocked by cancellation cleanup.
+           * The response still fails closed even if a provider-specific abort
+           * hook itself misbehaves.
+           */
+        }
+
         this.logger.warn(
           `Analysis exceeded the total synchronous budget of ${resolvedBudgetMs} ms. ` +
-            'Responding with a deadline error; the operation continues and will populate the ' +
-            'cache, so an identical retry is served from it. Provider work is NOT cancelled — ' +
-            'see ANALYSIS CANCELLATION, OPEN.',
+            'Responding with a deadline error. Fresh-request OpenAI work is cancelled; ' +
+            'already-dispatched news retrieval may still settle. A timed-out result is not cached.',
         );
 
         /* After this rejection nobody awaits the operation. Keep its eventual
@@ -2828,6 +2897,7 @@ export class AnalysisService {
   private async retrieveMemberEvidence(
     member: CountryMeta,
     requestedLanguage: LanguageCode,
+    allowFallback = true,
   ): Promise<{
     articles: NewsArticle[];
     providers: string[];
@@ -2851,8 +2921,12 @@ export class AnalysisService {
 
     try {
       const response = isPolish
-        ? await this.newsService.topHeadlines(SEARCH_POOL_SIZE, { lang: 'pl', q: sent })
-        : await this.newsService.search(sent, SEARCH_POOL_SIZE);
+        ? await this.newsService.topHeadlines(SEARCH_POOL_SIZE, {
+            lang: 'pl',
+            q: sent,
+            allowFallback,
+          })
+        : await this.newsService.search(sent, SEARCH_POOL_SIZE, undefined, { allowFallback });
 
       const failureKinds = readProviderFailures(response).map((failure) => failure.kind);
 
@@ -2925,6 +2999,7 @@ export class AnalysisService {
   private async retrieveDeclaredRegionEvidence(
     region: DeclaredRegion,
     requestedLanguage: LanguageCode,
+    explicitlyNamedCountries: readonly CountryMeta[] = [],
   ): Promise<{
     articles: NewsArticle[];
     retrievalContext: AnalysisRetrievalContext;
@@ -2933,7 +3008,16 @@ export class AnalysisService {
     live: Set<string>;
     unavailable: Set<string>;
   }> {
-    const members = resolveRegionMembers(region);
+    /*
+     * Explicit countries inside a regional question are retrieval priorities,
+     * never extra region members. This is what makes "East Africa ... Rwanda
+     * and DR Congo" attempt Rwanda + DRC before a provider throttle can cut the
+     * second batch off.
+     */
+    const members = prioritizeRegionMembers(region, explicitlyNamedCountries);
+    const fallbackEligible = new Set(
+      members.slice(0, REGION_LIVE_FALLBACK_MEMBER_LIMIT).map((member) => member.iso3),
+    );
 
     const collected: NewsArticle[] = [];
     const providers = new Set<string>();
@@ -2959,7 +3043,13 @@ export class AnalysisService {
         cannot reject the batch and lose the others' evidence.
       */
       const results = await Promise.all(
-        batch.map((member) => this.retrieveMemberEvidence(member, requestedLanguage)),
+        batch.map((member) =>
+          this.retrieveMemberEvidence(
+            member,
+            requestedLanguage,
+            fallbackEligible.has(member.iso3),
+          ),
+        ),
       );
 
       results.forEach((result, index) => {
@@ -3027,25 +3117,32 @@ export class AnalysisService {
   }
 
   private async retrieveRetainedForRegion(members: readonly CountryMeta[]): Promise<NewsArticle[]> {
-    const collected: NewsArticle[] = [];
+    /*
+     * Retained reads are local database work, not provider work. Running them
+     * serially made a throttled eleven-country region pay N round trips after
+     * live retrieval had already degraded. Fan them out together; each member
+     * still fails independently and no failure can erase another member's
+     * retained evidence.
+     */
+    const perMember = await Promise.all(
+      members.map(async (member): Promise<NewsArticle[]> => {
+        try {
+          return await this.newsService.findRetainedByCountry(
+            member.iso2,
+            RETAINED_PER_MEMBER_LIMIT,
+            RETAINED_MAX_AGE_MINUTES,
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Retained lookup failed for ${member.iso3}; continuing without it`,
+            error instanceof Error ? error : undefined,
+          );
+          return [];
+        }
+      }),
+    );
 
-    for (const member of members) {
-      try {
-        const retained = await this.newsService.findRetainedByCountry(
-          member.iso2,
-          RETAINED_PER_MEMBER_LIMIT,
-          RETAINED_MAX_AGE_MINUTES,
-        );
-        collected.push(...retained);
-      } catch (error) {
-        this.logger.warn(
-          `Retained lookup failed for ${member.iso3}; continuing without it`,
-          error instanceof Error ? error : undefined,
-        );
-      }
-    }
-
-    return deduplicateArticles(collected);
+    return deduplicateArticles(perMember.flat());
   }
 
   private toRetrievalContext(

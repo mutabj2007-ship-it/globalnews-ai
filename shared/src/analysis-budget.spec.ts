@@ -6,6 +6,8 @@ import {
   ANALYSIS_RETRIEVAL_BUDGET_MS,
   ANALYSIS_SERVER_OVERHEAD_BUDGET_MS,
   ANALYSIS_MAX_SERVER_BUDGET_MS,
+  ANALYSIS_FIRST_PARTY_PROXY_CUTOFF_MS,
+  ANALYSIS_PROXY_RESPONSE_MARGIN_MS,
   ANALYSIS_TOTAL_BUDGET_MS,
   resolveServerBudgetMs,
 } from './analysis-budget';
@@ -41,8 +43,8 @@ describe('ANALYSIS EXECUTION BUDGET — the client deadline is derived, not gues
     ever fails, the false-failure defect has returned.
   */
   it('a successful response cannot legally outlive the client deadline', () => {
-    expect(ANALYSIS_CLIENT_TIMEOUT_MS).toBeGreaterThan(ANALYSIS_TOTAL_BUDGET_MS);
-    expect(ANALYSIS_CLIENT_TIMEOUT_MS - ANALYSIS_TOTAL_BUDGET_MS).toBe(
+    expect(ANALYSIS_CLIENT_TIMEOUT_MS).toBeGreaterThan(ANALYSIS_MAX_SERVER_BUDGET_MS);
+    expect(ANALYSIS_CLIENT_TIMEOUT_MS - ANALYSIS_MAX_SERVER_BUDGET_MS).toBeGreaterThanOrEqual(
       ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS,
     );
   });
@@ -52,26 +54,32 @@ describe('ANALYSIS EXECUTION BUDGET — the client deadline is derived, not gues
   });
 
   /*
-    THE MEASURED INCIDENT, PINNED AS A REGRESSION CASE.
+    THE LIVE ALPHA PROXY INCIDENT, PINNED AS A REGRESSION CASE.
 
-    The observed run — retrieval, generation #1 at 16,535 ms, brief assessment,
-    generation #2 at 13,887 ms — totalled 30,914 ms and was declared a failure.
-    Even if a path that long somehow recurs, it must now fit inside the client
-    deadline rather than being thrown away.
+    The first-party Next proxy closed the analysis socket at ~30,032 ms while
+    the backend still believed it could work until 32,000 ms. The backend now
+    settles early enough that its success or truthful 504 can traverse the
+    proxy rather than becoming a generic proxy 500.
   */
-  it('the 30,914 ms incident would no longer be reported as a failure', () => {
-    const OBSERVED_INCIDENT_MS = 30_914;
-    expect(OBSERVED_INCIDENT_MS).toBeLessThan(ANALYSIS_CLIENT_TIMEOUT_MS);
+  it('the runtime server ceiling leaves a real margin before the first-party proxy cutoff', () => {
+    expect(ANALYSIS_MAX_SERVER_BUDGET_MS).toBeLessThan(
+      ANALYSIS_FIRST_PARTY_PROXY_CUTOFF_MS,
+    );
+    expect(
+      ANALYSIS_FIRST_PARTY_PROXY_CUTOFF_MS - ANALYSIS_MAX_SERVER_BUDGET_MS,
+    ).toBeGreaterThanOrEqual(ANALYSIS_PROXY_RESPONSE_MARGIN_MS);
   });
 
   /*
-    And the single-generation path the correction actually produces — the same
-    run with the second generation removed — must fit with real room to spare.
+    The corrected single-generation path from run 579a0134 still fits with
+    substantial room inside the stricter runtime ceiling.
   */
-  it('the corrected single-generation path fits inside the server budget', () => {
-    const RETRIEVAL_AND_OVERHEAD_MS = 1_000; /* observed: well under a second */
-    const GENERATION_1_MS = 16_535; /* measured, run 579a0134 */
-    expect(RETRIEVAL_AND_OVERHEAD_MS + GENERATION_1_MS).toBeLessThan(ANALYSIS_TOTAL_BUDGET_MS);
+  it('the corrected single-generation path fits inside the runtime server ceiling', () => {
+    const RETRIEVAL_AND_OVERHEAD_MS = 1_000;
+    const GENERATION_1_MS = 16_535;
+    expect(RETRIEVAL_AND_OVERHEAD_MS + GENERATION_1_MS).toBeLessThan(
+      ANALYSIS_MAX_SERVER_BUDGET_MS,
+    );
   });
 
   it('every term is positive — a zeroed term would silently void the derivation', () => {
@@ -119,14 +127,14 @@ describe('REV A — the retry path the R1 derivation did not bound', () => {
       600_000,
     ];
     for (const path of anyReachablePath) {
-      const userFacing = Math.min(path, ANALYSIS_TOTAL_BUDGET_MS);
-      expect(userFacing).toBeLessThanOrEqual(ANALYSIS_TOTAL_BUDGET_MS);
+      const userFacing = Math.min(path, ANALYSIS_MAX_SERVER_BUDGET_MS);
+      expect(userFacing).toBeLessThanOrEqual(ANALYSIS_MAX_SERVER_BUDGET_MS);
       expect(userFacing).toBeLessThan(ANALYSIS_CLIENT_TIMEOUT_MS);
     }
   });
 
   it('the client deadline remains strictly greater than the server response deadline', () => {
-    expect(ANALYSIS_CLIENT_TIMEOUT_MS).toBeGreaterThan(ANALYSIS_TOTAL_BUDGET_MS);
+    expect(ANALYSIS_CLIENT_TIMEOUT_MS).toBeGreaterThan(ANALYSIS_MAX_SERVER_BUDGET_MS);
   });
 });
 
@@ -166,11 +174,11 @@ describe('resolveServerBudgetMs — REV B runtime enforcement', () => {
       not an absent one — every pre-existing config double would have failed
       instantly.
     */
-    expect(resolveServerBudgetMs(undefined)).toBe(ANALYSIS_TOTAL_BUDGET_MS);
-    expect(resolveServerBudgetMs(0)).toBe(ANALYSIS_TOTAL_BUDGET_MS);
-    expect(resolveServerBudgetMs(-1)).toBe(ANALYSIS_TOTAL_BUDGET_MS);
-    expect(resolveServerBudgetMs(Number.NaN)).toBe(ANALYSIS_TOTAL_BUDGET_MS);
-    expect(resolveServerBudgetMs(Number.POSITIVE_INFINITY)).toBe(ANALYSIS_TOTAL_BUDGET_MS);
+    expect(resolveServerBudgetMs(undefined)).toBe(ANALYSIS_MAX_SERVER_BUDGET_MS);
+    expect(resolveServerBudgetMs(0)).toBe(ANALYSIS_MAX_SERVER_BUDGET_MS);
+    expect(resolveServerBudgetMs(-1)).toBe(ANALYSIS_MAX_SERVER_BUDGET_MS);
+    expect(resolveServerBudgetMs(Number.NaN)).toBe(ANALYSIS_MAX_SERVER_BUDGET_MS);
+    expect(resolveServerBudgetMs(Number.POSITIVE_INFINITY)).toBe(ANALYSIS_MAX_SERVER_BUDGET_MS);
   });
 
   it('never returns a value that is not a real, armable deadline', () => {
@@ -191,13 +199,12 @@ describe('resolveServerBudgetMs — REV B runtime enforcement', () => {
     }
   });
 
-  it('pins the ceiling to the margin, not to the budget it currently equals', () => {
-    /*
-      They are equal today by construction. This asserts the RELATIONSHIP that
-      must survive a future change to either term, rather than the coincidence.
-    */
+  it('pins the ceiling to the smaller of client tolerance and proxy tolerance', () => {
     expect(ANALYSIS_MAX_SERVER_BUDGET_MS).toBe(
-      ANALYSIS_CLIENT_TIMEOUT_MS - ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS,
+      Math.min(
+        ANALYSIS_CLIENT_TIMEOUT_MS - ANALYSIS_CLIENT_TRANSPORT_MARGIN_MS,
+        ANALYSIS_FIRST_PARTY_PROXY_CUTOFF_MS - ANALYSIS_PROXY_RESPONSE_MARGIN_MS,
+      ),
     );
   });
 });
