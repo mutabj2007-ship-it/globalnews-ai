@@ -99,6 +99,9 @@ export * from './official-data/json-strict';
 export * from './official-data/transport';
 export * from './official-data/parser-registry';
 export * from './official-data/admission-evaluator';
+/* NISR FIRST REAL DATA R1 — the application/pdf row's own parser. Exported so the
+   composition root can install a text-layer extractor; nothing else imports it. */
+export * from './official-data/providers/nisr-cpi.decoder';
 export * from './humanitarian/spatial-geometry';
 export * from './humanitarian/geometry-authority';
 export * from './humanitarian/authority-cadence';

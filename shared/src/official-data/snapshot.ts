@@ -239,6 +239,59 @@ export interface OfficialDataRetrieval {
   readonly publisherReleasedAt?: string;
   /** Publisher last-changed timestamp, where supplied. Absent, never guessed. */
   readonly publisherChangedAt?: string;
+
+  /* ── NISR FIRST REAL DATA R1 · THE TWO PARSE-DERIVED LINEAGE FACTS ───────
+
+     Main’s ruling C routes a numeric observation to the Economy spine and then
+     states, twice, where these two live: *"source language — `lineage.retrieval.
+     sourceLanguage`"* and *"reference period — `EconomyPeriod`"*, with `R-NUM-2`
+     the binding constraint on the alternative: *"NO ECONOMY FIELD IS ADDED …
+     `sourceLanguage`, `parserId` and `parserVersion` each occur ZERO times in
+     `shared/src/economy/`. They are not missing from Economy — they arrive through
+     `lineage.retrieval`, which is an `OfficialDataRetrieval`."*
+
+     So they land HERE, beside the parse record that already carries parser identity
+     for the same reason, and NOT on `EconomySeries`, `EconomyPeriod` or
+     `EconomyObservation`. The Economy types are untouched by this round.
+
+     WHY BOTH ARE OPTIONAL, AND IT IS NOT LENIENCE. A JSON dataflow states neither: a
+     Eurostat response has no edition language and no single reference period — it
+     carries a whole time axis. Making them required would force every existing
+     retrieval to supply a value it does not have, and the value it would supply is a
+     guess. Absent is a measurement here exactly as it is for `publisherReleasedAt`
+     two fields up, and for `editionAnnotations` being empty on NISR (`R-AID-6`).
+
+     AND NEITHER MAY BE READ OFF A NAME. `R-AID-1`: a filename is never an identity
+     and "may never be parsed, compared, ordered or keyed on". The NISR artifact’s own
+     filename contains "AUGUST 2026" and its upload folder is `2026-09` — the
+     reference period and a month that is not it, both sitting in the path, both
+     forbidden as sources. These fields carry what the DOCUMENT BODY stated, read by
+     the governed parser, or they carry nothing.
+  */
+
+  /**
+   * The interval the retrieved artifact is ABOUT, as the ARTIFACT ITSELF states it.
+   *
+   * Never the publication date, never the upload folder, never the filename —
+   * `R-PAR-8`, and Economy’s own words: *"‘2026-Q1’ is a period; the release date of
+   * the Q1 figure is not."* Absent unless the governed parser read it from the body.
+   *
+   * It is a RETRIEVAL fact rather than an observation fact because it describes which
+   * period THIS ARTIFACT carried: two retrievals of two editions of one series differ
+   * here, and that difference is the evidence, not a property of the figure.
+   */
+  readonly referencePeriod?: string;
+
+  /**
+   * The language of the artifact EDITION, OBSERVED — never a declared locale tag.
+   *
+   * R1 `R-PROV-3`. The distinction is load-bearing and this lane has carried it since
+   * R2: a `Content-Language` header, an `hreflang`, or a locale in a path are all
+   * CLAIMS a publisher makes about a file, and a publisher that serves the English PDF
+   * under a French URL has made a false one. What may be written here is what the
+   * bytes were read to be.
+   */
+  readonly sourceLanguage?: string;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -346,6 +399,14 @@ export interface OfficialDataSnapshotStore {
     readonly editionAnnotations: Readonly<Record<string, string>>;
     readonly publisherReleasedAt?: string;
     readonly publisherChangedAt?: string;
+    /**
+     * NISR FIRST REAL DATA R1 — the two parse-derived lineage facts, mirrored from the
+     * record so the port and the thing behind it describe the same row. Optional for
+     * the reason they are optional on the record: a JSON dataflow states neither, and
+     * a required field would be filled with a guess.
+     */
+    readonly referencePeriod?: string;
+    readonly sourceLanguage?: string;
     /**
      * R2 · REQUIRED. An optional verdict defaults to absent, and absent is not
      * `REFUSED` — it is a third state no constraint describes. Required HERE means a

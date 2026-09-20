@@ -230,13 +230,27 @@ export const crossed: ParserBinding<CsvExtract> = {
 
 describe('4 · the landed registry dispatches through the binding', () => {
   it('every registered row supplies its own decoder', () => {
+    /*
+      NISR FIRST REAL DATA R1 — the table is no longer JSON-only, so the governed
+      endpoint AND the governed media type are both read per provider. Driving both
+      from one table is the point of the test: a provider added without its endpoint
+      and media type fails here rather than being skipped by a JSON-shaped loop.
+    */
+    const governed: Record<string, { endpointId: string; mediaType: string }> = {
+      EUROSTAT: { endpointId: 'prc_hicp_midx', mediaType: 'application/json' },
+      TED: { endpointId: 'notices/search', mediaType: 'application/json' },
+      'rw-nisr': { endpointId: 'cpi-monthly-en', mediaType: 'application/pdf' },
+    };
+
+    expect([...registeredParserProviders()].sort()).toEqual(Object.keys(governed).sort());
+
     for (const providerId of registeredParserProviders()) {
-      /* the two governed JSON endpoints */
-      const endpoints: Record<string, string> = { EUROSTAT: 'prc_hicp_midx', TED: 'notices/search' };
-      const binding = resolveParserBinding(providerId, endpoints[providerId]!, 'application/json');
+      const row = governed[providerId]!;
+      const binding = resolveParserBinding(providerId, row.endpointId, row.mediaType);
       expect(binding).not.toBeNull();
       expect(typeof binding!.decode).toBe('function');
       expect(typeof binding!.assertEnvelope).toBe('function');
+      expect(binding!.mediaType).toBe(row.mediaType);
     }
   });
 
@@ -305,9 +319,33 @@ describe('5 · the leading-byte sniff is media-aware', () => {
   });
 
   it('an empty body under a non-JSON type refuses with a non-JSON vocabulary', () => {
+    /*
+      NISR FIRST REAL DATA R1 — A GOVERNED TYPE NOW ANSWERS IN ITS OWN WORDS.
+
+      This used to expect `PARSE_FAILED`, which was the best the sniff could do
+      while it knew only that the type was "not JSON": it named a parse that had
+      not happened. `application/pdf` now has a row, and the row carries the key.
+      An UNGOVERNED type has no row and keeps the prior answer exactly.
+    */
     const empty = new Uint8Array([0x20, 0x20]);
     expect(sniffRefusal(empty, 'application/json')).toBe('BODY_NOT_JSON_SHAPED');
-    expect(sniffRefusal(empty, 'application/pdf')).toBe('PARSE_FAILED');
+    expect(sniffRefusal(empty, 'application/pdf')).toBe('BODY_NOT_PDF_SHAPED');
+    expect(sniffRefusal(empty, 'text/csv')).toBe('PARSE_FAILED');
+  });
+
+  it('THE OTHER HALF — a body served as a PDF that is not one refuses under the PDF key', () => {
+    /*
+      E1's headline case wearing a different Content-Type: HTTP 200, a declared
+      `application/pdf`, and an HTML error page in the body. Before the row existed
+      the sniff returned null here and left it to the decoder; now it is refused at
+      the same step the JSON case is, under the key that says what was wrong.
+    */
+    const html = new TextEncoder().encode('<!DOCTYPE html><html><body>404</body></html>');
+    const nearly = new TextEncoder().encode('%PDX-1.4');
+    expect(sniffRefusal(html, 'application/pdf')).toBe('BODY_NOT_PDF_SHAPED');
+    expect(sniffRefusal(nearly, 'application/pdf')).toBe('BODY_NOT_PDF_SHAPED');
+    /* and it is still REFUSE-ONLY: a real PDF passes, an HTML body never does. */
+    expect(sniffRefusal(pdf, 'application/pdf')).toBeNull();
   });
 });
 
@@ -319,7 +357,6 @@ describe('6 · support is claimed only where a decoder actually exists', () => {
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'text/csv',
-      'application/pdf',
     ]) {
       for (const provider of registeredParserProviders()) {
         expect(resolveParserBinding(provider, 'anything', media)).toBeNull();
@@ -327,16 +364,58 @@ describe('6 · support is claimed only where a decoder actually exists', () => {
     }
   });
 
-  it('the JSON allowlist was not widened', () => {
+  it('PDF is registered for ONE provider and ONE endpoint, and nowhere else', () => {
     /*
-      §8's boundary. The dispatch path is general; the ADMITTED set is not. A
-      media class becomes reachable by registering a row that supplies a real
-      decoder, not by adding a string here.
+      `application/pdf` left the list above when it gained a decoder, and the
+      replacement claim is narrower than the one it replaced: the class is not
+      "available", ONE ROW is. NISR publishes French and Kinyarwanda editions as
+      separate files and neither has been measured, so neither resolves.
+    */
+    expect(resolveParserBinding('rw-nisr', 'cpi-monthly-en', 'application/pdf')).not.toBeNull();
+    expect(resolveParserBinding('rw-nisr', 'cpi-monthly-fr', 'application/pdf')).toBeNull();
+    expect(resolveParserBinding('rw-nisr', 'cpi-monthly-rw', 'application/pdf')).toBeNull();
+    expect(resolveParserBinding('rw-nisr', 'cpi-monthly-en', 'application/json')).toBeNull();
+    expect(resolveParserBinding('EUROSTAT', 'cpi-monthly-en', 'application/pdf')).toBeNull();
+  });
+
+  it('THE INVARIANT THE ALLOWLIST ACTUALLY CARRIES — no admitted type lacks a decoder', () => {
+    /*
+      §8's boundary, restated as what it was always for.
+
+      This test used to assert the admitted set equalled `['application/json']`, and
+      with one member that was indistinguishable from the rule it stood for: A MEDIA
+      CLASS BECOMES REACHABLE BY REGISTERING A ROW THAT SUPPLIES A REAL DECODER, NOT
+      BY ADDING A STRING TO A LIST. A second member makes the two separable, and the
+      rule is the half worth keeping — pinning the list to one value would have
+      failed for the right reason and told a reader the wrong one.
+
+      So it now asserts the implication in the direction that can go wrong: every
+      admitted media type has at least one registry row that can read it. Adding a
+      string to the allowlist without building a decoder fails here.
     */
     const admission = require('./snapshot-admission') as {
       ALPHA_ADMITTED_MEDIA_TYPES: readonly string[];
     };
-    expect([...admission.ALPHA_ADMITTED_MEDIA_TYPES]).toEqual(['application/json']);
+
+    const governedEndpoints = [
+      { providerId: 'EUROSTAT', endpointId: 'prc_hicp_midx' },
+      { providerId: 'TED', endpointId: 'notices/search' },
+      { providerId: 'rw-nisr', endpointId: 'cpi-monthly-en' },
+    ];
+
+    for (const media of admission.ALPHA_ADMITTED_MEDIA_TYPES) {
+      const readable = governedEndpoints.some(
+        (e) => resolveParserBinding(e.providerId, e.endpointId, media) !== null,
+      );
+      expect({ media, readable }).toEqual({ media, readable: true });
+    }
+
+    /* and the set is still CLOSED — a class Main ruled admissible but nobody built
+       is absent from it, which is `R-PD-6`. */
+    expect([...admission.ALPHA_ADMITTED_MEDIA_TYPES].sort()).toEqual([
+      'application/json',
+      'application/pdf',
+    ]);
   });
 
   it('a decoder is a function per row, so two rows cannot share one hardwired parser by accident', () => {

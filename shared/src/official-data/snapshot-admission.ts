@@ -136,6 +136,20 @@ export const SNAPSHOT_REFUSAL_KEYS = [
   'SIZE_EXCEEDED',
   'DECOMPRESSION_BOUND_EXCEEDED',
   'BODY_NOT_JSON_SHAPED',
+  /*
+    NISR FIRST REAL DATA R1 · THE PDF SHAPE KEY.
+
+    R1 ruling B's media row names it, and R-PD-5 is why it exists rather than being
+    folded into the JSON one: *"Its refusal keys are its own (`BODY_NOT_PDF_SHAPED`,
+    and whatever the extraction refuses on), never `BODY_NOT_JSON_SHAPED`."*
+
+    The requirement it discharges — "a PDF must never reach BODY_NOT_JSON_SHAPED" —
+    was already HALF met: the sniff stopped APPLYING the JSON arms to a non-JSON body.
+    What it had no way to say was what was wrong INSTEAD, so a body served as a PDF
+    that was not one fell through to `PARSE_FAILED` — the DECODER's key, raised
+    before any decoder ran. This is the missing half.
+  */
+  'BODY_NOT_PDF_SHAPED',
   'ARCHIVE_NOT_ALLOWED',
   'PARSE_FAILED',
   'ENVELOPE_NOT_RECOGNISED',
@@ -166,6 +180,17 @@ const REFUSAL_CLASS_BY_KEY: Readonly<Record<SnapshotRefusalKey, RefusalClass | '
     SIZE_EXCEEDED: 'PERMANENT',
     DECOMPRESSION_BOUND_EXCEEDED: 'PERMANENT',
     BODY_NOT_JSON_SHAPED: 'TRANSIENT',
+    /*
+      TRANSIENT, FOR THE REASON ITS SIBLING IS — AND IT IS THE SAME BODY.
+
+      E1 gives the JSON shape key its own class because "a portal error page, a WAF
+      interstitial and a captive portal are operational conditions, not parse
+      failures". A request for a PDF meets those three conditions in exactly the same
+      way, and the HTML they serve is the same HTML. Classifying the two shape keys
+      differently would make the retry semantics of an interstitial depend on what we
+      had asked for, which is not a property of an interstitial.
+    */
+    BODY_NOT_PDF_SHAPED: 'TRANSIENT',
     ARCHIVE_NOT_ALLOWED: 'PERMANENT',
     PARSE_FAILED: 'PERMANENT',
     ENVELOPE_NOT_RECOGNISED: 'PERMANENT',
@@ -285,7 +310,6 @@ export function assertRefusalClassIsLawful(
  * because each new type brings its own parser and its own differentials. That is why
  * this is a frozen constant in the contract and not a settings value.
  */
-export const ALPHA_ADMITTED_MEDIA_TYPES = ['application/json'] as const;
 export const ALPHA_ADMITTED_CHARSETS = ['utf-8'] as const;
 export const ALPHA_ADMITTED_CONTENT_ENCODINGS = ['identity', 'gzip'] as const;
 export type AdmittedContentEncoding = (typeof ALPHA_ADMITTED_CONTENT_ENCODINGS)[number];
@@ -294,17 +318,133 @@ export const SNAPSHOT_WIRE_BYTE_CAP = 4 * 1024 * 1024;
 export const SNAPSHOT_DECODED_BYTE_CAP = 8 * 1024 * 1024;
 export const SNAPSHOT_MAX_COMPRESSION_RATIO = 20;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 3.1 · NISR FIRST REAL DATA R1 — THE ALLOWLIST BECOMES A ROW PER TYPE
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * The list above said "adding a media type is an amendment with its own PER-TYPE ROW,
+ * not a config change" and then held a bare array of one string. With one member the
+ * two are indistinguishable; with two they are not, and the second member is where a
+ * list quietly becomes a config value.
+ *
+ * So the per-type facts R1 ruling B enumerates are now a ROW, and the functions below
+ * READ the row instead of each carrying its own copy of the JSON assumption. Nothing
+ * about JSON changes: its row states exactly what the three functions already did.
+ *
+ * WHAT A ROW MAY NOT DO. It may not carry a decoder — that lives on the `ParserBinding`,
+ * and `R-PD-3` is why the two are kept apart: a media row describes what may ARRIVE, a
+ * parser binding describes what may READ it. A type with a row and no binding is
+ * admitted at step 3 and refused at step 8b, which is the correct order — "no approved
+ * parser is authorised for this" is a different fact from "this type may not arrive",
+ * and collapsing them would hide one behind the other.
+ */
+export interface MediaAdmissionRow {
+  /** Lower-case type/subtype. Parameters are never part of the key. */
+  readonly mediaType: string;
+  /**
+   * Whether a `charset` parameter is MEANINGFUL for this type.
+   *
+   * `false` means the parameter is not adjudicated, because the type’s bytes are not
+   * text and a charset on them describes nothing. It does NOT mean "any charset is
+   * accepted": there is no charset to accept. R1 ruling B states it as a per-type fact
+   * precisely because the JSON rule — "absent or utf-8" — is a fact ABOUT JSON.
+   */
+  readonly charsetApplies: boolean;
+  /**
+   * The magic the decoded body MUST begin with, or `null` when the type has no single
+   * prefix that identifies it.
+   *
+   * JSON is `null` — its shape is "`{` or `[`, and never a BOM", which is two rules and
+   * an exclusion rather than a prefix, and they are applied by their own arms in
+   * `sniffRefusal`. PDF is `%PDF-`, which ISO 32000-1 §7.5.2 requires at the head of
+   * the file.
+   */
+  readonly leadingBytes: readonly number[] | null;
+  /** The key this type refuses under when its body is not its own kind of thing. */
+  readonly shapeRefusalKey: SnapshotRefusalKey;
+  /**
+   * Per-type caps. BOTH ROWS CARRY THE EXISTING GLOBAL VALUES, UNCHANGED, AND THAT IS
+   * DELIBERATE: Main’s `R-STO-4` records that E1’s per-type caps "are currently
+   * guesses" and that the measurement does not exist yet. The STRUCTURE is per-type
+   * because the ruling makes it so; the VALUES are the landed ones, because inventing a
+   * PDF-specific number here would be exactly the unmeasured change `R-STO-2` refuses.
+   * The NISR rehearsal delivers the measurement that lets E1 set a real one.
+   */
+  readonly wireByteCap: number;
+  readonly decodedByteCap: number;
+  /**
+   * Whether this type IS an archive container. `false` for both rows, and the ZIP arm of
+   * the sniff refuses one either way — R1 ruling B states the fact so that a future
+   * archive-bearing type cannot be added without answering the question.
+   */
+  readonly containerIsArchive: boolean;
+}
+
+/** `%PDF-`. */
+const PDF_LEADING_BYTES: readonly number[] = Object.freeze([0x25, 0x50, 0x44, 0x46, 0x2d]);
+
+export const MEDIA_ADMISSION_ROWS: readonly MediaAdmissionRow[] = Object.freeze([
+  Object.freeze({
+    mediaType: 'application/json',
+    charsetApplies: true,
+    leadingBytes: null,
+    shapeRefusalKey: 'BODY_NOT_JSON_SHAPED' as SnapshotRefusalKey,
+    wireByteCap: SNAPSHOT_WIRE_BYTE_CAP,
+    decodedByteCap: SNAPSHOT_DECODED_BYTE_CAP,
+    containerIsArchive: false,
+  }),
+  /*
+    R1 ruling B’s PDF row, landing WITH its parser and not before it — `R-MED-6`, which
+    `R-PD-3` now enforces in the type system. The governed binding that reads these bytes
+    is the NISR CPI row in `parser-registry.ts`; without a binding this type is admitted
+    at step 3 and then refused at step 8b with NO_GOVERNED_PARSER_BINDING.
+
+    `charsetApplies: false` — a PDF is not text and carries no charset. A publisher that
+    sends one is describing nothing, and the evaluator does not adjudicate a parameter
+    that has no referent for the type it qualifies.
+  */
+  Object.freeze({
+    mediaType: 'application/pdf',
+    charsetApplies: false,
+    leadingBytes: PDF_LEADING_BYTES,
+    shapeRefusalKey: 'BODY_NOT_PDF_SHAPED' as SnapshotRefusalKey,
+    wireByteCap: SNAPSHOT_WIRE_BYTE_CAP,
+    decodedByteCap: SNAPSHOT_DECODED_BYTE_CAP,
+    containerIsArchive: false,
+  }),
+]);
+
+/** The bare type, parameters stripped, lower-cased. One parse, used by every reader. */
+export function mediaTypeOf(contentTypeHeader: string): string {
+  return (contentTypeHeader.split(';')[0] ?? '').trim().toLowerCase();
+}
+
+/** The governed row for a header, or `null` — which means "this type may not arrive". */
+export function mediaAdmissionRowFor(contentTypeHeader: string): MediaAdmissionRow | null {
+  const type = mediaTypeOf(contentTypeHeader);
+  return MEDIA_ADMISSION_ROWS.find((r) => r.mediaType === type) ?? null;
+}
+
+/**
+ * DERIVED FROM THE ROWS, so the list and the rows cannot disagree. Kept as an export
+ * because it is the name existing callers and tests already read.
+ */
+export const ALPHA_ADMITTED_MEDIA_TYPES: readonly string[] = Object.freeze(
+  MEDIA_ADMISSION_ROWS.map((r) => r.mediaType),
+);
+
 /**
  * Media type compared CASE-INSENSITIVELY with parameters PARSED, never string-matched.
  * E1's T-2 is the test: `application/JSON` and `application/json ; charset=UTF-8` are
  * both admissible, and a string comparison fails both.
  */
 export function mediaTypeIsAdmitted(contentTypeHeader: string): boolean {
-  const [rawType, ...params] = contentTypeHeader.split(';');
-  const type = rawType.trim().toLowerCase();
-  if (!ALPHA_ADMITTED_MEDIA_TYPES.includes(type as (typeof ALPHA_ADMITTED_MEDIA_TYPES)[number])) {
-    return false;
-  }
+  const [, ...params] = contentTypeHeader.split(';');
+  const row = mediaAdmissionRowFor(contentTypeHeader);
+  if (row === null) return false;
+  /* A type whose charset is not meaningful has no charset to adjudicate. The loop is
+     SKIPPED rather than widened, so the JSON rule stays exactly the JSON rule. */
+  if (!row.charsetApplies) return true;
   for (const p of params) {
     const [k, v] = p.split('=');
     if (k === undefined || v === undefined) return false;
@@ -386,7 +526,23 @@ export function sniffRefusal(
   decoded: Uint8Array,
   mediaType: string = 'application/json',
 ): SnapshotRefusalKey | null {
-  const expectsJson = mediaType.trim().toLowerCase() === 'application/json';
+  /*
+    NISR FIRST REAL DATA R1 — THE SHAPE ARM IS NOW THE ROW’S, NOT A BRANCH.
+
+    The media-aware sniff already stopped APPLYING the JSON arms to a non-JSON body.
+    What it could not do was say what was wrong instead: every non-JSON type fell
+    through to `null` here and was left for its decoder. For a type whose identifying
+    prefix the platform KNOWS — and R1 ruling B states `%PDF-` as a per-type fact —
+    that defers a refusal the sniff is already holding the evidence for, and defers it
+    into a decoder whose key (`PARSE_FAILED`) describes a parse that never happened.
+
+    STILL REFUSE-ONLY, and still ONE OFFSET (R2-SEC-C): the prefix is compared at the
+    same `i` the container arms and the JSON arm read, so no second offset is
+    reintroduced. A row with no prefix (JSON) reaches its own arms exactly as before.
+  */
+  const type = mediaTypeOf(mediaType);
+  const row = MEDIA_ADMISSION_ROWS.find((r) => r.mediaType === type) ?? null;
+  const expectsJson = type === 'application/json';
   let i = 0;
   while (
     i < decoded.length &&
@@ -395,7 +551,12 @@ export function sniffRefusal(
     i += 1;
   }
 
-  if (i >= decoded.length) return expectsJson ? 'BODY_NOT_JSON_SHAPED' : 'PARSE_FAILED';
+  /* A body with nothing in it is not the KIND OF THING any governed type is, so the
+     row answers for it. Ungoverned types keep the prior answer exactly. */
+  if (i >= decoded.length) {
+    if (row !== null) return row.shapeRefusalKey;
+    return expectsJson ? 'BODY_NOT_JSON_SHAPED' : 'PARSE_FAILED';
+  }
 
   // Every magic-byte test now reads from the SAME offset the JSON test uses.
   if (decoded[i] === 0x1f && decoded[i + 1] === 0x8b) return 'ENCODING_NOT_ALLOWED'; // gzip within gzip
@@ -407,9 +568,27 @@ export function sniffRefusal(
   ) {
     return 'ARCHIVE_NOT_ALLOWED';
   }
-  /* The two JSON-specific arms. A non-JSON artifact is decoded by its own
-     governed decoder, which is the authority on whether its bytes are its own
-     kind of thing. */
+
+  /*
+    A TYPE THAT DECLARES ITS OWN PREFIX IS ADJUDICATED AGAINST IT, UNDER ITS OWN KEY.
+
+    This is the arm that makes "a PDF must never reach BODY_NOT_JSON_SHAPED" true in
+    BOTH directions: a PDF is not refused under the JSON key, and an HTML error page
+    served as `application/pdf` with HTTP 200 — E1’s headline case, wearing a
+    different Content-Type — is refused as BODY_NOT_PDF_SHAPED rather than admitted
+    for a decoder to discover.
+  */
+  if (row !== null && row.leadingBytes !== null) {
+    const magic = row.leadingBytes;
+    for (let k = 0; k < magic.length; k += 1) {
+      if (decoded[i + k] !== magic[k]) return row.shapeRefusalKey;
+    }
+    return null;
+  }
+
+  /* The two JSON-specific arms. A non-JSON artifact with no declared prefix is decoded
+     by its own governed decoder, which is the authority on whether its bytes are its
+     own kind of thing. */
   if (!expectsJson) return null;
 
   if (decoded[i] === 0xef && decoded[i + 1] === 0xbb && decoded[i + 2] === 0xbf) {

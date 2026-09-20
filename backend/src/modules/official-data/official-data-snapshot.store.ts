@@ -104,6 +104,19 @@ export interface RetainInput {
   readonly publisherChangedAt?: string;
 
   /**
+   * NISR FIRST REAL DATA R1 — THE TWO PARSE-DERIVED LINEAGE FACTS.
+   *
+   * Mirrored from the port so the narrowed `Pick<…, 'retain'>` seam and the
+   * implementation describe the same row — the R2 lesson about `admission`, applied
+   * before it can be relearned.
+   *
+   * THIS STORE CANNOT PERSIST THEM YET, AND IT SAYS SO RATHER THAN DROPPING THEM.
+   * See `assertLineageFieldsArePersistable` below.
+   */
+  readonly referencePeriod?: string;
+  readonly sourceLanguage?: string;
+
+  /**
    * R2 · THE ADMISSION VERDICT. REQUIRED, NOT OPTIONAL, AND THAT IS S-1.
    *
    * An optional verdict defaults to ABSENT, and absent is not `REFUSED` — it is a
@@ -126,6 +139,70 @@ export interface CollectInput {
 /** SHA-256 over the exact bytes, lowercase hex. No decode, no normalisation, no copy through a string. */
 export function computeSha256Hex(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * NISR FIRST REAL DATA R1 · TWO LINEAGE FIELDS WITH NO COLUMN, AND A REFUSAL
+ *                            RATHER THAN A SILENT DROP
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * `OfficialDataRetrieval` now carries `referencePeriod` and `sourceLanguage`, because
+ * Main's ruling C places them on the retrieval and `R-NUM-2` forbids the alternative:
+ * *"NO ECONOMY FIELD IS ADDED … they arrive through `lineage.retrieval`."* The types
+ * landed. THE COLUMNS DID NOT, AND THIS ROUND DID NOT ADD THEM.
+ *
+ * ── WHAT WAS LOOKED FOR FIRST ─────────────────────────────────────────────
+ *
+ * The instruction was to use existing metadata storage if it could carry them.
+ * `SnapshotRetrieval` has exactly two JSON columns and NEITHER MAY HOLD THESE:
+ *
+ *   `parameters`          the request parameters, in the order sent. A parse-derived
+ *                         fact is not something we asked for.
+ *   `editionAnnotations`  "VERBATIM AND OPAQUE … the platform stores them and NEVER
+ *                         interprets them". `R-AID-6`: it holds what the PUBLISHER
+ *                         stated, and NISR states nothing — "an empty record is a
+ *                         MEASUREMENT, not a missing field to fill". Writing our own
+ *                         parse output there would destroy that measurement and put a
+ *                         derived value into the one field defined as underived.
+ *
+ * So there is no existing home, and two nullable TEXT columns would be a schema
+ * migration. Ruling D refuses to design one and the instruction says to STOP and
+ * report rather than invent it. REPORTED, NOT INVENTED — and the report is this
+ * function, because a note in a document is not a guard.
+ *
+ * ── WHY IT THROWS INSTEAD OF IGNORING THEM ────────────────────────────────
+ *
+ * A store that accepted these and wrote them nowhere would return a retrieval that
+ * carried them and hand back one that did not on the next `retrievalsFor()` — the
+ * figure would cite a lineage the evidence table cannot reproduce, which is the exact
+ * property `assertRetrievalIsProvable` exists to prevent, arriving through a field
+ * nobody checked. Silence is the failure mode worth refusing.
+ *
+ * NOTHING ELSE IS BLOCKED BY THIS. Retaining PDF BYTES needs no migration — `R-STO-1`,
+ * measured and ratified — so the artifact, its address, its retrieval row and its
+ * admission verdict all persist here today. It is the two lineage fields, and only
+ * those, that have nowhere to go.
+ */
+export function assertLineageFieldsArePersistable(input: {
+  readonly referencePeriod?: string;
+  readonly sourceLanguage?: string;
+}): void {
+  const unpersistable: string[] = [];
+  if (input.referencePeriod !== undefined) unpersistable.push('referencePeriod');
+  if (input.sourceLanguage !== undefined) unpersistable.push('sourceLanguage');
+  if (unpersistable.length === 0) return;
+
+  throw new SnapshotStoreError(
+    `SNAPSHOT_LINEAGE_FIELD_HAS_NO_COLUMN: ${unpersistable.join(' and ')} cannot be ` +
+      'persisted — SnapshotRetrieval has no column for either, and neither `parameters` ' +
+      'nor `editionAnnotations` may hold them (R-AID-6: editionAnnotations is the ' +
+      'publisher\u2019s VERBATIM record, and NISR\u2019s emptiness is a measurement). Adding two ' +
+      'nullable columns is a schema migration, which MAIN-\u2026-R2 ruling D declines to ' +
+      'design and this round was instructed to report rather than invent. The fields are ' +
+      'refused here rather than dropped silently, because a figure citing a lineage the ' +
+      'evidence table cannot reproduce is worse than a figure that will not be written.',
+  );
 }
 
 export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotStore {
@@ -168,6 +245,9 @@ export class PostgresOfficialDataSnapshotStore implements OfficialDataSnapshotSt
       instead of which constraint did.
     */
     assertAdmissionRecordIsCoherent(input.admission, input.httpStatus);
+
+    /* Before any byte is written: this store cannot keep these two, and says so. */
+    assertLineageFieldsArePersistable(input);
 
     const address = snapshotContentAddress(computeSha256Hex(input.bytes));
     const byteLength = input.bytes.byteLength;

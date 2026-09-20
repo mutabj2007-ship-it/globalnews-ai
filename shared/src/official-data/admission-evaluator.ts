@@ -51,7 +51,7 @@
 
 import {
   ALPHA_ADMITTED_CHARSETS,
-  ALPHA_ADMITTED_MEDIA_TYPES,
+  mediaAdmissionRowFor,
   assertAdmissionRecordIsCoherent,
   mediaTypeIsAdmitted,
   refusalClassFor,
@@ -159,12 +159,22 @@ export type ContentTypeVerdict = 'OK' | 'MEDIA_TYPE_NOT_ALLOWED' | 'CHARSET_NOT_
  * still producing the two keys E1 asks for.
  */
 export function classifyContentType(contentTypeHeader: string): ContentTypeVerdict {
-  const [rawType, ...params] = contentTypeHeader.split(';');
-  const type = (rawType ?? '').trim().toLowerCase();
+  const [, ...params] = contentTypeHeader.split(';');
 
-  if (!(ALPHA_ADMITTED_MEDIA_TYPES as readonly string[]).includes(type)) {
-    return 'MEDIA_TYPE_NOT_ALLOWED';
-  }
+  /*
+    NISR FIRST REAL DATA R1 — BOTH ARMS NOW READ THE SAME ROW.
+
+    The charset arm used to run for every admitted type, which was correct while every
+    admitted type was text. `application/pdf` is not, and R1 ruling B records
+    `charsetApplies FALSE` as a per-type fact. Left as it was, this function would
+    refuse `application/pdf; charset=iso-8859-1` as CHARSET_NOT_ALLOWED while
+    `mediaTypeIsAdmitted` admitted it — and the invariant below (they agree for every
+    input) is asserted by a test, so the divergence would have been a failure rather
+    than a silent one. Both now consult `mediaAdmissionRowFor`.
+  */
+  const row = mediaAdmissionRowFor(contentTypeHeader);
+  if (row === null) return 'MEDIA_TYPE_NOT_ALLOWED';
+  if (!row.charsetApplies) return 'OK';
 
   for (const p of params) {
     const [k, v] = p.split('=');

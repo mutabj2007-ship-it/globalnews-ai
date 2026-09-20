@@ -1,5 +1,6 @@
 import type { SnapshotRefusalKey } from './snapshot-admission';
 import { parseStrictJson } from './json-strict';
+import { NISR_CPI_BINDING } from './providers/nisr-cpi.decoder';
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * THE PARSER REGISTRY — SERVER-OWNED PARSER IDENTITY
@@ -177,6 +178,45 @@ export const assertTedNoticesEnvelope: EnvelopeAssertion = (parsed) => {
  * The pattern is anchored and narrow on purpose: Eurostat dataset codes are lowercase
  * alphanumerics and underscores, and anything else is not a dataset code.
  */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * THE ONE PLACE THE DECODED TYPE IS ERASED — AND WHY THAT IS NOT A LOOPHOLE
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * `ParserBinding<T>` is INVARIANT in `T`, which is exactly the property `R-PD-5` needs:
+ * `T` is produced by `decode` and consumed by `assertEnvelope`, so the two cannot be
+ * crossed. The cost is that a table holding rows of DIFFERENT `T` cannot be typed at
+ * all of them at once — `ParserBinding<NisrCpiDecoded>` is not a `ParserBinding<unknown>`,
+ * and it must not be, because that assignment is the crossed envelope.
+ *
+ * So the table stores the ERASED form, and this is the single named function that
+ * produces one. WHAT HAS ALREADY BEEN PROVEN BY THE TIME IT IS CALLED: the argument is
+ * a `ParserBinding<T>`, so its own declaration site typechecked `decode` against
+ * `assertEnvelope` at one `T`. The mutation proofs bind there and are unaffected — a row
+ * whose decoder and envelope disagree does not survive long enough to be erased.
+ *
+ * AND WHAT MAKES THE ERASURE SOUND AFTERWARDS IS ONE INVARIANT, STATED HERE BECAUSE IT
+ * IS THE WHOLE JUSTIFICATION: the evaluator calls `binding.decode(bytes)` and then hands
+ * `assertEnvelope` THAT RESULT AND NOTHING ELSE. It never carries a value from one
+ * binding to another; it cannot, because it holds exactly one binding at a time. The
+ * value reaching the assertion is therefore always the `T` its own decoder produced.
+ *
+ * The re-narrowing below is the only assertion in this file, it is one expression, and
+ * it is confined to the adapter rather than sprayed across the rows.
+ */
+export function erasedParserBinding<T>(binding: ParserBinding<T>): ParserBinding<unknown> {
+  return Object.freeze({
+    parserId: binding.parserId,
+    parserVersion: binding.parserVersion,
+    mediaType: binding.mediaType,
+    /* COVARIANT AND THEREFORE UNASSERTED: `ArtifactDecoder<T>` IS an
+       `ArtifactDecoder<unknown>`, because a decoder that produces a `T` produces
+       something. The compiler accepts this line on its own. */
+    decode: binding.decode,
+    assertEnvelope: (value: unknown) => binding.assertEnvelope(value as T),
+  });
+}
+
 interface ParserRegistryRow {
   readonly providerId: string;
   readonly endpointMatches: (endpointId: string) => boolean;
@@ -209,6 +249,46 @@ const REGISTRY: readonly ParserRegistryRow[] = Object.freeze([
       decode: parseStrictJson,
       assertEnvelope: assertTedNoticesEnvelope,
     }),
+  },
+  /*
+    ══════════════════════════════════════════════════════════════════════════
+    NISR FIRST REAL DATA R1 · THE FIRST NON-JSON ROW
+    ══════════════════════════════════════════════════════════════════════════
+
+    `R-PD-7`: the word NISR appears here, as a `providerId` in a ROW, exactly as
+    EUROSTAT and TED do — and nowhere in `admission-evaluator.ts`, which gained no
+    line at all for this. The parsing lives in `providers/nisr-cpi.decoder.ts`, the
+    same way `assertEurostatJsonStatEnvelope` lives beside its row; it is a module
+    rather than a function because a PDF table is larger than an envelope assertion,
+    not because it is governed differently.
+
+    `R-PD-3`/`R-MED-6`: THE ROW COULD NOT HAVE LANDED FIRST. `decode` is required, so
+    a media row with no parser does not typecheck — the mutation proofs demonstrate
+    exactly that — and this row was written after its decoder and its output type
+    existed, because there was no way to write it before.
+
+    `R-PD-5`: its result type is its OWN. `ParserBinding<NisrCpiDecoded>`, not
+    `ParserBinding<unknown>`, so `assertEnvelope` is asserted against the extraction
+    the decoder actually produced and a crossed envelope is a compile error.
+
+    PROVIDER ID. `rw-nisr`, which is what the official-source registry calls it —
+    R1 ruling B: "as the official-source registry names it. Never a hostname."
+
+    ENDPOINT. The English monthly CPI release and nothing else. NISR publishes French
+    and Kinyarwanda editions as SEPARATE FILES; neither has been measured, and a
+    pattern admitting them would authorise a parser over bytes nobody has read. A
+    narrow matcher is the honest one — `resolveParserBinding` returns null for the
+    others and the evaluator refuses.
+
+    THE SOURCE IS STILL DORMANT. `rw-nisr` is `enabled: false` / `ingestionMethod:
+    'none'`, and a parser binding is not an activation: this row says what MAY read
+    those bytes if they ever arrive through a governed fetch, and nothing here causes
+    one.
+  */
+  {
+    providerId: 'rw-nisr',
+    endpointMatches: (endpointId: string) => endpointId === 'cpi-monthly-en',
+    binding: erasedParserBinding(NISR_CPI_BINDING),
   },
 ]);
 
