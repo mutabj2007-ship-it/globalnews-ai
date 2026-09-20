@@ -5,7 +5,7 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { EconomyScreen } from '@/components/economy/EconomyScreen';
-import { PRODUCTION_SHAPED_SUBJECT } from '@/lib/economy/productionSubject';
+import { economySubjectFromRead } from '@/lib/economy/economyRetainedSubject';
 import { AlphaVisualPreviewMarker } from '@/components/economy/AlphaVisualPreview';
 import { RetainedObservationPanel } from '@/components/economy/RetainedObservationPanel';
 import { economyCapabilityFrom, readEconomyObservations } from '@/lib/economy/economyObservationRead';
@@ -106,6 +106,7 @@ function economyLocale(): EconomyLocale {
 export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
   const locale = economyLocale();
   const read = await readEconomyObservations();
+  const subject = economySubjectFromRead(read);
   return (
     /*
       D7-AR-ADOPTION — the step canonical's Economy routes declare, for the same reason:
@@ -123,7 +124,7 @@ export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
         */}
         <RetainedObservationPanel read={read} />
         <EconomyScreen
-          subject={PRODUCTION_SHAPED_SUBJECT}
+          subject={subject}
           locale={locale}
           data={economyCapabilityFrom(read)}
         />
