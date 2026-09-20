@@ -566,9 +566,20 @@ export class NewsService {
     query: string,
     limit?: number,
     relevanceMode: RelevanceMode = NO_RELEVANCE_FILTERING,
-    options?: { lang?: string; requestedSource?: RequestedSource },
+    options?: { lang?: string; requestedSource?: RequestedSource; allowFallback?: boolean },
   ): Promise<NewsResponse> {
     const requestedSource = options?.requestedSource;
+    /*
+     * ALPHA SEARCH RETRIEVAL CONVERGENCE — caller-scoped fallback policy.
+     *
+     * Default TRUE preserves every existing call. Declared-region Analysis may
+     * set this false for context members after the bounded live-fallback slice:
+     * GDELT is deliberately slow/serial and must not be multiplied once per
+     * country merely because a broad region named eleven members. A false value
+     * means "primary providers + the normal retained-store fallback", not "no
+     * fallback of any kind".
+     */
+    const allowFallback = options?.allowFallback !== false;
     // Milestone #36/#37: opt-in only, via the discriminated
     // RelevanceMode union above. CountryNewsService's country/city
     // retrieval and the public GET /news/search endpoint both call this
@@ -661,7 +672,12 @@ export class NewsService {
         ? { admits: admitsForPeerTail, graceMs: PEER_TAIL_GRACE_MS }
         : undefined;
 
-    const providerCall = await this.callAllProviders(searchOperation, 'search', peerTailPolicy);
+    const providerCall = await this.callAllProviders(
+      searchOperation,
+      'search',
+      peerTailPolicy,
+      allowFallback,
+    );
 
     /*
      * WHY the providers failed, kept for the one caller that must not treat a
@@ -792,7 +808,7 @@ export class NewsService {
      *   3. NO FAN-OUT. One call to one already-selected provider set. The
      *      primaries are not re-asked.
      */
-    if (response.articles.length === 0 && !providerCall.fallbackConsulted) {
+    if (response.articles.length === 0 && !providerCall.fallbackConsulted && allowFallback) {
       const fallbacks = this.eligibleProvidersForTier('search', 'fallback');
 
       if (fallbacks.length > 0) {
@@ -1022,7 +1038,7 @@ export class NewsService {
    */
   async topHeadlines(
     limit?: number,
-    options?: { lang?: string; q?: string },
+    options?: { lang?: string; q?: string; allowFallback?: boolean },
   ): Promise<NewsResponse> {
     /*
       NAVIGATION-LIVE-RETRIEVAL-CORRECTION (Option 1) — THE FRESHNESS DECISION,
@@ -1068,6 +1084,8 @@ export class NewsService {
           q: options?.q,
         }),
       'top-headlines',
+      undefined,
+      options?.allowFallback !== false,
     );
 
     /*
@@ -1522,6 +1540,13 @@ export class NewsService {
      * nothing and are therefore byte-for-byte unchanged.
      */
     peerTail?: PeerTailPolicy,
+    /**
+     * Caller-scoped live-fallback permission. Defaults to true so every existing
+     * path preserves its tier behaviour. Analysis uses false only for bounded
+     * regional context retrieval; retained database fallback remains available
+     * in search() after the provider phase.
+     */
+    allowFallback = true,
   ): Promise<ProviderCallResult> {
     const primaries = this.eligibleProvidersForTier(capability, 'primary');
     const fallbacks = this.eligibleProvidersForTier(capability, 'fallback');
@@ -1539,7 +1564,7 @@ export class NewsService {
       0,
     );
 
-    if (primaryArticleCount > 0 || fallbacks.length === 0) {
+    if (primaryArticleCount > 0 || fallbacks.length === 0 || !allowFallback) {
       return primaryCall;
     }
 
