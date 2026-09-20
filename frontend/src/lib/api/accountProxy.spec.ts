@@ -164,7 +164,13 @@ describe('next.config.mjs - the account proxy (M-ALPHA-AUTH)', () => {
   });
 
   it('every non-/api rewrite is a declared PUBLIC family — no unaccounted proxying', () => {
-    const PUBLIC_FAMILIES = ['/news/:path*', '/geo/:path*'];
+    /*
+      THREE PUBLIC FAMILIES. `/economy` joins `/news` and `/geo` — no cookie, no CSRF
+      token, no session, nothing behind RequireAuthGuard. E1-N-1 already records that
+      the invariant this file protects is the AUTHENTICATED count, and that a public
+      array entry is not an authenticated family. That count is unchanged at seven.
+    */
+    const PUBLIC_FAMILIES = ['/news/:path*', '/geo/:path*', '/economy/:path*'];
     const { rewrites } = probeConfig();
     const nonApi = rewrites
       .map((rule) => rule.source)
@@ -245,16 +251,21 @@ describe('next.config.mjs - the account proxy (M-ALPHA-AUTH)', () => {
     set silently, and a public family quietly moved under `/api` would inherit
     `private, no-store` and `Vary: Cookie` that its responses do not need.
   */
-  it('G-3: exactly SEVEN authenticated /api families and exactly TWO public non-/api families', () => {
+  it('G-3: exactly SEVEN authenticated /api families and exactly THREE public non-/api families', () => {
     const { rewrites } = probeConfig({ SERVER_INTERNAL_API_URL: 'http://backend.internal:8080' });
 
     const authenticated = rewrites.filter((rule) => rule.source.startsWith('/api/'));
     const publicFamilies = rewrites.filter((rule) => !rule.source.startsWith('/api/'));
 
+    /* THE AUTHENTICATED COUNT IS THE INVARIANT, AND IT HAS NOT MOVED. */
     expect(authenticated).toHaveLength(7);
     expect(publicFamilies.map((rule) => rule.source).sort()).toEqual(
-      ['/geo/:path*', '/news/:path*'],
+      ['/economy/:path*', '/geo/:path*', '/news/:path*'],
     );
+
+    /* And the new family is public in the same way the other two are: proxied to the
+       same backend origin, with no `/api` sibling that would blur the classes. */
+    expect(rewrites.some((rule) => rule.source.startsWith('/api/economy'))).toBe(false);
 
     /* `/api/geo` is explicitly NOT added — the two classes stay separate. */
     expect(rewrites.some((rule) => rule.source.startsWith('/api/geo'))).toBe(false);

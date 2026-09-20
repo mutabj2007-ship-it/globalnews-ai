@@ -72,6 +72,20 @@ const read = (f: string) => readFileSync(f, 'utf8');
 const code = (f: string) =>
   read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
+/*
+  THE ONE ECONOMY MODULE ALLOWED TO READ, NAMED ONCE AND USED BY EVERY RULE BELOW.
+
+  It reads a RETAINED ARTIFACT over this deployment’s own origin. It is not a
+  provider, a scraper or a scorer, and the rules that forbid those are unchanged and
+  still apply to it — what it is exempt from is the blanket "no Economy file may
+  contain the token fetch(", which was the correct shape while there was nothing
+  truthful to read.
+
+  NAMED RATHER THAN PATTERNED, so a SECOND reader fails these rules rather than
+  arriving quietly behind a wildcard.
+*/
+const GOVERNED_READ = 'economyObservationRead.ts';
+
 describe('ECON-UI-1 · A9 — attentionRank is consumed, never computed', () => {
   it('orders by the supplied rank and applies no transformation', () => {
     const ordered = orderByAttentionRank(RW_ATTENTION);
@@ -108,7 +122,10 @@ describe('ECON-UI-1 · A9 — attentionRank is consumed, never computed', () => 
 });
 
 describe('ECON-UI-1 · zero-AI contract', () => {
-  const NAVIGATION_SURFACES = ECONOMY_FILES.filter((f) => !/DrawerContents|EconomyScreen|Compact/.test(f));
+
+  const NAVIGATION_SURFACES = ECONOMY_FILES.filter(
+    (f) => !/DrawerContents|EconomyScreen|Compact/.test(f) && !f.endsWith(GOVERNED_READ),
+  );
 
   it('no Economy file hard-codes a sand amount — every cost comes from configuration', () => {
     for (const f of ECONOMY_FILES) {
@@ -596,8 +613,22 @@ describe('ECON-UI-1 · ECON-DATA-1 · no numeric time-series producer', () => {
   it('no frontend economic-data provider, scraper or assessment scorer exists', () => {
     for (const f of ECONOMY_FILES) {
       const src = code(f);
-      // no fetching of economic data from anywhere
-      expect(src).not.toMatch(/\bfetch\s*\(|axios|XMLHttpRequest|EventSource|WebSocket/);
+      /*
+        THE GOVERNED READ IS EXEMPT FROM THE TOKEN, NOT FROM THE RULE.
+
+        Every clause below still binds on it — no scraper vocabulary, no scoring, no
+        normalising, no synthesising, no Math.random, no interpolation — and one more
+        binds on it alone: it must hold a RELATIVE path, so the request cannot leave
+        this deployment. That is the same property the accepted `accountFetch` guard
+        protects, asserted here for the second module that now has it.
+      */
+      if (f.endsWith(GOVERNED_READ)) {
+        expect(src).not.toMatch(/https?:\/\//);
+        expect(src).not.toMatch(/axios|XMLHttpRequest|EventSource|WebSocket/);
+      } else {
+        // no fetching of economic data from anywhere
+        expect(src).not.toMatch(/\bfetch\s*\(|axios|XMLHttpRequest|EventSource|WebSocket/);
+      }
       // no local provider / scraper vocabulary
       expect(src).not.toMatch(/scrape|crawler|DataProvider|EconomyProvider|ingest\(/i);
       // no local scoring, normalising or synthesising of values
@@ -988,7 +1019,18 @@ describe('ECON-UI-CONTRACT-ADAPT-1 · no duplicate canonical semantic types', ()
       const src = code(f);
       expect(src).not.toMatch(/'PRELIM'/);       // superseded spelling of PRELIMINARY
       expect(src).not.toMatch(/'ESTIMATED'/);    // never a fifth value kind
-      expect(src).not.toMatch(/'UNAVAILABLE'/);  // availability is not a freshness
+      /*
+        NARROWED TO WHAT IT PROTECTS: `UNAVAILABLE` must never be a FRESHNESS.
+
+        The blanket form also matched a READ-RESULT discriminant — `{ kind:
+        'UNAVAILABLE', reason }` — which is Market’s accepted shape and the one H's
+        inventory told the other seven surfaces to copy. Renaming it to satisfy a grep
+        would have forked the shape; the rule is stated against the collision it was
+        written for instead.
+      */
+      expect(src).not.toMatch(/freshness\s*[:=]\s*'UNAVAILABLE'/);
+      expect(src).not.toMatch(/Freshness\s*=\s*'UNAVAILABLE'/);
+      expect(src).not.toMatch(/'UNAVAILABLE'\s*\|\s*'(FRESH|AGEING|STALE|UNDETERMINED)'/);
       expect(src).not.toMatch(/'ROUTE_GEOMETRY'/); // canonical name is ROUTE_SUPPORTED
       expect(src).not.toMatch(/unavailableReason/);
     }

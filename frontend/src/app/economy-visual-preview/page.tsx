@@ -8,6 +8,8 @@ import { EconomyScreen } from '@/components/economy/EconomyScreen';
 import { ECONOMY_DATA_CAPABILITY } from '@/lib/economy/economyConfig';
 import { PRODUCTION_SHAPED_SUBJECT } from '@/lib/economy/productionSubject';
 import { AlphaVisualPreviewMarker } from '@/components/economy/AlphaVisualPreview';
+import { RetainedObservationPanel } from '@/components/economy/RetainedObservationPanel';
+import { economyCapabilityFrom, readEconomyObservations } from '@/lib/economy/economyObservationRead';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -98,8 +100,9 @@ function economyLocale(): EconomyLocale {
   return SELECTABLE_LOCALES.find((l) => l === active) ?? 'en';
 }
 
-export default function EconomyVisualPreviewPage(): JSX.Element {
+export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
   const locale = economyLocale();
+  const read = await readEconomyObservations();
   return (
     /*
       D7-AR-ADOPTION — the step canonical's Economy routes declare, for the same reason:
@@ -109,10 +112,17 @@ export default function EconomyVisualPreviewPage(): JSX.Element {
     <ScriptRun locale={locale} step="wrapping" as="div">
       <main style={{ minHeight: '100vh' }}>
         <AlphaVisualPreviewMarker locale={locale} />
+        {/*
+          THE ONE REAL FIGURE. The capability below is DERIVED from this read rather
+          than declared, so it cannot say OBSERVED unless something was observed. The
+          read happens in this SERVER component, so the browser issues no request on
+          load and no provider is contacted at any point.
+        */}
+        <RetainedObservationPanel read={read} />
         <EconomyScreen
           subject={PRODUCTION_SHAPED_SUBJECT}
           locale={locale}
-          data={ECONOMY_DATA_CAPABILITY}
+          data={economyCapabilityFrom(read)}
         />
       </main>
     </ScriptRun>

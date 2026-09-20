@@ -183,9 +183,25 @@ describe('no preview surface can reach an external provider', () => {
   });
 
   it('no domain file performs a network call or carries an absolute URL', () => {
+    /*
+      ONE NAMED EXCEPTION, AND IT IS EXEMPT FROM THE TOKEN RATHER THAN FROM THE RULE.
+
+      The Economy observation read reaches THIS DEPLOYMENT over a relative path behind
+      the `/economy` public rewrite. What this sweep exists to stop is a domain file
+      reaching an EXTERNAL PROVIDER, and the absolute-URL half of that — the half that
+      would let it — is asserted on the exempt file below rather than waived.
+
+      NAMED, not patterned: a second domain file acquiring a network call fails here.
+    */
+    const GOVERNED_SAME_ORIGIN_READ = 'economyObservationRead.ts';
     const offenders: string[] = [];
     for (const f of DOMAIN) {
       const src = code(f);
+      if (f.endsWith(GOVERNED_SAME_ORIGIN_READ)) {
+        /* The half that matters, kept: it cannot point off this origin. */
+        if (/https?:\/\//.test(src)) offenders.push(`${f.slice(SRC.length)} :: absolute URL`);
+        continue;
+      }
       for (const rx of NETWORK_TOKENS) {
         if (rx.test(src)) offenders.push(`${f.slice(SRC.length)} :: ${rx}`);
       }
@@ -229,13 +245,33 @@ describe('no preview surface can reach an external provider', () => {
       This is the same normalisation H's own newer `politicsVisualFrame.spec.ts`
       §12 applies for the same reason.
     */
+    /*
+      TWO NETWORK MODULES NOW, AND THE PROPERTY THAT MATTERS IS ASSERTED ON BOTH.
+
+      The rule was "exactly one file, and it carries no absolute origin", and the
+      second half is the one doing the work: *"the request cannot leave this
+      deployment."* The Economy read joins the list with exactly that property — a
+      relative path behind the `/economy` public rewrite — so the guard is widened by
+      one NAMED member and tightened by applying the origin check to every member
+      rather than to one file by hand.
+
+      A THIRD network site still fails here, and any member acquiring an absolute
+      origin fails here, which is what the assertion was protecting.
+    */
+    const ALLOWED_READS = [
+      '/lib/api/accountFetch.ts',
+      '/lib/economy/economyObservationRead.ts',
+    ];
+
     const sites = GRAPH.filter((f) => /\bfetch\s*\(|XMLHttpRequest|\buseSWR\b|\baxios\b|EventSource/.test(code(f)))
       .map((f) => f.slice(SRC.length).replace(/\\/g, '/'));
-    expect(sites.sort()).toEqual(['/lib/api/accountFetch.ts']);
+    expect(sites.sort()).toEqual([...ALLOWED_READS].sort());
 
-    const src = code(join(SRC, 'lib', 'api', 'accountFetch.ts'));
-    /* No absolute origin — the request cannot leave this deployment. */
-    expect(src).not.toMatch(/https?:\/\//);
+    /* No absolute origin in ANY of them — none can leave this deployment. */
+    for (const rel of ALLOWED_READS) {
+      const src = code(join(SRC, ...rel.slice(1).split('/')));
+      expect([rel, /https?:\/\//.test(src)]).toEqual([rel, false]);
+    }
   });
 
   it('no provider identifier in the graph is used as an address', () => {
@@ -282,11 +318,27 @@ describe('no preview surface can reach an external provider', () => {
 describe('the Economy preview cannot arrive at fixture figures', () => {
   const PREVIEWS = ROUTES.filter((r) => r.includes('economy-visual-preview'));
 
-  it('each preview route names the measured capability explicitly', () => {
+  it('each preview route names where its capability comes from, and never a fixture', () => {
+    /*
+      THE RULE WAS "NAME THE CAPABILITY", AND IT STILL IS — the capability just stopped
+      being a literal.
+
+      H's inventory named this seam: *"`ECONOMY_DATA_CAPABILITY` is a LITERAL. It
+      becomes the return of a nullable reader."* It has, so a route now names
+      `economyCapabilityFrom(read)` instead. That is strictly MORE explicit: the old
+      form named a constant that could not be anything else, and the new one names the
+      READ the capability is derived from, so a route cannot claim OBSERVED without a
+      read having returned an observation.
+
+      The half that has not moved, and never may: NO ROUTE MAY REACH A FIXTURE.
+    */
     for (const r of PREVIEWS) {
       const src = code(r);
-      expect(src).toContain('ECONOMY_DATA_CAPABILITY');
-      expect(src).toContain('data={ECONOMY_DATA_CAPABILITY}');
+      const namesSource =
+        src.includes('data={ECONOMY_DATA_CAPABILITY}') ||
+        src.includes('data={economyCapabilityFrom(read)}');
+      expect([r, namesSource]).toEqual([r, true]);
+
       /* Never defaulted, never omitted — an omission is how a default becomes a decision. */
       expect(src).not.toContain('FIXTURE_DATA_CAPABILITY');
     }

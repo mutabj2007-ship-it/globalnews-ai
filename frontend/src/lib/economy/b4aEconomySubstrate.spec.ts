@@ -179,10 +179,49 @@ describe('B4-A · ECON-DATA-1 — honest without a producer', () => {
 });
 
 describe('B4-A · what was NOT activated', () => {
-  it('no EconomyModule is registered', () => {
-    const appModule = readFileSync(join(REPO, 'backend', 'src', 'app.module.ts'), 'utf-8');
+  it('the EconomyModule that IS registered is a read, and cannot fetch', () => {
+    /*
+      ── RETIRED AND REPLACED, WHICH IS HOW THIS ASSERTION SAID IT WOULD END ──
 
-    expect(appModule).not.toContain('EconomyModule');
+      It read `expect(appModule).not.toContain('EconomyModule')`, and while there was no
+      real observation to serve, absence was the honest form. There is one now: the
+      governed pipeline retained the August 2026 NISR CPI artifact and the Economy
+      read serves it.
+
+      Main’s accepted entry states how a tripwire of this kind is discharged —
+      *"retired and replaced by a presence assertion with the same teeth, never
+      deleted"* — so this now asserts what the module IS, and the replacement has MORE
+      teeth than the original: absence only said nothing was wired, while this says the
+      thing that IS wired cannot fetch.
+
+      WHAT IS STILL NOT ACTIVATED, asserted below rather than assumed: no producer, no
+      scheduler, no transport, no provider. `rw-nisr` remains `enabled: false`, and
+      `app/economy` still does not exist — the route tripwire beside this one is
+      untouched and still passes.
+    */
+    const appModule = readFileSync(join(REPO, 'backend', 'src', 'app.module.ts'), 'utf-8');
+    expect(appModule).toContain('EconomyModule');
+
+    const economyModule = readFileSync(
+      join(REPO, 'backend', 'src', 'modules', 'economy', 'economy.module.ts'),
+      'utf-8',
+    );
+    /*
+      THE TEETH: a READ module, and provably nothing else.
+
+      COMMENT-STRIPPED, because the module’s own header says in words that it has no
+      scheduler and no transport — and a guard that read the prose would fail on the
+      sentence promising the thing it is checking for.
+    */
+    const economyCode = economyModule.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+    expect(economyCode).not.toMatch(/Scheduler|Cron|Interval|Producer|Transport|WireFetch/i);
+
+    const registry = readFileSync(
+      join(REPO, 'backend', 'src', 'modules', 'official-sources', 'official-source-registry.ts'),
+      'utf-8',
+    );
+    expect(registry).toContain("id: 'rw-nisr'");
+    expect(registry).toMatch(/id: 'rw-nisr'[\s\S]*?enabled: false/);
   });
 
   it('no public Economy route exists', () => {

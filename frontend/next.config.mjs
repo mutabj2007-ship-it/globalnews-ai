@@ -182,6 +182,27 @@ const nextConfig = {
         Next's `headers()` does not reach a rewritten response.
       */
       { source: '/geo/:path*', destination: `${backendOrigin}/geo/:path*` },
+
+      /*
+        ECONOMY — A PUBLIC FAMILY, AND NOT AN EIGHTH AUTHENTICATED ONE.
+
+        The invariant above is about the AUTHENTICATED class — "SEVEN AUTHENTICATED
+        /api FAMILIES, AND NOT ONE MORE" — and E1-N-1 already records that the array
+        also carries public, non-`/api` families and that an extra array entry is not
+        an extra authenticated family. This is the third public one, beside `/news`
+        and `/geo`: no cookie, no CSRF token, no session, nothing behind
+        RequireAuthGuard.
+
+        WHY A REWRITE RATHER THAN AN ABSOLUTE URL IN THE READER: it is what keeps the
+        reader's request unable to leave this deployment, which is the property the
+        accepted network guard protects. The reader holds a relative path and cannot
+        point anywhere else.
+
+        G-8 SEQUENCING, as `/geo` records it: `EconomyModule` is registered in
+        `backend/src/app.module.ts` FIRST. A rewrite to an unregistered route is a 404
+        and is not integration.
+      */
+      { source: '/economy/:path*', destination: `${backendOrigin}/economy/:path*` },
     ];
   },
 

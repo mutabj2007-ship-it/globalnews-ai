@@ -8,6 +8,8 @@ import { EconomyCompactScreen } from '@/components/economy/compact/EconomyCompac
 import { ECONOMY_DATA_CAPABILITY } from '@/lib/economy/economyConfig';
 import { PRODUCTION_SHAPED_SUBJECT } from '@/lib/economy/productionSubject';
 import { AlphaVisualPreviewMarker } from '@/components/economy/AlphaVisualPreview';
+import { RetainedObservationPanel } from '@/components/economy/RetainedObservationPanel';
+import { economyCapabilityFrom, readEconomyObservations } from '@/lib/economy/economyObservationRead';
 
 /**
  * ECONOMY — ALPHA PRODUCT OWNER VISUAL PREVIEW, COMPACT.
@@ -48,17 +50,24 @@ function economyLocale(): EconomyLocale {
   return SELECTABLE_LOCALES.find((l) => l === active) ?? 'en';
 }
 
-export default function EconomyVisualPreviewCompactPage(): JSX.Element {
+export default async function EconomyVisualPreviewCompactPage(): Promise<JSX.Element> {
   const locale = economyLocale();
+  const read = await readEconomyObservations();
   return (
     <ScriptRun locale={locale} step="wrapping" as="div">
       <main style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
         <AlphaVisualPreviewMarker locale={locale} />
+        {/*
+          THE SAME REAL FIGURE AT COMPACT WIDTH. The panel wraps rather than scrolling —
+          the provenance grid collapses to one column below 240px of free width — so no
+          chrome budget moves and nothing is added to the frozen top bar.
+        */}
+        <RetainedObservationPanel read={read} />
         <div style={{ flex: '1 1 auto', minHeight: 0 }}>
           <EconomyCompactScreen
             subject={PRODUCTION_SHAPED_SUBJECT}
             locale={locale}
-            data={ECONOMY_DATA_CAPABILITY}
+            data={economyCapabilityFrom(read)}
           />
         </div>
       </main>

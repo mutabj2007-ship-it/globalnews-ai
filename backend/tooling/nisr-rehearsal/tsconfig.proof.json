@@ -12,6 +12,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["nisr-production-pipeline.proof.ts"],
+  "include": [
+    "nisr-production-pipeline.proof.ts"
+  ],
   "exclude": []
 }

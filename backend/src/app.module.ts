@@ -8,6 +8,7 @@ import { PrismaModule } from './database/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { NewsModule } from './modules/news/news.module';
+import { EconomyModule } from './modules/economy/economy.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { SignalsModule } from './modules/signals/signals.module';
 import { CorsStartupValidator } from './security/cors-startup-validator';
@@ -54,6 +55,15 @@ import {
     PrismaModule,
     HealthModule,
     NewsModule,
+    /*
+      ECONOMY — ONE READ ROUTE OVER RETAINED EVIDENCE, AND NO PROVIDER.
+
+      It serves the NISR CPI observation the governed pipeline retained. Registering it
+      adds no transport, no scheduler and no provider: nothing in its dependency graph
+      can issue a request, so ordinary navigation over this route contacts nobody and
+      consumes no GNews quota.
+    */
+    EconomyModule,
     /*
       GEO — the PUBLIC geographic resolution routes (E1-GEO-PUBLIC-REWRITE-REVIEW-1).
 
