@@ -24,17 +24,11 @@ import type { HoveredCountry } from '@/components/map/WorldMap';
  * bundle — it loads only once this section's client boundary
  * actually mounts.
  *
- * Data truth: this section makes ZERO automatic fetch on page load —
- * `countryStoryCounts` starts empty (an honest "nothing loaded yet"
- * state, not fabricated zeros pretending to be real counts). A real
- * fetchCountryNews() call — the SAME function /map itself uses —
- * happens only on a genuine user action (clicking a country), and
- * only for that one country. This preserves the "one homepage fetch
- * on load" architecture: this is a user-initiated interaction fetch,
- * not a page-load fetch. The summary panel shows only values computed
- * from that real response (story count, distinct publisher count,
- * most recent timestamp, most common category) — never a fabricated
- * "alert count" or "risk score."
+ * Data truth: this section performs ZERO provider-capable country reads,
+ * both on page load AND on country selection. `countryStoryCounts` starts
+ * empty and selection changes geographic scope only. The full Map owns the
+ * explicit retrieval action, so merely exploring geography on Home cannot
+ * spend GNews quota. No alert/risk/severity/story metrics are fabricated here.
  */
 const WorldMap = dynamic(() => import('@/components/map/WorldMap').then((m) => m.WorldMap), {
   ssr: false,
