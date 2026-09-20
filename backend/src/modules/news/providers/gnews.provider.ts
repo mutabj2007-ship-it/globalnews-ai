@@ -453,30 +453,21 @@ export class GNewsProvider implements NewsProvider {
         clearTimeout(timeout);
       }
 
-    /*
-     * R4 GDELT — 401 AND 403 ARE NOT THE SAME CONDITION, AND CONFLATING
-     * THEM MISLED AN OPERATOR DURING A LIVE OUTAGE.
-     *
-     * Both used to raise 'GNews rejected the configured API key.' When the
-     * Free plan reached 100/100 requests the live host received 403, and
-     * that sentence went to the log and to Admin. It sent the operator to
-     * rotate a credential that was perfectly valid, while the real
-     * condition — the daily allowance is spent and resets on its own —
-     * was not represented anywhere.
-     *
-     * 403 = QUOTA IS EVIDENCE FROM THIS DEPLOYMENT, NOT A RULE ABOUT HTTP.
-     * It is what the live host observed on THIS GNews plan. HTTP 403 means
-     * "forbidden" generally, and plenty of APIs use it for authorization
-     * failures. No other provider may copy this mapping without its own
-     * evidence, and if GNews changes plans this mapping must be
-     * re-verified rather than assumed to have carried over.
-     *
-     * The message still never echoes the key or GNews's raw body, which
-     * may contain it.
-     */
+      /*
+       * R4 GDELT — 401 AND 403 ARE NOT THE SAME CONDITION, AND CONFLATING
+       * THEM MISLED AN OPERATOR DURING A LIVE OUTAGE.
+       *
+       * 403 is observed as exhausted allowance on the deployed GNews plan;
+       * 429 is a shorter rate-limit condition. Both now open a short local
+       * circuit so one observed upstream stop signal cannot become a burst.
+       */
       if (response.status === 401) {
-      throw new GNewsProviderError('GNews rejected the configured API key.', undefined, 'auth');
-    }
+        throw new GNewsProviderError(
+          'GNews rejected the configured API key.',
+          undefined,
+          'auth',
+        );
+      }
       if (response.status === 403) {
         this.openCooldown('quota');
         throw new GNewsProviderError(
@@ -495,12 +486,12 @@ export class GNewsProvider implements NewsProvider {
         );
       }
       if (!response.ok) {
-      throw new GNewsProviderError(
-        `GNews responded with status ${response.status}.`,
-        undefined,
-        'unknown',
-      );
-    }
+        throw new GNewsProviderError(
+          `GNews responded with status ${response.status}.`,
+          undefined,
+          'unknown',
+        );
+      }
 
       let payload: unknown;
       try {
@@ -508,18 +499,18 @@ export class GNewsProvider implements NewsProvider {
       } catch (error) {
         throw new GNewsProviderError(
           'GNews returned a malformed (non-JSON) response.',
-        error,
-        'malformed',
-      );
-    }
+          error,
+          'malformed',
+        );
+      }
 
       if (
         !payload ||
-      typeof payload !== 'object' ||
-      !Array.isArray((payload as GNewsApiResponse).articles)
-    ) {
-      throw new GNewsProviderError('GNews response did not match the expected shape.');
-    }
+        typeof payload !== 'object' ||
+        !Array.isArray((payload as GNewsApiResponse).articles)
+      ) {
+        throw new GNewsProviderError('GNews response did not match the expected shape.');
+      }
 
       return payload as GNewsApiResponse;
     });
