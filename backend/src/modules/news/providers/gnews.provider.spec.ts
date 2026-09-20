@@ -129,6 +129,30 @@ describe('GNewsProvider', () => {
       await expect(provider.topHeadlines()).rejects.toThrow('rate limit');
     });
 
+    it('one timeout stops concurrently queued different searches from opening more sockets', async () => {
+      const abortError = new Error('aborted');
+      abortError.name = 'AbortError';
+      const fetchMock = jest.fn().mockRejectedValue(abortError);
+      global.fetch = fetchMock;
+      const provider = new GNewsProvider(makeConfig('test-key') as never);
+
+      const [first, second] = await Promise.allSettled([
+        provider.search('Rwanda'),
+        provider.search('DR Congo'),
+      ]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(first.status).toBe('rejected');
+      expect(second.status).toBe('rejected');
+
+      if (first.status === 'rejected') {
+        expect(first.reason).toMatchObject({ kind: 'timeout' });
+      }
+      if (second.status === 'rejected') {
+        expect(second.reason).toMatchObject({ kind: 'timeout' });
+      }
+    });
+
     it('one 429 stops concurrently queued different searches from issuing another upstream request', async () => {
       const fetchMock = jest.fn().mockResolvedValue(jsonResponse({}, 429));
       global.fetch = fetchMock;
