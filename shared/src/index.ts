@@ -202,6 +202,8 @@ export * from './relationships';
    geography and revision semantics. A DIFFERENT module from  beside it, which
    carries the display vocabulary; both are exported and neither shadows the other. */
 export * from './conflict/observation';
+export * from './conflict/read';
+export * from './official-data/providers/ucdp-ged-csv.decoder';
 
 /*
   THE CANONICAL CONFLICT OBSERVATION — including the ownership resolver.
