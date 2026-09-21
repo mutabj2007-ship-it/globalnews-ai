@@ -217,3 +217,5 @@ export * from './conflict/observation';
   vocabulary.
 */
 
+
+export * from './conflict/conflict-observation';
