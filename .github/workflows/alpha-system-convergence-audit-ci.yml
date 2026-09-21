@@ -41,6 +41,7 @@ jobs:
           npm test --workspace=frontend -- --runInBand src/lib/security/securityVisualFrame.spec.ts
           npm test --workspace=frontend -- --runInBand src/lib/humanitarian/humContract.spec.ts
           npm test --workspace=frontend -- --runInBand src/lib/economy/b4aEconomySubstrate.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/specialist/previewScopeRuling.spec.ts
           npm test --workspace=frontend -- --runInBand src/lib/market/marketSyntheticHarness.spec.ts
       - name: Frontend build
         run: npm run build:frontend
