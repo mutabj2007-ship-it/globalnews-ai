@@ -60,6 +60,8 @@ jobs:
           grep -q "@Controller('conflict')" backend/src/modules/conflict-observation/conflict-observation.controller.ts
           grep -q "@Throttle" backend/src/modules/conflict-observation/conflict-observation.controller.ts
           grep -q "@Throttle" backend/src/modules/market-ingest/market-read.controller.ts
+          test -f backend/prisma/migrations/20260921030000_add_conflict_observation/DOWN.sql
+          grep -q 'DROP TABLE IF EXISTS "ConflictObservation"' backend/prisma/migrations/20260921030000_add_conflict_observation/DOWN.sql
           ! grep -R -E 'ucdp|fetch\(|axios|http://' backend/src/modules/conflict-observation
           ! grep -R -E 'fetch\(|axios|http://' backend/src/modules/market-ingest/market-read.*
       - name: Backend build
