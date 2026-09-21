@@ -193,11 +193,14 @@ describe('no preview surface can reach an external provider', () => {
 
       NAMED, not patterned: a second domain file acquiring a network call fails here.
     */
-    const GOVERNED_SAME_ORIGIN_READ = 'economyObservationRead.ts';
+    const GOVERNED_SAME_ORIGIN_READS = new Set([
+      'economyObservationRead.ts',
+      'mktReadModel.ts',
+    ]);
     const offenders: string[] = [];
     for (const f of DOMAIN) {
       const src = code(f);
-      if (f.endsWith(GOVERNED_SAME_ORIGIN_READ)) {
+      if ([...GOVERNED_SAME_ORIGIN_READS].some((name) => f.endsWith(name))) {
         /* The half that matters, kept: it cannot point off this origin. */
         if (/https?:\/\//.test(src)) offenders.push(`${f.slice(SRC.length)} :: absolute URL`);
         continue;
@@ -227,7 +230,7 @@ describe('no preview surface can reach an external provider', () => {
    * those and is pinned here as the ONLY network module the four routes can reach, so a
    * second one — of any kind — fails this assertion rather than arriving quietly.
    */
-  it('the account read is the only network module reachable, and it is same-origin', () => {
+  it('every reachable network module is an explicitly named same-deployment read', () => {
     /*
       `.replace(/\\/g, '/')` — A PLATFORM FIX, NOT A WEAKENING OF THIS GUARD.
 
@@ -261,6 +264,7 @@ describe('no preview surface can reach an external provider', () => {
     const ALLOWED_READS = [
       '/lib/api/accountFetch.ts',
       '/lib/economy/economyObservationRead.ts',
+      '/lib/market/mktReadModel.ts',
     ];
 
     const sites = GRAPH.filter((f) => /\bfetch\s*\(|XMLHttpRequest|\buseSWR\b|\baxios\b|EventSource/.test(code(f)))
