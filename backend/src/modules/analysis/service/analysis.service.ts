@@ -846,12 +846,13 @@ export class AnalysisService {
         const priorRelation = priorQuestion
           ? deriveRelationalSearchQueries(normalizeQuery(priorQuestion).normalizedQuery)
           : undefined;
-        const followUpCountry =
+        const followUpLocation =
           declaredRegion === undefined && normalizedQuery.split(/\s+/).length <= 8
-            ? (classification.countries[0] ??
-              this.detectLocation(normalizedQuery) ??
+            ? (this.detectLocation(normalizedQuery) ??
               this.detectLocationByDemonym(normalizedQuery))
             : undefined;
+        const followUpCountry =
+          classification.countries[0] ?? followUpLocation?.country;
         const followUpRelation =
           priorRelation && followUpCountry
             ? {
@@ -937,8 +938,8 @@ export class AnalysisService {
             declaredRegion,
             [
               ...classification.countries,
-              ...(this.detectLocation(normalizedQuery)
-                ? [this.detectLocation(normalizedQuery)!]
+              ...(this.detectLocation(normalizedQuery)?.country
+                ? [this.detectLocation(normalizedQuery)!.country]
                 : []),
             ],
             requestedLanguage,
