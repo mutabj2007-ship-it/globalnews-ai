@@ -72,6 +72,12 @@ export const pl: Dictionary = {
     resultSourcesTruncated: 'Pokazano {shown} z {total}. Otw\u00f3rz pe\u0142n\u0105 analiz\u0119, aby zobaczy\u0107 reszt\u0119.',
     resultBriefAbsent: 'Ta analiza nie zawiera\u0142a streszczenia. To brak, a nie ocena \u2014 niczego nie zmierzono ani nie wstrzymano.',
     resultNoAnswer: 'Dla tego pytania nie powsta\u0142a odpowied\u017a. Stan powy\u017cej wyja\u015bnia dlaczego.',
+    resultNoAnswerProvider:
+      'Nie uda\u0142o si\u0119 wystarczaj\u0105co wiarygodnie pozyska\u0107 bie\u017c\u0105cych materia\u0142\u00f3w, aby odpowiedzie\u0107 na to pytanie.',
+    resultNoAnswerEvidence:
+      '\u017badne pozyskane materia\u0142y nie spe\u0142ni\u0142y progu dowodowego dla tego pytania.',
+    resultNoAnswerSafety:
+      'GlobalNews AI nie wygenerowa\u0142 odpowiedzi bez materia\u0142u dowodowego. Spr\u00f3buj ponownie za chwil\u0119 albo zadaj w\u0119\u017csze pytanie o miejsce, wydarzenie lub okres.',
     openFullAnalysis: 'Otw\u00f3rz pe\u0142n\u0105 analiz\u0119',
     telemetryReports: 'pozyskanych doniesie\u0144',
     telemetryClusters: 'grup doniesie\u0144',
