@@ -32,6 +32,7 @@ jobs:
           npm test --workspace=frontend -- --runInBand src/lib/market/mktContract.spec.ts
           npm test --workspace=frontend -- --runInBand src/components/home/HomepageSituationMap.spec.ts
           npm test --workspace=frontend -- --runInBand src/lib/intelligenceModules.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/home/TodayGeographicIntelligence.spec.ts
       - name: Frontend build
         run: npm run build:frontend
       - name: Backend build
