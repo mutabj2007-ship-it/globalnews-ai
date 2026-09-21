@@ -447,7 +447,7 @@ export class AnalysisService {
         ? `:story:${storyContext.countryCode.toLowerCase()}`
         : '';
     const priorQuestionKeySegment = priorQuestion
-      ? `:prior:${normalizeQuery(priorQuestion).toLowerCase()}`
+      ? `:prior:${normalizeQuery(priorQuestion).normalizedQuery.toLowerCase()}`
       : '';
     const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}`;
 
@@ -844,7 +844,7 @@ export class AnalysisService {
          * back into retrieval.
          */
         const priorRelation = priorQuestion
-          ? deriveRelationalSearchQueries(normalizeQuery(priorQuestion))
+          ? deriveRelationalSearchQueries(normalizeQuery(priorQuestion).normalizedQuery)
           : undefined;
         const followUpRelation =
           declaredRegion === undefined &&
