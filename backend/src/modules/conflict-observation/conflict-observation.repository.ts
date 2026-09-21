@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import type { ConflictObservation } from '@globalnews-ai/shared';
 
 /**
  * READ-ONLY CONFLICT PORT.
@@ -9,10 +8,34 @@ import type { ConflictObservation } from '@globalnews-ai/shared';
  * producer writes retained rows, this returns an honest empty collection.
  */
 @Injectable()
+export interface RetainedConflictObservationRow {
+  readonly observationKey: string;
+  readonly providerId: string;
+  readonly providerEventId: string;
+  readonly occurredOn: string;
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly countryIso3: string | null;
+  readonly placeLabel: string | null;
+  readonly sourceUrl: string | null;
+  readonly sourceName: string | null;
+  readonly ingestedAt: string;
+}
+
+/**
+ * STORAGE SHAPE IS NOT THE CANONICAL CONFLICT OBSERVATION.
+ *
+ * shared/src/conflict/observation.ts already owns the accepted canonical
+ * ConflictObservation contract, including geography, temporal provenance,
+ * ownership, severity state, acquisition provenance and revision semantics.
+ * This repository returns a deliberately named retained-row DTO until a
+ * governed adapter can prove every canonical field. It must never masquerade
+ * a thin database row as that canonical type.
+ */
 export class ConflictObservationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async latest(limit = 250): Promise<readonly ConflictObservation[]> {
+  async latest(limit = 250): Promise<readonly RetainedConflictObservationRow[]> {
     const bounded = Math.max(1, Math.min(Math.trunc(limit), 500));
     const rows = await this.prisma.conflictObservation.findMany({
       take: bounded,
