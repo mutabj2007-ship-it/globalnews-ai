@@ -1,4 +1,4 @@
-import type { ProviderHealthState } from '@globalnews-ai/shared';
+import type { ProviderHealthState, SourceType } from '@globalnews-ai/shared';
 
 /**
  * F1.b — the Admin system-health contract.
@@ -223,7 +223,7 @@ export interface AdminNewsProvidersResponse {
     sourceId: string;
     displayName: string;
     countryCode: string;
-    sourceType: 'NEWS_PROVIDER' | 'OFFICIAL_SOURCE';
+    sourceType: SourceType;
     language?: string;
     enabled: boolean;
   }>;
