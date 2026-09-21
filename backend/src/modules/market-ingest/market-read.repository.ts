@@ -20,6 +20,12 @@ export interface MarketReadObservation {
   readonly releaseStatus: string;
   readonly provider: string;
   readonly sourceClass: string;
+  /**
+   * Snapshot-backed Market retention is still provisional on this lineage.
+   * The reader must state that explicitly rather than omit the field and let
+   * the frontend treat undefined as an accidental third state.
+   */
+  readonly retentionIsFinal: false;
 }
 
 @Injectable()
@@ -58,6 +64,7 @@ export class MarketReadRepository {
       releaseStatus: row.releaseStatus,
       provider: row.providerId,
       sourceClass: row.subjectClass,
+      retentionIsFinal: false,
     }));
   }
 }
