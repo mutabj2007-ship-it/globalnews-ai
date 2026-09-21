@@ -5,6 +5,7 @@ on:
     branches:
       - fix/alpha-ask-conversation-cross-region-r1
       - fix/alpha-ask-relational-retained-r2
+      - fix/alpha-ask-relational-evidence-r3
   pull_request:
     branches:
       - release/alpha-m08-integrated-r1
