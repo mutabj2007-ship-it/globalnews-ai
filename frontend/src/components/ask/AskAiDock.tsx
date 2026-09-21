@@ -253,8 +253,8 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
             'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
             /* MOBILE — a bottom sheet. Full width, capped height, rounded top. */
             'inset-x-0 bottom-0 h-[92dvh] max-h-[92dvh] rounded-t-2xl',
-            /* TABLET and up — a right-hand dock, full height. */
-            'sm:inset-y-4 sm:end-4 sm:start-auto sm:w-[min(600px,92vw)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl',
+            /* TABLET and up — a bounded floating right-hand dock. */
+            'sm:inset-y-4 sm:end-4 sm:start-auto sm:h-auto sm:w-[min(600px,92vw)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl',
             /* DESKTOP — a wider dock, so evidence and answer sit side by side. */
             'lg:w-[min(680px,46vw)]',
           ].join(' ')}
