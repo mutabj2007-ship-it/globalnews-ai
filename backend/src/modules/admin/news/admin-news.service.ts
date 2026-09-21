@@ -4,6 +4,9 @@ import type { NewsProvider } from '../../news/interfaces';
 import { ALL_NEWS_PROVIDERS, NEWS_PROVIDERS } from '../../news/providers/provider.tokens';
 import { NewsService } from '../../news/news.service';
 import { ProviderExecutionRegistry } from '../../news/telemetry/provider-execution.registry';
+import { PrismaService } from '../../../database/prisma.service';
+import { FEED_SOURCES, resolveActiveFeedSources } from '../../news/providers/feed-source-registry';
+import { ConfigService } from '@nestjs/config';
 import type {
   AdminNewsProvidersResponse,
   AdminProviderHealth,
@@ -63,6 +66,10 @@ export class AdminNewsService {
      */
     @Optional()
     private readonly executions?: ProviderExecutionRegistry,
+    @Optional()
+    private readonly prisma?: PrismaService,
+    @Optional()
+    private readonly config?: ConfigService,
   ) {}
 
   async providers(): Promise<AdminNewsProvidersResponse> {
@@ -83,6 +90,51 @@ export class AdminNewsService {
     */
     const buckets = this.executions?.snapshot() ?? [];
 
+    const feedSelection = resolveActiveFeedSources(
+      FEED_SOURCES,
+      this.config?.get<string>('RSS_FEED_SOURCES'),
+    );
+    const activeFeedIds = new Set(feedSelection.sources.map((source) => source.sourceId));
+
+    let inventory: AdminNewsProvidersResponse['inventory'] = null;
+    if (this.prisma) {
+      try {
+        const [articleCount, latest, sourceGroups, countryGroups] = await Promise.all([
+          this.prisma.article.count(),
+          this.prisma.article.aggregate({ _max: { fetchedAt: true } }),
+          this.prisma.article.groupBy({
+            by: ['sourceId', 'sourceName'],
+            _count: { _all: true },
+            _max: { fetchedAt: true },
+            orderBy: { _count: { sourceId: 'desc' } },
+            take: 20,
+          }),
+          this.prisma.article.groupBy({
+            by: ['countryCode'],
+            where: { countryCode: { not: null } },
+            _count: { _all: true },
+            orderBy: { _count: { countryCode: 'desc' } },
+            take: 20,
+          }),
+        ]);
+        inventory = {
+          articleCount,
+          latestFetchedAt: latest._max.fetchedAt?.toISOString() ?? null,
+          bySource: sourceGroups.map((row) => ({
+            sourceId: row.sourceId,
+            sourceName: row.sourceName,
+            articleCount: row._count._all,
+            latestFetchedAt: row._max.fetchedAt?.toISOString() ?? null,
+          })),
+          byCountry: countryGroups
+            .filter((row): row is typeof row & { countryCode: string } => row.countryCode !== null)
+            .map((row) => ({ countryCode: row.countryCode, articleCount: row._count._all })),
+        };
+      } catch {
+        inventory = null;
+      }
+    }
+
     return {
       providers: statuses.map((status) =>
         projectProviderHealth(status, {
@@ -90,6 +142,15 @@ export class AdminNewsService {
           providerKind: kinds.get(status.providerId) ?? 'UNKNOWN',
         }),
       ),
+      sources: FEED_SOURCES.map((source) => ({
+        sourceId: source.sourceId,
+        displayName: source.displayName,
+        countryCode: source.countryCode,
+        sourceType: source.sourceType,
+        ...(source.language ? { language: source.language } : {}),
+        enabled: activeFeedIds.has(source.sourceId),
+      })),
+      inventory,
       execution: {
         buckets: buckets.map((bucket) => ({
           provider: bucket.provider,

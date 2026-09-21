@@ -101,8 +101,39 @@ export interface AdminProviderHealth {
   geoResolutionSuccessRate?: number;
 }
 
+export interface AdminArticleInventory {
+  articleCount: number;
+  latestFetchedAt: string | null;
+  bySource: Array<{
+    sourceId: string;
+    sourceName: string;
+    articleCount: number;
+    latestFetchedAt: string | null;
+  }>;
+  byCountry: Array<{ countryCode: string; articleCount: number }>;
+}
+
 export interface AdminNewsProvidersResponse {
   providers: AdminProviderHealth[];
+  sources: Array<{
+    sourceId: string;
+    displayName: string;
+    countryCode: string;
+    sourceType: 'NEWS_PROVIDER' | 'OFFICIAL_SOURCE';
+    language?: string;
+    enabled: boolean;
+  }>;
+  inventory: AdminArticleInventory | null;
+  execution?: {
+    buckets: Array<{
+      provider: string;
+      endpointClass: string;
+      cacheHits: number;
+      cacheMisses: number;
+      executions: number;
+    }>;
+    totalExecutions: number;
+  };
   generatedAt: string;
 }
 

@@ -1,4 +1,4 @@
-import type { ProviderHealthState } from '@globalnews-ai/shared';
+import type { ProviderHealthState, SourceType } from '@globalnews-ai/shared';
 
 /**
  * F1.b — the Admin system-health contract.
@@ -191,6 +191,21 @@ export interface AdminProviderExecutionBucket {
   executions: number;
 }
 
+export interface AdminArticleInventory {
+  articleCount: number;
+  latestFetchedAt: string | null;
+  bySource: Array<{
+    sourceId: string;
+    sourceName: string;
+    articleCount: number;
+    latestFetchedAt: string | null;
+  }>;
+  byCountry: Array<{
+    countryCode: string;
+    articleCount: number;
+  }>;
+}
+
 export interface AdminNewsProvidersResponse {
   /**
    * Every REGISTERED provider, each one marked with whether it is
@@ -200,6 +215,22 @@ export interface AdminNewsProvidersResponse {
    * that every row was serving traffic. Both are now visible at once.
    */
   providers: AdminProviderHealth[];
+  /**
+   * Publisher/source inventory is deliberately separate from transport providers.
+   * A single RSS connector may carry many independently-attributed publishers.
+   */
+  sources: Array<{
+    sourceId: string;
+    displayName: string;
+    countryCode: string;
+    sourceType: SourceType;
+    language?: string;
+    enabled: boolean;
+  }>;
+
+  /** Stored article inventory, measured from the database; null means the read failed. */
+  inventory: AdminArticleInventory | null;
+
 
   /**
    * R5 — WHAT THIS DEPLOYMENT HAS ACTUALLY SPENT, per provider and operation.

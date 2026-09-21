@@ -188,6 +188,7 @@ export function EconomyScreen({
   const watchAvailable = watchRuntime.acceptsLifecycleTriggers;
   const analysisAvailable = showFigures && onRequestWorkspace !== undefined;
   const drawerWidth = drawer ? DRAWER_WIDTH_PX[drawer] : ATTENTION_RAIL_PX;
+  const compact = effectiveWidth <= 860;
 
   const triadExplanation =
     primary?.triad && figureIsObservation(primary.triad.actual)
@@ -230,7 +231,7 @@ export function EconomyScreen({
         data-econ="body-grid"
         style={{
           flex: '1 1 auto', minHeight: 0, display: 'grid',
-          gridTemplateColumns: `minmax(0, 1fr) ${drawerWidth}px`,
+          gridTemplateColumns: compact ? 'minmax(0, 1fr)' : `minmax(0, 1fr) ${drawerWidth}px`,
           gap: '1px', background: ECON_LINE.structure,
         }}
       >
@@ -325,7 +326,7 @@ export function EconomyScreen({
           <div
             style={{
               flex: '0 0 auto', borderTop: `1px solid ${ECON_LINE.structure}`,
-              display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '1px', background: ECON_LINE.structure,
+              display: 'grid', gridTemplateColumns: compact ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 300px', gap: '1px', background: ECON_LINE.structure,
             }}
           >
             <div style={{ background: ECON_SURFACE.panel, padding: `13px ${bp.gutterPx}px`, display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
@@ -400,12 +401,63 @@ export function EconomyScreen({
                 }}
               />
             </div>
-            <MiniMap locale={locale} />
+            {!compact && <MiniMap locale={locale} />}
           </div>
         </div>
 
         {/* ---- SECONDARY REGION: the attention queue, OR the drawer that replaces it ---- */}
-        {drawer === null ? (
+        {compact ? (
+          <div
+            data-econ="compact-secondary"
+            style={{
+              borderTop: `1px solid ${ECON_LINE.structure}`,
+              background: ECON_SURFACE.panel,
+              padding: '12px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => openDrawer('TIMELINE')}
+              disabled={!hasTimeline}
+              style={{
+                minHeight: '44px',
+                border: `1px solid ${ECON_LINE.border}`,
+                background: 'transparent',
+                color: hasTimeline ? ECON_INK.primary : ECON_INK.label,
+                fontFamily: ECON_MONO,
+                fontSize: '10px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                textAlign: 'start',
+                padding: '10px 12px',
+                opacity: hasTimeline ? 1 : 0.55,
+              }}
+            >
+              {hasTimeline ? 'Timeline · retained release history' : 'No attention ranking · open retained sources below'}
+            </button>
+            <button
+              type="button"
+              onClick={() => openDrawer('SOURCES')}
+              style={{
+                minHeight: '44px',
+                border: `1px solid ${ECON_LINE.border}`,
+                background: ECON_SURFACE.selected,
+                color: ECON_INK.secondary,
+                fontFamily: ECON_MONO,
+                fontSize: '10px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                textAlign: 'start',
+                padding: '10px 12px',
+              }}
+            >
+              Sources · observation provenance
+            </button>
+          </div>
+        ) : drawer === null ? (
           /*
             THE COLUMN CARRIES ITS OWN FILL.
 
@@ -433,6 +485,19 @@ export function EconomyScreen({
             />
           </div>
         ) : (
+          <div
+            data-econ={compact ? 'compact-drawer-shell' : 'desktop-drawer-shell'}
+            style={compact ? {
+              position: 'fixed',
+              insetInline: 0,
+              bottom: 0,
+              zIndex: 60,
+              maxHeight: '72dvh',
+              overflowY: 'auto',
+              borderTop: `1px solid ${ECON_LINE.emphasis}`,
+              background: ECON_SURFACE.ground,
+            } : undefined}
+          >
           <EconomyDrawer
             title={drawerTitle(drawer, t)}
             locale={locale}
@@ -463,6 +528,7 @@ export function EconomyScreen({
                 : <div style={{ padding: '16px 18px' }}><ObservationAbsenceDetail locale={locale} /></div>
             )}
           </EconomyDrawer>
+          </div>
         )}
       </div>
 
