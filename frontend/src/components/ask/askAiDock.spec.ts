@@ -88,6 +88,33 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
   });
 });
 
+describe('the dock is a real scrollable conversation on phones', () => {
+  it('keeps settled turns locally without feeding prior AI output back into retrieval', () => {
+    expect(CODE).toMatch(/const \[history, setHistory\] = useState<SettledAskTurn\[\]>\(\[\]\)/);
+    expect(CODE).toMatch(/data-ask="history-turn"/);
+    expect(CODE).toMatch(/data-ask="user-message"/);
+    const submit = CODE.slice(CODE.indexOf('const submit = useCallback'), CODE.indexOf('return ('));
+    expect(submit).not.toMatch(/phase\.response|analysis\.sources|retrievalContext/);
+  });
+
+  it('the conversation scrolls independently and the composer stays outside that scroll region', () => {
+    expect(CODE).toMatch(/data-ask-scroll="conversation"/);
+    expect(CODE).toMatch(/overflow-y-auto/);
+    expect(CODE).toMatch(/data-ask="composer"/);
+    expect(CODE.indexOf('data-ask="composer"')).toBeGreaterThan(CODE.indexOf('data-ask-scroll="conversation"'));
+  });
+
+  it('submitting clears the composer so the second question is immediately typeable', () => {
+    expect(CODE).toMatch(/setPhase\(\{ kind: 'loading', question: asked \}\);\s*setQuestion\(''\);/);
+    expect(CODE).toMatch(/rows=\{phase\.kind === 'idle' && history\.length === 0 \? 2 : 1\}/);
+  });
+
+  it('the phone sheet uses dynamic viewport height and safe-area padding', () => {
+    expect(CODE).toContain('h-[92dvh]');
+    expect(CODE).toContain('env(safe-area-inset-bottom)');
+  });
+});
+
 describe('opening the panel is not a question', () => {
   it('the ONLY call to the analysis client sits inside the submit handler', () => {
     expect((CODE.match(/analyzeNews\(/g) ?? []).length).toBe(1);
