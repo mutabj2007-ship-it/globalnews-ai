@@ -250,16 +250,16 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           data-ask-phase={phase.kind}
           aria-label={t.panelLabel}
           className={[
-            'fixed z-50 flex flex-col border border-border-strong bg-surface',
+            'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
             /* MOBILE — a bottom sheet. Full width, capped height, rounded top. */
             'inset-x-0 bottom-0 h-[92dvh] max-h-[92dvh] rounded-t-2xl',
             /* TABLET and up — a right-hand dock, full height. */
-            'sm:inset-y-0 sm:end-0 sm:start-auto sm:w-[min(560px,92vw)] sm:max-h-none sm:rounded-none sm:rounded-s-2xl',
+            'sm:inset-y-4 sm:end-4 sm:start-auto sm:w-[min(600px,92vw)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl',
             /* DESKTOP — a wider dock, so evidence and answer sit side by side. */
-            'lg:w-[min(720px,52vw)]',
+            'lg:w-[min(680px,46vw)]',
           ].join(' ')}
         >
-          <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <header className="flex items-center justify-between gap-3 border-b border-border bg-surface-raised/95 px-4 py-3 backdrop-blur">
             <h2 className="font-display text-base font-medium text-ink-primary">{t.title}</h2>
             <button
               type="button"
@@ -273,13 +273,13 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
 
           <div
             ref={conversationRef}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-surface px-4 py-4 sm:px-5 sm:py-5"
             data-ask="body"
             data-ask-scroll="conversation"
           >
             {history.map((turn, index) => (
-              <div key={`${index}-${turn.question}`} data-ask="history-turn" className="mb-6 flex flex-col gap-3">
-                <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary">
+              <div key={`${index}-${turn.question}`} data-ask="history-turn" className="mb-6 flex flex-col gap-3 sm:gap-4">
+                <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm">
                   {turn.question}
                 </div>
                 {turn.kind === 'answered' ? (
@@ -299,7 +299,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
 
             {phase.kind === 'loading' || phase.kind === 'answered' || phase.kind === 'failed' ? (
               <div data-ask="current-turn" className="flex flex-col gap-3">
-                <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary">
+                <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm">
                   {phase.question}
                 </div>
               </div>
@@ -343,7 +343,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
             ) : null}
           </div>
 
-          <div data-ask="composer" className="shrink-0 border-t border-border bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div data-ask="composer" className="shrink-0 border-t border-border bg-surface-raised/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
           <form onSubmit={submit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
             <label className="sr-only" htmlFor="ask-ai-question">
               {t.inputLabel}
@@ -356,7 +356,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
               onChange={(event) => setQuestion(event.target.value)}
               placeholder={t.inputPlaceholder}
               maxLength={1000}
-              className="w-full resize-none rounded-2xl border border-border bg-void px-4 py-3 text-sm text-ink-primary placeholder:text-ink-tertiary focus:border-signal focus:outline-none"
+              className="w-full resize-none rounded-2xl border border-border-strong bg-surface px-4 py-3 text-sm text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
             />
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/*
@@ -377,7 +377,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
                 data-ask="context-affordance"
                 data-ask-context={storyContext === undefined ? 'generic' : 'anchored'}
                 title={storyContext === undefined ? undefined : storyContext.title}
-                className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary"
+                className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border-strong bg-surface px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-secondary"
               >
                 {storyContext === undefined ? t.contextChipGeneric : t.contextChipAnchored}
               </span>
@@ -386,7 +386,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
                 type="submit"
                 data-ask="submit"
                 disabled={question.trim().length === 0 || phase.kind === 'loading'}
-                className="min-h-[44px] rounded-2xl bg-signal px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-[44px] rounded-2xl bg-signal px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(61,111,255,0.22)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50"
               >
                 {t.submit}
               </button>
