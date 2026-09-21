@@ -822,6 +822,15 @@ export class AnalysisService {
           ? undefined
           : detectDeclaredRegion(normalizedQuery);
 
+        /*
+         * CROSS-REGION IMPACT QUESTIONS MUST KEEP THEIR RELATION.
+         * A declared region used to pre-empt relational parsing completely.
+         */
+        const declaredRegionRelation =
+          declaredRegion === undefined || sourceIntent
+            ? undefined
+            : deriveRelationalSearchQueries(normalizedQuery);
+
         if (declaredRegion) {
           this.logger.debug(
             `Typed question names the declared region "${declaredRegion.id}" ` +
@@ -872,7 +881,25 @@ export class AnalysisService {
         // computes for retrieval — no second parser, no reinterpretation.
         let relationalContext: { x: string; y: string } | undefined;
 
-        if (declaredRegion) {
+        if (declaredRegion && declaredRegionRelation) {
+          /*
+           * CROSS-REGION / CROSS-SCOPE RELATIONAL RETRIEVAL.
+           * Keep X->region plus explicitly named country refinements bounded,
+           * and use the existing relational relevance gate for every article.
+           */
+          const regionalRelation = await this.retrieveDeclaredRegionRelationalEvidence(
+            declaredRegionRelation,
+            declaredRegion,
+            classification.countries,
+            requestedLanguage,
+          );
+          articles = regionalRelation.articles;
+          retrievalContext = regionalRelation.retrievalContext;
+          relationalContext = {
+            x: declaredRegionRelation.x,
+            y: declaredRegion.label,
+          };
+        } else if (declaredRegion) {
           /*
             ══════════════════════════════════════════════════════════════════
             THE DECLARED-REGION BRANCH — ALL MEMBERS, BOUNDED CONCURRENCY
@@ -2894,6 +2921,76 @@ export class AnalysisService {
    * "Ukraine reports overnight strikes" headline. The country gate is the one
    * built for this question and it is unmodified here.
    */
+  private async retrieveDeclaredRegionRelationalEvidence(
+    relation: { x: string; y: string },
+    region: DeclaredRegion,
+    explicitlyNamedCountries: readonly CountryMeta[],
+    requestedLanguage: LanguageCode,
+  ): Promise<{ articles: NewsArticle[]; retrievalContext: AnalysisRetrievalContext }> {
+    const targets = [
+      { label: region.label, key: `region:${region.id}` },
+      ...explicitlyNamedCountries
+        .filter((country) => region.members.includes(country.iso3))
+        .slice(0, 2)
+        .map((country) => ({ label: country.name, key: `country:${country.iso3}` })),
+    ];
+
+    const collected: NewsArticle[] = [];
+    const providers = new Set<string>();
+    const failureKinds = new Set<string>();
+    let sawLive = false;
+    let sawCached = false;
+
+    for (let index = 0; index < targets.length; index += 1) {
+      const target = targets[index];
+      const providerQuery = makeProviderSafeNewsQuery(`${relation.x} ${target.label}`);
+      if (!providerQuery) continue;
+
+      try {
+        const response = await this.newsService.search(
+          providerQuery,
+          SEARCH_POOL_SIZE,
+          { type: 'relational', x: relation.x, y: target.label },
+          {
+            lang: requestedLanguage === 'pl' ? 'pl' : undefined,
+            allowFallback: index === 0,
+          },
+        );
+
+        for (const provider of response.providers ?? []) providers.add(provider);
+        for (const failure of readProviderFailures(response)) failureKinds.add(failure.kind);
+        if (response.dataMode === 'live') sawLive = true;
+        if (response.dataMode === 'cached') sawCached = true;
+        collected.push(...response.articles);
+      } catch (error) {
+        this.logger.warn(
+          `Relational region retrieval failed for ${target.key}; continuing with bounded evidence`,
+          error instanceof Error ? error : undefined,
+        );
+        failureKinds.add('unavailable');
+      }
+    }
+
+    const articles = deduplicateArticles(collected);
+    const dataMode: AnalysisRetrievalContext['dataMode'] = sawLive
+      ? 'live'
+      : sawCached
+        ? 'cached'
+        : 'unavailable';
+
+    return {
+      articles,
+      retrievalContext: {
+        dataMode,
+        providers: [...providers],
+        fallbackReason:
+          articles.length > 0 ? undefined : failureKinds.size > 0 ? 'provider-error' : 'no-live-results',
+        articlesRetrieved: articles.length,
+        outcome: retrievalOutcome(articles.length, failureKinds),
+      },
+    };
+  }
+
   private async retrieveMemberEvidence(
     member: CountryMeta,
     requestedLanguage: LanguageCode,
