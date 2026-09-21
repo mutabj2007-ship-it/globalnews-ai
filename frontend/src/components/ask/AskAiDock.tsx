@@ -181,8 +181,14 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
         is exactly the inversion Rev A's change log owns.
       */
       const sent = transportableContext(storyContext);
+      const priorQuestion =
+        phase.kind === 'answered' || phase.kind === 'failed'
+          ? phase.question
+          : history.length > 0
+            ? history[history.length - 1].question
+            : undefined;
 
-      analyzeNews(asked, language, sent)
+      analyzeNews(asked, language, sent, priorQuestion)
         .then((response) => {
           if (requestSeq.current !== seq) return;
           setPhase({ kind: 'answered', question: asked, response, context: sent });
@@ -197,7 +203,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           });
         });
     },
-    [question, language, dictionary, storyContext, phase],
+    [question, language, dictionary, storyContext, phase, history],
   );
 
   return (
