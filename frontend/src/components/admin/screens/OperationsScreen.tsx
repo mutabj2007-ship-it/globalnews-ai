@@ -74,15 +74,9 @@ export function OperationsScreen({ tab }: { tab: OperationsTab }): JSX.Element {
 
       {(tab === 'news' || tab === 'sources') && <ProviderHealthPanel />}
 
-      {tab === 'news' && (
-        <PlaceholderPanel
-          title={screen.articlesTitle}
-          purpose={screen.purpose}
-          requirement={screen.articlesRequirement}
-          field="admin-06.articleInventory"
-          ratio="min-h-[140px]"
-        />
-      )}
+      {tab === 'sources' && <PublisherSourcePanel />}
+
+      {tab === 'news' && <ArticleInventoryPanel />}
 
       {tab === 'ai' && (
         <>
@@ -113,6 +107,85 @@ export function OperationsScreen({ tab }: { tab: OperationsTab }): JSX.Element {
         />
       )}
     </div>
+  );
+}
+
+function PublisherSourcePanel(): JSX.Element {
+  const { t } = useAdminContext();
+  const screen = t.screens.operations;
+  const resource = useAdminResource<AdminNewsProvidersResponse>(ADMIN_API.newsProviders);
+  const sources = resource.data?.sources ?? [];
+
+  return (
+    <AdminPanel
+      title="Publisher & official sources"
+      field="admin-06.publisherSources"
+      note="Individual sources carried by the Publisher Feeds transport. Source identity and country are preserved independently."
+    >
+      <div className="grid gap-2 sm:grid-cols-2">
+        {sources.map((source) => (
+          <div key={source.sourceId} className="rounded-lg border border-adm-edge bg-adm-card-soft p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="font-semibold text-adm-ink">{source.displayName}</div>
+                <div className="mt-1 font-cd-mono text-[10px] text-adm-ink-faint">
+                  {source.countryCode} · {source.language ?? '—'} · {source.sourceType.replace('_', ' ')}
+                </div>
+              </div>
+              <StatusChip label={source.enabled ? 'ACTIVE' : 'INACTIVE'} tone={source.enabled ? 'good' : 'mute'} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </AdminPanel>
+  );
+}
+
+function ArticleInventoryPanel(): JSX.Element {
+  const resource = useAdminResource<AdminNewsProvidersResponse>(ADMIN_API.newsProviders);
+  const inventory = resource.data?.inventory;
+
+  return (
+    <AdminPanel
+      title="Article inventory"
+      field="admin-06.articleInventory"
+      note="Measured from retained Article rows. This read does not call a provider."
+    >
+      {resource.state === 'loading' ? (
+        <div className="py-8 font-cd-mono text-[10px] uppercase text-adm-ink-mute">Loading inventory…</div>
+      ) : inventory === null || inventory === undefined ? (
+        <div className="py-8 text-sm text-adm-ink-dim">Article inventory could not be read.</div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="rounded-lg border border-adm-edge bg-adm-card-soft p-3">
+              <div className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">Stored articles</div>
+              <div className="mt-1 text-2xl font-semibold text-adm-ink">{inventory.articleCount}</div>
+            </div>
+            <div className="rounded-lg border border-adm-edge bg-adm-card-soft p-3">
+              <div className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">Latest retained</div>
+              <div className="mt-1 break-all font-cd-mono text-[10px] text-adm-ink">{inventory.latestFetchedAt ?? '—'}</div>
+            </div>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-adm-edge">
+            <table className="w-full min-w-[460px] text-left text-xs">
+              <thead className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">
+                <tr><th className="p-3">Source</th><th className="p-3">Articles</th><th className="p-3">Latest retained</th></tr>
+              </thead>
+              <tbody>
+                {inventory.bySource.map((source) => (
+                  <tr key={source.sourceId} className="border-t border-adm-edge">
+                    <td className="p-3"><div className="font-semibold text-adm-ink">{source.sourceName}</div><div className="font-cd-mono text-[10px] text-adm-ink-faint">{source.sourceId}</div></td>
+                    <td className="p-3 text-adm-ink">{source.articleCount}</td>
+                    <td className="p-3 font-cd-mono text-[10px] text-adm-ink-dim">{source.latestFetchedAt ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </AdminPanel>
   );
 }
 
