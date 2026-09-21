@@ -93,7 +93,8 @@ describe('the dock is a real scrollable conversation on phones', () => {
     expect(CODE).toMatch(/const \[history, setHistory\] = useState<SettledAskTurn\[\]>\(\[\]\)/);
     expect(CODE).toMatch(/data-ask="history-turn"/);
     expect(CODE).toMatch(/data-ask="user-message"/);
-    const submit = CODE.slice(CODE.indexOf('const submit = useCallback'), CODE.indexOf('return ('));
+    const submitStart = CODE.indexOf('const submit = useCallback');
+    const submit = CODE.slice(submitStart, CODE.indexOf('\n  return (', submitStart));
     expect(submit).not.toMatch(/phase\.response|analysis\.sources|retrievalContext/);
   });
 
@@ -175,7 +176,8 @@ describe('ASK RULE A — only bounded context crosses the boundary', () => {
   });
 
   it('§7.3 — no evidence/report/cluster identity and no response field is used as an INPUT', () => {
-    const submit = CODE.slice(CODE.indexOf('const submit = useCallback'), CODE.indexOf('return ('));
+    const submitStart = CODE.indexOf('const submit = useCallback');
+    const submit = CODE.slice(submitStart, CODE.indexOf('\n  return (', submitStart));
     for (const forbidden of ['evidenceId', 'reportId', 'clusterId', 'sourceEntities', 'keyFacts',
                              'agreements', 'differences', 'sourceDiversity', 'retrievalContext',
                              'phase.response', 'analysis.sources']) {
@@ -184,7 +186,8 @@ describe('ASK RULE A — only bounded context crosses the boundary', () => {
   });
 
   it('conversation context contains only a prior USER question, never prior AI output', () => {
-    const submit = CODE.slice(CODE.indexOf('const submit = useCallback'), CODE.indexOf('return ('));
+    const submitStart = CODE.indexOf('const submit = useCallback');
+    const submit = CODE.slice(submitStart, CODE.indexOf('\n  return (', submitStart));
     expect(submit).toMatch(/const priorQuestion =/);
     expect(submit).toMatch(/phase\.question/);
     expect(submit).not.toMatch(/phase\.response|analysis\.sources|keyFacts|retrievalContext/);
