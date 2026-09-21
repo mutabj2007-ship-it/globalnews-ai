@@ -43,10 +43,11 @@ import type { TodayCountryCount } from '@/lib/homeFeedAllocation';
  *
  * ── THE WORLD MAP LINK PROMISES ONLY WHAT IT DELIVERS ─────────────────────
  *
- * It carries `?country=<iso3>`, the product's existing convention, but nothing
- * on /map reads that parameter today. So the accessible name says only that it
- * opens the World Map. When the map lane consumes the parameter this link
- * starts focusing for free and nothing here changes.
+ * It carries the current canonical country-selection URL: both the legacy
+ * `country=<iso3>` scope key and the semantic `sel=country:<iso3>` identity.
+ * Map selection therefore survives navigation without any provider read; the
+ * destination remains geographic scope until the reader explicitly requests
+ * country intelligence.
  */
 interface TodayGeographicIntelligenceProps {
   countries: TodayCountryCount[];
@@ -335,7 +336,7 @@ export function TodayGeographicIntelligence({
         href={
           selectedCountry === null
             ? '/map'
-            : `/map?country=${findCountryByIso2(selectedCountry)?.iso3 ?? selectedCountry}`
+            : (() => { const iso3 = findCountryByIso2(selectedCountry)?.iso3 ?? selectedCountry; return `/map?country=${encodeURIComponent(iso3)}&sel=${encodeURIComponent(`country:${iso3}`)}`; })()
         }
         aria-label={t.openWorldMap}
         className="mt-[12px] inline-flex min-h-[44px] items-center rounded-gn-pill border border-gn-line-pill px-[12px] font-gn-mono text-gn-hud-toggle uppercase text-gn-ink-active outline-none transition-colors hover:border-gn-line-pill-hover hover:bg-gn-pill-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gn-focus"

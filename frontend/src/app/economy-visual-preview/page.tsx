@@ -139,7 +139,10 @@ export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
     */
     <ScriptRun locale={locale} step="wrapping" as="div">
       <main style={{ minHeight: '100vh' }}>
-        <AlphaVisualPreviewMarker locale={locale} />
+        <AlphaVisualPreviewMarker
+          locale={locale}
+          observedGeography={retained?.geographyLabel}
+        />
         {/*
           THE ONE REAL FIGURE. The capability below is DERIVED from this read rather
           than declared, so it cannot say OBSERVED unless something was observed. The

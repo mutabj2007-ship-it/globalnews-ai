@@ -146,6 +146,23 @@ describe('the wiring carries the value, and carries nothing else', () => {
       .toBe('shell imports the bind: false');
   });
 
+  it('a geography selection under Conflict cannot swap the rail to Country Intelligence', () => {
+    /*
+      Country/city selections are scopes. The accepted Conflict contract only
+      swaps the attention queue for a selected CONFLICT SUBJECT, and no such
+      runtime subject exists yet. This guard prevents the measured Alpha defect
+      where selecting Sudan/Poland/Rwanda under domain=conflict exposed the
+      generic EvidenceSelectionCard and its Load Country Intelligence action.
+    */
+    expect(shell).toContain(
+      "contextQueue !== null && selection !== null && selection.kind !== 'REGION'",
+    );
+    expect(shell).toContain('selection === null || keepSpecialistQueueForGeography');
+
+    /* Positive control: the generic Country card still exists for /map. */
+    expect(shell).toContain('<EvidenceSelectionCard');
+  });
+
   it('the panel was not modified — it already declared, defaulted and gated the prop', () => {
     /* Main's D-1, re-measured here rather than trusted from the README. */
     expect(panel).toMatch(/readonly queue\?: AttentionQueue \| null;/);

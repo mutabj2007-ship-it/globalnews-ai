@@ -177,10 +177,11 @@ describe('a figure without a source or a unit is refused, not rendered', () => {
 /* ═══ 4 · THE READ PORT ═══════════════════════════════════════════════════════ */
 
 describe('the read port reports the platform gap rather than a quiet market', () => {
-  it('reports NO_READ_ENDPOINT while no internal read is wired', async () => {
-    const r = await readMarketObservations();
-    expect(r.kind).toBe('UNAVAILABLE');
-    if (r.kind === 'UNAVAILABLE') expect(r.reason).toBe('NO_READ_ENDPOINT');
+  it('the retained reader is wired, while the legacy absence sentinel remains explicit', () => {
+    const model = stripComments(read(join(DOMAIN_LIB, 'mktReadModel.ts')));
+    expect(model).toContain("const MARKET_READ_PATH = '/market-data/observations'");
+    expect(model).toContain('resolveApiBaseUrl()');
+    expect(model).toContain('const MARKET_OBSERVATION_READER: MarketObservationReader = retainedObservationReader');
     expect(MARKET_READ_ABSENCE).toBe('NO_READ_ENDPOINT');
   });
 
@@ -232,10 +233,16 @@ describe('the Market frontend cannot reach a provider', () => {
    * one edit from making one, so the domain is asserted to contain no request machinery
    * at all.
    */
-  it('no fetch, no client data hook, no external URL anywhere in the domain', () => {
+  it('the only fetch is the retained same-deployment read model; no client hook or external URL exists', () => {
     for (const f of DOMAIN_SOURCES) {
       const code = stripComments(read(f));
-      expect(code).not.toMatch(/\bfetch\s*\(/);
+      const isReadModel = f.endsWith('mktReadModel.ts');
+      if (isReadModel) {
+        expect((code.match(/\bfetch\s*\(/g) ?? [])).toHaveLength(1);
+        expect(code).toContain("const MARKET_READ_PATH = '/market-data/observations'");
+      } else {
+        expect(code).not.toMatch(/\bfetch\s*\(/);
+      }
       expect(code).not.toMatch(/\buseEffect\b/);
       expect(code).not.toMatch(/\buseSWR\b|\buseQuery\b|\baxios\b|XMLHttpRequest/);
       expect(code).not.toMatch(/https?:\/\//);

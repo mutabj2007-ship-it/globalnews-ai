@@ -9,6 +9,8 @@ import { HealthModule } from './health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { NewsModule } from './modules/news/news.module';
 import { EconomyModule } from './modules/economy/economy.module';
+import { MarketReadModule } from './modules/market-ingest/market-read.module';
+import { ConflictObservationModule } from './modules/conflict-observation/conflict-observation.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { SignalsModule } from './modules/signals/signals.module';
 import { CorsStartupValidator } from './security/cors-startup-validator';
@@ -64,6 +66,22 @@ import {
       consumes no GNews quota.
     */
     EconomyModule,
+    /*
+      MARKET — RETAINED READ ONLY.
+
+      This module exposes only MarketObservation rows already retained in Prisma.
+      It imports no scheduler, provider registry, transport or adapter, so page
+      navigation cannot activate TED, Eurostat, GLEIF or any other acquisition.
+    */
+    MarketReadModule,
+    /*
+      CONFLICT — RETAINED READ ONLY.
+
+      No Conflict producer is activated here. Until Product Owner approval of a
+      rights-cleared producer, this module can only return rows already retained
+      in the provider-neutral ConflictObservation table.
+    */
+    ConflictObservationModule,
     /*
       GEO — the PUBLIC geographic resolution routes (E1-GEO-PUBLIC-REWRITE-REVIEW-1).
 

@@ -106,10 +106,10 @@ export const LAYER_REGISTRY: readonly LayerDefinition[] = [
   },
   {
     id: 'rivers', class: 'REFERENCE', zoomRange: [4, 11], tier: 'implement-next',
-    runtime: 'NOT_IMPLEMENTED',
+    runtime: 'LIVE',
     runtimeEvidence:
-      'No centreline dataset is present in the product.',
-    available: false, licence: 'Natural Earth centerlines — public domain', modes: [], defaultOn: false,
+      'Bundled Natural Earth 1:50m river centreline geometry is served from /reference/rivers.json and rendered by EvidenceMapCanvas through referenceGeography.ts.',
+    available: true, licence: 'Natural Earth centerlines — public domain', modes: [], defaultOn: true,
   },
   {
     id: 'places', class: 'REFERENCE', zoomRange: [3, 13], tier: 'implement-next',
@@ -167,7 +167,7 @@ export const LAYER_REGISTRY: readonly LayerDefinition[] = [
     id: 'watch', class: 'EVIDENCE', zoomRange: [1, 13], tier: 'implement-next',
     runtime: 'GATED',
     runtimeEvidence:
-      'GATE: there is no Watch runtime anywhere. `backend/src/modules/watch` is absent here and `WatchModule` appears 0 times in canonical app.module.ts. This layer was `available: true` before PO ruling 5 — it was the decorative toggle the ruling names.',
+      'GATE: country Follow persistence exists and the shared Watch identity substrate is present, but no map Watch observation feed/producer is wired. The layer therefore remains unavailable until a governed Watch runtime can emit map evidence.',
     available: false, licence: 'GlobalNews AI user store — internal',
     modes: ['WORLD', 'EVIDENCE', 'WATCH'], defaultOn: true,
   },
@@ -188,11 +188,11 @@ export const LAYER_REGISTRY: readonly LayerDefinition[] = [
   },
   {
     id: 'admin1', class: 'REFERENCE', zoomRange: [6, 13], tier: 'beta',
-    runtime: 'NOT_IMPLEMENTED',
+    runtime: 'LIVE',
     runtimeEvidence:
-      'No admin-1 geometry exists in the product.',
-    available: false, licence: 'geoBoundaries ADM1 — CC-BY 4.0 (attribution required)',
-    modes: [], defaultOn: false,
+      'Bundled Natural Earth 1:50m admin-1 line geometry is served from /reference/admin1-lines.json and rendered by EvidenceMapCanvas. Coverage is intentionally sparse and excludes East Africa at this Natural Earth scale; Rwanda administrative authority remains NISR.',
+    available: true, licence: 'Natural Earth admin-1 lines — public domain',
+    modes: [], defaultOn: true,
   },
   {
     id: 'admin2', class: 'REFERENCE', zoomRange: [8, 13], tier: 'beta',

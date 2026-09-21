@@ -57,6 +57,8 @@
  * proved and this surface keeps.
  */
 
+import { resolveApiBaseUrl } from '@/lib/api/apiBase';
+
 /* ───────────────────────────────────────────────────────────────────────────
  * 1 · THE CONTRACT FIELD NAMES, AS A VALUE
  * ─────────────────────────────────────────────────────────────────────────── */
@@ -225,28 +227,50 @@ export type MarketReadResult =
   | { readonly kind: 'UNAVAILABLE'; readonly reason: MarketReadUnavailableReason };
 
 /**
- * THE ONE ACTIVATION POINT.
+ * THE ONE INTERNAL READ POINT.
  *
- * It returns `null` while no internal read seam exists. Give it a reader and the surface
- * transitions; nothing else in the Market frontend changes, which is the property that
- * makes this a seam rather than a stub.
+ * The retained read seam now exists. It can transition the surface only from
+ * "no retained observation" to observations already stored by the platform.
+ * It cannot activate a provider, scheduler or external transport.
  *
- * It is deliberately NOT a fetch of an external host and it never will be: the reader
- * surface consumes internal stored observations only. When Code lands the read endpoint,
- * the reader implemented here calls THAT, server-side.
+ * Browser execution, if this helper is ever reused client-side, stays on the
+ * same-origin /market-data rewrite. The current Market page calls it from a
+ * Server Component through the deployment-internal backend origin.
  */
 type MarketObservationReader = () => Promise<readonly MarketStoredObservation[]>;
 
-function activatedObservationReader(): MarketObservationReader | null {
-  return null;
+const MARKET_READ_PATH = '/market-data/observations';
+
+function marketReadUrl(): string {
+  if (typeof window !== 'undefined') return MARKET_READ_PATH;
+  return `${resolveApiBaseUrl()}/market/observations`;
 }
 
-const MARKET_OBSERVATION_READER: MarketObservationReader | null = activatedObservationReader();
+async function retainedObservationReader(): Promise<readonly MarketStoredObservation[]> {
+  /*
+   * Same-deployment INTERNAL reader only. Browser execution uses the relative
+   * /market-data rewrite; this Server Component uses the deployment's internal
+   * backend base because Node has no document against which to resolve a
+   * relative path. The backend target imports no scheduler or provider.
+   */
+  const response = await fetch(marketReadUrl(), {
+    cache: 'no-store',
+    headers: { accept: 'application/json' },
+  });
+
+  if (!response.ok) return [];
+
+  const payload: unknown = await response.json();
+  return Array.isArray(payload) ? (payload as MarketStoredObservation[]) : [];
+}
+
+const MARKET_OBSERVATION_READER: MarketObservationReader = retainedObservationReader;
 
 /**
- * The reason the surface reports while no reader is wired. It names the PLATFORM gap —
- * the ingest module ships a scheduler, a repository and two adapters but no controller —
- * rather than implying the market itself is quiet.
+ * Legacy vocabulary member retained because NO_READ_ENDPOINT is still a valid
+ * failure reason for older serialized states. It is NOT the current Alpha state:
+ * this reader now reports NO_OBSERVATION_STORED when the retained endpoint is
+ * healthy but empty.
  */
 export const MARKET_READ_ABSENCE: MarketReadUnavailableReason = 'NO_READ_ENDPOINT';
 
@@ -258,10 +282,12 @@ export const MARKET_READ_ABSENCE: MarketReadUnavailableReason = 'NO_READ_ENDPOIN
  * substrate proved, preserved rather than re-earned.
  */
 export async function readMarketObservations(): Promise<MarketReadResult> {
-  if (MARKET_OBSERVATION_READER === null) {
-    return { kind: 'UNAVAILABLE', reason: MARKET_READ_ABSENCE };
+  let stored: readonly MarketStoredObservation[];
+  try {
+    stored = await MARKET_OBSERVATION_READER();
+  } catch {
+    return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_STORED' };
   }
-  const stored = await MARKET_OBSERVATION_READER();
   if (stored.length === 0) {
     return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_STORED' };
   }

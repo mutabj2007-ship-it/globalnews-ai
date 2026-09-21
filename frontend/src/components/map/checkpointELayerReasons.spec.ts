@@ -101,11 +101,17 @@ describe('E-3 — an unavailable layer says which kind of unavailable', () => {
       }
     });
 
-    it('a missing dataset is NOT_BUILT — there is nothing to connect', () => {
-      /* "No admin-1 geometry exists in the product." */
-      expect(layerUnavailableReason(layerById('admin1')!)).toBe('NOT_BUILT');
+    it('a genuinely missing dataset is NOT_BUILT — there is nothing to connect', () => {
       expect(layerUnavailableReason(layerById('admin2')!)).toBe('NOT_BUILT');
-      expect(layerUnavailableReason(layerById('rivers')!)).toBe('NOT_BUILT');
+    });
+
+    it('bundled reference geography is LIVE once the renderer and same-origin data both exist', () => {
+      for (const id of ['rivers', 'admin1'] as const) {
+        const layer = layerById(id)!;
+        expect(layer.runtime).toBe('LIVE');
+        expect(layer.available).toBe(true);
+        expect(layerUnavailableReason(layer)).toBeNull();
+      }
     });
 
     it('a closed gate is NOT_CONNECTED, because the substrate exists', () => {
@@ -127,7 +133,11 @@ describe('E-3 — an unavailable layer says which kind of unavailable', () => {
     });
 
     it('a layer that worked and stopped promises nothing', () => {
-      const failed = { ...layerById('admin1')!, runtime: 'FAILED_MEASUREMENT' as const };
+      const failed = {
+        ...layerById('admin1')!,
+        runtime: 'FAILED_MEASUREMENT' as const,
+        available: false,
+      };
 
       expect(layerUnavailableReason(failed)).toBe('TEMPORARILY_UNAVAILABLE');
     });

@@ -1434,9 +1434,30 @@ export function GlobalMapShell({
     calloutViewport,
   );
 
+  /*
+   * CONFLICT DOMAIN SELECTION SEMANTICS — COUNTRY/CITY IS SCOPE, NOT A
+   * CONFLICT SUBJECT.
+   *
+   * The accepted Conflict contract says the attention queue is replaced only
+   * by a SELECTED CONFLICT SUBJECT. Today the map has no ConflictObservation
+   * event subject at all; a geographic country/city selection therefore cannot
+   * satisfy that mount condition. The previous generic branch nevertheless
+   * swapped in EvidenceSelectionCard, which is Country Intelligence and exposed
+   * "Load Country Intelligence" under a Conflict URL. That was the measured
+   * Alpha defect.
+   *
+   * A non-null specialist queue is the structural signal that this shell is
+   * bound to Conflict. Until a real Conflict subject type exists, ordinary
+   * geography selections keep the Conflict queue. REGION retains its dedicated
+   * RegionIdentityCard because that card describes scope and makes no Country
+   * Intelligence retrieval claim.
+   */
+  const keepSpecialistQueueForGeography =
+    contextQueue !== null && selection !== null && selection.kind !== 'REGION';
+
   const rail = hud.rightRail ? (
     <IntelligenceRightRail label={spatial.railLabel}>
-      {selection === null ? (
+      {selection === null || keepSpecialistQueueForGeography ? (
         <ContextSummaryPanel
           mode={mode}
           period={period}

@@ -142,7 +142,6 @@ describe('0 · the walk reaches what it claims to reach', () => {
       'energyStrings.ts',
       'energyModel.ts',
       'energyGoverned.ts',
-      'energyFixtures.ts',
       'energyTokens.ts',
       'EnergyShell.tsx',
       'EnergyParts.tsx',
@@ -174,7 +173,7 @@ describe('1 · H01 · one route family, state in the URL', () => {
   });
 
   it('round-trips every non-default combination', () => {
-    const state = { substrate: 'flows', subject: 'hormuz', window: '30d', frame: 'design-fixture' } as const;
+    const state = { substrate: 'flows', subject: 'hormuz', window: '30d' } as const;
     const params = searchParamsWithEnergyState(null, state);
     expect(energyStateFromSearchParams(params)).toEqual(state);
   });
@@ -195,7 +194,7 @@ describe('1 · H01 · one route family, state in the URL', () => {
       const state = energyStateFromSearchParams(params);
       expect(state.substrate).toBe(ENERGY_DEFAULT_SUBSTRATE);
       expect(state.window).toBe(ENERGY_DEFAULT_WINDOW);
-      expect(state.frame).toBe('governed');
+      expect(Object.prototype.hasOwnProperty.call(state, 'frame')).toBe(false);
       expect(state.subject === null || /^[a-z0-9][a-z0-9_-]*$/i.test(state.subject)).toBe(true);
     }
   });
@@ -657,10 +656,17 @@ describe('13 · a gate stops the one feature it governs', () => {
 
 /* ═══ 14 · THE FIXTURE FRAME IS LABELLED, AND IS NOT THE DEFAULT ══════════ */
 
-describe('14 · design fixtures are labelled and never served by default', () => {
-  it('/energy alone serves the governed frame', () => {
-    expect(energyStateFromSearchParams(new URLSearchParams('')).frame).toBe('governed');
-    expect(ENERGY_DEFAULT_URL_STATE.frame).toBe('governed');
+describe('14 · design fixtures are labelled and never served by the public route', () => {
+  it('/energy alone has no reader-selectable data-source state', () => {
+    expect(Object.prototype.hasOwnProperty.call(energyStateFromSearchParams(new URLSearchParams('')), 'frame')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(ENERGY_DEFAULT_URL_STATE, 'frame')).toBe(false);
+  });
+
+  it('a hand-authored frame=design-fixture URL cannot put fixture data on the reader route', () => {
+    const route = code(ROUTE);
+    expect(route).toContain('const data = ENERGY_GOVERNED_FRAME;');
+    expect(route).not.toContain('ENERGY_DESIGN_FIXTURE_FRAME');
+    expect(GRAPH.some((file) => file.endsWith('energyFixtures.ts'))).toBe(false);
   });
 
   it('the banner is derived from the data set and cannot be suppressed', () => {

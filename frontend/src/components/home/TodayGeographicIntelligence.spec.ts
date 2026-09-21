@@ -159,17 +159,20 @@ describe('R2 Today geography — the mandatory contract and its accessible equiv
   });
 });
 
-describe('R2 Today geography — the World Map link promises only what it delivers', () => {
-  it('carries the country parameter as ISO-3 using the released convention', () => {
-    expect(code).toMatch(/\/map\?country=\$\{findCountryByIso2\(selectedCountry\)\?\.iso3 \?\? selectedCountry\}/);
+describe('R2 Today geography — the World Map handoff', () => {
+  it('carries ISO-3 scope and semantic selection without performing a read', () => {
+    expect(code).toContain('/map?country=');
+    expect(code).toContain('&sel=');
+    expect(code).toContain('country:');
+    expect(code).toContain('encodeURIComponent');
     expect(code).toMatch(/selectedCountry === null\s*\?\s*'\/map'/);
   });
 
-  it('promises ONLY to open the World Map, because nothing on /map reads that parameter yet', () => {
+  it('promises only to open the World Map; selection itself remains provider-free', () => {
     expect(code).toMatch(/aria-label=\{t\.openWorldMap\}/);
     const en = getDictionary('en').today.openWorldMap;
     expect(en).toBe('Open the World Map');
-    expect(en.toLowerCase()).not.toMatch(/focus|zoom|centre|center|go to/);
+    expect(code).not.toMatch(/fetchCountryNews|performCountryRead|fetch\s*\(/);
   });
 });
 
