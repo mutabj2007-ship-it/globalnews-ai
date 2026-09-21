@@ -119,7 +119,7 @@ function PublisherSourcePanel(): JSX.Element {
   return (
     <AdminPanel
       title="Publisher & official sources"
-      field="admin-06.publisherSources"
+      field="admin-06.providerHealth"
       note="Individual sources carried by the Publisher Feeds transport. Source identity and country are preserved independently."
     >
       <div className="grid gap-2 sm:grid-cols-2">
