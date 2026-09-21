@@ -110,26 +110,26 @@ class FakeTable {
     where,
     orderBy,
     select,
+    take,
   }: {
     where?: AnyRow;
     orderBy?: AnyRow;
     select?: AnyRow;
+    take?: number;
   } = {}): AnyRow[] {
     let found = this.rows.filter((row) =>
-      where ? Object.entries(where).every(([k, v]) => row[k] === v) : true,
+      where ? Object.entries(where).every(([k, v]) => matchesCondition(row[k], v)) : true,
     );
 
     if (orderBy) {
       const [field, direction] = Object.entries(orderBy)[0] as [string, 'asc' | 'desc'];
       found = [...found].sort((a, b) => {
-        const av = a[field] as number | Date;
-        const bv = b[field] as number | Date;
-        const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+        const cmp = compare(a[field], b[field]);
         return direction === 'desc' ? -cmp : cmp;
       });
     }
 
-    return found.map((row) => project(row, select));
+    return take === undefined ? found.map((row) => project(row, select)) : found.slice(0, take).map((row) => project(row, select));
   }
 
   /** Prisma's findFirst: the first row matching, honoring orderBy. */
@@ -169,6 +169,61 @@ class FakeTable {
     if (existing) return this.update({ where, data: update, select });
     return this.create({ data: { ...create, ...where }, select });
   }
+}
+
+/**
+ * Evaluates one `where` clause entry against a row.
+ *
+ * Supports the small set of Prisma filter operators these services
+ * actually use — `gte`, `lte`, `gt`, `lt`, `in`, `not` — alongside
+ * plain equality. Anything else throws rather than silently
+ * mismatching: a fake that quietly returns no rows for a filter it
+ * does not understand produces a passing "empty result" test for a
+ * query that would really have matched, which is worse than no test.
+ */
+function matchesCondition(actual: unknown, condition: unknown): boolean {
+  if (condition === null || typeof condition !== 'object' || condition instanceof Date) {
+    return actual === condition;
+  }
+
+  for (const [operator, operand] of Object.entries(condition as AnyRow)) {
+    switch (operator) {
+      case 'equals':
+        if (actual !== operand) return false;
+        break;
+      case 'not':
+        if (actual === operand) return false;
+        break;
+      case 'in':
+        if (!Array.isArray(operand) || !operand.includes(actual)) return false;
+        break;
+      case 'gte':
+        if (!(compare(actual, operand) >= 0)) return false;
+        break;
+      case 'gt':
+        if (!(compare(actual, operand) > 0)) return false;
+        break;
+      case 'lte':
+        if (!(compare(actual, operand) <= 0)) return false;
+        break;
+      case 'lt':
+        if (!(compare(actual, operand) < 0)) return false;
+        break;
+      default:
+        throw new Error(
+          `FakePrisma: unsupported filter operator "${operator}". Add it rather than letting the query silently match nothing.`,
+        );
+    }
+  }
+
+  return true;
+}
+
+function compare(a: unknown, b: unknown): number {
+  const left = a instanceof Date ? a.getTime() : (a as number);
+  const right = b instanceof Date ? b.getTime() : (b as number);
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
 }
 
 function project(row: AnyRow, select?: AnyRow): AnyRow {

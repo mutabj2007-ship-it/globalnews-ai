@@ -17,6 +17,7 @@ import { UsersModule } from './modules/users/users.module';
 import { HistoryModule } from './modules/history/history.module';
 import { ComputeModule } from './modules/compute/compute.module';
 import { AskModule } from './modules/ask/ask.module';
+import { BetaModule } from './modules/beta/beta.module';
 
 @Module({
   imports: [
@@ -60,6 +61,12 @@ import { AskModule } from './modules/ask/ask.module';
     // other current caller of that route behave exactly as before.
     // AskModule composes AnalysisService rather than replacing it.
     AskModule,
+    // BETA-SIMPLE-ASK-SAND-1 §15/§16/§17 — the simplified public Beta
+    // entry layer. Adds GET /beta/categories/:category, which reads
+    // only already-stored articles: BetaModule imports no retrieval
+    // or analysis module at all, so a category click structurally
+    // cannot trigger expensive synthesis.
+    BetaModule,
   ],
   controllers: [AppController],
   providers: [
