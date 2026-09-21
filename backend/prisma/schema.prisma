@@ -1207,6 +1207,31 @@ model MarketIngestLease {
 ///
 /// The semantics are ECON-CONTRACT-1's. This table stores what the Market lane
 /// acquired; it invents no vocabulary and re-declares no axis.
+
+/// Retained conflict event evidence. This is deliberately an observation store,
+/// not a Conflict Assessment store: no severity, escalation or situation identity
+/// is inferred here. A future governed producer may write rows only after rights
+/// and activation approval.
+model ConflictObservation {
+  id              String   @id @default(uuid())
+  observationKey  String   @unique
+  providerId      String
+  providerEventId String
+  occurredOn      DateTime
+  latitude        Float
+  longitude       Float
+  countryIso3     String?
+  placeLabel      String?
+  sourceUrl       String?
+  sourceName      String?
+  ingestedAt      DateTime @default(now())
+
+  @@unique([providerId, providerEventId])
+  @@index([occurredOn])
+  @@index([countryIso3, occurredOn])
+  @@index([providerId])
+}
+
 model MarketObservation {
   id String @id @default(uuid())
 
