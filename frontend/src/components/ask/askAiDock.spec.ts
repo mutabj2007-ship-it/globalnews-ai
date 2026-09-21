@@ -47,7 +47,7 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     /* the submitted value is the trimmed input and nothing else: no synonym
        expansion, no template, no appended keywords, no site: operators */
     expect(CODE).toMatch(/const asked = question\.trim\(\);/);
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent\)/);
+    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion\)/);
     expect(CODE).not.toMatch(/asked \+|`\$\{asked\}[^`]/);
   });
 
@@ -160,7 +160,7 @@ describe('opening the panel is not a question', () => {
  */
 describe('ASK RULE A — only bounded context crosses the boundary', () => {
   it('§7.1/§7.2 — a third argument is passed, and its keys are a subset of {title, articleId, countryCode}', () => {
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent\)/);
+    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion\)/);
     /* the narrowing lives in ONE place, so no call site can widen it */
     expect(CODE).toMatch(/const sent = transportableContext\(storyContext\);/);
 
@@ -181,6 +181,13 @@ describe('ASK RULE A — only bounded context crosses the boundary', () => {
                              'phase.response', 'analysis.sources']) {
       expect(`${forbidden}: ${submit.includes(forbidden)}`).toBe(`${forbidden}: false`);
     }
+  });
+
+  it('conversation context contains only a prior USER question, never prior AI output', () => {
+    const submit = CODE.slice(CODE.indexOf('const submit = useCallback'), CODE.indexOf('return ('));
+    expect(submit).toMatch(/const priorQuestion =/);
+    expect(submit).toMatch(/phase\.question/);
+    expect(submit).not.toMatch(/phase\.response|analysis\.sources|keyFacts|retrievalContext/);
   });
 
   it('§7.4 — `title` comes from the published context, never from the input box', () => {
