@@ -43,6 +43,15 @@ jobs:
           npm test --workspace=frontend -- --runInBand src/lib/economy/b4aEconomySubstrate.spec.ts
           npm test --workspace=frontend -- --runInBand src/lib/specialist/previewScopeRuling.spec.ts
           npm test --workspace=frontend -- --runInBand src/lib/market/marketSyntheticHarness.spec.ts
+      - name: Phone and compact-device regression sweep
+        run: |
+          npm test --workspace=frontend -- --runInBand src/components/analysis-frame/phoneWidthFrame.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/analysis-frame/r4Responsive.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/home/mobileVisualPass.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/home/responsiveAccessibilityHardening.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/mobile/compactSpatialCorrection.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/mobile/mobilePlaceSearchKeyboard.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/navigation/mobileNavViewport.spec.ts
       - name: Frontend build
         run: npm run build:frontend
       - name: Backend build
