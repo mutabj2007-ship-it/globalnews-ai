@@ -227,15 +227,15 @@ export type MarketReadResult =
   | { readonly kind: 'UNAVAILABLE'; readonly reason: MarketReadUnavailableReason };
 
 /**
- * THE ONE ACTIVATION POINT.
+ * THE ONE INTERNAL READ POINT.
  *
- * It returns `null` while no internal read seam exists. Give it a reader and the surface
- * transitions; nothing else in the Market frontend changes, which is the property that
- * makes this a seam rather than a stub.
+ * The retained read seam now exists. It can transition the surface only from
+ * "no retained observation" to observations already stored by the platform.
+ * It cannot activate a provider, scheduler or external transport.
  *
- * It is deliberately NOT a fetch of an external host and it never will be: the reader
- * surface consumes internal stored observations only. When Code lands the read endpoint,
- * the reader implemented here calls THAT, server-side.
+ * Browser execution, if this helper is ever reused client-side, stays on the
+ * same-origin /market-data rewrite. The current Market page calls it from a
+ * Server Component through the deployment-internal backend origin.
  */
 type MarketObservationReader = () => Promise<readonly MarketStoredObservation[]>;
 
@@ -267,8 +267,10 @@ async function retainedObservationReader(): Promise<readonly MarketStoredObserva
 const MARKET_OBSERVATION_READER: MarketObservationReader = retainedObservationReader;
 
 /**
- * Kept as an exported compatibility sentinel for older guards. The read endpoint
- * now exists; when it returns no rows the reader reports NO_OBSERVATION_STORED.
+ * Legacy vocabulary member retained because NO_READ_ENDPOINT is still a valid
+ * failure reason for older serialized states. It is NOT the current Alpha state:
+ * this reader now reports NO_OBSERVATION_STORED when the retained endpoint is
+ * healthy but empty.
  */
 export const MARKET_READ_ABSENCE: MarketReadUnavailableReason = 'NO_READ_ENDPOINT';
 
