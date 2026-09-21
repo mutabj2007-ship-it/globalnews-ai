@@ -114,6 +114,14 @@ describe('the dock is a real scrollable conversation on phones', () => {
     expect(CODE).toContain('h-[92dvh]');
     expect(CODE).toContain('env(safe-area-inset-bottom)');
   });
+
+  it('desktop uses a bounded floating dock with lifted surfaces rather than a full-height dark slab', () => {
+    expect(CODE).toContain('sm:inset-y-4');
+    expect(CODE).toContain('lg:w-[min(680px,46vw)]');
+    expect(CODE).toContain('bg-surface-raised');
+    expect(CODE).toContain('data-ask-scroll="conversation"');
+    expect(CODE).toContain('bg-surface');
+  });
 });
 
 describe('relational answers lead with the backend-authoritative conclusion', () => {
@@ -124,6 +132,15 @@ describe('relational answers lead with the backend-authoritative conclusion', ()
     expect(compact.indexOf('data-ask="relational-answer"')).toBeLessThan(
       compact.indexOf('data-ask="brief"'),
     );
+  });
+
+  it('no-evidence state explains the evidence boundary and suppresses a dead full-analysis transition', () => {
+    const compact = readFileSync(join(__dirname, 'AskCompactResult.tsx'), 'utf8');
+    expect(compact).toContain('resultNoAnswerProvider');
+    expect(compact).toContain('resultNoAnswerEvidence');
+    expect(compact).toContain('resultNoAnswerSafety');
+    expect(compact).toContain('const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0');
+    expect(compact).toContain('{canOpenFullAnalysis ? (');
   });
 });
 
@@ -323,7 +340,8 @@ describe('the released navigation geometry is untouched', () => {
       const head = group.slice(0, 4000);
       for (const key of ['contextPendingHint:', 'contextChipAnchored:', 'contextChipGeneric:',
                          'resultSourcesHeading:', 'resultSourcesNone:', 'resultSourcesTruncated:',
-                         'resultBriefAbsent:', 'resultNoAnswer:', 'openFullAnalysis:']) {
+                         'resultBriefAbsent:', 'resultNoAnswer:', 'resultNoAnswerProvider:',
+                         'resultNoAnswerEvidence:', 'resultNoAnswerSafety:', 'openFullAnalysis:']) {
         expect(`${f} ${key} ${group.startsWith('askAi: {') && head.includes(key)}`)
           .toBe(`${f} ${key} true`);
       }
