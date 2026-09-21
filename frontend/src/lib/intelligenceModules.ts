@@ -202,12 +202,7 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     accent: 'amber',
     icon: 'Search',
     state: 'preview',
-    /*
-      AUDIT R1 — DIRECT VISUAL PREVIEW ONLY.
-
-      This frame intentionally carries no runtime observation: Security is the NOT_ASSESSED zone authority with zero metered actions. Keep the noindex route for Product Owner visual inspection, but do not advertise it from the reader-facing Home module engine as though an intelligence runtime were connected.
-    */
-    destination: undefined,
+    destination: '/security-visual-preview',
   },
   /*
     ── R2 §1 · WORLD INTELLIGENCE IS A SURFACE, AND IT DOES NOT EXIST YET ───
@@ -288,12 +283,7 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     accent: 'violet',
     icon: 'ScanSearch',
     state: 'preview',
-    /*
-      AUDIT R1 — DIRECT VISUAL PREVIEW ONLY.
-
-      This frame intentionally carries no runtime observation: Politics is unbound and producer coverage remains zero. Keep the noindex route for Product Owner visual inspection, but do not advertise it from the reader-facing Home module engine as though an intelligence runtime were connected.
-    */
-    destination: undefined,
+    destination: '/politics-visual-preview',
   },
   /*
     R2 §4 — the VISUAL preview opens; the gated data route does not.
@@ -426,18 +416,7 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     accent: 'purple',
     icon: 'History',
     state: 'preview',
-    /*
-      AUDIT R1 — THE SURFACE EXISTS, BUT THE GOVERNED BACKEND DOES NOT RUN.
-
-      Humanitarian's composition root explicitly returns no module while
-      HUMANITARIAN_PROVISIONING is undefined: no authority store, no intake and
-      no reader path. The frontend route is a degraded design frame built from
-      HUM_VIEWS specimen labels. A Home destination would therefore present a
-      reader-facing product entry whose governed runtime is absent. Keep the
-      route available for direct Product Owner inspection, but do not advertise
-      it as a working intelligence entry until provisioning exists.
-    */
-    destination: undefined,
+    destination: '/humanitarian',
   },
   /*
     ── SLOT 9 · FORECAST & WATCHLIST -> ENERGY INTELLIGENCE ─────────────────
