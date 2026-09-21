@@ -123,6 +123,17 @@ export function AskCompactResult({
         )}
       </div>
 
+      {analysis?.relationalComposition ? (
+        <div data-ask="relational-answer" className="rounded-2xl border border-signal/30 bg-signal/5 px-4 py-3">
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-signal">
+            {dictionary.analysisFrame.relationalAnswer}
+          </p>
+          <p className="text-sm leading-relaxed text-ink-primary">
+            {analysis.relationalComposition.summary}
+          </p>
+        </div>
+      ) : null}
+
       {!hasAnalysis ? (
         <p data-ask="no-answer" className="text-sm text-ink-secondary">
           {t.resultNoAnswer}
