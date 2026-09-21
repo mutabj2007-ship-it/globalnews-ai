@@ -111,8 +111,8 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     const variant = mapShellVariant();
     const inert = INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m)).map((m) => m.id).sort();
     const expected = variant === 'shell'
-      ? ['humanitarian', 'politics', 'security', 'world-intelligence']
-      : ['conflict', 'humanitarian', 'politics', 'security', 'world-intelligence'];
+      ? ['world-intelligence']
+      : ['conflict', 'world-intelligence'];
     expect(`${variant}: ${inert.join(',')}`).toBe(`${variant}: ${expected.join(',')}`);
 
     /*
@@ -132,20 +132,9 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       which is the fact that removed it from the list above. If it ever silently
       lost its destination, this fails rather than the list quietly shrinking.
     */
-    const humanitarian = INTELLIGENCE_MODULES.find((m) => m.id === 'humanitarian');
-    expect(humanitarian?.state).toBe('preview');
-    expect(humanitarian?.destination).toBeUndefined();
-    expect(isModuleNavigable(humanitarian!)).toBe(false);
-
     const politics = INTELLIGENCE_MODULES.find((m) => m.id === 'politics');
-    expect(politics?.state).toBe('preview');
-    expect(politics?.destination).toBeUndefined();
-    expect(isModuleNavigable(politics!)).toBe(false);
-
-    const security = INTELLIGENCE_MODULES.find((m) => m.id === 'security');
-    expect(security?.state).toBe('preview');
-    expect(security?.destination).toBeUndefined();
-    expect(isModuleNavigable(security!)).toBe(false);
+    expect(`politics navigable: ${isModuleNavigable(politics!)}`).toBe('politics navigable: true');
+    expect(politics?.destination).toBe('/politics-visual-preview');
   });
 
   it('the nine ARE the specialist family, and no stale heading survives', () => {
@@ -185,8 +174,8 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       makes a return fail here rather than pass quietly.
     */
     const realRoutes = [
-      '/map', '/market',
-      '/economy-visual-preview',
+      '/map', '/market', '/humanitarian',
+      '/security-visual-preview', '/economy-visual-preview',
       /*
         `/politics-visual-preview` — the PREVIEW address, and deliberately not
         `/politics`, which stays 404 and unactivated. Listing the preview here
@@ -194,6 +183,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
         the card were ever repointed at the governed route, it would not be in
         this list and this test would fail.
       */
+      '/politics-visual-preview',
       /*
         `/energy` — and note it is the PRODUCT address, not a `-visual-preview`
         twin. Energy differs from Security, Economy and Politics here: each of
@@ -311,14 +301,14 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       ? 'conflict:preview:/map?domain=conflict'
       : 'conflict:preview:-';
     expect(INTELLIGENCE_MODULES.map((m) => `${m.id}:${m.state}:${m.destination ?? '-'}`)).toEqual([
-      'security:preview:-',
+      'security:preview:/security-visual-preview',
       'world-intelligence:comingSoon:-',
       'country-intelligence:active:/map',
-      'politics:preview:-',
+      'politics:preview:/politics-visual-preview',
       'economy:preview:/economy-visual-preview',
       conflictRow,
       'market:preview:/market',
-      'humanitarian:preview:-',
+      'humanitarian:preview:/humanitarian',
       'energy:preview:/energy',
     ]);
   });
@@ -361,7 +351,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     const variant = mapShellVariant();
     const clickable = INTELLIGENCE_MODULES.filter(isModuleNavigable).length;
     expect(`${variant}: ${clickable} clickable`)
-      .toBe(`${variant}: ${variant === 'shell' ? 5 : 4} clickable`);
+      .toBe(`${variant}: ${variant === 'shell' ? 8 : 7} clickable`);
   });
 
   it('every module has a dictionaryKey — no hardcoded English title/description in the config itself', () => {
