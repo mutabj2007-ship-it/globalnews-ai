@@ -19,3 +19,10 @@ export * from './countries';
 export * from './query-normalization';
 export * from './geo-fuzzy-resolver';
 export * from './countryDisplayName';
+
+// BETA-SIMPLE-ASK-SAND-1 — compute classification / Sand metering (§5,§8,§9,§11,§13,§14)
+// and Ask Conversational V2 (§3) contracts. Appended, so a convergence
+// merge with any other lane that also appends here is a trivial textual
+// resolution rather than a conflict over reordered exports.
+export * from './compute';
+export * from './ask';
