@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/alpha-ask-conversation-cross-region-r1
+      - fix/alpha-ask-relational-retained-r2
 
 concurrency:
   group: alpha-ask-conversation-cross-region
