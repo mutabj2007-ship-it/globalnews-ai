@@ -171,10 +171,9 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
  
         `transportableContext` narrows to `{title, articleId?, countryCode?}`
         (§1.1) — `url` and `sourceName` are display-only and retrieval
-        ignores them. With no context published, it returns `undefined` and
-        `analyzeNews` is called with TWO arguments, byte-for-byte the Phase
-        1 request (§7.5). The generic path is not merely similar; it is the
-        same call.
+        ignores them. A conversational follow-up may additionally carry the
+        immediately preceding USER question. It never carries the preceding
+        AI answer, sources, evidence identities or retrieval output.
  
         `title` is the SUBJECT and comes from the published context — never
         from the input box (§1.3, §7.4). Passing the follow-up as the title
