@@ -95,6 +95,12 @@ export const en = {
     resultSourcesTruncated: 'Showing {shown} of {total}. Open the full analysis for the rest.',
     resultBriefAbsent: 'This analysis carried no executive brief. That is an absence, not an assessment \u2014 nothing was measured and withheld.',
     resultNoAnswer: 'No answer was produced for this question. The state above says why.',
+    resultNoAnswerProvider:
+      'Live reporting could not be retrieved reliably enough to answer this question.',
+    resultNoAnswerEvidence:
+      'No retrieved reporting met the evidence threshold for this question.',
+    resultNoAnswerSafety:
+      'GlobalNews AI did not generate an answer without supporting evidence. Try again shortly or ask a narrower question about a place, event, or time period.',
     openFullAnalysis: 'Open full analysis',
     telemetryReports: 'retrieved reports',
     telemetryClusters: 'reporting clusters',
