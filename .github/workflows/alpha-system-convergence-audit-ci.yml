@@ -54,5 +54,10 @@ jobs:
           npm test --workspace=frontend -- --runInBand src/components/navigation/mobileNavViewport.spec.ts
       - name: Frontend build
         run: npm run build:frontend
+      - name: Conflict retained-boundary static guard
+        run: |
+          grep -q 'model ConflictObservation' backend/prisma/schema.prisma
+          grep -q "@Controller('conflict')" backend/src/modules/conflict-observation/conflict-observation.controller.ts
+          ! grep -R -E 'ucdp|fetch\(|axios|http://' backend/src/modules/conflict-observation
       - name: Backend build
         run: npm run build:backend
