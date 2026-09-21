@@ -416,7 +416,18 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     accent: 'purple',
     icon: 'History',
     state: 'preview',
-    destination: '/humanitarian',
+    /*
+      AUDIT R1 — THE SURFACE EXISTS, BUT THE GOVERNED BACKEND DOES NOT RUN.
+
+      Humanitarian's composition root explicitly returns no module while
+      HUMANITARIAN_PROVISIONING is undefined: no authority store, no intake and
+      no reader path. The frontend route is a degraded design frame built from
+      HUM_VIEWS specimen labels. A Home destination would therefore present a
+      reader-facing product entry whose governed runtime is absent. Keep the
+      route available for direct Product Owner inspection, but do not advertise
+      it as a working intelligence entry until provisioning exists.
+    */
+    destination: undefined,
   },
   /*
     ── SLOT 9 · FORECAST & WATCHLIST -> ENERGY INTELLIGENCE ─────────────────
