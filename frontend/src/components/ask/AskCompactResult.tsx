@@ -115,8 +115,8 @@ export function AskCompactResult({
   const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0;
 
   return (
-    <div data-ask="compact-result" className="flex flex-col gap-4 rounded-2xl border border-border bg-surface-hover p-4 shadow-sm sm:p-5">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
+    <div data-ask="compact-result" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <AnalysisModeBadge provenance={response.provenance} language={language} />
         {telemetry.retrievedArticleCount === null && telemetry.reportingClusterCount === null ? null : (
           <span data-ask="telemetry" className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
@@ -143,11 +143,11 @@ export function AskCompactResult({
       ) : null}
 
       {!hasAnalysis ? (
-        <div data-ask="no-answer" className="rounded-2xl border border-border-strong bg-surface px-4 py-4">
+        <div data-ask="no-answer" className="border-s-2 border-border-strong ps-3 pe-1 py-1">
           <p className="text-sm font-medium leading-relaxed text-ink-primary">
             {noAnswerMessage}
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
+          <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">
             {t.resultNoAnswerSafety}
           </p>
         </div>
