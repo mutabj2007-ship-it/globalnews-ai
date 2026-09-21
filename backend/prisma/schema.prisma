@@ -1208,28 +1208,36 @@ model MarketIngestLease {
 /// The semantics are ECON-CONTRACT-1's. This table stores what the Market lane
 /// acquired; it invents no vocabulary and re-declares no axis.
 
-/// Retained conflict event evidence. This is deliberately an observation store,
-/// not a Conflict Assessment store: no severity, escalation or situation identity
-/// is inferred here. A future governed producer may write rows only after rights
-/// and activation approval.
+/// Retained canonical Conflict observations.
+///
+/// Complex accepted axes are stored as JSON because their exact structures are
+/// governed by shared/src/conflict/observation.ts. Index columns duplicate only
+/// stable identity/time/geography selectors for efficient reads; they do not
+/// replace or re-derive the canonical values.
 model ConflictObservation {
   id              String   @id @default(uuid())
   observationKey  String   @unique
-  providerId      String
-  providerEventId String
-  occurredOn      DateTime
-  latitude        Float
-  longitude       Float
-  countryIso3     String?
-  placeLabel      String?
-  sourceUrl       String?
-  sourceName      String?
-  ingestedAt      DateTime @default(now())
+  authority       String
+  upstreamEventId String
+  eventType       String
+  owner           String
+  actors          Json
+  geography       Json
+  temporal        Json
+  severity        Json
+  sourceReference Json
+  acquisition     Json
+  revision        Json
 
-  @@unique([providerId, providerEventId])
+  /// Read/index projections bound at write from canonical temporal/geography.
+  occurredOn  DateTime
+  countryIso3 String?
+  ingestedAt  DateTime @default(now())
+
+  @@unique([authority, upstreamEventId])
   @@index([occurredOn])
   @@index([countryIso3, occurredOn])
-  @@index([providerId])
+  @@index([authority])
 }
 
 model MarketObservation {
