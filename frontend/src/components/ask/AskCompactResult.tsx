@@ -106,9 +106,17 @@ export function AskCompactResult({
   const briefAccepted = !brief.briefWithheld && paragraphs.length > 0;
   const briefAbsent = hasAnalysis && !brief.briefWithheld && paragraphs.length === 0;
 
+  const retrievalUnavailable =
+    response.retrievalContext.dataMode === 'unavailable' ||
+    response.retrievalContext.fallbackReason === 'provider-error';
+  const noAnswerMessage = retrievalUnavailable
+    ? t.resultNoAnswerProvider
+    : t.resultNoAnswerEvidence;
+  const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0;
+
   return (
-    <div data-ask="compact-result" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <div data-ask="compact-result" className="flex flex-col gap-4 rounded-2xl border border-border bg-surface-hover p-4 shadow-sm sm:p-5">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
         <AnalysisModeBadge provenance={response.provenance} language={language} />
         {telemetry.retrievedArticleCount === null && telemetry.reportingClusterCount === null ? null : (
           <span data-ask="telemetry" className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
@@ -124,7 +132,7 @@ export function AskCompactResult({
       </div>
 
       {analysis?.relationalComposition ? (
-        <div data-ask="relational-answer" className="rounded-2xl border border-signal/30 bg-signal/5 px-4 py-3">
+        <div data-ask="relational-answer" className="rounded-2xl border border-signal/35 bg-signal/10 px-4 py-3">
           <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-signal">
             {dictionary.analysisFrame.relationalAnswer}
           </p>
@@ -135,9 +143,14 @@ export function AskCompactResult({
       ) : null}
 
       {!hasAnalysis ? (
-        <p data-ask="no-answer" className="text-sm text-ink-secondary">
-          {t.resultNoAnswer}
-        </p>
+        <div data-ask="no-answer" className="rounded-2xl border border-border-strong bg-surface px-4 py-4">
+          <p className="text-sm font-medium leading-relaxed text-ink-primary">
+            {noAnswerMessage}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
+            {t.resultNoAnswerSafety}
+          </p>
+        </div>
       ) : (
         <>
           {brief.briefWithheld ? (
@@ -227,9 +240,15 @@ export function AskCompactResult({
         rather than hidden in client state. The full workspace is the only
         place full analytical detail is rendered (§2.3).
       */}
-      <a data-ask="open-full" href={fullAnalysisHref(question, context)} className="self-start text-sm text-signal underline underline-offset-4">
-        {t.openFullAnalysis}
-      </a>
+      {canOpenFullAnalysis ? (
+        <a
+          data-ask="open-full"
+          href={fullAnalysisHref(question, context)}
+          className="self-start rounded-lg px-1 py-0.5 text-sm font-medium text-signal underline decoration-signal/50 underline-offset-4 hover:decoration-signal"
+        >
+          {t.openFullAnalysis}
+        </a>
+      ) : null}
     </div>
   );
 }
