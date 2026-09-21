@@ -1,41 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import type {
+  ConflictObservation,
+  ConflictActorRef,
+  ConflictGeography,
+  ConflictTemporal,
+  ConflictSeverityState,
+  ConflictSourceReference,
+  ConflictAcquisitionProvenance,
+  ConflictRevision,
+  ConflictEventType,
+  ConflictEventOwner,
+  ConflictUpstreamAuthority,
+} from '@globalnews-ai/shared';
 
 /**
  * READ-ONLY CONFLICT PORT.
  *
  * No provider, downloader or scheduler is reachable here. Until an approved
- * producer writes retained rows, this returns an honest empty collection.
+ * producer writes canonical retained rows, this returns an honest empty array.
+ *
+ * The database duplicates authority/event id/time/country only as index columns.
+ * The accepted complex axes are read from their canonical JSON fields and are
+ * never reconstructed from those indexes.
  */
 @Injectable()
-export interface RetainedConflictObservationRow {
-  readonly observationKey: string;
-  readonly providerId: string;
-  readonly providerEventId: string;
-  readonly occurredOn: string;
-  readonly latitude: number;
-  readonly longitude: number;
-  readonly countryIso3: string | null;
-  readonly placeLabel: string | null;
-  readonly sourceUrl: string | null;
-  readonly sourceName: string | null;
-  readonly ingestedAt: string;
-}
-
-/**
- * STORAGE SHAPE IS NOT THE CANONICAL CONFLICT OBSERVATION.
- *
- * shared/src/conflict/observation.ts already owns the accepted canonical
- * ConflictObservation contract, including geography, temporal provenance,
- * ownership, severity state, acquisition provenance and revision semantics.
- * This repository returns a deliberately named retained-row DTO until a
- * governed adapter can prove every canonical field. It must never masquerade
- * a thin database row as that canonical type.
- */
 export class ConflictObservationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async latest(limit = 250): Promise<readonly RetainedConflictObservationRow[]> {
+  async latest(limit = 250): Promise<readonly ConflictObservation[]> {
     const bounded = Math.max(1, Math.min(Math.trunc(limit), 500));
     const rows = await this.prisma.conflictObservation.findMany({
       take: bounded,
@@ -44,16 +37,19 @@ export class ConflictObservationRepository {
 
     return rows.map((row) => ({
       observationKey: row.observationKey,
-      providerId: row.providerId,
-      providerEventId: row.providerEventId,
-      occurredOn: row.occurredOn.toISOString().slice(0, 10),
-      latitude: row.latitude,
-      longitude: row.longitude,
-      countryIso3: row.countryIso3,
-      placeLabel: row.placeLabel,
-      sourceUrl: row.sourceUrl,
-      sourceName: row.sourceName,
-      ingestedAt: row.ingestedAt.toISOString(),
+      identity: {
+        authority: row.authority as ConflictUpstreamAuthority,
+        upstreamEventId: row.upstreamEventId,
+      },
+      eventType: row.eventType as ConflictEventType,
+      owner: row.owner as ConflictEventOwner,
+      actors: row.actors as unknown as readonly ConflictActorRef[],
+      geography: row.geography as unknown as ConflictGeography,
+      temporal: row.temporal as unknown as ConflictTemporal,
+      severity: row.severity as unknown as ConflictSeverityState,
+      sourceReference: row.sourceReference as unknown as ConflictSourceReference,
+      acquisition: row.acquisition as unknown as ConflictAcquisitionProvenance,
+      revision: row.revision as unknown as ConflictRevision,
     }));
   }
 }
