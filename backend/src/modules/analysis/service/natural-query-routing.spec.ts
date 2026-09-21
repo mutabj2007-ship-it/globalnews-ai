@@ -83,6 +83,7 @@ function harness(corpus: NewsArticle[], anchor?: NewsArticle): Harness {
         }) as NewsResponse,
     ),
     findArticleById: jest.fn(async () => anchor ?? null),
+    findRetainedByCountry: jest.fn(async () => []),
   };
 
   const countryNewsService = {
@@ -238,6 +239,23 @@ describe('THE REPORTED FAILURES — measured end to end', () => {
     ]);
     expect(countryCalls).toEqual([]);
     expect(response.articles).toEqual([]);
+    expect(provider.analyzeNews).not.toHaveBeenCalled();
+  });
+
+  it('cross-region live zero performs only local retained reads and never widens provider retrieval', async () => {
+    const { service, searchCalls, countryCalls, provider } = harness([]);
+
+    const response = await service.analyzeNews(
+      'How does Middle East conflict affect the major part of East Africa including Rwanda?',
+    );
+
+    expect(searchCalls).toEqual([
+      { query: 'Middle East conflict East Africa', mode: 'relational' },
+      { query: 'Middle East conflict Rwanda', mode: 'relational' },
+    ]);
+    expect(countryCalls).toEqual([]);
+    expect(response.articles).toEqual([]);
+    expect(response.analysis).toBeNull();
     expect(provider.analyzeNews).not.toHaveBeenCalled();
   });
 
