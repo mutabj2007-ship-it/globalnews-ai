@@ -25,7 +25,7 @@ jobs:
       - name: Ask retrieval regressions
         run: |
           npm test --workspace=backend -- --runInBand src/modules/analysis/query/derive-relational-search-queries.util.spec.ts
-          npm test --workspace=backend -- --runInBand src/modules/analysis/service/natural-query-routing.spec.ts -t "cross-region impact"
+          npm test --workspace=backend -- --runInBand src/modules/analysis/service/natural-query-routing.spec.ts -t "cross-region impact|second-turn"
       - name: Ask conversation and phone regressions
         run: |
           npm test --workspace=frontend -- --runInBand src/components/ask/askAiDock.spec.ts
