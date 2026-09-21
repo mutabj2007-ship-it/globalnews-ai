@@ -846,15 +846,18 @@ export class AnalysisService {
         const priorRelation = priorQuestion
           ? deriveRelationalSearchQueries(normalizeQuery(priorQuestion).normalizedQuery)
           : undefined;
+        const followUpCountry =
+          declaredRegion === undefined && normalizedQuery.split(/\s+/).length <= 8
+            ? (classification.countries[0] ??
+              this.detectLocation(normalizedQuery) ??
+              this.detectLocationByDemonym(normalizedQuery))
+            : undefined;
         const followUpRelation =
-          declaredRegion === undefined &&
-          priorRelation &&
-          classification.countries.length === 1 &&
-          normalizedQuery.split(/\s+/).length <= 8
+          priorRelation && followUpCountry
             ? {
                 x: priorRelation.x,
-                y: classification.countries[0].name,
-                providerQuery: `${priorRelation.x} ${classification.countries[0].name}`,
+                y: followUpCountry.name,
+                providerQuery: `${priorRelation.x} ${followUpCountry.name}`,
               }
             : undefined;
 
@@ -932,7 +935,12 @@ export class AnalysisService {
           const regionalRelation = await this.retrieveDeclaredRegionRelationalEvidence(
             declaredRegionRelation,
             declaredRegion,
-            classification.countries,
+            [
+              ...classification.countries,
+              ...(this.detectLocation(normalizedQuery)
+                ? [this.detectLocation(normalizedQuery)!]
+                : []),
+            ],
             requestedLanguage,
           );
           articles = regionalRelation.articles;
