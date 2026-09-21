@@ -54,10 +54,13 @@ jobs:
           npm test --workspace=frontend -- --runInBand src/components/navigation/mobileNavViewport.spec.ts
       - name: Frontend build
         run: npm run build:frontend
-      - name: Conflict retained-boundary static guard
+      - name: Retained-reader security and quota guards
         run: |
           grep -q 'model ConflictObservation' backend/prisma/schema.prisma
           grep -q "@Controller('conflict')" backend/src/modules/conflict-observation/conflict-observation.controller.ts
+          grep -q "@Throttle" backend/src/modules/conflict-observation/conflict-observation.controller.ts
+          grep -q "@Throttle" backend/src/modules/market-ingest/market-read.controller.ts
           ! grep -R -E 'ucdp|fetch\(|axios|http://' backend/src/modules/conflict-observation
+          ! grep -R -E 'fetch\(|axios|http://' backend/src/modules/market-ingest/market-read.*
       - name: Backend build
         run: npm run build:backend
