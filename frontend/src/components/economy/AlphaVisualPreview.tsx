@@ -94,7 +94,13 @@ import { ALPHA_PREVIEW_VISUAL_SCOPE } from '@/lib/specialist/previewScope';
  * no country name. The reasoning is written out in full at that module.
  */
 
-export function AlphaVisualPreviewMarker({ locale }: { locale: EconomyLocale }): JSX.Element {
+export function AlphaVisualPreviewMarker({
+  locale,
+  observedGeography,
+}: {
+  locale: EconomyLocale;
+  observedGeography?: string;
+}): JSX.Element {
   const res = resolveEconomyStrings(locale);
   return (
     <div
@@ -124,12 +130,19 @@ export function AlphaVisualPreviewMarker({ locale }: { locale: EconomyLocale }):
         than in a colour or weight of its own, because a plan should not out-rank the
         dashboard it introduces.
       */}
-      <span>
-        Planned visual scope{' '}
-        <span style={{ color: ECON_INK.label }}>
-          {ALPHA_PREVIEW_VISUAL_SCOPE.label} ({ALPHA_PREVIEW_VISUAL_SCOPE.geo})
+      {observedGeography ? (
+        <span>
+          Observed scope{' '}
+          <span style={{ color: ECON_INK.label }}>{observedGeography}</span>
         </span>
-      </span>
+      ) : (
+        <span>
+          Planned visual scope{' '}
+          <span style={{ color: ECON_INK.label }}>
+            {ALPHA_PREVIEW_VISUAL_SCOPE.label} ({ALPHA_PREVIEW_VISUAL_SCOPE.geo})
+          </span>
+        </span>
+      )}
     </div>
   );
 }
