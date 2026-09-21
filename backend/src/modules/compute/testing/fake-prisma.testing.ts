@@ -129,7 +129,9 @@ class FakeTable {
       });
     }
 
-    return take === undefined ? found.map((row) => project(row, select)) : found.slice(0, take).map((row) => project(row, select));
+    return take === undefined
+      ? found.map((row) => project(row, select))
+      : found.slice(0, take).map((row) => project(row, select));
   }
 
   /** Prisma's findFirst: the first row matching, honoring orderBy. */

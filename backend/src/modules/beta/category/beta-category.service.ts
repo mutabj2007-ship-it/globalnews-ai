@@ -73,10 +73,7 @@ export class BetaCategoryService {
    * renderable state (§17's freshness and count fields carry the
    * truth), not a failure the user has to interpret.
    */
-  async getCategoryView(
-    category: BetaCategory,
-    countryCode?: string,
-  ): Promise<BetaCategoryView> {
+  async getCategoryView(category: BetaCategory, countryCode?: string): Promise<BetaCategoryView> {
     const mapping = BETA_CATEGORY_MAPPINGS[category];
 
     let rows: Array<{

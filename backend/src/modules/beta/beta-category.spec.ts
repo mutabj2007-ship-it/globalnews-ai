@@ -60,8 +60,7 @@ describe('§16 — a category click never runs AI', () => {
     // The structural guarantee: an injected retrieval or analysis
     // service would be an invitation for a later change to call it.
     // Nest records constructor param types under this metadata key.
-    const params: unknown[] =
-      Reflect.getMetadata('design:paramtypes', BetaCategoryService) ?? [];
+    const params: unknown[] = Reflect.getMetadata('design:paramtypes', BetaCategoryService) ?? [];
     expect(params).toHaveLength(1);
     expect(params[0]).toBe(PrismaService);
   });
@@ -184,7 +183,11 @@ describe('§17 — the view reflects the stored corpus honestly', () => {
 
   it('collects the countries with activity, for the simple map', async () => {
     const { service, prisma } = await buildService();
-    seedArticle(prisma, { title: 'Energy grid in Rwanda', category: 'business', countryCode: 'RW' });
+    seedArticle(prisma, {
+      title: 'Energy grid in Rwanda',
+      category: 'business',
+      countryCode: 'RW',
+    });
     seedArticle(prisma, { title: 'Solar in Kenya', category: 'business', countryCode: 'KE' });
     seedArticle(prisma, { title: 'More solar in Kenya', category: 'business', countryCode: 'KE' });
 
@@ -254,7 +257,10 @@ describe('§15 — the Beta vocabulary is not the provider vocabulary', () => {
 
   it('matches against the summary as well as the title', () => {
     expect(
-      matchesBetaCategory('energy', { title: 'Cabinet meets', summary: 'Discussed the power grid.' }),
+      matchesBetaCategory('energy', {
+        title: 'Cabinet meets',
+        summary: 'Discussed the power grid.',
+      }),
     ).toBe(true);
   });
 
