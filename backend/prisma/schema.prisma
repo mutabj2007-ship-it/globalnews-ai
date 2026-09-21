@@ -87,6 +87,18 @@ model User {
   identities UserIdentity[]
   sessions   Session[]
   history    SearchHistoryEntry[]
+
+  // BETA-SIMPLE-ASK-SAND-1 — back-relations only. Prisma relation
+  // fields are virtual: these add NO column to "User" and produce NO
+  // ALTER TABLE "User" in the generated migration (verified against the
+  // emitted SQL). They exist so the existing M57 guarantee still holds
+  // — a single DELETE /users/me continues to remove every account-owned
+  // row across every table, now including Ask threads, compute
+  // operations and ledger entries, with no orphaned data by
+  // construction.
+  askThreads        AskThread[]
+  computeOperations ComputeOperation[]
+  sandLedgerEntries SandLedgerEntry[]
 }
 
 model UserIdentity {
@@ -126,4 +138,245 @@ model SearchHistoryEntry {
 
   @@index([userId])
   @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// BETA-SIMPLE-ASK-SAND-1 — Ask Conversational V2 (§3), stored-result
+// reuse (§6), metered compute (§8/§12/§13) and the minimal Sand ledger
+// (§11).
+//
+// §24 DATABASE SAFETY: every model below is NEW. No existing column is
+// altered, renamed, retyped or dropped; no existing index or constraint
+// is changed. The only edits to pre-existing models are the four
+// back-relation fields added to `User` — Prisma relation fields are
+// virtual and produce NO column and NO DDL against the User table (see
+// the generated migration, which contains no ALTER TABLE "User").
+// Existing Analysis/Watch/History data is untouched by construction.
+//
+// GUESTS ARE FIRST-CLASS. Every AI capability in this product is
+// currently unauthenticated, so `userId` is nullable everywhere here
+// and an anonymous owner is identified by `sessionKey` instead. The
+// `ownerKey` column carries whichever of the two applies, so a single
+// index serves both cases.
+// ---------------------------------------------------------------------------
+
+/// §6 — the durable, cross-process stored-result store.
+///
+/// This is what makes "reopening a stored result costs zero new Sand"
+/// survive a process restart and a multi-replica Railway deployment,
+/// neither of which AnalysisService's in-memory Map can do. That Map is
+/// unchanged and still runs in front of this as a fast path.
+model StoredResult {
+  id String @id @default(uuid())
+
+  /// SHA-256 of the canonical §6 identity. See
+  /// backend/src/modules/compute/identity/stored-result-fingerprint.util.ts.
+  fingerprint String @unique
+
+  kind         String
+  computeClass String
+
+  /// The AnalysisApiResponse (or category view) this result replays.
+  payload Json
+
+  /// Denormalized identity dimensions, for Admin inspection and for
+  /// revision-based invalidation sweeps. The fingerprint above remains
+  /// the only thing lookups match on.
+  evidenceRevision String
+  language         String
+  countryCode      String?
+
+  createdAt DateTime @default(now())
+
+  /// §31 — cache-hit measurement. Bumped on every reuse.
+  reuseCount   Int       @default(0)
+  lastReusedAt DateTime?
+
+  /// Results are reusable only while current; swept by evidence revision.
+  expiresAt DateTime?
+
+  operations ComputeOperation[]
+
+  @@index([evidenceRevision])
+  @@index([countryCode])
+  @@index([expiresAt])
+}
+
+/// §8 — the canonical server-side metered-operation record.
+///
+/// One row per logical operation, created at QUOTE time and mutated
+/// only along the §13 lifecycle. §12's guarantee rests on the unique
+/// index on `idempotencyKey`: a duplicate submission cannot create a
+/// second row, so it cannot reserve or charge a second time.
+model ComputeOperation {
+  id String @id @default(uuid())
+
+  /// §12 — SHA-256 of (kind, ownerKey, client-supplied key). UNIQUE is
+  /// the actual enforcement mechanism, not application-level checking:
+  /// two concurrent identical submissions race to INSERT and exactly
+  /// one wins, whatever the application layer believes.
+  idempotencyKey String @unique
+
+  kind         String
+  computeClass String
+
+  /// The owning caller: userId when signed in, opaque session key when a guest.
+  ownerKey   String
+  ownerKind  String
+  userId     String?
+  sessionKey String?
+
+  quotedSand           Int     @default(0)
+  requiresConfirmation Boolean @default(false)
+  entitlementState     String
+
+  /// §13 — QUOTED | RESERVED | RUNNING | COMPLETED | FAILED | RESERVATION_RELEASED
+  executionStatus String @default("QUOTED")
+
+  /// §9 — a quote pins a classification, so it must not be confirmable forever.
+  quoteExpiresAt DateTime?
+  confirmedAt    DateTime?
+
+  /// §6 — the stored result this operation produced or replayed.
+  storedResultId String?
+  storedResult   StoredResult? @relation(fields: [storedResultId], references: [id], onDelete: SetNull)
+
+  /// §14 — private/Admin-side cost telemetry. Never rendered publicly.
+  provider              String?
+  model                 String?
+  inputTokens           Int?
+  outputTokens          Int?
+  retrievalCalls        Int?
+  providerRequests      Int?
+  evidenceCount         Int?
+  durationMs            Int?
+  cacheHit              Boolean?
+  storedResultReused    Boolean  @default(false)
+  failureType           String?
+  estimatedCostMicroUsd Int?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  user          User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerEntries SandLedgerEntry[]
+  askTurns      AskTurn[]
+
+  @@index([ownerKey])
+  @@index([userId])
+  @@index([executionStatus])
+  @@index([createdAt])
+  @@index([computeClass])
+}
+
+/// §11 — the minimal, auditable Sand ledger.
+///
+/// APPEND-ONLY BY DESIGN: there is no update path and no balance column
+/// anywhere in this model. A reservation and its release are two rows,
+/// not one row edited twice, so §13's "a failed computation must never
+/// silently consume Sand" is provable from the table itself rather than
+/// inferred from a mutable field's current value.
+///
+/// §11/§34: this is compute accounting, not a wallet. No purchase, no
+/// top-up, no payment reference, no currency.
+model SandLedgerEntry {
+  id String @id @default(uuid())
+
+  operationId String
+  operation   ComputeOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  /// QUOTE | RESERVE | SETTLE | RELEASE
+  entryType String
+
+  userId     String?
+  sessionKey String?
+
+  quotedSand   Int @default(0)
+  reservedSand Int @default(0)
+  finalSand    Int @default(0)
+
+  status   String
+  resultId String?
+
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([operationId])
+  @@index([userId])
+  @@index([entryType])
+  @@index([createdAt])
+}
+
+/// §3 — a persistent Ask conversation.
+model AskThread {
+  id String @id @default(uuid())
+
+  /// 'user' | 'anonymous'
+  ownerKind String
+  /// userId when signed in, opaque session key when a guest. Always set.
+  ownerKey   String
+  userId     String?
+  sessionKey String?
+
+  title    String
+  language String @default("en")
+
+  /// §4 — the AskContext this conversation was started from: origin
+  /// route, country, subject, module, time window. Stored as JSON
+  /// because it is read and written whole and never queried field-wise.
+  context Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  turns AskTurn[]
+
+  @@index([ownerKey])
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+/// §3 — one turn in a conversation.
+///
+/// The answer payload is stored by REFERENCE (storedResultId on the
+/// backing operation) wherever a stored result backs it, so reopening a
+/// thread replays the same row §6 already accounts for instead of
+/// duplicating a large AnalysisApiResponse per turn. `answer` holds the
+/// payload inline only when no stored result backs the turn.
+model AskTurn {
+  id String @id @default(uuid())
+
+  threadId String
+  thread   AskThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  /// 1-based, stable, never renumbered.
+  sequence Int
+
+  /// 'user' | 'assistant'
+  role String
+
+  question String?
+  answer   Json?
+
+  /// §3 — answered | no-evidence | provider-failed | analysis-failed |
+  /// invalid-response | awaiting-confirmation | blocked
+  status String
+
+  computeClass       String?
+  storedResultReused Boolean @default(false)
+
+  operationId String?
+  operation   ComputeOperation? @relation(fields: [operationId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  /// Makes turn ordering a database invariant rather than an
+  /// application convention — a concurrent double-submit cannot produce
+  /// two turns claiming the same position in one conversation.
+  @@unique([threadId, sequence])
+  @@index([threadId])
+  @@index([operationId])
 }
