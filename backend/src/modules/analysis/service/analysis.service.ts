@@ -920,7 +920,7 @@ export class AnalysisService {
 
           articles = response?.articles ?? [];
           retrievalContext = response
-            ? this.retrievalContextFromNewsResponse(response)
+            ? this.toRetrievalContext(response)
             : NON_RETRIEVABLE_QUERY_CONTEXT;
           relationalContext = { x: followUpRelation.x, y: followUpRelation.y };
         } else if (declaredRegion && declaredRegionRelation) {
