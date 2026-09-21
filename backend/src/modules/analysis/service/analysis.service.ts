@@ -243,6 +243,17 @@ function isSubdivisionQualifier(word: string | undefined): boolean {
 const COUNTRY_CONTEXT_PATTERN = /\b(?:in|from|about|across|inside|within)\s+(.+)$/i;
 
 /**
+ * A named-country refinement attached to an already-detected declared region.
+ *
+ * "East Africa including Rwanda" is not ordinary free country routing: the
+ * declared region is already the governing scope, and "including" explicitly
+ * marks a narrower member the reader wants called out. This closed frame keeps
+ * the general location resolver conservative while allowing that one structural
+ * refinement to resolve through the canonical country table.
+ */
+const REGION_MEMBER_REFINEMENT_PATTERN = /\bincluding\s+(.+?)(?:[?!.,;:]|$)/i;
+
+/**
  * Matches standalone ALL-CAPS 2-3 letter tokens (e.g. "USA", "UK",
  * "UAE") anywhere in a query, with no preceding preposition required.
  *
@@ -933,14 +944,16 @@ export class AnalysisService {
            * Keep X->region plus explicitly named country refinements bounded,
            * and use the existing relational relevance gate for every article.
            */
+          const regionRefinementMatch = normalizedQuery.match(REGION_MEMBER_REFINEMENT_PATTERN);
+          const regionRefinementCountry = regionRefinementMatch?.[1]
+            ? resolveCountryByAnyIdentifier(regionRefinementMatch[1].trim())
+            : undefined;
           const regionalRelation = await this.retrieveDeclaredRegionRelationalEvidence(
             declaredRegionRelation,
             declaredRegion,
             [
               ...classification.countries,
-              ...(this.detectLocation(normalizedQuery)?.country
-                ? [this.detectLocation(normalizedQuery)!.country]
-                : []),
+              ...(regionRefinementCountry ? [regionRefinementCountry] : []),
             ],
             requestedLanguage,
           );
