@@ -5,6 +5,7 @@
     "test",
     "dist",
     "**/*spec.ts",
+    "**/*.testing.ts",
     "prisma.config.ts",
     "prisma/**",
     ".agents/**",
