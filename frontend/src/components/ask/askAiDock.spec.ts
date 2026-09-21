@@ -111,7 +111,7 @@ describe('the dock is a real scrollable conversation on phones', () => {
   });
 
   it('the phone sheet uses dynamic viewport height and safe-area padding', () => {
-    expect(CODE).toContain('h-[92dvh]');
+    expect(CODE).toContain('h-[86dvh]');
     expect(CODE).toContain('env(safe-area-inset-bottom)');
   });
 
@@ -141,6 +141,8 @@ describe('relational answers lead with the backend-authoritative conclusion', ()
     expect(compact).toContain('resultNoAnswerSafety');
     expect(compact).toContain('const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0');
     expect(compact).toContain('{canOpenFullAnalysis ? (');
+    expect(compact).toContain('border-s-2 border-border-strong');
+    expect(compact).not.toContain('data-ask="compact-result" className="flex flex-col gap-4 rounded-2xl');
   });
 });
 
