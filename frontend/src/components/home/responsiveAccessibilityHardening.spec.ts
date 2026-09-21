@@ -116,12 +116,19 @@ describe('Accessibility — Global Situation Map (CTO HUD finishing pass)', () =
     expect(mapSource).toMatch(/aria-label=\{t\.heading\}/);
   });
 
-  it('the loading state uses a live region so screen reader users are notified', () => {
-    expect(mapSource).toMatch(/role="status" aria-live="polite"/);
+  it('the lazy map placeholder is decorative and never makes a false loading-data announcement', () => {
+    /*
+      Homepage map selection is now provider-free: there is no country-news
+      loading state to announce. The dynamic MapLibre placeholder is visual
+      bundle-loading chrome only, so it must not claim data is being retrieved.
+    */
+    expect(mapSource).not.toMatch(/role="status" aria-live="polite"/);
+    expect(mapSource).toMatch(/loading:\s*\(\)\s*=>\s*<div/);
   });
 
-  it('the category legend is text-labeled, not color-only', () => {
-    expect(mapSource).toMatch(/categoryLabels\[category\]/);
+  it('no empty news-category legend survives after provider-free selection removed news summaries', () => {
+    expect(mapSource).not.toMatch(/categoryLabels\[category\]/);
+    expect(mapSource).not.toMatch(/CATEGORY_COLORS/);
   });
 });
 
