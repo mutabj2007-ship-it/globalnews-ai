@@ -108,7 +108,8 @@ export function AlphaVisualPreviewMarker({
       data-preview-locale={res.requested}
       data-preview-locale-resolved={res.resolved}
       data-preview-locale-fellback={String(res.fellBack)}
-      data-preview-visual-scope={ALPHA_PREVIEW_VISUAL_SCOPE.geo}
+      data-preview-visual-scope={observedGeography ?? ALPHA_PREVIEW_VISUAL_SCOPE.geo}
+      data-preview-scope-kind={observedGeography ? 'observed' : 'planned'}
       role="note"
       style={{
         flex: '0 0 auto', padding: '8px 20px',
