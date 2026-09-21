@@ -121,7 +121,10 @@ import {
 } from '../../news/identity/requested-source.util';
 import { polishCountryName } from '../query/polish-country-forms.util';
 import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
-import { scoreGenericRelevance } from '../../news/relevance/generic-relevance.util';
+import {
+  scoreGenericRelevance,
+  scoreRelationalRelevance,
+} from '../../news/relevance/generic-relevance.util';
 import {
   extractAnchorTerms,
   buildAnchorRetrievalQuery,
@@ -875,9 +878,12 @@ export class AnalysisService {
 
         if (declaredRegion) {
           this.logger.debug(
-            `Typed question names the declared region "${declaredRegion.id}" ` +
-              `(${declaredRegion.members.length} declared members); ` +
-              'retrieving per member rather than as one generic search.',
+            declaredRegionRelation
+              ? `Typed question names the declared region "${declaredRegion.id}" and a relational shape; ` +
+                  'using bounded relational region retrieval.'
+              : `Typed question names the declared region "${declaredRegion.id}" ` +
+                  `(${declaredRegion.members.length} declared members); ` +
+                  'retrieving per member rather than as one generic search.',
           );
         }
 
@@ -959,6 +965,48 @@ export class AnalysisService {
           );
           articles = regionalRelation.articles;
           retrievalContext = regionalRelation.retrievalContext;
+
+          /*
+           * R3 — RELATIONAL RETAINED-EVIDENCE LADDER.
+           *
+           * The ordinary declared-region path already falls back to retained
+           * reporting when live retrieval is unavailable. The relational path
+           * previously stopped at zero, which is what produced the mobile Ask
+           * dead-end for "Middle East conflict -> East Africa including
+           * Rwanda" when GDELT timed out.
+           *
+           * This pass is LOCAL-ONLY: it spends no provider quota. It reads
+           * retained reporting only for the region members the reader actually
+           * asked about, then applies the SAME relational evidence gate to the
+           * stored title/summary before admitting anything. No unrelated cache
+           * can enter merely because it came from East Africa.
+           */
+          if (articles.length === 0) {
+            const retained = await this.retrieveRetainedRelationalForRegion(
+              declaredRegionRelation,
+              declaredRegion,
+              [
+                ...classification.countries,
+                ...(regionRefinementCountry ? [regionRefinementCountry] : []),
+              ],
+            );
+
+            if (retained.length > 0) {
+              articles = retained;
+              retrievalContext = {
+                ...retrievalContext,
+                dataMode: 'cached',
+                fallbackReason: 'provider-error',
+                articlesRetrieved: retained.length,
+                outcome: 'RETAINED_ONLY',
+              };
+              this.logger.warn(
+                `Relational region "${declaredRegion.id}": live evidence unavailable; ` +
+                  `served ${retained.length} relevance-gated retained article(s) without a provider retry.`,
+              );
+            }
+          }
+
           relationalContext = {
             x: declaredRegionRelation.x,
             y: declaredRegion.label,
@@ -3275,6 +3323,31 @@ export class AnalysisService {
         requestedScope: buildRegionScope(region, { attempted, unreached, live, unavailable }),
       },
     };
+  }
+
+  private async retrieveRetainedRelationalForRegion(
+    relation: { x: string; y: string },
+    region: DeclaredRegion,
+    explicitlyNamedCountries: readonly CountryMeta[],
+  ): Promise<NewsArticle[]> {
+    const prioritized = prioritizeRegionMembers(region, explicitlyNamedCountries);
+    const retained = await this.retrieveRetainedForRegion(prioritized);
+
+    const targetLabels = [
+      region.label,
+      ...explicitlyNamedCountries
+        .filter((country) => region.members.includes(country.iso3))
+        .slice(0, 2)
+        .map((country) => country.name),
+    ];
+
+    return deduplicateArticles(
+      retained.filter((article) =>
+        targetLabels.some(
+          (target) => scoreRelationalRelevance(article, relation.x, target).isRelevant,
+        ),
+      ),
+    );
   }
 
   private async retrieveRetainedForRegion(members: readonly CountryMeta[]): Promise<NewsArticle[]> {
