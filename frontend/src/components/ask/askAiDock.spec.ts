@@ -115,6 +115,17 @@ describe('the dock is a real scrollable conversation on phones', () => {
   });
 });
 
+describe('relational answers lead with the backend-authoritative conclusion', () => {
+  it('the compact result renders relationalComposition.summary before generic brief prose', () => {
+    const compact = readFileSync(join(__dirname, 'AskCompactResult.tsx'), 'utf8');
+    expect(compact).toContain('data-ask="relational-answer"');
+    expect(compact).toContain('analysis.relationalComposition.summary');
+    expect(compact.indexOf('data-ask="relational-answer"')).toBeLessThan(
+      compact.indexOf('data-ask="brief"'),
+    );
+  });
+});
+
 describe('opening the panel is not a question', () => {
   it('the ONLY call to the analysis client sits inside the submit handler', () => {
     expect((CODE.match(/analyzeNews\(/g) ?? []).length).toBe(1);
