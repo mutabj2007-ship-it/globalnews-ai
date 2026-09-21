@@ -111,8 +111,8 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     const variant = mapShellVariant();
     const inert = INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m)).map((m) => m.id).sort();
     const expected = variant === 'shell'
-      ? ['humanitarian', 'world-intelligence']
-      : ['conflict', 'humanitarian', 'world-intelligence'];
+      ? ['humanitarian', 'politics', 'security', 'world-intelligence']
+      : ['conflict', 'humanitarian', 'politics', 'security', 'world-intelligence'];
     expect(`${variant}: ${inert.join(',')}`).toBe(`${variant}: ${expected.join(',')}`);
 
     /*
@@ -138,8 +138,14 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     expect(isModuleNavigable(humanitarian!)).toBe(false);
 
     const politics = INTELLIGENCE_MODULES.find((m) => m.id === 'politics');
-    expect(`politics navigable: ${isModuleNavigable(politics!)}`).toBe('politics navigable: true');
-    expect(politics?.destination).toBe('/politics-visual-preview');
+    expect(politics?.state).toBe('preview');
+    expect(politics?.destination).toBeUndefined();
+    expect(isModuleNavigable(politics!)).toBe(false);
+
+    const security = INTELLIGENCE_MODULES.find((m) => m.id === 'security');
+    expect(security?.state).toBe('preview');
+    expect(security?.destination).toBeUndefined();
+    expect(isModuleNavigable(security!)).toBe(false);
   });
 
   it('the nine ARE the specialist family, and no stale heading survives', () => {
@@ -180,7 +186,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     */
     const realRoutes = [
       '/map', '/market',
-      '/security-visual-preview', '/economy-visual-preview',
+      '/economy-visual-preview',
       /*
         `/politics-visual-preview` — the PREVIEW address, and deliberately not
         `/politics`, which stays 404 and unactivated. Listing the preview here
@@ -188,7 +194,6 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
         the card were ever repointed at the governed route, it would not be in
         this list and this test would fail.
       */
-      '/politics-visual-preview',
       /*
         `/energy` — and note it is the PRODUCT address, not a `-visual-preview`
         twin. Energy differs from Security, Economy and Politics here: each of
@@ -306,10 +311,10 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       ? 'conflict:preview:/map?domain=conflict'
       : 'conflict:preview:-';
     expect(INTELLIGENCE_MODULES.map((m) => `${m.id}:${m.state}:${m.destination ?? '-'}`)).toEqual([
-      'security:preview:/security-visual-preview',
+      'security:preview:-',
       'world-intelligence:comingSoon:-',
       'country-intelligence:active:/map',
-      'politics:preview:/politics-visual-preview',
+      'politics:preview:-',
       'economy:preview:/economy-visual-preview',
       conflictRow,
       'market:preview:/market',
@@ -356,7 +361,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     const variant = mapShellVariant();
     const clickable = INTELLIGENCE_MODULES.filter(isModuleNavigable).length;
     expect(`${variant}: ${clickable} clickable`)
-      .toBe(`${variant}: ${variant === 'shell' ? 7 : 6} clickable`);
+      .toBe(`${variant}: ${variant === 'shell' ? 5 : 4} clickable`);
   });
 
   it('every module has a dictionaryKey — no hardcoded English title/description in the config itself', () => {
