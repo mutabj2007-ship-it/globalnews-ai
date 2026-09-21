@@ -109,6 +109,13 @@ describe('the planned visual scope is rendered, and rendered as a plan', () => {
     expect(`qualified: ${/Planned visual scope/.test(src)}`).toBe('qualified: true');
   });
 
+  it('a retained observed geography overrides the planned scope in reader-visible chrome and metadata', () => {
+    expect(src).toMatch(/observedGeography\s*\?/);
+    expect(src).toContain('Observed scope');
+    expect(src).toContain("data-preview-scope-kind={observedGeography ? 'observed' : 'planned'}");
+    expect(src).toContain('observedGeography ?? ALPHA_PREVIEW_VISUAL_SCOPE.geo');
+  });
+
   it('THE MUTATION · dropping the qualifier is detected', () => {
     /*
       The qualifier is the entire difference between a plan and a claim, and it is one
