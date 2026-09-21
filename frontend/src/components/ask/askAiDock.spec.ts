@@ -47,7 +47,7 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     /* the submitted value is the trimmed input and nothing else: no synonym
        expansion, no template, no appended keywords, no site: operators */
     expect(CODE).toMatch(/const asked = question\.trim\(\);/);
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent\)/);
+    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion\)/);
     expect(CODE).not.toMatch(/asked \+|`\$\{asked\}[^`]/);
   });
 
@@ -88,6 +88,45 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
   });
 });
 
+describe('the dock is a real scrollable conversation on phones', () => {
+  it('keeps settled turns locally without feeding prior AI output back into retrieval', () => {
+    expect(CODE).toMatch(/const \[history, setHistory\] = useState<SettledAskTurn\[\]>\(\[\]\)/);
+    expect(CODE).toMatch(/data-ask="history-turn"/);
+    expect(CODE).toMatch(/data-ask="user-message"/);
+    const submitStart = CODE.indexOf('const submit = useCallback');
+    const submit = CODE.slice(submitStart, CODE.indexOf('\n  return (', submitStart));
+    expect(submit).not.toMatch(/phase\.response|analysis\.sources|retrievalContext/);
+  });
+
+  it('the conversation scrolls independently and the composer stays outside that scroll region', () => {
+    expect(CODE).toMatch(/data-ask-scroll="conversation"/);
+    expect(CODE).toMatch(/overflow-y-auto/);
+    expect(CODE).toMatch(/data-ask="composer"/);
+    expect(CODE.indexOf('data-ask="composer"')).toBeGreaterThan(CODE.indexOf('data-ask-scroll="conversation"'));
+  });
+
+  it('submitting clears the composer so the second question is immediately typeable', () => {
+    expect(CODE).toMatch(/setPhase\(\{ kind: 'loading', question: asked \}\);\s*setQuestion\(''\);/);
+    expect(CODE).toMatch(/rows=\{phase\.kind === 'idle' && history\.length === 0 \? 2 : 1\}/);
+  });
+
+  it('the phone sheet uses dynamic viewport height and safe-area padding', () => {
+    expect(CODE).toContain('h-[92dvh]');
+    expect(CODE).toContain('env(safe-area-inset-bottom)');
+  });
+});
+
+describe('relational answers lead with the backend-authoritative conclusion', () => {
+  it('the compact result renders relationalComposition.summary before generic brief prose', () => {
+    const compact = readFileSync(join(__dirname, 'AskCompactResult.tsx'), 'utf8');
+    expect(compact).toContain('data-ask="relational-answer"');
+    expect(compact).toContain('analysis.relationalComposition.summary');
+    expect(compact.indexOf('data-ask="relational-answer"')).toBeLessThan(
+      compact.indexOf('data-ask="brief"'),
+    );
+  });
+});
+
 describe('opening the panel is not a question', () => {
   it('the ONLY call to the analysis client sits inside the submit handler', () => {
     expect((CODE.match(/analyzeNews\(/g) ?? []).length).toBe(1);
@@ -122,7 +161,7 @@ describe('opening the panel is not a question', () => {
  */
 describe('ASK RULE A — only bounded context crosses the boundary', () => {
   it('§7.1/§7.2 — a third argument is passed, and its keys are a subset of {title, articleId, countryCode}', () => {
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent\)/);
+    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion\)/);
     /* the narrowing lives in ONE place, so no call site can widen it */
     expect(CODE).toMatch(/const sent = transportableContext\(storyContext\);/);
 
@@ -137,12 +176,21 @@ describe('ASK RULE A — only bounded context crosses the boundary', () => {
   });
 
   it('§7.3 — no evidence/report/cluster identity and no response field is used as an INPUT', () => {
-    const submit = CODE.slice(CODE.indexOf('const submit = useCallback'), CODE.indexOf('return ('));
+    const submitStart = CODE.indexOf('const submit = useCallback');
+    const submit = CODE.slice(submitStart, CODE.indexOf('\n  return (', submitStart));
     for (const forbidden of ['evidenceId', 'reportId', 'clusterId', 'sourceEntities', 'keyFacts',
                              'agreements', 'differences', 'sourceDiversity', 'retrievalContext',
                              'phase.response', 'analysis.sources']) {
       expect(`${forbidden}: ${submit.includes(forbidden)}`).toBe(`${forbidden}: false`);
     }
+  });
+
+  it('conversation context contains only a prior USER question, never prior AI output', () => {
+    const submitStart = CODE.indexOf('const submit = useCallback');
+    const submit = CODE.slice(submitStart, CODE.indexOf('\n  return (', submitStart));
+    expect(submit).toMatch(/const priorQuestion =/);
+    expect(submit).toMatch(/phase\.question/);
+    expect(submit).not.toMatch(/phase\.response|analysis\.sources|keyFacts|retrievalContext/);
   });
 
   it('§7.4 — `title` comes from the published context, never from the input box', () => {

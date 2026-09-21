@@ -186,6 +186,7 @@ export function analyzeNews(
    * accidentally share one pending request.
    */
   storyContext?: StoryContext,
+  priorQuestion?: string,
 ): Promise<AnalysisApiResponse> {
   /**
    * Milestone #51 Phase B (CTO final correction): prefers
@@ -203,14 +204,15 @@ export function analyzeNews(
     : storyContext?.countryCode
       ? `:story:${storyContext.countryCode.toLowerCase()}`
       : '';
-  const key = `${requestedLanguage}:${query.trim()}${storyAnchorKeySegment}`;
+  const priorKeySegment = priorQuestion ? `:prior:${priorQuestion.trim()}` : '';
+  const key = `${requestedLanguage}:${query.trim()}${storyAnchorKeySegment}${priorKeySegment}`;
 
   const existing = inFlightAnalysisRequests.get(key);
   if (existing) {
     return existing;
   }
 
-  const request = performAnalyzeNews(query, requestedLanguage, storyContext).finally(() => {
+  const request = performAnalyzeNews(query, requestedLanguage, storyContext, priorQuestion).finally(() => {
     // Only delete this key's entry if it still points at THIS promise.
     // Guards against a theoretical race where an older, already-
     // resolved request's cleanup could otherwise delete a NEWER
@@ -261,6 +263,7 @@ async function performAnalyzeNews(
   query: string,
   requestedLanguage: LanguageCode,
   storyContext?: StoryContext,
+  priorQuestion?: string,
 ): Promise<AnalysisApiResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -293,7 +296,12 @@ async function performAnalyzeNews(
        * timeout policy on every authenticated request in the product.
        */
       credentials: 'include',
-      body: JSON.stringify(storyContext ? { query, requestedLanguage, storyContext } : { query, requestedLanguage }),
+      body: JSON.stringify({
+        query,
+        requestedLanguage,
+        ...(storyContext ? { storyContext } : {}),
+        ...(priorQuestion ? { priorQuestion } : {}),
+      }),
       cache: 'no-store',
       signal: controller.signal,
     });

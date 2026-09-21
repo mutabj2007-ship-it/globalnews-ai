@@ -213,12 +213,19 @@
 */
 .gn-justified-prose {
   text-align: left;
-  hyphens: auto;
+  /*
+   * PHONE READING: do not hyphenate ordinary English prose in a narrow
+   * single-column measure. The screenshots showed repeated contem-plat- /
+   * particu-lar / escala-tion breaks despite left alignment.
+   */
+  hyphens: none;
+  overflow-wrap: break-word;
 }
 
 @media (min-width: 640px) {
   .gn-justified-prose {
     text-align: justify;
+    hyphens: auto;
     /* Explicit, so no future reset can quietly justify the last line. */
     text-align-last: auto;
   }

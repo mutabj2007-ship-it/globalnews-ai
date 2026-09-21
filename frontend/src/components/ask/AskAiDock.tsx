@@ -73,11 +73,12 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
  */
 
 type AskPhase =
-  /* opened, nothing asked. NOT a failure, and NOT a request. */
   | { kind: 'idle' }
   | { kind: 'loading'; question: string }
   | { kind: 'answered'; question: string; response: AnalysisApiResponse; context: StoryContext | undefined }
   | { kind: 'failed'; question: string; message: string };
+
+type SettledAskTurn = Extract<AskPhase, { kind: 'answered' | 'failed' }>;
 
 interface AskAiDockProps {
   language?: LanguageCode;
@@ -87,7 +88,9 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
+  const [history, setHistory] = useState<SettledAskTurn[]>([]);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const conversationRef = useRef<HTMLDivElement | null>(null);
   /* guards a response arriving after the reader asked something else */
   const requestSeq = useRef(0);
 
@@ -121,6 +124,17 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
+  /*
+   * Conversation scroll belongs to the conversation region, never the page.
+   * New turns move the internal reader to the newest exchange while the
+   * composer remains reachable at the bottom of the sheet.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+    const node = conversationRef.current;
+    if (node) node.scrollTop = node.scrollHeight;
+  }, [isOpen, history, phase]);
+
   /* Escape closes, because a panel that traps the reader is a trap. */
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -139,25 +153,41 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
 
       const seq = requestSeq.current + 1;
       requestSeq.current = seq;
+
+      /*
+       * Preserve the previous settled exchange as conversation history before
+       * beginning the next turn. Only DISPLAY state is retained: no prior
+       * response/evidence is sent back to AnalysisService, so Ask Rule A and
+       * the single retrieval architecture remain intact.
+       */
+      setHistory((turns) =>
+        phase.kind === 'answered' || phase.kind === 'failed' ? [...turns, phase] : turns,
+      );
       setPhase({ kind: 'loading', question: asked });
+      setQuestion('');
 
       /*
         THE ONE TRANSPORT SITE.
  
         `transportableContext` narrows to `{title, articleId?, countryCode?}`
         (§1.1) — `url` and `sourceName` are display-only and retrieval
-        ignores them. With no context published, it returns `undefined` and
-        `analyzeNews` is called with TWO arguments, byte-for-byte the Phase
-        1 request (§7.5). The generic path is not merely similar; it is the
-        same call.
+        ignores them. A conversational follow-up may additionally carry the
+        immediately preceding USER question. It never carries the preceding
+        AI answer, sources, evidence identities or retrieval output.
  
         `title` is the SUBJECT and comes from the published context — never
         from the input box (§1.3, §7.4). Passing the follow-up as the title
         is exactly the inversion Rev A's change log owns.
       */
       const sent = transportableContext(storyContext);
+      const priorQuestion =
+        phase.kind === 'answered' || phase.kind === 'failed'
+          ? phase.question
+          : history.length > 0
+            ? history[history.length - 1].question
+            : undefined;
 
-      analyzeNews(asked, language, sent)
+      analyzeNews(asked, language, sent, priorQuestion)
         .then((response) => {
           if (requestSeq.current !== seq) return;
           setPhase({ kind: 'answered', question: asked, response, context: sent });
@@ -172,7 +202,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           });
         });
     },
-    [question, language, dictionary, storyContext],
+    [question, language, dictionary, storyContext, phase, history],
   );
 
   return (
@@ -222,7 +252,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           className={[
             'fixed z-50 flex flex-col border border-border-strong bg-surface',
             /* MOBILE — a bottom sheet. Full width, capped height, rounded top. */
-            'inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl',
+            'inset-x-0 bottom-0 h-[92dvh] max-h-[92dvh] rounded-t-2xl',
             /* TABLET and up — a right-hand dock, full height. */
             'sm:inset-y-0 sm:end-0 sm:start-auto sm:w-[min(560px,92vw)] sm:max-h-none sm:rounded-none sm:rounded-s-2xl',
             /* DESKTOP — a wider dock, so evidence and answer sit side by side. */
@@ -241,14 +271,87 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
             </button>
           </header>
 
-          <form onSubmit={submit} data-ask="form" className="flex flex-col gap-2 border-b border-border px-4 py-3">
+          <div
+            ref={conversationRef}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+            data-ask="body"
+            data-ask-scroll="conversation"
+          >
+            {history.map((turn, index) => (
+              <div key={`${index}-${turn.question}`} data-ask="history-turn" className="mb-6 flex flex-col gap-3">
+                <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary">
+                  {turn.question}
+                </div>
+                {turn.kind === 'answered' ? (
+                  <AskCompactResult
+                    response={turn.response}
+                    question={turn.question}
+                    language={language}
+                    context={turn.context}
+                  />
+                ) : (
+                  <div role="alert" className="rounded-2xl border border-border bg-void p-4 text-sm text-ink-secondary">
+                    {turn.message}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {phase.kind === 'loading' || phase.kind === 'answered' || phase.kind === 'failed' ? (
+              <div data-ask="current-turn" className="flex flex-col gap-3">
+                <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary">
+                  {phase.question}
+                </div>
+              </div>
+            ) : null}
+
+            {phase.kind === 'idle' ? (
+              /* No request has been made and none will be until a question is
+                 submitted. This is the honest empty state, not a failure. */
+              <p data-ask="idle" className="text-sm text-ink-tertiary">
+                {t.idle}
+              </p>
+            ) : null}
+
+            {phase.kind === 'loading' ? (
+              /* the SAME loading presentation /search uses, same stages */
+              <LoadingStages stages={[...dictionary.loadingStages]} />
+            ) : null}
+
+            {phase.kind === 'failed' ? (
+              <div data-ask="error" role="alert" className="rounded-2xl border border-border bg-void p-6 text-center">
+                <p className="text-sm text-ink-secondary">{phase.message}</p>
+              </div>
+            ) : null}
+
+            {phase.kind === 'answered' ? (
+              /*
+                §6 — A PROJECTION OF THE RESPONSE, NOT A SECOND WORKSPACE.
+
+                `phase.context` is the context the question was ASKED with,
+                not a fresh read: the transition must reproduce the request
+                that produced THIS response, and by the time the reader
+                presses it the live context may already be a different
+                story.
+              */
+              <AskCompactResult
+                response={phase.response}
+                question={phase.question}
+                language={language}
+                context={phase.context}
+              />
+            ) : null}
+          </div>
+
+          <div data-ask="composer" className="shrink-0 border-t border-border bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <form onSubmit={submit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
             <label className="sr-only" htmlFor="ask-ai-question">
               {t.inputLabel}
             </label>
             <textarea
               id="ask-ai-question"
               ref={inputRef}
-              rows={2}
+              rows={phase.kind === 'idle' && history.length === 0 ? 2 : 1}
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               placeholder={t.inputPlaceholder}
@@ -289,44 +392,6 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
               </button>
             </div>
           </form>
-
-          <div className="flex-1 overflow-y-auto px-4 py-4" data-ask="body">
-            {phase.kind === 'idle' ? (
-              /* No request has been made and none will be until a question is
-                 submitted. This is the honest empty state, not a failure. */
-              <p data-ask="idle" className="text-sm text-ink-tertiary">
-                {t.idle}
-              </p>
-            ) : null}
-
-            {phase.kind === 'loading' ? (
-              /* the SAME loading presentation /search uses, same stages */
-              <LoadingStages stages={[...dictionary.loadingStages]} />
-            ) : null}
-
-            {phase.kind === 'failed' ? (
-              <div data-ask="error" role="alert" className="rounded-2xl border border-border bg-void p-6 text-center">
-                <p className="text-sm text-ink-secondary">{phase.message}</p>
-              </div>
-            ) : null}
-
-            {phase.kind === 'answered' ? (
-              /*
-                §6 — A PROJECTION OF THE RESPONSE, NOT A SECOND WORKSPACE.
-
-                `phase.context` is the context the question was ASKED with,
-                not a fresh read: the transition must reproduce the request
-                that produced THIS response, and by the time the reader
-                presses it the live context may already be a different
-                story.
-              */
-              <AskCompactResult
-                response={phase.response}
-                question={phase.question}
-                language={language}
-                context={phase.context}
-              />
-            ) : null}
           </div>
         </section>
       )}

@@ -145,4 +145,16 @@ describe('deriveRelationalSearchQueries (Milestone #37)', () => {
     const input = 'How is the Iran conflict affecting oil prices?';
     expect(deriveRelationalSearchQueries(input)).toEqual(deriveRelationalSearchQueries(input));
   });
+
+  it('reduces target scope wrappers while preserving the cross-region relation', () => {
+    expect(
+      deriveRelationalSearchQueries(
+        'How does Middle East conflict affect the major part of East Africa including Rwanda?',
+      ),
+    ).toEqual({
+      providerQuery: 'Middle East conflict East Africa',
+      x: 'Middle East conflict',
+      y: 'East Africa',
+    });
+  });
 });

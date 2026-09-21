@@ -107,4 +107,16 @@ export class AnalyzeNewsDto {
   @ValidateNested()
   @Type(() => StoryContextDto)
   storyContext?: StoryContextDto;
+
+  /**
+   * ASK CONVERSATION R1 — the immediately preceding USER question only.
+   * No AI answer, evidence identity, source list or retrieval output may cross
+   * this boundary. It exists solely to resolve a bounded follow-up such as
+   * "What about Rwanda?" against the relation the reader just asked about.
+   */
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(1000)
+  priorQuestion?: string;
 }

@@ -243,6 +243,17 @@ function isSubdivisionQualifier(word: string | undefined): boolean {
 const COUNTRY_CONTEXT_PATTERN = /\b(?:in|from|about|across|inside|within)\s+(.+)$/i;
 
 /**
+ * A named-country refinement attached to an already-detected declared region.
+ *
+ * "East Africa including Rwanda" is not ordinary free country routing: the
+ * declared region is already the governing scope, and "including" explicitly
+ * marks a narrower member the reader wants called out. This closed frame keeps
+ * the general location resolver conservative while allowing that one structural
+ * refinement to resolve through the canonical country table.
+ */
+const REGION_MEMBER_REFINEMENT_PATTERN = /\bincluding\s+(.+?)(?:[?!.,;:]|$)/i;
+
+/**
  * Matches standalone ALL-CAPS 2-3 letter tokens (e.g. "USA", "UK",
  * "UAE") anywhere in a query, with no preceding preposition required.
  *
@@ -406,6 +417,7 @@ export class AnalysisService {
      * Q&A), behavior is completely unchanged.
      */
     storyContext?: StoryContext,
+    priorQuestion?: string,
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
 
@@ -445,7 +457,10 @@ export class AnalysisService {
       : storyContext?.countryCode
         ? `:story:${storyContext.countryCode.toLowerCase()}`
         : '';
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}`;
+    const priorQuestionKeySegment = priorQuestion
+      ? `:prior:${normalizeQuery(priorQuestion).normalizedQuery.toLowerCase()}`
+      : '';
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -822,6 +837,42 @@ export class AnalysisService {
           ? undefined
           : detectDeclaredRegion(normalizedQuery);
 
+        /*
+         * CROSS-REGION IMPACT QUESTIONS MUST KEEP THEIR RELATION.
+         * A declared region used to pre-empt relational parsing completely.
+         */
+        const declaredRegionRelation =
+          declaredRegion === undefined || sourceIntent
+            ? undefined
+            : deriveRelationalSearchQueries(normalizedQuery);
+
+        /*
+         * CONVERSATIONAL FOLLOW-UP: one prior USER question, never the prior
+         * AI answer. If the previous turn established an X->Y relation and the
+         * new turn names exactly one country ("What about Rwanda?"), preserve X
+         * and replace only the target with the country the reader just typed.
+         * This is deterministic, bounded and cannot feed generated evidence
+         * back into retrieval.
+         */
+        const priorRelation = priorQuestion
+          ? deriveRelationalSearchQueries(normalizeQuery(priorQuestion).normalizedQuery)
+          : undefined;
+        const followUpLocation =
+          declaredRegion === undefined && normalizedQuery.split(/\s+/).length <= 8
+            ? (this.detectLocation(normalizedQuery) ??
+              this.detectLocationByDemonym(normalizedQuery))
+            : undefined;
+        const followUpCountry =
+          classification.countries[0] ?? followUpLocation?.country;
+        const followUpRelation =
+          priorRelation && followUpCountry
+            ? {
+                x: priorRelation.x,
+                y: followUpCountry.name,
+                providerQuery: `${priorRelation.x} ${followUpCountry.name}`,
+              }
+            : undefined;
+
         if (declaredRegion) {
           this.logger.debug(
             `Typed question names the declared region "${declaredRegion.id}" ` +
@@ -872,7 +923,47 @@ export class AnalysisService {
         // computes for retrieval — no second parser, no reinterpretation.
         let relationalContext: { x: string; y: string } | undefined;
 
-        if (declaredRegion) {
+        if (followUpRelation) {
+          const providerQuery = makeProviderSafeNewsQuery(followUpRelation.providerQuery);
+          const response = providerQuery
+            ? await this.newsService.search(
+                providerQuery,
+                SEARCH_POOL_SIZE,
+                { type: 'relational', x: followUpRelation.x, y: followUpRelation.y },
+              )
+            : null;
+
+          articles = response?.articles ?? [];
+          retrievalContext = response
+            ? this.toRetrievalContext(response)
+            : NON_RETRIEVABLE_QUERY_CONTEXT;
+          relationalContext = { x: followUpRelation.x, y: followUpRelation.y };
+        } else if (declaredRegion && declaredRegionRelation) {
+          /*
+           * CROSS-REGION / CROSS-SCOPE RELATIONAL RETRIEVAL.
+           * Keep X->region plus explicitly named country refinements bounded,
+           * and use the existing relational relevance gate for every article.
+           */
+          const regionRefinementMatch = normalizedQuery.match(REGION_MEMBER_REFINEMENT_PATTERN);
+          const regionRefinementCountry = regionRefinementMatch?.[1]
+            ? resolveCountryByAnyIdentifier(regionRefinementMatch[1].trim())
+            : undefined;
+          const regionalRelation = await this.retrieveDeclaredRegionRelationalEvidence(
+            declaredRegionRelation,
+            declaredRegion,
+            [
+              ...classification.countries,
+              ...(regionRefinementCountry ? [regionRefinementCountry] : []),
+            ],
+            requestedLanguage,
+          );
+          articles = regionalRelation.articles;
+          retrievalContext = regionalRelation.retrievalContext;
+          relationalContext = {
+            x: declaredRegionRelation.x,
+            y: declaredRegion.label,
+          };
+        } else if (declaredRegion) {
           /*
             ══════════════════════════════════════════════════════════════════
             THE DECLARED-REGION BRANCH — ALL MEMBERS, BOUNDED CONCURRENCY
@@ -2894,6 +2985,76 @@ export class AnalysisService {
    * "Ukraine reports overnight strikes" headline. The country gate is the one
    * built for this question and it is unmodified here.
    */
+  private async retrieveDeclaredRegionRelationalEvidence(
+    relation: { x: string; y: string },
+    region: DeclaredRegion,
+    explicitlyNamedCountries: readonly CountryMeta[],
+    requestedLanguage: LanguageCode,
+  ): Promise<{ articles: NewsArticle[]; retrievalContext: AnalysisRetrievalContext }> {
+    const targets = [
+      { label: region.label, key: `region:${region.id}` },
+      ...explicitlyNamedCountries
+        .filter((country) => region.members.includes(country.iso3))
+        .slice(0, 2)
+        .map((country) => ({ label: country.name, key: `country:${country.iso3}` })),
+    ];
+
+    const collected: NewsArticle[] = [];
+    const providers = new Set<string>();
+    const failureKinds = new Set<string>();
+    let sawLive = false;
+    let sawCached = false;
+
+    for (let index = 0; index < targets.length; index += 1) {
+      const target = targets[index];
+      const providerQuery = makeProviderSafeNewsQuery(`${relation.x} ${target.label}`);
+      if (!providerQuery) continue;
+
+      try {
+        const response = await this.newsService.search(
+          providerQuery,
+          SEARCH_POOL_SIZE,
+          { type: 'relational', x: relation.x, y: target.label },
+          {
+            lang: requestedLanguage === 'pl' ? 'pl' : undefined,
+            allowFallback: index === 0,
+          },
+        );
+
+        for (const provider of response.providers ?? []) providers.add(provider);
+        for (const failure of readProviderFailures(response)) failureKinds.add(failure.kind);
+        if (response.dataMode === 'live') sawLive = true;
+        if (response.dataMode === 'cached') sawCached = true;
+        collected.push(...response.articles);
+      } catch (error) {
+        this.logger.warn(
+          `Relational region retrieval failed for ${target.key}; continuing with bounded evidence`,
+          error instanceof Error ? error : undefined,
+        );
+        failureKinds.add('unavailable');
+      }
+    }
+
+    const articles = deduplicateArticles(collected);
+    const dataMode: AnalysisRetrievalContext['dataMode'] = sawLive
+      ? 'live'
+      : sawCached
+        ? 'cached'
+        : 'unavailable';
+
+    return {
+      articles,
+      retrievalContext: {
+        dataMode,
+        providers: [...providers],
+        fallbackReason:
+          articles.length > 0 ? undefined : failureKinds.size > 0 ? 'provider-error' : 'no-live-results',
+        articlesRetrieved: articles.length,
+        outcome: retrievalOutcome(articles.length, failureKinds),
+      },
+    };
+  }
+
   private async retrieveMemberEvidence(
     member: CountryMeta,
     requestedLanguage: LanguageCode,

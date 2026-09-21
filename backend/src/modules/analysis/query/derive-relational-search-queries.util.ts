@@ -72,6 +72,25 @@ function wordCount(value: string): number {
 }
 
 /**
+ * A relational TARGET may contain a scope qualifier that is useful to the
+ * reader but poisonous to provider/relevance matching:
+ *
+ *   "the major part of East Africa including Rwanda"
+ *
+ * The relation is still X -> East Africa. "including Rwanda" is an explicit
+ * country scope handled separately by AnalysisService, where it receives its
+ * own bounded relational retrieval. This function only removes those two
+ * structural wrappers; it never substitutes a region/country or adds a word
+ * the reader did not type.
+ */
+function reduceRelationalTarget(value: string): string {
+  return value
+    .replace(/^(?:the\s+)?(?:major\s+part|most)\s+of\s+/i, '')
+    .replace(/\s+including\s+.+$/i, '')
+    .trim();
+}
+
+/**
  * Attempts deterministic relational decomposition of a query already
  * processed by normalizeQuery(). Returns undefined whenever the closed
  * pattern set doesn't match, either capture is empty after cleanup, or
@@ -102,7 +121,7 @@ export function deriveRelationalSearchQueries(
     if (rawX.toLowerCase() === 'the' || rawY.toLowerCase() === 'the') continue;
 
     const x = stripLeadingThe(rawX);
-    const y = stripLeadingThe(rawY);
+    const y = reduceRelationalTarget(stripLeadingThe(rawY));
     if (!x || !y) continue;
 
     if (wordCount(x) > MAX_CONCEPT_WORDS) continue;

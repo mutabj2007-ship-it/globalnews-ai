@@ -42,8 +42,8 @@ export class AnalysisController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('news')
   analyzeNews(
-    @Body() { query, requestedLanguage, storyContext }: AnalyzeNewsDto,
+    @Body() { query, requestedLanguage, storyContext, priorQuestion }: AnalyzeNewsDto,
   ): Promise<AnalysisApiResponse> {
-    return this.analysisService.analyzeNews(query, requestedLanguage, storyContext);
+    return this.analysisService.analyzeNews(query, requestedLanguage, storyContext, priorQuestion);
   }
 }

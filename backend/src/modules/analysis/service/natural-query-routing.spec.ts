@@ -225,6 +225,40 @@ describe('THE REPORTED FAILURES — measured end to end', () => {
     expect(provider.analyzeNews).not.toHaveBeenCalled();
   });
 
+  it('cross-region impact keeps the relation and explicitly refines Rwanda instead of fanning out Burundi-first', async () => {
+    const { service, searchCalls, countryCalls, provider } = harness([]);
+
+    const response = await service.analyzeNews(
+      'How does Middle East conflict affect the major part of East Africa including Rwanda?',
+    );
+
+    expect(searchCalls).toEqual([
+      { query: 'Middle East conflict East Africa', mode: 'relational' },
+      { query: 'Middle East conflict Rwanda', mode: 'relational' },
+    ]);
+    expect(countryCalls).toEqual([]);
+    expect(response.articles).toEqual([]);
+    expect(provider.analyzeNews).not.toHaveBeenCalled();
+  });
+
+  it('a second-turn "What about Rwanda?" preserves the prior relation without feeding back AI output', async () => {
+    const { service, searchCalls, countryCalls, provider } = harness([]);
+
+    const response = await service.analyzeNews(
+      'What about Rwanda?',
+      'en',
+      undefined,
+      'How does Middle East conflict affect East Africa?',
+    );
+
+    expect(searchCalls).toEqual([
+      { query: 'Middle East conflict Rwanda', mode: 'relational' },
+    ]);
+    expect(countryCalls).toEqual([]);
+    expect(response.articles).toEqual([]);
+    expect(provider.analyzeNews).not.toHaveBeenCalled();
+  });
+
   it('NQ-004 the conversational entity question still works — G-ALPHA-1 D2 preserved', async () => {
     const { service, searchCalls } = harness([
       article(
