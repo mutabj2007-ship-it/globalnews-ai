@@ -202,7 +202,12 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     accent: 'amber',
     icon: 'Search',
     state: 'preview',
-    destination: '/security-visual-preview',
+    /*
+      AUDIT R1 — DIRECT VISUAL PREVIEW ONLY.
+
+      This frame intentionally carries no runtime observation: Security is the NOT_ASSESSED zone authority with zero metered actions. Keep the noindex route for Product Owner visual inspection, but do not advertise it from the reader-facing Home module engine as though an intelligence runtime were connected.
+    */
+    destination: undefined,
   },
   /*
     ── R2 §1 · WORLD INTELLIGENCE IS A SURFACE, AND IT DOES NOT EXIST YET ───
@@ -283,7 +288,12 @@ export const INTELLIGENCE_MODULES: IntelligenceModuleConfig[] = [
     accent: 'violet',
     icon: 'ScanSearch',
     state: 'preview',
-    destination: '/politics-visual-preview',
+    /*
+      AUDIT R1 — DIRECT VISUAL PREVIEW ONLY.
+
+      This frame intentionally carries no runtime observation: Politics is unbound and producer coverage remains zero. Keep the noindex route for Product Owner visual inspection, but do not advertise it from the reader-facing Home module engine as though an intelligence runtime were connected.
+    */
+    destination: undefined,
   },
   /*
     R2 §4 — the VISUAL preview opens; the gated data route does not.
