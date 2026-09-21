@@ -111,8 +111,8 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     const variant = mapShellVariant();
     const inert = INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m)).map((m) => m.id).sort();
     const expected = variant === 'shell'
-      ? ['world-intelligence']
-      : ['conflict', 'world-intelligence'];
+      ? ['humanitarian', 'world-intelligence']
+      : ['conflict', 'humanitarian', 'world-intelligence'];
     expect(`${variant}: ${inert.join(',')}`).toBe(`${variant}: ${expected.join(',')}`);
 
     /*
@@ -132,6 +132,11 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       which is the fact that removed it from the list above. If it ever silently
       lost its destination, this fails rather than the list quietly shrinking.
     */
+    const humanitarian = INTELLIGENCE_MODULES.find((m) => m.id === 'humanitarian');
+    expect(humanitarian?.state).toBe('preview');
+    expect(humanitarian?.destination).toBeUndefined();
+    expect(isModuleNavigable(humanitarian!)).toBe(false);
+
     const politics = INTELLIGENCE_MODULES.find((m) => m.id === 'politics');
     expect(`politics navigable: ${isModuleNavigable(politics!)}`).toBe('politics navigable: true');
     expect(politics?.destination).toBe('/politics-visual-preview');
@@ -174,7 +179,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       makes a return fail here rather than pass quietly.
     */
     const realRoutes = [
-      '/map', '/market', '/humanitarian',
+      '/map', '/market',
       '/security-visual-preview', '/economy-visual-preview',
       /*
         `/politics-visual-preview` — the PREVIEW address, and deliberately not
@@ -308,7 +313,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       'economy:preview:/economy-visual-preview',
       conflictRow,
       'market:preview:/market',
-      'humanitarian:preview:/humanitarian',
+      'humanitarian:preview:-',
       'energy:preview:/energy',
     ]);
   });
@@ -351,7 +356,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     const variant = mapShellVariant();
     const clickable = INTELLIGENCE_MODULES.filter(isModuleNavigable).length;
     expect(`${variant}: ${clickable} clickable`)
-      .toBe(`${variant}: ${variant === 'shell' ? 8 : 7} clickable`);
+      .toBe(`${variant}: ${variant === 'shell' ? 7 : 6} clickable`);
   });
 
   it('every module has a dictionaryKey — no hardcoded English title/description in the config itself', () => {
