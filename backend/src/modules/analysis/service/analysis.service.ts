@@ -406,6 +406,7 @@ export class AnalysisService {
      * Q&A), behavior is completely unchanged.
      */
     storyContext?: StoryContext,
+    priorQuestion?: string,
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
 
@@ -445,7 +446,10 @@ export class AnalysisService {
       : storyContext?.countryCode
         ? `:story:${storyContext.countryCode.toLowerCase()}`
         : '';
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}`;
+    const priorQuestionKeySegment = priorQuestion
+      ? `:prior:${normalizeQuery(priorQuestion).toLowerCase()}`
+      : '';
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -831,6 +835,29 @@ export class AnalysisService {
             ? undefined
             : deriveRelationalSearchQueries(normalizedQuery);
 
+        /*
+         * CONVERSATIONAL FOLLOW-UP: one prior USER question, never the prior
+         * AI answer. If the previous turn established an X->Y relation and the
+         * new turn names exactly one country ("What about Rwanda?"), preserve X
+         * and replace only the target with the country the reader just typed.
+         * This is deterministic, bounded and cannot feed generated evidence
+         * back into retrieval.
+         */
+        const priorRelation = priorQuestion
+          ? deriveRelationalSearchQueries(normalizeQuery(priorQuestion))
+          : undefined;
+        const followUpRelation =
+          declaredRegion === undefined &&
+          priorRelation &&
+          classification.countries.length === 1 &&
+          normalizedQuery.split(/\s+/).length <= 8
+            ? {
+                x: priorRelation.x,
+                y: classification.countries[0].name,
+                providerQuery: `${priorRelation.x} ${classification.countries[0].name}`,
+              }
+            : undefined;
+
         if (declaredRegion) {
           this.logger.debug(
             `Typed question names the declared region "${declaredRegion.id}" ` +
@@ -881,7 +908,22 @@ export class AnalysisService {
         // computes for retrieval — no second parser, no reinterpretation.
         let relationalContext: { x: string; y: string } | undefined;
 
-        if (declaredRegion && declaredRegionRelation) {
+        if (followUpRelation) {
+          const providerQuery = makeProviderSafeNewsQuery(followUpRelation.providerQuery);
+          const response = providerQuery
+            ? await this.newsService.search(
+                providerQuery,
+                SEARCH_POOL_SIZE,
+                { type: 'relational', x: followUpRelation.x, y: followUpRelation.y },
+              )
+            : null;
+
+          articles = response?.articles ?? [];
+          retrievalContext = response
+            ? this.retrievalContextFromNewsResponse(response)
+            : NON_RETRIEVABLE_QUERY_CONTEXT;
+          relationalContext = { x: followUpRelation.x, y: followUpRelation.y };
+        } else if (declaredRegion && declaredRegionRelation) {
           /*
            * CROSS-REGION / CROSS-SCOPE RELATIONAL RETRIEVAL.
            * Keep X->region plus explicitly named country refinements bounded,
