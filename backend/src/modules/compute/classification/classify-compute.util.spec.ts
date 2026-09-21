@@ -9,7 +9,9 @@ import {
 } from './classify-compute.util';
 
 /** An ordinary, unremarkable single-country Ask turn. The neutral starting point. */
-function ordinaryAsk(overrides: Partial<ComputeClassificationInput> = {}): ComputeClassificationInput {
+function ordinaryAsk(
+  overrides: Partial<ComputeClassificationInput> = {},
+): ComputeClassificationInput {
   return {
     kind: 'ask-turn',
     storedResultAvailable: false,
@@ -190,11 +192,17 @@ describe('BETA-SIMPLE-ASK-SAND-1 §5 classifyCompute', () => {
 
   describe('§9 confirmation threshold', () => {
     it('requires confirmation at or above DEEP_ANALYSIS, and never below', () => {
-      expect(classifyCompute(ordinaryAsk({ storedResultAvailable: true })).requiresConfirmation).toBe(false);
-      expect(classifyCompute(ordinaryAsk({ contextualOnly: true })).requiresConfirmation).toBe(false);
+      expect(
+        classifyCompute(ordinaryAsk({ storedResultAvailable: true })).requiresConfirmation,
+      ).toBe(false);
+      expect(classifyCompute(ordinaryAsk({ contextualOnly: true })).requiresConfirmation).toBe(
+        false,
+      );
       expect(classifyCompute(ordinaryAsk()).requiresConfirmation).toBe(false);
       expect(classifyCompute(ordinaryAsk({ countryCount: 5 })).requiresConfirmation).toBe(true);
-      expect(classifyCompute(ordinaryAsk({ explicitReportRequest: true })).requiresConfirmation).toBe(true);
+      expect(
+        classifyCompute(ordinaryAsk({ explicitReportRequest: true })).requiresConfirmation,
+      ).toBe(true);
     });
   });
 

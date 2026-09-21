@@ -17,9 +17,7 @@ function identity(overrides: Partial<StoredResultIdentity> = {}): StoredResultId
 
 describe('BETA-SIMPLE-ASK-SAND-1 §6 stored-result fingerprint', () => {
   it('is deterministic', () => {
-    expect(buildStoredResultFingerprint(identity())).toBe(
-      buildStoredResultFingerprint(identity()),
-    );
+    expect(buildStoredResultFingerprint(identity())).toBe(buildStoredResultFingerprint(identity()));
   });
 
   it('is a fixed-width sha256 hex string, whatever the task length', () => {

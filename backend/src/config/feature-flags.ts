@@ -128,9 +128,7 @@ export function isSandChargingEnabled(
   meteredRaw: string | undefined,
   classificationRaw: string | undefined,
 ): boolean {
-  return (
-    isFlagEnabled(raw) && isSandLedgerEnabled(ledgerRaw, meteredRaw, classificationRaw)
-  );
+  return isFlagEnabled(raw) && isSandLedgerEnabled(ledgerRaw, meteredRaw, classificationRaw);
 }
 
 /** The exact env variable names this tranche reads. One authority, no string literals elsewhere. */
@@ -184,11 +182,7 @@ export function resolveBetaFeatureFlags(env: BetaFeatureFlagEnv): BetaFeatureFla
     askPersistence: isAskPersistenceEnabled(env.askPersistence, env.askConversationalV2),
     computeClassification,
     meteredCompute: isMeteredComputeEnabled(env.meteredCompute, env.computeClassification),
-    sandLedger: isSandLedgerEnabled(
-      env.sandLedger,
-      env.meteredCompute,
-      env.computeClassification,
-    ),
+    sandLedger: isSandLedgerEnabled(env.sandLedger, env.meteredCompute, env.computeClassification),
     sandCharging: isSandChargingEnabled(
       env.sandCharging,
       env.sandLedger,

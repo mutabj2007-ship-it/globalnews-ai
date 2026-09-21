@@ -223,8 +223,7 @@ export function classifyCompute(input: ComputeClassificationInput): ComputeClass
   //    first three is sufficient on its own.
   const multiCountry = input.countryCount >= DEEP_ANALYSIS_COUNTRY_THRESHOLD;
   const crossDomain = input.domainCount >= DEEP_ANALYSIS_DOMAIN_THRESHOLD;
-  const historical =
-    (input.requestedTimeWindowDays ?? 0) >= DEEP_ANALYSIS_TIME_WINDOW_DAYS;
+  const historical = (input.requestedTimeWindowDays ?? 0) >= DEEP_ANALYSIS_TIME_WINDOW_DAYS;
 
   if (multiCountry) rationale.push(`multi-country:${input.countryCount}`);
   if (crossDomain) rationale.push(`cross-domain:${input.domainCount}`);

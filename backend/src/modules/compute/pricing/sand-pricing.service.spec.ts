@@ -25,13 +25,10 @@ describe('BETA-SIMPLE-ASK-SAND-1 §8 SandPricingService', () => {
     it.each<[ComputeClass, string]>([
       ['STORED', 'SAND_PRICE_STORED'],
       ['CONTEXTUAL', 'SAND_PRICE_CONTEXTUAL'],
-    ])(
-      'keeps %s free even if an operator sets a stray %s variable',
-      async (computeClass, key) => {
-        const service = await buildService({ [key]: '99' });
-        expect(service.priceFor(computeClass)).toBe(0);
-      },
-    );
+    ])('keeps %s free even if an operator sets a stray %s variable', async (computeClass, key) => {
+      const service = await buildService({ [key]: '99' });
+      expect(service.priceFor(computeClass)).toBe(0);
+    });
   });
 
   describe('§5 an ordinary fresh Ask is governed by quota, not Sand', () => {
@@ -50,7 +47,9 @@ describe('BETA-SIMPLE-ASK-SAND-1 §8 SandPricingService', () => {
 
     it('prices a report above a deep analysis', async () => {
       const service = await buildService();
-      expect(service.priceFor('RESEARCH_REPORT')).toBeGreaterThan(service.priceFor('DEEP_ANALYSIS'));
+      expect(service.priceFor('RESEARCH_REPORT')).toBeGreaterThan(
+        service.priceFor('DEEP_ANALYSIS'),
+      );
     });
   });
 
@@ -71,10 +70,13 @@ describe('BETA-SIMPLE-ASK-SAND-1 §8 SandPricingService', () => {
       ['a non-numeric value', 'free'],
       ['an empty value', ''],
       ['a whitespace value', '   '],
-    ])('falls back to the fixture for %s rather than producing a corrupt amount', async (_label, raw) => {
-      const service = await buildService({ SAND_PRICE_DEEP_ANALYSIS: raw });
-      expect(service.priceFor('DEEP_ANALYSIS')).toBe(24);
-    });
+    ])(
+      'falls back to the fixture for %s rather than producing a corrupt amount',
+      async (_label, raw) => {
+        const service = await buildService({ SAND_PRICE_DEEP_ANALYSIS: raw });
+        expect(service.priceFor('DEEP_ANALYSIS')).toBe(24);
+      },
+    );
 
     it('never returns NaN for any class under any override', async () => {
       const service = await buildService({
@@ -123,13 +125,10 @@ describe('BETA-SIMPLE-ASK-SAND-1 §8 SandPricingService', () => {
       expect(service.quoteTtlSeconds()).toBe(300);
     });
 
-    it.each([['0'], ['-1'], ['abc'], ['']])(
-      'ignores the invalid TTL override %s',
-      async (raw) => {
-        const service = await buildService({ SAND_QUOTE_TTL_SECONDS: raw });
-        expect(service.quoteTtlSeconds()).toBe(300);
-      },
-    );
+    it.each([['0'], ['-1'], ['abc'], ['']])('ignores the invalid TTL override %s', async (raw) => {
+      const service = await buildService({ SAND_QUOTE_TTL_SECONDS: raw });
+      expect(service.quoteTtlSeconds()).toBe(300);
+    });
 
     it('honors a valid TTL override', async () => {
       const service = await buildService({ SAND_QUOTE_TTL_SECONDS: '60' });

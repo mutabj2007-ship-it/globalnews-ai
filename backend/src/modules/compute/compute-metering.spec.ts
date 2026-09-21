@@ -7,7 +7,10 @@ import { SandPricingService } from './pricing/sand-pricing.service';
 import { EntitlementService } from './entitlement/entitlement.service';
 import { StoredResultService } from './stored-result/stored-result.service';
 import { SandLedgerService } from './ledger/sand-ledger.service';
-import { ComputeOperationService, type OperationOwner } from './operation/compute-operation.service';
+import {
+  ComputeOperationService,
+  type OperationOwner,
+} from './operation/compute-operation.service';
 import { ComputeQuoteService } from './quote/compute-quote.service';
 import { FakePrisma, resetFakePrismaIds } from './testing/fake-prisma.testing';
 
@@ -309,10 +312,14 @@ describe('§30 AI-cost protection — stored-result reuse (§6)', () => {
     });
 
     const userA = await h.quotes.quote(
-      ordinaryAskRequest({ owner: { kind: 'anonymous', key: 'session-a', sessionKey: 'session-a' } }),
+      ordinaryAskRequest({
+        owner: { kind: 'anonymous', key: 'session-a', sessionKey: 'session-a' },
+      }),
     );
     const userB = await h.quotes.quote(
-      ordinaryAskRequest({ owner: { kind: 'anonymous', key: 'session-b', sessionKey: 'session-b' } }),
+      ordinaryAskRequest({
+        owner: { kind: 'anonymous', key: 'session-b', sessionKey: 'session-b' },
+      }),
     );
 
     expect(userA.quote.resultId).toBe(userB.quote.resultId);
@@ -467,9 +474,9 @@ describe('§30 Sand — explicit confirmation is required', () => {
     const operation = (await h.operations.findById(quote.operationId))!;
 
     expect(h.operations.isQuoteExpired(operation, new Date())).toBe(false);
-    expect(
-      h.operations.isQuoteExpired(operation, new Date(Date.now() + 10 * 60 * 1000)),
-    ).toBe(true);
+    expect(h.operations.isQuoteExpired(operation, new Date(Date.now() + 10 * 60 * 1000))).toBe(
+      true,
+    );
   });
 });
 
@@ -505,7 +512,10 @@ describe('§30 Sand — charging OFF prevents mutation', () => {
   });
 
   it('writes no ledger rows at all when SAND_LEDGER is off', async () => {
-    const h = await buildHarness({ COMPUTE_CLASSIFICATION_ENABLED: 'true', METERED_COMPUTE_ENABLED: 'true' });
+    const h = await buildHarness({
+      COMPUTE_CLASSIFICATION_ENABLED: 'true',
+      METERED_COMPUTE_ENABLED: 'true',
+    });
     const { quote } = await h.quotes.quote(deepAskRequest());
 
     expect(h.flags.get().sandLedger).toBe(false);

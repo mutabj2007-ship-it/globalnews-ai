@@ -35,7 +35,18 @@ describe('BETA-SIMPLE-ASK-SAND-1 §10 feature flags', () => {
     });
 
     it.each(simplePredicates)('%s is false for every near-miss value', (_name, predicate) => {
-      for (const raw of [undefined, '', '   ', 'TRUE', 'True', '1', 'yes', 'on', 'false', 'TRUE ']) {
+      for (const raw of [
+        undefined,
+        '',
+        '   ',
+        'TRUE',
+        'True',
+        '1',
+        'yes',
+        'on',
+        'false',
+        'TRUE ',
+      ]) {
         expect(predicate(raw)).toBe(false);
       }
     });

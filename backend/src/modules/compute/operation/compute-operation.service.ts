@@ -172,7 +172,9 @@ export class ComputeOperationService {
         // (an operator deletion, a cascade from account deletion). Not
         // recoverable here, and silently creating a second operation
         // would defeat the whole mechanism.
-        throw new ConflictException('Operation could not be resolved after an idempotency conflict');
+        throw new ConflictException(
+          'Operation could not be resolved after an idempotency conflict',
+        );
       }
 
       this.logger.debug(`Reusing existing operation ${existing.id} for a duplicate submission.`);
@@ -260,9 +262,7 @@ export class ComputeOperationService {
         executionStatus: to,
         ...(patch.storedResultId !== undefined ? { storedResultId: patch.storedResultId } : {}),
         ...(patch.failureType !== undefined ? { failureType: patch.failureType } : {}),
-        ...(isTerminalOperationStatus(to)
-          ? { completedAt: patch.completedAt ?? new Date() }
-          : {}),
+        ...(isTerminalOperationStatus(to) ? { completedAt: patch.completedAt ?? new Date() } : {}),
       },
     });
 

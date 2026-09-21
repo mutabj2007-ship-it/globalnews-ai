@@ -15,6 +15,8 @@ import { RequestIdMiddleware } from './observability/request-id.middleware';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { HistoryModule } from './modules/history/history.module';
+import { ComputeModule } from './modules/compute/compute.module';
+import { AskModule } from './modules/ask/ask.module';
 
 @Module({
   imports: [
@@ -45,6 +47,19 @@ import { HistoryModule } from './modules/history/history.module';
     AuthModule,
     UsersModule,
     HistoryModule,
+    // BETA-SIMPLE-ASK-SAND-1 §5/§8/§11/§14 — compute classification,
+    // metering and the Sand foundation. Internal only: ComputeModule
+    // registers no controller and no public route, exactly like
+    // SignalsModule's own pattern. Constructing it performs zero
+    // database queries and zero provider calls, under any flag
+    // configuration — see compute.module.ts.
+    ComputeModule,
+    // BETA-SIMPLE-ASK-SAND-1 §3 — Ask AI Conversational V2. Adds
+    // GET/POST /ask/* alongside the existing POST /analysis/news,
+    // which is left completely unchanged: SearchPageClient and every
+    // other current caller of that route behave exactly as before.
+    // AskModule composes AnalysisService rather than replacing it.
+    AskModule,
   ],
   controllers: [AppController],
   providers: [

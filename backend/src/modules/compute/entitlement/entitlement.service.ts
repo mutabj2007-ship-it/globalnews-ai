@@ -44,8 +44,16 @@ export class EntitlementService {
    * repository that could say otherwise, and returning an optimistic
    * PROFESSIONAL would silently grant capabilities nobody has paid
    * for.
+   *
+   * It takes NO ARGUMENT deliberately. An unused `caller` parameter
+   * would look like tier resolution already considers who is asking
+   * when it cannot — there is no subscription record to consider.
+   * When a real tier model lands, this method gains its parameter and
+   * its one call site (ComputeQuoteService) gains one argument; that
+   * is a smaller and more honest change than carrying dead weight now
+   * to avoid it.
    */
-  resolveTier(_caller: { userId?: string }): EntitlementTier {
+  resolveTier(): EntitlementTier {
     return 'FREE';
   }
 

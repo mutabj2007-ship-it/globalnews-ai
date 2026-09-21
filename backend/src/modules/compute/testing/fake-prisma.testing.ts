@@ -132,6 +132,11 @@ class FakeTable {
     return found.map((row) => project(row, select));
   }
 
+  /** Prisma's findFirst: the first row matching, honoring orderBy. */
+  findFirst(args: { where?: AnyRow; orderBy?: AnyRow; select?: AnyRow } = {}): AnyRow | null {
+    return this.findMany({ ...args })[0] ?? null;
+  }
+
   update({ where, data, select }: { where: AnyRow; data: AnyRow; select?: AnyRow }): AnyRow {
     const row = this.match(where);
     if (!row) throw new Error(`${this.name}: no row matching ${JSON.stringify(where)}`);
@@ -187,23 +192,19 @@ export class FakePrisma {
     expiresAt: null,
   }));
 
-  readonly computeOperation = new FakeTable(
-    'computeOperation',
-    ['idempotencyKey', 'id'],
-    () => ({
-      id: undefined,
-      executionStatus: 'QUOTED',
-      quotedSand: 0,
-      requiresConfirmation: false,
-      storedResultId: null,
-      storedResultReused: false,
-      quoteExpiresAt: null,
-      confirmedAt: null,
-      completedAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }),
-  );
+  readonly computeOperation = new FakeTable('computeOperation', ['idempotencyKey', 'id'], () => ({
+    id: undefined,
+    executionStatus: 'QUOTED',
+    quotedSand: 0,
+    requiresConfirmation: false,
+    storedResultId: null,
+    storedResultReused: false,
+    quoteExpiresAt: null,
+    confirmedAt: null,
+    completedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }));
 
   readonly sandLedgerEntry = new FakeTable('sandLedgerEntry', ['id'], () => ({
     id: undefined,
@@ -212,6 +213,19 @@ export class FakePrisma {
     finalSand: 0,
     resultId: null,
     createdAt: new Date(),
+  }));
+
+  /**
+   * The PRE-EXISTING Article table, not one this tranche added.
+   * Present only because EvidenceRevisionService reads
+   * max(fetchedAt) from it to compute the §6 evidence revision. A
+   * test that seeds no article exercises the genuine empty-corpus
+   * path, which is a real state, not a broken one.
+   */
+  readonly article = new FakeTable('article', ['id', 'url'], () => ({
+    id: undefined,
+    countryCode: null,
+    fetchedAt: new Date(),
   }));
 
   readonly askThread = new FakeTable('askThread', ['id'], () => ({

@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  ComputeOperationKind,
-  SandQuote,
-  StoredResultIdentity,
-} from '@globalnews-ai/shared';
+import type { ComputeOperationKind, SandQuote, StoredResultIdentity } from '@globalnews-ai/shared';
 import { BetaFeatureFlagsService } from '../flags/beta-feature-flags.service';
 import { EntitlementService } from '../entitlement/entitlement.service';
 import { SandPricingService } from '../pricing/sand-pricing.service';
@@ -107,7 +103,7 @@ export class ComputeQuoteService {
      */
     const neverMetered = this.pricing.isNeverMeteredKind(request.kind);
 
-    const tier = this.entitlement.resolveTier({ userId: request.owner.userId });
+    const tier = this.entitlement.resolveTier();
     const entitlementState = neverMetered
       ? 'included'
       : this.entitlement.resolveState({
@@ -117,7 +113,8 @@ export class ComputeQuoteService {
           quotaExhausted: request.quotaExhausted,
         });
 
-    const quotedSand = neverMetered || storedResultAvailable ? 0 : this.pricing.priceFor(computeClass);
+    const quotedSand =
+      neverMetered || storedResultAvailable ? 0 : this.pricing.priceFor(computeClass);
 
     /**
      * §9 — confirmation is required when the CLASS says so AND there
@@ -156,9 +153,7 @@ export class ComputeQuoteService {
     const quote: SandQuote = {
       operationId: operation.id,
       kind: request.kind,
-      computeClass: reused
-        ? (operation.computeClass as SandQuote['computeClass'])
-        : computeClass,
+      computeClass: reused ? (operation.computeClass as SandQuote['computeClass']) : computeClass,
       quotedSand: reused ? operation.quotedSand : quotedSand,
       requiresConfirmation: reused ? operation.requiresConfirmation : requiresConfirmation,
       entitlementState: reused
@@ -170,7 +165,9 @@ export class ComputeQuoteService {
         reused ? (operation.computeClass as SandQuote['computeClass']) : computeClass,
       ),
       rationale: classification.rationale,
-      expiresAt: (operation.quoteExpiresAt ?? new Date(Date.now() + ttlSeconds * 1000)).toISOString(),
+      expiresAt: (
+        operation.quoteExpiresAt ?? new Date(Date.now() + ttlSeconds * 1000)
+      ).toISOString(),
       // §10 — reported truthfully so the UI can say "this will not be
       // charged during Beta" rather than implying a debit that will
       // never happen.
