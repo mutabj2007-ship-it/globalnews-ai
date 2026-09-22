@@ -2031,12 +2031,55 @@ export class AnalysisService {
 
               if (searchResponse.articles.length === 0 && primaryFailures.length > 0) {
                 this.logger.warn(
-                  'Generic retrieval was REFUSED by the provider — the bounded fallback is ' +
-                    'deliberately not attempted: ' +
+                  'Generic live retrieval was refused/degraded: ' +
                     primaryFailures
                       .map((failure) => `${failure.providerId}=${failure.kind}`)
-                      .join(', '),
+                      .join(', ') +
+                    '. Consulting bounded LOCAL retained evidence; no provider retry will be issued.',
                 );
+
+                /*
+                 * BETA RETRIEVAL HEALTH R1 — GDELT IS NOT A SINGLE POINT OF
+                 * FAILURE.
+                 *
+                 * A provider refusal still suppresses another LIVE/provider
+                 * attempt — rate limits, auth failures and timeouts must never
+                 * trigger a retry storm. But the database already contains
+                 * retained reporting. Query it locally, then admit only rows
+                 * that pass the SAME generic relevance gate used for live
+                 * results. This spends zero provider quota and cannot turn
+                 * unrelated cache into evidence merely because a provider is
+                 * down.
+                 */
+                const retainedQuery =
+                  deriveFallbackNewsQuery(genericSearchQuery) ?? genericSearchQuery;
+                const retainedTerms = retainedQuery
+                  .toLowerCase()
+                  .replace(/[^\p{L}\p{N}]+/gu, ' ')
+                  .split(/\s+/)
+                  .filter((term) => term.length >= 3)
+                  .slice(0, 8);
+                const retainedCandidates = await this.newsService.findRetainedByQuery(
+                  retainedQuery,
+                  retainedTerms,
+                  SEARCH_POOL_SIZE,
+                  RETAINED_MAX_AGE_MINUTES,
+                );
+                const retained = retainedCandidates.filter(
+                  (article) => scoreGenericRelevance(article, retainedQuery).isRelevant,
+                );
+
+                if (retained.length > 0) {
+                  searchResponse = {
+                    ...searchResponse,
+                    articles: retained,
+                    dataMode: 'cached',
+                    fallbackReason: 'provider-error',
+                  };
+                  this.logger.warn(
+                    `Generic retrieval served ${retained.length} relevance-gated retained article(s) after live provider failure.`,
+                  );
+                }
               } else if (searchResponse.articles.length === 0) {
                 const fallbackQuery = deriveFallbackNewsQuery(genericSearchQuery);
                 if (fallbackQuery) {
