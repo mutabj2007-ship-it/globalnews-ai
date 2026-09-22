@@ -152,6 +152,7 @@ model User {
   /// R1/T3 — a fifth account-owned relation, cascading like the four
   /// above.
   countryFollows CountryFollow[]
+  watchSubscriptions WatchSubscription[]
 
   /// R3/T7 — account-scoped telemetry. SET NULL, NOT Cascade (CTO
   /// decision): deleting an account severs the link to the person while
@@ -1402,4 +1403,75 @@ model SecurityProjectionMember {
   observation SecurityObservation @relation(fields: [observationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
   @@id([runId, observationId])
   @@unique([runId, observationKey])
+}
+
+enum WatchSubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+enum WatchRunStatus {
+  RUNNING
+  RETRY_WAIT
+  SUCCEEDED
+  NO_EVIDENCE
+  FAILED
+  BUDGET_EXHAUSTED
+  CANCELLED
+}
+
+// Dormant foundation. No relation to CountryFollow or Sand charging.
+model WatchSubscription {
+  id                String @id @default(cuid())
+  userId            String
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId         String
+  countryCode       String
+  status            WatchSubscriptionStatus @default(PAUSED)
+  intervalSeconds   Int @default(3600)
+  nextRunAt         DateTime
+  lastSuccessAt     DateTime?
+  lastFailureAt     DateTime?
+  lastFailureCode   String?
+  maxAttempts       Int @default(3)
+  dailyRunLimit     Int @default(24)
+  dailyAttemptLimit Int @default(48)
+  evidenceLimit     Int @default(100)
+  budgetDay         DateTime
+  runsUsed          Int @default(0)
+  attemptsUsed      Int @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  runs              WatchRun[]
+  @@unique([userId, subjectId])
+  @@index([status, nextRunAt])
+}
+
+model WatchRun {
+  id             String @id @default(cuid())
+  subscriptionId String
+  subscription   WatchSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  scheduledAt    DateTime
+  status         WatchRunStatus
+  attempts       Int @default(0)
+  retryAt        DateTime?
+  leaseUntil     DateTime?
+  completedAt    DateTime?
+  failureCode    String?
+  createdAt      DateTime @default(now())
+  observation    WatchObservation?
+  @@unique([subscriptionId, scheduledAt])
+}
+
+model WatchObservation {
+  id           String @id @default(cuid())
+  runId        String @unique
+  run          WatchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  observedAt   DateTime
+  outcome      String
+  // Bounded immutable copy of retained evidence; no fabricated change assessment.
+  evidence     Json
+  truncated    Boolean
+  @@index([observedAt])
 }
