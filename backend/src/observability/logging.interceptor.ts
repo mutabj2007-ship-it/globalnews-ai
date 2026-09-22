@@ -42,6 +42,10 @@ export class LoggingInterceptor implements NestInterceptor {
     // into the log line at all, not merely omitted after the fact.
     const rawPath = request.originalUrl ?? request.url;
     const path = rawPath.split('?')[0];
+    // Election audit records evidence, never correlated reader interest (E1 KE4-2).
+    if ((method === 'GET' || method === 'HEAD') && /^\/election\/evidence\/ke\/?$/.test(path)) {
+      return next.handle();
+    }
     const startedAt = Date.now();
 
     this.logger.log(`${idPrefix}HTTP request start method=${method} path=${path}`);

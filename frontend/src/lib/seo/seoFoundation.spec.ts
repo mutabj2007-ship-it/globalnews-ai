@@ -606,7 +606,12 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       `robots` is the Energy route's own and is asserted by H's guards rather than restated
       here, which is where that assertion already lives.
     */
-    expect(pages).toHaveLength(42);
+    // CTO-accepted Election adds two provider-free previews; the live route stays closed.
+    expect(pages).toHaveLength(44);
+    expect(pages).toContain('/election-visual-preview');
+    expect(pages).toContain('/election-visual-preview/compact');
+    expect(pages).not.toContain('/election');
+    expect(pages).not.toContain('/election/compact');
     expect(pages).toContain('/');
     /*
       AND `/economy` IS ASSERTED ABSENT, HERE, BESIDE THE COUNT.

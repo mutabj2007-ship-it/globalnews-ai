@@ -12,6 +12,7 @@ import { PrismaModule } from './database/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { NewsModule } from './modules/news/news.module';
+import { ElectionReadModule } from './modules/election/election-read.module';
 import { EconomyModule } from './modules/economy/economy.module';
 import { MarketReadModule } from './modules/market-ingest/market-read.module';
 import { ConflictObservationModule } from './modules/conflict-observation/conflict-observation.module';
@@ -71,6 +72,7 @@ import {
       consumes no GNews quota.
     */
     EconomyModule,
+    ElectionReadModule,
     /*
       MARKET — RETAINED READ ONLY.
 
