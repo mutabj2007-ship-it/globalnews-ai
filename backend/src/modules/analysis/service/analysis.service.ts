@@ -892,13 +892,28 @@ export class AnalysisService {
         const priorRelation = priorQuestion
           ? deriveRelationalSearchQueries(normalizeQuery(priorQuestion).normalizedQuery)
           : undefined;
-        const followUpLocation =
-          declaredRegion === undefined && normalizedQuery.split(/\s+/).length <= 8
-            ? (this.detectLocation(normalizedQuery) ??
-              this.detectLocationByDemonym(normalizedQuery))
-            : undefined;
-        const followUpCountry =
-          classification.countries[0] ?? followUpLocation?.country;
+
+        /*
+         * ASK EXPLICIT-SCOPE R1 — A FOLLOW-UP MUST ACTUALLY LOOK LIKE ONE.
+         *
+         * The previous implementation let classification.countries[0] feed a
+         * prior relation even for a long, self-contained new question. Once a
+         * long multi-country question is correctly classified, that would turn
+         * its first country into the target of the PREVIOUS turn. Preserve the
+         * accepted follow-up behaviour only for short questions naming at most
+         * one country, e.g. "What about Rwanda?".
+         */
+        const isShortSingleScopeFollowUp =
+          declaredRegion === undefined &&
+          normalizedQuery.split(/\s+/).length <= 8 &&
+          classification.countries.length <= 1;
+        const followUpLocation = isShortSingleScopeFollowUp
+          ? (this.detectLocation(normalizedQuery) ??
+            this.detectLocationByDemonym(normalizedQuery))
+          : undefined;
+        const followUpCountry = isShortSingleScopeFollowUp
+          ? (classification.countries[0] ?? followUpLocation?.country)
+          : undefined;
         const followUpRelation =
           priorRelation && followUpCountry
             ? {
@@ -919,14 +934,37 @@ export class AnalysisService {
           );
         }
 
+        /*
+         * ASK EXPLICIT-SCOPE R1 — CURRENT USER TEXT OUTRANKS INHERITED STORY
+         * CONTEXT.
+         *
+         * storyContext is useful only while the new turn is genuinely about
+         * that story. A typed country/region is a newer, explicit instruction.
+         * The live failure was a five-country Middle East comparison submitted
+         * while a Pakistan story anchor was still mounted: the stale PAK
+         * context won and six Pakistan reports were sent to OpenAI.
+         *
+         * typedLocation reuses the existing location authority. The
+         * classifier owns multi-country lists. No second country table or
+         * heuristic is introduced.
+         */
+        const typedLocation =
+          classification.sides.length >= 2 ||
+          classification.intent === 'CLARIFICATION_REQUIRED'
+            ? undefined
+            : (this.detectLocation(normalizedQuery) ??
+              this.detectLocationByDemonym(normalizedQuery));
+        const typedScopeOverridesStory =
+          declaredRegion !== undefined ||
+          classification.countries.length > 0 ||
+          typedLocation !== undefined;
+
         const location =
           declaredRegion !== undefined
             ? undefined
-            : (storyAnchoredLocation ??
-              (classification.sides.length >= 2
-                ? undefined
-                : (this.detectLocation(normalizedQuery) ??
-                  this.detectLocationByDemonym(normalizedQuery))));
+            : typedScopeOverridesStory
+              ? typedLocation
+              : storyAnchoredLocation;
 
         /**
          * R4 C1 — THE ANCHOR LOOKUP MOVES AHEAD OF RETRIEVAL.
@@ -948,9 +986,10 @@ export class AnalysisService {
          * When articleId is absent or does not resolve, `anchorArticle` is
          * null and every branch below takes the pre-R4 path unchanged.
          */
-        const anchorArticle = storyContext?.articleId
-          ? await this.newsService.findArticleById(storyContext.articleId)
-          : null;
+        const anchorArticle =
+          !typedScopeOverridesStory && storyContext?.articleId
+            ? await this.newsService.findArticleById(storyContext.articleId)
+            : null;
 
         let articles: NewsArticle[];
         let retrievalContext: AnalysisRetrievalContext;
