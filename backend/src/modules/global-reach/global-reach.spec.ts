@@ -14,6 +14,7 @@ import { GlobalReachService } from './global-reach.service';
 import { GlobalReachAcquisitionService } from './global-reach-acquisition.service';
 import { GlobalReachModule } from './global-reach.module';
 import { GLOBAL_REACH_REGIONS } from './source-pack.registry';
+import { supranationalById } from '../geo/supranational-membership';
 import { AdminGlobalReachController } from '../admin/admin-global-reach.controller';
 import { AdminPlatformEnabledGuard } from '../admin/admin-platform.guard';
 import { AdminGuard } from '../admin/admin.guard';
@@ -70,6 +71,107 @@ function pack(entries: readonly SourcePackEntry[] = [source()]): CountrySourcePa
 function reach(entries: readonly SourcePackEntry[] = [source()]) {
   return new GlobalReachService({ regions, packs: [pack(entries)] });
 }
+
+describe('Global Reach priority programmes', () => {
+  it('counts exactly East Africa, Middle East and EU-27 as primary programmes', () => {
+    expect(GLOBAL_REACH_REGIONS.map((region) => region.id)).toEqual([
+      'region:east-africa',
+      'region:middle-east',
+      'region:european-union',
+    ]);
+    expect(GLOBAL_REACH_REGIONS).toHaveLength(3);
+    expect(GLOBAL_REACH_REGIONS[0].members).toEqual([
+      'BDI',
+      'COD',
+      'DJI',
+      'ERI',
+      'ETH',
+      'KEN',
+      'RWA',
+      'SOM',
+      'SSD',
+      'TZA',
+      'UGA',
+    ]);
+    expect(GLOBAL_REACH_REGIONS[1].members).toEqual([
+      'BHR',
+      'EGY',
+      'IRN',
+      'IRQ',
+      'ISR',
+      'JOR',
+      'KWT',
+      'LBN',
+      'OMN',
+      'PSE',
+      'QAT',
+      'SAU',
+      'SYR',
+      'TUR',
+      'ARE',
+      'YEM',
+    ]);
+  });
+
+  it('uses the existing membership authority and exactly the 27 EU member states', () => {
+    const eu = GLOBAL_REACH_REGIONS.find((region) => region.id === 'region:european-union')!;
+    expect(eu.members).toBe(supranationalById('region:european-union')!.members);
+    expect(eu.members).toHaveLength(27);
+    expect([...eu.members].sort()).toEqual([
+      'AUT',
+      'BEL',
+      'BGR',
+      'CYP',
+      'CZE',
+      'DEU',
+      'DNK',
+      'ESP',
+      'EST',
+      'FIN',
+      'FRA',
+      'GRC',
+      'HRV',
+      'HUN',
+      'IRL',
+      'ITA',
+      'LTU',
+      'LUX',
+      'LVA',
+      'MLT',
+      'NLD',
+      'POL',
+      'PRT',
+      'ROU',
+      'SVK',
+      'SVN',
+      'SWE',
+    ]);
+    for (const nonMember of ['GBR', 'NOR', 'CHE', 'RUS', 'UKR']) {
+      expect(eu.members).not.toContain(nonMember);
+    }
+  });
+
+  it('accounts for 54 memberships without counting EAC or M49 Europe as programmes', () => {
+    const service = new GlobalReachService({ regions: GLOBAL_REACH_REGIONS, packs: [] });
+    expect(service.summary()).toMatchObject({
+      governedCountryCount: 54,
+      governedMembershipCount: 54,
+      states: { COVERAGE_GAP: 54 },
+    });
+    expect(service.summary().regions).toHaveLength(3);
+    expect(service.coverage()).toHaveLength(54);
+    expect(
+      service
+        .coverage()
+        .some((row) =>
+          ['region:europe', 'region:east-african-community'].includes(row.governedRegion),
+        ),
+    ).toBe(false);
+    // Navigation/geography authorities remain available independently of these programmes.
+    expect(supranationalById('region:east-african-community')!.members.length).toBeGreaterThan(0);
+    expect(supranationalById('region:europe')!.members).toContain('GBR');
+  });
+});
 
 describe('Global Reach schema and coverage authority', () => {
   it('shares publisher references across overlapping regions independent of JSON key order', () => {
