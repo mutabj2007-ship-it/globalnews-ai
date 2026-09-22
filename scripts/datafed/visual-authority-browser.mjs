@@ -27,7 +27,7 @@ await new Promise((resolve, reject) => { api.once('error', reject); api.listen(4
 const browser = await chromium.launch({ headless: true, channel: 'chrome' });
 const results = [];
 try {
-  for (const locale of ['en', 'pl']) for (const width of [390, 1440]) {
+  for (const locale of ['en', 'pl']) for (const width of [320, 390, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 900 } });
     await context.addCookies([{ name: 'globalnews-ai-language', value: locale, url: base }]);
     const page = await context.newPage();
@@ -55,19 +55,34 @@ try {
       regions[key] = await region.boundingBox();
     }
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 0);
-    await page.screenshot({ path: `${output}/restored-economy-UI-FIXTURE-${locale}-${width}.png`, fullPage: true });
-    if (!compact) {
+    await page.screenshot({ path: `${output}/plan-b-economy-UI-FIXTURE-${locale}-${width}.png`, fullPage: true });
+    assert.match(await frame.innerText(), locale === 'pl' ? /trend nieustalony/i : /trend not established/i);
+    if (compact) {
+      await page.locator('[data-econ="compact-indicator-cell"]').first().click();
+      await page.locator('[data-econ="retained-source-details"]').waitFor();
+      assert.equal(await page.locator('[data-econ="economy-sheet"]').getAttribute('data-detent'), 'HALF');
+    } else {
       await page.locator('[data-econ="observed-provenance-line"]').click();
       await page.locator('[data-econ="retained-source-details"]').waitFor();
       assert.equal(await page.locator('[data-econ="desktop-drawer-shell"]').count(), 1);
       assert.match(await page.locator('[data-econ="retained-source-details"]').innerText(), /National Institute of Statistics/);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 0);
     }
+    const source = page.locator('[data-econ="retained-source-details"] a');
+    assert.equal(await source.getAttribute('href'), body.provenance.sourceUrl);
+    assert.equal(await source.getAttribute('lang'), 'en');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 0);
+    await page.screenshot({ path: `${output}/plan-b-evidence-UI-FIXTURE-${locale}-${width}.png`, fullPage: true });
+    if (compact) {
+      await page.keyboard.press('Escape');
+      await page.locator('[data-econ="compact-indicator-cell"]').nth(2).click();
+      assert.equal(await page.locator('[data-econ="retained-source-details"]').count(), 0);
+    }
     assert.deepEqual(errors, []);
     assert.deepEqual(forbidden, []);
     results.push({ locale, width, regions, input: 'UI fixture only; no DB verification', restoredFrame: true, overflow: 0, errors, forbidden });
     await context.close();
   }
-  await writeFile(`${output}/restored-economy-browser.json`, JSON.stringify(results, null, 2));
+  await writeFile(`${output}/plan-b-economy-browser.json`, JSON.stringify(results, null, 2));
   console.log(JSON.stringify(results, null, 2));
 } finally { await browser.close(); await new Promise(resolve => api.close(resolve)); }

@@ -1,7 +1,10 @@
 'use client';
+import { retainedEconomyStrings } from '@/lib/economy/strings';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { RetainedSourceDetails } from '../EconomyScreen';
+import type { RetainedObservation } from '@/lib/economy/economyObservationRead';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { economyStrings } from '@/lib/economy/strings';
@@ -57,6 +60,7 @@ export type CompactSurface =
 
 export interface EconomyCompactProps {
   subject: EconomySubject;
+  retainedObservation?: RetainedObservation;
   locale: EconomyLocale;
   /**
    * Compact frame width. OMIT IT IN PRODUCTION — the frame measures itself. A pinned value
@@ -83,7 +87,7 @@ export function EconomyCompactScreen({
   data = ECONOMY_DATA_CAPABILITY,
   watchRuntime = DEV_WATCH_RUNTIME,
   initialSurface = { kind: 'NONE' },
-  competing, timeline, onRequestWorkspace,
+  competing, timeline, onRequestWorkspace, retainedObservation,
 }: EconomyCompactProps): JSX.Element {
   const t = economyStrings(locale);
 
@@ -112,6 +116,7 @@ export function EconomyCompactScreen({
 
   const open = useCallback((s: CompactSurface) => setSurface(s), []);
   const close = useCallback(() => setSurface({ kind: 'NONE' }), []);
+  const selectedSeries = subject.indicators.find(series => seriesId(series) === selectedId);
   const geographyLeads = enteredFrom !== null && subject.corridor !== null;
 
   return (
@@ -228,7 +233,7 @@ export function EconomyCompactScreen({
                 type="button"
                 data-econ="compact-indicator-cell"
                 aria-pressed={active}
-                onClick={() => setSelectedId(seriesId(s))}
+                onClick={() => { setSelectedId(seriesId(s)); open({ kind: 'INSPECT', detent: 'HALF' }); }}
                 style={{
                   flex: '0 0 106px', boxSizing: 'border-box', padding: '9px 10px',
                   minHeight: `${COMPACT_HIT_TARGET_PX}px`,
@@ -238,7 +243,7 @@ export function EconomyCompactScreen({
                 }}
               >
                 <span style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 9px)', letterSpacing: 'calc(0.07em * var(--ar-ls-mul, 1))', textTransform: 'uppercase', color: ECON_INK.label }}>
-                  {s.shortLabel}
+                  {retainedObservation && seriesId(s) === subject.primarySeries?.model.seriesId ? `${s.shortLabel} · ${retainedEconomyStrings(locale).source}` : s.shortLabel}
                 </span>
                 <EconomyFigure slot={o} sizePx={17} />
                 {/*
@@ -372,13 +377,15 @@ export function EconomyCompactScreen({
             cell, so nothing on it claims an observation was formed and failed to arrive.
           */}
           {surface.kind === 'INSPECT' && (
-            showFigures && subject.primarySeries?.triad ? (
-              <Triad triad={subject.primarySeries.triad} locale={locale} cellBasisPx={100} showSurprise={false} />
+            retainedObservation && selectedId === subject.primarySeries?.model.seriesId ? (
+              <RetainedSourceDetails observation={retainedObservation} locale={locale} />
+            ) : showFigures && selectedSeries?.triad ? (
+              <Triad triad={selectedSeries.triad} locale={locale} cellBasisPx={100} showSurprise={false} />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <QuietTriad locale={locale} cellBasisPx={100} />
                 <PeriodContext locale={locale} />
-                <NoObservationData locale={locale} subjectName={subject.primarySeries ? seriesName(subject.primarySeries) : subject.name} />
+                <NoObservationData locale={locale} subjectName={selectedSeries ? seriesName(selectedSeries) : subject.name} />
               </div>
             )
           )}

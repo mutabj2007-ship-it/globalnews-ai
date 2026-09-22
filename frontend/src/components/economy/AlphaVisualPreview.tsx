@@ -1,3 +1,4 @@
+import { retainedEconomyStrings } from '@/lib/economy/strings';
 import type { JSX } from 'react';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { resolveEconomyStrings } from '@/lib/economy/strings';
@@ -120,7 +121,7 @@ export function AlphaVisualPreviewMarker({
         display: 'flex', flexWrap: 'wrap', gap: '6px 14px', alignItems: 'baseline',
       }}
     >
-      <span>Alpha visual preview</span>
+      <span>{retainedEconomyStrings(locale).preview}</span>
       <span style={{ color: ECON_INK.label }}>
         {res.fellBack ? `${res.requested} → ${res.resolved}` : res.resolved}
       </span>
@@ -133,12 +134,12 @@ export function AlphaVisualPreviewMarker({
       */}
       {observedGeography ? (
         <span>
-          Observed scope{' '}
+          {retainedEconomyStrings(locale).observedScope}{' '}
           <span style={{ color: ECON_INK.label }}>{observedGeography}</span>
         </span>
       ) : (
         <span>
-          Planned visual scope{' '}
+          {retainedEconomyStrings(locale).plannedScope}{' '}
           <span style={{ color: ECON_INK.label }}>
             {ALPHA_PREVIEW_VISUAL_SCOPE.label} ({ALPHA_PREVIEW_VISUAL_SCOPE.geo})
           </span>

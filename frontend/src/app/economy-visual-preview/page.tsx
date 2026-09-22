@@ -105,7 +105,7 @@ function economyLocale(): EconomyLocale {
 export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
   const locale = economyLocale();
   const read = await readEconomyObservations();
-  const subject = economySubjectFromRead(read);
+  const subject = economySubjectFromRead(read, locale);
   const primaryObservation =
     subject.primarySeries?.latest.kind === 'OBSERVATION'
       ? subject.primarySeries.latest.observation

@@ -1,3 +1,4 @@
+import { retainedEconomyStrings } from '@/lib/economy/strings';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { economyStrings } from '@/lib/economy/strings';
 import type { Corridor, FigureSlot, Series } from '@/lib/economy/types';
@@ -83,7 +84,7 @@ export function SeriesChart({
           {t.seriesLabel} · {seriesName(series)}
         </span>
         <span style={{ fontSize: 'max(var(--ar-fs-min, 0px), 13px)', color: ECON_INK.secondary }}>
-          One retained period ({only ? slotPeriodLabel(only) : 'current'}) · trend not available yet
+          {retainedEconomyStrings(locale).onePeriod} ({only ? slotPeriodLabel(only) : '—'}) · {retainedEconomyStrings(locale).trend}
         </span>
       </div>
     );
