@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "country": "SYR",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "ar",
+    "en",
+    "ku"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:syr:sana",
+      "country": "SYR",
+      "language": "ar",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "sana",
+        "name": "Syrian Arab News Agency (SANA)",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "sana.sy",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://sana.sy/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://sana.sy/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Arabic agency page lists Syrian governorates and economy section; edition links are not separate publishers."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://sana.sy/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the SYR source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Arabic agency page lists Syrian governorates and economy section; edition links are not separate publishers. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:syr:enab",
+      "country": "SYR",
+      "language": "ar",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "enab",
+        "name": "Enab Baladi",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.enabbaladi.net",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSROOM",
+      "endpoint": {
+        "url": "https://www.enabbaladi.net/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.enabbaladi.net/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Arabic Syria-focused homepage observed; current newsroom location and ownership not verified."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.enabbaladi.net/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the SYR source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Arabic Syria-focused homepage observed; current newsroom location and ownership not verified. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:syr:cbs-bank",
+      "country": "SYR",
+      "language": "ar",
+      "languageStatus": "candidate",
+      "publisher": {
+        "id": "cbs-bank",
+        "name": "Central Bank of Syria",
+        "identityStatus": "candidate",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "cb.gov.sy",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "CENTRAL_BANK",
+      "endpoint": {
+        "url": "https://cb.gov.sy/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://cb.gov.sy/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "retrieval_failed",
+          "note": "Direct open failed; targeted primary-source search returned no corroborating result. Host and identity provisional."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://cb.gov.sy/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Direct open failed; targeted primary-source search returned no corroborating result. Host and identity provisional. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "Central Bank candidate remains unverified; statistical-office sources/releases remain a gap.",
+    "English, Kurdish and other locally relevant editions need verification.",
+    "Current institutional remit, publisher operations and subnational reach require review."
+  ]
+}

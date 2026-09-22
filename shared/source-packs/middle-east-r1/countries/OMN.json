@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "country": "OMN",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "ar",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:omn:ona",
+      "country": "OMN",
+      "language": "ar",
+      "languageStatus": "indexed",
+      "publisher": {
+        "id": "ona",
+        "name": "Oman News Agency",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "omannews.gov.om",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://omannews.gov.om/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://omannews.gov.om/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "retrieval_failed",
+          "note": "Direct open failed; indexed Arabic Oman Today agency page available."
+        },
+        {
+          "url": "https://omannews.gov.om/topics/ar/3/page/309",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Indexed Arabic Oman Today listing identifies Oman News Agency; crawl age about ten months."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://omannews.gov.om/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the OMN source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Direct open failed; indexed Arabic Oman Today agency page available. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:omn:times-oman",
+      "country": "OMN",
+      "language": "en",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "times-oman",
+        "name": "Times of Oman",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "timesofoman.com",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSPAPER",
+      "endpoint": {
+        "url": "https://timesofoman.com/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://timesofoman.com/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "English publisher homepage observed."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://timesofoman.com/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the OMN source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "English publisher homepage observed. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:omn:ncsi",
+      "country": "OMN",
+      "language": "en",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "ncsi",
+        "name": "National Centre for Statistics and Information (Oman)",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.ncsi.gov.om",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://www.ncsi.gov.om/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.ncsi.gov.om/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "English portal lists statistical bulletins, inflation and energy releases and links to data portal."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.ncsi.gov.om/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "English portal lists statistical bulletins, inflation and energy releases and links to data portal. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "Arabic ONA direct access failed; additional Arabic local reporting remains open."
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "id": "global-reach-middle-east-multi-vantage-r1",
+  "agent": "CODEX O",
+  "reviewedOn": "2026-09-22",
+  "baseCommit": "dc0b029f0d29e07908c0dc8c66d3ad1bd216fc15",
+  "branch": "feature/beta-global-reach-middle-east-r1",
+  "baseline": [
+    "BHR",
+    "EGY",
+    "IRN",
+    "IRQ",
+    "ISR",
+    "JOR",
+    "KWT",
+    "LBN",
+    "OMN",
+    "PSE",
+    "QAT",
+    "SAU",
+    "SYR",
+    "TUR",
+    "ARE",
+    "YEM"
+  ],
+  "scopeNote": "GlobalNews AI monitoring construct, not a geopolitical boundary claim.",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "alphaActivation": false,
+  "productionHold": true,
+  "governance": {
+    "preserveCompetingReporting": true,
+    "preserveOriginalLanguage": true,
+    "preservePublisherAttribution": true,
+    "countrySubstitutionAllowed": false,
+    "regionalProxyAllowed": false,
+    "translationCountsAsIndependentPublisher": false,
+    "officialSourcesCountAsIndependentJournalisticCorroboration": false,
+    "politicalSentimentScoring": false,
+    "ideologicalClassification": false,
+    "broadScrapingAllowed": false,
+    "activationRequires": [
+      "Separate source convergence approval",
+      "Verified exact acquisition endpoint and representative payload",
+      "Governed rights binding and evaluated instrument",
+      "Exact user-agent/path robots and access review",
+      "Country/language gaps and ownership relationships reviewed",
+      "Explicit future activation authorization; Production HOLD remains"
+    ]
+  },
+  "countries": [
+    {
+      "country": "BHR",
+      "manifest": "countries/BHR.json"
+    },
+    {
+      "country": "EGY",
+      "manifest": "countries/EGY.json"
+    },
+    {
+      "country": "IRN",
+      "manifest": "countries/IRN.json"
+    },
+    {
+      "country": "IRQ",
+      "manifest": "countries/IRQ.json"
+    },
+    {
+      "country": "ISR",
+      "manifest": "countries/ISR.json"
+    },
+    {
+      "country": "JOR",
+      "manifest": "countries/JOR.json"
+    },
+    {
+      "country": "KWT",
+      "manifest": "countries/KWT.json"
+    },
+    {
+      "country": "LBN",
+      "manifest": "countries/LBN.json"
+    },
+    {
+      "country": "OMN",
+      "manifest": "countries/OMN.json"
+    },
+    {
+      "country": "PSE",
+      "manifest": "countries/PSE.json"
+    },
+    {
+      "country": "QAT",
+      "manifest": "countries/QAT.json"
+    },
+    {
+      "country": "SAU",
+      "manifest": "countries/SAU.json"
+    },
+    {
+      "country": "SYR",
+      "manifest": "countries/SYR.json"
+    },
+    {
+      "country": "TUR",
+      "manifest": "countries/TUR.json"
+    },
+    {
+      "country": "ARE",
+      "manifest": "countries/ARE.json"
+    },
+    {
+      "country": "YEM",
+      "manifest": "countries/YEM.json"
+    }
+  ],
+  "sharedGaps": [
+    "All source records are research candidates, not activated coverage.",
+    "No machine-readable feed payload verified; landing pages must not be submitted to feed ingestion.",
+    "Rights have not been evaluated or bound; no commercial reuse permission established.",
+    "Most robots directives are unchecked; retrieval failures never imply permission.",
+    "Ownership relationships and editorial independence are not audited.",
+    "Language targets are an initial review checklist, not an exhaustive account of local language environments.",
+    "No reach, completeness, political sentiment, ideological or truth ranking is assigned."
+  ]
+}
