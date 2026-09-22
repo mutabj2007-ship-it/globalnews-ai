@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "country": "IRN",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "fa",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:irn:irna",
+      "country": "IRN",
+      "language": "fa",
+      "languageStatus": "indexed",
+      "publisher": {
+        "id": "irna",
+        "name": "Islamic Republic News Agency (IRNA)",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.irna.ir",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://www.irna.ir/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.irna.ir/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "limited_content",
+          "note": "Only transfer screen returned; endpoint content not verified."
+        },
+        {
+          "url": "https://www2.irna.ir/service/foreignpolicy",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Indexed Persian IRNA content on another subdomain; not approval to change canonical host."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.irna.ir/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the IRN source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Only transfer screen returned; endpoint content not verified. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:irn:isna",
+      "country": "IRN",
+      "language": "fa",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "isna",
+        "name": "Iranian Students' News Agency (ISNA)",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.isna.ir",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://www.isna.ir/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.isna.ir/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Persian publisher masthead and news listing observed. RSS text search had no match; this does not prove absence."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.isna.ir/robots.txt",
+        "status": "FETCH_FAILED",
+        "checkedOn": "2026-09-22",
+        "note": "Targeted robots.txt open failed in the research tool; directives unknown, not permissive."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the IRN source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Persian publisher masthead and news listing observed. RSS text search had no match; this does not prove absence. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:irn:bbc-persian",
+      "country": "IRN",
+      "language": "fa",
+      "languageStatus": "candidate",
+      "publisher": {
+        "id": "bbc-persian",
+        "name": "BBC — Persian service",
+        "identityStatus": "candidate",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.bbc.com",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "BROADCASTER",
+      "endpoint": {
+        "url": "https://www.bbc.com/persian",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.bbc.com/persian",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "retrieval_failed",
+          "note": "Open failed; subsequent search reported BBC domains blocked by robots.txt. Accessible edition not verified."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.bbc.com/robots.txt",
+        "status": "RESEARCH_TOOL_BLOCKED",
+        "checkedOn": "2026-09-22",
+        "note": "Search tool explicitly reported BBC domains blocked by robots.txt; exact agent directives not inspected. Do not bypass."
+      },
+      "localInternationalBasis": {
+        "scope": "INTERNATIONAL",
+        "note": "External Persian-language service candidate addressing Iranian audiences; not an Iranian domestic newsroom."
+      },
+      "accessLimitation": "Open failed; subsequent search reported BBC domains blocked by robots.txt. Accessible edition not verified. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:irn:sci",
+      "country": "IRN",
+      "language": "fa",
+      "languageStatus": "candidate",
+      "publisher": {
+        "id": "sci",
+        "name": "Statistical Centre of Iran",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.amar.org.ir",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://www.amar.org.ir/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.amar.org.ir/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "retrieval_failed",
+          "note": "Open failed. Historical UN-hosted census document identifies institution and host; current service unverified."
+        },
+        {
+          "url": "https://unstats.un.org/unsd/demographic-social/census/documents/Iran/Iran-2011-Census-Results.pdf",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Historical primary census document identifies SCI and amar.org.ir; current service and Persian edition unverified."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.amar.org.ir/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Open failed. Historical UN-hosted census document identifies institution and host; current service unverified. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "IRNA root is a transfer page; SCI current host/service remains unverified.",
+    "BBC Persian is an international candidate blocked in this research environment; no bypass.",
+    "English and minority-language local reporting remain gaps."
+  ]
+}

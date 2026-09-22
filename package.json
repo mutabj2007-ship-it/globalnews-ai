@@ -29,7 +29,8 @@
     "verify:file-inclusion": "node scripts/verify-release-file-inclusion.mjs",
     "test:request-economy": "node scripts/map-request-economy-probe.mjs",
     "test:zoom-controls": "node scripts/map-zoom-controls-probe.mjs",
-    "test:shared": "npm run test --workspace=shared"
+    "test:shared": "npm run test --workspace=shared",
+    "test:eu27-source-packs": "node scripts/verify-eu27-source-packs.mjs && node --test scripts/verify-eu27-source-packs.test.mjs"
   },
   "engines": {
     "node": ">=20.0.0",

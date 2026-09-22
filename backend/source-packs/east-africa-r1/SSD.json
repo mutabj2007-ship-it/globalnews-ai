@@ -1,0 +1,319 @@
+{
+  "schemaVersion": 1,
+  "packId": "east-africa-r1:SSD",
+  "country": "SSD",
+  "scope": "GOVERNED_EAST_AFRICA_BASELINE",
+  "enabled": false,
+  "alphaEnabled": false,
+  "productionHold": true,
+  "coverageStatus": "COVERAGE_GAP",
+  "findings": "Eye Radio HTML and Tamazuj feed are self-described independent; Tamazuj is cross-border and print permission is not product permission. Legislature DNS failure; national statistics hostname needs identity review. BoSS publications and OCHA context cannot close journalism gaps.",
+  "qualifiedIndependentLocalPublishers": 0,
+  "independenceRule": "Two distinct ownership groups, country-local reporting, technically usable endpoint, and explicit product reuse scope required. Self-description, exile coverage and public broadcasters do not satisfy this by themselves.",
+  "categoryAudit": [
+    {
+      "category": "LOCAL_NEWS",
+      "candidateIds": [
+        "ea-r1:ssd:eyeradio",
+        "ea-r1:ssd:tamazuj"
+      ],
+      "verifiedFeedEndpointIds": [
+        "ea-r1:ssd:tamazuj"
+      ],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "PUBLIC_NEWS",
+      "candidateIds": [
+        "ea-r1:ssd:ssbc"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "GOVERNMENT",
+      "candidateIds": [
+        "ea-r1:ssd:parliament"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "STATISTICS",
+      "candidateIds": [
+        "ea-r1:ssd:nbs"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "CENTRAL_BANK",
+      "candidateIds": [
+        "ea-r1:ssd:boss"
+      ],
+      "verifiedFeedEndpointIds": [
+        "ea-r1:ssd:boss"
+      ],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "HUMANITARIAN",
+      "candidateIds": [
+        "ea-r1:ssd:ocha"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    }
+  ],
+  "sources": [
+    {
+      "id": "ea-r1:ssd:eyeradio",
+      "name": "Eye Radio",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://www.eyeradio.org/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "SELF_DESCRIBED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.eyeradio.org/about"
+        ],
+        "note": "Current about page self-describes independent South Sudan reporting. Legacy /about-us/ serves a not-found page. No advertised feed captured."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:ssd:eyeradio",
+        "checkedAt": "2026-09-22T16:19:09.045Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:ssd:tamazuj",
+      "name": "Radio Tamazuj (cross-border)",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://www.radiotamazuj.org/en/",
+      "feedUrl": "https://www.radiotamazuj.org/en/feed",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "SELF_DESCRIBED",
+      "locality": "EXILE_OR_CROSS_BORDER",
+      "declaredFeedLanguage": "en-US",
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rights": {
+        "status": "LIMITED_SCOPE_REVIEW",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.radiotamazuj.org/en/about-us"
+        ],
+        "note": "Publisher states editorial independence; covers South Sudan and Sudan borderlands. Print reprint permission is limited to newspapers in those countries with credit; it is not permission for this product. Sudan is not added to pack membership."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:ssd:tamazuj",
+        "checkedAt": "2026-09-22T16:21:56.464Z"
+      },
+      "blockers": [
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:ssd:ssbc",
+      "name": "South Sudan Broadcasting Corporation",
+      "category": "PUBLIC_NEWS",
+      "homepage": "https://ssbc.gov.ss/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://ssbc.gov.ss/terms.php"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:ssd:ssbc",
+        "checkedAt": "2026-09-22T16:19:15.167Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:ssd:parliament",
+      "name": "National Legislature South Sudan",
+      "category": "GOVERNMENT",
+      "homepage": "https://www.parliament.gov.ss/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.parliament.gov.ss/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:ssd:parliament",
+        "checkedAt": "2026-09-22T16:19:11.593Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:ssd:nbs",
+      "name": "National Bureau of Statistics South Sudan",
+      "category": "STATISTICS",
+      "homepage": "https://www.ssnbss.org/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "FEED_SIGNATURE_ONLY",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.ssnbss.org/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:ssd:nbs",
+        "checkedAt": "2026-09-22T16:19:12.678Z"
+      },
+      "blockers": [
+        "FEED_SIGNATURE_ONLY",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:ssd:boss",
+      "name": "Bank of South Sudan",
+      "category": "CENTRAL_BANK",
+      "homepage": "https://boss.gov.ss/statistical-bulletin/",
+      "feedUrl": "https://boss.gov.ss/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": "en-US",
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://boss.gov.ss/statistical-bulletin/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:ssd:boss",
+        "checkedAt": "2026-09-22T16:21:58.319Z"
+      },
+      "blockers": [
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:ssd:ocha",
+      "name": "OCHA South Sudan",
+      "category": "HUMANITARIAN",
+      "homepage": "https://www.unocha.org/south-sudan",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.unocha.org/south-sudan"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:ssd:ocha",
+        "checkedAt": "2026-09-22T16:19:14.208Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    }
+  ]
+}

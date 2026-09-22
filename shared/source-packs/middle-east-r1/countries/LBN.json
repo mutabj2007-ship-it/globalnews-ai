@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "country": "LBN",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "ar",
+    "fr",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:lbn:nna",
+      "country": "LBN",
+      "language": "ar",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "nna",
+        "name": "National News Agency (Lebanon)",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.nna-leb.gov.lb",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://www.nna-leb.gov.lb/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.nna-leb.gov.lb/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Arabic agency landing page observed; redirect to /ar; short extracted page."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.nna-leb.gov.lb/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the LBN source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Arabic agency landing page observed; redirect to /ar; short extracted page. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:lbn:orient-today",
+      "country": "LBN",
+      "language": "en",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "orient-today",
+        "name": "L'Orient-Le Jour — L'Orient Today",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "today.lorientlejour.com",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSPAPER",
+      "endpoint": {
+        "url": "https://today.lorientlejour.com/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://today.lorientlejour.com/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "English edition observed; other editions are not independent publishers."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://today.lorientlejour.com/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the LBN source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "English edition observed; other editions are not independent publishers. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:lbn:cas",
+      "country": "LBN",
+      "language": "en",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "cas",
+        "name": "Central Administration of Statistics (Lebanon)",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.cas.gov.lb",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://www.cas.gov.lb/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.cas.gov.lb/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Institutional masthead identifies Lebanese Republic and statistical office; national accounts and economic navigation observed."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.cas.gov.lb/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Institutional masthead identifies Lebanese Republic and statistical office; national accounts and economic navigation observed. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "French-language reporting is not represented by a verified edition.",
+    "Local/subnational reach unmeasured; translations must not inflate publisher diversity."
+  ]
+}

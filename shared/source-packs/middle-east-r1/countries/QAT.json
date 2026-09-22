@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "country": "QAT",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "ar",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:qat:qna",
+      "country": "QAT",
+      "language": "ar",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "qna",
+        "name": "Qatar News Agency",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.qna.org.qa",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://www.qna.org.qa/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.qna.org.qa/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Arabic agency homepage observed."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.qna.org.qa/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the QAT source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Arabic agency homepage observed. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:qat:aljazeera",
+      "country": "QAT",
+      "language": "ar",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "aljazeera",
+        "name": "Al Jazeera Media Network — Al Jazeera Arabic",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.aljazeera.net",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "BROADCASTER",
+      "endpoint": {
+        "url": "https://www.aljazeera.net/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.aljazeera.net/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Arabic network homepage observed; regional reach is not a substitute for other countries' packs."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.aljazeera.net/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the QAT source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Arabic network homepage observed; regional reach is not a substitute for other countries' packs. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:qat:npc",
+      "country": "QAT",
+      "language": "en",
+      "languageStatus": "indexed",
+      "publisher": {
+        "id": "npc",
+        "name": "National Planning Council — National Statistics Center (Qatar)",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.npc.qa",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://www.npc.qa/en/statistics/pages/default.aspx",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.npc.qa/en/statistics/pages/default.aspx",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Indexed English statistics/about pages available; root open failed. Portal reports JavaScript requirement."
+        },
+        {
+          "url": "https://www.npc.qa/en/aboutus/pages/default.aspx",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Indexed institutional page identifies NPC and National Statistics Center under its cited 2024 decision."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.npc.qa/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Indexed English statistics/about pages available; root open failed. Portal reports JavaScript requirement. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "English Qatar-local newsroom edition remains unverified.",
+    "Al Jazeera regional reach cannot substitute for domestic voices elsewhere; seek additional Qatar-local publishers."
+  ]
+}

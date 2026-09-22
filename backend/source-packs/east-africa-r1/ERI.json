@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "packId": "east-africa-r1:ERI",
+  "country": "ERI",
+  "scope": "GOVERNED_EAST_AFRICA_BASELINE",
+  "enabled": false,
+  "alphaEnabled": false,
+  "productionHold": true,
+  "coverageStatus": "COVERAGE_GAP",
+  "findings": "Domestic independent-news COVERAGE_GAP. Erena is exile coverage; Shabait and ministry page are one state publisher. No verified standalone national statistics endpoint found; central-bank candidate inaccessible. IFRC directory blocked. No substitute international news added.",
+  "qualifiedIndependentLocalPublishers": 0,
+  "independenceRule": "Two distinct ownership groups, country-local reporting, technically usable endpoint, and explicit product reuse scope required. Self-description, exile coverage and public broadcasters do not satisfy this by themselves.",
+  "categoryAudit": [
+    {
+      "category": "LOCAL_NEWS",
+      "candidateIds": [
+        "ea-r1:eri:erena"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "PUBLIC_NEWS",
+      "candidateIds": [
+        "ea-r1:eri:shabait"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "GOVERNMENT",
+      "candidateIds": [
+        "ea-r1:eri:ministry"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "STATISTICS",
+      "candidateIds": [],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "No technically verified national endpoint found in bounded discovery; do not substitute international news."
+    },
+    {
+      "category": "CENTRAL_BANK",
+      "candidateIds": [
+        "ea-r1:eri:boe"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "HUMANITARIAN",
+      "candidateIds": [
+        "ea-r1:eri:redcross"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    }
+  ],
+  "sources": [
+    {
+      "id": "ea-r1:eri:erena",
+      "name": "Radio Erena (exile)",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://erena.org/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "REVIEW_REQUIRED",
+      "locality": "EXILE_OR_CROSS_BORDER",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://rsf.org/en/country/eritrea"
+        ],
+        "note": "Exile outlet; does not close the domestic independent-news gap. RSF country profile is contextual evidence, not a content source or rights authority."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eri:erena",
+        "checkedAt": "2026-09-22T16:18:22.721Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eri:shabait",
+      "name": "Ministry of Information Shabait",
+      "category": "PUBLIC_NEWS",
+      "homepage": "https://shabait.com/",
+      "feedUrl": "https://shabait.com/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": "eritrea-ministry-information",
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "RECHECK_FAILED",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://shabait.com/"
+        ],
+        "note": "State information output; never count as independent local journalism."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eri:shabait",
+        "checkedAt": "2026-09-22T16:21:35.470Z"
+      },
+      "blockers": [
+        "RECHECK_FAILED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eri:ministry",
+      "name": "Eritrea Ministry of Information publications",
+      "category": "GOVERNMENT",
+      "homepage": "https://shabait.com/category/local-news/",
+      "feedUrl": "https://shabait.com/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": "eritrea-ministry-information",
+      "duplicateOf": "ea-r1:eri:shabait",
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "DUPLICATE_ENDPOINT",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://shabait.com/category/local-news/"
+        ],
+        "note": "Same publisher and same feed as Shabait. Role pointer only; no extra diversity or parliamentary coverage claim."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eri:ministry",
+        "checkedAt": "2026-09-22T16:18:26.394Z"
+      },
+      "blockers": [
+        "DUPLICATE_ENDPOINT",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eri:boe",
+      "name": "Bank of Eritrea (candidate host)",
+      "category": "CENTRAL_BANK",
+      "homepage": "https://www.boe.gov.er/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.boe.gov.er/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eri:boe",
+        "checkedAt": "2026-09-22T16:18:33.394Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eri:redcross",
+      "name": "Red Cross Society of Eritrea",
+      "category": "HUMANITARIAN",
+      "homepage": "https://www.ifrc.org/national-societies-directory/red-cross-society-eritrea",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "ACCESS_BLOCKED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.ifrc.org/national-societies-directory/red-cross-society-eritrea"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eri:redcross",
+        "checkedAt": "2026-09-22T16:18:27.244Z"
+      },
+      "blockers": [
+        "ACCESS_BLOCKED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    }
+  ]
+}

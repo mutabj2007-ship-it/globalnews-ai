@@ -225,3 +225,6 @@ export * from './security/read-model';
 
 // Public absence-only Humanitarian reader; acquisition stays unprovisioned.
 export * from './humanitarian/retained-read';
+
+export * from './global-reach';
+export * from './global-reach-regions';

@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "country": "TUR",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "tr",
+    "ku",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:tur:anadolu",
+      "country": "TUR",
+      "language": "tr",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "anadolu",
+        "name": "Anadolu Agency",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.aa.com.tr",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://www.aa.com.tr/tr",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.aa.com.tr/tr",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Turkish agency edition observed."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.aa.com.tr/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the TUR source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Turkish agency edition observed. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:tur:bianet",
+      "country": "TUR",
+      "language": "tr",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "bianet",
+        "name": "bianet",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "bianet.org",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSROOM",
+      "endpoint": {
+        "url": "https://bianet.org/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "ADVERTISED_UNRESOLVED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://bianet.org/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Turkish homepage observed with English/Kurdish edition links and RSS link. RSS traversal failed; no feed payload verified."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://bianet.org/robots.txt",
+        "status": "FETCH_FAILED",
+        "checkedOn": "2026-09-22",
+        "note": "Targeted robots.txt open failed in the research tool; directives unknown, not permissive."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the TUR source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Turkish homepage observed with English/Kurdish edition links and RSS link. RSS traversal failed; no feed payload verified. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:tur:tuik",
+      "country": "TUR",
+      "language": "tr",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "tuik",
+        "name": "Turkish Statistical Institute (TUIK)",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.tuik.gov.tr",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://www.tuik.gov.tr/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.tuik.gov.tr/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Turkish institutional homepage observed."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.tuik.gov.tr/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Turkish institutional homepage observed. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "English and Kurdish edition links need content checks; Turkish editions do not fill these gaps.",
+    "bianet advertises RSS but traversal failed; feed URL/payload remains unverified."
+  ]
+}

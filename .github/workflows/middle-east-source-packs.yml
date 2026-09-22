@@ -1,0 +1,32 @@
+name: Middle East source-pack manifest validation
+
+on:
+  push:
+    branches:
+      - feature/beta-global-reach-middle-east-r1
+    paths:
+      - 'shared/source-packs/middle-east-r1/**'
+      - 'scripts/verify-middle-east-source-packs*'
+      - '.github/workflows/middle-east-source-packs.yml'
+  pull_request:
+    paths:
+      - 'shared/source-packs/middle-east-r1/**'
+      - 'scripts/verify-middle-east-source-packs*'
+      - '.github/workflows/middle-east-source-packs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: Validate dormant country manifests
+        run: node scripts/verify-middle-east-source-packs.mjs
+      - name: Exercise safety refusals
+        run: node --test scripts/verify-middle-east-source-packs.test.mjs

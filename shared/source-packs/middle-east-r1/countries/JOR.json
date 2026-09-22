@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "country": "JOR",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "ar",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:jor:petra",
+      "country": "JOR",
+      "language": "ar",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "petra",
+        "name": "Jordan News Agency (Petra)",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "petra.gov.jo",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://petra.gov.jo/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://petra.gov.jo/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Arabic agency page observed; redirect to /ar."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://petra.gov.jo/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the JOR source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Arabic agency page observed; redirect to /ar. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:jor:jordan-times",
+      "country": "JOR",
+      "language": "en",
+      "languageStatus": "indexed",
+      "publisher": {
+        "id": "jordan-times",
+        "name": "The Jordan Times / Jordan Press Foundation",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "jordantimes.com",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSPAPER",
+      "endpoint": {
+        "url": "https://jordantimes.com/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://jordantimes.com/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "retrieval_failed",
+          "note": "Homepage open failed; indexed publisher about page identifies English daily and Jordan Press Foundation."
+        },
+        {
+          "url": "https://jordantimes.com/static/about-us",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Publisher identifies English daily and Jordan Press Foundation; self-description is not an independence assessment."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://jordantimes.com/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the JOR source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Homepage open failed; indexed publisher about page identifies English daily and Jordan Press Foundation. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:jor:dos",
+      "country": "JOR",
+      "language": "en",
+      "languageStatus": "indexed",
+      "publisher": {
+        "id": "dos",
+        "name": "Department of Statistics (Jordan)",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "dosweb.dos.gov.jo",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://dosweb.dos.gov.jo/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://dosweb.dos.gov.jo/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "retrieval_failed",
+          "note": "Homepage open failed; indexed population and national accounts pages available."
+        },
+        {
+          "url": "https://dosweb.dos.gov.jo/nationalaccount/annual-accounts/",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Indexed English institutional description of annual national accounts."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://dosweb.dos.gov.jo/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Homepage open failed; indexed population and national accounts pages available. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "Jordan Times and statistics root access need follow-up; additional Arabic local reporting remains open."
+  ]
+}

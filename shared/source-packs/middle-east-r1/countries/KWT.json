@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "country": "KWT",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "ar",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:kwt:kuna",
+      "country": "KWT",
+      "language": "ar",
+      "languageStatus": "indexed",
+      "publisher": {
+        "id": "kuna",
+        "name": "Kuwait News Agency (KUNA)",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.kuna.net.kw",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://www.kuna.net.kw/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.kuna.net.kw/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "retrieval_failed",
+          "note": "Direct open timed out; indexed Arabic publisher pages available. Query parameters alone do not prove language."
+        },
+        {
+          "url": "https://www.kuna.net.kw/?Language=ar&id=2424428",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Indexed Arabic publisher content identifies KUNA."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.kuna.net.kw/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the KWT source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Direct open timed out; indexed Arabic publisher pages available. Query parameters alone do not prove language. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:kwt:kuwait-times",
+      "country": "KWT",
+      "language": "en",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "kuwait-times",
+        "name": "Kuwait Times",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "kuwaittimes.com",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSPAPER",
+      "endpoint": {
+        "url": "https://kuwaittimes.com/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://kuwaittimes.com/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "English homepage with Kuwait/business sections and copyright notice observed."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://kuwaittimes.com/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the KWT source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "English homepage with Kuwait/business sections and copyright notice observed. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:kwt:csb",
+      "country": "KWT",
+      "language": "ar",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "csb",
+        "name": "Central Statistical Bureau (Kuwait)",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.csb.gov.kw",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://www.csb.gov.kw/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.csb.gov.kw/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Arabic institutional homepage describes statistical work; English option not separately verified."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.csb.gov.kw/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Arabic institutional homepage describes statistical work; English option not separately verified. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "Arabic KUNA direct access timed out; additional Arabic newsroom coverage needed."
+  ]
+}

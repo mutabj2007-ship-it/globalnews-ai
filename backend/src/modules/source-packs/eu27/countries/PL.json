@@ -1,0 +1,343 @@
+{
+  "schemaVersion": 1,
+  "packId": "eu27-pl-r1",
+  "countryCode": "PL",
+  "countryName": "Poland",
+  "reviewedAt": "2026-09-22",
+  "coverageStatus": "PARTIAL",
+  "coverageReason": "Deep reference uses historical WP/GUS evidence, Sejm and NBP API documentation; second independent publisher transport, rights and fresh native-language captures remain open.",
+  "languageTargets": ["pl"],
+  "supplementarySourceIds": ["eu-eurostat"],
+  "sources": [
+    {
+      "sourceId": "eu27:pl:publisher-1",
+      "name": "Wirtualna Polska — Wiadomości",
+      "countryCode": "PL",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://wiadomosci.wp.pl/",
+      "expectedLanguages": ["pl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Wiadomości z kraju i ze świata – najważniejsze i najnowsze informacje – WP",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://wiadomosci.wp.pl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [
+        {
+          "kind": "RSS",
+          "url": "https://wiadomosci.wp.pl/rss.xml",
+          "documentationUrl": null,
+          "language": "pl",
+          "reviewedAt": "2026-09-22",
+          "status": "HISTORICAL_REGISTRY_RECORD",
+          "note": "Existing feed:wp-pl registry records a 2026-08-31 fetch. No WP byte fixture is retained there. Historical record only; no current validation."
+        }
+      ],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ],
+      "existingRegistryId": "feed:wp-pl",
+      "repositoryEvidence": ["backend/src/modules/news/providers/feed-source-registry.ts"]
+    },
+    {
+      "sourceId": "eu27:pl:publisher-2",
+      "name": "OKO.press",
+      "countryCode": "PL",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://oko.press/",
+      "expectedLanguages": ["pl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "OKO.press – Informacje, analizy, śledztwa, reportaże, fact-checkingi",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://oko.press/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": ["https://oko.press/o-nas"],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED",
+        "NO_DOCUMENTED_MACHINE_ENDPOINT"
+      ]
+    },
+    {
+      "sourceId": "eu27:pl:public-news",
+      "name": "Polskie Radio",
+      "countryCode": "PL",
+      "scope": "NATIONAL",
+      "role": "PUBLIC_NEWS",
+      "discoveryUrl": "https://www.polskieradio.pl/",
+      "expectedLanguages": ["pl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "RESTRICTION_OBSERVED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Polskie Radio online",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.polskieradio.pl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [
+        {
+          "kind": "RSS_INDEX",
+          "url": "https://www.polskieradio.pl/399/8214",
+          "documentationUrl": "https://www.polskieradio.pl/399/8214",
+          "language": "pl",
+          "reviewedAt": "2026-09-22",
+          "status": "DOCUMENTED_NOT_FETCHED",
+          "note": "Publisher lists Polish-language RSS. Feed link could not be resolved by research tool; this URL is an index, not a feed."
+        }
+      ],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"],
+      "rightsEvidence": {
+        "url": "https://www.polskieradio.pl/399/8214",
+        "reviewedAt": "2026-09-22",
+        "note": "Footer restricts copying, storage and distribution without prior written permission; obtain source-specific rights review."
+      }
+    },
+    {
+      "sourceId": "eu27:pl:statistics",
+      "name": "Główny Urząd Statystyczny",
+      "countryCode": "PL",
+      "scope": "NATIONAL",
+      "role": "OFFICIAL_STATISTICS",
+      "discoveryUrl": "https://stat.gov.pl/",
+      "expectedLanguages": ["pl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://stat.gov.pl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [
+        "https://ec.europa.eu/eurostat/web/european-statistical-system/ess-partners"
+      ],
+      "endpoints": [
+        {
+          "kind": "RSS_INDEX",
+          "url": "https://stat.gov.pl/rss/",
+          "documentationUrl": "https://stat.gov.pl/rss/",
+          "language": "pl",
+          "reviewedAt": "2026-09-22",
+          "status": "DISCOVERY_ACCESS_UNRESOLVED",
+          "note": "Polish RSS index found in search; direct page timed out. Do not invent a Polish feed path."
+        },
+        {
+          "kind": "RSS",
+          "url": "https://stat.gov.pl/rss/en/3/3.xml",
+          "documentationUrl": "https://stat.gov.pl/en/rss/",
+          "language": "en",
+          "reviewedAt": "2026-09-22",
+          "status": "HISTORICAL_REGISTRY_RECORD",
+          "note": "Existing English fixture is structurally accurate with normalized whitespace; it is not a Polish-language capture."
+        },
+        {
+          "kind": "API",
+          "url": "https://bdl.stat.gov.pl/api/v1/",
+          "documentationUrl": "https://api.stat.gov.pl/Home/BdlApi?lang=en",
+          "language": "pl",
+          "reviewedAt": "2026-09-22",
+          "status": "DOCUMENTED_NOT_FETCHED",
+          "note": "BDL docs support lang=pl; retain Polish labels, units, territorial codes and observation periods."
+        }
+      ],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"],
+      "existingRegistryId": "feed:gus-pl",
+      "repositoryEvidence": [
+        "backend/src/modules/news/providers/feed-source-registry.ts",
+        "backend/src/modules/news/providers/__fixtures__/gus-feed.sample.xml",
+        "backend/src/modules/news/providers/__fixtures__/README.md"
+      ]
+    },
+    {
+      "sourceId": "eu27:pl:parliament",
+      "name": "Sejm Rzeczypospolitej Polskiej",
+      "countryCode": "PL",
+      "scope": "NATIONAL",
+      "role": "PARLIAMENT_GOVERNMENT",
+      "discoveryUrl": "https://www.sejm.gov.pl/",
+      "expectedLanguages": ["pl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "LIMITED_PAGE",
+        "pageTitle": "www.sejm.gov.pl",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.sejm.gov.pl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [
+        {
+          "kind": "API",
+          "url": "https://api.sejm.gov.pl/sejm/term10",
+          "documentationUrl": "https://api.sejm.gov.pl/sejm.html",
+          "language": "pl",
+          "reviewedAt": "2026-09-22",
+          "status": "DOCUMENTED_NOT_FETCHED",
+          "note": "Term 10 documentation example, not an evergreen current-term alias. Resolve term and pagination explicitly; preserve legislative identifiers and original text."
+        }
+      ],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:pl:central-bank",
+      "name": "Narodowy Bank Polski",
+      "countryCode": "PL",
+      "scope": "NATIONAL",
+      "role": "CENTRAL_BANK",
+      "discoveryUrl": "https://nbp.pl/",
+      "expectedLanguages": ["pl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://nbp.pl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": ["https://www.ecb.europa.eu/services/links/html/index.en.html"],
+      "endpoints": [
+        {
+          "kind": "API",
+          "url": "https://api.nbp.pl/api/",
+          "documentationUrl": "https://api.nbp.pl/",
+          "language": "pl",
+          "reviewedAt": "2026-09-22",
+          "status": "DOCUMENTED_NOT_FETCHED",
+          "note": "FX and gold structured PUBLIC_DATA, not news or journalistic corroboration. HTTPS required; requests bounded to documented date limits."
+        }
+      ],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"],
+      "publicationDiscoveryUrls": ["https://nbp.pl/kategoria/aktualnosci-2/inflacja-bazowa/"]
+    }
+  ],
+  "gaps": [
+    {
+      "role": "DOMESTIC_PUBLISHER",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Validate two editorially independent domestic publishers, distinct ownership groups, native-language payloads and reuse rights."
+    },
+    {
+      "role": "PUBLIC_NEWS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "OFFICIAL_STATISTICS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "PARLIAMENT_GOVERNMENT",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "CENTRAL_BANK",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    }
+  ],
+  "referenceImplementation": {
+    "historicalEvidenceDate": "2026-08-31",
+    "rejectedHistoricalCandidates": [
+      {
+        "publisher": "PAP",
+        "finding": "Existing registry records stale 2022 HTML at /rss.xml; not revalidated."
+      },
+      {
+        "publisher": "tvn24.pl",
+        "finding": "Existing registry records HTTP 403; not revalidated."
+      },
+      {
+        "publisher": "rp.pl",
+        "finding": "Existing registry records undecodable binary; not revalidated."
+      }
+    ],
+    "promotionChecklist": [
+      "Capture permitted original Polish publisher payloads with timestamps and hashes; preserve unmodified bytes.",
+      "Confirm two independent ownership/editorial groups and distinguish syndicated copies.",
+      "Resolve source-specific rights through the existing shared rights evaluator, not a new grade table.",
+      "Validate Polish GUS release feed and BDL metadata; retain English GUS separately.",
+      "Validate Sejm term/pagination and NBP economic units, periods and provenance.",
+      "CTO baseline review is distinct from PO source-ID activation; production HOLD continues."
+    ]
+  }
+}
