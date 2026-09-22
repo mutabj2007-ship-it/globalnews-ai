@@ -1,6 +1,5 @@
 import {
   SECURITY_ABSENCE_REACHABLE_AT_ALPHA,
-  SECURITY_PUBLIC_CONTENT_BLOCKER,
   SECURITY_COVERAGE_AXES,
   type SecurityReadResponse,
 } from '@globalnews-ai/shared';
@@ -13,7 +12,7 @@ export function admitSecurityPublicContent(_candidate: unknown): {
   reason: string;
 } {
   void _candidate; // No unreviewed field, including URLs, crosses this boundary.
-  return { permitted: false, reason: SECURITY_PUBLIC_CONTENT_BLOCKER };
+  return { permitted: false, reason: 'PUBLIC_CONTENT_NOT_AUTHORISED' };
 }
 
 export function publicSecurityRead(countryCode: string): SecurityReadResponse {

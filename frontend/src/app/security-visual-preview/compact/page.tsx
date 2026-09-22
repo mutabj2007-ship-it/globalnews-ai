@@ -1,4 +1,3 @@
-import { DomainEvidenceStatus } from '@/components/evidence/DomainEvidenceStatus';
 import type { Metadata } from 'next';
 import type { JSX } from 'react';
 import { cookies } from 'next/headers';
@@ -39,7 +38,7 @@ export default function SecurityVisualPreviewCompactPage(): JSX.Element {
   return (
     <ScriptRun locale={locale} step="wrapping" as="div">
       <div className="min-h-screen bg-sp-bg">
-        <DomainEvidenceStatus domain="security" locale={locale}><SecurityCompactScreen locale={locale} /></DomainEvidenceStatus>
+        <SecurityCompactScreen locale={locale} />
       </div>
     </ScriptRun>
   );

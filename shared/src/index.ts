@@ -230,5 +230,3 @@ export * from './global-reach';
 export * from './global-reach-regions';
 
 export * from './comparison-coverage';
-
-export * from './observation/public-domain-gates';

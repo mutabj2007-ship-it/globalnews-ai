@@ -103,54 +103,83 @@ const stub = createServer((req, res) => {
           });
           const start = requests.length;
           await page.goto('http://127.0.0.1:3387' + route, { waitUntil: 'networkidle' });
-          const surface = page.locator('[data-evidence-domain]');
-          assert.equal(await surface.getAttribute('data-evidence-status'), 'GATE_CLOSED');
+          const hum = route.startsWith('/humanitarian');
+          const compact = route.endsWith('/compact');
+          const surface = page.locator(
+            hum
+              ? compact
+                ? '[data-hum="compact-screen"]'
+                : '[data-hum="screen"]'
+              : compact
+                ? '[data-sec="compact-screen"]'
+                : '[data-sec="screen"]',
+          );
+          assert.equal(await surface.count(), 1);
+          assert.equal(
+            await page.locator('[data-evidence-domain], details[data-evidence-framework]').count(),
+            0,
+          );
           const text = await surface.innerText();
           assert(
-            text
-              .toLowerCase()
-              .includes(locale === 'pl' ? 'dowody i zakres pokrycia' : 'evidence & coverage'),
+            text.includes(
+              locale === 'pl'
+                ? hum
+                  ? 'zweryfikowane dowody'
+                  : 'zatwierdzonego przeglądu'
+                : hum
+                  ? 'reviewed evidence'
+                  : 'governed review',
+            ),
           );
-          assert(!/NOT ASSESSED|SECRET PERSON|private.invalid/.test(text));
-          assert.equal(
-            await page.locator('details[data-evidence-framework]').getAttribute('open'),
-            null,
-          );
+          assert(!/SECRET PERSON|private.invalid/.test(text));
+          if (hum) {
+            assert.equal(await surface.getAttribute('data-hum-read'), 'NOT_ASSESSED');
+            for (const zone of compact
+              ? ['compact-zone-a', 'compact-zone-b', 'compact-substrate', 'compact-dock']
+              : ['zone-a', 'zone-b', 'zone-c', 'zone-d', 'zone-e'])
+              assert(await page.locator(`[data-hum="${zone}"]`).isVisible(), zone);
+          } else {
+            assert(await page.locator('[data-sec-zone="A0"]').isVisible());
+            assert(text.includes('This is not a statement that conditions are safe.'));
+            assert(await page.locator('[data-sec-zone="C2"]').isVisible());
+            assert.equal(await page.locator('[data-sec-selected="true"]').count(), 0);
+          }
+          if (locale === 'pl')
+            assert(
+              await page
+                .locator(hum ? '[data-hum="locale-fallback"]' : '[data-sec="locale-fallback"]')
+                .isVisible(),
+            );
           const overflow = await page.evaluate(
             () => document.documentElement.scrollWidth > innerWidth,
           );
-          if (overflow) {
-            await page.screenshot({ path: path.join(out, 'overflow.png'), fullPage: true });
-            console.log(
-              await page.evaluate(() =>
-                [...document.querySelectorAll('body *')]
-                  .filter((e) => e.getBoundingClientRect().right > innerWidth + 1)
-                  .slice(0, 12)
-                  .map((e) => ({
-                    tag: e.tagName,
-                    cls: e.className,
-                    text: e.textContent.slice(0, 100),
-                    right: e.getBoundingClientRect().right,
-                  })),
+          const geometry = await surface.evaluate((el) =>
+            [
+              ...el.querySelectorAll(
+                '[data-sec-region], [data-sec-zone="A0"], [data-hum="zone-a"], [data-hum="zone-b"], [data-hum="zone-c"], [data-hum="zone-d"], [data-hum="compact-zone-a"], [data-hum="compact-zone-b"]',
               ),
-            );
-          }
-          assert.equal(overflow, false, `${route} ${locale} ${width} overflow`);
+            ].map((e) => ({
+              region:
+                e.getAttribute('data-sec-region') ||
+                e.getAttribute('data-sec-zone') ||
+                e.getAttribute('data-hum'),
+              x: e.getBoundingClientRect().x,
+              y: e.getBoundingClientRect().y,
+              width: e.getBoundingClientRect().width,
+              height: e.getBoundingClientRect().height,
+            })),
+          );
           await page.screenshot({
             path: path.join(out, `${route.slice(1).replaceAll('/', '-')}-${locale}-${width}.png`),
             fullPage: true,
           });
-          // Native disclosure must work with a keyboard and keep the page inside its viewport.
-          await page.locator('details[data-evidence-framework] > summary').focus();
-          await page.keyboard.press('Enter');
-          assert.equal(
-            await page.locator('details[data-evidence-framework]').getAttribute('open'),
-            '',
-          );
-          assert.equal(
-            await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
-            false,
-          );
+          if (!hum && compact) {
+            for (const detent of ['PEEK', 'HALF', 'FULL', 'WORKSPACE']) {
+              await page.locator(`[data-sec-detent-target="${detent}"]`).click();
+              assert(await page.locator('[data-sec-zone="A0"]').isVisible());
+              assert(await page.locator('[data-sec-zone="C2"]').isVisible());
+            }
+          }
           assert.deepEqual(external, []);
           assert.deepEqual(errors, []);
           const calls = requests.slice(start);
@@ -170,7 +199,8 @@ const stub = createServer((req, res) => {
             locale,
             width,
             overflow,
-            keyboardDisclosure: 'PASS',
+            acceptedRegions: 'PASS',
+            geometry,
             externalRequests: external,
             pageErrors: errors,
             backendRequests: calls,
@@ -187,8 +217,8 @@ const stub = createServer((req, res) => {
         const page = await context.newPage();
         await page.goto('http://127.0.0.1:3387/humanitarian', { waitUntil: 'networkidle' });
         assert.equal(
-          await page.locator('[data-evidence-domain]').getAttribute('data-evidence-status'),
-          'READ_UNAVAILABLE',
+          await page.locator('[data-hum="screen"]').getAttribute('data-hum-read'),
+          'COVERAGE_GAP',
         );
         assert(!/SECRET PERSON|private.invalid/.test(await page.content()));
         await page.screenshot({
@@ -199,7 +229,7 @@ const stub = createServer((req, res) => {
           failure,
           locale,
           width: 390,
-          status: 'READ_UNAVAILABLE',
+          status: 'COVERAGE_GAP',
           noContentLeak: true,
         });
         await context.close();

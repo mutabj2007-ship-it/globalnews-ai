@@ -76,7 +76,7 @@ export function SecurityCompactScreen({ locale }: { locale: SecLocale }): JSX.El
         that can shrink this away, and *"never dismissible never collapsed"* has to be
         structural at 390px or it is not a rule.
       */}
-      <ZoneA0 />
+      <ZoneA0 locale={locale} />
 
       <header data-sec="region" data-sec-region="A"
         className="flex shrink-0 flex-col gap-[6px] border-b border-sp-line bg-sp-panel px-[14px] py-[10px]">

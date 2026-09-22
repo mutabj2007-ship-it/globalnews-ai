@@ -57,7 +57,6 @@ const codeOnly = (s: string): string =>
  */
 const HOSTS: ReadonlyArray<{ file: string; controls: number; why?: string }> = [
   { file: 'components/navigation/NavBar.tsx', controls: 1 },
-  { file: 'components/evidence/DomainEvidenceStatus.tsx', controls: 1, why: 'Evidence status entry; original domain controls remain inside the collapsed reference framework.' },
   { file: 'components/market/MarketScreen.tsx', controls: 1 },
   { file: 'components/market/MarketCompactScreen.tsx', controls: 1 },
   { file: 'components/politics/PoliticsScreen.tsx', controls: 1 },

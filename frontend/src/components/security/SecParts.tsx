@@ -1,6 +1,8 @@
 'use client';
 
 import type { JSX, ReactNode } from 'react';
+import type { SecLocale } from '@/lib/security/securityStrings';
+import { securityPublicReadExplanation } from '@/lib/security/securityPublicReadLabel';
 import { SECURITY_ABSENCE_FALLBACK, securityAbsenceLabel } from '@globalnews-ai/shared';
 
 /**
@@ -58,7 +60,7 @@ export const SEC_MICRO = 'font-gn-mono text-[9.5px] uppercase tracking-[0.14em] 
  * that conditions are safe"* — comes from the shared vocabulary, never from a local string,
  * so it cannot be shortened on one surface.
  */
-export function ZoneA0(): JSX.Element {
+export function ZoneA0({ locale = 'en' }: { locale?: SecLocale }): JSX.Element {
   return (
     <div
       data-sec="zone"
@@ -67,7 +69,7 @@ export function ZoneA0(): JSX.Element {
       className="flex shrink-0 items-center border-b border-sp-line bg-sp-panel-2 px-[20px] py-[8px]"
     >
       <p className="max-w-[74ch] text-[12px] leading-[1.45] text-sp-ink-2">
-        {securityAbsenceLabel(SECURITY_ABSENCE_FALLBACK)}
+        {securityAbsenceLabel(SECURITY_ABSENCE_FALLBACK)} {securityPublicReadExplanation(locale)}
       </p>
     </div>
   );

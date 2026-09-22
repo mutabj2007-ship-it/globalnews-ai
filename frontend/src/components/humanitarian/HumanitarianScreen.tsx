@@ -15,7 +15,7 @@
  * become a calm blank.
  */
 import { humanitarianReadAbsence, type HumanitarianRetainedRead } from '@globalnews-ai/shared';
-import { humanitarianReadLabel } from '@/lib/humanitarian/humanitarianReadLabel';
+import { humanitarianReadLabel, humanitarianReadExplanation } from '@/lib/humanitarian/humanitarianReadLabel';
 import { useReducer, type JSX } from 'react';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { HUM_CANVAS, HUM_INK, HUM_LICENSED, HUM_LINE, HUM_NAV, HUM_SURFACE, HUM_TYPE, humTracking } from '@/lib/humanitarian/humTokens';
@@ -250,7 +250,7 @@ export function HumanitarianScreen({ locale, retainedRead = humanitarianReadAbse
           margin: 0, fontSize: HUM_TYPE.statement, lineHeight: 'var(--ar-lh, 1.35)', color: HUM_INK.primary,
           maxWidth: '68ch',
         }}>
-          {t.assessment.noAssessment}
+          {humanitarianReadExplanation(retainedRead, locale)}
         </p>
         {view.change.reason !== null && <Absence reason={view.change.reason} t={t} />}
       </section>

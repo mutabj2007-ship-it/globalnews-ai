@@ -74,7 +74,7 @@ export function SecurityScreen({ locale }: { locale: SecLocale }): JSX.Element {
       )}
 
       {/* ══ A0 · resident, non-dismissible, first in the document ═════════ */}
-      <ZoneA0 />
+      <ZoneA0 locale={locale} />
 
       {/* ══ REGION A · the state bar, at its stated fixed height ═════════ */}
       <header
