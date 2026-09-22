@@ -51,6 +51,7 @@ export interface RetainedObservationProvenance {
   readonly basePeriod: string;
   /** The day the document itself printed. See the backend note on vintage precision. */
   readonly publicationDateStated: string;
+  readonly sourceUrl?: string;
 }
 
 export interface RetainedObservation {

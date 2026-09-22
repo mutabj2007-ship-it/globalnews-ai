@@ -1,3 +1,4 @@
+import { RetainedEconomySummary } from '@/components/economy/RetainedEconomySummary';
 import type { Metadata } from 'next';
 import type { JSX } from 'react';
 import { cookies } from 'next/headers';
@@ -149,7 +150,7 @@ export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
           read happens in this SERVER component, so the browser issues no request on
           load and no provider is contacted at any point.
         */}
-        <EconomyScreen
+        {retained ? <RetainedEconomySummary observation={retained} locale={locale} /> : <EconomyScreen
           subject={subject}
           locale={locale}
           data={economyCapabilityFrom(read)}
@@ -157,7 +158,7 @@ export default async function EconomyVisualPreviewPage(): Promise<JSX.Element> {
           revisionVintages={revisionVintages}
           revisionEffects={revisionEffects}
           timeline={timeline}
-        />
+        />}
       </main>
     </ScriptRun>
   );

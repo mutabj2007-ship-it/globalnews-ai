@@ -192,6 +192,7 @@ export class EconomyObservationReadService {
         basePeriod: decoded.basePeriod,
         /* From the ARTIFACT, at the artifact’s own precision. See the field note. */
         publicationDateStated: decoded.publicationDate,
+        sourceUrl: held.sourceUrl,
       },
     };
   }

@@ -1,3 +1,4 @@
+import { RetainedEconomySummary } from '@/components/economy/RetainedEconomySummary';
 import type { Metadata } from 'next';
 import type { JSX } from 'react';
 import { cookies } from 'next/headers';
@@ -52,21 +53,22 @@ export default async function EconomyVisualPreviewCompactPage(): Promise<JSX.Ele
   const locale = economyLocale();
   const read = await readEconomyObservations();
   const subject = economySubjectFromRead(read);
+  const retained = read.kind === 'OBSERVATIONS' ? read.observations[0] : undefined;
   return (
     <ScriptRun locale={locale} step="wrapping" as="div">
       <main style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <AlphaVisualPreviewMarker locale={locale} />
+        <AlphaVisualPreviewMarker locale={locale} observedGeography={retained?.geographyLabel} />
         {/*
           THE SAME REAL FIGURE AT COMPACT WIDTH. The panel wraps rather than scrolling —
           the provenance grid collapses to one column below 240px of free width — so no
           chrome budget moves and nothing is added to the frozen top bar.
         */}
         <div style={{ flex: '1 1 auto', minHeight: 0 }}>
-          <EconomyCompactScreen
+          {retained ? <RetainedEconomySummary observation={retained} locale={locale} /> : <EconomyCompactScreen
             subject={subject}
             locale={locale}
             data={economyCapabilityFrom(read)}
-          />
+          />}
         </div>
       </main>
     </ScriptRun>

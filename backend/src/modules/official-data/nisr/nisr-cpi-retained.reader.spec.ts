@@ -1,7 +1,7 @@
 import { makeNisrCpiDecoder } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { PostgresOfficialDataSnapshotStore } from '../official-data-snapshot.store';
-import { RetainedNisrCpiReader } from './nisr-cpi-retained.reader';
+import { RetainedNisrCpiReader, retainedNisrSourceUrl } from './nisr-cpi-retained.reader';
 import { NISR_CPI_EXTRACTOR_ID, NISR_CPI_EXTRACTOR_VERSION } from './nisr-cpi-pdf.extractor';
 import { nisrCpiEditionOrderFor } from '../../economy/producers/nisr-cpi-economy.normalizer';
 
@@ -20,7 +20,7 @@ const row = {
 };
 const retrieval = {
   retrievalId: row.retrievalId, contentAddress: address,
-  request: { providerId: 'rw-nisr', endpointId: 'cpi-monthly-en' },
+  request: { providerId: 'rw-nisr', endpointId: 'cpi-monthly-en', requestPath: '/sites/default/files/retained-test.pdf' },
 };
 
 describe('retained NISR read boundary', () => {
@@ -45,7 +45,10 @@ describe('retained NISR read boundary', () => {
     retrievalsFor.mockResolvedValue([retrieval, { ...retrieval, retrievalId: 'unrelated', request: { providerId: 'other', endpointId: 'other' } }]);
     const result = await read();
     expect(result.kind).toBe('RETAINED');
-    if (result.kind === 'RETAINED') expect(result.retrieval).toBe(retrieval);
+    if (result.kind === 'RETAINED') {
+      expect(result.retrieval).toBe(retrieval);
+      expect(result.sourceUrl).toBe('https://statistics.gov.rw/sites/default/files/retained-test.pdf');
+    }
     expect(open).toHaveBeenCalledWith(address);
     expect(decode).toHaveBeenCalledWith(new Uint8Array([1]));
   });
@@ -82,5 +85,15 @@ describe('retained NISR read boundary', () => {
     expect(result.kind).toBe('RETAINED');
     if (result.kind === 'RETAINED') expect(nisrCpiEditionOrderFor(result.priorContentAddresses, result.contentAddress)).toBe('AMBIGUOUS');
     expect(findMany.mock.calls[0][0].where).toMatchObject({ providerId: 'rw-nisr', endpointId: 'cpi-monthly-en', admissibility: 'ADMITTED', OR: [{ referencePeriod: '2026-08' }, { referencePeriod: null }] });
+  });
+});
+
+
+describe('retained document citations', () => {
+  it('uses the governed origin and refuses alternate hosts and malformed paths', () => {
+    expect(retainedNisrSourceUrl('/sites/default/files/report.pdf')).toBe('https://statistics.gov.rw/sites/default/files/report.pdf');
+    for (const path of [undefined, '//example.com/report.pdf', '/\\example.com/report.pdf', 'https://example.com', 'report.pdf']) {
+      expect(retainedNisrSourceUrl(path)).toBeUndefined();
+    }
   });
 });

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { OFFICIAL_SOURCES } from '../../official-sources/official-source-registry';
 
 import {
   makeNisrCpiDecoder,
@@ -84,6 +85,7 @@ export interface RetainedNisrCpiLineage {
 export type RetainedNisrCpiRead =
   | {
       readonly kind: 'RETAINED';
+      readonly sourceUrl?: string;
       readonly decoded: NisrCpiDecoded;
       readonly retrieval: OfficialDataRetrieval;
       readonly contentAddress: string;
@@ -178,6 +180,7 @@ export class RetainedNisrCpiReader {
 
     return {
       kind: 'RETAINED',
+      sourceUrl: retainedNisrSourceUrl(retrieval.request.requestPath),
       decoded: decodeResult.value,
       retrieval,
       contentAddress: row.contentAddress,
@@ -192,4 +195,14 @@ export class RetainedNisrCpiReader {
       priorContentAddresses: firstAddress == null ? [] : [firstAddress],
     };
   }
+}
+
+/** A click-through citation, never an acquisition. Only the governed origin is allowed. */
+export function retainedNisrSourceUrl(path: unknown): string | undefined {
+  const origin = OFFICIAL_SOURCES.find(source => source.id === 'rw-nisr')?.baseUrl;
+  if (!origin || typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//') || path.includes('\\')) return undefined;
+  try {
+    const url = new URL(path, origin);
+    return url.origin === new URL(origin).origin ? url.href : undefined;
+  } catch { return undefined; }
 }
