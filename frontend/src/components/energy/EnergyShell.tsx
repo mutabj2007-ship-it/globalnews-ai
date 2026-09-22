@@ -1,5 +1,6 @@
 'use client';
 
+import { EnergyRetainedSurface } from './EnergyRetainedSurface';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
@@ -254,6 +255,10 @@ export function EnergyShell({ data, strings, urlState, locale }: EnergyShellProp
    * `react-dom/server` and asserts the escape is real and this form is exact.
    */
   const scriptTokens = <style dangerouslySetInnerHTML={{ __html: ENERGY_SCRIPT_TOKEN_CSS }} />;
+
+  if (data.source === 'governed' && data.subjects.length === 0) {
+    return <EnergyRetainedSurface read={data.retainedRead ?? { kind: 'EMPTY', observations: [] }} strings={strings} urlState={urlState} locale={locale} />;
+  }
 
   /* ══ COMPACT ═══════════════════════════════════════════════════════════ */
   if (compact) {

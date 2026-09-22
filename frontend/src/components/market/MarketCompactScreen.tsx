@@ -160,7 +160,7 @@ export function MarketCompactScreen({ locale, read }: {
           margin: 0, fontSize: MKT_TYPE.title, fontWeight: 600, color: MKT_INK.primary,
           whiteSpace: 'normal', overflowWrap: 'anywhere',
         }}>{t.reader.headline}</h1>
-        <MarketStatus held={held} t={t} />
+        <MarketStatus held={held} t={t} unavailable={read.kind === 'UNAVAILABLE' && read.reason === 'NO_READ_ENDPOINT'} />
       </header>
 
       <div data-mkt="compact-body" style={{
@@ -188,7 +188,7 @@ export function MarketCompactScreen({ locale, read }: {
           wrap rather than truncate, and the freshness state keeps its governed label. A
           truncated subject name is a different subject.
         */}
-        <CoverageStrip t={t} />
+        <CoverageStrip t={t} observations={read.kind === 'OBSERVATIONS' ? read.observations : []} />
 
         {read.kind === 'OBSERVATIONS' ? (
           <SubstratePanel t={t}>
@@ -204,7 +204,7 @@ export function MarketCompactScreen({ locale, read }: {
           <SubstratePanel t={t} />
         )}
 
-        <ChangeContext t={t} />
+        <ChangeContext t={t} held={held > 0} />
 
         {read.kind !== 'OBSERVATIONS' && <ReadUnavailable reason={read.reason} t={t} />}
 

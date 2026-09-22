@@ -91,3 +91,30 @@ it('renders the explicit preliminary state without displaying FINAL', async () =
   expect(html).toContain('data-mkt-release="PRELIMINARY"');
   expect(html).not.toContain('data-mkt-release="FINAL"');
 });
+
+it('binds verified trade context and does not show an empty chart', () => {
+ const rich = { ...observation, context: { reporter: 'PL', partner: 'DE', product: '01', flow: '1', indicators: 'VALUE_IN_EUROS', freq: 'M' }, retainedAt: '2026-09-02T00:00:00Z', retrievalId: 'test-capture' };
+ const html = renderToStaticMarkup(createElement(MarketScreen, { locale: 'en', read: { kind: 'OBSERVATIONS', observations: [rich] } }));
+ expect(html).toContain('PL / DE');
+ expect(html).toContain('Commodity code');
+ expect(html).toContain('2026-09-02T00:00:00Z');
+ const empty = renderToStaticMarkup(createElement(MarketScreen, { locale: 'en', read: { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_STORED' } }));
+ expect(empty).not.toContain('substrate-well');
+ expect(empty).not.toContain('repeating-linear-gradient');
+});
+
+it('marks unavailable holdings as unknown rather than zero', () => {
+ const html = renderToStaticMarkup(createElement(MarketScreen, { locale: 'en', read: { kind: 'UNAVAILABLE', reason: 'NO_READ_ENDPOINT' } }));
+ expect(html).toContain('data-mkt-held="unknown"');
+ expect(html).not.toContain('NO OBSERVATIONS HELD');
+});
+
+it('keeps an admitted null measurement explicit rather than dropping its record', async () => {
+ jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => [{ ...observation, value: null }] } as Response);
+ const result = await readMarketObservations();
+ expect(result.kind).toBe('OBSERVATIONS');
+ const html = renderToStaticMarkup(createElement(MarketScreen, { locale: 'en', read: result }));
+ expect(html).toContain('data-mkt="observation"');
+ expect(html).toContain('data-mkt-freshness="UNAVAILABLE"');
+ expect(html).toContain('—');
+});

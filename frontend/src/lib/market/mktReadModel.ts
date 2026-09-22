@@ -101,6 +101,9 @@ export type MarketReleaseStatus =
  * optional, so an unattributable observation cannot be constructed.
  */
 export interface MarketStoredObservation {
+  readonly context?: { reporterLabel?: string; partnerLabel?: string; productLabel?: string; flowLabel?: string; indicatorsLabel?: string; reporter: string; partner: string; product: string; flow: string; indicators: string; freq: string };
+  readonly retainedAt?: string;
+  readonly retrievalId?: string;
   readonly observationKey: string;
   readonly seriesId: string;
   readonly periodId: string;
@@ -199,7 +202,7 @@ export function deriveFreshness(o: MarketStoredObservation): MarketFreshnessStat
 
 /** True where a figure may be shown at all. R10 rule 1: no value without a freshness state. */
 export function observationIsDisplayable(o: MarketStoredObservation): boolean {
-  if (o.value === null) return false;
+  // An admitted null is an explicit missing measurement, not a missing record.
   if (o.releaseStatus === 'WITHDRAWN') return false;
   if (o.provider.trim() === '') return false;
   if (o.sourceClass.trim() === '') return false;
@@ -259,6 +262,7 @@ async function retainedObservationReader(): Promise<readonly MarketStoredObserva
    */
   const response = await fetch(marketReadUrl(), {
     cache: 'no-store',
+    signal: AbortSignal.timeout(5000),
     headers: { accept: 'application/json' },
   });
 
@@ -283,6 +287,14 @@ export function isMarketReadObservation(value: unknown): value is MarketStoredOb
   if (![o.publisherVintage, o.publisherChangedAt].every(v => v === null || date(v))) return false;
   if (o.vintageProvenance === 'PUBLISHER_VINTAGE' && !date(o.publisherVintage)) return false;
   if (o.vintageProvenance === 'PUBLISHER_CHANGED_AT' && !date(o.publisherChangedAt)) return false;
+  if (o.context !== undefined) {
+    if (!o.context || typeof o.context !== 'object') return false;
+    const c = o.context as Record<string, unknown>;
+    if (!['reporterLabel', 'partnerLabel', 'productLabel', 'flowLabel', 'indicatorsLabel'].every(k => c[k] === undefined || typeof c[k] === 'string')) return false;
+    if (!['reporter', 'partner', 'product', 'flow', 'indicators', 'freq'].every(k => typeof c[k] === 'string' && (c[k] as string).trim())) return false;
+  }
+  if (o.retainedAt !== undefined && !date(o.retainedAt)) return false;
+  if (o.retrievalId !== undefined && (typeof o.retrievalId !== 'string' || !o.retrievalId.trim())) return false;
   return o.retentionIsFinal === false && o.freshnessBasis === 'RETAINED_ONLY';
 }
 const MARKET_OBSERVATION_READER: MarketObservationReader = retainedObservationReader;

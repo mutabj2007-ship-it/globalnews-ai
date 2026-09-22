@@ -43,6 +43,7 @@ export function inspectMarketCapture(c: MarketRetainedCapture): {
   sourceClass: MarketArtifactClass;
   subjectClass: 'CORRIDOR';
   geography: ComextRequest;
+  labels: { reporterLabel?: string; partnerLabel?: string; productLabel?: string; flowLabel?: string; indicatorsLabel?: string; };
   observations: readonly MarketObservationDraft[];
 } {
   requireFact(c.providerId === 'EUROSTAT', 'Undeclared retained Market provider');
@@ -193,6 +194,10 @@ export function inspectMarketCapture(c: MarketRetainedCapture): {
     sourceClass: 'STATISTICAL_RELEASE',
     subjectClass: 'CORRIDOR',
     geography: request,
+    labels: Object.fromEntries(dimensions.flatMap(d => {
+      const label = body.dimension[d].category.label?.[request[d]];
+      return typeof label === 'string' && label.trim() ? [[d + 'Label', label]] : [];
+    })),
     observations: periods.map((periodId, position) => ({
       observationKey: `${seriesId}|${periodId}`,
       seriesId,

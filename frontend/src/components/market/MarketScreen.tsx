@@ -193,7 +193,7 @@ export function MarketScreen({ locale, read }: {
           <h1 style={{ margin: 0, fontSize: MKT_TYPE.title, fontWeight: 600, color: MKT_INK.primary }}>
             {t.reader.headline}
           </h1>
-          <MarketStatus held={held} t={t} />
+          <MarketStatus held={held} t={t} unavailable={read.kind === 'UNAVAILABLE' && read.reason === 'NO_READ_ENDPOINT'} />
         </div>
       </header>
 
@@ -234,7 +234,7 @@ export function MarketScreen({ locale, read }: {
         }}>
           <div style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0 }}>
             {/* ── REGION B ── */}
-            <CoverageStrip t={t} />
+            <CoverageStrip t={t} observations={read.kind === 'OBSERVATIONS' ? read.observations : []} />
 
             {/* ── REGION C ── one substrate at a time; observations occupy this panel. */}
             {read.kind === 'OBSERVATIONS' ? (
@@ -250,7 +250,7 @@ export function MarketScreen({ locale, read }: {
             )}
 
             {/* ── REGION D ── */}
-            <ChangeContext t={t} />
+            <ChangeContext t={t} held={held > 0} />
 
             {/*
               THE ONE SENTENCE THAT STOPS THE INFERENCE, KEPT AND DEMOTED.
