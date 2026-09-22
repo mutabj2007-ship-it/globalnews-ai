@@ -998,8 +998,8 @@ describe('10 · the preview binds no election', () => {
   it('compact renders the SAME component — there is no second region list', () => {
     const desktop = code(join(SRC, 'app', 'election-visual-preview', 'page.tsx'));
     const compact = code(join(SRC, 'app', 'election-visual-preview', 'compact', 'page.tsx'));
-    expect(desktop).toMatch(/<ElectionPreviewScreen locale=\{locale\} compact=\{false\} \/>/);
-    expect(compact).toMatch(/<ElectionPreviewScreen locale=\{locale\} compact=\{true\} \/>/);
+    expect(desktop).toMatch(/<ElectionEvidenceScreen locale=\{locale\} compact=\{false\} result=\{result\} \/>/);
+    expect(compact).toMatch(/<ElectionEvidenceScreen locale=\{locale\} compact=\{true\} result=\{result\} \/>/);
   });
 
   it('EN and PL only — and NO Kiswahili string is authored', () => {

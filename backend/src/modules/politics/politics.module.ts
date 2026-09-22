@@ -16,6 +16,7 @@ export class PoliticsReadService {
       observations: rows.slice(0, limit), truncated: rows.length > limit,
       absence: rows.length ? null : this.ledger.withheld ? 'EVIDENCE_WITHHELD' : 'NOT_ASSESSED',
       acquisition: 'RETAINED_ONLY',
+      coverage: { checkedCaptures: POLITICS_RETAINED_CAPTURES.length, admittedObservations: this.ledger.observations.length, withheld: this.ledger.withheld },
     };
   }
 }
