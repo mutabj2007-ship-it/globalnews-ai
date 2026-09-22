@@ -607,7 +607,13 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       here, which is where that assertion already lives.
     */
     // CTO-accepted Election adds two provider-free previews; the live route stays closed.
-    expect(pages).toHaveLength(44);
+    // K adds the retained Imihigo pair and the provider-free Delivery preview pair.
+    expect(pages).toHaveLength(48);
+    for (const route of ['/imihigo', '/imihigo/compact', '/delivery-visual-preview', '/delivery-visual-preview/compact']) {
+      expect(pages).toContain(route);
+      expect(classify(route).indexability).toBe('noindex');
+      expect(sitemapRoutes().map(entry => entry.path)).not.toContain(route);
+    }
     expect(pages).toContain('/election-visual-preview');
     expect(pages).toContain('/election-visual-preview/compact');
     expect(pages).not.toContain('/election');
