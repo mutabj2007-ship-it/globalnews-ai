@@ -131,9 +131,9 @@ export const PROVENANCE = {
   'admin-06.providerMode': 'A', //      NewsDataMode
   'admin-06.providerCounters': 'C', //  design said A: declared, never populated
   'admin-06.articleLanguage': 'C', //   design said A: not persisted
-  'admin-06.articleInventory': 'B',
-  'admin-06.retrievalFreshness': 'C',
-  'admin-06.rateLimitState': 'C',
+  'admin-06.articleInventory': 'A', // GET /admin/news/providers — measured retained Article inventory
+  'admin-06.retrievalFreshness': 'A', // latest retained Article timestamp
+  'admin-06.rateLimitState': 'A', // passive observed provider throttle state
   'admin-06.aiOperations': 'C',
   'admin-06.aiProviders': 'C',
   'admin-06.intelligenceModules': 'C',

@@ -91,6 +91,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
   const [history, setHistory] = useState<SettledAskTurn[]>([]);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const conversationRef = useRef<HTMLDivElement | null>(null);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   /* guards a response arriving after the reader asked something else */
   const requestSeq = useRef(0);
 
@@ -134,6 +135,38 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
     const node = conversationRef.current;
     if (node) node.scrollTop = node.scrollHeight;
   }, [isOpen, history, phase]);
+
+  /*
+   * MOBILE KEYBOARD — VisualViewport is the geometry the reader can
+   * actually see after iOS Safari raises the software keyboard. 100dvh
+   * alone continues to describe the layout viewport on affected Safari
+   * versions, leaving the composer behind the keyboard.
+   *
+   * Lift the whole bottom sheet by the obscured viewport amount. The
+   * conversation remains the only scroll region and the composer stays
+   * structurally outside it.
+   */
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined' || !window.visualViewport) {
+      setKeyboardInset(0);
+      return undefined;
+    }
+    const viewport = window.visualViewport;
+    const update = (): void => {
+      const obscured = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop,
+      );
+      setKeyboardInset(obscured > 80 ? obscured : 0);
+    };
+    update();
+    viewport.addEventListener('resize', update);
+    viewport.addEventListener('scroll', update);
+    return () => {
+      viewport.removeEventListener('resize', update);
+      viewport.removeEventListener('scroll', update);
+    };
+  }, [isOpen]);
 
   /* Escape closes, because a panel that traps the reader is a trap. */
   useEffect(() => {
@@ -249,6 +282,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           data-ask="panel"
           data-ask-phase={phase.kind}
           aria-label={t.panelLabel}
+          style={{ bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
           className={[
             'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
             /* MOBILE — a bottom sheet. Full width, capped height, rounded top. */
@@ -354,6 +388,9 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
               rows={phase.kind === 'idle' && history.length === 0 ? 2 : 1}
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
+              onFocus={() => {
+                requestAnimationFrame(() => inputRef.current?.scrollIntoView({ block: 'nearest' }));
+              }}
               placeholder={t.inputPlaceholder}
               maxLength={1000}
               className="w-full resize-none rounded-2xl border border-border-strong bg-surface px-4 py-3 text-sm text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"

@@ -499,6 +499,28 @@ export class NewsService {
    * which is the same convention `findArticleById` follows above. A retained
    * fallback that threw would turn a degraded answer into no answer.
    */
+  /**
+   * BETA RETRIEVAL HEALTH R1 — bounded retained candidates for a generic
+   * question. This is LOCAL database work only; it never calls a provider.
+   * The query is a candidate net, not an admission decision. AnalysisService
+   * applies the same generic relevance gate before any retained article may
+   * reach OpenAI.
+   */
+  async findRetainedByQuery(
+    query: string,
+    queryTerms: string[],
+    limit: number,
+    maxAgeMinutes: number,
+  ): Promise<NewsArticle[]> {
+    const retained = await this.articlePersistence.findRecent({
+      query,
+      queryTerms,
+      limit,
+      maxAgeMinutes,
+    });
+    return retained.map((article) => withDerivedEvidenceFields(article));
+  }
+
   async findRetainedByCountry(
     countryCode: string,
     limit: number,

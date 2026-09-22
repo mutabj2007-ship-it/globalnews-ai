@@ -7,6 +7,7 @@ import {
   resolveCountryByCity,
   resolveGeoTypo,
   type AnalysisApiResponse,
+  type AnalysisCoverageContext,
   type AnalysisFailureReason,
   type AnalysisProvenance,
   type AnalysisProvenanceStatus,
@@ -196,6 +197,37 @@ interface CacheEntry {
 
 /** Number of articles requested before deduping/bounding. */
 const SEARCH_POOL_SIZE = 20;
+const COVERAGE_QUESTION_PATTERNS = [
+  /\bwhy\s+(?:do\s+we\s+have\s+)?(?:only|just|so\s+few|few|less|fewer)\b/i,
+  /\b(?:only|just)\s+\d+\s+(?:articles?|reports?|stories?|news)\b/i,
+  /\bis\s+(?:that|this)\s+(?:all|the\s+only)\b/i,
+  /\bwhy\s+(?:are|is)\s+there\s+(?:so\s+)?(?:few|less|fewer)\b/i,
+  /\bwhy\s+(?:is|are)\s+(?:the\s+)?(?:coverage|news|reporting)\s+(?:so\s+)?(?:limited|low|thin|small)\b/i,
+  /\bwhich\s+(?:providers?|sources?)\b/i,
+  /\bwhy\s+(?:did|does)\s+(?:globalnews|the\s+system|retrieval)\b/i,
+];
+
+function asksAboutCoverage(query: string): boolean {
+  return COVERAGE_QUESTION_PATTERNS.some((pattern) => pattern.test(query));
+}
+
+function buildCoverageContext(
+  query: string,
+  retrievalContext: AnalysisRetrievalContext,
+  sourceDiversity: ReturnType<typeof computeSourceDiversity>,
+): AnalysisCoverageContext | undefined {
+  if (!asksAboutCoverage(query)) return undefined;
+  return {
+    questionAsksAboutCoverage: true,
+    retrievedArticleCount: sourceDiversity.retrievedArticleCount,
+    reportingClusterCount: sourceDiversity.reportingClusterCount,
+    contributingProviders: retrievalContext.providers,
+    dataMode: retrievalContext.dataMode,
+    ...(retrievalContext.outcome ? { outcome: retrievalContext.outcome } : {}),
+    comprehensiveCoverageEstablished: false,
+  };
+}
+
 
 /**
  * Maximum number of words considered after a country-context phrase.
@@ -1999,12 +2031,55 @@ export class AnalysisService {
 
               if (searchResponse.articles.length === 0 && primaryFailures.length > 0) {
                 this.logger.warn(
-                  'Generic retrieval was REFUSED by the provider — the bounded fallback is ' +
-                    'deliberately not attempted: ' +
+                  'Generic live retrieval was refused/degraded: ' +
                     primaryFailures
                       .map((failure) => `${failure.providerId}=${failure.kind}`)
-                      .join(', '),
+                      .join(', ') +
+                    '. Consulting bounded LOCAL retained evidence; no provider retry will be issued.',
                 );
+
+                /*
+                 * BETA RETRIEVAL HEALTH R1 — GDELT IS NOT A SINGLE POINT OF
+                 * FAILURE.
+                 *
+                 * A provider refusal still suppresses another LIVE/provider
+                 * attempt — rate limits, auth failures and timeouts must never
+                 * trigger a retry storm. But the database already contains
+                 * retained reporting. Query it locally, then admit only rows
+                 * that pass the SAME generic relevance gate used for live
+                 * results. This spends zero provider quota and cannot turn
+                 * unrelated cache into evidence merely because a provider is
+                 * down.
+                 */
+                const retainedQuery =
+                  deriveFallbackNewsQuery(genericSearchQuery) ?? genericSearchQuery;
+                const retainedTerms = retainedQuery
+                  .toLowerCase()
+                  .replace(/[^\p{L}\p{N}]+/gu, ' ')
+                  .split(/\s+/)
+                  .filter((term) => term.length >= 3)
+                  .slice(0, 8);
+                const retainedCandidates = await this.newsService.findRetainedByQuery(
+                  retainedQuery,
+                  retainedTerms,
+                  SEARCH_POOL_SIZE,
+                  RETAINED_MAX_AGE_MINUTES,
+                );
+                const retained = retainedCandidates.filter(
+                  (article) => scoreGenericRelevance(article, retainedQuery).isRelevant,
+                );
+
+                if (retained.length > 0) {
+                  searchResponse = {
+                    ...searchResponse,
+                    articles: retained,
+                    dataMode: 'cached',
+                    fallbackReason: 'provider-error',
+                  };
+                  this.logger.warn(
+                    `Generic retrieval served ${retained.length} relevance-gated retained article(s) after live provider failure.`,
+                  );
+                }
               } else if (searchResponse.articles.length === 0) {
                 const fallbackQuery = deriveFallbackNewsQuery(genericSearchQuery);
                 if (fallbackQuery) {
@@ -2105,6 +2180,11 @@ export class AnalysisService {
             // Milestone #43: computed over the (empty) original retrieved
             // pool — all-zero fields, never fabricated.
             sourceDiversity: computeSourceDiversity(articles),
+            coverageContext: buildCoverageContext(
+              originalQuery,
+              retrievalContext,
+              computeSourceDiversity(articles),
+            ),
             // Milestone #30: no AI call was ever attempted — there was
             // nothing to analyze — so this is 'not-attempted', not 'failed'.
             // Distinguishing the two lets the frontend tell "we found
@@ -2376,6 +2456,7 @@ export class AnalysisService {
             retrievalContext,
             sourceEntities,
             sourceDiversity,
+            coverageContext: buildCoverageContext(originalQuery, retrievalContext, sourceDiversity),
             provenance: this.buildProvenance(config, 'success', { latencyMs }),
           };
         } catch (error) {
@@ -2399,6 +2480,7 @@ export class AnalysisService {
             retrievalContext,
             sourceEntities,
             sourceDiversity,
+            coverageContext: buildCoverageContext(originalQuery, retrievalContext, sourceDiversity),
             provenance: this.buildProvenance(config, status, { failureReason, latencyMs }),
           };
         }

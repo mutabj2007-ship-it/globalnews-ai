@@ -97,15 +97,7 @@ export function OperationsScreen({ tab }: { tab: OperationsTab }): JSX.Element {
         </>
       )}
 
-      {tab === 'providers' && (
-        <PlaceholderPanel
-          title={screen.aiProvidersTitle}
-          purpose={screen.purpose}
-          requirement={screen.aiProvidersRequirement}
-          field="admin-06.aiProviders"
-          ratio="min-h-[140px]"
-        />
-      )}
+      {tab === 'providers' && <ProviderExecutionPanel />}
     </div>
   );
 }
@@ -178,6 +170,54 @@ function ArticleInventoryPanel(): JSX.Element {
                     <td className="p-3"><div className="font-semibold text-adm-ink">{source.sourceName}</div><div className="font-cd-mono text-[10px] text-adm-ink-faint">{source.sourceId}</div></td>
                     <td className="p-3 text-adm-ink">{source.articleCount}</td>
                     <td className="p-3 font-cd-mono text-[10px] text-adm-ink-dim">{source.latestFetchedAt ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </AdminPanel>
+  );
+}
+
+function ProviderExecutionPanel(): JSX.Element {
+  const resource = useAdminResource<AdminNewsProvidersResponse>(ADMIN_API.newsProviders);
+  const execution = resource.data?.execution;
+
+  return (
+    <AdminPanel
+      title="Provider execution activity"
+      field="admin-06.providerHealth"
+      note="Measured backend execution buckets. Opening this table does not call a news provider."
+    >
+      {resource.state === 'loading' ? (
+        <div className="py-8 font-cd-mono text-[10px] uppercase text-adm-ink-mute">Loading execution activity…</div>
+      ) : !execution ? (
+        <div className="py-8 text-sm text-adm-ink-dim">No provider execution registry is available in this process.</div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="rounded-lg border border-adm-edge bg-adm-card-soft p-3">
+            <div className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">Measured executions</div>
+            <div className="mt-1 text-2xl font-semibold text-adm-ink">{execution.totalExecutions}</div>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-adm-edge">
+            <table className="w-full min-w-[560px] text-left text-xs">
+              <thead className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">
+                <tr>
+                  <th className="p-3">Provider</th><th className="p-3">Endpoint</th>
+                  <th className="p-3 text-right">Executions</th><th className="p-3 text-right">Cache hits</th>
+                  <th className="p-3 text-right">Cache misses</th>
+                </tr>
+              </thead>
+              <tbody>
+                {execution.buckets.map((row) => (
+                  <tr key={`${row.provider}:${row.endpointClass}`} className="border-t border-adm-edge">
+                    <td className="p-3 font-semibold text-adm-ink">{row.provider}</td>
+                    <td className="p-3 font-cd-mono text-[10px] text-adm-ink-dim">{row.endpointClass}</td>
+                    <td className="p-3 text-right text-adm-ink">{row.executions}</td>
+                    <td className="p-3 text-right text-adm-ink">{row.cacheHits}</td>
+                    <td className="p-3 text-right text-adm-ink">{row.cacheMisses}</td>
                   </tr>
                 ))}
               </tbody>

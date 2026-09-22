@@ -235,6 +235,10 @@ export class GNewsProvider implements NewsProvider {
   private executionChain: Promise<void> = Promise.resolve();
   private cooldownUntil = 0;
   private cooldownKind: 'quota' | 'rate-limited' | 'timeout' | 'transport' | undefined;
+  /** Passive provider telemetry: Admin health must never spend a GNews request. */
+  private lastSuccessfulRequestAt: string | undefined;
+  private lastFailureMessage: string | undefined;
+  private lastFailureAt: string | undefined;
 
   constructor(private readonly config: ConfigService) {}
 
@@ -345,6 +349,7 @@ export class GNewsProvider implements NewsProvider {
 
   async health(): Promise<ProviderHealthStatus> {
     const apiKey = this.config.get<string>('GNEWS_API_KEY');
+    const checkedAt = new Date().toISOString();
 
     if (!apiKey) {
       return {
@@ -352,54 +357,49 @@ export class GNewsProvider implements NewsProvider {
         displayName: this.displayName,
         status: 'down',
         message: 'GNEWS_API_KEY is not configured. The backend is running in mock mode.',
-        checkedAt: new Date().toISOString(),
+        checkedAt,
       };
     }
 
-    try {
-      // Cheapest live check available: a 1-result top-headlines call.
-      const url = this.buildUrl('/top-headlines', apiKey, { max: '1' });
-      await this.request(url);
-      return {
-        providerId: this.id,
-        displayName: this.displayName,
-        status: 'ok',
-        message: 'GNews responded successfully.',
-        checkedAt: new Date().toISOString(),
-      };
-    } catch (error) {
-      logWithRequestId(this.logger, 'warn', 'GNews health check failed', error as Error);
-
-      /*
-       * R4 GDELT — REPORT THE THROTTLE WITHOUT INVENTING A HEALTH STATE.
-       *
-       * `ProviderHealthState` stays 'ok' | 'degraded' | 'down'; no member
-       * is added here. What changes is that a quota or rate-limit failure
-       * now also sets `rateLimitState: 'throttled'`, which already exists
-       * on ProviderHealthStatus and is already carried through
-       * AdminNewsService.projectProviderHealth() untouched.
-       *
-       * So Admin gains a true signal with NO admin contract change and NO
-       * frontend change — and, critically, it no longer reads a sentence
-       * telling it the API key was rejected when the key is fine.
-       *
-       * Anything that is not a throttle leaves `rateLimitState` ABSENT
-       * rather than setting 'ok'. A failed health check has not shown the
-       * provider to be un-throttled; it has shown nothing about throttling
-       * at all, and 'ok' would be a measurement nobody took.
-       */
-      const kind = error instanceof GNewsProviderError ? error.kind : 'unknown';
-      const throttled = kind === 'quota' || kind === 'rate-limited';
-
+    /*
+     * BETA HEALTH R1 — PASSIVE HEALTH ONLY.
+     *
+     * Admin is an observability surface, not a workload generator. The old
+     * implementation spent a real /top-headlines?max=1 request every time
+     * Admin refreshed, which could itself trigger the rate limit it displayed.
+     * Health now reports only facts observed during real product traffic.
+     */
+    if (Date.now() < this.cooldownUntil) {
+      const throttled = this.cooldownKind === 'quota' || this.cooldownKind === 'rate-limited';
       return {
         providerId: this.id,
         displayName: this.displayName,
         status: 'degraded',
-        message: this.describeError(error),
-        checkedAt: new Date().toISOString(),
+        message: this.lastFailureMessage ?? 'GNews is in local cooldown after an upstream failure.',
+        checkedAt,
         ...(throttled ? { rateLimitState: 'throttled' as const } : {}),
       };
     }
+
+    if (this.lastSuccessfulRequestAt) {
+      return {
+        providerId: this.id,
+        displayName: this.displayName,
+        status: 'ok',
+        message: `Last successful product request observed at ${this.lastSuccessfulRequestAt}. Passive health check; no quota spent.`,
+        checkedAt,
+      };
+    }
+
+    return {
+      providerId: this.id,
+      displayName: this.displayName,
+      status: this.lastFailureAt ? 'degraded' : 'ok',
+      message: this.lastFailureAt
+        ? `Last observed failure at ${this.lastFailureAt}: ${this.lastFailureMessage ?? 'unknown provider failure'}`
+        : 'Configured. No product request has been observed since this process started; passive health check spent no quota.',
+      checkedAt,
+    };
   }
 
   private requireApiKey(): string {
@@ -511,9 +511,14 @@ export class GNewsProvider implements NewsProvider {
         typeof payload !== 'object' ||
         !Array.isArray((payload as GNewsApiResponse).articles)
       ) {
-        throw new GNewsProviderError('GNews response did not match the expected shape.');
+        this.lastFailureAt = new Date().toISOString();
+        this.lastFailureMessage = 'GNews response did not match the expected shape.';
+        throw new GNewsProviderError(this.lastFailureMessage);
       }
 
+      this.lastSuccessfulRequestAt = new Date().toISOString();
+      this.lastFailureAt = undefined;
+      this.lastFailureMessage = undefined;
       return payload as GNewsApiResponse;
     });
   }
@@ -545,6 +550,15 @@ export class GNewsProvider implements NewsProvider {
   ): void {
     this.cooldownUntil = Date.now() + GNEWS_COOLDOWN_MS;
     this.cooldownKind = kind;
+    this.lastFailureAt = new Date().toISOString();
+    this.lastFailureMessage =
+      kind === 'quota'
+        ? 'GNews request allowance is exhausted; local cooldown active.'
+        : kind === 'rate-limited'
+          ? 'GNews rate limit exceeded; local cooldown active.'
+          : kind === 'timeout'
+            ? 'GNews request timed out; local cooldown active.'
+            : 'GNews transport failed; local cooldown active.';
   }
 
   private cooldownRefusal(): GNewsProviderError {

@@ -277,6 +277,29 @@ export function EconomyScreen({
                   <span style={microLabel}>{t.seriesLabel} · {primary ? seriesName(primary) : subject.name}</span>
                   <span style={{ ...microLabel, fontSize: 'max(var(--ar-fs-min, 0px), 9px)' }}>{bp.seriesWindowMonths}M window</span>
                 </div>
+                {compact && retainedObservation ? (
+                  <div
+                    data-econ="plain-language-summary"
+                    style={{
+                      display: 'grid', gridTemplateColumns: '1fr', gap: '10px', padding: '14px',
+                      border: '1px solid rgba(91,227,168,0.24)', borderRadius: '16px',
+                      background: 'linear-gradient(135deg, rgba(91,227,168,0.08), rgba(74,144,226,0.05))',
+                    }}
+                  >
+                    <div>
+                      <div style={{ ...microLabel, color: '#5BE3A8' }}>What we know</div>
+                      <div style={{ marginTop: '6px', fontSize: '14px', lineHeight: 1.55, color: ECON_INK.primary }}>
+                        Consumer prices were {retainedObservation.value}{retainedObservation.unit === 'PERCENT' ? '%' : ` ${retainedObservation.unit}`} higher than a year earlier in {retainedObservation.periodId}.
+                      </div>
+                    </div>
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '10px' }}>
+                      <div style={{ ...microLabel, color: '#D9A441' }}>What we cannot conclude yet</div>
+                      <div style={{ marginTop: '6px', fontSize: '12px', lineHeight: 1.55, color: ECON_INK.secondary }}>
+                        Only one retained period is available. A trend, acceleration or comparison would require additional observations.
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 {showFigures ? (
                   <IntelligenceStatement text={subject.assessment.statement} sizePx={hudOpen ? 22 : 24} />
                 ) : (
@@ -406,7 +429,7 @@ export function EconomyScreen({
         </div>
 
         {/* ---- SECONDARY REGION: the attention queue, OR the drawer that replaces it ---- */}
-        {compact ? (
+        {compact && drawer === null ? (
           <div
             data-econ="compact-secondary"
             style={{
@@ -424,8 +447,9 @@ export function EconomyScreen({
               disabled={!hasTimeline}
               style={{
                 minHeight: '44px',
-                border: `1px solid ${ECON_LINE.border}`,
-                background: 'transparent',
+                border: hasTimeline ? '1px solid rgba(74,144,226,0.48)' : `1px solid ${ECON_LINE.border}`,
+                borderRadius: '14px',
+                background: hasTimeline ? 'linear-gradient(135deg, rgba(74,144,226,0.12), rgba(91,227,168,0.04))' : 'transparent',
                 color: hasTimeline ? ECON_INK.primary : ECON_INK.label,
                 fontFamily: ECON_MONO,
                 fontSize: '10px',
@@ -443,9 +467,10 @@ export function EconomyScreen({
               onClick={() => openDrawer('SOURCES')}
               style={{
                 minHeight: '44px',
-                border: `1px solid ${ECON_LINE.border}`,
-                background: ECON_SURFACE.selected,
-                color: ECON_INK.secondary,
+                border: '1px solid rgba(91,227,168,0.38)',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, rgba(91,227,168,0.10), rgba(91,227,168,0.03))',
+                color: ECON_INK.primary,
                 fontFamily: ECON_MONO,
                 fontSize: '10px',
                 letterSpacing: '0.08em',

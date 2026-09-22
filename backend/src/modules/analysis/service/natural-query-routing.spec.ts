@@ -84,6 +84,7 @@ function harness(corpus: NewsArticle[], anchor?: NewsArticle): Harness {
     ),
     findArticleById: jest.fn(async () => anchor ?? null),
     findRetainedByCountry: jest.fn(async () => []),
+    findRetainedByQuery: jest.fn(async () => []),
   };
 
   const countryNewsService = {
@@ -201,6 +202,37 @@ describe('THE REPORTED FAILURES — measured end to end', () => {
     expect(countryCalls).toEqual([]);
     expect(response.articles.length).toBeGreaterThan(0);
     expect(response.retrievalContext.articlesRetrieved).toBe(response.articles.length);
+  });
+
+  it('generic provider failure may consult local retained evidence but never retries a live provider', async () => {
+    const { service, searchCalls, provider } = harness([]);
+
+    const newsService = (service as unknown as { newsService: {
+      search: jest.Mock;
+      findRetainedByQuery: jest.Mock;
+    } }).newsService;
+
+    newsService.search.mockResolvedValueOnce({
+      articles: [],
+      totalResults: 0,
+      providers: [],
+      dataMode: 'unavailable',
+      fallbackReason: 'provider-error',
+      generatedAt: new Date().toISOString(),
+      providerFailures: [{ providerId: 'gdelt-doc', kind: 'timeout', message: 'timed out' }],
+    });
+    newsService.findRetainedByQuery.mockResolvedValueOnce([
+      article('retained-1', 'NATO leaders discuss defence spending', 'NATO members met on defence spending.'),
+    ]);
+
+    await service.analyzeNews('What is happening with NATO?');
+
+    expect(searchCalls).toHaveLength(0);
+    expect(newsService.search).toHaveBeenCalledTimes(1);
+    expect(newsService.findRetainedByQuery).toHaveBeenCalledTimes(1);
+    // Evidence exists after the local retained ladder, so reaching the
+    // analysis provider is expected; this harness provider throws by design.
+    expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
   });
 
   it('NQ-002 an ordinary "it" never routes to Italy', async () => {
