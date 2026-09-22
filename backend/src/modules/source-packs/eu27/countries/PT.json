@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "packId": "eu27-pt-r1",
+  "countryCode": "PT",
+  "countryName": "Portugal",
+  "reviewedAt": "2026-09-22",
+  "coverageStatus": "PARTIAL",
+  "coverageReason": "Publico and parliamentary discovery unresolved; RTP and Observador do not close all national evidence gaps.",
+  "languageTargets": ["pt"],
+  "supplementarySourceIds": ["eu-eurostat"],
+  "sources": [
+    {
+      "sourceId": "eu27:pt:publisher-1",
+      "name": "Público",
+      "countryCode": "PT",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://www.publico.pt/",
+      "expectedLanguages": ["pt"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://www.publico.pt/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:pt:publisher-2",
+      "name": "Observador",
+      "countryCode": "PT",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://observador.pt/",
+      "expectedLanguages": ["pt"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Observador – Notícias, Opinião, Especiais, Explicadores e Newsletters",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://observador.pt/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:pt:public-news",
+      "name": "RTP Notícias",
+      "countryCode": "PT",
+      "scope": "NATIONAL",
+      "role": "PUBLIC_NEWS",
+      "discoveryUrl": "https://www.rtp.pt/noticias/",
+      "expectedLanguages": ["pt"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "RTP Notícias",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.rtp.pt/noticias/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:pt:statistics",
+      "name": "Instituto Nacional de Estatística",
+      "countryCode": "PT",
+      "scope": "NATIONAL",
+      "role": "OFFICIAL_STATISTICS",
+      "discoveryUrl": "https://www.ine.pt/",
+      "expectedLanguages": ["pt"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://www.ine.pt/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [
+        "https://ec.europa.eu/eurostat/web/european-statistical-system/ess-partners"
+      ],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:pt:parliament",
+      "name": "Assembleia da República",
+      "countryCode": "PT",
+      "scope": "NATIONAL",
+      "role": "PARLIAMENT_GOVERNMENT",
+      "discoveryUrl": "https://www.parlamento.pt/",
+      "expectedLanguages": ["pt"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://www.parlamento.pt/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:pt:central-bank",
+      "name": "Banco de Portugal",
+      "countryCode": "PT",
+      "scope": "NATIONAL",
+      "role": "CENTRAL_BANK",
+      "discoveryUrl": "https://www.bportugal.pt/",
+      "expectedLanguages": ["pt"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Homepage | Banco de Portugal",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.bportugal.pt/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": ["https://www.ecb.europa.eu/services/links/html/index.en.html"],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    }
+  ],
+  "gaps": [
+    {
+      "role": "DOMESTIC_PUBLISHER",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Validate two editorially independent domestic publishers, distinct ownership groups, native-language payloads and reuse rights."
+    },
+    {
+      "role": "PUBLIC_NEWS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "OFFICIAL_STATISTICS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "PARLIAMENT_GOVERNMENT",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "CENTRAL_BANK",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    }
+  ]
+}

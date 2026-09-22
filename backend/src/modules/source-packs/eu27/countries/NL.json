@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "packId": "eu27-nl-r1",
+  "countryCode": "NL",
+  "countryName": "Netherlands",
+  "reviewedAt": "2026-09-22",
+  "coverageStatus": "PARTIAL",
+  "coverageReason": "Both private publisher pages unresolved; two mastheads do not prove distinct ownership groups.",
+  "languageTargets": ["nl"],
+  "supplementarySourceIds": ["eu-eurostat"],
+  "sources": [
+    {
+      "sourceId": "eu27:nl:publisher-1",
+      "name": "NRC",
+      "countryCode": "NL",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://www.nrc.nl/",
+      "expectedLanguages": ["nl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://www.nrc.nl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:nl:publisher-2",
+      "name": "de Volkskrant",
+      "countryCode": "NL",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://www.volkskrant.nl/",
+      "expectedLanguages": ["nl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://www.volkskrant.nl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:nl:public-news",
+      "name": "NOS",
+      "countryCode": "NL",
+      "scope": "NATIONAL",
+      "role": "PUBLIC_NEWS",
+      "discoveryUrl": "https://nos.nl/",
+      "expectedLanguages": ["nl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "NOS.nl - Nieuws, Sport en Evenementen | Nederlandse Omroep Stichting",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://nos.nl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:nl:statistics",
+      "name": "Centraal Bureau voor de Statistiek",
+      "countryCode": "NL",
+      "scope": "NATIONAL",
+      "role": "OFFICIAL_STATISTICS",
+      "discoveryUrl": "https://www.cbs.nl/",
+      "expectedLanguages": ["nl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Centraal Bureau voor de Statistiek | CBS",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.cbs.nl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [
+        "https://ec.europa.eu/eurostat/web/european-statistical-system/ess-partners"
+      ],
+      "endpoints": [
+        {
+          "kind": "RSS_INDEX",
+          "url": "https://www.cbs.nl/rss",
+          "documentationUrl": "https://www.cbs.nl/rss",
+          "language": "nl",
+          "reviewedAt": "2026-09-22",
+          "status": "DOCUMENTED_NOT_FETCHED",
+          "note": "Official RSS discovery index; not itself an XML endpoint."
+        }
+      ],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:nl:parliament",
+      "name": "Tweede Kamer",
+      "countryCode": "NL",
+      "scope": "NATIONAL",
+      "role": "PARLIAMENT_GOVERNMENT",
+      "discoveryUrl": "https://www.tweedekamer.nl/",
+      "expectedLanguages": ["nl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Tweede Kamer der Staten-Generaal",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.tweedekamer.nl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:nl:central-bank",
+      "name": "De Nederlandsche Bank",
+      "countryCode": "NL",
+      "scope": "NATIONAL",
+      "role": "CENTRAL_BANK",
+      "discoveryUrl": "https://www.dnb.nl/",
+      "expectedLanguages": ["nl"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "De Nederlandsche Bank – de centrale bank van Nederland",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.dnb.nl/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": ["https://www.ecb.europa.eu/services/links/html/index.en.html"],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    }
+  ],
+  "gaps": [
+    {
+      "role": "DOMESTIC_PUBLISHER",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Validate two editorially independent domestic publishers, distinct ownership groups, native-language payloads and reuse rights."
+    },
+    {
+      "role": "PUBLIC_NEWS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "OFFICIAL_STATISTICS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "PARLIAMENT_GOVERNMENT",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "CENTRAL_BANK",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    }
+  ]
+}

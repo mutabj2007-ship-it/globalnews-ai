@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "packId": "eu27-mt-r1",
+  "countryCode": "MT",
+  "countryName": "Malta",
+  "reviewedAt": "2026-09-22",
+  "coverageStatus": "PARTIAL",
+  "coverageReason": "English publishers identified; Maltese-language independent journalism remains a gap; TVM access unresolved.",
+  "languageTargets": ["mt", "en"],
+  "supplementarySourceIds": ["eu-eurostat"],
+  "sources": [
+    {
+      "sourceId": "eu27:mt:publisher-1",
+      "name": "Times of Malta",
+      "countryCode": "MT",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://timesofmalta.com/",
+      "expectedLanguages": ["en"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "LIMITED_PAGE",
+        "pageTitle": "News, sport and opinion from Malta and the world – Times of Malta",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://timesofmalta.com/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:mt:publisher-2",
+      "name": "MaltaToday",
+      "countryCode": "MT",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://www.maltatoday.com.mt/",
+      "expectedLanguages": ["en"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "MaltaToday | News, Politics, Comment",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.maltatoday.com.mt/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:mt:public-news",
+      "name": "TVM News",
+      "countryCode": "MT",
+      "scope": "NATIONAL",
+      "role": "PUBLIC_NEWS",
+      "discoveryUrl": "https://tvmnews.mt/",
+      "expectedLanguages": ["mt"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://tvmnews.mt/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:mt:statistics",
+      "name": "National Statistics Office",
+      "countryCode": "MT",
+      "scope": "NATIONAL",
+      "role": "OFFICIAL_STATISTICS",
+      "discoveryUrl": "https://nso.gov.mt/",
+      "expectedLanguages": ["en"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "NSO Malta – Your gateway to Malta's official statistics.",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://nso.gov.mt/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [
+        "https://ec.europa.eu/eurostat/web/european-statistical-system/ess-partners"
+      ],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:mt:parliament",
+      "name": "Parlament ta’ Malta",
+      "countryCode": "MT",
+      "scope": "NATIONAL",
+      "role": "PARLIAMENT_GOVERNMENT",
+      "discoveryUrl": "https://parlament.mt/",
+      "expectedLanguages": [],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Parliament of Malta - Parliament of Malta",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://parlament.mt/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:mt:central-bank",
+      "name": "Central Bank of Malta",
+      "countryCode": "MT",
+      "scope": "NATIONAL",
+      "role": "CENTRAL_BANK",
+      "discoveryUrl": "https://www.centralbankmalta.org/",
+      "expectedLanguages": ["en"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Home - Central Bank of Malta",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.centralbankmalta.org/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": ["https://www.ecb.europa.eu/services/links/html/index.en.html"],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    }
+  ],
+  "gaps": [
+    {
+      "role": "DOMESTIC_PUBLISHER",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Validate two editorially independent domestic publishers, distinct ownership groups, native-language payloads and reuse rights."
+    },
+    {
+      "role": "PUBLIC_NEWS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "OFFICIAL_STATISTICS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "PARLIAMENT_GOVERNMENT",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "CENTRAL_BANK",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    }
+  ]
+}

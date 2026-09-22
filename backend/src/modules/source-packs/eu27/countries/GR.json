@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "packId": "eu27-gr-r1",
+  "countryCode": "GR",
+  "countryName": "Greece",
+  "reviewedAt": "2026-09-22",
+  "coverageStatus": "PARTIAL",
+  "coverageReason": "Kathimerini homepage unresolved; Efsyn discovery does not establish transport or rights.",
+  "languageTargets": ["el"],
+  "supplementarySourceIds": ["eu-eurostat"],
+  "sources": [
+    {
+      "sourceId": "eu27:gr:publisher-1",
+      "name": "Η Καθημερινή",
+      "countryCode": "GR",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://www.kathimerini.gr/",
+      "expectedLanguages": ["el"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://www.kathimerini.gr/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:gr:publisher-2",
+      "name": "Εφημερίδα των Συντακτών",
+      "countryCode": "GR",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://www.efsyn.gr/",
+      "expectedLanguages": ["el"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Η Εφημερίδα των Συντακτών | Νέα, ειδήσεις, αναλύσεις και ρεπορτάζ",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.efsyn.gr/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:gr:public-news",
+      "name": "ΕΡΤ News",
+      "countryCode": "GR",
+      "scope": "NATIONAL",
+      "role": "PUBLIC_NEWS",
+      "discoveryUrl": "https://www.ertnews.gr/",
+      "expectedLanguages": ["el"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "ERT NEWS | Ενημέρωση, Πολιτισμός, Ψυχαγωγία - ertnews.gr",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.ertnews.gr/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:gr:statistics",
+      "name": "Ελληνική Στατιστική Αρχή",
+      "countryCode": "GR",
+      "scope": "NATIONAL",
+      "role": "OFFICIAL_STATISTICS",
+      "discoveryUrl": "https://www.statistics.gr/",
+      "expectedLanguages": ["el"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Κεντρική Σελίδα ΕΛΣΤΑΤ - ELSTAT",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.statistics.gr/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [
+        "https://ec.europa.eu/eurostat/web/european-statistical-system/ess-partners"
+      ],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:gr:parliament",
+      "name": "Βουλή των Ελλήνων",
+      "countryCode": "GR",
+      "scope": "NATIONAL",
+      "role": "PARLIAMENT_GOVERNMENT",
+      "discoveryUrl": "https://www.hellenicparliament.gr/",
+      "expectedLanguages": ["el"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "ΒΟΥΛΗ ΤΩΝ ΕΛΛΗΝΩΝ",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.hellenicparliament.gr/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:gr:central-bank",
+      "name": "Τράπεζα της Ελλάδος",
+      "countryCode": "GR",
+      "scope": "NATIONAL",
+      "role": "CENTRAL_BANK",
+      "discoveryUrl": "https://www.bankofgreece.gr/",
+      "expectedLanguages": ["el"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Τράπεζα της Ελλάδος",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.bankofgreece.gr/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": ["https://www.ecb.europa.eu/services/links/html/index.en.html"],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    }
+  ],
+  "gaps": [
+    {
+      "role": "DOMESTIC_PUBLISHER",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Validate two editorially independent domestic publishers, distinct ownership groups, native-language payloads and reuse rights."
+    },
+    {
+      "role": "PUBLIC_NEWS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "OFFICIAL_STATISTICS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "PARLIAMENT_GOVERNMENT",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "CENTRAL_BANK",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    }
+  ]
+}

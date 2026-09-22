@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "packId": "eu27-ro-r1",
+  "countryCode": "RO",
+  "countryName": "Romania",
+  "reviewedAt": "2026-09-22",
+  "coverageStatus": "PARTIAL",
+  "coverageReason": "Statistics homepage unresolved; official and journalistic authority remain separate.",
+  "languageTargets": ["ro"],
+  "supplementarySourceIds": ["eu-eurostat"],
+  "sources": [
+    {
+      "sourceId": "eu27:ro:publisher-1",
+      "name": "HotNews",
+      "countryCode": "RO",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://hotnews.ro/",
+      "expectedLanguages": ["ro"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "HotNews.ro - Știri de ultimă oră din România și din lume",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://hotnews.ro/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:ro:publisher-2",
+      "name": "Recorder",
+      "countryCode": "RO",
+      "scope": "NATIONAL",
+      "role": "DOMESTIC_PUBLISHER",
+      "discoveryUrl": "https://recorder.ro/",
+      "expectedLanguages": ["ro"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "REVIEW_REQUIRED",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Acasa - Recorder",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://recorder.ro/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": [
+        "RIGHTS_REVIEW_REQUIRED",
+        "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED",
+        "OWNERSHIP_AND_EDITORIAL_INDEPENDENCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "sourceId": "eu27:ro:public-news",
+      "name": "Radio România Actualități",
+      "countryCode": "RO",
+      "scope": "NATIONAL",
+      "role": "PUBLIC_NEWS",
+      "discoveryUrl": "https://www.romania-actualitati.ro/",
+      "expectedLanguages": ["ro"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Radio Romania Actualitati site oficial | Radio România Actualitați",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.romania-actualitati.ro/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:ro:statistics",
+      "name": "Institutul Național de Statistică",
+      "countryCode": "RO",
+      "scope": "NATIONAL",
+      "role": "OFFICIAL_STATISTICS",
+      "discoveryUrl": "https://insse.ro/",
+      "expectedLanguages": ["ro"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "ACCESS_UNRESOLVED",
+        "pageTitle": "Internal Error ()",
+        "reportedCrawlAge": null,
+        "finalUrl": "https://insse.ro/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [
+        "https://ec.europa.eu/eurostat/web/european-statistical-system/ess-partners"
+      ],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:ro:parliament",
+      "name": "Camera Deputaților",
+      "countryCode": "RO",
+      "scope": "NATIONAL",
+      "role": "PARLIAMENT_GOVERNMENT",
+      "discoveryUrl": "https://www.cdep.ro/",
+      "expectedLanguages": ["ro"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "Camera Deputatilor",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.cdep.ro/ords/pls/dic/site2015.home?idl=1",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": [],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    },
+    {
+      "sourceId": "eu27:ro:central-bank",
+      "name": "Banca Națională a României",
+      "countryCode": "RO",
+      "scope": "NATIONAL",
+      "role": "CENTRAL_BANK",
+      "discoveryUrl": "https://www.bnr.ro/",
+      "expectedLanguages": ["ro"],
+      "observedContentLanguage": null,
+      "languageStatus": "REQUIRES_PAYLOAD_REVIEW",
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": null,
+      "rightsStatus": "UNREVIEWED",
+      "ownershipGroup": null,
+      "independenceStatus": "NOT_COUNTED_AS_INDEPENDENT",
+      "validationStatus": "CANDIDATE",
+      "discoveryEvidence": {
+        "checkedAt": "2026-09-22",
+        "method": "WEB_TOOL_CACHED_PAGE",
+        "outcome": "PAGE_OBSERVED",
+        "pageTitle": "BNR Banca Națională a României (BNR)",
+        "reportedCrawlAge": "today",
+        "finalUrl": "https://www.bnr.ro/",
+        "note": "Discovery metadata only; not a direct HTTP measurement, parsed feed, freshness check, rights grant, or editorial-independence validation."
+      },
+      "authorityEvidenceUrls": ["https://www.ecb.europa.eu/services/links/html/index.en.html"],
+      "endpoints": [],
+      "blockers": ["RIGHTS_REVIEW_REQUIRED", "TRANSPORT_AND_PAYLOAD_VALIDATION_REQUIRED"]
+    }
+  ],
+  "gaps": [
+    {
+      "role": "DOMESTIC_PUBLISHER",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Validate two editorially independent domestic publishers, distinct ownership groups, native-language payloads and reuse rights."
+    },
+    {
+      "role": "PUBLIC_NEWS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "OFFICIAL_STATISTICS",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "PARLIAMENT_GOVERNMENT",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    },
+    {
+      "role": "CENTRAL_BANK",
+      "status": "COVERAGE_GAP",
+      "reason": "No current, rights-reviewed and payload-validated baseline in this category.",
+      "nextAction": "Discover publisher-documented transport; review rights, identity, native-language payload, freshness and lineage."
+    }
+  ]
+}

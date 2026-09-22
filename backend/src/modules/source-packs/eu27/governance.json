@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "packVersion": "EU27-R1",
+  "reviewedAt": "2026-09-22",
+  "membershipEvidenceUrl": "https://european-union.europa.eu/principles-countries-history/eu-countries_en",
+  "memberCountryCodes": [
+    "AT",
+    "BE",
+    "BG",
+    "CY",
+    "CZ",
+    "DE",
+    "DK",
+    "EE",
+    "ES",
+    "FI",
+    "FR",
+    "GR",
+    "HR",
+    "HU",
+    "IE",
+    "IT",
+    "LT",
+    "LU",
+    "LV",
+    "MT",
+    "NL",
+    "PL",
+    "PT",
+    "RO",
+    "SE",
+    "SI",
+    "SK"
+  ],
+  "coverageStatuses": ["VALIDATED_LOCAL_BASELINE", "PARTIAL", "COVERAGE_GAP"],
+  "baselineRequirements": {
+    "independentDomesticPublishers": 2,
+    "distinctReviewedOwnershipGroups": 2,
+    "requiredRoles": [
+      "PUBLIC_NEWS",
+      "OFFICIAL_STATISTICS",
+      "PARLIAMENT_GOVERNMENT",
+      "CENTRAL_BANK"
+    ],
+    "requiredEvidence": [
+      "publisher identity",
+      "ownership and editorial independence for journalism",
+      "publisher-documented endpoint",
+      "permitted retained original-language payload with hash and timestamps",
+      "parse and freshness validation",
+      "source-specific resolved rights review",
+      "CTO baseline review"
+    ]
+  },
+  "activation": {
+    "productionHold": true,
+    "massActivationAllowed": false,
+    "clickTriggeredAcquisitionAllowed": false,
+    "ingestionMethod": "none",
+    "requiresSourceIdAuthorization": true,
+    "rightsEvaluator": "shared/src/rights/source-rights.ts",
+    "note": "Catalogue only. Not imported by runtime providers, routes, schedulers or UI. Does not create rights grants or activation records."
+  },
+  "languagePolicy": {
+    "preserveOriginal": true,
+    "automaticTranslation": false,
+    "discardOriginalAfterTranslation": false,
+    "translationIsSeparateDerivedArtifact": true,
+    "requiredEvidenceFields": [
+      "sourceId",
+      "sourceUrl",
+      "originalLanguage",
+      "originalText",
+      "originalPayloadHash",
+      "retrievedAt",
+      "publishedAt"
+    ],
+    "unknownLanguage": "und",
+    "note": "Expected languages are discovery targets, not observed payload languages. Preserve original scripts and bytes when retention is permitted; never overwrite original evidence with a translation."
+  },
+  "supplementarySources": [
+    {
+      "sourceId": "eu-eurostat",
+      "existingRegistryId": "eurostat",
+      "name": "Eurostat",
+      "scope": "EU_SUPPLEMENTARY",
+      "role": "OFFICIAL_STATISTICS",
+      "countryCode": null,
+      "countsAsDomesticJournalism": false,
+      "countsAsNationalAuthority": false,
+      "enabled": false,
+      "ingestionMethod": "none",
+      "rightsBinding": {
+        "rightsAuthorityId": "ECONOMY_ACQUISITION_RIGHTS",
+        "rightsRecordKey": "EUROSTAT"
+      },
+      "rightsStatus": "EXISTING_BINDING_REQUIRES_RESOLUTION",
+      "api": {
+        "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data",
+        "documentationUrl": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/",
+        "status": "DOCUMENTED_NOT_FETCHED"
+      },
+      "updateFeeds": [
+        {
+          "language": "en",
+          "url": "https://ec.europa.eu/eurostat/api/dissemination/catalogue/rss/en/statistics-update.rss"
+        },
+        {
+          "language": "de",
+          "url": "https://ec.europa.eu/eurostat/api/dissemination/catalogue/rss/de/statistics-update.rss"
+        },
+        {
+          "language": "fr",
+          "url": "https://ec.europa.eu/eurostat/api/dissemination/catalogue/rss/fr/statistics-update.rss"
+        }
+      ],
+      "updateFeedDocumentationUrl": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/catalogue-api/rss",
+      "note": "RSS announces data/structure/codelist updates; not domestic news. Preserve dataset dimensions, units, periods, flags and original labels. Dataset geo uses EL for Greece, not ISO GR.",
+      "geoOverrides": {
+        "GR": "EL"
+      }
+    }
+  ]
+}
