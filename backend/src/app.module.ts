@@ -1,13 +1,18 @@
+import { HumanitarianReadModule } from './modules/humanitarian/humanitarian-read.module';
+import { AskV2Module } from './modules/ask-v2/ask-v2.module';
+import { SecurityModule } from './modules/security/security.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { PoliticsReadModule } from './modules/politics/politics.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './database/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { NewsModule } from './modules/news/news.module';
+import { ElectionReadModule } from './modules/election/election-read.module';
 import { EconomyModule } from './modules/economy/economy.module';
 import { MarketReadModule } from './modules/market-ingest/market-read.module';
 import { ConflictObservationModule } from './modules/conflict-observation/conflict-observation.module';
@@ -56,6 +61,7 @@ import {
     ]),
     PrismaModule,
     HealthModule,
+    PoliticsReadModule, // Retained-only; no acquisition or schedule activation.
     NewsModule,
     /*
       ECONOMY — ONE READ ROUTE OVER RETAINED EVIDENCE, AND NO PROVIDER.
@@ -66,6 +72,7 @@ import {
       consumes no GNews quota.
     */
     EconomyModule,
+    ElectionReadModule,
     /*
       MARKET — RETAINED READ ONLY.
 
@@ -117,6 +124,8 @@ import {
     AuthModule,
     UsersModule,
     HistoryModule,
+    // Additive, authenticated, default-off; execution port remains on CTO HOLD.
+    AskV2Module,
     // Milestone F1.a — administrative authorization foundation. This
     // is the ONLY line of any pre-existing file that F1.a changes.
     // Registering the module places no guard anywhere near an existing
@@ -192,6 +201,7 @@ import {
       canonical backend file was copied.
     */
     ConflictClaimModule,
+    SecurityModule, // Pure read; public Alpha remains NOT_ASSESSED.
 
     /*
       HUMANITARIAN — AUTHORITY VALIDATION AT STARTUP, ACQUISITION STILL OFF.
@@ -213,6 +223,7 @@ import {
       ever is not.
     */
     ...humanitarianModuleImports(HUMANITARIAN_PROVISIONING),
+    HumanitarianReadModule,
   ],
   controllers: [AppController],
   providers: [

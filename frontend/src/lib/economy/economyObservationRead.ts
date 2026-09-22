@@ -86,14 +86,14 @@ export const ECONOMY_READ_ABSENCE_TEXT: Readonly<Record<EconomyReadAbsence, stri
   NO_OBSERVATION_RETAINED:
     'No official economy artifact has been retained yet. No figure is held here.',
   NO_DISPLAYABLE_OBSERVATION:
-    'An artifact is retained but supplies no publishable figure for this period.',
+    'No publishable economy figure could be read from this deployment.',
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
  * THE READER
  * ══════════════════════════════════════════════════════════════════════════ */
 
-type EconomyObservationReader = () => Promise<readonly RetainedObservation[]>;
+type EconomyObservationReader = () => Promise<EconomyReadResult>;
 
 /**
  * THE PATH IS RELATIVE, AND THAT IS THE PROPERTY THE ACCEPTED GUARD PROTECTS.
@@ -143,7 +143,7 @@ function activatedObservationReader(): EconomyObservationReader | null {
       cache: 'no-store',
       headers: { accept: 'application/json' },
     });
-    if (!response.ok) return [];
+    if (!response.ok) return { kind: 'UNAVAILABLE', reason: 'NO_DISPLAYABLE_OBSERVATION' };
 
     const body = (await response.json()) as {
       slot?: { kind?: string; observation?: { value?: number; unit?: string; periodId?: string } };
@@ -153,12 +153,21 @@ function activatedObservationReader(): EconomyObservationReader | null {
       provenance?: RetainedObservationProvenance;
     };
 
-    if (body.slot?.kind !== 'OBSERVATION' || body.publishable !== true) return [];
+    if (body.slot?.kind !== 'OBSERVATION' || body.publishable !== true) {
+      return { kind: 'UNAVAILABLE', reason: 'NO_DISPLAYABLE_OBSERVATION' };
+    }
     const o = body.slot.observation;
-    if (o?.value === undefined || o.unit === undefined || o.periodId === undefined) return [];
-    if (body.provenance === undefined) return [];
+    if (typeof o?.value !== 'number' || !Number.isFinite(o.value) ||
+        o.unit !== 'PERCENT' || typeof o.periodId !== 'string' ||
+        !/^\d{4}-(0[1-9]|1[0-2])$/.test(o.periodId) ||
+        body.provenance == null ||
+        typeof body.provenance.contentAddress !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(body.provenance.contentAddress) ||
+        body.provenance.referencePeriod !== o.periodId) {
+      return { kind: 'UNAVAILABLE', reason: 'NO_DISPLAYABLE_OBSERVATION' };
+    }
 
-    return [
+    return { kind: 'OBSERVATIONS', observations: [
       {
         seriesLabel: body.seriesLabel ?? 'Headline CPI',
         geographyLabel: body.geographyLabel ?? '',
@@ -167,7 +176,7 @@ function activatedObservationReader(): EconomyObservationReader | null {
         periodId: o.periodId,
         provenance: body.provenance,
       },
-    ];
+    ] };
   };
 }
 const ECONOMY_OBSERVATION_READER = activatedObservationReader();
@@ -180,14 +189,11 @@ export async function readEconomyObservations(): Promise<EconomyReadResult> {
   if (ECONOMY_OBSERVATION_READER === null) {
     return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_READER' };
   }
-  let stored: readonly RetainedObservation[];
   try {
-    stored = await ECONOMY_OBSERVATION_READER();
+    return await ECONOMY_OBSERVATION_READER();
   } catch {
-    return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_RETAINED' };
+    return { kind: 'UNAVAILABLE', reason: 'NO_DISPLAYABLE_OBSERVATION' };
   }
-  if (stored.length === 0) return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_RETAINED' };
-  return { kind: 'OBSERVATIONS', observations: stored };
 }
 
 /**

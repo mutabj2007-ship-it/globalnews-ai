@@ -1,5 +1,6 @@
 'use client';
 
+import { comparisonCoverageLines } from '@globalnews-ai/shared';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import {
@@ -130,6 +131,24 @@ export function AskCompactResult({
           </span>
         )}
       </div>
+
+      {response.retrievalContext.comparisonCoverage?.length ? (
+        <section
+          data-ask="coverage-checked"
+          className="min-w-0 rounded-xl border border-border-strong px-3 py-2"
+        >
+          <p className="text-xs font-medium text-ink-primary">
+            {language === 'pl' ? 'Sprawdzone pokrycie' : 'Coverage checked'}
+          </p>
+          <ul className="mt-2 space-y-2 text-xs leading-relaxed text-ink-secondary">
+            {comparisonCoverageLines(response.retrievalContext.comparisonCoverage, language).map(
+              (line, index) => (
+                <li key={response.retrievalContext.comparisonCoverage?.[index].iso3}>{line}</li>
+              ),
+            )}
+          </ul>
+        </section>
+      ) : null}
 
       {analysis?.relationalComposition ? (
         <div data-ask="relational-answer" className="rounded-2xl border border-signal/35 bg-signal/10 px-4 py-3">

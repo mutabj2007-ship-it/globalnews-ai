@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "country": "ISR",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "he",
+    "ar",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:isr:ynet",
+      "country": "ISR",
+      "language": "he",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "ynet",
+        "name": "Ynet",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.ynet.co.il",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSROOM",
+      "endpoint": {
+        "url": "https://www.ynet.co.il/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.ynet.co.il/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Hebrew homepage observed; redirect to /home/0,7340,L-8,00.html. RSS text search had no match."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.ynet.co.il/robots.txt",
+        "status": "FETCH_FAILED",
+        "checkedOn": "2026-09-22",
+        "note": "Targeted robots.txt open failed in the research tool; directives unknown, not permissive."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the ISR source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Hebrew homepage observed; redirect to /home/0,7340,L-8,00.html. RSS text search had no match. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:isr:toi",
+      "country": "ISR",
+      "language": "en",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "toi",
+        "name": "The Times of Israel",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.timesofisrael.com",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSROOM",
+      "endpoint": {
+        "url": "https://www.timesofisrael.com/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.timesofisrael.com/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "English homepage observed. Separate robots check shows restrictions on common feed paths."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.timesofisrael.com/robots.txt",
+        "status": "RESTRICTIONS_OBSERVED",
+        "checkedOn": "2026-09-22",
+        "note": "Wildcard directives disallow /feed/ and /rss-feed/ among other paths, with restrictions for named agents. Not a full production-agent determination or a reuse licence."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the ISR source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "English homepage observed. Separate robots check shows restrictions on common feed paths. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:isr:cbs",
+      "country": "ISR",
+      "language": "en",
+      "languageStatus": "candidate",
+      "publisher": {
+        "id": "cbs",
+        "name": "Central Bureau of Statistics (Israel)",
+        "identityStatus": "candidate",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.cbs.gov.il",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://www.cbs.gov.il/en/Pages/default.aspx",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.cbs.gov.il/en/Pages/default.aspx",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "limited_content",
+          "note": "Unresolved application templates plus English/Hebrew notices; current statistical releases not verified."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.cbs.gov.il/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Unresolved application templates plus English/Hebrew notices; current statistical releases not verified. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "Arabic-language Israeli publisher coverage remains a gap; PSE sources are not substitutes.",
+    "CBS rendered unresolved templates; validate releases and geographic scope separately."
+  ]
+}

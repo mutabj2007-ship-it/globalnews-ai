@@ -9,6 +9,7 @@ import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClien
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
+import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 
@@ -108,6 +109,11 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
    * has nothing of its own to go stale.
    */
   const storyContext = useAskStoryContext();
+  const showStoryLabel = storyContext !== undefined && usesStoryContextLabel(
+    question.trim() || (phase.kind !== 'idle' ? phase.question : ''),
+    question.trim() ? undefined : phase.kind === 'answered'
+      ? phase.response.retrievalContext.storyContextUsed : undefined,
+  );
 
   /*
    * R2 FINDING 2 — WHERE THE LAUNCHER SITS IS A SURFACE QUESTION.
@@ -412,11 +418,11 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
               */}
               <span
                 data-ask="context-affordance"
-                data-ask-context={storyContext === undefined ? 'generic' : 'anchored'}
-                title={storyContext === undefined ? undefined : storyContext.title}
+                data-ask-context={showStoryLabel ? 'anchored' : 'generic'}
+                title={showStoryLabel ? storyContext?.title : undefined}
                 className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border-strong bg-surface px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-secondary"
               >
-                {storyContext === undefined ? t.contextChipGeneric : t.contextChipAnchored}
+                {showStoryLabel ? t.contextChipAnchored : t.contextChipGeneric}
               </span>
 
               <button

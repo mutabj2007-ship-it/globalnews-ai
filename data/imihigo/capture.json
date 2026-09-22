@@ -1,0 +1,11 @@
+{
+  "sourceUrl": "https://statistics.gov.rw/sites/default/files/documents/2026-03/Imihigo%202024~2025.pdf",
+  "artifact": "nisr-imihigo-2024-2025.pdf",
+  "capturedAt": "2026-09-22T16:17:47.345677Z",
+  "sha256": "fb858beb954de5912a737f05d27a65ddea4c7ba97c782dca26019f1e6847b0af",
+  "byteLength": 1652341,
+  "publisher": "National Institute of Statistics of Rwanda (NISR)",
+  "reportPeriod": "2024/2025",
+  "captureAgent": "imihigo-single-capture/1.0",
+  "mediaType": "application/pdf"
+}

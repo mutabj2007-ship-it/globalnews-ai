@@ -44,7 +44,7 @@ import { ScreenHeading } from './SystemHealthScreen';
 export type AnalyticsTab = 'analytics' | 'geography' | 'users' | 'subscriptions';
 
 export function AnalyticsScreen({ tab }: { tab: AnalyticsTab }): JSX.Element {
-  const { t } = useAdminContext();
+  const { t, can } = useAdminContext();
   const screen = t.screens.analytics;
 
   const tabs = [
@@ -57,6 +57,9 @@ export function AnalyticsScreen({ tab }: { tab: AnalyticsTab }): JSX.Element {
       href: ADMIN_ROUTES.usersSubscriptions,
     },
   ] as const;
+
+  const required = tab === 'users' ? 'access.manage' : 'analytics.view';
+  if (!can(required)) return <p>{t.access.forbiddenBody}</p>;
 
   return (
     <div className="flex flex-col gap-4">

@@ -319,10 +319,40 @@ function withhold(sourceGeometryId: string, code: string): WithheldRecord {
   return { sourceGeometryId, code, codeOrigin: originOf(code) };
 }
 
+/** Envelope errors are private admission failures, never reader absence tokens. */
+export class CopernicusPayloadRefused extends Error {}
+
+function assertPayloadEnvelope(payload: EmsDelineationPayload): void {
+  if (!payload || !Array.isArray(payload.features) || payload.features.length > 10000) {
+    throw new CopernicusPayloadRefused('Invalid or oversized delineation batch');
+  }
+  const identities = new Set<string>();
+  for (const feature of payload.features) {
+    if (!feature || typeof feature !== 'object' ||
+        typeof feature.geometryType !== 'string' || typeof feature.crs !== 'string') {
+      throw new CopernicusPayloadRefused('Invalid delineation feature');
+    }
+    // Preserve the existing source identity verbatim; refuse ambiguous decompositions.
+    for (const id of [feature.activationCode, feature.productId, feature.featureId]) {
+      if (typeof id !== 'string' || id.length === 0 || id.length > 512 ||
+          id.trim() !== id || id.includes('/') || /[\u0000-\u001f\u007f]/.test(id)) {
+        throw new CopernicusPayloadRefused('Missing or ambiguous source identity');
+      }
+    }
+    const id = feature.activationCode + '/' + feature.productId + '/' + feature.featureId;
+    if (identities.has(id)) {
+      // No revision metadata exists here. Choosing first/last would invent authority.
+      throw new CopernicusPayloadRefused('Duplicate identity requires revision reconciliation');
+    }
+    identities.add(id);
+  }
+}
+
 export function produceInundationExtents(
   payload: EmsDelineationPayload,
   keying: GovernedRecordKeying,
 ): ProducerResult {
+  assertPayloadEnvelope(payload);
   const emitted: KeyedGeometry[] = [];
   const withheld: WithheldRecord[] = [];
 

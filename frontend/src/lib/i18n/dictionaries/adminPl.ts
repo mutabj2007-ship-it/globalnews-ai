@@ -14,6 +14,22 @@ import type { AdminDictionary } from './adminEn';
  * those keys to match and requires every other string to differ.
  */
 export const adminPl: AdminDictionary = {
+  realData: {
+    accountDetails: 'Zarejestrowane obserwacje kont',
+    created24h: 'Utworzone konta · 24h',
+    returned24h: 'Konta z zaobserwowanym powrotem · 24h',
+    neverReturned: 'Konta bez zaobserwowanego powrotu',
+    tokenTitle: 'Zarejestrowane użycie analiz · 7d',
+    tokenNote:
+      'Sumy tokenów obejmują tylko uruchomienia z pomiarem użycia. Brak próbek oznacza brak danych, a nie zerowy koszt.',
+    runs7d: 'Żądania analizy · 7d',
+    tokenSamples: 'Uruchomienia z pomiarem tokenów',
+    promptTokens: 'Zarejestrowane tokeny wejściowe',
+    completionTokens: 'Zarejestrowane tokeny odpowiedzi',
+    totalTokens: 'Zarejestrowane tokeny łącznie',
+    passiveHealth:
+      'Stan systemu w panelu nie odpytuje dostawców wiadomości. Ich stan pozostaje tutaj nieznany do czasu podłączenia pasywnego odczytu.',
+  },
   meta: {
     title: 'Administracja — GlobalNews AI',
     description: 'Administracja GlobalNews AI.',
@@ -361,6 +377,33 @@ export const adminPl: AdminDictionary = {
     },
 
     operations: {
+      retained: {
+        publisherTitle: 'Wydawcy i źródła oficjalne',
+        publisherNote:
+          'Poszczególne źródła obsługiwane przez kanał Publisher Feeds. Tożsamość źródła i kraj są zachowane niezależnie.',
+        active: 'AKTYWNE',
+        inactive: 'NIEAKTYWNE',
+        inventoryTitle: 'Zasób artykułów',
+        inventoryNote:
+          'Pomiar na podstawie zachowanych rekordów Article. Odczyt nie wywołuje dostawcy.',
+        inventoryLoading: 'Ładowanie zasobu…',
+        inventoryUnavailable: 'Nie udało się odczytać zasobu artykułów.',
+        storedArticles: 'Zapisane artykuły',
+        latestRetained: 'Ostatnio zachowane',
+        source: 'Źródło',
+        articles: 'Artykuły',
+        executionTitle: 'Aktywność wywołań dostawców',
+        executionNote:
+          'Zmierzone wywołania backendu. Otwarcie tabeli nie wywołuje dostawcy wiadomości. Liczniki obejmują czas działania procesu, nie okres rozliczeniowy.',
+        executionLoading: 'Ładowanie aktywności wywołań…',
+        executionUnavailable: 'Rejestr wywołań dostawców jest niedostępny w tym procesie.',
+        measuredExecutions: 'Zmierzone wywołania',
+        provider: 'Dostawca',
+        endpoint: 'Punkt końcowy',
+        executions: 'Wywołania',
+        cacheHits: 'Trafienia pamięci',
+        cacheMisses: 'Chybienia pamięci',
+      },
       title: 'Wiadomości, źródła i operacje AI',
       purpose:
         'Którzy dostawcy odpowiadają, w jakim trybie są dane i jak zachowuje się warstwa AI.',

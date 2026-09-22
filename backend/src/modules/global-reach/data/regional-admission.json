@@ -1,0 +1,390 @@
+{
+  "version": 1,
+  "policy": "All sources disabled; unknown rights not upgraded; coverage is calculated only by shared accountSourceCoverage; no acquisition.",
+  "inputs": [
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/BDI.json",
+      "sha256": "e81cb7bc38625a7c5fe471b49bbc7b4ca11663cc3bfb1a4be45a60722ebd290c",
+      "candidates": 7
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "sha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b",
+      "candidates": 8
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/DJI.json",
+      "sha256": "87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452",
+      "candidates": 6
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+      "sha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e",
+      "candidates": 5
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "sha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76",
+      "candidates": 8
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "sha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb",
+      "candidates": 12
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "sha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756",
+      "candidates": 12
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/SOM.json",
+      "sha256": "91b1904597fe9045a53083ae69a1871ec1b6d7e05fa0f07d2d7885c412947a4e",
+      "candidates": 7
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+      "sha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579",
+      "candidates": 7
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/TZA.json",
+      "sha256": "c872f6b4db2f1c786fc4faed7c65d9283b49a41794dca61618871ccff8ccd8d0",
+      "candidates": 7
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/UGA.json",
+      "sha256": "86692b0875ea617937037a798f4b0a7ea90f5c15b8d0bbb3d3a9795925a0f70f",
+      "candidates": 7
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/ARE.json",
+      "sha256": "f6b6157c826cea1bd623bcc0db23a0c7c3c790fa0a7a3aeda1a1292190689fa1",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/BHR.json",
+      "sha256": "9772b484ee9857ca3914a4bc364a5efc801310c8f8a56532885d79c405d2e8b5",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/EGY.json",
+      "sha256": "2fc46f1136c39b990dcfe17cef17e4b0670134f823bc3cdaf77d71baf2364a38",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/IRN.json",
+      "sha256": "67b0cf026a53cc4f25a0c39ad119a06a19e1c51b89f7eebfc6f8e39cbdab7c27",
+      "candidates": 4
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/IRQ.json",
+      "sha256": "868088987508d6c2f4cf69aa4e266245d212c68b3ebec4f2241979049e881684",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/ISR.json",
+      "sha256": "5373aaa01be48260e3e68dd56e5d8e8c1dc010d6334a273f5b3e25ba037b27d3",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/JOR.json",
+      "sha256": "276a69ef76f820ca6ead1c291bb0802ec9e96592f5e7ff324b6962e867b25522",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/KWT.json",
+      "sha256": "9f4f1a5b7194fabe872fe8d567799318011b72699a4fe54efa28dbfa3761030f",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/LBN.json",
+      "sha256": "2aa58d3b2f5a2bcbfc27a301633d9b4f4f2e99bc648466d50a01431c6fc6bced",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/OMN.json",
+      "sha256": "d0eadaedfb5961d3a073445632de8b8235be4cf34421e2c5e9bec23bfbeb54c5",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/PSE.json",
+      "sha256": "4e60488bff16c9788ac4129df178fc9339ca505ecd4161b2d892a4c956c2cf71",
+      "candidates": 4
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/QAT.json",
+      "sha256": "3a8dcc54d130ea3249cf8b0c0f479a0e8f2250b2ec49961b2ffe637ee4f2325d",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/SAU.json",
+      "sha256": "b3e31d4485b5d8f8f7efdc330a67bba1588e05097f9f017649307e5f74ecc53d",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/SYR.json",
+      "sha256": "1c7a44d68c9e55cbd33cf857c59ed38d479bfc46b327c3baf515e3e021837346",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/TUR.json",
+      "sha256": "494d1df6f4d9170d29cf6abb9f6b0437a4a14b54be5e1602a2d5e27ba04f82b9",
+      "candidates": 3
+    },
+    {
+      "lane": "O",
+      "manifestPath": "shared/source-packs/middle-east-r1/countries/YEM.json",
+      "sha256": "fd6f89a2b412d3cea6cc8dcb5e1f0c736b3ddbb3ccae4a3b3be61ba230b4ac09",
+      "candidates": 3
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/AT.json",
+      "sha256": "75ec74b36192ed18f9e36b49aa9c268c22e2c57fd2d5389163db07b4281c0cf6",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/BE.json",
+      "sha256": "5839dd0ddc0493a9b5dc7182ee900ac8dd69fb806ba6859b9be86decf9925ca5",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/BG.json",
+      "sha256": "5264a63e5e6587cac9101f080a370f94891a5c6fec5a6f25a58812720a6d83f3",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/CY.json",
+      "sha256": "cd24356b7e9ddb93d73c2a6818d7a04902bf9d9a4b0d5c4c6fb2b34a6e080149",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/CZ.json",
+      "sha256": "72351029c8b82936f72d8374acdaac465eba29723b146b6d924af41014eac621",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/DE.json",
+      "sha256": "4c0836b5c8858eed40c5d3ce17ca6e77095bcedd6d91c827bf7487d8baa00a6a",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/DK.json",
+      "sha256": "e1b34646481c4597666876ec3c5cc12f47953723a9b9fbaba58354bc40137133",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/EE.json",
+      "sha256": "e56d58513d23fd21e9ccbf6251ceecb0f28c46e346fda04a55cd69fbeeed1ac3",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/ES.json",
+      "sha256": "307df5966e7e30af1b132a8da9e4dbb2940d3763e57965478fd4b412aa5443ed",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/FI.json",
+      "sha256": "ee28cc70ea9d20f3c242a6153d99f035080bc248288b0dabb5d4aa7fa315b80c",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/FR.json",
+      "sha256": "8f543a84608ad75d4f05f752f4ce155a32f7f4bbd9a56d1f447b1ef30afb418e",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/GR.json",
+      "sha256": "7cbd0c2a618109b48931712fed78834274a811e1fd213425c01a3221e4e38c9e",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/HR.json",
+      "sha256": "4403b355e3dd21b70da52a83ad6bd7439cb3c0397135ec6fb5620759428eb721",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/HU.json",
+      "sha256": "a10f3229c9fcff4411faff55ef43dea904abf7de19d4f5d150eac9911ac590d9",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/IE.json",
+      "sha256": "3386b045b2485624e77d3c00c3629163d87fa60a3de84f98e129d026a5d4ee69",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/IT.json",
+      "sha256": "c8836cfd41f07318cd5519b310176b314b4e0664bd33edd574405932b6c91b35",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/LT.json",
+      "sha256": "bf478e424e28ffcc44a3cba44f7e2fcba1bf3c040d45cc035d2c3e2c504aa979",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/LU.json",
+      "sha256": "bfac47e6e0f4ad62530f09bc89adf51f353bcb5aa88942391a520c070e89ff39",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/LV.json",
+      "sha256": "8f90db18cd2960af8056aa92d49ecbaf9befb6e63ca979a87f278ac6fca741d3",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/MT.json",
+      "sha256": "3a93fa5b28eccf291a8cd63e6a4ec0427e4131122feb0063d476b2e14602a5f6",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/NL.json",
+      "sha256": "5fb0c686e6a6d268f9109be2df840e30f45a7d7b426e4b8b5fea9b12c05a9795",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/PL.json",
+      "sha256": "b71a216aae9f2f698ebf116359b43471f8750a45a16f867361657fb0b503ca3d",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/PT.json",
+      "sha256": "e1f0efe6d9d45b4885f6904027197c0d4b94908fad3683d492e2f2d2d8d2096b",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/RO.json",
+      "sha256": "e6c24b927a7c7969ecee338e6afd0221b08be7dce110a0974edaa9dd9a31d6c3",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/SE.json",
+      "sha256": "0ccd3be2e8cf90568718436e4a0ecb4204fd94f3d463b92f0701e6e1865fae0b",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/SI.json",
+      "sha256": "e817ae3a087466f0f71c4595d5fcba0c1ef99850c52b6eef67ee8e7e0aa3aa1a",
+      "candidates": 6
+    },
+    {
+      "lane": "P",
+      "manifestPath": "backend/src/modules/source-packs/eu27/countries/SK.json",
+      "sha256": "b7eb9ad83cd65ecf60741567582deb1b5691c0b283b5554255191c7b50649a80",
+      "candidates": 6
+    }
+  ],
+  "candidates": 298,
+  "admittedRecords": 290,
+  "rejected": [
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+      "manifestSha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e",
+      "originalSourceId": "ea-r1:eri:ministry",
+      "reason": "EXPLICIT_ALIAS_OF:ea-r1:eri:shabait"
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76",
+      "originalSourceId": "ea-r1:eth:ess-current",
+      "reason": "EXPLICIT_ALIAS_OF:ea-r1:eth:ess"
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb",
+      "originalSourceId": "ea-r1:ken:capital-current",
+      "reason": "EXPLICIT_ALIAS_OF:ea-r1:ken:capital"
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756",
+      "originalSourceId": "ea-r1:rwa:nisr-apex",
+      "reason": "EXPLICIT_ALIAS_OF:ea-r1:rwa:nisr"
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b",
+      "originalSourceId": "ea-r1:cod:ocha",
+      "reason": "AMBIGUOUS_PUBLISHER_IDENTITY:host:unocha.org"
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/DJI.json",
+      "manifestSha256": "87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452",
+      "originalSourceId": "ea-r1:dji:redcrescent",
+      "reason": "AMBIGUOUS_PUBLISHER_IDENTITY:host:ifrc.org"
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+      "manifestSha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e",
+      "originalSourceId": "ea-r1:eri:redcross",
+      "reason": "AMBIGUOUS_PUBLISHER_IDENTITY:host:ifrc.org"
+    },
+    {
+      "lane": "N",
+      "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+      "manifestSha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579",
+      "originalSourceId": "ea-r1:ssd:ocha",
+      "reason": "AMBIGUOUS_PUBLISHER_IDENTITY:host:unocha.org"
+    }
+  ]
+}

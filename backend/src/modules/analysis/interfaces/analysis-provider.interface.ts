@@ -1,4 +1,4 @@
-import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
+import type { ComparisonCountryCoverage, LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 
 /**
  * Milestone #40 (authoritative-context correction) — the exact,
@@ -32,6 +32,7 @@ export interface AnalysisRelationalContext {
 
 export interface AnalysisProviderInput {
   query: string;
+  comparisonCoverage?: ComparisonCountryCoverage[];
   /** Already deduped/clustered and bounded to a reasonable count. */
   articles: NewsArticle[];
   /**

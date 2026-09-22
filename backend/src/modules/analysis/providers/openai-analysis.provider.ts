@@ -96,6 +96,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     query,
     articles,
     relationalContext,
+    comparisonCoverage,
     responseLanguage,
     repairDirective,
     developmentBreadth,
@@ -127,8 +128,9 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       // unchanged, exactly as relationalContext and repairDirective are:
       // this provider never measures or reinterprets breadth itself.
       developmentBreadth,
+      comparisonCoverage,
     );
-    const maxAttempts = config.retryAttempts + 1;
+    const maxAttempts = comparisonCoverage?.length ? 1 : config.retryAttempts + 1;
     const startedAt = Date.now();
 
     let lastError: OpenAiAnalysisError | undefined;

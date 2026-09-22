@@ -30,8 +30,8 @@
  * disagree about is exactly what RSC-1 refused to aggregate over.
  *
  * PRODUCT_GOVERNED — no external standard defines the region the product means,
- * so the Product Owner declares the membership and it lives here, explicitly.
- * This is the ONLY place a member list may be written, and every such entry
+ * so the Product Owner declares the membership. The lists now live in shared
+ * global-reach-regions.ts for map and source-pack accounting, and every entry
  * must say out loud that it is a product coverage decision rather than an
  * agreed geography.
  *
@@ -90,10 +90,7 @@ export interface DeclaredProductRegion {
  * membership. UN M49 has no 'Middle East'" — which is why this list is
  * product-governed and says so, rather than pretending to a standard.
  */
-const MIDDLE_EAST_MEMBERS: readonly string[] = [
-  'BHR', 'EGY', 'IRN', 'IRQ', 'ISR', 'JOR', 'KWT', 'LBN',
-  'OMN', 'PSE', 'QAT', 'SAU', 'SYR', 'TUR', 'ARE', 'YEM',
-];
+import { MIDDLE_EAST_MEMBERS, EAST_AFRICA_MEMBERS } from '@globalnews-ai/shared';
 
 /**
  * "Do NOT equate East Africa with EAC. For Alpha, define the GlobalNews AI East
@@ -104,9 +101,6 @@ const MIDDLE_EAST_MEMBERS: readonly string[] = [
  * is deliberately NOT any one of the five attributed definitions in
  * `east-africa.tranche.ts` — it is the product's own monitoring baseline.
  */
-const EAST_AFRICA_MEMBERS: readonly string[] = [
-  'BDI', 'COD', 'DJI', 'ERI', 'ETH', 'KEN', 'RWA', 'SOM', 'SSD', 'TZA', 'UGA',
-];
 
 export const DECLARED_PRODUCT_REGIONS: readonly DeclaredProductRegion[] = [
   {

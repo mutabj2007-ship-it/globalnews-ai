@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "country": "EGY",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "ar",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:egy:ahram",
+      "country": "EGY",
+      "language": "en",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "ahram",
+        "name": "Al-Ahram — Ahram Online",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "english.ahram.org.eg",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSPAPER",
+      "endpoint": {
+        "url": "https://english.ahram.org.eg/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://english.ahram.org.eg/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "English masthead and Egypt/business sections observed."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://english.ahram.org.eg/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the EGY source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "English masthead and Egypt/business sections observed. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:egy:almasry",
+      "country": "EGY",
+      "language": "ar",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "almasry",
+        "name": "Al-Masry Al-Youm",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.almasryalyoum.com",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWSPAPER",
+      "endpoint": {
+        "url": "https://www.almasryalyoum.com/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.almasryalyoum.com/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Arabic publisher homepage and news listing observed."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.almasryalyoum.com/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the EGY source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Arabic publisher homepage and news listing observed. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:egy:capmas",
+      "country": "EGY",
+      "language": "ar",
+      "languageStatus": "indexed",
+      "publisher": {
+        "id": "capmas",
+        "name": "Central Agency for Public Mobilization and Statistics",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "capmas.gov.eg",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://capmas.gov.eg/HomePage.aspx",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://capmas.gov.eg/HomePage.aspx",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "limited_content",
+          "note": "Only title returned directly; indexed Arabic statistical catalogue available."
+        },
+        {
+          "url": "https://capmas.gov.eg/HomePage.aspx",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Indexed Arabic statistical releases and indicators; limited direct extraction."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://capmas.gov.eg/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Only title returned directly; indexed Arabic statistical catalogue available. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "Additional Arabic community/subnational reporting and edition-specific feeds remain open."
+  ]
+}

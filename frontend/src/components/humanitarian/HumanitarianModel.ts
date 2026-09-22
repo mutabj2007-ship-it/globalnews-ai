@@ -114,3 +114,16 @@ export const HUM_VIEWS: Readonly<Record<HumFrameState, HumSituationView>> = {
  * made of nothing, which is exactly what §1 says this surface is not.
  */
 export const HUM_QUEUE_ROWS: readonly never[] = [];
+
+/** Runtime scope is unknown. Design specimen jurisdictions and standing claims are not evidence. */
+export function humanitarianUnassessedView(frame: HumFrameState): HumSituationView {
+  return {
+    ...HUM_VIEWS[frame],
+    jurisdiction: 'Humanitarian Intelligence',
+    region: '—',
+    title: frame === 'QUIET' ? titleFromChangeState() : statedTitle('—'),
+    precision: precisionFloor('COUNTRY'),
+    evidence: evidenceUnavailable('NO_VALIDATED_BASELINE'),
+    access: [accessNotAssessed(area('—', 'COUNTRY'), 'NO_LOCAL_EVIDENCE_IN_PERIOD')],
+  };
+}

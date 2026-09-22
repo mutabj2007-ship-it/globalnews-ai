@@ -1,3 +1,4 @@
+import { readHumanitarianObservations } from '@/lib/humanitarian/humanitarianRead';
 import type { JSX } from 'react';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
@@ -65,7 +66,8 @@ function humLocale(): HumLocale {
   return SELECTABLE_LOCALES.find((l) => l === language) ?? 'en';
 }
 
-export default function HumanitarianPage(): JSX.Element {
+export default async function HumanitarianPage(): Promise<JSX.Element> {
+  const retainedRead = await readHumanitarianObservations();
   /*
     Humanitarian carries dense chrome and running prose in the same frame, exactly as
     Economy does, so `wrapping` is the step that satisfies both leading minimums.
@@ -80,7 +82,7 @@ export default function HumanitarianPage(): JSX.Element {
         shell unusable at any locale was exactly its absence.
       */}
       <NavBar language={humLanguage()} />
-      <HumanitarianScreen locale={humLocale()} />
+      <HumanitarianScreen locale={humLocale()} retainedRead={retainedRead} />
       <Footer language={humLanguage()} />
     </ScriptRun>
   );

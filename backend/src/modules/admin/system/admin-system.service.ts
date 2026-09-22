@@ -56,11 +56,20 @@ export class AdminSystemService {
     private readonly config: ConfigService,
   ) {}
 
-  async health(): Promise<AdminSystemHealthResponse> {
+  async health(options: { skipProviderProbes?: boolean } = {}): Promise<AdminSystemHealthResponse> {
     const now = (): string => new Date().toISOString();
 
     const database = await this.probeDatabase(now);
-    const newsProvider = await this.probeNewsProviders(now);
+    // Admin GETs must not enter the legacy health fan-out (GNews may acquire).
+    // No passive snapshot is available here; unknown is truthful.
+    const newsProvider: AdminComponentProbe = options.skipProviderProbes
+      ? {
+          component: 'NEWS_PROVIDER',
+          status: 'UNKNOWN',
+          lastProbeAt: null,
+          detail: 'no-probe-configured',
+        }
+      : await this.probeNewsProviders(now);
     const authentication = this.probeAuthentication(now);
     const aiProvider = this.probeAiProvider(now);
     const ingestion = await this.readIngestionLiveness();

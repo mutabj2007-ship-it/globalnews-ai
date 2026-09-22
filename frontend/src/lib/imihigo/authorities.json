@@ -1,0 +1,9 @@
+[
+  {
+    "sha256": "fb858beb954de5912a737f05d27a65ddea4c7ba97c782dca26019f1e6847b0af",
+    "contentHash": "478fb97bc191c526fdfb54a828d836c2aeeacf0fdba29ad579ec68cb5478a472",
+    "sourceUrl": "https://statistics.gov.rw/sites/default/files/documents/2026-03/Imihigo%202024~2025.pdf",
+    "documentId": "nisr-imihigo-2024-2025-final",
+    "parser": "imihigo-nisr-exact-source/1.0"
+  }
+]

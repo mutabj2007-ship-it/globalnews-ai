@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "country": "PSE",
+  "status": "DORMANT_RESEARCH",
+  "enabled": false,
+  "languageTargets": [
+    "ar",
+    "en"
+  ],
+  "sources": [
+    {
+      "id": "me-r1:pse:wafa",
+      "country": "PSE",
+      "language": "ar",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "wafa",
+        "name": "Palestine News and Information Agency (WAFA)",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.wafa.ps",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://www.wafa.ps/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.wafa.ps/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "Arabic agency page observed; links to English/Hebrew/French editions do not add independent publishers."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.wafa.ps/robots.txt",
+        "status": "FETCH_FAILED",
+        "checkedOn": "2026-09-22",
+        "note": "Targeted robots.txt open failed in the research tool; directives unknown, not permissive."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the PSE source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Arabic agency page observed; links to English/Hebrew/French editions do not add independent publishers. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:pse:maan",
+      "country": "PSE",
+      "language": "ar",
+      "languageStatus": "indexed",
+      "publisher": {
+        "id": "maan",
+        "name": "Ma'an News Agency / Ma'an Network",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.maannews.net",
+      "sourceType": "NEWS_PROVIDER",
+      "sourceKind": "NEWS_AGENCY",
+      "endpoint": {
+        "url": "https://www.maannews.net/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.maannews.net/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "retrieval_failed",
+          "note": "Direct open failed; indexed Arabic homepage/about page available. /eng/ search result was Arabic; English not verified."
+        },
+        {
+          "url": "https://www.maannews.net/about",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Publisher identifies network and Bethlehem/Gaza offices; present operational reach not established."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.maannews.net/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-facing publisher candidate in the PSE source environment; this assignment does not assert current headquarters, ownership independence or universal reach."
+      },
+      "accessLimitation": "Direct open failed; indexed Arabic homepage/about page available. /eng/ search result was Arabic; English not verified. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:pse:pcbs",
+      "country": "PSE",
+      "language": "en",
+      "languageStatus": "indexed",
+      "publisher": {
+        "id": "pcbs",
+        "name": "Palestinian Central Bureau of Statistics",
+        "identityStatus": "indexed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.pcbs.gov.ps",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "STATISTICS_OFFICE",
+      "endpoint": {
+        "url": "https://www.pcbs.gov.ps/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.pcbs.gov.ps/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "retrieval_failed",
+          "note": "Direct www-host open failed; indexed institutional pages show statistics with differing geographic scopes."
+        },
+        {
+          "url": "https://www.pcbs.gov.ps/en/reference/the-open-data-inventory-odin/",
+          "method": "web_search",
+          "checkedOn": "2026-09-22",
+          "outcome": "index_observed",
+          "note": "Indexed English PCBS indicators and geographic limitations; no completeness claim."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.pcbs.gov.ps/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "LOCAL",
+        "note": "Country-specific institutional publication candidate; geographic remit must be checked per release."
+      },
+      "accessLimitation": "Direct www-host open failed; indexed institutional pages show statistics with differing geographic scopes. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    },
+    {
+      "id": "me-r1:pse:ocha-opt",
+      "country": "PSE",
+      "language": "en",
+      "languageStatus": "observed",
+      "publisher": {
+        "id": "ocha-opt",
+        "name": "United Nations OCHA — occupied Palestinian territory",
+        "identityStatus": "page_observed",
+        "ownershipReview": "NOT_REVIEWED"
+      },
+      "canonicalHost": "www.ochaopt.org",
+      "sourceType": "OFFICIAL_SOURCE",
+      "sourceKind": "HUMANITARIAN_ORGANIZATION",
+      "endpoint": {
+        "url": "https://www.ochaopt.org/",
+        "kind": "LANDING_PAGE",
+        "feedUrl": null,
+        "feedStatus": "NOT_VERIFIED",
+        "machineIngestionReady": false
+      },
+      "verificationEvidence": [
+        {
+          "url": "https://www.ochaopt.org/",
+          "method": "web_open",
+          "checkedOn": "2026-09-22",
+          "outcome": "page_observed",
+          "note": "UN OCHA territorial office and humanitarian reporting observed; international institutional vantage."
+        }
+      ],
+      "rights": {
+        "status": "NOT_REVIEWED",
+        "binding": null,
+        "instrumentUrl": null,
+        "note": "Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+      },
+      "robots": {
+        "url": "https://www.ochaopt.org/robots.txt",
+        "status": "NOT_CHECKED",
+        "checkedOn": null,
+        "note": "Review the exact agent and endpoint before acquisition; no permission inferred."
+      },
+      "localInternationalBasis": {
+        "scope": "INTERNATIONAL",
+        "note": "UN humanitarian institution reporting about this country scope; not local journalistic corroboration."
+      },
+      "accessLimitation": "UN OCHA territorial office and humanitarian reporting observed; international institutional vantage. Production-path, regional availability, authentication and paywall audit not completed.",
+      "enabled": false
+    }
+  ],
+  "gaps": [
+    "Ma'an and PCBS direct access failed; English local newsroom edition remains unverified.",
+    "Gaza/West Bank reporting reach and interruptions must be disclosed separately; no full territorial coverage claim.",
+    "OCHA supplements institutional context and cannot replace Palestinian local reporting."
+  ]
+}

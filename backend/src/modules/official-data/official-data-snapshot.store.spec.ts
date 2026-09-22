@@ -1326,7 +1326,7 @@ describe('E1-E · there is no Market-specific snapshot architecture', () => {
 
   const marketSources = (): Array<[string, string]> =>
     readdirSync(marketDir)
-      .filter((f) => f.endsWith('.ts'))
+      .filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts'))
       .map(
         (f) =>
           [
@@ -1338,7 +1338,7 @@ describe('E1-E · there is no Market-specific snapshot architecture', () => {
       );
 
   it('Market declares no snapshot store, payload table or content-address helper', () => {
-    for (const [name, src] of marketSources()) {
+    for (const [name, src] of marketSources().filter(([name]) => !name.endsWith('.spec.ts'))) {
       for (const forbidden of [
         'MarketSnapshot',
         'MarketPayload',
@@ -1352,8 +1352,22 @@ describe('E1-E · there is no Market-specific snapshot architecture', () => {
   });
 
   it('and it holds no bytes of its own — no Bytes column, no Buffer storage', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const marketModels = schema.match(/model Market\w* \{[\s\S]*?^\}/gm) ?? [];
+    expect(marketModels.length).toBeGreaterThan(0);
+    for (const model of marketModels) expect(model).not.toMatch(/\bBytes\b/);
     for (const [name, src] of marketSources()) {
-      expect([name, /Bytes\b|Buffer\.from\(.*body|payloadBytes/i.test(src)]).toEqual([name, false]);
+      // Reading the canonical retained payload for digest validation is allowed.
+      // A Market-owned payload writer or second byte store is not.
+      expect([
+        name,
+        /snapshotPayload\.(?:create|upsert|update|delete)|Buffer\.from\(.*body|payloadBytes/i.test(
+          src,
+        ),
+      ]).toEqual([name, false]);
     }
   });
 

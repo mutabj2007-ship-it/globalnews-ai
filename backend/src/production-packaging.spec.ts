@@ -1,5 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 
@@ -146,7 +154,11 @@ describe('2 · THE GATE FAILS ON THE CONFIGURATION THAT SHIPPED THE DEFECT', () 
     const root = join(scratch, name);
 
     mkdirSync(root, { recursive: true });
-    symlinkSync(join(BACKEND_DIR, 'src'), join(root, 'src'), 'dir');
+    symlinkSync(
+      join(BACKEND_DIR, 'src'),
+      join(root, 'src'),
+      process.platform === 'win32' ? 'junction' : 'dir',
+    );
     writeFileSync(join(root, 'nest-cli.json'), JSON.stringify(config, null, 2));
 
     return root;

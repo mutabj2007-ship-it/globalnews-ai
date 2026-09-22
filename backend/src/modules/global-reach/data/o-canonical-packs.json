@@ -1,0 +1,1736 @@
+[
+  {
+    "schemaVersion": 1,
+    "iso2": "AE",
+    "iso3": "ARE",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"WAM Arabic returned no readable content; further Arabic local newsroom coverage needed.\",\"Migrant-community language reporting not covered by this initial pack.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/ARE.json\",\"manifestSha256\":\"f6b6157c826cea1bd623bcc0db23a0c7c3c790fa0a7a3aeda1a1292190689fa1\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:are:wam",
+        "publisherName": "Emirates News Agency (WAM)",
+        "iso2": "AE",
+        "iso3": "ARE",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "wam.ae",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/ARE.json\",\"manifestSha256\":\"f6b6157c826cea1bd623bcc0db23a0c7c3c790fa0a7a3aeda1a1292190689fa1\",\"originalSourceId\":\"me-r1:are:wam\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:are:wam\",\"country\":\"ARE\",\"language\":\"ar\",\"languageStatus\":\"candidate\",\"publisher\":{\"id\":\"wam\",\"name\":\"Emirates News Agency (WAM)\",\"identityStatus\":\"candidate\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.wam.ae\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.wam.ae/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.wam.ae/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"limited_content\",\"note\":\"Title returned with zero lines; Arabic edition is a candidate, not verified content.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.wam.ae/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the ARE source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Title returned with zero lines; Arabic edition is a candidate, not verified content. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:are:national",
+        "publisherName": "The National",
+        "iso2": "AE",
+        "iso3": "ARE",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "thenationalnews.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/ARE.json\",\"manifestSha256\":\"f6b6157c826cea1bd623bcc0db23a0c7c3c790fa0a7a3aeda1a1292190689fa1\",\"originalSourceId\":\"me-r1:are:national\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:are:national\",\"country\":\"ARE\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"national\",\"name\":\"The National\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.thenationalnews.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSPAPER\",\"endpoint\":{\"url\":\"https://www.thenationalnews.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.thenationalnews.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English publisher homepage observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.thenationalnews.com/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the ARE source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"English publisher homepage observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:are:fcsc",
+        "publisherName": "Federal Competitiveness and Statistics Centre",
+        "iso2": "AE",
+        "iso3": "ARE",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "fcsc.gov.ae",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/ARE.json\",\"manifestSha256\":\"f6b6157c826cea1bd623bcc0db23a0c7c3c790fa0a7a3aeda1a1292190689fa1\",\"originalSourceId\":\"me-r1:are:fcsc\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:are:fcsc\",\"country\":\"ARE\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"fcsc\",\"name\":\"Federal Competitiveness and Statistics Centre\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"fcsc.gov.ae\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://fcsc.gov.ae/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://fcsc.gov.ae/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English institutional page identifies UAE statistics and competitiveness data; index crawl age two months.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://fcsc.gov.ae/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"English institutional page identifies UAE statistics and competitiveness data; index crawl age two months. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "BH",
+    "iso3": "BHR",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"BNA Arabic access and GDN English access remain unverified.\",\"Seek additional country-local newsroom coverage; publisher ownership relationships are not audited.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/BHR.json\",\"manifestSha256\":\"9772b484ee9857ca3914a4bc364a5efc801310c8f8a56532885d79c405d2e8b5\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:bhr:bna",
+        "publisherName": "Bahrain News Agency",
+        "iso2": "BH",
+        "iso3": "BHR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "bna.bh",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/BHR.json\",\"manifestSha256\":\"9772b484ee9857ca3914a4bc364a5efc801310c8f8a56532885d79c405d2e8b5\",\"originalSourceId\":\"me-r1:bhr:bna\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:bhr:bna\",\"country\":\"BHR\",\"language\":\"ar\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"bna\",\"name\":\"Bahrain News Agency\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.bna.bh\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.bna.bh/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.bna.bh/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"405 Method Not Allowed; content not verified.\"},{\"url\":\"https://beta.bna.bh/article/XVvz1ECl5ogMvbd2\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed Arabic BNA article provides Bahrain local-coverage evidence; subdomain does not validate root access.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.bna.bh/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the BHR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"405 Method Not Allowed; content not verified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:bhr:gdn",
+        "publisherName": "Gulf Daily News / GDN Online",
+        "iso2": "BH",
+        "iso3": "BHR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "gdnonline.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/BHR.json\",\"manifestSha256\":\"9772b484ee9857ca3914a4bc364a5efc801310c8f8a56532885d79c405d2e8b5\",\"originalSourceId\":\"me-r1:bhr:gdn\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:bhr:gdn\",\"country\":\"BHR\",\"language\":\"en\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"gdn\",\"name\":\"Gulf Daily News / GDN Online\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.gdnonline.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSPAPER\",\"endpoint\":{\"url\":\"https://www.gdnonline.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.gdnonline.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Homepage timeout; indexed publisher material identifies Bahrain coverage.\"},{\"url\":\"https://www.gdnonline.com/Login/92512\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed English publisher description identifies Gulf Daily News and local/regional input; login URL suggests an access gate.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.gdnonline.com/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the BHR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Homepage timeout; indexed publisher material identifies Bahrain coverage. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:bhr:iga",
+        "publisherName": "Information & eGovernment Authority — Statistics & Population",
+        "iso2": "BH",
+        "iso3": "BHR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "iga.gov.bh",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/BHR.json\",\"manifestSha256\":\"9772b484ee9857ca3914a4bc364a5efc801310c8f8a56532885d79c405d2e8b5\",\"originalSourceId\":\"me-r1:bhr:iga\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:bhr:iga\",\"country\":\"BHR\",\"language\":\"en\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"iga\",\"name\":\"Information & eGovernment Authority — Statistics & Population\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"iga.gov.bh\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://iga.gov.bh/en/article/statistics-and-population\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://iga.gov.bh/en/article/statistics-and-population\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"403 on direct open; indexed institutional description available.\"},{\"url\":\"https://iga.gov.bh/en/article/statistics-and-population\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed statistics/open-data responsibilities; no rights grade inferred.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://iga.gov.bh/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"403 on direct open; indexed institutional description available. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "EG",
+    "iso3": "EGY",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"Additional Arabic community/subnational reporting and edition-specific feeds remain open.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/EGY.json\",\"manifestSha256\":\"2fc46f1136c39b990dcfe17cef17e4b0670134f823bc3cdaf77d71baf2364a38\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:egy:ahram",
+        "publisherName": "Al-Ahram — Ahram Online",
+        "iso2": "EG",
+        "iso3": "EGY",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "english.ahram.org.eg",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/EGY.json\",\"manifestSha256\":\"2fc46f1136c39b990dcfe17cef17e4b0670134f823bc3cdaf77d71baf2364a38\",\"originalSourceId\":\"me-r1:egy:ahram\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:egy:ahram\",\"country\":\"EGY\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"ahram\",\"name\":\"Al-Ahram — Ahram Online\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"english.ahram.org.eg\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSPAPER\",\"endpoint\":{\"url\":\"https://english.ahram.org.eg/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://english.ahram.org.eg/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English masthead and Egypt/business sections observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://english.ahram.org.eg/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the EGY source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"English masthead and Egypt/business sections observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:egy:almasry",
+        "publisherName": "Al-Masry Al-Youm",
+        "iso2": "EG",
+        "iso3": "EGY",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "almasryalyoum.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/EGY.json\",\"manifestSha256\":\"2fc46f1136c39b990dcfe17cef17e4b0670134f823bc3cdaf77d71baf2364a38\",\"originalSourceId\":\"me-r1:egy:almasry\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:egy:almasry\",\"country\":\"EGY\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"almasry\",\"name\":\"Al-Masry Al-Youm\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.almasryalyoum.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSPAPER\",\"endpoint\":{\"url\":\"https://www.almasryalyoum.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.almasryalyoum.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic publisher homepage and news listing observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.almasryalyoum.com/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the EGY source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic publisher homepage and news listing observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:egy:capmas",
+        "publisherName": "Central Agency for Public Mobilization and Statistics",
+        "iso2": "EG",
+        "iso3": "EGY",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "capmas.gov.eg",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/EGY.json\",\"manifestSha256\":\"2fc46f1136c39b990dcfe17cef17e4b0670134f823bc3cdaf77d71baf2364a38\",\"originalSourceId\":\"me-r1:egy:capmas\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:egy:capmas\",\"country\":\"EGY\",\"language\":\"ar\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"capmas\",\"name\":\"Central Agency for Public Mobilization and Statistics\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"capmas.gov.eg\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://capmas.gov.eg/HomePage.aspx\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://capmas.gov.eg/HomePage.aspx\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"limited_content\",\"note\":\"Only title returned directly; indexed Arabic statistical catalogue available.\"},{\"url\":\"https://capmas.gov.eg/HomePage.aspx\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed Arabic statistical releases and indicators; limited direct extraction.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://capmas.gov.eg/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Only title returned directly; indexed Arabic statistical catalogue available. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "IR",
+    "iso3": "IRN",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"IRNA root is a transfer page; SCI current host/service remains unverified.\",\"BBC Persian is an international candidate blocked in this research environment; no bypass.\",\"English and minority-language local reporting remain gaps.\"],\"languageTargets\":[\"fa\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/IRN.json\",\"manifestSha256\":\"67b0cf026a53cc4f25a0c39ad119a06a19e1c51b89f7eebfc6f8e39cbdab7c27\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:irn:irna",
+        "publisherName": "Islamic Republic News Agency (IRNA)",
+        "iso2": "IR",
+        "iso3": "IRN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "irna.ir",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/IRN.json\",\"manifestSha256\":\"67b0cf026a53cc4f25a0c39ad119a06a19e1c51b89f7eebfc6f8e39cbdab7c27\",\"originalSourceId\":\"me-r1:irn:irna\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:irn:irna\",\"country\":\"IRN\",\"language\":\"fa\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"irna\",\"name\":\"Islamic Republic News Agency (IRNA)\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.irna.ir\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.irna.ir/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.irna.ir/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"limited_content\",\"note\":\"Only transfer screen returned; endpoint content not verified.\"},{\"url\":\"https://www2.irna.ir/service/foreignpolicy\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed Persian IRNA content on another subdomain; not approval to change canonical host.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.irna.ir/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the IRN source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Only transfer screen returned; endpoint content not verified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:irn:isna",
+        "publisherName": "Iranian Students' News Agency (ISNA)",
+        "iso2": "IR",
+        "iso3": "IRN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "isna.ir",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "fa"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/IRN.json\",\"manifestSha256\":\"67b0cf026a53cc4f25a0c39ad119a06a19e1c51b89f7eebfc6f8e39cbdab7c27\",\"originalSourceId\":\"me-r1:irn:isna\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:irn:isna\",\"country\":\"IRN\",\"language\":\"fa\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"isna\",\"name\":\"Iranian Students' News Agency (ISNA)\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.isna.ir\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.isna.ir/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.isna.ir/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Persian publisher masthead and news listing observed. RSS text search had no match; this does not prove absence.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.isna.ir/robots.txt\",\"status\":\"FETCH_FAILED\",\"checkedOn\":\"2026-09-22\",\"note\":\"Targeted robots.txt open failed in the research tool; directives unknown, not permissive.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the IRN source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Persian publisher masthead and news listing observed. RSS text search had no match; this does not prove absence. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:irn:bbc-persian",
+        "publisherName": "BBC — Persian service",
+        "iso2": "IR",
+        "iso3": "IRN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "bbc.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "INTERNATIONAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/IRN.json\",\"manifestSha256\":\"67b0cf026a53cc4f25a0c39ad119a06a19e1c51b89f7eebfc6f8e39cbdab7c27\",\"originalSourceId\":\"me-r1:irn:bbc-persian\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:irn:bbc-persian\",\"country\":\"IRN\",\"language\":\"fa\",\"languageStatus\":\"candidate\",\"publisher\":{\"id\":\"bbc-persian\",\"name\":\"BBC — Persian service\",\"identityStatus\":\"candidate\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.bbc.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"BROADCASTER\",\"endpoint\":{\"url\":\"https://www.bbc.com/persian\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.bbc.com/persian\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Open failed; subsequent search reported BBC domains blocked by robots.txt. Accessible edition not verified.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.bbc.com/robots.txt\",\"status\":\"RESEARCH_TOOL_BLOCKED\",\"checkedOn\":\"2026-09-22\",\"note\":\"Search tool explicitly reported BBC domains blocked by robots.txt; exact agent directives not inspected. Do not bypass.\"},\"localInternationalBasis\":{\"scope\":\"INTERNATIONAL\",\"note\":\"External Persian-language service candidate addressing Iranian audiences; not an Iranian domestic newsroom.\"},\"accessLimitation\":\"Open failed; subsequent search reported BBC domains blocked by robots.txt. Accessible edition not verified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:irn:sci",
+        "publisherName": "Statistical Centre of Iran",
+        "iso2": "IR",
+        "iso3": "IRN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "amar.org.ir",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/IRN.json\",\"manifestSha256\":\"67b0cf026a53cc4f25a0c39ad119a06a19e1c51b89f7eebfc6f8e39cbdab7c27\",\"originalSourceId\":\"me-r1:irn:sci\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:irn:sci\",\"country\":\"IRN\",\"language\":\"fa\",\"languageStatus\":\"candidate\",\"publisher\":{\"id\":\"sci\",\"name\":\"Statistical Centre of Iran\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.amar.org.ir\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://www.amar.org.ir/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.amar.org.ir/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Open failed. Historical UN-hosted census document identifies institution and host; current service unverified.\"},{\"url\":\"https://unstats.un.org/unsd/demographic-social/census/documents/Iran/Iran-2011-Census-Results.pdf\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Historical primary census document identifies SCI and amar.org.ir; current service and Persian edition unverified.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.amar.org.ir/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Open failed. Historical UN-hosted census document identifies institution and host; current service unverified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "IQ",
+    "iso3": "IRQ",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"Arabic INA and statistics roots could not be read directly.\",\"Kurdish, including Sorani, endpoints need verification; English Rudaw does not fill this gap.\",\"Subnational reach outside the observed publisher environments remains unmeasured.\"],\"languageTargets\":[\"ar\",\"ckb\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/IRQ.json\",\"manifestSha256\":\"868088987508d6c2f4cf69aa4e266245d212c68b3ebec4f2241979049e881684\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:irq:ina",
+        "publisherName": "Iraqi News Agency (INA / واع)",
+        "iso2": "IQ",
+        "iso3": "IRQ",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "ina.iq",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/IRQ.json\",\"manifestSha256\":\"868088987508d6c2f4cf69aa4e266245d212c68b3ebec4f2241979049e881684\",\"originalSourceId\":\"me-r1:irq:ina\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:irq:ina\",\"country\":\"IRQ\",\"language\":\"ar\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"ina\",\"name\":\"Iraqi News Agency (INA / واع)\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"ina.iq\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://ina.iq/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://ina.iq/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"403 on direct open; indexed Arabic edition available.\"},{\"url\":\"https://ina.iq/ar/\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed Arabic INA news listing; not live endpoint validation.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://ina.iq/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the IRQ source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"403 on direct open; indexed Arabic edition available. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:irq:rudaw",
+        "publisherName": "Rudaw",
+        "iso2": "IQ",
+        "iso3": "IRQ",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "rudaw.net",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/IRQ.json\",\"manifestSha256\":\"868088987508d6c2f4cf69aa4e266245d212c68b3ebec4f2241979049e881684\",\"originalSourceId\":\"me-r1:irq:rudaw\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:irq:rudaw\",\"country\":\"IRQ\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"rudaw\",\"name\":\"Rudaw\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.rudaw.net\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSROOM\",\"endpoint\":{\"url\":\"https://www.rudaw.net/english\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.rudaw.net/english\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English edition includes Kurdistan, Iraq and economy sections; preserve separately from INA.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.rudaw.net/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the IRQ source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"English edition includes Kurdistan, Iraq and economy sections; preserve separately from INA. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:irq:cosit",
+        "publisherName": "Statistics and Geographic Information Systems Authority",
+        "iso2": "IQ",
+        "iso3": "IRQ",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "cosit.gov.iq",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/IRQ.json\",\"manifestSha256\":\"868088987508d6c2f4cf69aa4e266245d212c68b3ebec4f2241979049e881684\",\"originalSourceId\":\"me-r1:irq:cosit\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:irq:cosit\",\"country\":\"IRQ\",\"language\":\"ar\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"cosit\",\"name\":\"Statistics and Geographic Information Systems Authority\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"cosit.gov.iq\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://cosit.gov.iq/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://cosit.gov.iq/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Root open failed; indexed www-host Arabic page identifies current authority.\"},{\"url\":\"https://www.cosit.gov.iq/ar/\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed Arabic page identifies Statistics and Geographic Information Systems Authority.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://cosit.gov.iq/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Root open failed; indexed www-host Arabic page identifies current authority. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "IL",
+    "iso3": "ISR",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"Arabic-language Israeli publisher coverage remains a gap; PSE sources are not substitutes.\",\"CBS rendered unresolved templates; validate releases and geographic scope separately.\"],\"languageTargets\":[\"he\",\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/ISR.json\",\"manifestSha256\":\"5373aaa01be48260e3e68dd56e5d8e8c1dc010d6334a273f5b3e25ba037b27d3\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:isr:ynet",
+        "publisherName": "Ynet",
+        "iso2": "IL",
+        "iso3": "ISR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "ynet.co.il",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "he"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/ISR.json\",\"manifestSha256\":\"5373aaa01be48260e3e68dd56e5d8e8c1dc010d6334a273f5b3e25ba037b27d3\",\"originalSourceId\":\"me-r1:isr:ynet\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:isr:ynet\",\"country\":\"ISR\",\"language\":\"he\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"ynet\",\"name\":\"Ynet\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.ynet.co.il\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSROOM\",\"endpoint\":{\"url\":\"https://www.ynet.co.il/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.ynet.co.il/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Hebrew homepage observed; redirect to /home/0,7340,L-8,00.html. RSS text search had no match.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.ynet.co.il/robots.txt\",\"status\":\"FETCH_FAILED\",\"checkedOn\":\"2026-09-22\",\"note\":\"Targeted robots.txt open failed in the research tool; directives unknown, not permissive.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the ISR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Hebrew homepage observed; redirect to /home/0,7340,L-8,00.html. RSS text search had no match. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:isr:toi",
+        "publisherName": "The Times of Israel",
+        "iso2": "IL",
+        "iso3": "ISR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "timesofisrael.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/ISR.json\",\"manifestSha256\":\"5373aaa01be48260e3e68dd56e5d8e8c1dc010d6334a273f5b3e25ba037b27d3\",\"originalSourceId\":\"me-r1:isr:toi\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:isr:toi\",\"country\":\"ISR\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"toi\",\"name\":\"The Times of Israel\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.timesofisrael.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSROOM\",\"endpoint\":{\"url\":\"https://www.timesofisrael.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.timesofisrael.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English homepage observed. Separate robots check shows restrictions on common feed paths.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.timesofisrael.com/robots.txt\",\"status\":\"RESTRICTIONS_OBSERVED\",\"checkedOn\":\"2026-09-22\",\"note\":\"Wildcard directives disallow /feed/ and /rss-feed/ among other paths, with restrictions for named agents. Not a full production-agent determination or a reuse licence.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the ISR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"English homepage observed. Separate robots check shows restrictions on common feed paths. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:isr:cbs",
+        "publisherName": "Central Bureau of Statistics (Israel)",
+        "iso2": "IL",
+        "iso3": "ISR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "cbs.gov.il",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/ISR.json\",\"manifestSha256\":\"5373aaa01be48260e3e68dd56e5d8e8c1dc010d6334a273f5b3e25ba037b27d3\",\"originalSourceId\":\"me-r1:isr:cbs\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:isr:cbs\",\"country\":\"ISR\",\"language\":\"en\",\"languageStatus\":\"candidate\",\"publisher\":{\"id\":\"cbs\",\"name\":\"Central Bureau of Statistics (Israel)\",\"identityStatus\":\"candidate\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.cbs.gov.il\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://www.cbs.gov.il/en/Pages/default.aspx\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.cbs.gov.il/en/Pages/default.aspx\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"limited_content\",\"note\":\"Unresolved application templates plus English/Hebrew notices; current statistical releases not verified.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.cbs.gov.il/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Unresolved application templates plus English/Hebrew notices; current statistical releases not verified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "JO",
+    "iso3": "JOR",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"Jordan Times and statistics root access need follow-up; additional Arabic local reporting remains open.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/JOR.json\",\"manifestSha256\":\"276a69ef76f820ca6ead1c291bb0802ec9e96592f5e7ff324b6962e867b25522\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:jor:petra",
+        "publisherName": "Jordan News Agency (Petra)",
+        "iso2": "JO",
+        "iso3": "JOR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "petra.gov.jo",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/JOR.json\",\"manifestSha256\":\"276a69ef76f820ca6ead1c291bb0802ec9e96592f5e7ff324b6962e867b25522\",\"originalSourceId\":\"me-r1:jor:petra\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:jor:petra\",\"country\":\"JOR\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"petra\",\"name\":\"Jordan News Agency (Petra)\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"petra.gov.jo\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://petra.gov.jo/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://petra.gov.jo/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic agency page observed; redirect to /ar.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://petra.gov.jo/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the JOR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic agency page observed; redirect to /ar. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:jor:jordan-times",
+        "publisherName": "The Jordan Times / Jordan Press Foundation",
+        "iso2": "JO",
+        "iso3": "JOR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "jordantimes.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/JOR.json\",\"manifestSha256\":\"276a69ef76f820ca6ead1c291bb0802ec9e96592f5e7ff324b6962e867b25522\",\"originalSourceId\":\"me-r1:jor:jordan-times\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:jor:jordan-times\",\"country\":\"JOR\",\"language\":\"en\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"jordan-times\",\"name\":\"The Jordan Times / Jordan Press Foundation\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"jordantimes.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSPAPER\",\"endpoint\":{\"url\":\"https://jordantimes.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://jordantimes.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Homepage open failed; indexed publisher about page identifies English daily and Jordan Press Foundation.\"},{\"url\":\"https://jordantimes.com/static/about-us\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Publisher identifies English daily and Jordan Press Foundation; self-description is not an independence assessment.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://jordantimes.com/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the JOR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Homepage open failed; indexed publisher about page identifies English daily and Jordan Press Foundation. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:jor:dos",
+        "publisherName": "Department of Statistics (Jordan)",
+        "iso2": "JO",
+        "iso3": "JOR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "dosweb.dos.gov.jo",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/JOR.json\",\"manifestSha256\":\"276a69ef76f820ca6ead1c291bb0802ec9e96592f5e7ff324b6962e867b25522\",\"originalSourceId\":\"me-r1:jor:dos\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:jor:dos\",\"country\":\"JOR\",\"language\":\"en\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"dos\",\"name\":\"Department of Statistics (Jordan)\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"dosweb.dos.gov.jo\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://dosweb.dos.gov.jo/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://dosweb.dos.gov.jo/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Homepage open failed; indexed population and national accounts pages available.\"},{\"url\":\"https://dosweb.dos.gov.jo/nationalaccount/annual-accounts/\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed English institutional description of annual national accounts.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://dosweb.dos.gov.jo/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Homepage open failed; indexed population and national accounts pages available. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "KW",
+    "iso3": "KWT",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"Arabic KUNA direct access timed out; additional Arabic newsroom coverage needed.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/KWT.json\",\"manifestSha256\":\"9f4f1a5b7194fabe872fe8d567799318011b72699a4fe54efa28dbfa3761030f\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:kwt:kuna",
+        "publisherName": "Kuwait News Agency (KUNA)",
+        "iso2": "KW",
+        "iso3": "KWT",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "kuna.net.kw",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/KWT.json\",\"manifestSha256\":\"9f4f1a5b7194fabe872fe8d567799318011b72699a4fe54efa28dbfa3761030f\",\"originalSourceId\":\"me-r1:kwt:kuna\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:kwt:kuna\",\"country\":\"KWT\",\"language\":\"ar\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"kuna\",\"name\":\"Kuwait News Agency (KUNA)\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.kuna.net.kw\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.kuna.net.kw/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.kuna.net.kw/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Direct open timed out; indexed Arabic publisher pages available. Query parameters alone do not prove language.\"},{\"url\":\"https://www.kuna.net.kw/?Language=ar&id=2424428\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed Arabic publisher content identifies KUNA.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.kuna.net.kw/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the KWT source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Direct open timed out; indexed Arabic publisher pages available. Query parameters alone do not prove language. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:kwt:kuwait-times",
+        "publisherName": "Kuwait Times",
+        "iso2": "KW",
+        "iso3": "KWT",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "kuwaittimes.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/KWT.json\",\"manifestSha256\":\"9f4f1a5b7194fabe872fe8d567799318011b72699a4fe54efa28dbfa3761030f\",\"originalSourceId\":\"me-r1:kwt:kuwait-times\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:kwt:kuwait-times\",\"country\":\"KWT\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"kuwait-times\",\"name\":\"Kuwait Times\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"kuwaittimes.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSPAPER\",\"endpoint\":{\"url\":\"https://kuwaittimes.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://kuwaittimes.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English homepage with Kuwait/business sections and copyright notice observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://kuwaittimes.com/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the KWT source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"English homepage with Kuwait/business sections and copyright notice observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:kwt:csb",
+        "publisherName": "Central Statistical Bureau (Kuwait)",
+        "iso2": "KW",
+        "iso3": "KWT",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "csb.gov.kw",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/KWT.json\",\"manifestSha256\":\"9f4f1a5b7194fabe872fe8d567799318011b72699a4fe54efa28dbfa3761030f\",\"originalSourceId\":\"me-r1:kwt:csb\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:kwt:csb\",\"country\":\"KWT\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"csb\",\"name\":\"Central Statistical Bureau (Kuwait)\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.csb.gov.kw\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://www.csb.gov.kw/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.csb.gov.kw/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic institutional homepage describes statistical work; English option not separately verified.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.csb.gov.kw/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Arabic institutional homepage describes statistical work; English option not separately verified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "LB",
+    "iso3": "LBN",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"French-language reporting is not represented by a verified edition.\",\"Local/subnational reach unmeasured; translations must not inflate publisher diversity.\"],\"languageTargets\":[\"ar\",\"fr\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/LBN.json\",\"manifestSha256\":\"2aa58d3b2f5a2bcbfc27a301633d9b4f4f2e99bc648466d50a01431c6fc6bced\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:lbn:nna",
+        "publisherName": "National News Agency (Lebanon)",
+        "iso2": "LB",
+        "iso3": "LBN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "nna-leb.gov.lb",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/LBN.json\",\"manifestSha256\":\"2aa58d3b2f5a2bcbfc27a301633d9b4f4f2e99bc648466d50a01431c6fc6bced\",\"originalSourceId\":\"me-r1:lbn:nna\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:lbn:nna\",\"country\":\"LBN\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"nna\",\"name\":\"National News Agency (Lebanon)\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.nna-leb.gov.lb\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.nna-leb.gov.lb/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.nna-leb.gov.lb/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic agency landing page observed; redirect to /ar; short extracted page.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.nna-leb.gov.lb/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the LBN source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic agency landing page observed; redirect to /ar; short extracted page. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:lbn:orient-today",
+        "publisherName": "L'Orient-Le Jour — L'Orient Today",
+        "iso2": "LB",
+        "iso3": "LBN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "today.lorientlejour.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/LBN.json\",\"manifestSha256\":\"2aa58d3b2f5a2bcbfc27a301633d9b4f4f2e99bc648466d50a01431c6fc6bced\",\"originalSourceId\":\"me-r1:lbn:orient-today\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:lbn:orient-today\",\"country\":\"LBN\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"orient-today\",\"name\":\"L'Orient-Le Jour — L'Orient Today\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"today.lorientlejour.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSPAPER\",\"endpoint\":{\"url\":\"https://today.lorientlejour.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://today.lorientlejour.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English edition observed; other editions are not independent publishers.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://today.lorientlejour.com/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the LBN source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"English edition observed; other editions are not independent publishers. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:lbn:cas",
+        "publisherName": "Central Administration of Statistics (Lebanon)",
+        "iso2": "LB",
+        "iso3": "LBN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "cas.gov.lb",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/LBN.json\",\"manifestSha256\":\"2aa58d3b2f5a2bcbfc27a301633d9b4f4f2e99bc648466d50a01431c6fc6bced\",\"originalSourceId\":\"me-r1:lbn:cas\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:lbn:cas\",\"country\":\"LBN\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"cas\",\"name\":\"Central Administration of Statistics (Lebanon)\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.cas.gov.lb\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://www.cas.gov.lb/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.cas.gov.lb/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Institutional masthead identifies Lebanese Republic and statistical office; national accounts and economic navigation observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.cas.gov.lb/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Institutional masthead identifies Lebanese Republic and statistical office; national accounts and economic navigation observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "OM",
+    "iso3": "OMN",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"Arabic ONA direct access failed; additional Arabic local reporting remains open.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/OMN.json\",\"manifestSha256\":\"d0eadaedfb5961d3a073445632de8b8235be4cf34421e2c5e9bec23bfbeb54c5\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:omn:ona",
+        "publisherName": "Oman News Agency",
+        "iso2": "OM",
+        "iso3": "OMN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "omannews.gov.om",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/OMN.json\",\"manifestSha256\":\"d0eadaedfb5961d3a073445632de8b8235be4cf34421e2c5e9bec23bfbeb54c5\",\"originalSourceId\":\"me-r1:omn:ona\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:omn:ona\",\"country\":\"OMN\",\"language\":\"ar\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"ona\",\"name\":\"Oman News Agency\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"omannews.gov.om\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://omannews.gov.om/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://omannews.gov.om/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Direct open failed; indexed Arabic Oman Today agency page available.\"},{\"url\":\"https://omannews.gov.om/topics/ar/3/page/309\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed Arabic Oman Today listing identifies Oman News Agency; crawl age about ten months.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://omannews.gov.om/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the OMN source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Direct open failed; indexed Arabic Oman Today agency page available. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:omn:times-oman",
+        "publisherName": "Times of Oman",
+        "iso2": "OM",
+        "iso3": "OMN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "timesofoman.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/OMN.json\",\"manifestSha256\":\"d0eadaedfb5961d3a073445632de8b8235be4cf34421e2c5e9bec23bfbeb54c5\",\"originalSourceId\":\"me-r1:omn:times-oman\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:omn:times-oman\",\"country\":\"OMN\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"times-oman\",\"name\":\"Times of Oman\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"timesofoman.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSPAPER\",\"endpoint\":{\"url\":\"https://timesofoman.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://timesofoman.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English publisher homepage observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://timesofoman.com/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the OMN source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"English publisher homepage observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:omn:ncsi",
+        "publisherName": "National Centre for Statistics and Information (Oman)",
+        "iso2": "OM",
+        "iso3": "OMN",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "ncsi.gov.om",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/OMN.json\",\"manifestSha256\":\"d0eadaedfb5961d3a073445632de8b8235be4cf34421e2c5e9bec23bfbeb54c5\",\"originalSourceId\":\"me-r1:omn:ncsi\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:omn:ncsi\",\"country\":\"OMN\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"ncsi\",\"name\":\"National Centre for Statistics and Information (Oman)\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.ncsi.gov.om\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://www.ncsi.gov.om/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.ncsi.gov.om/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English portal lists statistical bulletins, inflation and energy releases and links to data portal.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.ncsi.gov.om/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"English portal lists statistical bulletins, inflation and energy releases and links to data portal. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "PS",
+    "iso3": "PSE",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"Ma'an and PCBS direct access failed; English local newsroom edition remains unverified.\",\"Gaza/West Bank reporting reach and interruptions must be disclosed separately; no full territorial coverage claim.\",\"OCHA supplements institutional context and cannot replace Palestinian local reporting.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/PSE.json\",\"manifestSha256\":\"4e60488bff16c9788ac4129df178fc9339ca505ecd4161b2d892a4c956c2cf71\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:pse:wafa",
+        "publisherName": "Palestine News and Information Agency (WAFA)",
+        "iso2": "PS",
+        "iso3": "PSE",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "wafa.ps",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/PSE.json\",\"manifestSha256\":\"4e60488bff16c9788ac4129df178fc9339ca505ecd4161b2d892a4c956c2cf71\",\"originalSourceId\":\"me-r1:pse:wafa\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:pse:wafa\",\"country\":\"PSE\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"wafa\",\"name\":\"Palestine News and Information Agency (WAFA)\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.wafa.ps\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.wafa.ps/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.wafa.ps/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic agency page observed; links to English/Hebrew/French editions do not add independent publishers.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.wafa.ps/robots.txt\",\"status\":\"FETCH_FAILED\",\"checkedOn\":\"2026-09-22\",\"note\":\"Targeted robots.txt open failed in the research tool; directives unknown, not permissive.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the PSE source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic agency page observed; links to English/Hebrew/French editions do not add independent publishers. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:pse:maan",
+        "publisherName": "Ma'an News Agency / Ma'an Network",
+        "iso2": "PS",
+        "iso3": "PSE",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "maannews.net",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/PSE.json\",\"manifestSha256\":\"4e60488bff16c9788ac4129df178fc9339ca505ecd4161b2d892a4c956c2cf71\",\"originalSourceId\":\"me-r1:pse:maan\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:pse:maan\",\"country\":\"PSE\",\"language\":\"ar\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"maan\",\"name\":\"Ma'an News Agency / Ma'an Network\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.maannews.net\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.maannews.net/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.maannews.net/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Direct open failed; indexed Arabic homepage/about page available. /eng/ search result was Arabic; English not verified.\"},{\"url\":\"https://www.maannews.net/about\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Publisher identifies network and Bethlehem/Gaza offices; present operational reach not established.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.maannews.net/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the PSE source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Direct open failed; indexed Arabic homepage/about page available. /eng/ search result was Arabic; English not verified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:pse:pcbs",
+        "publisherName": "Palestinian Central Bureau of Statistics",
+        "iso2": "PS",
+        "iso3": "PSE",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "pcbs.gov.ps",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/PSE.json\",\"manifestSha256\":\"4e60488bff16c9788ac4129df178fc9339ca505ecd4161b2d892a4c956c2cf71\",\"originalSourceId\":\"me-r1:pse:pcbs\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:pse:pcbs\",\"country\":\"PSE\",\"language\":\"en\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"pcbs\",\"name\":\"Palestinian Central Bureau of Statistics\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.pcbs.gov.ps\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://www.pcbs.gov.ps/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.pcbs.gov.ps/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Direct www-host open failed; indexed institutional pages show statistics with differing geographic scopes.\"},{\"url\":\"https://www.pcbs.gov.ps/en/reference/the-open-data-inventory-odin/\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed English PCBS indicators and geographic limitations; no completeness claim.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.pcbs.gov.ps/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Direct www-host open failed; indexed institutional pages show statistics with differing geographic scopes. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:pse:ocha-opt",
+        "publisherName": "United Nations OCHA — occupied Palestinian territory",
+        "iso2": "PS",
+        "iso3": "PSE",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "ochaopt.org",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [
+          "en"
+        ],
+        "basis": "INTERNATIONAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/PSE.json\",\"manifestSha256\":\"4e60488bff16c9788ac4129df178fc9339ca505ecd4161b2d892a4c956c2cf71\",\"originalSourceId\":\"me-r1:pse:ocha-opt\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:pse:ocha-opt\",\"country\":\"PSE\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"ocha-opt\",\"name\":\"United Nations OCHA — occupied Palestinian territory\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.ochaopt.org\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"HUMANITARIAN_ORGANIZATION\",\"endpoint\":{\"url\":\"https://www.ochaopt.org/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.ochaopt.org/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"UN OCHA territorial office and humanitarian reporting observed; international institutional vantage.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.ochaopt.org/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"INTERNATIONAL\",\"note\":\"UN humanitarian institution reporting about this country scope; not local journalistic corroboration.\"},\"accessLimitation\":\"UN OCHA territorial office and humanitarian reporting observed; international institutional vantage. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "QA",
+    "iso3": "QAT",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"English Qatar-local newsroom edition remains unverified.\",\"Al Jazeera regional reach cannot substitute for domestic voices elsewhere; seek additional Qatar-local publishers.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/QAT.json\",\"manifestSha256\":\"3a8dcc54d130ea3249cf8b0c0f479a0e8f2250b2ec49961b2ffe637ee4f2325d\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:qat:qna",
+        "publisherName": "Qatar News Agency",
+        "iso2": "QA",
+        "iso3": "QAT",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "qna.org.qa",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/QAT.json\",\"manifestSha256\":\"3a8dcc54d130ea3249cf8b0c0f479a0e8f2250b2ec49961b2ffe637ee4f2325d\",\"originalSourceId\":\"me-r1:qat:qna\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:qat:qna\",\"country\":\"QAT\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"qna\",\"name\":\"Qatar News Agency\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.qna.org.qa\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.qna.org.qa/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.qna.org.qa/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic agency homepage observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.qna.org.qa/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the QAT source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic agency homepage observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:qat:aljazeera",
+        "publisherName": "Al Jazeera Media Network — Al Jazeera Arabic",
+        "iso2": "QA",
+        "iso3": "QAT",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "aljazeera.net",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/QAT.json\",\"manifestSha256\":\"3a8dcc54d130ea3249cf8b0c0f479a0e8f2250b2ec49961b2ffe637ee4f2325d\",\"originalSourceId\":\"me-r1:qat:aljazeera\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:qat:aljazeera\",\"country\":\"QAT\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"aljazeera\",\"name\":\"Al Jazeera Media Network — Al Jazeera Arabic\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.aljazeera.net\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"BROADCASTER\",\"endpoint\":{\"url\":\"https://www.aljazeera.net/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.aljazeera.net/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic network homepage observed; regional reach is not a substitute for other countries' packs.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.aljazeera.net/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the QAT source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic network homepage observed; regional reach is not a substitute for other countries' packs. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:qat:npc",
+        "publisherName": "National Planning Council — National Statistics Center (Qatar)",
+        "iso2": "QA",
+        "iso3": "QAT",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "npc.qa",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/QAT.json\",\"manifestSha256\":\"3a8dcc54d130ea3249cf8b0c0f479a0e8f2250b2ec49961b2ffe637ee4f2325d\",\"originalSourceId\":\"me-r1:qat:npc\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:qat:npc\",\"country\":\"QAT\",\"language\":\"en\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"npc\",\"name\":\"National Planning Council — National Statistics Center (Qatar)\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.npc.qa\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://www.npc.qa/en/statistics/pages/default.aspx\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.npc.qa/en/statistics/pages/default.aspx\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed English statistics/about pages available; root open failed. Portal reports JavaScript requirement.\"},{\"url\":\"https://www.npc.qa/en/aboutus/pages/default.aspx\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed institutional page identifies NPC and National Statistics Center under its cited 2024 decision.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.npc.qa/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Indexed English statistics/about pages available; root open failed. Portal reports JavaScript requirement. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "SA",
+    "iso3": "SAU",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"SPA Arabic returned no readable content; additional Arabic newsroom coverage remains open.\",\"GASTAT catalogue is indexed only; verify actual release endpoints and methods.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/SAU.json\",\"manifestSha256\":\"b3e31d4485b5d8f8f7efdc330a67bba1588e05097f9f017649307e5f74ecc53d\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:sau:spa",
+        "publisherName": "Saudi Press Agency",
+        "iso2": "SA",
+        "iso3": "SAU",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "spa.gov.sa",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/SAU.json\",\"manifestSha256\":\"b3e31d4485b5d8f8f7efdc330a67bba1588e05097f9f017649307e5f74ecc53d\",\"originalSourceId\":\"me-r1:sau:spa\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:sau:spa\",\"country\":\"SAU\",\"language\":\"ar\",\"languageStatus\":\"candidate\",\"publisher\":{\"id\":\"spa\",\"name\":\"Saudi Press Agency\",\"identityStatus\":\"candidate\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.spa.gov.sa\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.spa.gov.sa/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.spa.gov.sa/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"limited_content\",\"note\":\"Publisher title returned with zero content lines; current edition unverified.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.spa.gov.sa/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the SAU source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Publisher title returned with zero content lines; current edition unverified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:sau:arab-news",
+        "publisherName": "Arab News",
+        "iso2": "SA",
+        "iso3": "SAU",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "arabnews.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "en"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/SAU.json\",\"manifestSha256\":\"b3e31d4485b5d8f8f7efdc330a67bba1588e05097f9f017649307e5f74ecc53d\",\"originalSourceId\":\"me-r1:sau:arab-news\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:sau:arab-news\",\"country\":\"SAU\",\"language\":\"en\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"arab-news\",\"name\":\"Arab News\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.arabnews.com\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSPAPER\",\"endpoint\":{\"url\":\"https://www.arabnews.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.arabnews.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"English publisher homepage observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.arabnews.com/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the SAU source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"English publisher homepage observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:sau:gastat",
+        "publisherName": "General Authority for Statistics (Saudi Arabia)",
+        "iso2": "SA",
+        "iso3": "SAU",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "stats.gov.sa",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/SAU.json\",\"manifestSha256\":\"b3e31d4485b5d8f8f7efdc330a67bba1588e05097f9f017649307e5f74ecc53d\",\"originalSourceId\":\"me-r1:sau:gastat\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:sau:gastat\",\"country\":\"SAU\",\"language\":\"en\",\"languageStatus\":\"indexed\",\"publisher\":{\"id\":\"gastat\",\"name\":\"General Authority for Statistics (Saudi Arabia)\",\"identityStatus\":\"indexed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.stats.gov.sa\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://www.stats.gov.sa/en/p-statistics\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.stats.gov.sa/en/p-statistics\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed English catalogue/about page available; root direct open failed.\"},{\"url\":\"https://www.stats.gov.sa/en/gastat-about-us\",\"method\":\"web_search\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"index_observed\",\"note\":\"Indexed authority about page describes statistical responsibilities.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.stats.gov.sa/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Indexed English catalogue/about page available; root direct open failed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "SY",
+    "iso3": "SYR",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"Central Bank candidate remains unverified; statistical-office sources/releases remain a gap.\",\"English, Kurdish and other locally relevant editions need verification.\",\"Current institutional remit, publisher operations and subnational reach require review.\"],\"languageTargets\":[\"ar\",\"en\",\"ku\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/SYR.json\",\"manifestSha256\":\"1c7a44d68c9e55cbd33cf857c59ed38d479bfc46b327c3baf515e3e021837346\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:syr:sana",
+        "publisherName": "Syrian Arab News Agency (SANA)",
+        "iso2": "SY",
+        "iso3": "SYR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "sana.sy",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/SYR.json\",\"manifestSha256\":\"1c7a44d68c9e55cbd33cf857c59ed38d479bfc46b327c3baf515e3e021837346\",\"originalSourceId\":\"me-r1:syr:sana\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:syr:sana\",\"country\":\"SYR\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"sana\",\"name\":\"Syrian Arab News Agency (SANA)\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"sana.sy\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://sana.sy/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://sana.sy/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic agency page lists Syrian governorates and economy section; edition links are not separate publishers.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://sana.sy/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the SYR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic agency page lists Syrian governorates and economy section; edition links are not separate publishers. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:syr:enab",
+        "publisherName": "Enab Baladi",
+        "iso2": "SY",
+        "iso3": "SYR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "enabbaladi.net",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/SYR.json\",\"manifestSha256\":\"1c7a44d68c9e55cbd33cf857c59ed38d479bfc46b327c3baf515e3e021837346\",\"originalSourceId\":\"me-r1:syr:enab\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:syr:enab\",\"country\":\"SYR\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"enab\",\"name\":\"Enab Baladi\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.enabbaladi.net\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSROOM\",\"endpoint\":{\"url\":\"https://www.enabbaladi.net/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.enabbaladi.net/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic Syria-focused homepage observed; current newsroom location and ownership not verified.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.enabbaladi.net/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the SYR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic Syria-focused homepage observed; current newsroom location and ownership not verified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:syr:cbs-bank",
+        "publisherName": "Central Bank of Syria",
+        "iso2": "SY",
+        "iso3": "SYR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "cb.gov.sy",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/SYR.json\",\"manifestSha256\":\"1c7a44d68c9e55cbd33cf857c59ed38d479bfc46b327c3baf515e3e021837346\",\"originalSourceId\":\"me-r1:syr:cbs-bank\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:syr:cbs-bank\",\"country\":\"SYR\",\"language\":\"ar\",\"languageStatus\":\"candidate\",\"publisher\":{\"id\":\"cbs-bank\",\"name\":\"Central Bank of Syria\",\"identityStatus\":\"candidate\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"cb.gov.sy\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"CENTRAL_BANK\",\"endpoint\":{\"url\":\"https://cb.gov.sy/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://cb.gov.sy/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"retrieval_failed\",\"note\":\"Direct open failed; targeted primary-source search returned no corroborating result. Host and identity provisional.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://cb.gov.sy/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Direct open failed; targeted primary-source search returned no corroborating result. Host and identity provisional. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "TR",
+    "iso3": "TUR",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"English and Kurdish edition links need content checks; Turkish editions do not fill these gaps.\",\"bianet advertises RSS but traversal failed; feed URL/payload remains unverified.\"],\"languageTargets\":[\"tr\",\"ku\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/TUR.json\",\"manifestSha256\":\"494d1df6f4d9170d29cf6abb9f6b0437a4a14b54be5e1602a2d5e27ba04f82b9\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:tur:anadolu",
+        "publisherName": "Anadolu Agency",
+        "iso2": "TR",
+        "iso3": "TUR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "aa.com.tr",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "tr"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/TUR.json\",\"manifestSha256\":\"494d1df6f4d9170d29cf6abb9f6b0437a4a14b54be5e1602a2d5e27ba04f82b9\",\"originalSourceId\":\"me-r1:tur:anadolu\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:tur:anadolu\",\"country\":\"TUR\",\"language\":\"tr\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"anadolu\",\"name\":\"Anadolu Agency\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.aa.com.tr\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.aa.com.tr/tr\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.aa.com.tr/tr\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Turkish agency edition observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.aa.com.tr/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the TUR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Turkish agency edition observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:tur:bianet",
+        "publisherName": "bianet",
+        "iso2": "TR",
+        "iso3": "TUR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "bianet.org",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "tr"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/TUR.json\",\"manifestSha256\":\"494d1df6f4d9170d29cf6abb9f6b0437a4a14b54be5e1602a2d5e27ba04f82b9\",\"originalSourceId\":\"me-r1:tur:bianet\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:tur:bianet\",\"country\":\"TUR\",\"language\":\"tr\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"bianet\",\"name\":\"bianet\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"bianet.org\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWSROOM\",\"endpoint\":{\"url\":\"https://bianet.org/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"ADVERTISED_UNRESOLVED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://bianet.org/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Turkish homepage observed with English/Kurdish edition links and RSS link. RSS traversal failed; no feed payload verified.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://bianet.org/robots.txt\",\"status\":\"FETCH_FAILED\",\"checkedOn\":\"2026-09-22\",\"note\":\"Targeted robots.txt open failed in the research tool; directives unknown, not permissive.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the TUR source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Turkish homepage observed with English/Kurdish edition links and RSS link. RSS traversal failed; no feed payload verified. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:tur:tuik",
+        "publisherName": "Turkish Statistical Institute (TUIK)",
+        "iso2": "TR",
+        "iso3": "TUR",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "tuik.gov.tr",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [
+          "tr"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/TUR.json\",\"manifestSha256\":\"494d1df6f4d9170d29cf6abb9f6b0437a4a14b54be5e1602a2d5e27ba04f82b9\",\"originalSourceId\":\"me-r1:tur:tuik\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:tur:tuik\",\"country\":\"TUR\",\"language\":\"tr\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"tuik\",\"name\":\"Turkish Statistical Institute (TUIK)\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.tuik.gov.tr\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"STATISTICS_OFFICE\",\"endpoint\":{\"url\":\"https://www.tuik.gov.tr/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.tuik.gov.tr/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Turkish institutional homepage observed.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.tuik.gov.tr/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Turkish institutional homepage observed. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "iso2": "YE",
+    "iso3": "YEM",
+    "governedRegion": "region:middle-east",
+    "verifiedAt": null,
+    "gapReason": "No operational local baseline admitted. Original gaps: {\"gaps\":[\"Two Saba-branded hosts remain separate; ownership, institutional relationships and operating locations need review.\",\"Non-agency local reporting, English editions and statistical-office sources remain gaps.\",\"Central-bank geographic remit and parallel institutional publications need review before national aggregate inference.\"],\"languageTargets\":[\"ar\",\"en\"]}",
+    "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/YEM.json\",\"manifestSha256\":\"fd6f89a2b412d3cea6cc8dcb5e1f0c736b3ddbb3ccae4a3b3be61ba230b4ac09\",\"originalLanguagePolicy\":\"Original names and language evidence retained; no translation or language inference.\"}",
+    "entries": [
+      {
+        "sourceId": "me-r1:yem:saba-sabanew",
+        "publisherName": "Saba — sabanew.net publication",
+        "iso2": "YE",
+        "iso3": "YEM",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "sabanew.net",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/YEM.json\",\"manifestSha256\":\"fd6f89a2b412d3cea6cc8dcb5e1f0c736b3ddbb3ccae4a3b3be61ba230b4ac09\",\"originalSourceId\":\"me-r1:yem:saba-sabanew\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:yem:saba-sabanew\",\"country\":\"YEM\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"saba-sabanew\",\"name\":\"Saba — sabanew.net publication\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.sabanew.net\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.sabanew.net/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.sabanew.net/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic Saba-branded publication observed; keep separate from saba.ye pending ownership/authority review.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.sabanew.net/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the YEM source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic Saba-branded publication observed; keep separate from saba.ye pending ownership/authority review. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:yem:saba-ye",
+        "publisherName": "Saba — saba.ye publication",
+        "iso2": "YE",
+        "iso3": "YEM",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "saba.ye",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "NEWS_PROVIDER",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/YEM.json\",\"manifestSha256\":\"fd6f89a2b412d3cea6cc8dcb5e1f0c736b3ddbb3ccae4a3b3be61ba230b4ac09\",\"originalSourceId\":\"me-r1:yem:saba-ye\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:yem:saba-ye\",\"country\":\"YEM\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"saba-ye\",\"name\":\"Saba — saba.ye publication\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"www.saba.ye\",\"sourceType\":\"NEWS_PROVIDER\",\"sourceKind\":\"NEWS_AGENCY\",\"endpoint\":{\"url\":\"https://www.saba.ye/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://www.saba.ye/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic Saba-branded publication observed; redirect to /ar. Do not merge with sabanew.net by shared name.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://www.saba.ye/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-facing publisher candidate in the YEM source environment; this assignment does not assert current headquarters, ownership independence or universal reach.\"},\"accessLimitation\":\"Arabic Saba-branded publication observed; redirect to /ar. Do not merge with sabanew.net by shared name. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      },
+      {
+        "sourceId": "me-r1:yem:cby",
+        "publisherName": "Central Bank of Yemen — cby-ye.com publication",
+        "iso2": "YE",
+        "iso3": "YEM",
+        "governedRegion": "region:middle-east",
+        "canonicalHost": "cby-ye.com",
+        "transport": "NONE",
+        "endpoint": null,
+        "sourceClass": "OFFICIAL_SOURCE",
+        "languages": [
+          "ar"
+        ],
+        "basis": "LOCAL",
+        "rights": {
+          "standing": "UNKNOWN",
+          "binding": null,
+          "usageNote": "Dormant research; original rights status NOT_REVIEWED. No permission inferred. Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted."
+        },
+        "verifiedAt": null,
+        "captureCapability": "UNKNOWN",
+        "activationStatus": "DISABLED",
+        "failureReason": "Product verification, rights and transport admission remain unresolved; original research observations are not operational coverage.",
+        "provenanceNote": "{\"adapter\":\"DORMANT_REGIONAL_R1\",\"lane\":\"O\",\"manifestPath\":\"shared/source-packs/middle-east-r1/countries/YEM.json\",\"manifestSha256\":\"fd6f89a2b412d3cea6cc8dcb5e1f0c736b3ddbb3ccae4a3b3be61ba230b4ac09\",\"originalSourceId\":\"me-r1:yem:cby\",\"interpretation\":\"Research evidence only; no product verification, rights admission or network transport. Original names/languages/evidence are retained without translation or inferred detection.\",\"originalEvidence\":{\"id\":\"me-r1:yem:cby\",\"country\":\"YEM\",\"language\":\"ar\",\"languageStatus\":\"observed\",\"publisher\":{\"id\":\"cby\",\"name\":\"Central Bank of Yemen — cby-ye.com publication\",\"identityStatus\":\"page_observed\",\"ownershipReview\":\"NOT_REVIEWED\"},\"canonicalHost\":\"cby-ye.com\",\"sourceType\":\"OFFICIAL_SOURCE\",\"sourceKind\":\"CENTRAL_BANK\",\"endpoint\":{\"url\":\"https://cby-ye.com/\",\"kind\":\"LANDING_PAGE\",\"feedUrl\":null,\"feedStatus\":\"NOT_VERIFIED\",\"machineIngestionReady\":false},\"verificationEvidence\":[{\"url\":\"https://cby-ye.com/\",\"method\":\"web_open\",\"checkedOn\":\"2026-09-22\",\"outcome\":\"page_observed\",\"note\":\"Arabic institutional announcements, licensing and auction links observed; geographic and institutional remit needs review.\"}],\"rights\":{\"status\":\"NOT_REVIEWED\",\"binding\":null,\"instrumentUrl\":null,\"note\":\"Public visibility is not permission to ingest, retain, translate or redistribute; no rights grade granted.\"},\"robots\":{\"url\":\"https://cby-ye.com/robots.txt\",\"status\":\"NOT_CHECKED\",\"checkedOn\":null,\"note\":\"Review the exact agent and endpoint before acquisition; no permission inferred.\"},\"localInternationalBasis\":{\"scope\":\"LOCAL\",\"note\":\"Country-specific institutional publication candidate; geographic remit must be checked per release.\"},\"accessLimitation\":\"Arabic institutional announcements, licensing and auction links observed; geographic and institutional remit needs review. Production-path, regional availability, authentication and paywall audit not completed.\",\"enabled\":false}}",
+        "health": {
+          "status": "UNKNOWN",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "consecutiveFailures": 0,
+          "failureReason": null
+        }
+      }
+    ]
+  }
+]

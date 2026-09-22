@@ -3,7 +3,7 @@
 import { useAdminContext } from '../shell/AdminContext';
 import { sectionNumber, sectionState } from '@/lib/admin/adminDataState';
 import { ADMIN_API } from '@/lib/admin/adminRoutes';
-import { useAdminResource } from '@/lib/admin/useAdminResource';
+import { useAdminResource, type AdminResource } from '@/lib/admin/useAdminResource';
 import type { AdminCoverageGeographyResponse } from '@/lib/admin/adminApiTypes';
 import { AdminDataTable } from '../primitives/AdminDataTable';
 import { AdminPanel } from '../primitives/AdminPanel';
@@ -29,12 +29,26 @@ import { PlaceholderPanel } from '../primitives/PlaceholderPanel';
  * panel stating why it is absent — which is a stronger disclosure than
  * omitting it, because an omitted panel invites somebody to build one.
  */
-export function AnalyticsGeographyTab(): JSX.Element {
-  const { t } = useAdminContext();
-  const screen = t.screens.analytics;
+export function AnalyticsGeographyTab({
+  resource,
+}: { resource?: AdminResource<AdminCoverageGeographyResponse> } = {}): JSX.Element {
+  return resource ? <GeographyData geography={resource} /> : <GeographyResource />;
+}
+
+function GeographyResource(): JSX.Element {
   const geography = useAdminResource<AdminCoverageGeographyResponse>(
     ADMIN_API.analyticsCoverageGeography,
   );
+  return <GeographyData geography={geography} />;
+}
+
+function GeographyData({
+  geography,
+}: {
+  geography: AdminResource<AdminCoverageGeographyResponse>;
+}): JSX.Element {
+  const { t } = useAdminContext();
+  const screen = t.screens.analytics;
 
   const countries = geography.data?.countries ?? null;
   const followed = geography.data?.followedCountries ?? null;

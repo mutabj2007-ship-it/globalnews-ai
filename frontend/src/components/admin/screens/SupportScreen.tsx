@@ -58,6 +58,11 @@ const STATUS_TONE: Record<SupportTicketStatus, ChipTone> = {
 };
 
 export function SupportScreen(): JSX.Element {
+  const { can, t } = useAdminContext();
+  return can('support.handle') ? <SupportData /> : <p>{t.access.forbiddenBody}</p>;
+}
+
+function SupportData(): JSX.Element {
   const { t } = useAdminContext();
   const screen = t.screens.support;
 
@@ -166,6 +171,7 @@ export function SupportScreen(): JSX.Element {
               columns={columns}
               rows={queue.data?.tickets ?? []}
               state={queue.state}
+              onRetry={queue.reload}
               emptyTitle={queue.state === 'error' ? screen.queueErrorTitle : screen.queueEmptyTitle}
               emptyBody={queue.state === 'error' ? screen.queueErrorBody : screen.queueEmptyBody}
               rowKey={(row) => row.reference}

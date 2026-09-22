@@ -92,6 +92,40 @@ describe('OpenAiAnalysisProvider', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('sends comparison coverage into exactly one OpenAI request, even on rate limit', async () => {
+    const input = makeInput();
+    input.comparisonCoverage = [
+      {
+        countryName: 'Iran',
+        iso2: 'IR',
+        iso3: 'IRN',
+        requested: true,
+        liveRetrievalAttempted: true,
+        usableLiveEvidenceCount: 0,
+        usableRetainedEvidenceCount: 0,
+        finalQualifyingEvidenceCount: 0,
+        finalLiveEvidenceCount: 0,
+        finalRetainedEvidenceCount: 0,
+        providers: ['gnews'],
+        providerFailureKinds: ['rate-limited'],
+        retrievalState: 'PROVIDER_UNAVAILABLE',
+        localSourceProvenance: 'NOT_ESTABLISHED',
+        coverageGap: true,
+        coverageGapReason: 'PROVIDER_UNAVAILABLE',
+        liveArticleIds: [],
+        retainedArticleIds: [],
+      },
+    ];
+    fetchMock.mockResolvedValue(jsonResponse(429, {}));
+    await expect(
+      new OpenAiAnalysisProvider(makeConfigService()).analyzeNews(input),
+    ).rejects.toBeDefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.messages[0].content).toContain('AUTHORITATIVE COMPARISON COVERAGE TRUTH');
+    expect(body.messages[0].content).toContain('"countryName":"Iran"');
+  });
+
   it('classifies a 401 as provider-auth and does not retry', async () => {
     fetchMock.mockResolvedValue(jsonResponse(401, {}));
     const provider = new OpenAiAnalysisProvider(makeConfigService());

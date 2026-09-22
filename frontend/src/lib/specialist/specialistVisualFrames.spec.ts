@@ -334,14 +334,28 @@ const NETWORK_TOKENS: readonly RegExp[] = [
 ];
 
 describe('no Humanitarian surface can reach a provider', () => {
-  it('no domain file performs a network call or carries an absolute URL', () => {
+  it('only the server retained reader may call this backend; no domain file carries a provider URL', () => {
     const offenders: string[] = [];
     for (const f of HUM_DOMAIN) {
-      for (const rx of NETWORK_TOKENS) {
+      // One reviewed backend read; all other network tokens remain prohibited.
+      const tokens = f === join(SRC, 'lib', 'humanitarian', 'humanitarianRead.ts')
+        ? NETWORK_TOKENS.slice(1) : NETWORK_TOKENS;
+      for (const rx of tokens) {
         if (rx.test(code(f))) offenders.push(`${f.slice(SRC.length)} :: ${rx}`);
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  it('the sole transport calls the fixed backend route and is unreachable from client frames', () => {
+    const reader = join(SRC, 'lib', 'humanitarian', 'humanitarianRead.ts');
+    expect(code(reader)).toContain('/humanitarian/observations');
+    expect(code(reader)).toContain('resolveApiBaseUrl()');
+    expect(code(reader)).toContain("typeof window !== 'undefined'");
+    expect(code(reader).match(/\bfetch\s*\(/g)).toHaveLength(1);
+    for (const name of ['HumanitarianScreen', 'HumanitarianCompactScreen']) {
+      expect(reachable([join(SRC, 'components', 'humanitarian', name + '.tsx')])).not.toContain(reader);
+    }
   });
 
   it('the sweep can fail — positive control', () => {

@@ -433,7 +433,7 @@ export interface PoliticsWatchRegistrationProposal {
   readonly blockedBy: readonly string[];
 }
 
-export const POLITICS_WATCH_REGISTRATION_PROPOSAL: PoliticsWatchRegistrationProposal = {
+export const POLITICS_WATCH_REGISTRATION_PROPOSAL = {
   proposedSurface: 'POLITICS',
   proposedSubjectTypes: [
     'ELECTION',
@@ -451,13 +451,19 @@ export const POLITICS_WATCH_REGISTRATION_PROPOSAL: PoliticsWatchRegistrationProp
     'SUBJECT_PERSISTENCE: watch-readiness declares no table for subjects, snapshots or cursors.',
     'ENTITLEMENT: canonical states "no tier, no plan, no entitlement" (watch.ts) and that ceilings are resource bounds, not entitlements (follows.ts). Composite Watch counting has no runtime to reconcile against.',
   ],
-};
+} as const satisfies PoliticsWatchRegistrationProposal;
 
 /** A compile-time reminder that the proposal is not a `WatchSubjectType`, and must not become one here. */
 export type PoliticsWatchSubjectTypeIsNotRegistered = Exclude<
   (typeof POLITICS_WATCH_REGISTRATION_PROPOSAL.proposedSubjectTypes)[number],
   WatchSubjectType
 >;
+
+/** R3: adding a proposed type to WatchSubjectType must fail compilation. */
+type ProposalIsUnregistered =
+  [(typeof POLITICS_WATCH_REGISTRATION_PROPOSAL.proposedSubjectTypes)[number]] extends
+    [PoliticsWatchSubjectTypeIsNotRegistered] ? true : never;
+export const POLITICS_WATCH_PROPOSAL_IS_UNREGISTERED: ProposalIsUnregistered = true;
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * §6 · ARTIFACT-LEVEL SOURCE CLASS — THE §12 RULE, GIVEN A CARRIER

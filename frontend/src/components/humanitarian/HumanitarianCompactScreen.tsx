@@ -12,6 +12,8 @@
  * the spatial slot is simply not mounted at PEEK, which a stylesheet edit cannot
  * undo, rather than hidden with CSS, which one could.
  */
+import { humanitarianReadAbsence, type HumanitarianRetainedRead } from '@globalnews-ai/shared';
+import { humanitarianReadLabel } from '@/lib/humanitarian/humanitarianReadLabel';
 import { useReducer, type JSX } from 'react';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { HUM_CANVAS, HUM_INK, HUM_LINE, HUM_NAV, HUM_SURFACE, HUM_TYPE, humTracking } from '@/lib/humanitarian/humTokens';
@@ -22,17 +24,17 @@ import {
 } from '@/lib/humanitarian/humState';
 import { humFrameLabel, resolveHumStrings, type HumLocale } from '@/lib/humanitarian/humStrings';
 import { quietClaimFor } from '@/lib/humanitarian/humDegraded';
-import { HUM_VIEWS } from './HumanitarianModel';
+import { humanitarianUnassessedView } from './HumanitarianModel';
 import { HumDrawer } from './HumDrawer';
 import { Absence, AreaLabel, Chip, SectionTitle, microLabel, panelEdge } from './HumParts';
 
 const FRAMES: readonly HumFrameState[] = ['ENTRY', 'SELECTED', 'GAP', 'QUIET'];
 
-export function HumanitarianCompactScreen({ locale }: { locale: HumLocale }): JSX.Element {
+export function HumanitarianCompactScreen({ locale, retainedRead = humanitarianReadAbsence('NOT_ASSESSED') }: { locale: HumLocale; retainedRead?: HumanitarianRetainedRead }): JSX.Element {
   const resolution = resolveHumStrings(locale);
   const t = resolution.strings;
   const [state, dispatch] = useReducer(humViewReducer, undefined, () => initialViewState('ENTRY'));
-  const view = HUM_VIEWS[state.frame];
+  const view = humanitarianUnassessedView(state.frame);
   const detent = state.drawer === null ? null : HUM_DRAWER_DETENT[state.drawer];
   /** R14 · the map is not mounted below HALF. Structural, not cosmetic. */
   const mapAllowed = detent === null;
@@ -40,6 +42,7 @@ export function HumanitarianCompactScreen({ locale }: { locale: HumLocale }): JS
   return (
     <main
       data-hum="compact-screen"
+      data-hum-read={retainedRead.absence}
       data-hum-frame={state.frame}
       data-hum-drawer={state.drawer ?? 'none'}
       data-hum-detent={detent ?? 'none'}
@@ -88,7 +91,7 @@ export function HumanitarianCompactScreen({ locale }: { locale: HumLocale }): JS
         </span>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <Chip label={t.zoneA.precision} value={view.precision.alias} />
-          <Chip label={t.zoneA.coverage} value={t.coverage[view.coverage.health]}
+          <Chip label={t.zoneA.coverage} value={humanitarianReadLabel(retainedRead, locale)}
             accent={view.coverage.health === 'COVERAGE_GAP' ? 'amber' : undefined} />
         </div>
       </header>
@@ -124,7 +127,7 @@ export function HumanitarianCompactScreen({ locale }: { locale: HumLocale }): JS
                 letterSpacing: humTracking(active ? 0.09 : 0.07),
               }}
             >
-              {humFrameLabel(t, f, HUM_VIEWS[f].change)}
+              {humFrameLabel(t, f, humanitarianUnassessedView(f).change)}
             </button>
           );
         })}

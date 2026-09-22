@@ -37,10 +37,15 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
 
   it('it contains no provider, model, prompt, retrieval or ranking of its own', () => {
     for (const forbidden of ['openai', 'OpenAI', 'gpt', 'prompt', 'embedding', 'rerank',
-                             'temperature', 'systemMessage', 'retriev']) {
+                             'temperature', 'systemMessage']) {
       expect(`${forbidden}: ${CODE.toLowerCase().includes(forbidden.toLowerCase())}`)
         .toBe(`${forbidden}: false`);
     }
+  });
+
+  it('reads routing metadata without performing retrieval', () => {
+    expect(CODE).toContain('phase.response.retrievalContext.storyContextUsed');
+    expect(CODE).not.toMatch(/retrieve\w*\s*\(|newsService|countryNewsService/);
   });
 
   it('the reader question is passed VERBATIM — no frontend query rewriting', () => {

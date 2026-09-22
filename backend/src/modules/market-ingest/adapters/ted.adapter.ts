@@ -1,3 +1,4 @@
+import { tedReleaseStatus } from '../market-release-status';
 import { marketProcurementIdentity, procurementPortalReferenceKey } from '@globalnews-ai/shared';
 
 import type { PermittedProvider } from '../market-provider-registry';
@@ -174,6 +175,9 @@ function parseTedPayload(body: string): TedSearchPayload {
  * authorship, and manufacturing one here would put a number on a row that never had one.
  */
 export function tedNoticeToDraft(notice: TedNoticePayload): MarketObservationDraft {
+  let releaseStatus: 'WITHDRAWN';
+  try { releaseStatus = tedReleaseStatus(notice.withdrawn); }
+  catch (error) { throw new ValidationFailure((error as Error).message); }
   /*
     KNOWN LIMITATION — REPORTED AS BLOCKER R3-B1, NOT WORKED AROUND.
 
@@ -218,7 +222,7 @@ export function tedNoticeToDraft(notice: TedNoticePayload): MarketObservationDra
     publisherChangedAt: notice.publicationDate,
     vintageProvenance: 'PUBLISHER_CHANGED_AT',
     // WITHDRAWN is a first-class state, never a delete — and only when the publisher says so.
-    releaseStatus: notice.withdrawn === true ? 'WITHDRAWN' : 'FINAL',
+    releaseStatus,
   };
 }
 

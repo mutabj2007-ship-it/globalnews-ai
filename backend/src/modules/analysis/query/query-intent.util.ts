@@ -273,17 +273,10 @@ const ENTITY_BACKGROUND_MARKERS: readonly RegExp[] = [
  * would misroute prose. Demonyms need no frame — see resolveNamedCountries().
  */
 const COORDINATION_FRAMES: readonly RegExp[] = [
-  /\bbetween\s+(.+?)\s*[?.!]*$/i,
-  /*
-   * The optional preposition MUST consume its own trailing whitespace.
-   * Written as `(?:in|of|for|between)?\s*` it matched the "In" of
-   * "India" and handed the member list "dia and Pakistan" to the
-   * splitter, so "Compare India and Pakistan" found one member and asked
-   * for clarification. Caught by the class corpus, not by a reviewer.
-   */
-  /\bcompare\s+(?:the\s+)?(?:current\s+)?(?:situations?|economies|economics|politics|conditions?|states?)?\s*(?:(?:in|of|for|between)\s+)?(.+?)\s*[?.!]*$/i,
-  /\bcomparison\s+(?:of|between)\s+(.+?)\s*[?.!]*$/i,
-  /\bdifference[s]?\s+between\s+(.+?)\s*[?.!]*$/i,
+  // Q: Polish geographic lists share the canonical resolver and existing ceiling.
+  /(?<![\p{L}])(?:w|we)\s+(.+?)(?=\s+(?:są|sa|jest|były|był|była|będą|będzie)\b|[?.!]|$)/iu,
+  // Specific geographic lists precede the broad comparison frame: its partial
+  // three-country match must not hide a longer list from the retrieval ceiling.
   /*
    * ASK EXPLICIT-SCOPE R1 — COUNTRY LISTS INSIDE A LONGER SENTENCE.
    *
@@ -306,6 +299,18 @@ const COORDINATION_FRAMES: readonly RegExp[] = [
    * a real comma/and country list becomes authoritative typed scope.
    */
   /\b(?:in|from|across)\s+(.+?)(?=\s+(?:is|are|was|were|has|have|had|will|would|can|could|should|may|might|that|which|who|while)\b|[?.!]|$)/i,
+  /\bbetween\s+(.+?)\s*[?.!]*$/i,
+  /*
+   * The optional preposition MUST consume its own trailing whitespace.
+   * Written as `(?:in|of|for|between)?\s*` it matched the "In" of
+   * "India" and handed the member list "dia and Pakistan" to the
+   * splitter, so "Compare India and Pakistan" found one member and asked
+   * for clarification. Caught by the class corpus, not by a reviewer.
+   */
+  /\bcompare\s+(?:the\s+)?(?:current\s+)?(?:situations?|economies|economics|politics|conditions?|states?)?\s*(?:(?:in|of|for|between)\s+)?(.+?)\s*[?.!]*$/i,
+  /\bcomparison\s+(?:of|between)\s+(.+?)\s*[?.!]*$/i,
+  /\bdifference[s]?\s+between\s+(.+?)\s*[?.!]*$/i,
+
   /^(.+?)\s+(?:versus|vs\.?)\s+(.+?)\s*[?.!]*$/i,
 
   /*

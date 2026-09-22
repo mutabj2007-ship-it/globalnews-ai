@@ -14,6 +14,8 @@
  * observation renders its reason. That is the only way a coverage gap cannot quietly
  * become a calm blank.
  */
+import { humanitarianReadAbsence, type HumanitarianRetainedRead } from '@globalnews-ai/shared';
+import { humanitarianReadLabel } from '@/lib/humanitarian/humanitarianReadLabel';
 import { useReducer, type JSX } from 'react';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { HUM_CANVAS, HUM_INK, HUM_LICENSED, HUM_LINE, HUM_NAV, HUM_SURFACE, HUM_TYPE, humTracking } from '@/lib/humanitarian/humTokens';
@@ -24,21 +26,22 @@ import {
 } from '@/lib/humanitarian/humState';
 import { humFrameLabel, resolveHumStrings, type HumLocale } from '@/lib/humanitarian/humStrings';
 import { quietClaimFor } from '@/lib/humanitarian/humDegraded';
-import { HUM_VIEWS, HUM_QUEUE_ROWS } from './HumanitarianModel';
+import { humanitarianUnassessedView, HUM_QUEUE_ROWS } from './HumanitarianModel';
 import { HumDrawer } from './HumDrawer';
 import { Absence, AreaLabel, Chip, Dependency, SectionTitle, Zone, microLabel, panelEdge } from './HumParts';
 
 const FRAMES: readonly HumFrameState[] = ['ENTRY', 'SELECTED', 'GAP', 'QUIET'];
 
-export function HumanitarianScreen({ locale }: { locale: HumLocale }): JSX.Element {
+export function HumanitarianScreen({ locale, retainedRead = humanitarianReadAbsence('NOT_ASSESSED') }: { locale: HumLocale; retainedRead?: HumanitarianRetainedRead }): JSX.Element {
   const resolution = resolveHumStrings(locale);
   const t = resolution.strings;
   const [state, dispatch] = useReducer(humViewReducer, undefined, () => initialViewState('ENTRY'));
-  const view = HUM_VIEWS[state.frame];
+  const view = humanitarianUnassessedView(state.frame);
 
   return (
     <main
       data-hum="screen"
+      data-hum-read={retainedRead.absence}
       data-hum-frame={state.frame}
       data-hum-drawer={state.drawer ?? 'none'}
       className={`relative ${HUM_CANVAS.base}`}
@@ -122,7 +125,7 @@ export function HumanitarianScreen({ locale }: { locale: HumLocale }): JSX.Eleme
               only — the other three coverage values stay neutral, because a hue that
               marks every state marks nothing.
             */}
-            <Chip label={t.zoneA.coverage} value={t.coverage[view.coverage.health]}
+            <Chip label={t.zoneA.coverage} value={humanitarianReadLabel(retainedRead, locale)}
               accent={view.coverage.health === 'COVERAGE_GAP' ? 'amber' : undefined} />
             <Chip label={t.zoneA.updated} value={t.common.noData} />
             <Chip label={t.zoneA.revision} value={t.common.noData} />
@@ -194,7 +197,7 @@ export function HumanitarianScreen({ locale }: { locale: HumLocale }): JSX.Eleme
                 letterSpacing: humTracking(active ? 0.1 : 0.08),
               }}
             >
-              {humFrameLabel(t, f, HUM_VIEWS[f].change)}
+              {humFrameLabel(t, f, humanitarianUnassessedView(f).change)}
             </button>
           );
         })}

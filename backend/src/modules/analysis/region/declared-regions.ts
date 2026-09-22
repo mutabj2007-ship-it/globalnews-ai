@@ -1,5 +1,5 @@
 import type { CountryMeta } from '@globalnews-ai/shared';
-import { resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
+import { resolveCountryByAnyIdentifier, EAST_AFRICA_MEMBERS } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -37,9 +37,8 @@ import { resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
  *
  * The frontend already carries the same idea for the map's jump targets
  * (`declaredProductRegions.ts`, `membershipSource: 'PRODUCT_GOVERNED'`). This
- * is the retrieval-side statement of it. The two lists are deliberately
- * separate modules on separate sides of the wire and are asserted to agree by
- * spec rather than shared through a runtime import.
+ * is the retrieval-side statement of it. Membership is shared through
+ * global-reach-regions.ts with the map and source-pack coverage authority.
  *
  * ── WHAT A REGION MAY NEVER DO ──────────────────────────────────────────────
  *
@@ -68,7 +67,7 @@ export const EAST_AFRICA: DeclaredRegion = {
   id: 'east-africa',
   label: 'East Africa',
   /* The ruling's list, verbatim and in its order. */
-  members: ['BDI', 'COD', 'DJI', 'ERI', 'ETH', 'KEN', 'RWA', 'SOM', 'SSD', 'TZA', 'UGA'],
+  members: EAST_AFRICA_MEMBERS,
   phrases: ['east africa', 'eastern africa', 'the horn of africa', 'east african'],
 };
 

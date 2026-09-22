@@ -1,5 +1,6 @@
 import {
   assertAuthorityIsInstalled,
+  assertGeometryIsWellFormed,
   recordIsProtectedUnderAuthority,
   type ProtectionAuthority,
   type SourceGeometryKind,
@@ -110,6 +111,23 @@ export class GovernedIntakeService implements GovernedHumanitarianIntake {
       a read-path mistake is not.
     */
     assertAuthorityIsInstalled(authority);
+
+    // Queue/retry callers can bypass the producer. Validate the entire batch before
+    // the first durable write, preserving the shared geometry refusal vocabulary.
+    const identities = new Set<string>();
+    for (const record of evidence) {
+      assertNoProtectionOwnedFields(record);
+      for (const id of [record.recordKey, record.sourceId, record.sourceGeometryId, record.emittingDomainId]) {
+        if (typeof id !== 'string' || id.trim().length === 0) throw new Error('Missing evidence identity');
+      }
+      if (identities.has(record.recordKey)) throw new Error('Duplicate record requires revision reconciliation');
+      identities.add(record.recordKey);
+      assertGeometryIsWellFormed({
+        kind: record.geometryKind, denotation: record.denotation, origin: record.origin,
+        crs: record.crs, coordinates: record.coordinates, sourceId: record.sourceId,
+        sourceGeometryId: record.sourceGeometryId, relationToAssertion: 'THE_ASSERTION',
+      });
+    }
 
     const recordKeys: string[] = [];
 

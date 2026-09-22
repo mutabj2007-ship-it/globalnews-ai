@@ -1,0 +1,23 @@
+name: EU27 source-pack governance
+on:
+  pull_request:
+    paths:
+      - 'backend/src/**'
+      - 'scripts/verify-eu27-source-packs*'
+      - 'frontend/src/**'
+      - 'package.json'
+      - '.github/workflows/eu27-source-packs-ci.yml'
+  push:
+    branches: ['feature/beta-global-reach-eu27-r1']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm run test:eu27-source-packs
