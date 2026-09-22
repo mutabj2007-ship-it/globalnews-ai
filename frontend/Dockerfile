@@ -31,6 +31,10 @@ FROM dependencies AS build
 # OAUTH_FLOW_SECRET, which must never appear in a Docker build
 # instruction and are instead passed only as backend container
 # runtime environment variables (see docker-compose.yml).
+# Canonical identity must reach next build; runtime changes require a rebuild.
+# No default: an unconfigured origin continues to omit canonical URLs.
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ARG SERVER_INTERNAL_API_URL

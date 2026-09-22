@@ -116,3 +116,25 @@ describe('B5-B · NEXT_PUBLIC_SITE_URL is build-time, so DOMAIN-1 must rebuild',
     expect(code).toContain('NEXT_PUBLIC_SITE_URL');
   });
 });
+
+describe('domain launch build wiring', () => {
+  const root = join(__dirname, '..', '..', '..', '..');
+
+  it('passes the explicit site origin through the Docker build stage before next build', () => {
+    const dockerfile = readFileSync(join(root, 'frontend', 'Dockerfile'), 'utf-8');
+    const stage = dockerfile.split('FROM dependencies AS build')[1].split('# ---- Production ----')[0];
+    expect(stage).toMatch(/^ARG NEXT_PUBLIC_SITE_URL\s*$/m);
+    expect(stage).toMatch(/^ENV NEXT_PUBLIC_SITE_URL=\$NEXT_PUBLIC_SITE_URL\s*$/m);
+    expect(stage.indexOf('ENV NEXT_PUBLIC_SITE_URL=')).toBeLessThan(
+      stage.indexOf('RUN npm run build --workspace=frontend'),
+    );
+  });
+
+  it('forwards Compose configuration without inventing a canonical fallback', () => {
+    const compose = readFileSync(join(root, 'docker-compose.yml'), 'utf-8');
+    const frontendBuild = compose.split('  frontend:')[1].split('    container_name:')[0];
+    expect(frontendBuild).toContain('NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}');
+    const example = readFileSync(join(root, '.env.example'), 'utf-8');
+    expect(example).toMatch(/^NEXT_PUBLIC_SITE_URL=\s*$/m);
+  });
+});
