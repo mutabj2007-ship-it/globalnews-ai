@@ -7,6 +7,7 @@ import {
   resolveCountryByCity,
   resolveGeoTypo,
   type AnalysisApiResponse,
+  type ComparisonCountryCoverage,
   type AnalysisCoverageContext,
   type AnalysisFailureReason,
   type AnalysisProvenance,
@@ -28,15 +29,13 @@ import { CountryNewsService } from '../../news/country/country-news.service';
 import type { AnalysisProvider } from '../interfaces';
 import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
+import { hasUnsupportedLocalReportingClaim } from '../validation/comparison-coverage.util';
 import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
 import {
   assessBriefCompliance,
   detectDevelopmentBreadth,
 } from '../validation/brief-compliance.util';
-import {
-  acceptExecutiveBrief,
-  withholdExecutiveBrief,
-} from '../validation/brief-fail-closed.util';
+import { acceptExecutiveBrief, withholdExecutiveBrief } from '../validation/brief-fail-closed.util';
 import { applyBriefRelationIntegrity } from '../validation/entity-role-geography.util';
 import {
   buildRegionScope,
@@ -1003,11 +1002,11 @@ export class AnalysisService {
         if (followUpRelation) {
           const providerQuery = makeProviderSafeNewsQuery(followUpRelation.providerQuery);
           const response = providerQuery
-            ? await this.newsService.search(
-                providerQuery,
-                SEARCH_POOL_SIZE,
-                { type: 'relational', x: followUpRelation.x, y: followUpRelation.y },
-              )
+            ? await this.newsService.search(providerQuery, SEARCH_POOL_SIZE, {
+                type: 'relational',
+                x: followUpRelation.x,
+                y: followUpRelation.y,
+              })
             : null;
 
           articles = response?.articles ?? [];
@@ -2199,6 +2198,10 @@ export class AnalysisService {
           );
         }
 
+        if (storyContext) {
+          retrievalContext = { ...retrievalContext, storyContextUsed: !typedScopeOverridesStory };
+        }
+
         if (articles.length === 0) {
           const empty: AnalysisApiResponse = {
             query: originalQuery,
@@ -2243,6 +2246,33 @@ export class AnalysisService {
         }
 
         const deduped = clusterDuplicateArticles(articles).slice(0, config.maxArticles);
+        for (const member of retrievalContext.comparisonCoverage ?? []) {
+          const liveIds = new Set(member.liveArticleIds);
+          const retainedIds = new Set(member.retainedArticleIds);
+          const liveCount = deduped.filter((article) => liveIds.has(article.id)).length;
+          const retainedCount = deduped.filter((article) => retainedIds.has(article.id)).length;
+          member.finalQualifyingEvidenceCount = liveCount + retainedCount;
+          member.finalLiveEvidenceCount = liveCount;
+          member.finalRetainedEvidenceCount = retainedCount;
+          member.retrievalState =
+            liveCount > 0
+              ? 'LIVE_EVIDENCE'
+              : retainedCount > 0
+                ? 'RETAINED_ONLY'
+                : member.providerFailureKinds.length > 0
+                  ? 'PROVIDER_UNAVAILABLE'
+                  : member.liveRetrievalAttempted
+                    ? 'NO_MATCHING_EVIDENCE'
+                    : 'NOT_ATTEMPTED';
+          member.coverageGapReason =
+            member.finalQualifyingEvidenceCount > 0
+              ? 'LOCALITY_NOT_ESTABLISHED'
+              : member.retrievalState === 'PROVIDER_UNAVAILABLE'
+                ? 'PROVIDER_UNAVAILABLE'
+                : member.retrievalState === 'NOT_ATTEMPTED'
+                  ? 'NOT_ATTEMPTED'
+                  : 'NO_QUALIFYING_EVIDENCE';
+        }
 
         /**
          * Milestone #43: computed over `articles` — the ORIGINAL retrieved
@@ -2291,6 +2321,7 @@ export class AnalysisService {
           const candidate = await this.provider.analyzeNews({
             query: normalizedQuery,
             articles: deduped,
+            comparisonCoverage: retrievalContext.comparisonCoverage,
             // Milestone #40 (authoritative-context correction): undefined
             // for country/city retrieval and ordinary M35/M36 generic
             // queries — only set when the M37 relational branch matched.
@@ -2405,7 +2436,7 @@ export class AnalysisService {
             already does. Fail closed rather than fabricate.
           */
           const structuralVerdict = assessBriefCompliance(analysis.summary, developmentBreadth);
-          const briefVerdict = applyBriefRelationIntegrity(
+          let briefVerdict = applyBriefRelationIntegrity(
             structuralVerdict,
             analysis.summary,
             deduped,
@@ -2469,6 +2500,15 @@ export class AnalysisService {
             more. It never meant "a repair was skipped silently", and it must
             not start meaning that without the field saying so.
           */
+          if (
+            hasUnsupportedLocalReportingClaim(analysis.summary, retrievalContext.comparisonCoverage)
+          ) {
+            briefVerdict = {
+              ...briefVerdict,
+              compliant: false,
+              reason: 'Publisher locality is not established for this comparison.',
+            };
+          }
           const repairRequested = false;
 
           /*
@@ -3015,108 +3055,94 @@ export class AnalysisService {
   private async retrievePerSideEvidence(
     sides: readonly CountryMeta[],
     requestedLanguage: LanguageCode,
-  ): Promise<{
-    articles: NewsArticle[];
-    retrievalContext: AnalysisRetrievalContext;
-  }> {
+  ): Promise<{ articles: NewsArticle[]; retrievalContext: AnalysisRetrievalContext }> {
     const collected: NewsArticle[] = [];
+    const coverage: ComparisonCountryCoverage[] = [];
     const providers = new Set<string>();
-
-    let sawLive = false;
-    let sawCached = false;
-    let sidesAttempted = 0;
-    let sidesFailed = 0;
-    /*
-      C907 §8 — WHICH KIND OF FAILURE, NOT MERELY THAT THERE WAS ONE.
-
-      `dataMode`/`fallbackReason` collapse a refusal and an empty answer into
-      the same two values, which is exactly the conflation the ruling rejects:
-      RATE_LIMITED IS NOT "NO NEWS EXISTS". `readProviderFailures` is the
-      typed channel NewsService already carries — the same one the English and
-      Polish branches use to suppress a bounded retry — so the kinds are read
-      from it rather than inferred.
-    */
     const failureKinds = new Set<string>();
-
-    /*
-     * G-ALPHA-2.1 (A) — A POLISH QUESTION IS RETRIEVED IN POLISH.
-     *
-     * G-ALPHA-2 sent the English country name through NewsService.search() for
-     * every language, so extending Stage 2 to Polish as written would have
-     * answered a Polish question with English-language reporting — weakening
-     * exactly the Polish retrieval contract Milestone #47 established and the
-     * closure instruction protects.
-     *
-     * NOTHING NEW IS INVENTED. The Polish path reuses the two mechanisms that
-     * already exist for this: the /top-headlines lang=pl call the Polish branch
-     * already makes, and scoreCountryRelevance()'s own `language` parameter,
-     * which already resolves a localized country name via Intl.DisplayNames and
-     * already matches it in Polish article text. The gate is the same function
-     * in both languages; only the name it is told to look for changes.
-     */
-    /*
-      C907 §0.1(3) — THE PER-COUNTRY WORK IS NOW `retrieveMemberEvidence`.
-
-      It is the same body this loop used to carry inline: the Polish/English
-      term choice, the provider-safety chokepoint, the provider-failure
-      exclusion and the unmodified `scoreCountryRelevance` firewall. It moved
-      so the declared-region branch could do IDENTICAL work rather than a
-      second implementation of it — two fan-outs that gate a country
-      differently is precisely the drift this repository keeps finding.
-
-      This branch stays SERIAL. Its callers are comparison questions naming two
-      or three sides, where concurrency buys almost nothing and the rate-limit
-      slot is better spent elsewhere; the batched, bounded-concurrency schedule
-      belongs to the declared-region branch, which may face eleven members.
-    */
     for (const side of sides) {
       const result = await this.retrieveMemberEvidence(side, requestedLanguage);
-
-      sidesAttempted += 1;
-
-      for (const kind of result.failureKinds) failureKinds.add(kind);
-      for (const provider of result.providers) providers.add(provider);
-
-      if (result.failed) {
-        sidesFailed += 1;
-        continue;
-      }
-
-      if (result.dataMode === 'live') sawLive = true;
-      if (result.dataMode === 'cached') sawCached = true;
-
-      collected.push(...result.articles);
+      result.providers.forEach((provider) => providers.add(provider));
+      result.failureKinds.forEach((kind) => failureKinds.add(kind));
+      const live = result.dataMode === 'live' ? result.articles : [];
+      // Reuse the bounded database-only regional ladder. No provider retry.
+      const retainedCandidates =
+        result.failed || result.failureKinds.length > 0 || live.length === 0
+          ? await this.retrieveRetainedForRegion([side])
+          : [];
+      const retained = deduplicateArticles([
+        ...(result.dataMode === 'cached' ? result.articles : []),
+        ...retainedCandidates,
+      ]).filter(
+        (article) =>
+          !live.some((candidate) => candidate.url === article.url) &&
+          scoreCountryRelevance(article, side, requestedLanguage).isRelevant &&
+          admitsToAnalysisCorpus(article, side, requestedLanguage),
+      );
+      const count = live.length + retained.length;
+      collected.push(...live, ...retained);
+      coverage.push({
+        countryName: side.name,
+        iso2: side.iso2,
+        iso3: side.iso3,
+        requested: true,
+        liveRetrievalAttempted: result.attempted,
+        usableLiveEvidenceCount: live.length,
+        usableRetainedEvidenceCount: retained.length,
+        finalQualifyingEvidenceCount: count,
+        finalLiveEvidenceCount: live.length,
+        finalRetainedEvidenceCount: retained.length,
+        providers: result.providers,
+        providerFailureKinds: result.failureKinds,
+        retrievalState:
+          live.length > 0
+            ? 'LIVE_EVIDENCE'
+            : retained.length > 0
+              ? 'RETAINED_ONLY'
+              : result.failed || result.failureKinds.length > 0
+                ? 'PROVIDER_UNAVAILABLE'
+                : result.attempted
+                  ? 'NO_MATCHING_EVIDENCE'
+                  : 'NOT_ATTEMPTED',
+        // Article geography does not attest publisher origin. This lane has no
+        // trusted locality attestation; candidate source registries are not evidence.
+        localSourceProvenance: 'NOT_ESTABLISHED',
+        coverageGap: true,
+        coverageGapReason:
+          count > 0
+            ? 'LOCALITY_NOT_ESTABLISHED'
+            : result.failed || result.failureKinds.length > 0
+              ? 'PROVIDER_UNAVAILABLE'
+              : result.attempted
+                ? 'NO_QUALIFYING_EVIDENCE'
+                : 'NOT_ATTEMPTED',
+        liveArticleIds: live.map((article) => article.id),
+        retainedArticleIds: retained.map((article) => article.id),
+      });
     }
 
     const articles = deduplicateArticles(collected);
-
-    const everySideFailed = sidesAttempted > 0 && sidesFailed === sidesAttempted;
-
-    const dataMode: AnalysisRetrievalContext['dataMode'] = sawLive
-      ? 'live'
-      : sawCached
-        ? 'cached'
-        : 'unavailable';
-
     return {
       articles,
       retrievalContext: {
-        dataMode,
+        dataMode: coverage.some((member) => member.usableLiveEvidenceCount > 0)
+          ? 'live'
+          : articles.length > 0
+            ? 'cached'
+            : 'unavailable',
         providers: [...providers],
         fallbackReason:
-          articles.length > 0 ? undefined : everySideFailed ? 'provider-error' : 'no-live-results',
+          failureKinds.size > 0
+            ? 'provider-error'
+            : articles.length === 0
+              ? 'no-live-results'
+              : undefined,
         articlesRetrieved: articles.length,
-        /*
-          C907 §8 — the outcome, decided once, from what actually happened.
-
-          ORDER MATTERS AND IS NOT ARBITRARY. A rate limit is reported ahead of
-          a general unavailability because it is the more specific and more
-          actionable fact, and both are reported ahead of
-          NO_RELEVANT_EVIDENCE — which is the ONLY outcome that asserts
-          anything about the world, and must never be reached while a provider
-          is known to have refused us.
-        */
-        outcome: retrievalOutcome(articles.length, failureKinds),
+        outcome:
+          articles.length > 0 && !coverage.some((member) => member.usableLiveEvidenceCount > 0)
+            ? 'RETAINED_ONLY'
+            : retrievalOutcome(articles.length, failureKinds),
+        comparisonCoverage: coverage,
       },
     };
   }
@@ -3234,12 +3260,20 @@ export class AnalysisService {
     dataMode: NewsResponse['dataMode'] | null;
     failed: boolean;
     failureKinds: string[];
+    attempted: boolean;
   }> {
     const isPolish = requestedLanguage === 'pl';
     const term = isPolish ? (polishCountryName(member) ?? member.name) : member.name;
     const sent = makeProviderSafeNewsQuery(term);
 
-    const empty = { articles: [], providers: [], dataMode: null, failed: false, failureKinds: [] };
+    const empty = {
+      articles: [],
+      providers: [],
+      dataMode: null,
+      failed: false,
+      failureKinds: [],
+      attempted: false,
+    };
 
     /*
       A member is built from a curated country name, so this is defensive
@@ -3258,7 +3292,14 @@ export class AnalysisService {
           })
         : await this.newsService.search(sent, SEARCH_POOL_SIZE, undefined, { allowFallback });
 
-      const failureKinds = readProviderFailures(response).map((failure) => failure.kind);
+      const failures = readProviderFailures(response);
+      const failureKinds = failures.map((failure) => failure.kind);
+      const providers = [
+        ...new Set([
+          ...(response.providers ?? []),
+          ...failures.map((failure) => failure.providerId),
+        ]),
+      ];
 
       const failed =
         response.dataMode === 'unavailable' ||
@@ -3271,7 +3312,14 @@ export class AnalysisService {
             'treating as no usable evidence for this member',
         );
 
-        return { ...empty, dataMode: response.dataMode, failed: true, failureKinds };
+        return {
+          ...empty,
+          dataMode: response.dataMode,
+          failed: true,
+          failureKinds: failureKinds.length ? failureKinds : ['unavailable'],
+          providers,
+          attempted: true,
+        };
       }
 
       return {
@@ -3281,7 +3329,8 @@ export class AnalysisService {
             scoreCountryRelevance(article, member, requestedLanguage).isRelevant &&
             admitsToAnalysisCorpus(article, member, requestedLanguage),
         ),
-        providers: [...(response.providers ?? [])],
+        providers,
+        attempted: true,
         dataMode: response.dataMode,
         failed: false,
         failureKinds,
@@ -3292,7 +3341,7 @@ export class AnalysisService {
         error instanceof Error ? error : undefined,
       );
 
-      return { ...empty, failed: true, failureKinds: ['unavailable'] };
+      return { ...empty, failed: true, failureKinds: ['unavailable'], attempted: true };
     }
   }
 
@@ -3374,11 +3423,7 @@ export class AnalysisService {
       */
       const results = await Promise.all(
         batch.map((member) =>
-          this.retrieveMemberEvidence(
-            member,
-            requestedLanguage,
-            fallbackEligible.has(member.iso3),
-          ),
+          this.retrieveMemberEvidence(member, requestedLanguage, fallbackEligible.has(member.iso3)),
         ),
       );
 

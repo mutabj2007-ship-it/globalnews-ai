@@ -273,6 +273,8 @@ const ENTITY_BACKGROUND_MARKERS: readonly RegExp[] = [
  * would misroute prose. Demonyms need no frame — see resolveNamedCountries().
  */
 const COORDINATION_FRAMES: readonly RegExp[] = [
+  // Q: Polish geographic lists share the canonical resolver and existing ceiling.
+  /(?<![\p{L}])(?:w|we)\s+(.+?)(?=\s+(?:są|sa|jest|były|był|była|będą|będzie)\b|[?.!]|$)/iu,
   // Specific geographic lists precede the broad comparison frame: its partial
   // three-country match must not hide a longer list from the retrieval ceiling.
   /*

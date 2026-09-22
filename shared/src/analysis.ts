@@ -937,6 +937,8 @@ export interface AnalysisRetrievalContext {
    * asked.
    */
   requestedScope?: RequestedRegionScope;
+  comparisonCoverage?: import('./comparison-coverage').ComparisonCountryCoverage[];
+  storyContextUsed?: boolean;
 }
 
 /**

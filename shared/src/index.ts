@@ -228,3 +228,5 @@ export * from './humanitarian/retained-read';
 
 export * from './global-reach';
 export * from './global-reach-regions';
+
+export * from './comparison-coverage';
