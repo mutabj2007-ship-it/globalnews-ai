@@ -173,6 +173,7 @@ const stub = createServer((req, res) => {
             path: path.join(out, `${route.slice(1).replaceAll('/', '-')}-${locale}-${width}.png`),
             fullPage: true,
           });
+          assert.equal(overflow, false, 'page overflow');
           if (!hum && compact) {
             for (const detent of ['PEEK', 'HALF', 'FULL', 'WORKSPACE']) {
               await page.locator(`[data-sec-detent-target="${detent}"]`).click();
