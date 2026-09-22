@@ -1,3 +1,4 @@
+import { DomainEvidenceStatus } from '@/components/evidence/DomainEvidenceStatus';
 import { readHumanitarianObservations } from '@/lib/humanitarian/humanitarianRead';
 import type { JSX } from 'react';
 import type { Metadata } from 'next';
@@ -68,7 +69,7 @@ export default async function HumanitarianCompactPage(): Promise<JSX.Element> {
         shell unusable at any locale was exactly its absence.
       */}
       <NavBar language={humLanguage()} />
-      <HumanitarianCompactScreen locale={humLocale()} retainedRead={retainedRead} />
+      <DomainEvidenceStatus domain="humanitarian" locale={humLocale()} retainedRead={retainedRead}><HumanitarianCompactScreen locale={humLocale()} retainedRead={retainedRead} /></DomainEvidenceStatus>
       <Footer language={humLanguage()} />
     </ScriptRun>
   );

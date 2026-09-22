@@ -211,7 +211,8 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
           <Logo size={30} gapPx={11} />
         </Link>
 
-        <nav className="ml-[14px] flex items-center gap-1" aria-label={t.primaryNavigationAriaLabel}>
+        {/* Long localized labels scroll within the nav, keeping account controls in the viewport. */}
+        <nav className="ml-[14px] flex min-w-0 items-center gap-1 overflow-x-auto" aria-label={t.primaryNavigationAriaLabel}>
           {NAV_MODEL.map((entry) => renderNavItem(entry, 'desktop'))}
         </nav>
 
