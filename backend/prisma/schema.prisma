@@ -1356,3 +1356,50 @@ model MarketObservation {
   @@index([snapshotRetrievalId])
   @@index([runId])
 }
+
+/// Internal R2 append-only production ledger. No acquisition or public activation.
+model SecurityProjectionRun {
+  id Int @id @default(autoincrement())
+  geographyId String
+  maxAgeMinutes Int
+  startedAt DateTime @default(now())
+  completion SecurityProjectionCompletion?
+  observations SecurityObservation[]
+  members SecurityProjectionMember[]
+  @@index([geographyId, id])
+}
+model SecurityProjectionCompletion {
+  runId Int @id
+  run SecurityProjectionRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  status String
+  observationCount Int
+  completedAt DateTime @default(now())
+}
+model SecurityObservation {
+  id Int @id @default(autoincrement())
+  runId Int
+  run SecurityProjectionRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  observationKey String
+  geographyId String
+  revisionOrdinal Int
+  supersedesRevisionOrdinal Int?
+  ownershipT1 Boolean
+  ownershipT2 Boolean
+  resolvedOwner String
+  payload Json
+  memberships SecurityProjectionMember[]
+  @@unique([observationKey, revisionOrdinal])
+  @@unique([runId, observationKey])
+  @@index([geographyId, runId])
+}
+
+/// Immutable snapshot membership allows refresh without inventing a new evidence revision.
+model SecurityProjectionMember {
+  runId Int
+  observationId Int
+  observationKey String
+  run SecurityProjectionRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  observation SecurityObservation @relation(fields: [observationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  @@id([runId, observationId])
+  @@unique([runId, observationKey])
+}

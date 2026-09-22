@@ -27,7 +27,7 @@ interface ArticleCountryRelationInput {
   relevanceScore: number;
   isRelevant: boolean;
 }
-interface FindRecentByCountryOptions {
+export interface FindRecentByCountryOptions {
   countryCode: string;
   limit?: number;
   maxAgeMinutes?: number;
@@ -55,6 +55,17 @@ interface FindRecentByCountryOptions {
  * `firstSeenAt`. It is not an error signal and must never be treated as one.
  */
 export type FirstSeenByUrl = ReadonlyMap<string, string>;
+
+export interface SecurityRetainedArticle extends NewsArticle {
+  securityCountryAttribution: {
+    countryCode: string;
+    relevanceScore: number;
+    basis: 'ArticleCountry';
+  };
+}
+export type SecurityCorpusReadResult =
+  | { status: 'OK' | 'NO_RESULTS'; articles: SecurityRetainedArticle[] }
+  | { status: 'SOURCE_UNAVAILABLE'; articles: [] };
 
 const NO_OBSERVATIONS: FirstSeenByUrl = new Map<string, string>();
 
@@ -263,6 +274,15 @@ export class ArticlePersistenceService {
     }
   }
   async findRecentByCountry(options: FindRecentByCountryOptions): Promise<NewsArticle[]> {
+    const result = await this.readRecentForSecurity(options);
+    return result.articles.map(
+      ({ securityCountryAttribution: _attribution, ...article }) => article,
+    );
+  }
+
+  async readRecentForSecurity(
+    options: FindRecentByCountryOptions,
+  ): Promise<SecurityCorpusReadResult> {
     const {
       countryCode,
       limit = 20,
@@ -278,7 +298,7 @@ export class ArticlePersistenceService {
     const normalizedCountryCode = countryCode.trim().toUpperCase();
 
     if (!normalizedCountryCode) {
-      return [];
+      return { status: 'SOURCE_UNAVAILABLE', articles: [] };
     }
 
     const cutoff = new Date(Date.now() - safeMaxAgeMinutes * 60 * 1000);
@@ -311,7 +331,12 @@ export class ArticlePersistenceService {
         take: safeLimit,
       });
 
-      return rows.map((row) => ({
+      const articles = rows.map((row) => ({
+        securityCountryAttribution: {
+          countryCode: row.countryCode,
+          relevanceScore: row.relevanceScore,
+          basis: 'ArticleCountry' as const,
+        },
         id: row.article.id,
         title: row.article.title,
         summary: row.article.summary,
@@ -333,6 +358,7 @@ export class ArticlePersistenceService {
         countryCode: row.article.countryCode ?? undefined,
         countryName: row.article.countryName ?? undefined,
       }));
+      return { status: articles.length ? 'OK' : 'NO_RESULTS', articles };
     } catch (error) {
       logWithRequestId(
         this.logger,
@@ -341,7 +367,7 @@ export class ArticlePersistenceService {
         error instanceof Error ? error : undefined,
       );
 
-      return [];
+      return { status: 'SOURCE_UNAVAILABLE', articles: [] };
     }
   }
   async findRecent(options: FindRecentArticlesOptions = {}): Promise<NewsArticle[]> {

@@ -1,3 +1,4 @@
+import { SecurityModule } from './modules/security/security.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -194,6 +195,7 @@ import {
       canonical backend file was copied.
     */
     ConflictClaimModule,
+    SecurityModule, // Pure read; public Alpha remains NOT_ASSESSED.
 
     /*
       HUMANITARIAN — AUTHORITY VALIDATION AT STARTUP, ACQUISITION STILL OFF.
