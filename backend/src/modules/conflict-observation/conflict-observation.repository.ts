@@ -1,18 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import type {
-  ConflictObservation,
-  ConflictActorRef,
-  ConflictGeography,
-  ConflictTemporal,
-  ConflictSeverityState,
-  ConflictSourceReference,
-  ConflictAcquisitionProvenance,
-  ConflictRevision,
-  ConflictEventType,
-  ConflictEventOwner,
-  ConflictUpstreamAuthority,
-} from '@globalnews-ai/shared';
+import type { ConflictObservation as RetainedRow } from '../../generated/prisma/client';
+import type { ConflictObservation } from '@globalnews-ai/shared';
+import { decodeRetainedConflictRow } from './conflict-observation.validation';
 
 /**
  * READ-ONLY CONFLICT PORT.
@@ -29,27 +19,18 @@ export class ConflictObservationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async latest(limit = 250): Promise<readonly ConflictObservation[]> {
-    const bounded = Math.max(1, Math.min(Math.trunc(limit), 500));
-    const rows = await this.prisma.conflictObservation.findMany({
-      take: bounded,
-      orderBy: [{ occurredOn: 'desc' }, { ingestedAt: 'desc' }],
-    });
+    const bounded = Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 500)) : 250;
+    // Select the current revision BEFORE sorting/limiting. A corrected event date must
+    // not resurrect its older revision. Historical evidence remains in the table.
+    const rows = await this.prisma.$queryRaw<RetainedRow[]>`
+      SELECT * FROM (
+        SELECT DISTINCT ON ("observationKey") * FROM "ConflictObservation"
+        ORDER BY "observationKey", "revisionOrdinal" DESC
+      ) AS current_observations
+      ORDER BY "occurredOn" DESC, "ingestedAt" DESC, "observationKey" ASC
+      LIMIT ${bounded}
+    `;
 
-    return rows.map((row) => ({
-      observationKey: row.observationKey,
-      identity: {
-        authority: row.authority as ConflictUpstreamAuthority,
-        upstreamEventId: row.upstreamEventId,
-      },
-      eventType: row.eventType as ConflictEventType,
-      owner: row.owner as ConflictEventOwner,
-      actors: row.actors as unknown as readonly ConflictActorRef[],
-      geography: row.geography as unknown as ConflictGeography,
-      temporal: row.temporal as unknown as ConflictTemporal,
-      severity: row.severity as unknown as ConflictSeverityState,
-      sourceReference: row.sourceReference as unknown as ConflictSourceReference,
-      acquisition: row.acquisition as unknown as ConflictAcquisitionProvenance,
-      revision: row.revision as unknown as ConflictRevision,
-    }));
+    return rows.map(decodeRetainedConflictRow);
   }
 }

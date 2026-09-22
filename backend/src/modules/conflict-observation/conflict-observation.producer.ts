@@ -1,0 +1,162 @@
+import {
+  decodeRetainedConflictRow,
+  validateConflictObservation,
+} from './conflict-observation.validation';
+import { Inject, Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import { assertRevisionAppends, type ConflictRevision } from '@globalnews-ai/shared';
+import { PrismaService } from '../../database/prisma.service';
+import { Prisma } from '../../generated/prisma/client';
+import {
+  ConflictAdmissionRefused,
+  MAX_CONFLICT_CAPTURE_BYTES,
+  normalizeUcdpGed,
+  type ReviewedUcdpCapture,
+} from './ucdp-ged.normalizer';
+
+export const REVIEWED_UCDP_CAPTURES = Symbol('REVIEWED_UCDP_CAPTURES');
+
+/** Internal DI service only. No controller, timer, downloader, or boot-time work. */
+@Injectable()
+export class ConflictObservationProducer {
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REVIEWED_UCDP_CAPTURES) private readonly reviewed: readonly ReviewedUcdpCapture[],
+  ) {}
+
+  async admitRetained(retrievalId: string, runId: string) {
+    if (
+      typeof retrievalId !== 'string' ||
+      !retrievalId.trim() ||
+      retrievalId.length > 256 ||
+      typeof runId !== 'string' ||
+      !runId.trim() ||
+      runId.length > 256
+    ) {
+      throw new ConflictAdmissionRefused('INVALID_ADMISSION_ID');
+    }
+    // All validation and writes are one serializable transaction. A conflict fails closed;
+    // the internal caller can retry the same retained retrieval, with no provider request.
+    return this.prisma.$transaction(
+      async (tx) => {
+        const capture = await tx.snapshotRetrieval.findUnique({
+          where: { retrievalId },
+          include: { payload: true },
+        });
+        if (
+          !capture ||
+          capture.providerId !== 'UCDP_GED' ||
+          capture.admissibility !== 'ADMITTED' ||
+          capture.completeness !== 'COMPLETE' ||
+          capture.refusalKey !== null ||
+          capture.httpStatus !== 200 ||
+          !capture.payloadRetentionPermitted ||
+          capture.parserId !== 'ucdp-ged-json' ||
+          capture.parserVersion !== '1' ||
+          !capture.parsedAt ||
+          capture.mediaType.split(';')[0].trim().toLowerCase() !== 'application/json' ||
+          capture.payload?.storageState !== 'RETAINED' ||
+          !capture.payload.bytes
+        ) {
+          throw new ConflictAdmissionRefused('CAPTURE_NOT_ADMITTED_OR_RETAINED');
+        }
+        const bytes = capture.payload.bytes;
+        if (
+          bytes.byteLength > MAX_CONFLICT_CAPTURE_BYTES ||
+          bytes.byteLength !== capture.byteLength ||
+          bytes.byteLength !== capture.payload.byteLength ||
+          capture.mediaType !== capture.payload.mediaType
+        ) {
+          throw new ConflictAdmissionRefused('CAPTURE_INTEGRITY_REFUSED');
+        }
+        const hash = createHash('sha256').update(bytes).digest('hex');
+        if (hash !== capture.contentAddress || hash !== capture.payload.contentAddress) {
+          throw new ConflictAdmissionRefused('CAPTURE_INTEGRITY_REFUSED');
+        }
+        const profile = this.reviewed.find((entry) => entry.sha256 === hash);
+        if (!profile) throw new ConflictAdmissionRefused('SCHEMA_NOT_CONFIRMED_BY_CAPTURE');
+        const observations = normalizeUcdpGed(bytes, profile, {
+          retrievalId,
+          runId,
+          ingestedAt: new Date().toISOString(),
+        });
+        let inserted = 0;
+        let duplicates = 0;
+        for (const observation of observations) {
+          const history = await tx.conflictObservation.findMany({
+            where: { observationKey: observation.observationKey },
+            orderBy: { revisionOrdinal: 'desc' },
+            take: 1,
+          });
+          const prior = history[0];
+          if (prior) decodeRetainedConflictRow(prior);
+          // Replaying an older capture must not append it after a newer revision.
+          const alreadyRetained = await tx.conflictObservation.findFirst({
+            where: { observationKey: observation.observationKey, captureHash: hash },
+          });
+          if (alreadyRetained) {
+            duplicates++;
+            continue;
+          }
+          const revision: ConflictRevision = prior
+            ? {
+                ...observation.revision,
+                revisionOrdinal: prior.revisionOrdinal + 1,
+                supersedesRevisionOrdinal: prior.revisionOrdinal,
+                revisionKind: 'SOURCE_REVISION',
+              }
+            : observation.revision;
+          if (prior) {
+            if (
+              !prior.captureRetrievedAt ||
+              capture.retrievedAt.getTime() <= prior.captureRetrievedAt.getTime()
+            ) {
+              throw new ConflictAdmissionRefused('STALE_OR_UNORDERED_CAPTURE');
+            }
+            assertRevisionAppends(prior.revision as unknown as ConflictRevision, revision);
+          }
+          validateConflictObservation({ ...observation, revision });
+          const json = (value: unknown) => value as Prisma.InputJsonValue;
+          // Reuse the snapshot substrate's citation pin, in the same transaction as the
+          // observation. A historical revision continues to cite its original bytes.
+          const citedBy = `${observation.observationKey}:revision:${revision.revisionOrdinal}`;
+          await tx.snapshotPin.upsert({
+            where: { contentAddress_citedBy: { contentAddress: hash, citedBy } },
+            create: {
+              contentAddress: hash,
+              citedBy,
+              pinnedAt: new Date(observation.temporal.ingestedAt),
+            },
+            update: { releasedAt: null },
+          });
+          await tx.conflictObservation.create({
+            data: {
+              observationKey: observation.observationKey,
+              authority: observation.identity.authority,
+              upstreamEventId: observation.identity.upstreamEventId,
+              eventType: observation.eventType,
+              owner: observation.owner,
+              actors: json(observation.actors),
+              geography: json(observation.geography),
+              temporal: json(observation.temporal),
+              severity: json(observation.severity),
+              sourceReference: json(observation.sourceReference),
+              acquisition: json(observation.acquisition),
+              revision: json(revision),
+              revisionOrdinal: revision.revisionOrdinal,
+              occurredOn: new Date(observation.temporal.eventStartedAt),
+              ingestedAt: new Date(observation.temporal.ingestedAt),
+              snapshotRetrievalId: retrievalId,
+              snapshotAdmissibility: 'ADMITTED',
+              captureHash: hash,
+              captureRetrievedAt: capture.retrievedAt,
+            },
+          });
+          inserted++;
+        }
+        return { inserted, duplicates };
+      },
+      { isolationLevel: 'Serializable', timeout: 30_000 },
+    );
+  }
+}

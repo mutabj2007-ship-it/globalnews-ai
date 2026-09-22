@@ -1020,6 +1020,7 @@ model SnapshotRetrieval {
   createdAt DateTime @default(now())
 
   observations MarketObservation[]
+  conflictObservations ConflictObservation[]
 
   /// R2 · S-3 — THE COMPOSITE KEY AN OBSERVATION REFERENCES.
   ///
@@ -1216,7 +1217,7 @@ model MarketIngestLease {
 /// replace or re-derive the canonical values.
 model ConflictObservation {
   id              String   @id @default(uuid())
-  observationKey  String   @unique
+  observationKey  String
   authority       String
   upstreamEventId String
   eventType       String
@@ -1228,13 +1229,21 @@ model ConflictObservation {
   sourceReference Json
   acquisition     Json
   revision        Json
+  revisionOrdinal Int @default(0)
+  captureHash String?
+  captureRetrievedAt DateTime?
+  snapshotRetrievalId String?
+  snapshotAdmissibility String?
+  snapshotRetrieval SnapshotRetrieval? @relation(fields: [snapshotRetrievalId, snapshotAdmissibility], references: [retrievalId, admissibility])
 
   /// Read/index projections bound at write from canonical temporal/geography.
   occurredOn  DateTime
   countryIso3 String?
   ingestedAt  DateTime @default(now())
 
-  @@unique([authority, upstreamEventId])
+  @@unique([authority, upstreamEventId, revisionOrdinal])
+  @@unique([observationKey, revisionOrdinal])
+  @@unique([observationKey, captureHash])
   @@index([occurredOn])
   @@index([countryIso3, occurredOn])
   @@index([authority])
