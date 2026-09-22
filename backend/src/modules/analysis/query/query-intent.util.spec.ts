@@ -164,6 +164,23 @@ describe('CLASS comparison with determinable members', () => {
     ]);
   });
 
+  it('ASK EXPLICIT-SCOPE R1 — a country list later in a long comparison is still authoritative', () => {
+    const result = classifyQueryIntent(
+      'Compare how current local reporting in Israel, Iran, Saudi Arabia, Turkey and the UAE ' +
+        'is framing the same regional security developments.',
+    );
+
+    expect(result.intent).toBe('CLARIFICATION_REQUIRED');
+    expect(result.countries.map((country) => country.name)).toEqual([
+      'Israel',
+      'Iran',
+      'Saudi Arabia',
+      'Turkey',
+      'United Arab Emirates',
+    ]);
+    expect(result.reason).toContain('retrieval ceiling');
+  });
+
   it('G-ALPHA-2.1 (C) — MORE THAN THREE COUNTRIES IS NOT QUIETLY TRUNCATED', () => {
     /*
      * G-ALPHA-2 capped retrieval at three and recorded the truncation only in
