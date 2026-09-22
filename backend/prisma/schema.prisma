@@ -117,6 +117,10 @@ model User {
   /// code constant and never configuration.
   adminRole AdminRole?
 
+  askThreads AskThread[]
+  storedAskResults StoredResult[]
+  computeOperations ComputeOperation[]
+
   identities UserIdentity[]
   sessions   Session[]
   history    SearchHistoryEntry[]
@@ -1346,4 +1350,93 @@ model MarketObservation {
   @@index([snapshotContentAddress])
   @@index([snapshotRetrievalId])
   @@index([runId])
+}
+
+// CODEX J: additive authenticated Ask substrate. No anonymous persistence,
+// wallet or balance. Stored model output is display-only, never evidence.
+model AskThread {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientKey String
+  requestHash String
+  language String
+  returnPath String?
+  nextSequence Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  turns AskTurn[]
+  @@unique([userId, clientKey])
+  @@index([userId, updatedAt])
+}
+
+model AskTurn {
+  id String @id @default(uuid())
+  threadId String
+  thread AskThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sequence Int
+  // Only the user's question is retained here; answer accessed by operation.
+  question String
+  language String
+  operationId String @unique
+  operation ComputeOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([threadId, sequence])
+}
+
+model StoredResult {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fingerprint String
+  evidenceRevision String
+  // Immutable display artifact; NEVER consumed as a retrieval input.
+  payload Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  operations ComputeOperation[]
+  @@index([userId, fingerprint, expiresAt])
+}
+
+model ComputeOperation {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientKey String
+  requestHash String
+  kind String
+  computeClass String
+  fingerprint String
+  // Server-prepared contract, never caller context or prior model output.
+  plan Json
+  quotedSand Int @default(0)
+  ledgerEnabled Boolean @default(false)
+  status String @default("QUOTED")
+  quoteExpiresAt DateTime
+  acceptedAt DateTime?
+  leaseExpiresAt DateTime?
+  runToken String?
+  storedResultId String?
+  storedResult StoredResult? @relation(fields: [storedResultId], references: [id], onDelete: SetNull)
+  storedResultReused Boolean @default(false)
+  failureCode String?
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+  turn AskTurn?
+  ledger SandLedgerEntry[]
+  @@unique([userId, clientKey])
+  @@index([userId, createdAt])
+}
+
+model SandLedgerEntry {
+  id String @id @default(uuid())
+  operationId String
+  operation ComputeOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  entryType String
+  quotedSand Int @default(0)
+  reservedSand Int @default(0)
+  finalSand Int @default(0)
+  createdAt DateTime @default(now())
+  // Cross-process protection in addition to transactional transitions.
+  @@unique([operationId, entryType])
 }

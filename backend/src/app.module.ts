@@ -1,3 +1,4 @@
+import { AskV2Module } from './modules/ask-v2/ask-v2.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -117,6 +118,8 @@ import {
     AuthModule,
     UsersModule,
     HistoryModule,
+    // Additive, authenticated, default-off; execution port remains on CTO HOLD.
+    AskV2Module,
     // Milestone F1.a — administrative authorization foundation. This
     // is the ONLY line of any pre-existing file that F1.a changes.
     // Registering the module places no guard anywhere near an existing
