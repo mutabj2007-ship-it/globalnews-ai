@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { PoliticsReadModule } from './modules/politics/politics.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './database/prisma.module';
@@ -56,6 +57,7 @@ import {
     ]),
     PrismaModule,
     HealthModule,
+    PoliticsReadModule, // Retained-only; no acquisition or schedule activation.
     NewsModule,
     /*
       ECONOMY — ONE READ ROUTE OVER RETAINED EVIDENCE, AND NO PROVIDER.

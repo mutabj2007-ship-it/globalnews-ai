@@ -217,3 +217,4 @@ export * from './conflict/observation';
   vocabulary.
 */
 
+export * from './politics/retained';
