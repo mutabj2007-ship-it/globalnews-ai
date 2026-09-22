@@ -222,3 +222,6 @@ export * from './politics/retained';
 // Security R2 contracts; public activation remains gated by the Alpha authority.
 export * from './security/observation';
 export * from './security/read-model';
+
+// Public absence-only Humanitarian reader; acquisition stays unprovisioned.
+export * from './humanitarian/retained-read';

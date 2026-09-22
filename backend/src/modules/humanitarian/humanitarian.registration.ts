@@ -18,9 +18,9 @@ import { HumanitarianModule, type HumanitarianBootOptions } from './humanitarian
  * ── WHY THIS IS NOT AN UNCONDITIONAL IMPORT ───────────────────────────────
  *
  * `hum_authority` is a separate schema with a separate owner, created by
- * `sql/gx14-authority-store.sql`, and it exists in NO current database — not dev, not
- * CI, not Alpha. Importing the module unconditionally would make every backend start
- * read a schema that is not there, and the process fails closed by design, so the whole
+ * `sql/gx14-authority-store.sql`. This source configuration supplies no reviewed store
+ * binding. Importing the module unconditionally would make every backend start
+ * read an unverified store, and the process fails closed by design, so the whole
  * backend would stop booting everywhere. A security control that takes the product down
  * in every environment it was not provisioned for gets reverted within the day, and the
  * revert removes the control.
@@ -30,9 +30,9 @@ import { HumanitarianModule, type HumanitarianBootOptions } from './humanitarian
  * Two states, and no third:
  *
  *   NOT PROVISIONED   no store binding is supplied, the module is not imported, and
- *                     HUMANITARIAN DOES NOT RUN. No authority, no intake, no reader
- *                     path — `currentProtectionAuthority()` throws for anyone who asks.
- *                     Nothing is served unprotected, because nothing is served.
+ *                     the governed capability does not run: no authority, intake or protected reader
+ *                     path. The independent public absence-only route remains available.
+ *                     No protected observations are served.
  *
  *   PROVISIONED       a store binding is supplied, the module is imported, and boot
  *                     VALIDATES. Any failure — drift, empty registry, unreachable store
@@ -73,23 +73,12 @@ export function humanitarianModuleImports(
 }
 
 /**
- * THE PROVISIONING THIS DEPLOYMENT HAS.
+ * No reviewed governed store binding is configured in this deployment. Do not infer
+ * database readiness from a provider declaration or set a data-ready flag here.
+ * A reviewed binding must pass boot validation before the capability is initialized.
  *
- * `undefined`, and it is a deliberate, reviewable statement rather than an omission:
- * no database in this lineage has the `hum_authority` schema, so there is no governed
- * store to read. Applying that schema is a DBA action against a real database, which is
- * outside this task by ruling — Production HOLD, no migration deployment.
- *
- * Binding it is one object literal, in this file, once the schema exists:
- *
- *     export const HUMANITARIAN_PROVISIONING: HumanitarianProvisioning | undefined = {
- *       store: { provide: HUMANITARIAN_AUTHORITY_STORE, useClass: PostgresGovernedAuthorityStore },
- *       options: { epoch: 1, loadedAt: new Date().toISOString() },
- *     };
- *
- * Until then Humanitarian does not run, which is the correct behaviour for a capability
- * whose authority store does not exist — and is distinct from running it with an empty
- * authority, which GA-44 refuses precisely because an empty dark set protects nothing
- * while looking exactly like one that protects everything.
+ * The independent public module reports absence without initializing this capability.
+ * Successful authority boot alone proves neither retained capture admission nor an
+ * observation store. Source approval, provenance, chronology and revisions are separate.
  */
 export const HUMANITARIAN_PROVISIONING: HumanitarianProvisioning | undefined = undefined;

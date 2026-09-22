@@ -1,3 +1,4 @@
+import { HumanitarianReadModule } from './modules/humanitarian/humanitarian-read.module';
 import { AskV2Module } from './modules/ask-v2/ask-v2.module';
 import { SecurityModule } from './modules/security/security.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
@@ -220,6 +221,7 @@ import {
       ever is not.
     */
     ...humanitarianModuleImports(HUMANITARIAN_PROVISIONING),
+    HumanitarianReadModule,
   ],
   controllers: [AppController],
   providers: [

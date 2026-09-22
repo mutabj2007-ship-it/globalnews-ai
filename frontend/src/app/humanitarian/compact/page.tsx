@@ -1,3 +1,4 @@
+import { readHumanitarianObservations } from '@/lib/humanitarian/humanitarianRead';
 import type { JSX } from 'react';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
@@ -55,7 +56,8 @@ function humLocale(): HumLocale {
   return SELECTABLE_LOCALES.find((l) => l === language) ?? 'en';
 }
 
-export default function HumanitarianCompactPage(): JSX.Element {
+export default async function HumanitarianCompactPage(): Promise<JSX.Element> {
+  const retainedRead = await readHumanitarianObservations();
   return (
     <ScriptRun locale={humLocale()} step="wrapping" as="div">
       {/*
@@ -66,7 +68,7 @@ export default function HumanitarianCompactPage(): JSX.Element {
         shell unusable at any locale was exactly its absence.
       */}
       <NavBar language={humLanguage()} />
-      <HumanitarianCompactScreen locale={humLocale()} />
+      <HumanitarianCompactScreen locale={humLocale()} retainedRead={retainedRead} />
       <Footer language={humLanguage()} />
     </ScriptRun>
   );

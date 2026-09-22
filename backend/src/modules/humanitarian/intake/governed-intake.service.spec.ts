@@ -301,3 +301,21 @@ describe('part B · the AppModule wiring, which G assigned to this lane', () => 
     expect(bootSrc).not.toMatch(/@Controller|@Get\(|@Post\(|@Put\(|@Delete\(/);
   });
 });
+
+
+describe('recovery admission before durable writes', () => {
+  it('refuses a malformed later row without writing an earlier valid row', async () => {
+    const authority = await installed();
+    const repo = new RecordingRepository();
+    const intake = new GovernedIntakeService(resolver({presentationPartitionKey:'PART-LIGHT'}), repo, () => authority);
+    await expect(intake.admit([evidence(), evidence({recordKey:'rec:2', coordinates:{type:'Polygon',coordinates:[]}})])).rejects.toThrow();
+    expect(repo.rows).toEqual([]);
+  });
+  it('refuses duplicate identities rather than silently overwriting a revision', async () => {
+    const authority = await installed();
+    const repo = new RecordingRepository();
+    const intake = new GovernedIntakeService(resolver({presentationPartitionKey:'PART-LIGHT'}), repo, () => authority);
+    await expect(intake.admit([evidence(), evidence()])).rejects.toThrow(/revision reconciliation/);
+    expect(repo.rows).toEqual([]);
+  });
+});
