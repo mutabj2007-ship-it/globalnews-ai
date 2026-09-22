@@ -273,6 +273,11 @@ const ENTITY_BACKGROUND_MARKERS: readonly RegExp[] = [
  * would misroute prose. Demonyms need no frame — see resolveNamedCountries().
  */
 const COORDINATION_FRAMES: readonly RegExp[] = [
+  // Polish geographic lists use the same canonical member resolver and ceiling.
+  /(?<![\p{L}])(?:w|we)\s+(.+?)(?=\s+(?:są|sa|jest|były|był|była|będą|będzie)\b|[?.!]|$)/iu,
+  // Prefer a bounded geographic list over a broad "compare ..." capture that
+  // may resolve only interior comma-separated members and silently lose ends.
+  /\b(?:in|from|across)\s+(.+?)(?=\s+(?:is|are|was|were|has|have|had|will|would|can|could|should|may|might|that|which|who|while)\b|[?.!]|$)/i,
   /\bbetween\s+(.+?)\s*[?.!]*$/i,
   /*
    * The optional preposition MUST consume its own trailing whitespace.
@@ -305,7 +310,6 @@ const COORDINATION_FRAMES: readonly RegExp[] = [
    * Therefore "in general", "in the market", etc. contribute nothing, while
    * a real comma/and country list becomes authoritative typed scope.
    */
-  /\b(?:in|from|across)\s+(.+?)(?=\s+(?:is|are|was|were|has|have|had|will|would|can|could|should|may|might|that|which|who|while)\b|[?.!]|$)/i,
   /^(.+?)\s+(?:versus|vs\.?)\s+(.+?)\s*[?.!]*$/i,
 
   /*

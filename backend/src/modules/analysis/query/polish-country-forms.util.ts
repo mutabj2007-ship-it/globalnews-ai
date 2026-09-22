@@ -56,6 +56,9 @@ const MIN_FORM_LENGTH = 4;
  */
 const IRREGULAR_FORMS: Record<string, readonly string[]> = {
   niemcy: ['niemiec', 'niemczech', 'niemcami'],
+  izrael: ['izraela', 'izraelu', 'izraelem'],
+  iran: ['iranu', 'iranie', 'iranem'],
+  'arabia saudyjska': ['arabii saudyjskiej', 'arabię saudyjską', 'arabią saudyjską'],
   włochy: ['włoszech', 'włochami', 'włoch'],
   węgry: ['węgier', 'węgrzech'],
 };
@@ -63,7 +66,7 @@ const IRREGULAR_FORMS: Record<string, readonly string[]> = {
 /**
  * Expands one Polish nominative into its bounded surface-form set.
  *
- * MULTI-WORD NAMES KEEP THEIR NOMINATIVE ONLY. "Wielka Brytania" and "Stany
+ * MULTI-WORD NAMES KEEP THEIR NOMINATIVE AND EXPLICIT IRREGULAR FORMS ONLY. "Wielka Brytania" and "Stany
  * Zjednoczone" inflect on every word ("w Wielkiej Brytanii"), which a
  * single-token suffix rule cannot express. Rather than produce a half-correct
  * form, those names are indexed as written and their oblique cases are an
