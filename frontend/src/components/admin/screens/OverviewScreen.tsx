@@ -1,35 +1,34 @@
 'use client';
 
 import { useAdminContext } from '../shell/AdminContext';
-import { NOT_IMPLEMENTED, UNAVAILABLE } from '@/lib/admin/adminDataState';
+import { NOT_IMPLEMENTED, UNAVAILABLE, sectionNumber } from '@/lib/admin/adminDataState';
 import { AdminPanel } from '../primitives/AdminPanel';
 import { KpiCard } from '../primitives/KpiCard';
 import { PlaceholderPanel } from '../primitives/PlaceholderPanel';
 import { ScreenHeading } from './SystemHealthScreen';
+import { ADMIN_API } from '@/lib/admin/adminRoutes';
+import { useAdminResource } from '@/lib/admin/useAdminResource';
+import type {
+  AdminAnalyticsUsageResponse,
+  AdminCoverageGeographyResponse,
+  AdminSystemHealthResponse,
+} from '@/lib/admin/adminApiTypes';
+import { AnalyticsGeographyTab } from './AnalyticsGeographyTab';
 
-/**
- * ADMIN-02 — Overview.
- *
- * Five KPI cards, and not one of them has a backend today. They render
- * "No source" or "Planned" with their provenance tag rather than a
- * number, because every figure in the approved artifact is tagged D and
- * D does not ship.
- *
- * Two of the five are worth naming precisely, because F0 corrected the
- * design's own tags on both:
- *   ARTICLES INGESTED  the rows genuinely exist (Article.fetchedAt is
- *                      indexed) but no endpoint returns a count — tag B,
- *                      not the A the design assumed
- *   ACTIVE USERS       there is no activity record of any kind in this
- *                      platform; a Session row is a sign-in, not
- *                      activity — tag C, not B
- *
- * The window selector is rendered inert: switching a window over five
- * empty cards would be a control that pretends to do something.
- */
+/** Overview: existing aggregate reads only; no provider acquisition. */
 export function OverviewScreen(): JSX.Element {
+  const { can, t } = useAdminContext();
+  return can('analytics.view') ? <OverviewData /> : <p>{t.access.forbiddenBody}</p>;
+}
+
+function OverviewData(): JSX.Element {
   const { t } = useAdminContext();
   const screen = t.screens.overview;
+  const usage = useAdminResource<AdminAnalyticsUsageResponse>(ADMIN_API.analyticsUsage);
+  const health = useAdminResource<AdminSystemHealthResponse>(ADMIN_API.systemHealth);
+  const geography = useAdminResource<AdminCoverageGeographyResponse>(
+    ADMIN_API.analyticsCoverageGeography,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -42,10 +41,14 @@ export function OverviewScreen(): JSX.Element {
 
       <div className="grid grid-cols-1 gap-3 adm-rail:grid-cols-3 adm-full:grid-cols-5">
         <KpiCard
-          label={screen.kpis.articlesIngested}
-          windowLabel={screen.windows.h24}
-          field="admin-02.articlesIngested"
-          data={UNAVAILABLE}
+          label={t.screens.systemHealth.ingestionCountLabel}
+          field="admin-07.ingestionVolume"
+          data={sectionNumber(
+            health.state,
+            health.data?.ingestion,
+            health.data?.ingestion?.articleCount,
+          )}
+          onRetry={health.reload}
         />
         <KpiCard
           label={screen.kpis.activeUsers}
@@ -54,15 +57,21 @@ export function OverviewScreen(): JSX.Element {
           data={UNAVAILABLE}
         />
         <KpiCard
-          label={screen.kpis.countries}
-          field="admin-02.countriesWithActivity"
-          data={UNAVAILABLE}
+          label={t.screens.analytics.coverageDistinct}
+          field="admin-03.contentGeography"
+          data={sectionNumber(
+            geography.state,
+            geography.data?.distinctCountriesWithRelevantCoverage,
+            geography.data?.distinctCountriesWithRelevantCoverage,
+          )}
+          onRetry={geography.reload}
         />
         <KpiCard
           label={screen.kpis.analysisRequests}
           windowLabel={screen.windows.h24}
-          field="admin-02.analysisRequests"
-          data={NOT_IMPLEMENTED}
+          field="admin-03.analysisRuns"
+          data={sectionNumber(usage.state, usage.data?.analysis, usage.data?.analysis?.runsLast24h)}
+          onRetry={usage.reload}
         />
         <KpiCard
           label={screen.kpis.providerErrors}
@@ -74,12 +83,7 @@ export function OverviewScreen(): JSX.Element {
 
       <div className="grid grid-cols-1 gap-4 adm-full:grid-cols-3">
         <div className="adm-full:col-span-2">
-          <PlaceholderPanel
-            title={screen.reachTitle}
-            purpose={screen.reachPurpose}
-            requirement={screen.reachRequirement}
-            field="admin-02.reachMap"
-          />
+          <AnalyticsGeographyTab resource={geography} />
         </div>
 
         <div className="flex flex-col gap-4">

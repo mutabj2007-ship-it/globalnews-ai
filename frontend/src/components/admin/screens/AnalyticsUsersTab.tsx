@@ -33,6 +33,11 @@ import { KpiCard } from '../primitives/KpiCard';
  * an administrative role.
  */
 export function AnalyticsUsersTab(): JSX.Element {
+  const { can, t } = useAdminContext();
+  return can('access.manage') ? <UsersData /> : <p>{t.access.forbiddenBody}</p>;
+}
+
+function UsersData(): JSX.Element {
   const { t } = useAdminContext();
   const screen = t.screens.analytics;
   const [page, setPage] = useState(1);

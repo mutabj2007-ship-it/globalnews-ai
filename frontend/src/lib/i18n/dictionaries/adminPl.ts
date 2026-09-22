@@ -14,6 +14,22 @@ import type { AdminDictionary } from './adminEn';
  * those keys to match and requires every other string to differ.
  */
 export const adminPl: AdminDictionary = {
+  realData: {
+    accountDetails: 'Zarejestrowane obserwacje kont',
+    created24h: 'Utworzone konta · 24h',
+    returned24h: 'Konta z zaobserwowanym powrotem · 24h',
+    neverReturned: 'Konta bez zaobserwowanego powrotu',
+    tokenTitle: 'Zarejestrowane użycie analiz · 7d',
+    tokenNote:
+      'Sumy tokenów obejmują tylko uruchomienia z pomiarem użycia. Brak próbek oznacza brak danych, a nie zerowy koszt.',
+    runs7d: 'Żądania analizy · 7d',
+    tokenSamples: 'Uruchomienia z pomiarem tokenów',
+    promptTokens: 'Zarejestrowane tokeny wejściowe',
+    completionTokens: 'Zarejestrowane tokeny odpowiedzi',
+    totalTokens: 'Zarejestrowane tokeny łącznie',
+    passiveHealth:
+      'Stan systemu w panelu nie odpytuje dostawców wiadomości. Ich stan pozostaje tutaj nieznany do czasu podłączenia pasywnego odczytu.',
+  },
   meta: {
     title: 'Administracja — GlobalNews AI',
     description: 'Administracja GlobalNews AI.',

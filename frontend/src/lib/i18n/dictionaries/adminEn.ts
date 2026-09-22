@@ -15,6 +15,22 @@
  * has no backend, the copy says so.
  */
 export const adminEn = {
+  realData: {
+    accountDetails: 'Recorded account observations',
+    created24h: 'Accounts created · 24h',
+    returned24h: 'Accounts observed returning · 24h',
+    neverReturned: 'Accounts never observed returning',
+    tokenTitle: 'Recorded analysis usage · 7d',
+    tokenNote:
+      'Token totals cover only runs with recorded token usage. No sample means unavailable, not zero cost.',
+    runs7d: 'Analysis requests · 7d',
+    tokenSamples: 'Runs with token measurements',
+    promptTokens: 'Recorded prompt tokens',
+    completionTokens: 'Recorded completion tokens',
+    totalTokens: 'Recorded total tokens',
+    passiveHealth:
+      'Admin health does not probe news providers. News-provider health is unknown here until a passive snapshot is connected.',
+  },
   meta: {
     title: 'Admin — GlobalNews AI',
     description: 'GlobalNews AI administration.',

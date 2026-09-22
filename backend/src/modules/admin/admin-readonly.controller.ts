@@ -59,7 +59,7 @@ export class AdminReadonlyController {
   @Get('system/health')
   @RequireCapability(CAPABILITIES.AnalyticsView)
   systemHealth(): Promise<AdminSystemHealthResponse> {
-    return this.systemService.health();
+    return this.systemService.health({ skipProviderProbes: true });
   }
 
   /** GET /admin/news/providers — the ADMIN-06 provider health projection. */

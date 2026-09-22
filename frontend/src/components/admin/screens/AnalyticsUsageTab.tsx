@@ -102,6 +102,72 @@ export function AnalyticsUsageTab(): JSX.Element {
       </div>
 
       <p className="text-[11px] leading-relaxed text-adm-ink-dim">{screen.returningMeaning}</p>
+      <AdminPanel title={t.realData.accountDetails} field="admin-03.userRecords">
+        <div className="grid grid-cols-1 gap-3 adm-rail:grid-cols-3">
+          <KpiCard
+            label={t.realData.created24h}
+            field="admin-03.newUsers"
+            data={accountValue(accounts?.createdLast24h)}
+            onRetry={usage.reload}
+          />
+          <KpiCard
+            label={t.realData.returned24h}
+            field="admin-03.observedReturnVisits"
+            data={accountValue(accounts?.observedReturningLast24h)}
+            onRetry={usage.reload}
+          />
+          <KpiCard
+            label={t.realData.neverReturned}
+            field="admin-03.userRecords"
+            data={accountValue(accounts?.neverObservedReturning)}
+            onRetry={usage.reload}
+          />
+        </div>
+      </AdminPanel>
+      <AdminPanel
+        title={t.realData.tokenTitle}
+        field="admin-03.analysisRuns"
+        note={t.realData.tokenNote}
+      >
+        <div className="grid grid-cols-1 gap-3 adm-rail:grid-cols-3">
+          <KpiCard
+            label={t.realData.runs7d}
+            field="admin-03.analysisRuns"
+            data={analysisValue(analysis?.runsLast7d)}
+            onRetry={usage.reload}
+          />
+          <KpiCard
+            label={t.realData.tokenSamples}
+            field="admin-03.analysisRuns"
+            data={analysisValue(analysis?.tokens.sampleCount)}
+            onRetry={usage.reload}
+          />
+          <KpiCard
+            label={t.realData.promptTokens}
+            field="admin-03.analysisRuns"
+            data={analysisValue(
+              analysis?.tokens.sampleCount ? analysis.tokens.promptTokens : undefined,
+            )}
+            onRetry={usage.reload}
+          />
+          <KpiCard
+            label={t.realData.completionTokens}
+            field="admin-03.analysisRuns"
+            data={analysisValue(
+              analysis?.tokens.sampleCount ? analysis.tokens.completionTokens : undefined,
+            )}
+            onRetry={usage.reload}
+          />
+          <KpiCard
+            label={t.realData.totalTokens}
+            field="admin-03.analysisRuns"
+            data={analysisValue(
+              analysis?.tokens.sampleCount ? analysis.tokens.totalTokens : undefined,
+            )}
+            onRetry={usage.reload}
+          />
+        </div>
+      </AdminPanel>
 
       <AdminPanel
         title={screen.analysisTitle}

@@ -66,6 +66,11 @@ const COMPONENT_FIELD: Record<string, ProvenanceKey> = {
 };
 
 export function SystemHealthScreen(): JSX.Element {
+  const { can, t } = useAdminContext();
+  return can('analytics.view') ? <SystemHealthData /> : <p>{t.access.forbiddenBody}</p>;
+}
+
+function SystemHealthData(): JSX.Element {
   const { t } = useAdminContext();
   const health = useAdminResource<AdminSystemHealthResponse>(ADMIN_API.systemHealth);
   const screen = t.screens.systemHealth;
@@ -115,6 +120,8 @@ export function SystemHealthScreen(): JSX.Element {
           />
         </div>
       </AdminPanel>
+
+      <p className="text-[11px] text-adm-ink-dim">{t.realData.passiveHealth}</p>
 
       <AdminPanel title={screen.componentsTitle} field="admin-07.appProbe">
         <AdminStateBlock state={health.state} onRetry={health.reload}>
