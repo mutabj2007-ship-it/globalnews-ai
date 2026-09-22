@@ -606,7 +606,13 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       `robots` is the Energy route's own and is asserted by H's guards rather than restated
       here, which is where that assertion already lives.
     */
-    expect(pages).toHaveLength(42);
+    // Imihigo R1: recovered delivery preview pair and retained specialist pair.
+    expect(pages).toHaveLength(46);
+    for (const route of ['/imihigo', '/imihigo/compact', '/delivery-visual-preview', '/delivery-visual-preview/compact']) {
+      expect(pages).toContain(route);
+      expect(classify(route).indexability).toBe('noindex');
+      expect(sitemapRoutes().map(entry => entry.path)).not.toContain(route);
+    }
     expect(pages).toContain('/');
     /*
       AND `/economy` IS ASSERTED ABSENT, HERE, BESIDE THE COUNT.

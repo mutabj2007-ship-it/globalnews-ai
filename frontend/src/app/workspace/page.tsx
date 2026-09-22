@@ -99,9 +99,16 @@ const capabilityModules: CapabilityModule[] = [
   },
   {
     symbol: '🇷🇼',
+    name: 'Imihigo Intelligence',
+    description: 'Read retained official NISR evaluations with source evidence and revision history.',
+    status: 'Foundation ready',
+    href: '/imihigo',
+  },
+  {
+    symbol: '🇷🇼',
     name: 'Rwanda Intelligence',
     description:
-      'Support district comparison, elections, Imihigo performance, development projects, public services, budgets, infrastructure, and national trends.',
+      'Support district comparison, development projects, public services, budgets, infrastructure, and national trends.',
     status: 'Planned',
   },
 ];
@@ -150,7 +157,6 @@ const todaysIntelligencePlaceholders = [
 
 const rwandaPreviewItems = [
   'District comparisons',
-  'Imihigo performance',
   'Election intelligence',
   'Development projects',
   'Education and health indicators',
@@ -398,7 +404,7 @@ export default function HomePage(): JSX.Element {
               ))}
             </ul>
             <p className="mt-6 text-xs text-slate-500">
-              District and Imihigo data are not yet available.
+              District comparison data are not yet available.
             </p>
             <Link
               href="/map"
