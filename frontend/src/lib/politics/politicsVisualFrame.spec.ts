@@ -121,11 +121,12 @@ describe('the Politics module graph walk reaches what it claims to', () => {
   it('both routes exist and the domain is in the graph', () => {
     for (const r of ROUTES) expect(`${r}: ${existsSync(r)}`).toBe(`${r}: true`);
     expect(GRAPH.length).toBeGreaterThan(10);
-    expect(DOMAIN.length).toBeGreaterThanOrEqual(3);
+    expect(DOMAIN.length).toBeGreaterThanOrEqual(5);
     for (const must of [
-      join(SRC, 'components', 'politics', 'PoliticsEvidenceScreen.tsx'),
+      join(SRC, 'components', 'politics', 'PoliticsScreen.tsx'),
+      join(SRC, 'components', 'politics', 'PoliticsCompactScreen.tsx'),
       join(SRC, 'lib', 'politics', 'politicsStrings.ts'),
-      join(SRC, 'lib', 'politics', 'politicsDomain.ts'),
+      join(SRC, 'lib', 'politics', 'politicsSubject.ts'),
     ]) expect(`${must}: ${GRAPH.includes(must)}`).toBe(`${must}: true`);
   });
 
@@ -147,11 +148,9 @@ const NETWORK_TOKENS: readonly RegExp[] = [
 ];
 
 describe('no Politics surface can reach a provider or spend AI', () => {
-  it('only the bounded retained-reader adapter performs a network call', () => {
+  it('nothing in the reachable graph performs a network call', () => {
     const offenders: string[] = [];
     for (const f of GRAPH) {
-      // R1 admits first-party retained reads, never acquisition. Behavioral tests cover errors and holds.
-      if ([join(SRC, 'lib', 'evidence', 'retainedReaders.ts'), join(SRC, 'lib', 'api', 'apiBase.ts')].includes(f)) continue;
       for (const rx of NETWORK_TOKENS) if (rx.test(code(f))) offenders.push(`${f.slice(SRC.length)} :: ${rx}`);
     }
     expect(offenders).toEqual([]);
@@ -163,7 +162,7 @@ describe('no Politics surface can reach a provider or spend AI', () => {
 
   it('no provider or AI name appears anywhere in the graph', () => {
     const offenders = GRAPH
-      .filter((f) => /gnews|openai|\/analysis\/news|acled|ucdp|gdelt|cellar/i.test(code(f)))
+      .filter((f) => /gnews|openai|\/analysis\/news|acled|ucdp|gdelt|iebc|cellar/i.test(code(f)))
       .map((f) => f.slice(SRC.length));
     expect(offenders).toEqual([]);
   });
@@ -561,7 +560,7 @@ describe('no Politics code escapes the domain directories', () => {
       for (const name of readdirSync(dir)) {
         const full = join(dir, name);
         if (statSync(full).isDirectory()) { walk(full); continue; }
-        if (!/\.tsx?$/.test(full) || /\.spec\.ts$/.test(full)) continue;
+        if (!/\.tsx?$/.test(full)) continue;
         if (/[\\/](lib|components)[\\/]politics[\\/]/.test(full)) continue;
         if (/[\\/]app[\\/]politics-visual-preview[\\/]/.test(full)) continue;
         if (/from '@\/(lib|components)\/politics\//.test(code(full))) offenders.push(full.slice(SRC.length));
@@ -649,9 +648,6 @@ describe('12 · the package is self-contained against the current lineage', () =
     expect(EXTERNAL).toEqual([
       'components/navigation/ReturnControl.tsx',
       'components/specialist/SpecialistHudLine.tsx',
-      'lib/api/apiBase.ts',
-      'lib/election/electionRead.ts',
-      'lib/evidence/retainedReaders.ts',
       'lib/i18n/languages.ts',
       'lib/navigation/returnDepth.ts',
       'lib/navigation/returnFallback.ts',
