@@ -2,7 +2,9 @@ import { EAST_AFRICA_MEMBERS, MIDDLE_EAST_MEMBERS } from '@globalnews-ai/shared'
 import type { CountrySourcePack, GovernedSourceRegion } from '@globalnews-ai/shared';
 import { supranationalById } from '../geo/supranational-membership';
 
-/** Matches the four declared product regions. Undefined geographic labels are not scope. */
+/** The three priority coverage programmes: East Africa, Middle East and EU-27.
+ * Geography/navigation regions do not independently define Global Reach completeness.
+ */
 export const GLOBAL_REACH_REGIONS: readonly GovernedSourceRegion[] = [
   {
     id: 'region:east-africa',
@@ -14,7 +16,7 @@ export const GLOBAL_REACH_REGIONS: readonly GovernedSourceRegion[] = [
     members: MIDDLE_EAST_MEMBERS,
     provenanceNote: 'Product Owner Alpha monitoring membership, alpha-1',
   },
-  ...['region:europe', 'region:east-african-community'].map((id) => {
+  ...['region:european-union'].map((id) => {
     const region = supranationalById(id);
     if (!region || region.members.length === 0)
       throw new Error(`Missing governed membership: ${id}`);
