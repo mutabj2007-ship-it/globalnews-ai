@@ -284,6 +284,28 @@ const COORDINATION_FRAMES: readonly RegExp[] = [
   /\bcompare\s+(?:the\s+)?(?:current\s+)?(?:situations?|economies|economics|politics|conditions?|states?)?\s*(?:(?:in|of|for|between)\s+)?(.+?)\s*[?.!]*$/i,
   /\bcomparison\s+(?:of|between)\s+(.+?)\s*[?.!]*$/i,
   /\bdifference[s]?\s+between\s+(.+?)\s*[?.!]*$/i,
+  /*
+   * ASK EXPLICIT-SCOPE R1 — COUNTRY LISTS INSIDE A LONGER SENTENCE.
+   *
+   * The live failure that introduced this frame was:
+   *   "Compare how current local reporting in Israel, Iran, Saudi Arabia,
+   *    Turkey and the UAE is framing ..."
+   *
+   * The older comparison frames only accepted a country list immediately
+   * after "compare". Here the comparison target is introduced later by the
+   * ordinary geographic preposition "in", so the classifier saw no countries
+   * and a stale storyContext country silently won.
+   *
+   * This frame is deliberately conservative:
+   * - it only opens on an explicit geographic preposition;
+   * - it stops at a finite-clause verb boundary or sentence end;
+   * - resolveNamedCountries still accepts it ONLY if at least two members
+   *   resolve exactly through the canonical country table.
+   *
+   * Therefore "in general", "in the market", etc. contribute nothing, while
+   * a real comma/and country list becomes authoritative typed scope.
+   */
+  /\b(?:in|from|across)\s+(.+?)(?=\s+(?:is|are|was|were|has|have|had|will|would|can|could|should|may|might|that|which|who|while)\b|[?.!]|$)/i,
   /^(.+?)\s+(?:versus|vs\.?)\s+(.+?)\s*[?.!]*$/i,
 
   /*
