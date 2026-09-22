@@ -1,0 +1,86 @@
+BDI|iwacu|IWACU|LOCAL_NEWS|https://www.iwacu-burundi.org/|https://www.iwacu-burundi.org/groupe-iwacu/
+BDI|sos-medias|SOS Medias Burundi|LOCAL_NEWS|https://www.sosmediasburundi.org/|https://www.sosmediasburundi.org/en/about/
+BDI|rtnb|RTNB|PUBLIC_NEWS|https://www.rtnb.bi/|
+BDI|assembly|National Assembly Burundi|GOVERNMENT|https://assemblee.bi/|
+BDI|insbu|INSBU|STATISTICS|https://www.insbu.bi/|https://www.insbu.bi/useragreement
+BDI|brb|Bank of the Republic of Burundi|CENTRAL_BANK|https://www.brb.bi/|
+BDI|redcross|Burundi Red Cross|HUMANITARIAN|https://croixrouge.bi/|
+COD|actualite|Actualite.cd|LOCAL_NEWS|https://actualite.cd/|
+COD|7sur7|7sur7.cd|LOCAL_NEWS|https://7sur7.cd/|
+COD|acp|Congolese Press Agency|PUBLIC_NEWS|https://acp.cd/|
+COD|assembly|National Assembly DRC|GOVERNMENT|https://assemblee-nationale.cd/|
+COD|ins|INS DRC|STATISTICS|https://ins.cd/|
+COD|bcc|Central Bank of Congo|CENTRAL_BANK|https://www.bcc.cd/|
+COD|ocha|OCHA DRC|HUMANITARIAN|https://www.unocha.org/democratic-republic-congo|
+DJI|human-village|Human Village|LOCAL_NEWS|https://human-village.org/|
+DJI|adi|Djibouti News Agency|PUBLIC_NEWS|https://www.adi.dj/|
+DJI|gazette|Official Journal Djibouti|GOVERNMENT|https://www.journalofficiel.dj/|
+DJI|instad|INSTAD|STATISTICS|https://instad.dj/|
+DJI|bcd|Central Bank of Djibouti|CENTRAL_BANK|https://banque-centrale.dj/|
+DJI|redcrescent|Djibouti Red Crescent|HUMANITARIAN|https://www.ifrc.org/national-societies-directory/djibouti-red-crescent|
+ERI|erena|Radio Erena (exile)|LOCAL_NEWS|https://erena.org/|
+ERI|shabait|Ministry of Information Shabait|PUBLIC_NEWS|https://shabait.com/|
+ERI|ministry|Eritrea Ministry of Information publications|GOVERNMENT|https://shabait.com/category/local-news/|
+ERI|boe|Bank of Eritrea (candidate host)|CENTRAL_BANK|https://www.boe.gov.er/|
+ERI|redcross|Red Cross Society of Eritrea|HUMANITARIAN|https://www.ifrc.org/national-societies-directory/red-cross-society-eritrea|
+ETH|addis-standard|Addis Standard|LOCAL_NEWS|https://addisstandard.com/|
+ETH|reporter|The Reporter Ethiopia|LOCAL_NEWS|https://www.thereporterethiopia.com/|
+ETH|ena|Ethiopian News Agency|PUBLIC_NEWS|https://www.ena.et/web/eng/|
+ETH|parliament|House of Peoples Representatives|GOVERNMENT|https://www.hopr.gov.et/|
+ETH|ess|Ethiopian Statistical Service|STATISTICS|https://www.statsethiopia.gov.et/|
+ETH|nbe|National Bank of Ethiopia|CENTRAL_BANK|https://nbe.gov.et/publications-statistics/statistics/|
+ETH|edr|Ethiopian Disaster Risk Management Commission|HUMANITARIAN|https://edrmc.gov.et/|
+KEN|standard|The Standard|LOCAL_NEWS|https://www.standardmedia.co.ke/|https://www.standardmedia.co.ke/rss/headlines.php
+KEN|nation|Nation Kenya|LOCAL_NEWS|https://nation.africa/kenya|
+KEN|star|The Star Kenya|LOCAL_NEWS|https://www.the-star.co.ke/|
+KEN|capital|Capital FM Kenya|LOCAL_NEWS|https://www.capitalfm.co.ke/news/|
+KEN|kbc|Kenya Broadcasting Corporation|PUBLIC_NEWS|https://www.kbc.co.ke/|
+KEN|parliament|Parliament of Kenya|GOVERNMENT|https://www.parliament.go.ke/|
+KEN|knbs|Kenya National Bureau of Statistics|STATISTICS|https://www.knbs.or.ke/|https://www.knbs.or.ke/about/
+KEN|cbk|Central Bank of Kenya|CENTRAL_BANK|https://www.centralbank.go.ke/|https://www.centralbank.go.ke/feed/
+KEN|ndma|National Drought Management Authority|HUMANITARIAN|https://ndma.go.ke/|
+KEN|redcross|Kenya Red Cross|HUMANITARIAN|https://www.redcross.or.ke/|
+KEN|treasury|National Treasury Kenya|GOVERNMENT|https://www.treasury.go.ke/|
+RWA|ktpress|KT Press|LOCAL_NEWS|https://www.ktpress.rw/|https://www.ktpress.rw/feed/
+RWA|taarifa|Taarifa Rwanda|LOCAL_NEWS|https://taarifa.rw/|https://taarifa.rw/feed/
+RWA|igihe|IGIHE|LOCAL_NEWS|https://en.igihe.com/|
+RWA|newtimes|The New Times|LOCAL_NEWS|https://www.newtimes.co.rw/|https://www.newtimes.co.rw/rssFeed/14
+RWA|rna|Rwanda News Agency|LOCAL_NEWS|https://www.rnanews.com/|
+RWA|rba|Rwanda Broadcasting Agency|PUBLIC_NEWS|https://www.rba.co.rw/|
+RWA|parliament|Parliament of Rwanda|GOVERNMENT|https://www.parliament.gov.rw/|
+RWA|nisr|National Institute of Statistics of Rwanda|STATISTICS|https://www.statistics.gov.rw/|
+RWA|bnr|National Bank of Rwanda|CENTRAL_BANK|https://www.bnr.rw/|
+RWA|minema|Ministry in Charge of Emergency Management|HUMANITARIAN|https://www.minema.gov.rw/|
+RWA|minecofin|Ministry of Finance and Economic Planning|GOVERNMENT|https://www.minecofin.gov.rw/|
+SOM|shabelle|Shabelle Media Network|LOCAL_NEWS|https://shabellemedia.com/|
+SOM|goobjoog|Goobjoog Media|LOCAL_NEWS|https://goobjoog.com/|
+SOM|sonna|Somali National News Agency|PUBLIC_NEWS|https://sonna.so/en/|
+SOM|parliament|Federal Parliament Somalia|GOVERNMENT|https://parliament.gov.so/|
+SOM|snbs|Somali National Bureau of Statistics|STATISTICS|https://nbs.gov.so/|
+SOM|cbs|Central Bank of Somalia|CENTRAL_BANK|https://centralbank.gov.so/|
+SOM|sodma|Somali Disaster Management Agency|HUMANITARIAN|https://sodma.gov.so/|
+SSD|eyeradio|Eye Radio|LOCAL_NEWS|https://www.eyeradio.org/|
+SSD|tamazuj|Radio Tamazuj (cross-border)|LOCAL_NEWS|https://www.radiotamazuj.org/en/|
+SSD|ssbc|South Sudan Broadcasting Corporation|PUBLIC_NEWS|https://ssbc.gov.ss/|
+SSD|parliament|National Legislature South Sudan|GOVERNMENT|https://www.parliament.gov.ss/|
+SSD|nbs|National Bureau of Statistics South Sudan|STATISTICS|https://www.ssnbss.org/|
+SSD|boss|Bank of South Sudan|CENTRAL_BANK|https://boss.gov.ss/statistical-bulletin/|
+SSD|ocha|OCHA South Sudan|HUMANITARIAN|https://www.unocha.org/south-sudan|
+TZA|citizen|The Citizen|LOCAL_NEWS|https://www.thecitizen.co.tz/|
+TZA|ipp|IPP Media|LOCAL_NEWS|https://www.ippmedia.com/|
+TZA|dailynews|Daily News Tanzania|PUBLIC_NEWS|https://dailynews.co.tz/|
+TZA|parliament|Parliament Tanzania|GOVERNMENT|https://www.parliament.go.tz/|
+TZA|nbs|National Bureau of Statistics Tanzania|STATISTICS|https://www.nbs.go.tz/|
+TZA|bot|Bank of Tanzania|CENTRAL_BANK|https://www.bot.go.tz/|
+TZA|pmo|Prime Ministers Office disaster management|HUMANITARIAN|https://www.pmo.go.tz/|
+UGA|monitor|Daily Monitor|LOCAL_NEWS|https://www.monitor.co.ug/|
+UGA|observer|The Observer Uganda|LOCAL_NEWS|https://observer.ug/|
+UGA|ubc|Uganda Broadcasting Corporation|PUBLIC_NEWS|https://ubc.go.ug/|
+UGA|parliament|Parliament Uganda|GOVERNMENT|https://www.parliament.go.ug/|
+UGA|ubos|Uganda Bureau of Statistics|STATISTICS|https://www.ubos.org/|
+UGA|bou|Bank of Uganda|CENTRAL_BANK|https://www.bou.or.ug/|
+UGA|opm|Office of the Prime Minister disaster preparedness|HUMANITARIAN|https://opm.go.ug/|
+COD|ins-official|INS DRC official portal candidate|STATISTICS|https://ins.gouv.cd/|
+ETH|ess-current|Ethiopian Statistical Service current portal|STATISTICS|https://ess.gov.et/find-statistics/|
+RWA|nisr-apex|NISR canonical apex host|STATISTICS|https://statistics.gov.rw/|
+KEN|capital-current|Capital FM current domain|LOCAL_NEWS|https://capitalfm.africa/|

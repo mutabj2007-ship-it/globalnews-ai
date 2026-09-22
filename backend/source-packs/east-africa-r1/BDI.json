@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "packId": "east-africa-r1:BDI",
+  "country": "BDI",
+  "scope": "GOVERNED_EAST_AFRICA_BASELINE",
+  "enabled": false,
+  "alphaEnabled": false,
+  "productionHold": true,
+  "coverageStatus": "COVERAGE_GAP",
+  "findings": "IWACU timeout and SOS Medias HTML feed prevent two usable local feeds. Public broadcaster and Assembly inaccessible; INSBU HTML available; BRB timeout. Red Cross provides humanitarian candidate only.",
+  "qualifiedIndependentLocalPublishers": 0,
+  "independenceRule": "Two distinct ownership groups, country-local reporting, technically usable endpoint, and explicit product reuse scope required. Self-description, exile coverage and public broadcasters do not satisfy this by themselves.",
+  "categoryAudit": [
+    {
+      "category": "LOCAL_NEWS",
+      "candidateIds": [
+        "ea-r1:bdi:iwacu",
+        "ea-r1:bdi:sos-medias"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "PUBLIC_NEWS",
+      "candidateIds": [
+        "ea-r1:bdi:rtnb"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "GOVERNMENT",
+      "candidateIds": [
+        "ea-r1:bdi:assembly"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "STATISTICS",
+      "candidateIds": [
+        "ea-r1:bdi:insbu"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "CENTRAL_BANK",
+      "candidateIds": [
+        "ea-r1:bdi:brb"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "HUMANITARIAN",
+      "candidateIds": [
+        "ea-r1:bdi:redcross"
+      ],
+      "verifiedFeedEndpointIds": [
+        "ea-r1:bdi:redcross"
+      ],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    }
+  ],
+  "sources": [
+    {
+      "id": "ea-r1:bdi:iwacu",
+      "name": "IWACU",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://www.iwacu-burundi.org/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": "iwacu",
+      "duplicateOf": null,
+      "independence": "SELF_DESCRIBED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "INACCESSIBLE",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.iwacu-burundi.org/groupe-iwacu/"
+        ],
+        "note": "Publisher describes an independent Burundi newsroom. Direct homepage request timed out; no feed admitted."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:bdi:iwacu",
+        "checkedAt": "2026-09-22T16:18:01.094Z"
+      },
+      "blockers": [
+        "INACCESSIBLE",
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:bdi:sos-medias",
+      "name": "SOS Medias Burundi",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://www.sosmediasburundi.org/",
+      "feedUrl": "https://www.sosmediasburundi.org/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "SELF_DESCRIBED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.sosmediasburundi.org/en/about/"
+        ],
+        "note": "Journalist-founded Burundi-focused outlet. Ownership and commercial reuse remain unresolved. Advertised feed returned HTML in this capture."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:bdi:sos-medias",
+        "checkedAt": "2026-09-22T16:17:53.957Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:bdi:rtnb",
+      "name": "RTNB",
+      "category": "PUBLIC_NEWS",
+      "homepage": "https://www.rtnb.bi/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.rtnb.bi/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:bdi:rtnb",
+        "checkedAt": "2026-09-22T16:17:52.981Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:bdi:assembly",
+      "name": "National Assembly Burundi",
+      "category": "GOVERNMENT",
+      "homepage": "https://assemblee.bi/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://assemblee.bi/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:bdi:assembly",
+        "checkedAt": "2026-09-22T16:17:52.297Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:bdi:insbu",
+      "name": "INSBU",
+      "category": "STATISTICS",
+      "homepage": "https://www.insbu.bi/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.insbu.bi/useragreement"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:bdi:insbu",
+        "checkedAt": "2026-09-22T16:17:54.813Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:bdi:brb",
+      "name": "Bank of the Republic of Burundi",
+      "category": "CENTRAL_BANK",
+      "homepage": "https://www.brb.bi/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "INACCESSIBLE",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.brb.bi/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:bdi:brb",
+        "checkedAt": "2026-09-22T16:17:55.762Z"
+      },
+      "blockers": [
+        "INACCESSIBLE",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:bdi:redcross",
+      "name": "Burundi Red Cross",
+      "category": "HUMANITARIAN",
+      "homepage": "https://croixrouge.bi/",
+      "feedUrl": "https://croixrouge.bi/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": "fr-FR",
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://croixrouge.bi/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:bdi:redcross",
+        "checkedAt": "2026-09-22T16:21:32.946Z"
+      },
+      "blockers": [
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    }
+  ]
+}

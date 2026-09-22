@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "baseline": [
+    "BDI",
+    "COD",
+    "DJI",
+    "ERI",
+    "ETH",
+    "KEN",
+    "RWA",
+    "SOM",
+    "SSD",
+    "TZA",
+    "UGA"
+  ],
+  "baseCommit": "dc0b029f0d29e07908c0dc8c66d3ad1bd216fc15",
+  "branch": "feature/beta-global-reach-east-africa-r1",
+  "productionHold": true,
+  "alphaEnabled": false,
+  "files": [
+    "BDI.json",
+    "COD.json",
+    "DJI.json",
+    "ERI.json",
+    "ETH.json",
+    "KEN.json",
+    "RWA.json",
+    "SOM.json",
+    "SSD.json",
+    "TZA.json",
+    "UGA.json"
+  ]
+}

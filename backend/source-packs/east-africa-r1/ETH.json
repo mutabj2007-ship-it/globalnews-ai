@@ -1,0 +1,355 @@
+{
+  "schemaVersion": 1,
+  "packId": "east-africa-r1:ETH",
+  "country": "ETH",
+  "scope": "GOVERNED_EAST_AFRICA_BASELINE",
+  "enabled": false,
+  "alphaEnabled": false,
+  "productionHold": true,
+  "coverageStatus": "COVERAGE_GAP",
+  "findings": "Addis Standard blocked; Reporter feed initially responds but recheck may fail. Old statistics domain fails; ESS replacement checked. Parliament and disaster commission HTML do not prove structured publication access. ENA timeout retained.",
+  "qualifiedIndependentLocalPublishers": 0,
+  "independenceRule": "Two distinct ownership groups, country-local reporting, technically usable endpoint, and explicit product reuse scope required. Self-description, exile coverage and public broadcasters do not satisfy this by themselves.",
+  "categoryAudit": [
+    {
+      "category": "LOCAL_NEWS",
+      "candidateIds": [
+        "ea-r1:eth:addis-standard",
+        "ea-r1:eth:reporter"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "PUBLIC_NEWS",
+      "candidateIds": [
+        "ea-r1:eth:ena"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "GOVERNMENT",
+      "candidateIds": [
+        "ea-r1:eth:parliament"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "STATISTICS",
+      "candidateIds": [
+        "ea-r1:eth:ess",
+        "ea-r1:eth:ess-current"
+      ],
+      "verifiedFeedEndpointIds": [
+        "ea-r1:eth:ess-current"
+      ],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "CENTRAL_BANK",
+      "candidateIds": [
+        "ea-r1:eth:nbe"
+      ],
+      "verifiedFeedEndpointIds": [
+        "ea-r1:eth:nbe"
+      ],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "HUMANITARIAN",
+      "candidateIds": [
+        "ea-r1:eth:edr"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    }
+  ],
+  "sources": [
+    {
+      "id": "ea-r1:eth:addis-standard",
+      "name": "Addis Standard",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://addisstandard.com/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "REVIEW_REQUIRED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://addisstandard.com/about-us/"
+        ],
+        "note": "Primary about page and direct robots endpoint blocked; no bypass attempted."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eth:addis-standard",
+        "checkedAt": "2026-09-22T16:18:28.505Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eth:reporter",
+      "name": "The Reporter Ethiopia",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://www.thereporterethiopia.com/",
+      "feedUrl": "https://www.thereporterethiopia.com/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": "media-communications-center-ethiopia",
+      "duplicateOf": null,
+      "independence": "SELF_DESCRIBED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "RECHECK_FAILED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.thereporterethiopia.com/about-us/"
+        ],
+        "note": "Publisher identifies private ownership by MCC and an Addis Ababa newsroom. Feed recheck failure must not be hidden by initial success."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eth:reporter",
+        "checkedAt": "2026-09-22T16:21:42.694Z"
+      },
+      "blockers": [
+        "RECHECK_FAILED",
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eth:ena",
+      "name": "Ethiopian News Agency",
+      "category": "PUBLIC_NEWS",
+      "homepage": "https://www.ena.et/web/eng/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "INACCESSIBLE",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.ena.et/web/eng/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eth:ena",
+        "checkedAt": "2026-09-22T16:18:32.275Z"
+      },
+      "blockers": [
+        "INACCESSIBLE",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eth:parliament",
+      "name": "House of Peoples Representatives",
+      "category": "GOVERNMENT",
+      "homepage": "https://www.hopr.gov.et/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.hopr.gov.et/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eth:parliament",
+        "checkedAt": "2026-09-22T16:18:36.323Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eth:ess",
+      "name": "Ethiopian Statistical Service",
+      "category": "STATISTICS",
+      "homepage": "https://www.statsethiopia.gov.et/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.statsethiopia.gov.et/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eth:ess",
+        "checkedAt": "2026-09-22T16:18:35.586Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eth:nbe",
+      "name": "National Bank of Ethiopia",
+      "category": "CENTRAL_BANK",
+      "homepage": "https://nbe.gov.et/publications-statistics/statistics/",
+      "feedUrl": "https://nbe.gov.et/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": "en-US",
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://nbe.gov.et/publications-statistics/statistics/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eth:nbe",
+        "checkedAt": "2026-09-22T16:21:43.144Z"
+      },
+      "blockers": [
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eth:edr",
+      "name": "Ethiopian Disaster Risk Management Commission",
+      "category": "HUMANITARIAN",
+      "homepage": "https://edrmc.gov.et/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://edrmc.gov.et/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eth:edr",
+        "checkedAt": "2026-09-22T16:18:40.330Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:eth:ess-current",
+      "name": "Ethiopian Statistical Service current portal",
+      "category": "STATISTICS",
+      "homepage": "https://ess.gov.et/find-statistics/",
+      "feedUrl": "https://ess.gov.et/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": "ea-r1:eth:ess",
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": "en-GB",
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://ess.gov.et/find-statistics/"
+        ],
+        "note": "Discovered current ESS portal; old statsethiopia hostname failure retained separately."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:eth:ess-current",
+        "checkedAt": "2026-09-22T16:22:03.336Z"
+      },
+      "blockers": [
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    }
+  ]
+}

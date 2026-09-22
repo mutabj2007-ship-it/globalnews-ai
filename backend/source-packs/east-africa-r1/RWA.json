@@ -1,0 +1,499 @@
+{
+  "schemaVersion": 1,
+  "packId": "east-africa-r1:RWA",
+  "country": "RWA",
+  "scope": "GOVERNED_EAST_AFRICA_BASELINE",
+  "enabled": false,
+  "alphaEnabled": false,
+  "productionHold": true,
+  "coverageStatus": "COVERAGE_GAP",
+  "findings": "Deep pack: KT Press, Taarifa, IGIHE, New Times and RNA plus public broadcaster and five institutional candidates. KT group identity known but independence not established; Taarifa self-description not ownership verification. RNA now offers RSS. IGIHE blocked, New Times feed skipped under robots rules, BNR HTML only. NISR apex resolves www TLS problem; government robots restrictions retained.",
+  "qualifiedIndependentLocalPublishers": 0,
+  "independenceRule": "Two distinct ownership groups, country-local reporting, technically usable endpoint, and explicit product reuse scope required. Self-description, exile coverage and public broadcasters do not satisfy this by themselves.",
+  "categoryAudit": [
+    {
+      "category": "LOCAL_NEWS",
+      "candidateIds": [
+        "ea-r1:rwa:ktpress",
+        "ea-r1:rwa:taarifa",
+        "ea-r1:rwa:igihe",
+        "ea-r1:rwa:newtimes",
+        "ea-r1:rwa:rna"
+      ],
+      "verifiedFeedEndpointIds": [
+        "ea-r1:rwa:ktpress",
+        "ea-r1:rwa:taarifa",
+        "ea-r1:rwa:rna"
+      ],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "PUBLIC_NEWS",
+      "candidateIds": [
+        "ea-r1:rwa:rba"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "GOVERNMENT",
+      "candidateIds": [
+        "ea-r1:rwa:parliament",
+        "ea-r1:rwa:minecofin"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "STATISTICS",
+      "candidateIds": [
+        "ea-r1:rwa:nisr",
+        "ea-r1:rwa:nisr-apex"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "CENTRAL_BANK",
+      "candidateIds": [
+        "ea-r1:rwa:bnr"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    },
+    {
+      "category": "HUMANITARIAN",
+      "candidateIds": [
+        "ea-r1:rwa:minema"
+      ],
+      "verifiedFeedEndpointIds": [],
+      "status": "COVERAGE_GAP",
+      "reason": "Endpoint evidence retained; rights and admission not cleared. HTML-only institutions need publication endpoint/schema review."
+    }
+  ],
+  "sources": [
+    {
+      "id": "ea-r1:rwa:ktpress",
+      "name": "KT Press",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://www.ktpress.rw/",
+      "feedUrl": "https://www.ktpress.rw/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": "kigali-today",
+      "duplicateOf": null,
+      "independence": "REVIEW_REQUIRED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": "en-US",
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.ktpress.rw/about-us/"
+        ],
+        "note": "Publisher names Kigali Today Ltd as parent. KT Radio and Kigali Today must not become additional independent publishers. About page also contains unrelated outbound gambling links; integrity review required before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:ktpress",
+        "checkedAt": "2026-09-22T16:21:47.476Z"
+      },
+      "blockers": [
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:taarifa",
+      "name": "Taarifa Rwanda",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://taarifa.rw/",
+      "feedUrl": "https://taarifa.rw/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "SELF_DESCRIBED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": "en-US",
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rights": {
+        "status": "LIMITED_SCOPE_REVIEW",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://taarifa.rw/about-taarifa/",
+          "https://taarifa.rw/taarifa-terms-of-use/"
+        ],
+        "note": "Current about page describes independent Rwanda reporting; legacy /about-us/ contains template filler. Terms mention links and attributed short excerpts and route reprints/licensing to publisher. Full-text AI ingestion rights unestablished; no grant inferred from ambiguous extracted wording."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:taarifa",
+        "checkedAt": "2026-09-22T16:21:48.664Z"
+      },
+      "blockers": [
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:igihe",
+      "name": "IGIHE",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://en.igihe.com/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "REVIEW_REQUIRED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://en.igihe.com/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:igihe",
+        "checkedAt": "2026-09-22T16:18:57.703Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:newtimes",
+      "name": "The New Times",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://www.newtimes.co.rw/",
+      "feedUrl": "https://www.newtimes.co.rw/rssFeed/14",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "REVIEW_REQUIRED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.newtimes.co.rw/terms-and-conditions"
+        ],
+        "note": "Prior registry described feed redirect to homepage. This run skipped the legacy feed under conservative robots policy; do not report historical redirect as a newly observed dead feed."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:newtimes",
+        "checkedAt": "2026-09-22T16:25:00.252Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:rna",
+      "name": "Rwanda News Agency",
+      "category": "LOCAL_NEWS",
+      "homepage": "https://www.rnanews.com/",
+      "feedUrl": "https://www.rnanews.com/feed/",
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "REVIEW_REQUIRED",
+      "locality": "COUNTRY_FOCUSED_CANDIDATE",
+      "declaredFeedLanguage": "en-US",
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.rnanews.com/"
+        ],
+        "note": "Current advertised feed is reachable, unlike the historical robots 503. Ownership, independence and reuse remain unverified."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:rna",
+        "checkedAt": "2026-09-22T16:21:50.337Z"
+      },
+      "blockers": [
+        "RIGHTS_NOT_CLEARED",
+        "INDEPENDENT_OWNERSHIP_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:rba",
+      "name": "Rwanda Broadcasting Agency",
+      "category": "PUBLIC_NEWS",
+      "homepage": "https://www.rba.co.rw/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.rba.co.rw/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:rba",
+        "checkedAt": "2026-09-22T16:19:10.097Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:parliament",
+      "name": "Parliament of Rwanda",
+      "category": "GOVERNMENT",
+      "homepage": "https://www.parliament.gov.rw/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.parliament.gov.rw/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:parliament",
+        "checkedAt": "2026-09-22T16:25:03.324Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:nisr",
+      "name": "National Institute of Statistics of Rwanda",
+      "category": "STATISTICS",
+      "homepage": "https://www.statistics.gov.rw/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.statistics.gov.rw/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:nisr",
+        "checkedAt": "2026-09-22T16:19:01.418Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:bnr",
+      "name": "National Bank of Rwanda",
+      "category": "CENTRAL_BANK",
+      "homepage": "https://www.bnr.rw/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.bnr.rw/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:bnr",
+        "checkedAt": "2026-09-22T16:19:01.583Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:minema",
+      "name": "Ministry in Charge of Emergency Management",
+      "category": "HUMANITARIAN",
+      "homepage": "https://www.minema.gov.rw/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.minema.gov.rw/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:minema",
+        "checkedAt": "2026-09-22T16:25:06.725Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:minecofin",
+      "name": "Ministry of Finance and Economic Planning",
+      "category": "GOVERNMENT",
+      "homepage": "https://www.minecofin.gov.rw/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": null,
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "NOT_FETCHED",
+      "rights": {
+        "status": "UNRESOLVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://www.minecofin.gov.rw/"
+        ],
+        "note": "No product reuse grant established by bounded audit; obtain and review applicable terms before admission."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:minecofin",
+        "checkedAt": "2026-09-22T16:25:09.696Z"
+      },
+      "blockers": [
+        "NOT_FETCHED",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    },
+    {
+      "id": "ea-r1:rwa:nisr-apex",
+      "name": "NISR canonical apex host",
+      "category": "STATISTICS",
+      "homepage": "https://statistics.gov.rw/",
+      "feedUrl": null,
+      "enabled": false,
+      "alphaEnabled": false,
+      "admission": "HOLD",
+      "publisherGroup": null,
+      "duplicateOf": "ea-r1:rwa:nisr",
+      "independence": "NOT_APPLICABLE",
+      "locality": "INSTITUTIONAL",
+      "declaredFeedLanguage": null,
+      "languageNote": "Publisher-declared metadata only; not language detection. Mixed-language items require per-item review.",
+      "technicalStatus": "HTML_PAGE",
+      "rights": {
+        "status": "RESTRICTION_OR_NOTICE_OBSERVED",
+        "reuseApproved": false,
+        "evidenceUrls": [
+          "https://statistics.gov.rw/documents/strategies-and-policies/law-establishing-nisr"
+        ],
+        "note": "Canonical apex host responds; www variant has certificate-name mismatch. TLS verification was not disabled."
+      },
+      "evidence": {
+        "file": "captures.json",
+        "sourceId": "ea-r1:rwa:nisr-apex",
+        "checkedAt": "2026-09-22T16:21:30.335Z"
+      },
+      "blockers": [
+        "HTML_PAGE",
+        "RIGHTS_NOT_CLEARED",
+        "AUTHORITY_AND_PUBLICATION_SCOPE_REVIEW"
+      ]
+    }
+  ]
+}
