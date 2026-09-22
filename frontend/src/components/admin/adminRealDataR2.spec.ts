@@ -16,14 +16,14 @@ import type { AdminCapability } from '@/lib/admin/adminCapabilities';
 
 jest.mock('@/lib/admin/useAdminResource', () => ({ useAdminResource: jest.fn() }));
 const resource = jest.mocked(useAdminResource);
-const render = (component: React.ReactElement, capabilities: AdminCapability[]) =>
-  renderToStaticMarkup(
-    React.createElement(AdminContextProvider, {
-      t: adminEn,
-      me: { adminId: 'test', role: 'SUPER_ADMIN', capabilities },
-      children: component,
-    }),
-  );
+const render = (component: React.ReactElement, capabilities: AdminCapability[]) => {
+  const props = {
+    t: adminEn,
+    me: { adminId: 'test', role: 'SUPER_ADMIN' as const, capabilities },
+    children: component,
+  };
+  return renderToStaticMarkup(React.createElement(AdminContextProvider, props));
+};
 
 beforeEach(() => {
   resource.mockReset();

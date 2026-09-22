@@ -382,6 +382,32 @@ export const adminEn = {
     },
 
     operations: {
+      retained: {
+        publisherTitle: 'Publisher & official sources',
+        publisherNote:
+          'Individual sources carried by the Publisher Feeds transport. Source identity and country are preserved independently.',
+        active: 'ACTIVE',
+        inactive: 'INACTIVE',
+        inventoryTitle: 'Article inventory',
+        inventoryNote: 'Measured from retained Article rows. This read does not call a provider.',
+        inventoryLoading: 'Loading inventory…',
+        inventoryUnavailable: 'Article inventory could not be read.',
+        storedArticles: 'Stored articles',
+        latestRetained: 'Latest retained',
+        source: 'Source',
+        articles: 'Articles',
+        executionTitle: 'Provider execution activity',
+        executionNote:
+          'Measured backend execution buckets. Opening this table does not call a news provider. Counters cover this process lifetime, not a billing period.',
+        executionLoading: 'Loading execution activity…',
+        executionUnavailable: 'No provider execution registry is available in this process.',
+        measuredExecutions: 'Measured executions',
+        provider: 'Provider',
+        endpoint: 'Endpoint',
+        executions: 'Executions',
+        cacheHits: 'Cache hits',
+        cacheMisses: 'Cache misses',
+      },
       title: 'News, sources & AI operations',
       purpose:
         'Which providers are answering, what mode the data is in, and how the AI layer behaves.',

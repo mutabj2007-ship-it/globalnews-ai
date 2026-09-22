@@ -117,8 +117,8 @@ model User {
   /// code constant and never configuration.
   adminRole AdminRole?
 
-  askThreads AskThread[]
-  storedAskResults StoredResult[]
+  askThreads        AskThread[]
+  storedAskResults  StoredResult[]
   computeOperations ComputeOperation[]
 
   identities UserIdentity[]
@@ -155,7 +155,7 @@ model User {
 
   /// R1/T3 — a fifth account-owned relation, cascading like the four
   /// above.
-  countryFollows CountryFollow[]
+  countryFollows     CountryFollow[]
   watchSubscriptions WatchSubscription[]
 
   /// R3/T7 — account-scoped telemetry. SET NULL, NOT Cascade (CTO
@@ -369,6 +369,7 @@ model SearchHistoryEntry {
   @@index([userId])
   @@index([createdAt])
 }
+
 /// Support loop S1 — what a user says their request is about.
 ///
 /// Mirrors SupportCategory in shared/src/support.ts member for member;
@@ -478,15 +479,16 @@ model SupportMessage {
   @@index([ticketId])
 }
 
-
-/* ──────────────────────────────────────────────────────────────────────
-   SITUATION MEMORY SUBSTRATE — recovered VERBATIM from the accepted
-   authority (canonical worktree alpha-convergence-2-20260830-133946) under
-   MAIN-FINAL-CORRECTED-ALPHA-CONVERGENCE-1 PO ruling 1. NOT ONE FIELD IS
-   INVENTED, RENAMED OR RETYPED. Its migration,
-   20260901050000_add_situation_memory, creates five NEW tables and alters no
-   existing one; DOWN.sql beside it drops exactly those five.
-   ────────────────────────────────────────────────────────────────────── */
+/**
+ * ──────────────────────────────────────────────────────────────────────
+ * SITUATION MEMORY SUBSTRATE — recovered VERBATIM from the accepted
+ * authority (canonical worktree alpha-convergence-2-20260830-133946) under
+ * MAIN-FINAL-CORRECTED-ALPHA-CONVERGENCE-1 PO ruling 1. NOT ONE FIELD IS
+ * INVENTED, RENAMED OR RETYPED. Its migration,
+ * 20260901050000_add_situation_memory, creates five NEW tables and alters no
+ * existing one; DOWN.sql beside it drops exactly those five.
+ * ──────────────────────────────────────────────────────────────────────
+ */
 
 /// The thing a user follows and the system remembers across retrieval cycles.
 model Situation {
@@ -577,7 +579,6 @@ model Situation {
   /// This is what replaces S1's `key @unique`, and it is the only uniqueness
   /// this model asserts.
   @@unique([partitionKey, keyVersion, discriminator])
-
   /// The bounded lookup G's write path performs: load the situations in this
   /// observation's bucket, at this key version, and nothing else.
   @@index([partitionKey, keyVersion])
@@ -1024,7 +1025,7 @@ model SnapshotRetrieval {
 
   createdAt DateTime @default(now())
 
-  observations MarketObservation[]
+  observations         MarketObservation[]
   conflictObservations ConflictObservation[]
 
   /// R2 · S-3 — THE COMPOSITE KEY AN OBSERVATION REFERENCES.
@@ -1164,8 +1165,8 @@ model MarketIngestRun {
   /// outage indistinguishable from a quiet month.
   outcome String?
 
-  attempts             Int @default(0)
-  observationsWritten  Int @default(0)
+  attempts            Int @default(0)
+  observationsWritten Int @default(0)
 
   /// Why, in the outcome's own terms. Never a stack trace, never free prose that
   /// a later reader has to interpret.
@@ -1221,25 +1222,25 @@ model MarketIngestLease {
 /// stable identity/time/geography selectors for efficient reads; they do not
 /// replace or re-derive the canonical values.
 model ConflictObservation {
-  id              String   @id @default(uuid())
-  observationKey  String
-  authority       String
-  upstreamEventId String
-  eventType       String
-  owner           String
-  actors          Json
-  geography       Json
-  temporal        Json
-  severity        Json
-  sourceReference Json
-  acquisition     Json
-  revision        Json
-  revisionOrdinal Int @default(0)
-  captureHash String?
-  captureRetrievedAt DateTime?
-  snapshotRetrievalId String?
+  id                    String             @id @default(uuid())
+  observationKey        String
+  authority             String
+  upstreamEventId       String
+  eventType             String
+  owner                 String
+  actors                Json
+  geography             Json
+  temporal              Json
+  severity              Json
+  sourceReference       Json
+  acquisition           Json
+  revision              Json
+  revisionOrdinal       Int                @default(0)
+  captureHash           String?
+  captureRetrievedAt    DateTime?
+  snapshotRetrievalId   String?
   snapshotAdmissibility String?
-  snapshotRetrieval SnapshotRetrieval? @relation(fields: [snapshotRetrievalId, snapshotAdmissibility], references: [retrievalId, admissibility])
+  snapshotRetrieval     SnapshotRetrieval? @relation(fields: [snapshotRetrievalId, snapshotAdmissibility], references: [retrievalId, admissibility])
 
   /// Read/index projections bound at write from canonical temporal/geography.
   occurredOn  DateTime
@@ -1364,35 +1365,39 @@ model MarketObservation {
 
 /// Internal R2 append-only production ledger. No acquisition or public activation.
 model SecurityProjectionRun {
-  id Int @id @default(autoincrement())
-  geographyId String
+  id            Int                           @id @default(autoincrement())
+  geographyId   String
   maxAgeMinutes Int
-  startedAt DateTime @default(now())
-  completion SecurityProjectionCompletion?
-  observations SecurityObservation[]
-  members SecurityProjectionMember[]
+  startedAt     DateTime                      @default(now())
+  completion    SecurityProjectionCompletion?
+  observations  SecurityObservation[]
+  members       SecurityProjectionMember[]
+
   @@index([geographyId, id])
 }
+
 model SecurityProjectionCompletion {
-  runId Int @id
-  run SecurityProjectionRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  status String
+  runId            Int                   @id
+  run              SecurityProjectionRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  status           String
   observationCount Int
-  completedAt DateTime @default(now())
+  completedAt      DateTime              @default(now())
 }
+
 model SecurityObservation {
-  id Int @id @default(autoincrement())
-  runId Int
-  run SecurityProjectionRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  observationKey String
-  geographyId String
-  revisionOrdinal Int
+  id                        Int                        @id @default(autoincrement())
+  runId                     Int
+  run                       SecurityProjectionRun      @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  observationKey            String
+  geographyId               String
+  revisionOrdinal           Int
   supersedesRevisionOrdinal Int?
-  ownershipT1 Boolean
-  ownershipT2 Boolean
-  resolvedOwner String
-  payload Json
-  memberships SecurityProjectionMember[]
+  ownershipT1               Boolean
+  ownershipT2               Boolean
+  resolvedOwner             String
+  payload                   Json
+  memberships               SecurityProjectionMember[]
+
   @@unique([observationKey, revisionOrdinal])
   @@unique([runId, observationKey])
   @@index([geographyId, runId])
@@ -1400,11 +1405,12 @@ model SecurityObservation {
 
 /// Immutable snapshot membership allows refresh without inventing a new evidence revision.
 model SecurityProjectionMember {
-  runId Int
-  observationId Int
+  runId          Int
+  observationId  Int
   observationKey String
-  run SecurityProjectionRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  observation SecurityObservation @relation(fields: [observationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  run            SecurityProjectionRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  observation    SecurityObservation   @relation(fields: [observationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
   @@id([runId, observationId])
   @@unique([runId, observationKey])
 }
@@ -1427,144 +1433,152 @@ enum WatchRunStatus {
 
 // Dormant foundation. No relation to CountryFollow or Sand charging.
 model WatchSubscription {
-  id                String @id @default(cuid())
+  id                String                  @id @default(cuid())
   userId            String
-  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   subjectId         String
   countryCode       String
   status            WatchSubscriptionStatus @default(PAUSED)
-  intervalSeconds   Int @default(3600)
+  intervalSeconds   Int                     @default(3600)
   nextRunAt         DateTime
   lastSuccessAt     DateTime?
   lastFailureAt     DateTime?
   lastFailureCode   String?
-  maxAttempts       Int @default(3)
-  dailyRunLimit     Int @default(24)
-  dailyAttemptLimit Int @default(48)
-  evidenceLimit     Int @default(100)
+  maxAttempts       Int                     @default(3)
+  dailyRunLimit     Int                     @default(24)
+  dailyAttemptLimit Int                     @default(48)
+  evidenceLimit     Int                     @default(100)
   budgetDay         DateTime
-  runsUsed          Int @default(0)
-  attemptsUsed      Int @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  runsUsed          Int                     @default(0)
+  attemptsUsed      Int                     @default(0)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
   runs              WatchRun[]
+
   @@unique([userId, subjectId])
   @@index([status, nextRunAt])
 }
 
 model WatchRun {
-  id             String @id @default(cuid())
+  id             String            @id @default(cuid())
   subscriptionId String
   subscription   WatchSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   scheduledAt    DateTime
   status         WatchRunStatus
-  attempts       Int @default(0)
+  attempts       Int               @default(0)
   retryAt        DateTime?
   leaseUntil     DateTime?
   completedAt    DateTime?
   failureCode    String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime          @default(now())
   observation    WatchObservation?
+
   @@unique([subscriptionId, scheduledAt])
 }
 
 model WatchObservation {
-  id           String @id @default(cuid())
-  runId        String @unique
-  run          WatchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
-  observedAt   DateTime
-  outcome      String
+  id         String   @id @default(cuid())
+  runId      String   @unique
+  run        WatchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  observedAt DateTime
+  outcome    String
   // Bounded immutable copy of retained evidence; no fabricated change assessment.
-  evidence     Json
-  truncated    Boolean
+  evidence   Json
+  truncated  Boolean
+
   @@index([observedAt])
 }
 
 // CODEX J: additive authenticated Ask substrate. No anonymous persistence,
 // wallet or balance. Stored model output is display-only, never evidence.
 model AskThread {
-  id String @id @default(uuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientKey String
-  requestHash String
-  language String
-  returnPath String?
-  nextSequence Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  turns AskTurn[]
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientKey    String
+  requestHash  String
+  language     String
+  returnPath   String?
+  nextSequence Int       @default(1)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  turns        AskTurn[]
+
   @@unique([userId, clientKey])
   @@index([userId, updatedAt])
 }
 
 model AskTurn {
-  id String @id @default(uuid())
-  threadId String
-  thread AskThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  sequence Int
+  id          String           @id @default(uuid())
+  threadId    String
+  thread      AskThread        @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sequence    Int
   // Only the user's question is retained here; answer accessed by operation.
-  question String
-  language String
-  operationId String @unique
-  operation ComputeOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  question    String
+  language    String
+  operationId String           @unique
+  operation   ComputeOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+
   @@unique([threadId, sequence])
 }
 
 model StoredResult {
-  id String @id @default(uuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fingerprint String
+  id               String             @id @default(uuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fingerprint      String
   evidenceRevision String
   // Immutable display artifact; NEVER consumed as a retrieval input.
-  payload Json
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-  operations ComputeOperation[]
+  payload          Json
+  createdAt        DateTime           @default(now())
+  expiresAt        DateTime
+  operations       ComputeOperation[]
+
   @@index([userId, fingerprint, expiresAt])
 }
 
 model ComputeOperation {
-  id String @id @default(uuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientKey String
-  requestHash String
-  kind String
-  computeClass String
-  fingerprint String
+  id                 String            @id @default(uuid())
+  userId             String
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientKey          String
+  requestHash        String
+  kind               String
+  computeClass       String
+  fingerprint        String
   // Server-prepared contract, never caller context or prior model output.
-  plan Json
-  quotedSand Int @default(0)
-  ledgerEnabled Boolean @default(false)
-  status String @default("QUOTED")
-  quoteExpiresAt DateTime
-  acceptedAt DateTime?
-  leaseExpiresAt DateTime?
-  runToken String?
-  storedResultId String?
-  storedResult StoredResult? @relation(fields: [storedResultId], references: [id], onDelete: SetNull)
-  storedResultReused Boolean @default(false)
-  failureCode String?
-  createdAt DateTime @default(now())
-  completedAt DateTime?
-  turn AskTurn?
-  ledger SandLedgerEntry[]
+  plan               Json
+  quotedSand         Int               @default(0)
+  ledgerEnabled      Boolean           @default(false)
+  status             String            @default("QUOTED")
+  quoteExpiresAt     DateTime
+  acceptedAt         DateTime?
+  leaseExpiresAt     DateTime?
+  runToken           String?
+  storedResultId     String?
+  storedResult       StoredResult?     @relation(fields: [storedResultId], references: [id], onDelete: SetNull)
+  storedResultReused Boolean           @default(false)
+  failureCode        String?
+  createdAt          DateTime          @default(now())
+  completedAt        DateTime?
+  turn               AskTurn?
+  ledger             SandLedgerEntry[]
+
   @@unique([userId, clientKey])
   @@index([userId, createdAt])
 }
 
 model SandLedgerEntry {
-  id String @id @default(uuid())
-  operationId String
-  operation ComputeOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  entryType String
-  quotedSand Int @default(0)
-  reservedSand Int @default(0)
-  finalSand Int @default(0)
-  createdAt DateTime @default(now())
+  id           String           @id @default(uuid())
+  operationId  String
+  operation    ComputeOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  entryType    String
+  quotedSand   Int              @default(0)
+  reservedSand Int              @default(0)
+  finalSand    Int              @default(0)
+  createdAt    DateTime         @default(now())
+
   // Cross-process protection in addition to transactional transitions.
   @@unique([operationId, entryType])
 }

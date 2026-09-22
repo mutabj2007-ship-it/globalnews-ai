@@ -110,21 +110,28 @@ function PublisherSourcePanel(): JSX.Element {
 
   return (
     <AdminPanel
-      title="Publisher & official sources"
+      title={screen.retained.publisherTitle}
       field="admin-06.providerHealth"
-      note="Individual sources carried by the Publisher Feeds transport. Source identity and country are preserved independently."
+      note={screen.retained.publisherNote}
     >
       <div className="grid gap-2 sm:grid-cols-2">
         {sources.map((source) => (
-          <div key={source.sourceId} className="rounded-lg border border-adm-edge bg-adm-card-soft p-3">
+          <div
+            key={source.sourceId}
+            className="rounded-lg border border-adm-edge bg-adm-card-soft p-3"
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="font-semibold text-adm-ink">{source.displayName}</div>
                 <div className="mt-1 font-cd-mono text-[10px] text-adm-ink-faint">
-                  {source.countryCode} · {source.language ?? '—'} · {source.sourceType.replace('_', ' ')}
+                  {source.countryCode} · {source.language ?? '—'} ·{' '}
+                  {source.sourceType.replace('_', ' ')}
                 </div>
               </div>
-              <StatusChip label={source.enabled ? 'ACTIVE' : 'INACTIVE'} tone={source.enabled ? 'good' : 'mute'} />
+              <StatusChip
+                label={source.enabled ? screen.retained.active : screen.retained.inactive}
+                tone={source.enabled ? 'good' : 'mute'}
+              />
             </div>
           </div>
         ))}
@@ -134,42 +141,65 @@ function PublisherSourcePanel(): JSX.Element {
 }
 
 function ArticleInventoryPanel(): JSX.Element {
+  const { t } = useAdminContext();
+  const screen = t.screens.operations;
   const resource = useAdminResource<AdminNewsProvidersResponse>(ADMIN_API.newsProviders);
   const inventory = resource.data?.inventory;
 
   return (
     <AdminPanel
-      title="Article inventory"
+      title={screen.retained.inventoryTitle}
       field="admin-06.articleInventory"
-      note="Measured from retained Article rows. This read does not call a provider."
+      note={screen.retained.inventoryNote}
     >
       {resource.state === 'loading' ? (
-        <div className="py-8 font-cd-mono text-[10px] uppercase text-adm-ink-mute">Loading inventory…</div>
+        <div className="py-8 font-cd-mono text-[10px] uppercase text-adm-ink-mute">
+          {screen.retained.inventoryLoading}
+        </div>
       ) : inventory === null || inventory === undefined ? (
-        <div className="py-8 text-sm text-adm-ink-dim">Article inventory could not be read.</div>
+        <div className="py-8 text-sm text-adm-ink-dim">{screen.retained.inventoryUnavailable}</div>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="rounded-lg border border-adm-edge bg-adm-card-soft p-3">
-              <div className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">Stored articles</div>
-              <div className="mt-1 text-2xl font-semibold text-adm-ink">{inventory.articleCount}</div>
+              <div className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">
+                {screen.retained.storedArticles}
+              </div>
+              <div className="mt-1 text-2xl font-semibold text-adm-ink">
+                {inventory.articleCount}
+              </div>
             </div>
             <div className="rounded-lg border border-adm-edge bg-adm-card-soft p-3">
-              <div className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">Latest retained</div>
-              <div className="mt-1 break-all font-cd-mono text-[10px] text-adm-ink">{inventory.latestFetchedAt ?? '—'}</div>
+              <div className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">
+                {screen.retained.latestRetained}
+              </div>
+              <div className="mt-1 break-all font-cd-mono text-[10px] text-adm-ink">
+                {inventory.latestFetchedAt ?? '—'}
+              </div>
             </div>
           </div>
           <div className="overflow-x-auto rounded-lg border border-adm-edge">
             <table className="w-full min-w-[460px] text-left text-xs">
               <thead className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">
-                <tr><th className="p-3">Source</th><th className="p-3">Articles</th><th className="p-3">Latest retained</th></tr>
+                <tr>
+                  <th className="p-3">{screen.retained.source}</th>
+                  <th className="p-3">{screen.retained.articles}</th>
+                  <th className="p-3">{screen.retained.latestRetained}</th>
+                </tr>
               </thead>
               <tbody>
                 {inventory.bySource.map((source) => (
                   <tr key={source.sourceId} className="border-t border-adm-edge">
-                    <td className="p-3"><div className="font-semibold text-adm-ink">{source.sourceName}</div><div className="font-cd-mono text-[10px] text-adm-ink-faint">{source.sourceId}</div></td>
+                    <td className="p-3">
+                      <div className="font-semibold text-adm-ink">{source.sourceName}</div>
+                      <div className="font-cd-mono text-[10px] text-adm-ink-faint">
+                        {source.sourceId}
+                      </div>
+                    </td>
                     <td className="p-3 text-adm-ink">{source.articleCount}</td>
-                    <td className="p-3 font-cd-mono text-[10px] text-adm-ink-dim">{source.latestFetchedAt ?? '—'}</td>
+                    <td className="p-3 font-cd-mono text-[10px] text-adm-ink-dim">
+                      {source.latestFetchedAt ?? '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -182,39 +212,54 @@ function ArticleInventoryPanel(): JSX.Element {
 }
 
 function ProviderExecutionPanel(): JSX.Element {
+  const { t } = useAdminContext();
+  const screen = t.screens.operations;
   const resource = useAdminResource<AdminNewsProvidersResponse>(ADMIN_API.newsProviders);
   const execution = resource.data?.execution;
 
   return (
     <AdminPanel
-      title="Provider execution activity"
+      title={screen.retained.executionTitle}
       field="admin-06.providerHealth"
-      note="Measured backend execution buckets. Opening this table does not call a news provider."
+      note={screen.retained.executionNote}
     >
       {resource.state === 'loading' ? (
-        <div className="py-8 font-cd-mono text-[10px] uppercase text-adm-ink-mute">Loading execution activity…</div>
+        <div className="py-8 font-cd-mono text-[10px] uppercase text-adm-ink-mute">
+          {screen.retained.executionLoading}
+        </div>
       ) : !execution ? (
-        <div className="py-8 text-sm text-adm-ink-dim">No provider execution registry is available in this process.</div>
+        <div className="py-8 text-sm text-adm-ink-dim">{screen.retained.executionUnavailable}</div>
       ) : (
         <div className="flex flex-col gap-3">
           <div className="rounded-lg border border-adm-edge bg-adm-card-soft p-3">
-            <div className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">Measured executions</div>
-            <div className="mt-1 text-2xl font-semibold text-adm-ink">{execution.totalExecutions}</div>
+            <div className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">
+              {screen.retained.measuredExecutions}
+            </div>
+            <div className="mt-1 text-2xl font-semibold text-adm-ink">
+              {execution.totalExecutions}
+            </div>
           </div>
           <div className="overflow-x-auto rounded-lg border border-adm-edge">
             <table className="w-full min-w-[560px] text-left text-xs">
               <thead className="font-cd-mono text-[10px] uppercase tracking-wider text-adm-ink-faint">
                 <tr>
-                  <th className="p-3">Provider</th><th className="p-3">Endpoint</th>
-                  <th className="p-3 text-right">Executions</th><th className="p-3 text-right">Cache hits</th>
-                  <th className="p-3 text-right">Cache misses</th>
+                  <th className="p-3">{screen.retained.provider}</th>
+                  <th className="p-3">{screen.retained.endpoint}</th>
+                  <th className="p-3 text-right">{screen.retained.executions}</th>
+                  <th className="p-3 text-right">{screen.retained.cacheHits}</th>
+                  <th className="p-3 text-right">{screen.retained.cacheMisses}</th>
                 </tr>
               </thead>
               <tbody>
                 {execution.buckets.map((row) => (
-                  <tr key={`${row.provider}:${row.endpointClass}`} className="border-t border-adm-edge">
+                  <tr
+                    key={`${row.provider}:${row.endpointClass}`}
+                    className="border-t border-adm-edge"
+                  >
                     <td className="p-3 font-semibold text-adm-ink">{row.provider}</td>
-                    <td className="p-3 font-cd-mono text-[10px] text-adm-ink-dim">{row.endpointClass}</td>
+                    <td className="p-3 font-cd-mono text-[10px] text-adm-ink-dim">
+                      {row.endpointClass}
+                    </td>
                     <td className="p-3 text-right text-adm-ink">{row.executions}</td>
                     <td className="p-3 text-right text-adm-ink">{row.cacheHits}</td>
                     <td className="p-3 text-right text-adm-ink">{row.cacheMisses}</td>
