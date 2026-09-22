@@ -22,6 +22,8 @@ export * from './geo-fuzzy-resolver';
 export * from './countryDisplayName';
 export * from './officialSources';
 export * from './rights/source-rights';
+export * from './global-reach';
+export * from './global-reach-regions';
 /*
   PUBLISHER FEEDS RECOVERY R1 — the recovered C55 `SourceType`, plus the one
   corroboration rule the ruling requires. Placed beside './officialSources'
@@ -216,4 +218,3 @@ export * from './conflict/observation';
   `POLITICS`, so a Politics producer calls it instead of declaring a second ownership
   vocabulary.
 */
-

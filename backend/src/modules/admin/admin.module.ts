@@ -10,6 +10,8 @@ import { AdminAnalyticsService } from './analytics/admin-analytics.service';
 import { AdminGuard } from './admin.guard';
 import { AdminPlatformEnabledGuard } from './admin-platform.guard';
 import { AdminService } from './admin.service';
+import { AdminGlobalReachController } from './admin-global-reach.controller';
+import { GlobalReachModule } from '../global-reach/global-reach.module';
 
 /**
  * F1.a — administrative authorization foundation.
@@ -49,8 +51,8 @@ import { AdminService } from './admin.service';
  * so the call names it forbids are deliberately not spelled out here.)
  */
 @Module({
-  imports: [ConfigModule, AuthModule, NewsModule],
-  controllers: [AdminController, AdminReadonlyController],
+  imports: [ConfigModule, AuthModule, NewsModule, GlobalReachModule],
+  controllers: [AdminController, AdminReadonlyController, AdminGlobalReachController],
   providers: [
     AdminService,
     AdminSystemService,
