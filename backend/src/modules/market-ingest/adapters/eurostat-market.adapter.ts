@@ -1,3 +1,4 @@
+import { eurostatReleaseStatus } from '../market-release-status';
 import type { PermittedProvider } from '../market-provider-registry';
 import {
   ValidationFailure,
@@ -89,6 +90,7 @@ export function comextHttpRequest(
 
 /** The JSON-stat fields this adapter reads. */
 export interface EurostatJsonStatPayload {
+  readonly status?: unknown;
   readonly extension?: { readonly annotation?: readonly { type?: string; title?: string }[] };
   readonly dimension?: {
     readonly time?: { readonly category?: { readonly index?: Record<string, number> } };
@@ -152,6 +154,9 @@ export function eurostatDraftsFor(
     // so a hole in a series stays visible instead of closing up.
     const value = typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
 
+    let releaseStatus: 'PRELIMINARY' | 'REVISED';
+    try { releaseStatus = eurostatReleaseStatus(payload.status, index[periodId]); }
+    catch (error) { throw new ValidationFailure((error as Error).message); }
     drafts.push({
       observationKey: `${seriesId}|${periodId}`,
       seriesId,
@@ -161,7 +166,7 @@ export function eurostatDraftsFor(
       publisherVintage: null,
       publisherChangedAt: updateData,
       vintageProvenance: 'PUBLISHER_CHANGED_AT',
-      releaseStatus: 'FINAL',
+      releaseStatus,
     });
   }
 

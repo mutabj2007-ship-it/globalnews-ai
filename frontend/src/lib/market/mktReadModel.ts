@@ -121,6 +121,7 @@ export interface MarketStoredObservation {
    * the surface says so rather than presenting a provisional figure as settled.
    */
   readonly retentionIsFinal: boolean;
+  readonly freshnessBasis?: 'RETAINED_ONLY';
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -175,6 +176,9 @@ export function deriveFreshness(o: MarketStoredObservation): MarketFreshnessStat
   }
   if (o.value === null) {
     return { kind: 'UNAVAILABLE', at: null, atProvenance: null };
+  }
+  if (o.freshnessBasis === 'RETAINED_ONLY') {
+    return { kind: 'STALE', at: o.publisherChangedAt ?? o.publisherVintage, atProvenance: o.vintageProvenance };
   }
   if (o.vintageProvenance === 'PUBLISHER_VINTAGE' && o.publisherVintage !== null) {
     return {
@@ -258,12 +262,29 @@ async function retainedObservationReader(): Promise<readonly MarketStoredObserva
     headers: { accept: 'application/json' },
   });
 
-  if (!response.ok) return [];
+  if (!response.ok) throw new Error('Market retained read unavailable');
 
   const payload: unknown = await response.json();
-  return Array.isArray(payload) ? (payload as MarketStoredObservation[]) : [];
+  if (!Array.isArray(payload)) throw new Error('Malformed Market read envelope');
+  return payload as MarketStoredObservation[];
 }
 
+/** Validate untrusted JSON before the dashboard calls string methods or renders values. */
+export function isMarketReadObservation(value: unknown): value is MarketStoredObservation {
+  if (value === null || typeof value !== 'object') return false;
+  const o = value as Record<string, unknown>;
+  if (!['observationKey', 'seriesId', 'periodId', 'unit', 'provider', 'sourceClass'].every(
+    key => typeof o[key] === 'string' && (o[key] as string).trim().length > 0)) return false;
+  if (o.provider !== 'EUROSTAT' || o.sourceClass !== 'STATISTICAL_RELEASE' || o.unit === 'PUBLISHER_STATED') return false;
+  if (o.value !== null && (typeof o.value !== 'number' || !Number.isFinite(o.value))) return false;
+  if (!['SCHEDULED', 'PRELIMINARY', 'REVISED', 'FINAL', 'WITHDRAWN'].includes(String(o.releaseStatus))) return false;
+  if (!['PUBLISHER_VINTAGE', 'PUBLISHER_CHANGED_AT', 'INGEST_SNAPSHOT'].includes(String(o.vintageProvenance))) return false;
+  const date = (v: unknown) => typeof v === 'string' && /T.*(?:Z|[+-]\d{2}:?\d{2})$/.test(v) && Number.isFinite(Date.parse(v));
+  if (![o.publisherVintage, o.publisherChangedAt].every(v => v === null || date(v))) return false;
+  if (o.vintageProvenance === 'PUBLISHER_VINTAGE' && !date(o.publisherVintage)) return false;
+  if (o.vintageProvenance === 'PUBLISHER_CHANGED_AT' && !date(o.publisherChangedAt)) return false;
+  return o.retentionIsFinal === false && o.freshnessBasis === 'RETAINED_ONLY';
+}
 const MARKET_OBSERVATION_READER: MarketObservationReader = retainedObservationReader;
 
 /**
@@ -286,12 +307,12 @@ export async function readMarketObservations(): Promise<MarketReadResult> {
   try {
     stored = await MARKET_OBSERVATION_READER();
   } catch {
-    return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_STORED' };
+    return { kind: 'UNAVAILABLE', reason: 'NO_READ_ENDPOINT' };
   }
   if (stored.length === 0) {
     return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_STORED' };
   }
-  const displayable = stored.filter(observationIsDisplayable);
+  const displayable = stored.filter(isMarketReadObservation).filter(observationIsDisplayable);
   if (displayable.length === 0) {
     return { kind: 'UNAVAILABLE', reason: 'NO_DISPLAYABLE_OBSERVATION' };
   }

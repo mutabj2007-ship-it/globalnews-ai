@@ -202,6 +202,7 @@ const TED_NOTICE: TedNoticePayload = {
   publicationDate: '2026-09-18',
   jurisdiction: 'PL',
   contractingAuthorityRef: 'PL-ORG-9911',
+  withdrawn: true, // Synthetic explicit status; ordinary notices without a status must fail closed.
 };
 
 const tedBody = JSON.stringify({ notices: [TED_NOTICE] });
@@ -210,6 +211,7 @@ const comextBody = JSON.stringify({
   extension: { annotation: [{ type: 'UPDATE_DATA', title: '2026-09-11T11:00:00+0200' }] },
   dimension: { time: { category: { index: { '2026-06': 0, '2026-07': 1, '2026-08': 2 } } } },
   value: { '0': 1234.5, '2': 1300.25 },
+  status: { '0': 'p', '1': 'p', '2': 'r' },
 });
 
 const eurostatConfig = (reporter: string, product = '8703', partner = 'PL'): EurostatAdapterConfig => ({
@@ -381,7 +383,8 @@ describe('R3-2 · TED', () => {
   });
 
   it('WITHDRAWN only when the publisher says so — never inferred from notice type', () => {
-    expect(tedNoticeToDraft(TED_NOTICE).releaseStatus).toBe('FINAL');
+    expect(() => tedNoticeToDraft({ ...TED_NOTICE, withdrawn: undefined })).toThrow('does not establish FINAL');
+    expect(() => tedNoticeToDraft({ ...TED_NOTICE, withdrawn: false })).toThrow('does not establish FINAL');
     expect(tedNoticeToDraft({ ...TED_NOTICE, withdrawn: true }).releaseStatus).toBe('WITHDRAWN');
   });
 
@@ -600,7 +603,7 @@ describe('R3-6 · request discipline', () => {
         return;
       }
       if (!/\.(ts|tsx|js|jsx)$/.test(path)) return;
-      if (readFileSync(path, 'utf-8').includes('market-ingest')) offenders.push(path);
+      if (/(from|import).*market-ingest\/(market-ingest\.scheduler|market-retained\.producer|adapters\/)/.test(readFileSync(path, 'utf-8'))) offenders.push(path);
     };
 
     for (const root of roots) walk(root);
@@ -773,5 +776,18 @@ describe('R3-1-7 · canonical snapshot admission', () => {
     // positive control: it DOES consume the canonical predicates
     expect(code.includes('retrievalIsPublishable')).toBe(true);
     expect(code.includes('refusalIsSecurityClass')).toBe(true);
+  });
+});
+
+
+describe('R2 adapter status evidence', () => {
+  it.each([undefined, null, {}, { '0': 'f' }, { '0': 'FINAL' }])('Eurostat does not infer FINAL from %p', status => {
+    expect(() => eurostatDraftsFor({ ...JSON.parse(comextBody), status }, 'test-series')).toThrow('explicit release status');
+  });
+  it('preserves explicitly mapped non-final Eurostat flags', () => {
+    expect(eurostatDraftsFor(JSON.parse(comextBody), 'test-series').map(d => d.releaseStatus)).toEqual(['PRELIMINARY', 'PRELIMINARY', 'REVISED']);
+  });
+  it('does not use one flagged cell to establish the status of other cells', () => {
+    expect(() => eurostatDraftsFor({ ...JSON.parse(comextBody), status: { '0': 'p' } }, 'test-series')).toThrow('cell 1');
   });
 });

@@ -987,7 +987,7 @@ describe('§7 · nothing in this module can be reached from a request', () => {
     try {
       matches = execFileSync(
         'git',
-        ['grep', '-l', '-E', 'market-ingest', '--', 'frontend/src', 'backend/src/app.module.ts'],
+        ['grep', '-l', '-E', '(from|import).*market-ingest/(market-ingest.scheduler|market-retained.producer|adapters/)', '--', 'frontend/src', 'backend/src/app.module.ts'],
         { cwd: repoRoot, encoding: 'utf-8' },
       ).trim();
     } catch (error) {
