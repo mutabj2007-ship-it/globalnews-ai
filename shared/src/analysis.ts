@@ -1184,6 +1184,29 @@ export interface AnalysisProvenance {
  * still be populated so the frontend can show raw results with an
  * explanation instead of crashing.
  */
+export interface AnalysisCoverageContext {
+  /**
+   * True when the user's wording asks about GlobalNews AI's own coverage,
+   * retrieval count, source completeness or why only/few reports surfaced.
+   * This is a product-observability intent, not a claim about the world.
+   */
+  questionAsksAboutCoverage: boolean;
+  /** Articles in the original retrieval pool before clustering/capping. */
+  retrievedArticleCount: number;
+  /** Reporting clusters in that original pool. */
+  reportingClusterCount: number;
+  /** Providers that actually contributed admitted articles. */
+  contributingProviders: string[];
+  /** Whether this retrieval is known to be live, retained/cached, or unavailable. */
+  dataMode: NewsDataMode;
+  outcome?: RetrievalOutcome;
+  /**
+   * Explicit guardrail for the reader: a bounded retrieval can never prove
+   * that it represents all news about a country/topic.
+   */
+  comprehensiveCoverageEstablished: false;
+}
+
 export interface AnalysisApiResponse {
   /** The user's original, verbatim question — never rewritten. */
   query: string;
@@ -1251,6 +1274,13 @@ export interface AnalysisApiResponse {
    * proven safe to make required across every one of those paths.
    */
   sourceDiversity?: SourceDiversity;
+
+  /**
+   * Beta coverage-awareness R1. Present for coverage/system questions so
+   * Ask can answer "why only two?" without pretending the evidence set is
+   * the entire real-world news picture.
+   */
+  coverageContext?: AnalysisCoverageContext;
 }
 
 /**
