@@ -180,7 +180,7 @@ describe('an observation flag may only be derived from observations', () => {
     for (const f of ['MarketScreen.tsx', 'MarketCompactScreen.tsx']) {
       const src = stripComments(read(join(DOMAIN_COMPONENTS, f)));
       expect(src).toContain("read.kind === 'OBSERVATIONS' ? read.observations.length : 0");
-      expect(src).toContain('<MarketStatus held={held} t={t} unavailable=');
+      expect(src).toContain('<MarketStatus held={held} t={t} />');
       expect(src).not.toContain('NO OBSERVATION DATA');
     }
     expect(MARKET_HAS_ANY_OBSERVATION).toBe(false);
@@ -485,11 +485,11 @@ describe('the Polish catalogue does not register as complete', () => {
       'labels.observationBadgeHeld', 'labels.observationBadgeZero', 'labels.observationBody',
       'reader.awaitingData', 'reader.capability', 'reader.capabilityActivation',
       'reader.capabilityNone', 'reader.capabilityRights', 'reader.change',
-      'reader.corridor', 'reader.coverage', 'reader.flow', 'reader.freshness', 'reader.headline',
+      'reader.coverage', 'reader.freshness', 'reader.headline',
       'reader.headlineNone', 'reader.observations', 'reader.period',
-      'reader.product', 'reader.providerNotActivated', 'reader.provisionalRetention',
+      'reader.providerNotActivated', 'reader.provisionalRetention',
       'reader.readNoActivatedProvider', 'reader.readNoDisplayable', 'reader.readNoEndpoint',
-      'reader.readNoObservation', 'reader.readinessControl', 'reader.retainedAt', 'reader.retainedOnly', 'reader.seriesIdentifier',
+      'reader.readNoObservation', 'reader.readinessControl', 'reader.seriesIdentifier',
       'reader.seriesNameNotCarried',
       'reader.showCapability', 'reader.showProvenance', 'reader.source',
       'reader.sourceClass', 'reader.unit', 'reader.value', 'reader.vintage',

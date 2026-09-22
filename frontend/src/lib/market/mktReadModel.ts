@@ -373,3 +373,16 @@ export const MARKET_HAS_RUNNABLE_PROVIDER: boolean = MARKET_CAPABILITY.some((p) 
  * arrives before R2 lands is not read as settled.
  */
 export const MARKET_RETENTION_IS_PROVISIONAL = true;
+
+/** Text for the accepted ObservationCard context note; no new visual slot. */
+export function retainedObservationContext(o: MarketStoredObservation): string | null {
+  if (!o.context) return null;
+  const c = o.context;
+  return [
+    'Reporting country / partner: ' + (c.reporterLabel ?? c.reporter) + ' / ' + (c.partnerLabel ?? c.partner),
+    'Commodity: ' + (c.productLabel ? c.productLabel + ' (' + c.product + ')' : c.product),
+    'Flow / indicator: ' + (c.flowLabel ?? c.flow) + ' / ' + (c.indicatorsLabel ?? c.indicators) + ' (' + c.freq + ')',
+    ...(o.retainedAt ? ['Retained at: ' + o.retainedAt] : []),
+    'Retained evidence only; the latest publisher edition is not verified.',
+  ].join(' · ');
+}

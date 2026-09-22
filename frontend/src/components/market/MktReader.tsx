@@ -71,6 +71,7 @@ import {
 import { Identifier, edge, micro } from './MktParts';
 import {
   deriveFreshness,
+  retainedObservationContext,
   type MarketCapabilityRow,
   type MarketFreshnessState,
   type MarketReadUnavailableReason,
@@ -174,13 +175,6 @@ export function ObservationCard({ o, t }: {
         </span>
       </header>
 
-      {o.context && <div style={{ display: 'grid', gap: '8px', overflowWrap: 'anywhere' }}>
-        <Field label={t.reader.corridor}>{o.context.reporterLabel ?? o.context.reporter} / {o.context.partnerLabel ?? o.context.partner}</Field>
-        <Field label={t.reader.product}>{o.context.productLabel ? o.context.productLabel + ' (' + o.context.product + ')' : o.context.product}</Field>
-        <Field label={t.reader.flow}>{o.context.flowLabel ?? o.context.flow} / {o.context.indicatorsLabel ?? o.context.indicators} ({o.context.freq})</Field>
-      </div>}
-      {o.retainedAt && <Field label={t.reader.retainedAt}>{o.retainedAt}</Field>}
-      {o.freshnessBasis === 'RETAINED_ONLY' && <p style={{ margin: 0 }}>{t.reader.retainedOnly}</p>}
       {/* §9.4 value + unit · §9.6 period · the vintage, labelled with its provenance */}
       <div style={{
         display: 'grid',
@@ -225,7 +219,7 @@ export function ObservationCard({ o, t }: {
       <p style={{
         margin: 0, fontSize: MKT_TYPE.monoMeta, color: MKT_INK.tertiary,
         whiteSpace: 'normal', overflowWrap: 'anywhere',
-      }}>{t.reader.seriesNameNotCarried}</p>
+      }}>{retainedObservationContext(o) ?? t.reader.seriesNameNotCarried}</p>
     </article>
   );
 }
@@ -398,9 +392,9 @@ export function CapabilityList({ rows, t }: {
  * STATUS STRIP — Z1, reduced to what is true
  * ─────────────────────────────────────────────────────────────────────────── */
 
-export function MarketStatus({ held, t, unavailable = false }: { held: number; t: MktStrings; unavailable?: boolean }): JSX.Element {
+export function MarketStatus({ held, t }: { held: number; t: MktStrings }): JSX.Element {
   return (
-    <div data-mkt="status" data-mkt-held={unavailable ? "unknown" : String(held)} style={{
+    <div data-mkt="status" data-mkt-held={String(held)} style={{
       display: 'flex', flexWrap: 'wrap', gap: '8px 16px', alignItems: 'baseline',
     }}>
       <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.observations}</span>
@@ -415,7 +409,7 @@ export function MarketStatus({ held, t, unavailable = false }: { held: number; t
           data* — a claim about the world. `held` is `observations.length`: a count of
           records this surface is holding, never a readiness flag.
         */}
-        {unavailable ? t.freshness.UNAVAILABLE : held > 0
+        {held > 0
           ? `${t.labels.observationBadgeHeld} · ${held}`
           : t.labels.observationBadgeZero}
       </span>
@@ -458,8 +452,7 @@ const ABSENT = '—';
  * mean *nothing is watched*; it would mean *watching works and you have chosen nothing*.
  * The count returns when the subject types do.
  */
-export function CoverageStrip({ t, observations = [] }: { t: MktStrings; observations?: readonly MarketStoredObservation[] }): JSX.Element {
-  const corridors = new Set(observations.flatMap(o => o.context ? [o.context.reporter + '/' + o.context.partner] : [])).size;
+export function CoverageStrip({ t }: { t: MktStrings }): JSX.Element {
   const kinds = Object.keys(t.subjects);
   return (
     <section data-mkt="zone-b" data-mkt-region="coverage" style={{
@@ -468,7 +461,7 @@ export function CoverageStrip({ t, observations = [] }: { t: MktStrings; observa
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', alignItems: 'baseline' }}>
         <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.coverage}</span>
         <span data-mkt="coverage-freshness" style={{ ...micro, color: MKT_INK.tertiary }}>
-          {observations.length ? t.reader.retainedOnly : t.freshness.UNAVAILABLE}
+          {t.freshness.UNAVAILABLE}
         </span>
       </div>
       <div style={{
@@ -483,10 +476,10 @@ export function CoverageStrip({ t, observations = [] }: { t: MktStrings; observa
             <span style={{ ...micro, color: MKT_INK.label, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
               {t.subjects[kind]}
             </span>
-            <span data-mkt={kind === 'CORRIDOR' && corridors ? "coverage-count" : "figure-absent"} aria-label={kind === 'CORRIDOR' && corridors ? t.subjects[kind] : t.reader.awaitingData} style={{
+            <span data-mkt="figure-absent" aria-label={t.reader.awaitingData} style={{
               fontFamily: "var(--ar-family, 'IBM Plex Mono', monospace)",
               fontSize: MKT_TYPE.bodyLarge, color: MKT_INK.tertiary,
-            }}>{kind === 'CORRIDOR' && corridors ? corridors : ABSENT}</span>
+            }}>{ABSENT}</span>
           </div>
         ))}
       </div>
@@ -521,13 +514,24 @@ export function SubstratePanel({ t, children }: {
   return (
     <section data-mkt="zone-c" style={{
       border: edge, background: MKT_SURFACE.panel, padding: '16px 18px',
-      display: 'flex', flexDirection: 'column', gap: '12px', minHeight: children ? '220px' : undefined, minWidth: 0,
+      display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '220px', minWidth: 0,
     }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.observations}</span>
-        <span style={{ ...micro, color: MKT_INK.label }}>{children ? null : t.reader.awaitingData}</span>
+        <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.awaitingData}</span>
       </div>
-      {children ?? null}
+      {children ?? (
+        <div data-mkt="substrate-well" role="img" aria-label={t.reader.awaitingData} style={{
+          flex: '1 1 auto', minHeight: '140px',
+          backgroundImage: `repeating-linear-gradient(135deg, ${MKT_SURFACE.raised} 0 7px, ${MKT_SURFACE.panel} 7px 14px)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <span data-mkt="figure-absent" style={{
+            fontFamily: "var(--ar-family, 'IBM Plex Mono', monospace)",
+            fontSize: MKT_TYPE.title, color: MKT_INK.tertiary,
+          }}>{ABSENT}</span>
+        </div>
+      )}
     </section>
   );
 }
@@ -555,7 +559,7 @@ export function SubstratePanel({ t, children }: {
  * engineering: it belongs in the readiness disclosure, where `absence` already carries it
  * along with the sentence that matters most about it — *"this is not 'no material change'."*
  */
-export function ChangeContext({ t, held = false }: { t: MktStrings; held?: boolean }): JSX.Element {
+export function ChangeContext({ t }: { t: MktStrings }): JSX.Element {
   const slot = {
     fontFamily: "var(--ar-family, 'IBM Plex Mono', monospace)",
     fontSize: MKT_TYPE.body, color: MKT_INK.tertiary,
@@ -567,8 +571,8 @@ export function ChangeContext({ t, held = false }: { t: MktStrings; held?: boole
       <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.change}</span>
       <span data-mkt="figure-absent" aria-label={t.reader.awaitingData} style={slot}>{ABSENT}</span>
       <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.freshness}</span>
-      <span data-mkt="freshness" data-mkt-freshness={held ? "STALE" : "UNAVAILABLE"} style={{ ...micro, color: MKT_INK.tertiary }}>
-        {held ? t.freshness.STALE : t.freshness.UNAVAILABLE}
+      <span data-mkt="freshness" data-mkt-freshness="UNAVAILABLE" style={{ ...micro, color: MKT_INK.tertiary }}>
+        {t.freshness.UNAVAILABLE}
       </span>
     </div>
   );

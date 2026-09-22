@@ -32,7 +32,7 @@ export interface MktStrings {
    */
   readonly reader: Readonly<Record<
     'headline' | 'headlineNone' | 'observations'
-    | 'corridor' | 'product' | 'flow' | 'retainedAt' | 'retainedOnly' | 'seriesIdentifier' | 'seriesNameNotCarried' | 'value' | 'unit' | 'period'
+    | 'seriesIdentifier' | 'seriesNameNotCarried' | 'value' | 'unit' | 'period'
     | 'vintage' | 'vintagePublisher' | 'vintageChanged' | 'vintageNone'
     | 'freshness' | 'source' | 'sourceClass' | 'provisionalRetention'
     | 'capability' | 'capabilityRights' | 'capabilityActivation' | 'capabilityNone'
@@ -124,7 +124,6 @@ const en: MktStrings = {
     headlineNone: 'No market observations are held',
     observations: 'Observations',
     seriesIdentifier: 'Series',
-    corridor: 'Reporting country / partner', product: 'Commodity code', flow: 'Flow / indicator', retainedAt: 'Retained at', retainedOnly: 'Retained evidence only; the latest publisher edition is not verified.',
     seriesNameNotCarried: 'A published name for this series is not carried by the contract yet.',
     value: 'Value',
     unit: 'Unit',
@@ -142,7 +141,7 @@ const en: MktStrings = {
     capabilityActivation: 'Activated',
     capabilityNone: 'No source is currently active.',
     providerNotActivated: 'Not currently active',
-    readNoEndpoint: 'Retained evidence cannot be read right now.',
+    readNoEndpoint: 'Data not yet available.',
     readNoActivatedProvider: 'Source not currently active.',
     readNoObservation: 'Awaiting verified observation.',
     readNoDisplayable: 'Awaiting a verified unit and source.',

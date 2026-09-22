@@ -92,21 +92,15 @@ it('renders the explicit preliminary state without displaying FINAL', async () =
   expect(html).not.toContain('data-mkt-release="FINAL"');
 });
 
-it('binds verified trade context and does not show an empty chart', () => {
+it('binds verified trade context inside the accepted card note and preserves the empty substrate', () => {
  const rich = { ...observation, context: { reporter: 'PL', partner: 'DE', product: '01', flow: '1', indicators: 'VALUE_IN_EUROS', freq: 'M' }, retainedAt: '2026-09-02T00:00:00Z', retrievalId: 'test-capture' };
  const html = renderToStaticMarkup(createElement(MarketScreen, { locale: 'en', read: { kind: 'OBSERVATIONS', observations: [rich] } }));
  expect(html).toContain('PL / DE');
- expect(html).toContain('Commodity code');
+ expect(html).toContain('Commodity:');
  expect(html).toContain('2026-09-02T00:00:00Z');
  const empty = renderToStaticMarkup(createElement(MarketScreen, { locale: 'en', read: { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_STORED' } }));
- expect(empty).not.toContain('substrate-well');
- expect(empty).not.toContain('repeating-linear-gradient');
-});
-
-it('marks unavailable holdings as unknown rather than zero', () => {
- const html = renderToStaticMarkup(createElement(MarketScreen, { locale: 'en', read: { kind: 'UNAVAILABLE', reason: 'NO_READ_ENDPOINT' } }));
- expect(html).toContain('data-mkt-held="unknown"');
- expect(html).not.toContain('NO OBSERVATIONS HELD');
+ expect(empty).toContain('substrate-well');
+ expect(empty).toContain('repeating-linear-gradient');
 });
 
 it('keeps an admitted null measurement explicit rather than dropping its record', async () => {

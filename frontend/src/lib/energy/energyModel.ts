@@ -403,7 +403,6 @@ export interface EnergyZoneState {
 }
 
 export interface EnergyFrameData {
-  readonly retainedRead?: import('@globalnews-ai/shared').EnergyReadResult;
   /** Which data set this is. The banner is derived from it and cannot be suppressed. */
   readonly source: 'governed' | 'design-fixture';
   /** True only when a per-reader visit checkpoint exists. M05 — it does not. */

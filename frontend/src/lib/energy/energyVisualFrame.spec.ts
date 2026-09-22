@@ -222,13 +222,10 @@ describe('2 · entering /energy executes 0 providers and 0 models', () => {
    * every file the route can reach, so a future import of a provider client
    * fails here rather than in production.
    */
-  it('only the internal retained reader can make a request', () => {
+  it('no file in the Energy graph can make a request', () => {
     for (const file of ENERGY_FILES) {
       const source = code(file);
-      if (file.endsWith('energyReadModel.ts')) {
-        expect(source).toContain('/energy/observations');
-        expect(source).toContain('resolveApiBaseUrl()');
-      } else expect(source).not.toMatch(/\bfetch\s*\(/);
+      expect(source).not.toMatch(/\bfetch\s*\(/);
       expect(source).not.toMatch(/XMLHttpRequest|EventSource|WebSocket/);
       expect(source).not.toMatch(/\baxios\b/);
     }
@@ -249,10 +246,10 @@ describe('2 · entering /energy executes 0 providers and 0 models', () => {
     expect(substrate).toMatch(/getCountryFeatureCollection/);
   });
 
-  it('the route awaits only the retained reader', () => {
+  it('the route awaits nothing, so a page load has nothing to wait for', () => {
     const route = code(ROUTE);
-    expect(route.match(/\bawait\s+\w+/g)).toEqual(['await readEnergyObservations']);
-    expect(route).not.toMatch(/\bfetch\s*\(/);
+    expect(route).not.toMatch(/\bawait\b/);
+    expect(route).not.toMatch(/async function/);
   });
 });
 
@@ -667,7 +664,7 @@ describe('14 · design fixtures are labelled and never served by the public rout
 
   it('a hand-authored frame=design-fixture URL cannot put fixture data on the reader route', () => {
     const route = code(ROUTE);
-    expect(route).toContain('...ENERGY_GOVERNED_FRAME, retainedRead: await readEnergyObservations()');
+    expect(route).toContain('const data = ENERGY_GOVERNED_FRAME;');
     expect(route).not.toContain('ENERGY_DESIGN_FIXTURE_FRAME');
     expect(GRAPH.some((file) => file.endsWith('energyFixtures.ts'))).toBe(false);
   });
