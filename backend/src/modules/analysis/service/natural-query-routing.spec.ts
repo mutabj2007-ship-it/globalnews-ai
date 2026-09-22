@@ -418,53 +418,73 @@ describe('NO EXISTING ROUTE MOVED', () => {
   });
 });
 
-describe('ARTICLE_ANCHORED PRECEDENCE — required by the CTO, enforced by the service', () => {
+describe('ASK EXPLICIT-SCOPE R1 — current typed scope outranks inherited story context', () => {
   const anchor = article(
     'anchor-1',
-    'Hotel worker charged in Penang assault case',
-    'The accused appeared in court in George Town.',
-    'MYS',
+    'Pakistan parties debate a new security measure',
+    'Officials in Islamabad discussed the proposal.',
+    'PAK',
   );
 
-  it('a resolved articleId outranks a multi-entity reading', async () => {
+  it('an explicit multi-entity question outranks a resolved article anchor', async () => {
     const { service, searchCalls, countryCalls } = harness(UKRAINE_RUSSIA, anchor);
 
     await service.analyzeNews('What is happening between Russia and Ukraine?', 'en', {
       articleId: 'anchor-1',
+      countryCode: 'PAK',
       title: anchor.title,
     });
 
-    // No per-side retrieval, and no country feed: the anchor branch owns this.
-    expect(searchCalls.map((call) => call.query)).not.toContain('Russia');
-    expect(searchCalls.map((call) => call.query)).not.toContain('Ukraine');
+    expect(searchCalls.map((call) => call.query)).toEqual(['Russia', 'Ukraine']);
     expect(countryCalls).toEqual([]);
   });
 
-  it('a resolved articleId outranks a comparison reading', async () => {
-    const { service, searchCalls } = harness(RWANDA_KENYA, anchor);
+  it('an explicit comparison outranks a resolved article anchor', async () => {
+    const { service, searchCalls, countryCalls } = harness(RWANDA_KENYA, anchor);
 
     await service.analyzeNews('Compare the current situations in Rwanda and Kenya.', 'en', {
       articleId: 'anchor-1',
+      countryCode: 'PAK',
       title: anchor.title,
     });
 
-    expect(searchCalls.map((call) => call.query)).not.toContain('Rwanda');
-    expect(searchCalls.map((call) => call.query)).not.toContain('Kenya');
+    expect(searchCalls.map((call) => call.query)).toEqual(['Rwanda', 'Kenya']);
+    expect(countryCalls).toEqual([]);
   });
 
-  it('a resolved articleId outranks a clarification reading — the anchor is answerable', async () => {
-    const { service, searchCalls } = harness(RWANDA_KENYA, anchor);
+  it('the live five-country failure can never fall back to the stale Pakistan story', async () => {
+    const { service, searchCalls, countryCalls, provider } = harness([], anchor);
 
     const response = await service.analyzeNews(
-      'Which country is more powerful in East Africa?',
+      'Compare how current local reporting in Israel, Iran, Saudi Arabia, Turkey and the UAE ' +
+        'is framing the same regional security developments. Tell me which countries and local ' +
+        'sources GlobalNews AI actually checked, distinguish what the evidence supports from what ' +
+        'it cannot establish, and explicitly identify any coverage gaps instead of treating a few ' +
+        'retrieved articles as complete regional coverage.',
       'en',
-      { articleId: 'anchor-1', title: anchor.title },
+      { articleId: 'anchor-1', countryCode: 'PAK', title: anchor.title },
     );
 
-    // The clarification branch makes NO provider call at all; the anchor branch
-    // does. A non-empty call list is proof the anchor branch ran instead.
+    // Five explicit countries exceed the bounded three-side retrieval ceiling.
+    // The honest result is clarification/no retrieval — never a Pakistan query.
+    expect(searchCalls).toEqual([]);
+    expect(countryCalls).toEqual([]);
+    expect(response.articles).toEqual([]);
+    expect(response.provenance.status).toBe('not-attempted');
+    expect(provider.analyzeNews).not.toHaveBeenCalled();
+  });
+
+  it('a genuinely story-relative follow-up still uses the resolved anchor', async () => {
+    const { service, searchCalls, countryCalls } = harness([], anchor);
+
+    await service.analyzeNews('What happened next?', 'en', {
+      articleId: 'anchor-1',
+      countryCode: 'PAK',
+      title: anchor.title,
+    });
+
     expect(searchCalls.length).toBeGreaterThan(0);
-    expect(response.retrievalContext).toBeDefined();
+    expect(countryCalls).toEqual([]);
   });
 });
 
