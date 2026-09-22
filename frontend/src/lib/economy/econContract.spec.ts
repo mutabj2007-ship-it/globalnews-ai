@@ -503,7 +503,11 @@ describe('ECON-UI-1 · fixtures are illustrative, never production facts', () =>
   it('fixtures are confined to the fixture module', () => {
     for (const f of ECONOMY_FILES) {
       if (f.endsWith('fixtures.ts')) continue;
-      expect(code(f)).not.toMatch(/Rwanda|Mombasa|Kigali|Poland|NISR|GUS/);
+      // The governed retained adapter names its real source; it must never import fixtures.
+      expect(code(f)).not.toMatch(/(?:from\s*|import\s*\()['"][^'"]*\/fixtures['"]/);
+      if (!f.endsWith('economyRetainedSubject.ts')) {
+        expect(code(f)).not.toMatch(/Rwanda|Mombasa|Kigali|Poland|NISR|GUS/);
+      }
     }
   });
 

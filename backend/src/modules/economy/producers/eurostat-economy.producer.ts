@@ -531,7 +531,8 @@ export async function produceSeriesCell(
     value,
     unit: series.unit,
     semantics: {
-      releaseStatus: 'FINAL',
+      // A numeric cell and dataset update time do not establish finality.
+      releaseStatus: null,
       valueKind: 'ACTUAL',
       /*
         UNDETERMINED, AND IT STAYS THAT WAY. Freshness is judged against the publisher's

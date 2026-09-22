@@ -61,7 +61,8 @@ export type RetainedNisrCpiRefusal =
   /** The bytes are held and the governed decoder refused them. The document's. */
   | 'PARSE_FAILED'
   /** The payload is held with no retrieval lineage to attribute it to. Ours. */
-  | 'NO_RETRIEVAL_LINEAGE';
+  | 'NO_RETRIEVAL_LINEAGE'
+  | 'LINEAGE_MISMATCH';
 
 /**
  * THE LINEAGE AS PERSISTED, NOT AS RE-DERIVED.
@@ -88,9 +89,9 @@ export type RetainedNisrCpiRead =
       readonly contentAddress: string;
       readonly lineage: RetainedNisrCpiLineage;
       /**
-       * Every content address held for this artifact BEFORE the one returned, oldest
-       * first. Ruling D's ordering input: a caller decides edition order from what was
-       * already seen, and the store — not the caller — is the authority on that.
+       * First admitted content address for this endpoint and reference period. Legacy
+       * captures without a period are included conservatively. Keeping the first
+       * anchor prevents a repeated conflicting payload from laundering revision order.
        */
       readonly priorContentAddresses: readonly string[];
     }
@@ -115,7 +116,7 @@ export class RetainedNisrCpiReader {
 
     const row = await this.prisma.snapshotRetrieval.findFirst({
       where: { providerId, endpointId, admissibility: 'ADMITTED' },
-      orderBy: { retrievedAt: 'desc' },
+      orderBy: [{ retrievedAt: 'desc' }, { retrievalId: 'desc' }],
     });
     if (row === null || row.contentAddress === null) {
       return { kind: 'NONE', refusal: 'NO_ADMITTED_CAPTURE' };
@@ -128,7 +129,7 @@ export class RetainedNisrCpiReader {
       evidence that was never recorded either way.
     */
     if (
-      row.extractorId !== null &&
+      (row.extractorId !== null || row.extractorVersion !== null) &&
       (row.extractorId !== NISR_CPI_EXTRACTOR_ID ||
         row.extractorVersion !== NISR_CPI_EXTRACTOR_VERSION)
     ) {
@@ -143,12 +144,42 @@ export class RetainedNisrCpiReader {
     if (!decodeResult.ok) return { kind: 'NONE', refusal: 'PARSE_FAILED' };
 
     const all = await store.retrievalsFor(address);
-    if (all.length === 0) return { kind: 'NONE', refusal: 'NO_RETRIEVAL_LINEAGE' };
+    // A checksum can be shared by endpoints and refused captures. Use this admission.
+    const retrieval = all.find((candidate) =>
+      candidate.retrievalId === row.retrievalId &&
+      candidate.request.providerId === providerId &&
+      candidate.request.endpointId === endpointId &&
+      candidate.contentAddress === row.contentAddress);
+    if (retrieval === undefined) return { kind: 'NONE', refusal: 'NO_RETRIEVAL_LINEAGE' };
+    if (
+      (row.parserId !== null && row.parserId !== 'nisr.cpi.pdf') ||
+      (row.parserVersion !== null && row.parserVersion !== '1.0.0') ||
+      (row.referencePeriod !== null && row.referencePeriod !== decodeResult.value.referencePeriod) ||
+      (row.sourceLanguage !== null && row.sourceLanguage !== decodeResult.value.sourceLanguage) ||
+      (row.publisherReleasedAt !== null &&
+        row.publisherReleasedAt.toISOString().slice(0, 10) !== decodeResult.value.publicationDate)
+    ) return { kind: 'NONE', refusal: 'LINEAGE_MISMATCH' };
+
+    // Look across payloads, not just retrievals of these same bytes. Other periods
+    // are history, not revisions. Legacy rows without a period remain conservative.
+    const prior = await this.prisma.snapshotRetrieval.findMany({
+      where: {
+        providerId, endpointId, admissibility: 'ADMITTED',
+        contentAddress: { not: null },
+        OR: [{ referencePeriod: decodeResult.value.referencePeriod }, { referencePeriod: null }],
+        retrievedAt: { lte: row.retrievedAt },
+      },
+      orderBy: [{ retrievedAt: 'asc' }, { retrievalId: 'asc' }],
+      select: { contentAddress: true },
+    });
+    // Re-fetching a conflicting payload cannot promote it to SAME. The first
+    // admitted payload remains the anchor until a measured comparator exists.
+    const firstAddress = prior[0]?.contentAddress;
 
     return {
       kind: 'RETAINED',
       decoded: decodeResult.value,
-      retrieval: all[all.length - 1]!,
+      retrieval,
       contentAddress: row.contentAddress,
       lineage: {
         parserId: row.parserId,
@@ -158,7 +189,7 @@ export class RetainedNisrCpiReader {
         referencePeriod: row.referencePeriod,
         sourceLanguage: row.sourceLanguage,
       },
-      priorContentAddresses: all.slice(0, -1).map((r) => r.contentAddress ?? ''),
+      priorContentAddresses: firstAddress == null ? [] : [firstAddress],
     };
   }
 }

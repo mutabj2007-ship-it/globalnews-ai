@@ -90,13 +90,8 @@ function retainedCpiSeries(retained: RetainedObservation): Series {
     shortLabel: 'CPI',
     direction: 'FLAT',
     latest: slot,
-    triad: {
-      actual: slot,
-      expected: null,
-      previous: null,
-      surprise: null,
-      surpriseUnit: retained.unit,
-    },
+    // An actual alone supplies no expected/previous comparison evidence.
+    triad: null,
     history: [slot],
   };
 }

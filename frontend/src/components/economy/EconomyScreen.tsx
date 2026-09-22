@@ -180,7 +180,12 @@ export function EconomyScreen({
 
   const primary = subject.primarySeries;
   const observedIndicatorCount = subject.indicators.filter((series) => figureIsObservation(series.latest)).length;
-  const hasRevisionTrack = (revisionVintages?.length ?? 0) > 0 && revisionEffects !== undefined;
+  const revisionKeys = new Set((revisionVintages ?? []).flatMap((slot) =>
+    slot.kind === 'OBSERVATION' && primary?.latest.kind === 'OBSERVATION' &&
+    slot.observation.seriesId === primary.latest.observation.seriesId &&
+    slot.observation.periodId === primary.latest.observation.periodId
+      ? [slot.observation.vintage] : []));
+  const hasRevisionTrack = revisionKeys.size > 1 && revisionEffects !== undefined;
   const hasCompetingReadings = competing !== undefined;
   const hasTransmissionChain = (chain?.length ?? 0) > 0;
   const hasTimeline = (timeline?.length ?? 0) > 0;

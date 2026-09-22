@@ -406,6 +406,7 @@ describe('EA-4 · the accepted pipeline, and only it', () => {
 
     // C-6 · the period is the one the VALUE occupies, not the dataset's newest
     expect(cell.observation.periodId).toBe('2026-07');
+    expect(cell.observation.semantics.releaseStatus).toBeNull();
     expect(cell.observation.semantics.freshness).toBe('UNDETERMINED');
     expect(cell.observation.provenance.sourceType).toBe('PUBLIC_DATA');
   });
