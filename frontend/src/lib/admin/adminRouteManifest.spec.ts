@@ -111,6 +111,7 @@ describe('F1.b — the twenty-route Admin manifest', () => {
       expect(path.startsWith('/admin')).toBe(true);
     });
     expect(Object.keys(ADMIN_API).sort()).toEqual([
+      'alphaReview',
       'analyticsCoverageGeography',
       'analyticsUsage',
       'me',
