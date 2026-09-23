@@ -52,6 +52,7 @@ export const PROVENANCE = {
   // provenance, and the same is already true of admin-07.appProbe.
   'admin-02.analysisRequests': 'A', // GET /admin/analytics/usage
   'admin-02.providerErrors': 'C', //    counters declared, populated by nobody
+  'admin-02.alphaReview': 'A', //       GET /admin/alpha-review — authenticated retained-evidence review
   'admin-02.reachMap': 'C',
   'admin-02.pipelineMode': 'A', //      NewsDataMode, on every news response
   'admin-02.alerts': 'C',
