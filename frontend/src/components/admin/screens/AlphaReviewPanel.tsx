@@ -25,7 +25,7 @@ function AlphaReviewData(): JSX.Element {
 
   if (review.state === 'loading') {
     return (
-      <AdminPanel title="ALPHA REVIEW" field="admin.alphaReview">
+      <AdminPanel title="ALPHA REVIEW" field="admin-02.alphaReview">
         <p className="text-[12px] text-adm-ink-dim">Loading retained evidence inventory…</p>
       </AdminPanel>
     );
@@ -33,7 +33,7 @@ function AlphaReviewData(): JSX.Element {
 
   if (review.state === 'error' || !review.data) {
     return (
-      <AdminPanel title="ALPHA REVIEW" field="admin.alphaReview">
+      <AdminPanel title="ALPHA REVIEW" field="admin-02.alphaReview">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[12px] text-adm-chip-warn-ink">
             Review inventory unavailable. This is not a zero-holdings statement.
@@ -53,7 +53,7 @@ function AlphaReviewData(): JSX.Element {
   return (
     <AdminPanel
       title="ALPHA PRODUCT OWNER REVIEW"
-      field="admin.alphaReview"
+      field="admin-02.alphaReview"
       note="Internal Alpha inspection only · public gates are unchanged"
     >
       <div className="flex flex-col gap-3">
