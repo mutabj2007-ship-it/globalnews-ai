@@ -10,64 +10,16 @@ import { AlphaVisualPreviewMarker } from '@/components/economy/AlphaVisualPrevie
 import { economyCapabilityFrom, readEconomyObservations } from '@/lib/economy/economyObservationRead';
 
 /**
- * ════════════════════════════════════════════════════════════════════════════
- * ECONOMY — ALPHA PRODUCT OWNER VISUAL PREVIEW. NOT THE ECONOMY ROUTE.
- * ════════════════════════════════════════════════════════════════════════════
+ * Noindex Economy preview, linked by the canonical intelligence-module registry.
+ * `/economy` remains governed separately; this route does not change its eligibility.
  *
- * WHY THIS IS NOT `/economy`, AND WHY THAT IS NOT A TECHNICALITY.
+ * The server reads display locale and performs an INTERNAL retained-reader fetch to
+ * this deployment's backend. Displayable retained observations populate the accepted
+ * EconomyScreen slots; otherwise the existing absence frame renders. No fixture fallback.
  *
- * `/economy` is governed. `shared/src/economy/route-eligibility.ts` holds eight conditions
- * and a predicate, and today the route is NOT ELIGIBLE on three of them —
- * `E1_PUBLISHABLE_OBSERVATION`, `E4A_SOURCE_REGISTERED` and
- * `E4B_SOURCE_ACTIVATED_WITH_RIGHTS`. Every one of the three is a DATA condition. Main's
- * accepted entry states the consequence in a sentence worth quoting because it is the
- * whole reason this file exists: *"not one of the eight is visual readiness."*
- *
- * A second guard holds the same door from the other side. `b4aEconomySubstrate.spec.ts`
- * asserts, in its `B4-A · what was NOT activated` block:
- *
- *     expect(existsSync(join(REPO, 'frontend', 'src', 'app', 'economy'))).toBe(false);
- *
- * That is a TRIPWIRE, and Main's entry is explicit about how it may be discharged: it is
- * *"retired and replaced by a presence assertion with the same teeth, never deleted"* —
- * and only when the seven transition conditions hold. Creating `app/economy/` to inspect a
- * layout would trip it, and deleting the assertion to stop it tripping is the exact move
- * that entry forbids.
- *
- * So this route is somewhere else entirely, and the contract is untouched: `app/economy`
- * still does not exist, the eligibility predicate still returns NOT ELIGIBLE, and the
- * tripwire still passes unchanged. Nothing here is a claim that Economy is ready.
- *
- * ── IT IS NOT A SECOND ECONOMY IMPLEMENTATION ─────────────────────────────
- *
- * Every import below is the one the eventual `/economy` will use, and canonical's own
- * `app/economy/page.tsx` at `3db5a09` composes these same four: `EconomyScreen`,
- * `PRODUCTION_SHAPED_SUBJECT`, `ECONOMY_DATA_CAPABILITY` and the platform locale read.
- * This file adds a preview marker and subtracts nothing. When the route opens, what a
- * reader sees is what is on this page, because it is rendered by the same components from
- * the same subject under the same capability.
- *
- * ── FIXTURES ARE NOT REACHABLE FROM HERE ──────────────────────────────────
- *
- * `FIXTURE_DATA_CAPABILITY` is not imported, and `data` is passed explicitly rather than
- * defaulted, so there is no omission, flag or default parameter by which this page could
- * arrive at the design's illustrative Rwanda, Kenya or Poland figures.
- *
- * THE CAPABILITY IS NO LONGER A LITERAL, AND IT NO LONGER READS `NO_OBSERVATION_SOURCE`.
- * It is `economyCapabilityFrom(read)` — the answer to the retained-observation read —
- * so it says OBSERVED exactly when something was observed and NO_OBSERVATION_SOURCE
- * otherwise. Neither branch can reach a fixture: no branch of that function returns one.
- *
- * ── ZERO EXTERNAL CALLS ───────────────────────────────────────────────────
- *
- * The module graph reachable from this file performs no fetch. It reads one cookie on the
- * server and renders. No GNews, no OpenAI, no `/analysis/news`, no TED, no Eurostat, no
- * GUS, no provider of any kind — on load or on any interaction this page offers.
- *
- * NOINDEX, AND ABSENT FROM NAVIGATION. `intelligenceModules.ts` keeps Economy at
- * `state: 'preview'` with no `destination`, and `isModuleNavigable` requires both `active`
- * and a destination, so the Home tile stays inert. Nothing links here; the Product Owner
- * reaches it by typing it.
+ * Page load performs zero EXTERNAL provider/AI acquisition. Source disclosure opens
+ * retained detail; only explicit citation navigation opens the publisher's document.
+ * The global Ask AI dock submits through its existing engine only on explicit user submit.
  */
 export const metadata: Metadata = {
   title: 'Economy Intelligence — Alpha visual preview',

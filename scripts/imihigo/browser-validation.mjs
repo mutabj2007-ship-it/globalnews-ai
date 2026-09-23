@@ -11,7 +11,7 @@ const browser = await chromium.launch({ headless: true, channel: 'chrome' });
 const results = [];
 try {
   for (const locale of ['en', 'pl']) {
-    for (const width of [320, 390, 768, 1440]) {
+    for (const width of [320, 375, 390, 430, 768, 1440]) {
       const compact = width < 1000;
       const context = await browser.newContext({ viewport: { width, height: 900 } });
       await context.addCookies([{ name: 'globalnews-ai-language', value: locale, url: base }]);

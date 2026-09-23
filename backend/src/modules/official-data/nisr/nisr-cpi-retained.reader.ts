@@ -46,7 +46,7 @@ import {
  *
  * ── IT CONTACTS NOBODY ────────────────────────────────────────────────────
  *
- * There is no transport, no URL and no fetch in this file or in its dependency graph. It
+ * There is no external acquisition transport in this reader. Source URLs are citation metadata. It
  * opens bytes that the snapshot store already retained. Calling it a thousand times
  * reaches NISR zero times.
  */
@@ -120,7 +120,7 @@ export class RetainedNisrCpiReader {
       where: { providerId, endpointId, admissibility: 'ADMITTED' },
       orderBy: [{ retrievedAt: 'desc' }, { retrievalId: 'desc' }],
     });
-    if (row === null || row.contentAddress === null) {
+    if (row === null) {
       return { kind: 'NONE', refusal: 'NO_ADMITTED_CAPTURE' };
     }
 
@@ -138,6 +138,7 @@ export class RetainedNisrCpiReader {
       return { kind: 'NONE', refusal: 'EXTRACTOR_IDENTITY_MISMATCH' };
     }
 
+    if (row.contentAddress === null) return { kind: 'NONE', refusal: 'PAYLOAD_NOT_RETAINED' };
     const address = snapshotContentAddress(row.contentAddress);
     const payload = await store.open(address);
     if (payload === null) return { kind: 'NONE', refusal: 'PAYLOAD_NOT_RETAINED' };

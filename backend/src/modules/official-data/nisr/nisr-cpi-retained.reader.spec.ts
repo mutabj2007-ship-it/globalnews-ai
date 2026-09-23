@@ -57,6 +57,11 @@ describe('retained NISR read boundary', () => {
     expect(await read()).toEqual({ kind: 'NONE', refusal: 'NO_ADMITTED_CAPTURE' });
     expect(open).not.toHaveBeenCalled();
   });
+  it('distinguishes a retained row without an address from no capture', async () => {
+    findFirst.mockResolvedValue({ ...row, contentAddress: null });
+    expect(await read()).toEqual({ kind: 'NONE', refusal: 'PAYLOAD_NOT_RETAINED' });
+    expect(open).not.toHaveBeenCalled();
+  });
   it('refuses missing bytes', async () => {
     open.mockResolvedValue(null);
     expect(await read()).toEqual({ kind: 'NONE', refusal: 'PAYLOAD_NOT_RETAINED' });

@@ -329,6 +329,7 @@ export function EconomyCompactScreen({
       {/* bottom bar — every control clears the 44px hit target */}
       <nav
         data-econ="compact-tab-bar"
+        data-launcher-bottom-boundary
         style={{ flex: '0 0 auto', height: '56px', borderTop: `1px solid ${ECON_LINE.structure}`, background: ECON_SURFACE.panel, display: 'flex' }}
       >
         {[
@@ -444,6 +445,7 @@ export function EconomySheet({
     <div
       ref={ref}
       data-econ="economy-sheet"
+      data-launcher-dialog
       data-detent={detent}
       role="dialog"
       aria-label={title}
