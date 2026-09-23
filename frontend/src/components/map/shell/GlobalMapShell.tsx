@@ -1820,7 +1820,7 @@ export function GlobalMapShell({
           fitBounds={pendingBounds}
           onBoundsResolved={onBoundsResolved}
           evidenceRecords={records}
-          layers={layers}
+          layers={retainedWindow ? { ...layers, evidencePoints: true, countryEvidence: false } : layers}
           watch={watch}
           interactive={hud.interactive}
           capturesWheel={hud.capturesWheel}
