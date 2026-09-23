@@ -355,8 +355,8 @@ describe('ASK-AI-CONTEXT-1 §5 — provider lifecycle, fail closed', () => {
   });
 
   it('L4 — a route with no publisher leaves the context undefined', () => {
-    /* structural: the workspace is the ONLY publisher in the product */
-    expect(importersOf('usePublishStoryContext')).toEqual(['components/search/SearchPageClient.tsx']);
+    /* CTO /ask ruling: both analysis-owning surfaces publish through the same token lifecycle. */
+    expect(importersOf('usePublishStoryContext')).toEqual(['components/ask-frame/AskFrameScreen.tsx', 'components/search/SearchPageClient.tsx']);
   });
 
   it('§5.2.5 — the dock keeps no copy: no state, ref or memo of the context', () => {
@@ -402,7 +402,8 @@ describe('ASK-AI-TRUTHFULNESS-1 §6 — four states, none collapsed', () => {
     expect(code).toMatch(/buildBriefTelemetry\(response, null\)/);
     /* the source list is the response's own, not a parallel one */
     expect(code).toMatch(/analysis\?\.sources \?\? \[\]/);
-    expect(code).not.toMatch(/sourceEntities|response\.articles/);
+    // Retained article COUNT gates handoff; sources still come only from analysis.sources.
+    expect(code.replace(/response\.articles\.length/g, '')).not.toMatch(/sourceEntities|response\.articles/);
   });
 
   it('§6.2 — an unknown telemetry figure is null, never invented', () => {

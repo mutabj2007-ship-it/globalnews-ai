@@ -91,12 +91,13 @@ const stripComments = (value: string): string =>
 
 const dockCode = stripComments(dock);
 
-describe('M — the entry controls are the SAME source as the governed baseline', () => {
+// CTO R1 routing supersedes the historical mobile destination above.
+describe('M — entry controls preserve explicit execution under CTO R1 routing', () => {
   it('the bottom nav offers Ask AI', () => {
-    expect(bottomNav).toContain("{ key: 'ask', href: '/search', Icon: Search }");
+    expect(bottomNav).toContain("{ key: 'ask', href: '/ask', Icon: Search }");
   });
 
-  it('and it is navigation to /search, not an AI execution', () => {
+  it('and it is navigation to /ask, not an AI execution', () => {
     /*
       The item is an <a href>. Pressing it costs nothing and asks nothing; the
       question is typed on the destination.

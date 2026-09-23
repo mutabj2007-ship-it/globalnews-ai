@@ -8,6 +8,7 @@ import { LoadingStages } from '@/components/search/LoadingStages';
 import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClient';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
+import { dashboardHref } from '@/lib/ask/dashboardContext';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
 import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
@@ -300,7 +301,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           ].join(' ')}
         >
           <header className="flex items-center justify-between gap-3 border-b border-border bg-surface-raised/95 px-4 py-3 backdrop-blur">
-            <h2 className="font-display text-base font-medium text-ink-primary">{t.title}</h2>
+            <h2 className="font-display text-base font-medium text-ink-primary"><a data-ask="dashboard-entry" href={dashboardHref(question || (phase.kind !== 'idle' ? phase.question : ''), storyContext)}>{t.title} ↗</a></h2>
             <button
               type="button"
               data-ask="close"
