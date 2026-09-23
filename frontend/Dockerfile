@@ -67,7 +67,31 @@ COPY frontend ./frontend
 # release wiring is ever removed.
 COPY scripts ./scripts
 RUN npm run build:shared
-RUN npm run build --workspace=frontend
+# ALPHA-FRONTEND-BUILD-RETRY-R1 — next/font/google resolves font CSS and
+# font binaries during next build. Railway has twice failed here with the
+# same transient loader/network error while this exact source passed CI on
+# a clean rerun. A bounded retry keeps the ACCEPTED typography unchanged:
+# no font family, weight, CSS variable, runtime fallback or UI code changes.
+#
+# This does NOT turn a bad build green. Any deterministic compile/test/gate
+# failure is retried from a clean .next directory and still exits non-zero
+# after the third attempt. Spatial token/structure gates remain inside the
+# same npm build command on every attempt.
+RUN set -eu; \
+    attempt=1; \
+    while true; do \
+      if npm run build --workspace=frontend; then \
+        break; \
+      fi; \
+      if [ "$attempt" -ge 3 ]; then \
+        echo "Frontend build failed after $attempt attempts"; \
+        exit 1; \
+      fi; \
+      echo "Frontend build attempt $attempt failed; retrying from a clean .next directory"; \
+      rm -rf frontend/.next; \
+      attempt=$((attempt + 1)); \
+      sleep 2; \
+    done
 
 # ---- Production ----
 FROM node:20-alpine AS production
