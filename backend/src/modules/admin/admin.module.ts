@@ -12,6 +12,9 @@ import { AdminPlatformEnabledGuard } from './admin-platform.guard';
 import { AdminService } from './admin.service';
 import { AdminGlobalReachController } from './admin-global-reach.controller';
 import { GlobalReachModule } from '../global-reach/global-reach.module';
+import { EconomyModule } from '../economy/economy.module';
+import { ElectionReadModule } from '../election/election-read.module';
+import { AlphaReviewService } from './alpha-review.service';
 
 /**
  * F1.a — administrative authorization foundation.
@@ -51,13 +54,14 @@ import { GlobalReachModule } from '../global-reach/global-reach.module';
  * so the call names it forbids are deliberately not spelled out here.)
  */
 @Module({
-  imports: [ConfigModule, AuthModule, NewsModule, GlobalReachModule],
+  imports: [ConfigModule, AuthModule, NewsModule, GlobalReachModule, EconomyModule, ElectionReadModule],
   controllers: [AdminController, AdminReadonlyController, AdminGlobalReachController],
   providers: [
     AdminService,
     AdminSystemService,
     AdminNewsService,
     AdminAnalyticsService,
+    AlphaReviewService,
     AdminGuard,
     AdminPlatformEnabledGuard,
   ],
