@@ -5,9 +5,10 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { EnergyShell } from '@/components/energy/EnergyShell';
-import { ENERGY_GOVERNED_FRAME } from '@/lib/energy/energyGoverned';
+import { readEnergyObservations } from '@/lib/energy/energyReadModel';
+import { energyFrameFromRetained, energyRetainedStrings } from '@/lib/energy/energyRetainedAdapter';
 import { energyStateFromSearchParams } from '@/lib/energy/energyUrl';
-import { energyStrings, type EnergyLocale } from '@/lib/energy/energyStrings';
+import { type EnergyLocale } from '@/lib/energy/energyStrings';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -24,16 +25,9 @@ import { energyStrings, type EnergyLocale } from '@/lib/energy/energyStrings';
  *
  * ── ZERO PROVIDERS AND ZERO MODELS, BY CONSTRUCTION ──────────────────────
  *
- * This Server Component AWAITS NOTHING AND FETCHES NOTHING. There is no read
- * model, no provider client, no model call and no `fetch` anywhere in the
- * Energy module graph — the data is two static modules, and the substrate's
- * geometry is a bundled import rather than a tile request. So
- *
- *     "entering /energy must execute 0 providers and 0 models"
- *
- * is a property of the module graph, not a discipline applied to it. The
- * measured proof ships in the package; the guard suite walks the graph and
- * fails on the first network-capable import.
+ * This Server Component reads only the existing retained backend endpoint.
+ * No producer, model, external data provider, or acquisition is invoked.
+ * Plan B fills existing subject/evidence slots; unsupported fields stay absent.
  *
  * ── WHY THE PAGE IS `noindex` ────────────────────────────────────────────
  *
@@ -64,11 +58,11 @@ function energyLocale(): EnergyLocale {
   return (SELECTABLE_LOCALES.find((locale) => locale === language) ?? 'en') as EnergyLocale;
 }
 
-export default function EnergyPage({
+export default async function EnergyPage({
   searchParams,
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
-}): JSX.Element {
+}): Promise<JSX.Element> {
   const params = new URLSearchParams();
   Object.entries(searchParams ?? {}).forEach(([key, value]) => {
     if (typeof value === 'string') params.set(key, value);
@@ -92,11 +86,12 @@ export default function EnergyPage({
     Claude Design comparison, but this public route always renders the governed
     frame. No provider or model is activated by this correction.
   */
-  const data = ENERGY_GOVERNED_FRAME;
+  const retained = await readEnergyObservations();
+  const data = energyFrameFromRetained(retained, locale);
 
   return (
     <ScriptRun locale={locale} step="wrapping" as="div">
-      <EnergyShell data={data} strings={energyStrings(locale)} urlState={urlState} locale={locale} />
+      <EnergyShell data={data} strings={energyRetainedStrings(retained, locale)} urlState={urlState} locale={locale} />
     </ScriptRun>
   );
 }

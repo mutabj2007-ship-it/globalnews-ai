@@ -71,6 +71,7 @@ import {
 import { Identifier, edge, micro } from './MktParts';
 import {
   deriveFreshness,
+  retainedObservationContext,
   type MarketCapabilityRow,
   type MarketFreshnessState,
   type MarketReadUnavailableReason,
@@ -218,7 +219,7 @@ export function ObservationCard({ o, t }: {
       <p style={{
         margin: 0, fontSize: MKT_TYPE.monoMeta, color: MKT_INK.tertiary,
         whiteSpace: 'normal', overflowWrap: 'anywhere',
-      }}>{t.reader.seriesNameNotCarried}</p>
+      }}>{retainedObservationContext(o) ?? t.reader.seriesNameNotCarried}</p>
     </article>
   );
 }

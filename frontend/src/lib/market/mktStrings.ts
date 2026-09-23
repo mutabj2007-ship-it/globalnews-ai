@@ -182,7 +182,7 @@ const en: MktStrings = {
     DELAYED: 'Delayed',
     LAST_CLOSE: 'Last close',
     LATEST_PUBLISHED: 'Latest published',
-    STALE: 'No published vintage',
+    STALE: 'Current edition unverified',
     UNAVAILABLE: 'Unavailable',
   },
   release: {

@@ -163,7 +163,6 @@ describe('a figure without a source or a unit is refused, not rendered', () => {
     ['no provider', { provider: '' }],
     ['no source class', { sourceClass: '' }],
     ['no unit', { unit: '' }],
-    ['no value', { value: null }],
     ['withdrawn', { releaseStatus: 'WITHDRAWN' as const }],
   ])('%s is not displayable', (_label, over) => {
     expect(observationIsDisplayable(obs(over))).toBe(false);

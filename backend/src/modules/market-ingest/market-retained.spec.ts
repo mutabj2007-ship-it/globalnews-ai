@@ -341,3 +341,22 @@ it('refuses legacy FINAL on the same revision even when the value and unit match
   await expect(producer.admit('test-only', 'reviewer')).rejects.toThrow('Conflicting');
   expect(tx.marketObservation.create).not.toHaveBeenCalled();
 });
+
+it('keeps verified corridor context and retrieval time', async () => {
+ const result = await reader([row()]).repo.latest();
+ expect(result[0].context).toMatchObject({ reporter: 'PL', partner: 'DE', product: '01' });
+ expect(result[0].retainedAt).toBe('2026-09-02T00:00:00.000Z');
+});
+it('continues past 250 rejected rows to find retained evidence', async () => {
+ const rejected = Array.from({ length: 250 }, (_, i) => ({ ...row(), observationKey: 'bad-' + i, snapshotAdmissibility: 'REFUSED' }));
+ const findMany = jest.fn().mockResolvedValueOnce(rejected).mockResolvedValueOnce([row()]);
+ const repo = new MarketReadRepository({ marketObservation: { findMany } } as unknown as PrismaService);
+ expect(await repo.latest()).toHaveLength(1);
+ expect(findMany.mock.calls[1][0].skip).toBe(250);
+});
+
+it('uses publisher labels only when the retained artifact states them', () => {
+ const capture = fixture(b => { b.dimension.product.category.label = { '01': 'Publisher commodity label' }; });
+ expect(inspectMarketCapture(capture).labels.productLabel).toBe('Publisher commodity label');
+ expect(inspectMarketCapture(fixture()).labels.productLabel).toBeUndefined();
+});
