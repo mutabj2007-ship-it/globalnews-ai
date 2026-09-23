@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { analyzeNews } from '@/lib/api/analysisApi';
 import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClient';
@@ -13,6 +13,9 @@ export interface AskTurn {
   readonly response?: AnalysisApiResponse;
   readonly error?: string;
 }
+// Commit the identity before promise continuations can publish after a client render.
+const useCommittedEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
 /** Display history only. Only the previous USER question crosses transport. */
 export function useAskConversation(language: LanguageCode, context: StoryContext | undefined) {
   const [turns, setTurns] = useState<AskTurn[]>([]);
@@ -20,19 +23,31 @@ export function useAskConversation(language: LanguageCode, context: StoryContext
   const inFlight = useRef(false);
   const generation = useRef(0);
   const previous = useRef<AskTurn>();
-  useEffect(
-    () => () => {
+  const bounded = transportableContext(context);
+  const { title, articleId, countryCode } = bounded ?? {};
+  const identity = useRef({ language, context: bounded });
+  useCommittedEffect(() => {
+    identity.current = {
+      language,
+      context: title === undefined ? undefined : { title, articleId, countryCode },
+    };
+    inFlight.current = false;
+    setPending(null);
+    // Also invalidate on unmount, and on A -> B -> A transitions.
+    return () => {
       generation.current += 1;
-    },
-    [],
-  );
+    };
+  }, [language, title, articleId, countryCode]);
   async function submit(question: string): Promise<boolean> {
     if (!question.trim() || inFlight.current) return false;
     inFlight.current = true;
     const request = ++generation.current;
     const sent = transportableContext(context);
     const prior = previous.current;
-    const priorQuestion = prior && sameAskContext(prior.context, sent) ? prior.question : undefined;
+    const priorQuestion =
+      prior && prior.language === language && sameAskContext(prior.context, sent)
+        ? prior.question
+        : undefined;
     setPending(question);
     let turn: AskTurn;
     try {
@@ -46,7 +61,12 @@ export function useAskConversation(language: LanguageCode, context: StoryContext
         error: resolveAnalysisErrorMessage(error, getDictionary(language)),
       };
     }
-    if (generation.current !== request) return false;
+    if (
+      generation.current !== request ||
+      identity.current.language !== language ||
+      !sameAskContext(identity.current.context, sent)
+    )
+      return false;
     previous.current = turn;
     setTurns((current) => [...current, turn]);
     setPending(null);

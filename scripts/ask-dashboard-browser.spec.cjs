@@ -91,6 +91,12 @@ fixture.retrievalContext.comparisonCoverage = ['ISR', 'IRN', 'SAU'].map((iso3, i
         await page.locator('[data-ask="composer-input"]').waitFor();
         await page.waitForTimeout(700);
         assert.equal(calls.length, 0, 'opening with q must remain idle');
+        assert.equal(
+          await page.locator('[data-ask="launcher"]').count(),
+          0,
+          'dedicated dashboard owns the only composer',
+        );
+        assert.equal(await page.locator('[data-ask="composer-input"]').count(), 1);
         assert.equal(acquisition.length, 0, 'opening must not acquire provider evidence');
         assert.equal(
           await page.locator('[data-ask="composer-input"]').inputValue(),
@@ -184,8 +190,63 @@ fixture.retrievalContext.comparisonCoverage = ['ISR', 'IRN', 'SAU'].map((iso3, i
         const workspaceGlobalOverflow = await page.evaluate(
           () => document.documentElement.scrollWidth > innerWidth,
         );
+        for (const route of ['/map', '/', '/humanitarian']) {
+          const navigation = await page.goto(`${base}${route}`, {
+            waitUntil: 'networkidle',
+            timeout: 120000,
+          });
+          assert.equal(navigation.status(), 200);
+          await page.locator('[data-ask="launcher"]').waitFor();
+          await page.locator('[data-ask="launcher"]').click();
+          await page.locator('[data-ask="dashboard-entry"]').waitFor();
+          assert.equal(calls.length, 3, `dock on ${route} must remain idle`);
+        }
+        // Real browser lifecycle: release an old answer only after current context is removed.
+        await page.goto(`${base}/ask?storyTitle=Rwanda&countryCode=RWA`, {
+          waitUntil: 'networkidle',
+        });
+        let release;
+        let started;
+        const held = new Promise((resolve) => {
+          release = resolve;
+        });
+        const sent = new Promise((resolve) => {
+          started = resolve;
+        });
+        let delivered;
+        const delivery = new Promise((resolve) => {
+          delivered = resolve;
+        });
+        await page.route('**/analysis/news', async (route) => {
+          calls.push(route.request().postDataJSON());
+          started();
+          await held;
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(fixture),
+          });
+          delivered();
+        });
+        await page.locator('[data-ask="composer-input"]').fill('Rwanda question');
+        await page.locator('[data-ask="composer-submit"]').click();
+        await sent;
+        await page.locator('[data-ask="context"] button').click();
+        assert.equal(await page.locator('[data-ask="pending"]').count(), 0);
+        assert.equal(calls.length, 4, 'context changes cannot submit');
+        release();
+        await delivery;
+        await page.waitForTimeout(150);
+        assert.equal(
+          await page.locator('[data-ask="turn"]').count(),
+          0,
+          'stale answer must not publish',
+        );
+        assert.equal(await page.locator('[data-ask="launcher"]').count(), 0);
         results.push({
           locale,
+          globalDockRoutes: ['/search', '/map', '/', '/humanitarian'],
+          staleAnswerSuppressed: true,
           viewport,
           calls,
           geometry,

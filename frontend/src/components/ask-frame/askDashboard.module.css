@@ -121,16 +121,11 @@
     transform: none;
   }
   .composer {
-    padding: 8px 60px 8px 8px;
+    padding: 8px;
   }
 }
 
 .reader[data-tab='sources'] :global([data-ask='brief']),
 .reader[data-tab='sources'] :global([data-ask='relational-answer']) {
   display: none;
-}
-
-/* Reserve the global lightweight launcher footprint without changing its all-route behavior. */
-.composer :global([data-ask='composer-submit']) {
-  margin-inline-end: 104px;
 }

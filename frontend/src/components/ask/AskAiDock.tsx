@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { usePathname } from 'next/navigation';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { analyzeNews } from '@/lib/api/analysisApi';
 import { LoadingStages } from '@/components/search/LoadingStages';
@@ -9,6 +10,7 @@ import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClien
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
 import { dashboardHref } from '@/lib/ask/dashboardContext';
+import { ASK_CANONICAL_ROUTE } from '@/lib/ask/askFrame';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
 import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
@@ -86,7 +88,14 @@ interface AskAiDockProps {
   language?: LanguageCode;
 }
 
-export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
+export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
+  const pathname = usePathname();
+  // The dedicated dashboard owns its composer; unmount the global dock entirely.
+  if (pathname === ASK_CANONICAL_ROUTE) return null;
+  return <GlobalAskAiDock {...props} />;
+}
+
+function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
