@@ -1,0 +1,53 @@
+{
+  "observationKey": "cfl:1:8:UCDP_GED:6:TEST-A",
+  "identity": {
+    "authority": "UCDP_GED",
+    "upstreamEventId": "TEST-A"
+  },
+  "eventType": "ARMED_CLASH",
+  "owner": "CONFLICT",
+  "actors": [
+    {
+      "kind": "ORGANISED_ARMED_GROUP",
+      "upstreamName": "TEST ONLY group"
+    }
+  ],
+  "geography": {
+    "geometryKind": "POINT",
+    "coordinates": {
+      "type": "Point",
+      "coordinates": [29, -1]
+    },
+    "crs": "EPSG:4326",
+    "denotation": "EVENT_LOCATION",
+    "origin": "SOURCE_NATIVE",
+    "precision": "EXACT",
+    "locationProvenance": "STATED",
+    "countryIso3": "COD"
+  },
+  "temporal": {
+    "eventStartedAt": "2026-09-20",
+    "ingestedAt": "2026-09-22T00:00:00Z",
+    "temporalProvenance": "EVENT_DATED_BY_SOURCE"
+  },
+  "severity": {
+    "kind": "PUBLISHER_STATED",
+    "value": "HIGH",
+    "publisherAuthority": "UCDP_GED",
+    "publisherScaleRef": "TEST ONLY scale"
+  },
+  "sourceReference": {
+    "citation": "TEST ONLY citation",
+    "sourceUrl": "https://example.invalid/test-only"
+  },
+  "acquisition": {
+    "snapshotRetrievalId": "TEST ONLY retrieval",
+    "snapshotAdmissibility": "ADMITTED",
+    "runId": "TEST ONLY run"
+  },
+  "revision": {
+    "revisionOrdinal": 0,
+    "supersedesRevisionOrdinal": null,
+    "recordedAt": "2026-09-22T00:00:00Z"
+  }
+}

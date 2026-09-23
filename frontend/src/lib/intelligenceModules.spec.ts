@@ -110,9 +110,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
   it('the inert cards are exactly those with no surface, for THIS build variant', () => {
     const variant = mapShellVariant();
     const inert = INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m)).map((m) => m.id).sort();
-    const expected = variant === 'shell'
-      ? ['world-intelligence']
-      : ['conflict', 'world-intelligence'];
+    const expected = ['world-intelligence'];
     expect(`${variant}: ${inert.join(',')}`).toBe(`${variant}: ${expected.join(',')}`);
 
     /*
@@ -173,8 +171,8 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       that was the old architecture"* — and removing it from this list is what
       makes a return fail here rather than pass quietly.
     */
-    const realRoutes = [
-      '/map', '/market', '/humanitarian',
+    const realRoutes = ['/conflict',
+      '/conflict', '/map', '/market', '/humanitarian',
       '/security-visual-preview', '/economy-visual-preview',
       /*
         `/politics-visual-preview` — the PREVIEW address, and deliberately not
@@ -297,9 +295,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
       is fixed, so the variant is substituted into the single row that depends
       on it rather than the whole assertion being loosened.
     */
-    const conflictRow = mapShellVariant() === 'shell'
-      ? 'conflict:preview:/map?domain=conflict'
-      : 'conflict:preview:-';
+    const conflictRow = 'conflict:preview:/conflict';
     expect(INTELLIGENCE_MODULES.map((m) => `${m.id}:${m.state}:${m.destination ?? '-'}`)).toEqual([
       'security:preview:/security-visual-preview',
       'world-intelligence:comingSoon:-',
@@ -351,7 +347,7 @@ describe('INTELLIGENCE_MODULES (Master Frontend Recomposition, Checkpoint 1)', (
     const variant = mapShellVariant();
     const clickable = INTELLIGENCE_MODULES.filter(isModuleNavigable).length;
     expect(`${variant}: ${clickable} clickable`)
-      .toBe(`${variant}: ${variant === 'shell' ? 8 : 7} clickable`);
+      .toBe(`${variant}: 8 clickable`);
   });
 
   it('every module has a dictionaryKey — no hardcoded English title/description in the config itself', () => {

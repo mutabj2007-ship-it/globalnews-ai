@@ -81,7 +81,10 @@ export interface MobileBottomSheetLabels {
   readonly stops: Readonly<Record<SheetStop, string>>;
 }
 
+export const SPATIAL_DETENTS = { peek: PEEK_HEIGHT_PX, half: HALF_FRACTION, full: FULL_FRACTION } as const;
 export interface MobileBottomSheetProps {
+  /** A recovered domain may supply its accepted detents; defaults preserve Spatial. */
+  readonly geometry?: { readonly peek: number; readonly half: number; readonly full: number };
   readonly stop: SheetStop;
   readonly onStopChange: (stop: SheetStop) => void;
   readonly labels: MobileBottomSheetLabels;
@@ -109,11 +112,11 @@ export interface MobileBottomSheetProps {
  * height rather than for the ones that happen to round down. The accepted
  * fractions are unchanged — this makes the accepted rule true.
  */
-function heightFor(stop: SheetStop, viewportHeight: number): number {
-  if (stop === 'PEEK') return PEEK_HEIGHT_PX;
-  if (stop === 'HALF') return Math.floor(viewportHeight * HALF_FRACTION);
+function heightFor(stop: SheetStop, viewportHeight: number, geometry: NonNullable<MobileBottomSheetProps["geometry"]> = SPATIAL_DETENTS): number {
+  if (stop === 'PEEK') return geometry.peek;
+  if (stop === 'HALF') return Math.floor(viewportHeight * geometry.half);
 
-  return Math.floor(viewportHeight * FULL_FRACTION);
+  return Math.floor(viewportHeight * geometry.full);
 }
 
 /**
@@ -130,6 +133,7 @@ export function mapFractionAt(stop: SheetStop, viewportHeight: number): number {
 
 export function MobileBottomSheet({
   stop,
+  geometry = SPATIAL_DETENTS,
   onStopChange,
   labels,
   children,
@@ -169,7 +173,7 @@ export function MobileBottomSheet({
     };
   }, []);
 
-  const settled = viewportHeight > 0 ? heightFor(stop, viewportHeight) : PEEK_HEIGHT_PX;
+  const settled = viewportHeight > 0 ? heightFor(stop, viewportHeight, geometry) : geometry.peek;
   const height = dragHeight ?? settled;
 
   const onPointerDown = useCallback(
@@ -195,12 +199,12 @@ export function MobileBottomSheet({
       if (Math.abs(travelled) > TAP_SLOP_PX) movedRef.current = true;
 
       const next = drag.startHeight + travelled;
-      const min = PEEK_HEIGHT_PX;
-      const max = heightFor('FULL', viewportHeight);
+      const min = geometry.peek;
+      const max = heightFor('FULL', viewportHeight, geometry);
 
       setDragHeight(Math.max(min, Math.min(max, next)));
     },
-    [viewportHeight],
+    [viewportHeight, geometry],
   );
 
   const endDrag = useCallback(
@@ -225,7 +229,7 @@ export function MobileBottomSheet({
       let best = Number.POSITIVE_INFINITY;
 
       for (const candidate of SHEET_STOPS) {
-        const distance = Math.abs(heightFor(candidate, viewportHeight) - landed);
+        const distance = Math.abs(heightFor(candidate, viewportHeight, geometry) - landed);
 
         if (distance < best) {
           best = distance;
@@ -235,7 +239,7 @@ export function MobileBottomSheet({
 
       if (nearest !== stop) onStopChange(nearest);
     },
-    [dragHeight, onStopChange, stop, viewportHeight],
+    [dragHeight, onStopChange, stop, viewportHeight, geometry],
   );
 
   /* Tap cycles PEEK -> HALF -> FULL -> PEEK, so the sheet works without a drag. */

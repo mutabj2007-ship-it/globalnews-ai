@@ -518,6 +518,7 @@ export interface EvidenceMapCanvasProps {
   readonly onCalloutAnchorChange?: (point: { x: number; y: number } | null) => void;
   readonly onHoverCountry?: (hover: HoveredCountry | null) => void;
   readonly onSelectCountry?: (feature: CountryFeature) => void;
+  readonly onSelectEvidence?: (id: string) => void;
   /**
    * PO-1 — THE ENGINE'S REAL ZOOM FLOOR, REPORTED UPWARD.
    *
@@ -617,6 +618,7 @@ export function EvidenceMapCanvas({
   onCalloutAnchorChange,
   onHoverCountry,
   onSelectCountry,
+  onSelectEvidence,
   onMinZoomChange,
   fitBounds = null,
   onBoundsResolved,
@@ -646,6 +648,8 @@ export function EvidenceMapCanvas({
   /* Same reason as gestureRef: the map is created once, so handlers read latest through refs. */
   const hoverRef = useRef(onHoverCountry);
   hoverRef.current = onHoverCountry;
+  const evidenceSelectRef = useRef(onSelectEvidence);
+  evidenceSelectRef.current = onSelectEvidence;
   const selectRef = useRef(onSelectCountry);
   selectRef.current = onSelectCountry;
   const minZoomRef = useRef(onMinZoomChange);
@@ -1383,6 +1387,12 @@ export function EvidenceMapCanvas({
       hoverRef.current?.(null);
     });
 
+    map.on('click', MARK_LAYER_ID, (event: maplibregl.MapLayerMouseEvent) => {
+      if (eventOriginatesFromMapHud(event)) return;
+      const id = event.features?.[0]?.properties?.recordId;
+      if (typeof id === 'string') evidenceSelectRef.current?.(id);
+    });
+
     map.on('click', FILL_LAYER_ID, (event: maplibregl.MapLayerMouseEvent) => {
       /*
         ══ HUD ORIGIN · CHROME IS NOT GEOGRAPHY ════════════════════════════
@@ -2095,7 +2105,7 @@ export function EvidenceMapCanvas({
   };
 
   return (
-    <div className="relative h-full w-full" data-gn="map-canvas" data-gn-density={density}>
+    <div className="relative h-full w-full" data-gn="map-canvas" data-gn-density={density} data-gn-ready={styleReady}>
       <div
         ref={containerRef}
         data-gn="map-canvas-surface"

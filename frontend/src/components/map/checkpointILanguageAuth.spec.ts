@@ -237,7 +237,7 @@ describe('I — the selected geography survives sign-in, without touching return
 
   describe('THE HAPPY PATH IS UNCHANGED', () => {
     it('the sign-in URL builder is untouched', () => {
-      const accountBase = src('lib', 'api', 'accountBase.ts');
+      const accountBase = src('lib', 'api', 'accountLinks.ts');
 
       expect(accountBase).toContain('const base = `${ACCOUNT_API_PATH_PREFIX}/auth/google`;');
       expect(accountBase).toContain('returnTo=${encodeURIComponent(returnTo)}');
