@@ -131,7 +131,7 @@ export function EnergyShell({ data, strings, urlState, locale }: EnergyShellProp
 
   const subject = findSubject(data, urlState.subject);
   const hudSubject = findSubject(data, hudId);
-  const watched = (id: string, fallback: boolean): boolean => watchOverrides[id] ?? fallback;
+  const watched = (id: string, fallback: boolean | null): boolean | null => fallback === null ? null : watchOverrides[id] ?? fallback;
 
   /* ── THE SINGLE URL WRITER ────────────────────────────────────────────── */
   const writeUrl = useCallback(
@@ -206,7 +206,8 @@ export function EnergyShell({ data, strings, urlState, locale }: EnergyShellProp
   /* A stable frame for the substrate camera; the governed frame has no corridors to fit. */
   const bbox = useMemo<readonly [number, number, number, number]>(() => [-14, 62, 70, 8], []);
 
-  const toggleWatch = (id: string, current: boolean): void => {
+  const toggleWatch = (id: string, current: boolean | null): void => {
+    if (current === null) return;
     setWatchOverrides((previous) => ({ ...previous, [id]: !current }));
   };
 
@@ -333,7 +334,7 @@ export function EnergyShell({ data, strings, urlState, locale }: EnergyShellProp
             <span style={{ width: '44px', height: '4px', borderRadius: '2px', background: 'rgba(141,162,184,.45)' }} />
           </button>
           <div style={{ padding: '0 16px 10px', flex: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Meta>{subject === null ? strings.substrateHeadline.change : strings.lensTitle}</Meta>
+            <Meta>{subject === null ? (urlState.substrate === 'spatial' && data.subjects.length > 0 && data.feed.length === 0 ? strings.hudEvidence : strings.substrateHeadline.change) : strings.lensTitle}</Meta>
             <div style={{ flex: 1 }} />
             <MachineReadable>
               <Meta>{strings.sheetStage[sheet]}</Meta>
@@ -343,7 +344,7 @@ export function EnergyShell({ data, strings, urlState, locale }: EnergyShellProp
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
             {subject === null ? (
               <>
-                <CompactFeed data={data} strings={strings} onSelect={(id) => { setSubject(id); setSheet('half'); }} />
+                <CompactFeed data={data} showSubjects={urlState.substrate === 'spatial'} strings={strings} onSelect={(id) => { setSubject(id); setSheet('half'); }} />
                 <AbsenceLegend strings={strings} />
               </>
             ) : (
@@ -543,7 +544,7 @@ export function EnergyShell({ data, strings, urlState, locale }: EnergyShellProp
           ))}
           <div style={{ flex: 1 }} />
           <div style={{ margin: '0 12px 12px', padding: '11px 12px', border: `1px solid ${ENERGY_LINE.mint}`, borderRadius: ENERGY_RADIUS.panel, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <span style={{ ...mono(undefined, ENERGY_SEMANTIC.mint), letterSpacing: '.14em' }}>{formatEnergyString(strings.watchActiveTemplate, { count: data.watchCount })}</span>
+            <span style={{ ...mono(undefined, ENERGY_SEMANTIC.mint), letterSpacing: '.14em' }}>{formatEnergyString(strings.watchActiveTemplate, { count: data.watchCount ?? ENERGY_ABSENT })}</span>
             <span style={{ fontSize: '11.5px', color: ENERGY_INK.meta, lineHeight: 1.4 }}>
               {tier === 'free' ? strings.watchProfessionalOnly : `${ENERGY_GATES.E02.id} · ${ENERGY_GATES.E02.stops}`}
             </span>
@@ -976,14 +977,19 @@ function ChangeRegion({
   );
 }
 
-function CompactFeed({ data, strings, onSelect }: { data: EnergyFrameData; strings: EnergyStrings; onSelect: (id: string | null) => void }): JSX.Element {
-  if (data.feed.length === 0) {
+function CompactFeed({ data, strings, onSelect, showSubjects }: { data: EnergyFrameData; strings: EnergyStrings; onSelect: (id: string | null) => void; showSubjects: boolean }): JSX.Element {
+  // Reuse the compact list for unranked identities; never put these into the change feed.
+  const items = data.feed.length > 0 ? data.feed : showSubjects ? data.subjects.map(subject => ({
+    subjectId: subject.id, readerState: subject.readerState, canonicalAbsence: subject.canonicalAbsence,
+    changeState: subject.changeState, tone: subject.tone, ago: '', title: subject.name, scopeLabel: subject.scopeLabel,
+  })) : [];
+  if (items.length === 0) {
     const zone = data.zones['change.grid'];
     return zone === undefined ? <span /> : <AbsenceBlock zone={zone} strings={strings} />;
   }
   return (
     <>
-      {data.feed.map((item, index) => (
+      {items.map((item, index) => (
         <button
           key={`${item.title}-${index}`}
           type="button"
@@ -1030,7 +1036,7 @@ function CompactSubject({
   data: EnergyFrameData;
   strings: EnergyStrings;
   subjectId: string;
-  watched: boolean;
+  watched: boolean | null;
   onToggleWatch: () => void;
   onAsk: () => void;
 }): JSX.Element | null {
@@ -1050,7 +1056,7 @@ function CompactSubject({
         </div>
         <span style={{ fontSize: '17px', fontWeight: 600, lineHeight: 1.3, color: ENERGY_INK.primary }}>{subject.headline ?? subject.name}</span>
         <span style={{ fontSize: '13.5px', color: ENERGY_INK.secondary, lineHeight: 1.6 }}>
-          {subject.assessment ?? strings.stateWhy[subject.readerState ?? 'NO_DATA']}
+          {subject.assessment ?? [strings.stateWhy[subject.readerState ?? 'NO_DATA'], ...subject.evidence.map(artifact => artifact.title)].join(' · ')}
         </span>
         <div style={{ display: 'flex', gap: '8px', paddingTop: '4px' }}>
           <WatchControl watched={watched} strings={strings} onToggle={onToggleWatch} />

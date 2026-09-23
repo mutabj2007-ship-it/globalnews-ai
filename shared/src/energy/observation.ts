@@ -6,7 +6,7 @@ export interface EnergyObservation {
   observationKey: string;
   subjectId: string;
   subjectName: string;
-  subjectType: 'SYSTEM' | 'CORRIDOR' | 'ASSET';
+  subjectType: 'SUPPLY_SITUATION' | 'CORRIDOR' | 'INFRASTRUCTURE_ASSET' | 'GRID_SITUATION';
   geographyId: string;
   spatialPrecision: SpatialPrecision;
   metric: 'GENERATION' | 'CAPACITY' | 'STORAGE' | 'OUTAGE' | 'FLOW' | 'GRID' | 'ASSET';
@@ -40,7 +40,7 @@ export function isEnergyObservation(value: unknown): value is EnergyObservation 
       'unit',
       'retrievalId',
     ].every((k) => text(o[k])) &&
-    ['SYSTEM', 'CORRIDOR', 'ASSET'].includes(o.subjectType) &&
+    ['SUPPLY_SITUATION', 'CORRIDOR', 'INFRASTRUCTURE_ASSET', 'GRID_SITUATION'].includes(o.subjectType) &&
     (SPATIAL_PRECISION_LADDER as readonly string[]).includes(o.spatialPrecision) &&
     ['GENERATION', 'CAPACITY', 'STORAGE', 'OUTAGE', 'FLOW', 'GRID', 'ASSET'].includes(o.metric) &&
     ['PRELIMINARY', 'REVISED', 'FINAL', 'WITHDRAWN'].includes(o.releaseStatus) &&

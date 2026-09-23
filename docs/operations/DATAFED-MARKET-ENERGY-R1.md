@@ -1,11 +1,64 @@
-# Data-fed Market and Energy R1 — visual authority correction
+# Data-fed Market and Energy R1 — Plan B delivery
 
 Branch: feature/datafed-market-energy-r1
-Base: e4e010ac7604d40c7a4c2414cf16dc7e9bc8850a
+Accepted visual base: e4e010ac7604d40c7a4c2414cf16dc7e9bc8850a
+Preserved correction commit: 7779322. Plan B is an additional commit, not a history rewrite.
 
-## Current review status
+## Result
 
-VISUAL AUTHORITY CORRECTION ACCEPTED — DATA BINDING ONLY. The previous replacement Energy surface and Market substrate removal are withdrawn. The accepted frame is restored. Backend/read-model work remains. Energy public data binding is held: DESIGN ESCALATION REQUIRED (details below).
+Product Owner Plan B applied. Energy public binding is mounted into the accepted Part XI shell. The previous design escalation is resolved by the engineering adapter. Market Part VII and its retained reader are unchanged. No new dashboard, permanent region, geometry or style was introduced. Production HOLD remains. No merge, deploy, production operation, migration application, acquisition or provider activation occurred.
+
+No admissible Energy or Market trade observations were found in the inspected repository material. Deployment holdings remain unknown: no database was configured. No fixtures were added to public routes. Empty and failed Energy reads retain the governed absence frame. Existing banner copy distinguishes an unavailable read from empty holdings and retained evidence; neither claims that no energy event occurred.
+
+## Energy contract and mapping
+
+The shared contract and a new SQL CHECK require exact public subject types: SUPPLY_SITUATION, CORRIDOR, INFRASTRUCTURE_ASSET or GRID_SITUATION. Generic SYSTEM and ASSET records are refused even if retained bytes match. The reader still verifies admission, independent public disclosure, review, rights, bytes/digest, capture times and exact publisher fields at the JSON Pointer. Later refusal/withdrawal suppresses older values.
+
+The route performs one bounded internal GET /energy/observations. It calls no provider, producer or AI engine. The adapter binds identity/type, geography, precision, metric, period, value/unit, release status, publisher changed time, provenance and retrieval identity into existing slots. Null measurements remain absent with their unit. Freshness states that only retained evidence is known; the latest publisher edition is unverified.
+
+Subjects are unranked, ordered lexically by source identity. Opaque deterministic URL keys support source identities outside the URL alphabet; exact source identities remain in the details. All observations for a consistent subject are retained. Conflicting identity/name/type/geography is withheld rather than arbitrarily selected.
+
+Desktop uses the existing subject list, HUD, drawer and evidence regions. Phone uses its existing compact list in spatial mode and the existing selected-subject text slot for raw facts/provenance. Its existing header reads Evidence when showing these unranked identities. Change remains absent. No assessed attention feed is generated.
+
+Geometry, change-state pair, cause, confidence, corridor/asset roles, Watch state, cross-domain consequences, assessment check time and timeline remain absent. Raw FLOW cannot fill Sankey sharePct; raw STORAGE cannot fill levelPct. This narrow contract carries no admitted ratio or geometry semantics, so those charts retain existing absence states.
+
+Evidence is CONTEXT for the absent assessment; the original source evidenceRole is preserved in detail. Specific source class and language remain absent, not inferred from PUBLIC_DATA or institution names. Existing Watch controls show the absent marker and are disabled when state is unknown. Public evidence availability reflects both independently validated rights and disclosure gates.
+
+## Exact Energy admission steps
+
+These are instructions for a separately authorized non-production admission/release, not executed operations.
+
+1. Configure the approved database and inventory SnapshotRetrieval, SnapshotPayload and EnergyObservation. Do not acquire new data or activate providers in this lane.
+2. Apply 20260922150000_energy_retained_read and 20260923120000_energy_partxi_subject_type through the approved release process. Inspect legacy public payload types first. The new constraint deliberately fails on generic public types until those records are explicitly refused/re-reviewed; it does not coerce or rewrite them. DOWN.sql removes only the new constraint.
+3. Use an already admitted COMPLETE HTTP 200 E-5 snapshot, with rights reference, permitted retained bytes, reproducible digest and provenance.
+4. Review exact subject type, identity, geography/precision, metric, period, value/unit, release status, publisher changed time and institution. energy-record-v1 requires exact fields at its JSON Pointer. A different publisher shape needs a reviewed source-specific parser, never a guessed mapping.
+5. In an approved offline transaction, store the projection, snapshot FK, positive per-key revision, parser version, pointer, reviewer and review reference. Set ADMITTED/publicDisclosureApproved only after separate reviews. Pin the snapshot through SnapshotPin for retention. No runtime writer or scheduler is introduced.
+6. Verify GET /energy/observations against original bytes and later refusal/withdrawal; then select the record on /energy in desktop/phone EN/PL. Unsupported charts, assessments and geometry must stay absent.
+
+## Visual change ledger
+
+| File | Binding reason | Desktop/phone and EN/PL result |
+|---|---|---|
+| frontend/src/app/energy/page.tsx | Retained read and adapter | Accepted returned JSX hierarchy; existing banner strings bound to read state and locale |
+| frontend/src/components/energy/EnergyShell.tsx | Null Watch propagation; existing compact list and selected-text binding | Selected evidence and unselected phone discoverability tested in EN/PL at 1512/390; no style or region changes |
+| frontend/src/components/energy/EnergyParts.tsx | Null Watch marker and disabled behavior | Same control dimensions/styles; language-neutral absence |
+| frontend/src/components/energy/EnergySubjectSurfaces.tsx | Null source-class marker and stable field keys | Existing HUD/drawer/lens markup and styles retained |
+| frontend/src/lib/energy/energyModel.ts | Nullable missing metadata and optional field identity | Data contract only |
+| frontend/src/lib/energy/energyRetainedAdapter.ts | Exact facts and localized labels/status/metrics | Existing detail slots only; no assessments inferred |
+
+visualAuthorityCorrection.spec.ts reverses only the specifically authorized expression/null-handling changes and requires equality with the accepted base. Untouched visual files remain byte-pinned. Route JSX is separately pinned after reversing only the banner-strings binding. Existing Energy tests now allow only the retained reader request instead of requiring a permanently data-free route; provider/model/tile-host prohibitions remain.
+
+Render integration tests use synthetic test-only records and a mocked map renderer. They establish responsive branch behavior and binding, not font-exact browser pixels. Prior 7779322 browser checks of the unchanged empty frame found no Energy horizontal overflow at 1512x900/390x844 in EN/PL. No new populated production screenshot is claimed.
+
+Prior limitations remain: development font downloads timed out, Market PL explicitly falls back to English, and its unchanged global navbar overflowed by 22px at 1512px. Baseline Energy administrative gate fragments remain unchanged. None is claimed fixed here.
+
+## Validation
+
+- Focused frontend Market/Energy suite: 272 tests passed across 9 suites.
+- Backend Energy reader: 25 tests passed, including exact-type acceptance and generic-type refusal.
+- Shared and backend builds, backend runtime packaging, frontend TypeScript and Prisma schema validation passed.
+- New SQL migration has not been run against a database; no live holdings are claimed.
+- Automatic approval review briefly failed because of a usage limit; the command did not run. After the user's continue instruction the same approval path succeeded. No approval blocker remains.
 
 ## Scope and evidence inventory
 
@@ -67,25 +120,6 @@ If inventory finds no admissible capture, stop. Populating Market first requires
 
 6. Verify GET /market/observations on the approved local backend, then /market and /market/compact. A healthy empty array remains an honest empty state.
 
-## Energy seam and coverage
-
-The shared EnergyObservation contract reuses SourceProvenance, evidence-role vocabulary and SpatialPrecision. It carries subject identity/type, stated geography, metric, period, nullable value, unit, release status, publisher timestamp and retrieval identity. It carries no inferred geometry or assessment.
-
-The new EnergyObservation table references the existing SnapshotRetrieval byte store, has ordered revisions, defaults to REFUSED and publicDisclosureApproved=false, and requires recorded review before the reader will expose anything. Migration: backend/prisma/migrations/20260922150000_energy_retained_read/migration.sql. It was validated but not applied.
-
-GET /energy/observations has no producer or scheduler. The energy-record-v1 parser only accepts a reviewed JSON Pointer into retained JSON whose subject, geography, measurement, period, unit, status, publisher date and institution exactly reproduce the projection. It rechecks capture admission, rights, digest, timestamps and source role. Generic news, altered values, mismatched geography, unknown parsers and undisclosed records fail closed. The latest refused/withdrawn revision prevents resurrection of an older value. Public output uses an explicit field allowlist; internal reviewers and review references are not exposed.
-
-This is deliberately a narrow future seam, not an adapter for ENTSO-E, storage feeds or another new provider. A real source with a different record shape needs a reviewed parser before it can populate this table; normalizing a fixture and pretending it was a publisher record is prohibited.
-
-Future Energy admission prerequisites:
-
-1. Apply the migration only to an approved target in a separately authorized release process.
-2. Obtain an already admitted, reproducible E-5 snapshot through the shared pipeline, preserving its original publisher bytes and provenance.
-3. Review subject identity, geographic precision, units, release meaning, evidence pointer and public disclosure. Add a tested source-specific parser if energy-record-v1 cannot reproduce the source record.
-4. In an approved offline transaction, store the exact projection, snapshot FK, positive per-key revision, parser version, pointer, reviewer and review reference; set ADMITTED and publicDisclosureApproved only after both reviews pass. Pin the snapshot using the existing SnapshotPin lifecycle before relying on long-term availability. No generic runtime writer is introduced here.
-5. Verify the public reader against the retained record, including refusal/withdrawal of later revisions. Do not expose these rows through a replacement frontend. The public Energy adapter is held until the accepted Part XI mapping is resolved below.
-
-The public /energy route is restored byte-for-byte to the accepted base. It renders ENERGY_GOVERNED_FRAME through the original EnergyShell. The internal backend endpoint and validated frontend read helper remain available as a seam, but the helper is deliberately not imported by the public route. No facts are silently coerced into assessments or fixture subjects.
 
 ## Recovered visual authority
 
@@ -97,44 +131,5 @@ Inspected in D:/Desktop/GlobalNewsAI/Claude_Output before changing visual compon
 - H-ENERGY-PARTXI-IMPLEMENTATION-R2-README.md describes corrections without geometric changes. H-ENERGY-PARTXI-IMPLEMENTATION-R4.zip README and ALPHA-RELEASE-AUTHORITY-ENERGY-R2.zip README establish R4 as the accepted hydration correction, preserving the frozen frame. R4 SHA-256 774528b1dfa2b8b6f65c66682236d92b8ade7eb6d0b1c44e6e468d59d28df84b matches the release report.
 - The user's accepted base e4e010ac7604d40c7a4c2414cf16dc7e9bc8850a and its Part VII / Part XI guards resolve the final implemented bytes. No original package was missing.
 
-## Exact visual diff and validation matrix
-
-Only MktReader.tsx differs among Market/Energy visual components relative to the accepted base: one helper import and one data expression replacing the fixed fallback text inside the existing paragraph. All original markup, style values and hierarchy are identical. MarketScreen.tsx, MarketCompactScreen.tsx, EnergyShell.tsx, Energy page/model and original visual/contract guards were restored; EnergyRetainedSurface.tsx was removed. Other Energy components, tokens, URL handling, map/substrates, HUD/drawer/lens were untouched.
-
-| File relative to repository | Why a change is needed / authority proof | Desktop result | Phone result | EN result | PL result |
-|---|---|---|---|---|---|
-| frontend/src/components/market/MktReader.tsx | The existing context note previously read only a constant. Its expression now reads verified context; no new slot. visualAuthorityCorrection.spec.ts reverses those two expression/import edits and requires exact base equality. Original mktContract.spec.ts and mktReader tests pass. | Accepted zones/rail/substrate preserved at 1512x900 | Accepted compact composition and substrate preserved at 390x844 | Existing copy plus data note | Existing disclosed English Market fallback preserved |
-| frontend/src/lib/market/mktStrings.ts | One existing STALE text value corrected to match retained-only provenance; no key or typography change | Existing freshness chip | Same chip | Current edition unverified | Same disclosed fallback |
-| frontend/src/components/market/MarketScreen.tsx; MarketCompactScreen.tsx | Prior edits withdrawn; exact base bytes | Original desktop regions | Original compact detents | Preserved | Fallback preserved |
-| frontend/src/components/energy/EnergyShell.tsx; frontend/src/app/energy/page.tsx | Replacement entry path withdrawn; exact base bytes | Map, module rail, right region and substrate switching restored | Original map, bottom sheet and four tabs restored | Preserved | Polish navigation and absence copy preserved |
-| frontend/src/components/energy/EnergyRetainedSurface.tsx | Unauthorized alternative architecture removed; guard asserts file absence | No substitute dashboard | No substitute dashboard | No alternate copy | No alternate copy |
-
-Browser checks used the in-app browser against localhost with SERVER_INTERNAL_API_URL and NEXT_PUBLIC_API_URL pointing to an unconnected local backend. No data fixtures were served. Results:
-
-| Domain | Locale | Viewport | Measured result |
-|---|---|---|---|
-| Energy | EN | 1512x900 | Desktop shell, map/rail/right region present; no document horizontal overflow |
-| Energy | EN | 390x844 | Compact shell, map/bottom sheet/four tabs present; no document horizontal overflow |
-| Energy | PL | 1512x900 | Desktop shell, localized controls; change switch updates substrate URL; no document horizontal overflow |
-| Energy | PL | 390x844 | Compact shell and Polish bottom-sheet/tab labels present; no document horizontal overflow |
-| Market | EN | 1512x900 | Accepted frame present; document scroll width 1497 <= 1512 |
-| Market | EN | 390x844 | Compact route and original substrate present; no document horizontal overflow |
-| Market | PL | 1512x900 | English fallback disclosed; global navbar Sign In link reaches x=1534 (22px overflow). This unchanged global navigation was not edited. |
-| Market | PL | 390x844 | English fallback disclosed; no document horizontal overflow |
-
-Browser limitations: Google font download attempts timed out and development fallback fonts were used. These are composition/behavior checks, not a claim of font-exact screenshot parity. The Polish global-navbar overflow needs separate review under the existing global navigation authority; it was not fixed by changing the Market frame. Energy retains baseline untranslated administrative gate fragments, as required by byte-preservation. Populated-context behavior is tested with explicitly synthetic unit-test records only; no real deployment holdings were available to screenshot.
-
-## DESIGN ESCALATION REQUIRED — Energy public binding
-
-The new generic EnergyObservation seam is not itself the accepted Part XI presentation contract. SYSTEM does not determine SUPPLY_SITUATION versus GRID_SITUATION. A retained numeric observation does not establish a reviewed change-state pair, artifactsReviewed, lastChecked assessment time, attention/feed ordering, or corridor/asset role. A raw FLOW value cannot be converted into the designed sharePct Sankey, and generic STORAGE cannot be treated as levelPct without its unit and meaning being established. No route/asset geometry is present.
-
-Required ruling/input: approve a source-specific mapping into existing EnergySubject fields/evidence and exact existing subject types, keeping absent assessments/geometry explicit; identify which evidence produces each designed change/flow/storage slot. If a raw record list is desired instead, that is a separate Claude Design/CTO design change. It is not authorized here. Public binding stops at this boundary; the governed frame remains in place and the backend seam remains dormant with respect to the route.
-
-## Validation and remaining limits
-
-- 250 frontend Market/Energy tests pass, including the original visual guards restored byte-for-byte and 20 added authority checks (18 exact-file checks, one expression-only check, one replacement-surface exclusion).
-- Frontend TypeScript passes. Backend is unchanged by this correction; the prior 68 retained-reader tests, schema validation and backend build remain applicable.
-- No provider activated, no runtime acquisition, no migration applied, no deployment, no merge. Live holdings remain unmeasured because no database was configured.
-- Initial automatic approval review rejected restoration due to a mistaken empty-request/uncommitted-work concern. Read-only checks proved both worktree and index clean and the prior implementation safely committed in f8a447b; the authorized retry succeeded. No approval blocker remains.
 
 READY FOR CTO DATAFED MARKET ENERGY REVIEW

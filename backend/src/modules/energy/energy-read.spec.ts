@@ -7,7 +7,7 @@ function row() {
   const fact = {
     subjectId: 'test-system',
     subjectName: 'Test system',
-    subjectType: 'SYSTEM',
+    subjectType: 'GRID_SITUATION',
     geographyId: 'PL',
     spatialPrecision: 'COUNTRY',
     metric: 'GENERATION',
@@ -98,4 +98,25 @@ it('reads an empty store without provider calls', async () => {
   } finally {
     fetcher.mockRestore();
   }
+});
+
+it.each(['SYSTEM', 'ASSET', 'UNKNOWN', null])('refuses unsupported presentation type %s even when retained bytes agree', type => {
+  const r = row();
+  (r.payload as any).subjectType = type;
+  const record = JSON.parse(r.snapshotRetrieval.payload.bytes.toString()).record;
+  record.subjectType = type;
+  const bytes = Buffer.from(JSON.stringify({ record }));
+  r.snapshotRetrieval.payload = { storageState: 'RETAINED', bytes, byteLength: bytes.length };
+  r.snapshotRetrieval.contentAddress = createHash('sha256').update(bytes).digest('hex');
+  expect(inspectEnergyRow(r)).toBeNull();
+});
+it.each(['SUPPLY_SITUATION', 'CORRIDOR', 'INFRASTRUCTURE_ASSET', 'GRID_SITUATION'])('admits exact source-stated type %s', type => {
+  const r = row();
+  r.payload.subjectType = type;
+  const record = JSON.parse(r.snapshotRetrieval.payload.bytes.toString()).record;
+  record.subjectType = type;
+  const bytes = Buffer.from(JSON.stringify({ record }));
+  r.snapshotRetrieval.payload = { storageState: 'RETAINED', bytes, byteLength: bytes.length };
+  r.snapshotRetrieval.contentAddress = createHash('sha256').update(bytes).digest('hex');
+  expect(inspectEnergyRow(r)?.subjectType).toBe(type);
 });

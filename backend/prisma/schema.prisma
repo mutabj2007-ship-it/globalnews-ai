@@ -1584,7 +1584,8 @@ model SandLedgerEntry {
   @@unique([operationId, entryType])
 }
 
-/// Dormant, reviewed projection over the shared retained byte store. No runtime writer.
+/// Reviewed projection over the shared retained byte store. No runtime writer.
+/// Public payload.subjectType must exactly match Part XI; enforced by the SQL check and shared reader validator.
 model EnergyObservation {
   id String @id
   observationKey String
