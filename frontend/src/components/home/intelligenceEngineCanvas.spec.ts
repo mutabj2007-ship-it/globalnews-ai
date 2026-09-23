@@ -206,9 +206,10 @@ describe('M66.5 — only legitimately navigable modules are interactive', () => 
     that is the standard this test holds, and it is why Politics and Conflict
     are absent from the list rather than pointed somewhere plausible.
   */
-  it('five modules produce a real link, and each destination is a real existing surface', () => {
+  it('accepted modules produce a real link, and each destination is a real existing surface', () => {
     const navigable = INTELLIGENCE_MODULES.filter(isModuleNavigable);
     expect(navigable.map((m) => m.id).sort()).toEqual([
+      'conflict',
       'country-intelligence',
       'economy',
       'energy',
@@ -217,7 +218,7 @@ describe('M66.5 — only legitimately navigable modules are interactive', () => 
       'politics',
       'security',
     ]);
-    const REAL = ['/map', '/market', '/humanitarian', '/security-visual-preview', '/economy-visual-preview',
+    const REAL = ['/conflict', '/map', '/market', '/humanitarian', '/security-visual-preview', '/economy-visual-preview',
       '/politics-visual-preview', '/energy'];
     for (const moduleItem of navigable) {
       expect(`${moduleItem.id}: ${REAL.includes(moduleItem.destination as string)}`)
@@ -225,7 +226,7 @@ describe('M66.5 — only legitimately navigable modules are interactive', () => 
     }
     /* and each route really is on disk, not merely in this list */
     const APP = join(__dirname, '..', '..', 'app');
-    for (const dir of ['map', 'market', 'humanitarian', 'security-visual-preview', 'economy-visual-preview',
+    for (const dir of ['conflict', 'map', 'market', 'humanitarian', 'security-visual-preview', 'economy-visual-preview',
       'politics-visual-preview', 'energy']) {
       expect(`${dir}: ${existsSync(join(APP, dir, 'page.tsx'))}`).toBe(`${dir}: true`);
     }
@@ -272,15 +273,15 @@ describe('M66.5 — only legitimately navigable modules are interactive', () => 
     /*
       UNIQUENESS IS THE POINT OF THE ENGINE. Two cards sharing a destination
       would make the distinction the nine exist to draw invisible — which is
-      exactly why Conflict is inert rather than pointed at `/map`, and why the
+      why Conflict has its own `/conflict` dashboard instead of pointing at `/map`, and why the
       two cards that once shared `/search` are gone.
     */
     const set = INTELLIGENCE_MODULES.map((m) => m.destination).filter(Boolean);
     expect(new Set(set).size).toBe(set.length);
 
-    /* The two with no surface to name carry no destination at all. Energy left
-       this list when R4 supplied /energy; World and Conflict have not. */
-    for (const id of ['world-intelligence', 'conflict']) {
+    /* World remains closed; accepted Conflict authority supplies its own route. */
+    expect(destinationOf('conflict')).toBe('/conflict');
+    for (const id of ['world-intelligence']) {
       expect(`${id}: ${destinationOf(id) ?? '-'}`).toBe(`${id}: -`);
     }
   });
@@ -864,7 +865,7 @@ describe('M66.5 — released module card (GN-CD-148/149/156)', () => {
       `five modules produce a real link` above. The gate itself is unchanged,
       and the inert branch is still asserted to carry no affordance.
     */
-    expect(INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m))).toHaveLength(2);
+    expect(INTELLIGENCE_MODULES.filter((m) => !isModuleNavigable(m)).map((m) => m.id)).toEqual(['world-intelligence']);
   });
 });
 
@@ -1200,6 +1201,7 @@ describe('DC-02 — the one in-page module actually announces its arrival', () =
     */
     const destinations = INTELLIGENCE_MODULES.map((m) => m.destination).filter(Boolean);
     expect([...new Set(destinations)].sort()).toEqual([
+      '/conflict',
       '/economy-visual-preview',
       '/energy',
       '/humanitarian',

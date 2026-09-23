@@ -609,7 +609,9 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
     // CTO-accepted Election adds two provider-free previews; the live route stays closed.
     // K adds the retained Imihigo pair and the provider-free Delivery preview pair.
     // CTO routing ruling 2026-09-23: dedicated idle Ask, full workspace retained.
-    expect(pages).toHaveLength(49);
+    expect(pages).toHaveLength(50);
+    expect(pages).toContain('/conflict');
+    expect(classify('/conflict').indexability).toBe('noindex');
     expect(pages).toContain('/ask');
     expect(classify('/ask').indexability).toBe('noindex');
     for (const route of ['/imihigo', '/imihigo/compact', '/delivery-visual-preview', '/delivery-visual-preview/compact']) {

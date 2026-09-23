@@ -202,34 +202,18 @@ describe('the dependency evidence is reachable, not resident', () => {
   });
 });
 
-/* ═══ 3 · CONFLICT — THE STANDING RULING STILL HOLDS ════════════════════════ */
-
-/**
- * `MAIN-CONFLICT-RUNTIME-CONTRACT-R3-ADDENDUM-A1` carries, in its own status line:
- *
- *     **MAIN-CONFLICT-D1 and D4 REMAIN BLOCKING. No Conflict implementation.**
- *
- * and AUTHORITY DELTA A1 §3 addresses H directly: *"H must not wire production Conflict
- * runtime until Main resolves/ratifies these blockers."* The register carries
- * `MAIN-CONFLICT-D1-BIND` as OPEN, module unwired.
- *
- * Canonical C55 DOES carry a frontend Conflict domain — `components/map/conflict/
- * ConflictAssessmentRail.tsx` and `lib/map/conflict/{conflictDomain,conflictCapability,
- * conflictHud}.ts` — and it is deliberately unrecovered here, with the reason recorded in
- * `specialistPlatformNeutrality.spec.ts`: *"Conflict is the one domain that may not be
- * wired."*
- *
- * This asserts the absence rather than trusting it. The Conflict VISUAL frame is the D1
- * spatial workspace, which needs none of these files.
- */
-describe('the Conflict domain is not implemented on this lineage', () => {
-  it('no Conflict domain directory exists in the frontend', () => {
-    for (const absent of [
-      join(SRC, 'lib', 'map', 'conflict'),
-      join(SRC, 'components', 'map', 'conflict'),
-      join(SRC, 'lib', 'conflict'),
-      join(SRC, 'components', 'conflict'),
-    ]) expect(`${absent}: ${existsSync(absent)}`).toBe(`${absent}: false`);
+/* ═══ 3 · ACCEPTED RETAINED CONFLICT, ISOLATED FROM GENERIC FRAMES ═══ */
+/* Data-fed convergence admits X's dedicated retained dashboard. Generic
+ * specialist components still must not import its domain implementation. */
+describe('accepted Conflict stays isolated from generic specialist frames', () => {
+  it('the dedicated Conflict route uses the retained-only reader', () => {
+    expect(existsSync(join(SRC, 'app', 'conflict', 'page.tsx'))).toBe(true);
+    const reader = code(join(SRC, 'lib', 'conflict', 'retained.ts'));
+    expect(reader).toContain('validateConflictObservation');
+    expect(reader).toContain('observationRestsOnAdmittedCapture');
+    const dashboard = code(join(SRC, 'components', 'conflict', 'ConflictDashboard.tsx'));
+    expect(dashboard).toContain('/conflict-data/observations?limit=500');
+    expect(dashboard).not.toMatch(/https?:\/\/|localhost|analyzeNews/);
   });
 
   it('and no shared file reaches into one', () => {
