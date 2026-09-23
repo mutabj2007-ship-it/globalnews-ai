@@ -13,7 +13,7 @@
  * undo, rather than hidden with CSS, which one could.
  */
 import { humanitarianReadAbsence, type HumanitarianRetainedRead } from '@globalnews-ai/shared';
-import { humanitarianReadLabel } from '@/lib/humanitarian/humanitarianReadLabel';
+import { humanitarianReadLabel, humanitarianReadExplanation } from '@/lib/humanitarian/humanitarianReadLabel';
 import { useReducer, type JSX } from 'react';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { HUM_CANVAS, HUM_INK, HUM_LINE, HUM_NAV, HUM_SURFACE, HUM_TYPE, humTracking } from '@/lib/humanitarian/humTokens';
@@ -150,7 +150,7 @@ export function HumanitarianCompactScreen({ locale, retainedRead = humanitarianR
           <Chip label={t.assessment.confidence} value={t.confidence[view.change.confidence]} />
         </div>
         <p style={{ margin: 0, fontSize: HUM_TYPE.bodyLarge, lineHeight: 'var(--ar-lh, 1.4)', color: HUM_INK.primary }}>
-          {t.assessment.noAssessment}
+          {humanitarianReadExplanation(retainedRead, locale)}
         </p>
         {view.change.reason !== null && <Absence reason={view.change.reason} t={t} />}
       </section>
