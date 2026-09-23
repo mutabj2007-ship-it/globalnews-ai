@@ -14,6 +14,7 @@ import type {
   AdminSystemHealthResponse,
 } from '@/lib/admin/adminApiTypes';
 import { AnalyticsGeographyTab } from './AnalyticsGeographyTab';
+import { AlphaReviewPanel } from './AlphaReviewPanel';
 
 /** Overview: existing aggregate reads only; no provider acquisition. */
 export function OverviewScreen(): JSX.Element {
@@ -80,6 +81,8 @@ function OverviewData(): JSX.Element {
           data={NOT_IMPLEMENTED}
         />
       </div>
+
+      <AlphaReviewPanel />
 
       <div className="grid grid-cols-1 gap-4 adm-full:grid-cols-3">
         <div className="adm-full:col-span-2">
