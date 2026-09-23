@@ -60,6 +60,7 @@ describe('F1.b — provenance registry', () => {
       'admin-01.capabilities',
       'admin-01.identity',
       'admin-01.role',
+      'admin-02.alphaReview',
       'admin-02.analysisRequests',
       'admin-02.pipelineMode',
       'admin-03.analysisRuns',
