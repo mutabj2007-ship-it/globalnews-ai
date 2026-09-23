@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readElection, readPolitics } from './retainedReaders';
 
-// Data seam only. It is intentionally not imported by an accepted visual route.
-describe('retained reader adapters pending visual-authority ruling', () => {
+// Plan B permits first-party retained data in the accepted Election frame.
+describe('retained reader adapters', () => {
   afterEach(() => jest.restoreAllMocks());
   it.each(['en', 'pl'] as const)('preserves the disabled gate in %s', async locale => {
     const payload = { domain: 'ELECTION', state: 'COVERAGE_GAP', locale, records: [], reason: 'READER_DISABLED' };

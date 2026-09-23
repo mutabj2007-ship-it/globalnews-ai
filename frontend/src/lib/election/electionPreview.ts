@@ -2,30 +2,7 @@ import type { SpecialistDomainId } from '@/lib/specialist/specialistDomain';
 import type { IndicatorStrip } from '@/lib/specialist/indicatorStrip';
 import type { HudLine } from '@/lib/specialist/hudGrammar';
 
-/**
- * ════════════════════════════════════════════════════════════════════════════
- * KENYA ELECTIONS · THE PROVIDER-FREE PREVIEW — AND IT CONTAINS NO ELECTION
- * ════════════════════════════════════════════════════════════════════════════
- *
- * *"The ceiling in one sentence: a complete, reviewable national election
- * surface that contains no election."*
- *
- * Every value in this file is a PLACEHOLDER with no real-world referent. No
- * Kenyan subject, no real candidate, no real party, no real figure, no IEBC
- * number. The contract is stricter here than the ordinary preview convention
- * and states why:
- *
- *   *"A screenshot of a preview election surface carrying real Kenyan names and
- *   fixture numbers is an invented election result, and it will outlive the
- *   explanation attached to it."*
- *
- * ── LIFECYCLE, MIRRORED FROM `previewScope.ts` ────────────────────────────
- *
- * *"when /economy opens, this module is DELETED along with the preview."*
- * The same clause governs here: **this module is deleted when `/election`
- * opens. It is not inherited by it.**
- */
-
+/** Accepted Plan B frame; retained binding is supplied separately. No fallback contestants. */
 export const ELECTION_DOMAIN: SpecialistDomainId = 'ELECTION';
 
 /**
@@ -191,26 +168,11 @@ export interface UnrankedSubjectList {
   readonly rows: readonly UnrankedSubjectRow[];
 }
 
-/**
- * The preview's contestant rows.
- *
- * **`orderReason` is `LEXICAL`, and the reason it is that value:** no authority
- * sequence is bound — the preview binds no contestants at all — so there is no
- * `AUTHORITY_PUBLISHED` order to carry, and `UPSTREAM_ASSESSED` is unavailable
- * to this vertical by construction. The placeholder labels are in lexical order
- * by label, which is what the field declares.
- *
- * **Non-attributable placeholders.** No name resembles a real candidate, no
- * label resembles a real party, and no row carries a figure of any kind.
- */
+/** Empty fallback. Plan B supplies retained declaration rows; no authority sequence is inferred. */
 export const ELECTION_SUBJECT_LIST: UnrankedSubjectList = {
   headerLabel: 'CONTESTANTS',
   orderReason: 'LEXICAL',
-  rows: [
-    { id: 'placeholder-contestant-1', label: 'Placeholder contestant A', stateLabel: 'PREVIEW' },
-    { id: 'placeholder-contestant-2', label: 'Placeholder contestant B', stateLabel: 'PREVIEW' },
-    { id: 'placeholder-contestant-3', label: 'Placeholder contestant C', stateLabel: 'PREVIEW' },
-  ],
+  rows: [],
 };
 
 /* ═══ §5.3 · THE THREE DISJOINT TREATMENTS ══════════════════════════════ */
