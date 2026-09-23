@@ -112,7 +112,7 @@ import {
   watchCtaStage,
   type UnderstandingSignal,
 } from '@/lib/map/monetization/watchCtaLadder';
-import { accountSignInUrl } from '@/lib/api/accountBase';
+import { accountSignInUrl } from '@/lib/api/accountLinks';
 /* CHECKPOINT F — the product's ONE language persistence path, reused. */
 import { persistLanguageSelection } from '@/lib/i18n/languages';
 /* MAP-DISPLAY-NAME-CENTRALISATION — the one reader-facing place-name path. */

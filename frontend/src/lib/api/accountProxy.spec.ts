@@ -165,12 +165,18 @@ describe('next.config.mjs - the account proxy (M-ALPHA-AUTH)', () => {
 
   it('every non-/api rewrite is a declared PUBLIC family — no unaccounted proxying', () => {
     /*
-      THREE PUBLIC FAMILIES. `/economy` joins `/news` and `/geo` — no cookie, no CSRF
+      PUBLIC FAMILIES. `/economy` joins `/news` and `/geo` — no cookie, no CSRF
       token, no session, nothing behind RequireAuthGuard. E1-N-1 already records that
       the invariant this file protects is the AUTHENTICATED count, and that a public
       array entry is not an authenticated family. That count is unchanged at seven.
     */
-    const PUBLIC_FAMILIES = ['/news/:path*', '/geo/:path*', '/economy/:path*'];
+    const PUBLIC_FAMILIES = [
+      '/news/:path*',
+      '/geo/:path*',
+      '/economy/:path*',
+      '/market-data/:path*',
+      '/conflict-data/:path*',
+    ];
     const { rewrites } = probeConfig();
     const nonApi = rewrites
       .map((rule) => rule.source)
@@ -251,7 +257,7 @@ describe('next.config.mjs - the account proxy (M-ALPHA-AUTH)', () => {
     set silently, and a public family quietly moved under `/api` would inherit
     `private, no-store` and `Vary: Cookie` that its responses do not need.
   */
-  it('G-3: exactly SEVEN authenticated /api families and exactly THREE public non-/api families', () => {
+  it('G-3: exactly SEVEN authenticated /api families and exactly FIVE public non-/api families', () => {
     const { rewrites } = probeConfig({ SERVER_INTERNAL_API_URL: 'http://backend.internal:8080' });
 
     const authenticated = rewrites.filter((rule) => rule.source.startsWith('/api/'));
@@ -259,9 +265,13 @@ describe('next.config.mjs - the account proxy (M-ALPHA-AUTH)', () => {
 
     /* THE AUTHENTICATED COUNT IS THE INVARIANT, AND IT HAS NOT MOVED. */
     expect(authenticated).toHaveLength(7);
-    expect(publicFamilies.map((rule) => rule.source).sort()).toEqual(
-      ['/economy/:path*', '/geo/:path*', '/news/:path*'],
-    );
+    expect(publicFamilies.map((rule) => rule.source).sort()).toEqual([
+      '/conflict-data/:path*',
+      '/economy/:path*',
+      '/geo/:path*',
+      '/market-data/:path*',
+      '/news/:path*',
+    ]);
 
     /* And the new family is public in the same way the other two are: proxied to the
        same backend origin, with no `/api` sibling that would blur the classes. */
@@ -542,5 +552,31 @@ describe('MAIN-C2 STAGE 1 — the proxy hop does not change who the backend thin
     expect(sources).not.toContain('/api/news/:path*');
     // /events keeps the original absence entirely.
     expect(sources.some((source) => source.includes('/events'))).toBe(false);
+  });
+});
+
+describe('Conflict public retained rewrite', () => {
+  it.each([
+    [
+      { SERVER_INTERNAL_API_URL: 'http://backend.railway.internal:4000' },
+      'http://backend.railway.internal:4000',
+    ],
+    [
+      {
+        SERVER_INTERNAL_API_URL: 'http://backend.railway.internal:4000',
+        NEXT_PUBLIC_API_URL: 'https://public.example',
+      },
+      'http://backend.railway.internal:4000',
+    ],
+    [{ NEXT_PUBLIC_API_URL: 'https://public.example' }, 'https://public.example'],
+    [{}, 'http://localhost:4000'],
+  ])('uses server destination precedence for %j', (env, origin) => {
+    const { rewrites, headers } = probeConfig(env as Record<string, string>);
+    expect(rewrites.find((rule) => rule.source === '/conflict-data/:path*')).toEqual({
+      source: '/conflict-data/:path*',
+      destination: origin + '/conflict/:path*',
+    });
+    expect(rewrites.filter((rule) => rule.source.startsWith('/api/'))).toHaveLength(7);
+    expect(headers.some((rule) => rule.source.startsWith('/conflict-data'))).toBe(false);
   });
 });

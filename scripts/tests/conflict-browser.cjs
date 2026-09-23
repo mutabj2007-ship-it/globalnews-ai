@@ -31,18 +31,32 @@ fs.mkdirSync(out, { recursive: true });
         let data = [];
         let responseStatus = 200;
         page.on('pageerror', (e) => errors.push(e.message));
-        await page.route('**/conflict/observations?*', (route) => {
+        await page.route('**/conflict-data/observations?*', (route) => {
           calls.push(route.request().url());
           return route.fulfill({
             status: responseStatus,
             contentType: 'application/json',
-            headers: { 'access-control-allow-origin': '*' },
             body: JSON.stringify(data),
           });
         });
         const forbidden = [];
+        const dataRequests = [];
         page.on('request', (r) => {
-          if (/\/(analysis|news|ucdp|providers)\//.test(r.url())) forbidden.push(r.url());
+          const url = new URL(r.url());
+          if (
+            /\/(analysis|news|ucdp|providers?|producers?)(\/|$)/i.test(url.pathname) ||
+            url.origin === 'http://localhost:4000'
+          )
+            forbidden.push(r.url());
+          if (['fetch', 'xhr'].includes(r.resourceType()) && url.origin !== 'http://127.0.0.1:3107')
+            forbidden.push(r.url());
+          if (
+            ['fetch', 'xhr'].includes(r.resourceType()) &&
+            !url.pathname.startsWith('/_next/') &&
+            !url.pathname.startsWith('/geo/') &&
+            !url.pathname.endsWith('.json')
+          )
+            dataRequests.push(r.url());
         });
         await page.goto('http://127.0.0.1:3107/conflict', {
           waitUntil: 'networkidle',
@@ -112,12 +126,26 @@ fs.mkdirSync(out, { recursive: true });
           );
         assert.equal(forbidden.length, 0);
         responseStatus = 503;
-        await page.goto('http://127.0.0.1:3107/conflict', {waitUntil: 'networkidle'});
+        await page.goto('http://127.0.0.1:3107/conflict', { waitUntil: 'networkidle' });
         if (width < 861) await page.locator('[data-gn="mobile-sheet-handle"]').click();
-        await page.getByRole('button', {name: lang === 'pl' ? 'Ponów' : 'Retry', exact: true}).waitFor();
+        await page
+          .getByRole('button', { name: lang === 'pl' ? 'Ponów' : 'Retry', exact: true })
+          .waitFor();
         assert.equal(await page.locator('[data-gn="conflict-rail"]').count(), 0);
         assert.equal(forbidden.length, 0);
+        assert(calls.length > 0);
+        assert(calls.every((url) => new URL(url).origin === 'http://127.0.0.1:3107'));
+        assert(dataRequests.length > 0);
+        assert(
+          dataRequests.every(
+            (url) =>
+              new URL(url).origin === 'http://127.0.0.1:3107' &&
+              new URL(url).pathname === '/conflict-data/observations',
+          ),
+          JSON.stringify(dataRequests),
+        );
         results.push({
+          dataRequests,
           lang,
           width,
           roundTrip: 'passed',

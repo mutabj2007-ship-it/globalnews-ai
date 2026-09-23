@@ -16,7 +16,7 @@ import { applyCardFilters } from '@/lib/map/selection/selectionIntelligence';
 import { loadActionIsOffered, type CountryReadState } from '@/lib/map/retrieval/countryReadRequest';
 import { FollowControl, type FollowControlLabels } from '@/components/map/shell/FollowControl';
 import { SourceCard } from '@/components/map/shell/SourceCard';
-import { accountSignInUrl } from '@/lib/api/accountBase';
+import { accountSignInUrl } from '@/lib/api/accountLinks';
 import { WatchCta, type WatchCtaLabels } from './monetization/WatchCta';
 import { AssessmentTimelineStrip, type TimelineLabels } from './monetization/AssessmentTimeline';
 import { watchCtaIsSolePrimary, type WatchCtaStage } from '@/lib/map/monetization/watchCtaLadder';

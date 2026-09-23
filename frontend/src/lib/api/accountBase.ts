@@ -1,4 +1,6 @@
 import { resolveApiBaseUrl } from './apiBase';
+import { ACCOUNT_API_PATH_PREFIX } from './accountLinks';
+export { ACCOUNT_API_PATH_PREFIX, accountSignInUrl } from './accountLinks';
 
 /**
  * M-ALPHA-AUTH — the FIRST-PARTY base for every authenticated account request,
@@ -27,13 +29,6 @@ import { resolveApiBaseUrl } from './apiBase';
  */
 
 /**
- * The first-party prefix, matching the six rewrite families in next.config.mjs
- * exactly. Declared once here and asserted against that file by
- * accountProxy.spec.ts, so the two cannot drift.
- */
-export const ACCOUNT_API_PATH_PREFIX = '/api';
-
-/**
  * Resolves the base for an account request in the CURRENT execution context.
  *
  * BROWSER: the relative prefix, so the request is same-origin by construction
@@ -58,35 +53,4 @@ export function resolveAccountApiBase(): string {
   }
 
   return ACCOUNT_API_PATH_PREFIX;
-}
-
-/**
- * Builds the sign-in URL for ONE of the five entry points, carrying where the
- * user should be returned to.
- *
- * ALWAYS RELATIVE, in every execution context. This value is an `<a href>`
- * rendered into HTML, never a fetch target, so the browser resolves it — and a
- * relative href is first-party by construction on both a server-rendered and a
- * client-rendered page. That also means this function needs no environment
- * variable at all, which is one fewer thing a deployment can get wrong.
- *
- * THE DESTINATION IS A HINT, NOT AN INSTRUCTION. It is validated by the backend
- * against an allowlist of this application's own routes on the way in, carried
- * inside the HMAC-signed httpOnly OAuth flow-state cookie, and revalidated with
- * a same-origin assertion before the callback redirects. Nothing this function
- * emits is trusted; passing an unknown path simply returns the user to the
- * homepage, exactly as before this milestone.
- *
- * `encodeURIComponent` is applied because this is a query parameter and that is
- * what correctness requires here — it is NOT the security control. The backend's
- * allowlist is.
- */
-export function accountSignInUrl(returnTo?: string): string {
-  const base = `${ACCOUNT_API_PATH_PREFIX}/auth/google`;
-
-  if (returnTo === undefined || returnTo.length === 0) {
-    return base;
-  }
-
-  return `${base}?returnTo=${encodeURIComponent(returnTo)}`;
 }

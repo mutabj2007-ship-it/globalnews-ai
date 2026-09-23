@@ -10,7 +10,6 @@ import { MobileBottomSheet, type SheetStop } from '@/components/map/mobile/Mobil
 import { MapLanguageControl } from '@/components/map/shell/MapLanguageControl';
 import { persistLanguageSelection } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { resolveApiBaseUrl } from '@/lib/api/apiBase';
 import { evidenceTotals } from '@/lib/map/evidence/evidenceModel';
 import {
   WORLD_CAMERA,
@@ -80,7 +79,7 @@ export function ConflictDashboard({
   useEffect(() => {
     const controller = new AbortController();
     setStatus('loading');
-    fetch(resolveApiBaseUrl() + '/conflict/observations?limit=500', {
+    fetch('/conflict-data/observations?limit=500', {
       signal: controller.signal,
       cache: 'no-store',
     })
