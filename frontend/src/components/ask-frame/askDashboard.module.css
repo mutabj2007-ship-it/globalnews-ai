@@ -1,0 +1,131 @@
+.frame {
+  font-family: var(--font-cd-body), system-ui, sans-serif;
+  height: calc(var(--ask-visible-height, 100dvh) - var(--ask-top, 62px));
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--sp-bg, #05090f);
+  color: #e8eef8;
+}
+.header {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 14px;
+  border-bottom: 1px solid #22303f;
+  background: #0b131d;
+}
+.body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 10px;
+  padding: 10px;
+}
+.map {
+  width: var(--ask-map-percent);
+  min-width: 0;
+  height: 100%;
+  flex-shrink: 0;
+}
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border: 1px solid #22303f;
+  background: #0f1823;
+}
+.reader {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px;
+}
+.reader section {
+  margin-bottom: 12px;
+}
+.composer {
+  flex-shrink: 0;
+  padding: 10px;
+  border-top: 1px solid #22303f;
+}
+.resize {
+  width: 8px;
+  flex-shrink: 0;
+  margin: 0 -9px;
+  z-index: 2;
+  cursor: col-resize;
+  touch-action: none;
+}
+.resize:focus-visible {
+  outline: 2px solid #4a9de0;
+}
+.panel[data-fullmap='true'] {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, 72vw);
+  max-height: 80%;
+  flex: none;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px #0007;
+}
+@media (max-width: 860px) {
+  .header {
+    padding: 4px 10px;
+  }
+  .body {
+    padding: 0;
+    display: block;
+  }
+  .map {
+    width: 100%;
+    height: 100%;
+  }
+  .map[data-full='true'] {
+    visibility: hidden;
+  }
+  .panel {
+    position: absolute;
+    inset: auto 0 0;
+    height: var(--ask-sheet-height);
+    min-height: 260px;
+    border-radius: 12px 12px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .panel[data-detent='peek'] > div:nth-child(2) {
+    display: none;
+  }
+  .panel[data-detent='peek'] .reader {
+    display: none;
+  }
+  .panel[data-detent='full'] {
+    height: 90%;
+  }
+  .panel[data-fullmap='true'] {
+    left: 10px;
+    right: 10px;
+    bottom: 12px;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    transform: none;
+  }
+  .composer {
+    padding: 8px;
+  }
+}
+
+.reader[data-tab='sources'] :global([data-ask='brief']),
+.reader[data-tab='sources'] :global([data-ask='relational-answer']) {
+  display: none;
+}

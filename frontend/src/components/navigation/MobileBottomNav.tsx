@@ -28,7 +28,7 @@ interface MobileBottomNavProps {
 const NAV_ITEMS = [
   { key: 'home', href: '/', Icon: Home },
   { key: 'worldMap', href: '/map', Icon: Globe2 },
-  { key: 'ask', href: '/search', Icon: Search },
+  { key: 'ask', href: '/ask', Icon: Search },
   { key: 'intelligence', href: '#intelligence-modules', Icon: Sparkles },
 ] as const;
 
