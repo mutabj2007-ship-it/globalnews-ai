@@ -4,21 +4,7 @@ import type {
   PoliticsPollField, PoliticsSubjectType,
 } from './politicsDomain';
 
-/**
- * PART VIII · POLITICS — DOMAIN-LOCAL COPY, on the accepted Economy/Market/Humanitarian
- * pattern. Resolution makes the fallback VISIBLE; nothing falls back silently.
- *
- * ENGLISH ONLY, AND THAT IS THE GOVERNED ANSWER RATHER THAN A SHORTFALL. The activation is
- * explicit — *"do not author speculative translations outside existing authority. Governed
- * fallback is preferable to invented localization."* Market and Humanitarian both ship
- * EN-only catalogues with a disclosed fallback for the same reason, and L authors the rest.
- *
- * ON A DOMAIN LIKE THIS ONE THE RULE MATTERS MORE THAN USUAL. A mistranslated political
- * label is not a cosmetic defect: `allegation`, `official position` and `confirmed fact` are
- * three different claims about the world, and §6 requires them to stay visibly distinct in
- * every language. Guessing at those in Polish would be inventing an epistemic distinction in
- * a language this lane does not author.
- */
+/** Plan B: existing copy slots in EN/PL. Epistemic states remain distinct; other locales disclose fallback. */
 export type PolLocale = DisplayLocale;
 
 export interface PolStrings {
@@ -109,7 +95,7 @@ const en: PolStrings = {
     localeFallback: 'Politics copy is not yet authored in this language. Showing English.',
     close: 'Close',
     /* The shared attention queue's own semantics: an empty queue is a RESULT. */
-    emptyIsResult: 'Nothing currently meets the attention threshold. This is a result, not an error.',
+    emptyIsResult: 'No governed evidence is retained in this preview. This does not mean nothing happened. Jurisdiction, subject and source classes remain unassessed.',
     /* §9. Stated on the frame because a reader deciding whether to click deserves it. */
     zeroAiNavigation: 'Browsing costs no AI. Analysis states its cost first.',
     showProvenance: 'Where this came from',
@@ -158,7 +144,41 @@ const en: PolStrings = {
   },
 };
 
-const POL_CATALOGUE: Partial<Record<PolLocale, PolStrings>> = { en };
+const pl: PolStrings = {
+  domain: 'Polityka',
+  metaTitle: 'Analiza polityczna — GlobalNews AI',
+  metaDescription: 'Udokumentowane wydarzenia polityczne, działania instytucji i procesy polityczne wraz ze źródłami i ograniczeniami.',
+  zones: { HEADER: 'Stan polityczny', ATTENTION: 'Uwaga', SUBSTRATE: 'Wydarzenia polityczne', CONTEXT: 'Kontekst' },
+  labels: {
+    jurisdiction: 'Jurysdykcja', assessment: 'Ocena', confidence: 'Pewność oceny',
+    lastReassessment: 'Ostatnia ponowna ocena', precision: 'Dokładność', precisionCeiling: 'Limit dokładności',
+    changeState: 'Stan zmiany', lifecycleEvent: 'Zdarzenie w cyklu', subjectType: 'Typ tematu',
+    evidence: 'Dowody', stage: 'Etap', actors: 'Podmioty', crossDomain: 'Odniesienia między dziedzinami',
+    sourceClass: 'Klasa źródła', timeline: 'Oś czasu', watch: 'Obserwuj', ask: 'Zapytaj AI',
+    deepAnalysis: 'Pogłębiona analiza', polling: 'Sondaże', awaitingData: 'Oczekiwanie na zweryfikowane dane',
+    notAssessed: 'Nie oceniono', noVerifiedEvidence: 'Brak zweryfikowanych dowodów',
+    localeFallback: 'Treść polityczna nie jest dostępna w tym języku. Wyświetlono wersję angielską.',
+    close: 'Zamknij',
+    emptyIsResult: 'W tym podglądzie nie ma zachowanych dowodów dopuszczonych zgodnie z zasadami. Nie oznacza to, że nic się nie wydarzyło. Jurysdykcja, temat i klasy źródeł pozostają nieocenione.',
+    zeroAiNavigation: 'Przeglądanie nie używa AI. Koszt analizy jest podany przed jej uruchomieniem.',
+    showProvenance: 'Pochodzenie danych', developerDetail: 'Szczegóły gotowości',
+  },
+  subjectTypes: { ELECTION: 'Wybory', LEGISLATIVE_SUBJECT: 'Temat legislacyjny', PROTEST_CAMPAIGN: 'Protest / kampania mobilizacyjna' },
+  eventKinds: { VOTE: 'Głosowanie', RESIGNATION: 'Rezygnacja', APPOINTMENT: 'Powołanie', COURT_RULING: 'Orzeczenie sądu', COALITION_AGREEMENT: 'Umowa koalicyjna', COMMISSION_DECISION: 'Decyzja komisji', RALLY: 'Wiec' },
+  confidence: { LOW: 'Niska', MODERATE: 'Umiarkowana', HIGH: 'Wysoka' },
+  epistemic: {
+    CONFIRMED_FACT: 'Potwierdzony fakt', OFFICIAL_POSITION: 'Oficjalne stanowisko',
+    POLITICAL_CLAIM: 'Twierdzenie polityczne', ALLEGATION: 'Zarzut',
+    INDEPENDENT_ASSESSMENT: 'Niezależna ocena', DISPUTED_READING: 'Sporny odczyt', UNVERIFIED_REPORT: 'Niezweryfikowana relacja',
+  },
+  pollFields: {
+    POLLSTER: 'Pracownia badawcza', FIELD_DATES: 'Termin badania', SAMPLE_SIZE: 'Wielkość próby',
+    METHODOLOGY: 'Metodologia', GEOGRAPHY: 'Obszar', MARGIN_OF_ERROR: 'Margines błędu',
+    SPONSOR: 'Zleceniodawca', FRESHNESS: 'Aktualność', OFFICIAL_STATUS: 'Status oficjalny', SINGLE_POLL_VS_TREND: 'Pojedynczy sondaż czy trend',
+  },
+};
+
+const POL_CATALOGUE: Partial<Record<PolLocale, PolStrings>> = { en, pl };
 
 export interface PolStringsResolution {
   readonly strings: PolStrings;

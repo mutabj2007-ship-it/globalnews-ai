@@ -545,7 +545,8 @@ describe('6b · the rendered rows, and the guard shown to bind', () => {
       ),
     );
 
-  const MARKUP = renderRows([...ELECTION_SUBJECT_LIST.rows]);
+  // Test-only labels; never production fallback data.
+  const MARKUP = renderRows(['A', 'B', 'C'].map(label => ({ id: label, label })));
 
   it('RC-4 · every rendered row carries an IDENTICAL presentation', () => {
     expect(rowOpeningTags(MARKUP)).toHaveLength(3);
@@ -921,7 +922,7 @@ describe('9 · the three treatments are disjoint, proven on three axes', () => {
 
 /* ═══ 10 · PREVIEW BEHAVIOUR, THE CEILING AND THE GATE ═════════════════ */
 
-describe('10 · the preview binds no election', () => {
+describe('10 · no ungoverned fallback is bound', () => {
   it('nothing Kenyan is BOUND — no subject, candidate, party or figure', () => {
     /*
       WITHDRAWN AND REPAIRED. The first version swept every byte of the lane
@@ -952,9 +953,7 @@ describe('10 · the preview binds no election', () => {
 
     expect(ELECTION_PREVIEW_SCOPE.iso2).toBe('ZZ');
     expect(ELECTION_PREVIEW_SCOPE.label).toBe('No subject bound');
-    for (const item of ELECTION_SUBJECT_LIST.rows) {
-      expect(item.label).toMatch(/^Placeholder contestant/);
-    }
+    expect(ELECTION_SUBJECT_LIST.rows).toEqual([]);
   });
 
   it('MUTATION CONTROL · the bound-content sweep fires on a real referent', () => {
@@ -998,8 +997,8 @@ describe('10 · the preview binds no election', () => {
   it('compact renders the SAME component — there is no second region list', () => {
     const desktop = code(join(SRC, 'app', 'election-visual-preview', 'page.tsx'));
     const compact = code(join(SRC, 'app', 'election-visual-preview', 'compact', 'page.tsx'));
-    expect(desktop).toMatch(/<ElectionPreviewScreen locale=\{locale\} compact=\{false\} \/>/);
-    expect(compact).toMatch(/<ElectionPreviewScreen locale=\{locale\} compact=\{true\} \/>/);
+    expect(desktop).toMatch(/<ElectionPreviewScreen locale=\{locale\} compact=\{false\} binding=\{binding\} \/>/);
+    expect(compact).toMatch(/<ElectionPreviewScreen locale=\{locale\} compact=\{true\} binding=\{binding\} \/>/);
   });
 
   it('EN and PL only — and NO Kiswahili string is authored', () => {

@@ -150,13 +150,13 @@ export function ValueSlot({ treatment, label, children }: {
  * computed treatment is identical and demonstrate themselves failing against an
  * emphasised row.**
  */
-export function ContestantRow({ label, state }: { label: string; state?: string }): JSX.Element {
+export function ContestantRow({ label, state }: { label: ReactNode; state?: string }): JSX.Element {
   return (
     <li
       data-eln="contestant"
       className="flex min-w-0 items-baseline justify-between gap-[12px] px-[12px] py-[10px]"
     >
-      <span className="min-w-0 break-words text-[13px] leading-[1.45] text-sp-ink-2">{label}</span>
+      <div className="min-w-0 break-words text-[13px] leading-[1.45] text-sp-ink-2">{label}</div>
       {state !== undefined && <span className={`${ELN_MICRO} shrink-0`}>{state}</span>}
     </li>
   );

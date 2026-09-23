@@ -83,7 +83,7 @@ export interface ElectionStrings {
 }
 
 const EN: ElectionStrings = {
-  title: 'Election Intelligence — provider-free preview',
+  title: 'Election Intelligence — retained evidence',
   previewMarker: 'PREVIEW · NO ELECTION DATA IS BOUND',
   previewNote:
     'Every subject on this screen is a placeholder with no real-world referent. No result, turnout or certification is bound, and none is computed.',
@@ -133,7 +133,7 @@ const EN: ElectionStrings = {
 };
 
 const PL: ElectionStrings = {
-  title: 'Analiza wyborcza — podgląd bez dostawców',
+  title: 'Analiza wyborcza — zachowane dowody',
   previewMarker: 'PODGLĄD · ŻADNE DANE WYBORCZE NIE SĄ POWIĄZANE',
   previewNote:
     'Każdy temat na tym ekranie jest zastępczy i nie odnosi się do niczego rzeczywistego. Żaden wynik, żadna frekwencja ani żadne potwierdzenie nie są powiązane i żadne nie są wyliczane.',

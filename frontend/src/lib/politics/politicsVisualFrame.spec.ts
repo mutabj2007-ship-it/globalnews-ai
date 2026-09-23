@@ -539,10 +539,12 @@ describe('the preview route is a preview, and the live route is not opened', () 
     expect(existsSync(join(SRC, 'app', 'politics'))).toBe(false);
   });
 
-  it('English is the only registered locale, and the fallback is disclosed', async () => {
+  it('Plan B EN/PL copy is available; other locales disclose fallback', async () => {
     const strings = (await import('./politicsStrings')) as typeof import('./politicsStrings');
     expect(strings.resolvePolStrings('en').fellBack).toBe(false);
-    for (const l of ['pl', 'fr', 'de', 'es', 'pt', 'ar'] as const) {
+    expect(strings.resolvePolStrings('pl').fellBack).toBe(false);
+    expect(new Set(Object.values(strings.polStrings('pl').epistemic)).size).toBe(7);
+    for (const l of ['fr', 'de', 'es', 'pt', 'ar'] as const) {
       expect(`${l}: ${strings.resolvePolStrings(l).fellBack}`).toBe(`${l}: true`);
     }
     for (const f of ['PoliticsScreen.tsx', 'PoliticsCompactScreen.tsx']) {

@@ -37,6 +37,8 @@ fs.mkdirSync(output, { recursive: true });
             '|',
           );
         }),
+        absence: document.querySelectorAll('[data-eln-treatment="ABSENCE"]').length,
+        fakeRows: document.body.innerText.includes('Placeholder contestant'),
         robots: document.querySelector('meta[name="robots"]').content,
       }));
       await page.screenshot({
@@ -60,7 +62,7 @@ fs.mkdirSync(output, { recursive: true });
         r.errors.length ||
         r.external.length ||
         r.regions.length !== 4 ||
-        new Set(r.rows).size !== 1,
+        r.fakeRows || (r.rows.length ? new Set(r.rows).size !== 1 : r.absence !== 1),
     )
   )
     process.exitCode = 1;

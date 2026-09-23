@@ -209,6 +209,7 @@ describe('Kenya bounded official evidence', () => {
     await app.init();
     try {
       delete process.env.ELECTION_EVIDENCE_READ_ENABLED;
+      expect(new ElectionReadService().read('en')).toMatchObject({ state: 'COVERAGE_GAP', reason: 'READER_DISABLED', records: [] });
       expect(
         (await request(app.getHttpServer()).get('/election/evidence/ke').expect(200)).body.state,
       ).toBe('COVERAGE_GAP');
