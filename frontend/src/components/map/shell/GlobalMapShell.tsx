@@ -198,6 +198,15 @@ export interface GlobalMapShellProps {
    * D1 components, and that the panel already declares, defaults and gates it.
    */
   readonly contextQueue?: AttentionQueue | null;
+  /** Part V / Plan B: same rail container, domain-owned content. */
+  readonly specialistRail?: React.ReactNode;
+  readonly specialistLayers?: React.ReactNode;
+  readonly specialistNavigation?: React.ReactNode;
+  readonly specialistLabel?: string;
+  readonly retainedWindow?: boolean;
+  readonly retainedWindowLabel?: string;
+  readonly requestedCamera?: CameraState;
+  readonly onSelectEvidence?: (id: string) => void;
   /**
    * The explicit country read — state, action, and the blocks a completed read
    * populates.
@@ -370,6 +379,7 @@ export function GlobalMapShell({
   language,
   /* Country's own configuration is the default, so an omitted prop is today. */
   contextQueue = null,
+  specialistRail, specialistLayers, specialistNavigation, specialistLabel, onSelectEvidence, retainedWindow = false, retainedWindowLabel, requestedCamera,
   countryRead,
   selectionDetail,
   initialCamera = WORLD_CAMERA,
@@ -416,6 +426,7 @@ export function GlobalMapShell({
   const hud = hudProfile(surfaceDensity);
 
   const [session, dispatch] = useReducer(cameraReducer, initialCamera, initialCameraSession);
+  useEffect(() => { if (requestedCamera) dispatch({kind:'commit',camera:requestedCamera}); }, [requestedCamera]);
 
   /*
     ── CHECKPOINT A · THE EXPLICIT VIEW SCOPE ───────────────────────────────
@@ -521,8 +532,8 @@ export function GlobalMapShell({
     input to any of it.
   */
   const records = useMemo(
-    () => qualifyingRecords(evidenceSet, mode, period, watch),
-    [evidenceSet, mode, period, watch],
+    () => retainedWindow ? evidenceSet.records : qualifyingRecords(evidenceSet, mode, period, watch),
+    [evidenceSet, mode, period, watch, retainedWindow],
   );
   const totals = useMemo(() => geographyTotals(records), [records]);
   const overall = useMemo(() => evidenceTotals(records), [records]);
@@ -1456,7 +1467,8 @@ export function GlobalMapShell({
     contextQueue !== null && selection !== null && selection.kind !== 'REGION';
 
   const rail = hud.rightRail ? (
-    <IntelligenceRightRail label={spatial.railLabel}>
+    <IntelligenceRightRail label={specialistLabel ?? spatial.railLabel}>
+      {specialistRail ?? <>
       {selection === null || keepSpecialistQueueForGeography ? (
         <ContextSummaryPanel
           mode={mode}
@@ -1644,6 +1656,7 @@ export function GlobalMapShell({
           {railDetail}
         </div>
       )}
+    </>}
     </IntelligenceRightRail>
   ) : null;
 
@@ -1699,7 +1712,7 @@ export function GlobalMapShell({
       {(hud.modeSwitcher || hud.search || hud.periodChips) && (
         <div className="col-span-full">
           <MapHudTopBar
-            labels={spatial.topBar}
+            labels={specialistLabel ? { ...spatial.topBar, brandSub: specialistLabel } : spatial.topBar}
             /*
               CHECKPOINT F — the map's EN/PL control.
 
@@ -1721,16 +1734,16 @@ export function GlobalMapShell({
             }
             period={period}
             onPeriodChange={(next) => onPeriodChange?.(next)}
-            showPeriodChips={hud.periodChips}
+            showPeriodChips={hud.periodChips && !retainedWindow}
             modeSlot={
-              hud.modeSwitcher ? (
+              specialistNavigation ?? (hud.modeSwitcher ? (
                 <ModeSwitcher
                   active={mode}
                   onModeChange={(next) => onModeChange?.(next)}
                   pinnedReason={pinnedModeReason}
                   labels={spatial.modes}
                 />
-              ) : undefined
+              ) : undefined)
             }
             searchSlot={
               hud.search ? (
@@ -1758,7 +1771,7 @@ export function GlobalMapShell({
           data-gn="map-layer-rail-column"
           className="z-30 flex h-full w-[52px] flex-col items-center gap-[4px] overflow-y-auto border-r border-sp-line bg-sp-rail py-[10px]"
         >
-          <LayerToggleRail
+          {specialistLayers ?? <LayerToggleRail
             mode={mode}
             zoom={session.camera.zoom}
             state={layers}
@@ -1780,7 +1793,7 @@ export function GlobalMapShell({
                   }
                 : undefined
             }
-          />
+          />}
         </div>
       )}
 
@@ -1791,6 +1804,7 @@ export function GlobalMapShell({
         className="relative min-w-0 overflow-hidden bg-sp-ocean"
       >
         <EvidenceMapCanvas
+            onSelectEvidence={onSelectEvidence}
           camera={session.camera}
           origin={session.origin}
           onGesture={onGesture}
@@ -1911,7 +1925,7 @@ export function GlobalMapShell({
             />
           }
           layers={
-            <LayersControl
+            specialistLayers ? <span /> : <LayersControl
               state={layers}
               /*
                 ══ THE MISSING RENDER CONNECTION — MAP-GRID-CONTROL-1 AND
@@ -2194,7 +2208,7 @@ export function GlobalMapShell({
           </div>
 
           {hud.readout && (
-            <MapReadout camera={session.camera} mode={mode} period={period} labels={spatial.readout} />
+            <MapReadout camera={session.camera} mode={mode} period={period} labels={retainedWindow && retainedWindowLabel ? {...spatial.readout, periods:{...spatial.readout.periods, [period]:retainedWindowLabel}} : spatial.readout} />
           )}
         </div>
         )}

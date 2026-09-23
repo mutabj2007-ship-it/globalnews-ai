@@ -207,7 +207,8 @@ describe('§11 — the Beta marker and the period control are untouched', () => 
 
   it('the period chips still render, and still on the densities that declare them', () => {
     expect(TOP_BAR).toContain('showPeriodChips');
-    expect(SHELL).toContain('showPeriodChips={hud.periodChips}');
+    expect(SHELL).toContain('showPeriodChips={hud.periodChips && !retainedWindow}');
+    expect(SHELL).toContain('retainedWindow = false');
   });
 
   it('FULL and MODAL declare period chips; the picture densities do not', () => {

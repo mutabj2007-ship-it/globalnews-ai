@@ -55,8 +55,8 @@ describe('1 · the codec is Main’s file, verbatim', () => {
       .toBe('8cba6ef0ad8cbfe8d4fc8be9affda962d474e39c7215cbc1d609cee5a721cea3');
   });
 
-  it('no route was created, and no map mode gained a member', () => {
-    expect(existsSync(join(SRC, 'app', 'conflict'))).toBe(false);
+  it('Plan B adds a dedicated route without adding a map mode', () => {
+    expect(existsSync(join(SRC, 'app', 'conflict', 'page.tsx'))).toBe(true);
     expect(MAP_MODES).toEqual(['WORLD', 'EVIDENCE', 'SITUATIONS', 'WATCH', 'CHANGE', 'SOURCES']);
     expect(LIVE_MAP_MODES).toEqual(['WORLD', 'EVIDENCE']);
     /* the two vocabularies still share nothing — Main's B-3 */
