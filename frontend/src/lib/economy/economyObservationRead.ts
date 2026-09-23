@@ -13,7 +13,8 @@
  *   3. the absence reason names the PLATFORM gap rather than the world — it must never
  *      read as "Rwanda has no inflation";
  *   4. it is called from a SERVER COMPONENT, so the reader's browser makes no request on
- *      load. The zero-network-on-page-load property is PRESERVED, not re-earned.
+ *      load. The server performs one INTERNAL retained-reader fetch; zero EXTERNAL
+ *      provider/AI acquisition on page load remains the invariant.
  *
  * ── WHAT IT READS, AND WHAT IT CANNOT CAUSE ───────────────────────────────
  *
@@ -51,6 +52,7 @@ export interface RetainedObservationProvenance {
   readonly basePeriod: string;
   /** The day the document itself printed. See the backend note on vintage precision. */
   readonly publicationDateStated: string;
+  readonly sourceUrl?: string;
 }
 
 export interface RetainedObservation {
@@ -98,14 +100,9 @@ type EconomyObservationReader = () => Promise<EconomyReadResult>;
 /**
  * THE PATH IS RELATIVE, AND THAT IS THE PROPERTY THE ACCEPTED GUARD PROTECTS.
  *
- * `accountFetch` — the one network module the preview graph was allowed to reach — is
- * pinned by an assertion that ends: *"No absolute origin — the request cannot leave this
- * deployment."* An absolute base read from an environment variable would defeat exactly
- * that, whatever it happened to be set to.
- *
- * So this reads a RELATIVE path behind the deployment’s own origin, and `next.config.mjs`
- * rewrites `/economy/*` to the backend the same way it already rewrites the public
- * `/news/*` and `/geo/*` families. There is no origin in this file to point anywhere.
+ * Browser use is same-origin through the existing `/economy` rewrite. Server rendering
+ * uses the deployment's configured backend base from `apiBase.ts`; it is an internal read,
+ * not a provider request. This read does not follow a source citation or acquire evidence.
  */
 const ECONOMY_READ_PATH = '/economy/observations/rw-nisr-cpi';
 
@@ -121,7 +118,7 @@ const ECONOMY_READ_PATH = '/economy/observations/rw-nisr-cpi';
  *   SERVER component, so this is the branch that actually carries it.
  *
  * The origin lives in `lib/api/apiBase.ts`, where it already lives for every other
- * server-side read. THIS module holds no URL literal and cannot be pointed anywhere.
+ * server-side read. This module delegates backend configuration to that shared resolver.
  */
 function economyReadUrl(): string {
   if (typeof window !== 'undefined') return ECONOMY_READ_PATH;
@@ -148,11 +145,15 @@ function activatedObservationReader(): EconomyObservationReader | null {
     const body = (await response.json()) as {
       slot?: { kind?: string; observation?: { value?: number; unit?: string; periodId?: string } };
       publishable?: boolean;
+      retainedState?: string;
       seriesLabel?: string;
       geographyLabel?: string;
       provenance?: RetainedObservationProvenance;
     };
 
+    if (body.retainedState === 'NO_CAPTURE' && body.publishable === false && body.slot?.kind === 'GAP') {
+      return { kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_RETAINED' };
+    }
     if (body.slot?.kind !== 'OBSERVATION' || body.publishable !== true) {
       return { kind: 'UNAVAILABLE', reason: 'NO_DISPLAYABLE_OBSERVATION' };
     }

@@ -7,7 +7,8 @@
  *
  * This module opens bytes the snapshot store already retained and decodes them. It
  * contacts nobody. `rw-nisr` stays `enabled: false`, no scheduler exists, and nothing
- * here can cause a request: there is no transport, no driver and no URL in this file.
+ * here can acquire external data: there is no provider transport or driver here.
+ * Source URLs in the response are retained citation metadata.
  *
  * ── AND IT DOES NOT TOUCH THE GLOBAL INSTALL SEAM ─────────────────────────
  *
@@ -68,6 +69,8 @@ const ENDPOINT_ID = 'cpi-monthly-en';
 export interface EconomyObservationView {
   readonly slot: EconomyFigureSlot;
   readonly publishable: boolean;
+  /** Read availability only; does not expose internal admission/refusal details. */
+  readonly retainedState: 'NO_CAPTURE' | 'NOT_DISPLAYABLE' | 'DISPLAYABLE';
   /** Present only for an OBSERVATION. */
   readonly provenance?: {
     readonly institution: string;
@@ -131,6 +134,7 @@ export class EconomyObservationReadService {
     const gap = (reason: 'NO_PRODUCER' | 'WITHHELD'): EconomyObservationView => ({
       slot: { kind: 'GAP', seriesId: 'rw-nisr:cpi:all-rwanda', periodId: 'UNKNOWN', reason },
       publishable: false,
+      retainedState: 'NOT_DISPLAYABLE',
     });
 
     const held = await this.retained.read(PROVIDER_ID, ENDPOINT_ID);
@@ -140,7 +144,8 @@ export class EconomyObservationReadService {
         ABOUT US — nor the reverse. `WITHHELD` says the document supplied no figure;
         the other four say this deployment could not produce one.
       */
-      return gap(held.refusal === 'PARSE_FAILED' ? 'WITHHELD' : 'NO_PRODUCER');
+      return { ...gap(held.refusal === 'PARSE_FAILED' ? 'WITHHELD' : 'NO_PRODUCER'),
+        retainedState: held.refusal === 'NO_ADMITTED_CAPTURE' ? 'NO_CAPTURE' : 'NOT_DISPLAYABLE' };
     }
 
     const { decoded, retrieval, contentAddress, lineage, priorContentAddresses } = held;
@@ -161,12 +166,13 @@ export class EconomyObservationReadService {
 
     const read = readNisrCpiNationalFigureSlot({ decoded, retrieval, provenance, editionOrder });
     if (read.slot.kind !== 'OBSERVATION') {
-      return { slot: read.slot, publishable: false };
+      return { slot: read.slot, publishable: false, retainedState: 'NOT_DISPLAYABLE' };
     }
 
     return {
       slot: read.slot,
       publishable: read.publishable,
+      retainedState: read.publishable ? 'DISPLAYABLE' : 'NOT_DISPLAYABLE',
       seriesLabel: 'Rwanda headline CPI, year on year',
       geographyLabel: 'All Rwanda',
       provenance: {
@@ -192,6 +198,7 @@ export class EconomyObservationReadService {
         basePeriod: decoded.basePeriod,
         /* From the ARTIFACT, at the artifact’s own precision. See the field note. */
         publicationDateStated: decoded.publicationDate,
+        sourceUrl: held.sourceUrl,
       },
     };
   }

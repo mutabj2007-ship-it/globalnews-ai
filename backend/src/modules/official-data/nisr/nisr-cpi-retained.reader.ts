@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { OFFICIAL_SOURCES } from '../../official-sources/official-source-registry';
 
 import {
   makeNisrCpiDecoder,
@@ -45,7 +46,7 @@ import {
  *
  * ── IT CONTACTS NOBODY ────────────────────────────────────────────────────
  *
- * There is no transport, no URL and no fetch in this file or in its dependency graph. It
+ * There is no external acquisition transport in this reader. Source URLs are citation metadata. It
  * opens bytes that the snapshot store already retained. Calling it a thousand times
  * reaches NISR zero times.
  */
@@ -84,6 +85,7 @@ export interface RetainedNisrCpiLineage {
 export type RetainedNisrCpiRead =
   | {
       readonly kind: 'RETAINED';
+      readonly sourceUrl?: string;
       readonly decoded: NisrCpiDecoded;
       readonly retrieval: OfficialDataRetrieval;
       readonly contentAddress: string;
@@ -118,7 +120,7 @@ export class RetainedNisrCpiReader {
       where: { providerId, endpointId, admissibility: 'ADMITTED' },
       orderBy: [{ retrievedAt: 'desc' }, { retrievalId: 'desc' }],
     });
-    if (row === null || row.contentAddress === null) {
+    if (row === null) {
       return { kind: 'NONE', refusal: 'NO_ADMITTED_CAPTURE' };
     }
 
@@ -136,6 +138,7 @@ export class RetainedNisrCpiReader {
       return { kind: 'NONE', refusal: 'EXTRACTOR_IDENTITY_MISMATCH' };
     }
 
+    if (row.contentAddress === null) return { kind: 'NONE', refusal: 'PAYLOAD_NOT_RETAINED' };
     const address = snapshotContentAddress(row.contentAddress);
     const payload = await store.open(address);
     if (payload === null) return { kind: 'NONE', refusal: 'PAYLOAD_NOT_RETAINED' };
@@ -178,6 +181,7 @@ export class RetainedNisrCpiReader {
 
     return {
       kind: 'RETAINED',
+      sourceUrl: retainedNisrSourceUrl(retrieval.request.requestPath),
       decoded: decodeResult.value,
       retrieval,
       contentAddress: row.contentAddress,
@@ -192,4 +196,14 @@ export class RetainedNisrCpiReader {
       priorContentAddresses: firstAddress == null ? [] : [firstAddress],
     };
   }
+}
+
+/** A click-through citation, never an acquisition. Only the governed origin is allowed. */
+export function retainedNisrSourceUrl(path: unknown): string | undefined {
+  const origin = OFFICIAL_SOURCES.find(source => source.id === 'rw-nisr')?.baseUrl;
+  if (!origin || typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//') || path.includes('\\')) return undefined;
+  try {
+    const url = new URL(path, origin);
+    return url.origin === new URL(origin).origin ? url.href : undefined;
+  } catch { return undefined; }
 }

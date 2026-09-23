@@ -67,3 +67,10 @@ it('keeps one-vintage and duplicate-vintage revision controls disabled, as well 
     expect(html).toContain('trend not available yet');
   }
 });
+
+it('distinguishes no retained capture from retained but undisplayable', async () => {
+  response({ publishable: false, retainedState: 'NO_CAPTURE', slot: { kind: 'GAP', reason: 'NO_PRODUCER' } });
+  expect(await readEconomyObservations()).toEqual({ kind: 'UNAVAILABLE', reason: 'NO_OBSERVATION_RETAINED' });
+  response({ publishable: false, retainedState: 'NOT_DISPLAYABLE', slot: { kind: 'GAP', reason: 'NO_PRODUCER' } });
+  expect(await readEconomyObservations()).toEqual({ kind: 'UNAVAILABLE', reason: 'NO_DISPLAYABLE_OBSERVATION' });
+});

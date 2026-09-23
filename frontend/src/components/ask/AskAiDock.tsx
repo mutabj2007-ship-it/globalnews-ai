@@ -125,7 +125,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
    * the clearer one; at and above `spatial` it returns the released
    * placement without measuring anything.
    */
-  const anchor = useLauncherAnchor();
+  const { anchor, bottomOffset, coveredByDialog } = useLauncherAnchor();
 
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
@@ -274,7 +274,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           command bar, the mode badge and the reader's own question
           heading — which is where R1 put the launcher, and was wrong.
         */
-        style={anchor === 'top' ? { top: COMPACT_TOP_PX, bottom: 'auto' } : undefined}
+        style={{ ...(anchor === 'top' ? { top: COMPACT_TOP_PX, bottom: 'auto' } : { bottom: bottomOffset }), visibility: coveredByDialog && !isOpen ? 'hidden' : undefined }}
         data-ask-anchor={anchor}
         className="fixed end-4 bottom-4 z-40 inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink-primary shadow-lg transition-colors spatial:bottom-4 spatial:top-auto hover:border-signal focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
       >
