@@ -104,7 +104,7 @@ export function geometryKind(geometry: EnergyGeometry): EnergySpatialKind {
 
 export interface EnergyEvidenceArtifact {
   readonly id: string;
-  readonly sourceClass: EnergySourceClass;
+  readonly sourceClass: EnergySourceClass | null;
   readonly role: EnergyEvidenceRole;
   /** Source language, preserved; "AR → EN" when a translation is displayed. */
   readonly language: string;
@@ -232,7 +232,7 @@ export interface EnergySubject {
   */
 
   readonly affectedSystems: readonly { readonly label: string; readonly meta: string; readonly tone: EnergyTone }[];
-  readonly fields: readonly { readonly key: string; readonly value: string }[];
+  readonly fields: readonly { readonly id?: string; readonly key: string; readonly value: string }[];
   readonly timeline: readonly EnergyTimelineEntry[];
   readonly evidence: readonly EnergyEvidenceArtifact[];
   readonly crossDomain: readonly EnergyCrossDomainReference[];
@@ -248,7 +248,7 @@ export interface EnergySubject {
     happening to it, 'watchable' is itself the disclosure."* With no per-subject
     gate there is nothing that could vary with what is happening to a subject.
   */
-  readonly watched: boolean;
+  readonly watched: boolean | null;
 }
 
 /* ── THE CHANGE GRID ────────────────────────────────────────────────────── */
@@ -419,7 +419,7 @@ export interface EnergyFrameData {
   /** Subjects that exist but whose geometry is withheld. They stay reachable. */
   readonly withheldGeometry: readonly { readonly id: string; readonly name: string; readonly gate: EnergyGateId }[];
   readonly changeAxis: readonly string[];
-  readonly watchCount: number;
+  readonly watchCount: number | null;
   /**
    * Per-zone absence. A zone listed here has nothing to show AND says why.
    * The map is partial by design: a zone with content is simply absent from it.

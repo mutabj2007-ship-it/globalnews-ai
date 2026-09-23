@@ -1,3 +1,4 @@
+import { retainedEconomyStrings } from '@/lib/economy/strings';
 import type { JSX } from 'react';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { resolveEconomyStrings } from '@/lib/economy/strings';
@@ -20,78 +21,19 @@ import { ALPHA_PREVIEW_VISUAL_SCOPE } from '@/lib/specialist/previewScope';
  *
  * ── WHY IT IS NOT A FIXTURE BANNER, AND MUST NOT BECOME ONE ───────────────
  *
- * `FixtureBanner` declares that the FIGURES ON SCREEN ARE INVENTED. Nothing on this
- * surface is invented — there are no figures at all, because the capability passed to the
- * frame is the measured `NO_OBSERVATION_SOURCE` and not `FIXTURE`. Borrowing the fixture
- * banner here would tell a reader the opposite of what is true and would make the real
- * fixture declaration mean less wherever it genuinely applies.
+ * `FixtureBanner` denotes invented illustrative figures. This preview instead binds an
+ * internal retained read: admitted displayable observations may populate it; otherwise
+ * the accepted absence frame renders. It never falls back to fixtures.
  *
- * What this marker declares is narrower and is about the ROUTE, not the data: that the
- * governed `/economy` route is not open, and that this address exists so a layout can be
- * inspected before it is.
- *
- * ── WHY IT IS IN ENGLISH ONLY, DELIBERATELY ───────────────────────────────
- *
- * Every other string on this page comes from `economyStrings`, which the localisation lane
- * authored across all seven display locales, and this lane authors no translation. This
- * marker has no authored source and is not sent to one, because it is not reader copy: it
- * addresses the Product Owner inspecting an unrouted address, and it disappears with the
- * preview the moment `/economy` opens. Translating a surface that exists to be deleted
- * would put a permanent string in the catalogue for a temporary address.
- *
- * The locale still reaches the marker, and it is used for something real: the resolution's
- * `fellBack` flag is reported beside the label, so an inspector reading the Polish capture
- * can tell at a glance whether the frame below is genuinely Polish or English standing in.
- * For Economy today it is genuinely Polish, and the marker is where that is verifiable
- * rather than assumed.
+ * The marker identifies the noindex preview route, not the availability of figures.
+ * Its display copy uses the authored locale catalogue. Observed scope follows retained
+ * evidence; the planned visual scope is only a fallback when no observation is available.
+ * Source-language metadata stays separate from display-language selection.
  */
 /**
- * ── THE PLANNED ALPHA VISUAL SCOPE — A PRESENTATION LABEL, NOT A BINDING ──
- *
- * Product Owner ruling: *"visual scope = Poland. Show Poland as the planned Alpha visual
- * scope in the preview chrome/header."* This is the ruling §9 of the delivery asked for and
- * deliberately declined to make — *"that is a one-line change to an accepted module and
- * should be a ruling, not my decision."* Declining was right. The ruling is made now, and
- * it is applied HERE rather than in the accepted module, which is the whole point.
- *
- * The same ruling forbids the obvious implementation: *"Do not mutate or falsely bind the
- * production Economy subject (`economyIso2: ZZ`) merely to make the label appear."*
- * Writing `Poland` into `PRODUCTION_SHAPED_SUBJECT` would print `Poland` beside a subject
- * bound to no economy — a claim the accepted module deliberately does not make, and one
- * that would still be sitting there the day `/economy` opens, over data never collected
- * for Poland.
- *
- * So the scope lives in the PREVIEW MARKER and nowhere else. Three consequences follow,
- * and each is what makes this honest rather than merely convenient:
- *
- *   1. It is scoped to the preview. The marker renders on `/economy-visual-preview` and
- *      its compact twin and on no other surface, so the label cannot reach a reader who
- *      is not the Product Owner inspecting a layout.
- *   2. It disappears with the preview. When `/economy` opens this component is deleted and
- *      the scope goes with it — there is no migration step at which a presentation label
- *      could be mistaken for a bound subject.
- *   3. It is worded as a PLAN. `Planned visual scope` states what Alpha intends to show,
- *      not what is bound or observed. The frame forty pixels below still reads
- *      `No subject bound`, and the two are consistent precisely because this one does not
- *      claim otherwise.
- *
- * **The eventual live route must derive geography from the actual bound subject.** That is
- * the ruling's closing requirement, and it is why this constant is not exported to, nor
- * read by, anything that renders `/economy`. `previewScopeRuling.spec.ts` asserts the
- * production subject still carries `ZZ` and `No subject bound`, so the day someone tries
- * to satisfy a header by editing the subject instead, that guard fails first.
- *
- * ── WHY THE VALUE IS IMPORTED AND NOT WRITTEN HERE ────────────────────────
- *
- * It was written here first, and `ECON-UI-1 · fixtures are illustrative, never production
- * facts` rejected it: that accepted guard forbids `Rwanda|Mombasa|Kigali|Poland|NISR|GUS`
- * in every non-fixture file under `components/economy`, because those are the design's
- * illustrative economies and the guard keeps them inside `fixtures.ts`.
- *
- * The guard was not weakened, edited or suppressed — it was right. A planned presentation
- * scope is not Economy domain data, so it lives in `lib/specialist/previewScope.ts` with
- * the rest of this preview's own machinery, and the Economy component tree still contains
- * no country name. The reasoning is written out in full at that module.
+ * Planned scope is presentation metadata from the shared preview registry. It never
+ * changes the production subject. When retained data is bound, observedGeography takes
+ * precedence so preview navigation cannot mislabel the observation's actual geography.
  */
 
 export function AlphaVisualPreviewMarker({
@@ -120,7 +62,7 @@ export function AlphaVisualPreviewMarker({
         display: 'flex', flexWrap: 'wrap', gap: '6px 14px', alignItems: 'baseline',
       }}
     >
-      <span>Alpha visual preview</span>
+      <span>{retainedEconomyStrings(locale).preview}</span>
       <span style={{ color: ECON_INK.label }}>
         {res.fellBack ? `${res.requested} → ${res.resolved}` : res.resolved}
       </span>
@@ -133,12 +75,12 @@ export function AlphaVisualPreviewMarker({
       */}
       {observedGeography ? (
         <span>
-          Observed scope{' '}
+          {retainedEconomyStrings(locale).observedScope}{' '}
           <span style={{ color: ECON_INK.label }}>{observedGeography}</span>
         </span>
       ) : (
         <span>
-          Planned visual scope{' '}
+          {retainedEconomyStrings(locale).plannedScope}{' '}
           <span style={{ color: ECON_INK.label }}>
             {ALPHA_PREVIEW_VISUAL_SCOPE.label} ({ALPHA_PREVIEW_VISUAL_SCOPE.geo})
           </span>

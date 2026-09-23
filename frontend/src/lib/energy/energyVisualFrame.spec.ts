@@ -222,10 +222,13 @@ describe('2 · entering /energy executes 0 providers and 0 models', () => {
    * every file the route can reach, so a future import of a provider client
    * fails here rather than in production.
    */
-  it('no file in the Energy graph can make a request', () => {
+  it('only the retained backend reader can make a request', () => {
     for (const file of ENERGY_FILES) {
       const source = code(file);
-      expect(source).not.toMatch(/\bfetch\s*\(/);
+      if (file.endsWith('energyReadModel.ts')) {
+        expect(source).toContain('/energy/observations');
+        expect(source.match(/\bfetch\s*\(/g)).toHaveLength(1);
+      } else expect(source).not.toMatch(/\bfetch\s*\(/);
       expect(source).not.toMatch(/XMLHttpRequest|EventSource|WebSocket/);
       expect(source).not.toMatch(/\baxios\b/);
     }
@@ -246,10 +249,10 @@ describe('2 · entering /energy executes 0 providers and 0 models', () => {
     expect(substrate).toMatch(/getCountryFeatureCollection/);
   });
 
-  it('the route awaits nothing, so a page load has nothing to wait for', () => {
+  it('the route awaits only retained observations and maps into the accepted shell', () => {
     const route = code(ROUTE);
-    expect(route).not.toMatch(/\bawait\b/);
-    expect(route).not.toMatch(/async function/);
+    expect(route.match(/\bawait\b/g)).toHaveLength(1);
+    expect(route).toContain('energyFrameFromRetained(retained, locale)');
   });
 });
 
@@ -664,7 +667,8 @@ describe('14 · design fixtures are labelled and never served by the public rout
 
   it('a hand-authored frame=design-fixture URL cannot put fixture data on the reader route', () => {
     const route = code(ROUTE);
-    expect(route).toContain('const data = ENERGY_GOVERNED_FRAME;');
+    expect(route).toContain('const retained = await readEnergyObservations();');
+    expect(route).toContain('const data = energyFrameFromRetained(retained, locale);');
     expect(route).not.toContain('ENERGY_DESIGN_FIXTURE_FRAME');
     expect(GRAPH.some((file) => file.endsWith('energyFixtures.ts'))).toBe(false);
   });

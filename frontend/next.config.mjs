@@ -212,6 +212,8 @@ const nextConfig = {
         reader-only MarketReadModule, which imports no scheduler or transport.
       */
       { source: '/market-data/:path*', destination: `${backendOrigin}/market/:path*` },
+      // Public retained evidence: same-origin browser read, server-only backend routing.
+      { source: '/conflict-data/:path*', destination: `${backendOrigin}/conflict/:path*` },
     ];
   },
 

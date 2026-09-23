@@ -1026,6 +1026,7 @@ model SnapshotRetrieval {
   createdAt DateTime @default(now())
 
   observations         MarketObservation[]
+  energyObservations   EnergyObservation[]
   conflictObservations ConflictObservation[]
 
   /// R2 · S-3 — THE COMPOSITE KEY AN OBSERVATION REFERENCES.
@@ -1581,4 +1582,23 @@ model SandLedgerEntry {
 
   // Cross-process protection in addition to transactional transitions.
   @@unique([operationId, entryType])
+}
+
+/// Reviewed projection over the shared retained byte store. No runtime writer.
+/// Public payload.subjectType must exactly match Part XI; enforced by the SQL check and shared reader validator.
+model EnergyObservation {
+  id String @id
+  observationKey String
+  revision Int
+  snapshotRetrievalId String
+  snapshotRetrieval SnapshotRetrieval @relation(fields: [snapshotRetrievalId], references: [retrievalId], onDelete: Restrict)
+  payload Json
+  /// JSON Pointer to a publisher record, interpreted by energy-record-v1 only.
+  evidencePointer String
+  parserVersion String
+  admission String @default("REFUSED")
+  publicDisclosureApproved Boolean @default(false)
+  reviewedBy String?
+  reviewRef String?
+  @@unique([observationKey, revision])
 }

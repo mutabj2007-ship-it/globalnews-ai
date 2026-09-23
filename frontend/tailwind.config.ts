@@ -745,6 +745,8 @@ const config: Config = {
             border/background pair is `.45` / `.07`; its `-line` takes the
             `.45`, which is also its most frequent border alpha.
           */
+          // Part V R2 severity: CRITICAL only, verbatim #ff5f4e from the board.
+          red: '#ff5f4e',
           watch: '#5be3a8',
           'watch-line': 'rgba(91,227,168,.45)',
           'watch-dim': 'rgba(91,227,168,.1)',

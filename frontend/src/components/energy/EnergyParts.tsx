@@ -29,7 +29,7 @@ import {
   type ChangeState,
   type ChangeStateLabels,
 } from '@/lib/observation/changeState';
-import { formatEnergyString, type EnergyStrings } from '@/lib/energy/energyStrings';
+import { ENERGY_ABSENT, formatEnergyString, type EnergyStrings } from '@/lib/energy/energyStrings';
 import type { EnergyRowMeta, EnergyTone, EnergyZoneState } from '@/lib/energy/energyModel';
 
 /**
@@ -446,16 +446,17 @@ export function WatchControl({
   strings,
   onToggle,
 }: {
-  watched: boolean;
+  watched: boolean | null;
   strings: EnergyStrings;
   onToggle?: () => void;
 }): JSX.Element {
   return (
     <button
       type="button"
-      data-energy-watch={watched ? 'active' : 'inactive'}
+      data-energy-watch={watched === null ? 'absent' : watched ? 'active' : 'inactive'}
+      disabled={watched === null}
       onClick={onToggle}
-      aria-pressed={watched}
+      aria-pressed={watched ?? undefined}
       style={{
         ...mono(undefined, watched ? ENERGY_SEMANTIC.mint : ENERGY_INK.quiet),
         border: `1px solid ${watched ? ENERGY_LINE.mint : ENERGY_LINE.achromatic}`,
@@ -467,7 +468,7 @@ export function WatchControl({
         flex: 1,
       }}
     >
-      {watched ? strings.watchWatching : strings.watchNotWatching}
+      {watched === null ? ENERGY_ABSENT : watched ? strings.watchWatching : strings.watchNotWatching}
     </button>
   );
 }

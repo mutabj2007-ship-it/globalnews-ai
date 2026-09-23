@@ -12,6 +12,7 @@ describe('public retained Economy route', () => {
       const service = new EconomyObservationReadService({ read } as unknown as RetainedNisrCpiReader);
       const controller = new EconomyController(service);
       expect(await controller.nisrHeadlineCpi()).toMatchObject({
+        retainedState: refusal === 'NO_ADMITTED_CAPTURE' ? 'NO_CAPTURE' : 'NOT_DISPLAYABLE',
         publishable: false, slot: { kind: 'GAP', reason: refusal === 'PARSE_FAILED' ? 'WITHHELD' : 'NO_PRODUCER' },
       });
       expect(read).toHaveBeenCalledWith('rw-nisr', 'cpi-monthly-en');

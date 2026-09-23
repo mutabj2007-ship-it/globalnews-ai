@@ -24,6 +24,6 @@ export class MarketReadController {
   @Get('observations')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   observations(@Query() query: MarketReadQuery) {
-    return this.repository.latest(query.limit ?? 100);
+    return this.repository.latest(query.limit);
   }
 }

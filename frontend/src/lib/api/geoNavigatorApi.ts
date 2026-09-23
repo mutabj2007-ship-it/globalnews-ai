@@ -53,7 +53,7 @@ import type { Bounds } from '@/lib/map/camera/cameraState';
  * in it.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+// The existing public /geo rewrite resolves the backend in the Next server.
 
 /**
  * A typeahead runs on every keystroke, and a keystroke that has already been
@@ -303,7 +303,7 @@ export async function searchNavigator(
   if (options.limit !== undefined) params.set('limit', String(options.limit));
 
   try {
-    const response = await fetch(`${API_BASE_URL}/geo/search?${params.toString()}`, {
+    const response = await fetch(`/geo/search?${params.toString()}`, {
       cache: 'no-store',
       signal: controller.signal,
     });
@@ -361,7 +361,7 @@ export async function lookupNavigatorPlace(geographyId: string): Promise<Navigat
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/geo/place?${new URLSearchParams({ id: geographyId }).toString()}`,
+      `/geo/place?${new URLSearchParams({ id: geographyId }).toString()}`,
       { cache: 'no-store', signal: controller.signal },
     );
 

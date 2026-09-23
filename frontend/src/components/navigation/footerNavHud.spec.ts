@@ -268,7 +268,8 @@ describe('C2.1 — global shell / brand / navigation foundation', () => {
   it('MobileBottomNav.tsx keeps its real, deliberate item set (Home, World Map, Search, Intelligence anchor) unchanged by the C2.1 visual pass', () => {
     expect(mobileBottomNavSource).toMatch(/href: '\/'/);
     expect(mobileBottomNavSource).toMatch(/href: '\/map'/);
-    expect(mobileBottomNavSource).toMatch(/href: '\/search'/);
+    // CTO routing: Ask dashboard; complete analysis remains /search.
+    expect(mobileBottomNavSource).toMatch(/href: '\/ask'/);
     expect(mobileBottomNavSource).toMatch(/href: '#intelligence-modules'/);
   });
 

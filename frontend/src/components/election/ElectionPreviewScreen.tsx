@@ -1,19 +1,18 @@
 'use client';
 
 import type { JSX } from 'react';
+import { electionBindingStrings, type ElectionBinding } from '@/lib/evidence/electionBinding';
 import { SpecialistHudLine } from '@/components/specialist/SpecialistHudLine';
 import { ObservedIndicatorStrip } from '@/components/specialist/ObservedIndicatorStrip';
 import { HUD_LINE_PX, renderableSlots } from '@/lib/specialist/hudGrammar';
 import {
   ELECTION_COLLAPSED_SLOTS,
-  ELECTION_PREVIEW_SCOPE,
-  ELECTION_SUBJECT_LIST,
   ELECTION_PREVIEW_STRIP,
   ELECTION_TREATMENTS,
   electionPreviewHud,
 } from '@/lib/election/electionPreview';
 import { electionStrings, type ElectionLocale } from '@/lib/election/electionStrings';
-import { Chip, ContestantRow, ELN_MICRO, Panel, Region, ValueSlot } from './ElnParts';
+import { ContestantRow, ELN_MICRO, Panel, Region, ValueSlot } from './ElnParts';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -49,12 +48,14 @@ import { Chip, ContestantRow, ELN_MICRO, Panel, Region, ValueSlot } from './ElnP
  * blocker is IEBC rights rather than engineering, and a surface that visibly
  * mourned the geometry would misreport a rights position as a failure.
  */
-export function ElectionPreviewScreen({ locale, compact }: {
+export function ElectionPreviewScreen({ locale, compact, binding }: {
   locale: ElectionLocale;
   compact: boolean;
+  binding: ElectionBinding;
 }): JSX.Element {
   const t = electionStrings(locale);
-  const hud = electionPreviewHud(t.modeLabel, t.scopeLabel);
+  const copy = electionBindingStrings[locale];
+  const hud = electionPreviewHud(copy.mode, '');
 
   /*
     RC-1 / RC-2 — THE ORDER IS SUPPLIED AND ITS PROVENANCE IS ON THE RECORD.
@@ -69,7 +70,8 @@ export function ElectionPreviewScreen({ locale, compact }: {
     and the landed behaviour for `false` is to render the unavailable state —
     which would blank a region that has subjects to show.
   */
-  const orderReason = ELECTION_SUBJECT_LIST.orderReason;
+  const subjectList = binding.list;
+  const orderReason = subjectList.orderReason;
 
   return (
     <div
@@ -81,9 +83,9 @@ export function ElectionPreviewScreen({ locale, compact }: {
         <h1 className="text-[17px] font-medium leading-[1.3] text-sp-ink">{t.title}</h1>
         {/* The preview marker. It is a statement of fact about the screen, not a badge. */}
         <p data-eln="preview-marker" className={ELN_MICRO}>
-          {t.previewMarker}
+          {binding.state === 'BOUND' ? copy.marker : copy[binding.state]}
         </p>
-        <p className="max-w-[72ch] text-[12px] leading-[1.55] text-sp-ink-3">{t.previewNote}</p>
+        <p className="max-w-[72ch] text-[12px] leading-[1.55] text-sp-ink-3">{copy.note}</p>
       </header>
 
       {/* ── REGION 1 · THE HUD LINE ─────────────────────────────────────── */}
@@ -102,7 +104,7 @@ export function ElectionPreviewScreen({ locale, compact }: {
           control still tells the reader the feature exists.
         */}
         <p data-eln="collapsed-slots" className={ELN_MICRO}>
-          {ELECTION_COLLAPSED_SLOTS.join(' · ')}
+          {[...ELECTION_COLLAPSED_SLOTS, 'SCOPE'].join(' · ')}
         </p>
         <p className="text-[12px] leading-[1.5] text-sp-ink-3">{t.ceilingNote}</p>
       </Region>
@@ -136,39 +138,40 @@ export function ElectionPreviewScreen({ locale, compact }: {
             numbering or directional affordance between rows.
           */}
           <ul data-eln="contestants" className="flex flex-col">
-            {ELECTION_SUBJECT_LIST.rows.map((row) => (
-              <ContestantRow key={row.id} label={row.label} state={row.stateLabel} />
+            {subjectList.rows.map((row) => (
+              <ContestantRow key={row.id} label={<>
+                {row.label}
+                <p>{binding.declarations[row.id].declaredPerson?.partyAsPublished}</p>
+                <p>{binding.declarations[row.id].qualifiedReading ?? binding.declarations[row.id].label}</p>
+                <p>{binding.declarations[row.id].election.administrativeGeography.map(g => g.label).join(' · ')}</p>
+                <p>{binding.declarations[row.id].election.publisherEventLabel}</p>
+                {/* Existing native source disclosure treatment; no new panel or region. */}
+                <details className="mt-[8px]">
+                  <summary className="cursor-pointer">{copy.evidence}</summary>
+                  <p>{copy.authority}: {binding.declarations[row.id].source.publisher} · {binding.declarations[row.id].publisherStatus}</p>
+                  <p>{copy.event}: {binding.declarations[row.id].election.eventId} · {binding.declarations[row.id].election.electionDate} · {binding.declarations[row.id].election.electivePosition}</p>
+                  <p>{copy.place}: {binding.declarations[row.id].election.administrativeGeography.map(g => [g.kind, g.label, g.officialCode].filter(Boolean).join(' · ')).join('; ')}</p>
+                  <p>{copy.declared}: {binding.declarations[row.id].declaredAt ?? '—'}</p>
+                  <p>{copy.captured}: {binding.declarations[row.id].capturedAt}</p>
+                  <p>{copy.publication}</p>
+                  <p>{copy.sourceLanguage}: {binding.declarations[row.id].sourceLanguage}</p>
+                  <a href={binding.declarations[row.id].source.url} target="_blank" rel="noreferrer">{binding.declarations[row.id].citation.locator}</a>
+                  <p>{binding.declarations[row.id].citation.statement}</p>
+                  <p>{copy.limitations}</p>
+                </details>
+              </>} />
             ))}
           </ul>
         </Panel>
-        {/*
-          §5.3 · the three disjoint treatments, rendered side by side so a
-          reviewer can see they cannot be mistaken for one another. No figure is
-          bound, so the VALUE slot carries a placeholder numeral rather than an
-          election number — and the absence slot carries NO numeral at all,
-          which is why a reported `0` and an absent figure can never look alike.
-        */}
         <div data-eln="treatments" className="flex flex-wrap items-center gap-[10px]">
-          <span className={ELN_MICRO}>LOADING</span>
-          <ValueSlot treatment={ELECTION_TREATMENTS.LOADING} label={t.loadingLabel} />
-          <span className={ELN_MICRO}>ABSENCE</span>
-          <ValueSlot treatment={ELECTION_TREATMENTS.ABSENCE} label={t.absenceAssertion} />
-          <span className={ELN_MICRO}>VALUE</span>
-          <ValueSlot treatment={ELECTION_TREATMENTS.VALUE} label="placeholder">0</ValueSlot>
+          {binding.state !== 'BOUND' && <>
+            <ValueSlot treatment={ELECTION_TREATMENTS.ABSENCE} label={copy[binding.state]} />
+            <span className={ELN_MICRO}>{copy[binding.state]}</span>
+          </>}
+          {binding.withheldKinds.length > 0 && <span className={ELN_MICRO}>{copy.unsupported}: {binding.withheldKinds.join(' · ')}</span>}
         </div>
-        {/*
-          §5.1 rendered as TWO ELEMENTS, which is the whole point of the
-          decomposition: `NIEPEŁNE` can render PARTIAL and cannot reach
-          PROVISIONAL, because PROVISIONAL is COMPLETE on that axis.
-        */}
-        <div data-eln="axes" className="flex flex-wrap items-center gap-[8px]">
-          <Chip>{t.reportedness.PARTIAL}</Chip>
-          <Chip>{t.reportedness.COMPLETE}</Chip>
-          <Chip>{t.finality.UNCERTIFIED}</Chip>
-          <Chip>{t.finality.CERTIFIED}</Chip>
-          {/* Amber, in the one place the accepted rule allows: a change. */}
-          <Chip amber>{t.corrected}</Chip>
-        </div>
+        {/* Reportedness/finality axes remain collapsed: declaration does not supply either. */}
+        <div data-eln="axes" className="flex flex-wrap items-center gap-[8px]" />
       </Region>
 
       {/* ── REGION 4 · COMPETING READINGS ───────────────────────────────── */}
@@ -180,14 +183,13 @@ export function ElectionPreviewScreen({ locale, compact }: {
           than rendering an empty dispute.
         */}
         <Panel className="p-[12px]">
-          <p className="text-[12px] leading-[1.5] text-sp-ink-3">{t.readingsLabels.unresolvedNote}</p>
-          <p className={`${ELN_MICRO} mt-[8px]`}>{t.noBoundSubject}</p>
+          <p className="text-[12px] leading-[1.5] text-sp-ink-3">{binding.state === 'BOUND' ? copy.BOUND : copy[binding.state]}</p>
+          <p className={`${ELN_MICRO} mt-[8px]`}>{binding.state === 'BOUND' ? copy.limitations : t.noBoundSubject}</p>
         </Panel>
       </Region>
 
       <footer className={ELN_MICRO}>
-        {ELECTION_PREVIEW_SCOPE.iso2} · {ELECTION_PREVIEW_SCOPE.label} ·{' '}
-        {ELECTION_PREVIEW_SCOPE.presentationCeiling}
+        {binding.state === 'BOUND' ? copy.marker : copy[binding.state]}
       </footer>
     </div>
   );

@@ -94,7 +94,7 @@ export class ElectionReadService {
       records: [],
     };
     // Production HOLD. This switch is also the tested immediate stop control.
-    if (process.env.ELECTION_EVIDENCE_READ_ENABLED !== 'true') return gap;
+    if (process.env.ELECTION_EVIDENCE_READ_ENABLED !== 'true') return { ...gap, reason: 'READER_DISABLED' as const };
     try {
       const bytes = readFileSync(join(__dirname, 'data', `${ADMITTED_BUNDLE_SHA256}.json`));
       if (sha256(bytes) !== ADMITTED_BUNDLE_SHA256) throw new Error('retained digest mismatch');
@@ -105,7 +105,7 @@ export class ElectionReadService {
       );
     } catch {
       this.logger.error('ELECTION_EVIDENCE_WITHHELD: retained evidence validation failed');
-      return gap;
+      return { ...gap, reason: 'VALIDATION_FAILED' as const };
     }
   }
 }

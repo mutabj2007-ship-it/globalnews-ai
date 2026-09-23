@@ -205,7 +205,7 @@ export function EnergySubjectDrawer({ subject, strings, onClose, onOpenLens, onT
 
         {subject.fields.map((field) => (
           <div
-            key={field.key}
+            key={field.id ?? field.key}
             style={{
               padding: '10px 16px',
               borderBottom: `1px solid ${ENERGY_LINE.hairlineFaint}`,
@@ -287,7 +287,7 @@ function EvidenceRow({
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ ...mono(undefined, ENERGY_INK.meta), border: `1px solid ${ENERGY_LINE.chip}`, padding: '2px 5px', borderRadius: ENERGY_RADIUS.chip }}>
-          {strings.sourceClass[artifact.sourceClass]}
+          {artifact.sourceClass === null ? ENERGY_ABSENT : strings.sourceClass[artifact.sourceClass]}
         </span>
         <div style={{ flex: 1 }} />
         <Meta>{artifact.language}</Meta>

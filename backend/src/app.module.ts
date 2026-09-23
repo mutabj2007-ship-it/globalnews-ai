@@ -14,6 +14,7 @@ import { AnalysisModule } from './modules/analysis/analysis.module';
 import { NewsModule } from './modules/news/news.module';
 import { ElectionReadModule } from './modules/election/election-read.module';
 import { EconomyModule } from './modules/economy/economy.module';
+import { EnergyReadModule } from './modules/energy/energy-read.module';
 import { MarketReadModule } from './modules/market-ingest/market-read.module';
 import { ConflictObservationModule } from './modules/conflict-observation/conflict-observation.module';
 import { GeoModule } from './modules/geo/geo.module';
@@ -81,6 +82,7 @@ import {
       navigation cannot activate TED, Eurostat, GLEIF or any other acquisition.
     */
     MarketReadModule,
+    EnergyReadModule,
     /*
       CONFLICT — RETAINED READ ONLY.
 

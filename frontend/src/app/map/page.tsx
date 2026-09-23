@@ -1,3 +1,4 @@
+import { ConflictDashboard } from '@/components/conflict/ConflictDashboard';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
@@ -48,9 +49,14 @@ export async function generateMetadata(): Promise<Metadata> {
  * closed the equivalent gap on the homepage feed. No second language
  * persistence mechanism is introduced.
  */
-export default function MapPage(): JSX.Element {
+export default function MapPage({ searchParams }: { searchParams?: { from?: string; domain?: string; observation?: string; cam?: string } }): JSX.Element {
   const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+
+  // Explicit Part V handoff: retained-only spatial lens, never a Country retrieval.
+  if (searchParams?.from === 'conflict' && searchParams.domain === 'conflict') {
+    return <><LanguageSync /><ConflictDashboard language={language} spatialView /></>;
+  }
 
   /*
     ══ SPATIAL M2 OWNS THE VIEWPORT ═════════════════════════════════════════

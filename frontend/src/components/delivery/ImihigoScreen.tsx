@@ -10,12 +10,14 @@ export function ImihigoScreen({ view, compact, locale }: {
   view: ImihigoView; compact: boolean; locale: DeliveryLocale;
 }): JSX.Element {
   const pl = locale === 'pl';
+  const count = view.current.reduce((total, capture) => total + capture.records.length, 0);
+  const periods = view.current.map(capture => capture.reportPeriod).join(' · ');
   const t = pl ? {
     title: 'Imihigo Intelligence', marker: 'Ocena NISR · zachowane dane źródłowe',
-    note: 'Wyniki oficjalnej oceny NISR. GlobalNews AI nie oblicza ocen ani rankingów.',
+    note: `Imihigo: ocena realizacji zobowiązań publicznych NISR, ${periods}. ${count} jednostek: 27 dystryktów i jeden łączny wynik Kigali. Oficjalne wyniki, bez rankingu produktu.`,
     hud: 'Zakres oceny', commitments: 'Wskaźniki i cele', subjects: 'Oceniane jednostki', readings: 'Źródła i historia wersji',
     absent: 'Brak zachowanych danych. Brak danych nie oznacza słabych wyników.',
-    missing: 'W zachowanym zestawie nie ma celów ani wskaźników przypisanych do poszczególnych jednostek.',
+    missing: 'Brak celów i wskaźników jednostek. Dystrykty: oficjalny „Final Score”, bez jednostki w kolumnie źródła. Kigali: łączny wynik w %. Jeden okres — trend nieustalony.',
     coverage: '27 dystryktów oraz miasto Kigali wraz z podległymi dystryktami. Brak ocen poszczególnych ministerstw i rad w tym zestawie.',
     order: 'Kolejność według etykiety', evidence: 'Dowód źródłowy', source: 'Dokument źródłowy',
     evaluation: 'Ocena', captured: 'Data zachowania', language: 'Język źródła',
@@ -24,10 +26,10 @@ export function ImihigoScreen({ view, compact, locale }: {
     unsupported: 'Niepodany w zachowanym zestawie',
   } : {
     title: 'Imihigo Intelligence', marker: 'NISR evaluation · retained source evidence',
-    note: 'Official NISR evaluation results. GlobalNews AI does not calculate scores or rankings.',
+    note: `Imihigo: NISR evaluation of public performance commitments, ${periods}. ${count} entities: 27 districts and one combined Kigali result. Official results, no product ranking.`,
     hud: 'Evaluation scope', commitments: 'Indicators and targets', subjects: 'Evaluated entities', readings: 'Sources and revision history',
     absent: 'No retained evidence. Missing evidence does not imply underperformance.',
-    missing: 'Entity-level targets and indicators are not available in this retained selection.',
+    missing: 'Entity targets and indicators are unavailable. Districts: official “Final Score”, with no unit stated in the source column. Kigali: combined result in %. One period — trend not established.',
     coverage: '27 districts and the City of Kigali with its affiliated districts. Individual ministry and board scores are not admitted in this selection.',
     order: 'Order by label', evidence: 'Source evidence', source: 'Source document',
     evaluation: 'Evaluation', captured: 'Captured', language: 'Source language',
@@ -41,7 +43,7 @@ export function ImihigoScreen({ view, compact, locale }: {
       <header className="flex flex-col gap-[8px]">
         <h1 className="text-[17px] font-medium leading-[1.3] text-sp-ink">{t.title}</h1>
         <p className={DEL_MICRO}>{t.marker}</p>
-        <p className="max-w-[72ch] text-[12px] leading-[1.55] text-sp-ink-3">{t.note}</p>
+        <p className="max-w-[72ch] text-[12px] leading-[1.55] text-sp-ink-3">{view.state === 'empty' ? t.absent : t.note}</p>
       </header>
       <Region title={t.hud}>
         <Panel className="px-[10px]">
@@ -50,7 +52,7 @@ export function ImihigoScreen({ view, compact, locale }: {
           </div>
         </Panel>
         {view.current.map(capture => <p key={capture.captureId} className={DEL_MICRO}>
-          {capture.reportPeriod} · {t.evaluation}: {capture.evaluationDate.value} ({capture.evaluationDate.precision}) · NISR
+          {capture.reportPeriod} · {t.evaluation}: {capture.evaluationDate.value} ({capture.evaluationDate.precision === 'month' ? (pl ? 'miesiąc' : 'month') : (pl ? 'dzień' : 'day')}) · NISR
         </p>)}
         {view.state === 'empty' && <p data-imihigo="empty" className="text-[12px]">{t.absent}</p>}
       </Region>
@@ -61,13 +63,13 @@ export function ImihigoScreen({ view, compact, locale }: {
         {view.current.map(capture => <Panel key={capture.captureId}>
           <ul data-del="subjects" className="flex flex-col">
             {capture.records.map(row => <SubjectRow key={row.entity} label={row.entity} state={`NISR · ${row.result.value}${row.result.unit ?? ''}`}>
-              <p>{row.result.label} · {row.entityClass} · {capture.cycle} · {t.language}: {capture.sourceLanguage}</p>
+              <p><span lang={capture.sourceLanguage}>{row.result.label}</span> · {row.entityClass === 'district' ? (pl ? 'dystrykt' : 'district') : row.entityClass === 'city-of-kigali' ? (pl ? 'Kigali łącznie' : 'combined Kigali') : row.entityClass} · {capture.cycle} · {t.language}: {capture.sourceLanguage}</p>
               <details className="mt-[8px]">
                 <summary className="cursor-pointer">{t.evidence}</summary>
-                <p>{row.provenance.section} · PDF {row.provenance.pdfPage} / {row.provenance.printedPage}</p>
+                <p lang={capture.sourceLanguage}>{row.provenance.section} · PDF {row.provenance.pdfPage} / {row.provenance.printedPage}</p>
                 {row.provenance.columnHeader && <p lang={capture.sourceLanguage}>{row.provenance.columnHeader}</p>}
                 <blockquote lang={capture.sourceLanguage}>{row.provenance.quote}</blockquote>
-                <p>{t.target}: {row.target?.value ?? t.unsupported} · {t.indicator}: {row.indicator?.value ?? t.unsupported}</p>
+                {(row.target || row.indicator) && <p>{row.target && `${t.target}: ${row.target.value}`} {row.indicator && `${t.indicator}: ${row.indicator.value}`}</p>}
                 <a className="underline" href={`${capture.sourceUrl}#page=${row.provenance.pdfPage}`} target="_blank" rel="noreferrer">{t.source} · NISR</a>
               </details>
             </SubjectRow>)}
@@ -81,7 +83,7 @@ export function ImihigoScreen({ view, compact, locale }: {
           {view.history.map(capture => <details key={capture.captureId} className="mt-[12px] min-w-0 break-words text-[12px] leading-[1.6]">
             <summary className="cursor-pointer">{capture.sourceDocument} · {t.revision}: {capture.revisionOf === null ? t.original : capture.revisionLabel}</summary>
             <p>{capture.publisher} · {capture.license}</p>
-            <p>{t.evaluation}: {capture.evaluationDate.value} ({capture.evaluationDate.precision})</p>
+            <p>{t.evaluation}: {capture.evaluationDate.value} ({capture.evaluationDate.precision === 'month' ? (pl ? 'miesiąc' : 'month') : (pl ? 'dzień' : 'day')})</p>
             <p>{t.captured}: <time dateTime={capture.capturedAt}>{capture.capturedAt}</time></p>
             <p>{t.language}: {capture.sourceLanguage} · {capture.parser} · {capture.decoder}</p>
             <p className="break-all">SHA256: {capture.sha256}</p>

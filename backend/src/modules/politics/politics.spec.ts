@@ -124,7 +124,7 @@ describe('public GET has no acquisition', () => {
       expect(http).not.toHaveBeenCalled();
       expect(https).not.toHaveBeenCalled();
       const response = await request(app.getHttpServer()).get('/politics/observations').expect(200);
-      expect(response.body).toEqual({ observations: [], absence: 'NOT_ASSESSED', truncated: false, acquisition: 'RETAINED_ONLY' });
+      expect(response.body).toEqual({ observations: [], absence: 'NOT_ASSESSED', truncated: false, acquisition: 'RETAINED_ONLY', coverage: { checkedCaptures: 0, admittedObservations: 0, withheld: false } });
       for (const query of ['limit=0', 'limit=101', 'limit=NaN', 'limit=1&limit=2', 'subjectId=']) {
         await request(app.getHttpServer()).get('/politics/observations?' + query).expect(400);
       }

@@ -350,10 +350,24 @@ describe('6 · Energy can consume the shared union and mint no ENE_* twins', () 
     expect(DECLARES_LABELS.test(sec)).toBe(true);
   });
 
-  it('Energy declares nothing yet — this round prepares the dependency only', () => {
+  it('retained Energy contracts mint no domain-specific absence twins', () => {
     const energyDir = join(SRC, 'energy');
-    let present = false;
-    try { present = statSync(energyDir).isDirectory(); } catch { present = false; }
-    expect(`shared/src/energy exists: ${present}`).toBe('shared/src/energy exists: false');
+    expect(statSync(energyDir).isDirectory()).toBe(true);
+    const declaresTwin = /\b(?:type|interface|const|enum)\s+(?:ENE_\w*|EnergyAbsence\w*)\b/;
+    const inspect = (dir: string): void => {
+      for (const name of readdirSync(dir)) {
+        const file = join(dir, name);
+        if (statSync(file).isDirectory()) inspect(file);
+        else if (name.endsWith('.ts') && !name.endsWith('.spec.ts')) {
+          const code = readFileSync(file, 'utf-8')
+            .replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
+          expect({ file: name, duplicateAbsence: declaresTwin.test(code) })
+            .toEqual({ file: name, duplicateAbsence: false });
+        }
+      }
+    };
+    inspect(energyDir);
+    expect(declaresTwin.test("export const ENE_NOT_ASSESSED = 'NOT_ASSESSED';")).toBe(true);
+    expect(declaresTwin.test("export type EnergyAbsenceState = 'NOT_ASSESSED';")).toBe(true);
   });
 });

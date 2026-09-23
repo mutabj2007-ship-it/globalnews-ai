@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { usePathname } from 'next/navigation';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { analyzeNews } from '@/lib/api/analysisApi';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClient';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
+import { dashboardHref } from '@/lib/ask/dashboardContext';
+import { ASK_CANONICAL_ROUTE } from '@/lib/ask/askFrame';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
 import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
@@ -85,7 +88,14 @@ interface AskAiDockProps {
   language?: LanguageCode;
 }
 
-export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
+export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
+  const pathname = usePathname();
+  // The dedicated dashboard owns its composer; unmount the global dock entirely.
+  if (pathname === ASK_CANONICAL_ROUTE) return null;
+  return <GlobalAskAiDock {...props} />;
+}
+
+function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
@@ -125,7 +135,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
    * the clearer one; at and above `spatial` it returns the released
    * placement without measuring anything.
    */
-  const anchor = useLauncherAnchor();
+  const { anchor, bottomOffset, coveredByDialog } = useLauncherAnchor();
 
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
@@ -274,7 +284,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           command bar, the mode badge and the reader's own question
           heading — which is where R1 put the launcher, and was wrong.
         */
-        style={anchor === 'top' ? { top: COMPACT_TOP_PX, bottom: 'auto' } : undefined}
+        style={{ ...(anchor === 'top' ? { top: COMPACT_TOP_PX, bottom: 'auto' } : { bottom: bottomOffset }), visibility: coveredByDialog && !isOpen ? 'hidden' : undefined }}
         data-ask-anchor={anchor}
         className="fixed end-4 bottom-4 z-40 inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink-primary shadow-lg transition-colors spatial:bottom-4 spatial:top-auto hover:border-signal focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
       >
@@ -300,7 +310,7 @@ export function AskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           ].join(' ')}
         >
           <header className="flex items-center justify-between gap-3 border-b border-border bg-surface-raised/95 px-4 py-3 backdrop-blur">
-            <h2 className="font-display text-base font-medium text-ink-primary">{t.title}</h2>
+            <h2 className="font-display text-base font-medium text-ink-primary"><a data-ask="dashboard-entry" href={dashboardHref(question || (phase.kind !== 'idle' ? phase.question : ''), storyContext)}>{t.title} ↗</a></h2>
             <button
               type="button"
               data-ask="close"

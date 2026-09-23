@@ -1,0 +1,38 @@
+/* Part V R2 inherits Spatial tokens and rail geometry; no alternate visual system. */
+.conflict-dashboard [data-gn='queue-header'] > h3 > span {
+  display: none;
+} /* no numeric conflict-absence claim */
+.conflict-dashboard [data-gn='conflict-workspace'] {
+  overflow-wrap: anywhere;
+}
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .conflict-dashboard [data-gn='global-map-shell'] {
+    grid-template-columns: 52px 1fr 320px !important;
+  }
+}
+@media (min-width: 861px) and (max-width: 1023px) {
+  .conflict-dashboard [data-gn='global-map-shell'] {
+    grid-template-columns: 52px 1fr 320px !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .conflict-dashboard [data-gn='map-rail-holder'] {
+    width: 320px;
+  }
+}
+@media (min-width: 861px) and (max-width: 1023px) {
+  .conflict-dashboard [data-gn='global-map-shell'] {
+    position: relative;
+    grid-template-columns: 52px 1fr !important;
+  }
+  .conflict-dashboard [data-gn='map-rail-holder'] {
+    position: absolute;
+    right: 0;
+    top: 44px;
+    bottom: 0;
+    height: auto;
+    width: 320px;
+    max-width: 85%;
+  }
+}

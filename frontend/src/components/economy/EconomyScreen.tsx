@@ -1,4 +1,5 @@
 'use client';
+import { retainedEconomyStrings } from '@/lib/economy/strings';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EconomyLocale } from '@/lib/economy/strings';
@@ -465,7 +466,7 @@ export function EconomyScreen({
                 opacity: hasTimeline ? 1 : 0.55,
               }}
             >
-              {hasTimeline ? 'Timeline · retained release history' : 'No attention ranking · open retained sources below'}
+              {hasTimeline ? retainedEconomyStrings(locale).timeline : retainedEconomyStrings(locale).noRanking}
             </button>
             <button
               type="button"
@@ -484,7 +485,7 @@ export function EconomyScreen({
                 padding: '10px 12px',
               }}
             >
-              Sources · observation provenance
+              {retainedEconomyStrings(locale).sources}
             </button>
           </div>
         ) : drawer === null ? (
@@ -502,7 +503,7 @@ export function EconomyScreen({
               rows={subject.attention} locale={locale}
               selectedId={selectedAttentionId} onSelect={selectAttention}
               railPx={ATTENTION_RAIL_PX}
-              emptyMessage="No attention ranking has been formed — no assessment producer is active."
+              emptyMessage={retainedEconomyStrings(locale).attentionEmpty}
             />
             <WatchAndNextStep
               subject={subject} locale={locale}
@@ -554,7 +555,7 @@ export function EconomyScreen({
             */}
             {drawer === 'SOURCES' && (
               retainedObservation
-                ? <RetainedSourceDetails observation={retainedObservation} />
+                ? <RetainedSourceDetails observation={retainedObservation} locale={locale} />
                 : <div style={{ padding: '16px 18px' }}><ObservationAbsenceDetail locale={locale} /></div>
             )}
           </EconomyDrawer>
@@ -603,9 +604,10 @@ function UnavailableDrawerMessage({ text }: { readonly text: string }): JSX.Elem
   );
 }
 
-function RetainedSourceDetails({ observation }: { readonly observation: RetainedObservation }): JSX.Element {
+export function RetainedSourceDetails({ observation, locale }: { readonly observation: RetainedObservation; readonly locale: EconomyLocale }): JSX.Element {
+  const t = economyStrings(locale);
   const p = observation.provenance;
-  const row = (label: string, value: string) => (
+  const row = (label: string, value: string | JSX.Element) => (
     <div key={label} style={{ display: 'grid', gridTemplateColumns: '116px 1fr', gap: '10px', paddingBlock: '7px', borderBottom: `1px solid ${ECON_LINE.hairline}` }}>
       <span style={{ fontFamily: ECON_MONO, fontSize: '10px', letterSpacing: '0.07em', textTransform: 'uppercase', color: ECON_INK.label }}>{label}</span>
       <span style={{ fontSize: '12px', lineHeight: '1.5', color: ECON_INK.secondary, overflowWrap: 'anywhere' }}>{value}</span>
@@ -613,17 +615,17 @@ function RetainedSourceDetails({ observation }: { readonly observation: Retained
   );
   return (
     <div data-econ="retained-source-details" style={{ padding: '16px 18px' }}>
-      {row('Source', p.institution)}
-      {row('Jurisdiction', p.jurisdiction)}
-      {row('Reference period', p.referencePeriod)}
-      {row('Published', p.publicationDateStated)}
-      {row('Retrieved', p.retrievedAt)}
-      {row('Licence', p.licence)}
-      {row('Index base', p.basePeriod)}
-      {row('Language', p.sourceLanguage)}
-      {row('Artifact', `sha256 ${p.contentAddress}`)}
+      {row(retainedEconomyStrings(locale).source, p.sourceUrl ? <a className="underline" lang={p.sourceLanguage} href={p.sourceUrl} target="_blank" rel="noreferrer" aria-label={retainedEconomyStrings(locale).openSource}>{p.institution}</a> : <span lang={p.sourceLanguage}>{p.institution}</span>)}
+      {row(retainedEconomyStrings(locale).jurisdiction, p.jurisdiction)}
+      {row(retainedEconomyStrings(locale).period, p.referencePeriod)}
+      {row(retainedEconomyStrings(locale).published, p.publicationDateStated)}
+      {row(retainedEconomyStrings(locale).retrieved, p.retrievedAt)}
+      {row(retainedEconomyStrings(locale).licence, p.licence)}
+      {row(retainedEconomyStrings(locale).base, p.basePeriod)}
+      {row(retainedEconomyStrings(locale).language, p.sourceLanguage)}
+      {row(retainedEconomyStrings(locale).artifact, `sha256 ${p.contentAddress}`)}
       {row('Parser', `${p.parserId} ${p.parserVersion}`)}
-      {row('Extractor', `${p.extractorId} ${p.extractorVersion}`)}
+      {row(retainedEconomyStrings(locale).extractor, `${p.extractorId} ${p.extractorVersion}`)}
     </div>
   );
 }
@@ -674,7 +676,7 @@ function WatchAndNextStep({
           {t.watchNextStep}
         </span>
         <span style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 9px)', letterSpacing: 'calc(0.08em * var(--ar-ls-mul, 1))', textTransform: 'uppercase', color: ECON_INK.label }}>
-          {enabled.length} watched
+          {enabled.length} {retainedEconomyStrings(locale).watched}
         </span>
       </div>
       {/* Decomposed, always. Never one aggregate economy value. */}
@@ -752,17 +754,17 @@ function EconomyFooterLane({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
         <span style={{ fontFamily: ECON_MONO, fontSize: 'max(var(--ar-fs-min, 0px), 9px)', letterSpacing: 'calc(0.08em * var(--ar-ls-mul, 1))', textTransform: 'uppercase', color: ECON_INK.label }}>
-          Policy &amp; release
+          {retainedEconomyStrings(locale).policy}
         </span>
         {subject.policyLane.map((e) => (
           <span key={e.id} style={{ fontSize: 'max(var(--ar-fs-min, 0px), 12px)', color: ECON_INK.secondary }}>{e.label}</span>
         ))}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', alignItems: 'center' }}>
-        <button type="button" style={{ ...action, ...(!triadAvailable ? disabledStyle : {}) }} disabled={!triadAvailable} title={triadAvailable ? undefined : 'No observation triad is available.'} onClick={onOpenHud}>Explain triad</button>
-        <button type="button" style={{ ...action, ...(!revisionAvailable ? disabledStyle : {}) }} disabled={!revisionAvailable} title={revisionAvailable ? undefined : 'No revision history is retained yet.'} onClick={onOpenRevision}>Revisions</button>
-        <button type="button" style={{ ...action, ...(!competingAvailable ? disabledStyle : {}) }} disabled={!competingAvailable} title={competingAvailable ? undefined : 'No competing reading set is retained yet.'} onClick={onOpenCompeting}>Competing readings</button>
-        <button type="button" style={{ ...action, ...(!policyAvailable ? disabledStyle : {}) }} disabled={!policyAvailable} title={policyAvailable ? undefined : 'No policy event is retained for this observation.'} onClick={onOpenPolicy}>Policy event</button>
+        <button type="button" style={{ ...action, ...(!triadAvailable ? disabledStyle : {}) }} disabled={!triadAvailable} title={triadAvailable ? undefined : 'No observation triad is available.'} onClick={onOpenHud}>{retainedEconomyStrings(locale).explain}</button>
+        <button type="button" style={{ ...action, ...(!revisionAvailable ? disabledStyle : {}) }} disabled={!revisionAvailable} title={revisionAvailable ? undefined : 'No revision history is retained yet.'} onClick={onOpenRevision}>{retainedEconomyStrings(locale).revisions}</button>
+        <button type="button" style={{ ...action, ...(!competingAvailable ? disabledStyle : {}) }} disabled={!competingAvailable} title={competingAvailable ? undefined : 'No competing reading set is retained yet.'} onClick={onOpenCompeting}>{retainedEconomyStrings(locale).readings}</button>
+        <button type="button" style={{ ...action, ...(!policyAvailable ? disabledStyle : {}) }} disabled={!policyAvailable} title={policyAvailable ? undefined : 'No policy event is retained for this observation.'} onClick={onOpenPolicy}>{retainedEconomyStrings(locale).policyEvent}</button>
         {cost !== null && (
           <button
             type="button"
@@ -774,7 +776,7 @@ function EconomyFooterLane({
             onClick={() => onRequestWorkspace?.('DRIVER_DECOMPOSITION')}
             style={{ ...action, color: ECON_INK.primary, border: `1px solid ${ECON_LINE.emphasis}`, background: ECON_SURFACE.selected, ...(!analysisAvailable ? disabledStyle : {}) }}
           >
-            Run analysis · {cost} sand · {t.remainingAllowance} {ai.remainingSand}
+            {retainedEconomyStrings(locale).analyze} · {cost} sand · {t.remainingAllowance} {ai.remainingSand}
           </button>
         )}
       </div>

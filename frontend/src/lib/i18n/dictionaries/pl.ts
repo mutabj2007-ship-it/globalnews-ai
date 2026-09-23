@@ -834,7 +834,7 @@ export const pl: Dictionary = {
     // Milestone #57 — Optional Accounts.
     history: 'Historia',
     /* SUPPORT CLOSURE — patrz komentarz przy tych kluczach w en.ts. */
-    help: 'Pomoc i wsparcie',
+    help: 'Wsparcie',
     support: 'Pomoc',
     settings: 'Ustawienia',
     signOut: 'Wyloguj się',
@@ -864,8 +864,8 @@ export const pl: Dictionary = {
     // odpowiadają labelKey z navModel.ts, dzięki czemu każda widoczna
     // etykieta jest tłumaczona.
     navItemLabels: {
-      home: 'Strona główna',
-      worldMap: 'Mapa świata',
+      home: 'Start',
+      worldMap: 'Mapa',
       world: 'Świat',
       politics: 'Polityka',
       business: 'Biznes',

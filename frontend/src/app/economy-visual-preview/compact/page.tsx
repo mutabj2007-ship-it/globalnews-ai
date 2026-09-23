@@ -51,11 +51,12 @@ function economyLocale(): EconomyLocale {
 export default async function EconomyVisualPreviewCompactPage(): Promise<JSX.Element> {
   const locale = economyLocale();
   const read = await readEconomyObservations();
-  const subject = economySubjectFromRead(read);
+  const subject = economySubjectFromRead(read, locale);
+  const retained = read.kind === 'OBSERVATIONS' ? read.observations[0] : undefined;
   return (
     <ScriptRun locale={locale} step="wrapping" as="div">
       <main style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <AlphaVisualPreviewMarker locale={locale} />
+        <AlphaVisualPreviewMarker locale={locale} observedGeography={retained?.geographyLabel} />
         {/*
           THE SAME REAL FIGURE AT COMPACT WIDTH. The panel wraps rather than scrolling —
           the provenance grid collapses to one column below 240px of free width — so no
@@ -66,6 +67,7 @@ export default async function EconomyVisualPreviewCompactPage(): Promise<JSX.Ele
             subject={subject}
             locale={locale}
             data={economyCapabilityFrom(read)}
+            retainedObservation={retained}
           />
         </div>
       </main>

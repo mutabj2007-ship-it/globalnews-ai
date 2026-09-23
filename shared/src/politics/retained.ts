@@ -21,4 +21,6 @@ export interface PoliticsReadResponse {
   readonly absence: 'NOT_ASSESSED' | 'EVIDENCE_WITHHELD' | null;
   readonly truncated: boolean;
   readonly acquisition: 'RETAINED_ONLY';
+  /** Whole-ledger admission inventory, before subject filtering or pagination. */
+  readonly coverage?: { readonly checkedCaptures: number; readonly admittedObservations: number; readonly withheld: boolean };
 }

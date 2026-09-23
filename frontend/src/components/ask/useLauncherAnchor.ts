@@ -18,7 +18,7 @@ import {
  * pure; this only supplies it with measurements.
  *
  * WHEN IT RE-EVALUATES: on mount, on resize/orientation change, and on
- * pathname change — the three moments at which "what is under the
+ * pathname change, and compact boundary/dialog mounts — moments when "what is under the
  * launcher" can differ. `usePathname` is the only page fact this reads,
  * and it is read for TIMING, not to branch on a route: there is no route
  * list anywhere in this feature.
@@ -28,7 +28,7 @@ import {
  * measurement taken in the same tick as mount sees a page that has not
  * drawn its chrome yet and would choose from an empty document.
  */
-export function useLauncherAnchor(): LauncherAnchor {
+export function useLauncherAnchor(): { anchor: LauncherAnchor; bottomOffset: number; coveredByDialog: boolean } {
   const pathname = usePathname();
   /*
    * `bottom` is the SSR and first-paint value, which is the released
@@ -37,23 +37,35 @@ export function useLauncherAnchor(): LauncherAnchor {
    * rather than flashing from a guess.
    */
   const [anchor, setAnchor] = useState<LauncherAnchor>('bottom');
+  const [bottomOffset, setBottomOffset] = useState(LAUNCHER_GAP);
+  const [coveredByDialog, setCoveredByDialog] = useState(false);
 
   const measure = useCallback((): void => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
     const viewportWidth = window.innerWidth;
     if (viewportWidth >= SPATIAL_FROM) {
+      setBottomOffset(LAUNCHER_GAP);
+      setCoveredByDialog(false);
       setAnchor(chooseAnchor({ viewportWidth, topCollisions: 0, bottomCollisions: 0 }));
       return;
     }
 
+    // Existing compact navigation declares its occupied edge. Reuse the released
+    // launcher gap above it; no dashboard row, dimension or route lookup is introduced.
+    const boundary = document.querySelector('[data-launcher-bottom-boundary]');
+    const rect = boundary?.getBoundingClientRect();
+    const offset = rect && rect.width > 0 && rect.top < window.innerHeight
+      ? Math.max(LAUNCHER_GAP, window.innerHeight - rect.top + LAUNCHER_GAP) : LAUNCHER_GAP;
+    setBottomOffset(offset);
+    setCoveredByDialog(document.querySelector('[data-launcher-dialog]') !== null);
     const left = viewportWidth - LAUNCHER_GAP - LAUNCHER_W;
     const right = viewportWidth - LAUNCHER_GAP;
     const candidates = {
       top: { top: COMPACT_TOP_PX, bottom: COMPACT_TOP_PX + LAUNCHER_H },
       bottom: {
-        top: window.innerHeight - LAUNCHER_GAP - LAUNCHER_H,
-        bottom: window.innerHeight - LAUNCHER_GAP,
+        top: window.innerHeight - offset - LAUNCHER_H,
+        bottom: window.innerHeight - offset,
       },
     };
 
@@ -97,9 +109,12 @@ export function useLauncherAnchor(): LauncherAnchor {
       /* a second pass after the client surfaces have settled */
       window.setTimeout(measure, 400);
     });
+    const observer = new MutationObserver(measure);
+    observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener('resize', measure);
     window.addEventListener('orientationchange', measure);
     return () => {
+      observer.disconnect();
       window.cancelAnimationFrame(raf);
       window.removeEventListener('resize', measure);
       window.removeEventListener('orientationchange', measure);
@@ -123,6 +138,9 @@ export function useLauncherAnchor(): LauncherAnchor {
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
     if (anchor !== 'bottom' || window.innerWidth >= SPATIAL_FROM) return undefined;
+    // A bounded compact frame owns its internal overflow; its tab bar already clears
+    // the launcher. Do not add document height around that accepted geometry.
+    if (document.querySelector('[data-launcher-bottom-boundary]')) return undefined;
     const body = document.body;
     const previous = body.style.paddingBottom;
     body.style.paddingBottom = `calc(${previous === '' ? '0px' : previous} + ${LAUNCHER_H + LAUNCHER_GAP * 2}px)`;
@@ -131,5 +149,5 @@ export function useLauncherAnchor(): LauncherAnchor {
     };
   }, [anchor, pathname]);
 
-  return anchor;
+  return { anchor, bottomOffset, coveredByDialog };
 }

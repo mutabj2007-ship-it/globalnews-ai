@@ -223,12 +223,12 @@ describe('the five sign-in entry points', () => {
    * Files excluded, with justification:
    *  - *.spec.ts / *.spec.tsx : a test that FORBIDS a shape has to be able to
    *    write that shape down. Specs are also never shipped to a browser.
-   *  - lib/api/accountBase.ts : the single module permitted to define the
+   *  - lib/api/accountLinks.ts : the single module permitted to define the
    *    first-party sign-in path. That is the whole point of it existing.
    */
   function isExcludedFile(relativePath: string): boolean {
     if (/\.spec\.tsx?$/.test(relativePath)) return true;
-    return relativePath.replace(/\\/g, '/') === 'lib/api/accountBase.ts';
+    return relativePath.replace(/\\/g, '/') === 'lib/api/accountLinks.ts';
   }
 
   function collectSourceFiles(root: string): string[] {
