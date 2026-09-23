@@ -93,8 +93,23 @@ export class ElectionReadService {
       locale,
       records: [],
     };
-    // Production HOLD. This switch is also the tested immediate stop control.
+    // Public gate. Alpha Admin review uses review() below; this stop control stays intact.
     if (process.env.ELECTION_EVIDENCE_READ_ENABLED !== 'true') return { ...gap, reason: 'READER_DISABLED' as const };
+    return this.review(locale);
+  }
+
+  /**
+   * Validated retained bundle for authenticated Admin/Product Owner review.
+   * This deliberately ignores only the PUBLIC read switch; digest validation,
+   * bundle validation, expiry semantics and neutral projection are identical.
+   */
+  review(locale: 'en' | 'pl') {
+    const gap = {
+      state: 'COVERAGE_GAP' as const,
+      domain: 'ELECTION' as const,
+      locale,
+      records: [],
+    };
     try {
       const bytes = readFileSync(join(__dirname, 'data', `${ADMITTED_BUNDLE_SHA256}.json`));
       if (sha256(bytes) !== ADMITTED_BUNDLE_SHA256) throw new Error('retained digest mismatch');
