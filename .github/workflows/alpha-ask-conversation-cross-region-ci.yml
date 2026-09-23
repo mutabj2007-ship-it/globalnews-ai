@@ -36,6 +36,20 @@ jobs:
           npm test --workspace=frontend -- --runInBand src/components/ask/askAiDock.spec.ts
           npm test --workspace=frontend -- --runInBand src/components/analysis-frame/phoneWidthFrame.spec.ts
       - name: Frontend build
-        run: npm run build:frontend
+        run: |
+          attempt=1
+          while true; do
+            if npm run build:frontend; then
+              break
+            fi
+            if [ "$attempt" -ge 3 ]; then
+              echo "Frontend build failed after $attempt attempts"
+              exit 1
+            fi
+            echo "Frontend build attempt $attempt failed; retrying from a clean .next directory"
+            rm -rf frontend/.next
+            attempt=$((attempt + 1))
+            sleep 2
+          done
       - name: Backend build
         run: npm run build:backend
