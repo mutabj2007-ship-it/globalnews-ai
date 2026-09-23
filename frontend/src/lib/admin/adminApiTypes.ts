@@ -307,3 +307,22 @@ export type {
 } from '@globalnews-ai/shared';
 
 export { ADMIN_SUPPORT_STATUS_ACTIONS, SUPPORT_TICKET_STATUSES } from '@globalnews-ai/shared';
+
+
+/** Product Owner Alpha inspection contract. Read-only and admin-gated. */
+export interface AdminAlphaReviewDomain {
+  id: string;
+  route: string;
+  state: 'RECORDS' | 'EMPTY' | 'UNAVAILABLE' | 'SURFACE_ONLY';
+  count: number | null;
+  publicGate: 'OPEN' | 'CLOSED' | 'NOT_APPLICABLE';
+  records: unknown[];
+  note: string;
+}
+
+export interface AdminAlphaReviewResponse {
+  scope: 'ALPHA_ADMIN_REVIEW';
+  generatedAt: string;
+  domains: AdminAlphaReviewDomain[];
+  omissions: string[];
+}

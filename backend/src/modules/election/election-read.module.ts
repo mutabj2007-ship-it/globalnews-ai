@@ -13,5 +13,5 @@ export class ElectionController {
   }
 }
 /** No acquisition provider, scheduler, credentials, or network client in this graph. */
-@Module({ controllers: [ElectionController], providers: [ElectionReadService] })
+@Module({ controllers: [ElectionController], providers: [ElectionReadService], exports: [ElectionReadService] })
 export class ElectionReadModule {}

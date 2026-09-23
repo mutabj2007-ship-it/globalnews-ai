@@ -61,6 +61,7 @@ export const ADMIN_API = {
   // these belong here rather than in a third constant.
   analyticsUsage: '/admin/analytics/usage',
   analyticsCoverageGeography: '/admin/analytics/coverage-geography',
+  alphaReview: '/admin/alpha-review',
   users: '/admin/users',
 } as const;
 

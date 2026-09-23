@@ -7,6 +7,7 @@ import { RequireCapability } from './rbac/require-capability.decorator';
 import { AdminSystemService } from './system/admin-system.service';
 import { AdminNewsService } from './news/admin-news.service';
 import { AdminAnalyticsService } from './analytics/admin-analytics.service';
+import { AlphaReviewService, type AlphaReviewResponse } from './alpha-review.service';
 import type {
   AdminNewsProvidersResponse,
   AdminSystemHealthResponse,
@@ -53,6 +54,7 @@ export class AdminReadonlyController {
     private readonly systemService: AdminSystemService,
     private readonly newsService: AdminNewsService,
     private readonly analyticsService: AdminAnalyticsService,
+    private readonly alphaReviewService: AlphaReviewService,
   ) {}
 
   /** GET /admin/system/health — the ADMIN-07 eight-component probe fan-in. */
@@ -94,6 +96,19 @@ export class AdminReadonlyController {
   @RequireCapability(CAPABILITIES.AnalyticsView)
   coverageGeography(): Promise<AdminCoverageGeographyResponse> {
     return this.analyticsService.coverageGeography();
+  }
+
+
+  /**
+   * GET /admin/alpha-review — Product Owner inspection of what Alpha already retains.
+   *
+   * EvidenceExport deliberately excludes SUPPORT. The route is read-only and cannot
+   * activate a provider, change an admission/public-disclosure decision or publish.
+   */
+  @Get('alpha-review')
+  @RequireCapability(CAPABILITIES.EvidenceExport)
+  alphaReview(): Promise<AlphaReviewResponse> {
+    return this.alphaReviewService.read();
   }
 
   /**
