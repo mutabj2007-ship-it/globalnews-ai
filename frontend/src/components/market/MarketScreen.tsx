@@ -197,6 +197,11 @@ export function MarketScreen({ locale, read, procurement }: {
             {t.reader.headline}
           </h1>
           <MarketStatus held={held} t={t} />
+          {noticeHeld > 0 && (
+            <span data-mkt="notice-held" style={{ ...micro, color: MKT_INK.secondary }}>
+              {t.procurement.notice} · {noticeHeld}
+            </span>
+          )}
         </div>
       </header>
 
