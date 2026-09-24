@@ -35,6 +35,7 @@ import {
 } from '@/lib/map/camera/cameraState';
 import type { EvidenceRecord } from '@/lib/map/evidence/evidenceModel';
 import { evidencePlaceMarks } from '@/lib/map/evidence/evidencePlaceMarks';
+import { declutterProjectedRipples } from '@/lib/map/evidence/rippleDeclutter';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import type { LocationProvenance } from '@/lib/spatial/spatialPrecision';
 import { type LabelCandidate, placeLabels } from '@/lib/map/labels/labelPlacement';
@@ -1757,7 +1758,9 @@ export function EvidenceMapCanvas({
       }
     }
 
-    setRipples(active);
+    setRipples(
+      declutterProjectedRipples(active, map.getZoom(), DESIGN_RIPPLE.diameter),
+    );
   }, [evidenceRecords, labelNames, language, layers?.labels, layers?.evidencePoints]);
 
 
