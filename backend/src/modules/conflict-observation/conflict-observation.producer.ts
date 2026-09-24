@@ -13,6 +13,12 @@ import {
   normalizeUcdpGed,
   type ReviewedUcdpCapture,
 } from './ucdp-ged.normalizer';
+import {
+  MAX_UCDP_CANDIDATE_CSV_BYTES,
+  normalizeUcdpCandidateCsv,
+  type ReviewedUcdpCandidateCsvCapture,
+} from './ucdp-candidate-csv.normalizer';
+import { UCDP_CANDIDATE_RIGHTS } from './ucdp-candidate.reviewed';
 
 export const REVIEWED_UCDP_CAPTURES = Symbol('REVIEWED_UCDP_CAPTURES');
 
@@ -21,7 +27,8 @@ export const REVIEWED_UCDP_CAPTURES = Symbol('REVIEWED_UCDP_CAPTURES');
 export class ConflictObservationProducer {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(REVIEWED_UCDP_CAPTURES) private readonly reviewed: readonly ReviewedUcdpCapture[],
+    @Inject(REVIEWED_UCDP_CAPTURES)
+    private readonly reviewed: readonly (ReviewedUcdpCapture | ReviewedUcdpCandidateCsvCapture)[],
   ) {}
 
   async admitRetained(retrievalId: string, runId: string) {
@@ -51,10 +58,16 @@ export class ConflictObservationProducer {
           capture.refusalKey !== null ||
           capture.httpStatus !== 200 ||
           !capture.payloadRetentionPermitted ||
-          capture.parserId !== 'ucdp-ged-json' ||
+          capture.rightsGrade !== UCDP_CANDIDATE_RIGHTS.rightsGrade ||
+          !capture.rightsInstrumentRef?.trim() ||
           capture.parserVersion !== '1' ||
           !capture.parsedAt ||
-          capture.mediaType.split(';')[0].trim().toLowerCase() !== 'application/json' ||
+          !(
+            (capture.parserId === 'ucdp-ged-json' &&
+              capture.mediaType.split(';')[0].trim().toLowerCase() === 'application/json') ||
+            (capture.parserId === 'ucdp-candidate-csv' &&
+              capture.mediaType.split(';')[0].trim().toLowerCase() === 'text/csv')
+          ) ||
           capture.payload?.storageState !== 'RETAINED' ||
           !capture.payload.bytes
         ) {
@@ -62,7 +75,10 @@ export class ConflictObservationProducer {
         }
         const bytes = capture.payload.bytes;
         if (
-          bytes.byteLength > MAX_CONFLICT_CAPTURE_BYTES ||
+          bytes.byteLength >
+            (capture.parserId === 'ucdp-candidate-csv'
+              ? MAX_UCDP_CANDIDATE_CSV_BYTES
+              : MAX_CONFLICT_CAPTURE_BYTES) ||
           bytes.byteLength !== capture.byteLength ||
           bytes.byteLength !== capture.payload.byteLength ||
           capture.mediaType !== capture.payload.mediaType
@@ -75,11 +91,23 @@ export class ConflictObservationProducer {
         }
         const profile = this.reviewed.find((entry) => entry.sha256 === hash);
         if (!profile) throw new ConflictAdmissionRefused('SCHEMA_NOT_CONFIRMED_BY_CAPTURE');
-        const observations = normalizeUcdpGed(bytes, profile, {
+        const context = {
           retrievalId,
           runId,
           ingestedAt: new Date().toISOString(),
-        });
+        };
+        const observations =
+          profile.schema === 'ucdp-candidate-csv-v1' && capture.parserId === 'ucdp-candidate-csv'
+            ? normalizeUcdpCandidateCsv(
+                bytes,
+                profile as ReviewedUcdpCandidateCsvCapture,
+                context,
+              )
+            : profile.schema === 'ucdp-ged-json-v1' && capture.parserId === 'ucdp-ged-json'
+              ? normalizeUcdpGed(bytes, profile as ReviewedUcdpCapture, context)
+              : (() => {
+                  throw new ConflictAdmissionRefused('SCHEMA_NOT_CONFIRMED_BY_CAPTURE');
+                })();
         let inserted = 0;
         let duplicates = 0;
         for (const observation of observations) {
@@ -146,6 +174,7 @@ export class ConflictObservationProducer {
               revisionOrdinal: revision.revisionOrdinal,
               occurredOn: new Date(observation.temporal.eventStartedAt),
               ingestedAt: new Date(observation.temporal.ingestedAt),
+              countryIso3: observation.geography.countryIso3 ?? null,
               snapshotRetrievalId: retrievalId,
               snapshotAdmissibility: 'ADMITTED',
               captureHash: hash,

@@ -23,7 +23,8 @@
     "origin": "SOURCE_NATIVE",
     "precision": "EXACT",
     "locationProvenance": "STATED",
-    "countryIso3": "COD"
+    "countryIso3": "COD",
+    "countryIso3Basis": "SOURCE_STATED"
   },
   "temporal": {
     "eventStartedAt": "2026-09-20",

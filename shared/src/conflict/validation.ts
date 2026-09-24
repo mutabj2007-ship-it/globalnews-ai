@@ -108,7 +108,7 @@ export function validateConflictObservation(value: unknown): ConflictObservation
     const g = obj(
       o.geography,
       ['geometryKind', 'crs', 'denotation', 'origin', 'precision', 'locationProvenance'],
-      ['coordinates', 'partitionUnitLevel', 'countryIso3'],
+      ['coordinates', 'partitionUnitLevel', 'countryIso3', 'countryIso3Basis', 'sourceCountryName'],
     );
     member(g.geometryKind, SOURCE_GEOMETRY_KINDS);
     member(g.denotation, GEOMETRY_DENOTATIONS);
@@ -117,8 +117,19 @@ export function validateConflictObservation(value: unknown): ConflictObservation
     member(g.locationProvenance, LOCATION_PROVENANCES);
     requireValid(g.crs === GEOMETRY_CRS);
     if (g.partitionUnitLevel !== undefined) member(g.partitionUnitLevel, PARTITION_UNIT_LEVELS);
-    if (Object.prototype.hasOwnProperty.call(g, 'countryIso3'))
+    if (Object.prototype.hasOwnProperty.call(g, 'countryIso3')) {
       requireValid(typeof g.countryIso3 === 'string' && /^[A-Z]{3}$/.test(g.countryIso3));
+      requireValid(
+        g.countryIso3Basis === 'SOURCE_STATED' ||
+          g.countryIso3Basis === 'SOURCE_COUNTRY_NAME_NORMALIZED',
+      );
+      if (g.countryIso3Basis === 'SOURCE_COUNTRY_NAME_NORMALIZED') {
+        text(g.sourceCountryName);
+      }
+    } else {
+      requireValid(g.countryIso3Basis === undefined && g.sourceCountryName === undefined);
+    }
+    if (g.sourceCountryName !== undefined) text(g.sourceCountryName);
     if (g.geometryKind === 'NONE') requireValid(g.coordinates === undefined);
     else {
       assertCoordinatesAreClosed(
