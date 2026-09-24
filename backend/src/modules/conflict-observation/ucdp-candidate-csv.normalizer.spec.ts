@@ -29,7 +29,7 @@ function csvCell(value: string): string {
 }
 
 function capture(over: Record<string, string> = {}): Buffer {
-  const row = {
+  const row: Record<string, string> = {
     ...base(),
     id: '637360',
     type_of_violence: '3',
@@ -110,7 +110,7 @@ describe('UCDP Candidate CSV retained normalizer', () => {
     { side_a: '' },
     { date_start: '2026-02-30 00:00:00.000' },
     { date_end: '2026-08-09 00:00:00.000' },
-  ])('refuses unusable event fields %j', (over) => {
+  ] as readonly Record<string, string>[])('refuses unusable event fields %j', (over) => {
     expect(() => normalizeUcdpCandidateCsv(capture(over), profile, context)).toThrow();
   });
 
