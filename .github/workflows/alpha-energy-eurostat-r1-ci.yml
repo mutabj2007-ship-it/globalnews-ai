@@ -1,0 +1,47 @@
+name: Alpha Energy Eurostat R1 CI
+
+on:
+  push:
+    branches:
+      - feature/alpha-energy-eurostat-r1
+  pull_request:
+    branches:
+      - release/alpha-m08-integrated-r1
+    paths:
+      - 'backend/src/modules/energy/**'
+      - 'backend/src/tooling/energy-eurostat-alpha-r1.ts'
+      - 'frontend/src/lib/energy/**'
+      - 'frontend/src/components/energy/**'
+      - 'frontend/src/app/energy/**'
+      - '.github/workflows/alpha-energy-eurostat-r1-ci.yml'
+
+concurrency:
+  group: alpha-energy-eurostat-r1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --config backend/prisma.config.ts
+      - run: npm run build:shared
+
+      - name: Raw Eurostat Energy evidence gates
+        run: |
+          npm test --workspace=backend -- --runInBand src/modules/energy/energy-eurostat-pem.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/energy/energy-read.repository.spec.ts
+
+      - name: Existing Energy design-native guards
+        run: npm test --workspace=frontend -- --runInBand src/lib/energy/energyVisualFrame.spec.ts
+
+      - name: Production builds
+        run: |
+          npm run build:backend
+          npm run build:frontend
