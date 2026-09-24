@@ -110,7 +110,7 @@ export function Panel({ children, className = '' }: { children: ReactNode; class
  * and a pulse would say something is arriving. The diagonal hatch is the same inert fill the
  * accepted Economy and D1 wells use to mean *this is a plot area and it is not plotting*.
  */
-export function Well({ label, minHeightPx = 140 }: { label: string; minHeightPx?: number }): JSX.Element {
+export function Well({ label, minHeightPx = 140, children }: { label: string; minHeightPx?: number; children?: ReactNode }): JSX.Element {
   return (
     <div
       data-pol="well"
@@ -123,7 +123,7 @@ export function Well({ label, minHeightPx = 140 }: { label: string; minHeightPx?
       }}
       className="flex flex-1 items-center justify-center"
     >
-      <span className="font-gn-mono text-[18px] text-sp-ink-3">{POLITICS_ABSENT}</span>
+      {children ?? <span className="font-gn-mono text-[18px] text-sp-ink-3">{POLITICS_ABSENT}</span>}
     </div>
   );
 }
