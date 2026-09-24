@@ -67,7 +67,21 @@ COPY frontend ./frontend
 # release wiring is ever removed.
 COPY scripts ./scripts
 RUN npm run build:shared
-RUN npm run build --workspace=frontend
+RUN set -eu; \
+    attempt=1; \
+    while [ "$attempt" -le 3 ]; do \
+      echo "[frontend-build] attempt ${attempt}/3"; \
+      if npm run build --workspace=frontend; then \
+        echo "[frontend-build] PASS on attempt ${attempt}"; \
+        exit 0; \
+      fi; \
+      echo "[frontend-build] attempt ${attempt} failed; clearing .next before retry"; \
+      rm -rf frontend/.next; \
+      attempt=$((attempt + 1)); \
+      if [ "$attempt" -le 3 ]; then sleep 5; fi; \
+    done; \
+    echo "[frontend-build] STOP after 3 failed attempts"; \
+    exit 1
 
 # ---- Production ----
 FROM node:20-alpine AS production
