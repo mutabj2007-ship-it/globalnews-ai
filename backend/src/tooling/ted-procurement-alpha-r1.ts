@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '../generated/prisma/client';
-import { MarketProviderRegistry, RIGHTS_RECORDS } from '../modules/market-ingest/market-provider-registry';
+import { MarketProviderRegistry } from '../modules/market-ingest/market-provider-registry';
+import { RIGHTS_RECORDS } from '../modules/market-ingest/market-acquisition-declarations';
 import {
   inspectTedProcurementCapture,
   MAX_TED_PROCUREMENT_BYTES,
