@@ -270,7 +270,7 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
                   </div>
                 ))}
               </div>
-              {subjects.length > 0 ? (
+              {subjects.length ? (
                 <div className="flex flex-col border border-sp-line bg-sp-panel">
                   {subjects.map((observation) => (
                     <button
