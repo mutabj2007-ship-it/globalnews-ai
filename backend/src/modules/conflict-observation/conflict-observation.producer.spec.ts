@@ -55,34 +55,68 @@ function harness(initial = capture()) {
   let current = initial;
   const profiles: ReviewedUcdpCapture[] = [];
   const rows: any[] = [];
+  const pins: any[] = [];
   const tx = {
-    snapshotPin: { upsert: jest.fn().mockResolvedValue({}) },
+    snapshotPin: {
+      updateMany: jest.fn(async ({ where, data }) => {
+        let count = 0;
+        for (const pin of pins) {
+          if (
+            pin.contentAddress === where.contentAddress &&
+            where.citedBy.in.includes(pin.citedBy) &&
+            pin.releasedAt !== null &&
+            pin.releasedAt !== undefined
+          ) {
+            Object.assign(pin, data);
+            count++;
+          }
+        }
+        return { count };
+      }),
+      createMany: jest.fn(async ({ data, skipDuplicates }) => {
+        let count = 0;
+        for (const pin of data) {
+          const exists = pins.some(
+            (current) =>
+              current.contentAddress === pin.contentAddress && current.citedBy === pin.citedBy,
+          );
+          if (exists) {
+            if (skipDuplicates) continue;
+            throw new Error('PIN_UNIQUE_COLLISION');
+          }
+          pins.push(pin);
+          count++;
+        }
+        return { count };
+      }),
+    },
     snapshotRetrieval: { findUnique: jest.fn(async () => current) },
     conflictObservation: {
-      findMany: jest.fn(async ({ where }) =>
-        rows
-          .filter((r) => r.observationKey === where.observationKey)
-          .sort((a, b) => b.revisionOrdinal - a.revisionOrdinal)
-          .slice(0, 1),
-      ),
-      findFirst: jest.fn(async ({ where }) =>
-        rows.find(
-          (r) => r.observationKey === where.observationKey && r.captureHash === where.captureHash,
-        ),
-      ),
-      create: jest.fn(async ({ data }) => {
-        rows.push(data);
-        return data;
+      findMany: jest.fn(async ({ where }) => {
+        const keys: string[] = where.observationKey?.in ?? [where.observationKey];
+        return rows
+          .filter((row) => keys.includes(row.observationKey))
+          .sort(
+            (a, b) =>
+              a.observationKey.localeCompare(b.observationKey) ||
+              b.revisionOrdinal - a.revisionOrdinal,
+          );
+      }),
+      createMany: jest.fn(async ({ data }) => {
+        rows.push(...data);
+        return { count: data.length };
       }),
     },
   };
   const db = {
     $transaction: jest.fn(async (fn) => {
-      const before = rows.length;
+      const beforeRows = rows.length;
+      const beforePins = pins.length;
       try {
         return await fn(tx);
       } catch (error) {
-        rows.splice(before);
+        rows.splice(beforeRows);
+        pins.splice(beforePins);
         throw error;
       }
     }),
@@ -100,6 +134,7 @@ function harness(initial = capture()) {
   select(initial);
   return {
     rows,
+    pins,
     tx,
     db,
     profiles,
@@ -148,7 +183,7 @@ describe('bounded retained-only admission', () => {
     await expect(h.producer.admitRetained('capture-20', 'run')).rejects.toThrow(
       'UNSUPPORTED_SCHEMA',
     );
-    expect(h.tx.conflictObservation.create).not.toHaveBeenCalled();
+    expect(h.tx.conflictObservation.createMany).not.toHaveBeenCalled();
   });
   it('appends revisions, preserves history, deduplicates replays including older captures', async () => {
     const first = capture();
@@ -176,12 +211,27 @@ describe('bounded retained-only admission', () => {
       duplicates: 1,
     });
     expect(h.rows).toHaveLength(2);
-    expect(h.tx.snapshotPin.upsert).toHaveBeenCalledTimes(2);
+    expect(h.tx.snapshotPin.createMany).toHaveBeenCalledTimes(2);
+    expect(h.tx.conflictObservation.createMany).toHaveBeenCalledTimes(2);
     expect(h.db.$transaction).toHaveBeenCalledWith(expect.any(Function), {
       isolationLevel: 'Serializable',
       timeout: CONFLICT_ADMISSION_TRANSACTION_TIMEOUT_MS,
     });
   });
+  it('uses a constant number of database round trips for a multi-observation batch', async () => {
+    const h = harness(capture([fixture({ id: 17 }), fixture({ id: 18 }), fixture({ id: 19 })]));
+    await expect(h.producer.admitRetained('capture-20', 'bulk')).resolves.toEqual({
+      inserted: 3,
+      duplicates: 0,
+    });
+    expect(h.rows).toHaveLength(3);
+    expect(h.pins).toHaveLength(3);
+    expect(h.tx.conflictObservation.findMany).toHaveBeenCalledTimes(1);
+    expect(h.tx.snapshotPin.updateMany).toHaveBeenCalledTimes(1);
+    expect(h.tx.snapshotPin.createMany).toHaveBeenCalledTimes(1);
+    expect(h.tx.conflictObservation.createMany).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects out-of-order capture and rolls back the entire batch', async () => {
     const h = harness(capture([fixture()], 21));
     await h.producer.admitRetained('capture-21', 'one');
