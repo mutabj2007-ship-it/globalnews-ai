@@ -51,13 +51,14 @@ import {
 import { Heading, Identifier, Verdict, edge, micro } from './MktParts';
 import {
   CapabilityList, ChangeContext, CoverageStrip, MarketStatus, ObservationCard,
-  ProvenanceAffordance, ProvenanceDetail, ReadUnavailable, SubstratePanel,
+  ProcurementCard, ProvenanceAffordance, ProvenanceDetail, ReadUnavailable, SubstratePanel,
 } from './MktReader';
 import {
   CHANGE_STATES_NOT_DERIVABLE, CHANGE_STATE_GAPS, DATA_READINESS,
   MARKET_FIGURE_GAP_REASON, MARKET_SURFACE_DECLARES_NO_SCORER, SUBJECT_READINESS,
 } from '@/lib/market/mktReadiness';
 import { MARKET_CAPABILITY, type MarketReadResult } from '@/lib/market/mktReadModel';
+import type { MarketProcurementReadResult } from '@/lib/market/mktProcurementRead';
 import { resolveMktStrings, type MktLocale, type MktStrings } from '@/lib/market/mktStrings';
 import { economyStrings } from '@/lib/economy/strings';
 
@@ -127,13 +128,16 @@ function ReadinessRow({ ready, label, measured }: {
   );
 }
 
-export function MarketScreen({ locale, read }: {
-  locale: MktLocale; read: MarketReadResult;
+export function MarketScreen({ locale, read, procurement }: {
+  locale: MktLocale;
+  read: MarketReadResult;
+  procurement: MarketProcurementReadResult;
 }): JSX.Element {
   const [view, dispatch] = useReducer(reducer, { drawer: null });
   const res = resolveMktStrings(locale);
   const t = res.strings;
-  const held = read.kind === 'OBSERVATIONS' ? read.observations.length : 0;
+  const procurementCount = procurement.kind === 'PROCUREMENT' ? procurement.notices.length : 0;
+  const held = (read.kind === 'OBSERVATIONS' ? read.observations.length : 0) + procurementCount;
 
   return (
     <main data-mkt="screen" data-mkt-drawer={view.drawer ?? 'none'}
@@ -234,7 +238,7 @@ export function MarketScreen({ locale, read }: {
         }}>
           <div style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0 }}>
             {/* ── REGION B ── */}
-            <CoverageStrip t={t} />
+            <CoverageStrip t={t} procurementCount={procurementCount} />
 
             {/* ── REGION C ── one substrate at a time; observations occupy this panel. */}
             {read.kind === 'OBSERVATIONS' ? (
@@ -242,6 +246,22 @@ export function MarketScreen({ locale, read }: {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {read.observations.map((o) => (
                     <ObservationCard key={o.observationKey} o={o} t={t} />
+                  ))}
+                </div>
+              </SubstratePanel>
+            ) : procurement.kind === 'PROCUREMENT' ? (
+              <SubstratePanel t={t}>
+                <div
+                  data-mkt="procurement-observations"
+                  style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+                >
+                  {procurement.notices.map((notice) => (
+                    <ProcurementCard
+                      key={notice.procurementKey}
+                      notice={notice}
+                      locale={locale}
+                      t={t}
+                    />
                   ))}
                 </div>
               </SubstratePanel>
@@ -261,7 +281,9 @@ export function MarketScreen({ locale, read }: {
               region, and it is now a note below the region it explains. It renders only
               when there is genuinely nothing held.
             */}
-            {read.kind !== 'OBSERVATIONS' && <ReadUnavailable reason={read.reason} t={t} />}
+            {read.kind !== 'OBSERVATIONS' && procurement.kind !== 'PROCUREMENT' && (
+              <ReadUnavailable reason={read.reason} t={t} />
+            )}
 
             {/* ── REGION E ── */}
             <ProvenanceAffordance t={t} onOpen={() => dispatch({ k: 'OPEN', v: 'PROVENANCE' })} />
