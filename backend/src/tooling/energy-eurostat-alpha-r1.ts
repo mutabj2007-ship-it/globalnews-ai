@@ -258,3 +258,44 @@ async function persist(
     },
   });
 }
+
+async function main(): Promise<void> {
+  if (process.env.ALPHA_ENERGY_EUROSTAT_R1_APPLY !== 'YES') {
+    fail('EXPLICIT_APPLY_ENV_REQUIRED');
+  }
+
+  const acquired = await acquire();
+  const prisma = new PrismaService();
+  try {
+    await persist(prisma, acquired);
+    console.log(
+      JSON.stringify({
+        scope: 'ALPHA_ENERGY_EUROSTAT_R1',
+        retrievalId: acquired.retrievalId,
+        sourceSha256: acquired.contentAddress,
+        retainedBytes: acquired.bytes.byteLength,
+        observationKey: acquired.observation.observationKey,
+        subjectName: acquired.observation.subjectName,
+        period: acquired.observation.period,
+        value: acquired.observation.value,
+        unit: acquired.observation.unit,
+        releaseStatus: acquired.observation.releaseStatus,
+        publicDisclosureApproved: false,
+        reviewRef: REVIEW_REF,
+      }),
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+main().catch((error) => {
+  console.error(
+    JSON.stringify({
+      scope: 'ALPHA_ENERGY_EUROSTAT_R1',
+      state: 'STOP',
+      reason: error instanceof Error ? error.message : 'UNKNOWN',
+    }),
+  );
+  process.exitCode = 1;
+});
