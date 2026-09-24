@@ -21,6 +21,7 @@ import {
 import { UCDP_CANDIDATE_RIGHTS } from './ucdp-candidate.reviewed';
 
 export const REVIEWED_UCDP_CAPTURES = Symbol('REVIEWED_UCDP_CAPTURES');
+export const CONFLICT_ADMISSION_TRANSACTION_TIMEOUT_MS = 120_000;
 
 /** Internal DI service only. No controller, timer, downloader, or boot-time work. */
 @Injectable()
@@ -185,7 +186,15 @@ export class ConflictObservationProducer {
         }
         return { inserted, duplicates };
       },
-      { isolationLevel: 'Serializable', timeout: 30_000 },
+      {
+        isolationLevel: 'Serializable',
+        // The governed Candidate capture is bounded to <=500 admitted rows. Each row
+        // performs history/dedup/pin/write checks inside one atomic transaction, and
+        // the first live Alpha run measured ~30.5s before the old 30s limit expired.
+        // Four times that measured duration preserves atomicity without removing the
+        // upper bound or widening the dataset.
+        timeout: CONFLICT_ADMISSION_TRANSACTION_TIMEOUT_MS,
+      },
     );
   }
 }
