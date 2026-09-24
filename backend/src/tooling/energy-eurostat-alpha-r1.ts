@@ -48,6 +48,10 @@ async function acquire() {
     fail('MEDIA_TYPE');
   }
 
+  const contentEncoding =
+    response.headers.get('content-encoding')?.trim().toLowerCase() || 'identity';
+  if (!['identity', 'gzip'].includes(contentEncoding)) fail('CONTENT_ENCODING');
+
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.length === 0 || bytes.length > 4 * 1024 * 1024) fail('SIZE');
 
@@ -96,5 +100,6 @@ async function acquire() {
     retrievedAt,
     parsedAt,
     mediaType,
+    contentEncoding,
   };
 }
