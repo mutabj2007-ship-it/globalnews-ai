@@ -136,6 +136,7 @@ export function MarketScreen({ locale, read, procurement }: {
   const res = resolveMktStrings(locale);
   const t = res.strings;
   const held = read.kind === 'OBSERVATIONS' ? read.observations.length : 0;
+  const noticeHeld = procurement.kind === 'PROCUREMENT' ? procurement.notices.length : 0;
 
   return (
     <main data-mkt="screen" data-mkt-drawer={view.drawer ?? 'none'}
