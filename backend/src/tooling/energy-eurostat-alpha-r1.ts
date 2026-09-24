@@ -213,7 +213,7 @@ async function persist(
 
   if (latest) {
     if (
-      latest.revision !== 0 ||
+      latest.revision !== 1 ||
       latest.snapshotRetrievalId !== acquired.retrievalId ||
       latest.parserVersion !== EUROSTAT_ENERGY_ROW_PARSER_VERSION ||
       latest.admission !== 'ADMITTED' ||
@@ -228,7 +228,7 @@ async function persist(
       data: {
         id: randomUUID(),
         observationKey: acquired.observation.observationKey,
-        revision: 0,
+        revision: 1,
         snapshotRetrievalId: acquired.retrievalId,
         payload: acquired.observation as unknown as Prisma.InputJsonValue,
         evidencePointer: '/value/0',
@@ -246,14 +246,14 @@ async function persist(
       contentAddress_citedBy: {
         contentAddress: acquired.contentAddress,
         citedBy:
-          'energy:alpha-r1:EUROSTAT:nrg_cb_pem:ES:TOTAL:GWH:2026-07:revision:0',
+          'energy:alpha-r1:EUROSTAT:nrg_cb_pem:ES:TOTAL:GWH:2026-07:revision:1',
       },
     },
     update: { releasedAt: null },
     create: {
       contentAddress: acquired.contentAddress,
       citedBy:
-        'energy:alpha-r1:EUROSTAT:nrg_cb_pem:ES:TOTAL:GWH:2026-07:revision:0',
+        'energy:alpha-r1:EUROSTAT:nrg_cb_pem:ES:TOTAL:GWH:2026-07:revision:1',
       pinnedAt: acquired.parsedAt,
     },
   });
