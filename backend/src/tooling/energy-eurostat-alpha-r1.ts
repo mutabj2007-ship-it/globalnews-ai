@@ -24,3 +24,77 @@ function fail(reason: string): never {
 function digest(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
+
+async function acquire() {
+  const rights = assertProviderRightsPermitRunning('EUROSTAT');
+  const url = new URL(BASE_URL);
+  for (const parameter of EUROSTAT_ENERGY_ALPHA_R1_PARAMETERS) {
+    url.searchParams.append(parameter.key, parameter.value);
+  }
+
+  const requestedAt = new Date();
+  const response = await fetch(url, {
+    headers: { accept: 'application/json' },
+    signal: AbortSignal.timeout(12_000),
+    redirect: 'error',
+  });
+  const retrievedAt = new Date();
+
+  if (!response.ok || response.status !== 200) fail(`HTTP_${response.status}`);
+  if (response.url !== url.toString()) fail('REDIRECT_OR_QUERY_DRIFT');
+
+  const mediaType = response.headers.get('content-type') ?? '';
+  if (mediaType.split(';')[0].trim().toLowerCase() !== 'application/json') {
+    fail('MEDIA_TYPE');
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.length === 0 || bytes.length > 4 * 1024 * 1024) fail('SIZE');
+
+  const contentAddress = digest(bytes);
+  const retrievalId =
+    `eurostat-energy:nrg_cb_pem:ES:TOTAL:GWH:2026-07:${contentAddress}`;
+  const parsedAt = new Date();
+
+  const candidate = {
+    retrievalId,
+    providerId: 'EUROSTAT',
+    endpointId: EUROSTAT_ENERGY_ALPHA_R1_ENDPOINT_ID,
+    requestPath: EUROSTAT_ENERGY_ALPHA_R1_REQUEST_PATH,
+    parameters: EUROSTAT_ENERGY_ALPHA_R1_PARAMETERS,
+    requestedAt,
+    retrievedAt,
+    httpStatus: 200,
+    mediaType,
+    byteLength: bytes.length,
+    contentAddress,
+    completeness: 'COMPLETE',
+    admissibility: 'ADMITTED',
+    refusalKey: null,
+    parserId: EUROSTAT_ENERGY_ALPHA_R1_PARSER_ID,
+    parserVersion: EUROSTAT_ENERGY_ALPHA_R1_PARSER_VERSION,
+    rightsGrade: rights.rightsClass,
+    rightsInstrumentRef: rights.instrument,
+    payloadRetentionPermitted: true,
+    payload: {
+      bytes,
+      storageState: 'RETAINED',
+      byteLength: bytes.length,
+      contentAddress,
+    },
+  };
+
+  const observation = normalizeEurostatEnergyCapture(candidate);
+  return {
+    rights,
+    candidate,
+    observation,
+    bytes,
+    contentAddress,
+    retrievalId,
+    requestedAt,
+    retrievedAt,
+    parsedAt,
+    mediaType,
+  };
+}
