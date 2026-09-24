@@ -58,6 +58,9 @@ export interface MktStrings {
 
   readonly release: Readonly<Record<
     'SCHEDULED' | 'PRELIMINARY' | 'REVISED' | 'FINAL' | 'WITHDRAWN', string>>;
+  readonly procurement: Readonly<Record<
+    'notice' | 'buyer' | 'country' | 'cpv' | 'noticeType' | 'published' | 'deadline'
+    | 'statedValue' | 'openNotice' | 'retainedAt' | 'notStated', string>>;
 }
 
 const en: MktStrings = {
@@ -191,6 +194,19 @@ const en: MktStrings = {
     REVISED: 'Revised',
     FINAL: 'Final',
     WITHDRAWN: 'Withdrawn',
+  },
+  procurement: {
+    notice: 'Official notice',
+    buyer: 'Buyer',
+    country: 'Country',
+    cpv: 'CPV',
+    noticeType: 'Record type',
+    published: 'Published',
+    deadline: 'Deadline',
+    statedValue: 'Stated value',
+    openNotice: 'Open source record',
+    retainedAt: 'Retained',
+    notStated: 'Not stated',
   },
 };
 

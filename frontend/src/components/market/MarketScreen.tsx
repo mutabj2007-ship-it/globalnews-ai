@@ -60,6 +60,8 @@ import {
 import { MARKET_CAPABILITY, type MarketReadResult } from '@/lib/market/mktReadModel';
 import { resolveMktStrings, type MktLocale, type MktStrings } from '@/lib/market/mktStrings';
 import { economyStrings } from '@/lib/economy/strings';
+import { MarketNoticeCard } from './MktNoticeCard';
+import type { MarketProcurementReadResult } from '@/lib/market/mktProcurementRead';
 
 /**
  * TWO DRAWERS, NOT FOUR TABS.
@@ -127,13 +129,14 @@ function ReadinessRow({ ready, label, measured }: {
   );
 }
 
-export function MarketScreen({ locale, read }: {
-  locale: MktLocale; read: MarketReadResult;
+export function MarketScreen({ locale, read, procurement }: {
+  locale: MktLocale; read: MarketReadResult; procurement: MarketProcurementReadResult;
 }): JSX.Element {
   const [view, dispatch] = useReducer(reducer, { drawer: null });
   const res = resolveMktStrings(locale);
   const t = res.strings;
   const held = read.kind === 'OBSERVATIONS' ? read.observations.length : 0;
+  const noticeHeld = procurement.kind === 'PROCUREMENT' ? procurement.notices.length : 0;
 
   return (
     <main data-mkt="screen" data-mkt-drawer={view.drawer ?? 'none'}
@@ -194,6 +197,11 @@ export function MarketScreen({ locale, read }: {
             {t.reader.headline}
           </h1>
           <MarketStatus held={held} t={t} />
+          {noticeHeld > 0 && (
+            <span data-mkt="notice-held" style={{ ...micro, color: MKT_INK.secondary }}>
+              {t.procurement.notice} · {noticeHeld}
+            </span>
+          )}
         </div>
       </header>
 
@@ -245,6 +253,19 @@ export function MarketScreen({ locale, read }: {
                   ))}
                 </div>
               </SubstratePanel>
+            ) : procurement.kind === 'PROCUREMENT' ? (
+              <SubstratePanel t={t}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {procurement.notices.map((notice) => (
+                    <MarketNoticeCard
+                      key={notice.portalReference.noticeId}
+                      notice={notice}
+                      locale={locale}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              </SubstratePanel>
             ) : (
               <SubstratePanel t={t} />
             )}
@@ -261,7 +282,7 @@ export function MarketScreen({ locale, read }: {
               region, and it is now a note below the region it explains. It renders only
               when there is genuinely nothing held.
             */}
-            {read.kind !== 'OBSERVATIONS' && <ReadUnavailable reason={read.reason} t={t} />}
+            {read.kind !== 'OBSERVATIONS' && noticeHeld === 0 && <ReadUnavailable reason={read.reason} t={t} />}
 
             {/* ── REGION E ── */}
             <ProvenanceAffordance t={t} onOpen={() => dispatch({ k: 'OPEN', v: 'PROVENANCE' })} />

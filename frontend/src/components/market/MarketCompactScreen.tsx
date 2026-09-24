@@ -47,6 +47,8 @@ import {
 import { MARKET_CAPABILITY, type MarketReadResult } from '@/lib/market/mktReadModel';
 import { resolveMktStrings, type MktLocale, type MktStrings } from '@/lib/market/mktStrings';
 import { economyStrings } from '@/lib/economy/strings';
+import { MarketNoticeCard } from './MktNoticeCard';
+import type { MarketProcurementReadResult } from '@/lib/market/mktProcurementRead';
 
 /**
  * THE DETENTS ARE THE INHERITED ONES, AND THE HEIGHTS SAY WHICH IS WHICH.
@@ -119,13 +121,14 @@ function CompactReadinessRow({ ready, label, measured }: {
   );
 }
 
-export function MarketCompactScreen({ locale, read }: {
-  locale: MktLocale; read: MarketReadResult;
+export function MarketCompactScreen({ locale, read, procurement }: {
+  locale: MktLocale; read: MarketReadResult; procurement: MarketProcurementReadResult;
 }): JSX.Element {
   const [view, dispatch] = useReducer(reducer, { drawer: null });
   const res = resolveMktStrings(locale);
   const t = res.strings;
   const held = read.kind === 'OBSERVATIONS' ? read.observations.length : 0;
+  const noticeHeld = procurement.kind === 'PROCUREMENT' ? procurement.notices.length : 0;
   const detent = view.drawer === null ? null : DETENT[view.drawer];
 
   return (
@@ -161,6 +164,11 @@ export function MarketCompactScreen({ locale, read }: {
           whiteSpace: 'normal', overflowWrap: 'anywhere',
         }}>{t.reader.headline}</h1>
         <MarketStatus held={held} t={t} />
+        {noticeHeld > 0 && (
+          <span data-mkt="notice-held" style={{ ...micro, color: MKT_INK.secondary }}>
+            {t.procurement.notice} · {noticeHeld}
+          </span>
+        )}
       </header>
 
       <div data-mkt="compact-body" style={{
@@ -200,13 +208,28 @@ export function MarketCompactScreen({ locale, read }: {
               ))}
             </div>
           </SubstratePanel>
+        ) : procurement.kind === 'PROCUREMENT' ? (
+          <SubstratePanel t={t}>
+            <div data-mkt="compact-notices" style={{
+              display: 'flex', flexDirection: 'column', gap: '10px',
+            }}>
+              {procurement.notices.map((notice) => (
+                <MarketNoticeCard
+                  key={notice.portalReference.noticeId}
+                  notice={notice}
+                  locale={locale}
+                  t={t}
+                />
+              ))}
+            </div>
+          </SubstratePanel>
         ) : (
           <SubstratePanel t={t} />
         )}
 
         <ChangeContext t={t} />
 
-        {read.kind !== 'OBSERVATIONS' && <ReadUnavailable reason={read.reason} t={t} />}
+        {read.kind !== 'OBSERVATIONS' && noticeHeld === 0 && <ReadUnavailable reason={read.reason} t={t} />}
 
         {/*
           THE CAPABILITY REGION, LAST AND QUIET. Same three rows as the desktop rail, same

@@ -235,10 +235,15 @@ describe('the Market frontend cannot reach a provider', () => {
   it('the only fetch is the retained same-deployment read model; no client hook or external URL exists', () => {
     for (const f of DOMAIN_SOURCES) {
       const code = stripComments(read(f));
-      const isReadModel = f.endsWith('mktReadModel.ts');
-      if (isReadModel) {
+      const isNumericReadModel = f.endsWith('mktReadModel.ts');
+      const isProcurementReadModel = f.endsWith('mktProcurementRead.ts');
+      if (isNumericReadModel) {
         expect((code.match(/\bfetch\s*\(/g) ?? [])).toHaveLength(1);
         expect(code).toContain("const MARKET_READ_PATH = '/market-data/observations'");
+      } else if (isProcurementReadModel) {
+        expect((code.match(/\bfetch\s*\(/g) ?? [])).toHaveLength(1);
+        expect(code).toContain("'/market-data/procurement'");
+        expect(code).toContain('resolveApiBaseUrl()');
       } else {
         expect(code).not.toMatch(/\bfetch\s*\(/);
       }

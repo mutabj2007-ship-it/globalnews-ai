@@ -195,6 +195,7 @@ describe('no preview surface can reach an external provider', () => {
     */
     const GOVERNED_SAME_ORIGIN_READS = new Set([
       'economyObservationRead.ts',
+      'mktProcurementRead.ts',
       'mktReadModel.ts',
     ]);
     const offenders: string[] = [];
@@ -249,7 +250,7 @@ describe('no preview surface can reach an external provider', () => {
       §12 applies for the same reason.
     */
     /*
-      TWO NETWORK MODULES NOW, AND THE PROPERTY THAT MATTERS IS ASSERTED ON BOTH.
+      THREE DOMAIN READ MODULES NOW, AND THE PROPERTY THAT MATTERS IS ASSERTED ON ALL.
 
       The rule was "exactly one file, and it carries no absolute origin", and the
       second half is the one doing the work: *"the request cannot leave this
@@ -258,12 +259,13 @@ describe('no preview surface can reach an external provider', () => {
       one NAMED member and tightened by applying the origin check to every member
       rather than to one file by hand.
 
-      A THIRD network site still fails here, and any member acquiring an absolute
+      Any unlisted network site still fails here, and any member acquiring an absolute
       origin fails here, which is what the assertion was protecting.
     */
     const ALLOWED_READS = [
       '/lib/api/accountFetch.ts',
       '/lib/economy/economyObservationRead.ts',
+      '/lib/market/mktProcurementRead.ts',
       '/lib/market/mktReadModel.ts',
     ];
 
