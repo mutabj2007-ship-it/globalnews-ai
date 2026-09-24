@@ -658,6 +658,7 @@ describe('12 · the package is self-contained against the current lineage', () =
     expect(EXTERNAL).toEqual([
       'components/navigation/ReturnControl.tsx',
       'components/specialist/SpecialistHudLine.tsx',
+      'lib/api/apiBase.ts',
       'lib/i18n/languages.ts',
       'lib/navigation/returnDepth.ts',
       'lib/navigation/returnFallback.ts',
