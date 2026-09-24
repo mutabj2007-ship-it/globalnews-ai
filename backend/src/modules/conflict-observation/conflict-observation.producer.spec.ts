@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../../database/prisma.service';
-import { ConflictObservationProducer } from './conflict-observation.producer';
+import {
+  CONFLICT_ADMISSION_TRANSACTION_TIMEOUT_MS,
+  ConflictObservationProducer,
+} from './conflict-observation.producer';
 import { ConflictObservationRepository } from './conflict-observation.repository';
 import { ConflictObservationController } from './conflict-observation.controller';
 import type { ReviewedUcdpCapture } from './ucdp-ged.normalizer';
@@ -176,7 +179,7 @@ describe('bounded retained-only admission', () => {
     expect(h.tx.snapshotPin.upsert).toHaveBeenCalledTimes(2);
     expect(h.db.$transaction).toHaveBeenCalledWith(expect.any(Function), {
       isolationLevel: 'Serializable',
-      timeout: 30_000,
+      timeout: CONFLICT_ADMISSION_TRANSACTION_TIMEOUT_MS,
     });
   });
   it('rejects out-of-order capture and rolls back the entire batch', async () => {
