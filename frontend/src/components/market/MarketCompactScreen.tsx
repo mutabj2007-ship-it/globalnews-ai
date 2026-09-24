@@ -128,6 +128,7 @@ export function MarketCompactScreen({ locale, read, procurement }: {
   const res = resolveMktStrings(locale);
   const t = res.strings;
   const held = read.kind === 'OBSERVATIONS' ? read.observations.length : 0;
+  const noticeHeld = procurement.kind === 'PROCUREMENT' ? procurement.notices.length : 0;
   const detent = view.drawer === null ? null : DETENT[view.drawer];
 
   return (
