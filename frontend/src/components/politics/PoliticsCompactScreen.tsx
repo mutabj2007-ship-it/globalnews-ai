@@ -187,7 +187,7 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
                 </button>
               ))}
             </div>
-          )}
+          ) : null}
         </Region>
 
         <Region title={t.labels.assessment} note={selected ? t.labels.notAssessed : t.labels.awaitingData}>
