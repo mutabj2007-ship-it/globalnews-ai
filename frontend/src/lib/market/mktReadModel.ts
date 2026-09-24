@@ -341,6 +341,34 @@ function marketProcurementReadUrl(): string {
   return `${resolveApiBaseUrl()}/market/procurement`;
 }
 
+export function isMarketProcurementNotice(value: unknown): value is MarketRetainedProcurementNotice {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const n = value as Record<string, any>;
+  return (
+    n.artifactClass === 'PROCUREMENT_NOTICE' &&
+    n.providerId === 'TED' &&
+    n.freshnessBasis === 'RETAINED_ONLY' &&
+    n.portalReference?.portalId === 'TED' &&
+    typeof n.portalReference?.noticeId === 'string' &&
+    /^\d{6}-\d{4}$/.test(n.portalReference.noticeId) &&
+    n.noticeType === 'cn-standard' &&
+    n.buyerCountryIso3 === 'POL' &&
+    Array.isArray(n.cpvCodes) &&
+    n.cpvCodes.every((code: unknown) => typeof code === 'string' && /^\d{8}$/.test(code)) &&
+    typeof n.sourceUrl === 'string' &&
+    typeof n.retainedAt === 'string' &&
+    typeof n.retrievalId === 'string' &&
+    typeof n.contentAddress === 'string' &&
+    /^[0-9a-f]{64}$/.test(n.contentAddress) &&
+    n.title &&
+    typeof n.title === 'object' &&
+    [n.title.en, n.title.pl].some((title) => typeof title === 'string' && title.trim()) &&
+    (n.totalValue === null || (typeof n.totalValue === 'number' && Number.isFinite(n.totalValue))) &&
+    ((n.totalValue === null && n.currency === null) ||
+      (n.totalValue !== null && typeof n.currency === 'string' && /^[A-Z]{3}$/.test(n.currency)))
+  );
+}
+
 /* ───────────────────────────────────────────────────────────────────────────
  * 4 · CAPABILITY — WHAT THE READER IS TOLD ABOUT PROVIDERS
  * ─────────────────────────────────────────────────────────────────────────── */
