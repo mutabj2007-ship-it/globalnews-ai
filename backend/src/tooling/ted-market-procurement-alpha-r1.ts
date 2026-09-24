@@ -136,3 +136,127 @@ async function acquire() {
     contentEncoding,
   };
 }
+
+async function persist(prisma: PrismaService, acquired: Awaited<ReturnType<typeof acquire>>) {
+  const existing = await prisma.snapshotRetrieval.findUnique({
+    where: { retrievalId: acquired.retrievalId },
+    include: { payload: true },
+  });
+
+  if (existing) {
+    const replay = inspectTedProcurementCapture(existing);
+    if (
+      replay.length !== acquired.notices.length ||
+      existing.contentAddress !== acquired.contentAddress ||
+      existing.payload?.storageState !== 'RETAINED' ||
+      !existing.payload.bytes ||
+      digest(existing.payload.bytes) !== acquired.contentAddress
+    ) {
+      fail('EXISTING_RETRIEVAL_MISMATCH');
+    }
+
+    await prisma.snapshotPin.upsert({
+      where: {
+        contentAddress_citedBy: {
+          contentAddress: acquired.contentAddress,
+          citedBy: CITED_BY,
+        },
+      },
+      update: { releasedAt: null },
+      create: {
+        contentAddress: acquired.contentAddress,
+        citedBy: CITED_BY,
+        pinnedAt: acquired.parsedAt,
+      },
+    });
+    return;
+  }
+
+  await prisma.$transaction(
+    async (tx) => {
+      const payload = await tx.snapshotPayload.findUnique({
+        where: { contentAddress: acquired.contentAddress },
+      });
+
+      if (payload) {
+        if (
+          payload.storageState !== 'RETAINED' ||
+          !payload.bytes ||
+          payload.byteLength !== acquired.bytes.byteLength ||
+          payload.mediaType.split(';')[0].trim().toLowerCase() !== 'application/json' ||
+          digest(payload.bytes) !== acquired.contentAddress
+        ) {
+          fail('EXISTING_PAYLOAD_MISMATCH');
+        }
+      } else {
+        await tx.snapshotPayload.create({
+          data: {
+            contentAddress: acquired.contentAddress,
+            bytes: Buffer.from(acquired.bytes),
+            byteLength: acquired.bytes.byteLength,
+            mediaType: acquired.mediaType,
+            storageState: 'RETAINED',
+          },
+        });
+      }
+
+      await tx.snapshotRetrieval.create({
+        data: {
+          retrievalId: acquired.retrievalId,
+          providerId: 'TED',
+          endpointId: TED_MARKET_ALPHA_R1_ENDPOINT_ID,
+          requestPath: TED_MARKET_ALPHA_R1_REQUEST_PATH,
+          parameters: PARAMETERS as unknown as Prisma.InputJsonValue,
+          requestedAt: acquired.requestedAt,
+          retrievedAt: acquired.retrievedAt,
+          httpStatus: 200,
+          mediaType: acquired.mediaType,
+          byteLength: acquired.bytes.byteLength,
+          contentAddress: acquired.contentAddress,
+          completeness: 'COMPLETE',
+          contentEncoding: acquired.contentEncoding,
+          wireByteLength: acquired.contentEncoding === 'identity' ? acquired.bytes.byteLength : null,
+          admissibility: 'ADMITTED',
+          refusalKey: null,
+          refusalClass: null,
+          parserId: TED_MARKET_ALPHA_R1_PARSER_ID,
+          parserVersion: TED_MARKET_ALPHA_R1_PARSER_VERSION,
+          parsedAt: acquired.parsedAt,
+          rightsGrade: acquired.permitted.rights.rightsClass,
+          rightsInstrumentRef: acquired.permitted.rights.instrument,
+          payloadRetentionPermitted: true,
+          editionAnnotations: {
+            source: 'TED Search API v3',
+            query: TED_MARKET_ALPHA_R1_QUERY,
+            noticeCount: acquired.notices.length,
+            publicationDate: '2026-09-24',
+            buyerCountry: 'POL',
+            noticeType: 'cn-standard',
+          } as Prisma.InputJsonValue,
+          publisherReleasedAt: null,
+          publisherChangedAt: null,
+          referencePeriod: null,
+          sourceLanguage: null,
+          extractorId: null,
+          extractorVersion: null,
+        },
+      });
+
+      await tx.snapshotPin.upsert({
+        where: {
+          contentAddress_citedBy: {
+            contentAddress: acquired.contentAddress,
+            citedBy: CITED_BY,
+          },
+        },
+        update: { releasedAt: null },
+        create: {
+          contentAddress: acquired.contentAddress,
+          citedBy: CITED_BY,
+          pinnedAt: acquired.parsedAt,
+        },
+      });
+    },
+    { isolationLevel: 'Serializable', timeout: 30_000 },
+  );
+}
