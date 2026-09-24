@@ -114,6 +114,23 @@ describe('UCDP Candidate CSV retained normalizer', () => {
     expect(() => normalizeUcdpCandidateCsv(capture(over), profile, context)).toThrow();
   });
 
+  it('filters only by an explicit governed ISO3 allowlist after validating the whole retained row', () => {
+    const scopedProfile: ReviewedUcdpCandidateCsvCapture = {
+      ...profile,
+      countryAllowlistIso3: ['COD'],
+    };
+    const afghanistan = normalizeUcdpCandidateCsv(capture(), scopedProfile, context);
+    expect(afghanistan).toEqual([]);
+
+    const congo = normalizeUcdpCandidateCsv(
+      capture({ id: '637362', country: 'DR Congo (Zaire)' }),
+      scopedProfile,
+      context,
+    );
+    expect(congo).toHaveLength(1);
+    expect(congo[0].geography.countryIso3).toBe('COD');
+  });
+
   it('pins the exact reviewed header and refuses schema drift', () => {
     const bytes = capture();
     const text = bytes.toString('utf8').replace(/^id,/, 'event_id,');
