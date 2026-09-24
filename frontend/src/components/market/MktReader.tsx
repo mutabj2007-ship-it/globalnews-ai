@@ -240,6 +240,8 @@ export function ProcurementCard({ notice, locale, t }: {
   t: MktStrings;
 }): JSX.Element {
   const buyers = procurementBuyerNames(notice, locale);
+  const hasBuyers = Boolean(buyers.length);
+  const hasCpv = Boolean(notice.cpvCodes.length);
   const href = procurementSourceHref(notice, locale);
   const deadline = notice.deadlineDates[0] ?? null;
 
@@ -302,13 +304,13 @@ export function ProcurementCard({ notice, locale, t }: {
           </span>
         </Field>
         <Field label={t.reader.buyer}>
-          {buyers.length > 0 ? buyers.join(' · ') : '—'}
+          {hasBuyers ? buyers.join(' · ') : '—'}
         </Field>
         <Field label={t.reader.buyerCountry}>
           <Identifier>{notice.buyerCountries.join(' · ')}</Identifier>
         </Field>
         <Field label={t.reader.cpv}>
-          {notice.cpvCodes.length > 0 ? (
+          {hasCpv ? (
             <Identifier>{notice.cpvCodes.join(' · ')}</Identifier>
           ) : '—'}
         </Field>
@@ -534,15 +536,16 @@ export function CapabilityList({ rows, t }: {
  * ─────────────────────────────────────────────────────────────────────────── */
 
 export function MarketStatus({ held, t }: { held: number; t: MktStrings }): JSX.Element {
+  const hasHeld = Boolean(held);
   return (
     <div data-mkt="status" data-mkt-held={String(held)} style={{
       display: 'flex', flexWrap: 'wrap', gap: '8px 16px', alignItems: 'baseline',
     }}>
       <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.observations}</span>
       <span data-mkt="status-value" style={{
-        ...micro, padding: '3px 8px', border: `1px solid ${held > 0 ? MKT_LICENSED.mint : MKT_LINE.border}`,
-        color: held > 0 ? MKT_LICENSED.mint : MKT_INK.tertiary,
-        background: held > 0 ? 'transparent' : MKT_SURFACE.chip, whiteSpace: 'nowrap',
+        ...micro, padding: '3px 8px', border: `1px solid ${hasHeld ? MKT_LICENSED.mint : MKT_LINE.border}`,
+        color: hasHeld ? MKT_LICENSED.mint : MKT_INK.tertiary,
+        background: hasHeld ? 'transparent' : MKT_SURFACE.chip, whiteSpace: 'nowrap',
       }}>
         {/*
           F M-1 / M-2 · HELD, NOT DATA, AND COUNTED FROM RECORDS.
@@ -598,6 +601,7 @@ export function CoverageStrip({ t, procurementCount = 0 }: {
   procurementCount?: number;
 }): JSX.Element {
   const kinds = Object.keys(t.subjects);
+  const hasProcurement = Boolean(procurementCount);
   return (
     <section data-mkt="zone-b" data-mkt-region="coverage" style={{
       display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0,
@@ -620,7 +624,7 @@ export function CoverageStrip({ t, procurementCount = 0 }: {
             <span style={{ ...micro, color: MKT_INK.label, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
               {t.subjects[kind]}
             </span>
-            {kind === 'PROCUREMENT_OPPORTUNITY' && procurementCount > 0 ? (
+            {kind === 'PROCUREMENT_OPPORTUNITY' && hasProcurement ? (
               <span
                 data-mkt="coverage-held"
                 data-mkt-count={String(procurementCount)}
