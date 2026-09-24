@@ -103,3 +103,158 @@ async function acquire() {
     contentEncoding,
   };
 }
+
+async function persist(
+  prisma: PrismaService,
+  acquired: Awaited<ReturnType<typeof acquire>>,
+): Promise<void> {
+  const existingRetrieval = await prisma.snapshotRetrieval.findUnique({
+    where: { retrievalId: acquired.retrievalId },
+    include: { payload: true },
+  });
+
+  if (existingRetrieval) {
+    const replay = normalizeEurostatEnergyCapture(existingRetrieval);
+    if (
+      replay.observationKey !== acquired.observation.observationKey ||
+      existingRetrieval.contentAddress !== acquired.contentAddress ||
+      existingRetrieval.payload?.storageState !== 'RETAINED' ||
+      !existingRetrieval.payload.bytes ||
+      digest(existingRetrieval.payload.bytes) !== acquired.contentAddress
+    ) {
+      fail('EXISTING_RETRIEVAL_MISMATCH');
+    }
+  } else {
+    await prisma.$transaction(
+      async (tx) => {
+        const payload = await tx.snapshotPayload.findUnique({
+          where: { contentAddress: acquired.contentAddress },
+        });
+
+        if (payload) {
+          if (
+            payload.storageState !== 'RETAINED' ||
+            !payload.bytes ||
+            payload.byteLength !== acquired.bytes.byteLength ||
+            payload.mediaType.split(';')[0].trim().toLowerCase() !== 'application/json' ||
+            digest(payload.bytes) !== acquired.contentAddress
+          ) {
+            fail('EXISTING_PAYLOAD_MISMATCH');
+          }
+        } else {
+          await tx.snapshotPayload.create({
+            data: {
+              contentAddress: acquired.contentAddress,
+              bytes: Buffer.from(acquired.bytes),
+              byteLength: acquired.bytes.byteLength,
+              mediaType: acquired.mediaType,
+              storageState: 'RETAINED',
+            },
+          });
+        }
+
+        await tx.snapshotRetrieval.create({
+          data: {
+            retrievalId: acquired.retrievalId,
+            providerId: 'EUROSTAT',
+            endpointId: EUROSTAT_ENERGY_ALPHA_R1_ENDPOINT_ID,
+            requestPath: EUROSTAT_ENERGY_ALPHA_R1_REQUEST_PATH,
+            parameters:
+              EUROSTAT_ENERGY_ALPHA_R1_PARAMETERS as unknown as Prisma.InputJsonValue,
+            requestedAt: acquired.requestedAt,
+            retrievedAt: acquired.retrievedAt,
+            httpStatus: 200,
+            mediaType: acquired.mediaType,
+            byteLength: acquired.bytes.byteLength,
+            contentAddress: acquired.contentAddress,
+            completeness: 'COMPLETE',
+            contentEncoding: acquired.contentEncoding,
+            wireByteLength:
+              acquired.contentEncoding === 'identity'
+                ? acquired.bytes.byteLength
+                : null,
+            admissibility: 'ADMITTED',
+            refusalKey: null,
+            refusalClass: null,
+            parserId: EUROSTAT_ENERGY_ALPHA_R1_PARSER_ID,
+            parserVersion: EUROSTAT_ENERGY_ALPHA_R1_PARSER_VERSION,
+            parsedAt: acquired.parsedAt,
+            rightsGrade: acquired.rights.rightsClass,
+            rightsInstrumentRef: acquired.rights.instrument,
+            payloadRetentionPermitted: true,
+            editionAnnotations: {
+              source: 'Eurostat',
+              dataset: 'nrg_cb_pem',
+              geo: 'ES',
+              siec: 'TOTAL',
+              unit: 'GWH',
+              period: '2026-07',
+              sourceFlag: 'p',
+            } as Prisma.InputJsonValue,
+            publisherReleasedAt: null,
+            publisherChangedAt: new Date(
+              acquired.observation.publisherChangedAt as string,
+            ),
+            referencePeriod: acquired.observation.period,
+            sourceLanguage: 'en',
+            extractorId: null,
+            extractorVersion: null,
+          },
+        });
+      },
+      { isolationLevel: 'Serializable', timeout: 30_000 },
+    );
+  }
+
+  const latest = await prisma.energyObservation.findFirst({
+    where: { observationKey: acquired.observation.observationKey },
+    orderBy: { revision: 'desc' },
+  });
+
+  if (latest) {
+    if (
+      latest.revision !== 0 ||
+      latest.snapshotRetrievalId !== acquired.retrievalId ||
+      latest.parserVersion !== EUROSTAT_ENERGY_ROW_PARSER_VERSION ||
+      latest.admission !== 'ADMITTED' ||
+      latest.publicDisclosureApproved !== false ||
+      latest.reviewedBy !== REVIEWED_BY ||
+      latest.reviewRef !== REVIEW_REF
+    ) {
+      fail('EXISTING_ENERGY_OBSERVATION_REQUIRES_REVIEW');
+    }
+  } else {
+    await prisma.energyObservation.create({
+      data: {
+        id: randomUUID(),
+        observationKey: acquired.observation.observationKey,
+        revision: 0,
+        snapshotRetrievalId: acquired.retrievalId,
+        payload: acquired.observation as unknown as Prisma.InputJsonValue,
+        evidencePointer: '/value/0',
+        parserVersion: EUROSTAT_ENERGY_ROW_PARSER_VERSION,
+        admission: 'ADMITTED',
+        publicDisclosureApproved: false,
+        reviewedBy: REVIEWED_BY,
+        reviewRef: REVIEW_REF,
+      },
+    });
+  }
+
+  await prisma.snapshotPin.upsert({
+    where: {
+      contentAddress_citedBy: {
+        contentAddress: acquired.contentAddress,
+        citedBy:
+          'energy:alpha-r1:EUROSTAT:nrg_cb_pem:ES:TOTAL:GWH:2026-07:revision:0',
+      },
+    },
+    update: { releasedAt: null },
+    create: {
+      contentAddress: acquired.contentAddress,
+      citedBy:
+        'energy:alpha-r1:EUROSTAT:nrg_cb_pem:ES:TOTAL:GWH:2026-07:revision:0',
+      pinnedAt: acquired.parsedAt,
+    },
+  });
+}
