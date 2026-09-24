@@ -9,6 +9,7 @@ import type { HumLocale } from '@/lib/humanitarian/humStrings';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { HumanitarianCompactScreen } from '@/components/humanitarian/HumanitarianCompactScreen';
+import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
 
 /**
  * PART X · THE PHONE FRAME AT ITS OWN ENTRY.
@@ -69,6 +70,7 @@ export default async function HumanitarianCompactPage(): Promise<JSX.Element> {
       */}
       <NavBar language={humLanguage()} />
       <HumanitarianCompactScreen locale={humLocale()} retainedRead={retainedRead} />
+      <AlphaRetainedReportingDock domain="humanitarian" />
       <Footer language={humLanguage()} />
     </ScriptRun>
   );
