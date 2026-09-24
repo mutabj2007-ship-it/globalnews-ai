@@ -6,6 +6,7 @@ import {
   resolveCountryByAnyIdentifier,
   SEVERITY_UNAVAILABLE_NO_RULE,
   type ConflictObservation,
+  type ConflictRetainedEvidenceDetail,
   type SpatialPrecision,
 } from '@globalnews-ai/shared';
 
@@ -294,6 +295,70 @@ export function normalizeUcdpCandidateCsv(
       observation.geography.countryIso3 !== undefined &&
       allow.has(observation.geography.countryIso3),
   );
+}
+
+
+export function extractUcdpCandidateEvidenceDetail(
+  bytes: Uint8Array,
+  args: {
+    observationKey: string;
+    upstreamEventId: string;
+    retrievalId: string;
+    contentAddress: string;
+  },
+): ConflictRetainedEvidenceDetail | null {
+  requiredText(args.observationKey, 'observationKey', 512);
+  requiredText(args.upstreamEventId, 'upstreamEventId', 128);
+  requiredText(args.retrievalId, 'retrievalId', 256);
+  if (!/^[0-9a-f]{64}$/.test(args.contentAddress)) refuse('CONTENT_ADDRESS_INVALID');
+
+  const rows = parseCsv(bytes);
+  if (rows.length < 2) refuse('UNSUPPORTED_SCHEMA_OR_RECORD_BOUND');
+  const header = rows[0];
+  if (
+    header.length !== HEADERS.length ||
+    HEADERS.some((name, index) => header[index] !== name)
+  ) {
+    refuse('SCHEMA_NOT_CONFIRMED_BY_CAPTURE');
+  }
+
+  for (const values of rows.slice(1)) {
+    const row = rowObject(header, values);
+    if (row.id !== args.upstreamEventId) continue;
+
+    const partyA = requiredText(row.side_a, 'side_a', 4096);
+    const partyB = optionalSource(row.side_b);
+    const count =
+      row.number_of_sources && /^\d+$/.test(row.number_of_sources)
+        ? Number(row.number_of_sources)
+        : undefined;
+
+    return {
+      observationKey: args.observationKey,
+      authority: 'UCDP_GED',
+      upstreamEventId: args.upstreamEventId,
+      sourceParties: [...new Set([partyA, ...(partyB ? [partyB] : [])])],
+      ...(optionalSource(row.where_description)
+        ? { whereDescription: row.where_description }
+        : {}),
+      ...(optionalSource(row.source_headline)
+        ? { sourceHeadline: row.source_headline }
+        : {}),
+      ...(optionalSource(row.source_original)
+        ? { sourceOriginal: row.source_original }
+        : {}),
+      ...(optionalSource(row.conflict_name)
+        ? { conflictName: row.conflict_name }
+        : {}),
+      ...(optionalSource(row.dyad_name) ? { dyadName: row.dyad_name } : {}),
+      ...(count !== undefined ? { numberOfSources: count } : {}),
+      ...(optionalSource(row.country) ? { sourceCountryName: row.country } : {}),
+      snapshotRetrievalId: args.retrievalId,
+      snapshotContentAddress: args.contentAddress,
+    };
+  }
+
+  return null;
 }
 
 export const UCDP_CANDIDATE_CSV_HEADERS = HEADERS;
