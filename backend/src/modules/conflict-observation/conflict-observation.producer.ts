@@ -3,7 +3,7 @@ import {
   validateConflictObservation,
 } from './conflict-observation.validation';
 import { Inject, Injectable } from '@nestjs/common';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { assertRevisionAppends, type ConflictRevision } from '@globalnews-ai/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
@@ -109,24 +109,43 @@ export class ConflictObservationProducer {
               : (() => {
                   throw new ConflictAdmissionRefused('SCHEMA_NOT_CONFIRMED_BY_CAPTURE');
                 })();
-        let inserted = 0;
+        const json = (value: unknown) => value as Prisma.InputJsonValue;
+        const observationKeys = observations.map((observation) => observation.observationKey);
+
+        /*
+          One bounded read replaces the former N×(history + duplicate) queries.
+          Ordering makes the first row for each key the latest revision, while
+          every row remains available to detect a replay of this exact capture.
+        */
+        const retainedRows =
+          observationKeys.length === 0
+            ? []
+            : await tx.conflictObservation.findMany({
+                where: { observationKey: { in: observationKeys } },
+                orderBy: [{ observationKey: 'asc' }, { revisionOrdinal: 'desc' }],
+              });
+
+        const latestByKey = new Map<string, (typeof retainedRows)[number]>();
+        const replayedKeys = new Set<string>();
+        for (const row of retainedRows) {
+          if (row.captureHash === hash) replayedKeys.add(row.observationKey);
+          if (!latestByKey.has(row.observationKey)) {
+            decodeRetainedConflictRow(row);
+            latestByKey.set(row.observationKey, row);
+          }
+        }
+
         let duplicates = 0;
+        const pinRows: Prisma.SnapshotPinCreateManyInput[] = [];
+        const observationRows: Prisma.ConflictObservationCreateManyInput[] = [];
+
         for (const observation of observations) {
-          const history = await tx.conflictObservation.findMany({
-            where: { observationKey: observation.observationKey },
-            orderBy: { revisionOrdinal: 'desc' },
-            take: 1,
-          });
-          const prior = history[0];
-          if (prior) decodeRetainedConflictRow(prior);
-          // Replaying an older capture must not append it after a newer revision.
-          const alreadyRetained = await tx.conflictObservation.findFirst({
-            where: { observationKey: observation.observationKey, captureHash: hash },
-          });
-          if (alreadyRetained) {
+          if (replayedKeys.has(observation.observationKey)) {
             duplicates++;
             continue;
           }
+
+          const prior = latestByKey.get(observation.observationKey);
           const revision: ConflictRevision = prior
             ? {
                 ...observation.revision,
@@ -135,6 +154,7 @@ export class ConflictObservationProducer {
                 revisionKind: 'SOURCE_REVISION',
               }
             : observation.revision;
+
           if (prior) {
             if (
               !prior.captureRetrievedAt ||
@@ -144,55 +164,75 @@ export class ConflictObservationProducer {
             }
             assertRevisionAppends(prior.revision as unknown as ConflictRevision, revision);
           }
+
           validateConflictObservation({ ...observation, revision });
-          const json = (value: unknown) => value as Prisma.InputJsonValue;
-          // Reuse the snapshot substrate's citation pin, in the same transaction as the
-          // observation. A historical revision continues to cite its original bytes.
           const citedBy = `${observation.observationKey}:revision:${revision.revisionOrdinal}`;
-          await tx.snapshotPin.upsert({
-            where: { contentAddress_citedBy: { contentAddress: hash, citedBy } },
-            create: {
-              contentAddress: hash,
-              citedBy,
-              pinnedAt: new Date(observation.temporal.ingestedAt),
-            },
-            update: { releasedAt: null },
+
+          pinRows.push({
+            id: randomUUID(),
+            contentAddress: hash,
+            citedBy,
+            pinnedAt: new Date(observation.temporal.ingestedAt),
           });
-          await tx.conflictObservation.create({
-            data: {
-              observationKey: observation.observationKey,
-              authority: observation.identity.authority,
-              upstreamEventId: observation.identity.upstreamEventId,
-              eventType: observation.eventType,
-              owner: observation.owner,
-              actors: json(observation.actors),
-              geography: json(observation.geography),
-              temporal: json(observation.temporal),
-              severity: json(observation.severity),
-              sourceReference: json(observation.sourceReference),
-              acquisition: json(observation.acquisition),
-              revision: json(revision),
-              revisionOrdinal: revision.revisionOrdinal,
-              occurredOn: new Date(observation.temporal.eventStartedAt),
-              ingestedAt: new Date(observation.temporal.ingestedAt),
-              countryIso3: observation.geography.countryIso3 ?? null,
-              snapshotRetrievalId: retrievalId,
-              snapshotAdmissibility: 'ADMITTED',
-              captureHash: hash,
-              captureRetrievedAt: capture.retrievedAt,
-            },
+
+          observationRows.push({
+            id: randomUUID(),
+            observationKey: observation.observationKey,
+            authority: observation.identity.authority,
+            upstreamEventId: observation.identity.upstreamEventId,
+            eventType: observation.eventType,
+            owner: observation.owner,
+            actors: json(observation.actors),
+            geography: json(observation.geography),
+            temporal: json(observation.temporal),
+            severity: json(observation.severity),
+            sourceReference: json(observation.sourceReference),
+            acquisition: json(observation.acquisition),
+            revision: json(revision),
+            revisionOrdinal: revision.revisionOrdinal,
+            occurredOn: new Date(observation.temporal.eventStartedAt),
+            ingestedAt: new Date(observation.temporal.ingestedAt),
+            countryIso3: observation.geography.countryIso3 ?? null,
+            snapshotRetrievalId: retrievalId,
+            snapshotAdmissibility: 'ADMITTED',
+            captureHash: hash,
+            captureRetrievedAt: capture.retrievedAt,
           });
-          inserted++;
         }
-        return { inserted, duplicates };
+
+        if (pinRows.length > 0) {
+          /*
+            A released historical pin for the same citation is reactivated just
+            as the former per-row upsert did, but with one bounded update.
+          */
+          await tx.snapshotPin.updateMany({
+            where: {
+              contentAddress: hash,
+              citedBy: { in: pinRows.map((row) => row.citedBy) },
+              releasedAt: { not: null },
+            },
+            data: { releasedAt: null },
+          });
+          await tx.snapshotPin.createMany({ data: pinRows, skipDuplicates: true });
+        }
+
+        if (observationRows.length > 0) {
+          /*
+            No skipDuplicates here. A uniqueness collision that was not present
+            in the single prefetch is a concurrent-write conflict and must fail
+            the serializable transaction rather than be silently swallowed.
+          */
+          await tx.conflictObservation.createMany({ data: observationRows });
+        }
+
+        return { inserted: observationRows.length, duplicates };
       },
       {
         isolationLevel: 'Serializable',
-        // The governed Candidate capture is bounded to <=500 admitted rows. Each row
-        // performs history/dedup/pin/write checks inside one atomic transaction, and
-        // the first live Alpha run measured ~30.5s before the old 30s limit expired.
-        // Four times that measured duration preserves atomicity without removing the
-        // upper bound or widening the dataset.
+        // The governed Candidate capture is bounded to <=500 admitted rows.
+        // History/dedup are prefetched once and pins/observations are written in
+        // bounded batches, but the ceiling stays explicit so a stalled database
+        // cannot hold a serializable transaction indefinitely.
         timeout: CONFLICT_ADMISSION_TRANSACTION_TIMEOUT_MS,
       },
     );
