@@ -84,12 +84,19 @@ export class ConflictObservationRepository {
       return null;
     }
 
-    return extractUcdpCandidateEvidenceDetail(capture.payload.bytes, {
-      observationKey: row.observationKey,
-      upstreamEventId: row.upstreamEventId,
-      retrievalId: capture.retrievalId,
-      contentAddress: capture.contentAddress,
-    });
+    try {
+      return extractUcdpCandidateEvidenceDetail(capture.payload.bytes, {
+        observationKey: row.observationKey,
+        upstreamEventId: row.upstreamEventId,
+        retrievalId: capture.retrievalId,
+        contentAddress: capture.contentAddress,
+      });
+    } catch {
+      // Detail is supplementary. A malformed retained payload must not turn the
+      // canonical observation read into an availability failure or cause a
+      // reader-visible 500. The observation remains readable without detail.
+      return null;
+    }
   }
 
   async latest(limit = 250): Promise<readonly ConflictObservation[]> {
