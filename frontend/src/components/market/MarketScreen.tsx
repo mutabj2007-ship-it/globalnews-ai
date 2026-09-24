@@ -277,7 +277,7 @@ export function MarketScreen({ locale, read, procurement }: {
               region, and it is now a note below the region it explains. It renders only
               when there is genuinely nothing held.
             */}
-            {read.kind !== 'OBSERVATIONS' && <ReadUnavailable reason={read.reason} t={t} />}
+            {read.kind !== 'OBSERVATIONS' && noticeHeld === 0 && <ReadUnavailable reason={read.reason} t={t} />}
 
             {/* ── REGION E ── */}
             <ProvenanceAffordance t={t} onOpen={() => dispatch({ k: 'OPEN', v: 'PROVENANCE' })} />
