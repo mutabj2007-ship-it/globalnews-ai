@@ -336,6 +336,11 @@ export async function readMarketObservations(): Promise<MarketReadResult> {
   return { kind: 'OBSERVATIONS', observations: displayable };
 }
 
+function marketProcurementReadUrl(): string {
+  if (typeof window !== 'undefined') return '/market-data/procurement';
+  return `${resolveApiBaseUrl()}/market/procurement`;
+}
+
 /* ───────────────────────────────────────────────────────────────────────────
  * 4 · CAPABILITY — WHAT THE READER IS TOLD ABOUT PROVIDERS
  * ─────────────────────────────────────────────────────────────────────────── */
