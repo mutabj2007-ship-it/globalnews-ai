@@ -39,7 +39,11 @@ export interface MktStrings {
     | 'providerNotActivated'
     | 'readNoEndpoint' | 'readNoActivatedProvider' | 'readNoObservation' | 'readNoDisplayable'
     | 'showCapability' | 'showProvenance'
-    | 'awaitingData' | 'coverage' | 'change' | 'readinessControl', string>>;
+    | 'awaitingData' | 'coverage' | 'change' | 'readinessControl'
+    | 'procurementNotice' | 'publication' | 'buyer' | 'buyerCountry'
+    | 'cpv' | 'deadline' | 'noticeType' | 'contractValue'
+    | 'retained' | 'openNotice' | 'procurementHeld' | 'procurementNoValue'
+    | 'procurementSourceNote', string>>;
 
   /**
    * READINESS LABELS — lifted out of the two screens.
@@ -166,6 +170,20 @@ const en: MktStrings = {
     coverage: 'Coverage',
     change: 'Change',
     readinessControl: 'Readiness detail',
+    procurementNotice: 'Procurement opportunity',
+    publication: 'Publication',
+    buyer: 'Buyer',
+    buyerCountry: 'Buyer country',
+    cpv: 'CPV',
+    deadline: 'Tender deadline',
+    noticeType: 'Notice type',
+    contractValue: 'Published value',
+    retained: 'Retained',
+    openNotice: 'Open TED notice',
+    procurementHeld: 'retained notices',
+    procurementNoValue: 'No single notice-level value published',
+    procurementSourceNote:
+      'Official TED notice · retained evidence only · no score, ranking or inferred market movement',
   },
   readiness: {
     equityOrIndex: 'Equity or index source qualified',

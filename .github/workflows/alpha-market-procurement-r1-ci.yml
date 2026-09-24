@@ -1,0 +1,55 @@
+name: Alpha Market Procurement R1 CI
+
+on:
+  push:
+    branches:
+      - feature/alpha-market-procurement-r1
+  pull_request:
+    branches:
+      - release/alpha-m08-integrated-r1
+    paths:
+      - 'backend/src/modules/market-ingest/**'
+      - 'backend/src/tooling/ted-procurement-alpha-r1.ts'
+      - 'shared/src/market/**'
+      - 'shared/src/index.ts'
+      - 'frontend/src/app/market/**'
+      - 'frontend/src/components/market/**'
+      - 'frontend/src/lib/market/**'
+      - 'frontend/src/lib/specialist/alphaVisualFrames.spec.ts'
+      - '.github/workflows/alpha-market-procurement-r1-ci.yml'
+
+concurrency:
+  group: alpha-market-procurement-r1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --config backend/prisma.config.ts
+      - run: npm run build:shared
+
+      - name: TED retained procurement contract
+        run: |
+          npm test --workspace=backend -- --runInBand src/modules/market-ingest/ted-procurement-retained.spec.ts
+
+      - name: Market retained reader and native visual gates
+        run: |
+          npm test --workspace=frontend -- --runInBand src/lib/market/mktProcurementRead.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/market/mktProcurementVisual.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/market/mktReader.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/market/mktContract.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/specialist/alphaVisualFrames.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/analysis-frame/phoneWidthFrame.spec.ts
+
+      - name: Production builds
+        run: |
+          npm run build:backend
+          npm run build:frontend

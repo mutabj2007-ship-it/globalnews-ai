@@ -465,8 +465,9 @@ describe('the Polish catalogue does not register as complete', () => {
     /*
       ══ L'S AUTHORING QUEUE, PINNED ══════════════════════════════════════════
       
-      The Alpha reader surface added 46 leaves, and the final visual frames added five
-      more — `reader.awaitingData`, `coverage`, `change` and `readinessControl`.
+      The Alpha reader surface and final visual frames already carried an explicit
+      Polish authoring queue. Market Procurement R1 adds thirteen reader leaves to that
+      queue — it does NOT translate them here and does NOT register Polish as complete.
       This lane authored NONE of their Polish, deliberately: F's ownership line is unchanged — *"H wires, L authors the six
       other locales"* — and a lane that invents Polish to make its own guard pass has
       written the defect L exists to prevent.
@@ -483,13 +484,18 @@ describe('the Polish catalogue does not register as complete', () => {
       'freshness.DELAYED', 'freshness.LAST_CLOSE', 'freshness.LATEST_PUBLISHED',
       'freshness.LIVE', 'freshness.STALE', 'freshness.UNAVAILABLE',
       'labels.observationBadgeHeld', 'labels.observationBadgeZero', 'labels.observationBody',
-      'reader.awaitingData', 'reader.capability', 'reader.capabilityActivation',
+      'reader.awaitingData', 'reader.buyer', 'reader.buyerCountry',
+      'reader.capability', 'reader.capabilityActivation',
       'reader.capabilityNone', 'reader.capabilityRights', 'reader.change',
-      'reader.coverage', 'reader.freshness', 'reader.headline',
-      'reader.headlineNone', 'reader.observations', 'reader.period',
-      'reader.providerNotActivated', 'reader.provisionalRetention',
+      'reader.contractValue', 'reader.coverage', 'reader.cpv', 'reader.deadline',
+      'reader.freshness', 'reader.headline', 'reader.headlineNone',
+      'reader.noticeType', 'reader.observations', 'reader.openNotice', 'reader.period',
+      'reader.procurementHeld', 'reader.procurementNoValue', 'reader.procurementNotice',
+      'reader.procurementSourceNote', 'reader.providerNotActivated',
+      'reader.provisionalRetention', 'reader.publication',
       'reader.readNoActivatedProvider', 'reader.readNoDisplayable', 'reader.readNoEndpoint',
-      'reader.readNoObservation', 'reader.readinessControl', 'reader.seriesIdentifier',
+      'reader.readNoObservation', 'reader.readinessControl', 'reader.retained',
+      'reader.seriesIdentifier',
       'reader.seriesNameNotCarried',
       'reader.showCapability', 'reader.showProvenance', 'reader.source',
       'reader.sourceClass', 'reader.unit', 'reader.value', 'reader.vintage',

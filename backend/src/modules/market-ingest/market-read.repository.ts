@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { inspectMarketCapture, InvalidMarketCapture } from './market-retained-capture';
+import {
+  inspectTedProcurementCapture,
+  InvalidTedProcurementCapture,
+} from './ted-procurement-retained';
+import type { MarketProcurementNotice } from '@globalnews-ai/shared';
 
 export interface MarketReadObservation {
   readonly context: {
@@ -34,6 +39,40 @@ export interface MarketReadObservation {
 @Injectable()
 export class MarketReadRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  async procurement(limit = 25): Promise<readonly MarketProcurementNotice[]> {
+    const bounded = Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 50)) : 25;
+    const captures = await this.prisma.snapshotRetrieval.findMany({
+      where: {
+        providerId: 'TED',
+        endpointId: 'TED_SEARCH_V3',
+        admissibility: 'ADMITTED',
+      },
+      take: 20,
+      orderBy: [{ retrievedAt: 'desc' }, { retrievalId: 'asc' }],
+      include: { payload: true },
+    });
+
+    const result: MarketProcurementNotice[] = [];
+    const seen = new Set<string>();
+    for (const capture of captures) {
+      let notices: readonly MarketProcurementNotice[];
+      try {
+        notices = inspectTedProcurementCapture(capture);
+      } catch (error) {
+        if (error instanceof InvalidTedProcurementCapture) continue;
+        throw error;
+      }
+
+      for (const notice of notices) {
+        if (seen.has(notice.procurementKey)) continue;
+        seen.add(notice.procurementKey);
+        result.push(notice);
+        if (result.length === bounded) return result;
+      }
+    }
+    return result;
+  }
 
   async latest(limit?: number): Promise<readonly MarketReadObservation[]> {
     const bounded =

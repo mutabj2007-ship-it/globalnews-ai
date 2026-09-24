@@ -58,6 +58,7 @@
  */
 
 import type { JSX, ReactNode } from 'react';
+import type { MarketProcurementNotice } from '@globalnews-ai/shared';
 import {
   MKT_HEADING,
   MKT_HIT_TARGET_PX,
@@ -77,7 +78,12 @@ import {
   type MarketReadUnavailableReason,
   type MarketStoredObservation,
 } from '@/lib/market/mktReadModel';
-import type { MktStrings } from '@/lib/market/mktStrings';
+import type { MktLocale, MktStrings } from '@/lib/market/mktStrings';
+import {
+  procurementBuyerNames,
+  procurementSourceHref,
+  procurementTitle,
+} from '@/lib/market/mktProcurementRead';
 
 /* ───────────────────────────────────────────────────────────────────────────
  * FIELD — one labelled fact inside a card
@@ -220,6 +226,143 @@ export function ObservationCard({ o, t }: {
         margin: 0, fontSize: MKT_TYPE.monoMeta, color: MKT_INK.tertiary,
         whiteSpace: 'normal', overflowWrap: 'anywhere',
       }}>{retainedObservationContext(o) ?? t.reader.seriesNameNotCarried}</p>
+    </article>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * PROCUREMENT OPPORTUNITY CARD — official TED retained artifact
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+export function ProcurementCard({ notice, locale, t }: {
+  notice: MarketProcurementNotice;
+  locale: MktLocale;
+  t: MktStrings;
+}): JSX.Element {
+  const buyers = procurementBuyerNames(notice, locale);
+  const hasBuyers = Boolean(buyers.length);
+  const hasCpv = Boolean(notice.cpvCodes.length);
+  const href = procurementSourceHref(notice, locale);
+  const deadline = notice.deadlineDates[0] ?? null;
+
+  return (
+    <article
+      data-mkt="procurement-observation"
+      data-mkt-procurement={notice.publicationNumber}
+      style={{
+        border: edge,
+        background: MKT_SURFACE.panel,
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+      }}
+    >
+      <header style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', alignItems: 'baseline' }}>
+          <span style={{ ...micro, color: MKT_HEADING.secondaryInk }}>
+            {t.reader.procurementNotice}
+          </span>
+          <span style={{ ...micro, color: MKT_INK.tertiary }}>
+            <Identifier>{notice.noticeType}</Identifier>
+          </span>
+          <span
+            data-mkt="procurement-freshness"
+            style={{
+              ...micro,
+              padding: '3px 8px',
+              border: `1px solid ${MKT_LINE.border}`,
+              background: MKT_SURFACE.chip,
+              color: MKT_INK.secondary,
+            }}
+          >
+            {t.freshness.STALE}
+          </span>
+        </div>
+        <h3 style={{
+          margin: 0,
+          fontSize: MKT_TYPE.bodyLarge,
+          lineHeight: 1.45,
+          fontWeight: 600,
+          color: MKT_INK.primary,
+          whiteSpace: 'normal',
+          overflowWrap: 'anywhere',
+        }}>
+          {procurementTitle(notice, locale)}
+        </h3>
+      </header>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
+        gap: '12px 18px',
+      }}>
+        <Field label={t.reader.publication}>
+          <Identifier>{notice.publicationNumber}</Identifier>
+          <span style={{ display: 'block', color: MKT_INK.secondary }}>
+            {notice.publicationDate}
+          </span>
+        </Field>
+        <Field label={t.reader.buyer}>
+          {hasBuyers ? buyers.join(' · ') : '—'}
+        </Field>
+        <Field label={t.reader.buyerCountry}>
+          <Identifier>{notice.buyerCountries.join(' · ')}</Identifier>
+        </Field>
+        <Field label={t.reader.cpv}>
+          {hasCpv ? (
+            <Identifier>{notice.cpvCodes.join(' · ')}</Identifier>
+          ) : '—'}
+        </Field>
+        <Field label={t.reader.contractValue}>
+          {notice.totalValue !== null && notice.totalValueCurrency !== null ? (
+            <>
+              <Identifier>{String(notice.totalValue)}</Identifier>{' '}
+              <Identifier>{notice.totalValueCurrency}</Identifier>
+            </>
+          ) : (
+            <span style={{ color: MKT_INK.tertiary }}>{t.reader.procurementNoValue}</span>
+          )}
+        </Field>
+        <Field label={t.reader.deadline}>
+          {deadline ?? '—'}
+        </Field>
+      </div>
+
+      <footer style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '6px 14px',
+        alignItems: 'baseline',
+        borderBlockStart: `1px solid ${MKT_LINE.hairline}`,
+        paddingBlockStart: '10px',
+      }}>
+        <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.source}</span>
+        <Identifier>TED</Identifier>
+        <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.sourceClass}</span>
+        <Identifier>{notice.sourceClass}</Identifier>
+        <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.retained}</span>
+        <Identifier>{notice.retainedAt}</Identifier>
+        {href && (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: MKT_TYPE.body, color: MKT_LICENSED.cyan }}
+          >
+            {t.reader.openNotice} →
+          </a>
+        )}
+      </footer>
+
+      <p style={{
+        margin: 0,
+        fontSize: MKT_TYPE.monoMeta,
+        color: MKT_INK.tertiary,
+        whiteSpace: 'normal',
+      }}>
+        {t.reader.procurementSourceNote}
+      </p>
     </article>
   );
 }
@@ -393,15 +536,16 @@ export function CapabilityList({ rows, t }: {
  * ─────────────────────────────────────────────────────────────────────────── */
 
 export function MarketStatus({ held, t }: { held: number; t: MktStrings }): JSX.Element {
+  const hasHeld = Boolean(held);
   return (
     <div data-mkt="status" data-mkt-held={String(held)} style={{
       display: 'flex', flexWrap: 'wrap', gap: '8px 16px', alignItems: 'baseline',
     }}>
       <span style={{ ...micro, color: MKT_INK.label }}>{t.reader.observations}</span>
       <span data-mkt="status-value" style={{
-        ...micro, padding: '3px 8px', border: `1px solid ${held > 0 ? MKT_LICENSED.mint : MKT_LINE.border}`,
-        color: held > 0 ? MKT_LICENSED.mint : MKT_INK.tertiary,
-        background: held > 0 ? 'transparent' : MKT_SURFACE.chip, whiteSpace: 'nowrap',
+        ...micro, padding: '3px 8px', border: `1px solid ${hasHeld ? MKT_LICENSED.mint : MKT_LINE.border}`,
+        color: hasHeld ? MKT_LICENSED.mint : MKT_INK.tertiary,
+        background: hasHeld ? 'transparent' : MKT_SURFACE.chip, whiteSpace: 'nowrap',
       }}>
         {/*
           F M-1 / M-2 · HELD, NOT DATA, AND COUNTED FROM RECORDS.
@@ -452,8 +596,12 @@ const ABSENT = '—';
  * mean *nothing is watched*; it would mean *watching works and you have chosen nothing*.
  * The count returns when the subject types do.
  */
-export function CoverageStrip({ t }: { t: MktStrings }): JSX.Element {
+export function CoverageStrip({ t, procurementCount = 0 }: {
+  t: MktStrings;
+  procurementCount?: number;
+}): JSX.Element {
   const kinds = Object.keys(t.subjects);
+  const hasProcurement = Boolean(procurementCount);
   return (
     <section data-mkt="zone-b" data-mkt-region="coverage" style={{
       display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0,
@@ -476,10 +624,27 @@ export function CoverageStrip({ t }: { t: MktStrings }): JSX.Element {
             <span style={{ ...micro, color: MKT_INK.label, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
               {t.subjects[kind]}
             </span>
-            <span data-mkt="figure-absent" aria-label={t.reader.awaitingData} style={{
-              fontFamily: "var(--ar-family, 'IBM Plex Mono', monospace)",
-              fontSize: MKT_TYPE.bodyLarge, color: MKT_INK.tertiary,
-            }}>{ABSENT}</span>
+            {kind === 'PROCUREMENT_OPPORTUNITY' && hasProcurement ? (
+              <span
+                data-mkt="coverage-held"
+                data-mkt-count={String(procurementCount)}
+                style={{
+                  fontFamily: "var(--ar-family, 'IBM Plex Mono', monospace)",
+                  fontSize: MKT_TYPE.bodyLarge,
+                  color: MKT_LICENSED.mint,
+                }}
+              >
+                {procurementCount}
+                <span style={{ ...micro, display: 'block', color: MKT_INK.tertiary }}>
+                  {t.reader.procurementHeld}
+                </span>
+              </span>
+            ) : (
+              <span data-mkt="figure-absent" aria-label={t.reader.awaitingData} style={{
+                fontFamily: "var(--ar-family, 'IBM Plex Mono', monospace)",
+                fontSize: MKT_TYPE.bodyLarge, color: MKT_INK.tertiary,
+              }}>{ABSENT}</span>
+            )}
           </div>
         ))}
       </div>

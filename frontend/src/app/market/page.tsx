@@ -12,6 +12,7 @@ import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import type { MktLocale } from '@/lib/market/mktStrings';
 import { readMarketObservations } from '@/lib/market/mktReadModel';
+import { readMarketProcurement } from '@/lib/market/mktProcurementRead';
 import { MarketScreen } from '@/components/market/MarketScreen';
 
 /**
@@ -64,11 +65,14 @@ function mktLocale(): MktLocale {
 }
 
 export default async function MarketPage(): Promise<JSX.Element> {
-  const read = await readMarketObservations();
+  const [read, procurement] = await Promise.all([
+    readMarketObservations(),
+    readMarketProcurement(),
+  ]);
   return (
     <ScriptRun locale={mktLocale()} step="wrapping" as="div">
       <NavBar language={mktLanguage()} />
-      <MarketScreen locale={mktLocale()} read={read} />
+      <MarketScreen locale={mktLocale()} read={read} procurement={procurement} />
       <Footer language={mktLanguage()} />
     </ScriptRun>
   );
