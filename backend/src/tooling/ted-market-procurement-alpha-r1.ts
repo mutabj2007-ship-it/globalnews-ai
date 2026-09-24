@@ -47,3 +47,87 @@ const REQUEST_BODY = {
   paginationMode: 'PAGE_NUMBER',
   onlyLatestVersions: true,
 } as const;
+
+async function acquire() {
+  const registry = new MarketProviderRegistry(['TED']);
+  const permitted = registry.resolve('TED', 'PROCUREMENT_OPPORTUNITY', 'ACQUIRE');
+  registry.resolve('TED', 'PROCUREMENT_OPPORTUNITY', 'RETAIN_PAYLOAD');
+
+  const requestedAt = new Date();
+  const response = await fetch(SOURCE_URL, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(REQUEST_BODY),
+    signal: AbortSignal.timeout(permitted.fetchTimeoutMs),
+    redirect: 'error',
+  });
+  const retrievedAt = new Date();
+
+  if (!response.ok || response.status !== 200) fail(`HTTP_${response.status}`);
+  if (response.url !== SOURCE_URL) fail('REDIRECT_ORIGIN_DRIFT');
+
+  const mediaType = response.headers.get('content-type') ?? '';
+  if (mediaType.split(';')[0].trim().toLowerCase() !== 'application/json') {
+    fail('MEDIA_TYPE');
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_TED_MARKET_ALPHA_R1_BYTES) {
+    fail('SIZE');
+  }
+
+  const contentAddress = digest(bytes);
+  const retrievalId = `ted-search:2026-09-24:POL:cn-standard:${contentAddress}`;
+  const parsedAt = new Date();
+
+  const candidate = {
+    retrievalId,
+    providerId: 'TED',
+    endpointId: TED_MARKET_ALPHA_R1_ENDPOINT_ID,
+    requestPath: TED_MARKET_ALPHA_R1_REQUEST_PATH,
+    parameters: PARAMETERS,
+    requestedAt,
+    retrievedAt,
+    httpStatus: 200,
+    mediaType,
+    byteLength: bytes.byteLength,
+    contentAddress,
+    completeness: 'COMPLETE',
+    admissibility: 'ADMITTED',
+    refusalKey: null,
+    parserId: TED_MARKET_ALPHA_R1_PARSER_ID,
+    parserVersion: TED_MARKET_ALPHA_R1_PARSER_VERSION,
+    parsedAt,
+    rightsGrade: permitted.rights.rightsClass,
+    rightsInstrumentRef: permitted.rights.instrument,
+    payloadRetentionPermitted: true,
+    payload: {
+      bytes,
+      storageState: 'RETAINED',
+      byteLength: bytes.byteLength,
+      mediaType,
+      contentAddress,
+    },
+  };
+
+  const notices = inspectTedProcurementCapture(candidate);
+  if (notices.length < 1 || notices.length > TED_MARKET_ALPHA_R1_LIMIT) {
+    fail('NOTICE_COUNT_BOUND');
+  }
+
+  return {
+    permitted,
+    candidate,
+    notices,
+    bytes,
+    contentAddress,
+    retrievalId,
+    mediaType,
+    requestedAt,
+    retrievedAt,
+    parsedAt,
+  };
+}
