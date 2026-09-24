@@ -1,0 +1,45 @@
+name: Alpha Market TED Retained R1 CI
+
+on:
+  push:
+    branches:
+      - feature/alpha-market-ted-procurement-r1
+  pull_request:
+    branches:
+      - release/alpha-m08-integrated-r1
+    paths:
+      - 'backend/src/modules/market-ingest/**'
+      - 'shared/src/market/**'
+      - 'frontend/src/app/market/**'
+      - 'frontend/src/components/market/**'
+      - 'frontend/src/lib/market/**'
+      - '.github/workflows/alpha-market-ted-retained-r1-ci.yml'
+
+concurrency:
+  group: alpha-market-ted-retained-r1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --config backend/prisma.config.ts
+      - run: npm run build:shared
+
+      - name: Market retained-source gates
+        run: |
+          npm test --workspace=backend -- --runInBand src/modules/market-ingest/ted-procurement-retained.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/market/mktReader.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/market/mktContract.spec.ts
+
+      - name: Production builds
+        run: |
+          npm run build:backend
+          npm run build:frontend
