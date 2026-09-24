@@ -29,6 +29,8 @@ function capture(rows: unknown = [fixture()], day = 20) {
     refusalKey: null,
     httpStatus: 200,
     payloadRetentionPermitted: true,
+    rightsGrade: 'E-5',
+    rightsInstrumentRef: 'https://ucdp.uu.se/downloads/ — UCDP datasets licensed CC BY 4.0',
     parserId: 'ucdp-ged-json',
     parserVersion: '1',
     parsedAt: new Date(),
@@ -118,6 +120,8 @@ describe('bounded retained-only admission', () => {
     { completeness: 'TRUNCATED' },
     { parserVersion: '99' },
     { payloadRetentionPermitted: false },
+    { rightsGrade: 'E-4' },
+    { rightsInstrumentRef: '' },
     { parserId: null },
     { refusalKey: 'HOST_MISMATCH' },
   ])('refuses ineligible retrieval %j', async (over) => {
