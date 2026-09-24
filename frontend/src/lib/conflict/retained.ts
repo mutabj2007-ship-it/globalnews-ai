@@ -24,6 +24,47 @@ export function reviewedObservations(input: unknown): readonly ConflictObservati
     );
 }
 
+export interface ConflictDisplayStats {
+  readonly retained: number;
+  readonly drawable: number;
+  readonly withheld: number;
+  readonly exact: number;
+  readonly city: number;
+}
+
+/** Source-stated place/country label for reader presentation. Never derived from coordinates. */
+export function conflictPlaceLabel(row: ConflictObservation): string {
+  return row.geography.sourceCountryName ?? row.geography.countryIso3 ?? row.identity.authority;
+}
+
+/**
+ * Presentation counts over the retained objects themselves.
+ *
+ * "Drawable" means only that the existing Spatial point grammar can render the
+ * observation without coercion. It is not a severity, confidence or attention rank.
+ */
+export function conflictDisplayStats(rows: readonly ConflictObservation[]): ConflictDisplayStats {
+  let drawable = 0;
+  let exact = 0;
+  let city = 0;
+
+  for (const row of rows) {
+    const record = observationMapRecord(row);
+    if (!record) continue;
+    drawable++;
+    if (row.geography.precision === 'EXACT') exact++;
+    if (row.geography.precision === 'CITY') city++;
+  }
+
+  return {
+    retained: rows.length,
+    drawable,
+    withheld: rows.length - drawable,
+    exact,
+    city,
+  };
+}
+
 /** Spatial's point grammar cannot represent lines/areas/centroids. Withhold, never coerce. */
 export function observationMapRecord(row: ConflictObservation): EvidenceRecord | null {
   const g = row.geography;
@@ -40,12 +81,28 @@ export function observationMapRecord(row: ConflictObservation): EvidenceRecord |
     return null;
   const point = (g.coordinates as { coordinates: readonly [number, number] }).coordinates;
   if (!Array.isArray(point) || point.length < 2) return null;
+  /*
+    The geography id is the exact source point, not the event identity.
+
+    EvidenceMapCanvas already groups records by geography.id. Using the event
+    id here defeated that accepted collision rule and drew one coincident ring
+    per UCDP row. Exact coordinate equality is not a spatial inference: both
+    rows literally carry the same source-stated point. Nearby-but-different
+    points remain separate.
+  */
+  const geographyId = [
+    'conflict-point',
+    g.countryIso3,
+    String(point[0]),
+    String(point[1]),
+  ].join(':');
+
   return {
     id: row.observationKey,
     geography: {
-      id: row.observationKey,
+      id: geographyId,
       countryIso3: g.countryIso3,
-      displayName: row.identity.upstreamEventId,
+      displayName: conflictPlaceLabel(row),
       point: [point[0], point[1]],
     },
     precision: g.precision,
