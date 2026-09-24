@@ -260,3 +260,40 @@ async function persist(prisma: PrismaService, acquired: Awaited<ReturnType<typeo
     { isolationLevel: 'Serializable', timeout: 30_000 },
   );
 }
+
+async function main(): Promise<void> {
+  if (process.env.ALPHA_TED_MARKET_R1_APPLY !== 'YES') {
+    fail('EXPLICIT_APPLY_ENV_REQUIRED');
+  }
+
+  const acquired = await acquire();
+  const prisma = new PrismaService();
+  try {
+    await persist(prisma, acquired);
+    console.log(
+      JSON.stringify({
+        scope: 'ALPHA_TED_MARKET_R1',
+        retrievalId: acquired.retrievalId,
+        sourceSha256: acquired.contentAddress,
+        retainedBytes: acquired.bytes.byteLength,
+        retainedNotices: acquired.notices.length,
+        publicationNumbers: acquired.notices.map(
+          (notice) => notice.portalReference.noticeId,
+        ),
+      }),
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+main().catch((error) => {
+  console.error(
+    JSON.stringify({
+      scope: 'ALPHA_TED_MARKET_R1',
+      state: 'STOP',
+      reason: error instanceof Error ? error.message : 'UNKNOWN',
+    }),
+  );
+  process.exitCode = 1;
+});
