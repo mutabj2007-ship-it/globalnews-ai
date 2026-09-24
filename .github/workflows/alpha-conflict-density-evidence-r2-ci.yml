@@ -1,0 +1,55 @@
+name: Alpha Conflict Density Evidence R2 CI
+
+on:
+  push:
+    branches:
+      - feature/alpha-conflict-density-evidence-r2
+  pull_request:
+    branches:
+      - release/alpha-m08-integrated-r1
+    paths:
+      - 'backend/src/modules/conflict-observation/**'
+      - 'shared/src/conflict/**'
+      - 'frontend/src/components/conflict/**'
+      - 'frontend/src/components/map/shell/EvidenceMapCanvas.tsx'
+      - 'frontend/src/lib/conflict/**'
+      - 'frontend/src/lib/map/evidence/**'
+      - '.github/workflows/alpha-conflict-density-evidence-r2-ci.yml'
+
+concurrency:
+  group: alpha-conflict-density-evidence-r2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --config backend/prisma.config.ts
+      - run: npm run build:shared
+
+      - name: Retained evidence-detail gates
+        run: |
+          npm test --workspace=backend -- --runInBand src/modules/conflict-observation/ucdp-candidate-csv.normalizer.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/conflict-observation/conflict-observation.repository.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/conflict/evidenceDetail.spec.ts
+
+      - name: Conflict density and map gates
+        run: |
+          npm test --workspace=frontend -- --runInBand src/lib/map/evidence/rippleDeclutter.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/map/evidence/evidencePlaceMarks.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/conflict/retained.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/map/d1/conflictDomainBind.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/checkpointELayerReasons.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/mobile/compactSpatialCorrection.spec.ts
+
+      - name: Production builds
+        run: |
+          npm run build:backend
+          npm run build:frontend

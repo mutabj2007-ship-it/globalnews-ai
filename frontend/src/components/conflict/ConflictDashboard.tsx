@@ -1,6 +1,10 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ConflictObservation, LanguageCode } from '@globalnews-ai/shared';
+import type {
+  ConflictObservation,
+  ConflictRetainedEvidenceDetail,
+  LanguageCode,
+} from '@globalnews-ai/shared';
 import { severityValueOrNull } from '@globalnews-ai/shared';
 import { GlobalMapShell } from '@/components/map/shell/GlobalMapShell';
 import { EvidenceMapCanvas } from '@/components/map/shell/EvidenceMapCanvas';
@@ -26,6 +30,7 @@ import {
   sourceHref,
 } from '@/lib/conflict/retained';
 import { conflictStrings } from '@/lib/conflict/strings';
+import { readConflictEvidenceDetail } from '@/lib/conflict/evidenceDetail';
 import type { AttentionQueue } from '@/lib/specialist/attentionQueue';
 import './conflict.css';
 
@@ -48,6 +53,10 @@ export function ConflictDashboard({
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [evidenceDetail, setEvidenceDetail] =
+    useState<ConflictRetainedEvidenceDetail | null>(null);
+  const [evidenceDetailStatus, setEvidenceDetailStatus] =
+    useState<'idle' | 'loading' | 'ready'>('idle');
   const [drawer, setDrawer] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [incidentsVisible, setIncidentsVisible] = useState(true);
@@ -112,6 +121,26 @@ export function ConflictDashboard({
     );
     if (target) target.scrollTop = scroll.current;
   }, [status, phone]);
+
+  useEffect(() => {
+    if (!selected) {
+      setEvidenceDetail(null);
+      setEvidenceDetailStatus('idle');
+      return;
+    }
+
+    const controller = new AbortController();
+    setEvidenceDetail(null);
+    setEvidenceDetailStatus('loading');
+    void readConflictEvidenceDetail(selected, controller.signal).then((detail) => {
+      if (controller.signal.aborted) return;
+      setEvidenceDetail(detail);
+      setEvidenceDetailStatus('ready');
+    });
+
+    return () => controller.abort();
+  }, [selected]);
+
   const row = rows.find((item) => item.observationKey === selected) ?? null;
   const records = useMemo(
     () =>
@@ -234,10 +263,22 @@ export function ConflictDashboard({
           </dd>
         </div>
       )}
+      {evidenceDetail?.sourceParties.length ? (
+        <div>
+          <dt>{t.sourceParties}</dt>
+          <dd>{evidenceDetail.sourceParties.join(' · ')}</dd>
+        </div>
+      ) : null}
       <div>
         <dt>{t.sourceCountry}</dt>
-        <dd>{conflictPlaceLabel(row)}</dd>
+        <dd>{evidenceDetail?.sourceCountryName ?? conflictPlaceLabel(row)}</dd>
       </div>
+      {evidenceDetail?.whereDescription && (
+        <div>
+          <dt>{t.sourceLocationText}</dt>
+          <dd>{evidenceDetail.whereDescription}</dd>
+        </div>
+      )}
       <div>
         <dt>{t.eventClassification}</dt>
         <dd>{t.events[row.eventType]}</dd>
@@ -294,6 +335,39 @@ export function ConflictDashboard({
           </dd>
         )}
       </div>
+      {evidenceDetail?.sourceHeadline && (
+        <div>
+          <dt>{t.sourceHeadline}</dt>
+          <dd>{evidenceDetail.sourceHeadline}</dd>
+        </div>
+      )}
+      {evidenceDetail?.sourceOriginal && (
+        <div>
+          <dt>{t.sourceOriginal}</dt>
+          <dd>{evidenceDetail.sourceOriginal}</dd>
+        </div>
+      )}
+      {evidenceDetail?.conflictName && (
+        <div>
+          <dt>{t.conflictName}</dt>
+          <dd>{evidenceDetail.conflictName}</dd>
+        </div>
+      )}
+      {evidenceDetail?.dyadName && (
+        <div>
+          <dt>{t.dyadName}</dt>
+          <dd>{evidenceDetail.dyadName}</dd>
+        </div>
+      )}
+      {evidenceDetail?.numberOfSources !== undefined && (
+        <div>
+          <dt>{t.sourceCount}</dt>
+          <dd>{evidenceDetail.numberOfSources}</dd>
+        </div>
+      )}
+      {evidenceDetailStatus === 'ready' && evidenceDetail === null && (
+        <p className="text-sp-ink-3">{t.evidenceDetailUnavailable}</p>
+      )}
       {row.temporal.publisherRecordedAt && (
         <div>
           <dt>{t.publisherTime}</dt>

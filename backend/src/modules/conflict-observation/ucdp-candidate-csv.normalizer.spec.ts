@@ -3,6 +3,7 @@ import {
   conflictEventKey,
 } from '@globalnews-ai/shared';
 import {
+  extractUcdpCandidateEvidenceDetail,
   MAX_UCDP_CANDIDATE_CSV_BYTES,
   normalizeUcdpCandidateCsv,
   UCDP_CANDIDATE_CSV_HEADERS,
@@ -129,6 +130,54 @@ describe('UCDP Candidate CSV retained normalizer', () => {
     );
     expect(congo).toHaveLength(1);
     expect(congo[0].geography.countryIso3).toBe('COD');
+  });
+
+  it('extracts retained evidence detail without upgrading actor kind or event classification', () => {
+    const bytes = capture({
+      side_a: 'Government of Example',
+      side_b: 'Example Armed Group',
+      where_description: 'Source described location',
+      source_headline: 'Source headline',
+      source_original: 'Example outlet',
+      conflict_name: 'Example conflict',
+      dyad_name: 'Government of Example - Example Armed Group',
+      number_of_sources: '4',
+      country: 'DR Congo (Zaire)',
+    });
+
+    expect(
+      extractUcdpCandidateEvidenceDetail(bytes, {
+        observationKey: 'cfl:1:8:UCDP_GED:6:637360',
+        upstreamEventId: '637360',
+        retrievalId: 'candidate-test',
+        contentAddress: 'a'.repeat(64),
+      }),
+    ).toEqual({
+      observationKey: 'cfl:1:8:UCDP_GED:6:637360',
+      authority: 'UCDP_GED',
+      upstreamEventId: '637360',
+      sourceParties: ['Government of Example', 'Example Armed Group'],
+      whereDescription: 'Source described location',
+      sourceHeadline: 'Source headline',
+      sourceOriginal: 'Example outlet',
+      conflictName: 'Example conflict',
+      dyadName: 'Government of Example - Example Armed Group',
+      numberOfSources: 4,
+      sourceCountryName: 'DR Congo (Zaire)',
+      snapshotRetrievalId: 'candidate-test',
+      snapshotContentAddress: 'a'.repeat(64),
+    });
+  });
+
+  it('returns null when the selected upstream event is not present in the retained capture', () => {
+    expect(
+      extractUcdpCandidateEvidenceDetail(capture(), {
+        observationKey: 'missing',
+        upstreamEventId: '999999',
+        retrievalId: 'candidate-test',
+        contentAddress: 'b'.repeat(64),
+      }),
+    ).toBeNull();
   });
 
   it('pins the exact reviewed header and refuses schema drift', () => {
