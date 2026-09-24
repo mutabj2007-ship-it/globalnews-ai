@@ -477,6 +477,25 @@ export interface ConflictSourceReference {
   readonly sourceUrl?: string;
 }
 
+export interface ConflictRetainedEvidenceDetail {
+  readonly observationKey: string;
+  readonly authority: ConflictUpstreamAuthority;
+  readonly upstreamEventId: string;
+  /** Verbatim UCDP side labels. Their actor KIND remains unclassified here. */
+  readonly sourceParties: readonly string[];
+  /** Verbatim source-published location description; never geocoded or upgraded. */
+  readonly whereDescription?: string;
+  readonly sourceHeadline?: string;
+  readonly sourceOriginal?: string;
+  readonly conflictName?: string;
+  readonly dyadName?: string;
+  readonly numberOfSources?: number;
+  readonly sourceCountryName?: string;
+  readonly snapshotRetrievalId: string;
+  readonly snapshotContentAddress: string;
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * 8 · ACQUISITION PROVENANCE — THE PLATFORM'S, NOT A SECOND ONE
  * ═══════════════════════════════════════════════════════════════════════════
