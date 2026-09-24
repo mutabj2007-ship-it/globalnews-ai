@@ -195,6 +195,19 @@ const en: MktStrings = {
     FINAL: 'Final',
     WITHDRAWN: 'Withdrawn',
   },
+  procurement: {
+    notice: 'Official notice',
+    buyer: 'Buyer',
+    country: 'Country',
+    cpv: 'CPV',
+    noticeType: 'Record type',
+    published: 'Published',
+    deadline: 'Deadline',
+    statedValue: 'Stated value',
+    openNotice: 'Open source record',
+    retainedAt: 'Retained',
+    notStated: 'Not stated',
+  },
 };
 
 /**
