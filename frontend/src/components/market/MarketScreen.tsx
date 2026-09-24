@@ -60,6 +60,8 @@ import {
 import { MARKET_CAPABILITY, type MarketReadResult } from '@/lib/market/mktReadModel';
 import { resolveMktStrings, type MktLocale, type MktStrings } from '@/lib/market/mktStrings';
 import { economyStrings } from '@/lib/economy/strings';
+import { MarketNoticeCard } from './MktNoticeCard';
+import type { MarketProcurementReadResult } from '@/lib/market/mktProcurementRead';
 
 /**
  * TWO DRAWERS, NOT FOUR TABS.
@@ -127,8 +129,8 @@ function ReadinessRow({ ready, label, measured }: {
   );
 }
 
-export function MarketScreen({ locale, read }: {
-  locale: MktLocale; read: MarketReadResult;
+export function MarketScreen({ locale, read, procurement }: {
+  locale: MktLocale; read: MarketReadResult; procurement: MarketProcurementReadResult;
 }): JSX.Element {
   const [view, dispatch] = useReducer(reducer, { drawer: null });
   const res = resolveMktStrings(locale);
