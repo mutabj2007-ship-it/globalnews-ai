@@ -146,25 +146,14 @@ describe('the Politics module graph walk reaches what it claims to', () => {
 const NETWORK_TOKENS: readonly RegExp[] = [
   /\bfetch\s*\(/, /XMLHttpRequest/, /\buseSWR\b/, /\baxios\b/, /EventSource/, /https?:\/\//,
 ];
-const ALPHA_RETAINED_REPORTING_DOCK = join(
-  SRC,
-  'components',
-  'alpha',
-  'AlphaRetainedReportingDock.tsx',
-);
 
 describe('no Politics surface can reach a provider or spend AI', () => {
-  it('the specialist frame cannot reach a provider or AI; the Product Owner overlay has one bounded retained read', () => {
+  it('nothing in the reachable graph performs a network call', () => {
     const offenders: string[] = [];
-    for (const f of GRAPH.filter((file) => file !== ALPHA_RETAINED_REPORTING_DOCK)) {
+    for (const f of GRAPH) {
       for (const rx of NETWORK_TOKENS) if (rx.test(code(f))) offenders.push(`${f.slice(SRC.length)} :: ${rx}`);
     }
     expect(offenders).toEqual([]);
-
-    const reviewDock = code(ALPHA_RETAINED_REPORTING_DOCK);
-    expect(reviewDock).toContain("fetch('/api/admin/alpha-review'");
-    expect([...reviewDock.matchAll(/\bfetch\s*\(/g)]).toHaveLength(1);
-    expect(reviewDock).not.toMatch(/https?:\/\/|\/analysis\/|\/news\/|gnews|openai/i);
   });
 
   it('the sweep can fail — positive control', () => {
