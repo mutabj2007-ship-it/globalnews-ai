@@ -7,7 +7,13 @@ import {
   validateConflictObservation,
   type ConflictObservation,
 } from '@globalnews-ai/shared';
-import { reviewedObservations, observationMapRecord, sourceHref } from './retained';
+import {
+  conflictDisplayStats,
+  conflictPlaceLabel,
+  reviewedObservations,
+  observationMapRecord,
+  sourceHref,
+} from './retained';
 import { ConflictAssessmentRail } from '@/components/map/conflict/ConflictAssessmentRail';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { conflictStrings } from './strings';
@@ -93,6 +99,48 @@ describe('Plan B retained Conflict read boundary', () => {
       }),
     ).toBeNull();
   });
+  it('uses source-stated place labels and groups only exact source points', () => {
+    const a = fixture();
+    const withPlace = {
+      ...a,
+      geography: { ...a.geography, sourceCountryName: 'DR Congo (Zaire)' },
+    } as ConflictObservation;
+    expect(conflictPlaceLabel(withPlace)).toBe('DR Congo (Zaire)');
+
+    const b = changed('B', a.temporal.eventStartedAt);
+    const samePoint = observationMapRecord(b)!;
+    const first = observationMapRecord(a)!;
+    expect(samePoint.geography.id).toBe(first.geography.id);
+
+    const shifted = observationMapRecord({
+      ...b,
+      geography: {
+        ...b.geography,
+        coordinates: { type: 'Point', coordinates: [29.0001, -1] },
+      },
+    })!;
+    expect(shifted.geography.id).not.toBe(first.geography.id);
+  });
+
+  it('counts retained, drawable and withheld observations without inventing rank', () => {
+    const exact = fixture();
+    const city = {
+      ...changed('B', '2026-09-21'),
+      geography: { ...fixture().geography, precision: 'CITY' as const },
+    };
+    const coarse = {
+      ...changed('C', '2026-09-22'),
+      geography: { ...fixture().geography, precision: 'COUNTRY' as const },
+    };
+    expect(conflictDisplayStats([exact, city, coarse])).toEqual({
+      retained: 3,
+      drawable: 2,
+      withheld: 1,
+      exact: 1,
+      city: 1,
+    });
+  });
+
   it('never collapses polygon, bbox or line to a point', () => {
     for (const geometryKind of ['POLYGON', 'BBOX', 'LINE'] as const) {
       const o = fixture();

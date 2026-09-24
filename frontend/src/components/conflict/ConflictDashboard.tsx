@@ -18,7 +18,13 @@ import {
   type Bounds,
 } from '@/lib/map/camera/cameraState';
 import { encodeCamera, decodeCamera } from '@/lib/map/camera/cameraUrl';
-import { reviewedObservations, observationMapRecord, sourceHref } from '@/lib/conflict/retained';
+import {
+  conflictDisplayStats,
+  conflictPlaceLabel,
+  reviewedObservations,
+  observationMapRecord,
+  sourceHref,
+} from '@/lib/conflict/retained';
 import { conflictStrings } from '@/lib/conflict/strings';
 import type { AttentionQueue } from '@/lib/specialist/attentionQueue';
 import './conflict.css';
@@ -115,6 +121,7 @@ export function ConflictDashboard({
       }),
     [rows],
   );
+  const stats = useMemo(() => conflictDisplayStats(rows), [rows]);
   const visibleRecords = incidentsVisible ? records : [];
   const evidenceSet = useMemo(
     () => ({
@@ -216,17 +223,34 @@ export function ConflictDashboard({
           {row.temporal.eventEndedAt ? ' — ' + row.temporal.eventEndedAt : ''}
         </dd>
       </div>
-      {!spatialView && row.actors.length > 0 && (
+      {!spatialView && row.actors.some((actor) => actor.upstreamName) && (
         <div>
           <dt>{t.actors}</dt>
           <dd>
             {row.actors
-              .map((a) => a.upstreamName)
+              .map((actor) => actor.upstreamName)
               .filter(Boolean)
-              .join(' · ') || '—'}
+              .join(' · ')}
           </dd>
         </div>
       )}
+      <div>
+        <dt>{t.sourceCountry}</dt>
+        <dd>{conflictPlaceLabel(row)}</dd>
+      </div>
+      <div>
+        <dt>{t.eventClassification}</dt>
+        <dd>{t.events[row.eventType]}</dd>
+        {row.eventType === 'EVENT_TYPE_NOT_CLASSIFIED' && (
+          <dd className="mt-1 text-sp-ink-3">{t.unclassifiedDetail}</dd>
+        )}
+      </div>
+      <div>
+        <dt>{t.sourceEventId}</dt>
+        <dd className="font-gn-mono text-[9px] text-sp-ink-3">
+          {row.identity.authority} · {row.identity.upstreamEventId}
+        </dd>
+      </div>
       <div>
         <dt>{t.precision}</dt>
         <dd>{spatial.context.levels[row.geography.precision]}</dd>
@@ -376,7 +400,11 @@ export function ConflictDashboard({
             </section>
           ) : (
             <ConflictAssessmentRail
-              subjectLabel={t.events[row.eventType] + ' · ' + row.identity.upstreamEventId}
+              subjectLabel={
+                row.eventType === 'EVENT_TYPE_NOT_CLASSIFIED'
+                  ? conflictPlaceLabel(row) + ' · ' + row.temporal.eventStartedAt
+                  : t.events[row.eventType] + ' · ' + conflictPlaceLabel(row)
+              }
               severity={severityValueOrNull(row.severity)}
               changeStateLabel={null}
               assessment={null}
@@ -403,20 +431,36 @@ export function ConflictDashboard({
             <p>{t.empty}</p>
           ) : (
             <ul>
-              {rows.map((item) => (
-                <li key={item.observationKey}>
-                  <button
-                    className={button + ' w-full py-3 text-left'}
-                    onClick={() => choose(item.observationKey)}
-                  >
-                    <span className="block">{t.events[item.eventType]}</span>
-                    <time>{item.temporal.eventStartedAt}</time>
-                    <span className="block break-all text-sp-ink-3">
-                      {item.identity.upstreamEventId}
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {rows.map((item) => {
+                const place = conflictPlaceLabel(item);
+                const classification =
+                  item.eventType === 'EVENT_TYPE_NOT_CLASSIFIED'
+                    ? t.observation
+                    : t.events[item.eventType];
+
+                return (
+                  <li key={item.observationKey}>
+                    <button
+                      className={button + ' w-full py-3 text-left'}
+                      onClick={() => choose(item.observationKey)}
+                    >
+                      <span className="block text-[12px] font-medium text-sp-ink">
+                        {classification}
+                      </span>
+                      <span className="mt-1 block text-[11px] text-sp-ink-2">
+                        {place} · <time>{item.temporal.eventStartedAt}</time>
+                      </span>
+                      <span className="mt-1 block font-gn-mono text-[8.5px] uppercase tracking-[0.08em] text-sp-ink-3">
+                        {spatial.context.levels[item.geography.precision]} ·{' '}
+                        {spatial.card.provenanceValues[item.geography.locationProvenance]}
+                      </span>
+                      <span className="mt-1 block break-all font-gn-mono text-[8px] text-sp-ink-3/70">
+                        {t.sourceEventId}: {item.identity.upstreamEventId}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
@@ -425,7 +469,7 @@ export function ConflictDashboard({
           <ContextSummaryPanel
             mode="WORLD"
             period="24H"
-            totals={evidenceTotals([])}
+            totals={evidenceTotals(records)}
             ranked={[]}
             noEvidence={[]}
             queue={queue}
@@ -442,6 +486,12 @@ export function ConflictDashboard({
                     ? t.empty
                     : rows.length + ' ' + t.records}
             </p>
+            {status === 'ready' && rows.length > 0 && (
+              <p className="mt-2 font-gn-mono text-[8.5px] uppercase tracking-[0.1em] text-sp-ink-3">
+                {stats.retained} {t.retainedCount} · {stats.drawable} {t.drawableCount} ·{' '}
+                {stats.withheld} {t.withheldCount}
+              </p>
+            )}
             {status === 'error' ? (
               <button className={button} onClick={() => setAttempt((n) => n + 1)}>
                 {t.retry}
