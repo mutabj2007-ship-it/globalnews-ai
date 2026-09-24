@@ -1,0 +1,54 @@
+name: Alpha Conflict UCDP Candidate R1 CI
+
+on:
+  push:
+    branches:
+      - feature/alpha-conflict-ucdp-candidate-r1
+  pull_request:
+    branches:
+      - release/alpha-m08-integrated-r1
+    paths:
+      - 'backend/src/modules/conflict-observation/**'
+      - 'backend/src/tooling/ucdp-candidate-alpha-r1.ts'
+      - 'shared/src/conflict/**'
+      - 'shared/src/global-reach-regions.ts'
+      - 'frontend/src/lib/conflict/**'
+      - 'frontend/src/app/conflict/**'
+      - 'scripts/tests/conflict-observation.fixture.json'
+      - '.github/workflows/alpha-conflict-ucdp-candidate-r1-ci.yml'
+
+concurrency:
+  group: alpha-conflict-ucdp-candidate-r1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --config backend/prisma.config.ts
+      - run: npm run build:shared
+
+      - name: Conflict retained admission and candidate CSV gates
+        run: |
+          npm test --workspace=backend -- --runInBand src/modules/conflict-observation/ucdp-candidate-csv.normalizer.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/conflict-observation/ucdp-ged.normalizer.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/conflict-observation/conflict-observation.producer.spec.ts
+
+      - name: Conflict reader and map gates
+        run: |
+          npm test --workspace=frontend -- --runInBand src/lib/conflict/retained.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/map/d1/conflictDomainBind.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/checkpointELayerReasons.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/alpha/designNativeDataGate.spec.ts
+
+      - name: Production builds
+        run: |
+          npm run build:backend
+          npm run build:frontend
