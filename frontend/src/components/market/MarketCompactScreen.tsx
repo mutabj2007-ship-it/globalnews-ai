@@ -164,6 +164,11 @@ export function MarketCompactScreen({ locale, read, procurement }: {
           whiteSpace: 'normal', overflowWrap: 'anywhere',
         }}>{t.reader.headline}</h1>
         <MarketStatus held={held} t={t} />
+        {noticeHeld > 0 && (
+          <span data-mkt="notice-held" style={{ ...micro, color: MKT_INK.secondary }}>
+            {t.procurement.notice} · {noticeHeld}
+          </span>
+        )}
       </header>
 
       <div data-mkt="compact-body" style={{
@@ -224,7 +229,7 @@ export function MarketCompactScreen({ locale, read, procurement }: {
 
         <ChangeContext t={t} />
 
-        {read.kind !== 'OBSERVATIONS' && <ReadUnavailable reason={read.reason} t={t} />}
+        {read.kind !== 'OBSERVATIONS' && noticeHeld === 0 && <ReadUnavailable reason={read.reason} t={t} />}
 
         {/*
           THE CAPABILITY REGION, LAST AND QUIET. Same three rows as the desktop rail, same
