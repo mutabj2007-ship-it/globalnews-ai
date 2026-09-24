@@ -1,3 +1,4 @@
+import { EAST_AFRICA_MEMBERS, EU27_MEMBERS, MIDDLE_EAST_MEMBERS } from '@globalnews-ai/shared';
 import type { ReviewedUcdpCandidateCsvCapture } from './ucdp-candidate-csv.normalizer';
 
 /**
@@ -13,6 +14,11 @@ export const UCDP_CANDIDATE_AUGUST_2026: ReviewedUcdpCandidateCsvCapture = Objec
   datasetVersion: '26.0.8',
   sourceUrl: 'https://ucdp.uu.se/downloads/candidateged/GEDEvent_v26_0_8.csv',
   schema: 'ucdp-candidate-csv-v1',
+  countryAllowlistIso3: Object.freeze([
+    ...EAST_AFRICA_MEMBERS,
+    ...MIDDLE_EAST_MEMBERS,
+    ...EU27_MEMBERS,
+  ]),
 });
 
 export const UCDP_CANDIDATE_RIGHTS = Object.freeze({
