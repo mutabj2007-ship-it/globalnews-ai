@@ -1,0 +1,38 @@
+name: Alpha Market TED Capture R1 CI
+
+on:
+  push:
+    branches:
+      - feature/alpha-market-ted-capture-r1
+  pull_request:
+    branches:
+      - release/alpha-m08-integrated-r1
+    paths:
+      - 'backend/src/tooling/ted-market-procurement-alpha-r1.ts'
+      - 'backend/src/modules/market-ingest/ted-procurement-retained.ts'
+      - 'backend/src/modules/market-ingest/ted-procurement-retained.spec.ts'
+      - '.github/workflows/alpha-market-ted-capture-r1-ci.yml'
+
+concurrency:
+  group: alpha-market-ted-capture-r1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --config backend/prisma.config.ts
+      - run: npm run build:shared
+
+      - name: Retained TED parser gate
+        run: npm test --workspace=backend -- --runInBand src/modules/market-ingest/ted-procurement-retained.spec.ts
+
+      - name: Backend production build
+        run: npm run build:backend
