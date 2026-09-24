@@ -146,14 +146,22 @@ describe('the Politics module graph walk reaches what it claims to', () => {
 const NETWORK_TOKENS: readonly RegExp[] = [
   /\bfetch\s*\(/, /XMLHttpRequest/, /\buseSWR\b/, /\baxios\b/, /EventSource/, /https?:\/\//,
 ];
+const POLITICS_READ_MODEL = join(SRC, 'lib', 'politics', 'politicsReadModel.ts');
+const API_BASE = join(SRC, 'lib', 'api', 'apiBase.ts');
 
 describe('no Politics surface can reach a provider or spend AI', () => {
-  it('nothing in the reachable graph performs a network call', () => {
+  it('only the server-side retained reader may perform a bounded internal network read', () => {
     const offenders: string[] = [];
-    for (const f of GRAPH) {
+    for (const f of GRAPH.filter((file) => file !== POLITICS_READ_MODEL && file !== API_BASE)) {
       for (const rx of NETWORK_TOKENS) if (rx.test(code(f))) offenders.push(`${f.slice(SRC.length)} :: ${rx}`);
     }
     expect(offenders).toEqual([]);
+
+    const reader = code(POLITICS_READ_MODEL);
+    expect([...reader.matchAll(/\bfetch\s*\(/g)]).toHaveLength(1);
+    expect(reader).toContain('/politics/observations?limit=100');
+    expect(reader).toContain("cache: 'no-store'");
+    expect(reader).not.toMatch(/gnews|openai|\/analysis\/news|ucdp|gdelt|acled/i);
   });
 
   it('the sweep can fail — positive control', () => {
