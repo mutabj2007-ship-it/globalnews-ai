@@ -253,8 +253,21 @@ export interface ConflictGeography {
   readonly locationProvenance: LocationProvenance;
   /** The administrative unit level, where the source published one. */
   readonly partitionUnitLevel?: PartitionUnitLevel;
-  /** ISO 3166-1 alpha-3, where the source published one. Never inferred from coordinates. */
+  /**
+   * ISO 3166-1 alpha-3 used only as the map/reference join key.
+   *
+   * It may be source-stated OR produced by an exact curated normalization of a
+   * source-published country name. It is NEVER inferred from coordinates.
+   */
   readonly countryIso3?: string;
+  /**
+   * How countryIso3 was obtained. Kept separate from locationProvenance:
+   * coordinates can be source-stated while the join code is a deterministic
+   * normalization of the publisher's own country label.
+   */
+  readonly countryIso3Basis?: 'SOURCE_STATED' | 'SOURCE_COUNTRY_NAME_NORMALIZED';
+  /** Verbatim publisher country label when the ISO3 join code was normalized. */
+  readonly sourceCountryName?: string;
 }
 
 export class ConflictGeographyRefused extends Error {}
