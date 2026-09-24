@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '../generated/prisma/client';
