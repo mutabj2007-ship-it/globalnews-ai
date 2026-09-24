@@ -98,6 +98,7 @@ describe('the module graph walk reaches what it claims to reach', () => {
       join(SRC, 'components', 'market', 'MarketScreen.tsx'),
       join(SRC, 'components', 'market', 'MktReader.tsx'),
       join(SRC, 'lib', 'market', 'mktReadModel.ts'),
+      join(SRC, 'lib', 'market', 'mktProcurementRead.ts'),
       join(SRC, 'lib', 'economy', 'productionSubject.ts'),
     ]) {
       expect(`${must}: ${GRAPH.includes(must)}`).toBe(`${must}: true`);
@@ -196,6 +197,7 @@ describe('no preview surface can reach an external provider', () => {
     const GOVERNED_SAME_ORIGIN_READS = new Set([
       'economyObservationRead.ts',
       'mktReadModel.ts',
+      'mktProcurementRead.ts',
     ]);
     const offenders: string[] = [];
     for (const f of DOMAIN) {
@@ -265,6 +267,7 @@ describe('no preview surface can reach an external provider', () => {
       '/lib/api/accountFetch.ts',
       '/lib/economy/economyObservationRead.ts',
       '/lib/market/mktReadModel.ts',
+      '/lib/market/mktProcurementRead.ts',
     ];
 
     const sites = GRAPH.filter((f) => /\bfetch\s*\(|XMLHttpRequest|\buseSWR\b|\baxios\b|EventSource/.test(code(f)))
