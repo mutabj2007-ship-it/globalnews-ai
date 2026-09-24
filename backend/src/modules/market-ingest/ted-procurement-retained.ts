@@ -302,7 +302,7 @@ export function inspectTedProcurementCapture(
       providerId: 'TED',
       retainedAt: capture.retrievedAt.toISOString(),
       retrievalId: capture.retrievalId,
-      contentAddress: capture.contentAddress,
+      contentAddress: capture.contentAddress!,
       freshnessBasis: 'RETAINED_ONLY',
     };
   });
