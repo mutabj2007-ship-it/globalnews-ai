@@ -13,6 +13,7 @@ import { Footer } from '@/components/layout/Footer';
 import type { MktLocale } from '@/lib/market/mktStrings';
 import { readMarketObservations } from '@/lib/market/mktReadModel';
 import { MarketScreen } from '@/components/market/MarketScreen';
+import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
 
 /**
  * PART VII · THE MARKET ROUTE.
@@ -69,6 +70,7 @@ export default async function MarketPage(): Promise<JSX.Element> {
     <ScriptRun locale={mktLocale()} step="wrapping" as="div">
       <NavBar language={mktLanguage()} />
       <MarketScreen locale={mktLocale()} read={read} />
+      <AlphaRetainedReportingDock domain="market" />
       <Footer language={mktLanguage()} />
     </ScriptRun>
   );
