@@ -24,3 +24,26 @@ function fail(reason: string): never {
 function digest(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
+
+const PARAMETERS = [
+  { key: 'method', value: 'POST' },
+  { key: 'query', value: TED_MARKET_ALPHA_R1_QUERY },
+  { key: 'fields', value: JSON.stringify(TED_MARKET_ALPHA_R1_FIELDS) },
+  { key: 'page', value: '1' },
+  { key: 'limit', value: String(TED_MARKET_ALPHA_R1_LIMIT) },
+  { key: 'scope', value: 'ALL' },
+  { key: 'checkQuerySyntax', value: 'false' },
+  { key: 'paginationMode', value: 'PAGE_NUMBER' },
+  { key: 'onlyLatestVersions', value: 'true' },
+] as const;
+
+const REQUEST_BODY = {
+  query: TED_MARKET_ALPHA_R1_QUERY,
+  fields: [...TED_MARKET_ALPHA_R1_FIELDS],
+  page: 1,
+  limit: TED_MARKET_ALPHA_R1_LIMIT,
+  scope: 'ALL',
+  checkQuerySyntax: false,
+  paginationMode: 'PAGE_NUMBER',
+  onlyLatestVersions: true,
+} as const;
