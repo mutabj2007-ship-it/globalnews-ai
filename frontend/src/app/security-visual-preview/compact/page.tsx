@@ -5,7 +5,6 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { SecLocale } from '@/lib/security/securityStrings';
 import { SecurityCompactScreen } from '@/components/security/SecurityCompactScreen';
-import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
 
 /**
  * SECURITY — ALPHA VISUAL PREVIEW, COMPACT. `PEEK · HALF · FULL · WORKSPACE`.
@@ -40,7 +39,6 @@ export default function SecurityVisualPreviewCompactPage(): JSX.Element {
     <ScriptRun locale={locale} step="wrapping" as="div">
       <div className="min-h-screen bg-sp-bg">
         <SecurityCompactScreen locale={locale} />
-        <AlphaRetainedReportingDock domain="security" />
       </div>
     </ScriptRun>
   );

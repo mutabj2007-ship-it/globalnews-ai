@@ -13,7 +13,6 @@ import { Footer } from '@/components/layout/Footer';
 import type { MktLocale } from '@/lib/market/mktStrings';
 import { readMarketObservations } from '@/lib/market/mktReadModel';
 import { MarketCompactScreen } from '@/components/market/MarketCompactScreen';
-import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
 
 /**
  * THE COMPACT ENTRY — and this route used to be the defect.
@@ -52,7 +51,6 @@ export default async function MarketCompactPage(): Promise<JSX.Element> {
     <ScriptRun locale={mktLocale()} step="wrapping" as="div">
       <NavBar language={mktLanguage()} />
       <MarketCompactScreen locale={mktLocale()} read={read} />
-      <AlphaRetainedReportingDock domain="market" />
       <Footer language={mktLanguage()} />
     </ScriptRun>
   );

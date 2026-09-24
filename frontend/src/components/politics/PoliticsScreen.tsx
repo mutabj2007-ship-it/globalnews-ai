@@ -1,6 +1,7 @@
 'use client';
 
 import { useReducer, type JSX } from 'react';
+import type { PoliticsReadResponse, RetainedPoliticsObservation } from '@globalnews-ai/shared';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { SpecialistHudLine } from '@/components/specialist/SpecialistHudLine';
 import { HUD_LINE_PX } from '@/lib/specialist/hudGrammar';
@@ -48,9 +49,16 @@ import { Absent, Chip, Field, POL_MICRO, Panel, Region, Well } from './PolParts'
 
 type Drawer = 'PROVENANCE' | 'READINESS';
 
-interface View { readonly drawer: Drawer | null }
-type Action = { k: 'OPEN'; v: Drawer } | { k: 'CLOSE' };
-const reducer = (s: View, a: Action): View => (a.k === 'OPEN' ? { drawer: a.v } : { drawer: null });
+interface View { readonly drawer: Drawer | null; readonly selected: string | null }
+type Action =
+  | { k: 'OPEN'; v: Drawer }
+  | { k: 'CLOSE' }
+  | { k: 'SELECT'; v: string };
+const reducer = (s: View, a: Action): View => {
+  if (a.k === 'OPEN') return { ...s, drawer: a.v };
+  if (a.k === 'SELECT') return { drawer: null, selected: a.v };
+  return { ...s, drawer: null };
+};
 
 /**
  * R14's caps, transcribed. *"Attention rail ≈ 320–360 · context rail ≈ 360–400."*
@@ -98,10 +106,25 @@ function politicsHud(t: PolStrings): HudLine {
   };
 }
 
-export function PoliticsScreen({ locale }: { locale: PolLocale }): JSX.Element {
-  const [view, dispatch] = useReducer(reducer, { drawer: null });
+function provenancePublisher(observation: RetainedPoliticsObservation): string | null {
+  return observation.provenance.institution ?? observation.provenance.providerId ?? null;
+}
+
+export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: PoliticsReadResponse }): JSX.Element {
+  const [view, dispatch] = useReducer(reducer, {
+    drawer: null,
+    selected: read.observations[0]?.observationKey ?? null,
+  });
   const res = resolvePolStrings(locale);
   const t = res.strings;
+  const selected =
+    read.observations.find((observation) => observation.observationKey === view.selected) ??
+    read.observations[0] ??
+    null;
+  const subjects = read.observations.filter(
+    (observation, index, all) =>
+      all.findIndex((candidate) => candidate.subjectId === observation.subjectId) === index,
+  );
 
   return (
     <main
@@ -155,10 +178,14 @@ export function PoliticsScreen({ locale }: { locale: PolLocale }): JSX.Element {
           not the substrate.
         */}
         <div data-pol="axes" className="grid max-w-[900px] gap-[12px_24px] [grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))]">
-          <Field label={t.labels.subjectType}><Absent label={t.labels.awaitingData} /></Field>
-          <Field label={t.labels.lifecycleEvent}><Absent label={t.labels.awaitingData} /></Field>
-          <Field label={t.labels.changeState}><Absent label={t.labels.awaitingData} /></Field>
-          <Field label={t.labels.confidence}><Absent label={t.labels.awaitingData} /></Field>
+          <Field label={t.labels.subjectType}>
+            {selected ? t.subjectTypes[selected.subjectType] : <Absent label={t.labels.awaitingData} />}
+          </Field>
+          <Field label={t.labels.lifecycleEvent}>
+            {selected ? t.observationKinds[selected.observationKind] : <Absent label={t.labels.awaitingData} />}
+          </Field>
+          <Field label={t.labels.changeState}><Absent label={t.labels.notAssessed} /></Field>
+          <Field label={t.labels.confidence}><Absent label={t.labels.notAssessed} /></Field>
         </div>
 
         {/*
@@ -206,7 +233,7 @@ export function PoliticsScreen({ locale }: { locale: PolLocale }): JSX.Element {
                 ranking political actors at all.
               */}
               <p className="text-[13px] leading-[1.5] text-sp-ink-2" style={{ maxWidth: `${PROSE_CH}ch` }}>
-                {t.labels.emptyIsResult}
+                {read.observations.length > 0 ? t.labels.retainedSubjectsAvailable : t.labels.emptyIsResult}
               </p>
             </Panel>
           </Region>
@@ -223,7 +250,7 @@ export function PoliticsScreen({ locale }: { locale: PolLocale }): JSX.Element {
               a statement about us. The activation forbids fake protest counts, and a `0` a
               reader reads as a count is one.
             */}
-            <Region title={t.zones.SUBSTRATE} note={t.labels.awaitingData}>
+            <Region title={t.zones.SUBSTRATE} note={read.observations.length > 0 ? t.labels.retainedEvidence : t.labels.awaitingData}>
               <div data-pol="subject-slots" className="grid gap-[1px] bg-sp-line [grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))]">
                 {POLITICS_SUBJECT_SLOTS.map((slot) => (
                   <div key={slot.subjectType} data-pol="subject-slot" data-pol-subject={slot.subjectType}
@@ -235,23 +262,75 @@ export function PoliticsScreen({ locale }: { locale: PolLocale }): JSX.Element {
                       names, and it is true of all three slots for the same reason — a
                       subject exists as a type, and nothing has been assessed.
                     */}
-                    <span className="text-[13px] text-sp-ink-2">{t.labels.notAssessed}</span>
+                    <span className="text-[13px] text-sp-ink-2">
+                      {read.observations.some((observation) => observation.subjectType === slot.subjectType)
+                        ? t.labels.retainedEvidence
+                        : t.labels.notAssessed}
+                    </span>
                   </div>
                 ))}
               </div>
+              {subjects.length ? (
+                <div className="flex flex-col border border-sp-line bg-sp-panel">
+                  {subjects.map((observation) => (
+                    <button
+                      key={observation.subjectId}
+                      type="button"
+                      data-pol="bound-subject"
+                      aria-pressed={selected?.subjectId === observation.subjectId}
+                      onClick={() => dispatch({ k: 'SELECT', v: observation.observationKey })}
+                      className="flex min-h-[52px] flex-col gap-[3px] border-b border-sp-line/50 px-[12px] py-[9px] text-left last:border-b-0"
+                    >
+                      <span className={POL_MICRO}>
+                        {t.subjectTypes[observation.subjectType]} · {t.stages[observation.claim.stage]}
+                      </span>
+                      <span className="line-clamp-2 text-[12px] leading-[1.45] text-sp-ink-2">
+                        {observation.claim.sourceText}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </Region>
 
             {/* The substrate well — where the selected subject will be drawn. */}
             <Panel className="flex flex-col gap-[12px] p-[16px_18px]">
               <div className="flex flex-wrap items-baseline justify-between gap-[10px]">
                 <span className={POL_MICRO}>{t.labels.assessment}</span>
-                <span className={POL_MICRO}>{t.labels.awaitingData}</span>
+                <span className={POL_MICRO}>{selected ? t.labels.notAssessed : t.labels.awaitingData}</span>
               </div>
-              <Well label={t.labels.awaitingData} />
+              <Well label={selected ? t.labels.notAssessed : t.labels.awaitingData}>
+                {selected ? (
+                  <div className="flex max-w-[68ch] flex-col gap-[8px] p-[16px] text-left">
+                    <span className={POL_MICRO}>{t.observationKinds[selected.observationKind]}</span>
+                    <span className="text-[15px] font-medium text-sp-ink">
+                      {t.stages[selected.claim.stage]}
+                    </span>
+                    <p className="text-[13px] leading-[1.5] text-sp-ink-2">{selected.claim.sourceText}</p>
+                  </div>
+                ) : undefined}
+              </Well>
               <div className="grid gap-[12px_20px] [grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))]">
-                <Field label={t.labels.stage}><Absent label={t.labels.awaitingData} /></Field>
-                <Field label={t.labels.actors}><Absent label={t.labels.awaitingData} /></Field>
-                <Field label={t.labels.evidence}><Absent label={t.labels.noVerifiedEvidence} /></Field>
+                <Field label={t.labels.stage}>
+                  {selected ? t.stages[selected.claim.stage] : <Absent label={t.labels.awaitingData} />}
+                </Field>
+                <Field label={t.labels.actors}><Absent label={t.labels.notAssessed} /></Field>
+                <Field label={t.labels.evidence}>
+                  {selected?.sourceReference.sourceUrl ? (
+                    <a
+                      href={selected.sourceReference.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sp-cyan hover:underline"
+                    >
+                      {selected.sourceReference.citation ?? t.labels.openSource}
+                    </a>
+                  ) : selected?.sourceReference.citation ? (
+                    selected.sourceReference.citation
+                  ) : (
+                    <Absent label={t.labels.noVerifiedEvidence} />
+                  )}
+                </Field>
                 <Field label={t.labels.crossDomain}><Absent label={t.labels.awaitingData} /></Field>
               </div>
             </Panel>
@@ -305,7 +384,9 @@ export function PoliticsScreen({ locale }: { locale: PolLocale }): JSX.Element {
                   capabilities … not a second Watch, map, Ask, Timeline or evidence system"*.
                 */}
                 <Field label={t.labels.watch}><Absent label={t.labels.awaitingData} /></Field>
-                <Field label={t.labels.timeline}><Absent label={t.labels.awaitingData} /></Field>
+                <Field label={t.labels.timeline}>
+                  {selected ? selected.publishedAt : <Absent label={t.labels.awaitingData} />}
+                </Field>
                 <Field label={t.labels.ask}><Absent label={t.labels.awaitingData} /></Field>
                 <Field label={t.labels.deepAnalysis}><Absent label={t.labels.awaitingData} /></Field>
               </div>
@@ -365,12 +446,34 @@ export function PoliticsScreen({ locale }: { locale: PolLocale }): JSX.Element {
           </div>
 
           {view.drawer === 'PROVENANCE' && (
-            <div className="flex flex-col gap-[10px]">
-              {/*
-                §6's rule, stated to the reader rather than only obeyed: the class attaches to
-                the ARTIFACT, never permanently to the institution. That is why the seven are
-                a vocabulary here and not a list of publishers.
-              */}
+            <div className="flex flex-col gap-[12px]">
+              {selected ? (
+                <Panel className="flex flex-col gap-[10px] p-[14px]">
+                  <Field label={t.labels.subject}>
+                    {t.subjectTypes[selected.subjectType]} · {t.stages[selected.claim.stage]}
+                  </Field>
+                  <Field label={t.labels.sourceType}>{selected.provenance.sourceType}</Field>
+                  <Field label={t.labels.evidenceRole}>
+                    {selected.provenance.evidenceRole ?? <Absent label={t.labels.awaitingData} />}
+                  </Field>
+                  <Field label={t.labels.publisher}>
+                    {provenancePublisher(selected) ?? <Absent label={t.labels.awaitingData} />}
+                  </Field>
+                  <Field label={t.labels.publishedAt}>{selected.publishedAt}</Field>
+                  <Field label={t.labels.retrievedAt}>{selected.temporal.retrievedAt}</Field>
+                  <Field label={t.labels.evidence}>{selected.claim.sourceText}</Field>
+                  {selected.sourceReference.sourceUrl && (
+                    <a
+                      href={selected.sourceReference.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="min-h-[44px] self-start border border-sp-line px-[12px] py-[10px] text-[12px] text-sp-cyan"
+                    >
+                      {t.labels.openSource} →
+                    </a>
+                  )}
+                </Panel>
+              ) : null}
               {POLITICS_SOURCE_CLASS_SLOTS.map((slot) => (
                 <Field key={slot.state} label={t.epistemic[slot.state]}>
                   <Absent label={t.labels.noVerifiedEvidence} />
@@ -382,7 +485,7 @@ export function PoliticsScreen({ locale }: { locale: PolLocale }): JSX.Element {
           {view.drawer === 'READINESS' && (
             <div className="flex flex-col gap-[12px]">
               <p className="text-[13px] leading-[1.5] text-sp-ink-2" style={{ maxWidth: `${PROSE_CH}ch` }}>
-                {t.labels.awaitingData} · {t.labels.noVerifiedEvidence}
+                {read.observations.length > 0 ? t.labels.retainedEvidence : t.labels.awaitingData} · {read.absence ?? t.labels.notAssessed}
               </p>
               <Field label={t.labels.subjectType}>
                 {POLITICS_SUBJECT_SLOTS.map((s) => t.subjectTypes[s.subjectType]).join(' · ')}

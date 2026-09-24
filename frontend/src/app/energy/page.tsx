@@ -9,7 +9,6 @@ import { readEnergyObservations } from '@/lib/energy/energyReadModel';
 import { energyFrameFromRetained, energyRetainedStrings } from '@/lib/energy/energyRetainedAdapter';
 import { energyStateFromSearchParams } from '@/lib/energy/energyUrl';
 import { type EnergyLocale } from '@/lib/energy/energyStrings';
-import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -93,7 +92,6 @@ export default async function EnergyPage({
   return (
     <ScriptRun locale={locale} step="wrapping" as="div">
       <EnergyShell data={data} strings={energyRetainedStrings(retained, locale)} urlState={urlState} locale={locale} />
-      <AlphaRetainedReportingDock domain="energy" />
     </ScriptRun>
   );
 }

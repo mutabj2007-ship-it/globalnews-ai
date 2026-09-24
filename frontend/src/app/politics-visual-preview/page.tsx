@@ -5,7 +5,7 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { PolLocale } from '@/lib/politics/politicsStrings';
 import { PoliticsScreen } from '@/components/politics/PoliticsScreen';
-import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
+import { readPoliticsObservations } from '@/lib/politics/politicsReadModel';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -67,8 +67,9 @@ function politicsLocale(): PolLocale {
   return SELECTABLE_LOCALES.find((l) => l === active) ?? 'en';
 }
 
-export default function PoliticsVisualPreviewPage(): JSX.Element {
+export default async function PoliticsVisualPreviewPage(): Promise<JSX.Element> {
   const locale = politicsLocale();
+  const read = await readPoliticsObservations();
   return (
     /*
       D7-AR-ADOPTION — `wrapping` is the step that satisfies both minimums on a frame that
@@ -84,8 +85,7 @@ export default function PoliticsVisualPreviewPage(): JSX.Element {
         set here, once, on the element that actually wraps the whole route.
       */}
       <div className="min-h-screen bg-sp-bg">
-        <PoliticsScreen locale={locale} />
-        <AlphaRetainedReportingDock domain="politics" />
+        <PoliticsScreen locale={locale} read={read} />
       </div>
     </ScriptRun>
   );

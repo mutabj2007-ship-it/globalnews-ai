@@ -1,4 +1,4 @@
-import type { DisplayLocale } from '@globalnews-ai/shared';
+import type { DisplayLocale, RetainedPoliticsClaim } from '@globalnews-ai/shared';
 import type {
   PoliticsConfidence, PoliticsEpistemicState, PoliticsEventKind,
   PoliticsPollField, PoliticsSubjectType,
@@ -22,9 +22,13 @@ export interface PolStrings {
     | 'sourceClass' | 'timeline' | 'watch' | 'ask' | 'deepAnalysis'
     | 'polling' | 'awaitingData' | 'notAssessed' | 'noVerifiedEvidence'
     | 'localeFallback' | 'close' | 'emptyIsResult' | 'zeroAiNavigation'
-    | 'showProvenance' | 'developerDetail', string>>;
+    | 'showProvenance' | 'developerDetail' | 'retainedEvidence' | 'retainedSubjectsAvailable'
+    | 'openSource' | 'sourceType' | 'evidenceRole' | 'publisher' | 'publishedAt'
+    | 'retrievedAt' | 'subject', string>>;
 
   readonly subjectTypes: Readonly<Record<PoliticsSubjectType, string>>;
+  readonly observationKinds: Readonly<Record<RetainedPoliticsClaim['kind'], string>>;
+  readonly stages: Readonly<Record<RetainedPoliticsClaim['stage'], string>>;
   readonly eventKinds: Readonly<Record<PoliticsEventKind, string>>;
   readonly confidence: Readonly<Record<PoliticsConfidence, string>>;
   readonly epistemic: Readonly<Record<PoliticsEpistemicState, string>>;
@@ -100,12 +104,40 @@ const en: PolStrings = {
     zeroAiNavigation: 'Browsing costs no AI. Analysis states its cost first.',
     showProvenance: 'Where this came from',
     developerDetail: 'Readiness detail',
+    retainedEvidence: 'Retained evidence',
+    retainedSubjectsAvailable: 'Retained political subjects are available in the primary substrate. No shared attention ranking has been issued.',
+    openSource: 'Open source',
+    sourceType: 'Source type',
+    evidenceRole: 'Evidence role',
+    publisher: 'Publisher / provider',
+    publishedAt: 'Published',
+    retrievedAt: 'Retrieved',
+    subject: 'Subject',
   },
 
   subjectTypes: {
     ELECTION: 'Election',
     LEGISLATIVE_SUBJECT: 'Legislative subject',
     PROTEST_CAMPAIGN: 'Protest / mobilisation campaign',
+  },
+
+  observationKinds: {
+    ELECTION_PROCESS_NOTICE: 'Election process notice',
+    LEGISLATIVE_STAGE: 'Legislative stage',
+    PROTEST_HELD: 'Protest held',
+  },
+
+  stages: {
+    ANNOUNCED: 'Announced',
+    HELD: 'Held',
+    INTRODUCED: 'Introduced',
+    AMENDED: 'Amended',
+    PASSED: 'Passed',
+    REJECTED: 'Rejected',
+    VETOED: 'Vetoed',
+    SIGNED: 'Signed',
+    IMPLEMENTED: 'Implemented',
+    WITHDRAWN: 'Withdrawn',
   },
 
   eventKinds: {
@@ -162,8 +194,34 @@ const pl: PolStrings = {
     emptyIsResult: 'W tym podglądzie nie ma zachowanych dowodów dopuszczonych zgodnie z zasadami. Nie oznacza to, że nic się nie wydarzyło. Jurysdykcja, temat i klasy źródeł pozostają nieocenione.',
     zeroAiNavigation: 'Przeglądanie nie używa AI. Koszt analizy jest podany przed jej uruchomieniem.',
     showProvenance: 'Pochodzenie danych', developerDetail: 'Szczegóły gotowości',
+    retainedEvidence: 'Zachowane dowody',
+    retainedSubjectsAvailable: 'Zachowane tematy polityczne są dostępne w głównym obszarze. Nie wydano wspólnego rankingu uwagi.',
+    openSource: 'Otwórz źródło',
+    sourceType: 'Typ źródła',
+    evidenceRole: 'Rola dowodowa',
+    publisher: 'Wydawca / dostawca',
+    publishedAt: 'Opublikowano',
+    retrievedAt: 'Pobrano',
+    subject: 'Temat',
   },
   subjectTypes: { ELECTION: 'Wybory', LEGISLATIVE_SUBJECT: 'Temat legislacyjny', PROTEST_CAMPAIGN: 'Protest / kampania mobilizacyjna' },
+  observationKinds: {
+    ELECTION_PROCESS_NOTICE: 'Informacja o procesie wyborczym',
+    LEGISLATIVE_STAGE: 'Etap procesu legislacyjnego',
+    PROTEST_HELD: 'Odbyty protest',
+  },
+  stages: {
+    ANNOUNCED: 'Ogłoszono',
+    HELD: 'Odbyto',
+    INTRODUCED: 'Wniesiono',
+    AMENDED: 'Zmieniono',
+    PASSED: 'Przyjęto',
+    REJECTED: 'Odrzucono',
+    VETOED: 'Zawetowano',
+    SIGNED: 'Podpisano',
+    IMPLEMENTED: 'Wdrożono',
+    WITHDRAWN: 'Wycofano',
+  },
   eventKinds: { VOTE: 'Głosowanie', RESIGNATION: 'Rezygnacja', APPOINTMENT: 'Powołanie', COURT_RULING: 'Orzeczenie sądu', COALITION_AGREEMENT: 'Umowa koalicyjna', COMMISSION_DECISION: 'Decyzja komisji', RALLY: 'Wiec' },
   confidence: { LOW: 'Niska', MODERATE: 'Umiarkowana', HIGH: 'Wysoka' },
   epistemic: {
