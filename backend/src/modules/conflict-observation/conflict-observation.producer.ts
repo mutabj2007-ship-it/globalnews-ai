@@ -174,6 +174,7 @@ export class ConflictObservationProducer {
               revisionOrdinal: revision.revisionOrdinal,
               occurredOn: new Date(observation.temporal.eventStartedAt),
               ingestedAt: new Date(observation.temporal.ingestedAt),
+              countryIso3: observation.geography.countryIso3 ?? null,
               snapshotRetrievalId: retrievalId,
               snapshotAdmissibility: 'ADMITTED',
               captureHash: hash,
