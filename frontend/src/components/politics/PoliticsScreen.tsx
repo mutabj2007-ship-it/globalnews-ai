@@ -106,11 +106,6 @@ function politicsHud(t: PolStrings): HudLine {
   };
 }
 
-function displayTimestamp(value: string): string {
-  const date = new Date(value);
-  return Number.isFinite(date.getTime()) ? date.toLocaleString() : value;
-}
-
 function provenancePublisher(observation: RetainedPoliticsObservation): string | null {
   return observation.provenance.institution ?? observation.provenance.providerId ?? null;
 }
@@ -275,7 +270,7 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
                   </div>
                 ))}
               </div>
-              {subjects.length > 0 && (
+              {subjects.length > 0 ? (
                 <div className="flex flex-col border border-sp-line bg-sp-panel">
                   {subjects.map((observation) => (
                     <button
@@ -295,7 +290,7 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
                     </button>
                   ))}
                 </div>
-              )}
+              ) : null}
             </Region>
 
             {/* The substrate well — where the selected subject will be drawn. */}
@@ -390,7 +385,7 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
                 */}
                 <Field label={t.labels.watch}><Absent label={t.labels.awaitingData} /></Field>
                 <Field label={t.labels.timeline}>
-                  {selected ? displayTimestamp(selected.publishedAt) : <Absent label={t.labels.awaitingData} />}
+                  {selected ? selected.publishedAt : <Absent label={t.labels.awaitingData} />}
                 </Field>
                 <Field label={t.labels.ask}><Absent label={t.labels.awaitingData} /></Field>
                 <Field label={t.labels.deepAnalysis}><Absent label={t.labels.awaitingData} /></Field>
@@ -464,8 +459,8 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
                   <Field label={t.labels.publisher}>
                     {provenancePublisher(selected) ?? <Absent label={t.labels.awaitingData} />}
                   </Field>
-                  <Field label={t.labels.publishedAt}>{displayTimestamp(selected.publishedAt)}</Field>
-                  <Field label={t.labels.retrievedAt}>{displayTimestamp(selected.temporal.retrievedAt)}</Field>
+                  <Field label={t.labels.publishedAt}>{selected.publishedAt}</Field>
+                  <Field label={t.labels.retrievedAt}>{selected.temporal.retrievedAt}</Field>
                   <Field label={t.labels.evidence}>{selected.claim.sourceText}</Field>
                   {selected.sourceReference.sourceUrl && (
                     <a
