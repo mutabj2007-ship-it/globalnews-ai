@@ -17,6 +17,8 @@ export interface ReviewedUcdpCandidateCsvCapture {
   readonly datasetVersion: string;
   readonly sourceUrl: string;
   readonly schema: 'ucdp-candidate-csv-v1';
+  /** Optional governed output scope. Source bytes remain whole and retained. */
+  readonly countryAllowlistIso3?: readonly string[];
 }
 
 const HEADERS = [
@@ -201,7 +203,7 @@ export function normalizeUcdpCandidateCsv(
   }
 
   const seen = new Set<string>();
-  return rows.slice(1).map((values) => {
+  const observations = rows.slice(1).map((values) => {
     const r = rowObject(header, values);
     const rawId = requiredText(r.id, 'id', 128);
     if (!/^\d+$/.test(rawId)) refuse('EVENT_IDENTITY_DEPENDENCY');
@@ -281,6 +283,14 @@ export function normalizeUcdpCandidateCsv(
       },
     };
   });
+
+  if (!profile.countryAllowlistIso3) return observations;
+  const allow = new Set(profile.countryAllowlistIso3);
+  return observations.filter(
+    (observation) =>
+      observation.geography.countryIso3 !== undefined &&
+      allow.has(observation.geography.countryIso3),
+  );
 }
 
 export const UCDP_CANDIDATE_CSV_HEADERS = HEADERS;
