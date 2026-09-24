@@ -5,7 +5,6 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { SecLocale } from '@/lib/security/securityStrings';
 import { SecurityScreen } from '@/components/security/SecurityScreen';
-import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -57,7 +56,6 @@ export default function SecurityVisualPreviewPage(): JSX.Element {
     <ScriptRun locale={locale} step="wrapping" as="div">
       <div className="min-h-screen bg-sp-bg">
         <SecurityScreen locale={locale} />
-        <AlphaRetainedReportingDock domain="security" />
       </div>
     </ScriptRun>
   );
