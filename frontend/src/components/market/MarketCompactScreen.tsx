@@ -47,6 +47,8 @@ import {
 import { MARKET_CAPABILITY, type MarketReadResult } from '@/lib/market/mktReadModel';
 import { resolveMktStrings, type MktLocale, type MktStrings } from '@/lib/market/mktStrings';
 import { economyStrings } from '@/lib/economy/strings';
+import { MarketNoticeCard } from './MktNoticeCard';
+import type { MarketProcurementReadResult } from '@/lib/market/mktProcurementRead';
 
 /**
  * THE DETENTS ARE THE INHERITED ONES, AND THE HEIGHTS SAY WHICH IS WHICH.
@@ -119,8 +121,8 @@ function CompactReadinessRow({ ready, label, measured }: {
   );
 }
 
-export function MarketCompactScreen({ locale, read }: {
-  locale: MktLocale; read: MarketReadResult;
+export function MarketCompactScreen({ locale, read, procurement }: {
+  locale: MktLocale; read: MarketReadResult; procurement: MarketProcurementReadResult;
 }): JSX.Element {
   const [view, dispatch] = useReducer(reducer, { drawer: null });
   const res = resolveMktStrings(locale);
