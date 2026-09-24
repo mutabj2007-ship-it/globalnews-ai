@@ -5,6 +5,7 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { PolLocale } from '@/lib/politics/politicsStrings';
 import { PoliticsCompactScreen } from '@/components/politics/PoliticsCompactScreen';
+import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
 
 /**
  * POLITICS — ALPHA PRODUCT OWNER VISUAL PREVIEW, COMPACT.
@@ -44,6 +45,7 @@ export default function PoliticsVisualPreviewCompactPage(): JSX.Element {
       */}
       <div className="min-h-screen bg-sp-bg">
         <PoliticsCompactScreen locale={locale} />
+        <AlphaRetainedReportingDock domain="politics" />
       </div>
     </ScriptRun>
   );

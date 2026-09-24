@@ -320,9 +320,40 @@ export interface AdminAlphaReviewDomain {
   note: string;
 }
 
+export interface AdminAlphaReviewReportingRecord {
+  id: string;
+  title: string;
+  summary: string;
+  url: string;
+  sourceName: string;
+  category: string;
+  publishedAt: string;
+  firstSeenAt: string;
+  countryCode: string | null;
+  countryName: string | null;
+  countries: Array<{
+    countryCode: string;
+    countryName: string;
+    relevanceScore: number;
+  }>;
+}
+
+export interface AdminAlphaReviewReportingLane {
+  id: 'politics' | 'security' | 'conflict' | 'market' | 'energy' | 'humanitarian';
+  state: 'RECORDS' | 'EMPTY' | 'UNAVAILABLE';
+  basis: 'RETAINED_REPORTING_FILTER';
+  assessment: 'UNASSESSED';
+  publicGate: 'CLOSED';
+  count: number | null;
+  newestFetchedAt: string | null;
+  records: AdminAlphaReviewReportingRecord[];
+  note: string;
+}
+
 export interface AdminAlphaReviewResponse {
   scope: 'ALPHA_ADMIN_REVIEW';
   generatedAt: string;
   domains: AdminAlphaReviewDomain[];
+  reporting: AdminAlphaReviewReportingLane[];
   omissions: string[];
 }

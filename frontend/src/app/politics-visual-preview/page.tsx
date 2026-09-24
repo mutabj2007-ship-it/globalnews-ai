@@ -5,6 +5,7 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { PolLocale } from '@/lib/politics/politicsStrings';
 import { PoliticsScreen } from '@/components/politics/PoliticsScreen';
+import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -84,6 +85,7 @@ export default function PoliticsVisualPreviewPage(): JSX.Element {
       */}
       <div className="min-h-screen bg-sp-bg">
         <PoliticsScreen locale={locale} />
+        <AlphaRetainedReportingDock domain="politics" />
       </div>
     </ScriptRun>
   );

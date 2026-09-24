@@ -9,6 +9,7 @@ import type { HumLocale } from '@/lib/humanitarian/humStrings';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { HumanitarianScreen } from '@/components/humanitarian/HumanitarianScreen';
+import { AlphaRetainedReportingDock } from '@/components/alpha/AlphaRetainedReportingDock';
 
 /**
  * PART X · THE HUMANITARIAN ROUTE.
@@ -83,6 +84,7 @@ export default async function HumanitarianPage(): Promise<JSX.Element> {
       */}
       <NavBar language={humLanguage()} />
       <HumanitarianScreen locale={humLocale()} retainedRead={retainedRead} />
+      <AlphaRetainedReportingDock domain="humanitarian" />
       <Footer language={humLanguage()} />
     </ScriptRun>
   );
