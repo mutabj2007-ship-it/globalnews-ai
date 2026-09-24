@@ -38,7 +38,7 @@ import {
 import { Heading, Identifier, Verdict, edge, micro } from './MktParts';
 import {
   CapabilityList, ChangeContext, CoverageStrip, MarketStatus, ObservationCard,
-  ProvenanceDetail, ReadUnavailable, SubstratePanel,
+  ProcurementCard, ProvenanceDetail, ReadUnavailable, SubstratePanel,
 } from './MktReader';
 import {
   CHANGE_STATES_NOT_DERIVABLE, DATA_READINESS,
