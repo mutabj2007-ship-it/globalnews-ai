@@ -26,4 +26,10 @@ export class MarketReadController {
   observations(@Query() query: MarketReadQuery) {
     return this.repository.latest(query.limit);
   }
+
+  @Get('procurement')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  procurement(@Query() query: MarketReadQuery) {
+    return this.repository.procurement(query.limit ?? 20);
+  }
 }
