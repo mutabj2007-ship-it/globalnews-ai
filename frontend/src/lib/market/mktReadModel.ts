@@ -234,6 +234,10 @@ export type MarketReadResult =
   | { readonly kind: 'OBSERVATIONS'; readonly observations: readonly MarketStoredObservation[] }
   | { readonly kind: 'UNAVAILABLE'; readonly reason: MarketReadUnavailableReason };
 
+export type MarketProcurementReadResult =
+  | { readonly kind: 'PROCUREMENT'; readonly notices: readonly MarketRetainedProcurementNotice[] }
+  | { readonly kind: 'UNAVAILABLE'; readonly reason: 'NO_READ_ENDPOINT' | 'NO_PROCUREMENT_STORED' | 'NO_DISPLAYABLE_PROCUREMENT' };
+
 /**
  * THE ONE INTERNAL READ POINT.
  *
