@@ -43,7 +43,10 @@ describe('Market Procurement R1 native composition', () => {
   it('Watch remains unavailable for the procurement subject', () => {
     const screen = read('components/market/MarketScreen.tsx');
     expect(screen).toContain('t.labels.watchUnavailable');
-    const shared = read('../shared/src/market/index.ts');
+    const shared = readFileSync(
+      join(SRC, '..', '..', 'shared', 'src', 'market', 'index.ts'),
+      'utf8',
+    );
     expect(shared).toContain("PROCUREMENT_OPPORTUNITY: 'NEW_SUBJECT_TYPE_REQUIRED'");
   });
 });
