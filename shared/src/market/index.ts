@@ -220,6 +220,42 @@ export interface ProcurementPortalReference {
   readonly noticeVersion?: string;
 }
 
+/**
+ * Reader-facing retained procurement notice.
+ *
+ * This is NOT a Watch subject registration and NOT a numeric MarketObservation.
+ * It is the source artifact itself, shaped for the Part VII substrate so a
+ * procurement notice can render without a fabricated price/change/confidence.
+ */
+export interface MarketRetainedProcurementNotice {
+  readonly portalReference: ProcurementPortalReference;
+  readonly artifactClass: 'PROCUREMENT_NOTICE';
+  readonly publicationDate: string;
+  readonly noticeType: string;
+  readonly title: {
+    readonly en?: string;
+    readonly pl?: string;
+  };
+  readonly buyerNames: {
+    readonly en?: readonly string[];
+    readonly pl?: readonly string[];
+    readonly source?: readonly string[];
+  };
+  readonly buyerCountryIso3: string;
+  readonly cpvCodes: readonly string[];
+  readonly totalValue: number | null;
+  readonly currency: string | null;
+  readonly deadlineDate: string | null;
+  readonly deadlineTime: string | null;
+  readonly sourceUrl: string;
+  readonly providerId: 'TED';
+  readonly retainedAt: string;
+  readonly retrievalId: string;
+  readonly contentAddress: string;
+  readonly freshnessBasis: 'RETAINED_ONLY';
+}
+
+
 export function procurementPortalReferenceKey(reference: ProcurementPortalReference): string {
   return lengthPrefixed([reference.portalId, reference.noticeId, reference.noticeVersion ?? '']);
 }
