@@ -45,6 +45,7 @@ import {
   MARKET_FIGURE_GAP_REASON, SUBJECT_READINESS,
 } from '@/lib/market/mktReadiness';
 import { MARKET_CAPABILITY, type MarketReadResult } from '@/lib/market/mktReadModel';
+import type { MarketProcurementReadResult } from '@/lib/market/mktProcurementRead';
 import { resolveMktStrings, type MktLocale, type MktStrings } from '@/lib/market/mktStrings';
 import { economyStrings } from '@/lib/economy/strings';
 
@@ -119,13 +120,16 @@ function CompactReadinessRow({ ready, label, measured }: {
   );
 }
 
-export function MarketCompactScreen({ locale, read }: {
-  locale: MktLocale; read: MarketReadResult;
+export function MarketCompactScreen({ locale, read, procurement }: {
+  locale: MktLocale;
+  read: MarketReadResult;
+  procurement: MarketProcurementReadResult;
 }): JSX.Element {
   const [view, dispatch] = useReducer(reducer, { drawer: null });
   const res = resolveMktStrings(locale);
   const t = res.strings;
-  const held = read.kind === 'OBSERVATIONS' ? read.observations.length : 0;
+  const procurementCount = procurement.kind === 'PROCUREMENT' ? procurement.notices.length : 0;
+  const held = (read.kind === 'OBSERVATIONS' ? read.observations.length : 0) + procurementCount;
   const detent = view.drawer === null ? null : DETENT[view.drawer];
 
   return (
@@ -188,7 +192,7 @@ export function MarketCompactScreen({ locale, read }: {
           wrap rather than truncate, and the freshness state keeps its governed label. A
           truncated subject name is a different subject.
         */}
-        <CoverageStrip t={t} />
+        <CoverageStrip t={t} procurementCount={procurementCount} />
 
         {read.kind === 'OBSERVATIONS' ? (
           <SubstratePanel t={t}>
@@ -200,13 +204,30 @@ export function MarketCompactScreen({ locale, read }: {
               ))}
             </div>
           </SubstratePanel>
+        ) : procurement.kind === 'PROCUREMENT' ? (
+          <SubstratePanel t={t}>
+            <div data-mkt="compact-procurement-observations" style={{
+              display: 'flex', flexDirection: 'column', gap: '10px',
+            }}>
+              {procurement.notices.map((notice) => (
+                <ProcurementCard
+                  key={notice.procurementKey}
+                  notice={notice}
+                  locale={locale}
+                  t={t}
+                />
+              ))}
+            </div>
+          </SubstratePanel>
         ) : (
           <SubstratePanel t={t} />
         )}
 
         <ChangeContext t={t} />
 
-        {read.kind !== 'OBSERVATIONS' && <ReadUnavailable reason={read.reason} t={t} />}
+        {read.kind !== 'OBSERVATIONS' && procurement.kind !== 'PROCUREMENT' && (
+          <ReadUnavailable reason={read.reason} t={t} />
+        )}
 
         {/*
           THE CAPABILITY REGION, LAST AND QUIET. Same three rows as the desktop rail, same
