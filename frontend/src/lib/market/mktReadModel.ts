@@ -58,6 +58,7 @@
  */
 
 import { resolveApiBaseUrl } from '@/lib/api/apiBase';
+import type { MarketRetainedProcurementNotice } from '@globalnews-ai/shared';
 
 /* ───────────────────────────────────────────────────────────────────────────
  * 1 · THE CONTRACT FIELD NAMES, AS A VALUE
