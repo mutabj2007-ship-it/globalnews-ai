@@ -1,0 +1,67 @@
+name: Alpha Design-Native Data Convergence R1 CI
+
+on:
+  push:
+    branches:
+      - fix/alpha-design-native-data-convergence-r1
+  pull_request:
+    branches:
+      - release/alpha-m08-integrated-r1
+    paths:
+      - 'frontend/src/app/politics-visual-preview/**'
+      - 'frontend/src/app/security-visual-preview/**'
+      - 'frontend/src/app/conflict/**'
+      - 'frontend/src/app/market/**'
+      - 'frontend/src/app/energy/**'
+      - 'frontend/src/app/humanitarian/**'
+      - 'frontend/src/components/politics/**'
+      - 'frontend/src/lib/politics/**'
+      - 'frontend/src/lib/alpha/**'
+      - 'backend/src/modules/politics/**'
+      - 'docs/operations/ALPHA-DESIGN-NATIVE-DATA-CONVERGENCE-R1.md'
+      - '.github/workflows/alpha-design-native-data-convergence-r1-ci.yml'
+
+concurrency:
+  group: alpha-design-native-data-convergence-r1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --config backend/prisma.config.ts
+      - run: npm run build:shared
+
+      - name: Design-native specialist gates
+        run: |
+          npm test --workspace=frontend -- --runInBand src/lib/alpha/designNativeDataGate.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/politics/politicsVisualFrame.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/security/securityVisualFrame.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/market/mktReader.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/market/mktContract.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/energy/energyVisualFrame.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/humanitarian/humContract.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/map/d1/conflictDomainBind.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/checkpointELayerReasons.spec.ts
+
+      - name: Specialist family and phone regression gates
+        run: |
+          npm test --workspace=frontend -- --runInBand src/lib/specialist/alphaVisualFrames.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/specialist/specialistVisualFrames.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/specialist/previewScopeRuling.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/analysis-frame/phoneWidthFrame.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/analysis-frame/r4Responsive.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/mobile/compactSpatialCorrection.spec.ts
+
+      - name: Frontend production build
+        run: npm run build:frontend
+
+      - name: Backend production build
+        run: npm run build:backend
