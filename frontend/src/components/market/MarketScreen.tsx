@@ -248,6 +248,19 @@ export function MarketScreen({ locale, read, procurement }: {
                   ))}
                 </div>
               </SubstratePanel>
+            ) : procurement.kind === 'PROCUREMENT' ? (
+              <SubstratePanel t={t}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {procurement.notices.map((notice) => (
+                    <MarketNoticeCard
+                      key={notice.portalReference.noticeId}
+                      notice={notice}
+                      locale={locale}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              </SubstratePanel>
             ) : (
               <SubstratePanel t={t} />
             )}
