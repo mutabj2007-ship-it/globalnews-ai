@@ -124,8 +124,14 @@ describe('Eurostat Energy retained parser', () => {
       })),
     ).toThrow('REQUEST_PARAMETERS_DRIFT:geo');
 
-    expect(() =>
-      normalizeEurostatEnergyCapture(capture({ contentAddress: '0'.repeat(64) })),
-    ).toThrow('CAPTURE_DIGEST_OR_LENGTH');
+    const digestMismatch = capture();
+    digestMismatch.contentAddress = '0'.repeat(64);
+    digestMismatch.payload = {
+      ...digestMismatch.payload,
+      contentAddress: '0'.repeat(64),
+    };
+    expect(() => normalizeEurostatEnergyCapture(digestMismatch)).toThrow(
+      'CAPTURE_DIGEST_OR_LENGTH',
+    );
   });
 });
