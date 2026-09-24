@@ -203,7 +203,8 @@ export function normalizeUcdpCandidateCsv(
   }
 
   const seen = new Set<string>();
-  const observations = rows.slice(1).map((values) => {
+  const observations: ConflictObservation[] = rows.slice(1).map(
+    (values): ConflictObservation => {
     const r = rowObject(header, values);
     const rawId = requiredText(r.id, 'id', 128);
     if (!/^\d+$/.test(rawId)) refuse('EVENT_IDENTITY_DEPENDENCY');
@@ -248,11 +249,12 @@ export function normalizeUcdpCandidateCsv(
     };
     assertPrecisionNotInferredFromGeometry(geography);
 
-    const sourceReference: ConflictObservation['sourceReference'] = {};
     const citation = optionalSource(r.source_article);
     const office = optionalSource(r.source_office);
-    if (citation) sourceReference.citation = citation;
-    if (office) sourceReference.reportingOffice = office;
+    const sourceReference: ConflictObservation['sourceReference'] = {
+      ...(citation ? { citation } : {}),
+      ...(office ? { reportingOffice: office } : {}),
+    };
 
     return {
       observationKey,
@@ -282,7 +284,8 @@ export function normalizeUcdpCandidateCsv(
         recordedAt: context.ingestedAt,
       },
     };
-  });
+    },
+  );
 
   if (!profile.countryAllowlistIso3) return observations;
   const allow = new Set(profile.countryAllowlistIso3);
