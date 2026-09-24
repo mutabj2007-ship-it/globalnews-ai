@@ -34,6 +34,7 @@ import {
   normaliseCamera,
 } from '@/lib/map/camera/cameraState';
 import type { EvidenceRecord } from '@/lib/map/evidence/evidenceModel';
+import { evidencePlaceMarks } from '@/lib/map/evidence/evidencePlaceMarks';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import type { LocationProvenance } from '@/lib/spatial/spatialPrecision';
 import { type LabelCandidate, placeLabels } from '@/lib/map/labels/labelPlacement';
@@ -41,8 +42,6 @@ import { LABEL_TYPE, referenceLabelCandidates } from '@/lib/map/labels/labelSour
 import { REFERENCE_LAYERS, REFERENCE_SOURCES } from '@/lib/map/reference/referenceGeography';
 import type { DisplayPrecision } from '@/lib/map/spatial/precisionModel';
 import {
-  countsAsVerified,
-  displayPrecisionFor,
   haloRadiusKm,
   markerStyleFor,
   rendersAsPoint,
@@ -196,79 +195,9 @@ const MARK_LAYER_ID = 'gn-evidence-mark';
  * is a claim about a place inside the country that no record made.
  */
 function evidenceFeatures(records: readonly EvidenceRecord[]): GeoJSON.FeatureCollection {
-  /*
-    ── ONE MARK PER PLACE, NOT ONE PER RECORD ────────────────────────────────
-
-    DEFECT FOUND BY THE LIVE G FEED, AND ONLY BY IT.
-
-    Two Rwandan headlines resolved through G's route to the SAME settlement:
-    one STATED ("… in Kigali"), one INTERPRETED ("Kigalli" corrected to Kigali,
-    edit distance 1). Both carry the identical `geographyId` and the identical
-    coordinate, so the previous one-feature-per-record loop emitted two exactly
-    coincident marks — and MapLibre drew them in array order, which put the
-    hollow dashed INTERPRETED ring on top of the filled STATED dot.
-
-    The place then READ as interpreted although a source had stated it. That is
-    the provenance axis inverted by an accident of iteration order, and no
-    fixture could have produced it: it needs two real records agreeing on a
-    place and disagreeing on how they got there.
-
-    So records are grouped by `geography.id` — the same key `geographyTotals`
-    aggregates on, so the mark and the numbers in the rail cannot describe
-    different sets — and each place is drawn once.
-
-    ── AND THE STRONGEST PROVENANCE WINS, DELIBERATELY ──────────────────────
-
-    A hollow dashed mark asserts something specific: that no source stated this
-    location. One STATED record makes that assertion FALSE, so a place holding
-    any stated record is drawn filled. The interpreted reports are not hidden by
-    this — `hasUnverified` and the separate verified count already carry them
-    into the selection card, which is where a qualifier belongs. Part II §8 q9
-    forbids folding an interpreted record into a verified TOTAL; it does not ask
-    a place with real stated evidence to be drawn as though it had none.
-
-    The precision drawn is the FINEST any record at the place asserted, matching
-    `geographyTotals.finestPrecision`, so the halo and the rail agree too.
-  */
-  interface PlaceMark {
-    readonly recordId: string;
-    readonly point: readonly [number, number];
-    precision: DisplayPrecision;
-    provenance: LocationProvenance | undefined;
-  }
-
-  const byGeography = new Map<string, PlaceMark>();
-
-  for (const record of records) {
-    const point = record.geography.point;
-
-    if (point === undefined || !rendersAsPoint(record.precision)) continue;
-
-    const key = record.geography.id;
-    const existing = byGeography.get(key);
-
-    if (existing === undefined) {
-      byGeography.set(key, {
-        recordId: record.id,
-        point,
-        precision: record.precision,
-        provenance: record.provenance,
-      });
-      continue;
-    }
-
-    /* Finest level claimed at this place — never coarser than a record held. */
-    if (displayPrecisionFor(record.precision, existing.precision) !== record.precision) {
-      existing.precision = record.precision;
-    }
-
-    /* Strongest provenance claimed at this place. See the note above. */
-    if (countsAsVerified(record.provenance)) existing.provenance = record.provenance;
-  }
-
   const features: GeoJSON.Feature[] = [];
 
-  for (const [geographyId, mark] of byGeography) {
+  for (const mark of evidencePlaceMarks(records)) {
     const radiusKm = haloRadiusKm(mark.precision);
     const style = markerStyleFor(mark.precision, mark.provenance);
     const token = legendToken(style.legendKey);
@@ -279,19 +208,13 @@ function evidenceFeatures(records: readonly EvidenceRecord[]): GeoJSON.FeatureCo
       geometry: { type: 'Point', coordinates: [mark.point[0], mark.point[1]] },
       properties: {
         recordId: mark.recordId,
-        geographyId,
+        geographyId: mark.geographyId,
         lat: mark.point[1],
-        /* 0 for EXACT, which is a real answer and not a missing one. */
         haloMetres: (radiusKm ?? 0) * 1000,
         stroke: token.stroke,
         fill: token.fill,
         fillOpacity: token.fillOpacity,
         strokeOpacity: token.strokeOpacity,
-        /*
-          THE HALO'S OWN OPACITIES, from Design's `.halo` rule rather than from
-          the country-fill grammar: a precision halo is a different element from
-          a country wash and the reference gives it different numbers.
-        */
         haloFillOpacity:
           style.legendKey === 'attention'
             ? DESIGN_HALO.fillOpacityAmber
@@ -299,7 +222,6 @@ function evidenceFeatures(records: readonly EvidenceRecord[]): GeoJSON.FeatureCo
         haloStrokeOpacity: rgbaParts(
           style.legendKey === 'attention' ? DESIGN_HALO.strokeAmber : DESIGN_HALO.strokeCyan,
         ).opacity,
-        /* Provenance drawn in KIND: hollow marks for interpreted and contested. */
         markFilled: style.filled ? 1 : 0,
         legendKey: style.legendKey,
       },
@@ -1808,17 +1730,13 @@ export function EvidenceMapCanvas({
     const active: { id: string; x: number; y: number; amber: boolean }[] = [];
 
     if (layers?.evidencePoints !== false) {
-      for (const record of evidenceRecords) {
-        const point = record.geography.point;
-
-        if (point === undefined || !rendersAsPoint(record.precision)) continue;
-
-        const style = markerStyleFor(record.precision, record.provenance);
+      for (const mark of evidencePlaceMarks(evidenceRecords)) {
+        const style = markerStyleFor(mark.precision, mark.provenance);
 
         /* `.mk.unk .ring { display: none }` — see the note above. */
         if ((DESIGN_RIPPLE.suppressedFor as readonly string[]).includes(style.legendKey)) continue;
 
-        const projected = map.project([point[0], point[1]]);
+        const projected = map.project([mark.point[0], mark.point[1]]);
 
         if (!Number.isFinite(projected.x) || !Number.isFinite(projected.y)) continue;
         if (
@@ -1831,7 +1749,7 @@ export function EvidenceMapCanvas({
         }
 
         active.push({
-          id: record.geography.id,
+          id: mark.geographyId,
           x: projected.x,
           y: projected.y,
           amber: style.legendKey === 'attention',

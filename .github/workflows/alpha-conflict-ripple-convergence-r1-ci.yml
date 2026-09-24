@@ -1,0 +1,43 @@
+name: Alpha Conflict Ripple Convergence R1 CI
+
+on:
+  push:
+    branches:
+      - fix/alpha-conflict-ripple-key-convergence-r1
+  pull_request:
+    branches:
+      - release/alpha-m08-integrated-r1
+    paths:
+      - 'frontend/src/components/map/shell/EvidenceMapCanvas.tsx'
+      - 'frontend/src/lib/map/evidence/evidencePlaceMarks.ts'
+      - 'frontend/src/lib/map/evidence/evidencePlaceMarks.spec.ts'
+      - '.github/workflows/alpha-conflict-ripple-convergence-r1-ci.yml'
+
+concurrency:
+  group: alpha-conflict-ripple-convergence-r1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --config backend/prisma.config.ts
+      - run: npm run build:shared
+
+      - name: Shared place-mark and Conflict map regressions
+        run: |
+          npm test --workspace=frontend -- --runInBand src/lib/map/evidence/evidencePlaceMarks.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/conflict/retained.spec.ts
+          npm test --workspace=frontend -- --runInBand src/lib/map/d1/conflictDomainBind.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/checkpointELayerReasons.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/mobile/compactSpatialCorrection.spec.ts
+
+      - name: Frontend production build
+        run: npm run build:frontend
