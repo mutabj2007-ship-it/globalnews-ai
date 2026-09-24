@@ -168,7 +168,7 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
               </div>
             ))}
           </div>
-          {subjects.length > 0 ? (
+          {subjects.length ? (
             <div className="mt-[8px] flex flex-col border border-sp-line bg-sp-panel">
               {subjects.map((observation) => (
                 <button
