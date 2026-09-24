@@ -5,6 +5,7 @@ import { ScriptRun } from '@/lib/typography/runBoundary';
 import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
 import type { PolLocale } from '@/lib/politics/politicsStrings';
 import { PoliticsCompactScreen } from '@/components/politics/PoliticsCompactScreen';
+import { readPoliticsObservations } from '@/lib/politics/politicsReadModel';
 
 /**
  * POLITICS — ALPHA PRODUCT OWNER VISUAL PREVIEW, COMPACT.
@@ -30,8 +31,9 @@ function politicsLocale(): PolLocale {
   return SELECTABLE_LOCALES.find((l) => l === active) ?? 'en';
 }
 
-export default function PoliticsVisualPreviewCompactPage(): JSX.Element {
+export default async function PoliticsVisualPreviewCompactPage(): Promise<JSX.Element> {
   const locale = politicsLocale();
+  const read = await readPoliticsObservations();
   return (
     <ScriptRun locale={locale} step="wrapping" as="div">
       {/*
@@ -43,7 +45,7 @@ export default function PoliticsVisualPreviewCompactPage(): JSX.Element {
         set here, once, on the element that actually wraps the whole route.
       */}
       <div className="min-h-screen bg-sp-bg">
-        <PoliticsCompactScreen locale={locale} />
+        <PoliticsCompactScreen locale={locale} read={read} />
       </div>
     </ScriptRun>
   );
