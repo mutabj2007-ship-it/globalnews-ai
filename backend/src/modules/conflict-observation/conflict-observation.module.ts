@@ -5,14 +5,16 @@ import {
   ConflictObservationProducer,
   REVIEWED_UCDP_CAPTURES,
 } from './conflict-observation.producer';
+import { UCDP_CANDIDATE_AUGUST_2026 } from './ucdp-candidate.reviewed';
 
 @Module({
   controllers: [ConflictObservationController],
   providers: [
     ConflictObservationRepository,
     ConflictObservationProducer,
-    // No real capture has been reviewed in this lane. Activation requires reviewed bytes.
-    { provide: REVIEWED_UCDP_CAPTURES, useValue: Object.freeze([]) },
+    // One exact public UCDP Candidate artifact is reviewed for the Product Owner-approved
+    // Alpha R1 proof. This registry alone does not fetch, schedule or admit anything.
+    { provide: REVIEWED_UCDP_CAPTURES, useValue: Object.freeze([UCDP_CANDIDATE_AUGUST_2026]) },
   ],
   exports: [ConflictObservationRepository, ConflictObservationProducer],
 })
