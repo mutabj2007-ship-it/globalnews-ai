@@ -67,11 +67,6 @@ const reducer = (s: View, a: Action): View => {
  */
 const DETENT_VH: Readonly<Record<Sheet, number>> = { PROVENANCE: 55, READINESS: 42 };
 
-function displayTimestamp(value: string): string {
-  const date = new Date(value);
-  return Number.isFinite(date.getTime()) ? date.toLocaleString() : value;
-}
-
 function provenancePublisher(observation: RetainedPoliticsObservation): string | null {
   return observation.provenance.institution ?? observation.provenance.providerId ?? null;
 }
@@ -173,7 +168,7 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
               </div>
             ))}
           </div>
-          {subjects.length > 0 && (
+          {subjects.length > 0 ? (
             <div className="mt-[8px] flex flex-col border border-sp-line bg-sp-panel">
               {subjects.map((observation) => (
                 <button
@@ -241,7 +236,7 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
           <div className="flex flex-col gap-[10px]">
             <Field label={t.labels.watch}><Absent label={t.labels.awaitingData} /></Field>
             <Field label={t.labels.timeline}>
-              {selected ? displayTimestamp(selected.publishedAt) : <Absent label={t.labels.awaitingData} />}
+              {selected ? selected.publishedAt : <Absent label={t.labels.awaitingData} />}
             </Field>
             <Field label={t.labels.ask}><Absent label={t.labels.awaitingData} /></Field>
           </div>
@@ -292,8 +287,8 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
                   <Field label={t.labels.publisher}>
                     {provenancePublisher(selected) ?? <Absent label={t.labels.awaitingData} />}
                   </Field>
-                  <Field label={t.labels.publishedAt}>{displayTimestamp(selected.publishedAt)}</Field>
-                  <Field label={t.labels.retrievedAt}>{displayTimestamp(selected.temporal.retrievedAt)}</Field>
+                  <Field label={t.labels.publishedAt}>{selected.publishedAt}</Field>
+                  <Field label={t.labels.retrievedAt}>{selected.temporal.retrievedAt}</Field>
                   <Field label={t.labels.evidence}>{selected.claim.sourceText}</Field>
                   {selected.sourceReference.sourceUrl && (
                     <a
