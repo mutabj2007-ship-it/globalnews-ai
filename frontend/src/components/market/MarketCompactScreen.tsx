@@ -203,6 +203,21 @@ export function MarketCompactScreen({ locale, read, procurement }: {
               ))}
             </div>
           </SubstratePanel>
+        ) : procurement.kind === 'PROCUREMENT' ? (
+          <SubstratePanel t={t}>
+            <div data-mkt="compact-notices" style={{
+              display: 'flex', flexDirection: 'column', gap: '10px',
+            }}>
+              {procurement.notices.map((notice) => (
+                <MarketNoticeCard
+                  key={notice.portalReference.noticeId}
+                  notice={notice}
+                  locale={locale}
+                  t={t}
+                />
+              ))}
+            </div>
+          </SubstratePanel>
         ) : (
           <SubstratePanel t={t} />
         )}
