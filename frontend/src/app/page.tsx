@@ -9,6 +9,8 @@ import { HomepageSituationMap } from '@/components/home/HomepageSituationMap';
 import { ExploreByTopic } from '@/components/home/ExploreByTopic';
 import { EngineEnergyField } from '@/components/home/EngineEnergyField';
 import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
+import { HowItWorks } from '@/components/home/HowItWorks';
+import { TrustSection } from '@/components/home/TrustSection';
 import { Footer } from '@/components/layout/Footer';
 import { PageCanvas } from '@/components/layout/PageCanvas';
 import { getHomeFeed } from '@/lib/homeFeed';
@@ -357,6 +359,23 @@ export default async function HomePage(): Promise<JSX.Element> {
             <EngineEnergyField />
             <IntelligenceModulesSection language={language} />
           </div>
+          {/*
+            C6 · HOW IT WORKS AND BUILT ON TRUST RETURN.
+
+            R1 retired both because neither appears in an approved R4.1 or R5.1
+            Home frame and neither is named in the 139-key Home copy catalogue.
+            That reasoning was sound against the authority R1 had; the R2
+            contract supersedes it and requires both sections back, which is the
+            later instruction and therefore the one that governs.
+
+            Nothing about either file changed while it was retired — they were
+            unimported, not deleted, and their own specs kept reading them — so
+            this is a re-mount, not a rebuild. Both take the one resolved
+            language like every other surface on the page, and neither fetches
+            anything: they are static explanatory copy from the dictionary.
+          */}
+          <HowItWorks language={language} />
+          <TrustSection language={language} />
         </PageCanvas>
       </main>
       <Footer language={language} />

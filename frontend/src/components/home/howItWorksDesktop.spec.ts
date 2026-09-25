@@ -589,8 +589,14 @@ describe('M66.8d — scope discipline', () => {
     expect(code).toMatch(/w-\[52px\]/);
   });
 
-  it('HowItWorks is retired from Home, and its file is kept', () => {
-    expect(pageSource).not.toMatch(/<HowItWorks/);
+  it('HowItWorks is MOUNTED on Home, and its file is kept', () => {
+    /*
+      C6 RE-POINT (BETA HOME CLOSURE R2), per BETA-DESIGN-AUTHORITY-R5.1 §3 —
+      the R2 contract requires this section back on Home, superseding the H5
+      retirement this assertion pinned. Inverted, not deleted: the subject is
+      still where the surface lives and whether its file survives.
+    */
+    expect(pageSource).toMatch(/<HowItWorks/);
     expect(existsSync(join(__dirname, 'HowItWorks.tsx'))).toBe(true);
   });
 

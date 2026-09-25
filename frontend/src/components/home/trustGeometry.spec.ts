@@ -474,15 +474,22 @@ describe('M66.6 — multilingual layout (MLR-01 … MLR-06)', () => {
 });
 
 describe('M66.6 — protected surfaces are untouched', () => {
-  it('TrustSection and HowItWorks are retired from Home, and both files are kept', () => {
-    /* H5 · Issue #29 — TodayWorkspace, HowItWorks and TrustSection are RETIRED
-       FROM HOME. They appear in no approved R4.1/R5.1 Home frame and in none of
-       the 139 approved Home copy keys; contract precedence rule 4 forbids
-       treating the current implementation as missing design authority. The files
-       stay on disk, unimported, and their own specs read those files rather than
-       page.tsx, so they keep their subject. */
-    expect(pageSource).not.toMatch(/<TrustSection/);
-    expect(pageSource).not.toMatch(/<HowItWorks/);
+  it('TrustSection and HowItWorks are MOUNTED on Home, and both files are kept', () => {
+    /*
+      C6 RE-POINT (BETA HOME CLOSURE R2), per BETA-DESIGN-AUTHORITY-R5.1 §3.
+
+      H5 (Issue #29) retired both from Home because neither appears in an
+      approved R4.1/R5.1 Home frame nor among the 139 approved Home copy keys,
+      and precedence rule 4 forbade treating the current implementation as
+      missing design authority. That was sound against the authority H5 had.
+
+      The R2 contract supersedes it and requires both sections back. It is the
+      later instruction, so the assertion is inverted rather than deleted: the
+      subject is unchanged — where these two surfaces live, and whether their
+      files survive — which is exactly what M66.6 set out to protect.
+    */
+    expect(pageSource).toMatch(/<TrustSection/);
+    expect(pageSource).toMatch(/<HowItWorks/);
     expect(existsSync(join(__dirname, 'TrustSection.tsx'))).toBe(true);
     expect(existsSync(join(__dirname, 'HowItWorks.tsx'))).toBe(true);
   });
