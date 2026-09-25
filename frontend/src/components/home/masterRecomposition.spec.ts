@@ -9,6 +9,8 @@ function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 }
 
+const exploreSource = readFileSync(join(__dirname, 'ExploreByTopic.tsx'), 'utf-8');
+
 describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase 2 — LatestNowRail removed as a duplicate presentation of feed.latestUpdates)', () => {
   it('renders sections in the approved order', () => {
     const order = [
@@ -25,11 +27,12 @@ describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase
       // Engine and is retired from this render path. Global Developments now
       // transitions directly into the Intelligence Engine, which is the
       // released Claude Design adjacency. The component file is retained.
-      /* GATE A · R5.1 — IntelligenceModulesSection supersedes
+      /* SUPERSEDED by the DESKTOP COMPOSITION RULING §7 — see below.
+         GATE A · R5.1 — IntelligenceModulesSection supersedes
          IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
          The engine file is retired, not deleted. The ORDER contract this list
          exists to protect is unchanged; only the section's identity moved. */
-      '<IntelligenceModulesSection',
+      '<ExploreByTopic',
     ];
     let lastIndex = -1;
     for (const marker of order) {
@@ -90,7 +93,15 @@ describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase
     const codeOnly = stripComments(bottomNavSource);
     expect(codeOnly).not.toMatch(/href:\s*'\/profile'/);
     expect(codeOnly).not.toMatch(/href:\s*'\/intelligence'/);
-    expect(codeOnly).toMatch(/href:\s*'#intelligence-modules'/);
+    /*
+      DESKTOP COMPOSITION RULING §6/§7. The nine-card Engine leaves Home, so
+      `#intelligence-modules` is no longer an id in THIS file. It is not dead:
+      it moved to the topic strip, because MobileBottomNav ships it as one of
+      four approved destinations and a tab pointing at a removed element is a
+      dead control in the product's primary mobile navigation. The assertion
+      follows the anchor rather than being deleted.
+    */
+    expect(exploreSource).toMatch(/id="intelligence-modules"/);
   });
 
   it('mobile bottom nav does not include a fabricated Trending destination', () => {

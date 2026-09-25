@@ -282,8 +282,18 @@ describe('the four approved navigation destinations are untouched', () => {
     }
   });
 
-  it('carries the #intelligence-modules anchor on the live section', () => {
-    expect(sectionSource).toMatch(/id="intelligence-modules"/);
+  it('carries the #intelligence-modules anchor on the surface Home actually renders', () => {
+    /*
+      DESKTOP COMPOSITION RULING §7 moves the nine-card Engine off Home to a
+      future separate intelligence/topics page. `IntelligenceModulesSection` is
+      retired from the Home render path, not deleted, so the anchor that
+      MobileBottomNav's Intelligence tab resolves had to move with the render
+      rather than stay on an unmounted file. It is now on the topic strip,
+      which is the surface Home renders and which answers the same question.
+      The tab keeps working and MobileBottomNav needed no edit.
+    */
+    const exploreSource = readFileSync(join(__dirname, 'ExploreByTopic.tsx'), 'utf-8');
+    expect(exploreSource).toMatch(/id="intelligence-modules"/);
   });
 
   it('keeps /ask and /search distinct — this section links to neither', () => {

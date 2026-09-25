@@ -26,7 +26,7 @@ function stripComments(src: string): string {
 }
 
 describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed as a duplicate presentation of feed.latestUpdates)', () => {
-  it('renders sections in the approved current order: NavBar, LiveStatusStrip, Hero, GlobalDevelopments, IntelligenceModulesSection, HowItWorks, TrustSection, Footer, MobileBottomNav', () => {
+  it('renders sections in the approved current order: NavBar, BetaHero, WhatsHappeningNow, ExploreByTopic, HowItWorks, TrustSection, Footer, MobileBottomNav', () => {
     // M65.1 — the two per-breakpoint Intelligence Engine renderers were
     // replaced by ONE section that serves every breakpoint.
     // M66.8c — HomepageSituationMap is retired from this render path. The
@@ -43,16 +43,26 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
          WhatsHappeningNow carries the editorial area plus the degraded-feed
          state the strip used to carry. The ORDER contract is unchanged. */
       '<WhatsHappeningNow',
-      /* C3 · BETA HOME CLOSURE R2 — the Global Situation Map returns to Home,
-         below the editorial area and inside the same column. It stood in this
-         list before M66.8c retired it; the marker is restored to the position
-         the order contract always gave it. */
-      '<HomepageSituationMap',
-      /* GATE A · R5.1 — IntelligenceModulesSection supersedes
-         IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
-         The engine file is retired, not deleted. The ORDER contract this list
-         exists to protect is unchanged; only the section's identity moved. */
-      '<IntelligenceModulesSection',
+      /* DESKTOP COMPOSITION RULING §3 — the Global Situation Map sits to the
+         RIGHT of the story cards, not below them, so it is mounted inside
+         HomeSideRail rather than in this file. Its marker leaves this list
+         because the list protects THIS file's order; the map's placement is
+         now asserted where it lives. */
+      /* DESKTOP COMPOSITION RULING §1 — ExploreByTopic moves INSIDE the
+         left main column, directly beneath the story rail, so the right rail
+         spans the same vertical band as stories + topics. The ruling calls
+         that relationship "the key design", and a sibling section could only
+         ever begin after the rail ended. */
+      '<ExploreByTopic',
+      /* DESKTOP COMPOSITION RULING §6/§7 — the nine-card Intelligence Engine
+         LEAVES HOME for a future separate intelligence/topics page:
+         "the full nine-card Intelligence Engine is no longer required inside
+         this first high-engagement Home composition". IntelligenceModulesSection
+         and EngineEnergyField are retired from this render path, not deleted;
+         both files stay on disk and their own specs read those files rather
+         than this one. */
+      '<HowItWorks',
+      '<TrustSection',
       '<Footer',
       '<MobileBottomNav',
     ];
@@ -89,9 +99,17 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
     copy of /map; it is a quota-free gateway to it.
   */
   it('C3 — HomepageSituationMap is MOUNTED on the homepage, and its file is RETAINED', () => {
-    const code = stripComments(pageSource);
-    expect(code).toMatch(/<HomepageSituationMap/);
-    expect(code).toMatch(/import \{ HomepageSituationMap \}/);
+    /*
+      DESKTOP COMPOSITION RULING §3 — the map sits to the RIGHT of the story
+      cards, so it mounts inside `HomeSideRail`, which `page.tsx` mounts.
+      "Mounted on the homepage" is still exactly what is asserted; only the
+      file it is written in moved, and the two-step assertion below is what
+      keeps the chain honest rather than assuming it.
+    */
+    const railSource = stripComments(readFileSync(join(__dirname, 'HomeSideRail.tsx'), 'utf-8'));
+    expect(stripComments(pageSource)).toMatch(/<HomeSideRail/);
+    expect(railSource).toMatch(/<HomepageSituationMap/);
+    expect(railSource).toMatch(/import \{ HomepageSituationMap \}/);
     // RETAINED, not deleted. If a later cleanup removes the file, this fails —
     // and so would five direct specs that read it. Mounted or retired, the
     // component must never quietly disappear.
@@ -99,9 +117,17 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
   });
 
   it('C3 — the homepage mounts exactly ONE situation-map surface, and /map is untouched', () => {
-    const code = stripComments(pageSource);
-    // One mount, not two: the rail's World Pulse thumbnail was superseded by
-    // this card, and a second world map must not reappear beside it.
+    /*
+      DESKTOP COMPOSITION RULING §3 — the map sits to the RIGHT of the story
+      cards, so it is mounted inside `HomeSideRail` rather than in `page.tsx`.
+      The invariant this test exists for is unchanged and is what still
+      matters: Home renders EXACTLY ONE situation-map surface, reaches for no
+      MapLibre of its own, and leaves /map alone. So the count is taken across
+      the whole Home render path rather than in one file, which also means a
+      future move cannot quietly reintroduce a second map.
+    */
+    const railSource = readFileSync(join(__dirname, 'HomeSideRail.tsx'), 'utf-8');
+    const code = stripComments(pageSource) + stripComments(railSource);
     expect(code.match(/<HomepageSituationMap/g)).toHaveLength(1);
     // The homepage still never reaches for MapLibre itself — it mounts the
     // section, which lazy-loads the shared WorldMap behind ssr:false.

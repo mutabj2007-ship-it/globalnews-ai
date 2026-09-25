@@ -5,13 +5,29 @@ const source = readFileSync(join(__dirname, 'HomepageSituationMap.tsx'), 'utf-8'
 
 describe('Global Situation Map visual polish (CTO continuation — priority 1)', () => {
   it('the scan/grid overlay is pointer-events-none — decoration never blocks real map pan/zoom/click', () => {
-    expect(source).toMatch(/pointer-events-none absolute inset-0 opacity-\[0\.15\]/);
+    /*
+      The property this test exists for is `pointer-events-none`: decoration
+      must never take a pointer away from the real map. That is asserted
+      directly below and is unchanged.
+
+      The opacity is no longer a single literal. DESKTOP FIDELITY CORRECTION
+      R2 §8 required the rail card to shed tool-like visual noise, so the
+      overlay is now 0.15 in the full-width section and 0.07 in the rail card.
+      Both values are asserted, so neither variant can lose its treatment
+      silently.
+    */
+    expect(source).toMatch(/pointer-events-none absolute inset-0/);
+    expect(source).toMatch(/opacity-\[0\.15\]/);
+    expect(source).toMatch(/opacity-\[0\.07\]/);
   });
 
   it('has an inner glow for depth, and HUD corner brackets for framing', () => {
     expect(source).toMatch(/shadow-\[inset_0_0_60px/);
+    /* R2 §8 — the brackets are section-only now; the rail card omits them
+       deliberately. They must still exist for the section that keeps them. */
     expect(source).toMatch(/border-l border-t/);
     expect(source).toMatch(/border-r border-b/);
+    expect(source).toMatch(/isRail\s*\n?\s*\?\s*null/);
   });
 
   it('the map container border/glow is stronger than the earlier muted treatment, and intensifies further on country selection', () => {

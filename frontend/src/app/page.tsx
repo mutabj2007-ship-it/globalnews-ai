@@ -8,8 +8,6 @@ import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
 import { HomeSideRail } from '@/components/home/HomeSideRail';
 import { HomeAccountPanel } from '@/components/home/HomeAccountPanel';
 import { ExploreByTopic } from '@/components/home/ExploreByTopic';
-import { EngineEnergyField } from '@/components/home/EngineEnergyField';
-import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
 import { HowItWorks } from '@/components/home/HowItWorks';
 import { TrustSection } from '@/components/home/TrustSection';
 import { Footer } from '@/components/layout/Footer';
@@ -281,8 +279,21 @@ export default async function HomePage(): Promise<JSX.Element> {
             The map component is unchanged and still performs zero
             provider-capable reads on mount or selection.
           */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,368px)] lg:items-start">
-            <div className="flex flex-col gap-10">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,352px)] lg:items-start">
+            {/*
+              THE LEFT MAIN COLUMN — stories, then topics directly underneath.
+
+              DESKTOP COMPOSITION RULING §1: *"The right rail spans the same
+              overall vertical band as `What's happening now + Explore by
+              topic`. This relationship is the key design."*
+
+              That is why `ExploreByTopic` is INSIDE this column rather than a
+              section of its own below the band. Rendered as a sibling section
+              it could only ever start after the rail ended, which is the
+              relationship the ruling refuses: two independent vertical blocks
+              instead of one composed band.
+            */}
+            <div className="flex min-w-0 flex-col gap-7">
               <WhatsHappeningNow
                 lead={feed.featured}
                 secondary={feed.inFocus}
@@ -290,6 +301,7 @@ export default async function HomePage(): Promise<JSX.Element> {
                 dataMode={feed.dataMode}
                 language={language}
               />
+              <ExploreByTopic language={language} />
             </div>
             <HomeSideRail language={language} />
           </div>
@@ -367,20 +379,13 @@ export default async function HomePage(): Promise<JSX.Element> {
             "View all topics" is an anchor into it.
           */}
           {/*
-            §9 — PERSONALIZATION SITS BELOW THE HIGH-ENGAGEMENT ZONES.
-
-            The ruling: *"Do not put a large signed-out follow card above those
-            in the normal desktop first fold... Signed-out personalization
-            invitation can move lower or into the personalization area."* The
-            prototype's right rail is the map and Ask, and its Sign In lives in
-            the header — which Home now has.
+            PERSONALIZATION, below the prototype's high-engagement band.
 
             `HomeAccountPanel` is unchanged and still state-aware: signed out it
             invites, signed in it renders For you, Following and Manage from the
             real account and follow APIs, and it never shows "Sign in" to
-            someone already signed in. Only its position moved. It keeps reading
-            the stories the page already holds, so "For you" still needs no
-            second request.
+            someone already signed in. It reads the stories the page already
+            holds, so "For you" needs no second request.
           */}
           <div className="mx-auto w-full max-w-md lg:max-w-none">
             <HomeAccountPanel
@@ -389,41 +394,6 @@ export default async function HomePage(): Promise<JSX.Element> {
             />
           </div>
 
-          <ExploreByTopic language={language} />
-          {/*
-            C5 · THE ENGINE KEEPS ITS NINE CARDS AND GETS ITS GLOW BACK.
-
-            `IntelligenceModulesSection` is NOT touched — it is still the Gate A
-            file, byte-for-byte, and `intelligenceModulesR51.spec.ts` still
-            guards it. The intelligence-energy identity is restored behind it as
-            a decorative field instead, drawn from the released engine geometry.
-
-            The retired `IntelligenceEngineRing` could not be mounted here: it
-            renders its own `IntelligenceModulePanel` per module, so the page
-            would carry eighteen module representations and eighteen tab stops.
-            EngineEnergyField draws only the hub, the rays and the node ring —
-            no module name, state or route — so the nine cards in front remain
-            the single presentation of the modules.
-          */}
-          <div className="relative isolate py-6 lg:py-10">
-            <EngineEnergyField />
-            <IntelligenceModulesSection language={language} />
-          </div>
-          {/*
-            C6 · HOW IT WORKS AND BUILT ON TRUST RETURN.
-
-            R1 retired both because neither appears in an approved R4.1 or R5.1
-            Home frame and neither is named in the 139-key Home copy catalogue.
-            That reasoning was sound against the authority R1 had; the R2
-            contract supersedes it and requires both sections back, which is the
-            later instruction and therefore the one that governs.
-
-            Nothing about either file changed while it was retired — they were
-            unimported, not deleted, and their own specs kept reading them — so
-            this is a re-mount, not a rebuild. Both take the one resolved
-            language like every other surface on the page, and neither fetches
-            anything: they are static explanatory copy from the dictionary.
-          */}
           <HowItWorks language={language} />
           <TrustSection language={language} />
         </PageCanvas>

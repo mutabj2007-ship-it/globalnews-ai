@@ -172,7 +172,7 @@ export function HomepageSituationMap({
               keeps one clear affordance — "Open full map" in its header — which
               is what the prototype draws.
             */
-            className={`relative overflow-hidden rounded-xl border bg-void transition-all duration-500 ${isRail ? 'h-[188px] [&_.maplibregl-ctrl-bottom-left]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden [&_.maplibregl-ctrl-top-right]:hidden' : 'h-[360px] sm:h-[440px]'} ${
+            className={`relative overflow-hidden rounded-xl border bg-void transition-all duration-500 ${isRail ? 'h-[150px] [&_.maplibregl-ctrl-bottom-left]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden [&_.maplibregl-ctrl-top-right]:hidden' : 'h-[360px] sm:h-[440px]'} ${
               selectedIso3
                 ? 'border-cyan-400/60 shadow-[0_0_70px_-8px_rgba(34,211,238,0.45)]'
                 : 'border-cyan-500/30 shadow-[0_0_50px_-10px_rgba(34,211,238,0.3)]'
@@ -296,7 +296,7 @@ function MapLegend({
   ).filter((m): m is NonNullable<typeof m> => m !== undefined);
 
   return (
-    <div className={compact ? 'mt-3 border-t border-border-strong/70 pt-3' : 'mt-4 rounded-2xl border border-border-strong bg-void/60 p-4'}>
+    <div className={compact ? 'mt-2.5 border-t border-border-strong/70 pt-2.5' : 'mt-4 rounded-2xl border border-border-strong bg-void/60 p-4'}>
       <h3 className="font-mono text-[11px] uppercase tracking-widest text-cyan-400">
         {t.legendTitle}
       </h3>

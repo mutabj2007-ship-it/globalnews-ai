@@ -18,6 +18,21 @@ import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModul
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * C4 · EXPLORE BY TOPIC
+ *
+ * ── IT NOW CARRIES `id="intelligence-modules"` ──────────────────────────
+ *
+ * Not decoration, and not a leftover. `MobileBottomNav` ships four approved
+ * destinations and one of them is `#intelligence-modules`. §7 of the DESKTOP
+ * COMPOSITION RULING moves the nine-card Engine off Home, which would have left
+ * that tab pointing at an element no longer in the document — a dead control in
+ * the product's primary mobile navigation.
+ *
+ * The anchor therefore moves to the surface that now answers the same question
+ * on Home: the topic strip. The tab keeps working, it lands somewhere that
+ * genuinely shows the reader the intelligence domains, and nothing in
+ * `MobileBottomNav` had to be edited to achieve it. When the separate
+ * intelligence/topics page exists, that tab is the second thing to repoint at
+ * it, after `View all topics`.
  * ════════════════════════════════════════════════════════════════════════════
  *
  * BETA HOME CLOSURE R2 increment C4. A compact topic row between the editorial
@@ -181,7 +196,11 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
   );
 
   return (
-    <section aria-labelledby="beta-topics-heading" className="flex scroll-mt-24 flex-col gap-4">
+    <section
+      id="intelligence-modules"
+      aria-labelledby="beta-topics-heading"
+      className="flex scroll-mt-24 flex-col gap-3"
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2
           id="beta-topics-heading"
@@ -189,13 +208,45 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
         >
           {t.exploreTopicsTitle}
         </h2>
-        <a
-          href="#intelligence-modules"
-          className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+        {/*
+          ══════════════════════════════════════════════════════════════════
+          "VIEW ALL TOPICS" — STRUCTURALLY READY, DELIBERATELY NOT WIRED.
+          ══════════════════════════════════════════════════════════════════
+
+          DESKTOP COMPOSITION RULING §6 supersedes the anchor this control used
+          to carry: *"`View all topics` will lead to a separate
+          intelligence/topics page... create/use a truthful destination only if
+          an appropriate route already exists; otherwise leave the Home CTA
+          structurally ready and report the route dependency; do not invent a
+          production route silently."*
+
+          MEASURED: `app/` carries no topics, intelligence or engine segment.
+          There is no route to point this at, and the old `#intelligence-modules`
+          anchor is no longer a destination either, because §7 moves the
+          nine-card Engine off Home entirely — pointing at it would scroll the
+          reader to nothing.
+
+          So the control keeps its place, its wording and its weight, and does
+          not navigate. It is a real `<button disabled>`: the browser refuses
+          the press, it is out of the tab order, and its own label says why. A
+          link to a page that does not exist would 404; a link to a removed
+          anchor would silently do nothing; this does neither.
+
+          ROUTE DEPENDENCY, REPORTED: when the intelligence/topics page exists,
+          this becomes a Link to it and nothing else in this file changes.
+        */}
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          tabIndex={-1}
+          className="inline-flex min-h-[44px] cursor-not-allowed items-center gap-1 text-sm font-semibold text-ink-tertiary lg:min-h-[32px]"
         >
           {t.viewAllTopics}
-          <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
-        </a>
+          <span className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary/70">
+            {t.viewAllTopicsPending}
+          </span>
+        </button>
       </div>
 
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-3.5">

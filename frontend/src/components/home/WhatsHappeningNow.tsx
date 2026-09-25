@@ -190,13 +190,19 @@ export function WhatsHappeningNow({
     .map(
       (key) =>
         `#${RADIO_ID(key)}:checked ~ .gn-deck [data-gn-story]:not([data-gn-cat="${key}"]){display:none}` +
-        `#${RADIO_ID(key)}:checked ~ .gn-chips label[for="${RADIO_ID(key)}"]{background-color:#f1f6fb;color:#04090f;border-color:#f1f6fb}`,
+        `#${RADIO_ID(key)}:checked ~ .gn-head label[for="${RADIO_ID(key)}"]{background-color:#f1f6fb;color:#04090f;border-color:#f1f6fb}`,
     )
     .join('');
 
+  /*
+    DESKTOP COMPOSITION RULING — the note is a TRUTH AFFORDANCE and stays, but
+    it stops taking a line of the composition. It rides the end of the chip row
+    on wide viewports and drops beneath it on narrow ones, so the band keeps
+    the prototype's density without trading the statement away.
+  */
   const noAiNote = (
-    <p className="flex items-start gap-1.5 text-[11.5px] leading-snug text-ink-tertiary">
-      <Info size={15} strokeWidth={1.75} aria-hidden="true" className="mt-0.5 shrink-0" />
+    <p className="flex items-start gap-1.5 text-[11px] leading-snug text-ink-tertiary">
+      <Info size={13} strokeWidth={1.75} aria-hidden="true" className="mt-[1px] shrink-0" />
       <span>{t.noAiNote}</span>
     </p>
   );
@@ -209,30 +215,6 @@ export function WhatsHappeningNow({
       aria-labelledby="beta-now-heading"
       className="flex scroll-mt-24 flex-col gap-3"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2
-          id="beta-now-heading"
-          className="font-display text-[22px] font-semibold tracking-tight text-ink-primary sm:text-2xl"
-        >
-          {t.nowHeading}
-          {/*
-            The prototype carries a standfirst under this heading —
-            "Selected global developments · Updated 20 min ago". `nowStandfirst`
-            is the first half; the second half is the SAME freshness stamp this
-            section already computes from the freshest record it actually holds,
-            so it is moved here rather than duplicated, and it still describes
-            the feed rather than the render.
-          */}
-          <span className="mt-1 block text-[12.5px] font-normal text-ink-tertiary">
-            {t.nowStandfirst}
-            {stamp === null ? null : <> · {stamp}</>}
-          </span>
-        </h2>
-        <span className="flex items-center gap-2.5">
-          <DataModeLabel dataMode={dataMode} language={language} />
-        </span>
-      </div>
-
       {rail.length === 0 ? (
         <>
           {noAiNote}
@@ -255,6 +237,67 @@ export function WhatsHappeningNow({
             with `sr-only`, never `display:none`, so they stay focusable and
             operable.
           */}
+          {/*
+            DESKTOP COMPOSITION RULING — ONE HEADING ROW.
+
+            The chips used to take a line of their own beneath the heading, and
+            the prototype's band has no such line: title and standfirst on the
+            left, the filter and "View all" on the right, then straight into the
+            cards. That row was the last ~50px standing between "Explore by
+            topic" and the first screen.
+
+            The radios stay AHEAD of this wrapper so the CSS-only filter still
+            works by sibling selection; the stylesheet now reaches the labels
+            through `.gn-head` rather than `.gn-chips` directly.
+          */}
+          <div className="gn-head flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h2
+              id="beta-now-heading"
+              className="font-display text-[22px] font-semibold tracking-tight text-ink-primary sm:text-2xl"
+            >
+              {t.nowHeading}
+              <span className="mt-1 block text-[12.5px] font-normal text-ink-tertiary">
+                {t.nowStandfirst}
+                {stamp === null ? null : <> · {stamp}</>}
+              </span>
+            </h2>
+
+            <div className="flex flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-2">
+              {showFilter ? (
+                <div
+                  role="radiogroup"
+                  aria-label={t.categoryFilterAria}
+                  className="gn-chips flex flex-wrap items-center gap-1.5"
+                >
+                  <label htmlFor={RADIO_ID('all')} className={CHIP_CLASS}>
+                    {categoryLabels.all}
+                  </label>
+                  {categories.map((key) => (
+                    <label key={key} htmlFor={RADIO_ID(key)} className={CHIP_CLASS}>
+                      {categoryLabels[key] ?? key}
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+
+              <DataModeLabel dataMode={dataMode} language={language} />
+
+              {/*
+                "View all" is a second label for the same All radio, worded as
+                the contract words it. It clears the filter; it does not
+                navigate, because there is no all-stories route to navigate to.
+              */}
+              <label
+                htmlFor={RADIO_ID('all')}
+                className="inline-flex min-h-[44px] cursor-pointer items-center text-[13px] font-semibold text-cyan-300 underline-offset-4 hover:underline lg:min-h-[32px]"
+              >
+                {t.viewAll}
+              </label>
+            </div>
+
+            <div className="w-full">{noAiNote}</div>
+          </div>
+
           {showFilter ? (
             <>
               <style>{filterCss}</style>
@@ -277,37 +320,10 @@ export function WhatsHappeningNow({
                 />
               ))}
 
-              <div
-                role="radiogroup"
-                aria-label={t.categoryFilterAria}
-                className="gn-chips flex flex-wrap items-center gap-1.5"
-              >
-                <label htmlFor={RADIO_ID('all')} className={CHIP_CLASS}>
-                  {categoryLabels.all}
-                </label>
-                {categories.map((key) => (
-                  <label key={key} htmlFor={RADIO_ID(key)} className={CHIP_CLASS}>
-                    {categoryLabels[key] ?? key}
-                  </label>
-                ))}
-                {/*
-                  "View all" is a second label for the same All radio, worded as
-                  the contract words it. It clears the filter; it does not
-                  navigate, because there is no all-stories route to navigate to.
-                */}
-                <label
-                  htmlFor={RADIO_ID('all')}
-                  className="ml-auto inline-flex min-h-[44px] cursor-pointer items-center text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline"
-                >
-                  {t.viewAll}
-                </label>
-              </div>
             </>
           ) : null}
 
-          {noAiNote}
-
-          <div className="gn-deck flex flex-col gap-4">
+          <div className="gn-deck flex flex-col gap-3">
             {rail.length === 0 ? null : (
               /*
                 The rail. Focusable so the arrow keys scroll it, labelled so a

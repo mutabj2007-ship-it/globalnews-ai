@@ -1055,12 +1055,34 @@ describe('M66.5 — navigation, localization and protected surfaces', () => {
     and the engine is retired rather than deleted, so its released geometry
     stays inspectable and every other assertion in this file keeps its subject.
   */
-  it('the homepage renders ONE module section — the R5.1 one — and no retired renderer', () => {
+  it('the homepage renders NO module section — the Engine has moved off Home', () => {
+    /*
+      DESKTOP COMPOSITION RULING §6/§7: *"the full nine-card Intelligence
+      Engine is no longer required inside this first high-engagement Home
+      composition"*, and it moves to a future separate intelligence/topics
+      page.
+
+      So the invariant inverts, and inverting is the test working: Home must
+      now render NEITHER the R5.1 section NOR any retired renderer. The files
+      all stay on disk, unimported by this route, exactly as this codebase
+      retires rather than deletes — which is what the second half asserts, so
+      a later cleanup cannot quietly take them with it.
+    */
     const code = stripComments(pageSource);
-    expect(code).toMatch(/<IntelligenceModulesSection language=\{language\} \/>/);
+    expect(code).not.toMatch(/<IntelligenceModulesSection/);
     expect(code).not.toMatch(/<IntelligenceEngineSection/);
     expect(code).not.toMatch(/<IntelligenceModulesDesktop/);
     expect(code).not.toMatch(/<IntelligenceModulesMobile/);
+    expect(code).not.toMatch(/<EngineEnergyField/);
+
+    for (const file of [
+      'IntelligenceModulesSection.tsx',
+      'IntelligenceEngineSection.tsx',
+      'IntelligenceEngineRing.tsx',
+      'EngineEnergyField.tsx',
+    ]) {
+      expect(existsSync(join(__dirname, file))).toBe(true);
+    }
   });
 
   it('the retired engine section is kept on disk, not deleted', () => {

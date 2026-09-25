@@ -2312,6 +2312,7 @@ export const en = {
        prototype's header says plainly Economy, Energy, Security,
        Humanitarian. DESTINATIONS STILL COME FROM THE REGISTRY — this names
        the item, it never decides where it goes. */
+    viewAllTopicsPending: '· page coming',
     nowStandfirst: 'Selected global developments',
     navLabels: { economy: 'Economy', energy: 'Energy', security: 'Security', humanitarian: 'Humanitarian' } as Record<string, string>,
     navMore: 'More',

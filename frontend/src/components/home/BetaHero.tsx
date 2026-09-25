@@ -113,7 +113,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
   return (
     <section
       aria-labelledby="beta-hero-heading"
-      className="relative isolate overflow-hidden pb-5 pt-4 sm:pb-6 lg:pb-7 lg:pt-6"
+      className="relative isolate overflow-hidden pb-4 pt-3 sm:pb-5 lg:pb-5 lg:pt-5"
     >
       {/*
         THE LAYERED DARK-BLUE INTELLIGENCE FIELD.
@@ -177,7 +177,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
         <div className="flex max-w-2xl flex-col">
           <h1
             id="beta-hero-heading"
-            className="font-display text-[34px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[42px] lg:text-[42px] xl:text-[48px]"
+            className="font-display text-[34px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[42px] lg:text-[40px] xl:text-[46px]"
           >
             <span className="block text-ink-primary">{t.heroA}</span>
             {/*
@@ -191,7 +191,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             <span className="block text-cyan-300">{t.heroB}</span>
           </h1>
 
-          <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-ink-secondary sm:text-[15px]">
+          <p className="mt-2.5 max-w-xl text-[14px] leading-relaxed text-ink-secondary sm:text-[15px]">
             {t.heroSub}
           </p>
 
@@ -205,7 +205,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             method="get"
             role="search"
             aria-label={t.askAria}
-            className="mt-4 flex w-full max-w-[520px] items-center gap-2 rounded-2xl border border-border-strong bg-void/70 p-1.5 pl-4 shadow-[0_0_40px_-12px_rgba(34,211,238,0.35)] focus-within:border-cyan-400/50"
+            className="mt-3.5 flex w-full max-w-[520px] items-center gap-2 rounded-2xl border border-border-strong bg-void/70 p-1.5 pl-4 shadow-[0_0_40px_-12px_rgba(34,211,238,0.35)] focus-within:border-cyan-400/50"
           >
             <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-violet-300" />
             <input
@@ -225,7 +225,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
           </form>
 
           {/* The metered-cost disclosure. Approved copy, stated before the spend. */}
-          <p className="mt-2.5 flex max-w-xl items-start gap-1.5 text-[11.5px] leading-snug text-ink-tertiary">
+          <p className="mt-2 flex max-w-xl items-start gap-1.5 text-[11.5px] leading-snug text-ink-tertiary">
             <Zap size={13} strokeWidth={2} aria-hidden="true" className="mt-[2px] shrink-0 text-amber-300" />
             <span>{t.askHint}</span>
           </p>
@@ -234,7 +234,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             THE THREE ACTIONS. All three are ordinary links to destinations that
             already exist, and none of them spends anything on arrival.
           */}
-          <div className="mt-4 grid w-full max-w-[700px] grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <div className="mt-3.5 grid w-full max-w-[700px] grid-cols-1 gap-2.5 sm:grid-cols-3">
             <a
               href="#whats-happening-now"
               className="flex min-h-[44px] items-center gap-2.5 rounded-xl border border-border-strong bg-void/70 px-3.5 py-2.5 text-left transition-colors hover:border-cyan-400/40 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
