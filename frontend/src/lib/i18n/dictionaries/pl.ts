@@ -1802,6 +1802,12 @@ export const pl: Dictionary = {
     nowHeading: 'Co dzieje się teraz',
     updatedStamp: 'Aktualizacja {time}',
     noAiNote: 'Wybranie kategorii lub otwarcie artykułu nigdy nie uruchamia analizy AI.',
+    firstVisit: 'Jesteś tu pierwszy raz? Zaloguj się, aby obserwować kraje i tematy oraz dopasować swój przegląd.',
+    signInToFollow: 'Zaloguj się, aby obserwować',
+    pulseTitle: 'Puls świata',
+    pulseNote: 'Podgląd poglądowy. Otwórz mapę, aby zobaczyć doniesienia i źródła według krajów.',
+    suggestedTitle: 'Sugerowane pytania',
+    suggestedNote: 'Dotknięcie sugestii wypełnia pole. Nic nie jest uruchamiane, dopóki nie naciśniesz Wyślij.',
   },
 
   intelligenceModules: {

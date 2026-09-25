@@ -4,10 +4,8 @@ import { NavBar } from '@/components/navigation/NavBar';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { BetaHero } from '@/components/home/BetaHero';
 import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
-import { TodayWorkspace } from '@/components/today/TodayWorkspace';
+import { HomeSideRail } from '@/components/home/HomeSideRail';
 import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
-import { HowItWorks } from '@/components/home/HowItWorks';
-import { TrustSection } from '@/components/home/TrustSection';
 import { Footer } from '@/components/layout/Footer';
 import { PageCanvas } from '@/components/layout/PageCanvas';
 import { getHomeFeed } from '@/lib/homeFeed';
@@ -223,13 +221,22 @@ export default async function HomePage(): Promise<JSX.Element> {
             different roles of that one response.
           */}
           <BetaHero language={language} latestUpdates={feed.latestUpdates} />
-          <WhatsHappeningNow
-            lead={feed.featured}
-            secondary={feed.inFocus}
-            discovery={feed.discovery}
-            dataMode={feed.dataMode}
-            language={language}
-          />
+          {/*
+            H5 · Issue #29 — the approved two-column editorial band: the
+            current-developments column beside the Home side rail, exactly as
+            the R4.1 frames place them. One column on phone and tablet, where
+            the approved phone frames stack the rail beneath the feed.
+          */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] lg:items-start">
+            <WhatsHappeningNow
+              lead={feed.featured}
+              secondary={feed.inFocus}
+              discovery={feed.discovery}
+              dataMode={feed.dataMode}
+              language={language}
+            />
+            <HomeSideRail language={language} />
+          </div>
           {/*
             R2 — TODAY. Placed here deliberately: it is live editorial content,
             so it belongs with the live half of the page, between Global
@@ -256,12 +263,6 @@ export default async function HomePage(): Promise<JSX.Element> {
             route, so the released surface remains inspectable beside the one
             that replaced it.
           */}
-          <TodayWorkspace
-            today={feed.today}
-            dataMode={feed.dataMode}
-            updatedAt={updatedAt}
-            language={language}
-          />
           {/*
             GATE A · R5.1 — IntelligenceModulesSection REPLACES
             IntelligenceEngineSection at this mount point, and replaces nothing
@@ -285,9 +286,25 @@ export default async function HomePage(): Promise<JSX.Element> {
             moves with the section, so MobileBottomNav's Intelligence tab, one
             of the four approved destinations, still resolves.
           */}
+          {/*
+            H5 · Issue #29 — THREE SECTIONS RETIRED FROM HOME.
+
+            TodayWorkspace, HowItWorks and TrustSection appear in NO approved
+            R4.1 or R5.1 Home frame, and none of the 139 keys in the approved
+            Home copy catalogue names them. Under the contract's precedence
+            rule 4 — "current implementation only as code to modify, never as
+            missing design authority" — their presence here was not evidence
+            that the approved Home contains them.
+
+            RETIRED, NOT DELETED: all three files stay on disk, unimported,
+            like TodaySection, LatestNowRail, HomepageSituationMap, Hero,
+            GlobalDevelopments and LiveStatusStrip before them. Their own
+            specs read those files rather than this one, so they keep passing.
+
+            The Intelligence modules section stays exactly as accepted at
+            c3dd01a — H4 is preserved and regression-tested, not rebuilt.
+          */}
           <IntelligenceModulesSection language={language} />
-          <HowItWorks language={language} />
-          <TrustSection language={language} />
         </PageCanvas>
       </main>
       <Footer language={language} />

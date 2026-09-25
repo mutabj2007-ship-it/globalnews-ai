@@ -2205,6 +2205,15 @@ export const en = {
     updatedStamp: 'Updated {time}',
     /* beta.noAi — the free-to-browse disclosure under the heading. */
     noAiNote: 'Choosing a category or opening a story never starts an AI analysis.',
+    /* beta.firstVisit / beta.chooseTopics — the signed-out rail card. */
+    firstVisit: 'New here? Sign in to follow countries and topics and shape your briefing.',
+    signInToFollow: 'Sign in to follow',
+    /* beta.pulse / beta.pulseNote — the map gateway. Explanatory, never live marks. */
+    pulseTitle: 'World Pulse',
+    pulseNote: 'Explanatory preview. Open the map to see country coverage and sources.',
+    /* beta.suggested / beta.fillNote — prefill only; nothing runs until Send. */
+    suggestedTitle: 'Suggested questions',
+    suggestedNote: 'Tapping a suggestion fills the box. Nothing runs until you press Send.',
   },
 
   intelligenceModules: {

@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { trustItems } from '@/lib/homeContent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -474,11 +474,17 @@ describe('M66.6 — multilingual layout (MLR-01 … MLR-06)', () => {
 });
 
 describe('M66.6 — protected surfaces are untouched', () => {
-  it('the homepage still renders TrustSection where it did, and HowItWorks is untouched (D-1 A)', () => {
-    const page = stripComments(pageSource);
-    expect(page).toMatch(/<HowItWorks language=\{language\} \/>/);
-    expect(page).toMatch(/<TrustSection language=\{language\} \/>/);
-    expect(page.indexOf('<HowItWorks')).toBeLessThan(page.indexOf('<TrustSection'));
+  it('TrustSection and HowItWorks are retired from Home, and both files are kept', () => {
+    /* H5 · Issue #29 — TodayWorkspace, HowItWorks and TrustSection are RETIRED
+       FROM HOME. They appear in no approved R4.1/R5.1 Home frame and in none of
+       the 139 approved Home copy keys; contract precedence rule 4 forbids
+       treating the current implementation as missing design authority. The files
+       stay on disk, unimported, and their own specs read those files rather than
+       page.tsx, so they keep their subject. */
+    expect(pageSource).not.toMatch(/<TrustSection/);
+    expect(pageSource).not.toMatch(/<HowItWorks/);
+    expect(existsSync(join(__dirname, 'TrustSection.tsx'))).toBe(true);
+    expect(existsSync(join(__dirname, 'HowItWorks.tsx'))).toBe(true);
   });
 
   it('the shared HUD geometry helpers are no longer imported by Trust, but still exist for their other users', () => {

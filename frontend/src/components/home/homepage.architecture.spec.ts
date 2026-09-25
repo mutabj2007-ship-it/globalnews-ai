@@ -48,8 +48,6 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
          The engine file is retired, not deleted. The ORDER contract this list
          exists to protect is unchanged; only the section's identity moved. */
       '<IntelligenceModulesSection',
-      '<HowItWorks',
-      '<TrustSection',
       '<Footer',
       '<MobileBottomNav',
     ];

@@ -830,8 +830,6 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
       // IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
       // Which sections the canvas PARENTS is still this test's subject.
       '<IntelligenceModulesSection',
-      '<HowItWorks',
-      '<TrustSection',
     ]) {
       expect(canvasBlock).toContain(section);
     }
@@ -857,8 +855,6 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
       // every remaining marker keeps its relative position.
       // GATE A · R5.1 — the section's identity moved here; its position did not.
       '<IntelligenceModulesSection',
-      '<HowItWorks',
-      '<TrustSection',
       '<Footer',
       '<MobileBottomNav',
     ];

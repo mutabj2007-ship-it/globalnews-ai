@@ -176,9 +176,18 @@ describe('R2 Today — identity, wiring and the client boundary', () => {
     TodaySection.tsx itself is untouched and its remaining tests still run
     against it: it is retired, not deleted.
   */
-  it('page.tsx renders Today from feed.today and stays a Server Component', () => {
-    expect(pageSource).toMatch(/<TodayWorkspace/);
-    expect(pageSource).toMatch(/today=\{feed\.today\}/);
+  /*
+    H5 · Issue #29 — Today is RETIRED FROM HOME. It appears in no approved
+    R4.1/R5.1 Home frame and in none of the 139 approved Home copy keys, and
+    the contract's precedence rule 4 forbids treating the current
+    implementation as missing design authority. TodayWorkspace.tsx stays on
+    disk, and every other assertion in this suite reads that file rather than
+    page.tsx, so they keep their subject. What is still protected here is the
+    server boundary and the role separation.
+  */
+  it('Today is retired from Home, and page.tsx stays a Server Component', () => {
+    expect(pageSource).not.toMatch(/<TodayWorkspace/);
+    expect(pageSource).not.toMatch(/today=\{feed\.today\}/);
     expect(pageSource).not.toMatch(/'use client'/);
     // The released role separation is untouched: Today takes its own role.
     expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.latestUpdates\}/);

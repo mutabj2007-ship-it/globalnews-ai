@@ -30,8 +30,6 @@ describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase
          The engine file is retired, not deleted. The ORDER contract this list
          exists to protect is unchanged; only the section's identity moved. */
       '<IntelligenceModulesSection',
-      '<HowItWorks',
-      '<TrustSection',
     ];
     let lastIndex = -1;
     for (const marker of order) {

@@ -110,15 +110,14 @@ describe('the section frame is bounded, and the homepage keeps its own scroll', 
          The engine file is retired, not deleted. The ORDER contract this list
          exists to protect is unchanged; only the section's identity moved. */
       '<IntelligenceModulesSection',
-      '<HowItWorks',
-      '<TrustSection',
     ]) {
       expect(pageSource).toContain(section);
     }
   });
 
-  it('mounts Today at the released position and adds no route', () => {
-    expect(pageSource).toMatch(/<TodayWorkspace/);
+  it('is retired from Home, adds no route, and page.tsx stays a Server Component', () => {
+    /* H5 · Issue #29 — see TodaySection.spec.ts. Retired, not deleted. */
+    expect(pageSource).not.toMatch(/<TodayWorkspace/);
     expect(pageSource).not.toMatch(/<TodaySection/);
     expect(pageSource).not.toMatch(/'use client'/);
   });

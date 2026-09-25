@@ -30,7 +30,10 @@ describe('M65 — language propagates coherently through the shell', () => {
     /* H3 · Issue #29 — the approved Home surfaces. BetaHero, SixtySecondBrief
        and WhatsHappeningNow replace Hero, LiveStatusStrip and
        GlobalDevelopments; each still receives the one resolved language. */
-    for (const surface of ['NavBar', 'BetaHero', 'WhatsHappeningNow', 'HowItWorks', 'TrustSection', 'Footer', 'MobileBottomNav']) {
+    /* H5 · Issue #29 — HowItWorks and TrustSection are retired from Home;
+       HomeSideRail joins the surfaces that receive the one resolved
+       language. */
+    for (const surface of ['NavBar', 'BetaHero', 'WhatsHappeningNow', 'HomeSideRail', 'Footer', 'MobileBottomNav']) {
       expect(pageSource).toMatch(new RegExp(`<${surface}[\\s\\S]{0,220}language=\\{language\\}`));
     }
   });

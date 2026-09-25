@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { processSteps } from '@/lib/homeContent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -589,13 +589,9 @@ describe('M66.8d — scope discipline', () => {
     expect(code).toMatch(/w-\[52px\]/);
   });
 
-  it('the homepage composition and PageCanvas are untouched', () => {
-    expect(pageSource).toMatch(/<HowItWorks language=\{language\} \/>/);
-    expect(pageSource).toMatch(/<main className="pb-16 lg:pb-0">/);
-    expect(pageSource.indexOf('<HowItWorks')).toBeLessThan(pageSource.indexOf('<TrustSection'));
-    expect(canvasSource).toMatch(
-      /relative mx-auto w-full max-w-cd-page px-cd-14 pb-cd-22 pt-cd-12 lg:px-cd-26 lg:pb-cd-60 lg:pt-cd-20/,
-    );
+  it('HowItWorks is retired from Home, and its file is kept', () => {
+    expect(pageSource).not.toMatch(/<HowItWorks/);
+    expect(existsSync(join(__dirname, 'HowItWorks.tsx'))).toBe(true);
   });
 
   it('no route, API or mobile chrome concern leaked into this milestone', () => {
