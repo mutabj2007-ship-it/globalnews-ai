@@ -129,7 +129,7 @@ export function HomepageSituationMap({
         puts the border on the OUTER element and lets the map and the legend sit
         inside it, separated by a rule rather than by two more borders.
       */}
-      <div className={isRail ? 'rounded-2xl border border-border-strong bg-void/60 p-3' : undefined}>
+      <div className={isRail ? 'rounded-[18px] border-[1.5px] border-white/[0.13] bg-gradient-to-b from-[#0e1a2a] to-[#080f1b] p-3.5 shadow-[0_14px_34px_-22px_rgba(0,0,0,0.95)]' : undefined}>
         <div className={`${isRail ? 'mb-3' : 'mb-5'} flex flex-wrap items-end justify-between gap-3`}>
           <div>
             {isRail ? (
@@ -172,7 +172,7 @@ export function HomepageSituationMap({
               keeps one clear affordance — "Open full map" in its header — which
               is what the prototype draws.
             */
-            className={`relative overflow-hidden rounded-xl border bg-void transition-all duration-500 ${isRail ? 'h-[150px] [&_.maplibregl-ctrl-bottom-left]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden [&_.maplibregl-ctrl-top-right]:hidden' : 'h-[360px] sm:h-[440px]'} ${
+            className={`relative overflow-hidden rounded-xl border bg-void transition-all duration-500 ${isRail ? 'h-[164px] [&_.maplibregl-ctrl-bottom-left]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden [&_.maplibregl-ctrl-top-right]:hidden' : 'h-[360px] sm:h-[440px]'} ${
               selectedIso3
                 ? 'border-cyan-400/60 shadow-[0_0_70px_-8px_rgba(34,211,238,0.45)]'
                 : 'border-cyan-500/30 shadow-[0_0_50px_-10px_rgba(34,211,238,0.3)]'
@@ -217,6 +217,33 @@ export function HomepageSituationMap({
 
             {/* Vignette — darkened edge falloff so the map reads as a layered intelligence surface, not a flat rectangle. */}
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(2,7,13,0.55)_100%)]" aria-hidden="true" />
+
+            {/*
+              VISUAL RICHNESS WITHOUT A SINGLE NEW CLAIM.
+
+              Three decorative layers over the real MapLibre canvas, every one
+              of them `pointer-events-none`, so pan, zoom and click reach the
+              map exactly as before and `WorldMap`'s internals are untouched.
+
+              None of them encodes anything: a cyan wash from the top-left, an
+              inner rim, and a horizon glow at the base. They say the surface is
+              an intelligence surface. They do not say anything is happening
+              anywhere — there is no mark, no position and no count in any of
+              them, which is what keeps the card truthful while it stops looking
+              like a flat grey rectangle.
+            */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_22%_12%,rgba(56,189,248,0.16),transparent_70%)]"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 shadow-[inset_0_0_42px_rgba(34,211,238,0.14)]"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-[linear-gradient(0deg,rgba(12,48,86,0.42),transparent_88%)]"
+            />
 
 
           </div>
@@ -302,8 +329,12 @@ function MapLegend({
       </h3>
       <ul className={compact ? 'mt-2.5 grid grid-cols-2 gap-x-2 gap-y-1.5' : 'mt-3 flex flex-wrap items-center gap-x-5 gap-y-2'}>
         {entries.map((module) => {
+          /* The prototype's category name, falling back to the registry's own
+             title if a later entry has no legend wording. */
           const label =
-            moduleText[module.dictionaryKey as keyof typeof moduleText]?.title ?? module.id;
+            t.legendLabels[module.id] ??
+            moduleText[module.dictionaryKey as keyof typeof moduleText]?.title ??
+            module.id;
           const dot = (
             <span
               aria-hidden="true"

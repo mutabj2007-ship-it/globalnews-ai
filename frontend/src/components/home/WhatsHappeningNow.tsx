@@ -113,7 +113,7 @@ const RADIO_ID = (category: string): string => `gn-cat-${category}`;
   centred now that the box is taller than its text.
 */
 const CHIP_CLASS =
-  'inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-border-strong bg-void/60 px-3.5 py-1.5 text-[13px] font-medium text-ink-secondary transition-colors hover:border-cyan-400/40 hover:text-ink-primary motion-reduce:transition-none lg:min-h-[32px]';
+  'inline-flex min-h-[44px] cursor-pointer items-center rounded-full border-[1.5px] border-white/[0.14] bg-white/[0.045] px-4 py-1.5 text-[13px] font-medium text-ink-secondary transition-colors hover:border-cyan-300/55 hover:bg-white/[0.08] hover:text-ink-primary motion-reduce:transition-none lg:min-h-[32px]';
 
 export function WhatsHappeningNow({
   lead,
@@ -343,7 +343,7 @@ export function WhatsHappeningNow({
                     key={article.id}
                     data-gn-story=""
                     data-gn-cat={article.category}
-                    className="flex h-[224px] shrink-0 basis-[86%] snap-start sm:basis-[46%] lg:basis-[calc(25%-0.5625rem)]"
+                    className="flex h-[238px] shrink-0 basis-[86%] snap-start sm:basis-[46%] lg:basis-[calc(25%-0.5625rem)]"
                   >
                     <RailCard article={article} language={language} />
                   </li>
@@ -367,7 +367,7 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
       href={article.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border-strong bg-void/60 transition-all duration-200 hover:-translate-y-1 hover:border-cyan-400/40 hover:shadow-[0_18px_40px_-24px_rgba(34,211,238,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="group flex h-full w-full flex-col overflow-hidden rounded-[18px] border-[1.5px] border-white/[0.13] bg-gradient-to-b from-[#0e1a2a] to-[#080f1b] shadow-[0_14px_34px_-22px_rgba(0,0,0,0.95)] transition-all duration-200 hover:-translate-y-1 hover:border-cyan-300/50 hover:shadow-[0_22px_48px_-24px_rgba(34,211,238,0.65)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
     >
       <span className="relative block overflow-hidden">
         {/*
@@ -391,15 +391,15 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/70 to-transparent"
         />
-        <span className="absolute left-2.5 top-2.5 inline-flex items-center rounded-md bg-black/55 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-cyan-200 backdrop-blur-sm">
+        <span className="absolute left-3 top-3 inline-flex items-center rounded-[6px] border border-white/15 bg-black/70 px-2 py-[3px] font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-200 backdrop-blur-sm">
           {categoryLabels[article.category] ?? article.category}
         </span>
-        <span className="absolute right-2.5 top-2.5 inline-flex items-center rounded-md bg-black/55 px-2 py-1 text-[10.5px] font-medium text-white/85 backdrop-blur-sm">
+        <span className="absolute right-3 top-3 inline-flex items-center rounded-[6px] border border-white/10 bg-black/70 px-2 py-[3px] text-[10.5px] font-medium text-white/90 backdrop-blur-sm">
           <Elapsed article={article} language={language} />
         </span>
       </span>
 
-      <span className="flex flex-1 flex-col gap-1 p-2.5">
+      <span className="flex flex-1 flex-col gap-1 p-3.5">
         {/*
           Two clamped lines for the headline and two for the summary. The clamps
           are what hold the rail to one card height: without them a long

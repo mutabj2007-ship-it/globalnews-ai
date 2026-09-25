@@ -915,6 +915,13 @@ export const en = {
       is the only reading of "must map to real layers" that does not invent
       a layer, and it is why no dot, count or severity is rendered.
     */
+    /* situationMap.legendLabels — the four conceptual categories, named as the
+       Product Owner prototype names them. The module registry's titles are
+       "Energy Intelligence", "Conflict Intelligence" and so on, which is right
+       inside the Engine and wrong in a four-entry legend under a 150px map.
+       THE LABEL NAMES THE CATEGORY; the registry still owns the entry, its
+       colour and whether it resolves anywhere. */
+    legendLabels: { energy: 'Energy', conflict: 'Conflict', humanitarian: 'Humanitarian', economy: 'Economy' } as Record<string, string>,
     legendTitle: 'Intelligence layers',
     legendNote: 'Each opens its module. The map itself shows country coverage only.',
   },

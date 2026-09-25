@@ -702,6 +702,7 @@ export const pl: Dictionary = {
     /* C3. New strings, written for this repository — FOR REVIEW (see the C1 note). */
     selectionScopeNote:
       'Wybór zmienia wyłącznie zakres geograficzny. Otwórz pełną mapę, aby przejrzeć zachowane dowody lub wprost poprosić o analizę kraju.',
+    legendLabels: { energy: 'Energia', conflict: 'Konflikt', humanitarian: 'Pomoc humanitarna', economy: 'Gospodarka' } as Record<string, string>,
     legendTitle: 'Warstwy analityczne',
     legendNote: 'Każda otwiera swój moduł. Sama mapa pokazuje wyłącznie relacje według krajów.',
   },

@@ -79,7 +79,7 @@ export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Elemen
       <HomepageSituationMap language={language} variant="rail" />
 
       {/* ASK SUGGESTIONS — prefill links, zero spend. */}
-      <section aria-labelledby="beta-suggested-heading" className="rounded-2xl border border-border-strong bg-void/60 p-3.5">
+      <section aria-labelledby="beta-suggested-heading" className="rounded-[18px] border-[1.5px] border-white/[0.13] bg-gradient-to-b from-[#0e1a2a] to-[#080f1b] p-4 shadow-[0_14px_34px_-22px_rgba(0,0,0,0.95)]">
         <h2 id="beta-suggested-heading" className="flex items-center gap-2 text-[15px] font-semibold text-ink-primary">
           <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" className="text-violet-300" />
           {t.suggestedTitle}
@@ -89,7 +89,7 @@ export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Elemen
             <li key={prompt}>
               <a
                 href={`/ask?q=${encodeURIComponent(prompt)}`}
-                className="flex min-h-[44px] items-center gap-2 rounded-xl border border-border-strong bg-void/70 px-3 py-2 text-left text-[13px] text-ink-primary transition-colors hover:border-cyan-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                className="flex min-h-[44px] items-center gap-2 rounded-[11px] border border-white/[0.11] bg-white/[0.045] px-3 py-2 text-left text-[13px] text-ink-primary transition-colors hover:border-cyan-300/50 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
               >
                 <span className="line-clamp-1 flex-1">{prompt}</span>
                 <PenLine size={15} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-ink-tertiary" />
