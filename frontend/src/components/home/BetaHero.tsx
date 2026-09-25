@@ -113,7 +113,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
   return (
     <section
       aria-labelledby="beta-hero-heading"
-      className="relative isolate overflow-hidden pb-7 pt-5 sm:pb-8 lg:pb-9 lg:pt-8"
+      className="relative isolate pb-5 pt-4 sm:pb-6 lg:pb-6 lg:pt-6"
     >
       {/*
         THE LAYERED DARK-BLUE INTELLIGENCE FIELD.
@@ -178,44 +178,78 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
       </div>
 
       {/*
-        THE GLOBE — HERO SCALE CORRECTION.
+        ══════════════════════════════════════════════════════════════════
+        THE GLOBE — THE MECHANISM CHANGED, NOT THE NUMBERS.
+        ══════════════════════════════════════════════════════════════════
 
-        The previous pass was refused for the opposite reason to the one before
-        it: *"the globe has now been reduced too far... it reads as a small
-        decorative globe behind the premium card."* The required hierarchy is
-        stated plainly — left is headline/search/actions, MIDDLE-RIGHT is a
-        large illuminated Earth, far right is the premium card floating above
-        it — and the card must not overpower the world.
+        The ruling: *"the globe must visually read as a free large globe, not a
+        rectangle with a globe inside it... it must not touch the ceiling/top
+        edge the way it does now"*, and §9: *"If a mechanism produces a result
+        that still looks mechanically wrong, do not defend the mechanism.
+        Change the mechanism."*
 
-        So the sphere is no longer bounded by the hero's own height. It is a
-        fixed square, ~1.7× its previous apparent size, centred vertically on
-        the band and allowed to overflow it top and bottom, with its horizontal
-        centre moved from ~68% of the hero to ~52% — into the middle. That is
-        what puts Earth behind the search field and the action row rather than
-        beside them, and it is why it no longer reads as a circular icon parked
-        behind the card.
+        THE DIAGNOSIS. Every previous pass sized and positioned the sphere
+        correctly and still looked boxed, because the `<section>` carried
+        `overflow-hidden`. The hero was a rectangle with a clipping edge, so
+        whatever the globe did, its top was sheared flat against the header and
+        its bottom against the next band. No amount of resizing fixes a clip —
+        the rectangle was the thing being seen.
 
-        THE MASKS ARE WHAT KEEP IT FROM BEING THE EARLIER REJECTED CROP. Fading
-        top, bottom and left means the sphere has no hard edge anywhere: it
-        dissolves into the atmosphere behind the headline instead of ending on
-        a line, so a viewer reads "a world the page is sitting on" rather than
-        "a large image that did not fit".
+        THE CHANGE. `overflow-hidden` is GONE from the hero. The section no
+        longer clips anything, so the sphere is bounded only by its own alpha
+        and its own mask. It sits clear of the header by design rather than by
+        luck, and it extends BELOW the hero into the page, fading out, because
+        a world that continues past the frame reads as a world while one that
+        stops on a line reads as a picture of one.
 
-        `-z-10` keeps it above the atmosphere layers and below every control.
-        It is `aria-hidden`, carries no marks, and nothing on the page reads it.
+        The full-bleed background still works: `PageCanvas` carries
+        `overflow-x-hidden`, which is what kept the `w-screen` layer from
+        producing a horizontal scrollbar, and that is unchanged.
+
+        THE MASK does the edge instead of the box. It is a circle, generous in
+        the middle and soft only in the last few percent, so the sphere keeps
+        its full illuminated mass and dissolves into the atmosphere at the limb
+        rather than ending anywhere.
       */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[380px] w-[380px] -translate-x-[6%] -translate-y-[52%] opacity-75 [mask-image:radial-gradient(circle_at_50%_50%,#000_84%,rgba(0,0,0,0.72)_93%,transparent_100%)] sm:h-[460px] sm:w-[460px] sm:opacity-90 lg:h-[580px] lg:w-[580px] lg:-translate-x-[20%] lg:-translate-y-[50%] lg:opacity-100 xl:h-[640px] xl:w-[640px] xl:-translate-x-[22%]"
+        className="pointer-events-none absolute left-1/2 top-[16px] -z-10 h-[300px] w-[300px] -translate-x-[34%] opacity-70 [mask-image:linear-gradient(to_bottom,#000_44%,rgba(0,0,0,0.55)_68%,rgba(0,0,0,0.18)_86%,transparent_98%)] sm:h-[360px] sm:w-[360px] sm:-translate-x-[26%] sm:opacity-85 lg:top-[18px] lg:h-[470px] lg:w-[470px] lg:-translate-x-[20%] lg:opacity-100 xl:h-[510px] xl:w-[510px] xl:-translate-x-[18%]"
       >
-        <HeroGlobe />
+        {/*
+          TWO NESTED MASKS, because they do two different jobs and one gradient
+          cannot do both.
+
+          OUTER (above): a vertical fade, so the sphere dissolves as it reaches
+          the editorial band beneath the hero. The hero no longer clips, which
+          is what freed the globe — but "not clipped" must not become "spills
+          over the stories", so the bottom is faded instead of cut.
+
+          INNER (below): the circular limb. Generous through the middle so the
+          illuminated mass is untouched, soft only in the last few percent, so
+          the edge is atmosphere rather than a boundary.
+        */}
+        <div className="h-full w-full [mask-image:radial-gradient(circle_at_50%_50%,#000_87%,rgba(0,0,0,0.5)_96%,transparent_100%)]">
+          <HeroGlobe />
+        </div>
       </div>
 
-      <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)] lg:items-start lg:gap-7">
+      {/*
+        §4 — THE CONNECTED-PERSPECTIVE BADGE, which the prototype places over
+        the world beside the headline. It is a product statement, not a
+        measurement: no count, no place, no time, nothing derived from the feed.
+      */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-[88px] z-[1] hidden max-w-[130px] translate-x-[118%] rounded-lg bg-[rgba(6,12,22,0.78)] px-3 py-2 text-[12px] font-medium leading-snug text-ink-secondary shadow-[0_10px_30px_-12px_rgba(0,0,0,0.9)] backdrop-blur-sm lg:block"
+      >
+        {t.connectedPerspective}
+      </span>
+
+      <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,296px)] lg:items-start lg:gap-12">
         <div className="flex max-w-2xl flex-col">
           <h1
             id="beta-hero-heading"
-            className="font-display text-[36px] font-semibold leading-[1.04] tracking-[-0.022em] sm:text-[44px] lg:text-[50px] xl:text-[56px]"
+            className="font-display text-[36px] font-semibold leading-[1.04] tracking-[-0.022em] sm:text-[44px] lg:text-[46px] xl:text-[52px]"
           >
             <span className="block text-ink-primary">{t.heroA}</span>
             {/*
@@ -229,7 +263,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             <span className="block text-cyan-300">{t.heroB}</span>
           </h1>
 
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-secondary sm:text-base">
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-secondary sm:text-base">
             {t.heroSub}
           </p>
 
@@ -243,7 +277,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             method="get"
             role="search"
             aria-label={t.askAria}
-            className="mt-5 flex w-full max-w-[600px] items-center gap-2 rounded-2xl border border-border-strong bg-void/75 p-2 pl-4 shadow-[0_0_40px_-12px_rgba(34,211,238,0.35)] focus-within:border-cyan-400/50"
+            className="mt-4 flex w-full max-w-[600px] items-center gap-2 rounded-2xl border border-border-strong bg-void/75 p-2 pl-4 shadow-[0_0_40px_-12px_rgba(34,211,238,0.35)] focus-within:border-cyan-400/50"
           >
             <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-violet-300" />
             <input
@@ -263,7 +297,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
           </form>
 
           {/* The metered-cost disclosure. Approved copy, stated before the spend. */}
-          <p className="mt-3 flex max-w-xl items-start gap-1.5 text-[12px] leading-snug text-ink-tertiary">
+          <p className="mt-2.5 flex max-w-xl items-start gap-1.5 text-[11.5px] leading-snug text-ink-tertiary">
             <Zap size={13} strokeWidth={2} aria-hidden="true" className="mt-[2px] shrink-0 text-amber-300" />
             <span>{t.askHint}</span>
           </p>
@@ -272,20 +306,20 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             THE THREE ACTIONS. All three are ordinary links to destinations that
             already exist, and none of them spends anything on arrival.
           */}
-          <div className="mt-5 grid w-full max-w-[720px] grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid w-full max-w-[720px] grid-cols-1 gap-3 sm:grid-cols-3">
             <a
               href="#whats-happening-now"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-xl border border-border-strong bg-void/70 px-4 py-3 text-left transition-colors hover:border-cyan-400/40 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+              className="flex min-h-[44px] items-center gap-2.5 rounded-xl border border-sky-400/45 bg-gradient-to-b from-sky-600/45 to-sky-800/35 px-4 py-3 text-left shadow-[0_10px_30px_-16px_rgba(56,189,248,0.9)] transition-colors hover:border-sky-300/70 hover:from-sky-500/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 motion-reduce:transition-none"
             >
-              <Globe2 size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-cyan-300" />
+              <Globe2 size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[14px] font-semibold leading-tight text-ink-primary">{t.exploreWorld}</span>
-                <span className="text-[11px] leading-tight text-ink-tertiary">{t.exploreWorldSub}</span>
+                <span className="text-[14px] font-semibold leading-tight text-white">{t.exploreWorld}</span>
+                <span className="text-[11px] leading-tight text-white/80">{t.exploreWorldSub}</span>
               </span>
             </a>
             <a
               href="/ask"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-violet-600 px-4 py-3 text-left transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none"
+              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-gradient-to-b from-violet-500 to-violet-700 px-4 py-3 text-left shadow-[0_10px_30px_-16px_rgba(167,139,250,0.95)] transition-colors hover:from-violet-400 hover:to-violet-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none"
             >
               <Sparkles size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
               <span className="flex min-w-0 flex-col">
@@ -295,7 +329,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             </a>
             <a
               href="/map"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-teal-700 px-4 py-3 text-left transition-colors hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none"
+              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 px-4 py-3 text-left shadow-[0_10px_30px_-16px_rgba(52,211,153,0.95)] transition-colors hover:from-emerald-400 hover:to-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none"
             >
               <MapIcon size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
               <span className="flex min-w-0 flex-col">

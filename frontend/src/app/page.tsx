@@ -293,7 +293,7 @@ export default async function HomePage(): Promise<JSX.Element> {
               relationship the ruling refuses: two independent vertical blocks
               instead of one composed band.
             */}
-            <div className="flex min-w-0 flex-col gap-7">
+            <div className="flex min-w-0 flex-col gap-6">
               <WhatsHappeningNow
                 lead={feed.featured}
                 secondary={feed.inFocus}

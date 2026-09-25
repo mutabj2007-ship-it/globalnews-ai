@@ -32,10 +32,10 @@ import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModul
 const LEGEND_MODULE_IDS = ['energy', 'conflict', 'humanitarian', 'economy'] as const;
 
 const LEGEND_DOT: Record<string, string> = {
-  energy: 'bg-amber-300',
-  conflict: 'bg-red-300',
-  humanitarian: 'bg-purple-300',
-  economy: 'bg-emerald-300',
+  energy: 'bg-amber-400 shadow-[0_0_8px_1px_rgba(251,191,36,0.75)]',
+  conflict: 'bg-rose-500 shadow-[0_0_8px_1px_rgba(244,63,94,0.75)]',
+  humanitarian: 'bg-violet-400 shadow-[0_0_8px_1px_rgba(167,139,250,0.75)]',
+  economy: 'bg-emerald-400 shadow-[0_0_8px_1px_rgba(52,211,153,0.75)]',
 };
 
 /**

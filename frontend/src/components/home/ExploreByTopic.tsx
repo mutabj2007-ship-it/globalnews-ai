@@ -132,46 +132,46 @@ interface TopicAccent {
 
 const TOPIC_ACCENT: Record<string, TopicAccent> = {
   'world-intelligence': {
-    surface: 'bg-gradient-to-b from-sky-500/[0.16] to-sky-500/[0.03]',
-    icon: 'text-sky-300',
-    tile: 'bg-sky-400/20 ring-1 ring-inset ring-sky-300/40',
+    surface: 'bg-gradient-to-b from-sky-500/30 to-sky-700/12',
+    icon: 'text-sky-200',
+    tile: 'bg-sky-400/30 ring-1 ring-inset ring-sky-300/55',
     hover: 'hover:border-sky-400/50 hover:shadow-[0_18px_44px_-26px_rgba(56,189,248,0.75)]',
-    arrow: 'bg-sky-500/85 text-white',
+    arrow: 'bg-sky-500 text-white',
   },
   economy: {
-    surface: 'bg-gradient-to-b from-violet-500/[0.16] to-violet-500/[0.03]',
-    icon: 'text-violet-300',
-    tile: 'bg-violet-400/20 ring-1 ring-inset ring-violet-300/40',
+    surface: 'bg-gradient-to-b from-violet-500/30 to-violet-700/12',
+    icon: 'text-violet-200',
+    tile: 'bg-violet-400/30 ring-1 ring-inset ring-violet-300/55',
     hover: 'hover:border-violet-400/50 hover:shadow-[0_18px_44px_-26px_rgba(167,139,250,0.75)]',
-    arrow: 'bg-violet-500/85 text-white',
+    arrow: 'bg-violet-500 text-white',
   },
   energy: {
-    surface: 'bg-gradient-to-b from-emerald-500/[0.16] to-emerald-500/[0.03]',
-    icon: 'text-emerald-300',
-    tile: 'bg-emerald-400/20 ring-1 ring-inset ring-emerald-300/40',
+    surface: 'bg-gradient-to-b from-emerald-500/30 to-emerald-700/12',
+    icon: 'text-emerald-200',
+    tile: 'bg-emerald-400/30 ring-1 ring-inset ring-emerald-300/55',
     hover: 'hover:border-emerald-400/50 hover:shadow-[0_18px_44px_-26px_rgba(52,211,153,0.75)]',
-    arrow: 'bg-emerald-500/85 text-white',
+    arrow: 'bg-emerald-500 text-white',
   },
   security: {
-    surface: 'bg-gradient-to-b from-rose-500/[0.16] to-rose-500/[0.03]',
-    icon: 'text-rose-300',
-    tile: 'bg-rose-400/20 ring-1 ring-inset ring-rose-300/40',
+    surface: 'bg-gradient-to-b from-rose-500/30 to-rose-700/12',
+    icon: 'text-rose-200',
+    tile: 'bg-rose-400/30 ring-1 ring-inset ring-rose-300/55',
     hover: 'hover:border-rose-400/50 hover:shadow-[0_18px_44px_-26px_rgba(251,113,133,0.75)]',
-    arrow: 'bg-rose-500/85 text-white',
+    arrow: 'bg-rose-500 text-white',
   },
   humanitarian: {
-    surface: 'bg-gradient-to-b from-amber-500/[0.16] to-amber-500/[0.03]',
-    icon: 'text-amber-300',
-    tile: 'bg-amber-400/20 ring-1 ring-inset ring-amber-300/40',
+    surface: 'bg-gradient-to-b from-amber-500/30 to-amber-700/12',
+    icon: 'text-amber-200',
+    tile: 'bg-amber-400/30 ring-1 ring-inset ring-amber-300/55',
     hover: 'hover:border-amber-400/50 hover:shadow-[0_18px_44px_-26px_rgba(251,191,36,0.75)]',
-    arrow: 'bg-amber-500/85 text-white',
+    arrow: 'bg-amber-500 text-white',
   },
   market: {
-    surface: 'bg-gradient-to-b from-cyan-500/[0.16] to-cyan-500/[0.03]',
-    icon: 'text-cyan-300',
-    tile: 'bg-cyan-400/20 ring-1 ring-inset ring-cyan-300/40',
+    surface: 'bg-gradient-to-b from-cyan-500/30 to-cyan-700/12',
+    icon: 'text-cyan-200',
+    tile: 'bg-cyan-400/30 ring-1 ring-inset ring-cyan-300/55',
     hover: 'hover:border-cyan-400/50 hover:shadow-[0_18px_44px_-26px_rgba(34,211,238,0.75)]',
-    arrow: 'bg-cyan-500/85 text-white',
+    arrow: 'bg-cyan-500 text-white',
   },
 };
 
@@ -251,8 +251,12 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
 
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-3.5">
         {topics.map((module) => {
+          /* The prototype's short name where it gives one; the registry's
+             title otherwise. The label never decides the destination. */
           const label =
-            moduleText[module.dictionaryKey as keyof typeof moduleText]?.title ?? module.id;
+            t.topicLabels[module.id] ??
+            moduleText[module.dictionaryKey as keyof typeof moduleText]?.title ??
+            module.id;
           const Icon = ICONS[module.icon];
           const accent = TOPIC_ACCENT[module.id] ?? TOPIC_FALLBACK;
           const summary =
@@ -267,7 +271,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
               >
                 <Icon size={23} strokeWidth={1.9} className={accent.icon} />
               </span>
-              <span className="mt-3.5 block text-[15px] font-semibold leading-snug text-ink-primary">
+              <span className="mt-3 block text-[15px] font-semibold leading-snug text-ink-primary">
                 {label}
               </span>
               {/*
@@ -293,7 +297,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
               {navigable ? (
                 <a
                   href={module.destination}
-                  className={`group flex h-full min-h-[150px] flex-col items-start rounded-2xl border border-border-strong ${accent.surface} p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${accent.hover}`}
+                  className={`group flex h-full min-h-[132px] flex-col items-start rounded-2xl border border-white/[0.10] ${accent.surface} p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${accent.hover}`}
                 >
                   {body}
                 </a>
@@ -303,7 +307,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                   no pointer cursor, muted surface. The registry says this module
                   has no route, so the row says the same thing.
                 */
-                <span className="group flex h-full min-h-[150px] cursor-default flex-col items-start rounded-2xl border border-dashed border-border-strong bg-void/30 p-4 opacity-70">
+                <span className="group flex h-full min-h-[132px] cursor-default flex-col items-start rounded-2xl border border-dashed border-border-strong bg-void/30 p-4 opacity-70">
                   {body}
                 </span>
               )}

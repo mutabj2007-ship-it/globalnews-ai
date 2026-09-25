@@ -2313,7 +2313,15 @@ export const en = {
        Humanitarian. DESTINATIONS STILL COME FROM THE REGISTRY — this names
        the item, it never decides where it goes. */
     viewAllTopicsPending: '· page coming',
+    connectedPerspective: 'A more connected perspective.',
     nowStandfirst: 'Selected global developments',
+    /* beta.topicLabels — the six topic cards' wording. The registry's own
+       titles are "World Intelligence", "Market Intelligence" and so on, which
+       is right inside the Engine and wraps to two lines on a card; the
+       prototype's strip says World, Economy, Energy, Security, Humanitarian,
+       Markets. This names the card; the registry still decides where it
+       goes and whether it goes anywhere at all. */
+    topicLabels: { 'world-intelligence': 'World', economy: 'Economy', energy: 'Energy', security: 'Security', humanitarian: 'Humanitarian', market: 'Markets' } as Record<string, string>,
     navLabels: { economy: 'Economy', energy: 'Energy', security: 'Security', humanitarian: 'Humanitarian' } as Record<string, string>,
     navMore: 'More',
     navUnavailable: 'Not yet',

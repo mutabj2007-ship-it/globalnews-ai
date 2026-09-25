@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 N = 1600                      # output is square, NxN
-R = N * 0.430                 # sphere radius, leaving room for the atmosphere
+R = N * 0.474                 # sphere radius, leaving room for the atmosphere
 CX = CY = N / 2.0
 LON0, LAT0 = math.radians(15.0), math.radians(20.0)   # Europe/Africa framing
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -103,16 +103,17 @@ for _name, clat, clon, tier in cities:
         d2 = (sx - jx) ** 2 + (sy - jy) ** 2
         glow[y0:y1, x0:x1] += ja * np.exp(-d2 / (2 * jr * jr))
 glow = np.asarray(Image.fromarray((np.clip(glow, 0, 4) * 63).astype(np.uint8)).filter(ImageFilter.GaussianBlur(4.5))).astype(np.float64) / 255.0 * 4
-glow *= land * (0.42 + 0.85 * night) * inside          # brightest on the night side, only on land
+glow *= land * (0.42 + 0.85 * night) * inside
+glow = np.where(land > 0.35, glow, glow * 0.25)   # no bleed past the coast          # brightest on the night side, only on land
 warm = np.array([1.00, 0.80, 0.52])
 for i in range(3):
     rgb[:, :, i] += glow * warm[i] * 1.85
 
 # ── cloud veil ──────────────────────────────────────────────────────────────
 cl = fbm((N, N), octaves=7, seed=29, start=56)
-cloud = np.clip((cl - 0.60) * 3.4, 0, 1) ** 1.7 * (0.15 + 0.85 * day)
+cloud = np.clip((cl - 0.655) * 2.6, 0, 1) ** 2.1 * (0.12 + 0.88 * day)
 for i in range(3):
-    rgb[:, :, i] = rgb[:, :, i] * (1 - cloud * 0.30) + np.array([0.74, 0.84, 0.95])[i] * cloud * 0.30
+    rgb[:, :, i] = rgb[:, :, i] * (1 - cloud * 0.20) + np.array([0.76, 0.86, 0.96])[i] * cloud * 0.20
 
 # ── limb darkening, then a soft atmosphere (no hard ring) ───────────────────
 limb = np.clip(1.0 - (rho ** 3.2) * 0.85, 0, 1)
@@ -124,12 +125,10 @@ for i, ch in enumerate((0.33, 0.62, 0.95)):
 alpha = inside.astype(np.float64)
 edge = np.clip((1.0 - rho) / 0.012, 0, 1)
 alpha *= edge
-# outer glow, fading to nothing - this is what replaces the neon ring
-outer = np.clip((rho - 1.0) / 0.20, 0, 1)
-outer_a = np.where((rho > 1.0) & (rho < 1.20), (1 - outer) ** 2.1 * 0.60, 0.0)
-for i, ch in enumerate((0.22, 0.52, 0.92)):
-    rgb[:, :, i] = np.where(outer_a > 0, ch, rgb[:, :, i])
-alpha = np.maximum(alpha, outer_a)
+# NO BAKED OUTER GLOW. A constant-colour annulus outside the disc reads as a
+# ring and, blurred against the page, as streaks. The atmosphere is drawn in CSS
+# in the hero instead, where it can be wider and softer than a PNG allows and
+# where it can extend around the globe into the rest of the scene.
 
 img = np.dstack([np.clip(rgb, 0, 1) * 255, np.clip(alpha, 0, 1) * 255]).astype(np.uint8)
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
