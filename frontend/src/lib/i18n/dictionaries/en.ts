@@ -2214,11 +2214,11 @@ export const en = {
     /* beta.askHint — the metered-cost disclosure beneath the field. */
     askHint: 'Ask runs an AI analysis. Browsing, sources and the map are free.',
     /* beta.askToday / beta.askTodaySub — primary CTA. */
-    askToday: 'Ask AI about today',
-    askTodaySub: 'Source-backed answers',
+    askToday: 'Ask GlobalNewsAI',
+    askTodaySub: 'Get a source-backed answer',
     /* beta.openMap / beta.openMapSub — secondary CTA. */
-    openMap: 'Open World Map',
-    openMapSub: 'Country coverage and sources',
+    openMap: 'Open Map',
+    openMapSub: 'Explore events on a live map',
     /* beta.brief — the panel heading. */
     briefTitle: 'Your world in 60 seconds',
     /*
@@ -2272,7 +2272,7 @@ export const en = {
       registry states does not exist (world-intelligence has none).
     */
     exploreWorld: 'Explore World',
-    exploreWorldSub: 'Today’s coverage, free to browse',
+    exploreWorldSub: 'See key developments',
 
     /*
       ── C1 · THE TIER BOUNDARY, WHICH DOES NOT SELL ANYTHING ──────────────
@@ -2291,6 +2291,20 @@ export const en = {
     premiumFree: 'Browsing, sources and the world map stay free.',
     premiumMetered: 'Deeper AI analysis runs on metered compute.',
     premiumNote: 'Plans are not open yet. Nothing on this page charges you.',
+    /*
+      beta.premiumCap1..4 — BETA HOME FINAL RECOVERY R1, zone Z3. The four
+      capability lines the Product Owner's prototype card carries. They NAME
+      what belongs to the paid layer; they are not offers, and none of them is
+      reachable from this card, because `premiumNote` above states in the same
+      card that plans are not open. Watch in particular is named as a paid-layer
+      capability and remains inactive product-wide.
+    */
+    premiumCap1: 'Watch what matters',
+    premiumCap2: 'Track changes over time',
+    premiumCap3: 'Access deeper analysis',
+    premiumCap4: 'Professional tools & exports',
+    /* beta.premiumFreeNote — the prototype's closing line under the card. */
+    premiumFreeNote: 'Free to explore.',
 
     /*
       ── C2 · THE CATEGORY FILTER AND THE STORY RAIL ───────────────────────

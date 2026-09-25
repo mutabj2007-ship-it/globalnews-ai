@@ -1795,10 +1795,10 @@ export const pl: Dictionary = {
     askAria: 'Zadaj pytanie',
     askButton: 'Zapytaj',
     askHint: 'Zapytanie uruchamia analizę AI. Przeglądanie, źródła i mapa są bezpłatne.',
-    askToday: 'Zapytaj AI o dzisiejsze wydarzenia',
-    askTodaySub: 'Odpowiedzi oparte na źródłach',
-    openMap: 'Otwórz mapę świata',
-    openMapSub: 'Doniesienia i źródła według krajów',
+    askToday: 'Zapytaj GlobalNewsAI',
+    askTodaySub: 'Otrzymaj odpowiedź opartą na źródłach',
+    openMap: 'Otwórz mapę',
+    openMapSub: 'Przeglądaj wydarzenia na żywej mapie',
     briefTitle: 'Twój świat w 60 sekund',
     briefMeta: 'Najnowsze informacje · {time} · bez użycia AI',
     imageUnavailable: 'Obraz niedostępny',
@@ -1825,11 +1825,16 @@ export const pl: Dictionary = {
       rather than presented as approved copy.
     */
     exploreWorld: 'Poznaj świat',
-    exploreWorldSub: 'Dzisiejsze doniesienia, przeglądanie bez opłat',
+    exploreWorldSub: 'Zobacz kluczowe wydarzenia',
     premiumTitle: 'Zyskaj więcej z GlobalNewsAI',
     premiumFree: 'Przeglądanie, źródła i mapa świata pozostają bezpłatne.',
     premiumMetered: 'Pogłębiona analiza AI korzysta z płatnych zasobów obliczeniowych.',
     premiumNote: 'Plany nie są jeszcze dostępne. Nic na tej stronie nie jest płatne.',
+    premiumCap1: 'Obserwuj to, co istotne',
+    premiumCap2: 'Śledź zmiany w czasie',
+    premiumCap3: 'Korzystaj z pogłębionej analizy',
+    premiumCap4: 'Narzędzia i eksport dla profesjonalistów',
+    premiumFreeNote: 'Przeglądanie bez opłat.',
 
     /* C2. New strings, written for this repository — FOR REVIEW (see C1 note). */
     categoryFilterAria: 'Filtruj artykuły według kategorii',

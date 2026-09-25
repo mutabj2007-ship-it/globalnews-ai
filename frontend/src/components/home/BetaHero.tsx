@@ -1,8 +1,8 @@
 import type { JSX } from 'react';
-import { Sparkles, Zap, Map as MapIcon, Globe2, Check } from 'lucide-react';
+import { Crown, Sparkles, Zap, Map as MapIcon, Globe2, Check } from 'lucide-react';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { HeroWorldVisual } from '@/components/home/HeroWorldVisual';
+import { HeroGlobe } from '@/components/home/HeroGlobe';
 import { SixtySecondBrief } from '@/components/home/SixtySecondBrief';
 
 /**
@@ -144,28 +144,24 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
       </div>
 
       {/*
-        THE GLOBE, at prototype scale. Decorative and aria-hidden: it explains,
-        it does not inform. It sits behind the right column so the 60-second
-        brief overlaps it exactly as the prototype draws, and it is pushed
-        partly off the right edge at every width so it reads as a world rather
-        than an icon. On phone it stays a restrained corner accent — the
-        headline owns that viewport.
+        THE GLOBE — Z2.
 
-        THE MASK IS WHY IT READS AS A FIELD AND NOT A PANEL. `HeroWorldVisual`
-        draws itself inside a rounded, bordered, clipped HUD panel, which is
-        right at the 460px it was used at before and wrong at 640–780px: the
-        border becomes a large rectangle across the hero. Its own spec pins the
-        exact signature `export function HeroWorldVisual(): JSX.Element`, so it
-        takes no presentation prop and must not grow one. Fading its edges from
-        the outside with a radial mask dissolves the panel entirely and leaves
-        the luminous world, without touching the component or its spec.
+        Large, pushed partly off the right edge so it reads as a world rather
+        than an icon, and sitting behind the right column exactly as the
+        Product Owner's prototype draws it. `HeroGlobe` needs no mask: it is a
+        sphere on transparency, not a bordered HUD panel, so it dissolves into
+        the field on its own. It is `aria-hidden` and carries no marks — see
+        the long note in HeroGlobe.tsx for why there are no points on it.
+
+        `HeroWorldVisual` is RETIRED FROM THE HERO, NOT DELETED. Its own spec
+        reads that file rather than this one and keeps passing.
       */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute right-[-72px] top-[-16px] w-[220px] opacity-50 [mask-image:radial-gradient(ellipse_at_center,#000_42%,transparent_76%)] sm:w-[300px] sm:opacity-60 lg:right-[-60px] lg:top-[-24px] lg:w-[640px] lg:opacity-95 xl:right-[-40px] xl:w-[780px]"
+        className="pointer-events-none absolute right-[-110px] top-[-30px] -z-10 w-[280px] opacity-45 sm:right-[-130px] sm:w-[360px] sm:opacity-55 lg:right-[-90px] lg:top-[-56px] lg:w-[600px] lg:opacity-95 xl:right-[-70px] xl:w-[660px]"
       >
-        <div className="aspect-[560/340] w-full">
-          <HeroWorldVisual />
+        <div className="aspect-square w-full">
+          <HeroGlobe />
         </div>
       </div>
 
@@ -173,14 +169,21 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
         <div className="flex max-w-2xl flex-col">
           <h1
             id="beta-hero-heading"
-            className="font-display text-4xl font-semibold leading-[1.03] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl"
+            className="font-display text-[38px] font-semibold leading-[1.04] tracking-[-0.02em] sm:text-5xl lg:text-[48px] xl:text-[56px]"
           >
             <span className="block text-ink-primary">{t.heroA}</span>
-            {/* The approved accent line. */}
-            <span className="block text-emerald-300">{t.heroB}</span>
+            {/*
+              The accent line. CYAN, not emerald: the Product Owner's desktop
+              screenshot draws "what's changing." in the product's cyan, and
+              under the takeover ruling that screenshot is the controlling
+              visual authority for Home. Emerald was the previous
+              implementation's choice and the ruling is explicit that the
+              current implementation is reference evidence, not authority.
+            */}
+            <span className="block text-cyan-300">{t.heroB}</span>
           </h1>
 
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-tertiary sm:text-lg">
+          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-secondary sm:text-base">
             {t.heroSub}
           </p>
 
@@ -194,7 +197,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             method="get"
             role="search"
             aria-label={t.askAria}
-            className="mt-8 flex w-full max-w-xl items-center gap-2 rounded-2xl border border-border-strong bg-void/70 p-2 pl-4 shadow-[0_0_40px_-12px_rgba(34,211,238,0.35)] focus-within:border-cyan-400/50"
+            className="mt-6 flex w-full max-w-xl items-center gap-2 rounded-2xl border border-border-strong bg-void/70 p-2 pl-4 shadow-[0_0_40px_-12px_rgba(34,211,238,0.35)] focus-within:border-cyan-400/50"
           >
             <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-violet-300" />
             <input
@@ -223,7 +226,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             THE THREE ACTIONS. All three are ordinary links to destinations that
             already exist, and none of them spends anything on arrival.
           */}
-          <div className="mt-7 grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mt-6 grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
             <a
               href="#whats-happening-now"
               className="flex min-h-[44px] items-center gap-3 rounded-xl border border-border-strong bg-void/70 px-4 py-3 text-left transition-colors hover:border-cyan-400/40 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
@@ -277,26 +280,61 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
           */}
           <aside
             aria-labelledby="beta-premium-heading"
-            className="rounded-2xl border border-violet-500/40 bg-[#0b0a1f]/90 p-4 shadow-[0_0_40px_-12px_rgba(139,92,246,0.5)] backdrop-blur-md"
+            className="rounded-2xl border border-amber-300/60 bg-[#0c0a05]/95 p-5 shadow-[0_0_46px_-14px_rgba(245,197,94,0.55)] backdrop-blur-md"
           >
             <h2
               id="beta-premium-heading"
-              className="flex items-center gap-2 text-sm font-semibold text-violet-200"
+              className="flex items-start gap-2.5 text-[15px] font-semibold leading-snug text-amber-100"
             >
-              <Sparkles size={16} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-violet-300" />
-              {t.premiumTitle}
+              <Crown size={18} strokeWidth={1.9} aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" />
+              <span className="block">{t.premiumTitle}</span>
             </h2>
-            <ul className="mt-3 flex flex-col gap-2">
-              <li className="flex items-start gap-2 text-xs leading-relaxed text-ink-secondary">
-                <Check size={14} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0 text-emerald-300" />
-                <span>{t.premiumFree}</span>
-              </li>
-              <li className="flex items-start gap-2 text-xs leading-relaxed text-amber-200/90">
-                <Zap size={14} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" />
-                <span>{t.premiumMetered}</span>
-              </li>
+
+            {/*
+              THE FOUR CAPABILITY LINES. They name what the paid layer is for.
+              None of them is a control: there is nothing to click here, so
+              nothing can be started by accident, and Watch — named on the first
+              line — stays inactive product-wide.
+            */}
+            <ul className="mt-4 flex flex-col gap-2.5">
+              {[t.premiumCap1, t.premiumCap2, t.premiumCap3, t.premiumCap4].map((capability) => (
+                <li key={capability} className="flex items-start gap-2.5 text-[13px] leading-snug text-ink-primary">
+                  <Check
+                    size={15}
+                    strokeWidth={2.4}
+                    aria-hidden="true"
+                    className="mt-[3px] shrink-0 rounded-full bg-amber-400/15 p-[1px] text-amber-300"
+                  />
+                  <span>{capability}</span>
+                </li>
+              ))}
             </ul>
-            <p className="mt-3 text-xs text-ink-secondary">{t.premiumNote}</p>
+
+            {/*
+              ══════════════════════════════════════════════════════════════
+              WHERE THE PROTOTYPE'S "View Plans →" BUTTON WENT — A DECLARED
+              DEVIATION, NOT AN OVERSIGHT.
+              ══════════════════════════════════════════════════════════════
+
+              The Product Owner's screenshot puts a filled gold "View Plans →"
+              button in this slot. There is NO PLANS ROUTE IN THIS PRODUCT —
+              `app/` carries no plans, pricing or upgrade segment — and the
+              activation forbids inventing one: *"Do not invent active pricing,
+              checkout, credits or Watch functionality."*
+
+              A gold button that goes nowhere is worse than no button: it is
+              the one element on this card a reader is most likely to press,
+              and pressing it would be the product's first broken promise about
+              money. So the slot keeps the button's WEIGHT and gives it to the
+              governed sentence that is true — the same sentence the card
+              already shipped with. When a plans route exists, this block is
+              where the button goes, and nothing else on the card changes.
+            */}
+            <p className="mt-5 rounded-xl border border-amber-300/25 bg-amber-300/[0.07] px-4 py-3 text-center text-[13px] font-medium leading-snug text-amber-100">
+              {t.premiumNote}
+            </p>
+
+            <p className="mt-3 text-center text-[11px] font-medium text-amber-200/70">{t.premiumFreeNote}</p>
           </aside>
 
           <SixtySecondBrief items={latestUpdates} language={language} />
