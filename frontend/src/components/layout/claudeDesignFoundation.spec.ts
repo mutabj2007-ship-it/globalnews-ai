@@ -819,7 +819,10 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
     for (const section of [
       '<Hero',
       '<GlobalDevelopments',
-      '<IntelligenceEngineSection',
+      // GATE A · R5.1 — IntelligenceModulesSection replaced
+      // IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
+      // Which sections the canvas PARENTS is still this test's subject.
+      '<IntelligenceModulesSection',
       '<HowItWorks',
       '<TrustSection',
     ]) {
@@ -846,7 +849,8 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
       '<GlobalDevelopments',
       // M66.8c — '<HomepageSituationMap' stood here. Removed, not reordered:
       // every remaining marker keeps its relative position.
-      '<IntelligenceEngineSection',
+      // GATE A · R5.1 — the section's identity moved here; its position did not.
+      '<IntelligenceModulesSection',
       '<HowItWorks',
       '<TrustSection',
       '<Footer',
@@ -873,7 +877,7 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
     expect(pageSource).toMatch(/isActiveLanguageCode/);
     expect(pageSource).toMatch(/const updatedAt = new Date\(\)\.toISOString\(\);/);
     expect(pageSource).toMatch(/<Hero latestArticles=\{feed\.latestUpdates\}/);
-    expect(pageSource).toMatch(/<IntelligenceEngineSection language=\{language\} \/>/);
+    expect(pageSource).toMatch(/<IntelligenceModulesSection language=\{language\} \/>/);
   });
 });
 

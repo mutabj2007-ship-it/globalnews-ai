@@ -2154,6 +2154,36 @@ export const en = {
     hubLabel: 'GlobalNews AI Intelligence Engine',
     // M65.1 — the approved Claude Design canvas subtitle.
     canvasSubtitle: 'Connected capabilities powering deeper understanding',
+
+    /*
+      ── GATE A · R5.1 INTELLIGENCE-MODULES DELTA ────────────────────────────
+      HOME_R4.1_DELTA.md's "Section subtitle", "Summary line", "Card route
+      line" and "Card note" rows. The wording is R5.1's own, taken from the
+      approved Home copy, with ONE substitution.
+
+      P1 IS PROPOSED, SO ITS FALLBACK APPLIES. R5.1 renders the registry state
+      `comingSoon` as "Unavailable" and summarises "1 unavailable".
+      PROPOSED_DELTAS.md marks that a Product Owner decision and names the
+      Beta-parity fallback: the registry's own badge text, which is
+      `stateLabels.comingSoon` above. So "unavailable" reads "coming soon"
+      here and in the PL catalogue, and nothing else in the R5.1 wording
+      changes. Adopting P1 later is a two-string edit, both in this block.
+
+      THE SUMMARY IS A TEMPLATE, never a sentence with the numbers baked in.
+      `IntelligenceModulesSection` counts the canonical INTELLIGENCE_MODULES
+      array and substitutes, so the line cannot drift from the registry the
+      way a hardcoded "9 modules" would — which is also R5.1's own rule for
+      it ("computed from the array, never hard-coded").
+    */
+    sectionTitle: 'Intelligence modules',
+    modulesSummary: '{n} modules · {a} active · {p} preview · {u} coming soon',
+    modulesSubtitle:
+      'Active opens a working surface. Preview opens a routed surface whose data and providers are not fully connected. Coming soon has no surface yet.',
+    /** Card route line where a module has no destination. */
+    routeNone: 'No route',
+    /** R5.1's "Opens preview" card note — never its review-package sibling, which describes the ZIP rather than the product. */
+    opensPreview: 'Opens preview',
+
     // M65.1 — the hub's capability line is DERIVED from the canonical
     // INTELLIGENCE_MODULES array (total count, and how many are actually
     // ACTIVE), never a hardcoded claim. These are only its grammatical

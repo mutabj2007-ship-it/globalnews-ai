@@ -98,7 +98,11 @@ describe('the section frame is bounded, and the homepage keeps its own scroll', 
     for (const section of [
       '<Hero ',
       '<GlobalDevelopments',
-      '<IntelligenceEngineSection',
+      /* GATE A · R5.1 — IntelligenceModulesSection supersedes
+         IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
+         The engine file is retired, not deleted. The ORDER contract this list
+         exists to protect is unchanged; only the section's identity moved. */
+      '<IntelligenceModulesSection',
       '<HowItWorks',
       '<TrustSection',
     ]) {

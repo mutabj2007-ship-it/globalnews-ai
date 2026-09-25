@@ -1775,6 +1775,24 @@ export const pl: Dictionary = {
     hubLabel: 'Silnik analityczny GlobalNews AI',
     // M65.1 — patrz en.ts
     canvasSubtitle: 'Połączone funkcje pogłębiające zrozumienie świata',
+
+    /*
+      ── GATE A · R5.1, patrz en.ts ──────────────────────────────────────────
+      Wording is R5.1's own approved PL Home copy, not a translation authored
+      here, with the single P1 substitution: R5.1's "{u} niedostępny" becomes
+      "{u} wkrótce", the registry's own `stateLabels.comingSoon` above,
+      because P1 is PROPOSED and its documented fallback is the Beta text.
+
+      "w podglądzie" is R5.1's own summary term and is invariant across
+      counts, so the template needs no declension table — which is why the
+      summary is a template here rather than another plural-forms triple.
+    */
+    sectionTitle: 'Moduły analityczne',
+    modulesSummary: '{n} modułów · {a} aktywny · {p} w podglądzie · {u} wkrótce',
+    modulesSubtitle:
+      'Aktywny otwiera działającą powierzchnię. Podgląd otwiera powierzchnię z trasą, której dane i dostawcy nie są w pełni podłączeni. Wkrótce nie ma jeszcze powierzchni.',
+    routeNone: 'Brak trasy',
+    opensPreview: 'Otwiera podgląd',
     moduleForms: ['moduł', 'moduły', 'modułów'] as [string, string, string],
     activeForms: ['aktywny', 'aktywne', 'aktywnych'] as [string, string, string],
     modules: {

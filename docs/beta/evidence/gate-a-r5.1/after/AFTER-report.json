@@ -1,0 +1,562 @@
+[
+  {
+    "label": "AFTER",
+    "locale": "en",
+    "viewport": "desktop-1440x900",
+    "status": 200,
+    "screenshot": "AFTER_desktop-1440x900_en.png",
+    "requestCount": 42,
+    "meteredRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world": {
+        "dom": true,
+        "visible": true
+      },
+      "country": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "AFTER",
+    "locale": "en",
+    "viewport": "phone-430x932",
+    "status": 200,
+    "screenshot": "AFTER_phone-430x932_en.png",
+    "requestCount": 40,
+    "meteredRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 430,
+    "clientWidth": 430,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world": {
+        "dom": true,
+        "visible": true
+      },
+      "country": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "AFTER",
+    "locale": "en",
+    "viewport": "phone-390x844",
+    "status": 200,
+    "screenshot": "AFTER_phone-390x844_en.png",
+    "requestCount": 40,
+    "meteredRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world": {
+        "dom": true,
+        "visible": true
+      },
+      "country": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "AFTER",
+    "locale": "en",
+    "viewport": "phone-360x800",
+    "status": 200,
+    "screenshot": "AFTER_phone-360x800_en.png",
+    "requestCount": 40,
+    "meteredRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world": {
+        "dom": true,
+        "visible": true
+      },
+      "country": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "AFTER",
+    "locale": "pl",
+    "viewport": "desktop-1440x900",
+    "status": 200,
+    "screenshot": "AFTER_desktop-1440x900_pl.png",
+    "requestCount": 49,
+    "meteredRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world": {
+        "dom": true,
+        "visible": true
+      },
+      "country": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "AFTER",
+    "locale": "pl",
+    "viewport": "phone-430x932",
+    "status": 200,
+    "screenshot": "AFTER_phone-430x932_pl.png",
+    "requestCount": 47,
+    "meteredRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 430,
+    "clientWidth": 430,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world": {
+        "dom": true,
+        "visible": true
+      },
+      "country": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "AFTER",
+    "locale": "pl",
+    "viewport": "phone-390x844",
+    "status": 200,
+    "screenshot": "AFTER_phone-390x844_pl.png",
+    "requestCount": 47,
+    "meteredRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world": {
+        "dom": true,
+        "visible": true
+      },
+      "country": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "AFTER",
+    "locale": "pl",
+    "viewport": "phone-360x800",
+    "status": 200,
+    "screenshot": "AFTER_phone-360x800_pl.png",
+    "requestCount": 47,
+    "meteredRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world": {
+        "dom": true,
+        "visible": true
+      },
+      "country": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  }
+]

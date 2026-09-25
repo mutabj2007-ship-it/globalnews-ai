@@ -7,7 +7,7 @@ import { Hero } from '@/components/home/Hero';
 import { HeroFocusProvider } from '@/components/home/HeroFocusProvider';
 import { GlobalDevelopments } from '@/components/home/GlobalDevelopments';
 import { TodayWorkspace } from '@/components/today/TodayWorkspace';
-import { IntelligenceEngineSection } from '@/components/home/IntelligenceEngineSection';
+import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
 import { HowItWorks } from '@/components/home/HowItWorks';
 import { TrustSection } from '@/components/home/TrustSection';
 import { Footer } from '@/components/layout/Footer';
@@ -245,7 +245,30 @@ export default async function HomePage(): Promise<JSX.Element> {
             updatedAt={updatedAt}
             language={language}
           />
-          <IntelligenceEngineSection language={language} />
+          {/*
+            GATE A · R5.1 — IntelligenceModulesSection REPLACES
+            IntelligenceEngineSection at this mount point, and replaces nothing
+            else. `HOME_R4.1_DELTA.md` changes exactly one section of Home and
+            declares the rest untouched, so Hero, Global Developments, the Today
+            workspace, How It Works, Trust, the header, the footer and the
+            bottom bar are all unchanged here.
+
+            The engine files are RETIRED, NOT DELETED — the convention this file
+            already applies to TodaySection, LatestNowRail, HomepageSituationMap
+            and IntelligenceModulesDesktop/Mobile. IntelligenceEngineSection,
+            IntelligenceEngineRing and intelligenceEngineGeometry stay on disk,
+            unimported by any route, so the released surface stays inspectable
+            beside the one that replaced it.
+
+            WHY IT WAS REPLACED: measured on the built page at 1440, 430, 390
+            and 360 in EN and PL, every module title, every status badge and the
+            summary line were in the DOM but absent from rendered innerText —
+            the radial ring keeps them in hover/focus panels. A first-time
+            reader saw no module name as text. `id="intelligence-modules"`
+            moves with the section, so MobileBottomNav's Intelligence tab, one
+            of the four approved destinations, still resolves.
+          */}
+          <IntelligenceModulesSection language={language} />
           <HowItWorks language={language} />
           <TrustSection language={language} />
         </PageCanvas>

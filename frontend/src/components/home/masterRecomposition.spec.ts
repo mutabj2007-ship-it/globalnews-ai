@@ -21,7 +21,11 @@ describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase
       // Engine and is retired from this render path. Global Developments now
       // transitions directly into the Intelligence Engine, which is the
       // released Claude Design adjacency. The component file is retained.
-      '<IntelligenceEngineSection',
+      /* GATE A · R5.1 — IntelligenceModulesSection supersedes
+         IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
+         The engine file is retired, not deleted. The ORDER contract this list
+         exists to protect is unchanged; only the section's identity moved. */
+      '<IntelligenceModulesSection',
       '<HowItWorks',
       '<TrustSection',
     ];

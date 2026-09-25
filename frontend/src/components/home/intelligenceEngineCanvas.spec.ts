@@ -1029,14 +1029,43 @@ describe('M66.5 — client boundary stays narrow', () => {
 
 describe('M66.5 — navigation, localization and protected surfaces', () => {
   it('the #intelligence-modules anchor survives, and MobileBottomNav still points at it', () => {
-    expect(sectionSource).toMatch(/id="intelligence-modules"/);
+    /*
+      GATE A · R5.1 — the anchor must be on the LIVE section, not merely
+      present somewhere on disk. It is one of the four approved navigation
+      destinations, so asserting it against the retired engine file would let
+      destination 4 break while this test stayed green.
+    */
+    const liveSection = readFileSync(join(__dirname, 'IntelligenceModulesSection.tsx'), 'utf-8');
+    expect(liveSection).toMatch(/id="intelligence-modules"/);
     expect(bottomNavSource).toMatch(/href: '#intelligence-modules'/);
   });
 
-  it('the homepage renders ONE engine section, and neither retired renderer', () => {
-    expect(stripComments(pageSource)).toMatch(/<IntelligenceEngineSection language=\{language\} \/>/);
-    expect(stripComments(pageSource)).not.toMatch(/<IntelligenceModulesDesktop/);
-    expect(stripComments(pageSource)).not.toMatch(/<IntelligenceModulesMobile/);
+  /*
+    GATE A · R5.1 — THIS PIN IS REPLACED, NOT DELETED.
+
+    It asserted that page.tsx mounts IntelligenceEngineSection. Under
+    `HOME_R4.1_DELTA.md` the modules section is the approved Home surface and
+    the engine is retired, so the old assertion now protects a surface the
+    Product Owner has superseded — exactly what
+    `BETA-DESIGN-AUTHORITY-R5.1.md` §3 says to replace with a gate on the R5.1
+    result instead.
+
+    What it still guarantees, and why each half matters: Home mounts exactly
+    ONE module renderer, so the three retired ones cannot come back silently;
+    and the engine is retired rather than deleted, so its released geometry
+    stays inspectable and every other assertion in this file keeps its subject.
+  */
+  it('the homepage renders ONE module section — the R5.1 one — and no retired renderer', () => {
+    const code = stripComments(pageSource);
+    expect(code).toMatch(/<IntelligenceModulesSection language=\{language\} \/>/);
+    expect(code).not.toMatch(/<IntelligenceEngineSection/);
+    expect(code).not.toMatch(/<IntelligenceModulesDesktop/);
+    expect(code).not.toMatch(/<IntelligenceModulesMobile/);
+  });
+
+  it('the retired engine section is kept on disk, not deleted', () => {
+    expect(sectionSource).toMatch(/id="intelligence-modules"/);
+    expect(sectionSource.length).toBeGreaterThan(0);
   });
 
   it('the retired components are neither imported nor resurrected by this milestone', () => {

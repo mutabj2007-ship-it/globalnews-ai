@@ -26,7 +26,7 @@ function stripComments(src: string): string {
 }
 
 describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed as a duplicate presentation of feed.latestUpdates)', () => {
-  it('renders sections in the approved current order: NavBar, LiveStatusStrip, Hero, GlobalDevelopments, IntelligenceEngineSection, HowItWorks, TrustSection, Footer, MobileBottomNav', () => {
+  it('renders sections in the approved current order: NavBar, LiveStatusStrip, Hero, GlobalDevelopments, IntelligenceModulesSection, HowItWorks, TrustSection, Footer, MobileBottomNav', () => {
     // M65.1 — the two per-breakpoint Intelligence Engine renderers were
     // replaced by ONE section that serves every breakpoint.
     // M66.8c — HomepageSituationMap is retired from this render path. The
@@ -37,7 +37,11 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
       '<LiveStatusStrip',
       '<Hero',
       '<GlobalDevelopments',
-      '<IntelligenceEngineSection',
+      /* GATE A · R5.1 — IntelligenceModulesSection supersedes
+         IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
+         The engine file is retired, not deleted. The ORDER contract this list
+         exists to protect is unchanged; only the section's identity moved. */
+      '<IntelligenceModulesSection',
       '<HowItWorks',
       '<TrustSection',
       '<Footer',

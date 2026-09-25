@@ -1,0 +1,283 @@
+import type { JSX } from 'react';
+import {
+  Search,
+  Globe2,
+  MapPinned,
+  ScanSearch,
+  LineChart,
+  ShieldAlert,
+  TrendingUp,
+  History,
+  Radar,
+  Check,
+  Eye,
+  Ban,
+} from 'lucide-react';
+import type { LanguageCode } from '@globalnews-ai/shared';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import {
+  INTELLIGENCE_MODULES,
+  isModuleNavigable,
+  type IntelligenceModuleConfig,
+  type IntelligenceModuleState,
+} from '@/lib/intelligenceModules';
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * GATE A · THE R5.1 INTELLIGENCE-MODULES SECTION
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * `HOME_R4.1_DELTA.md` is the whole of R5.1's Home authority, and it changes
+ * exactly one section: *"Only the items below differ. Hero, World Pulse,
+ * header, bottom bar, tokens, spacing and card styling are untouched."* This
+ * file is that one section, and nothing else on Home is touched by it.
+ *
+ * WHAT R5.1 CHANGED, ROW BY ROW, AND WHERE IT LANDS HERE:
+ *
+ *   Card list        9 cards in REGISTRY ORDER          -> INTELLIGENCE_MODULES, mapped in order
+ *   Statuses         1 active · 7 preview · 1 comingSoon -> read from the array, never asserted
+ *   Card route line  route in mono, or "No route"        -> `routeLine`
+ *   Card note        "Opens preview"                     -> `opensPreview`, preview + destination only
+ *   Summary line     computed, never hard-coded          -> `summary`, substituted from counts
+ *   Section subtitle Active/Preview/Coming soon meaning  -> `t.modulesSubtitle`
+ *   Status badge     Preview gets the developing token + eye icon;
+ *                    comingSoon muted + block icon; Active unchanged
+ *   Card border      DASHED ONLY for comingSoon; solid for Active AND Preview
+ *
+ * ── WHY THIS REPLACES THE RADIAL ENGINE ON HOME, AND ONLY ON HOME ──────────
+ *
+ * `IntelligenceEngineSection` rendered the GN-CD radial canvas here. Measured
+ * on the built page at 1440, 430, 390 and 360 in both locales, every module
+ * title, every status badge and the summary line were present in the DOM but
+ * ABSENT from rendered `innerText` — they live in hover/focus-revealed ring
+ * panels. A first-time reader saw no module name as text at any width, which
+ * `BETA-DESIGN-AUTHORITY-R5.1.md` §10 requires them to ("understand the major
+ * actions and module choices"). §3 of that authority supersedes stale
+ * presentation freezes where they conflict with the approved R5.1 result, and
+ * this is that conflict. The engine files are untouched and still exported.
+ *
+ * ── WHAT IS DELIBERATELY *NOT* IMPLEMENTED, BECAUSE IT IS OPEN ─────────────
+ *
+ * P1  badge text. R5.1 draws "Unavailable"; PROPOSED_DELTAS.md makes that a
+ *     Product Owner decision and names the registry's "Coming soon" as the
+ *     Beta-parity fallback. The fallback is what renders — see the dictionary.
+ * P2  category colours, and CC1–CC4 under it. R5.1 colours the icon and title
+ *     per category token. The documented fallback is R4.1's treatment, which
+ *     is what `STATE_STYLE` below encodes: *"icon --brand/--mut/--dis by
+ *     status; title --ink or --mut"*. No category palette is introduced.
+ * M3  icons. The registry's lucide names are inherited by ring slot, so
+ *     Security carries `Search`; R5.1 prefers Material Symbols chosen by
+ *     meaning. Keeping the registry's own icons is the current Beta state, so
+ *     it answers nothing — and when M3 is ruled, `ICONS` is the one map to
+ *     change.
+ * M2  Conflict's destination stays the registry's `/conflict`.
+ * N1/N2/N4/N11/S1  navigation. Not touched by this file at all: the four
+ *     destinations, the header and the bottom bar are exactly as they were.
+ *
+ * ── DATA HONESTY ──────────────────────────────────────────────────────────
+ *
+ * Every value rendered here comes from `INTELLIGENCE_MODULES` (the canonical
+ * registry) or the platform dictionary. No fixture, no illustrative headline,
+ * no sample credit value, no prototype geography, and no string from the
+ * review package that describes the package rather than the product — R5.1's
+ * "Route exists · not in this review package" is deliberately absent.
+ *
+ * SERVER COMPONENT. Static markup from static config; the cards are anchors,
+ * not stateful controls, so no client boundary is needed.
+ */
+
+const ICONS = {
+  Search,
+  Globe2,
+  MapPinned,
+  ScanSearch,
+  LineChart,
+  ShieldAlert,
+  TrendingUp,
+  History,
+  Radar,
+} as const;
+
+/**
+ * The P2 FALLBACK, encoded once. PROPOSED_DELTAS.md's fallback column reads
+ * *"R4.1 treatment: labels --mut, module icon/title by status"*, and
+ * HOME_R4.1_DELTA.md's R4.1 column spells the same rule out: *"icon
+ * --brand/--mut/--dis by status; title --ink or --mut"*.
+ *
+ * `border` carries R5.1's approved border rule, which is NOT proposed: dashed
+ * belongs to comingSoon alone, so Preview reads as a real surface a reader may
+ * open rather than as something withheld.
+ */
+const STATE_STYLE: Record<
+  IntelligenceModuleState,
+  { icon: string; title: string; border: string; badge: string; BadgeIcon: typeof Check }
+> = {
+  active: {
+    icon: 'text-cyan-300',
+    title: 'text-ink-primary',
+    border: 'border-solid border-cyan-500/40',
+    badge: 'border-cyan-500/40 text-cyan-300',
+    BadgeIcon: Check,
+  },
+  preview: {
+    /* R5.1: "Preview uses the developing token (--dev) with eye icon". */
+    icon: 'text-amber-300/90',
+    title: 'text-ink-primary',
+    border: 'border-solid border-border-strong',
+    badge: 'border-amber-500/40 text-amber-300',
+    BadgeIcon: Eye,
+  },
+  comingSoon: {
+    icon: 'text-ink-tertiary',
+    title: 'text-ink-tertiary',
+    /* The ONLY dashed border in the grid. */
+    border: 'border-dashed border-border-strong/70',
+    badge: 'border-border-strong text-ink-tertiary',
+    BadgeIcon: Ban,
+  },
+};
+
+interface IntelligenceModulesSectionProps {
+  language?: LanguageCode;
+}
+
+export function IntelligenceModulesSection({
+  language = 'en',
+}: IntelligenceModulesSectionProps): JSX.Element {
+  const t = getDictionary(language).intelligenceModules;
+
+  /*
+    COUNTED, NOT CLAIMED. R5.1 requires the summary be "computed from the
+    array, never hard-coded", so a module whose state changes in the registry
+    moves this line with it and cannot leave a stale count on Home.
+  */
+  const total = INTELLIGENCE_MODULES.length;
+  const counts = INTELLIGENCE_MODULES.reduce(
+    (acc, m) => ({ ...acc, [m.state]: acc[m.state] + 1 }),
+    { active: 0, preview: 0, comingSoon: 0 } as Record<IntelligenceModuleState, number>,
+  );
+  const summary = t.modulesSummary
+    .replace('{n}', String(total))
+    .replace('{a}', String(counts.active))
+    .replace('{p}', String(counts.preview))
+    .replace('{u}', String(counts.comingSoon));
+
+  return (
+    <section
+      /*
+        THE ANCHOR MOVES WITH THE SECTION. `MobileBottomNav`'s "Intelligence"
+        tab ships `href: '#intelligence-modules'` — one of the four approved
+        destinations — so this id is load-bearing and the scroll offsets are
+        the ones the previous section carried, for the same sticky header.
+      */
+      id="intelligence-modules"
+      aria-labelledby="intelligence-modules-heading"
+      className="scroll-mt-[65px] rounded-cd-16 border border-cd-edge-section bg-cd-engine-m px-cd-11 pb-cd-14 pt-cd-13 md:bg-cd-engine md:px-cd-24 md:pb-cd-30 md:pt-cd-26 cd-header:scroll-mt-[75px]"
+    >
+      <div className="flex flex-col gap-1">
+        <h2
+          id="intelligence-modules-heading"
+          className="font-display text-xl font-medium text-ink-primary sm:text-2xl"
+        >
+          {t.sectionTitle}
+        </h2>
+        {/* R5.1 renders the summary in mono, between the title and the subtitle. */}
+        <p className="font-mono text-xs font-semibold text-ink-secondary">{summary}</p>
+        <p className="max-w-3xl text-sm leading-relaxed text-ink-tertiary">{t.modulesSubtitle}</p>
+      </div>
+
+      {/*
+        R5.1's grid is `repeat(3, …)` at >=1440 and narrower repeats below it.
+        Expressed in the breakpoints this codebase already uses so the section
+        inherits Home's existing responsive rhythm: one column on the phone
+        widths Gate A tests (360/390/430), two from `sm`, three from `lg`.
+      */}
+      <ul className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {INTELLIGENCE_MODULES.map((module) => (
+          <ModuleCard key={module.id} module={module} language={language} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function ModuleCard({
+  module,
+  language,
+}: {
+  module: IntelligenceModuleConfig;
+  language: LanguageCode;
+}): JSX.Element {
+  const t = getDictionary(language).intelligenceModules;
+  const moduleText = t.modules[module.dictionaryKey as keyof typeof t.modules];
+  const style = STATE_STYLE[module.state];
+  const Icon = ICONS[module.icon];
+  const { BadgeIcon } = style;
+
+  /*
+    `isModuleNavigable` REMAINS THE SOLE GATE, unchanged. A comingSoon module
+    can never be a link whatever its destination field says, and a module with
+    no destination can never be a link whatever its badge says.
+  */
+  const navigable = isModuleNavigable(module);
+
+  const stateLabel =
+    module.state === 'active'
+      ? t.stateLabels.active
+      : module.state === 'preview'
+        ? t.stateLabels.preview
+        : t.stateLabels.comingSoon;
+
+  /* R5.1's route line: the real route in mono, or an explicit "No route". */
+  const routeLine = module.destination ?? t.routeNone;
+
+  /* R5.1's card note. Only a preview surface a reader can actually open earns it. */
+  const note = module.state === 'preview' && module.destination ? t.opensPreview : null;
+
+  const body = (
+    <>
+      <span aria-hidden="true" className={`mt-0.5 shrink-0 ${style.icon}`}>
+        <Icon size={24} strokeWidth={1.75} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className={`text-[15px] font-bold leading-5 ${style.title}`}>{moduleText.title}</span>
+        <span className="text-[13px] leading-[18px] text-ink-tertiary">{moduleText.description}</span>
+        <span className="break-words font-mono text-xs font-medium text-ink-tertiary">{routeLine}</span>
+        {note === null ? null : <span className="text-xs font-medium text-ink-tertiary">{note}</span>}
+        <span
+          className={`mt-0.5 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-px text-xs font-semibold ${style.badge}`}
+        >
+          <BadgeIcon size={14} strokeWidth={2} aria-hidden="true" />
+          {stateLabel}
+        </span>
+      </span>
+    </>
+  );
+
+  /* R5.1 card box: 84px minimum height, 14px padding, 16px radius, 12px gap. */
+  const box = `flex min-h-[84px] items-start gap-3 rounded-cd-16 border bg-void/60 p-3.5 ${style.border}`;
+
+  if (navigable && module.destination) {
+    return (
+      <li>
+        <a
+          href={module.destination}
+          className={`${box} h-full transition-colors hover:border-cyan-400/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/50 motion-reduce:transition-none`}
+        >
+          {body}
+        </a>
+      </li>
+    );
+  }
+
+  /*
+    NOT A DISABLED BUTTON. A module with no surface is a statement, not a
+    control a reader can press and be refused by, so it renders as plain
+    content with its state visible in the badge and the dashed border.
+  */
+  return (
+    <li>
+      <div className={`${box} h-full`}>{body}</div>
+    </li>
+  );
+}

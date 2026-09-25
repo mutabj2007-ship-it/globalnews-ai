@@ -38,6 +38,9 @@ const HOMEPAGE_COMPONENTS = [
   'components/home/HeroLiveFeedPanel.tsx',
   'components/home/GlobalDevelopments.tsx',
   'components/home/TrendingCard.tsx',
+  // GATE A · R5.1 — the LIVE module section. The engine files stay in the
+  // sweep because they remain on disk and must not regress either.
+  'components/home/IntelligenceModulesSection.tsx',
   'components/home/IntelligenceEngineSection.tsx',
   'components/home/IntelligenceEngineRing.tsx',
   'components/home/IntelligenceModuleCard.tsx',
