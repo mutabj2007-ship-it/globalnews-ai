@@ -1,0 +1,2108 @@
+[
+  {
+    "label": "H6",
+    "locale": "en",
+    "viewport": "desktop-1920x1080",
+    "status": 200,
+    "screenshot": "H6_desktop-1920x1080_en.png",
+    "requestCount": 40,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/map?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:3323/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:3323/support?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 1920,
+    "clientWidth": 1920,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "en",
+    "viewport": "desktop-1440x900",
+    "status": 200,
+    "screenshot": "H6_desktop-1440x900_en.png",
+    "requestCount": 40,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/map?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:3323/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "en",
+    "viewport": "tablet-1024x768",
+    "status": 200,
+    "screenshot": "H6_tablet-1024x768_en.png",
+    "requestCount": 38,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "en",
+    "viewport": "tablet-768x1024",
+    "status": 200,
+    "screenshot": "H6_tablet-768x1024_en.png",
+    "requestCount": 37,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "en",
+    "viewport": "phone-430x932",
+    "status": 200,
+    "screenshot": "H6_phone-430x932_en.png",
+    "requestCount": 37,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 430,
+    "clientWidth": 430,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "en",
+    "viewport": "phone-390x844",
+    "status": 200,
+    "screenshot": "H6_phone-390x844_en.png",
+    "requestCount": 37,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "en",
+    "viewport": "phone-360x800",
+    "status": 200,
+    "screenshot": "H6_phone-360x800_en.png",
+    "requestCount": 37,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Understand today’s world in seconds.",
+    "htmlLang": "en",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "pl",
+    "viewport": "desktop-1920x1080",
+    "status": 200,
+    "screenshot": "H6_desktop-1920x1080_pl.png",
+    "requestCount": 45,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 1920,
+    "clientWidth": 1920,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "pl",
+    "viewport": "desktop-1440x900",
+    "status": 200,
+    "screenshot": "H6_desktop-1440x900_pl.png",
+    "requestCount": 45,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/support?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "pl",
+    "viewport": "tablet-1024x768",
+    "status": 200,
+    "screenshot": "H6_tablet-1024x768_pl.png",
+    "requestCount": 43,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "pl",
+    "viewport": "tablet-768x1024",
+    "status": 200,
+    "screenshot": "H6_tablet-768x1024_pl.png",
+    "requestCount": 42,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "pl",
+    "viewport": "phone-430x932",
+    "status": 200,
+    "screenshot": "H6_phone-430x932_pl.png",
+    "requestCount": 42,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 430,
+    "clientWidth": 430,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "pl",
+    "viewport": "phone-390x844",
+    "status": 200,
+    "screenshot": "H6_phone-390x844_pl.png",
+    "requestCount": 42,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  },
+  {
+    "label": "H6",
+    "locale": "pl",
+    "viewport": "phone-360x800",
+    "status": 200,
+    "screenshot": "H6_phone-360x800_pl.png",
+    "requestCount": 42,
+    "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3323/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3323/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "title": "GlobalNews AI — Zrozum dzisiejszy świat w kilka sekund.",
+    "htmlLang": "pl",
+    "hasModulesAnchor": true,
+    "horizontalOverflow": false,
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "navHrefs": [
+      "/",
+      "/map",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/source-policy",
+      "/third-party-notices",
+      "/",
+      "/map",
+      "/ask",
+      "#intelligence-modules"
+    ],
+    "moduleTitles": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
+    },
+    "comingSoonBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "previewBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "activeBadge": {
+      "dom": true,
+      "visible": true
+    },
+    "routeLineShown": {
+      "dom": true,
+      "visible": true
+    },
+    "summaryLine": {
+      "dom": true,
+      "visible": true
+    }
+  }
+]

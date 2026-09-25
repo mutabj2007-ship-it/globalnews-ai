@@ -88,7 +88,16 @@ export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Elemen
             <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
           </a>
         </div>
-        <div aria-hidden="true" className="px-4 opacity-80">
+        {/*
+          H6 — THE PREVIEW IS CAPPED, and it has to be. `HeroWorldVisual`
+          scales to its container, and this card is only a 340px rail on
+          desktop but the full content width once the layout collapses to one
+          column. Measured at 768x1024, an uncapped preview rendered ~768px
+          tall and pushed the modules below two screens of decoration. The cap
+          keeps it a thumbnail at every width, which is what a gateway should
+          be.
+        */}
+        <div aria-hidden="true" className="mx-auto w-full max-w-[320px] px-4 opacity-80">
           <HeroWorldVisual />
         </div>
         <p className="p-4 pt-2 text-xs leading-relaxed text-ink-tertiary">{t.pulseNote}</p>
