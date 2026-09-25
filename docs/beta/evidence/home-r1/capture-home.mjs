@@ -74,9 +74,13 @@ for (const locale of LOCALES) {
       if (m.type() === 'error') consoleErrors.push(m.text());
     });
 
-    const response = await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle', timeout: 60000 });
-    /* Settle deferred client work before the frame is judged. */
-    await page.waitForTimeout(1200);
+    /* `domcontentloaded` plus a fixed settle, not `networkidle`: a live
+       deployment keeps connections open, so networkidle never fires there.
+       The settle is longer than the local one to let deferred client work
+       finish over the network. */
+    const response = await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForLoadState('load').catch(() => {});
+    await page.waitForTimeout(4000);
 
     const file = `${label}_${vp.name}_${locale}.png`;
     await page.screenshot({ path: join(outDir, file), fullPage: true });

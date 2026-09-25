@@ -5,7 +5,7 @@
     "viewport": "desktop-1920x1080",
     "status": 200,
     "screenshot": "ALPHA_desktop-1920x1080_en.png",
-    "requestCount": 45,
+    "requestCount": 44,
     "meteredRequests": [],
     "failedResponses": [
       {
@@ -14,20 +14,7 @@
         "type": "fetch"
       }
     ],
-    "failedRequests": [
-      {
-        "url": "https://frontend-alpha-4560.up.railway.app/search?_rsc=19zvn",
-        "failure": "net::ERR_ABORTED"
-      },
-      {
-        "url": "https://www.insideworldfootball.com/app/uploads/2026/09/Saint-Martin-win.jpg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      },
-      {
-        "url": "https://c.ndtvimg.com/2026-09/j7karqrc_donald-trump-xi-jinping-afp_625x300_25_September_26.jpeg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      }
-    ],
+    "failedRequests": [],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 401 ()"
     ],
@@ -164,7 +151,7 @@
     "viewport": "desktop-1440x900",
     "status": 200,
     "screenshot": "ALPHA_desktop-1440x900_en.png",
-    "requestCount": 45,
+    "requestCount": 44,
     "meteredRequests": [],
     "failedResponses": [
       {
@@ -173,16 +160,7 @@
         "type": "fetch"
       }
     ],
-    "failedRequests": [
-      {
-        "url": "https://www.insideworldfootball.com/app/uploads/2026/09/Saint-Martin-win.jpg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      },
-      {
-        "url": "https://c.ndtvimg.com/2026-09/j7karqrc_donald-trump-xi-jinping-afp_625x300_25_September_26.jpeg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      }
-    ],
+    "failedRequests": [],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 401 ()"
     ],
@@ -319,7 +297,7 @@
     "viewport": "tablet-1024x768",
     "status": 200,
     "screenshot": "ALPHA_tablet-1024x768_en.png",
-    "requestCount": 43,
+    "requestCount": 42,
     "meteredRequests": [],
     "failedResponses": [
       {
@@ -328,16 +306,7 @@
         "type": "fetch"
       }
     ],
-    "failedRequests": [
-      {
-        "url": "https://www.insideworldfootball.com/app/uploads/2026/09/Saint-Martin-win.jpg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      },
-      {
-        "url": "https://c.ndtvimg.com/2026-09/j7karqrc_donald-trump-xi-jinping-afp_625x300_25_September_26.jpeg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      }
-    ],
+    "failedRequests": [],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 401 ()"
     ],
@@ -474,7 +443,7 @@
     "viewport": "tablet-768x1024",
     "status": 200,
     "screenshot": "ALPHA_tablet-768x1024_en.png",
-    "requestCount": 45,
+    "requestCount": 42,
     "meteredRequests": [],
     "failedResponses": [
       {
@@ -483,16 +452,7 @@
         "type": "fetch"
       }
     ],
-    "failedRequests": [
-      {
-        "url": "https://www.insideworldfootball.com/app/uploads/2026/09/Saint-Martin-win.jpg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      },
-      {
-        "url": "https://c.ndtvimg.com/2026-09/j7karqrc_donald-trump-xi-jinping-afp_625x300_25_September_26.jpeg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      }
-    ],
+    "failedRequests": [],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 401 ()"
     ],
@@ -629,7 +589,7 @@
     "viewport": "phone-430x932",
     "status": 200,
     "screenshot": "ALPHA_phone-430x932_en.png",
-    "requestCount": 43,
+    "requestCount": 42,
     "meteredRequests": [],
     "failedResponses": [
       {
@@ -638,16 +598,7 @@
         "type": "fetch"
       }
     ],
-    "failedRequests": [
-      {
-        "url": "https://www.insideworldfootball.com/app/uploads/2026/09/Saint-Martin-win.jpg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      },
-      {
-        "url": "https://c.ndtvimg.com/2026-09/j7karqrc_donald-trump-xi-jinping-afp_625x300_25_September_26.jpeg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      }
-    ],
+    "failedRequests": [],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 401 ()"
     ],
@@ -784,7 +735,7 @@
     "viewport": "phone-390x844",
     "status": 200,
     "screenshot": "ALPHA_phone-390x844_en.png",
-    "requestCount": 43,
+    "requestCount": 42,
     "meteredRequests": [],
     "failedResponses": [
       {
@@ -797,14 +748,6 @@
       {
         "url": "https://frontend-alpha-4560.up.railway.app/search?_rsc=19zvn",
         "failure": "net::ERR_ABORTED"
-      },
-      {
-        "url": "https://www.insideworldfootball.com/app/uploads/2026/09/Saint-Martin-win.jpg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      },
-      {
-        "url": "https://c.ndtvimg.com/2026-09/j7karqrc_donald-trump-xi-jinping-afp_625x300_25_September_26.jpeg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
       }
     ],
     "consoleErrors": [
@@ -943,7 +886,7 @@
     "viewport": "phone-360x800",
     "status": 200,
     "screenshot": "ALPHA_phone-360x800_en.png",
-    "requestCount": 43,
+    "requestCount": 42,
     "meteredRequests": [],
     "failedResponses": [
       {
@@ -952,16 +895,7 @@
         "type": "fetch"
       }
     ],
-    "failedRequests": [
-      {
-        "url": "https://www.insideworldfootball.com/app/uploads/2026/09/Saint-Martin-win.jpg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      },
-      {
-        "url": "https://c.ndtvimg.com/2026-09/j7karqrc_donald-trump-xi-jinping-afp_625x300_25_September_26.jpeg",
-        "failure": "net::ERR_BLOCKED_BY_ORB"
-      }
-    ],
+    "failedRequests": [],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 401 ()"
     ],
@@ -1109,11 +1043,7 @@
     ],
     "failedRequests": [
       {
-        "url": "https://frontend-alpha-4560.up.railway.app/support?_rsc=19zvn",
-        "failure": "net::ERR_ABORTED"
-      },
-      {
-        "url": "https://frontend-alpha-4560.up.railway.app/search?_rsc=19zvn",
+        "url": "https://frontend-alpha-4560.up.railway.app/map?_rsc=19zvn",
         "failure": "net::ERR_ABORTED"
       }
     ],
@@ -1264,11 +1194,11 @@
     ],
     "failedRequests": [
       {
-        "url": "https://frontend-alpha-4560.up.railway.app/support?_rsc=19zvn",
+        "url": "https://frontend-alpha-4560.up.railway.app/search?_rsc=19zvn",
         "failure": "net::ERR_ABORTED"
       },
       {
-        "url": "https://frontend-alpha-4560.up.railway.app/search?_rsc=19zvn",
+        "url": "https://frontend-alpha-4560.up.railway.app/support?_rsc=19zvn",
         "failure": "net::ERR_ABORTED"
       }
     ],
