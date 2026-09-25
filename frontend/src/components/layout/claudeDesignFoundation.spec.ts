@@ -817,7 +817,10 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
     expect(code).toMatch(/<\/PageCanvas>/);
     const canvasBlock = code.slice(code.indexOf('<PageCanvas>'), code.indexOf('</PageCanvas>'));
     for (const section of [
-      '<Hero',
+      /* H2 · Issue #29 — BetaHero replaces Hero at this mount point
+         (H0 zone Z6-Z9). The ORDER contract this list protects is
+         unchanged; only the section's identity moved. */
+      '<BetaHero',
       '<GlobalDevelopments',
       // GATE A · R5.1 — IntelligenceModulesSection replaced
       // IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
@@ -876,7 +879,7 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
     expect(pageSource).toMatch(/LANGUAGE_COOKIE_NAME/);
     expect(pageSource).toMatch(/isActiveLanguageCode/);
     expect(pageSource).toMatch(/const updatedAt = new Date\(\)\.toISOString\(\);/);
-    expect(pageSource).toMatch(/<Hero latestArticles=\{feed\.latestUpdates\}/);
+    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.latestUpdates\}/);
     expect(pageSource).toMatch(/<IntelligenceModulesSection language=\{language\} \/>/);
   });
 });

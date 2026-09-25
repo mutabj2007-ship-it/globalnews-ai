@@ -2141,6 +2141,62 @@ export const en = {
       },
     },
   },
+  /*
+    ── BETA HOME · R4.1 APPROVED COPY ────────────────────────────────────────
+    Issue #29. Every string below is quoted verbatim from the verified R4.1
+    package's own catalogue, `i18n/i18n_en_pl.json`, under the key named beside
+    it. Nothing here is authored by the implementation.
+
+    WHY A SEPARATE BLOCK rather than edits to `hero` and `globalDevelopments`:
+    those belong to the M66/GN-CD Home composition that the approved Beta Home
+    replaces zone by zone. Keeping the two vocabularies apart means a retired
+    zone's copy stays inspectable beside the copy that replaced it, and neither
+    can be left half-migrated.
+
+    TIME IS NEVER BAKED IN. The R4.1 catalogue reads "· 08:40 ·" and
+    "20 min ago" because those are sample frames. They are templates here,
+    substituted from the real feed, because §6 forbids presenting a placeholder
+    as current intelligence.
+  */
+  betaHome: {
+    /* beta.heroA / beta.heroB — two lines, the second in the accent colour. */
+    heroA: 'Understand',
+    heroB: 'what’s changing.',
+    /* beta.heroSub */
+    heroSub: 'Global events. Deeper context. Evidence you can trust.',
+    /* beta.askPh — APPROVED (repo): this string came from this codebase. */
+    askPlaceholder: 'Ask anything...',
+    /* beta.askAria */
+    askAria: 'Ask a question',
+    /* beta.askBtn */
+    askButton: 'Ask',
+    /* beta.askHint — the metered-cost disclosure beneath the field. */
+    askHint: 'Ask runs an AI analysis. Browsing, sources and the map are free.',
+    /* beta.askToday / beta.askTodaySub — primary CTA. */
+    askToday: 'Ask AI about today',
+    askTodaySub: 'Source-backed answers',
+    /* beta.openMap / beta.openMapSub — secondary CTA. */
+    openMap: 'Open World Map',
+    openMapSub: 'Country coverage and sources',
+    /* beta.brief — the panel heading. */
+    briefTitle: 'Your world in 60 seconds',
+    /*
+      beta.briefMeta. The catalogue reads "Latest updates · 08:40 · no AI used"
+      because it is a sample frame; {time} is substituted from the real feed,
+      and the panel renders nothing where there is no time to state.
+    */
+    briefMeta: 'Latest updates · {time} · no AI used',
+    /* beta.imgMissing — the governed fallback when a story carries no image. */
+    imageUnavailable: 'Image unavailable',
+    /* beta.feedErr / beta.retry — truthful degraded state, never hidden. */
+    feedUnavailable: 'Couldn’t load the latest updates.',
+    /* beta.developing / beta.breaking — status chips, only where the feed says so. */
+    breaking: 'Breaking',
+    developing: 'Developing',
+    /* Screen-reader name for the sources count, e.g. "8 sources". */
+    sourcesLabel: 'sources',
+  },
+
   intelligenceModules: {
     eyebrow: 'Intelligence engine',
     heading: 'How GlobalNews AI understands the world',

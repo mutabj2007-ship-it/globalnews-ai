@@ -181,7 +181,7 @@ describe('R2 Today — identity, wiring and the client boundary', () => {
     expect(pageSource).toMatch(/today=\{feed\.today\}/);
     expect(pageSource).not.toMatch(/'use client'/);
     // The released role separation is untouched: Today takes its own role.
-    expect(pageSource).toMatch(/<Hero latestArticles=\{feed\.latestUpdates\}/);
+    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.latestUpdates\}/);
     expect(pageSource).not.toMatch(/today=\{feed\.(latestUpdates|featured|inFocus|discovery)\}/);
   });
 });

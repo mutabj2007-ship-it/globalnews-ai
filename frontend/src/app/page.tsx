@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { LiveStatusStrip } from '@/components/home/LiveStatusStrip';
-import { Hero } from '@/components/home/Hero';
+import { BetaHero } from '@/components/home/BetaHero';
 import { HeroFocusProvider } from '@/components/home/HeroFocusProvider';
 import { GlobalDevelopments } from '@/components/home/GlobalDevelopments';
 import { TodayWorkspace } from '@/components/today/TodayWorkspace';
@@ -199,12 +199,29 @@ export default async function HomePage(): Promise<JSX.Element> {
             dataMode={feed.dataMode}
             updatedAt={updatedAt}
           >
-            <Hero latestArticles={feed.latestUpdates}
-              language={language}
-              isLive={feed.isLive}
-              dataMode={feed.dataMode}
-              updatedAt={updatedAt}
-            />
+            {/*
+              H2 · Issue #29 — BetaHero replaces Hero at this mount point.
+
+              The approved R4.1 hero is a different composition and different
+              copy, and the superseded one carried a real quota defect: its Ask
+              submit routed to `/search?q=`, which keeps its explicit-query
+              auto-run under the N3 ruling, so pressing Ask on Home started a
+              metered analysis immediately. R4.1 CONTRACT_CONFLICTS C1 resolves
+              it in terms — every Ask entry goes to `/ask`, and only "Open
+              complete analysis" goes to `/search?q=`. BetaHero submits a plain
+              GET form to `/ask`, where the value is staged as a draft and
+              nothing runs until Send.
+
+              Hero.tsx is RETIRED, NOT DELETED — the convention this file
+              already applies to TodaySection, LatestNowRail,
+              HomepageSituationMap and the engine section. It stays on disk,
+              unimported by any route.
+
+              HeroFocusProvider still wraps GlobalDevelopments, which consumes
+              its context. H3 replaces that zone and retires the provider with
+              it.
+            */}
+            <BetaHero language={language} latestUpdates={feed.latestUpdates} />
             <GlobalDevelopments
               lead={feed.featured}
               secondary={feed.inFocus}

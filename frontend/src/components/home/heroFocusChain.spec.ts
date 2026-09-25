@@ -35,7 +35,7 @@ describe('M66.14B — one owner, final architecture from the first commit', () =
   });
 
   it('wraps BOTH Hero and GlobalDevelopments, so B-2 adds a consumer rather than replacing an architecture', () => {
-    expect(page).toMatch(/<HeroFocusProvider[\s\S]*?<Hero [\s\S]*?<GlobalDevelopments[\s\S]*?<\/HeroFocusProvider>/);
+    expect(page).toMatch(/<HeroFocusProvider[\s\S]*?<BetaHero [\s\S]*?<GlobalDevelopments[\s\S]*?<\/HeroFocusProvider>/);
   });
 
   it('preserves the Server Component boundary — the provider renders children it receives as a prop', () => {

@@ -1762,6 +1762,45 @@ export const pl: Dictionary = {
       },
     },
   },
+  /*
+    ── BETA HOME · R4.1, patrz en.ts ─────────────────────────────────────────
+    Issue #29. Polish quoted verbatim from the verified R4.1 package's own
+    `i18n/i18n_en_pl.json`, `pl` field of the key named beside each string.
+
+    STATUS: THE PACKAGE MARKS THIS PL "FOR REVIEW". Its own note reads "PL
+    strings are DRAFT FOR REVIEW except those marked approved (copied from
+    repo)", and of 139 Home keys only nine are APPROVED — those nine being the
+    ones taken FROM this codebase in the first place. `askPlaceholder` below is
+    one of them.
+
+    It ships anyway, and deliberately: the alternative is either no Polish for
+    the new Home copy, which breaks the EN/PL parity §2 requires, or Polish
+    authored here, which §6 forbids as an invented translation. Using the
+    design lane's own draft is the only option that neither invents nor
+    regresses. Recorded FOR REVIEW in the Product Owner report.
+  */
+  betaHome: {
+    heroA: 'Zrozum,',
+    heroB: 'co się zmienia.',
+    heroSub: 'Wydarzenia na świecie. Głębszy kontekst. Dowody, którym możesz zaufać.',
+    /* APPROVED (repo) — this one is not a draft. */
+    askPlaceholder: 'Zapytaj o cokolwiek...',
+    askAria: 'Zadaj pytanie',
+    askButton: 'Zapytaj',
+    askHint: 'Zapytanie uruchamia analizę AI. Przeglądanie, źródła i mapa są bezpłatne.',
+    askToday: 'Zapytaj AI o dzisiejsze wydarzenia',
+    askTodaySub: 'Odpowiedzi oparte na źródłach',
+    openMap: 'Otwórz mapę świata',
+    openMapSub: 'Doniesienia i źródła według krajów',
+    briefTitle: 'Twój świat w 60 sekund',
+    briefMeta: 'Najnowsze informacje · {time} · bez użycia AI',
+    imageUnavailable: 'Obraz niedostępny',
+    feedUnavailable: 'Nie udało się wczytać najnowszych informacji.',
+    breaking: 'Pilne',
+    developing: 'W toku',
+    sourcesLabel: 'źródeł',
+  },
+
   intelligenceModules: {
     eyebrow: 'Silnik analityczny',
     heading: 'Jak GlobalNews AI rozumie świat',

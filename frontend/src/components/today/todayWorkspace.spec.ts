@@ -96,7 +96,10 @@ describe('the section frame is bounded, and the homepage keeps its own scroll', 
 
   it('leaves the five accepted homepage sections in place', () => {
     for (const section of [
-      '<Hero ',
+      /* H2 · Issue #29 — BetaHero replaces Hero at this mount point
+         (H0 zone Z6-Z9). The ORDER contract this list protects is
+         unchanged; only the section's identity moved. */
+      '<BetaHero ',
       '<GlobalDevelopments',
       /* GATE A · R5.1 — IntelligenceModulesSection supersedes
          IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
