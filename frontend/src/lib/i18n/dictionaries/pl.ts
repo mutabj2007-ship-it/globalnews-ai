@@ -1835,6 +1835,12 @@ export const pl: Dictionary = {
     viewAll: 'Pokaż wszystko',
     storyRailAria: 'Bieżące artykuły. Użyj klawiszy strzałek, aby przewijać.',
     sideRailAria: 'Logowanie i sugerowane pytania',
+
+    /* C4. New strings, written for this repository — FOR REVIEW (see the C1 note). */
+    exploreTopicsTitle: 'Przeglądaj według tematu',
+    exploreTopicsNote:
+      'Powierzchnie zapoznawcze otwierają się z niepełnymi danymi. Temat, który nie ma jeszcze własnej powierzchni, nie jest odnośnikiem.',
+    viewAllTopics: 'Zobacz wszystkie tematy',
   },
 
   intelligenceModules: {

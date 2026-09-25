@@ -2294,6 +2294,19 @@ export const en = {
        it. That card is now the Global Situation Map in the main column, so the
        landmark needed a name that describes what it actually holds. */
     sideRailAria: 'Sign in and suggested questions',
+
+    /*
+      ── C4 · EXPLORE BY TOPIC ─────────────────────────────────────────────
+      The six entries are read from INTELLIGENCE_MODULES, so their names and
+      destinations are the registry's rather than a second list written here.
+      World is the one module the registry gives no destination, so it renders
+      as plain text instead of a dead link — the note says so plainly rather
+      than leaving a reader to discover it by clicking.
+    */
+    exploreTopicsTitle: 'Explore by topic',
+    exploreTopicsNote:
+      'Preview surfaces open with partial data. A topic with no surface yet is not a link.',
+    viewAllTopics: 'View all topics',
   },
 
   intelligenceModules: {

@@ -6,6 +6,7 @@ import { BetaHero } from '@/components/home/BetaHero';
 import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
 import { HomeSideRail } from '@/components/home/HomeSideRail';
 import { HomepageSituationMap } from '@/components/home/HomepageSituationMap';
+import { ExploreByTopic } from '@/components/home/ExploreByTopic';
 import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
 import { Footer } from '@/components/layout/Footer';
 import { PageCanvas } from '@/components/layout/PageCanvas';
@@ -329,6 +330,13 @@ export default async function HomePage(): Promise<JSX.Element> {
             The Intelligence modules section stays exactly as accepted at
             c3dd01a — H4 is preserved and regression-tested, not rebuilt.
           */}
+          {/*
+            C4 · EXPLORE BY TOPIC. Six entries read out of INTELLIGENCE_MODULES,
+            so their names and destinations are the registry's rather than a
+            second list. It sits immediately above the nine-card Engine because
+            "View all topics" is an anchor into it.
+          */}
+          <ExploreByTopic language={language} />
           <IntelligenceModulesSection language={language} />
         </PageCanvas>
       </main>
