@@ -232,7 +232,7 @@ export default async function HomePage(): Promise<JSX.Element> {
             The single getHomeFeed() call is unchanged; both sections read
             different roles of that one response.
           */}
-          <BetaHero language={language} latestUpdates={feed.latestUpdates} />
+          <BetaHero language={language} latestUpdates={feed.briefUpdates} />
           {/*
             H5 · Issue #29 — the approved two-column editorial band: the
             current-developments column beside the Home side rail, exactly as
@@ -264,7 +264,10 @@ export default async function HomePage(): Promise<JSX.Element> {
               />
               <HomepageSituationMap language={language} />
             </div>
-            <HomeSideRail language={language} />
+            <HomeSideRail
+              articles={[...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery]}
+              language={language}
+            />
           </div>
           {/*
             R2 — TODAY. Placed here deliberately: it is live editorial content,

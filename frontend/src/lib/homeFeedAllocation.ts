@@ -95,8 +95,10 @@ const allocationKey = (article: NewsArticle): string => {
   return url ? `url:${normalizeArticleUrl(url)}` : `id:${article.id}`;
 };
 
-const DEFAULT_IN_FOCUS_COUNT = 5;
-const DEFAULT_DISCOVERY_COUNT = 6;
+/* C7 — exported so a caller asking for a second policy view can reuse the
+   released widths instead of restating 5 and 6 at the call site. */
+export const DEFAULT_IN_FOCUS_COUNT = 5;
+export const DEFAULT_DISCOVERY_COUNT = 6;
 
 /**
  * Milestone #51 Phase B — pure curation/partition helper, extracted

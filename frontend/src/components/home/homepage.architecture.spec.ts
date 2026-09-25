@@ -136,7 +136,7 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
   it('Hero is the sole presentation of feed.latestUpdates (M60 Phase 2 deduplication — the former separate LatestNowRail import/render was removed from page.tsx; the source file itself is preserved, unimported, per the "do not destroy potentially reusable code" instruction)', () => {
     expect(pageSource).not.toMatch(/<LatestNowRail/);
     expect(pageSource).not.toMatch(/import \{ LatestNowRail \}/);
-    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.latestUpdates\}/);
+    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.briefUpdates\}/);
   });
 
   /*
@@ -159,7 +159,7 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
       Developments takes the three CURATED roles, which that same module
       guarantees are mutually distinct. One response, two jobs.
     */
-    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.latestUpdates\}/);
+    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.briefUpdates\}/);
     expect(pageSource).not.toMatch(/latestUpdates=\{feed\.(featured|inFocus|discovery)\}/);
     expect(pageSource).not.toMatch(/(lead|secondary|discovery)=\{feed\.latestUpdates\}/);
   });

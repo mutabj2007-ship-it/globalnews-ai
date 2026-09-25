@@ -1841,6 +1841,13 @@ export const pl: Dictionary = {
     exploreTopicsNote:
       'Powierzchnie zapoznawcze otwierają się z niepełnymi danymi. Temat, który nie ma jeszcze własnej powierzchni, nie jest odnośnikiem.',
     viewAllTopics: 'Zobacz wszystkie tematy',
+
+    /* C7. New strings, written for this repository — FOR REVIEW (see the C1 note). */
+    forYouTitle: 'Dla Ciebie',
+    forYouNote: 'Z krajów, które obserwujesz. Otwarcie artykułu nie uruchamia analizy.',
+    forYouEmpty: 'W dzisiejszych doniesieniach nie ma jeszcze nic z obserwowanych krajów.',
+    followingTitle: 'Obserwowane',
+    manageFollows: 'Zarządzaj',
   },
 
   intelligenceModules: {

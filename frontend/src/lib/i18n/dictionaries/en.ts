@@ -2307,6 +2307,24 @@ export const en = {
     exploreTopicsNote:
       'Preview surfaces open with partial data. A topic with no surface yet is not a link.',
     viewAllTopics: 'View all topics',
+
+    /*
+      ── C7 · THE SIGNED-IN SURFACES ───────────────────────────────────────
+      "For you" has NO backend of its own — there is no personalised-feed
+      endpoint — so it is derived from the one feed already fetched, filtered
+      by the countries this reader follows. That is why the empty state talks
+      about today's coverage rather than about a feed that failed: nothing
+      failed, the followed countries simply are not in today's stories.
+
+      Following and Manage are backed by the real GET/POST/DELETE
+      /follows/countries surface. Manage points at /map, which is where
+      countries are actually followed and unfollowed.
+    */
+    forYouTitle: 'For you',
+    forYouNote: 'From the countries you follow. Opening a story starts no analysis.',
+    forYouEmpty: 'Nothing from the countries you follow in today\u2019s coverage yet.',
+    followingTitle: 'Following',
+    manageFollows: 'Manage',
   },
 
   intelligenceModules: {

@@ -63,20 +63,27 @@ export function SixtySecondBrief({ items, language = 'en' }: SixtySecondBriefPro
   const rows = rest.slice(0, 2);
 
   /*
-    NOTHING TO SUMMARISE IS NOT A FAILURE, and saying so would be a false
-    claim about the provider.
+    ── C7 · THE ALLOCATION, NOT THE EMPTY STATE, WAS THE DEFECT ────────────
 
-    `latestUpdates` is the response MINUS the stories already placed in
-    featured/inFocus/discovery, so a narrow retrieval empties it while the
-    editorial section below is full of real reporting. Measured on Alpha: this
-    panel read "Couldn't load the latest updates." directly above a populated
-    feed. `homeFeedAllocation.ts` states the governing rule in terms —
-    "never infer provider failure from latestUpdates.length === 0" — and
-    HeroLiveFeedPanel enforced it for the surface this one replaces.
+    R1 shipped a bare `return null` here. It was the right emergency fix: the
+    panel had been feeding on `latestUpdates`, which under the governed
+    'exclusive' stream policy is only what REMAINS after the rail takes
+    1 + 5 + 6 = 12, so a narrow provider response emptied it while the page
+    below was full of reporting — and the panel then claimed a provider failure
+    that had not happened. `homeFeedAllocation.ts` states the rule in terms:
+    never infer provider failure from an empty stream.
 
-    So the panel renders nothing at all. It makes no claim, and the one place
-    that legitimately reports a failed feed is WhatsHappeningNow, which reads
-    the curated roles and the governed dataMode.
+    But a panel that disappears on every narrow day is not an architecture, and
+    R2 says so outright. The fix belongs upstream, and that is where it now is.
+    This component is fed `feed.briefUpdates`, whose rule is stated once on the
+    `HomeFeed` type: the response's chronological head, minus the lead story,
+    capped at three. The rail cannot starve it.
+
+    SO REACHING THIS LINE NOW MEANS SOMETHING DEFINITE — the response carried
+    one story or none, and there is genuinely nothing to summarise. The panel
+    still makes no claim about why, because the one surface that legitimately
+    reports a failed feed is WhatsHappeningNow, which reads the curated roles
+    and the governed `dataMode`.
   */
   if (lead === undefined) return null;
 

@@ -883,7 +883,7 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
     expect(pageSource).toMatch(/LANGUAGE_COOKIE_NAME/);
     expect(pageSource).toMatch(/isActiveLanguageCode/);
     expect(pageSource).toMatch(/const updatedAt = new Date\(\)\.toISOString\(\);/);
-    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.latestUpdates\}/);
+    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.briefUpdates\}/);
     expect(pageSource).toMatch(/<IntelligenceModulesSection language=\{language\} \/>/);
   });
 });

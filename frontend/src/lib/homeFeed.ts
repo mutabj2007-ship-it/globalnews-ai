@@ -2,6 +2,8 @@ import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/sha
 import { fetchTopHeadlines } from '@/lib/api/newsApi';
 import {
   allocateHomeFeed,
+  DEFAULT_IN_FOCUS_COUNT,
+  DEFAULT_DISCOVERY_COUNT,
   allocateToday,
   EMPTY_TODAY_ALLOCATION,
   type TodayAllocation,
@@ -24,6 +26,42 @@ export interface HomeFeed {
   discovery: NewsArticle[];
   latestUpdates: NewsArticle[];
   /**
+   * ── C7 · THE 60-SECOND BRIEF'S OWN ALLOCATION ──────────────────────────
+   *
+   * BETA HOME CLOSURE R2 replaces the brief's `return null` with a rule that
+   * cannot starve it while the response has stories.
+   *
+   * THE DEFECT THIS FIXES. The brief was fed `latestUpdates`, which under the
+   * governed `'exclusive'` stream policy is what REMAINS after the rail
+   * consumes 1 + 5 + 6 = 12. At the released retrieval width of 24 that leaves
+   * 12, which is a full panel — but a narrow provider response leaves nothing,
+   * and the brief then vanished from a page that was otherwise full of
+   * reporting. Rendering nothing was the correct emergency behaviour, because
+   * the alternative was claiming a provider failure that had not happened, but
+   * an always-absent-on-narrow-days panel is not an architecture.
+   *
+   * THE RULE, STATED ONCE: the brief is the response's chronological head,
+   * minus the lead story, capped at three.
+   *
+   * - CHRONOLOGICAL HEAD, so "your world in 60 seconds" means the newest
+   *   reporting rather than whatever the rail happened not to want. This uses
+   *   the allocator's `'chronological-inclusive'` policy, which exists as a
+   *   named opt-in for exactly this: a complete chronological record that MAY
+   *   carry a story a rail role also surfaced.
+   * - MINUS THE LEAD, because the lead is rendered a few hundred pixels below
+   *   as the large editorial card, and the same headline twice on one screen
+   *   reads as a bug. Overlap with inFocus and discovery is accepted: those are
+   *   a curated selection, and "also among the newest" is a true statement
+   *   about them.
+   * - CAPPED AT THREE, which is what the panel renders — one image-led lead and
+   *   two follow-up rows.
+   *
+   * It is therefore empty only when the response carries one story or none, and
+   * in that case the panel genuinely has nothing to summarise. No second
+   * request: this is another reading of the SAME response.
+   */
+  briefUpdates: NewsArticle[];
+  /**
    * R2 — the Today surface's own view of the SAME single response: the
    * articles this system first observed inside the current UTC day, counted
    * by country. Derived, never fetched — see allocateToday().
@@ -40,6 +78,7 @@ const EMPTY_FEED: HomeFeed = {
   inFocus: [],
   discovery: [],
   latestUpdates: [],
+  briefUpdates: [],
   today: EMPTY_TODAY_ALLOCATION,
   isLive: false,
   dataMode: null,
@@ -99,6 +138,26 @@ export async function getHomeFeed(language?: LanguageCode): Promise<HomeFeed> {
     const { featured, inFocus, discovery, latestUpdates } = allocateHomeFeed(response.articles);
 
     /*
+      C7 — the brief's allocation. See `briefUpdates` on HomeFeed for the rule
+      and why it exists.
+
+      A SECOND ALLOCATION CALL, NOT A SECOND REQUEST. `allocateHomeFeed` is
+      pure: it performs no I/O under any policy, which its own module states in
+      terms. Both calls read the one `response` already in hand, so the
+      single-request architecture is untouched and the provider is called
+      exactly once per invocation, as before.
+    */
+    const chronological = allocateHomeFeed(
+      response.articles,
+      DEFAULT_IN_FOCUS_COUNT,
+      DEFAULT_DISCOVERY_COUNT,
+      'chronological-inclusive',
+    );
+    const briefUpdates = chronological.latestUpdates
+      .filter((article) => article.id !== featured?.id)
+      .slice(0, 3);
+
+    /*
       R2 — ONE instant, captured here, for the Today window.
 
       It is deliberately taken next to the response rather than in page.tsx,
@@ -119,6 +178,7 @@ export async function getHomeFeed(language?: LanguageCode): Promise<HomeFeed> {
       inFocus,
       discovery,
       latestUpdates,
+      briefUpdates,
       today: allocateToday(response.articles, observedAt),
       isLive: true,
       dataMode: response.dataMode,

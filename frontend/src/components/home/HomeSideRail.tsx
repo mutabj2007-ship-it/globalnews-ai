@@ -1,7 +1,8 @@
 import type { JSX } from 'react';
 import { Sparkles, PenLine } from 'lucide-react';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { HomeAccountPanel } from '@/components/home/HomeAccountPanel';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -47,10 +48,16 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
  */
 
 interface HomeSideRailProps {
+  /**
+   * C7 — the stories the page already holds, forwarded to the account panel so
+   * "For you" can be derived without a second request. The rail itself does
+   * not render them.
+   */
+  articles: NewsArticle[];
   language?: LanguageCode;
 }
 
-export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Element {
+export function HomeSideRail({ articles, language = 'en' }: HomeSideRailProps): JSX.Element {
   const dict = getDictionary(language);
   const t = dict.betaHome;
   /* Existing governed product copy — not the review frames' sample prompts. */
@@ -59,19 +66,22 @@ export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Elemen
   return (
     <aside aria-label={t.sideRailAria} className="flex flex-col gap-4">
       {/*
-        THE SIGN-IN CARD. Rendered for everyone: it invites, it does not claim
-        anything about the reader's state, so it needs no account call and
-        cannot be wrong. Signing in is a real route.
+        ── C7 · THE ACCOUNT CARD IS NOW STATE-AWARE ──────────────────────────
+        H5 rendered a sign-in invitation to EVERY reader, on the grounds that an
+        invitation claims nothing about the reader's state and so cannot be
+        wrong. It can: R2 forbids showing "Sign in" to someone already signed
+        in, and that is exactly what it did, on every load, for an authenticated
+        reader.
+
+        `HomeAccountPanel` takes over the slot. Signed out it renders the same
+        card with the same copy; signed in it renders For you, Following and
+        Manage. It is the rail's only client boundary, and it exists because
+        session state lives in an httpOnly cookie the server cannot read.
+
+        This file stays a Server Component: the panel is a child, and the Ask
+        suggestions below it are still server-rendered links.
       */}
-      <section className="rounded-2xl border border-border-strong bg-void/60 p-4">
-        <p className="text-sm leading-relaxed text-ink-primary">{t.firstVisit}</p>
-        <a
-          href="/auth/google"
-          className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 motion-reduce:transition-none"
-        >
-          {t.signInToFollow}
-        </a>
-      </section>
+      <HomeAccountPanel articles={articles} language={language} />
 
       {/*
         ── C3 · WORLD PULSE IS SUPERSEDED BY THE REAL MAP, NOT DELETED ───────
