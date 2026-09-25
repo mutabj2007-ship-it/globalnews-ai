@@ -40,7 +40,24 @@ export const en = {
    * to the literals they replace in app/layout.tsx, so English output is
    * unchanged; the keys exist so Polish has a surface at all.
    */
-  homeMetaTitle: 'GlobalNews AI — Understand today\u2019s world in seconds.',
+  /*
+    ── C9 · THE TITLE NOW MATCHES THE PAGE ────────────────────────────────
+    It read "Understand today's world in seconds." — a headline the Home has
+    not carried since the approved hero landed, which reads "Understand /
+    what's changing." R1 recorded this as a known defect and did not fix it
+    unilaterally, because "/" is one of only five indexable routes and its
+    title is an SEO decision rather than a composition one. R2 rules on it.
+
+    The title, og:title and twitter:title all derive from this single key in
+    `buildPageMetadata`, so one change covers all three. The robots directive
+    comes from the route registry and is untouched — indexing policy is NOT
+    part of this change.
+
+    The description still describes the product rather than the hero, and is
+    left as it is: it was never the string that advertised the superseded
+    headline.
+  */
+  homeMetaTitle: 'GlobalNews AI — Understand what\u2019s changing.',
   homeMetaDescription:
     'GlobalNews AI turns the day\u2019s news into clear, sourced, multi-perspective answers you can actually understand.',
   searchWorkspaceHeading: 'Ask GlobalNews AI',

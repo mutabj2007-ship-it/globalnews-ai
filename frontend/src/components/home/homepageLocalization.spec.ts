@@ -163,10 +163,32 @@ describe('M66.13 — the strings this milestone repaired stay repaired', () => {
     expect(layout).toMatch(/description: t\.homeMetaDescription/);
   });
 
-  it('the metadata strings exist in both languages and English is unchanged', () => {
+  it('the metadata strings exist in both languages, and the title matches the rendered hero', () => {
+    /*
+      C9 RE-POINT (BETA HOME CLOSURE R2), per BETA-DESIGN-AUTHORITY-R5.1 §3.
+
+      M66.13's subject was that BOTH languages have a metadata surface and that
+      English did not change while Polish was being added. That subject is
+      intact; only the English string it pinned has moved.
+
+      It pinned "Understand today's world in seconds." — a headline Home has
+      not carried since the approved hero landed. R1 recorded the mismatch as a
+      known defect and declined to fix it unilaterally, because "/" is one of
+      only five indexable routes and its title is an SEO decision. R2 ruled on
+      it, so the pin follows the ruling.
+
+      The assertion is strengthened rather than merely moved: the title must
+      now agree with the hero the page actually renders, so the two cannot
+      drift apart again silently.
+    */
     const en = getDictionary('en');
     const pl = getDictionary('pl');
-    expect(en.homeMetaTitle).toBe('GlobalNews AI — Understand today’s world in seconds.');
+    expect(en.homeMetaTitle).toBe('GlobalNews AI — Understand what’s changing.');
+    expect(en.homeMetaTitle).toContain(`${en.betaHome.heroA} ${en.betaHome.heroB}`);
+    expect(pl.homeMetaTitle).toContain(`${pl.betaHome.heroA} ${pl.betaHome.heroB}`);
+    /* The superseded headline must not survive anywhere in either title. */
+    expect(en.homeMetaTitle).not.toContain('in seconds');
+    expect(pl.homeMetaTitle).not.toContain('w kilka sekund');
     expect(en.homeMetaDescription).toBe(
       'GlobalNews AI turns the day’s news into clear, sourced, multi-perspective answers you can actually understand.',
     );

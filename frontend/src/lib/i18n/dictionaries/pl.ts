@@ -34,7 +34,8 @@ export const pl: Dictionary = {
   /**
    * M66.13 — ta sama rola co w en.ts.
    */
-  homeMetaTitle: 'GlobalNews AI \u2014 Zrozum dzisiejszy \u015bwiat w kilka sekund.',
+  /* C9 — matches the rendered Polish hero, "Zrozum, co się zmienia." */
+  homeMetaTitle: 'GlobalNews AI \u2014 Zrozum, co si\u0119 zmienia.',
   homeMetaDescription:
     'GlobalNews AI zamienia codzienne wiadomo\u015bci w jasne, oparte na \u017ar\u00f3d\u0142ach i wielu perspektywach odpowiedzi, kt\u00f3re naprawd\u0119 rozumiesz.',
   searchWorkspaceHeading: 'Zapytaj GlobalNews AI',
