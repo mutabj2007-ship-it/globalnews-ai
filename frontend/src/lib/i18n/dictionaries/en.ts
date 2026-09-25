@@ -2250,6 +2250,22 @@ export const en = {
     premiumFree: 'Browsing, sources and the world map stay free.',
     premiumMetered: 'Deeper AI analysis runs on metered compute.',
     premiumNote: 'Plans are not open yet. Nothing on this page charges you.',
+
+    /*
+      ── C2 · THE CATEGORY FILTER AND THE STORY RAIL ───────────────────────
+      The chips are built from the governed `map.categories` vocabulary and
+      only for the categories the feed actually returned, so no chip can be
+      offered that leads to an empty result and no taxonomy is invented.
+
+      "View all" CLEARS THE FILTER; it is not a link. There is no
+      all-stories route in this product — /search is the analysis workspace
+      and runs analyzeNews, /story/:id is N6 and still OPEN — so pointing it
+      at a route would have meant inventing a destination. Flagged for the
+      Product Owner in case a route was intended.
+    */
+    categoryFilterAria: 'Filter stories by category',
+    viewAll: 'View all',
+    storyRailAria: 'Current stories. Use the arrow keys to scroll.',
   },
 
   intelligenceModules: {

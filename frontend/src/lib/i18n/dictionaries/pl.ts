@@ -1823,6 +1823,11 @@ export const pl: Dictionary = {
     premiumFree: 'Przeglądanie, źródła i mapa świata pozostają bezpłatne.',
     premiumMetered: 'Pogłębiona analiza AI korzysta z płatnych zasobów obliczeniowych.',
     premiumNote: 'Plany nie są jeszcze dostępne. Nic na tej stronie nie jest płatne.',
+
+    /* C2. New strings, written for this repository — FOR REVIEW (see C1 note). */
+    categoryFilterAria: 'Filtruj artykuły według kategorii',
+    viewAll: 'Pokaż wszystko',
+    storyRailAria: 'Bieżące artykuły. Użyj klawiszy strzałek, aby przewijać.',
   },
 
   intelligenceModules: {

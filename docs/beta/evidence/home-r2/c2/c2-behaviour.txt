@@ -1,0 +1,7 @@
+stories visible with All: 12
+stories visible with Politics: 2 -> politics
+requests caused by pressing a chip: 0
+stories visible after View all: 12
+rail scroll: {"start":4,"end":522,"scrollWidth":2845,"clientWidth":1032} overflows: true
+keyboard focus lands on: gn-cat-politics
+metered AI requests across the whole interaction: 0
