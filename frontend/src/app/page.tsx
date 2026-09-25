@@ -5,7 +5,6 @@ import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { BetaHero } from '@/components/home/BetaHero';
 import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
 import { HomeSideRail } from '@/components/home/HomeSideRail';
-import { HomepageSituationMap } from '@/components/home/HomepageSituationMap';
 import { ExploreByTopic } from '@/components/home/ExploreByTopic';
 import { EngineEnergyField } from '@/components/home/EngineEnergyField';
 import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
@@ -253,7 +252,20 @@ export default async function HomePage(): Promise<JSX.Element> {
             It supersedes the rail's World Pulse thumbnail, which stood in for
             exactly this surface. See the note in HomeSideRail.
           */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] lg:items-start">
+          {/*
+            Z4/Z5/Z6 — THE PROTOTYPE'S TWO-COLUMN BAND.
+
+            The Product Owner's desktop prototype puts the story rail on the
+            left and the Global Situation Map above the Ask card on the right.
+            `HomepageSituationMap` therefore moves INTO `HomeSideRail` and is
+            no longer stacked beneath the stories in the left column, which is
+            what made this band read as one tall column with a thin rail beside
+            it. The rail widens to the prototype's proportion to carry it.
+
+            The map component is unchanged and still performs zero
+            provider-capable reads on mount or selection.
+          */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,368px)] lg:items-start">
             <div className="flex flex-col gap-10">
               <WhatsHappeningNow
                 lead={feed.featured}
@@ -262,7 +274,6 @@ export default async function HomePage(): Promise<JSX.Element> {
                 dataMode={feed.dataMode}
                 language={language}
               />
-              <HomepageSituationMap language={language} />
             </div>
             <HomeSideRail
               articles={[...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery]}

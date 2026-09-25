@@ -126,10 +126,31 @@ export function WhatsHappeningNow({
   const categoryLabels = getDictionary(language).map.categories;
 
   /*
+    ══════════════════════════════════════════════════════════════════════
+    THE LEAD STORY JOINS THE RAIL AS AN EQUAL CARD.
+    ══════════════════════════════════════════════════════════════════════
+
+    HERO CORRECTION RULING, zone Z4: *"Do not let the current oversized
+    lead-story presentation dominate the page."* The Product Owner's desktop
+    prototype draws FOUR EQUAL CARDS and no privileged one.
+
+    This is a PRESENTATION change and nothing more. The allocator is
+    untouched: `featured`, `inFocus` and `discovery` arrive exactly as
+    `allocateHomeFeed` produced them under its unchanged `exclusive` stream
+    policy, and the featured story keeps its position at the head of the
+    sequence. What changes is that it is no longer drawn at twice the size of
+    everything after it. No story is dropped, no order is rewritten, and no
+    second request is made.
+
+    `LeadStory` is removed from this file rather than left unreferenced,
+    because an unused component here is a lint failure rather than an
+    inspectable retirement — the released version stays readable in git at
+    the commit before this one.
+
     The rail carries up to twelve. H3 took four, which is a grid, not a
     carousel — there was nothing to scroll to.
   */
-  const rail = [...secondary, ...discovery].slice(0, 12);
+  const rail = [...(lead === null ? [] : [lead]), ...secondary, ...discovery].slice(0, 12);
 
   /*
     CHIPS ONLY FOR CATEGORIES THE FEED ACTUALLY RETURNED, in the governed
@@ -141,7 +162,6 @@ export function WhatsHappeningNow({
     `all` is excluded from the scan and always leads.
   */
   const present = new Set<string>();
-  if (lead !== null) present.add(lead.category);
   for (const article of rail) present.add(article.category);
 
   const categories = Object.keys(categoryLabels).filter(
@@ -154,7 +174,7 @@ export function WhatsHappeningNow({
     The stamp describes the FRESHEST thing actually returned, not render time.
     Using `new Date()` here would state a freshness the feed never claimed.
   */
-  const newest = lead ?? rail[0];
+  const newest = rail[0];
   const stampTime =
     newest === undefined
       ? ''
@@ -202,7 +222,7 @@ export function WhatsHappeningNow({
         </span>
       </div>
 
-      {lead === null && rail.length === 0 ? (
+      {rail.length === 0 ? (
         <>
           {noAiNote}
           {/*
@@ -277,8 +297,6 @@ export function WhatsHappeningNow({
           {noAiNote}
 
           <div className="gn-deck flex flex-col gap-4">
-            {lead === null ? null : <LeadStory article={lead} language={language} />}
-
             {rail.length === 0 ? null : (
               /*
                 The rail. Focusable so the arrow keys scroll it, labelled so a
@@ -309,51 +327,6 @@ export function WhatsHappeningNow({
         </>
       )}
     </section>
-  );
-}
-
-/**
- * The lead story. It carries the filter attributes too, so choosing a category
- * the lead is not in hides it rather than leaving a headline that contradicts
- * the chip the reader just pressed.
- */
-function LeadStory({ article, language }: { article: NewsArticle; language: LanguageCode }): JSX.Element {
-  const t = getDictionary(language).betaHome;
-  const categoryLabels = getDictionary(language).map.categories;
-
-  return (
-    <a
-      href={article.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      data-gn-story=""
-      data-gn-cat={article.category}
-      className="group grid grid-cols-1 overflow-hidden rounded-2xl border border-border-strong bg-void/60 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/40 hover:shadow-[0_18px_40px_-24px_rgba(34,211,238,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:grid-cols-2"
-    >
-      {/* Both wrappers carry the height so `sm:h-full` still reaches the image
-          through the zoom layer and the lead keeps its full-bleed column. */}
-      <span className="relative block overflow-hidden sm:h-full">
-        <span className="block transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 sm:h-full">
-          <StoryImage article={article} language={language} className="aspect-[16/10] sm:h-full" />
-        </span>
-      </span>
-      <div className="flex flex-col gap-2 p-5">
-        <span className="font-mono text-[11px] uppercase tracking-wide text-cyan-300/80">
-          {categoryLabels[article.category] ?? article.category}
-        </span>
-        <h3 className="font-display text-xl font-semibold leading-snug text-ink-primary sm:text-2xl">
-          {article.title}
-        </h3>
-        {/* The publisher's own summary. Never an AI-written one — none is generated here. */}
-        <p className="line-clamp-3 text-sm leading-relaxed text-ink-tertiary">{article.summary}</p>
-        <p className="mt-auto pt-2 text-xs text-ink-tertiary">
-          {article.sourceName}
-          {' · '}
-          {pluralWithForms(article.sourcesCount, language, t.sourceForms)}
-          <Elapsed article={article} language={language} />
-        </p>
-      </div>
-    </a>
   );
 }
 

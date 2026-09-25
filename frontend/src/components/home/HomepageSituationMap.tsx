@@ -66,10 +66,34 @@ const WorldMap = dynamic(() => import('@/components/map/WorldMap').then((m) => m
 });
 
 interface HomepageSituationMapProps {
+  /**
+   * ── Z5 · THE RAIL VARIANT ────────────────────────────────────────────
+   *
+   * The Product Owner's desktop prototype puts this card in the right column
+   * beside the story rail, at roughly 368px. The released presentation is a
+   * full-width section: a heading block, then a `2.7fr / 1fr` grid whose
+   * second track is a text panel. At rail width that second track collapses to
+   * about 90px and breaks one word per line, the legend spills its row, and
+   * the card overflows its column — measured, not predicted.
+   *
+   * So the card gets a second presentation rather than a mangled first one.
+   * `variant="rail"` drops the section heading and the side panel, keeps the
+   * map itself and the four-entry legend the ruling requires kept visible, and
+   * moves "Open full map" onto the card header where the prototype draws its
+   * external-link glyph.
+   *
+   * NOTHING ABOUT THE MAP'S BEHAVIOUR CHANGES IN EITHER VARIANT. Same
+   * `WorldMap`, same `next/dynamic({ ssr: false })`, same selection handling,
+   * and the same zero provider-capable reads on mount and on selection.
+   */
   language?: LanguageCode;
+  variant?: 'section' | 'rail';
 }
 
-export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapProps): JSX.Element {
+export function HomepageSituationMap({
+  language = 'en',
+  variant = 'section',
+}: HomepageSituationMapProps): JSX.Element {
   const t = getDictionary(language).situationMap;
   const [countryStoryCounts] = useState<Record<string, number>>({});
   const [, setHovered] = useState<HoveredCountry | null>(null);
@@ -87,6 +111,9 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
 
   const displayName = selectedName ? getCountryDisplayName(selectedName.iso2, language, selectedName.name) : null;
 
+  /* Z5 — see the variant note on the props interface. */
+  const isRail = variant === 'rail';
+
   return (
     /* C3 — it now sits INSIDE PageCanvas, which already supplies the page
        column and its side padding. The former full-width wrapper (its own
@@ -94,19 +121,40 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
        the card and drawn a rule across the middle of the page. */
     <section className="scroll-mt-24" aria-labelledby="situation-map-heading">
       <div>
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div className={`${isRail ? 'mb-3' : 'mb-5'} flex flex-wrap items-end justify-between gap-3`}>
           <div>
-            <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">{t.eyebrow}</span>
-            <h2 id="situation-map-heading" className="mt-1 font-display text-2xl font-medium text-ink-primary sm:text-3xl">
-              {t.heading}
-            </h2>
-            <p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-secondary">{t.description}</p>
+            {isRail ? (
+              /* The rail header is the prototype's: the card's name and its
+                 open-in-new glyph on one line. The section eyebrow, display
+                 heading and description belong to the full-width presentation
+                 and would outweigh the map at 368px. */
+              <div className="flex w-full items-center justify-between gap-2">
+                <h2 id="situation-map-heading" className="font-display text-base font-semibold text-ink-primary">
+                  {t.heading}
+                </h2>
+                <a
+                  href="/map"
+                  aria-label={t.openFullMap}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-strong text-ink-secondary transition-colors hover:border-cyan-400/50 hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                >
+                  <ArrowUpRight size={15} strokeWidth={2} aria-hidden="true" />
+                </a>
+              </div>
+            ) : (
+              <>
+                <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">{t.eyebrow}</span>
+                <h2 id="situation-map-heading" className="mt-1 font-display text-2xl font-medium text-ink-primary sm:text-3xl">
+                  {t.heading}
+                </h2>
+                <p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-secondary">{t.description}</p>
+              </>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[2.7fr_1fr]">
+        <div className={`grid grid-cols-1 gap-3 ${isRail ? '' : 'lg:grid-cols-[2.7fr_1fr]'}`}>
           <div
-            className={`relative h-[360px] overflow-hidden rounded-2xl border bg-void transition-all duration-500 sm:h-[440px] ${
+            className={`relative overflow-hidden rounded-2xl border bg-void transition-all duration-500 ${isRail ? 'h-[200px]' : 'h-[360px] sm:h-[440px]'} ${
               selectedIso3
                 ? 'border-cyan-400/60 shadow-[0_0_70px_-8px_rgba(34,211,238,0.45)]'
                 : 'border-cyan-500/30 shadow-[0_0_50px_-10px_rgba(34,211,238,0.3)]'
@@ -145,6 +193,7 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
 
           </div>
 
+          {isRail ? null : (
           <div className="relative flex flex-col overflow-hidden rounded-2xl border border-cyan-500/25 bg-surface/90 p-5 backdrop-blur-sm">
             <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-cyan-400/60" />
             {!selectedIso3 ? (
@@ -190,9 +239,10 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
               <ArrowUpRight size={13} strokeWidth={2.25} aria-hidden="true" />
             </a>
           </div>
+          )}
         </div>
 
-        <MapLegend language={language} />
+        <MapLegend language={language} compact={isRail} />
       </div>
     </section>
   );
@@ -203,7 +253,13 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
  * registry cannot route is rendered as plain text rather than a dead link —
  * the same rule the nine-card Engine applies through `isModuleNavigable`.
  */
-function MapLegend({ language }: { language: LanguageCode }): JSX.Element {
+function MapLegend({
+  language,
+  compact = false,
+}: {
+  language: LanguageCode;
+  compact?: boolean;
+}): JSX.Element {
   const t = getDictionary(language).situationMap;
   const moduleText = getDictionary(language).intelligenceModules.modules;
 
@@ -212,11 +268,11 @@ function MapLegend({ language }: { language: LanguageCode }): JSX.Element {
   ).filter((m): m is NonNullable<typeof m> => m !== undefined);
 
   return (
-    <div className="mt-4 rounded-2xl border border-border-strong bg-void/60 p-4">
+    <div className={`rounded-2xl border border-border-strong bg-void/60 ${compact ? 'mt-3 p-3' : 'mt-4 p-4'}`}>
       <h3 className="font-mono text-[11px] uppercase tracking-widest text-cyan-400">
         {t.legendTitle}
       </h3>
-      <ul className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+      <ul className={`mt-3 flex flex-wrap items-center gap-y-2 ${compact ? 'gap-x-3' : 'gap-x-5'}`}>
         {entries.map((module) => {
           const label =
             moduleText[module.dictionaryKey as keyof typeof moduleText]?.title ?? module.id;
@@ -247,7 +303,7 @@ function MapLegend({ language }: { language: LanguageCode }): JSX.Element {
           );
         })}
       </ul>
-      <p className="mt-3 text-xs leading-relaxed text-ink-tertiary">{t.legendNote}</p>
+      {compact ? null : <p className="mt-3 text-xs leading-relaxed text-ink-tertiary">{t.legendNote}</p>}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Sparkles, PenLine } from 'lucide-react';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { HomeAccountPanel } from '@/components/home/HomeAccountPanel';
+import { HomepageSituationMap } from '@/components/home/HomepageSituationMap';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -66,39 +67,23 @@ export function HomeSideRail({ articles, language = 'en' }: HomeSideRailProps): 
   return (
     <aside aria-label={t.sideRailAria} className="flex flex-col gap-4">
       {/*
-        ── C7 · THE ACCOUNT CARD IS NOW STATE-AWARE ──────────────────────────
-        H5 rendered a sign-in invitation to EVERY reader, on the grounds that an
-        invitation claims nothing about the reader's state and so cannot be
-        wrong. It can: R2 forbids showing "Sign in" to someone already signed
-        in, and that is exactly what it did, on every load, for an authenticated
-        reader.
+        ── Z5 · THE GLOBAL SITUATION MAP LEADS THE RAIL ─────────────────────
+        The Product Owner's desktop prototype puts the map card at the TOP of
+        the right column, beside the story rail, with the Ask card beneath it.
+        The previous composition had the map in the LEFT column below the
+        stories, which is why the band read as one tall editorial column with a
+        thin rail beside it rather than as the prototype's two balanced columns.
 
-        `HomeAccountPanel` takes over the slot. Signed out it renders the same
-        card with the same copy; signed in it renders For you, Following and
-        Manage. It is the rail's only client boundary, and it exists because
-        session state lives in an httpOnly cookie the server cannot read.
+        The component itself is unchanged. It already reuses /map's own
+        `WorldMap` through `next/dynamic({ ssr: false })`, so MapLibre stays out
+        of the initial bundle, and it already performs ZERO provider-capable
+        country reads on mount or on selection — exploring geography from Home
+        still cannot spend quota. Only where it is mounted has changed.
 
-        This file stays a Server Component: the panel is a child, and the Ask
-        suggestions below it are still server-rendered links.
+        `pulseTitle`, `pulseNote` and the retired thumbnail treatment stay in
+        the dictionary and in git.
       */}
-      <HomeAccountPanel articles={articles} language={language} />
-
-      {/*
-        ── C3 · WORLD PULSE IS SUPERSEDED BY THE REAL MAP, NOT DELETED ───────
-        This card was a decorative thumbnail of `HeroWorldVisual` plus an
-        "Open World Map" link — a gateway standing in for a map the Home did
-        not have. C3 restores `HomepageSituationMap`, which is the real thing:
-        actual MapLibre geometry, a real country selection, its own "Open full
-        map" action, and the four-module legend. Keeping both would have put
-        two world maps on one page, the smaller of which explains nothing the
-        larger does not.
-
-        So the zone moves rather than disappears. `pulseTitle`, `pulseNote` and
-        the capped-thumbnail treatment stay in the dictionary and in git, and
-        the rail keeps the two cards that are genuinely rail-shaped — sign-in
-        and the Ask suggestions. That is also the composition the contract's
-        narrative order describes: "Global Situation Map / Ask rail".
-      */}
+      <HomepageSituationMap language={language} variant="rail" />
 
       {/* ASK SUGGESTIONS — prefill links, zero spend. */}
       <section aria-labelledby="beta-suggested-heading" className="rounded-2xl border border-border-strong bg-void/60 p-4">
@@ -121,6 +106,37 @@ export function HomeSideRail({ articles, language = 'en' }: HomeSideRailProps): 
         </ul>
         <p className="mt-3 text-xs leading-relaxed text-ink-tertiary">{t.suggestedNote}</p>
       </section>
+
+      {/*
+        ── C7 · THE ACCOUNT CARD, NOW BELOW THE PROTOTYPE'S TWO RAIL CARDS ──
+        It keeps its state-awareness — signed out it invites, signed in it
+        renders For you, Following and Manage, and it never shows "Sign in" to
+        someone already signed in. What changed is only its position: the
+        Product Owner's prototype rail is map-then-Ask, so the account card can
+        no longer occupy the slot the map card needs. It follows them instead of
+        displacing them, and nothing about its behaviour moved.
+
+        It remains the rail's only client boundary; this file stays a Server
+        Component.
+      */}
+      {/*
+        (original C7 note, retained)
+        H5 rendered a sign-in invitation to EVERY reader, on the grounds that an
+        invitation claims nothing about the reader's state and so cannot be
+        wrong. It can: R2 forbids showing "Sign in" to someone already signed
+        in, and that is exactly what it did, on every load, for an authenticated
+        reader.
+
+        `HomeAccountPanel` takes over the slot. Signed out it renders the same
+        card with the same copy; signed in it renders For you, Following and
+        Manage. It is the rail's only client boundary, and it exists because
+        session state lives in an httpOnly cookie the server cannot read.
+
+        This file stays a Server Component: the panel is a child, and the Ask
+        suggestions below it are still server-rendered links.
+      */}
+      <HomeAccountPanel articles={articles} language={language} />
+
     </aside>
   );
 }
