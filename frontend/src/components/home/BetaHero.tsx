@@ -113,7 +113,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
   return (
     <section
       aria-labelledby="beta-hero-heading"
-      className="relative isolate overflow-hidden pb-10 pt-6 sm:pb-14 lg:pb-20 lg:pt-12"
+      className="relative isolate overflow-hidden pb-8 pt-6 sm:pb-10 lg:pb-12 lg:pt-10"
     >
       {/*
         THE LAYERED DARK-BLUE INTELLIGENCE FIELD.
@@ -144,28 +144,41 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
       </div>
 
       {/*
-        THE GLOBE — Z2.
+        THE GLOBE — Z2, placed under the HERO CORRECTION RULING.
 
-        Large, pushed partly off the right edge so it reads as a world rather
-        than an icon, and sitting behind the right column exactly as the
-        Product Owner's prototype draws it. `HeroGlobe` needs no mask: it is a
-        sphere on transparency, not a bordered HUD panel, so it dissolves into
-        the field on its own. It is `aria-hidden` and carries no marks — see
-        the long note in HeroGlobe.tsx for why there are no points on it.
+        The first pass put it at 600–660px hard against the right edge, and it
+        was refused as *"too large, too far right/cropped"* and as reading like
+        a background crop rather than a focal point. The ruling sets the target
+        precisely: *"behind/right of the headline; between the left Hero content
+        and the premium card; with enough of the sphere visible to read
+        immediately as a globe; without swallowing the whole right side."*
 
-        `HeroWorldVisual` is RETIRED FROM THE HERO, NOT DELETED. Its own spec
-        reads that file rather than this one and keeps passing.
+        So it moves INWARD and DOWN and gets smaller. At `lg` it is 460px with
+        its right edge inside the content column rather than beyond it, and its
+        centre sits below the premium card's baseline — which is what keeps the
+        card off the globe's brightest quadrant, as §3 of the ruling requires.
+        Roughly seven eighths of the disc is inside the frame at every width, so
+        it reads as a sphere instantly rather than as an arc of one.
+
+        `HeroGlobe` needs no mask: it is a sphere on transparency, not a
+        bordered HUD panel, so it dissolves into the field on its own. It is
+        `aria-hidden` and carries no marks — see the long note in HeroGlobe.tsx
+        for why there are no points on it and why the city-light texture cannot
+        be read as one.
+
+        `HeroWorldVisual` remains RETIRED FROM THE HERO, NOT DELETED. Its own
+        spec reads that file rather than this one and keeps passing.
       */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute right-[-110px] top-[-30px] -z-10 w-[280px] opacity-45 sm:right-[-130px] sm:w-[360px] sm:opacity-55 lg:right-[-90px] lg:top-[-56px] lg:w-[600px] lg:opacity-95 xl:right-[-70px] xl:w-[660px]"
+        className="pointer-events-none absolute right-[-64px] top-[8px] -z-10 w-[260px] opacity-55 [mask-image:linear-gradient(to_bottom,#000_78%,transparent_98%)] sm:right-[-40px] sm:w-[320px] sm:opacity-70 lg:right-[3%] lg:top-[52px] lg:w-[430px] lg:opacity-100 xl:right-[6%] xl:top-[48px] xl:w-[470px]"
       >
         <div className="aspect-square w-full">
           <HeroGlobe />
         </div>
       </div>
 
-      <div className="relative grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start lg:gap-12">
+      <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,370px)] lg:items-start lg:gap-10">
         <div className="flex max-w-2xl flex-col">
           <h1
             id="beta-hero-heading"
@@ -280,7 +293,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
           */}
           <aside
             aria-labelledby="beta-premium-heading"
-            className="rounded-2xl border border-amber-300/60 bg-[#0c0a05]/95 p-5 shadow-[0_0_46px_-14px_rgba(245,197,94,0.55)] backdrop-blur-md"
+            className="rounded-2xl border border-amber-300/60 bg-[#0b0903]/96 p-4 shadow-[0_0_44px_-14px_rgba(245,197,94,0.5)] backdrop-blur-md"
           >
             <h2
               id="beta-premium-heading"
@@ -296,7 +309,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
               nothing can be started by accident, and Watch — named on the first
               line — stays inactive product-wide.
             */}
-            <ul className="mt-4 flex flex-col gap-2.5">
+            <ul className="mt-3 flex flex-col gap-2">
               {[t.premiumCap1, t.premiumCap2, t.premiumCap3, t.premiumCap4].map((capability) => (
                 <li key={capability} className="flex items-start gap-2.5 text-[13px] leading-snug text-ink-primary">
                   <Check
@@ -330,11 +343,49 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
               already shipped with. When a plans route exists, this block is
               where the button goes, and nothing else on the card changes.
             */}
-            <p className="mt-5 rounded-xl border border-amber-300/25 bg-amber-300/[0.07] px-4 py-3 text-center text-[13px] font-medium leading-snug text-amber-100">
-              {t.premiumNote}
-            </p>
+            {/*
+              ══════════════════════════════════════════════════════════════
+              THE CTA SLOT — KEPT, AND TRUTHFUL.
+              ══════════════════════════════════════════════════════════════
 
-            <p className="mt-3 text-center text-[11px] font-medium text-amber-200/70">{t.premiumFreeNote}</p>
+              The first pass removed the prototype's filled gold "View Plans →"
+              button entirely, on the grounds that a gold button going nowhere
+              would be the product's first broken promise about money. The HERO
+              CORRECTION RULING accepts the reasoning and rejects the remedy:
+              *"If no plans route exists, keep the prototype-sized CTA slot but
+              use truthful non-broken behavior such as `Plans coming soon` /
+              disabled state rather than removing the CTA area entirely."*
+
+              So the slot returns at the prototype's size and weight, as a
+              REAL disabled button rather than a paragraph dressed as one:
+
+                · `<button type="button" disabled>` — the browser refuses the
+                  press, so there is no click handler to go wrong and no href
+                  to resolve nowhere;
+                · `aria-disabled` and `tabIndex={-1}` keep it out of the tab
+                  order, so a keyboard reader never lands on a dead control;
+                · its label SAYS it is not open yet, so the disabled state is
+                  explained rather than merely felt — a greyed control with an
+                  active-sounding label is the thing that actually frustrates
+                  people;
+                · `cursor-not-allowed` and no hover transition, so the pointer
+                  reports the same fact.
+
+              Nothing here can start a purchase, because there is nothing here
+              to press. When a plans route exists, this becomes an enabled link
+              to it and nothing else on the card changes.
+            */}
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              tabIndex={-1}
+              className="mt-5 w-full cursor-not-allowed rounded-xl border border-amber-300/35 bg-amber-300/[0.10] px-4 py-2.5 text-center text-[13px] font-semibold text-amber-200/85"
+            >
+              {t.premiumCta}
+            </button>
+
+            <p className="mt-2.5 text-center text-[11px] leading-snug text-amber-100/55">{t.premiumNote}</p>
           </aside>
 
           <SixtySecondBrief items={latestUpdates} language={language} />

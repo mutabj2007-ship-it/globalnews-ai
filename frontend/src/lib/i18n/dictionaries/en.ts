@@ -2304,6 +2304,7 @@ export const en = {
     premiumCap3: 'Access deeper analysis',
     premiumCap4: 'Professional tools & exports',
     /* beta.premiumFreeNote — the prototype's closing line under the card. */
+    premiumCta: 'Plans coming soon',
     premiumFreeNote: 'Free to explore.',
 
     /*

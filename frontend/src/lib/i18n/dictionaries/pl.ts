@@ -1834,6 +1834,7 @@ export const pl: Dictionary = {
     premiumCap2: 'Śledź zmiany w czasie',
     premiumCap3: 'Korzystaj z pogłębionej analizy',
     premiumCap4: 'Narzędzia i eksport dla profesjonalistów',
+    premiumCta: 'Plany wkrótce',
     premiumFreeNote: 'Przeglądanie bez opłat.',
 
     /* C2. New strings, written for this repository — FOR REVIEW (see C1 note). */
