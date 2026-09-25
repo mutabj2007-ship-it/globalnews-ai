@@ -1,0 +1,37 @@
+FRONTEND JEST — integration/beta-launch-convergence-r1 @ e801495
+Command: npx jest (in frontend/)
+
+Test Suites: 10 failed, 283 passed, 293 total
+Tests:       15 failed, 13 skipped, 6482 passed, 6510 total
+Snapshots:   0 total
+Time:        131.465 s
+
+FAILING SUITES:
+FAIL src/components/admin/adminOperationalSurface.spec.ts (79.25 s)
+FAIL src/components/admin/adminSupportSurface.spec.ts (39.068 s)
+FAIL src/components/map/c911RequestEconomy.spec.ts (50.383 s)
+FAIL src/components/map/m51PhaseB.spec.ts (40.008 s)
+FAIL src/lib/admin/adminProvenance.spec.ts (83.122 s)
+FAIL src/lib/evidence/visualAuthority.spec.ts (53.166 s)
+FAIL src/lib/map/mapShellRouteWiring.spec.ts (54.238 s)
+FAIL src/lib/market/marketSyntheticHarness.spec.ts
+FAIL src/lib/market/mktRetained.spec.ts
+FAIL src/lib/market/visualAuthorityCorrection.spec.ts (92.745 s)
+
+FAILING TEST TITLES:
+● A-1 — the news provider table separates failure from absence › but that text SURVIVES where it is correct — the AI providers surface
+● C. analysisApi sends optional story context correctly › the POST body conditionally includes storyContext only when present — never sends an undefined/null field for ordinary requests
+● C911-R6 -- provider request economy › HOME -- one provider call, and every section reads it › the homepage situation map never fetches on mount -- interaction only
+● F1.b — provenance registry › the A-tagged set is exactly the capabilities that genuinely exist today
+● F1.b — provenance registry › the two fields the design over-tagged A that really are aggregations are B
+● preserves accepted bytes: frontend/src/components/market/MarketCompactScreen.tsx
+● preserves accepted bytes: frontend/src/components/market/MarketScreen.tsx
+● preserves accepted bytes: frontend/src/lib/market/mktContract.spec.ts
+● S3 — the admin support screen renders real data › ADMIN_API stays the READ-ONLY surface — the support writes are declared separately
+● Test suite failed to run
+● THE BUILD ARG — deployment-controlled, never source-pinned › the ARG is declared in the stage that runs the build
+● visual correction preserves accepted authority › frontend/src/app/politics-visual-preview/compact/page.tsx is identical to the accepted base
+● visual correction preserves accepted authority › frontend/src/app/politics-visual-preview/page.tsx is identical to the accepted base
+● visual correction preserves accepted authority › frontend/src/components/politics/PoliticsCompactScreen.tsx is identical to the accepted base
+● visual correction preserves accepted authority › frontend/src/components/politics/PoliticsScreen.tsx is identical to the accepted base
+● visual correction preserves accepted authority › frontend/src/components/politics/PolParts.tsx is identical to the accepted base

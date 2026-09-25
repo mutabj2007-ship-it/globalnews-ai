@@ -1,0 +1,12 @@
+runner,targets,desktop_1440,phone_390,width_360,width_430,populated_real_data,multi_country,en_pl,po_golden_authority,notes
+scripts/spatial-visual/spatial-visual.spec.ts,map/spatial frames,yes-2048px-goldens,no,no,no,yes-geography,yes-world-and-east-africa,no,PARTIAL-2-of-4-APPROVED,"V1 WORLD + V2 RWANDA/EAST AFRICA APPROVED; V3 SELECTED COUNTRY + V4 EVIDENCE MODE PENDING with filename:null; playwright retries:0"
+scripts/ask-dashboard-browser.spec.cjs,"/, /map, /search, /humanitarian",yes-1440x900,yes-390x844,no,no,not-asserted,no,no,no,Ask dashboard browser contract
+scripts/tests/conflict-browser.cjs,/conflict,yes-1440,yes-390,no,no,NO-MOCKED,no,partial-lang-loop,no,"page.route intercepts **/conflict-data/observations?* and fulfils from conflict-observation.fixture.json"
+scripts/datafed/visual-authority-browser.mjs,economy/evidence,yes-1440,yes-390,no-375-used,yes-430,NO-UI-FIXTURE,no,yes-en-and-pl,no,"screenshots filenamed plan-b-economy-UI-FIXTURE-<locale>-<width>.png; stub server answers /economy/observations/rw-nisr-cpi"
+scripts/datafed-evidence-browser.cjs,"/, /humanitarian, /security-visual-preview, compact",yes-1440,yes-390,no,no,not-asserted,no,no,no,datafed evidence browser
+scripts/imihigo/browser-validation.mjs,/imihigo,yes-1440,yes-390,no-320-375-used,yes-430,yes-real-retained-NISR,no-rwanda-only,not-asserted,no,widths 320/375/390/430/768/1440
+scripts/verify-election-preview.cjs,/election-visual-preview,yes-1440,yes-390,no,no,yes-retained-election,no,no,no,compact toggles 390x844
+NONE,/energy,no,no,no,no,no,no,no,no,NO BROWSER COVERAGE - Gate B module
+NONE,/market,no,no,no,no,no,no,no,no,NO BROWSER COVERAGE - Gate B module
+NONE,/politics-visual-preview,no,no,no,no,no,no,no,no,NO BROWSER COVERAGE
+NONE,Home-as-governed-frame,partial-via-ask-and-datafed,partial,no,no,no,no,no,no,no golden authority for Home

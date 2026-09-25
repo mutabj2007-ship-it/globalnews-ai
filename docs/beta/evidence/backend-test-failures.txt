@@ -1,0 +1,93 @@
+BACKEND JEST — integration/beta-launch-convergence-r1 @ e801495
+Command: npx prisma generate && npx jest (in backend/)
+NOTE: no local Postgres. 53 individual failure blocks cite DATABASE_URL/ECONNREFUSED and are an environment prerequisite, not defects.
+
+Test Suites: 14 failed, 5 skipped, 265 passed, 279 of 284 total
+Tests:       66 failed, 154 skipped, 7343 passed, 7563 total
+Snapshots:   0 total
+Time:        205.077 s
+
+FAILING SUITES:
+FAIL src/convergence-assembly.spec.ts (132.323 s)
+FAIL src/modules/admin/admin.security.spec.ts (11.825 s)
+FAIL src/modules/admin/admin-convergence-http.spec.ts (10.642 s)
+FAIL src/modules/admin/admin-passive-reads.spec.ts
+FAIL src/modules/analysis/region/declared-regions.spec.ts (10.534 s)
+FAIL src/modules/analysis/service/analysis.anchor-evidence.spec.ts (27.176 s)
+FAIL src/modules/analysis/service/analysis.geo-precision.spec.ts (30.676 s)
+FAIL src/modules/analysis/service/inFlightJoinerDeadline.spec.ts (31.592 s)
+FAIL src/modules/analysis/service/natural-query-routing.spec.ts (31.625 s)
+FAIL src/modules/news/news.module.spec.ts (9.488 s)
+FAIL src/modules/news/news.service.live-first-seen.spec.ts
+FAIL src/modules/news/news.service.post-relevance-fallback.spec.ts
+FAIL src/modules/news/news.service.spec.ts (6.161 s)
+FAIL src/modules/news/providers/gnews.provider.spec.ts (13.413 s)
+
+FAILING TEST TITLES:
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is off (fail-closed default) › a non-"true" value is also off
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is off (fail-closed default) › an unset flag makes every admin route 404 — for an administrator
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is off (fail-closed default) › an unset flag makes every admin route 404 — for an unauthenticated caller, so "disabled" means absent and not merely locked
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › a valid session whose user row no longer exists › is refused with 403 and does not crash
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › administrators › a section the database cannot serve comes back null, never zero-filled
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › administrators › ADMIN may read GET /admin/me and receives the server-derived capability list
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › administrators › ANALYST may read GET /admin/me and receives the server-derived capability list
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › administrators › only SUPER_ADMIN may read the account list, while all four may read the aggregates
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › administrators › SUPER_ADMIN may read GET /admin/me and receives the server-derived capability list
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › administrators › SUPPORT does not receive evidence.export, and ANALYST does — the approved matrix, over the wire
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › administrators › SUPPORT may read GET /admin/me and receives the server-derived capability list
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › authentication is resolved BEFORE authorization › an EXPIRED session belonging to a SUPER_ADMIN returns 401, never 403 — the status code never reveals that the account was privileged
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › ORDINARY AUTHENTICATED USER — the case this milestone exists to refuse › signed-in user with adminRole = null: GET /admin/analytics/coverage-geography -> 403
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › ORDINARY AUTHENTICATED USER — the case this milestone exists to refuse › signed-in user with adminRole = null: GET /admin/analytics/usage -> 403
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › ORDINARY AUTHENTICATED USER — the case this milestone exists to refuse › signed-in user with adminRole = null: GET /admin/me -> 403
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › ORDINARY AUTHENTICATED USER — the case this milestone exists to refuse › signed-in user with adminRole = null: GET /admin/news/providers -> 403
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › ORDINARY AUTHENTICATED USER — the case this milestone exists to refuse › signed-in user with adminRole = null: GET /admin/system/health -> 403
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › ORDINARY AUTHENTICATED USER — the case this milestone exists to refuse › signed-in user with adminRole = null: GET /admin/users -> 403
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › ORDINARY AUTHENTICATED USER — the case this milestone exists to refuse › the 403 body leaks no role, capability, user id or resource detail
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › unauthenticated caller › an unrecognised session cookie is also 401, never 403
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › unauthenticated caller › GET /admin/analytics/coverage-geography -> 401
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › unauthenticated caller › GET /admin/analytics/usage -> 401
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › unauthenticated caller › GET /admin/me -> 401
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › unauthenticated caller › GET /admin/news/providers -> 401
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › unauthenticated caller › GET /admin/system/health -> 401
+● admin API security boundary › ADMIN_PLATFORM_ENABLED is on › unauthenticated caller › GET /admin/users -> 401
+● combined AppModule assembles while new public evidence and execution stay on HOLD
+● GNewsProvider › provider health › a quota failure marks the provider throttled without inventing a health state
+● GNewsProvider › provider health › a rate-limit failure marks the provider throttled too
+● GNewsProvider › provider health › reports "degraded" (not thrown) when GNews is reachable but errors
+● N14 — the accepted anchored Evidence Geography path still resolves › an anchored request still reports the anchor’s country
+● NewsModule — real NestJS DI compilation and provider registration › ALL_NEWS_PROVIDERS always contains EVERY registered provider, so an inactive provider stays visible to GET /news/providers/health
+● NewsService › generic relevance gate (Milestone #36) › does not persist a relevance-rejected article as accepted generic evidence
+● NewsService › Milestone #48 — homepage news-content language containment › successful live results for a requested language are used directly, with no fallback attempted at all
+● NewsService › relational relevance mode (Milestone #37) › does not persist an x-only or y-only article as accepted relational evidence
+● NewsService › relational relevance mode (Milestone #37) › M66.14B — country enrichment is ADDITIVE: it adds two fields and changes nothing the M37 gate depends on
+● NewsService › uses cached articles for top headlines with provider-error provenance when live provider fails
+● NewsService › uses cached database articles with no-live-results provenance when a real provider returns no results
+● NewsService › uses cached database articles with provider-error provenance when a real provider fails
+● NewsService › uses category-scoped cached articles with provider-error provenance when category provider fails
+● R0.5 — the merge disturbs nothing else › preserves every provider-supplied field on an annotated article
+● R4 REGRESSION 1 — the provider query is derived from the article, not "Australia" › does not route an anchored request through the country feed at all
+● R4 REGRESSION 1 — the provider query is derived from the article, not "Australia" › sends an anchor-derived query and never the bare country name
+● R4 REGRESSION 2 — the anchor is present and first › keeps the selected article at the front of the evidence set
+● R4 REGRESSION 3 — unrelated same-country reporting is rejected › none of the seven observed stories survives
+● R4 REGRESSION 3 — unrelated same-country reporting is rejected › returns the anchor alone when every candidate is merely Australian
+● R4 REGRESSION 4 — a genuinely independent report of the same event is retained › keeps the same-event report and discards the unrelated ones in the same pool
+● R4 REGRESSION 6 — honest scarcity, and no country-feed top-up › an anchor-only evidence set is a valid result
+● R4 REGRESSION 6 — honest scarcity, and no country-feed top-up › never calls the country feed to make the evidence set look larger
+● R4 REGRESSION 6 — honest scarcity, and no country-feed top-up › prefers one relevant report over eight unrelated ones
+● R4 REGRESSION 7 — Evidence Geography still resolves Australia › reports the country from the retained evidence, without the country-feed branch
+● real Nest HTTP Admin refreshes with real news providers perform zero acquisition
+● REV B FINDING 1 — the in-flight joiner is bounded › a deadline is a 504, so it is reported as a timeout and not as a server fault
+● REV B FINDING 1 — the in-flight joiner is bounded › a joiner REJECTS on the deadline instead of waiting for an operation that never finishes
+● REV B FINDING 1 — the in-flight joiner is bounded › bounding the joiner does NOT duplicate provider work — one shared operation, one call
+● REV B FINDING 1 — the in-flight joiner is bounded › the joiner finishes inside its own budget, measured on the wall clock
+● S-G — the STORED database fallback stays reachable and truthful › is used when live retrieval yields nothing relevant, and is labelled cached
+● TEST A · the typed question resolves EAST AFRICA as request scope › is NOT routed as one generic global provider search
+● TEST A · the typed question resolves EAST AFRICA as request scope › THE TYPED QUESTION OUTRANKS THE MAP CAMERA
+● TEST B · a rate limit is not an empty world › all five outcomes exist and the fifth is stamped by the caller
+● TEST B · a rate limit is not an empty world › RETAINED reporting is fetched for the REGION’S OWN MEMBERS, never as unrelated cache
+● TEST B · a rate limit is not an empty world › retained reporting is never served without being declared
+● TEST B · a rate limit is not an empty world › the retained rung is reached only when live did NOT succeed
+● Test suite failed to run
+● the declared region list is governed, not inferred › membership comes from this module and from nothing else at request time
+● THE REPORTED FAILURES — measured end to end › generic provider failure may consult local retained evidence but never retries a live provider
+● THE REPORTED FAILURES — measured end to end › NQ-003 an implicit comparison asks for clarification and spends NO provider call

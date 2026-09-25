@@ -1,0 +1,24 @@
+route,module,status,home_card_destination,card_state,card_clickable,robots_effective,in_sitemap,desktop_file,compact_file,data_reader,retained_source,primary_data_first_screen,useful_data_behind_drawer,fixtures_can_reach,locale_catalogue,pl_keys_present,alpha_visible
+/,Home,public,entry,n/a,n/a,index,yes,app/page.tsx,responsive+MobileBottomNav,lib/homeFeed.ts,GNews live/cached/mock,yes,no,mock-only-if-zero-real-providers,platform-dictionary,yes,yes
+/map,Country Intelligence,public,/map,active,yes,index,yes,app/map/page.tsx,none,MapPageClient+geo,reference-geography+conflict-observations,yes,partial-lens,no,platform-dictionary,yes,yes
+/conflict,Conflict,public,/conflict,preview,yes,noindex,no,app/conflict/page.tsx,none,client-fetch /conflict-data/observations,UCDP Candidate CSV v26.0.8,no-client-fetch-after-hydration,yes-evidenceDetail,test-harness-mocks-endpoint,lib/conflict/strings.ts,yes,yes
+/energy,Energy,public,/energy,preview,yes,noindex,no,app/energy/page.tsx,none,lib/energy/energyReadModel.ts,Eurostat PEM geo=ES,yes-but-raw-dump,raw-provenance-dominates-primary,energyFixtures.ts-in-source-route-gated,energyStrings.ts,yes,yes
+/market,Market,public,/market,preview,yes,noindex,no,app/market/page.tsx,app/market/compact/page.tsx,mktReadModel.ts+mktProcurementRead.ts,TED buyer-country=POL date=20260924,yes,no,no,mktStrings.ts,NO,yes
+/humanitarian,Humanitarian,public,/humanitarian,preview,yes,noindex,no,app/humanitarian/page.tsx,app/humanitarian/compact/page.tsx,humanitarianRead.ts,Copernicus EMS,degraded-frame,no,no-fixture-route-by-design,humStrings.ts,yes,yes
+/economy-visual-preview,Economy,preview-family,/economy-visual-preview,preview,yes,noindex,no,app/economy-visual-preview/page.tsx,app/economy-visual-preview/compact/page.tsx,economyObservationRead.ts,NISR CPI Rwanda rw-nisr enabled:false,marker+retained-or-absence,no,lib/economy/fixtures.ts-spec-only,economy/strings.ts,yes,yes
+/politics-visual-preview,Politics,preview-family,/politics-visual-preview,preview,yes,noindex,no,app/politics-visual-preview/page.tsx,app/politics-visual-preview/compact/page.tsx,politicsReadModel.ts,offline-producer-no-fetch,absence-frame,no,no,politicsStrings.ts,yes,yes
+/security-visual-preview,Security,preview-family,/security-visual-preview,preview,yes,noindex,no,app/security-visual-preview/page.tsx,app/security-visual-preview/compact/page.tsx,NONE,NONE,no-data-at-all,n/a,no,securityStrings.ts,NO,yes
+/election-visual-preview,Election,preview-family-ORPHAN,none,n/a,n/a,noindex,no,app/election-visual-preview/page.tsx,app/election-visual-preview/compact/page.tsx,lib/evidence/retainedReaders.ts readElection,retained-election-evidence,n/a,n/a,no,electionStrings.ts,yes,url-only
+/delivery-visual-preview,Delivery,preview-family-ORPHAN,none,n/a,n/a,noindex,no,app/delivery-visual-preview/page.tsx,app/delivery-visual-preview/compact/page.tsx,NONE,NONE-provider-free-archive,n/a,n/a,is-the-archived-preview,deliveryStrings.ts,yes,url-only
+/imihigo,Imihigo,public-effectively-orphan,none,n/a,n/a,noindex,no,app/imihigo/page.tsx,app/imihigo/compact/page.tsx,lib/imihigo/retainedReader.ts,NISR Imihigo 2024/25 PDF Rwanda-only,yes,optional-source-details,no,deliveryStrings.ts,yes,inbound-only-from-orphan-workspace
+/ask,Ask/Analysis,public,none-ask-dock,n/a,n/a,noindex,no,app/ask/page.tsx,responsive,AskFrameScreen,analysis-on-explicit-submit,n/a,n/a,no,askStrings.ts,yes,yes
+/search,Ask/Analysis,public,none,n/a,n/a,noindex,no,app/search/page.tsx,responsive,SearchPageClient,analysis-pipeline,n/a,n/a,no,platform-dictionary,yes,yes
+/workspace,internal-prototype,ORPHAN,none,n/a,n/a,noindex-ruling-main,no,app/workspace/page.tsx,responsive,NONE-static-capability-list,NONE,n/a,n/a,is-a-static-list,platform-dictionary,yes,url-only
+WORLD,World Intelligence,NO-SURFACE,none,comingSoon,no,n/a,no,ABSENT,ABSENT,NONE,NONE,n/a,n/a,n/a,n/a,n/a,card-inert
+/privacy,legal,public,footer,n/a,n/a,index,yes,app/privacy/page.tsx,responsive,NONE,NONE,yes,no,no,platform-dictionary,yes,yes
+/terms,legal,public,footer,n/a,n/a,index,yes,app/terms/page.tsx,responsive,NONE,NONE,yes,no,no,platform-dictionary,yes,yes
+/source-policy,legal,public,footer,n/a,n/a,index,yes,app/source-policy/page.tsx,responsive,NONE,NONE,yes,no,no,platform-dictionary,yes,yes
+/support,private,private,none,n/a,n/a,noindex-userDependent,no,app/support/page.tsx,responsive,support-api,NONE,n/a,n/a,no,supportEn/supportPl,yes,yes
+/history,private,private,none,n/a,n/a,noindex-userDependent,no,app/history/page.tsx,responsive,history-api,NONE,n/a,n/a,no,platform-dictionary,yes,yes
+/account/settings,private,private,none,n/a,n/a,noindex-userDependent,no,app/account/settings/page.tsx,responsive,users-api,NONE,n/a,n/a,no,platform-dictionary,yes,yes
+/admin/**,private,private,none,n/a,n/a,noindex-userDependent,no,app/admin/**,responsive,admin-api,NONE,n/a,n/a,no,adminEn/adminPl,yes,yes
