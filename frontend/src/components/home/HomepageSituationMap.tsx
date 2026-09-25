@@ -184,7 +184,7 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
             {/* Open Full Map CTA — integrated into this same HUD panel frame rather than sitting in the section header, per the reference's single-context-block composition. */}
             <a
               href="/map"
-              className="mt-4 inline-flex items-center justify-center gap-1.5 border-t border-cyan-500/10 pt-3 text-xs font-medium text-cyan-300 transition-colors hover:text-cyan-200"
+              className="mt-4 inline-flex min-h-[44px] items-center justify-center gap-1.5 border-t border-cyan-500/10 pt-3 text-xs font-medium text-cyan-300 transition-colors hover:text-cyan-200"
             >
               {t.openFullMap}
               <ArrowUpRight size={13} strokeWidth={2.25} aria-hidden="true" />
@@ -232,13 +232,13 @@ function MapLegend({ language }: { language: LanguageCode }): JSX.Element {
               {isModuleNavigable(module) && module.destination !== undefined ? (
                 <a
                   href={module.destination}
-                  className="flex min-h-[32px] items-center gap-2 text-sm text-ink-secondary transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                  className="flex min-h-[44px] items-center gap-2 text-sm text-ink-secondary transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
                 >
                   {dot}
                   {label}
                 </a>
               ) : (
-                <span className="flex min-h-[32px] items-center gap-2 text-sm text-ink-tertiary">
+                <span className="flex min-h-[44px] items-center gap-2 text-sm text-ink-tertiary">
                   {dot}
                   {label}
                 </span>

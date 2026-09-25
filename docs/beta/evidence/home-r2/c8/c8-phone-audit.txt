@@ -1,0 +1,24 @@
+en 430x932  overflow=false  doc=430  sections=9  mainPb=64px
+   wide: div.pointer-events-none absolute -inset-x-6  | div.absolute inset-0 bg-[radial-gradient(ell | svg.[object SVGAnimatedString] | g.[object SVGAnimatedString] | path.[object SVGAnimatedString] | circle.[object SVGAnimatedString]
+   small targets: a:GlobalNews AI|29 | input:|1 | button:|29 | a:View all topics|20
+   tiny text: 10px 11px 9.5px 11.5px 8.5px 10.5px
+en 390x844  overflow=false  doc=390  sections=9  mainPb=64px
+   wide: div.pointer-events-none absolute -inset-x-6  | div.absolute inset-0 bg-[radial-gradient(ell | svg.[object SVGAnimatedString] | g.[object SVGAnimatedString] | path.[object SVGAnimatedString] | circle.[object SVGAnimatedString]
+   small targets: a:GlobalNews AI|29 | input:|1 | button:|29 | a:View all topics|20
+   tiny text: 10px 11px 9.5px 11.5px 8.5px 10.5px
+en 360x800  overflow=false  doc=360  sections=9  mainPb=64px
+   wide: div.pointer-events-none absolute -inset-x-6  | div.absolute inset-0 bg-[radial-gradient(ell | svg.[object SVGAnimatedString] | g.[object SVGAnimatedString] | path.[object SVGAnimatedString] | circle.[object SVGAnimatedString]
+   small targets: input:|1 | button:|29 | a:View all topics|20
+   tiny text: 10px 11px 9.5px 11.5px 8.5px 10.5px
+pl 430x932  overflow=false  doc=430  sections=9  mainPb=64px
+   wide: div.pointer-events-none absolute -inset-x-6  | div.absolute inset-0 bg-[radial-gradient(ell | svg.[object SVGAnimatedString] | g.[object SVGAnimatedString] | path.[object SVGAnimatedString] | circle.[object SVGAnimatedString]
+   small targets: a:GlobalNews AI|29 | input:|1 | button:|29 | a:Zobacz wszystkie tematy|20
+   tiny text: 10px 11px 9.5px 11.5px 8.5px 10.5px
+pl 390x844  overflow=false  doc=390  sections=9  mainPb=64px
+   wide: div.pointer-events-none absolute -inset-x-6  | div.absolute inset-0 bg-[radial-gradient(ell | svg.[object SVGAnimatedString] | g.[object SVGAnimatedString] | path.[object SVGAnimatedString] | circle.[object SVGAnimatedString]
+   small targets: a:GlobalNews AI|29 | input:|1 | button:|29 | a:Zobacz wszystkie tematy|20
+   tiny text: 10px 11px 9.5px 11.5px 8.5px 10.5px
+pl 360x800  overflow=false  doc=360  sections=9  mainPb=64px
+   wide: div.pointer-events-none absolute -inset-x-6  | div.absolute inset-0 bg-[radial-gradient(ell | svg.[object SVGAnimatedString] | g.[object SVGAnimatedString] | path.[object SVGAnimatedString] | circle.[object SVGAnimatedString]
+   small targets: input:|1 | button:|29 | a:Zobacz wszystkie tematy|20
+   tiny text: 10px 11px 9.5px 11.5px 8.5px 10.5px

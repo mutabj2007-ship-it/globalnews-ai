@@ -106,8 +106,14 @@ interface WhatsHappeningNowProps {
 const RADIO_NAME = 'gn-home-category';
 const RADIO_ID = (category: string): string => `gn-cat-${category}`;
 
+/*
+  C8 — `min-h-[44px]` is not decoration. Measured at 430, 390 and 360 the chips
+  came out 34px tall, below the 44px touch target, and they are the section's
+  primary control on a phone. `inline-flex items-center` keeps the label
+  centred now that the box is taller than its text.
+*/
 const CHIP_CLASS =
-  'cursor-pointer rounded-full border border-border-strong bg-void/60 px-4 py-1.5 text-sm font-medium text-ink-secondary transition-colors hover:border-cyan-400/40 hover:text-ink-primary motion-reduce:transition-none';
+  'inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-border-strong bg-void/60 px-4 py-1.5 text-sm font-medium text-ink-secondary transition-colors hover:border-cyan-400/40 hover:text-ink-primary motion-reduce:transition-none';
 
 export function WhatsHappeningNow({
   lead,
@@ -260,7 +266,7 @@ export function WhatsHappeningNow({
                 */}
                 <label
                   htmlFor={RADIO_ID('all')}
-                  className="ml-auto cursor-pointer text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline"
+                  className="ml-auto inline-flex min-h-[44px] cursor-pointer items-center text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline"
                 >
                   {t.viewAll}
                 </label>

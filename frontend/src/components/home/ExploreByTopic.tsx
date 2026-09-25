@@ -121,7 +121,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
         </h2>
         <a
           href="#intelligence-modules"
-          className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+          className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
         >
           {t.viewAllTopics}
           <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
