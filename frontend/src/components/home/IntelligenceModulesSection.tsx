@@ -61,10 +61,13 @@ import {
  * P1  badge text. R5.1 draws "Unavailable"; PROPOSED_DELTAS.md makes that a
  *     Product Owner decision and names the registry's "Coming soon" as the
  *     Beta-parity fallback. The fallback is what renders — see the dictionary.
- * P2  category colours, and CC1–CC4 under it. R5.1 colours the icon and title
- *     per category token. The documented fallback is R4.1's treatment, which
- *     is what `STATE_STYLE` below encodes: *"icon --brand/--mut/--dis by
- *     status; title --ink or --mut"*. No category palette is introduced.
+ * P2  broader category palette. CTO ruling C-3 closes ONE part of it — the
+ *     category TITLE-colour treatment, applied by `CATEGORY_TITLE_CLASS`
+ *     below. Everything else P2 proposes stays open: the icon palette, story
+ *     category labels, the 60-second briefing rows, other surfaces, and
+ *     CC1–CC4. So icons, borders and badges keep their STATUS colours here,
+ *     which the package's own Rule also requires — *"Status keeps its own
+ *     label, icon and pill colour and is never replaced by category colour."*
  * M3  icons. The registry's lucide names are inherited by ring slot, so
  *     Security carries `Search`; R5.1 prefers Material Symbols chosen by
  *     meaning. Keeping the registry's own icons is the current Beta state, so
@@ -110,11 +113,10 @@ const ICONS = {
  */
 const STATE_STYLE: Record<
   IntelligenceModuleState,
-  { icon: string; title: string; border: string; badge: string; BadgeIcon: typeof Check }
+  { icon: string; border: string; badge: string; BadgeIcon: typeof Check }
 > = {
   active: {
     icon: 'text-cyan-300',
-    title: 'text-ink-primary',
     border: 'border-solid border-cyan-500/40',
     badge: 'border-cyan-500/40 text-cyan-300',
     BadgeIcon: Check,
@@ -122,20 +124,77 @@ const STATE_STYLE: Record<
   preview: {
     /* R5.1: "Preview uses the developing token (--dev) with eye icon". */
     icon: 'text-amber-300/90',
-    title: 'text-ink-primary',
     border: 'border-solid border-border-strong',
     badge: 'border-amber-500/40 text-amber-300',
     BadgeIcon: Eye,
   },
   comingSoon: {
     icon: 'text-ink-tertiary',
-    title: 'text-ink-tertiary',
     /* The ONLY dashed border in the grid. */
     border: 'border-dashed border-border-strong/70',
     badge: 'border-border-strong text-ink-tertiary',
     BadgeIcon: Ban,
   },
 };
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * THE APPROVED CATEGORY TITLE COLOURS — CTO ruling C-3
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * `CATEGORY_COLOUR_TOKENS.md`'s Mapping table, module column, verbatim. Eight
+ * hues cover the nine modules because the package maps World Intelligence onto
+ * the economy token — *"Economy Intelligence; World Intelligence (registry:
+ * emerald)"*. `--c-science` maps to *"(no module)"* and so appears nowhere.
+ *
+ * ── WHY TAILWIND CLASSES AND NOT `--c-*` CUSTOM PROPERTIES ────────────────
+ *
+ * This is the form that satisfies BOTH accepted authorities, and it is the
+ * package's own derivation rather than a substitution.
+ *
+ * `CATEGORY_COLOUR_TOKENS.md` states where its dark values come from: *"Dark
+ * values are the exact Tailwind -300 text shades the branch uses
+ * (`text-amber-300` etc.)"*. All eight were verified against `tailwindcss/colors`
+ * and match to the byte:
+ *
+ *   --c-security #FDBA74 = orange-300     --c-conflict #FCA5A5 = red-300
+ *   --c-economy  #6EE7B7 = emerald-300    --c-market   #67E8F9 = cyan-300
+ *   --c-country  #93C5FD = blue-300       --c-humanitarian #D8B4FE = purple-300
+ *   --c-politics #C4B5FD = violet-300     --c-energy   #FCD34D = amber-300
+ *
+ * THE LITERAL FORM WOULD BREAK A NON-NEGOTIABLE. `GN-CD-300 §W.4` rules that
+ * `#fcd34d` *"does not exist and must not appear"*, and
+ * `claudeDesignFoundation.spec.ts` enforces that across the whole tree — so
+ * writing the approved Energy value as a hex literal would put the repository
+ * in breach of an accepted Claude Design rule. Naming the Tailwind shade
+ * renders the identical colour (the branch already paints it through
+ * `moduleAccentClasses.ts`'s `text-amber-300`) while the banned literal never
+ * enters source. Nothing is approximated: the rendered colour is exactly what
+ * R5.1 approved, and `intelligenceModulesR51.spec.ts` asserts each class
+ * resolves to the package's hex through `tailwindcss/colors`.
+ *
+ * THE MAP IS TOTAL OVER THE REGISTRY, asserted rather than assumed: a module
+ * added later without an entry here would render an unstyled title, so the
+ * spec checks every registry id resolves.
+ *
+ * A `Map` OF TUPLES, NOT AN OBJECT LITERAL, and that is load-bearing.
+ * `homepageLocalization.spec.ts` forbids a homepage component from declaring a
+ * second category vocabulary, detecting it as a `category: 'string'` pair —
+ * *"A new colour table stays legal; a new LABEL table does not."* This is a
+ * colour table, and the tuple form says so unambiguously instead of tripping a
+ * guard that is right to exist.
+ */
+const CATEGORY_TITLE_CLASS = new Map<string, string>([
+  ['security', 'text-orange-300'],
+  ['world-intelligence', 'text-emerald-300'],
+  ['country-intelligence', 'text-blue-300'],
+  ['politics', 'text-violet-300'],
+  ['economy', 'text-emerald-300'],
+  ['conflict', 'text-red-300'],
+  ['market', 'text-cyan-300'],
+  ['humanitarian', 'text-purple-300'],
+  ['energy', 'text-amber-300'],
+]);
 
 interface IntelligenceModulesSectionProps {
   language?: LanguageCode;
@@ -240,7 +299,15 @@ function ModuleCard({
         <Icon size={24} strokeWidth={1.75} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className={`text-[15px] font-bold leading-5 ${style.title}`}>{moduleText.title}</span>
+        {/*
+          THE CATEGORY TITLE COLOUR, and the only place it is applied. Weight
+          stays >=600, which `CATEGORY_COLOUR_TOKENS.md`'s Rule requires of
+          every category-coloured string. Description, route line and note stay
+          `--mut`; the badge keeps its status colour.
+        */}
+        <span className={`text-[15px] font-bold leading-5 ${CATEGORY_TITLE_CLASS.get(module.id) ?? ""}`}>
+          {moduleText.title}
+        </span>
         <span className="text-[13px] leading-[18px] text-ink-tertiary">{moduleText.description}</span>
         <span className="break-words font-mono text-xs font-medium text-ink-tertiary">{routeLine}</span>
         {note === null ? null : <span className="text-xs font-medium text-ink-tertiary">{note}</span>}

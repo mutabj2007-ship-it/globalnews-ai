@@ -1,0 +1,15 @@
+GATE A · C-3 CORRECTION 2 — the HTTP 500s, named
+
+Per-endpoint tally across all 8 AFTER captures:
+  8x  500 fetch /api/users/me            (AccountControl.tsx via useAccount.ts)
+  8x  500 fetch /api/follows/countries   (useCountryFollows.ts)
+
+ENVIRONMENTAL, NOT A GATE A REGRESSION — four proofs:
+  1. BEFORE captures (pre-change) carry the same 2 console errors in all 8 frames,
+     identical message. Count unchanged: 2 before, 2 after.
+  2. No backend running: 127.0.0.1:3001/health unreachable; no DATABASE_URL.
+  3. Reproducible without a browser: curl returns 500 on both paths directly.
+  4. Outside the Gate A surface: IntelligenceModulesSection.tsx issues 0 requests
+     (no fetch, no useEffect, no client boundary) — asserted by spec.
+
+Ownership: account/follow runtime. Not suppressed — captured and named.

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModules';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import colors from 'tailwindcss/colors';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -141,26 +142,104 @@ describe('P1 stays OPEN — the Beta-parity badge text is what ships', () => {
   });
 });
 
-describe('P2 stays OPEN — no category palette is introduced', () => {
-  it('ships none of the nine proposed --c-* category tokens', () => {
-    for (const token of [
-      '--c-energy',
-      '--c-economy',
-      '--c-security',
-      '--c-humanitarian',
-      '--c-politics',
-      '--c-science',
-      '--c-conflict',
-      '--c-market',
-      '--c-country',
-    ]) {
-      expect(sectionCode).not.toContain(token);
+/**
+ * CTO ruling C-3 closed ONE part of P2 — the category TITLE-colour treatment.
+ * These assert the approved mapping is applied exactly, and that the rest of
+ * P2 is still not implemented.
+ *
+ * Source of truth: `CATEGORY_COLOUR_TOKENS.md`, Mapping table, module column,
+ * with the intelligence-dark value of each token. World Intelligence shares
+ * `--c-economy` because the package maps it there ("Economy Intelligence;
+ * World Intelligence (registry: emerald)"). `--c-science` maps to "(no
+ * module)" and must therefore not ship.
+ */
+describe('C-3 — the approved category TITLE colours are applied', () => {
+  /**
+   * module id -> the Tailwind class shipped, and the R5.1 intelligence-dark
+   * value it must resolve to. The hexes are `CATEGORY_COLOUR_TOKENS.md`'s
+   * token table; the classes are the package's own stated derivation of them
+   * ("the exact Tailwind -300 text shades the branch uses").
+   */
+  /*
+    HUES, NOT HEXES — and that is a requirement, not a shortcut.
+
+    `CATEGORY_COLOUR_TOKENS.md` has a "Hue" column naming each token's hue, and
+    states that its intelligence-dark values ARE "the exact Tailwind -300 text
+    shades the branch uses". Asserting (hue, -300) therefore binds to the
+    package's own table exactly as tightly as asserting the hex would.
+
+    It must not assert the hex, because GN-CD-300 §W.4 rules that the approved
+    Energy value "does not exist and must not appear" anywhere in the tree, and
+    `claudeDesignFoundation.spec.ts` enforces that whole-tree. Writing the
+    literal here — even to check it — would put this file in breach of an
+    accepted NON-NEGOTIABLE. The hue form keeps both authorities satisfied.
+  */
+  const TITLE_HUE: Record<string, string> = {
+    security: 'orange',
+    'world-intelligence': 'emerald',
+    'country-intelligence': 'blue',
+    politics: 'violet',
+    economy: 'emerald',
+    conflict: 'red',
+    market: 'cyan',
+    humanitarian: 'purple',
+    energy: 'amber',
+  };
+
+  it('maps every registry module to a title colour — the map is total', () => {
+    for (const m of INTELLIGENCE_MODULES) {
+      expect(TITLE_HUE[m.id]).toBeDefined();
+      expect(sectionCode).toContain(`text-${TITLE_HUE[m.id]}-300`);
     }
   });
 
-  it('colours the card by STATUS, which is the documented P2 fallback', () => {
-    /* PROPOSED_DELTAS.md P2 fallback: "module icon/title by status". */
-    expect(sectionSource).toMatch(/STATE_STYLE/);
+  it('uses the -300 step the package names, and a hue Tailwind actually defines', () => {
+    for (const [id, hue] of Object.entries(TITLE_HUE)) {
+      const shade = (colors as unknown as Record<string, Record<string, string>>)[hue]?.['300'];
+      expect(`${id}:${typeof shade}`).toBe(`${id}:string`);
+      expect(shade).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+  });
+
+  /*
+    The whole-tree prohibition, asserted locally so a future edit that inlines
+    a value is caught here rather than in a distant foundation spec.
+  */
+  it('introduces no raw hex literal at all, satisfying GN-CD-300 §W.4', () => {
+    expect(sectionCode).not.toMatch(/#[0-9a-f]{6}\b/i);
+  });
+
+  it('applies the colour to the TITLE only, via the module id', () => {
+    expect(sectionCode).toMatch(/CATEGORY_TITLE_CLASS\.get\(module\.id\)/);
+    /* Exactly one consumer: the title span. */
+    expect((sectionCode.match(/CATEGORY_TITLE_CLASS\.get\(/g) ?? []).length).toBe(1);
+  });
+
+  it('does NOT ship a science colour, which the package maps to no module', () => {
+    expect(sectionCode).not.toContain('--c-science');
+    expect(sectionCode).not.toContain('text-lime-300');
+  });
+
+  /*
+    C-3: "Do not infer or expand the palette to icons, borders, badges, other
+    pages or other OPEN proposals." The status ladder must keep its own
+    colours, which CATEGORY_COLOUR_TOKENS.md's Rule also requires.
+  */
+  it('leaves icons, borders and badges on their STATUS colours', () => {
+    expect(sectionCode).toMatch(/STATE_STYLE/);
+    const stateBlock = sectionCode.slice(
+      sectionCode.indexOf('const STATE_STYLE'),
+      sectionCode.indexOf('const CATEGORY_TITLE_TOKEN'),
+    );
+    expect(stateBlock).not.toMatch(/--c-/);
+    expect(stateBlock).toMatch(/icon:/);
+    expect(stateBlock).toMatch(/border:/);
+    expect(stateBlock).toMatch(/badge:/);
+    /* STATE_STYLE no longer carries a title colour at all. */
+    expect(stateBlock).not.toMatch(/\btitle:/);
+  });
+
+  it('does not colour any other surface — the tokens are used here only', () => {
     expect(sectionCode).not.toMatch(/MODULE_ACCENT_CLASSES|MODULE_ACCENT_HEX/);
   });
 });
@@ -267,6 +346,52 @@ describe('EN and PL both carry every string this section renders', () => {
         const entry = modules[m.dictionaryKey];
         expect(entry?.title?.trim().length ?? 0).toBeGreaterThan(0);
         expect(entry?.description?.trim().length ?? 0).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  /*
+    C-3 evidence-strengthening: the browser probe previously checked four of
+    the nine modules. It now checks all nine, and so does this gate — for
+    ALL NINE ids, in BOTH locales, title and description, with no EN text
+    leaking into PL. Five cards were previously covered by manual inspection
+    only.
+  */
+  it.each(MATRIX_ORDER)('%s has distinct EN and PL title and description', (id) => {
+    /* Not named `module`: @next/next/no-assign-module-variable rejects that
+       identifier, and the production build runs ESLint over spec files too. */
+    const registryEntry = INTELLIGENCE_MODULES.find((m) => m.id === id);
+    expect(registryEntry).toBeDefined();
+    const key = registryEntry!.dictionaryKey;
+    const en = (dictionaries.en.intelligenceModules.modules as Record<string, { title: string; description: string }>)[key];
+    const pl = (dictionaries.pl.intelligenceModules.modules as Record<string, { title: string; description: string }>)[key];
+
+    for (const entry of [en, pl]) {
+      expect(entry?.title?.trim().length ?? 0).toBeGreaterThan(0);
+      expect(entry?.description?.trim().length ?? 0).toBeGreaterThan(0);
+    }
+    /* A PL string identical to its EN twin is an untranslated fallback. */
+    expect(pl.title).not.toBe(en.title);
+    expect(pl.description).not.toBe(en.description);
+  });
+
+  it('matches INTELLIGENCE_MODULE_MATRIX.md’s exact display names, all nine, both locales', () => {
+    /* The matrix's "Display name EN/PL (exact)" columns, verbatim. */
+    const EXACT: Record<string, { en: string; pl: string }> = {
+      security: { en: 'Security Intelligence', pl: 'Analiza bezpieczeństwa' },
+      'world-intelligence': { en: 'World Intelligence', pl: 'Analiza świata' },
+      'country-intelligence': { en: 'Country Intelligence', pl: 'Analiza krajów' },
+      politics: { en: 'Politics Intelligence', pl: 'Analiza polityczna' },
+      economy: { en: 'Economy Intelligence', pl: 'Analiza gospodarcza' },
+      conflict: { en: 'Conflict Intelligence', pl: 'Analiza konfliktów' },
+      market: { en: 'Market Intelligence', pl: 'Analiza rynkowa' },
+      humanitarian: { en: 'Humanitarian Intelligence', pl: 'Analiza humanitarna' },
+      energy: { en: 'Energy Intelligence', pl: 'Analiza energetyczna' },
+    };
+    for (const m of INTELLIGENCE_MODULES) {
+      for (const locale of ['en', 'pl'] as const) {
+        const modules = dictionaries[locale].intelligenceModules.modules as Record<string, { title: string }>;
+        expect(modules[m.dictionaryKey].title).toBe(EXACT[m.id][locale]);
       }
     }
   });

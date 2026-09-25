@@ -1,4 +1,4 @@
-GATE A R5.1 — build AFTER implementation
+GATE A · C-3 CORRECTION — build
 npm run build:shared   -> exit 0
 npm run build:frontend -> exit 0, Compiled successfully
 
@@ -42,8 +42,3 @@ npm run build:frontend -> exit 0, Compiled successfully
 ├ ƒ /imihigo/compact                     1.41 kB        89.6 kB
 ├ ƒ /map                                 16.6 kB         860 kB
 ├ ƒ /market                              2.74 kB         218 kB
-├ ƒ /market/compact                      2.58 kB         218 kB
-├ ƒ /politics-visual-preview             3.3 kB         96.3 kB
-├ ƒ /politics-visual-preview/compact     2.47 kB        95.5 kB
-├ ƒ /privacy                             1.14 kB         197 kB
-├ ƒ /robots.txt                          0 B                0 B

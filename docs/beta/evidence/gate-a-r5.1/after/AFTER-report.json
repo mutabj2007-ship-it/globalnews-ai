@@ -7,6 +7,28 @@
     "screenshot": "AFTER_desktop-1440x900_en.png",
     "requestCount": 42,
     "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3313/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      },
+      {
+        "url": "http://127.0.0.1:3313/api/follows/countries",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3313/map?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:3313/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
@@ -35,11 +57,31 @@
         "dom": true,
         "visible": true
       },
-      "world": {
+      "world-intelligence": {
         "dom": true,
         "visible": true
       },
-      "country": {
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
         "dom": true,
         "visible": true
       },
@@ -47,6 +89,55 @@
         "dom": true,
         "visible": true
       }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
     },
     "comingSoonBadge": {
       "dom": true,
@@ -77,6 +168,24 @@
     "screenshot": "AFTER_phone-430x932_en.png",
     "requestCount": 40,
     "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3313/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      },
+      {
+        "url": "http://127.0.0.1:3313/api/follows/countries",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3313/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
@@ -105,11 +214,31 @@
         "dom": true,
         "visible": true
       },
-      "world": {
+      "world-intelligence": {
         "dom": true,
         "visible": true
       },
-      "country": {
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
         "dom": true,
         "visible": true
       },
@@ -117,6 +246,55 @@
         "dom": true,
         "visible": true
       }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
     },
     "comingSoonBadge": {
       "dom": true,
@@ -147,6 +325,19 @@
     "screenshot": "AFTER_phone-390x844_en.png",
     "requestCount": 40,
     "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3313/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      },
+      {
+        "url": "http://127.0.0.1:3313/api/follows/countries",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
@@ -175,11 +366,31 @@
         "dom": true,
         "visible": true
       },
-      "world": {
+      "world-intelligence": {
         "dom": true,
         "visible": true
       },
-      "country": {
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
         "dom": true,
         "visible": true
       },
@@ -187,6 +398,55 @@
         "dom": true,
         "visible": true
       }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
     },
     "comingSoonBadge": {
       "dom": true,
@@ -217,6 +477,24 @@
     "screenshot": "AFTER_phone-360x800_en.png",
     "requestCount": 40,
     "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3313/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      },
+      {
+        "url": "http://127.0.0.1:3313/api/follows/countries",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3313/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
@@ -245,11 +523,31 @@
         "dom": true,
         "visible": true
       },
-      "world": {
+      "world-intelligence": {
         "dom": true,
         "visible": true
       },
-      "country": {
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
         "dom": true,
         "visible": true
       },
@@ -257,6 +555,55 @@
         "dom": true,
         "visible": true
       }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Security Intelligence": "rgb(253, 186, 116)",
+      "World Intelligence": "rgb(110, 231, 183)",
+      "Country Intelligence": "rgb(147, 197, 253)",
+      "Politics Intelligence": "rgb(196, 181, 253)",
+      "Economy Intelligence": "rgb(110, 231, 183)",
+      "Conflict Intelligence": "rgb(252, 165, 165)",
+      "Market Intelligence": "rgb(103, 232, 249)",
+      "Humanitarian Intelligence": "rgb(216, 180, 254)",
+      "Energy Intelligence": "rgb(252, 211, 77)"
     },
     "comingSoonBadge": {
       "dom": true,
@@ -287,6 +634,32 @@
     "screenshot": "AFTER_desktop-1440x900_pl.png",
     "requestCount": 49,
     "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3313/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      },
+      {
+        "url": "http://127.0.0.1:3313/api/follows/countries",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3313/map?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:3313/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:3313/support?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
@@ -315,11 +688,31 @@
         "dom": true,
         "visible": true
       },
-      "world": {
+      "world-intelligence": {
         "dom": true,
         "visible": true
       },
-      "country": {
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
         "dom": true,
         "visible": true
       },
@@ -327,6 +720,55 @@
         "dom": true,
         "visible": true
       }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
     },
     "comingSoonBadge": {
       "dom": true,
@@ -357,6 +799,19 @@
     "screenshot": "AFTER_phone-430x932_pl.png",
     "requestCount": 47,
     "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3313/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      },
+      {
+        "url": "http://127.0.0.1:3313/api/follows/countries",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
@@ -385,11 +840,31 @@
         "dom": true,
         "visible": true
       },
-      "world": {
+      "world-intelligence": {
         "dom": true,
         "visible": true
       },
-      "country": {
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
         "dom": true,
         "visible": true
       },
@@ -397,6 +872,55 @@
         "dom": true,
         "visible": true
       }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
     },
     "comingSoonBadge": {
       "dom": true,
@@ -427,6 +951,19 @@
     "screenshot": "AFTER_phone-390x844_pl.png",
     "requestCount": 47,
     "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3313/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      },
+      {
+        "url": "http://127.0.0.1:3313/api/follows/countries",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
@@ -455,11 +992,31 @@
         "dom": true,
         "visible": true
       },
-      "world": {
+      "world-intelligence": {
         "dom": true,
         "visible": true
       },
-      "country": {
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
         "dom": true,
         "visible": true
       },
@@ -467,6 +1024,55 @@
         "dom": true,
         "visible": true
       }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
     },
     "comingSoonBadge": {
       "dom": true,
@@ -497,6 +1103,24 @@
     "screenshot": "AFTER_phone-360x800_pl.png",
     "requestCount": 47,
     "meteredRequests": [],
+    "failedResponses": [
+      {
+        "url": "http://127.0.0.1:3313/api/users/me",
+        "status": 500,
+        "type": "fetch"
+      },
+      {
+        "url": "http://127.0.0.1:3313/api/follows/countries",
+        "status": 500,
+        "type": "fetch"
+      }
+    ],
+    "failedRequests": [
+      {
+        "url": "http://127.0.0.1:3313/search?_rsc=19zvn",
+        "failure": "net::ERR_ABORTED"
+      }
+    ],
     "consoleErrors": [
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
@@ -525,11 +1149,31 @@
         "dom": true,
         "visible": true
       },
-      "world": {
+      "world-intelligence": {
         "dom": true,
         "visible": true
       },
-      "country": {
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
         "dom": true,
         "visible": true
       },
@@ -537,6 +1181,55 @@
         "dom": true,
         "visible": true
       }
+    },
+    "moduleRoutes": {
+      "security": {
+        "dom": true,
+        "visible": true
+      },
+      "world-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "country-intelligence": {
+        "dom": true,
+        "visible": true
+      },
+      "politics": {
+        "dom": true,
+        "visible": true
+      },
+      "economy": {
+        "dom": true,
+        "visible": true
+      },
+      "conflict": {
+        "dom": true,
+        "visible": true
+      },
+      "market": {
+        "dom": true,
+        "visible": true
+      },
+      "humanitarian": {
+        "dom": true,
+        "visible": true
+      },
+      "energy": {
+        "dom": true,
+        "visible": true
+      }
+    },
+    "titleColours": {
+      "Analiza bezpieczeństwa": "rgb(253, 186, 116)",
+      "Analiza świata": "rgb(110, 231, 183)",
+      "Analiza krajów": "rgb(147, 197, 253)",
+      "Analiza polityczna": "rgb(196, 181, 253)",
+      "Analiza gospodarcza": "rgb(110, 231, 183)",
+      "Analiza konfliktów": "rgb(252, 165, 165)",
+      "Analiza rynkowa": "rgb(103, 232, 249)",
+      "Analiza humanitarna": "rgb(216, 180, 254)",
+      "Analiza energetyczna": "rgb(252, 211, 77)"
     },
     "comingSoonBadge": {
       "dom": true,

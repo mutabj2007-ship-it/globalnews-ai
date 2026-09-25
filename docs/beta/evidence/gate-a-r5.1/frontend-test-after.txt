@@ -1,23 +1,23 @@
-GATE A R5.1 — frontend jest AFTER implementation, feature/beta-shell-r5-1
+GATE A · C-3 CORRECTION — frontend jest
 Command: npx jest (in frontend/)
 
 Test Suites: 10 failed, 284 passed, 294 total
-Tests:       15 failed, 13 skipped, 6511 passed, 6539 total
-Time:        15.31 s, estimated 17 s
+Tests:       15 failed, 13 skipped, 6526 passed, 6554 total
+Time:        15.814 s
 
-FAILING SUITES — the IDENTICAL set already failing on base 408edb0:
-FAIL src/components/admin/adminOperationalSurface.spec.ts (7.585 s)
-FAIL src/components/admin/adminSupportSurface.spec.ts (10.333 s)
-FAIL src/components/map/c911RequestEconomy.spec.ts (7.579 s)
-FAIL src/components/map/m51PhaseB.spec.ts (8.091 s)
-FAIL src/lib/admin/adminProvenance.spec.ts (8.756 s)
-FAIL src/lib/evidence/visualAuthority.spec.ts (7.885 s)
-FAIL src/lib/map/mapShellRouteWiring.spec.ts (8.354 s)
+FAILING SUITES — identical set already failing on base 408edb0:
+FAIL src/components/admin/adminOperationalSurface.spec.ts (9.332 s)
+FAIL src/components/admin/adminSupportSurface.spec.ts (8.521 s)
+FAIL src/components/map/c911RequestEconomy.spec.ts (7.915 s)
+FAIL src/components/map/m51PhaseB.spec.ts (10.12 s)
+FAIL src/lib/admin/adminProvenance.spec.ts (8.135 s)
+FAIL src/lib/evidence/visualAuthority.spec.ts (9.078 s)
+FAIL src/lib/map/mapShellRouteWiring.spec.ts (8.147 s)
 FAIL src/lib/market/marketSyntheticHarness.spec.ts
 FAIL src/lib/market/mktRetained.spec.ts
-FAIL src/lib/market/visualAuthorityCorrection.spec.ts (10.796 s)
+FAIL src/lib/market/visualAuthorityCorrection.spec.ts (10.287 s)
 
-BASELINE (recorded pre-change in frontend-test-baseline.txt):
-  Test Suites: 10 failed, 283 passed, 293 total
-  Tests:       15 failed, 13 skipped, 6482 passed, 6510 total
-DELTA: +1 suite (intelligenceModulesR51.spec.ts), +29 passing tests, 0 new failures.
+BASELINE at 408edb0: 10 failed / 283 passed suites; 15 failed / 6482 passed tests
+AFTER df48cf2:       10 failed / 284 passed suites; 15 failed / 6511 passed tests
+AFTER C-3:           10 failed / 284 passed suites; 15 failed / 6526 passed tests
+DELTA: 0 new failing suites/tests; +44 passing tests vs base.

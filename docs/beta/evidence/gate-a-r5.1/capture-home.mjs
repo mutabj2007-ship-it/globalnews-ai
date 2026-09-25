@@ -50,6 +50,19 @@ for (const locale of LOCALES) {
     const requests = [];
     context.on('request', (r) => requests.push({ method: r.method(), url: r.url() }));
 
+    /* C-3 correction 2: a console "500" with no URL is unexplained evidence.
+       Record the failing response itself so the endpoint is named, not guessed. */
+    const failedResponses = [];
+    context.on('response', (r) => {
+      if (r.status() >= 400) {
+        failedResponses.push({ url: r.url(), status: r.status(), type: r.request().resourceType() });
+      }
+    });
+    const failedRequests = [];
+    context.on('requestfailed', (r) => {
+      failedRequests.push({ url: r.url(), failure: r.failure()?.errorText ?? null });
+    });
+
     const page = await context.newPage();
     const consoleErrors = [];
     page.on('console', (m) => {
@@ -81,12 +94,40 @@ for (const locale of LOCALES) {
         navHrefs: [...document.querySelectorAll('nav a')]
           .map((a) => a.getAttribute('href'))
           .filter(Boolean),
+        /* All NINE registry modules, EN or PL title, DOM and visible. */
         moduleTitles: {
           security: has(/Security Intelligence|Analiza bezpieczeństwa/),
-          world: has(/World Intelligence|Analiza świata/),
-          country: has(/Country Intelligence|Analiza krajów/),
+          'world-intelligence': has(/World Intelligence|Analiza świata/),
+          'country-intelligence': has(/Country Intelligence|Analiza krajów/),
+          politics: has(/Politics Intelligence|Analiza polityczna/),
+          economy: has(/Economy Intelligence|Analiza gospodarcza/),
+          conflict: has(/Conflict Intelligence|Analiza konfliktów/),
+          market: has(/Market Intelligence|Analiza rynkowa/),
+          humanitarian: has(/Humanitarian Intelligence|Analiza humanitarna/),
           energy: has(/Energy Intelligence|Analiza energetyczna/),
         },
+        /* Every module's route line, so all nine cards are proven rendered. */
+        moduleRoutes: {
+          security: has(/\/security-visual-preview/),
+          'world-intelligence': has(/No route|Brak trasy/),
+          'country-intelligence': has(/\/map(?![a-z])/),
+          politics: has(/\/politics-visual-preview/),
+          economy: has(/\/economy-visual-preview/),
+          conflict: has(/\/conflict/),
+          market: has(/\/market/),
+          humanitarian: has(/\/humanitarian/),
+          energy: has(/\/energy/),
+        },
+        /* The approved category title colours, read off the rendered nodes. */
+        titleColours: (() => {
+          const out = {};
+          for (const el of document.querySelectorAll('#intelligence-modules li a, #intelligence-modules li > div')) {
+            const title = el.querySelector('span > span');
+            if (!title) continue;
+            out[(title.textContent || '').trim()] = getComputedStyle(title).color;
+          }
+          return out;
+        })(),
         comingSoonBadge: has(/Coming soon|Wkrótce/),
         previewBadge: has(/Preview|Zapowiedź/),
         activeBadge: has(/\bActive\b|Aktywny/),
@@ -106,12 +147,14 @@ for (const locale of LOCALES) {
       screenshot: file,
       requestCount: requests.length,
       meteredRequests: metered,
+      failedResponses,
+      failedRequests,
       consoleErrors,
       ...probe,
     });
 
     console.log(
-      `${label} ${vp.name} ${locale}  http=${response?.status()}  lang=${probe.htmlLang}  reqs=${requests.length}  metered=${metered.length}  overflow=${probe.horizontalOverflow}  modsVisible=${probe.moduleTitles.security.visible}`,
+      `${label} ${vp.name} ${locale}  http=${response?.status()}  lang=${probe.htmlLang}  reqs=${requests.length}  metered=${metered.length}  overflow=${probe.horizontalOverflow}  mods=${Object.values(probe.moduleTitles).filter((m) => m.visible).length}/9  failed=${failedResponses.length}`,
     );
 
     await context.close();
@@ -129,3 +172,17 @@ console.log('captures:', report.length);
 console.log('metered/AI requests during ordinary Home browsing:', meteredTotal);
 console.log('horizontal overflow at:', overflow.length ? overflow.join(', ') : 'none');
 console.log('locale mismatch at:', wrongLang.length ? wrongLang.join(', ') : 'none');
+
+const allModulesVisible = report.every((r) => Object.values(r.moduleTitles).every((m) => m.visible));
+console.log('all nine module titles visible in every frame:', allModulesVisible);
+
+const byEndpoint = new Map();
+for (const r of report) {
+  for (const f of r.failedResponses) {
+    const key = `${f.status} ${f.type} ${new URL(f.url).pathname}`;
+    byEndpoint.set(key, (byEndpoint.get(key) ?? 0) + 1);
+  }
+}
+console.log('failing responses by endpoint:');
+if (byEndpoint.size === 0) console.log('  none');
+for (const [k, n] of byEndpoint) console.log(`  ${n}x  ${k}`);
