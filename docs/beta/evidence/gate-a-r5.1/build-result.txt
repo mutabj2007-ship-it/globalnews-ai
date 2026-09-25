@@ -1,0 +1,50 @@
+GATE A R5.1 — build results on feature/beta-shell-r5-1 @ 408edb0
+
+npm run build:shared  -> exit 0
+npm run build:frontend -> exit 0
+
+Route (app)                              Size     First Load JS
+├ ƒ /_not-found                          158 B          88.4 kB
+├ ƒ /account/settings                    1.38 kB         200 kB
+├ ƒ /admin                               3.33 kB        97.5 kB
+├ ƒ /admin/ai                            151 B           106 kB
+├ ƒ /admin/ai/providers                  152 B           106 kB
+├ ƒ /admin/analytics                     152 B           107 kB
+├ ƒ /admin/analytics/geography           152 B           107 kB
+├ ƒ /admin/audit                         1.04 kB        95.2 kB
+├ ƒ /admin/news                          151 B           106 kB
+├ ƒ /admin/news/sources                  152 B           106 kB
+├ ƒ /admin/payments                      1.44 kB         104 kB
+├ ƒ /admin/payments/customers            1.44 kB         104 kB
+├ ƒ /admin/payments/invoices             1.44 kB         104 kB
+├ ƒ /admin/payments/ksef                 1.44 kB         104 kB
+├ ƒ /admin/payments/traceability         1.44 kB         104 kB
+├ ƒ /admin/payments/vat                  1.44 kB         104 kB
+├ ƒ /admin/settings                      773 B          94.9 kB
+├ ƒ /admin/support                       3.21 kB         115 kB
+├ ƒ /admin/system/health                 180 B          94.3 kB
+├ ƒ /admin/system/logs                   717 B          94.9 kB
+├ ƒ /admin/users                         152 B           107 kB
+├ ƒ /admin/users/subscriptions           152 B           107 kB
+├ ○ /apple-icon.png                      0 B                0 B
+├ ƒ /ask                                 9.67 kB         523 kB
+├ ƒ /conflict                            1.85 kB         830 kB
+├ ƒ /delivery-visual-preview             144 B           111 kB
+├ ƒ /delivery-visual-preview/compact     144 B           111 kB
+├ ƒ /economy-visual-preview              184 B           133 kB
+├ ƒ /economy-visual-preview/compact      3.46 kB         136 kB
+├ ƒ /election-visual-preview             139 B          94.6 kB
+├ ƒ /election-visual-preview/compact     139 B          94.6 kB
+├ ƒ /energy                              17.6 kB         435 kB
+├ ƒ /history                             977 B           200 kB
+├ ƒ /humanitarian                        3.38 kB         209 kB
+├ ƒ /humanitarian/compact                2.69 kB         209 kB
+├ ○ /icon.svg                            0 B                0 B
+├ ƒ /imihigo                             1.41 kB        89.6 kB
+├ ƒ /imihigo/compact                     1.41 kB        89.6 kB
+├ ƒ /map                                 16.6 kB         860 kB
+├ ƒ /market                              2.74 kB         217 kB
+├ ƒ /market/compact                      2.58 kB         217 kB
+├ ƒ /politics-visual-preview             3.3 kB         96.3 kB
+├ ƒ /politics-visual-preview/compact     2.47 kB        95.5 kB
+├ ƒ /privacy                             1.14 kB         196 kB

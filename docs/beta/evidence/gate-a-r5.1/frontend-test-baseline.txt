@@ -1,0 +1,18 @@
+GATE A R5.1 — frontend jest baseline on feature/beta-shell-r5-1 @ 408edb0
+Command: npx jest (in frontend/). NO source modified by this task.
+
+Test Suites: 10 failed, 283 passed, 293 total
+Tests:       15 failed, 13 skipped, 6482 passed, 6510 total
+Time:        30.29 s
+
+FAILING SUITES (identical set to the Beta base measured in BETA-PREFLIGHT-AUDIT-R1 §G-2):
+FAIL src/components/admin/adminOperationalSurface.spec.ts
+FAIL src/components/admin/adminSupportSurface.spec.ts
+FAIL src/components/map/c911RequestEconomy.spec.ts
+FAIL src/components/map/m51PhaseB.spec.ts
+FAIL src/lib/admin/adminProvenance.spec.ts
+FAIL src/lib/evidence/visualAuthority.spec.ts
+FAIL src/lib/map/mapShellRouteWiring.spec.ts
+FAIL src/lib/market/marketSyntheticHarness.spec.ts
+FAIL src/lib/market/mktRetained.spec.ts
+FAIL src/lib/market/visualAuthorityCorrection.spec.ts
