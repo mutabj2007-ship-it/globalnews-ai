@@ -2220,6 +2220,36 @@ export const en = {
     /* beta.suggested / beta.fillNote — prefill only; nothing runs until Send. */
     suggestedTitle: 'Suggested questions',
     suggestedNote: 'Tapping a suggestion fills the box. Nothing runs until you press Send.',
+
+    /*
+      ── C1 · THE THIRD HERO ACTION ────────────────────────────────────────
+      The contract requires three hero actions where the rendered prototype
+      draws two. Ask -> /ask and Open Map -> /map already exist; this is the
+      third. It goes to the editorial section's anchor rather than a new
+      route, because browsing today's coverage is exactly what that section
+      is, and inventing a /world route would assign a destination the
+      registry states does not exist (world-intelligence has none).
+    */
+    exploreWorld: 'Explore World',
+    exploreWorldSub: 'Today’s coverage, free to browse',
+
+    /*
+      ── C1 · THE TIER BOUNDARY, WHICH DOES NOT SELL ANYTHING ──────────────
+      "Go further with GlobalNewsAI". Violet carries the tier boundary and
+      sand carries metered compute, per the contract's colour meanings.
+
+      IT HAS NO CALL TO ACTION ON PURPOSE. The contract says to inspect the
+      real plans routes before assigning one, and the inspection found none:
+      there is no plans, pricing, billing, upgrade or checkout route in the
+      app, and /account has a layout but no page, so it does not even
+      resolve. A button here would have to point somewhere that does not
+      exist. So this states where the free product ends and stops — no
+      price, no credit balance, no checkout, exactly as §5 requires.
+    */
+    premiumTitle: 'Go further with GlobalNewsAI',
+    premiumFree: 'Browsing, sources and the world map stay free.',
+    premiumMetered: 'Deeper AI analysis runs on metered compute.',
+    premiumNote: 'Plans are not open yet. Nothing on this page charges you.',
   },
 
   intelligenceModules: {

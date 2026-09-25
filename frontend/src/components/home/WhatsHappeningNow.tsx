@@ -96,7 +96,13 @@ export function WhatsHappeningNow({
   const stamp = stampTime === '' ? null : t.updatedStamp.replace('{time}', stampTime);
 
   return (
-    <section aria-labelledby="beta-now-heading" className="flex flex-col gap-4">
+    /* C1 gives the hero an "Explore World" action, and this section is where it
+       lands. scroll-mt keeps the heading clear of the fixed header. */
+    <section
+      id="whats-happening-now"
+      aria-labelledby="beta-now-heading"
+      className="flex scroll-mt-24 flex-col gap-4"
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="beta-now-heading" className="font-display text-2xl font-semibold text-ink-primary sm:text-3xl">
           {t.nowHeading}

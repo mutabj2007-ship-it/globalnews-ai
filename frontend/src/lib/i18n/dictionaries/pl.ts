@@ -1808,6 +1808,21 @@ export const pl: Dictionary = {
     pulseNote: 'Podgląd poglądowy. Otwórz mapę, aby zobaczyć doniesienia i źródła według krajów.',
     suggestedTitle: 'Sugerowane pytania',
     suggestedNote: 'Dotknięcie sugestii wypełnia pole. Nic nie jest uruchamiane, dopóki nie naciśniesz Wyślij.',
+
+    /*
+      C1. NEW STRINGS, NOT FROM THE DESIGN CATALOGUE. Every other Polish
+      string in this block is quoted verbatim from the R4.1 package's
+      i18n_en_pl.json. These five zones do not exist in that catalogue —
+      they come from the R2 contract's prose — so there is nothing to quote
+      and the Polish here was written for this repository. Marked FOR REVIEW
+      rather than presented as approved copy.
+    */
+    exploreWorld: 'Poznaj świat',
+    exploreWorldSub: 'Dzisiejsze doniesienia, przeglądanie bez opłat',
+    premiumTitle: 'Zyskaj więcej z GlobalNewsAI',
+    premiumFree: 'Przeglądanie, źródła i mapa świata pozostają bezpłatne.',
+    premiumMetered: 'Pogłębiona analiza AI korzysta z płatnych zasobów obliczeniowych.',
+    premiumNote: 'Plany nie są jeszcze dostępne. Nic na tej stronie nie jest płatne.',
   },
 
   intelligenceModules: {
