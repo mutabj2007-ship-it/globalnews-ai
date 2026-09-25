@@ -113,7 +113,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
   return (
     <section
       aria-labelledby="beta-hero-heading"
-      className="relative isolate overflow-hidden pb-4 pt-3 sm:pb-5 lg:pb-5 lg:pt-5"
+      className="relative isolate overflow-hidden pb-7 pt-5 sm:pb-8 lg:pb-9 lg:pt-8"
     >
       {/*
         THE LAYERED DARK-BLUE INTELLIGENCE FIELD.
@@ -135,49 +135,87 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
       */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2"
+        className="pointer-events-none absolute inset-y-0 left-1/2 -z-20 w-screen -translate-x-1/2"
       >
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,#04090f_0%,#050e1c_45%,#04080f_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_78%_32%,rgba(34,211,238,0.20),transparent_70%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_55%_at_12%_18%,rgba(139,92,246,0.14),transparent_70%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(2,6,12,0.65)_100%)]" />
+        {/*
+          ── THE WORLD ATMOSPHERE ────────────────────────────────────────
+          HERO SCALE CORRECTION: *"The current Hero still looks too much like a
+          plain dark panel with a globe asset placed inside it. Blend the world
+          treatment into the Hero background using gradients, atmospheric haze
+          and subtle world/geographic texture so the globe feels embedded in the
+          product surface."*
+
+          Seven layers, each doing one job, all pure CSS — no JavaScript, no
+          layout cost, nothing that moves and so nothing needing a
+          reduced-motion branch.
+        */}
+
+        {/* 1 · the deep base, warmer toward the horizon line than the edges */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#03070e_0%,#061426_42%,#08192c_62%,#040a14_100%)]" />
+
+        {/* 2 · THE ATMOSPHERE ITSELF — a wide blue bloom centred on the globe,
+               far larger than the sphere, so the light reads as coming OFF the
+               world rather than being painted behind it */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_86%_130%_at_58%_46%,rgba(56,150,236,0.30),transparent_68%)]" />
+
+        {/* 3 · the hotter inner core of that bloom */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_44%_74%_at_56%_44%,rgba(80,190,255,0.22),transparent_62%)]" />
+
+        {/* 4 · violet counterweight on the headline side, so the left is not a
+               dead corner and the two accents balance */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_52%_64%_at_6%_20%,rgba(124,92,246,0.18),transparent_70%)]" />
+
+        {/* 5 · SUBTLE GEOGRAPHIC TEXTURE — a graticule so faint it reads as
+               material rather than as a grid. Two repeating-linear-gradients,
+               one per axis, at ~2.5% so no line is ever individually legible */}
+        <div className="absolute inset-0 opacity-[0.55] [background-image:repeating-linear-gradient(90deg,rgba(125,211,252,0.045)_0_1px,transparent_1px_96px),repeating-linear-gradient(0deg,rgba(125,211,252,0.035)_0_1px,transparent_1px_96px)]" />
+
+        {/* 6 · atmospheric haze drifting up from the horizon */}
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(0deg,rgba(14,52,92,0.34),transparent_84%)]" />
+
+        {/* 7 · vignette, last, so type stays legible where the bloom is brightest */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_36%,rgba(2,6,12,0.62)_100%)]" />
       </div>
 
       {/*
-        THE GLOBE — Z2, placed under DESKTOP FIDELITY CORRECTION R2 §3.
+        THE GLOBE — HERO SCALE CORRECTION.
 
-        R2 refused the previous placement as *"too circular, too visually
-        isolated and too dominant"* — a standalone glowing circle rather than a
-        part of the composition. The target it sets: *"approximately the
-        middle/right half of the Hero; visibly behind/around the CTA area;
-        enough Earth visible to feel global; not a standalone glowing circle;
-        premium card clearly separated at the far right."*
+        The previous pass was refused for the opposite reason to the one before
+        it: *"the globe has now been reduced too far... it reads as a small
+        decorative globe behind the premium card."* The required hierarchy is
+        stated plainly — left is headline/search/actions, MIDDLE-RIGHT is a
+        large illuminated Earth, far right is the premium card floating above
+        it — and the card must not overpower the world.
 
-        So it starts at 38% of the hero's width and runs past the right edge,
-        and it is vertically centred on the band rather than parked at the top —
-        which is what puts it BEHIND the actions rather than above them. It is
-        deliberately cropped by the hero on the right: a world that runs off the
-        frame reads as a world, while a complete disc floating in space reads as
-        a widget. The premium card sits clear of it at the far right, §4.
+        So the sphere is no longer bounded by the hero's own height. It is a
+        fixed square, ~1.7× its previous apparent size, centred vertically on
+        the band and allowed to overflow it top and bottom, with its horizontal
+        centre moved from ~68% of the hero to ~52% — into the middle. That is
+        what puts Earth behind the search field and the action row rather than
+        beside them, and it is why it no longer reads as a circular icon parked
+        behind the card.
 
-        The mask does two jobs: it fades the bottom so the hero's overflow never
-        cuts a hard line, and it fades the left so the globe dissolves behind
-        the headline instead of ending on an edge beside it.
+        THE MASKS ARE WHAT KEEP IT FROM BEING THE EARLIER REJECTED CROP. Fading
+        top, bottom and left means the sphere has no hard edge anywhere: it
+        dissolves into the atmosphere behind the headline instead of ending on
+        a line, so a viewer reads "a world the page is sitting on" rather than
+        "a large image that did not fit".
+
+        `-z-10` keeps it above the atmosphere layers and below every control.
+        It is `aria-hidden`, carries no marks, and nothing on the page reads it.
       */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-[-16%] left-[42%] -z-10 opacity-70 [mask-image:linear-gradient(to_right,transparent_0%,#000_30%)] sm:right-[-12%] sm:left-[44%] sm:opacity-75 lg:right-[-12%] lg:left-[30%] lg:opacity-100"
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[380px] w-[380px] -translate-x-[6%] -translate-y-[52%] opacity-75 [mask-image:radial-gradient(circle_at_50%_50%,#000_84%,rgba(0,0,0,0.72)_93%,transparent_100%)] sm:h-[460px] sm:w-[460px] sm:opacity-90 lg:h-[580px] lg:w-[580px] lg:-translate-x-[20%] lg:-translate-y-[50%] lg:opacity-100 xl:h-[640px] xl:w-[640px] xl:-translate-x-[22%]"
       >
-        <div className="relative h-full w-full [mask-image:linear-gradient(to_bottom,#000_72%,transparent_97%)]">
-          <HeroGlobe />
-        </div>
+        <HeroGlobe />
       </div>
 
       <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)] lg:items-start lg:gap-7">
         <div className="flex max-w-2xl flex-col">
           <h1
             id="beta-hero-heading"
-            className="font-display text-[34px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[42px] lg:text-[40px] xl:text-[46px]"
+            className="font-display text-[36px] font-semibold leading-[1.04] tracking-[-0.022em] sm:text-[44px] lg:text-[50px] xl:text-[56px]"
           >
             <span className="block text-ink-primary">{t.heroA}</span>
             {/*
@@ -191,7 +229,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             <span className="block text-cyan-300">{t.heroB}</span>
           </h1>
 
-          <p className="mt-2.5 max-w-xl text-[14px] leading-relaxed text-ink-secondary sm:text-[15px]">
+          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-secondary sm:text-base">
             {t.heroSub}
           </p>
 
@@ -205,7 +243,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             method="get"
             role="search"
             aria-label={t.askAria}
-            className="mt-3.5 flex w-full max-w-[520px] items-center gap-2 rounded-2xl border border-border-strong bg-void/70 p-1.5 pl-4 shadow-[0_0_40px_-12px_rgba(34,211,238,0.35)] focus-within:border-cyan-400/50"
+            className="mt-5 flex w-full max-w-[600px] items-center gap-2 rounded-2xl border border-border-strong bg-void/75 p-2 pl-4 shadow-[0_0_40px_-12px_rgba(34,211,238,0.35)] focus-within:border-cyan-400/50"
           >
             <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-violet-300" />
             <input
@@ -225,7 +263,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
           </form>
 
           {/* The metered-cost disclosure. Approved copy, stated before the spend. */}
-          <p className="mt-2 flex max-w-xl items-start gap-1.5 text-[11.5px] leading-snug text-ink-tertiary">
+          <p className="mt-3 flex max-w-xl items-start gap-1.5 text-[12px] leading-snug text-ink-tertiary">
             <Zap size={13} strokeWidth={2} aria-hidden="true" className="mt-[2px] shrink-0 text-amber-300" />
             <span>{t.askHint}</span>
           </p>
@@ -234,35 +272,35 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             THE THREE ACTIONS. All three are ordinary links to destinations that
             already exist, and none of them spends anything on arrival.
           */}
-          <div className="mt-3.5 grid w-full max-w-[700px] grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <div className="mt-5 grid w-full max-w-[720px] grid-cols-1 gap-3 sm:grid-cols-3">
             <a
               href="#whats-happening-now"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-xl border border-border-strong bg-void/70 px-3.5 py-2.5 text-left transition-colors hover:border-cyan-400/40 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+              className="flex min-h-[44px] items-center gap-2.5 rounded-xl border border-border-strong bg-void/70 px-4 py-3 text-left transition-colors hover:border-cyan-400/40 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
             >
-              <Globe2 size={18} strokeWidth={1.9} aria-hidden="true" className="shrink-0 text-cyan-300" />
+              <Globe2 size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-cyan-300" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[13px] font-semibold leading-tight text-ink-primary">{t.exploreWorld}</span>
-                <span className="truncate text-[10.5px] leading-tight text-ink-tertiary">{t.exploreWorldSub}</span>
+                <span className="text-[14px] font-semibold leading-tight text-ink-primary">{t.exploreWorld}</span>
+                <span className="text-[11px] leading-tight text-ink-tertiary">{t.exploreWorldSub}</span>
               </span>
             </a>
             <a
               href="/ask"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-violet-600 px-3.5 py-2.5 text-left transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none"
+              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-violet-600 px-4 py-3 text-left transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none"
             >
-              <Sparkles size={18} strokeWidth={1.9} aria-hidden="true" className="shrink-0 text-white" />
+              <Sparkles size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[13px] font-semibold leading-tight text-white">{t.askToday}</span>
-                <span className="truncate text-[10.5px] leading-tight text-white/80">{t.askTodaySub}</span>
+                <span className="text-[14px] font-semibold leading-tight text-white">{t.askToday}</span>
+                <span className="text-[11px] leading-tight text-white/80">{t.askTodaySub}</span>
               </span>
             </a>
             <a
               href="/map"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-teal-700 px-3.5 py-2.5 text-left transition-colors hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none"
+              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-teal-700 px-4 py-3 text-left transition-colors hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none"
             >
-              <MapIcon size={18} strokeWidth={1.9} aria-hidden="true" className="shrink-0 text-white" />
+              <MapIcon size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[13px] font-semibold leading-tight text-white">{t.openMap}</span>
-                <span className="truncate text-[10.5px] leading-tight text-white/80">{t.openMapSub}</span>
+                <span className="text-[14px] font-semibold leading-tight text-white">{t.openMap}</span>
+                <span className="text-[11px] leading-tight text-white/80">{t.openMapSub}</span>
               </span>
             </a>
           </div>

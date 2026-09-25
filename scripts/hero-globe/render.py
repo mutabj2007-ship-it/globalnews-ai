@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 N = 1600                      # output is square, NxN
-R = N * 0.455                 # sphere radius, leaving room for the atmosphere
+R = N * 0.430                 # sphere radius, leaving room for the atmosphere
 CX = CY = N / 2.0
 LON0, LAT0 = math.radians(15.0), math.radians(20.0)   # Europe/Africa framing
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +40,7 @@ land = np.where(inside & (np.abs(lat) < math.radians(83.0)), land_arr[py, px], 0
 sun = np.array([-0.42, 0.50, 0.76]); sun /= np.linalg.norm(sun)
 nz = np.sqrt(np.clip(1 - rho2, 0, 1))
 lam = np.clip(dx * sun[0] + dy * sun[1] + nz * sun[2], 0, 1)
-day = np.clip((lam - 0.06) / 0.62, 0, 1) ** 0.85          # lit fraction
+day = np.clip((lam - 0.02) / 0.70, 0, 1) ** 0.72          # lit fraction
 night = 1.0 - day
 
 def fbm(shape, octaves=6, seed=7, start=24):
@@ -54,10 +54,10 @@ def fbm(shape, octaves=6, seed=7, start=24):
 
 # ── base colour ─────────────────────────────────────────────────────────────
 rgb = np.zeros((N, N, 3))
-ocean_day  = np.array([0.045, 0.120, 0.265]);  ocean_night = np.array([0.005, 0.018, 0.048])
-land_day   = np.array([0.085, 0.150, 0.205]);  land_night  = np.array([0.014, 0.030, 0.050])
+ocean_day  = np.array([0.075, 0.205, 0.420]);  ocean_night = np.array([0.006, 0.022, 0.058])
+land_day   = np.array([0.135, 0.235, 0.300]);  land_night  = np.array([0.018, 0.038, 0.062])
 tex = fbm((N, N), seed=11, start=40)
-land_tint = 1.0 + (tex - 0.5) * 0.55
+land_tint = 1.0 + (tex - 0.5) * 0.72
 for i in range(3):
     ocean = ocean_day[i] * day + ocean_night[i] * night
     ground = (land_day[i] * day + land_night[i] * night) * land_tint
@@ -67,9 +67,9 @@ for i in range(3):
 from PIL import ImageFilter as _IF
 _land_img = Image.fromarray((land * 255).astype(np.uint8))
 _blur = np.asarray(_land_img.filter(_IF.GaussianBlur(2.6))).astype(np.float64) / 255.0
-coast = np.clip(np.abs(land - _blur) * 2.6, 0, 1) * inside
+coast = np.clip(np.abs(land - _blur) * 3.0, 0, 1) * inside
 for i, ch in enumerate((0.42, 0.70, 0.95)):
-    rgb[:, :, i] += coast * ch * (0.13 + 0.48 * day)
+    rgb[:, :, i] += coast * ch * (0.18 + 0.60 * day)
 
 # ── city light: soft blooms at real cities, weighted to the night side ──────
 cities = json.load(open(os.path.join(HERE, 'cities.json')))
@@ -81,15 +81,15 @@ for _name, clat, clon, tier in cities:
         continue
     gx = CX + R * (math.cos(la) * math.sin(lo - LON0))
     gy = CY - R * (math.cos(LAT0) * math.sin(la) - math.sin(LAT0) * math.cos(la) * math.cos(lo - LON0))
-    rad = (2.6, 4.0, 6.2)[tier - 1] * (0.55 + 0.45 * cosd)
-    amp = (0.30, 0.52, 0.80)[tier - 1] * (0.35 + 0.65 * cosd)
+    rad = (3.0, 4.6, 7.0)[tier - 1] * (0.55 + 0.45 * cosd)
+    amp = (0.40, 0.68, 1.00)[tier - 1] * (0.35 + 0.65 * cosd)
     # A city is a conurbation, not a point: each one scatters a handful of
     # small satellite blooms around its centre, deterministically seeded, so
     # the result is an irregular urban patch rather than a neat circle. This is
     # what stops the light reading as a marker — a marker is one shape in one
     # place, and this is a cluster with no centre a reader can point at.
     rs = np.random.default_rng(abs(hash(_name)) % (2**32))
-    n_sat = (3, 6, 10)[tier - 1]
+    n_sat = (5, 10, 16)[tier - 1]
     for k in range(n_sat):
         jx = gx + rs.normal(0, rad * 2.1)
         jy = gy + rs.normal(0, rad * 2.1)
@@ -103,10 +103,10 @@ for _name, clat, clon, tier in cities:
         d2 = (sx - jx) ** 2 + (sy - jy) ** 2
         glow[y0:y1, x0:x1] += ja * np.exp(-d2 / (2 * jr * jr))
 glow = np.asarray(Image.fromarray((np.clip(glow, 0, 4) * 63).astype(np.uint8)).filter(ImageFilter.GaussianBlur(4.5))).astype(np.float64) / 255.0 * 4
-glow *= land * (0.30 + 0.85 * night) * inside          # brightest on the night side, only on land
+glow *= land * (0.42 + 0.85 * night) * inside          # brightest on the night side, only on land
 warm = np.array([1.00, 0.80, 0.52])
 for i in range(3):
-    rgb[:, :, i] += glow * warm[i] * 1.15
+    rgb[:, :, i] += glow * warm[i] * 1.85
 
 # ── cloud veil ──────────────────────────────────────────────────────────────
 cl = fbm((N, N), octaves=7, seed=29, start=56)
@@ -117,16 +117,16 @@ for i in range(3):
 # ── limb darkening, then a soft atmosphere (no hard ring) ───────────────────
 limb = np.clip(1.0 - (rho ** 3.2) * 0.85, 0, 1)
 rgb *= limb[:, :, None]
-haze = np.clip((rho - 0.72) / 0.28, 0, 1) ** 1.6 * day
+haze = np.clip((rho - 0.66) / 0.34, 0, 1) ** 1.45 * (0.22 + 0.78 * day)
 for i, ch in enumerate((0.33, 0.62, 0.95)):
-    rgb[:, :, i] += haze * ch * 0.34
+    rgb[:, :, i] += haze * ch * 0.62
 
 alpha = inside.astype(np.float64)
 edge = np.clip((1.0 - rho) / 0.012, 0, 1)
 alpha *= edge
 # outer glow, fading to nothing - this is what replaces the neon ring
-outer = np.clip((rho - 1.0) / 0.13, 0, 1)
-outer_a = np.where((rho > 1.0) & (rho < 1.13), (1 - outer) ** 2.4 * 0.42, 0.0)
+outer = np.clip((rho - 1.0) / 0.20, 0, 1)
+outer_a = np.where((rho > 1.0) & (rho < 1.20), (1 - outer) ** 2.1 * 0.60, 0.0)
 for i, ch in enumerate((0.22, 0.52, 0.92)):
     rgb[:, :, i] = np.where(outer_a > 0, ch, rgb[:, :, i])
 alpha = np.maximum(alpha, outer_a)
