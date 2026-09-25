@@ -2194,7 +2194,13 @@ export const en = {
     breaking: 'Breaking',
     developing: 'Developing',
     /* Screen-reader name for the sources count, e.g. "8 sources". */
-    sourcesLabel: 'sources',
+    /*
+      Source count, pluralised through the existing governed helper rather than
+      a bare noun: "1 sources" is wrong in English, and wrong in three different
+      ways in Polish. Forms are [singular, plural, genitive-plural], the triple
+      pluralize.ts expects.
+    */
+    sourceForms: ['source', 'sources', 'sources'] as [string, string, string],
     /* beta.now — the editorial section heading. */
     nowHeading: 'What’s happening now',
     /*

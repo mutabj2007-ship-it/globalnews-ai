@@ -3,6 +3,7 @@ import { ImageOff, Info } from 'lucide-react';
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
+import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { DataModeLabel } from '@/components/ui/DataModeLabel';
 
@@ -144,7 +145,7 @@ export function WhatsHappeningNow({
                       <span className="mt-auto pt-1 text-xs text-ink-tertiary">
                         {article.sourceName}
                         {' · '}
-                        {article.sourcesCount} {t.sourcesLabel}
+                        {pluralWithForms(article.sourcesCount, language, t.sourceForms)}
                         <Elapsed article={article} language={language} />
                       </span>
                     </span>
@@ -183,7 +184,7 @@ function LeadStory({ article, language }: { article: NewsArticle; language: Lang
         <p className="mt-auto pt-2 text-xs text-ink-tertiary">
           {article.sourceName}
           {' · '}
-          {article.sourcesCount} {t.sourcesLabel}
+          {pluralWithForms(article.sourcesCount, language, t.sourceForms)}
           <Elapsed article={article} language={language} />
         </p>
       </div>

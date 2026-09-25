@@ -3,6 +3,7 @@ import { ImageOff } from 'lucide-react';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
+import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
 
 /**
@@ -62,23 +63,22 @@ export function SixtySecondBrief({ items, language = 'en' }: SixtySecondBriefPro
   const rows = rest.slice(0, 2);
 
   /*
-    DEGRADED STATE IS TRUTHFUL, NOT HIDDEN. §6 requires a missing source to
-    render as a gap rather than be disguised. With nothing to show the panel
-    says so, in the reader's language, instead of rendering an empty shell.
+    NOTHING TO SUMMARISE IS NOT A FAILURE, and saying so would be a false
+    claim about the provider.
+
+    `latestUpdates` is the response MINUS the stories already placed in
+    featured/inFocus/discovery, so a narrow retrieval empties it while the
+    editorial section below is full of real reporting. Measured on Alpha: this
+    panel read "Couldn't load the latest updates." directly above a populated
+    feed. `homeFeedAllocation.ts` states the governing rule in terms —
+    "never infer provider failure from latestUpdates.length === 0" — and
+    HeroLiveFeedPanel enforced it for the surface this one replaces.
+
+    So the panel renders nothing at all. It makes no claim, and the one place
+    that legitimately reports a failed feed is WhatsHappeningNow, which reads
+    the curated roles and the governed dataMode.
   */
-  if (lead === undefined) {
-    return (
-      <section
-        aria-labelledby="beta-brief-heading"
-        className="rounded-2xl border border-border-strong bg-void/80 p-4"
-      >
-        <h2 id="beta-brief-heading" className="text-lg font-semibold text-ink-primary">
-          {t.briefTitle}
-        </h2>
-        <p className="mt-2 text-sm text-ink-tertiary">{t.feedUnavailable}</p>
-      </section>
-    );
-  }
+  if (lead === undefined) return null;
 
   /*
     The meta line's time comes from the lead item, basis-aware. Where the feed
@@ -128,7 +128,7 @@ export function SixtySecondBrief({ items, language = 'en' }: SixtySecondBriefPro
           <p className="mt-1 text-xs text-ink-tertiary">
             {categoryLabels[lead.category] ?? lead.category}
             {' · '}
-            {lead.sourcesCount} {t.sourcesLabel}
+            {pluralWithForms(lead.sourcesCount, language, t.sourceForms)}
             {' · '}
             {lead.sourceName}
           </p>
@@ -149,7 +149,7 @@ export function SixtySecondBrief({ items, language = 'en' }: SixtySecondBriefPro
                 <span className="text-xs text-ink-tertiary">
                   {categoryLabels[item.category] ?? item.category}
                   {' · '}
-                  {item.sourcesCount} {t.sourcesLabel}
+                  {pluralWithForms(item.sourcesCount, language, t.sourceForms)}
                 </span>
               </a>
             </li>
