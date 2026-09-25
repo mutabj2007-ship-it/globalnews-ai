@@ -808,10 +808,12 @@ describe('M66.1 — the authorized 1360px divergence, locked (CTO decision D4)',
 
 describe('M66.1 — the homepage receives the canvas without being reconstructed', () => {
   it('the homepage sections render inside PageCanvas', () => {
-    // M66.8c — five sections, not six: HomepageSituationMap is retired from
-    // this render path. Which sections the canvas PARENTS is this test's
-    // subject; the canvas itself, its tokens and its geometry are untouched
-    // by that milestone and every other assertion in this file is unchanged.
+    // C3 RE-POINT (BETA HOME CLOSURE R2), per BETA-DESIGN-AUTHORITY-R5.1 §3 —
+    // six sections again: the R2 contract requires the Global Situation Map on
+    // Home, which reverses the M66.8c retirement this assertion used to pin.
+    // Which sections the canvas PARENTS is still this test's subject; the
+    // canvas itself, its tokens and its geometry are untouched by either
+    // milestone, and every other assertion in this file is unchanged.
     const code = stripComments(pageSource);
     expect(code).toMatch(/<PageCanvas>/);
     expect(code).toMatch(/<\/PageCanvas>/);
@@ -830,10 +832,11 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
       // IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
       // Which sections the canvas PARENTS is still this test's subject.
       '<IntelligenceModulesSection',
+      // C3 — the canvas parents the Global Situation Map again.
+      '<HomepageSituationMap',
     ]) {
       expect(canvasBlock).toContain(section);
     }
-    expect(canvasBlock).not.toContain('<HomepageSituationMap');
     // Chrome stays outside the canvas: the header and footer have their own
     // GN-CD milestones and must not be re-bounded by this one.
     expect(canvasBlock).not.toContain('<NavBar');
@@ -846,13 +849,15 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
     expect(pageSource).toMatch(/<main className="pb-16 lg:pb-0">/);
   });
 
-  it('the section order is unchanged apart from the M66.8c retirement', () => {
+  it('the section order is unchanged, and the situation map is back in its old place', () => {
     const order = [
       '<NavBar',
       '<BetaHero',
       '<WhatsHappeningNow',
-      // M66.8c — '<HomepageSituationMap' stood here. Removed, not reordered:
-      // every remaining marker keeps its relative position.
+      // C3 — '<HomepageSituationMap' stood here before M66.8c removed it, and
+      // R2 restores it to the same position. Every other marker keeps its
+      // relative position, which is what this list exists to protect.
+      '<HomepageSituationMap',
       // GATE A · R5.1 — the section's identity moved here; its position did not.
       '<IntelligenceModulesSection',
       '<Footer',

@@ -1,8 +1,7 @@
 import type { JSX } from 'react';
-import { Sparkles, PenLine, ArrowRight } from 'lucide-react';
+import { Sparkles, PenLine } from 'lucide-react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { HeroWorldVisual } from '@/components/home/HeroWorldVisual';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -58,7 +57,7 @@ export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Elemen
   const prompts = dict.hero.exampleQuestions.slice(0, 3);
 
   return (
-    <aside aria-label={t.pulseTitle} className="flex flex-col gap-4">
+    <aside aria-label={t.sideRailAria} className="flex flex-col gap-4">
       {/*
         THE SIGN-IN CARD. Rendered for everyone: it invites, it does not claim
         anything about the reader's state, so it needs no account call and
@@ -74,34 +73,22 @@ export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Elemen
         </a>
       </section>
 
-      {/* WORLD PULSE — the map gateway, explanatory only. */}
-      <section aria-labelledby="beta-pulse-heading" className="overflow-hidden rounded-2xl border border-border-strong bg-void/60">
-        <div className="flex items-center justify-between gap-2 p-4 pb-2">
-          <h2 id="beta-pulse-heading" className="text-base font-semibold text-ink-primary">
-            {t.pulseTitle}
-          </h2>
-          <a
-            href="/map"
-            className="inline-flex items-center gap-1 text-sm font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
-          >
-            {t.openMap}
-            <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
-          </a>
-        </div>
-        {/*
-          H6 — THE PREVIEW IS CAPPED, and it has to be. `HeroWorldVisual`
-          scales to its container, and this card is only a 340px rail on
-          desktop but the full content width once the layout collapses to one
-          column. Measured at 768x1024, an uncapped preview rendered ~768px
-          tall and pushed the modules below two screens of decoration. The cap
-          keeps it a thumbnail at every width, which is what a gateway should
-          be.
-        */}
-        <div aria-hidden="true" className="mx-auto w-full max-w-[320px] px-4 opacity-80">
-          <HeroWorldVisual />
-        </div>
-        <p className="p-4 pt-2 text-xs leading-relaxed text-ink-tertiary">{t.pulseNote}</p>
-      </section>
+      {/*
+        ── C3 · WORLD PULSE IS SUPERSEDED BY THE REAL MAP, NOT DELETED ───────
+        This card was a decorative thumbnail of `HeroWorldVisual` plus an
+        "Open World Map" link — a gateway standing in for a map the Home did
+        not have. C3 restores `HomepageSituationMap`, which is the real thing:
+        actual MapLibre geometry, a real country selection, its own "Open full
+        map" action, and the four-module legend. Keeping both would have put
+        two world maps on one page, the smaller of which explains nothing the
+        larger does not.
+
+        So the zone moves rather than disappears. `pulseTitle`, `pulseNote` and
+        the capped-thumbnail treatment stay in the dictionary and in git, and
+        the rail keeps the two cards that are genuinely rail-shaped — sign-in
+        and the Ask suggestions. That is also the composition the contract's
+        narrative order describes: "Global Situation Map / Ask rail".
+      */}
 
       {/* ASK SUGGESTIONS — prefill links, zero spend. */}
       <section aria-labelledby="beta-suggested-heading" className="rounded-2xl border border-border-strong bg-void/60 p-4">

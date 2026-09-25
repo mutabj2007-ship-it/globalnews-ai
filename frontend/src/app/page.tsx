@@ -5,6 +5,7 @@ import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { BetaHero } from '@/components/home/BetaHero';
 import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
 import { HomeSideRail } from '@/components/home/HomeSideRail';
+import { HomepageSituationMap } from '@/components/home/HomepageSituationMap';
 import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
 import { Footer } from '@/components/layout/Footer';
 import { PageCanvas } from '@/components/layout/PageCanvas';
@@ -74,6 +75,13 @@ import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
  * rewritten (CTO decision D5), and every data path below is unchanged.
  * PageCanvas fetches nothing and holds no state — it is presentation
  * infrastructure only.
+ *
+ * C3 (BETA HOME CLOSURE R2) SUPERSEDES THE M66.8c NOTE BELOW. HomepageSituationMap
+ * is no longer retired: the R2 contract requires the Global Situation Map card on
+ * Home, and it is mounted in the editorial column above. The reasoning M66.8c
+ * recorded is kept verbatim underneath because it is still the reason the card
+ * had been removed, and because one of its premises no longer holds — the
+ * section makes no fetchCountryNews() call at all now, on load or on selection.
  *
  * M66.8c — HOMEPAGE COMPOSITION CLOSE. HomepageSituationMap is retired from
  * this render path, leaving five canvas sections: Hero, GlobalDevelopments,
@@ -227,14 +235,31 @@ export default async function HomePage(): Promise<JSX.Element> {
             the R4.1 frames place them. One column on phone and tablet, where
             the approved phone frames stack the rail beneath the feed.
           */}
+          {/*
+            C3 · THE GLOBAL SITUATION MAP JOINS THE EDITORIAL COLUMN.
+
+            `HomepageSituationMap` is RESTORED from retirement rather than
+            rebuilt. It already reuses /map's own `WorldMap` through the same
+            `next/dynamic({ ssr: false })` pattern, so MapLibre never enters the
+            initial bundle, and it performs ZERO provider-capable country reads
+            on mount and on selection. Selecting a country changes geographic
+            scope and nothing else; the explicit retrieval action stays on the
+            full map, so exploring geography on Home still cannot spend quota.
+
+            It supersedes the rail's World Pulse thumbnail, which stood in for
+            exactly this surface. See the note in HomeSideRail.
+          */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] lg:items-start">
-            <WhatsHappeningNow
-              lead={feed.featured}
-              secondary={feed.inFocus}
-              discovery={feed.discovery}
-              dataMode={feed.dataMode}
-              language={language}
-            />
+            <div className="flex flex-col gap-10">
+              <WhatsHappeningNow
+                lead={feed.featured}
+                secondary={feed.inFocus}
+                discovery={feed.discovery}
+                dataMode={feed.dataMode}
+                language={language}
+              />
+              <HomepageSituationMap language={language} />
+            </div>
             <HomeSideRail language={language} />
           </div>
           {/*

@@ -43,6 +43,11 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
          WhatsHappeningNow carries the editorial area plus the degraded-feed
          state the strip used to carry. The ORDER contract is unchanged. */
       '<WhatsHappeningNow',
+      /* C3 · BETA HOME CLOSURE R2 — the Global Situation Map returns to Home,
+         below the editorial area and inside the same column. It stood in this
+         list before M66.8c retired it; the marker is restored to the position
+         the order contract always gave it. */
+      '<HomepageSituationMap',
       /* GATE A · R5.1 — IntelligenceModulesSection supersedes
          IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
          The engine file is retired, not deleted. The ORDER contract this list
@@ -66,23 +71,41 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
     expect(stripComments(pageSource)).not.toMatch(/import \{ IntelligenceModulesMobile \}/);
   });
 
-  it('M66.8c — HomepageSituationMap is retired from the homepage, and its file is RETAINED', () => {
-    // Exactly the shape of the M65.1 test above: unwired here, kept on disk.
-    // The doc comment still names it, which is why both guards run on
-    // comment-stripped source.
+  /*
+    C3 RE-POINT (BETA HOME CLOSURE R2), per BETA-DESIGN-AUTHORITY-R5.1 §3.
+
+    These two tests pinned the M66.8c decision that HomepageSituationMap is
+    retired from Home. The R2 contract reverses that decision: the Global
+    Situation Map card is required on Home, with a four-module legend. The
+    assertions are therefore re-pointed rather than deleted — the subject is
+    still "where does the situation map live, and is the file still on disk",
+    which is exactly what M66.8c cared about.
+
+    M66.8c's reasoning also rested on a premise that no longer holds. It
+    retired the section partly because it was "a strict subset of /map: the
+    same WorldMap component, the same fetchCountryNews() call". There is no
+    fetchCountryNews() call any more — the card makes ZERO provider-capable
+    reads on mount and on selection — so the section is no longer a cheaper
+    copy of /map; it is a quota-free gateway to it.
+  */
+  it('C3 — HomepageSituationMap is MOUNTED on the homepage, and its file is RETAINED', () => {
     const code = stripComments(pageSource);
-    expect(code).not.toMatch(/<HomepageSituationMap/);
-    expect(code).not.toMatch(/import \{ HomepageSituationMap \}/);
-    expect(code).not.toMatch(/HomepageSituationMap/);
+    expect(code).toMatch(/<HomepageSituationMap/);
+    expect(code).toMatch(/import \{ HomepageSituationMap \}/);
     // RETAINED, not deleted. If a later cleanup removes the file, this fails —
-    // and so would five direct specs that read it and are outside M66.8c's
-    // scope. "Retired from the page" must never quietly become "deleted".
+    // and so would five direct specs that read it. Mounted or retired, the
+    // component must never quietly disappear.
     expect(existsSync(join(__dirname, 'HomepageSituationMap.tsx'))).toBe(true);
   });
 
-  it('M66.8c — no duplicate situation-map surface was left behind or re-added elsewhere', () => {
+  it('C3 — the homepage mounts exactly ONE situation-map surface, and /map is untouched', () => {
     const code = stripComments(pageSource);
-    expect(code).not.toMatch(/SituationMap|WorldMap|situationMap/);
+    // One mount, not two: the rail's World Pulse thumbnail was superseded by
+    // this card, and a second world map must not reappear beside it.
+    expect(code.match(/<HomepageSituationMap/g)).toHaveLength(1);
+    // The homepage still never reaches for MapLibre itself — it mounts the
+    // section, which lazy-loads the shared WorldMap behind ssr:false.
+    expect(code).not.toMatch(/<WorldMap/);
     // And /map itself is untouched: the route file still renders the real
     // client, so the capability moved nowhere.
     const mapRoute = readFileSync(join(__dirname, '../../app/map/page.tsx'), 'utf-8');

@@ -31,7 +31,20 @@ describe('HomepageSituationMap (Master Frontend Recomposition, Checkpoint 3)', (
     expect(code).toMatch(/setSelectedIso3\(country\.iso3\)/);
     expect(code).toMatch(/setSelectedName/);
     expect(code).not.toMatch(/async function handleSelectCountry/);
-    expect(source).toContain('Selection changes geographic scope only.');
+    /*
+      C3 RE-POINT, per BETA-DESIGN-AUTHORITY-R5.1 §3 — the assertion is kept,
+      not deleted; only what it points at moved.
+
+      It used to pin the English sentence as a source literal. Restoring this
+      card to Home made that string reachable again, and a Polish reader was
+      answered in English the moment they selected a country, which the
+      contract's EN/PL parity rule forbids. The sentence is now the governed
+      `situationMap.selectionScopeNote` key, so the behaviour this test
+      protects — selection states that it changed scope only, and sends deeper
+      work to the full map — is asserted through the key, while the wording is
+      asserted in the dictionary alongside every other string.
+    */
+    expect(code).toMatch(/\{t\.selectionScopeNote\}/);
   });
 
   it('does not fabricate alert, risk, severity or story-summary metrics', () => {

@@ -697,6 +697,12 @@ export const pl: Dictionary = {
     mapModeValue: 'Interaktywny',
     loadingLabel: 'Wczytywanie relacji\u2026',
     noCoverageLabel: 'Nie znaleziono aktualnych relacji dla tego kraju.',
+
+    /* C3. New strings, written for this repository — FOR REVIEW (see the C1 note). */
+    selectionScopeNote:
+      'Wybór zmienia wyłącznie zakres geograficzny. Otwórz pełną mapę, aby przejrzeć zachowane dowody lub wprost poprosić o analizę kraju.',
+    legendTitle: 'Warstwy analityczne',
+    legendNote: 'Każda otwiera swój moduł. Sama mapa pokazuje wyłącznie relacje według krajów.',
   },
   categoryCards: {
     label: 'Dzisiejsze wydarzenia',
@@ -1828,6 +1834,7 @@ export const pl: Dictionary = {
     categoryFilterAria: 'Filtruj artykuły według kategorii',
     viewAll: 'Pokaż wszystko',
     storyRailAria: 'Bieżące artykuły. Użyj klawiszy strzałek, aby przewijać.',
+    sideRailAria: 'Logowanie i sugerowane pytania',
   },
 
   intelligenceModules: {

@@ -876,6 +876,30 @@ export const en = {
     mapModeValue: 'Interactive',
     loadingLabel: 'Loading coverage\u2026',
     noCoverageLabel: 'No current coverage found for this country.',
+
+    /*
+      ── C3 · WAS A HARD-CODED ENGLISH SENTENCE IN THE COMPONENT ───────────
+      HomepageSituationMap carried this string inline, so a Polish reader who
+      selected a country was answered in English. Restoring the card to Home
+      makes that reachable again, so it becomes a governed key like every
+      other string on the surface.
+    */
+    selectionScopeNote:
+      'Selection changes geographic scope only. Open the full map to inspect retained evidence or explicitly request country intelligence.',
+
+    /*
+      ── C3 · THE LEGEND ──────────────────────────────────────────────────
+      The four legend entries are NOT map layers. This product's map
+      vocabulary is country coverage, and its governed news taxonomy is
+      world/politics/business/technology/science/health/sports/entertainment
+      — none of which is Energy, Conflict, Humanitarian or Economy. Those
+      four are INTELLIGENCE MODULE ids, so each legend entry links to its
+      real module surface and the map itself draws no marks for them. That
+      is the only reading of "must map to real layers" that does not invent
+      a layer, and it is why no dot, count or severity is rendered.
+    */
+    legendTitle: 'Intelligence layers',
+    legendNote: 'Each opens its module. The map itself shows country coverage only.',
   },
   categoryCards: {
     label: 'Today\u2019s coverage',
@@ -2266,6 +2290,10 @@ export const en = {
     categoryFilterAria: 'Filter stories by category',
     viewAll: 'View all',
     storyRailAria: 'Current stories. Use the arrow keys to scroll.',
+    /* C3 — the rail used to be labelled "World Pulse" because that card was in
+       it. That card is now the Global Situation Map in the main column, so the
+       landmark needed a name that describes what it actually holds. */
+    sideRailAria: 'Sign in and suggested questions',
   },
 
   intelligenceModules: {

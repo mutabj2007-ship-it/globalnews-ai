@@ -7,6 +7,36 @@ import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
 import type { HoveredCountry } from '@/components/map/WorldMap';
+import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModules';
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * C3 · THE LEGEND — FOUR MODULES, NOT FOUR MAP LAYERS
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * The R2 contract names the legend Energy · Conflict · Humanitarian · Economy
+ * and requires that it "map to real layers, no fake dots".
+ *
+ * Those four are not layers and cannot be made into layers honestly. The map's
+ * real vocabulary is country coverage; the governed news taxonomy is world,
+ * politics, business, technology, science, health, sports and entertainment.
+ * All four legend names are INTELLIGENCE MODULE ids. So each entry resolves
+ * through `INTELLIGENCE_MODULES` to its real destination and its governed
+ * title, gated by the same `isModuleNavigable` the nine-card Engine uses — and
+ * the map draws nothing for them. No dot, no count, no severity, no shading.
+ *
+ * Reading them out of the registry rather than writing a table here is what
+ * guarantees it: a legend entry cannot acquire a route the registry does not
+ * have, and cannot keep one the registry removes.
+ */
+const LEGEND_MODULE_IDS = ['energy', 'conflict', 'humanitarian', 'economy'] as const;
+
+const LEGEND_DOT: Record<string, string> = {
+  energy: 'bg-amber-300',
+  conflict: 'bg-red-300',
+  humanitarian: 'bg-purple-300',
+  economy: 'bg-emerald-300',
+};
 
 /**
  * Master Frontend Recomposition, Checkpoint 3 — the real Global
@@ -58,8 +88,12 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
   const displayName = selectedName ? getCountryDisplayName(selectedName.iso2, language, selectedName.name) : null;
 
   return (
-    <section className="border-b border-border bg-void" aria-labelledby="situation-map-heading">
-      <div className="mx-auto max-w-[1480px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    /* C3 — it now sits INSIDE PageCanvas, which already supplies the page
+       column and its side padding. The former full-width wrapper (its own
+       max-width, its own gutters and a bottom rule) would have double-padded
+       the card and drawn a rule across the middle of the page. */
+    <section className="scroll-mt-24" aria-labelledby="situation-map-heading">
+      <div>
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
             <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">{t.eyebrow}</span>
@@ -141,9 +175,9 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
             ) : (
               <div className="flex flex-1 flex-col gap-3">
                 <h3 className="font-display text-lg font-medium text-ink-primary">{displayName}</h3>
-                <p className="text-sm text-ink-secondary">
-                  Selection changes geographic scope only. Open the full map to inspect retained evidence or explicitly request country intelligence.
-                </p>
+                {/* C3 — was an inline English sentence, which answered a Polish
+                    reader in English the moment they selected a country. */}
+                <p className="text-sm text-ink-secondary">{t.selectionScopeNote}</p>
               </div>
             )}
 
@@ -157,7 +191,63 @@ export function HomepageSituationMap({ language = 'en' }: HomepageSituationMapPr
             </a>
           </div>
         </div>
+
+        <MapLegend language={language} />
       </div>
     </section>
+  );
+}
+
+/**
+ * The four legend entries, resolved from the module registry. An entry the
+ * registry cannot route is rendered as plain text rather than a dead link —
+ * the same rule the nine-card Engine applies through `isModuleNavigable`.
+ */
+function MapLegend({ language }: { language: LanguageCode }): JSX.Element {
+  const t = getDictionary(language).situationMap;
+  const moduleText = getDictionary(language).intelligenceModules.modules;
+
+  const entries = LEGEND_MODULE_IDS.map((id) =>
+    INTELLIGENCE_MODULES.find((m) => m.id === id),
+  ).filter((m): m is NonNullable<typeof m> => m !== undefined);
+
+  return (
+    <div className="mt-4 rounded-2xl border border-border-strong bg-void/60 p-4">
+      <h3 className="font-mono text-[11px] uppercase tracking-widest text-cyan-400">
+        {t.legendTitle}
+      </h3>
+      <ul className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+        {entries.map((module) => {
+          const label =
+            moduleText[module.dictionaryKey as keyof typeof moduleText]?.title ?? module.id;
+          const dot = (
+            <span
+              aria-hidden="true"
+              className={`h-2.5 w-2.5 shrink-0 rounded-full ${LEGEND_DOT[module.id] ?? 'bg-ink-tertiary'}`}
+            />
+          );
+
+          return (
+            <li key={module.id}>
+              {isModuleNavigable(module) && module.destination !== undefined ? (
+                <a
+                  href={module.destination}
+                  className="flex min-h-[32px] items-center gap-2 text-sm text-ink-secondary transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                >
+                  {dot}
+                  {label}
+                </a>
+              ) : (
+                <span className="flex min-h-[32px] items-center gap-2 text-sm text-ink-tertiary">
+                  {dot}
+                  {label}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-3 text-xs leading-relaxed text-ink-tertiary">{t.legendNote}</p>
+    </div>
   );
 }
