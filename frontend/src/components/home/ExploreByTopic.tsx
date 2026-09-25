@@ -89,13 +89,75 @@ const TOPIC_IDS = [
  * module titles. Keyed by module id so a topic can never be tinted as another
  * module.
  */
-const TOPIC_ACCENT: Record<string, string> = {
-  'world-intelligence': 'text-emerald-300',
-  economy: 'text-emerald-300',
-  energy: 'text-amber-300',
-  security: 'text-orange-300',
-  humanitarian: 'text-purple-300',
-  market: 'text-cyan-300',
+/**
+ * ── Z7 · THE PROTOTYPE'S TOPIC-CARD ACCENTS ──────────────────────────────
+ *
+ * The Product Owner's desktop prototype draws six substantial cards, each with
+ * a tinted icon tile, a name, a two-line description and a filled circular
+ * arrow in the card's own accent. The previous treatment was a flat 92px tile
+ * carrying an icon and a name — recognisably the same content, and not
+ * recognisably the same design.
+ *
+ * Each topic gets four values so the card composes without a lookup in the
+ * markup: the icon colour, the tile fill behind it, the card's hover border
+ * and the arrow fill. Colours are read off the prototype and kept inside the
+ * product's existing palette rather than introducing new hexes.
+ *
+ * ORDER AND NAMES REMAIN THE REGISTRY'S. Nothing here invents a topic, a label
+ * or a destination; `INTELLIGENCE_MODULES` is still the only source of those,
+ * and a topic with no surface is still not a link.
+ */
+interface TopicAccent {
+  readonly icon: string;
+  readonly tile: string;
+  readonly hover: string;
+  readonly arrow: string;
+}
+
+const TOPIC_ACCENT: Record<string, TopicAccent> = {
+  'world-intelligence': {
+    icon: 'text-sky-300',
+    tile: 'bg-sky-400/12 ring-1 ring-inset ring-sky-300/25',
+    hover: 'hover:border-sky-400/50 hover:shadow-[0_18px_44px_-26px_rgba(56,189,248,0.75)]',
+    arrow: 'bg-sky-500/85 text-white',
+  },
+  economy: {
+    icon: 'text-violet-300',
+    tile: 'bg-violet-400/12 ring-1 ring-inset ring-violet-300/25',
+    hover: 'hover:border-violet-400/50 hover:shadow-[0_18px_44px_-26px_rgba(167,139,250,0.75)]',
+    arrow: 'bg-violet-500/85 text-white',
+  },
+  energy: {
+    icon: 'text-emerald-300',
+    tile: 'bg-emerald-400/12 ring-1 ring-inset ring-emerald-300/25',
+    hover: 'hover:border-emerald-400/50 hover:shadow-[0_18px_44px_-26px_rgba(52,211,153,0.75)]',
+    arrow: 'bg-emerald-500/85 text-white',
+  },
+  security: {
+    icon: 'text-rose-300',
+    tile: 'bg-rose-400/12 ring-1 ring-inset ring-rose-300/25',
+    hover: 'hover:border-rose-400/50 hover:shadow-[0_18px_44px_-26px_rgba(251,113,133,0.75)]',
+    arrow: 'bg-rose-500/85 text-white',
+  },
+  humanitarian: {
+    icon: 'text-amber-300',
+    tile: 'bg-amber-400/12 ring-1 ring-inset ring-amber-300/25',
+    hover: 'hover:border-amber-400/50 hover:shadow-[0_18px_44px_-26px_rgba(251,191,36,0.75)]',
+    arrow: 'bg-amber-500/85 text-white',
+  },
+  market: {
+    icon: 'text-cyan-300',
+    tile: 'bg-cyan-400/12 ring-1 ring-inset ring-cyan-300/25',
+    hover: 'hover:border-cyan-400/50 hover:shadow-[0_18px_44px_-26px_rgba(34,211,238,0.75)]',
+    arrow: 'bg-cyan-500/85 text-white',
+  },
+};
+
+const TOPIC_FALLBACK: TopicAccent = {
+  icon: 'text-ink-secondary',
+  tile: 'bg-white/5 ring-1 ring-inset ring-white/10',
+  hover: 'hover:border-cyan-400/40',
+  arrow: 'bg-white/15 text-ink-primary',
 };
 
 interface ExploreByTopicProps {
@@ -128,18 +190,42 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
         </a>
       </div>
 
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-3.5">
         {topics.map((module) => {
           const label =
             moduleText[module.dictionaryKey as keyof typeof moduleText]?.title ?? module.id;
           const Icon = ICONS[module.icon];
-          const accent = TOPIC_ACCENT[module.id] ?? 'text-ink-secondary';
+          const accent = TOPIC_ACCENT[module.id] ?? TOPIC_FALLBACK;
+          const summary =
+            moduleText[module.dictionaryKey as keyof typeof moduleText]?.description ?? '';
           const navigable = isModuleNavigable(module) && module.destination !== undefined;
 
           const body = (
             <>
-              <Icon size={22} strokeWidth={1.75} aria-hidden="true" className={`shrink-0 ${accent}`} />
-              <span className="text-sm font-medium leading-snug text-ink-primary">{label}</span>
+              <span
+                aria-hidden="true"
+                className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${accent.tile}`}
+              >
+                <Icon size={21} strokeWidth={1.9} className={accent.icon} />
+              </span>
+              <span className="mt-3.5 block text-[15px] font-semibold leading-snug text-ink-primary">
+                {label}
+              </span>
+              {/*
+                The description is the registry's own module summary, clamped to
+                the prototype's two lines. It is not a second copy of the text:
+                the same string already renders in the modules section below, so
+                the two can never disagree.
+              */}
+              <span className="mt-1.5 line-clamp-2 text-[12.5px] leading-snug text-ink-tertiary">
+                {summary}
+              </span>
+              <span
+                aria-hidden="true"
+                className={`mt-auto ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full ${accent.arrow} transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0`}
+              >
+                <ArrowRight size={15} strokeWidth={2.4} />
+              </span>
             </>
           );
 
@@ -148,7 +234,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
               {navigable ? (
                 <a
                   href={module.destination}
-                  className="flex h-full min-h-[92px] flex-col items-start gap-2 rounded-2xl border border-border-strong bg-void/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/40 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                  className={`group flex h-full min-h-[150px] flex-col items-start rounded-2xl border border-border-strong bg-void/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${accent.hover}`}
                 >
                   {body}
                 </a>
@@ -158,7 +244,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                   no pointer cursor, muted surface. The registry says this module
                   has no route, so the row says the same thing.
                 */
-                <span className="flex h-full min-h-[92px] cursor-default flex-col items-start gap-2 rounded-2xl border border-dashed border-border-strong bg-void/30 p-4 opacity-70">
+                <span className="group flex h-full min-h-[150px] cursor-default flex-col items-start rounded-2xl border border-dashed border-border-strong bg-void/30 p-4 opacity-70">
                   {body}
                 </span>
               )}

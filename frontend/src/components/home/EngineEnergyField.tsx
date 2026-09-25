@@ -81,12 +81,24 @@ export function EngineEnergyField(): JSX.Element {
       className="pointer-events-none absolute -inset-x-6 -inset-y-12 -z-10 overflow-hidden rounded-[3rem]"
     >
       {/* The bloom behind the hub — depth, so the rays read as emerging from it. */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_50%_50%,rgba(34,211,238,0.20),transparent_72%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_62%_74%_at_50%_48%,rgba(34,211,238,0.34),transparent_74%)]" />
+      {/*
+        Z8 — the violet counterweight. The ruling asks for the *"glowing
+        intelligence ring / energy-field identity from the older Engine
+        Intelligence design"*, and that identity was never a single cyan disc:
+        it was cyan against violet. Both layers stay behind the grid at -z-10
+        and pointer-events-none, so the ring supports the cards and can never
+        take a pointer or cover a title — the regression that retired the ring
+        in the first place was titles living inside hover panels, and nothing
+        here moves a title.
+      */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_54%_58%_at_26%_30%,rgba(139,92,246,0.22),transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_46%_52%_at_78%_72%,rgba(56,189,248,0.16),transparent_72%)]" />
 
       <svg
         viewBox={`0 0 ${CONFIG.canvasWidth} ${CONFIG.canvasHeight}`}
         preserveAspectRatio="xMidYMid slice"
-        className="h-full w-full opacity-90"
+        className="h-full w-full opacity-100"
         xmlns="http://www.w3.org/2000/svg"
       >
         <style>
@@ -129,7 +141,7 @@ export function EngineEnergyField(): JSX.Element {
           cx={CONFIG.cx}
           cy={CONFIG.cy}
           r={CONFIG.r * 1.55}
-          fill="rgba(34,211,238,0.07)"
+          fill="rgba(34,211,238,0.12)"
           className="gna-engine-halo"
         />
         <circle
