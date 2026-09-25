@@ -1,8 +1,7 @@
 import type { JSX } from 'react';
 import { Sparkles, PenLine } from 'lucide-react';
-import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
+import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { HomeAccountPanel } from '@/components/home/HomeAccountPanel';
 import { HomepageSituationMap } from '@/components/home/HomepageSituationMap';
 
 /**
@@ -49,16 +48,10 @@ import { HomepageSituationMap } from '@/components/home/HomepageSituationMap';
  */
 
 interface HomeSideRailProps {
-  /**
-   * C7 — the stories the page already holds, forwarded to the account panel so
-   * "For you" can be derived without a second request. The rail itself does
-   * not render them.
-   */
-  articles: NewsArticle[];
   language?: LanguageCode;
 }
 
-export function HomeSideRail({ articles, language = 'en' }: HomeSideRailProps): JSX.Element {
+export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Element {
   const dict = getDictionary(language);
   const t = dict.betaHome;
   /* Existing governed product copy — not the review frames' sample prompts. */
@@ -86,56 +79,26 @@ export function HomeSideRail({ articles, language = 'en' }: HomeSideRailProps): 
       <HomepageSituationMap language={language} variant="rail" />
 
       {/* ASK SUGGESTIONS — prefill links, zero spend. */}
-      <section aria-labelledby="beta-suggested-heading" className="rounded-2xl border border-border-strong bg-void/60 p-4">
-        <h2 id="beta-suggested-heading" className="flex items-center gap-2 text-base font-semibold text-ink-primary">
+      <section aria-labelledby="beta-suggested-heading" className="rounded-2xl border border-border-strong bg-void/60 p-3.5">
+        <h2 id="beta-suggested-heading" className="flex items-center gap-2 text-[15px] font-semibold text-ink-primary">
           <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" className="text-violet-300" />
           {t.suggestedTitle}
         </h2>
-        <ul className="mt-3 flex flex-col gap-2">
+        <ul className="mt-2.5 flex flex-col gap-1.5">
           {prompts.map((prompt) => (
             <li key={prompt}>
               <a
                 href={`/ask?q=${encodeURIComponent(prompt)}`}
-                className="flex min-h-[44px] items-center gap-2 rounded-xl border border-border-strong bg-void/70 px-3 py-2 text-left text-sm text-ink-primary transition-colors hover:border-cyan-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                className="flex min-h-[44px] items-center gap-2 rounded-xl border border-border-strong bg-void/70 px-3 py-2 text-left text-[13px] text-ink-primary transition-colors hover:border-cyan-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
               >
-                <span className="flex-1">{prompt}</span>
+                <span className="line-clamp-1 flex-1">{prompt}</span>
                 <PenLine size={15} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-ink-tertiary" />
               </a>
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-xs leading-relaxed text-ink-tertiary">{t.suggestedNote}</p>
+        <p className="mt-2.5 text-[11px] leading-snug text-ink-tertiary">{t.suggestedNote}</p>
       </section>
-
-      {/*
-        ── C7 · THE ACCOUNT CARD, NOW BELOW THE PROTOTYPE'S TWO RAIL CARDS ──
-        It keeps its state-awareness — signed out it invites, signed in it
-        renders For you, Following and Manage, and it never shows "Sign in" to
-        someone already signed in. What changed is only its position: the
-        Product Owner's prototype rail is map-then-Ask, so the account card can
-        no longer occupy the slot the map card needs. It follows them instead of
-        displacing them, and nothing about its behaviour moved.
-
-        It remains the rail's only client boundary; this file stays a Server
-        Component.
-      */}
-      {/*
-        (original C7 note, retained)
-        H5 rendered a sign-in invitation to EVERY reader, on the grounds that an
-        invitation claims nothing about the reader's state and so cannot be
-        wrong. It can: R2 forbids showing "Sign in" to someone already signed
-        in, and that is exactly what it did, on every load, for an authenticated
-        reader.
-
-        `HomeAccountPanel` takes over the slot. Signed out it renders the same
-        card with the same copy; signed in it renders For you, Following and
-        Manage. It is the rail's only client boundary, and it exists because
-        session state lives in an httpOnly cookie the server cannot read.
-
-        This file stays a Server Component: the panel is a child, and the Ask
-        suggestions below it are still server-rendered links.
-      */}
-      <HomeAccountPanel articles={articles} language={language} />
 
     </aside>
   );

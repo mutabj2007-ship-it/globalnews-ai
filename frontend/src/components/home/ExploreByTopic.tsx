@@ -108,6 +108,7 @@ const TOPIC_IDS = [
  * and a topic with no surface is still not a link.
  */
 interface TopicAccent {
+  readonly surface: string;
   readonly icon: string;
   readonly tile: string;
   readonly hover: string;
@@ -116,44 +117,51 @@ interface TopicAccent {
 
 const TOPIC_ACCENT: Record<string, TopicAccent> = {
   'world-intelligence': {
+    surface: 'bg-gradient-to-b from-sky-500/[0.16] to-sky-500/[0.03]',
     icon: 'text-sky-300',
-    tile: 'bg-sky-400/12 ring-1 ring-inset ring-sky-300/25',
+    tile: 'bg-sky-400/20 ring-1 ring-inset ring-sky-300/40',
     hover: 'hover:border-sky-400/50 hover:shadow-[0_18px_44px_-26px_rgba(56,189,248,0.75)]',
     arrow: 'bg-sky-500/85 text-white',
   },
   economy: {
+    surface: 'bg-gradient-to-b from-violet-500/[0.16] to-violet-500/[0.03]',
     icon: 'text-violet-300',
-    tile: 'bg-violet-400/12 ring-1 ring-inset ring-violet-300/25',
+    tile: 'bg-violet-400/20 ring-1 ring-inset ring-violet-300/40',
     hover: 'hover:border-violet-400/50 hover:shadow-[0_18px_44px_-26px_rgba(167,139,250,0.75)]',
     arrow: 'bg-violet-500/85 text-white',
   },
   energy: {
+    surface: 'bg-gradient-to-b from-emerald-500/[0.16] to-emerald-500/[0.03]',
     icon: 'text-emerald-300',
-    tile: 'bg-emerald-400/12 ring-1 ring-inset ring-emerald-300/25',
+    tile: 'bg-emerald-400/20 ring-1 ring-inset ring-emerald-300/40',
     hover: 'hover:border-emerald-400/50 hover:shadow-[0_18px_44px_-26px_rgba(52,211,153,0.75)]',
     arrow: 'bg-emerald-500/85 text-white',
   },
   security: {
+    surface: 'bg-gradient-to-b from-rose-500/[0.16] to-rose-500/[0.03]',
     icon: 'text-rose-300',
-    tile: 'bg-rose-400/12 ring-1 ring-inset ring-rose-300/25',
+    tile: 'bg-rose-400/20 ring-1 ring-inset ring-rose-300/40',
     hover: 'hover:border-rose-400/50 hover:shadow-[0_18px_44px_-26px_rgba(251,113,133,0.75)]',
     arrow: 'bg-rose-500/85 text-white',
   },
   humanitarian: {
+    surface: 'bg-gradient-to-b from-amber-500/[0.16] to-amber-500/[0.03]',
     icon: 'text-amber-300',
-    tile: 'bg-amber-400/12 ring-1 ring-inset ring-amber-300/25',
+    tile: 'bg-amber-400/20 ring-1 ring-inset ring-amber-300/40',
     hover: 'hover:border-amber-400/50 hover:shadow-[0_18px_44px_-26px_rgba(251,191,36,0.75)]',
     arrow: 'bg-amber-500/85 text-white',
   },
   market: {
+    surface: 'bg-gradient-to-b from-cyan-500/[0.16] to-cyan-500/[0.03]',
     icon: 'text-cyan-300',
-    tile: 'bg-cyan-400/12 ring-1 ring-inset ring-cyan-300/25',
+    tile: 'bg-cyan-400/20 ring-1 ring-inset ring-cyan-300/40',
     hover: 'hover:border-cyan-400/50 hover:shadow-[0_18px_44px_-26px_rgba(34,211,238,0.75)]',
     arrow: 'bg-cyan-500/85 text-white',
   },
 };
 
 const TOPIC_FALLBACK: TopicAccent = {
+  surface: 'bg-white/[0.03]',
   icon: 'text-ink-secondary',
   tile: 'bg-white/5 ring-1 ring-inset ring-white/10',
   hover: 'hover:border-cyan-400/40',
@@ -177,7 +185,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2
           id="beta-topics-heading"
-          className="font-display text-2xl font-semibold tracking-tight text-ink-primary sm:text-3xl"
+          className="font-display text-[22px] font-semibold tracking-tight text-ink-primary sm:text-2xl"
         >
           {t.exploreTopicsTitle}
         </h2>
@@ -204,9 +212,9 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
             <>
               <span
                 aria-hidden="true"
-                className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${accent.tile}`}
+                className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${accent.tile}`}
               >
-                <Icon size={21} strokeWidth={1.9} className={accent.icon} />
+                <Icon size={23} strokeWidth={1.9} className={accent.icon} />
               </span>
               <span className="mt-3.5 block text-[15px] font-semibold leading-snug text-ink-primary">
                 {label}
@@ -217,7 +225,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                 the same string already renders in the modules section below, so
                 the two can never disagree.
               */}
-              <span className="mt-1.5 line-clamp-2 text-[12.5px] leading-snug text-ink-tertiary">
+              <span className="mt-1 line-clamp-2 text-[12px] leading-snug text-ink-tertiary">
                 {summary}
               </span>
               <span
@@ -234,7 +242,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
               {navigable ? (
                 <a
                   href={module.destination}
-                  className={`group flex h-full min-h-[150px] flex-col items-start rounded-2xl border border-border-strong bg-void/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${accent.hover}`}
+                  className={`group flex h-full min-h-[150px] flex-col items-start rounded-2xl border border-border-strong ${accent.surface} p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${accent.hover}`}
                 >
                   {body}
                 </a>

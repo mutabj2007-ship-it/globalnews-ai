@@ -113,7 +113,7 @@ const RADIO_ID = (category: string): string => `gn-cat-${category}`;
   centred now that the box is taller than its text.
 */
 const CHIP_CLASS =
-  'inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-border-strong bg-void/60 px-4 py-1.5 text-sm font-medium text-ink-secondary transition-colors hover:border-cyan-400/40 hover:text-ink-primary motion-reduce:transition-none';
+  'inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-border-strong bg-void/60 px-3.5 py-1.5 text-[13px] font-medium text-ink-secondary transition-colors hover:border-cyan-400/40 hover:text-ink-primary motion-reduce:transition-none lg:min-h-[32px]';
 
 export function WhatsHappeningNow({
   lead,
@@ -195,7 +195,7 @@ export function WhatsHappeningNow({
     .join('');
 
   const noAiNote = (
-    <p className="flex items-start gap-2 text-sm text-ink-tertiary">
+    <p className="flex items-start gap-1.5 text-[11.5px] leading-snug text-ink-tertiary">
       <Info size={15} strokeWidth={1.75} aria-hidden="true" className="mt-0.5 shrink-0" />
       <span>{t.noAiNote}</span>
     </p>
@@ -207,18 +207,29 @@ export function WhatsHappeningNow({
     <section
       id="whats-happening-now"
       aria-labelledby="beta-now-heading"
-      className="flex scroll-mt-24 flex-col gap-4"
+      className="flex scroll-mt-24 flex-col gap-3"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2
           id="beta-now-heading"
-          className="font-display text-3xl font-semibold tracking-tight text-ink-primary sm:text-4xl"
+          className="font-display text-[22px] font-semibold tracking-tight text-ink-primary sm:text-2xl"
         >
           {t.nowHeading}
+          {/*
+            The prototype carries a standfirst under this heading —
+            "Selected global developments · Updated 20 min ago". `nowStandfirst`
+            is the first half; the second half is the SAME freshness stamp this
+            section already computes from the freshest record it actually holds,
+            so it is moved here rather than duplicated, and it still describes
+            the feed rather than the render.
+          */}
+          <span className="mt-1 block text-[12.5px] font-normal text-ink-tertiary">
+            {t.nowStandfirst}
+            {stamp === null ? null : <> · {stamp}</>}
+          </span>
         </h2>
-        <span className="flex items-center gap-3">
+        <span className="flex items-center gap-2.5">
           <DataModeLabel dataMode={dataMode} language={language} />
-          {stamp === null ? null : <span className="text-sm text-ink-tertiary">{stamp}</span>}
         </span>
       </div>
 
@@ -269,7 +280,7 @@ export function WhatsHappeningNow({
               <div
                 role="radiogroup"
                 aria-label={t.categoryFilterAria}
-                className="gn-chips flex flex-wrap items-center gap-2"
+                className="gn-chips flex flex-wrap items-center gap-1.5"
               >
                 <label htmlFor={RADIO_ID('all')} className={CHIP_CLASS}>
                   {categoryLabels.all}
@@ -316,7 +327,7 @@ export function WhatsHappeningNow({
                     key={article.id}
                     data-gn-story=""
                     data-gn-cat={article.category}
-                    className="flex shrink-0 basis-[86%] snap-start sm:basis-[46%] lg:basis-[calc(25%-0.5625rem)]"
+                    className="flex h-[224px] shrink-0 basis-[86%] snap-start sm:basis-[46%] lg:basis-[calc(25%-0.5625rem)]"
                   >
                     <RailCard article={article} language={language} />
                   </li>
@@ -349,19 +360,44 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
           `prefers-reduced-motion`.
         */}
         <span className="block transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100">
-          <StoryImage article={article} language={language} className="aspect-[16/9]" />
+          <StoryImage article={article} language={language} className="aspect-[16/10]" />
         </span>
-      </span>
-      <span className="flex flex-1 flex-col gap-1 p-3">
-        <span className="font-mono text-[11px] uppercase tracking-wide text-cyan-300/80">
+
+        {/*
+          §7 — THE CATEGORY AND THE AGE SIT ON THE IMAGE, as the prototype draws
+          them: a filled category chip at the top left and the elapsed time at
+          the top right. Moving them off the body is what lets the body hold a
+          fixed number of lines, which is what makes every card the same height.
+          Both read over a gradient scrim rather than over bare photography, so
+          the text keeps its contrast whatever the image is.
+        */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/70 to-transparent"
+        />
+        <span className="absolute left-2.5 top-2.5 inline-flex items-center rounded-md bg-black/55 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-cyan-200 backdrop-blur-sm">
           {categoryLabels[article.category] ?? article.category}
         </span>
-        <span className="text-sm font-semibold leading-snug text-ink-primary">{article.title}</span>
-        <span className="mt-auto pt-1 text-xs text-ink-tertiary">
-          {article.sourceName}
-          {' · '}
-          {pluralWithForms(article.sourcesCount, language, t.sourceForms)}
+        <span className="absolute right-2.5 top-2.5 inline-flex items-center rounded-md bg-black/55 px-2 py-1 text-[10.5px] font-medium text-white/85 backdrop-blur-sm">
           <Elapsed article={article} language={language} />
+        </span>
+      </span>
+
+      <span className="flex flex-1 flex-col gap-1 p-2.5">
+        {/*
+          Two clamped lines for the headline and two for the summary. The clamps
+          are what hold the rail to one card height: without them a long
+          headline makes its own card taller than its neighbours, which is the
+          ragged rail the prototype does not have.
+        */}
+        <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink-primary">
+          {article.title}
+        </span>
+        <span className="line-clamp-2 text-[11.5px] leading-snug text-ink-tertiary">{article.summary}</span>
+        <span className="mt-auto flex items-center gap-1.5 pt-1 text-[10.5px] text-ink-tertiary">
+          <span className="truncate">{article.sourceName}</span>
+          <span aria-hidden="true">·</span>
+          <span className="shrink-0">{pluralWithForms(article.sourcesCount, language, t.sourceForms)}</span>
         </span>
       </span>
     </a>

@@ -2304,6 +2304,18 @@ export const en = {
     premiumCap3: 'Access deeper analysis',
     premiumCap4: 'Professional tools & exports',
     /* beta.premiumFreeNote — the prototype's closing line under the card. */
+    /* beta.navMore / beta.navUnavailable — the Home header's overflow control
+       and the inert label an entry carries when its module has no route. */
+    /* beta.navLabels — the Home header's primary nav wording. The module
+       registry's shortTitle is "Economy Intel", "Energy Intel" and so on,
+       which is right inside the Engine and wrong in a top-level nav; the
+       prototype's header says plainly Economy, Energy, Security,
+       Humanitarian. DESTINATIONS STILL COME FROM THE REGISTRY — this names
+       the item, it never decides where it goes. */
+    nowStandfirst: 'Selected global developments',
+    navLabels: { economy: 'Economy', energy: 'Energy', security: 'Security', humanitarian: 'Humanitarian' } as Record<string, string>,
+    navMore: 'More',
+    navUnavailable: 'Not yet',
     premiumCta: 'Plans coming soon',
     premiumFreeNote: 'Free to explore.',
 

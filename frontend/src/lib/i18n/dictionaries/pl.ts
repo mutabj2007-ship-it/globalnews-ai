@@ -1834,6 +1834,10 @@ export const pl: Dictionary = {
     premiumCap2: 'Śledź zmiany w czasie',
     premiumCap3: 'Korzystaj z pogłębionej analizy',
     premiumCap4: 'Narzędzia i eksport dla profesjonalistów',
+    nowStandfirst: 'Wybrane wydarzenia ze świata',
+    navLabels: { economy: 'Gospodarka', energy: 'Energia', security: 'Bezpieczeństwo', humanitarian: 'Pomoc humanitarna' } as Record<string, string>,
+    navMore: 'Więcej',
+    navUnavailable: 'Wkrótce',
     premiumCta: 'Plany wkrótce',
     premiumFreeNote: 'Przeglądanie bez opłat.',
 

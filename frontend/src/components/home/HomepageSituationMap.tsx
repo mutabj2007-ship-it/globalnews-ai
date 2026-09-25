@@ -120,7 +120,16 @@ export function HomepageSituationMap({
        max-width, its own gutters and a bottom rule) would have double-padded
        the card and drawn a rule across the middle of the page. */
     <section className="scroll-mt-24" aria-labelledby="situation-map-heading">
-      <div>
+      {/*
+        §8 — IN THE RAIL THIS IS ONE CARD, not a stack of boxes.
+
+        The prototype draws a single panel: title, map, legend, one clean edge.
+        The released section draws three separately-bordered blocks, which is
+        right at full width and reads as clutter at 308px. So the rail variant
+        puts the border on the OUTER element and lets the map and the legend sit
+        inside it, separated by a rule rather than by two more borders.
+      */}
+      <div className={isRail ? 'rounded-2xl border border-border-strong bg-void/60 p-3' : undefined}>
         <div className={`${isRail ? 'mb-3' : 'mb-5'} flex flex-wrap items-end justify-between gap-3`}>
           <div>
             {isRail ? (
@@ -154,7 +163,16 @@ export function HomepageSituationMap({
 
         <div className={`grid grid-cols-1 gap-3 ${isRail ? '' : 'lg:grid-cols-[2.7fr_1fr]'}`}>
           <div
-            className={`relative overflow-hidden rounded-2xl border bg-void transition-all duration-500 ${isRail ? 'h-[200px]' : 'h-[360px] sm:h-[440px]'} ${
+            /*
+              §8 — `[&_.maplibregl-ctrl-top-right]:hidden` in the rail variant
+              removes MapLibre's own zoom cluster from the card. It is a
+              presentational scope on THIS container, not a change to WorldMap
+              or to the shared MapLibre setup: the same component in the
+              full-width section keeps its controls exactly as before. The card
+              keeps one clear affordance — "Open full map" in its header — which
+              is what the prototype draws.
+            */
+            className={`relative overflow-hidden rounded-xl border bg-void transition-all duration-500 ${isRail ? 'h-[188px] [&_.maplibregl-ctrl-bottom-left]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden [&_.maplibregl-ctrl-top-right]:hidden' : 'h-[360px] sm:h-[440px]'} ${
               selectedIso3
                 ? 'border-cyan-400/60 shadow-[0_0_70px_-8px_rgba(34,211,238,0.45)]'
                 : 'border-cyan-500/30 shadow-[0_0_50px_-10px_rgba(34,211,238,0.3)]'
@@ -173,7 +191,7 @@ export function HomepageSituationMap({
             {/* Scan/grid overlay — CTO review: "stronger cyan geographic outline treatment... subtle technical grid/scan overlay." Sits above the real MapLibre canvas but pointer-events-none throughout, so real map interaction (pan/zoom/click) is never blocked. WorldMap.tsx's own internals remain untouched, per explicit instruction not to risk shared MapLibre code. */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-[0.15]"
+              className={`pointer-events-none absolute inset-0 ${isRail ? 'opacity-[0.07]' : 'opacity-[0.15]'}`}
               style={{
                 backgroundImage:
                   'linear-gradient(rgba(34,211,238,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.5) 1px, transparent 1px)',
@@ -182,10 +200,20 @@ export function HomepageSituationMap({
             />
             <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_60px_-10px_rgba(34,211,238,0.25)]" aria-hidden="true" />
 
-            {/* HUD corner brackets */}
-            {['left-2 top-2 border-l border-t', 'right-2 top-2 border-r border-t', 'left-2 bottom-2 border-l border-b', 'right-2 bottom-2 border-r border-b'].map((pos) => (
-              <span key={pos} aria-hidden="true" className={`pointer-events-none absolute h-4 w-4 border-cyan-400/50 ${pos}`} />
-            ))}
+            {/*
+              §8 — HUD corner brackets are FULL-SECTION CHROME ONLY.
+
+              The ruling: *"The map must be a compact right-rail card, not a
+              mini analyst workstation... Remove tool-like visual noise that
+              makes it look like /map embedded in Home."* Brackets read as
+              instrument framing, which is right at 440px in a section of its
+              own and wrong in a 308px rail card beside four story cards.
+            */}
+            {isRail
+              ? null
+              : ['left-2 top-2 border-l border-t', 'right-2 top-2 border-r border-t', 'left-2 bottom-2 border-l border-b', 'right-2 bottom-2 border-r border-b'].map((pos) => (
+                  <span key={pos} aria-hidden="true" className={`pointer-events-none absolute h-4 w-4 border-cyan-400/50 ${pos}`} />
+                ))}
 
             {/* Vignette — darkened edge falloff so the map reads as a layered intelligence surface, not a flat rectangle. */}
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(2,7,13,0.55)_100%)]" aria-hidden="true" />
@@ -268,11 +296,11 @@ function MapLegend({
   ).filter((m): m is NonNullable<typeof m> => m !== undefined);
 
   return (
-    <div className={`rounded-2xl border border-border-strong bg-void/60 ${compact ? 'mt-3 p-3' : 'mt-4 p-4'}`}>
+    <div className={compact ? 'mt-3 border-t border-border-strong/70 pt-3' : 'mt-4 rounded-2xl border border-border-strong bg-void/60 p-4'}>
       <h3 className="font-mono text-[11px] uppercase tracking-widest text-cyan-400">
         {t.legendTitle}
       </h3>
-      <ul className={`mt-3 flex flex-wrap items-center gap-y-2 ${compact ? 'gap-x-3' : 'gap-x-5'}`}>
+      <ul className={compact ? 'mt-2.5 grid grid-cols-2 gap-x-2 gap-y-1.5' : 'mt-3 flex flex-wrap items-center gap-x-5 gap-y-2'}>
         {entries.map((module) => {
           const label =
             moduleText[module.dictionaryKey as keyof typeof moduleText]?.title ?? module.id;

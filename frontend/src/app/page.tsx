@@ -1,10 +1,12 @@
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
+import { BetaHomeHeader } from '@/components/home/BetaHomeHeader';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { BetaHero } from '@/components/home/BetaHero';
 import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
 import { HomeSideRail } from '@/components/home/HomeSideRail';
+import { HomeAccountPanel } from '@/components/home/HomeAccountPanel';
 import { ExploreByTopic } from '@/components/home/ExploreByTopic';
 import { EngineEnergyField } from '@/components/home/EngineEnergyField';
 import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
@@ -170,7 +172,21 @@ export default async function HomePage(): Promise<JSX.Element> {
         remains the first visible element and nothing is wrapped.
       */}
       <SiteStructuredData />
-      <NavBar language={language} />
+      {/*
+        Z1 — HOME'S OWN DESKTOP HEADER, per DESKTOP FIDELITY CORRECTION R2 §1.
+
+        At and above `lg`, Home renders `BetaHomeHeader`, which follows the
+        Product Owner prototype and resolves every destination from
+        `INTELLIGENCE_MODULES`. Below `lg` the existing `NavBar` chrome serves
+        unchanged, which is why it is wrapped rather than replaced: the mobile
+        header, its sheet and its bottom nav are untouched, and `NavBar` itself
+        is not modified at all. `NAV_MODEL` and CTO decision D1 stand on every
+        other surface exactly as before.
+      */}
+      <BetaHomeHeader language={language} />
+      <div className="lg:hidden">
+        <NavBar language={language} />
+      </div>
       <main className="pb-16 lg:pb-0">
         <PageCanvas>
           {/*
@@ -275,10 +291,7 @@ export default async function HomePage(): Promise<JSX.Element> {
                 language={language}
               />
             </div>
-            <HomeSideRail
-              articles={[...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery]}
-              language={language}
-            />
+            <HomeSideRail language={language} />
           </div>
           {/*
             R2 — TODAY. Placed here deliberately: it is live editorial content,
@@ -353,6 +366,29 @@ export default async function HomePage(): Promise<JSX.Element> {
             second list. It sits immediately above the nine-card Engine because
             "View all topics" is an anchor into it.
           */}
+          {/*
+            §9 — PERSONALIZATION SITS BELOW THE HIGH-ENGAGEMENT ZONES.
+
+            The ruling: *"Do not put a large signed-out follow card above those
+            in the normal desktop first fold... Signed-out personalization
+            invitation can move lower or into the personalization area."* The
+            prototype's right rail is the map and Ask, and its Sign In lives in
+            the header — which Home now has.
+
+            `HomeAccountPanel` is unchanged and still state-aware: signed out it
+            invites, signed in it renders For you, Following and Manage from the
+            real account and follow APIs, and it never shows "Sign in" to
+            someone already signed in. Only its position moved. It keeps reading
+            the stories the page already holds, so "For you" still needs no
+            second request.
+          */}
+          <div className="mx-auto w-full max-w-md lg:max-w-none">
+            <HomeAccountPanel
+              articles={[...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery]}
+              language={language}
+            />
+          </div>
+
           <ExploreByTopic language={language} />
           {/*
             C5 · THE ENGINE KEEPS ITS NINE CARDS AND GETS ITS GLOW BACK.
