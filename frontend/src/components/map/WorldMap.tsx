@@ -64,6 +64,29 @@ interface WorldMapProps {
   /** Currently selected country's ISO3 code, if any. */
   selectedIso3: string | null;
 
+  /**
+   * Render for a small fixed-height host (the Home rail card).
+   *
+   * ADDITIVE AND DEFAULTED, deliberately. The standing instruction is not to
+   * risk this shared MapLibre component, so nothing here changes for any
+   * existing caller: omit the prop and the camera, the wrapper's 360px minimum
+   * and the wrapper's own border and radius are exactly what they were.
+   *
+   * It exists because the Home rail card measures 340 x 153 in the Product
+   * Owner prototype, and two things in this file made that impossible from
+   * outside:
+   *
+   *   · the root carries `min-h-[360px]`, so a 153px host clipped the map to
+   *     its top slice rather than sizing it — that is why the rail card showed
+   *     a band of north Africa instead of a world;
+   *   · the initial camera is z1.1 centred on [12, 20], which frames a world
+   *     in a 440px-tall box and a fraction of one in a 153px box.
+   *
+   * With `compact`, the root fills its host and the camera opens to z0.62 on
+   * the equator, which is the whole world at this aspect.
+   */
+  compact?: boolean;
+
   onHoverCountry: (hover: HoveredCountry | null) => void;
 
   onSelectCountry: (feature: CountryFeature) => void;
@@ -75,6 +98,7 @@ interface WorldMapProps {
 export function WorldMap({
   countryStoryCounts,
   selectedIso3,
+  compact = false,
   onHoverCountry,
   onSelectCountry,
   language = 'en',
@@ -97,9 +121,14 @@ useEffect(() => {
     map = new maplibregl.Map({
       container: containerRef.current,
       style: BASE_STYLE,
-      center: [12, 20],
-      zoom: 1.1,
-      minZoom: 0.6,
+      center: compact ? [8, 10] : [12, 20],
+      /* 360 degrees is 512px at z0, so a 340px-wide host needs
+         log2(340/512) = -0.59 to hold a whole world. `minZoom` has to come
+         down with it or MapLibre clamps the camera straight back to 0.6 and
+         the card shows a band of north Africa, which is exactly what the
+         first capture did. */
+      zoom: compact ? -0.58 : 1.1,
+      minZoom: compact ? -1.2 : 0.6,
       maxZoom: 6,
       attributionControl: false,
     });
@@ -489,7 +518,7 @@ useEffect(() => {
   }
 
   return (
-    <div className="relative h-full min-h-[360px] w-full overflow-hidden rounded-2xl border border-border">
+    <div className={`relative h-full w-full overflow-hidden ${compact ? '' : 'min-h-[360px] rounded-2xl border border-border'}`}>
       <div ref={containerRef} className="h-full w-full" aria-hidden="true" />
       {!isStyleLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-void">

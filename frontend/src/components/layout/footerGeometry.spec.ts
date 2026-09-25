@@ -687,7 +687,19 @@ describe('M66.8b — what deliberately did NOT change', () => {
   it('app/page.tsx and PageCanvas.tsx were not modified by this milestone', () => {
     // Read-only assertions on their load-bearing lines. If either were edited
     // to make the Footer fit, one of these would fail.
-    expect(homePageSource).toMatch(/<main className="pb-16 lg:pb-0">/);
+    //
+    // THE <main> ASSERTION LOOSENED ONCE, DELIBERATELY. It used to pin the
+    // whole attribute (`<main className="pb-16 lg:pb-0">`). DESKTOP PREMIUM
+    // VISUAL PASS section 11 required Home's SAMPLED page background
+    // (`#010a19`) to reach Home and only Home, so `HOME_PAGE_SURFACE` is
+    // appended to this element rather than the global `bg-void` token being
+    // changed under every other accepted surface.
+    //
+    // What this test is actually for is unchanged and still asserted: <main>
+    // keeps its own padding, the Footer is still wired here, and PageCanvas
+    // is still untouched. The pattern now allows an additional class and
+    // nothing else.
+    expect(homePageSource).toMatch(/<main className=\{?[`"]pb-16 lg:pb-0/);
     expect(homePageSource).toMatch(/<Footer language=\{language\} \/>/);
     expect(pageCanvasSource).toMatch(
       /relative mx-auto w-full max-w-cd-page px-cd-14 pb-cd-22 pt-cd-12 lg:px-cd-26 lg:pb-cd-60 lg:pt-cd-20/,

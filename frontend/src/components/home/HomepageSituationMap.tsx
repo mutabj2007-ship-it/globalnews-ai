@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { ArrowUpRight } from 'lucide-react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { RAIL_CARD_SHELL, MAP_BOX } from '@/components/home/homePresentation';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
 import type { HoveredCountry } from '@/components/map/WorldMap';
 import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModules';
@@ -31,12 +32,25 @@ import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModul
  */
 const LEGEND_MODULE_IDS = ['energy', 'conflict', 'humanitarian', 'economy'] as const;
 
+/**
+ * §5 + §11 — the legend dot colours, SAMPLED from the prototype's own legend.
+ *
+ * This corrected a real mismatch, not just a tone. The shipped table read
+ * energy=amber, conflict=rose, humanitarian=violet, economy=emerald. The
+ * prototype's dots sample energy `#36e8c4` (green), conflict `#f2666f` (red),
+ * humanitarian `#ffca53` (amber), economy `#a36ef0` (violet). Three of the
+ * four hues were assigned to the wrong domain, so the legend and the
+ * prototype disagreed about what colour a domain is — which matters here more
+ * than anywhere else on the page, because the map's own marks use the same
+ * scale.
+ */
 const LEGEND_DOT: Record<string, string> = {
-  energy: 'bg-amber-400 shadow-[0_0_8px_1px_rgba(251,191,36,0.75)]',
-  conflict: 'bg-rose-500 shadow-[0_0_8px_1px_rgba(244,63,94,0.75)]',
-  humanitarian: 'bg-violet-400 shadow-[0_0_8px_1px_rgba(167,139,250,0.75)]',
-  economy: 'bg-emerald-400 shadow-[0_0_8px_1px_rgba(52,211,153,0.75)]',
+  energy: 'bg-[#36e8c4] shadow-[0_0_10px_1px_rgba(54,232,196,0.75)]',
+  conflict: 'bg-[#f2666f] shadow-[0_0_10px_1px_rgba(242,102,111,0.75)]',
+  humanitarian: 'bg-[#ffca53] shadow-[0_0_10px_1px_rgba(255,202,83,0.75)]',
+  economy: 'bg-[#a36ef0] shadow-[0_0_10px_1px_rgba(163,110,240,0.75)]',
 };
+
 
 /**
  * Master Frontend Recomposition, Checkpoint 3 — the real Global
@@ -129,22 +143,27 @@ export function HomepageSituationMap({
         puts the border on the OUTER element and lets the map and the legend sit
         inside it, separated by a rule rather than by two more borders.
       */}
-      <div className={isRail ? 'rounded-[18px] border-[1.5px] border-white/[0.13] bg-gradient-to-b from-[#0e1a2a] to-[#080f1b] p-3.5 shadow-[0_14px_34px_-22px_rgba(0,0,0,0.95)]' : undefined}>
-        <div className={`${isRail ? 'mb-3' : 'mb-5'} flex flex-wrap items-end justify-between gap-3`}>
-          <div>
+      <div className={isRail ? `${RAIL_CARD_SHELL} p-[13px]` : undefined}>
+        <div className={`${isRail ? 'mb-[11px]' : 'mb-5'} flex flex-wrap items-end justify-between gap-3`}>
+          <div className={isRail ? 'w-full' : undefined}>
             {isRail ? (
               /* The rail header is the prototype's: the card's name and its
                  open-in-new glyph on one line. The section eyebrow, display
                  heading and description belong to the full-width presentation
                  and would outweigh the map at 368px. */
               <div className="flex w-full items-center justify-between gap-2">
-                <h2 id="situation-map-heading" className="font-display text-base font-semibold text-ink-primary">
-                  {t.heading}
+                {/* The prototype's rail card is titled "Global situation map".
+                    `situationMap.eyebrow` is already exactly that string in both
+                    languages, so the rail uses it rather than earning a new
+                    dictionary key; `heading` stays the full section's title,
+                    which wraps to two lines on a measured 368px card. */}
+                <h2 id="situation-map-heading" className="font-display text-[15px] font-bold tracking-[-0.01em] text-white">
+                  {t.eyebrow}
                 </h2>
                 <a
                   href="/map"
                   aria-label={t.openFullMap}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-strong text-ink-secondary transition-colors hover:border-cyan-400/50 hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                  className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border border-[#17324f] text-[#9db4cc] transition-colors hover:border-cyan-400/55 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
                 >
                   <ArrowUpRight size={15} strokeWidth={2} aria-hidden="true" />
                 </a>
@@ -172,15 +191,32 @@ export function HomepageSituationMap({
               keeps one clear affordance — "Open full map" in its header — which
               is what the prototype draws.
             */
-            className={`relative overflow-hidden rounded-xl border bg-void transition-all duration-500 ${isRail ? 'h-[164px] [&_.maplibregl-ctrl-bottom-left]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden [&_.maplibregl-ctrl-top-right]:hidden' : 'h-[360px] sm:h-[440px]'} ${
-              selectedIso3
-                ? 'border-cyan-400/60 shadow-[0_0_70px_-8px_rgba(34,211,238,0.45)]'
-                : 'border-cyan-500/30 shadow-[0_0_50px_-10px_rgba(34,211,238,0.3)]'
-            }`}
+            className={
+              isRail
+                ? /* Measured: 340 x 153 inner box, radius ~8, sampled fill `#021124`.
+                     The rail box carries NO cyan selection ring — the prototype's
+                     map sits flat inside the card, and a glowing outline around a
+                     153px thumbnail is exactly the instrument-panel reading §5
+                     asks to remove. Selection still lights the country itself. */
+                  /* Section 5 asks for a LUMINOUS map. At z-0.58 the shared
+                     style draws the world very thin, and the section's own
+                     dimming layers then take most of what is left -- the first
+                     capture's card was a near-empty box. The filter lifts the
+                     rendered canvas instead of editing the shared MapLibre
+                     style, which stays untouched for /map and every other
+                     caller. */
+                  `relative overflow-hidden transition-all duration-500 h-[153px] ${MAP_BOX} [&>div:first-child]:[filter:brightness(1.55)_saturate(1.25)_contrast(1.08)] [&_.maplibregl-ctrl-bottom-left]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden [&_.maplibregl-ctrl-top-right]:hidden`
+                : `relative overflow-hidden rounded-xl border bg-void transition-all duration-500 h-[360px] sm:h-[440px] ${
+                    selectedIso3
+                      ? 'border-cyan-400/60 shadow-[0_0_70px_-8px_rgba(34,211,238,0.45)]'
+                      : 'border-cyan-500/30 shadow-[0_0_50px_-10px_rgba(34,211,238,0.3)]'
+                  }`
+            }
             role="application"
             aria-label={t.heading}
           >
             <WorldMap
+              compact={isRail}
               countryStoryCounts={countryStoryCounts}
               selectedIso3={selectedIso3}
               onHoverCountry={setHovered}
@@ -189,16 +225,20 @@ export function HomepageSituationMap({
             />
 
             {/* Scan/grid overlay — CTO review: "stronger cyan geographic outline treatment... subtle technical grid/scan overlay." Sits above the real MapLibre canvas but pointer-events-none throughout, so real map interaction (pan/zoom/click) is never blocked. WorldMap.tsx's own internals remain untouched, per explicit instruction not to risk shared MapLibre code. */}
-            <div
-              aria-hidden="true"
-              className={`pointer-events-none absolute inset-0 ${isRail ? 'opacity-[0.07]' : 'opacity-[0.15]'}`}
-              style={{
-                backgroundImage:
-                  'linear-gradient(rgba(34,211,238,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.5) 1px, transparent 1px)',
-                backgroundSize: '32px 32px',
-              }}
-            />
-            <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_60px_-10px_rgba(34,211,238,0.25)]" aria-hidden="true" />
+            {isRail ? null : (
+              <>
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 opacity-[0.15]"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(rgba(34,211,238,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.5) 1px, transparent 1px)',
+                    backgroundSize: '32px 32px',
+                  }}
+                />
+                <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_60px_-10px_rgba(34,211,238,0.25)]" aria-hidden="true" />
+              </>
+            )}
 
             {/*
               §8 — HUD corner brackets are FULL-SECTION CHROME ONLY.
@@ -216,7 +256,9 @@ export function HomepageSituationMap({
                 ))}
 
             {/* Vignette — darkened edge falloff so the map reads as a layered intelligence surface, not a flat rectangle. */}
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(2,7,13,0.55)_100%)]" aria-hidden="true" />
+            {isRail ? null : (
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(2,7,13,0.55)_100%)]" aria-hidden="true" />
+            )}
 
             {/*
               VISUAL RICHNESS WITHOUT A SINGLE NEW CLAIM.
@@ -323,11 +365,14 @@ function MapLegend({
   ).filter((m): m is NonNullable<typeof m> => m !== undefined);
 
   return (
-    <div className={compact ? 'mt-2.5 border-t border-border-strong/70 pt-2.5' : 'mt-4 rounded-2xl border border-border-strong bg-void/60 p-4'}>
-      <h3 className="font-mono text-[11px] uppercase tracking-widest text-cyan-400">
+    <div className={compact ? 'mt-[11px]' : 'mt-4 rounded-2xl border border-border-strong bg-void/60 p-4'}>
+      {/* The prototype's rail legend has no title — four dots and four words,
+          on one line. The heading stays in the DOM for the section variant and
+          for screen readers in the rail, where it is visually hidden. */}
+      <h3 className={compact ? 'sr-only' : 'font-mono text-[11px] uppercase tracking-widest text-cyan-400'}>
         {t.legendTitle}
       </h3>
-      <ul className={compact ? 'mt-2.5 grid grid-cols-2 gap-x-2 gap-y-1.5' : 'mt-3 flex flex-wrap items-center gap-x-5 gap-y-2'}>
+      <ul className={compact ? 'flex flex-wrap items-center justify-between gap-x-2 gap-y-1' : 'mt-3 flex flex-wrap items-center gap-x-5 gap-y-2'}>
         {entries.map((module) => {
           /* The prototype's category name, falling back to the registry's own
              title if a later entry has no legend wording. */
@@ -338,7 +383,7 @@ function MapLegend({
           const dot = (
             <span
               aria-hidden="true"
-              className={`h-2.5 w-2.5 shrink-0 rounded-full ${LEGEND_DOT[module.id] ?? 'bg-ink-tertiary'}`}
+              className={`h-[10px] w-[10px] shrink-0 rounded-full ${LEGEND_DOT[module.id] ?? 'bg-ink-tertiary'}`}
             />
           );
 
@@ -347,13 +392,13 @@ function MapLegend({
               {isModuleNavigable(module) && module.destination !== undefined ? (
                 <a
                   href={module.destination}
-                  className="flex min-h-[44px] items-center gap-2 text-sm text-ink-secondary transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                  className="flex min-h-[44px] items-center gap-2 text-[12px] text-[#c2d3e6] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none lg:min-h-[24px]"
                 >
                   {dot}
                   {label}
                 </a>
               ) : (
-                <span className="flex min-h-[44px] items-center gap-2 text-sm text-ink-tertiary">
+                <span className="flex min-h-[44px] items-center gap-2 text-[12px] text-ink-tertiary lg:min-h-[24px]">
                   {dot}
                   {label}
                 </span>

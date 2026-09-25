@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import { Crown, Sparkles, Zap, Map as MapIcon, Globe2, Check } from 'lucide-react';
+import { Crown, Sparkles, Zap, Map as MapIcon, Globe2, Check, ArrowRight } from 'lucide-react';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { HeroGlobe } from '@/components/home/HeroGlobe';
@@ -113,7 +113,9 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
   return (
     <section
       aria-labelledby="beta-hero-heading"
-      className="relative isolate pb-5 pt-4 sm:pb-6 lg:pb-6 lg:pt-6"
+      /* Measured: the prototype's hero runs from the 62px header down to the
+         "What's happening now" cap box at y=360 -- about 293px of block. */
+      className="relative isolate pb-5 pt-4 sm:pb-6 lg:-mt-[16px] lg:pb-2 lg:pt-0"
     >
       {/*
         THE LAYERED DARK-BLUE INTELLIGENCE FIELD.
@@ -151,27 +153,31 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
         */}
 
         {/* 1 · the deep base, warmer toward the horizon line than the edges */}
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,#03070e_0%,#061426_42%,#08192c_62%,#040a14_100%)]" />
+        {/* §11 — sampled from the prototype: `#001729` deep, `#041d3b` mid,
+            `#023454` where the atmosphere lifts toward the globe. The shipped
+            base (`#03070e`/`#08192c`) was a grey-navy; every one of these is
+            measurably bluer. */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#00101f_0%,#001729_34%,#04223f_58%,#020d1c_100%)]" />
 
         {/* 2 · THE ATMOSPHERE ITSELF — a wide blue bloom centred on the globe,
                far larger than the sphere, so the light reads as coming OFF the
                world rather than being painted behind it */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_86%_130%_at_58%_46%,rgba(56,150,236,0.30),transparent_68%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_86%_130%_at_58%_46%,rgba(20,124,214,0.42),transparent_70%)]" />
 
         {/* 3 · the hotter inner core of that bloom */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_44%_74%_at_56%_44%,rgba(80,190,255,0.22),transparent_62%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_44%_74%_at_56%_44%,rgba(64,182,255,0.30),transparent_64%)]" />
 
         {/* 4 · violet counterweight on the headline side, so the left is not a
                dead corner and the two accents balance */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_52%_64%_at_6%_20%,rgba(124,92,246,0.18),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_52%_64%_at_6%_20%,rgba(124,92,246,0.22),transparent_70%)]" />
 
         {/* 5 · SUBTLE GEOGRAPHIC TEXTURE — a graticule so faint it reads as
                material rather than as a grid. Two repeating-linear-gradients,
                one per axis, at ~2.5% so no line is ever individually legible */}
-        <div className="absolute inset-0 opacity-[0.55] [background-image:repeating-linear-gradient(90deg,rgba(125,211,252,0.045)_0_1px,transparent_1px_96px),repeating-linear-gradient(0deg,rgba(125,211,252,0.035)_0_1px,transparent_1px_96px)]" />
+        <div className="absolute inset-0 opacity-[0.40] [background-image:repeating-linear-gradient(90deg,rgba(125,211,252,0.045)_0_1px,transparent_1px_96px),repeating-linear-gradient(0deg,rgba(125,211,252,0.035)_0_1px,transparent_1px_96px)]" />
 
         {/* 6 · atmospheric haze drifting up from the horizon */}
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(0deg,rgba(14,52,92,0.34),transparent_84%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(0deg,rgba(2,52,84,0.40),transparent_86%)]" />
 
         {/* 7 · vignette, last, so type stays legible where the bloom is brightest */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_36%,rgba(2,6,12,0.62)_100%)]" />
@@ -245,13 +251,13 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
         {t.connectedPerspective}
       </span>
 
-      <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,296px)] lg:items-start lg:gap-12">
+      <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,232px)] lg:items-start lg:gap-10">
         <div className="flex max-w-2xl flex-col">
           <h1
             id="beta-hero-heading"
-            className="font-display text-[36px] font-semibold leading-[1.04] tracking-[-0.022em] sm:text-[44px] lg:text-[46px] xl:text-[52px]"
+            className="font-display text-[34px] font-extrabold leading-[1.07] tracking-[-0.025em] sm:text-[40px] lg:text-[42px] xl:text-[46px]"
           >
-            <span className="block text-ink-primary">{t.heroA}</span>
+            <span className="block text-white">{t.heroA}</span>
             {/*
               The accent line. CYAN, not emerald: the Product Owner's desktop
               screenshot draws "what's changing." in the product's cyan, and
@@ -260,10 +266,24 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
               implementation's choice and the ruling is explicit that the
               current implementation is reference evidence, not authority.
             */}
-            <span className="block text-cyan-300">{t.heroB}</span>
+            {/*
+              §11 — the accent is TWO sampled colours, not one. The prototype
+              draws "what's" at `#5abff5` (sky) and "changing." at `#5df9e1`
+              rising to `#61fcea` (aqua); the implementation drew the whole
+              line in a single flat `cyan-300`.
+
+              It is rendered as a gradient across the line rather than as two
+              spans, because `heroB` is one translated string: Polish does not
+              split at the same word, and hard-coding a split point here would
+              put the colour change in the wrong place in the other language.
+              The gradient reproduces both sampled endpoints in both.
+            */}
+            <span className="block bg-[linear-gradient(90deg,#5abff5_0%,#4fd8e6_44%,#5df9e1_74%,#61fcea_100%)] bg-clip-text text-transparent [text-shadow:0_0_36px_rgba(70,220,230,0.28)]">
+              {t.heroB}
+            </span>
           </h1>
 
-          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-secondary sm:text-base">
+          <p className="mt-2.5 max-w-xl text-[15px] leading-relaxed text-[#cfe2f2]">
             {t.heroSub}
           </p>
 
@@ -277,27 +297,33 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             method="get"
             role="search"
             aria-label={t.askAria}
-            className="mt-4 flex w-full max-w-[600px] items-center gap-2 rounded-2xl border border-border-strong bg-void/75 p-2 pl-4 shadow-[0_0_40px_-12px_rgba(34,211,238,0.35)] focus-within:border-cyan-400/50"
+            className="mt-3.5 flex w-full max-w-[506px] items-center gap-2 rounded-[14px] border border-[#1b3a68] bg-[linear-gradient(180deg,#17335b_0%,#112750_100%)] p-[5px] pl-[13px] shadow-[inset_0_1px_0_rgba(150,200,255,0.10),0_16px_36px_-22px_rgba(0,0,0,0.9)] transition-colors focus-within:border-[#3d8fd8]"
           >
-            <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-violet-300" />
+            <Sparkles size={17} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-[#9db8dd]" />
             <input
               type="search"
               name="q"
               autoComplete="off"
               placeholder={t.askPlaceholder}
               aria-label={t.askAria}
-              className="min-h-[44px] min-w-0 flex-1 bg-transparent py-2 text-base text-ink-primary outline-none placeholder:text-ink-tertiary"
+              className="min-h-[44px] min-w-0 flex-1 bg-transparent py-1 text-[14px] text-white outline-none placeholder:text-[#7e99ba] lg:min-h-[32px]"
             />
+            {/*
+              Measured: a 28px filled circle, not a text button. The label is
+              not lost — it moves to `aria-label`, so the accessible name is
+              exactly the same string it was before.
+            */}
             <button
               type="submit"
-              className="min-h-[44px] shrink-0 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-ink-primary transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+              aria-label={t.askButton}
+              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,#3b8dfb_0%,#1f6ae0_100%)] text-white shadow-[0_0_18px_-2px_rgba(59,141,251,0.85)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 motion-reduce:transition-none motion-reduce:hover:scale-100"
             >
-              {t.askButton}
+              <ArrowRight size={16} strokeWidth={2.4} aria-hidden="true" />
             </button>
           </form>
 
           {/* The metered-cost disclosure. Approved copy, stated before the spend. */}
-          <p className="mt-2.5 flex max-w-xl items-start gap-1.5 text-[11.5px] leading-snug text-ink-tertiary">
+          <p className="mt-2 flex max-w-xl items-start gap-1.5 text-[11px] leading-snug text-ink-tertiary">
             <Zap size={13} strokeWidth={2} aria-hidden="true" className="mt-[2px] shrink-0 text-amber-300" />
             <span>{t.askHint}</span>
           </p>
@@ -306,35 +332,36 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             THE THREE ACTIONS. All three are ordinary links to destinations that
             already exist, and none of them spends anything on arrival.
           */}
-          <div className="mt-4 grid w-full max-w-[720px] grid-cols-1 gap-3 sm:grid-cols-3">
+          {/* Measured: 60px tall, radius ~8, 11px gutters. Fills sampled. */}
+          <div className="mt-3 grid w-full max-w-[660px] grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-[11px]">
             <a
               href="#whats-happening-now"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-xl border border-sky-400/45 bg-gradient-to-b from-sky-600/45 to-sky-800/35 px-4 py-3 text-left shadow-[0_10px_30px_-16px_rgba(56,189,248,0.9)] transition-colors hover:border-sky-300/70 hover:from-sky-500/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 motion-reduce:transition-none"
+              className="flex min-h-[44px] items-center gap-3 rounded-[9px] bg-[linear-gradient(105deg,#0a6bd6_0%,#0c42a2_100%)] px-[15px] py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(10,107,214,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(10,107,214,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[60px]"
             >
               <Globe2 size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[14px] font-semibold leading-tight text-white">{t.exploreWorld}</span>
-                <span className="text-[11px] leading-tight text-white/80">{t.exploreWorldSub}</span>
+                <span className="text-[14px] font-bold leading-tight text-white">{t.exploreWorld}</span>
+                <span className="mt-[2px] text-[11.5px] leading-tight text-white/85">{t.exploreWorldSub}</span>
               </span>
             </a>
             <a
               href="/ask"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-gradient-to-b from-violet-500 to-violet-700 px-4 py-3 text-left shadow-[0_10px_30px_-16px_rgba(167,139,250,0.95)] transition-colors hover:from-violet-400 hover:to-violet-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none"
+              className="flex min-h-[44px] items-center gap-3 rounded-[9px] bg-[linear-gradient(105deg,#412d9f_0%,#1f328a_100%)] px-[15px] py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(65,45,159,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(65,45,159,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[60px]"
             >
               <Sparkles size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[14px] font-semibold leading-tight text-white">{t.askToday}</span>
-                <span className="text-[11px] leading-tight text-white/80">{t.askTodaySub}</span>
+                <span className="text-[14px] font-bold leading-tight text-white">{t.askToday}</span>
+                <span className="mt-[2px] text-[11.5px] leading-tight text-white/85">{t.askTodaySub}</span>
               </span>
             </a>
             <a
               href="/map"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 px-4 py-3 text-left shadow-[0_10px_30px_-16px_rgba(52,211,153,0.95)] transition-colors hover:from-emerald-400 hover:to-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none"
+              className="flex min-h-[44px] items-center gap-3 rounded-[9px] bg-[linear-gradient(105deg,#0b8d6a_0%,#037050_100%)] px-[15px] py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(11,141,106,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(11,141,106,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[60px]"
             >
               <MapIcon size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[14px] font-semibold leading-tight text-white">{t.openMap}</span>
-                <span className="text-[11px] leading-tight text-white/80">{t.openMapSub}</span>
+                <span className="text-[14px] font-bold leading-tight text-white">{t.openMap}</span>
+                <span className="mt-[2px] text-[11.5px] leading-tight text-white/85">{t.openMapSub}</span>
               </span>
             </a>
           </div>
@@ -360,13 +387,26 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
           */}
           <aside
             aria-labelledby="beta-premium-heading"
-            className="rounded-2xl border border-amber-300/60 bg-[#0b0904]/[0.97] p-4 shadow-[0_18px_60px_-18px_rgba(245,197,94,0.45)] backdrop-blur-md"
+            className="relative overflow-hidden rounded-[14px] border border-[#5d4a1f] bg-[#090d19] p-[14px] shadow-[inset_0_1px_0_rgba(255,214,140,0.22),0_26px_64px_-20px_rgba(0,0,0,0.95),0_0_44px_-14px_rgba(245,197,94,0.30)]"
           >
+            {/* Sampled: the card's own fill is near-black `#090d19`, and the
+                gold reads as a warm bloom in its TOP-LEFT corner (`#483c23`),
+                not as a tint across the whole surface. */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_8%_4%,rgba(245,197,94,0.20),transparent_62%)]"
+            />
             <h2
               id="beta-premium-heading"
-              className="flex items-start gap-2.5 text-[15px] font-semibold leading-snug text-amber-100"
+              className="relative flex items-start gap-2.5 text-[15px] font-bold leading-[1.22] text-white"
             >
-              <Crown size={18} strokeWidth={1.9} aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" />
+              {/* Measured ~36 x 32px, and it glows. */}
+              <Crown
+                size={26}
+                strokeWidth={1.9}
+                aria-hidden="true"
+                className="mt-[1px] shrink-0 text-[#ffe198] drop-shadow-[0_0_12px_rgba(255,206,110,0.75)]"
+              />
               <span className="block">{t.premiumTitle}</span>
             </h2>
 
@@ -376,14 +416,15 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
               nothing can be started by accident, and Watch — named on the first
               line — stays inactive product-wide.
             */}
-            <ul className="mt-3 flex flex-col gap-2">
+            <ul className="relative mt-[12px] flex flex-col gap-[8px]">
               {[t.premiumCap1, t.premiumCap2, t.premiumCap3, t.premiumCap4].map((capability) => (
-                <li key={capability} className="flex items-start gap-2.5 text-[13px] leading-snug text-ink-primary">
+                <li key={capability} className="flex items-center gap-2.5 text-[13px] leading-[1.25] text-white">
+                  {/* Measured: a 17px ring, not a bare tick. */}
                   <Check
-                    size={15}
-                    strokeWidth={2.4}
+                    size={17}
+                    strokeWidth={2.6}
                     aria-hidden="true"
-                    className="mt-[3px] shrink-0 rounded-full bg-amber-400/15 p-[1px] text-amber-300"
+                    className="shrink-0 rounded-full border border-[#6b551f] bg-[#241d0d] p-[3px] text-[#ffd98a]"
                   />
                   <span>{capability}</span>
                 </li>
@@ -447,12 +488,12 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
               disabled
               aria-disabled="true"
               tabIndex={-1}
-              className="mt-4 w-full cursor-not-allowed rounded-xl bg-gradient-to-b from-[#f6d98a] to-[#e0b354] px-4 py-2.5 text-center text-[13px] font-bold tracking-wide text-[#3a2b08] shadow-[0_6px_18px_-8px_rgba(245,197,94,0.9)]"
+              className="relative mt-[12px] h-[35px] w-full cursor-not-allowed rounded-[10px] bg-[linear-gradient(180deg,#ebc267_0%,#dcae55_100%)] px-4 text-center text-[13px] font-bold tracking-[0.01em] text-[#452f0a] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_26px_-10px_rgba(235,194,103,0.85)]"
             >
               {t.premiumCta}
             </button>
 
-            <p className="mt-2.5 text-center text-[11px] leading-snug text-amber-100/60">{t.premiumNote}</p>
+            <p className="relative mt-[10px] text-center text-[10.5px] leading-snug text-[#b09a6d]">{t.premiumNote}</p>
           </aside>
 
           {/*

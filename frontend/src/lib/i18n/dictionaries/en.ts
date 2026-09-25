@@ -2329,6 +2329,14 @@ export const en = {
        Markets. This names the card; the registry still decides where it
        goes and whether it goes anywhere at all. */
     topicLabels: { 'world-intelligence': 'World', economy: 'Economy', energy: 'Energy', security: 'Security', humanitarian: 'Humanitarian', market: 'Markets' } as Record<string, string>,
+    /* beta.topicBlurbs — PREMIUM VISUAL PASS S6 ("shorter copy on the topic
+       cards"). The registry's own module descriptions are written for the
+       Engine's full-width panels; on a measured 136px card they clamp to
+       "Early-stage: economic and..." and read as truncation rather than copy.
+       These are the prototype's own one-breath lines, and they say nothing the
+       module descriptions do not already say -- they claim no capability, no
+       data and no route. The registry still decides where each card goes. */
+    topicBlurbs: { 'world-intelligence': 'Top global stories and trends', economy: 'Growth, policy and development', energy: 'Oil, gas, power and transition', security: 'Safety, threats and stability', humanitarian: 'People, needs and response', market: 'Commodities, companies and capital' } as Record<string, string>,
     navLabels: { economy: 'Economy', energy: 'Energy', security: 'Security', humanitarian: 'Humanitarian' } as Record<string, string>,
     navMore: 'More',
     navUnavailable: 'Not yet',

@@ -1,7 +1,8 @@
 import type { JSX } from 'react';
-import { Sparkles, PenLine } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { ASK_CARD_SHELL, ASK_ROW } from '@/components/home/homePresentation';
 import { HomepageSituationMap } from '@/components/home/HomepageSituationMap';
 
 /**
@@ -58,7 +59,7 @@ export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Elemen
   const prompts = dict.hero.exampleQuestions.slice(0, 3);
 
   return (
-    <aside aria-label={t.sideRailAria} className="flex flex-col gap-4">
+    <aside aria-label={t.sideRailAria} className="flex flex-col gap-[13px]">
       {/*
         ── Z5 · THE GLOBAL SITUATION MAP LEADS THE RAIL ─────────────────────
         The Product Owner's desktop prototype puts the map card at the TOP of
@@ -79,25 +80,43 @@ export function HomeSideRail({ language = 'en' }: HomeSideRailProps): JSX.Elemen
       <HomepageSituationMap language={language} variant="rail" />
 
       {/* ASK SUGGESTIONS — prefill links, zero spend. */}
-      <section aria-labelledby="beta-suggested-heading" className="rounded-[18px] border-[1.5px] border-white/[0.13] bg-gradient-to-b from-[#0e1a2a] to-[#080f1b] p-4 shadow-[0_14px_34px_-22px_rgba(0,0,0,0.95)]">
-        <h2 id="beta-suggested-heading" className="flex items-center gap-2 text-[15px] font-semibold text-ink-primary">
-          <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" className="text-violet-300" />
-          {t.suggestedTitle}
-        </h2>
-        <ul className="mt-2.5 flex flex-col gap-1.5">
+      {/*
+        §7 — the Ask rail, rebuilt on the sampled surface. Its fill samples
+        `#031428`, deliberately DARKER than the map card above it, and its
+        prompt rows sample `#12263f` with a `#122840` border — a border one
+        step from its own fill, which is what "fewer hard borders" means when
+        it is measured rather than judged.
+      */}
+      <section aria-labelledby="beta-suggested-heading" className={`${ASK_CARD_SHELL} p-[14px]`}>
+        <div className="flex items-start gap-2.5">
+          <Sparkles
+            size={22}
+            strokeWidth={1.9}
+            aria-hidden="true"
+            className="mt-[1px] shrink-0 text-[#a78bfa] drop-shadow-[0_0_10px_rgba(167,139,250,0.55)]"
+          />
+          <div className="min-w-0">
+            <h2 id="beta-suggested-heading" className="text-[15px] font-bold leading-tight text-white">
+              {t.suggestedTitle}
+            </h2>
+            {/* The prototype puts this line directly under the title, not at
+                the foot of the card. Same governed string, better placed. */}
+            <p className="mt-[3px] text-[12px] leading-[1.35] text-[#8ca3bd]">{t.suggestedNote}</p>
+          </div>
+        </div>
+        <ul className="mt-3 flex flex-col gap-2">
           {prompts.map((prompt) => (
             <li key={prompt}>
               <a
                 href={`/ask?q=${encodeURIComponent(prompt)}`}
-                className="flex min-h-[44px] items-center gap-2 rounded-[11px] border border-white/[0.11] bg-white/[0.045] px-3 py-2 text-left text-[13px] text-ink-primary transition-colors hover:border-cyan-300/50 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                className={`flex min-h-[44px] items-center gap-2 px-[11px] py-2 text-left text-[12.5px] text-white/95 lg:min-h-[32px] ${ASK_ROW} transition-colors hover:bg-[#17304e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none`}
               >
                 <span className="line-clamp-1 flex-1">{prompt}</span>
-                <PenLine size={15} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-ink-tertiary" />
+                <ArrowRight size={15} strokeWidth={2} aria-hidden="true" className="shrink-0 text-white/60" />
               </a>
             </li>
           ))}
         </ul>
-        <p className="mt-2.5 text-[11px] leading-snug text-ink-tertiary">{t.suggestedNote}</p>
       </section>
 
     </aside>

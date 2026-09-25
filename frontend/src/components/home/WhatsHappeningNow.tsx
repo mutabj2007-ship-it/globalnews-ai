@@ -2,6 +2,14 @@ import type { JSX } from 'react';
 import { ImageOff, Info } from 'lucide-react';
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import {
+  CARD_SHELL_INTERACTIVE,
+  CHIP_STYLE,
+  CHIP_FALLBACK,
+  CHIP_BASE,
+  SECTION_TITLE,
+  SECTION_STANDFIRST,
+} from '@/components/home/homePresentation';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
@@ -113,7 +121,7 @@ const RADIO_ID = (category: string): string => `gn-cat-${category}`;
   centred now that the box is taller than its text.
 */
 const CHIP_CLASS =
-  'inline-flex min-h-[44px] cursor-pointer items-center rounded-full border-[1.5px] border-white/[0.14] bg-white/[0.045] px-4 py-1.5 text-[13px] font-medium text-ink-secondary transition-colors hover:border-cyan-300/55 hover:bg-white/[0.08] hover:text-ink-primary motion-reduce:transition-none lg:min-h-[32px]';
+  'inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-[#17324f] bg-[#0b1c31] px-3 text-[12px] font-medium text-[#a8c0da] transition-colors hover:border-cyan-300/55 hover:bg-[#12293f] hover:text-white motion-reduce:transition-none lg:min-h-[26px]';
 
 export function WhatsHappeningNow({
   lead,
@@ -201,7 +209,7 @@ export function WhatsHappeningNow({
     the prototype's density without trading the statement away.
   */
   const noAiNote = (
-    <p className="flex items-start gap-1.5 text-[11px] leading-snug text-ink-tertiary">
+    <p className="flex items-start gap-1.5 text-[10.5px] leading-snug text-ink-tertiary">
       <Info size={13} strokeWidth={1.75} aria-hidden="true" className="mt-[1px] shrink-0" />
       <span>{t.noAiNote}</span>
     </p>
@@ -213,7 +221,7 @@ export function WhatsHappeningNow({
     <section
       id="whats-happening-now"
       aria-labelledby="beta-now-heading"
-      className="flex scroll-mt-24 flex-col gap-3"
+      className="flex scroll-mt-24 flex-col gap-2.5"
     >
       {rail.length === 0 ? (
         <>
@@ -250,54 +258,6 @@ export function WhatsHappeningNow({
             works by sibling selection; the stylesheet now reaches the labels
             through `.gn-head` rather than `.gn-chips` directly.
           */}
-          <div className="gn-head flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-            <h2
-              id="beta-now-heading"
-              className="font-display text-[22px] font-semibold tracking-tight text-ink-primary sm:text-2xl"
-            >
-              {t.nowHeading}
-              <span className="mt-1 block text-[12.5px] font-normal text-ink-tertiary">
-                {t.nowStandfirst}
-                {stamp === null ? null : <> · {stamp}</>}
-              </span>
-            </h2>
-
-            <div className="flex flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-2">
-              {showFilter ? (
-                <div
-                  role="radiogroup"
-                  aria-label={t.categoryFilterAria}
-                  className="gn-chips flex flex-wrap items-center gap-1.5"
-                >
-                  <label htmlFor={RADIO_ID('all')} className={CHIP_CLASS}>
-                    {categoryLabels.all}
-                  </label>
-                  {categories.map((key) => (
-                    <label key={key} htmlFor={RADIO_ID(key)} className={CHIP_CLASS}>
-                      {categoryLabels[key] ?? key}
-                    </label>
-                  ))}
-                </div>
-              ) : null}
-
-              <DataModeLabel dataMode={dataMode} language={language} />
-
-              {/*
-                "View all" is a second label for the same All radio, worded as
-                the contract words it. It clears the filter; it does not
-                navigate, because there is no all-stories route to navigate to.
-              */}
-              <label
-                htmlFor={RADIO_ID('all')}
-                className="inline-flex min-h-[44px] cursor-pointer items-center text-[13px] font-semibold text-cyan-300 underline-offset-4 hover:underline lg:min-h-[32px]"
-              >
-                {t.viewAll}
-              </label>
-            </div>
-
-            <div className="w-full">{noAiNote}</div>
-          </div>
-
           {showFilter ? (
             <>
               <style>{filterCss}</style>
@@ -323,6 +283,75 @@ export function WhatsHappeningNow({
             </>
           ) : null}
 
+          <div className="gn-head flex flex-col gap-[7px]">
+            <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+            <h2
+              id="beta-now-heading"
+              className={`font-display ${SECTION_TITLE}`}
+            >
+              {t.nowHeading}
+              <span className={`mt-1 block font-normal ${SECTION_STANDFIRST}`}>
+                {t.nowStandfirst}
+                {stamp === null ? null : <> · {stamp}</>}
+              </span>
+            </h2>
+
+            <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+              <DataModeLabel dataMode={dataMode} language={language} />
+              {/*
+                "View all" is a second label for the same All radio, worded as
+                the contract words it. It clears the filter; it does not
+                navigate, because there is no all-stories route to navigate to.
+              */}
+              <label
+                htmlFor={RADIO_ID('all')}
+                className="inline-flex min-h-[44px] cursor-pointer items-center text-[13px] font-semibold text-cyan-300 underline-offset-4 hover:underline lg:min-h-[32px]"
+              >
+                {t.viewAll}
+              </label>
+            </div>
+
+            </div>
+
+            {/*
+              THE FILTER ROW.
+
+              The composition ruling collapsed the heading to ONE row, and this
+              is the one place that could not hold: at the measured heading size
+              (~27px) the six category chips, the data-mode label and "View all"
+              do not fit beside the title in 836px, and the browser was wrapping
+              them into THREE rows — about 130px of heading against the
+              prototype's ~50px, which is worse than the single line the ruling
+              was removing.
+
+              So the row is split the cheapest way: the title keeps the data
+              mode and "View all" beside it, and the chips take one compact
+              26px strip below. That is ~26px, not the ~50px the ruling
+              rejected, and the approved filter UI stays visible. Declared,
+              because it is a deliberate departure from a literal reading.
+            */}
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            {showFilter ? (
+              <div
+                role="radiogroup"
+                aria-label={t.categoryFilterAria}
+                className="gn-chips flex flex-wrap items-center gap-1.5"
+              >
+                <label htmlFor={RADIO_ID('all')} className={CHIP_CLASS}>
+                  {categoryLabels.all}
+                </label>
+                {categories.map((key) => (
+                  <label key={key} htmlFor={RADIO_ID(key)} className={CHIP_CLASS}>
+                    {categoryLabels[key] ?? key}
+                  </label>
+                ))}
+              </div>
+            ) : null}
+
+            {noAiNote}
+            </div>
+          </div>
+
           <div className="gn-deck flex flex-col gap-3">
             {rail.length === 0 ? null : (
               /*
@@ -336,14 +365,14 @@ export function WhatsHappeningNow({
                 tabIndex={0}
                 role="group"
                 aria-label={t.storyRailAria}
-                className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+                className="-mx-1 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-2 lg:gap-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
               >
                 {rail.map((article) => (
                   <li
                     key={article.id}
                     data-gn-story=""
                     data-gn-cat={article.category}
-                    className="flex h-[238px] shrink-0 basis-[86%] snap-start sm:basis-[46%] lg:basis-[calc(25%-0.5625rem)]"
+                    className="flex h-[212px] shrink-0 basis-[86%] snap-start sm:basis-[46%] lg:basis-[calc(25%-7.5px)]"
                   >
                     <RailCard article={article} language={language} />
                   </li>
@@ -367,7 +396,7 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
       href={article.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex h-full w-full flex-col overflow-hidden rounded-[18px] border-[1.5px] border-white/[0.13] bg-gradient-to-b from-[#0e1a2a] to-[#080f1b] shadow-[0_14px_34px_-22px_rgba(0,0,0,0.95)] transition-all duration-200 hover:-translate-y-1 hover:border-cyan-300/50 hover:shadow-[0_22px_48px_-24px_rgba(34,211,238,0.65)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className={`group flex h-full w-full flex-col overflow-hidden ${CARD_SHELL_INTERACTIVE} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50`}
     >
       <span className="relative block overflow-hidden">
         {/*
@@ -376,7 +405,8 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
           `prefers-reduced-motion`.
         */}
         <span className="block transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100">
-          <StoryImage article={article} language={language} className="aspect-[16/10]" />
+          {/* Measured: 202 x 91 image on a 212-tall card -> 20:9, 43% of the card. */}
+          <StoryImage article={article} language={language} className="aspect-[20/9]" />
         </span>
 
         {/*
@@ -389,28 +419,37 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
         */}
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/70 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/55 via-black/20 to-transparent"
         />
-        <span className="absolute left-3 top-3 inline-flex items-center rounded-[6px] border border-white/15 bg-black/70 px-2 py-[3px] font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-200 backdrop-blur-sm">
+        {/*
+          The chip is no longer a generic black pill with cyan text. Its fill,
+          border and text are the triple sampled from the prototype's own chip
+          for this hue family — see `CHIP_STYLE`, which also records why the
+          prototype's four domain names cannot be printed on a real story.
+        */}
+        <span
+          className={`absolute left-[11px] top-[11px] ${CHIP_BASE} ${(CHIP_STYLE[article.category] ?? CHIP_FALLBACK).className} shadow-[0_2px_10px_-2px_rgba(0,0,0,0.9)]`}
+        >
           {categoryLabels[article.category] ?? article.category}
         </span>
-        <span className="absolute right-3 top-3 inline-flex items-center rounded-[6px] border border-white/10 bg-black/70 px-2 py-[3px] text-[10.5px] font-medium text-white/90 backdrop-blur-sm">
+        <span className="absolute right-[11px] top-[11px] inline-flex items-center text-[10.5px] font-medium text-white/85 [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]">
           <Elapsed article={article} language={language} />
         </span>
       </span>
 
-      <span className="flex flex-1 flex-col gap-1 p-3.5">
+      <span className="flex flex-1 flex-col gap-[3px] p-[13px]">
         {/*
           Two clamped lines for the headline and two for the summary. The clamps
           are what hold the rail to one card height: without them a long
           headline makes its own card taller than its neighbours, which is the
           ragged rail the prototype does not have.
         */}
-        <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink-primary">
+        {/* Measured: headline ~15px on ~16.5px leading; standfirst ~11.5px. */}
+        <span className="line-clamp-2 text-[15px] font-bold leading-[1.12] tracking-[-0.012em] text-white">
           {article.title}
         </span>
-        <span className="line-clamp-2 text-[11.5px] leading-snug text-ink-tertiary">{article.summary}</span>
-        <span className="mt-auto flex items-center gap-1.5 pt-1 text-[10.5px] text-ink-tertiary">
+        <span className="mt-[2px] line-clamp-2 text-[11.5px] leading-[1.32] text-[#93a9c2]">{article.summary}</span>
+        <span className="mt-auto flex items-center gap-1.5 pt-1 text-[10.5px] text-[#8299b4]">
           <span className="truncate">{article.sourceName}</span>
           <span aria-hidden="true">·</span>
           <span className="shrink-0">{pluralWithForms(article.sourcesCount, language, t.sourceForms)}</span>

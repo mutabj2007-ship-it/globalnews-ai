@@ -12,6 +12,7 @@ import { HowItWorks } from '@/components/home/HowItWorks';
 import { TrustSection } from '@/components/home/TrustSection';
 import { Footer } from '@/components/layout/Footer';
 import { PageCanvas } from '@/components/layout/PageCanvas';
+import { HOME_PAGE_SURFACE } from '@/components/home/homePresentation';
 import { getHomeFeed } from '@/lib/homeFeed';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -185,7 +186,10 @@ export default async function HomePage(): Promise<JSX.Element> {
       <div className="lg:hidden">
         <NavBar language={language} />
       </div>
-      <main className="pb-16 lg:pb-0">
+      {/* Section 11 of the premium pass: the SAMPLED page background, applied to
+          Home's own <main> so the global `bg-void` token, and therefore every
+          other accepted surface, is untouched. See `HOME_PAGE_SURFACE`. */}
+      <main className={`pb-16 lg:pb-0 ${HOME_PAGE_SURFACE}`}>
         <PageCanvas>
           {/*
             B5-A · C-13 — THE ERROR LANDING IS ALWAYS THE FRONTEND ORIGIN ROOT.
@@ -279,7 +283,7 @@ export default async function HomePage(): Promise<JSX.Element> {
             The map component is unchanged and still performs zero
             provider-capable reads on mount or selection.
           */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,352px)] lg:items-start">
+          <div className="grid grid-cols-1 gap-6 lg:gap-[25px] lg:grid-cols-[minmax(0,1fr)_minmax(0,368px)] lg:items-start">
             {/*
               THE LEFT MAIN COLUMN — stories, then topics directly underneath.
 

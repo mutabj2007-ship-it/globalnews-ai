@@ -1839,6 +1839,7 @@ export const pl: Dictionary = {
     connectedPerspective: 'Szersza, powiązana perspektywa.',
     nowStandfirst: 'Wybrane wydarzenia ze świata',
     topicLabels: { 'world-intelligence': 'Świat', economy: 'Gospodarka', energy: 'Energia', security: 'Bezpieczeństwo', humanitarian: 'Pomoc humanitarna', market: 'Rynki' } as Record<string, string>,
+    topicBlurbs: { 'world-intelligence': 'Najważniejsze wydarzenia i trendy', economy: 'Wzrost, polityka i rozwój', energy: 'Ropa, gaz, energia i transformacja', security: 'Bezpieczeństwo, zagrożenia i stabilność', humanitarian: 'Ludzie, potrzeby i reagowanie', market: 'Surowce, spółki i kapitał' } as Record<string, string>,
     navLabels: { economy: 'Gospodarka', energy: 'Energia', security: 'Bezpieczeństwo', humanitarian: 'Pomoc humanitarna' } as Record<string, string>,
     navMore: 'Więcej',
     navUnavailable: 'Wkrótce',

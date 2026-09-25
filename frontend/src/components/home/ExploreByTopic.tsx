@@ -14,6 +14,13 @@ import {
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModules';
+import {
+  TOPIC_STYLE,
+  TOPIC_FALLBACK,
+  TOPIC_CARD_BASE,
+  SECTION_TITLE,
+  SECTION_STANDFIRST,
+} from '@/components/home/homePresentation';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -122,66 +129,26 @@ const TOPIC_IDS = [
  * or a destination; `INTELLIGENCE_MODULES` is still the only source of those,
  * and a topic with no surface is still not a link.
  */
-interface TopicAccent {
-  readonly surface: string;
-  readonly icon: string;
-  readonly tile: string;
-  readonly hover: string;
-  readonly arrow: string;
-}
-
-const TOPIC_ACCENT: Record<string, TopicAccent> = {
-  'world-intelligence': {
-    surface: 'bg-gradient-to-b from-sky-500/30 to-sky-700/12',
-    icon: 'text-sky-200',
-    tile: 'bg-sky-400/30 ring-1 ring-inset ring-sky-300/55',
-    hover: 'hover:border-sky-400/50 hover:shadow-[0_18px_44px_-26px_rgba(56,189,248,0.75)]',
-    arrow: 'bg-sky-500 text-white',
-  },
-  economy: {
-    surface: 'bg-gradient-to-b from-violet-500/30 to-violet-700/12',
-    icon: 'text-violet-200',
-    tile: 'bg-violet-400/30 ring-1 ring-inset ring-violet-300/55',
-    hover: 'hover:border-violet-400/50 hover:shadow-[0_18px_44px_-26px_rgba(167,139,250,0.75)]',
-    arrow: 'bg-violet-500 text-white',
-  },
-  energy: {
-    surface: 'bg-gradient-to-b from-emerald-500/30 to-emerald-700/12',
-    icon: 'text-emerald-200',
-    tile: 'bg-emerald-400/30 ring-1 ring-inset ring-emerald-300/55',
-    hover: 'hover:border-emerald-400/50 hover:shadow-[0_18px_44px_-26px_rgba(52,211,153,0.75)]',
-    arrow: 'bg-emerald-500 text-white',
-  },
-  security: {
-    surface: 'bg-gradient-to-b from-rose-500/30 to-rose-700/12',
-    icon: 'text-rose-200',
-    tile: 'bg-rose-400/30 ring-1 ring-inset ring-rose-300/55',
-    hover: 'hover:border-rose-400/50 hover:shadow-[0_18px_44px_-26px_rgba(251,113,133,0.75)]',
-    arrow: 'bg-rose-500 text-white',
-  },
-  humanitarian: {
-    surface: 'bg-gradient-to-b from-amber-500/30 to-amber-700/12',
-    icon: 'text-amber-200',
-    tile: 'bg-amber-400/30 ring-1 ring-inset ring-amber-300/55',
-    hover: 'hover:border-amber-400/50 hover:shadow-[0_18px_44px_-26px_rgba(251,191,36,0.75)]',
-    arrow: 'bg-amber-500 text-white',
-  },
-  market: {
-    surface: 'bg-gradient-to-b from-cyan-500/30 to-cyan-700/12',
-    icon: 'text-cyan-200',
-    tile: 'bg-cyan-400/30 ring-1 ring-inset ring-cyan-300/55',
-    hover: 'hover:border-cyan-400/50 hover:shadow-[0_18px_44px_-26px_rgba(34,211,238,0.75)]',
-    arrow: 'bg-cyan-500 text-white',
-  },
-};
-
-const TOPIC_FALLBACK: TopicAccent = {
-  surface: 'bg-white/[0.03]',
-  icon: 'text-ink-secondary',
-  tile: 'bg-white/5 ring-1 ring-inset ring-white/10',
-  hover: 'hover:border-cyan-400/40',
-  arrow: 'bg-white/15 text-ink-primary',
-};
+/*
+ * ── WHERE THE TOPIC COLOURS NOW COME FROM ──────────────────────────────
+ *
+ * They used to be a local table of Tailwind washes
+ * (`from-sky-500/30 to-sky-700/12` and five siblings). Sampling the
+ * prototype showed two things wrong with that, not one:
+ *
+ *   · the wash ran top-to-bottom; the prototype's gradient runs
+ *     top-left to bottom-right, which is why the cards never sat right
+ *     next to the screenshot however the opacities were tuned;
+ *   · at 30% over a dark page the wash desaturates to roughly `#12233c`,
+ *     while the prototype's own top-left corners sample `#032f6f`,
+ *     `#003831`, `#391525`, `#4a2d14`. The prototype is far more
+ *     chromatic than any opacity of an existing app token.
+ *
+ * §11 forbids substituting muted existing colours for that reason, so the
+ * table moved to `homePresentation.ts` and now carries sampled values.
+ * The prototype also draws the icon as a BARE GLYPH with no tile behind
+ * it; the tile is gone from the markup below rather than restyled.
+ */
 
 interface ExploreByTopicProps {
   language?: LanguageCode;
@@ -201,13 +168,16 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
       aria-labelledby="beta-topics-heading"
       className="flex scroll-mt-24 flex-col gap-3"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2
-          id="beta-topics-heading"
-          className="font-display text-[22px] font-semibold tracking-tight text-ink-primary sm:text-2xl"
-        >
-          {t.exploreTopicsTitle}
-        </h2>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="min-w-0">
+          {/* Measured: cap box y 360..379 -> ~27px, weight 700. */}
+          <h2 id="beta-topics-heading" className={`font-display ${SECTION_TITLE}`}>
+            {t.exploreTopicsTitle}
+          </h2>
+          {/* The prototype puts the standfirst directly under the heading, not
+              under the grid, and keeps it to one short line. */}
+          <p className={`mt-1 ${SECTION_STANDFIRST}`}>{t.exploreTopicsNote}</p>
+        </div>
         {/*
           ══════════════════════════════════════════════════════════════════
           "VIEW ALL TOPICS" — STRUCTURALLY READY, DELIBERATELY NOT WIRED.
@@ -240,7 +210,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
           disabled
           aria-disabled="true"
           tabIndex={-1}
-          className="inline-flex min-h-[44px] cursor-not-allowed items-center gap-1 text-sm font-semibold text-ink-tertiary lg:min-h-[32px]"
+          className="inline-flex min-h-[44px] cursor-not-allowed items-center gap-1.5 text-[13px] font-semibold text-[#6f8aa6] lg:min-h-[28px]"
         >
           {t.viewAllTopics}
           <span className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary/70">
@@ -249,7 +219,8 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
         </button>
       </div>
 
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-3.5">
+      {/* Measured: six cards of 136px across 861px -> 9px gutters. */}
+      <ul className="mt-1 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6 lg:gap-[9px]">
         {topics.map((module) => {
           /* The prototype's short name where it gives one; the registry's
              title otherwise. The label never decides the destination. */
@@ -258,20 +229,28 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
             moduleText[module.dictionaryKey as keyof typeof moduleText]?.title ??
             module.id;
           const Icon = ICONS[module.icon];
-          const accent = TOPIC_ACCENT[module.id] ?? TOPIC_FALLBACK;
+          const accent = TOPIC_STYLE[module.id] ?? TOPIC_FALLBACK;
+          /* Section 6 of the premium pass asks for shorter copy. The prototype's
+             own one-line blurb where the dictionary carries one; the registry's
+             module description otherwise, so a new topic is never blank. */
           const summary =
-            moduleText[module.dictionaryKey as keyof typeof moduleText]?.description ?? '';
+            t.topicBlurbs[module.id] ??
+            moduleText[module.dictionaryKey as keyof typeof moduleText]?.description ??
+            '';
           const navigable = isModuleNavigable(module) && module.destination !== undefined;
 
           const body = (
             <>
-              <span
+              {/* Measured: bare glyph ~25x26px, no tile, 13px in from the
+                  card's top-left. The tile the implementation used to draw is
+                  not in the prototype at all. */}
+              <Icon
                 aria-hidden="true"
-                className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${accent.tile}`}
-              >
-                <Icon size={23} strokeWidth={1.9} className={accent.icon} />
-              </span>
-              <span className="mt-3 block text-[15px] font-semibold leading-snug text-ink-primary">
+                size={26}
+                strokeWidth={2.1}
+                className={`${accent.icon} drop-shadow-[0_0_10px_rgba(255,255,255,0.18)]`}
+              />
+              <span className="mt-[11px] block text-[15px] font-bold leading-[1.15] tracking-[-0.01em] text-white">
                 {label}
               </span>
               {/*
@@ -280,14 +259,15 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                 the same string already renders in the modules section below, so
                 the two can never disagree.
               */}
-              <span className="mt-1 line-clamp-2 text-[12px] leading-snug text-ink-tertiary">
+              {/* §6: shorter copy. Two measured lines at ~11.5px, clamped. */}
+              <span className="mt-[5px] line-clamp-2 text-[11.5px] leading-[1.3] text-[#8ca3bd]">
                 {summary}
               </span>
               <span
                 aria-hidden="true"
-                className={`mt-auto ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full ${accent.arrow} transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0`}
+                className={`mt-auto ml-auto inline-flex h-6 w-6 items-center justify-center rounded-full ${accent.arrow} transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0`}
               >
-                <ArrowRight size={15} strokeWidth={2.4} />
+                <ArrowRight size={13} strokeWidth={2.6} />
               </span>
             </>
           );
@@ -297,7 +277,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
               {navigable ? (
                 <a
                   href={module.destination}
-                  className={`group flex h-full min-h-[132px] flex-col items-start rounded-2xl border border-white/[0.10] ${accent.surface} p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${accent.hover}`}
+                  className={`${TOPIC_CARD_BASE} ${accent.surface} ${accent.hover}`}
                 >
                   {body}
                 </a>
@@ -307,7 +287,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                   no pointer cursor, muted surface. The registry says this module
                   has no route, so the row says the same thing.
                 */
-                <span className="group flex h-full min-h-[132px] cursor-default flex-col items-start rounded-2xl border border-dashed border-border-strong bg-void/30 p-4 opacity-70">
+                <span className={`${TOPIC_CARD_BASE} ${accent.surface} cursor-default opacity-65 hover:translate-y-0`}>
                   {body}
                 </span>
               )}
@@ -316,7 +296,6 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
         })}
       </ul>
 
-      <p className="text-sm text-ink-tertiary">{t.exploreTopicsNote}</p>
     </section>
   );
 }

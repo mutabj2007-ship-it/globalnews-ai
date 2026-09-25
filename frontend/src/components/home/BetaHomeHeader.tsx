@@ -126,10 +126,10 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
   }));
 
   const navItem =
-    'inline-flex h-[34px] items-center rounded-full px-3.5 text-[13.5px] font-medium text-ink-secondary transition-colors hover:bg-white/[0.07] hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none';
+    'inline-flex h-[32px] items-center rounded-full px-3.5 text-[13.5px] font-medium text-[#b6c9de] transition-colors hover:bg-white/[0.07] hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none';
 
   return (
-    <header className="sticky top-0 z-50 hidden border-b border-[rgba(56,189,248,0.18)] bg-[rgba(4,7,14,0.92)] backdrop-blur-[10px] lg:block">
+    <header className="sticky top-0 z-50 hidden border-b border-[#0a3358] bg-[rgba(3,21,45,0.90)] shadow-[0_1px_0_rgba(0,58,106,0.45)] backdrop-blur-[12px] lg:block">
       <div className="mx-auto flex h-[62px] max-w-cd-page items-center gap-5 px-[26px]">
         <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label={t.homeAriaLabel}>
           <Logo size={30} gapPx={11} />
@@ -149,7 +149,7 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
           <Link
             href="/"
             aria-current="page"
-            className={`${navItem} bg-white/[0.09] text-ink-primary`}
+            className={`${navItem} bg-[#12365e] text-white shadow-[inset_0_1px_0_rgba(150,200,255,0.18)]`}
           >
             {t.navItemLabels.home}
           </Link>
