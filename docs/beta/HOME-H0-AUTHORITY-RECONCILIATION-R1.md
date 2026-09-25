@@ -64,7 +64,7 @@ about today" suggestions) → Intelligence modules → footer (privacy, terms, f
 | Z2 | Header / top nav | R4.1 NAVIGATION §3–4, frames 01 | `NavBar.tsx` (493 ln) | **RESTYLE + HOLD** | Restyle to authority. Destination count is **N1 OPEN** → keep current routable set. See §4.1. |
 | Z3 | Header search pill | `searchShort`, `searchAria` | `NavBar` search icon | **HOLD** | **N4 OPEN** — pill has no action today; authority proposes opening Ask. Presentation only. |
 | Z4 | Language / account | `language`, `langAria`, `signIn`, `account` | `NavBar` + `AccountControl` | **KEEP** | Already matches; approved-from-repo strings. |
-| Z5 | Live/data status strip | not in R4.1 Home frames | `LiveStatusStrip.tsx` (113 ln) | **RECOMPOSE** | No approved Home strip. Its truthful degraded-state role is required by §6; fold into the feed area rather than a separate band. |
+| Z5 | Live/data status strip | not in R4.1 Home frames | `LiveStatusStrip.tsx` (113 ln) | **RETIRE FROM HOME (in H3)** | No approved Home strip, and it occupies prime first-fold space above the hero. Its truthful degraded-state duty is required by §6, so it is retired **in H3, together with its replacement** (the `updated` stamp and the feed's degraded state) rather than in H1 — Home is never left without degraded signalling. |
 | Z6 | Hero headline/sub | `heroA`,`heroB`,`heroSub` | `Hero.tsx` (691 ln) | **RECOMPOSE** | Copy, two-line accent treatment and layout all differ. |
 | Z7 | Hero Ask entry | `askPh`,`askAria`,`askBtn`,`askHint` | `Hero` input | **RESTYLE** | Input exists and is already draft-only. Add the metered note; keep `/ask` semantics. |
 | Z8 | Hero CTA pair | `askToday`,`askTodaySub`,`openMap`,`openMapSub` | partial ("View World Map") | **RECOMPOSE** | Two titled+subtitled CTAs, violet and teal. |
@@ -108,9 +108,22 @@ C-3 ruled that preserving current navigation behaviour satisfies Gate A. The con
 repeats it. So the **destination count is HELD**.
 
 The seven inert items are a different question: they appear in **no** approved Home frame,
-and they are not destinations but non-routing labels. Removing them is RESTYLE-to-authority,
-not a navigation change, and it removes seven dead controls from the Beta first screen.
-**Proposed for H1, flagged here** so the CTO can veto before it lands.
+and they are not destinations but non-routing labels. Removing them looked like
+RESTYLE-to-authority rather than a navigation change.
+
+**RESOLVED IN H1 — HOLD, do not remove.** Investigated before touching `navModel.ts`, and
+the premise was wrong. That nine-item sequence is itself an **accepted design authority**,
+not stale code: `navModel.ts` records it as ported from the approved Claude Design
+prototype under explicit CTO decision, and four spec suites enforce it —
+`lib/navModel.spec.ts` ("the approved nine-item header sequence", with the exact
+unavailable list), `navigation/supportDiscoverability.spec.ts` (`toHaveLength(9)`, twice),
+`navigation/mobileNavViewport.spec.ts`, and the two `NAV_MODEL.map` usage counts in
+`footerNavHud.spec.ts` and `headerSourcePort.spec.ts`.
+
+Removing the seven would therefore override a second accepted authority on exactly the
+axis N1 leaves open, which `§1` forbids ("Anything marked OPEN remains OPEN") and C-3
+already settled by ruling that current navigation behaviour is what Gate A preserves. The
+header keeps its current entries in full.
 
 ### 4.2 Category chips — N7 OPEN
 
