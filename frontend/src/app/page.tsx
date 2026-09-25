@@ -2,10 +2,8 @@ import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
-import { LiveStatusStrip } from '@/components/home/LiveStatusStrip';
 import { BetaHero } from '@/components/home/BetaHero';
-import { HeroFocusProvider } from '@/components/home/HeroFocusProvider';
-import { GlobalDevelopments } from '@/components/home/GlobalDevelopments';
+import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
 import { TodayWorkspace } from '@/components/today/TodayWorkspace';
 import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
 import { HowItWorks } from '@/components/home/HowItWorks';
@@ -164,7 +162,6 @@ export default async function HomePage(): Promise<JSX.Element> {
       */}
       <SiteStructuredData />
       <NavBar language={language} />
-      <LiveStatusStrip isLive={feed.isLive} dataMode={feed.dataMode} language={language} updatedAt={updatedAt} />
       <main className="pb-16 lg:pb-0">
         <PageCanvas>
           {/*
@@ -193,43 +190,46 @@ export default async function HomePage(): Promise<JSX.Element> {
             TrendingCard does not participate until B-2 — the architecture is
             final now, so B-2 adds a consumer rather than replacing anything.
           */}
-          <HeroFocusProvider
-            language={language}
-            isLive={feed.isLive}
+          {/*
+            H2/H3 · Issue #29 — the approved Beta Home composition.
+
+            BetaHero carries the headline, the Ask entry, the CTA pair and the
+            "Your world in 60 seconds" brief; WhatsHappeningNow carries the
+            editorial area. Together they replace Hero, GlobalDevelopments and
+            LiveStatusStrip.
+
+            THREE RETIREMENTS, ONE REASON EACH, and all three files stay on
+            disk unimported — the convention this file already applies to
+            TodaySection, LatestNowRail, HomepageSituationMap and the engine
+            section:
+
+              Hero                 superseded composition and copy, and its Ask
+                                   submit spent metered AI from Home (C1).
+              GlobalDevelopments   the same feed in the superseded M66
+                                   presentation; the approved lead + four-up
+                                   composition replaces it.
+              LiveStatusStrip      a band above the hero that appears in no
+                                   approved frame. Its degraded-data duty moved
+                                   into WhatsHappeningNow, which is why the two
+                                   changes land together rather than leaving
+                                   Home briefly silent about a failed feed.
+
+            HeroFocusProvider goes with them: it existed to link the old hero's
+            focus state to GlobalDevelopments, and neither survives. It is a
+            client boundary, so removing it also returns this stretch of Home
+            to pure server rendering.
+
+            The single getHomeFeed() call is unchanged; both sections read
+            different roles of that one response.
+          */}
+          <BetaHero language={language} latestUpdates={feed.latestUpdates} />
+          <WhatsHappeningNow
+            lead={feed.featured}
+            secondary={feed.inFocus}
+            discovery={feed.discovery}
             dataMode={feed.dataMode}
-            updatedAt={updatedAt}
-          >
-            {/*
-              H2 · Issue #29 — BetaHero replaces Hero at this mount point.
-
-              The approved R4.1 hero is a different composition and different
-              copy, and the superseded one carried a real quota defect: its Ask
-              submit routed to `/search?q=`, which keeps its explicit-query
-              auto-run under the N3 ruling, so pressing Ask on Home started a
-              metered analysis immediately. R4.1 CONTRACT_CONFLICTS C1 resolves
-              it in terms — every Ask entry goes to `/ask`, and only "Open
-              complete analysis" goes to `/search?q=`. BetaHero submits a plain
-              GET form to `/ask`, where the value is staged as a draft and
-              nothing runs until Send.
-
-              Hero.tsx is RETIRED, NOT DELETED — the convention this file
-              already applies to TodaySection, LatestNowRail,
-              HomepageSituationMap and the engine section. It stays on disk,
-              unimported by any route.
-
-              HeroFocusProvider still wraps GlobalDevelopments, which consumes
-              its context. H3 replaces that zone and retires the provider with
-              it.
-            */}
-            <BetaHero language={language} latestUpdates={feed.latestUpdates} />
-            <GlobalDevelopments
-              lead={feed.featured}
-              secondary={feed.inFocus}
-              discovery={feed.discovery}
-              dataMode={feed.dataMode}
-              language={language}
-            />
-          </HeroFocusProvider>
+            language={language}
+          />
           {/*
             R2 — TODAY. Placed here deliberately: it is live editorial content,
             so it belongs with the live half of the page, between Global

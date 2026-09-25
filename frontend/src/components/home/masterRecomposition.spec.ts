@@ -12,8 +12,12 @@ function stripComments(src: string): string {
 describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase 2 — LatestNowRail removed as a duplicate presentation of feed.latestUpdates)', () => {
   it('renders sections in the approved order', () => {
     const order = [
-      '<Hero',
-      '<GlobalDevelopments',
+      '<BetaHero',
+      /* H3 · Issue #29 — the approved R4.1 composition. LiveStatusStrip and
+         GlobalDevelopments are retired from Home (files kept on disk), and
+         WhatsHappeningNow carries the editorial area plus the degraded-feed
+         state the strip used to carry. The ORDER contract is unchanged. */
+      '<WhatsHappeningNow',
       // M65.1 — one Intelligence Engine section for every breakpoint,
       // replacing the two retired per-breakpoint renderers. Position in
       // the order is unchanged.

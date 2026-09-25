@@ -34,8 +34,19 @@ describe('M66.14B — one owner, final architecture from the first commit', () =
     expect(hero).not.toMatch(/useState<HeroFocus|setFocus\b/);
   });
 
-  it('wraps BOTH Hero and GlobalDevelopments, so B-2 adds a consumer rather than replacing an architecture', () => {
-    expect(page).toMatch(/<HeroFocusProvider[\s\S]*?<BetaHero [\s\S]*?<GlobalDevelopments[\s\S]*?<\/HeroFocusProvider>/);
+  /*
+    H3 · Issue #29 — REPLACED, NOT DELETED. This asserted that the provider
+    wrapped Hero and GlobalDevelopments. The approved R4.1 composition retires
+    both from Home, so the provider has nothing left to link and is retired
+    with them. What the gate protects now is stronger: Home mounts no client
+    focus boundary at all, and the file survives on disk so every other
+    assertion in this suite keeps its subject.
+  */
+  it('is retired from Home with the two surfaces it linked, and kept on disk', () => {
+    expect(page).not.toMatch(/<HeroFocusProvider/);
+    expect(page).not.toMatch(/<GlobalDevelopments/);
+    expect(page).toMatch(/<BetaHero /);
+    expect(provider.length).toBeGreaterThan(0);
   });
 
   it('preserves the Server Component boundary — the provider renders children it receives as a prop', () => {

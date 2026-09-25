@@ -100,7 +100,11 @@ describe('the section frame is bounded, and the homepage keeps its own scroll', 
          (H0 zone Z6-Z9). The ORDER contract this list protects is
          unchanged; only the section's identity moved. */
       '<BetaHero ',
-      '<GlobalDevelopments',
+      /* H3 · Issue #29 — the approved R4.1 composition. LiveStatusStrip and
+         GlobalDevelopments are retired from Home (files kept on disk), and
+         WhatsHappeningNow carries the editorial area plus the degraded-feed
+         state the strip used to carry. The ORDER contract is unchanged. */
+      '<WhatsHappeningNow',
       /* GATE A · R5.1 — IntelligenceModulesSection supersedes
          IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
          The engine file is retired, not deleted. The ORDER contract this list

@@ -821,7 +821,11 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
          (H0 zone Z6-Z9). The ORDER contract this list protects is
          unchanged; only the section's identity moved. */
       '<BetaHero',
-      '<GlobalDevelopments',
+      /* H3 · Issue #29 — the approved R4.1 composition. LiveStatusStrip and
+         GlobalDevelopments are retired from Home (files kept on disk), and
+         WhatsHappeningNow carries the editorial area plus the degraded-feed
+         state the strip used to carry. The ORDER contract is unchanged. */
+      '<WhatsHappeningNow',
       // GATE A · R5.1 — IntelligenceModulesSection replaced
       // IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
       // Which sections the canvas PARENTS is still this test's subject.
@@ -847,9 +851,8 @@ describe('M66.1 — the homepage receives the canvas without being reconstructed
   it('the section order is unchanged apart from the M66.8c retirement', () => {
     const order = [
       '<NavBar',
-      '<LiveStatusStrip',
-      '<Hero',
-      '<GlobalDevelopments',
+      '<BetaHero',
+      '<WhatsHappeningNow',
       // M66.8c — '<HomepageSituationMap' stood here. Removed, not reordered:
       // every remaining marker keeps its relative position.
       // GATE A · R5.1 — the section's identity moved here; its position did not.

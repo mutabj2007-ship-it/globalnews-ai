@@ -2195,6 +2195,16 @@ export const en = {
     developing: 'Developing',
     /* Screen-reader name for the sources count, e.g. "8 sources". */
     sourcesLabel: 'sources',
+    /* beta.now — the editorial section heading. */
+    nowHeading: 'What’s happening now',
+    /*
+      beta.updated. The catalogue reads "Updated 20 min ago" because it is a
+      sample frame; {time} is substituted from the newest item the feed
+      actually returned, and the stamp is omitted where there is no time.
+    */
+    updatedStamp: 'Updated {time}',
+    /* beta.noAi — the free-to-browse disclosure under the heading. */
+    noAiNote: 'Choosing a category or opening a story never starts an AI analysis.',
   },
 
   intelligenceModules: {

@@ -1799,6 +1799,9 @@ export const pl: Dictionary = {
     breaking: 'Pilne',
     developing: 'W toku',
     sourcesLabel: 'źródeł',
+    nowHeading: 'Co dzieje się teraz',
+    updatedStamp: 'Aktualizacja {time}',
+    noAiNote: 'Wybranie kategorii lub otwarcie artykułu nigdy nie uruchamia analizy AI.',
   },
 
   intelligenceModules: {

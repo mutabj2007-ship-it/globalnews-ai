@@ -27,7 +27,10 @@ describe('M65 — language propagates coherently through the shell', () => {
   });
 
   it('the homepage passes ONE resolved language to every shell surface it renders', () => {
-    for (const surface of ['NavBar', 'LiveStatusStrip', 'Hero', 'GlobalDevelopments', 'HowItWorks', 'TrustSection', 'Footer', 'MobileBottomNav']) {
+    /* H3 · Issue #29 — the approved Home surfaces. BetaHero, SixtySecondBrief
+       and WhatsHappeningNow replace Hero, LiveStatusStrip and
+       GlobalDevelopments; each still receives the one resolved language. */
+    for (const surface of ['NavBar', 'BetaHero', 'WhatsHappeningNow', 'HowItWorks', 'TrustSection', 'Footer', 'MobileBottomNav']) {
       expect(pageSource).toMatch(new RegExp(`<${surface}[\\s\\S]{0,220}language=\\{language\\}`));
     }
   });

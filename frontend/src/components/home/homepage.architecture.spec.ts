@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 const pageSource = readFileSync(join(__dirname, '../../app/page.tsx'), 'utf-8');
-const globalDevelopmentsSource = readFileSync(join(__dirname, 'GlobalDevelopments.tsx'), 'utf-8');
+const whatsHappeningNowSource = readFileSync(join(__dirname, 'WhatsHappeningNow.tsx'), 'utf-8');
 
 /**
  * Milestone #53 regression repair — this file previously encoded the
@@ -34,12 +34,15 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
     // was removed, not reordered, and its component file remains on disk.
     const order = [
       '<NavBar',
-      '<LiveStatusStrip',
       /* H2 · Issue #29 — BetaHero replaces Hero at this mount point
          (H0 zone Z6-Z9). The ORDER contract this list protects is
          unchanged; only the section's identity moved. */
       '<BetaHero',
-      '<GlobalDevelopments',
+      /* H3 · Issue #29 — the approved R4.1 composition. LiveStatusStrip and
+         GlobalDevelopments are retired from Home (files kept on disk), and
+         WhatsHappeningNow carries the editorial area plus the degraded-feed
+         state the strip used to carry. The ORDER contract is unchanged. */
+      '<WhatsHappeningNow',
       /* GATE A · R5.1 — IntelligenceModulesSection supersedes
          IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
          The engine file is retired, not deleted. The ORDER contract this list
@@ -121,7 +124,7 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
     nothing — six real current stories discarded per page load — so this
     assertion now also guards against silently dropping it again.
   */
-  it('GlobalDevelopments receives the real curated roles (featured/inFocus/discovery), not a fabricated shape', () => {
+  it('WhatsHappeningNow receives the real curated roles (featured/inFocus/discovery), not a fabricated shape', () => {
     expect(pageSource).toMatch(/lead=\{feed\.featured\}/);
     expect(pageSource).toMatch(/secondary=\{feed\.inFocus\}/);
     expect(pageSource).toMatch(/discovery=\{feed\.discovery\}/);
@@ -142,8 +145,10 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
 });
 
 describe('DataMode/provider labeling (Milestone #53 \u2014 current owner)', () => {
-  it('DataModeLabel is rendered by GlobalDevelopments, the current single homepage editorial surface (retired NewsroomSection/LatestUpdatesFeed are no longer part of this contract)', () => {
-    expect(globalDevelopmentsSource).toMatch(/DataModeLabel/);
+  it('DataModeLabel is rendered by WhatsHappeningNow, the single homepage editorial surface', () => {
+    /* H3 · Issue #29 — the surface moved; the duty did not. Provenance is
+       still stated exactly once on Home, through the governed component. */
+    expect(whatsHappeningNowSource).toMatch(/DataModeLabel/);
   });
 
   it('LatestNowRail carries no per-card data-mode badge', () => {
@@ -160,7 +165,21 @@ describe('Single-fetch architecture is preserved (Milestone #51/#53)', () => {
     expect(pageSource).toMatch(/feed\.discovery/);
     expect(pageSource).toMatch(/feed\.latestUpdates/);
     expect(pageSource).toMatch(/feed\.dataMode/);
-    expect(pageSource).toMatch(/feed\.isLive/);
+    /*
+      H3 · Issue #29 — `feed.isLive` is no longer asserted, and that is a real
+      change rather than a relaxation.
+
+      It had exactly two consumers, LiveStatusStrip and GlobalDevelopments, and
+      the approved R4.1 composition retires both. Nothing else needs it,
+      because it is DERIVABLE: `isLive` is `dataMode === 'live'`, and the
+      governed `DataModeLabel` that WhatsHappeningNow renders computes that
+      from `dataMode` itself.
+
+      Passing a redundant prop purely to keep this line green would have made
+      the page assert a dependency it does not have. The single-fetch contract
+      this test protects is untouched: one getHomeFeed() call, every semantic
+      role still consumed.
+    */
   });
 
   it('no old trending/categoryCards HomeFeed field names remain', () => {
