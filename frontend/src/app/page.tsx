@@ -7,6 +7,7 @@ import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
 import { HomeSideRail } from '@/components/home/HomeSideRail';
 import { HomepageSituationMap } from '@/components/home/HomepageSituationMap';
 import { ExploreByTopic } from '@/components/home/ExploreByTopic';
+import { EngineEnergyField } from '@/components/home/EngineEnergyField';
 import { IntelligenceModulesSection } from '@/components/home/IntelligenceModulesSection';
 import { Footer } from '@/components/layout/Footer';
 import { PageCanvas } from '@/components/layout/PageCanvas';
@@ -337,7 +338,25 @@ export default async function HomePage(): Promise<JSX.Element> {
             "View all topics" is an anchor into it.
           */}
           <ExploreByTopic language={language} />
-          <IntelligenceModulesSection language={language} />
+          {/*
+            C5 · THE ENGINE KEEPS ITS NINE CARDS AND GETS ITS GLOW BACK.
+
+            `IntelligenceModulesSection` is NOT touched — it is still the Gate A
+            file, byte-for-byte, and `intelligenceModulesR51.spec.ts` still
+            guards it. The intelligence-energy identity is restored behind it as
+            a decorative field instead, drawn from the released engine geometry.
+
+            The retired `IntelligenceEngineRing` could not be mounted here: it
+            renders its own `IntelligenceModulePanel` per module, so the page
+            would carry eighteen module representations and eighteen tab stops.
+            EngineEnergyField draws only the hub, the rays and the node ring —
+            no module name, state or route — so the nine cards in front remain
+            the single presentation of the modules.
+          */}
+          <div className="relative isolate py-6 lg:py-10">
+            <EngineEnergyField />
+            <IntelligenceModulesSection language={language} />
+          </div>
         </PageCanvas>
       </main>
       <Footer language={language} />
