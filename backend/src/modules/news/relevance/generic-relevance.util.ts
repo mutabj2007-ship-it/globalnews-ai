@@ -1,4 +1,5 @@
 import type { NewsArticle } from '@globalnews-ai/shared';
+import { equivalentForms, extractParityTerms } from './governed-term-parity';
 
 /**
  * Milestone #36 — Generic Retrieval Relevance Gate.
@@ -628,10 +629,76 @@ export function scoreGenericRelevance(
     containsWholePhraseWithGenericInflection(title, normalizedPhrase) ||
     containsWholePhraseWithGenericInflection(summary, normalizedPhrase);
 
+  if (wholePhraseMatched) {
+    return { isRelevant: true, reasons: ['whole-phrase match'] };
+  }
+
+  const parity = matchGovernedTermParity(title, summary, searchPhrase);
+  if (parity !== undefined) {
+    return { isRelevant: true, reasons: [parity] };
+  }
+
   return {
-    isRelevant: wholePhraseMatched,
-    reasons: wholePhraseMatched
-      ? ['whole-phrase match']
-      : ['no whole-phrase match for a multiword query'],
+    isRelevant: false,
+    reasons: ['no whole-phrase match for a multiword query', 'no governed term-parity match'],
   };
+}
+
+/**
+ * ASK RETRIEVAL RECALL R2 — THE ONE BOUNDED SECOND ADMISSION PATH.
+ *
+ * Reached ONLY after the unchanged whole-phrase rule has failed for a
+ * multi-word phrase. It can add admissions; it cannot remove one.
+ *
+ * Admits when EVERY load-bearing term of the phrase is present in the title,
+ * or inside ONE summary sentence while the title carries at least one of them
+ * — never scattered across fields or sentences — where
+ * each term is satisfied by itself or by a form in its governed equivalence
+ * class (governed-term-parity.ts), matched as a whole word with the SAME
+ * inflection tolerance the whole-phrase rule already uses.
+ *
+ * Bounds, each deliberate:
+ *   - at least TWO load-bearing terms after framing words are removed, so a
+ *     single ordinary word ("regulation") can never carry an admission here;
+ *   - ALL terms required (AND, not OR), so "EU regulation on batteries" is not
+ *     admitted for "EU AI regulation" (no AI), nor "US federal AI regulation"
+ *     (no EU);
+ *   - title, or one summary sentence with a headline anchor, so words scattered
+ *     across a long summary cannot combine into a topic;
+ *   - equivalences are a closed, reviewed table — no stemming, no dictionary,
+ *     no AI call.
+ */
+function matchGovernedTermParity(
+  title: string,
+  summary: string,
+  phrase: string,
+): string | undefined {
+  const terms = extractParityTerms(phrase);
+  if (terms.length < 2) return undefined;
+
+  const formIn = (text: string, term: string): string | undefined =>
+    equivalentForms(term).find((form) => containsWholePhraseWithGenericInflection(text, form));
+  const describe = (satisfied: (string | undefined)[]): string =>
+    terms.map((term, i) => (satisfied[i] === term ? term : `${term}→${satisfied[i]}`)).join(', ');
+
+  /* 1 — every term in the headline. */
+  const inTitle = terms.map((term) => formIn(title, term));
+  if (inTitle.every((form) => form !== undefined)) {
+    return `governed term-parity match (title): ${describe(inTitle)}`;
+  }
+
+  /*
+    2 — every term inside ONE summary sentence, AND the headline carries at
+    least one of them. A long summary can mention unrelated things together
+    ("semiconductor revenue rose while exports of cars fell"); the sentence
+    bound plus a headline anchor keeps that from counting as the topic.
+  */
+  if (!inTitle.some((form) => form !== undefined)) return undefined;
+  for (const sentence of splitIntoSentences(summary)) {
+    const inSentence = terms.map((term) => formIn(sentence, term));
+    if (inSentence.every((form) => form !== undefined)) {
+      return `governed term-parity match (summary sentence, headline-anchored): ${describe(inSentence)}`;
+    }
+  }
+  return undefined;
 }

@@ -1,4 +1,5 @@
 import { classifyQueryIntent, type QueryIntent } from './query-intent.util';
+import { normalizeQuery } from '@globalnews-ai/shared';
 
 /**
  * G-ALPHA-2 STAGE 2 ACCEPTANCE — THE DETERMINISTIC QUERY-CLASS CORPUS.
@@ -461,5 +462,35 @@ describe('ARTICLE_ANCHORED is reported, and is decided by the caller', () => {
       expect(result.sides).toEqual([]);
       expect(result.subject).toBeUndefined();
     }
+  });
+});
+
+/*
+ * ASK RETRIEVAL RECALL R2 — framing words never reach the explanation subject,
+ * and names that merely START with a novelty word are left whole.
+ */
+describe('ASK RETRIEVAL RECALL R2 — explanation subject without framing', () => {
+  it.each([
+    ['Explain the new EU AI regulation in plain English', 'EU AI regulation'],
+    ['Explain the new EU AI regulation in simple terms', 'EU AI regulation'],
+    ['What is the new EU AI law?', 'EU AI law'],
+    ['Can you explain the new EU AI Act?', 'EU AI Act'],
+    ['Explain the EU AI Act in simple terms', 'EU AI Act'],
+    ['Wyjaśnij nowe przepisy UE dotyczące AI prostym językiem', 'przepisy UE dotyczące AI'],
+    ['Wyjaśnij nowe przepisy UE dotyczące AI prostymi słowami', 'przepisy UE dotyczące AI'],
+  ])('%s → subject "%s"', (question, subject) => {
+    const c = classifyQueryIntent(normalizeQuery(question).normalizedQuery);
+    expect(c.intent).toBe('EXPLANATION');
+    expect(c.subject).toBe(subject);
+  });
+
+  it.each([
+    ['Explain the New Zealand electoral system', 'New Zealand electoral system'],
+    ['Explain the new zealand electoral system', 'new zealand electoral system'],
+    ['Explain the New York subway system', 'New York subway system'],
+    ['Explain the New Deal', 'New Deal'],
+    ['Explain new rules', 'new rules'],
+  ])('keeps a name or a too-short subject whole: %s', (question, subject) => {
+    expect(classifyQueryIntent(normalizeQuery(question).normalizedQuery).subject).toBe(subject);
   });
 });

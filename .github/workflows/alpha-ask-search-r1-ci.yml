@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - engineering/ask-search-home-click-r1
+      - engineering/ask-retrieval-recall-r2
   pull_request:
     branches:
       - release/alpha-m08-integrated-r1
@@ -48,7 +49,12 @@ jobs:
           npm test --workspace=backend -- --runInBand src/modules/analysis/prompt/build-analysis-prompt.util.spec.ts
           npm test --workspace=backend -- --runInBand src/modules/analysis/query/derive-generic-news-query.util.spec.ts
           npm test --workspace=backend -- --runInBand src/modules/analysis/service/analysis.service.spec.ts
-          npm test --workspace=backend -- --runInBand src/modules/analysis/service/natural-query-routing.spec.ts -t "ASK/SEARCH"
+          npm test --workspace=backend -- --runInBand src/modules/analysis/service/natural-query-routing.spec.ts -t "ASK/SEARCH|RECALL R2"
+      - name: Retrieval recall R2 (governed term parity, framing-free subjects)
+        run: |
+          npm test --workspace=backend -- --runInBand src/modules/news/relevance/governed-term-parity.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/news/relevance/generic-relevance.util.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/analysis/query/query-intent.util.spec.ts
       - name: Frontend build
         run: npm run build:frontend
       - name: Backend build
