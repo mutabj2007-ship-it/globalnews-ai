@@ -15,6 +15,7 @@ import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
 import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 
 /**
  * ═══ ASK AI — PHASE 1 ════════════════════════════════════════════════════
@@ -398,18 +399,18 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
             <label className="sr-only" htmlFor="ask-ai-question">
               {t.inputLabel}
             </label>
-            <textarea
+            <AdaptiveTextarea
               id="ask-ai-question"
               ref={inputRef}
-              rows={phase.kind === 'idle' && history.length === 0 ? 2 : 1}
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
-              onFocus={() => {
-                requestAnimationFrame(() => inputRef.current?.scrollIntoView({ block: 'nearest' }));
-              }}
               placeholder={t.inputPlaceholder}
               maxLength={1000}
-              className="w-full resize-none rounded-2xl border border-border-strong bg-surface px-4 py-3 text-sm text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
+              minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}
+              maxHeight={260}
+              maxViewportFraction={0.32}
+              keepVisible={false}
+              className="w-full rounded-2xl border border-border-strong bg-surface px-4 py-3 text-sm leading-6 text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
             />
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/*
