@@ -220,6 +220,7 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
         {/* Search control — the design's own CSS-drawn geometry, and a real link to the real /search workspace. */}
         <Link
           href="/search"
+          prefetch={false}
           aria-label={t.searchAriaLabel}
           className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] border border-cd-edge-header transition-colors hover:border-[rgba(34,211,238,0.55)]"
         >
@@ -346,7 +347,7 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
 
         <div className="flex-1" />
 
-        <Link href="/search" aria-label={t.searchAriaLabel} className="flex h-11 w-11 items-center justify-center">
+        <Link href="/search" prefetch={false} aria-label={t.searchAriaLabel} className="flex h-11 w-11 items-center justify-center">
           <span aria-hidden="true" className="relative block h-[15px] w-[15px]">
             <span className="absolute inset-0 rounded-full border-[1.8px] border-[#cfe3f5]" />
             <span

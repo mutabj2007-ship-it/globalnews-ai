@@ -352,7 +352,10 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                   no pointer cursor, muted surface. The registry says this module
                   has no route, so the row says the same thing.
                 */
-                <span className={`${TOPIC_CARD_BASE} ${accent.surface} cursor-default opacity-65 hover:translate-y-0`}>
+                <span
+                  aria-disabled="true"
+                  className={`${TOPIC_CARD_BASE} ${accent.surface} cursor-default opacity-65 hover:translate-y-0`}
+                >
                   {body}
                 </span>
               )}

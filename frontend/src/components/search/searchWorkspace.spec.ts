@@ -45,7 +45,10 @@ describe('M65 — queryless /search is usable', () => {
     absent from that set instead of present in it.
   */
   it('submitting uses the SAME /search?q=... contract the Hero already produces — one analysis entry path, and the public header is no longer one of its producers', () => {
-    expect(searchClientSource).toMatch(/router\.push\(`\/search\?q=\$\{encodeURIComponent\(trimmed\)\}`\)/);
+    /* ASK/SEARCH R1 — same URL contract; the explicit submit now also records
+       consent for exactly that href before navigating. */
+    expect(searchClientSource).toContain('const href = `/search?q=${encodeURIComponent(trimmed)}`;');
+    expect(searchClientSource).toMatch(/grantAnalysisConsent\(href\);\s*\n\s*router\.push\(href\);/);
     expect(heroSource).toMatch(/router\.push\(`\/search\?q=\$\{encodeURIComponent\(trimmed\)\}`\)/);
     expect(navModelSource).not.toMatch(/href: '\/search/);
   });

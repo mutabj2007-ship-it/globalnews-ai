@@ -2066,8 +2066,25 @@ export class AnalysisService {
                * before.
                */
               const primaryFailures = readProviderFailures(searchResponse);
+              /*
+               * ASK/SEARCH R1 — FAILURE IS NOT ABSENCE ON THE WIRE.
+               *
+               * When a provider failed (e.g. the GDELT rescue timed out after
+               * GNews answered with nothing relevant) NewsService can still
+               * report `dataMode: 'live'` with no fallbackReason, which the
+               * reader then saw as "the provider returned nothing". The same
+               * `retrievalOutcome()` the region paths already stamp is now
+               * stamped here too: RETAINED_ONLY when retained evidence stood in,
+               * PROVIDER_RATE_LIMITED / PROVIDER_UNAVAILABLE when nothing did.
+               * No retry is added and no evidence is invented.
+               */
+              let genericOutcome: RetrievalOutcome | undefined;
 
               if (searchResponse.articles.length === 0 && primaryFailures.length > 0) {
+                genericOutcome = retrievalOutcome(
+                  0,
+                  new Set(primaryFailures.map((failure) => failure.kind)),
+                );
                 this.logger.warn(
                   'Generic live retrieval was refused/degraded: ' +
                     primaryFailures
@@ -2114,6 +2131,7 @@ export class AnalysisService {
                     dataMode: 'cached',
                     fallbackReason: 'provider-error',
                   };
+                  genericOutcome = 'RETAINED_ONLY';
                   this.logger.warn(
                     `Generic retrieval served ${retained.length} relevance-gated retained article(s) after live provider failure.`,
                   );
@@ -2141,6 +2159,9 @@ export class AnalysisService {
 
               articles = searchResponse.articles;
               retrievalContext = this.toRetrievalContext(searchResponse);
+              if (genericOutcome !== undefined) {
+                retrievalContext = { ...retrievalContext, outcome: genericOutcome };
+              }
             }
           }
         }

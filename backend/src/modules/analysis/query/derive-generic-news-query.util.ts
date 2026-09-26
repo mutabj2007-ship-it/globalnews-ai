@@ -29,7 +29,12 @@
 const SUBJECT_EXTRACTION_PATTERNS: RegExp[] = [
   // "What's happening in/with/on/about/for/regarding X"
   // "What is happening ... X" / "What's going on with X" / "What's new with X" / "What's the latest on X"
-  /^(?:what'?s|what\s+is)\s+(?:happening|going\s+on|new|the\s+latest)\s+(?:in|with|on|about|for|regarding)\s+(.+)$/i,
+  // ASK/SEARCH R1 — the Home suggestion "What's happening in the Middle East
+  // right now?" captured "Middle East right now", which the whole-phrase
+  // relevance gate then required verbatim in headlines, so almost every live
+  // article was rejected. Same optional trailing time-phrase group, and the
+  // same non-greedy capture, that the Milestone #46 patterns below use.
+  /^(?:what'?s|what\s+is)\s+(?:happening|going\s+on|new|the\s+latest)\s+(?:in|with|on|about|for|regarding)\s+(.+?)(?:\s+right\s+now|\s+today|\s+currently)?$/i,
   // "latest/recent news on/about/regarding X"
   /^(?:latest|recent)\s+news\s+(?:on|about|regarding)\s+(.+)$/i,
   // "latest/recent X news" (non-greedy so it captures the shortest middle phrase)

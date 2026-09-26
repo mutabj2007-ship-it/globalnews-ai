@@ -64,6 +64,11 @@ export const en = {
   searchWorkspaceIntro: 'Ask a question about world events and get an evidence-grounded answer built from real sources.',
   searchWorkspacePlaceholder: 'What would you like to understand?',
   searchWorkspaceSubmitLabel: 'Analyze',
+  /* ASK/SEARCH R1 — the staged question on /search. Arrival never analyzes. */
+  analysisStagedNote:
+    'Nothing has been analyzed yet. Opening this page does not run analysis — it starts only when you choose Run analysis.',
+  analysisStagedRun: 'Run analysis',
+  analysisStagedEdit: 'Edit question',
   searchWorkspaceAriaLabel: 'Ask a research question',
   // M65 — localized analysis failures. The underlying HTTP status is
   // preserved on the error object; users never see the raw number.

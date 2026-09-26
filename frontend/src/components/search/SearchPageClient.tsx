@@ -1,11 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { analyzeNews, AnalysisApiError, type AnalysisApiErrorCode } from '@/lib/api/analysisApi';
 import { analysisAutoRunDecision } from '@/lib/analysis/analysisAutoRun';
+import {
+  analysisConsentKey,
+  consumeAnalysisConsent,
+  grantAnalysisConsent,
+} from '@/lib/analysis/analysisComputeConsent';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { AnalysisFrameSurface } from '@/components/analysis-frame/AnalysisFrameSurface';
 import { resolveFrameEvidence } from '@/components/analysis-frame/analysisFrameState';
@@ -205,6 +210,27 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
   // is exactly one analysis entry contract in the application.
   const [workspaceQuery, setWorkspaceQuery] = useState('');
 
+  /*
+    ASK/SEARCH ENGINEERING R1 — the request identity this arrival would analyse,
+    and the one identity (if any) the reader has explicitly accepted compute
+    for. A URL alone never sets `consentedKey`: only a grant left by an explicit
+    compute action, or the staged Run control below, does.
+  */
+  const requestKey = analysisConsentKey({
+    q: query,
+    articleId: articleIdParam,
+    countryCode: countryCodeParam,
+    storyTitle: storyTitleParam,
+  });
+  const [consentedKey, setConsentedKey] = useState<string | null>(null);
+  /*
+    The grant this component instance claimed. React Strict Mode re-runs the
+    arrival effect on the SAME instance (refs survive), after the one-shot grant
+    is already spent; the claim lets that replay see the same answer. A real
+    remount (reload, new tab, route re-entry) starts with no claim.
+  */
+  const claimedKeyRef = useRef<string | null>(null);
+
   const hasQuery = query.trim().length > 0;
 
   /**
@@ -241,15 +267,38 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
       CHECKPOINT D — the decision is named and countable. Same two conditions,
       same order, same outcomes; see analysisAutoRun.ts for why it is a function.
     */
-    const decision = analysisAutoRunDecision(query, hasResolvedLanguage);
+    /*
+      ASK/SEARCH R1 — consent intake. A one-shot grant for EXACTLY this request
+      identity is adopted into state and the effect returns; the state change
+      re-runs this effect, which then executes once. Arriving without a grant
+      clears any consent held for a previous identity, so back/forward to an
+      already-analysed question stages it again instead of silently re-spending.
+    */
+    if (hasResolvedLanguage && query.trim() && consentedKey !== requestKey) {
+      if (claimedKeyRef.current === requestKey || consumeAnalysisConsent(requestKey)) {
+        claimedKeyRef.current = requestKey;
+        setConsentedKey(requestKey);
+        return undefined;
+      }
+      if (consentedKey !== null) setConsentedKey(null);
+    }
+    if (consentedKey !== requestKey) claimedKeyRef.current = null;
+
+    const decision = analysisAutoRunDecision(
+      query,
+      hasResolvedLanguage,
+      consentedKey === requestKey,
+    );
 
     if (decision === 'idle-language-pending') return undefined;
 
     let cancelled = false;
 
-    if (decision === 'idle-no-query') {
+    if (decision === 'idle-no-query' || decision === 'idle-awaiting-consent') {
       // M65 — no question is no longer an error condition. The render
       // below shows the research workspace instead of an alert.
+      // ASK/SEARCH R1 — an unconsented question renders staged, with an
+      // explicit Run control. Zero requests.
       setIsLoading(false);
       setResponse(null);
       setFetchError(null);
@@ -275,14 +324,24 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
     return () => {
       cancelled = true;
     };
-  }, [query, language, hasResolvedLanguage, dictionary, storyContext]);
+  }, [query, language, hasResolvedLanguage, dictionary, storyContext, requestKey, consentedKey]);
 
   function handleWorkspaceSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const trimmed = workspaceQuery.trim();
     if (!trimmed) return;
-    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+    /* ASK/SEARCH R1 — pressing Analyze IS the compute moment; the grant records it. */
+    const href = `/search?q=${encodeURIComponent(trimmed)}`;
+    grantAnalysisConsent(href);
+    router.push(href);
   }
+
+  /** ASK/SEARCH R1 — the staged question's explicit Run. Exactly one execution. */
+  function handleRunStaged(): void {
+    setConsentedKey(requestKey);
+  }
+
+  const awaitingConsent = hasQuery && hasResolvedLanguage && consentedKey !== requestKey;
 
   /*
    * ── R4 §3 — THE BOUNDED PERSISTENT FRAME IS NOW THE PRESENTATION ──
@@ -462,7 +521,36 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
         </div>
       )}
 
-      {hasQuery && isLoading && <LoadingStages stages={[...dictionary.loadingStages]} />}
+      {awaitingConsent && !isLoading ? (
+        /*
+          ASK/SEARCH R1 — THE STAGED QUESTION. Arriving with a question in the
+          URL does not analyse it. Nothing has been requested; Run is the
+          compute moment, and Edit returns the text to the workspace field.
+        */
+        <div data-search="staged" className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+          <p className="text-sm text-ink-secondary">{dictionary.analysisStagedNote}</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              data-search="run-staged"
+              onClick={handleRunStaged}
+              className="min-h-[44px] rounded-2xl bg-gradient-to-b from-[#2563eb] to-[#1d4ed8] px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+            >
+              {dictionary.analysisStagedRun}
+            </button>
+            <button
+              type="button"
+              data-search="edit-staged"
+              onClick={handleEditQuestion}
+              className="min-h-[44px] rounded-2xl border border-border-strong px-6 py-3 text-sm font-medium text-ink-primary transition-colors hover:border-signal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+            >
+              {dictionary.analysisStagedEdit}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {hasQuery && isLoading && !awaitingConsent && <LoadingStages stages={[...dictionary.loadingStages]} />}
 
       {hasQuery && !isLoading && fetchError && (
         <div className="rounded-2xl border border-border bg-surface p-8 text-center" role="alert">

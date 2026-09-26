@@ -223,6 +223,10 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
       event.preventDefault();
       const asked = question.trim();
       if (asked.length === 0) return;
+      /* ASK/SEARCH R1 — one Send is one execution: a second submit while a
+         turn is in flight (Enter/requestSubmit bypass the disabled button)
+         must not issue a second request. */
+      if (phase.kind === 'loading') return;
 
       const seq = requestSeq.current + 1;
       requestSeq.current = seq;

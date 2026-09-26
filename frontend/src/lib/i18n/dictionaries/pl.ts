@@ -42,6 +42,10 @@ export const pl: Dictionary = {
   searchWorkspaceIntro: 'Zadaj pytanie o wydarzenia na świecie i otrzymaj odpowiedź opartą na dowodach z rzeczywistych źródeł.',
   searchWorkspacePlaceholder: 'Co chcesz zrozumieć?',
   searchWorkspaceSubmitLabel: 'Analizuj',
+  analysisStagedNote:
+    'Nic nie zostało jeszcze przeanalizowane. Otwarcie tej strony nie uruchamia analizy — rozpoczyna się ona dopiero po wybraniu „Uruchom analizę”.',
+  analysisStagedRun: 'Uruchom analizę',
+  analysisStagedEdit: 'Edytuj pytanie',
   searchWorkspaceAriaLabel: 'Zadaj pytanie badawcze',
   // M65 — zlokalizowane komunikaty o błędach analizy. Rzeczywisty status
   // HTTP pozostaje na obiekcie błędu; użytkownik nigdy nie widzi liczby.

@@ -213,6 +213,27 @@ export function resolveFrameEvidence(
    * consulted first, and `fallbackReason` only refines the answer where
    * the contract actually supplies one.
    */
+  /*
+   * ASK/SEARCH R1 — FAILURE IS NOT ABSENCE.
+   *
+   * When the backend stamps its own `outcome`, that is the authority: a rate
+   * limit or unreachable provider is a failure even when some other provider
+   * answered (so `dataMode` reads 'live'), and NO_RELEVANT_EVIDENCE is an
+   * answered search. Without an outcome, a recorded `provider-error` with zero
+   * reporting is a failure too — it used to fall through to 'no-evidence' and
+   * tell the reader the provider "returned nothing".
+   */
+  const { outcome, fallbackReason } = response.retrievalContext;
+  if (outcome === 'PROVIDER_UNAVAILABLE' || outcome === 'PROVIDER_RATE_LIMITED') {
+    return { state: 'provider-unavailable', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };
+  }
+  if (outcome === 'NO_RELEVANT_EVIDENCE') {
+    return { state: 'no-evidence', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };
+  }
+  if (response.retrievalContext.dataMode !== 'unavailable' && fallbackReason === 'provider-error') {
+    return { state: 'provider-unavailable', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };
+  }
+
   if (response.retrievalContext.dataMode === 'unavailable') {
     return response.retrievalContext.fallbackReason === 'no-live-results'
       ? { state: 'no-evidence', articleCount: 0, evidenceSurvives: false, ...NO_KINDS }

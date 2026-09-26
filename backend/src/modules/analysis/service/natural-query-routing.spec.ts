@@ -4,6 +4,7 @@ import type { AnalysisConfigService } from '../config/analysis-config.service';
 import { AnalysisService } from './analysis.service';
 import { scoreGenericRelevance } from '../../news/relevance/generic-relevance.util';
 import { scoreCountryRelevance } from '../../news/country/country-relevance.util';
+import { attachProviderFailures } from '../../news/news.service';
 import {
   ANALYSIS_TOTAL_BUDGET_MS,
   resolveCountryByAnyIdentifier,
@@ -536,5 +537,70 @@ describe('THE EVIDENCE GATES ARE NOT WEAKENED', () => {
     expect(response.retrievalContext.fallbackReason).toBe('no-live-results');
     // The providers ANSWERED — they are not blamed for having nothing.
     expect(response.retrievalContext.providers).toEqual(['gnews']);
+  });
+});
+
+/*
+ * ASK/SEARCH ENGINEERING R1 — failure is not absence on the wire.
+ * Failures are attached exactly as NewsService attaches them (the non-enumerable
+ * carrier), so this exercises the real readProviderFailures() path.
+ */
+describe('ASK/SEARCH R1 — the generic branch stamps its retrieval outcome', () => {
+  function degraded(kind: string): NewsResponse {
+    return attachProviderFailures(
+      {
+        articles: [],
+        totalResults: 0,
+        providers: ['gnews'],
+        dataMode: 'live',
+        generatedAt: new Date().toISOString(),
+      } as NewsResponse,
+      [{ providerId: 'gdelt-doc', kind, message: 'failed' } as never],
+    );
+  }
+
+  function newsServiceOf(service: AnalysisService) {
+    return (service as unknown as {
+      newsService: { search: jest.Mock; findRetainedByQuery: jest.Mock };
+    }).newsService;
+  }
+
+  it('a provider timeout with nothing retained is PROVIDER_UNAVAILABLE, not an empty world', async () => {
+    const { service } = harness([]);
+    const news = newsServiceOf(service);
+    news.search.mockResolvedValueOnce(degraded('timeout'));
+    news.findRetainedByQuery.mockResolvedValueOnce([]);
+
+    const response = await service.analyzeNews("What's happening in the Middle East right now?");
+
+    expect(response.articles).toHaveLength(0);
+    expect(response.retrievalContext.outcome).toBe('PROVIDER_UNAVAILABLE');
+    expect(news.search).toHaveBeenCalledTimes(1);
+  });
+
+  it('a rate limit with nothing retained is PROVIDER_RATE_LIMITED', async () => {
+    const { service } = harness([]);
+    const news = newsServiceOf(service);
+    news.search.mockResolvedValueOnce(degraded('rate-limited'));
+    news.findRetainedByQuery.mockResolvedValueOnce([]);
+
+    const response = await service.analyzeNews('What is happening with NATO?');
+
+    expect(response.retrievalContext.outcome).toBe('PROVIDER_RATE_LIMITED');
+  });
+
+  it('retained evidence standing in for a failed provider is declared RETAINED_ONLY and cached', async () => {
+    const { service } = harness([]);
+    const news = newsServiceOf(service);
+    news.search.mockResolvedValueOnce(degraded('timeout'));
+    news.findRetainedByQuery.mockResolvedValueOnce([
+      article('retained-1', 'NATO leaders discuss defence spending', 'NATO members met on defence spending.'),
+    ]);
+
+    const response = await service.analyzeNews('What is happening with NATO?');
+
+    expect(response.retrievalContext.outcome).toBe('RETAINED_ONLY');
+    expect(response.retrievalContext.dataMode).toBe('cached');
+    expect(response.retrievalContext.fallbackReason).toBe('provider-error');
   });
 });
