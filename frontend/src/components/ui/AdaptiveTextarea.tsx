@@ -162,6 +162,8 @@ export const AdaptiveTextarea = forwardRef<HTMLTextAreaElement, AdaptiveTextarea
         }}
         onFocus={(event) => {
           onFocus?.(event);
+          resize();
+          requestAnimationFrame(resize);
           if (!keepVisible) return;
           requestAnimationFrame(() => keepInsideVisualViewport());
           window.setTimeout(() => keepInsideVisualViewport(), 180);
