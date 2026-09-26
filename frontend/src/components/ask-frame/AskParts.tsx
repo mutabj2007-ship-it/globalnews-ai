@@ -177,8 +177,8 @@ export function Composer({
         placeholder={placeholder}
         maxLength={1000}
         minHeight={48}
-        maxHeight={240}
-        maxViewportFraction={0.34}
+        maxHeight={420}
+        maxViewportFraction={0.50}
         keepVisible
         className="w-full bg-transparent text-[13px] leading-[1.5] text-sp-ink placeholder:text-sp-ink-3 focus:outline-none"
       />
