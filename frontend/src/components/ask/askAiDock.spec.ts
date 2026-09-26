@@ -114,7 +114,7 @@ describe('the dock is a real scrollable conversation on phones', () => {
     expect(CODE).toMatch(/setPhase\(\{ kind: 'loading', question: asked \}\);\s*setQuestion\(''\);/);
     expect(CODE).toContain('<AdaptiveTextarea');
     expect(CODE).toContain("minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}");
-    expect(CODE).toContain('maxViewportFraction={0.32}');
+    expect(CODE).toContain('maxViewportFraction={0.46}');
   });
 
   it('the phone sheet uses dynamic viewport height and safe-area padding', () => {
