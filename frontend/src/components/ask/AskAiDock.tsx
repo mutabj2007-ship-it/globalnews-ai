@@ -16,6 +16,7 @@ import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
+import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openGlobalAsk';
 
 /**
  * ═══ ASK AI — PHASE 1 ════════════════════════════════════════════════════
@@ -141,6 +142,28 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
+
+  /*
+   * HOME ASK LAUNCH CONTRACT — in-place, zero spend.
+   *
+   * Home surfaces dispatch one document-local event carrying an optional draft.
+   * Receiving it only opens this already-mounted dock and stages text. It does
+   * not call analyzeNews(), submit a form, navigate, or mutate retrieval state.
+   * The only analysis transport remains the explicit form submit below.
+   */
+  useEffect(() => {
+    const openFromHome: EventListener = (event) => {
+      const custom = event as CustomEvent<GlobalAskOpenDetail>;
+      if (typeof custom.detail?.question === 'string') {
+        setQuestion(custom.detail.question);
+      }
+      setIsOpen(true);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    };
+
+    window.addEventListener(GLOBAL_ASK_OPEN_EVENT, openFromHome);
+    return () => window.removeEventListener(GLOBAL_ASK_OPEN_EVENT, openFromHome);
+  }, []);
 
   /*
    * Conversation scroll belongs to the conversation region, never the page.
