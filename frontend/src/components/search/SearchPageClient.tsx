@@ -14,6 +14,7 @@ import { PRIMARY_DIMENSION_KEYS, type PrimaryDimensionKey } from '@/components/s
 import { resolveStoryTitle, usePublishStoryContext } from '@/lib/ask/storyContextStore';
 import { resolveInitialLanguage } from '@/lib/i18n/languages';
 import { getDictionary, type Dictionary } from '@/lib/i18n/dictionaries';
+import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 
 interface SearchPageClientProps {
   /**
@@ -427,19 +428,28 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
             role="search"
             aria-label={dictionary.searchWorkspaceAriaLabel}
             onSubmit={handleWorkspaceSubmit}
-            className="mt-6 flex flex-col gap-3 sm:flex-row"
+            className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-end"
           >
             <label className="sr-only" htmlFor="search-workspace-question">
               {dictionary.searchWorkspaceAriaLabel}
             </label>
-            <input
+            <AdaptiveTextarea
               id="search-workspace-question"
-              type="text"
               value={workspaceQuery}
               onChange={(event) => setWorkspaceQuery(event.target.value)}
               placeholder={dictionary.searchWorkspacePlaceholder}
               maxLength={1000}
-              className="w-full flex-1 rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-ink-primary placeholder:text-ink-tertiary focus:border-cyan-400 focus:outline-none"
+              minHeight={48}
+              maxHeight={320}
+              maxViewportFraction={0.46}
+              keepVisible
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              className="w-full flex-1 rounded-2xl border border-border bg-surface px-4 py-3 text-sm leading-6 text-ink-primary placeholder:text-ink-tertiary focus:border-cyan-400 focus:outline-none"
             />
             <button
               type="submit"
