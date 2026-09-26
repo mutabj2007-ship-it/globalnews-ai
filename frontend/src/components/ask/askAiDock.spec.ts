@@ -413,3 +413,46 @@ describe('HERO COMPOSER OVERLAY R3 — elasticity must not reflow Home', () => {
     expect(focusBlock).toContain('requestAnimationFrame(resize)');
   });
 });
+
+
+describe('HOME ASK DOCK LAUNCH R1 — Home opens Ask in place with zero spend', () => {
+  const dock = readFileSync(join(__dirname, 'AskAiDock.tsx'), 'utf8');
+  const hero = readFileSync(join(__dirname, '../home/HeroAskField.tsx'), 'utf8');
+  const rail = readFileSync(join(__dirname, '../home/HomeSideRail.tsx'), 'utf8');
+  const betaHero = readFileSync(join(__dirname, '../home/BetaHero.tsx'), 'utf8');
+  const launcher = readFileSync(join(__dirname, '../home/HomeAskLauncher.tsx'), 'utf8');
+  const eventContract = readFileSync(join(__dirname, '../../lib/ask/openGlobalAsk.ts'), 'utf8');
+
+  it('the launcher only dispatches a local UI event and never performs transport', () => {
+    expect(eventContract).toContain("GLOBAL_ASK_OPEN_EVENT = 'globalnews:ask-open'");
+    expect(eventContract).toContain('window.dispatchEvent');
+    expect(eventContract).not.toMatch(/fetch\(|analyzeNews\(|router\.push|location\./);
+  });
+
+  it('the root Ask dock listens for the Home event and stages the optional draft', () => {
+    expect(dock).toContain('window.addEventListener(GLOBAL_ASK_OPEN_EVENT');
+    expect(dock).toContain('setQuestion(custom.detail.question)');
+    expect(dock).toContain('setIsOpen(true)');
+    expect(dock).toContain('requestAnimationFrame(() => inputRef.current?.focus())');
+  });
+
+  it('Home Hero submit stages the exact question in the dock instead of navigating', () => {
+    expect(hero).toContain('onSubmit={stageInAskDock}');
+    expect(hero).toContain('openGlobalAsk(draft)');
+  });
+
+  it('Home CTA and suggestion surfaces use the shared in-place launcher', () => {
+    expect(betaHero).toContain('<HomeAskLauncher');
+    expect(rail).toContain('<HomeAskLauncher');
+    expect(rail).toContain('question={prompt}');
+    expect(launcher).toContain('openGlobalAsk(question)');
+  });
+
+  it('analysis remains behind the dock submit path only', () => {
+    const openHandlerStart = dock.indexOf('const openFromHome');
+    const openHandlerEnd = dock.indexOf('}, []);', openHandlerStart);
+    const openHandler = dock.slice(openHandlerStart, openHandlerEnd);
+    expect(openHandler).not.toContain('analyzeNews(');
+    expect(dock).toContain('analyzeNews(asked, language, sent, priorQuestion)');
+  });
+});
