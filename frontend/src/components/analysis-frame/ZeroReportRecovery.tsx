@@ -2,6 +2,7 @@
 
 import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { resolveAmbiguousCountryQuestion } from '../search/EventAnchorNotice';
 import type { FrameClarificationReason, FrameEvidenceState } from './analysisFrameState';
 
 /**
@@ -86,6 +87,17 @@ export function ZeroReportRecovery({
    */
   const isClarification = state === 'clarification-required';
 
+  /*
+   * ANCHORING R1 — AN AMBIGUOUS COUNTRY IS ITS OWN STATE. A search MAY have
+   * run (the event evidence was consulted and did not settle the country),
+   * so "nothing was searched for" would be false here. The reader is asked to
+   * choose, with every candidate named; the country is never chosen for them.
+   */
+  const ambiguousCountry =
+    isClarification && clarificationReason === 'AMBIGUOUS_COUNTRY'
+      ? resolveAmbiguousCountryQuestion(response.retrievalContext, language)
+      : undefined;
+
   const clarificationWhy =
     clarificationReason === 'COMPARISON_MEMBERS_UNDETERMINED'
       ? t.clarificationComparisonMembers
@@ -94,7 +106,9 @@ export function ZeroReportRecovery({
         : null;
 
   const clarificationAsk =
-    clarificationReason === 'COMPARISON_MEMBERS_UNDETERMINED'
+    ambiguousCountry !== undefined
+      ? ambiguousCountry.question
+      : clarificationReason === 'COMPARISON_MEMBERS_UNDETERMINED'
       ? t.clarificationAskComparisonMembers
       : clarificationReason === 'TOO_MANY_ENTITIES'
         ? t.clarificationAskTooManyEntities
@@ -110,12 +124,16 @@ export function ZeroReportRecovery({
    * frame's own existing strings — no new copy, and no provider detail
    * that is not in the response.
    */
-  const heading = isClarification
+  const heading = ambiguousCountry !== undefined
+    ? dict.eventAnchor.stateAmbiguousCountry
+    : isClarification
     ? t.stateClarificationRequired
     : state === 'provider-unavailable'
       ? t.stateProviderUnavailable
       : t.stateNoEvidence;
-  const body = isClarification
+  const body = ambiguousCountry !== undefined
+    ? dict.eventAnchor.stateAmbiguousCountryBody
+    : isClarification
     ? t.stateClarificationRequiredBody
     : state === 'provider-unavailable'
       ? t.stateProviderUnavailableBody
@@ -188,6 +206,13 @@ export function ZeroReportRecovery({
           <p className="font-gn-sans text-[17px] font-semibold leading-[1.35] text-[#eaf1f8] md:text-[18px]">
             {clarificationAsk}
           </p>
+          {ambiguousCountry === undefined || ambiguousCountry.candidates.length === 0 ? null : (
+            <ul data-paf="clarification-candidates" className="mt-3 list-disc space-y-1 ps-5 font-gn-sans text-[15px] leading-[1.5] text-[#d5e1ee]">
+              {ambiguousCountry.candidates.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          )}
         </section>
       ) : null}
 

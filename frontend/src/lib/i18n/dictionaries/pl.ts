@@ -2160,6 +2160,28 @@ export const pl: Dictionary = {
       },
     ],
   },
+  eventAnchor: {
+    heading: 'Co ustalają doniesienia o zdarzeniu',
+    interpretedFromEvidence: 'Zinterpretowano jako {country} na podstawie doniesień o zdarzeniu.',
+    fromSelectedContext: 'Kraj przyjęty z Twojego wyboru: {country}.',
+    crossBorderNotEstablished:
+      'Dostępne doniesienia nie potwierdzają jeszcze bezpośredniego wpływu samego zdarzenia na kraje sąsiednie.',
+    causeNotEstablished: 'Dostępne doniesienia nie ustalają przyczyny zdarzenia.',
+    contextSeparated:
+      'Część doniesień z tego samego miejsca pokazano wyłącznie jako odrębny kontekst: nie ustalono, że jest skutkiem zdarzenia ani że się z nim wiąże.',
+    contextClaimsWithheld:
+      'Wstrzymano stwierdzenia o skutkach, które opierały się wyłącznie na tym odrębnym kontekście.',
+    countryNames: { COD: 'DR Konga / Kongo-Kinszasa', COG: 'Republika Konga / Kongo-Brazzaville' },
+    countryNamesFull: {
+      COD: 'Demokratyczna Republika Konga (Kongo-Kinszasa)',
+      COG: 'Republika Konga (Kongo-Brazzaville)',
+    },
+    stateAmbiguousCountry: 'KTÓRY KRAJ? · NAZWA PASUJE DO WIĘCEJ NIŻ JEDNEGO',
+    stateAmbiguousCountryBody:
+      'Miejsce w tym pytaniu odpowiada więcej niż jednemu krajowi, a ani pytanie, ani doniesienia nie rozstrzygnęły, o który chodzi. Nie wygenerowano odpowiedzi, zamiast wybierać kraj za Ciebie.',
+    ambiguousCountryQuestion: 'O który kraj chodzi?',
+  },
+
   analysisFrame: {
     skipToAnalysis: 'Przejd\u017a do analizy',
     /*

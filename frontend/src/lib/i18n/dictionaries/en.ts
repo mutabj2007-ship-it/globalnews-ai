@@ -2793,6 +2793,33 @@ export const en = {
    * touched, and in particular no geographic precision string is
    * modified (those are pinned by the GEO-4 contract tests).
    */
+  /*
+    ASK CONVERSATIONAL EVIDENCE ANCHORING R1 — what the event evidence does
+    and does not establish. Every line is a backend code worded here; none is
+    shown unless the backend stamped it.
+  */
+  eventAnchor: {
+    heading: 'What the event reporting establishes',
+    interpretedFromEvidence: 'Interpreted as {country} from the event evidence.',
+    fromSelectedContext: 'Country taken from your selection: {country}.',
+    crossBorderNotEstablished:
+      'The available reporting does not yet establish a direct impact on neighbouring countries from the event itself.',
+    causeNotEstablished: 'The available reporting does not establish what caused the event.',
+    contextSeparated:
+      'Some reporting from the same place is shown only as separate context: it is not established to be caused by or connected to the event.',
+    contextClaimsWithheld:
+      'Statements about effects that were supported only by that separate context were withheld.',
+    countryNames: { COD: 'DR Congo / Congo-Kinshasa', COG: 'Republic of the Congo / Congo-Brazzaville' },
+    countryNamesFull: {
+      COD: 'Democratic Republic of the Congo (Congo-Kinshasa)',
+      COG: 'Republic of the Congo (Congo-Brazzaville)',
+    },
+    stateAmbiguousCountry: 'WHICH COUNTRY? · THE NAME FITS MORE THAN ONE',
+    stateAmbiguousCountryBody:
+      'The place in this question names more than one country, and neither the question nor the reporting settled which one you mean. No answer was generated rather than choosing the country for you.',
+    ambiguousCountryQuestion: 'Which country do you mean?',
+  },
+
   analysisFrame: {
     skipToAnalysis: 'Skip to analysis',
     /*

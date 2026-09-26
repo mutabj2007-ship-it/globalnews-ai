@@ -7,6 +7,7 @@ import type { PrimaryDimensionKey } from '../search/analysisDimensions';
 import { buildDimensionClaims } from '../search/analysisClaims';
 import { AnalysisModeBadge } from '../search/AnalysisModeBadge';
 import { EvidenceFreshnessNotice } from '../search/EvidenceFreshnessNotice';
+import { EventAnchorNotice } from '../search/EventAnchorNotice';
 import { useIsomorphicLayoutEffect } from '@/lib/hooks/useIsomorphicLayoutEffect';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { BriefRow, BRIEF_TITLE_ID } from './BriefRow';
@@ -852,6 +853,11 @@ export function AnalysisFrame({
         >
           {response.query}
         </h1>
+        {/* ANCHORING R1 — what the event reporting does and does not establish,
+            from the same authority the Ask dock uses. Nothing without an anchor. */}
+        <div className="mt-3 empty:hidden">
+          <EventAnchorNotice retrievalContext={response.retrievalContext} language={language} />
+        </div>
       </section>
 
       {/*

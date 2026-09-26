@@ -102,7 +102,9 @@ type RetrievalContextWithOutcome = {
 /** Why a question needs narrowing. G's codes, never a sentence. */
 export type FrameClarificationReason =
   | 'COMPARISON_MEMBERS_UNDETERMINED'
-  | 'TOO_MANY_ENTITIES';
+  | 'TOO_MANY_ENTITIES'
+  /* ANCHORING R1 — a place name that fits more than one country ("Congo"). */
+  | 'AMBIGUOUS_COUNTRY';
 
 function readClarification(
   response: AnalysisApiResponse,
@@ -115,7 +117,9 @@ function readClarification(
   return {
     required: true,
     reason:
-      reason === 'COMPARISON_MEMBERS_UNDETERMINED' || reason === 'TOO_MANY_ENTITIES'
+      reason === 'COMPARISON_MEMBERS_UNDETERMINED' ||
+      reason === 'TOO_MANY_ENTITIES' ||
+      reason === 'AMBIGUOUS_COUNTRY'
         ? reason
         : null,
   };

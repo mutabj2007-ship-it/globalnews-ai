@@ -25,7 +25,20 @@ import {
   type StoryContext,
   type AnalysisEvidenceState,
   resolveEvidenceState,
+  type EventAnchorDisclosure,
+  type EventEvidenceRelation,
 } from '@globalnews-ai/shared';
+import {
+  asksAboutEvent,
+  classifyEventEvidence,
+  deriveEventDisclosures,
+  deriveEventTopic,
+  detectAmbiguousCountryMention,
+  detectEventAspects,
+  isAnaphoricFollowUp,
+  withholdContextOnlyConsequenceClaims,
+  withoutAmbiguousCountryMentions,
+} from '../anchor/event-anchor.util';
 import { NewsService, readProviderFailures } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
 import type { AnalysisProvider } from '../interfaces';
@@ -709,7 +722,29 @@ export class AnalysisService {
          * CURRENT_EVENT, carries no sides and no subject, so every shape it
          * does not recognise leaves every decision below exactly as it was.
          */
-        const classification = classifyQueryIntent(normalizedQuery);
+        /*
+          ASK CONVERSATIONAL EVIDENCE ANCHORING R1 — THE RETRIEVAL QUESTION.
+
+          A follow-up that refers back ("Does this influence the neighboring
+          countries?") names no event and no place, so routing it on its own
+          words retrieved nothing — or, with a map country selected, the whole
+          country feed. It is routed by the PRIOR USER QUESTION instead (never
+          by the prior AI answer), so the follow-up retrieves the same event.
+          The model still receives the reader's actual follow-up; only routing
+          changes. An explicit story article anchor keeps precedence.
+        */
+        const anaphoricPriorQuestion =
+          priorQuestion !== undefined &&
+          !storyContext?.articleId &&
+          isAnaphoricFollowUp(normalizedQuery)
+            ? normalizeQuery(priorQuestion).normalizedQuery
+            : undefined;
+        const retrievalQuery = anaphoricPriorQuestion ?? normalizedQuery;
+        /* A bare "Congo" is COD or COG — never silently one of them. */
+        const ambiguousCountry = detectAmbiguousCountryMention(retrievalQuery);
+        let countryInterpretation: EventAnchorDisclosure | undefined;
+
+        const classification = classifyQueryIntent(retrievalQuery);
 
         /*
          * A COMPARISON IS NOT ANSWERED BY ONE OF ITS SIDES.
@@ -779,7 +814,7 @@ export class AnalysisService {
          * because none of them place a closed reporting verb between a
          * bounded name and a topic preposition.
          */
-        const sourceAttributedIntent = detectSourceAttributedIntent(normalizedQuery);
+        const sourceAttributedIntent = detectSourceAttributedIntent(retrievalQuery);
         const sourceAttributedFrame = sourceAttributedIntent?.query;
         const requestedSource: RequestedSource | undefined = sourceAttributedFrame
           ? resolveRequestedSource(sourceAttributedFrame.sourcePhrase)
@@ -910,7 +945,7 @@ export class AnalysisService {
          */
         const declaredRegion = sourceIntent
           ? undefined
-          : detectDeclaredRegion(normalizedQuery);
+          : detectDeclaredRegion(retrievalQuery);
 
         /*
          * CROSS-REGION IMPACT QUESTIONS MUST KEEP THEIR RELATION.
@@ -919,7 +954,7 @@ export class AnalysisService {
         const declaredRegionRelation =
           declaredRegion === undefined || sourceIntent
             ? undefined
-            : deriveRelationalSearchQueries(normalizedQuery);
+            : deriveRelationalSearchQueries(retrievalQuery);
 
         /*
          * CONVERSATIONAL FOLLOW-UP: one prior USER question, never the prior
@@ -945,11 +980,11 @@ export class AnalysisService {
          */
         const isShortSingleScopeFollowUp =
           declaredRegion === undefined &&
-          normalizedQuery.split(/\s+/).length <= 8 &&
+          retrievalQuery.split(/\s+/).length <= 8 &&
           classification.countries.length <= 1;
         const followUpLocation = isShortSingleScopeFollowUp
-          ? (this.detectLocation(normalizedQuery) ??
-            this.detectLocationByDemonym(normalizedQuery))
+          ? (this.detectLocation(retrievalQuery) ??
+            this.detectLocationByDemonym(retrievalQuery))
           : undefined;
         const followUpCountry = isShortSingleScopeFollowUp
           ? (classification.countries[0] ?? followUpLocation?.country)
@@ -988,12 +1023,31 @@ export class AnalysisService {
          * classifier owns multi-country lists. No second country table or
          * heuristic is introduced.
          */
-        const typedLocation =
+        const rawTypedLocation =
           classification.sides.length >= 2 ||
           classification.intent === 'CLARIFICATION_REQUIRED'
             ? undefined
-            : (this.detectLocation(normalizedQuery) ??
-              this.detectLocationByDemonym(normalizedQuery));
+            : (this.detectLocation(retrievalQuery) ?? this.detectLocationByDemonym(retrievalQuery));
+        /*
+          ANCHORING R1 — GATE F. The shared resolver maps a bare "Congo" to one
+          country. That is a guess, not an interpretation, so it is not used as a
+          typed scope; the reader's selected country or the event evidence
+          decides (see the ambiguous-country branch below).
+        */
+        const typedLocation =
+          ambiguousCountry !== undefined &&
+          rawTypedLocation !== undefined &&
+          ambiguousCountry.candidates.includes(rawTypedLocation.country.iso3)
+            ? undefined
+            : rawTypedLocation;
+        if (
+          ambiguousCountry !== undefined &&
+          typedLocation === undefined &&
+          storyAnchoredLocation !== undefined &&
+          ambiguousCountry.candidates.includes(storyAnchoredLocation.country.iso3)
+        ) {
+          countryInterpretation = 'COUNTRY_FROM_SELECTED_CONTEXT';
+        }
         const typedScopeOverridesStory =
           declaredRegion !== undefined ||
           classification.countries.length > 0 ||
@@ -1061,7 +1115,7 @@ export class AnalysisService {
            * Keep X->region plus explicitly named country refinements bounded,
            * and use the existing relational relevance gate for every article.
            */
-          const regionRefinementMatch = normalizedQuery.match(REGION_MEMBER_REFINEMENT_PATTERN);
+          const regionRefinementMatch = retrievalQuery.match(REGION_MEMBER_REFINEMENT_PATTERN);
           const regionRefinementCountry = regionRefinementMatch?.[1]
             ? resolveCountryByAnyIdentifier(regionRefinementMatch[1].trim())
             : undefined;
@@ -1258,6 +1312,77 @@ export class AnalysisService {
             anchored.supporting,
             storyContext?.countryCode,
           );
+        } else if (
+          ambiguousCountry !== undefined &&
+          location === undefined &&
+          declaredRegion === undefined &&
+          sourceIntent === undefined &&
+          classification.sides.length < 2
+        ) {
+          /*
+            ANCHORING R1 — GATE F. A bare "Congo" with no selected country.
+
+            With an event topic, ONE provider search for "<topic> <Congo>" runs,
+            and the event reporting itself disambiguates: an article about the
+            event that the existing country-relevance authority resolves to
+            exactly one candidate supports that candidate. One supported
+            candidate → interpreted from the evidence, with a disclosure. None
+            or both → the reader is asked, evidence is withheld and no AI call
+            is made. Without a topic there is nothing to disambiguate from, so
+            the reader is asked and no provider call is made at all.
+          */
+          const topic = deriveEventTopic(retrievalQuery);
+          const candidateMetas = ambiguousCountry.candidates
+            .map((iso3) => resolveCountryByAnyIdentifier(iso3))
+            .filter((meta): meta is CountryMeta => meta !== undefined);
+          const clarification: AnalysisRetrievalContext = {
+            ...NON_RETRIEVABLE_QUERY_CONTEXT,
+            retrievalOutcome: 'CLARIFICATION_REQUIRED',
+            clarificationReason: 'AMBIGUOUS_COUNTRY',
+            clarificationCandidates: ambiguousCountry.candidates,
+          };
+          const sent = topic
+            ? makeProviderSafeNewsQuery(`${topic} ${ambiguousCountry.mention}`)
+            : undefined;
+          if (sent === undefined) {
+            articles = [];
+            retrievalContext = clarification;
+          } else {
+            const searchResponse = await this.newsService.search(sent, SEARCH_POOL_SIZE, {
+              type: 'generic',
+            });
+            const eventArticles = searchResponse.articles.filter(
+              (article) => classifyEventEvidence(article, topic as string) !== 'CONTEXT_ONLY',
+            );
+            /* A bare "Congo" in an article votes for neither candidate. */
+            const neutral = eventArticles.map((article) => ({
+              ...article,
+              title: withoutAmbiguousCountryMentions(article.title ?? ''),
+              summary: withoutAmbiguousCountryMentions(article.summary ?? ''),
+            }));
+            const supported = candidateMetas.filter((meta) =>
+              neutral.some(
+                (article) =>
+                  scoreCountryRelevance(article, meta).isRelevant &&
+                  candidateMetas
+                    .filter((other) => other.iso3 !== meta.iso3)
+                    .every((other) => !scoreCountryRelevance(article, other).isRelevant),
+              ),
+            );
+            if (supported.length === 1) {
+              const [country] = supported;
+              articles = searchResponse.articles;
+              retrievalContext = {
+                ...this.toRetrievalContext(searchResponse),
+                countryCode: country.iso3,
+                countryName: country.name,
+              };
+              countryInterpretation = 'COUNTRY_INTERPRETED_FROM_EVIDENCE';
+            } else {
+              articles = [];
+              retrievalContext = clarification;
+            }
+          }
         } else if (location && sourceIntent === undefined) {
           const { country, city, geoMatch } = location;
 
@@ -1292,7 +1417,7 @@ export class AnalysisService {
           // take exactly the same single-provider-call path as before
           // this milestone — confirmed by this block never running for
           // fewer than 3 requested domains or zero missing domains.
-          const requestedDomains = detectRequestedDomains(normalizedQuery);
+          const requestedDomains = detectRequestedDomains(retrievalQuery);
 
           if (isBroadMultiDomainQuestion(requestedDomains)) {
             const representedDomains = detectRepresentedDomains(articles);
@@ -1519,7 +1644,7 @@ export class AnalysisService {
           // since none of those match the closed relational pattern set.
           const relationalQuery = sourceIntent
             ? undefined
-            : deriveRelationalSearchQueries(normalizedQuery);
+            : deriveRelationalSearchQueries(retrievalQuery);
 
           if (sourceAttributed) {
             /*
@@ -1753,7 +1878,7 @@ export class AnalysisService {
             // English generic branch's NewsService.search() call uses
             // internally — this is reuse of the existing relevance
             // firewall, not a new or weaker one.
-            const derivedPolishTopic = derivePolishRetrievalQuery(normalizedQuery);
+            const derivedPolishTopic = derivePolishRetrievalQuery(retrievalQuery);
 
             /*
              * G-ALPHA-2.1 (A) — THE SAME GAP-FILLING RULE THE ENGLISH BRANCH USES.
@@ -1773,7 +1898,7 @@ export class AnalysisService {
              * the English branch.
              */
             const polishDerivationLeftSentenceIntact =
-              derivedPolishTopic.trim() === normalizedQuery.trim().replace(/[?!.,;:]+$/gu, '');
+              derivedPolishTopic.trim() === retrievalQuery.trim().replace(/[?!.,;:]+$/gu, '');
 
             const polishTopic =
               polishDerivationLeftSentenceIntact && classification.subject
@@ -1975,7 +2100,7 @@ export class AnalysisService {
             // (used for the AI prompt, caching key, and response.query)
             // remains completely untouched — only the provider search term
             // changes.
-            const derivedSearchQuery = deriveGenericNewsQuery(normalizedQuery);
+            const derivedSearchQuery = deriveGenericNewsQuery(retrievalQuery);
 
             /*
              * G-ALPHA-2 — THE CLASSIFIER'S SUBJECT FILLS A GAP; IT NEVER
@@ -1998,7 +2123,7 @@ export class AnalysisService {
              * to the unmatched case only.
              */
             const derivationLeftSentenceIntact =
-              derivedSearchQuery.trim() === normalizedQuery.trim().replace(/[?!.,;:]+$/g, '');
+              derivedSearchQuery.trim() === retrievalQuery.trim().replace(/[?!.,;:]+$/g, '');
 
             const genericSearchQuery =
               derivationLeftSentenceIntact && classification.subject
@@ -2265,6 +2390,52 @@ export class AnalysisService {
         }
 
         /*
+          ANCHORING R1 — GATES B + C. The structured event anchor.
+
+          Built only when the question reasons about an event (cause, effect,
+          cross-border) or refers back to one. Its topic is the reader's own
+          words; every relation and disclosure is derived deterministically from
+          retrieved evidence; no model output is read. Event-linked evidence is
+          ordered first so the evidence cap never drops it in favour of context.
+        */
+        const anchorTopic = deriveEventTopic(retrievalQuery);
+        const anchorAspects = detectEventAspects(normalizedQuery);
+        if (
+          anchorTopic !== undefined &&
+          retrievalContext.retrievalOutcome === undefined &&
+          (anaphoricPriorQuestion !== undefined || asksAboutEvent(anchorAspects))
+        ) {
+          const classified = articles.map((article) => ({
+            article,
+            relation: classifyEventEvidence(article, anchorTopic),
+          }));
+          articles = [
+            ...classified.filter((c) => c.relation !== 'CONTEXT_ONLY'),
+            ...classified.filter((c) => c.relation === 'CONTEXT_ONLY'),
+          ].map((c) => c.article);
+          const idsWith = (relation: EventEvidenceRelation): string[] =>
+            classified.filter((c) => c.relation === relation).map((c) => c.article.id);
+          retrievalContext = {
+            ...retrievalContext,
+            eventAnchor: {
+              topic: anchorTopic,
+              source: anaphoricPriorQuestion !== undefined ? 'prior-question' : 'current-question',
+              ...(retrievalContext.countryCode
+                ? { countryIso3: retrievalContext.countryCode }
+                : {}),
+              aspects: anchorAspects,
+              directEventArticleIds: idsWith('DIRECT_EVENT'),
+              consequenceArticleIds: idsWith('REPORTED_CONSEQUENCE'),
+              contextArticleIds: idsWith('CONTEXT_ONLY'),
+              disclosures: [
+                ...(countryInterpretation ? [countryInterpretation] : []),
+                ...deriveEventDisclosures(anchorAspects, anchorTopic, classified),
+              ],
+            },
+          };
+        }
+
+        /*
           ASK/SEARCH R1 CLOSURE — every retrieval path converges here, so the
           evidence-state fact is stamped exactly once, by the one shared
           derivation. The model, the cache TTL and the UI all read this value.
@@ -2321,6 +2492,19 @@ export class AnalysisService {
         }
 
         const deduped = clusterDuplicateArticles(articles).slice(0, config.maxArticles);
+        if (retrievalContext.eventAnchor !== undefined) {
+          const sentIds = new Set(deduped.map((article) => article.id));
+          const anchor = retrievalContext.eventAnchor;
+          retrievalContext = {
+            ...retrievalContext,
+            eventAnchor: {
+              ...anchor,
+              directEventArticleIds: anchor.directEventArticleIds.filter((id) => sentIds.has(id)),
+              consequenceArticleIds: anchor.consequenceArticleIds.filter((id) => sentIds.has(id)),
+              contextArticleIds: anchor.contextArticleIds.filter((id) => sentIds.has(id)),
+            },
+          };
+        }
         for (const member of retrievalContext.comparisonCoverage ?? []) {
           const liveIds = new Set(member.liveArticleIds);
           const retainedIds = new Set(member.retainedArticleIds);
@@ -2413,6 +2597,22 @@ export class AnalysisService {
               or current; the prompt section enforces the wording.
             */
             evidenceState: retrievalContext.evidenceState,
+            /*
+              ANCHORING R1 — GATES D + E. The anchor and each evidence item's
+              relation, aligned with `deduped` by index. Absent when no anchor.
+            */
+            ...(retrievalContext.eventAnchor !== undefined
+              ? {
+                  eventAnchor: retrievalContext.eventAnchor,
+                  eventEvidenceRelations: deduped.map((article) =>
+                    retrievalContext.eventAnchor?.contextArticleIds.includes(article.id)
+                      ? ('CONTEXT_ONLY' as const)
+                      : retrievalContext.eventAnchor?.consequenceArticleIds.includes(article.id)
+                        ? ('REPORTED_CONSEQUENCE' as const)
+                        : ('DIRECT_EVENT' as const),
+                  ),
+                }
+              : {}),
             newestEvidence: newestEvidenceFreshness(deduped),
             /*
               EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — THE SAME
@@ -2602,6 +2802,23 @@ export class AnalysisService {
           analysisResult = briefVerdict.compliant
             ? acceptExecutiveBrief(analysisResult, briefVerdict, repairRequested)
             : withholdExecutiveBrief(analysisResult, briefVerdict, repairRequested);
+
+          /*
+            ANCHORING R1 — GATE C, ENFORCED. Whatever the model wrote, an
+            effect / spillover / affected-party claim supported ONLY by context
+            evidence is withheld, and the count is disclosed on the anchor.
+          */
+          if (retrievalContext.eventAnchor !== undefined) {
+            const { analysis: anchored, withheld } = withholdContextOnlyConsequenceClaims(
+              analysisResult,
+              new Set(retrievalContext.eventAnchor.contextArticleIds),
+            );
+            analysisResult = anchored;
+            retrievalContext = {
+              ...retrievalContext,
+              eventAnchor: { ...retrievalContext.eventAnchor, contextOnlyClaimsWithheld: withheld },
+            };
+          }
 
           response = {
             query: originalQuery,
