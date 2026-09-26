@@ -1,4 +1,8 @@
 import {
+  buildAnalysisMessages as buildMessagesR1,
+  buildEvidenceStateInstruction,
+} from './build-analysis-prompt.util';
+import {
   buildAnalysisMessages,
   buildRelationalPromptSection,
   buildResponseLanguageInstruction,
@@ -730,4 +734,40 @@ describe('GEO-4 — the prompt forbids geographic precision exceeding evidence p
       'Avoid political persuasion, advocacy, or loaded language of any kind.',
     );
   });
+});
+
+describe('ASK/SEARCH R1 CLOSURE — buildEvidenceStateInstruction', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+
+  it('adds nothing for live evidence, so the live prompt is byte-identical', () => {
+    expect(buildEvidenceStateInstruction('live')).toBe('');
+    expect(buildEvidenceStateInstruction(undefined)).toBe('');
+    expect(buildMessagesR1('q', [], 500).system).toBe(
+      buildMessagesR1('q', [], 500, undefined, 'en', undefined, undefined, undefined, 'live')
+        .system,
+    );
+  });
+
+  it.each(['retained', 'degraded-fallback'] as const)(
+    'forbids live/current wording for %s evidence',
+    (state) => {
+      const text: string = buildEvidenceStateInstruction(state, '2026-09-25T10:00:00Z');
+      expect(text).toContain('AUTHORITATIVE EVIDENCE STATE');
+      expect(text).toContain('Do NOT describe this evidence');
+      expect(text).toContain('"right now"');
+      expect(text).toContain('2026-09-25T10:00:00Z');
+      const { system } = buildMessagesR1(
+        'q',
+        [],
+        500,
+        undefined,
+        'en',
+        undefined,
+        undefined,
+        undefined,
+        state,
+      );
+      expect(system).toContain('AUTHORITATIVE EVIDENCE STATE');
+    },
+  );
 });

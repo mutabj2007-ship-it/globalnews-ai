@@ -365,9 +365,11 @@ describe('3 — a question that was never searched for is not reported as a sear
 
   it('the clarification branch is read BEFORE the dataMode branch, in source', () => {
     const state = codeOnly(src('analysisFrameState.ts'));
-    expect(state.indexOf('readClarification(response)')).toBeLessThan(
-      state.indexOf("retrievalContext.dataMode === 'unavailable'"),
-    );
+    /* ASK/SEARCH R1 CLOSURE — the dataMode branch now lives in the shared
+       resolveEvidenceState; the lock is the same ordering against that call. */
+    const evidenceDecision = state.indexOf('resolveEvidenceState(');
+    expect(evidenceDecision).toBeGreaterThan(-1);
+    expect(state.indexOf('readClarification(response)')).toBeLessThan(evidenceDecision);
   });
 
   /*

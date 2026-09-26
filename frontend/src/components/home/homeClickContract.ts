@@ -273,7 +273,7 @@ export const HOME_CLICK_CONTRACT: readonly HomeClickRow[] = [
     evidence: { file: 'components/ask/AskAiDock.tsx', contains: "if (phase.kind === 'loading') return;" },
   },
   {
-    id: 'dock.open-full', label: 'Open full analysis', breakpoints: ALL, element: 'a',
+    id: 'dock.open-full', label: 'Run full analysis (Starts a new source-backed analysis.)', breakpoints: ALL, element: 'a',
     destination: '/search?q=…[&storyTitle&articleId&countryCode]', behavior: 'navigate', signedIn: same,
     signedOut: 'same-tab click runs the full analysis once; new tab / copied link lands staged', back: 'document-navigation',
     unavailable: 'shown only when the turn produced analysis or articles', external: false,

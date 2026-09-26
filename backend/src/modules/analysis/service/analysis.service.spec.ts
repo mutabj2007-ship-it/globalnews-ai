@@ -1534,6 +1534,8 @@ describe('AnalysisService', () => {
 
       expect(response.retrievalContext).toEqual({
         dataMode: 'live',
+        // ASK/SEARCH R1 CLOSURE — the stamped evidence-state fact.
+        evidenceState: 'live',
         providers: ['newsapi'],
         fallbackReason: undefined,
         newestArticlePublishedAt: undefined,
@@ -1699,6 +1701,8 @@ describe('AnalysisService', () => {
 
       expect(response.retrievalContext).toEqual({
         dataMode: 'live',
+        // ASK/SEARCH R1 CLOSURE — the stamped evidence-state fact.
+        evidenceState: 'live',
         providers: ['gnews'],
         fallbackReason: undefined,
         newestArticlePublishedAt: undefined,
@@ -1754,6 +1758,8 @@ describe('AnalysisService', () => {
 
       expect(response.retrievalContext).toEqual({
         dataMode: 'cached',
+        // ASK/SEARCH R1 CLOSURE — the stamped evidence-state fact.
+        evidenceState: 'retained',
         providers: [],
         fallbackReason: 'no-live-results',
         newestArticlePublishedAt: newestTimestamp,
@@ -1806,6 +1812,8 @@ describe('AnalysisService', () => {
 
       expect(response.retrievalContext).toEqual({
         dataMode: 'live',
+        // ASK/SEARCH R1 CLOSURE — the stamped evidence-state fact.
+        evidenceState: 'live',
         providers: ['gnews'],
         fallbackReason: undefined,
         newestArticlePublishedAt: undefined,

@@ -16,6 +16,10 @@ import { resolveRetrievalContextText } from '@/components/search/RetrievalContex
  * Complete Record's `RetrievalContextStatus` uses, in EN and PL.
  */
 export function evidenceIsLive(retrievalContext: AnalysisRetrievalContext): boolean {
+  /* The stamped evidence-state fact decides; older payloads keep the prior rule. */
+  if (retrievalContext.evidenceState !== undefined) {
+    return retrievalContext.evidenceState === 'live' || retrievalContext.evidenceState === 'no-relevant-evidence';
+  }
   return retrievalContext.dataMode === 'live' && retrievalContext.outcome !== 'RETAINED_ONLY';
 }
 
@@ -32,7 +36,17 @@ export function EvidenceFreshnessNotice({
 
   /* RETAINED_ONLY stamped on a 'live' mode is still stored reporting. */
   const disclosed: AnalysisRetrievalContext =
-    retrievalContext.dataMode === 'live' ? { ...retrievalContext, dataMode: 'cached' } : retrievalContext;
+    retrievalContext.dataMode === 'live'
+      ? {
+          ...retrievalContext,
+          /* A degraded state with nothing retrieved did not use stored reporting. */
+          dataMode:
+            retrievalContext.evidenceState === 'degraded-fallback' && retrievalContext.articlesRetrieved === 0
+              ? 'unavailable'
+              : 'cached',
+          ...(retrievalContext.evidenceState === 'degraded-fallback' ? { fallbackReason: 'provider-error' as const } : {}),
+        }
+      : retrievalContext;
   const mode = disclosed.dataMode as keyof typeof ICON;
   const text = resolveRetrievalContextText(disclosed, language);
   const Icon = ICON[mode];

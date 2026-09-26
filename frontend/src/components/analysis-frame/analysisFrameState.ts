@@ -1,4 +1,4 @@
-import type { AnalysisApiResponse } from '@globalnews-ai/shared';
+import { resolveEvidenceState, type AnalysisApiResponse } from '@globalnews-ai/shared';
 
 /**
  * R4 — WHICH TRUTH THE FRAME IS TELLING.
@@ -214,30 +214,17 @@ export function resolveFrameEvidence(
    * the contract actually supplies one.
    */
   /*
-   * ASK/SEARCH R1 — FAILURE IS NOT ABSENCE.
+   * ASK/SEARCH R1 CLOSURE — FAILURE IS NOT ABSENCE, DECIDED BY ONE FACT.
    *
-   * When the backend stamps its own `outcome`, that is the authority: a rate
-   * limit or unreachable provider is a failure even when some other provider
-   * answered (so `dataMode` reads 'live'), and NO_RELEVANT_EVIDENCE is an
-   * answered search. Without an outcome, a recorded `provider-error` with zero
-   * reporting is a failure too — it used to fall through to 'no-evidence' and
-   * tell the reader the provider "returned nothing".
+   * The backend stamps `evidenceState`; an older payload without it is derived
+   * with the SAME shared `resolveEvidenceState`. A degraded fallback (provider
+   * timeout, rate limit, error) with nothing to show is 'provider-unavailable';
+   * only a genuine 'no-relevant-evidence' may say that nothing matched.
    */
-  const { outcome, fallbackReason } = response.retrievalContext;
-  if (outcome === 'PROVIDER_UNAVAILABLE' || outcome === 'PROVIDER_RATE_LIMITED') {
+  const evidenceState =
+    response.retrievalContext.evidenceState ?? resolveEvidenceState(response.retrievalContext, 0);
+  if (evidenceState === 'degraded-fallback') {
     return { state: 'provider-unavailable', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };
-  }
-  if (outcome === 'NO_RELEVANT_EVIDENCE') {
-    return { state: 'no-evidence', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };
-  }
-  if (response.retrievalContext.dataMode !== 'unavailable' && fallbackReason === 'provider-error') {
-    return { state: 'provider-unavailable', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };
-  }
-
-  if (response.retrievalContext.dataMode === 'unavailable') {
-    return response.retrievalContext.fallbackReason === 'no-live-results'
-      ? { state: 'no-evidence', articleCount: 0, evidenceSurvives: false, ...NO_KINDS }
-      : { state: 'provider-unavailable', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };
   }
 
   return { state: 'no-evidence', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };

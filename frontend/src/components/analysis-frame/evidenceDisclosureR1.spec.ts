@@ -97,3 +97,60 @@ describe('THE ASK DOCK RESULT carries the disclosure beside the AI badge', () =>
     expect(out).toContain('Live reporting could not be retrieved reliably');
   });
 });
+
+describe('ASK/SEARCH R1 CLOSURE — the stamped evidence-state fact decides', () => {
+  it('stamped degraded-fallback with nothing to show is provider-unavailable, even on a live mode', () => {
+    const r = withContext({ dataMode: 'live', evidenceState: 'degraded-fallback' }, { analysis: false });
+    expect(resolveFrameEvidence(r, true).state).toBe('provider-unavailable');
+  });
+
+  it('stamped no-relevant-evidence is the only "nothing matched" state', () => {
+    const r = withContext({ dataMode: 'unavailable', evidenceState: 'no-relevant-evidence' }, { analysis: false });
+    expect(resolveFrameEvidence(r, true).state).toBe('no-evidence');
+  });
+
+  it('the notice never claims stored reporting was used when nothing was retrieved', () => {
+    const html = renderToStaticMarkup(
+      createElement(EvidenceFreshnessNotice, {
+        retrievalContext: { ...fixture().retrievalContext, dataMode: 'live', evidenceState: 'degraded-fallback', articlesRetrieved: 0 },
+        language: 'en',
+      }),
+    );
+    expect(html).toContain('data-evidence-freshness="unavailable"');
+    expect(html).not.toContain('Stored reporting');
+  });
+
+  it('the "nothing matched" copy no longer says the provider "returned nothing" (EN/PL)', () => {
+    const { getDictionary } = jest.requireActual('@/lib/i18n/dictionaries');
+    const en = JSON.stringify(getDictionary('en'));
+    const pl = JSON.stringify(getDictionary('pl'));
+    expect(en).not.toContain('returned nothing for this question');
+    expect(pl).not.toContain('nic nie zwróciło dla tego pytania');
+  });
+});
+
+describe('CTO RULING 2 — a compute-triggering control is never called Open', () => {
+  const html = (language: 'en' | 'pl'): string =>
+    renderToStaticMarkup(
+      createElement(AskCompactResult, {
+        response: withContext({ dataMode: 'live' }, { articles: 2 }),
+        question: 'What is happening?',
+        context: undefined,
+        language,
+      }),
+    );
+
+  it('EN: Run full analysis, with the supporting note', () => {
+    const out = html('en');
+    expect(out).toContain('Run full analysis');
+    expect(out).toContain('Starts a new source-backed analysis.');
+    expect(out).not.toContain('Open full analysis');
+  });
+
+  it('PL: Uruchom pełną analizę, with the supporting note', () => {
+    const out = html('pl');
+    expect(out).toContain('Uruchom pełną analizę');
+    expect(out).toContain('Rozpoczyna nową analizę opartą na źródłach.');
+    expect(out).not.toContain('Otwórz pełną analizę');
+  });
+});

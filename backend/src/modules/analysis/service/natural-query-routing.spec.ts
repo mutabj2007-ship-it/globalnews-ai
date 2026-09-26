@@ -560,9 +560,11 @@ describe('ASK/SEARCH R1 — the generic branch stamps its retrieval outcome', ()
   }
 
   function newsServiceOf(service: AnalysisService) {
-    return (service as unknown as {
-      newsService: { search: jest.Mock; findRetainedByQuery: jest.Mock };
-    }).newsService;
+    return (
+      service as unknown as {
+        newsService: { search: jest.Mock; findRetainedByQuery: jest.Mock };
+      }
+    ).newsService;
   }
 
   it('a provider timeout with nothing retained is PROVIDER_UNAVAILABLE, not an empty world', async () => {
@@ -594,7 +596,11 @@ describe('ASK/SEARCH R1 — the generic branch stamps its retrieval outcome', ()
     const news = newsServiceOf(service);
     news.search.mockResolvedValueOnce(degraded('timeout'));
     news.findRetainedByQuery.mockResolvedValueOnce([
-      article('retained-1', 'NATO leaders discuss defence spending', 'NATO members met on defence spending.'),
+      article(
+        'retained-1',
+        'NATO leaders discuss defence spending',
+        'NATO members met on defence spending.',
+      ),
     ]);
 
     const response = await service.analyzeNews('What is happening with NATO?');
@@ -602,5 +608,75 @@ describe('ASK/SEARCH R1 — the generic branch stamps its retrieval outcome', ()
     expect(response.retrievalContext.outcome).toBe('RETAINED_ONLY');
     expect(response.retrievalContext.dataMode).toBe('cached');
     expect(response.retrievalContext.fallbackReason).toBe('provider-error');
+  });
+});
+
+describe('ASK/SEARCH R1 CLOSURE — the evidence-state fact reaches the model, the cache and the reader', () => {
+  function degraded(kind: string): NewsResponse {
+    return attachProviderFailures(
+      {
+        articles: [],
+        totalResults: 0,
+        providers: ['gnews'],
+        dataMode: 'live',
+        generatedAt: new Date().toISOString(),
+      } as NewsResponse,
+      [{ providerId: 'gdelt-doc', kind, message: 'failed' } as never],
+    );
+  }
+  const newsOf = (service: AnalysisService) =>
+    (service as unknown as { newsService: { search: jest.Mock; findRetainedByQuery: jest.Mock } })
+      .newsService;
+
+  it('retained evidence behind a failed provider is passed to the model as degraded-fallback', async () => {
+    const { service, provider } = harness([]);
+    const news = newsOf(service);
+    news.search.mockResolvedValueOnce(degraded('timeout'));
+    news.findRetainedByQuery.mockResolvedValueOnce([
+      article(
+        'retained-1',
+        'NATO leaders discuss defence spending',
+        'NATO members met on defence spending.',
+      ),
+    ]);
+
+    const response = await service.analyzeNews('What is happening with NATO right now?');
+
+    expect(response.retrievalContext.evidenceState).toBe('degraded-fallback');
+    expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+    const input = (provider.analyzeNews as jest.Mock).mock.calls[0][0];
+    expect(input.evidenceState).toBe('degraded-fallback');
+    expect(typeof input.newestEvidencePublishedAt).toBe('string');
+  });
+
+  it('an explicit re-run after a degraded result gets a fresh retrieval, not a replay', async () => {
+    const { service } = harness([]);
+    const news = newsOf(service);
+    news.search
+      .mockResolvedValueOnce(degraded('timeout'))
+      .mockResolvedValueOnce(degraded('timeout'));
+    news.findRetainedByQuery.mockResolvedValue([]);
+
+    const first = await service.analyzeNews('What is happening with NATO?');
+    const second = await service.analyzeNews('What is happening with NATO?');
+
+    expect(news.search).toHaveBeenCalledTimes(2);
+    expect(second.provenance.cached).not.toBe(true);
+    // still in cooldown -> disclosed as degraded again, never as a fresh live success
+    expect(first.retrievalContext.evidenceState).toBe('degraded-fallback');
+    expect(second.retrievalContext.evidenceState).toBe('degraded-fallback');
+  });
+
+  it('a provider failure with nothing qualifying never says "no related articles were found"', async () => {
+    const { service } = harness([]);
+    const news = newsOf(service);
+    news.search.mockResolvedValueOnce(degraded('rate-limited'));
+    news.findRetainedByQuery.mockResolvedValueOnce([]);
+
+    const response = await service.analyzeNews('What is happening with NATO?');
+
+    expect(response.retrievalContext.evidenceState).toBe('degraded-fallback');
+    expect(response.analysisError).not.toMatch(/No related articles were found/);
+    expect(response.analysisError).toMatch(/could not be reached reliably/);
   });
 });

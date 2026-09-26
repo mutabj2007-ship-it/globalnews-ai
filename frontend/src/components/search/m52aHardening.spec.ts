@@ -62,7 +62,7 @@ describe('A. storyContext is stable across renders (real lint defect found and f
     // ASK/SEARCH R1 — two more honest members: the request identity and
     // the consent held for it, because arrival no longer implies compute.
     expect(searchClientSource).toMatch(
-      /\}, \[query, language, hasResolvedLanguage, dictionary, storyContext, requestKey, consentedKey\]\);/,
+      /\}, \[query, language, hasResolvedLanguage, dictionary, storyContext, requestKey, runKey, consentedKey\]\);/,
     );
   });
 
@@ -132,7 +132,7 @@ describe('F. Stale-response protection across rapid navigation (Story A -> Story
   });
 
   it('the effect now correctly re-runs when storyContext changes (memoized identity change reflects a real content change) \u2014 this is what actually triggers the cancel-and-restart behavior between two different stories', () => {
-    expect(searchClientSource).toMatch(/storyContext, requestKey, consentedKey\]\);/);
+    expect(searchClientSource).toMatch(/storyContext, requestKey, runKey, consentedKey\]\);/);
   });
 });
 

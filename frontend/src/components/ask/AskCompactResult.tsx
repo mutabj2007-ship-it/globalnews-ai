@@ -1,6 +1,6 @@
 'use client';
 
-import { comparisonCoverageLines } from '@globalnews-ai/shared';
+import { comparisonCoverageLines, resolveEvidenceState } from '@globalnews-ai/shared';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { EvidenceFreshnessNotice } from '@/components/search/EvidenceFreshnessNotice';
@@ -112,11 +112,8 @@ export function AskCompactResult({
   /* ASK/SEARCH R1 — the backend's own outcome, when stamped, decides failure
      vs absence before dataMode is consulted. */
   const retrievalUnavailable =
-    response.retrievalContext.outcome === 'PROVIDER_UNAVAILABLE' ||
-    response.retrievalContext.outcome === 'PROVIDER_RATE_LIMITED' ||
-    (response.retrievalContext.outcome !== 'NO_RELEVANT_EVIDENCE' &&
-      (response.retrievalContext.dataMode === 'unavailable' ||
-        response.retrievalContext.fallbackReason === 'provider-error'));
+    (response.retrievalContext.evidenceState ??
+      resolveEvidenceState(response.retrievalContext, response.articles.length)) === 'degraded-fallback';
   const noAnswerMessage = retrievalUnavailable
     ? t.resultNoAnswerProvider
     : t.resultNoAnswerEvidence;
@@ -268,6 +265,7 @@ export function AskCompactResult({
         place full analytical detail is rendered (§2.3).
       */}
       {canOpenFullAnalysis ? (
+        <div className="flex flex-col items-start gap-0.5">
         <a
           data-ask="open-full"
           href={fullAnalysisHref(question, context)}
@@ -284,8 +282,13 @@ export function AskCompactResult({
           }}
           className="self-start rounded-lg px-1 py-0.5 text-sm font-medium text-signal underline decoration-signal/50 underline-offset-4 hover:decoration-signal"
         >
-          {t.openFullAnalysis}
+          {/* CTO ruling 2 — the control starts compute, so it says Run. */}
+          {t.runFullAnalysis}
         </a>
+        <span data-ask="run-full-note" className="px-1 text-xs text-ink-tertiary">
+          {t.runFullAnalysisNote}
+        </span>
+        </div>
       ) : null}
     </div>
   );

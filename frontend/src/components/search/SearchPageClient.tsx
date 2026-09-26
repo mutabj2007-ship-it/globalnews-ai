@@ -222,6 +222,12 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
     countryCode: countryCodeParam,
     storyTitle: storyTitleParam,
   });
+  /*
+    CTO RULING 1 — consent is held for the question IN ONE LANGUAGE. A language
+    switch after a completed run is presentation, not compute consent: the new
+    language renders the question staged and waits for an explicit Run.
+  */
+  const runKey = JSON.stringify([requestKey, language]);
   const [consentedKey, setConsentedKey] = useState<string | null>(null);
   /*
     The grant this component instance claimed. React Strict Mode re-runs the
@@ -249,9 +255,9 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
   /**
    * M65 — a header language change persists the cookie and calls
    * router.refresh(), which re-renders this route's Server Component and
-   * delivers a new initialLanguage. Following it here is what makes the
-   * analysis itself re-run in the newly selected language, instead of
-   * this page staying on whatever it resolved at mount.
+   * delivers a new initialLanguage. Following it here keeps the page in
+   * the newly selected language. CTO RULING 1 — it does NOT re-run the
+   * analysis: the question is re-staged in that language (see runKey).
    */
   useEffect(() => {
     setLanguage(initialLanguage);
@@ -274,20 +280,20 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
       clears any consent held for a previous identity, so back/forward to an
       already-analysed question stages it again instead of silently re-spending.
     */
-    if (hasResolvedLanguage && query.trim() && consentedKey !== requestKey) {
-      if (claimedKeyRef.current === requestKey || consumeAnalysisConsent(requestKey)) {
-        claimedKeyRef.current = requestKey;
-        setConsentedKey(requestKey);
+    if (hasResolvedLanguage && query.trim() && consentedKey !== runKey) {
+      if (claimedKeyRef.current === runKey || consumeAnalysisConsent(requestKey)) {
+        claimedKeyRef.current = runKey;
+        setConsentedKey(runKey);
         return undefined;
       }
       if (consentedKey !== null) setConsentedKey(null);
     }
-    if (consentedKey !== requestKey) claimedKeyRef.current = null;
+    if (consentedKey !== runKey) claimedKeyRef.current = null;
 
     const decision = analysisAutoRunDecision(
       query,
       hasResolvedLanguage,
-      consentedKey === requestKey,
+      consentedKey === runKey,
     );
 
     if (decision === 'idle-language-pending') return undefined;
@@ -324,7 +330,7 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
     return () => {
       cancelled = true;
     };
-  }, [query, language, hasResolvedLanguage, dictionary, storyContext, requestKey, consentedKey]);
+  }, [query, language, hasResolvedLanguage, dictionary, storyContext, requestKey, runKey, consentedKey]);
 
   function handleWorkspaceSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -338,10 +344,10 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
 
   /** ASK/SEARCH R1 — the staged question's explicit Run. Exactly one execution. */
   function handleRunStaged(): void {
-    setConsentedKey(requestKey);
+    setConsentedKey(runKey);
   }
 
-  const awaitingConsent = hasQuery && hasResolvedLanguage && consentedKey !== requestKey;
+  const awaitingConsent = hasQuery && hasResolvedLanguage && consentedKey !== runKey;
 
   /*
    * ── R4 §3 — THE BOUNDED PERSISTENT FRAME IS NOW THE PRESENTATION ──

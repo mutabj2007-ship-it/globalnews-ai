@@ -125,11 +125,25 @@ async function instrument(context) {
         await page.screenshot({ path: path.join(out, `${tag}-3-second-turn.png`) });
 
         /* 6 — the accepted deeper-analysis transition runs exactly once */
+        row.runFullLabel = (await page.locator('[data-ask="open-full"]').last().innerText()).trim();
         await page.locator('[data-ask="open-full"]').last().click();
         await page.waitForURL(/\/search\?/, { timeout: 60000 });
         await page.waitForTimeout(1500);
         row.afterOpenFull = calls.length;
         row.openFullRanOnSearch = calls[calls.length - 1] && calls[calls.length - 1].at === '/search';
+
+        /* 6b — CTO RULING 1: a language switch after the completed run is not consent */
+        const target = locale === 'pl' ? 'English' : 'Polski';
+        await page.locator('[role="combobox"][aria-haspopup="listbox"]:visible').first().click();
+        await page.locator('[role="option"]', { hasText: target }).first().click();
+        await page.locator('[data-search="staged"]').waitFor({ timeout: 30000 });
+        await page.waitForTimeout(800);
+        row.afterLanguageSwitch = calls.length;
+        await page.screenshot({ path: path.join(out, `${tag}-3b-language-switch-staged.png`) });
+        await page.locator('[data-search="run-staged"]').click();
+        await page.waitForTimeout(1500);
+        row.afterRunInNewLanguage = calls.length;
+        row.newLanguageRequested = calls[calls.length - 1] && calls[calls.length - 1].body.requestedLanguage;
 
         /* 7 — reload of that URL: no grant, staged, 0 more */
         await page.reload({ waitUntil: 'networkidle' });
@@ -172,8 +186,11 @@ async function instrument(context) {
         assert.equal(row.afterSecondSend, 2);
         assert.equal(row.secondTurnPrior, true);
         assert.equal(row.afterOpenFull, 3);
-        assert.equal(row.afterReload, 3);
-        assert.equal(row.afterBackHome, 3);
+        assert.equal(row.afterLanguageSwitch, 3);
+        assert.equal(row.afterRunInNewLanguage, 4);
+        assert.equal(row.newLanguageRequested, locale === 'pl' ? 'en' : 'pl');
+        assert.equal(row.afterReload, 4);
+        assert.equal(row.afterBackHome, 4);
         assert.equal(row.searchArrivalWithQ, 0);
         assert.equal(row.afterRun, 1);
         assert.equal(row.queryless, 0);

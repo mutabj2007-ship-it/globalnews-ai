@@ -11,11 +11,15 @@ describe('deriveGenericNewsQuery (Milestone #35)', () => {
   });
 
   it('ASK/SEARCH R1 — a trailing time phrase is not part of the subject', () => {
-    expect(deriveGenericNewsQuery("What's happening in the Middle East right now?")).toBe('Middle East');
+    expect(deriveGenericNewsQuery("What's happening in the Middle East right now?")).toBe(
+      'Middle East',
+    );
     expect(deriveGenericNewsQuery('What is happening in Europe today?')).toBe('Europe');
     expect(deriveGenericNewsQuery("What's going on with NATO currently?")).toBe('NATO');
     /* a subject that merely contains the words is untouched */
-    expect(deriveGenericNewsQuery("What's happening with Right Now Media?")).toBe('Right Now Media');
+    expect(deriveGenericNewsQuery("What's happening with Right Now Media?")).toBe(
+      'Right Now Media',
+    );
   });
 
   it('"What\'s happening with East Africa?" -> "East Africa"', () => {

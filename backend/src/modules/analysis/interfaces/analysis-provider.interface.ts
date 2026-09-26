@@ -1,4 +1,9 @@
-import type { ComparisonCountryCoverage, LanguageCode, NewsArticle } from '@globalnews-ai/shared';
+import type {
+  AnalysisEvidenceState,
+  ComparisonCountryCoverage,
+  LanguageCode,
+  NewsArticle,
+} from '@globalnews-ai/shared';
 
 /**
  * Milestone #40 (authoritative-context correction) — the exact,
@@ -84,6 +89,16 @@ export interface AnalysisProviderInput {
    * caller that never sets this is completely unaffected.
    */
   developmentBreadth?: AnalysisDevelopmentBreadth;
+
+  /**
+   * ASK/SEARCH R1 CLOSURE — what the evidence IS (live / retained /
+   * degraded-fallback), stamped by AnalysisService with the one shared
+   * derivation. A provider renders it into the prompt; it never re-derives it.
+   * Absent means 'live' semantics for pre-existing callers.
+   */
+  evidenceState?: AnalysisEvidenceState;
+  /** ASK/SEARCH R1 CLOSURE — newest publishedAt in the evidence set, for the freshness statement. */
+  newestEvidencePublishedAt?: string;
 
   /**
    * Optional caller cancellation. AnalysisService uses this only for the

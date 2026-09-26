@@ -23,6 +23,8 @@ import {
   type RequestedRegionScope,
   type RetrievalOutcome,
   type StoryContext,
+  type AnalysisEvidenceState,
+  resolveEvidenceState,
 } from '@globalnews-ai/shared';
 import { NewsService, readProviderFailures } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
@@ -314,6 +316,17 @@ const ALL_CAPS_CODE_TOKEN_PATTERN = /\b[A-Z]{2,3}\b/g;
  */
 const FAILURE_CACHE_TTL_SECONDS = 15;
 
+/** ASK/SEARCH R1 CLOSURE — the newest publication time in the evidence set, for the model's freshness statement. */
+function newestPublishedAt(articles: readonly NewsArticle[]): string | undefined {
+  let newest: string | undefined;
+  for (const article of articles) {
+    if (article.publishedAt && (newest === undefined || article.publishedAt > newest)) {
+      newest = article.publishedAt;
+    }
+  }
+  return newest;
+}
+
 /**
  * Milestone #47 (backend no-evidence response-language correction) —
  * the zero-evidence `analysisError` sentence is GlobalNews AI's own
@@ -335,8 +348,23 @@ const NO_EVIDENCE_MESSAGE: Partial<Record<LanguageCode, string>> = {
   pl: 'Nie znaleziono powiązanych artykułów dla tego pytania.',
 };
 
-function resolveNoEvidenceMessage(language: LanguageCode): string {
-  return NO_EVIDENCE_MESSAGE[language] ?? NO_EVIDENCE_MESSAGE.en!;
+/*
+ * ASK/SEARCH R1 CLOSURE — a provider failure is never reported as "nothing was
+ * found". When the evidence state is degraded-fallback, the sentence says the
+ * providers could not be reached reliably; only a genuine no-relevant-evidence
+ * state uses the "no related articles" sentence.
+ */
+const PROVIDER_FAILURE_MESSAGE: Partial<Record<LanguageCode, string>> = {
+  en: 'Live news providers could not be reached reliably, and no stored reporting qualified for this question.',
+  pl: 'Nie udało się wiarygodnie połączyć z dostawcami wiadomości, a żadne zapisane doniesienia nie kwalifikowały się do tego pytania.',
+};
+
+function resolveNoEvidenceMessage(
+  language: LanguageCode,
+  evidenceState: AnalysisEvidenceState = 'no-relevant-evidence',
+): string {
+  const table = evidenceState === 'degraded-fallback' ? PROVIDER_FAILURE_MESSAGE : NO_EVIDENCE_MESSAGE;
+  return table[language] ?? table.en!;
 }
 
 /**
@@ -2223,6 +2251,16 @@ export class AnalysisService {
           retrievalContext = { ...retrievalContext, storyContextUsed: !typedScopeOverridesStory };
         }
 
+        /*
+          ASK/SEARCH R1 CLOSURE — every retrieval path converges here, so the
+          evidence-state fact is stamped exactly once, by the one shared
+          derivation. The model, the cache TTL and the UI all read this value.
+        */
+        retrievalContext = {
+          ...retrievalContext,
+          evidenceState: resolveEvidenceState(retrievalContext, articles.length),
+        };
+
         if (articles.length === 0) {
           const empty: AnalysisApiResponse = {
             query: originalQuery,
@@ -2237,7 +2275,10 @@ export class AnalysisService {
             responseLanguage: requestedLanguage,
             analysis: null,
             articles: [],
-            analysisError: resolveNoEvidenceMessage(requestedLanguage),
+            analysisError: resolveNoEvidenceMessage(
+              requestedLanguage,
+              retrievalContext.evidenceState,
+            ),
             retrievalContext,
             sourceEntities: buildSourceEntities([]),
             // Milestone #43: computed over the (empty) original retrieved
@@ -2353,6 +2394,13 @@ export class AnalysisService {
             // prompt to pre-Milestone-#47 behavior — see
             // buildResponseLanguageInstruction()'s own doc comment.
             responseLanguage: requestedLanguage,
+            /*
+              ASK/SEARCH R1 CLOSURE — the model is told what its evidence IS.
+              Retained or degraded evidence must never be written up as live
+              or current; the prompt section enforces the wording.
+            */
+            evidenceState: retrievalContext.evidenceState,
+            newestEvidencePublishedAt: newestPublishedAt(deduped),
             /*
               EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — THE SAME
               `developmentBreadth` COMPUTED ABOVE, AND THE SAME ONE HANDED TO
@@ -2803,6 +2851,24 @@ export class AnalysisService {
    * operator has already set that even lower.
    */
   private cacheTtlFor(response: AnalysisApiResponse, config: AnalysisConfig): number {
+    /*
+      ASK/SEARCH R1 CLOSURE — a retained or degraded answer is NEVER replayed
+      from this cache. An explicit re-run must get a fresh retrieval
+      opportunity; if a provider is still in cooldown it fails fast and the
+      new response discloses the degraded state again, rather than a cached
+      copy standing in for a search that did not happen. In-flight joining
+      of identical concurrent requests is unaffected.
+    */
+    const state = response.retrievalContext.evidenceState;
+    /* Demo ('mock') reporting has no live provider to refresh from, so it is
+       not a stored-instead-of-live answer and keeps the ordinary TTL. */
+    if (
+      response.retrievalContext.dataMode !== 'mock' &&
+      (state === 'retained' || state === 'degraded-fallback')
+    ) {
+      return 0;
+    }
+
     if (response.provenance.status === 'success') {
       return config.cacheTtlSeconds;
     }
@@ -3499,8 +3565,14 @@ export class AnalysisService {
       retrievalContext: {
         dataMode,
         providers: [...providers],
+        /*
+          ASK/SEARCH R1 CLOSURE (D4) — the contract says fallbackReason is
+          present only for cached/unavailable. A 'live' zero-result region used
+          to carry 'no-live-results' beside PROVIDER_RATE_LIMITED; the outcome
+          alone now carries that fact.
+        */
         fallbackReason:
-          articles.length > 0
+          articles.length > 0 || dataMode === 'live'
             ? undefined
             : unavailable.size === attempted.length && attempted.length > 0
               ? 'provider-error'

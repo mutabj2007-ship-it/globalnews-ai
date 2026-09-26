@@ -123,7 +123,9 @@ export const en = {
       'No retrieved reporting met the evidence threshold for this question.',
     resultNoAnswerSafety:
       'GlobalNews AI did not generate an answer without supporting evidence. Try again shortly or ask a narrower question about a place, event, or time period.',
-    openFullAnalysis: 'Open full analysis',
+    /* CTO ruling 2 — a compute-triggering control is never called Open. */
+    runFullAnalysis: 'Run full analysis',
+    runFullAnalysisNote: 'Starts a new source-backed analysis.',
     telemetryReports: 'retrieved reports',
     telemetryClusters: 'reporting clusters',
   },
@@ -2817,7 +2819,9 @@ export const en = {
     stateNoQuestion: 'NO QUESTION ASKED YET',
     stateNoQuestionBody: 'Ask a question to open an analysis in this frame.',
     stateNoEvidence: 'NO REPORTING MATCHED THIS QUESTION',
-    stateNoEvidenceBody: 'The provider was queried and returned nothing for this question, so no AI analysis was attempted.',
+    /* ASK/SEARCH R1 CLOSURE — only reached when retrieval ANSWERED; a provider
+       failure resolves to the provider-unavailable state instead. */
+    stateNoEvidenceBody: 'News sources were searched and answered, but none of their reporting was relevant to this question, so no AI analysis was attempted.',
     stateProviderUnavailable: 'REPORTING COULD NOT BE RETRIEVED',
     stateProviderUnavailableBody: 'No news provider could be reached and no stored reporting was available, so there was nothing to analyse.',
     stateAnalysisFailed: 'ANALYSIS UNAVAILABLE \u00b7 REPORTING SURVIVES',

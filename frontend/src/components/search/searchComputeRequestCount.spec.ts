@@ -185,6 +185,69 @@ describe('EXPLICIT COMPUTE — exactly one execution', () => {
   });
 });
 
+describe('CTO RULING 1 — a language switch is presentation, not compute consent', () => {
+  const switchLanguage = (language: 'en' | 'pl'): void => {
+    act(() => {
+      renderer.update(createElement(SearchPageClient, { initialLanguage: language }));
+    });
+  };
+
+  it('after a completed run, switching EN → PL adds 0 requests and stages the question', () => {
+    grantAnalysisConsent('/search?q=Poland');
+    arrive('q=Poland');
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(transport.mock.calls[0][1]).toBe('en');
+
+    switchLanguage('pl');
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(byData('staged')).toHaveLength(1);
+    expect(renderer.root.findByProps({ 'data-search': 'run-staged' }).props.children).toBe('Uruchom analizę');
+  });
+
+  it('then an explicit Run executes exactly once, in the newly selected language', () => {
+    grantAnalysisConsent('/search?q=Poland');
+    arrive('q=Poland');
+    switchLanguage('pl');
+    act(() => byData('run-staged')[0].props.onClick());
+    expect(transport).toHaveBeenCalledTimes(2);
+    expect(transport.mock.calls[1][0]).toBe('Poland');
+    expect(transport.mock.calls[1][1]).toBe('pl');
+  });
+
+  it('switching back to the already-run language does not replay a run either', () => {
+    grantAnalysisConsent('/search?q=Poland');
+    arrive('q=Poland');
+    switchLanguage('pl');
+    switchLanguage('en');
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('CTO RULING 3 — Map entry points stage; none of them can grant consent', () => {
+  const { readFileSync } = jest.requireActual('fs') as typeof import('fs');
+  const { join } = jest.requireActual('path') as typeof import('path');
+  const map = (file: string): string => readFileSync(join(__dirname, '..', 'map', file), 'utf-8');
+
+  it.each([
+    'MapPageClient.tsx',
+    'CountryPanel.tsx',
+    'CountryArticleCard.tsx',
+    join('shell', 'SourceCard.tsx'),
+    join('shell', 'GlobalMapShell.tsx'),
+  ])('%s never imports the consent grant or the analysis transport', (file) => {
+    const source = map(file);
+    expect(source).not.toContain('grantAnalysisConsent');
+    expect(source).not.toContain('analysisComputeConsent');
+    expect(source).not.toContain('analyzeNews(');
+  });
+
+  it('the exact Map Analysis shape (q + countryCode) arrives staged at 0 requests', () => {
+    arrive('q=Poland&countryCode=PL');
+    expect(transport).toHaveBeenCalledTimes(0);
+    expect(byData('run-staged')).toHaveLength(1);
+  });
+});
+
 describe('THE GRANT — bounded, one-shot, identity-bound', () => {
   it('expires after the TTL', () => {
     grantAnalysisConsent('/search?q=Poland', 1_000);

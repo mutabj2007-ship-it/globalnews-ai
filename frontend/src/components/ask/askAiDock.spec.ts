@@ -350,7 +350,9 @@ describe('the released navigation geometry is untouched', () => {
       for (const key of ['contextPendingHint:', 'contextChipAnchored:', 'contextChipGeneric:',
                          'resultSourcesHeading:', 'resultSourcesNone:', 'resultSourcesTruncated:',
                          'resultBriefAbsent:', 'resultNoAnswer:', 'resultNoAnswerProvider:',
-                         'resultNoAnswerEvidence:', 'resultNoAnswerSafety:', 'openFullAnalysis:']) {
+                         'resultNoAnswerEvidence:', 'resultNoAnswerSafety:',
+                         /* CTO ruling 2 — Open full analysis became Run full analysis. */
+                         'runFullAnalysis:', 'runFullAnalysisNote:']) {
         expect(`${f} ${key} ${group.startsWith('askAi: {') && head.includes(key)}`)
           .toBe(`${f} ${key} true`);
       }
