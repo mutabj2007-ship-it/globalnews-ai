@@ -24,13 +24,15 @@ describe('extractParityTerms — framing is never load-bearing', () => {
     ]);
   });
 
-  it('an acronym or governed concept is never framing ("US" / "us" is the country)', () => {
+  /* R2.1 B2 reverses the R2 rule: only the acronym "US" (or "United States") is the country. */
+  it('the acronym "US" is the country; lower-case "us" is the pronoun', () => {
     expect(extractParityTerms('US AI regulation')).toEqual(['us', 'ai', 'regulation']);
-    expect(extractParityTerms('us ai regulation')).toEqual(['us', 'ai', 'regulation']);
+    expect(extractParityTerms('us ai regulation')).toEqual(['ai', 'regulation']);
   });
 
+  /* Terms are canonical concept keys: PL "UE" is the same concept as "EU". */
   it('Polish function and novelty words are framing', () => {
-    expect(extractParityTerms('nowe przepisy UE dotyczące AI')).toEqual(['przepisy', 'ue', 'ai']);
+    expect(extractParityTerms('nowe przepisy UE dotyczące AI')).toEqual(['przepisy', 'eu', 'ai']);
   });
 
   it('the equivalence table is closed and symmetric per class', () => {
@@ -107,9 +109,9 @@ describe('FALSE-POSITIVE SAFETY — every load-bearing term, in one field, is re
     expect(admits('EU AI regulation', title, summary)).toBe(false);
   });
 
-  it('"US AI regulation" does not admit EU-only reporting, in either case', () => {
+  it('"US AI regulation" / "United States AI regulation" do not admit EU-only reporting', () => {
     expect(admits('US AI regulation', 'EU AI Act: what the new rules mean')).toBe(false);
-    expect(admits('us ai regulation', 'EU AI Act: what the new rules mean')).toBe(false);
+    expect(admits('United States AI regulation', 'EU AI Act: what the new rules mean')).toBe(false);
     expect(admits('US AI regulation', 'United States weighs federal AI rules')).toBe(true);
   });
 
@@ -158,4 +160,108 @@ describe('POLISH — the same governed concepts in the forms Polish reporting us
       expect(admits(phrase, title)).toBe(false);
     },
   );
+});
+
+/*
+ * PR #41 R2.1 — the three CTO review blockers, each pinned in both directions.
+ */
+describe('R2.1 B1 — multi-word equivalents are canonicalized on the QUERY side too', () => {
+  it('"European Union artificial intelligence regulation" canonicalizes to eu / ai / regulation', () => {
+    expect(extractParityTerms('European Union artificial intelligence regulation')).toEqual([
+      'eu',
+      'ai',
+      'regulation',
+    ]);
+    expect(extractParityTerms('United States AI regulation')).toEqual(['us', 'ai', 'regulation']);
+    expect(extractParityTerms('United Kingdom AI regulation')).toEqual(['uk', 'ai', 'regulation']);
+    expect(extractParityTerms('United Nations AI regulation')).toEqual(['un', 'ai', 'regulation']);
+  });
+
+  it('EU AI regulation query → European Union artificial intelligence law article', () => {
+    expect(
+      admits('EU AI regulation', 'European Union artificial intelligence law takes effect'),
+    ).toBe(true);
+  });
+
+  it('European Union artificial intelligence regulation query → EU AI Act article', () => {
+    expect(
+      admits(
+        'European Union artificial intelligence regulation',
+        'EU AI Act: what the new rules mean',
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    ['US AI regulation', 'United States weighs federal AI rules'],
+    ['United States AI regulation', 'US senators propose federal AI regulation'],
+    ['United States AI regulation', 'U.S. lawmakers draft AI legislation'],
+    ['UK AI regulation', 'United Kingdom sets out AI rules'],
+    ['United Kingdom AI regulation', 'UK publishes AI regulation plan'],
+    ['UN AI regulation', 'United Nations adopts AI resolution on rules'],
+    ['United Nations AI regulation', 'UN panel calls for AI rules'],
+  ])('%s admits "%s"', (query, title) => {
+    expect(admits(query, title)).toBe(true);
+  });
+
+  it('expanded forms still do not cross concepts', () => {
+    expect(admits('United Kingdom AI regulation', 'United States weighs federal AI rules')).toBe(
+      false,
+    );
+    expect(
+      admits('European Union AI regulation', 'United Nations adopts AI resolution on rules'),
+    ).toBe(false);
+  });
+});
+
+describe('R2.1 B2 — lower-case "us" is the pronoun, not the United States', () => {
+  it.each([
+    ['tell us about AI regulation'],
+    ['give us the AI regulation basics'],
+    ['us ai regulation'],
+    ['Us AI regulation'],
+  ])('"%s" carries no country term', (query) => {
+    expect(extractParityTerms(query)).not.toContain('us');
+  });
+
+  it('"tell us about AI regulation" is about AI regulation, not the US', () => {
+    expect(extractParityTerms('tell us about AI regulation')).toEqual(['ai', 'regulation']);
+  });
+
+  it('"US" and "United States" remain the country concept', () => {
+    expect(extractParityTerms('US AI regulation')).toContain('us');
+    expect(extractParityTerms('United States AI regulation')).toContain('us');
+  });
+
+  it('an article\'s pronoun "us" never satisfies the US concept', () => {
+    expect(admits('US AI regulation', 'EU AI rules: what they mean for us')).toBe(false);
+    expect(admits('US AI regulation', 'Tell us: will AI regulation work?')).toBe(false);
+  });
+
+  it('acronyms match only as acronyms in articles (no Portuguese "eu", no "Ai Weiwei")', () => {
+    expect(admits('EU AI regulation', 'Eu acho que a regulation da AI é boa')).toBe(false);
+    expect(admits('AI regulation', 'Ai Weiwei criticises new art regulation')).toBe(false);
+  });
+});
+
+describe('R2.1 B3 — a directive is not a regulation / act', () => {
+  it('"directive" is in no equivalence class', () => {
+    expect(equivalentForms('directive')).toEqual(['directive']);
+    expect(equivalentForms('regulation')).not.toContain('directive');
+    expect(equivalentForms('act')).not.toContain('directive');
+  });
+
+  it('EU AI directive query does not admit an EU AI Act article', () => {
+    expect(admits('EU AI directive', 'EU AI Act: what the new rules mean')).toBe(false);
+    expect(admits('EU AI directive', 'EU AI regulation enters next phase')).toBe(false);
+  });
+
+  it('inverse: EU AI regulation / Act queries do not admit an EU AI directive article', () => {
+    expect(admits('EU AI regulation', 'EU AI directive on liability withdrawn')).toBe(false);
+    expect(admits('EU AI Act', 'EU AI directive on liability withdrawn')).toBe(false);
+  });
+
+  it('a directive query still admits directive reporting', () => {
+    expect(admits('EU AI directive', 'EU AI liability directive withdrawn')).toBe(true);
+  });
 });

@@ -1,5 +1,10 @@
 import type { NewsArticle } from '@globalnews-ai/shared';
-import { equivalentForms, extractParityTerms } from './governed-term-parity';
+import {
+  containsAcronym,
+  equivalentForms,
+  extractParityTerms,
+  isAcronymForm,
+} from './governed-term-parity';
 
 /**
  * Milestone #36 — Generic Retrieval Relevance Gate.
@@ -676,8 +681,15 @@ function matchGovernedTermParity(
   const terms = extractParityTerms(phrase);
   if (terms.length < 2) return undefined;
 
+  /* R2.1 B2 — an acronym form counts only as an acronym ("US", "U.S."), never as
+     the pronoun "us" or Portuguese "eu"; every other form keeps the whole-word,
+     inflection-tolerant match the whole-phrase rule uses. */
   const formIn = (text: string, term: string): string | undefined =>
-    equivalentForms(term).find((form) => containsWholePhraseWithGenericInflection(text, form));
+    equivalentForms(term).find((form) =>
+      isAcronymForm(form)
+        ? containsAcronym(text, form)
+        : containsWholePhraseWithGenericInflection(text, form),
+    );
   const describe = (satisfied: (string | undefined)[]): string =>
     terms.map((term, i) => (satisfied[i] === term ? term : `${term}→${satisfied[i]}`)).join(', ');
 

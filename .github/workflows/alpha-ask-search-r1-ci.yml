@@ -55,6 +55,8 @@ jobs:
           npm test --workspace=backend -- --runInBand src/modules/news/relevance/governed-term-parity.spec.ts
           npm test --workspace=backend -- --runInBand src/modules/news/relevance/generic-relevance.util.spec.ts
           npm test --workspace=backend -- --runInBand src/modules/analysis/query/query-intent.util.spec.ts
+      - name: Recall R2.1 blockers (B1 multi-word symmetry, B2 case-aware us, B3 directive is not a regulation)
+        run: npm test --workspace=backend -- --runInBand src/modules/news/relevance/governed-term-parity.spec.ts -t "R2.1"
       - name: Frontend build
         run: npm run build:frontend
       - name: Backend build
