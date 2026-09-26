@@ -135,7 +135,7 @@ export const AdaptiveTextarea = forwardRef<HTMLTextAreaElement, AdaptiveTextarea
           requestAnimationFrame(() => keepInsideVisualViewport());
           window.setTimeout(() => keepInsideVisualViewport(), 180);
         }}
-        className={`resize-none overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+        className={`resize-none overflow-y-auto transition-[height] duration-150 ease-out motion-reduce:transition-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
       />
     );
   },
