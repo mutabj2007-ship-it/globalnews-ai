@@ -34,10 +34,10 @@ import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
  * ── WHAT IT STILL CANNOT DO ─────────────────────────────────────────────
  *
  * Focus does NOT navigate and does NOT start anything. There is no router
- * call, no fetch and no submit handler in this file. The surrounding element
- * is still a plain GET `<form action="/ask">`: submitting navigates to /ask
- * with the text as a query, which stages a DRAFT there. The first metered
- * moment is still the reader pressing Send on /ask.
+ * call and no fetch in this file. Submitting the Home form is intercepted and
+ * stages the exact draft in the root-mounted Ask dock; the form itself carries
+ * no route action, so it cannot fall through to /ask during a hydration race.
+ * The first metered moment is still the reader pressing Send in the dock.
  *
  * On phone, focusing a real `<input>` is what summons the keyboard —
  * `scrollIntoView` then keeps the composer above it. The final keyboard-open
@@ -107,13 +107,13 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
   return (
     <>
       {/*
-        A GET form with no handler: it navigates, it does not compute.
-        `autoComplete="off"` keeps a previous question from reappearing as if
-        it were live context.
+        Home Ask is deliberately client-owned now: this form has NO route
+        action, so even a delayed hydration edge cannot fall through to /ask.
+        The submit handler only stages the exact draft in the already-mounted
+        Global Ask dock. `autoComplete="off"` keeps a previous question from
+        reappearing as if it were live context.
       */}
       <form
-        action="/ask"
-        method="get"
         onSubmit={stageInAskDock}
         role="search"
         aria-label={ariaLabel}
