@@ -4,6 +4,7 @@ import type { LanguageCode } from '@globalnews-ai/shared';
 import type { NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { SixtySecondBrief } from '@/components/home/SixtySecondBrief';
+import { HomeAskLauncher } from '@/components/home/HomeAskLauncher';
 import { ASK_CARD_SHELL, ASK_ROW } from '@/components/home/homePresentation';
 
 /**
@@ -174,13 +175,13 @@ export function HomeSideRail({ language = 'en', briefUpdates = [] }: HomeSideRai
         <ul className="mt-2 flex flex-col gap-2">
           {prompts.map((prompt) => (
             <li key={prompt}>
-              <a
-                href={`/ask?q=${encodeURIComponent(prompt)}`}
-                className={`flex min-h-[44px] items-center gap-2 px-[13px] py-2.5 text-left text-[14px] text-white/95 xl:min-h-[32px] xl:px-[11px] xl:py-2 xl:text-[12.5px] ${ASK_ROW} transition-colors hover:bg-[#17304e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none`}
+              <HomeAskLauncher
+                question={prompt}
+                className={`flex w-full min-h-[44px] items-center gap-2 px-[13px] py-2.5 text-left text-[14px] text-white/95 xl:min-h-[32px] xl:px-[11px] xl:py-2 xl:text-[12.5px] ${ASK_ROW} transition-colors hover:bg-[#17304e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none`}
               >
                 <span className="line-clamp-1 flex-1">{prompt}</span>
                 <ArrowRight size={15} strokeWidth={2} aria-hidden="true" className="shrink-0 text-white/60" />
-              </a>
+              </HomeAskLauncher>
             </li>
           ))}
         </ul>
@@ -189,13 +190,12 @@ export function HomeSideRail({ language = 'en', briefUpdates = [] }: HomeSideRai
           The Ask entry point. A plain link to the composer: it opens /ask
           idle, with no question staged and nothing submitted.
         */}
-        <a
-          href="/ask"
-          className="mt-3 flex min-h-[44px] items-center justify-center gap-2 rounded-[10px] border border-[#3a2f74] bg-[linear-gradient(180deg,#2c2470_0%,#1d1850_100%)] px-4 text-[13.5px] font-bold text-[#e4dcff] transition-colors hover:border-[#5544a8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none xl:min-h-[38px] xl:text-[13px]"
+        <HomeAskLauncher
+          className="mt-3 flex w-full min-h-[44px] items-center justify-center gap-2 rounded-[10px] border border-[#3a2f74] bg-[linear-gradient(180deg,#2c2470_0%,#1d1850_100%)] px-4 text-[13.5px] font-bold text-[#e4dcff] transition-colors hover:border-[#5544a8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none xl:min-h-[38px] xl:text-[13px]"
         >
           <Sparkles size={15} strokeWidth={2} aria-hidden="true" />
           {t.askToday}
-        </a>
+        </HomeAskLauncher>
 
         {/*
           The no-AI-on-browse guarantee. It is fine print by size, not by
