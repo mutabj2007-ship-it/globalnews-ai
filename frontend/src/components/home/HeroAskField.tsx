@@ -3,6 +3,7 @@
 import type { JSX } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -50,7 +51,7 @@ interface HeroAskFieldProps {
 }
 
 export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: HeroAskFieldProps): JSX.Element {
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [active, setActive] = useState(false);
 
   /* Any press on the pill is a press on the field. Guarded so a press on the
@@ -61,7 +62,7 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
     if (target.closest('button') !== null) return;
     /* A press on the input itself already lands there — and letting the
        browser handle it is what preserves caret placement by click position. */
-    if (target.tagName === 'INPUT') return;
+    if (target.tagName === 'TEXTAREA') return;
     /*
       THE ACTUAL BUG THIS FIXES.
 
@@ -78,52 +79,9 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
     inputRef.current?.focus();
   }, []);
 
-  /*
-    KEEPING THE COMPOSER CLEAR OF THE SOFTWARE KEYBOARD.
+  // Keyboard clearance and smooth content growth are owned by AdaptiveTextarea.
+  // This surface only owns the active visual state.
 
-    "tap must focus the field and bring up the keyboard immediately; keyboard
-     must not cover the composer, Send/Ask, or second-question flow."
-
-    Focusing a real <input> is what summons the keyboard — that half is
-    structural and needs no code. The half that does need code is staying
-    visible afterwards, because the keyboard takes roughly the lower half of a
-    phone screen and the browser's own scroll-into-view often leaves the field
-    sitting right at its edge, with the Send button under it.
-
-    So on a narrow viewport the field is scrolled toward the TOP of the visual
-    viewport rather than merely into view, which leaves the whole pill — field
-    and Send together — above the keyboard with room beneath for what comes
-    next. `visualViewport` is used where the browser provides it, because that
-    is the only measure that actually shrinks when the keyboard opens; the
-    resize listener re-applies it if the keyboard's height changes (predictive
-    text, accessory bars). Desktop keeps `nearest`, so nothing jumps there.
-  */
-  const keepClear = useCallback((): void => {
-    const input = inputRef.current;
-    if (input === null) return;
-    if (window.innerWidth >= 1024) {
-      input.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      return;
-    }
-    const viewport = window.visualViewport;
-    const visibleHeight = viewport?.height ?? window.innerHeight;
-    const rect = input.getBoundingClientRect();
-    /* Aim the field about a fifth of the way down whatever is still visible. */
-    const target = window.scrollY + rect.top - visibleHeight * 0.2;
-    window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
-  }, []);
-
-  const onFocus = useCallback((): void => {
-    setActive(true);
-    /* After the keyboard has had a moment to appear and resize the viewport. */
-    window.setTimeout(keepClear, 180);
-    window.visualViewport?.addEventListener('resize', keepClear);
-  }, [keepClear]);
-
-  const onBlur = useCallback((): void => {
-    setActive(false);
-    window.visualViewport?.removeEventListener('resize', keepClear);
-  }, [keepClear]);
 
   return (
     <>
@@ -141,30 +99,34 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
       >
         <div
           onMouseDown={focusInput}
-          className={`flex w-full items-center gap-2 rounded-[14px] border bg-[linear-gradient(180deg,#17335b_0%,#112750_100%)] p-[5px] pl-[13px] transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none ${
+          className={`flex w-full items-end gap-2 rounded-[14px] border bg-[linear-gradient(180deg,#17335b_0%,#112750_100%)] p-[5px] pl-[13px] transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none ${
             active
               ? 'border-[#4f9fe6] shadow-[inset_0_1px_0_rgba(150,200,255,0.16),0_0_0_3px_rgba(59,141,251,0.20),0_18px_40px_-22px_rgba(0,0,0,0.9)]'
               : 'border-[#1b3a68] shadow-[inset_0_1px_0_rgba(150,200,255,0.10),0_16px_36px_-22px_rgba(0,0,0,0.9)]'
           }`}
         >
           <Sparkles size={17} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-[#9db8dd]" />
-          <input
+          <AdaptiveTextarea
             ref={inputRef}
-            type="search"
             name="q"
             autoComplete="off"
             placeholder={placeholder}
             aria-label={ariaLabel}
-            onFocus={onFocus}
-            onBlur={onBlur}
-            /*
-              The controlled expansion: the field grows by a few pixels and its
-              text steps up when it is being typed in. Deliberately small —
-              "expansion must remain visually controlled and must not destroy
-              Hero geometry", so nothing around it moves.
-            */
-            className={`min-w-0 flex-1 bg-transparent text-white outline-none transition-[height,font-size] duration-200 placeholder:text-[#7e99ba] motion-reduce:transition-none ${
-              active ? 'h-[50px] text-[16px] lg:h-[38px] lg:text-[15px]' : 'h-[44px] text-[15px] lg:h-[32px] lg:text-[14px]'
+            maxLength={1000}
+            minHeight={32}
+            maxHeight={220}
+            maxViewportFraction={0.34}
+            keepVisible
+            onFocus={() => setActive(true)}
+            onBlur={() => setActive(false)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
+            className={`min-h-[44px] min-w-0 flex-1 bg-transparent py-1 text-white outline-none transition-[height,font-size] duration-200 placeholder:text-[#7e99ba] motion-reduce:transition-none lg:min-h-[32px] ${
+              active ? 'text-[16px] lg:text-[15px]' : 'text-[15px] lg:text-[14px]'
             }`}
           />
           <button
