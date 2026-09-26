@@ -78,14 +78,52 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
     inputRef.current?.focus();
   }, []);
 
+  /*
+    KEEPING THE COMPOSER CLEAR OF THE SOFTWARE KEYBOARD.
+
+    "tap must focus the field and bring up the keyboard immediately; keyboard
+     must not cover the composer, Send/Ask, or second-question flow."
+
+    Focusing a real <input> is what summons the keyboard — that half is
+    structural and needs no code. The half that does need code is staying
+    visible afterwards, because the keyboard takes roughly the lower half of a
+    phone screen and the browser's own scroll-into-view often leaves the field
+    sitting right at its edge, with the Send button under it.
+
+    So on a narrow viewport the field is scrolled toward the TOP of the visual
+    viewport rather than merely into view, which leaves the whole pill — field
+    and Send together — above the keyboard with room beneath for what comes
+    next. `visualViewport` is used where the browser provides it, because that
+    is the only measure that actually shrinks when the keyboard opens; the
+    resize listener re-applies it if the keyboard's height changes (predictive
+    text, accessory bars). Desktop keeps `nearest`, so nothing jumps there.
+  */
+  const keepClear = useCallback((): void => {
+    const input = inputRef.current;
+    if (input === null) return;
+    if (window.innerWidth >= 1024) {
+      input.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      return;
+    }
+    const viewport = window.visualViewport;
+    const visibleHeight = viewport?.height ?? window.innerHeight;
+    const rect = input.getBoundingClientRect();
+    /* Aim the field about a fifth of the way down whatever is still visible. */
+    const target = window.scrollY + rect.top - visibleHeight * 0.2;
+    window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+  }, []);
+
   const onFocus = useCallback((): void => {
     setActive(true);
-    /* Phone: keep the composer visible once the keyboard takes the lower half.
-       `nearest` so desktop, where nothing is covered, does not jump. */
-    window.setTimeout(() => {
-      inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }, 120);
-  }, []);
+    /* After the keyboard has had a moment to appear and resize the viewport. */
+    window.setTimeout(keepClear, 180);
+    window.visualViewport?.addEventListener('resize', keepClear);
+  }, [keepClear]);
+
+  const onBlur = useCallback((): void => {
+    setActive(false);
+    window.visualViewport?.removeEventListener('resize', keepClear);
+  }, [keepClear]);
 
   return (
     <>
@@ -118,7 +156,7 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
             placeholder={placeholder}
             aria-label={ariaLabel}
             onFocus={onFocus}
-            onBlur={() => setActive(false)}
+            onBlur={onBlur}
             /*
               The controlled expansion: the field grows by a few pixels and its
               text steps up when it is being typed in. Deliberately small —

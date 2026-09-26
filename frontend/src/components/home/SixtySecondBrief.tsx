@@ -189,7 +189,18 @@ export function SixtySecondBrief({
         */}
         <StoryVisual
           article={lead}
-          className={isRail ? 'block aspect-[22/10]' : 'hidden aspect-[2/1] sm:block'}
+          /*
+            FINAL CORRECTION: "restore the stronger large-image treatment in
+            `Your world in 60 seconds`" on phone.
+
+            An earlier pass folded this image away below `sm` to buy back first
+            screen. That was the wrong trade: the approved Claude Design phone
+            frame leads this block with a picture, and the Product Owner has
+            now ruled the image back. It is the taller 16:9 crop on phone —
+            the stronger treatment, not merely a restored one — and the tighter
+            22:10 in the desktop rail, where the column is 368px.
+          */
+          className={isRail ? 'block aspect-[22/10]' : 'block aspect-[16/9] sm:aspect-[2/1]'}
           missingLabel={t.imageUnavailable}
           sizes="(min-width: 1024px) 368px, 100vw"
         />

@@ -8,6 +8,7 @@ import { getCountryDisplayName } from '@/lib/countryDisplayName';
 import { useAccount } from '@/lib/hooks/useAccount';
 import { useCountryFollows } from '@/components/home/useCountryFollows';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
+import { StoryVisual } from '@/components/home/StoryVisual';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -75,7 +76,35 @@ interface HomeAccountPanelProps {
   language?: LanguageCode;
 }
 
-const CARD = 'rounded-2xl border border-border-strong bg-void/60 p-4';
+/*
+  ── THE PERSONALIZATION BAND ────────────────────────────────────────────
+
+  Final correction: "replace the giant empty slab with a compact premium
+  personalization band ... signed-out users must not see a huge empty
+  personalized panel."
+
+  The DATA in this file was already honest — For you is the governed Home feed
+  filtered to the countries this reader actually follows, and the chips are the
+  real follow list. What was wrong was the PRESENTATION: one full-width slab at
+  the same weight whether it held three stories or a single sentence, which
+  made the signed-out state a large empty box.
+
+  So there are now two shapes, not one:
+
+    signed out -> a single compact row. One sentence, one button, ~76px. It
+                  makes no personalized claim and reserves no personalized
+                  space, because there is nothing personal to show.
+    signed in  -> a two-column band: For you on the left with up to three
+                  IMAGE-BACKED stories, Following on the right as compact chips
+                  with Manage. It stacks on phone.
+
+  Still true, and still structural: nothing here is fabricated. A signed-in
+  reader following nothing gets the invitation to manage rather than invented
+  stories, and `follows === null` (not read yet) stays distinct from `[]`.
+*/
+const BAND =
+  'rounded-[14px] border border-[#122a45] bg-[linear-gradient(135deg,#0a1b30_0%,#071528_46%,#040e1c_100%)] ' +
+  'shadow-[inset_0_1px_0_rgba(148,197,255,0.12),0_22px_52px_-26px_rgba(0,0,0,0.95)]';
 
 export function HomeAccountPanel({ articles, language = 'en' }: HomeAccountPanelProps): JSX.Element | null {
   const t = getDictionary(language).betaHome;
@@ -87,11 +116,12 @@ export function HomeAccountPanel({ articles, language = 'en' }: HomeAccountPanel
 
   if (user === null) {
     return (
-      <section className={CARD}>
-        <p className="text-sm leading-relaxed text-ink-primary">{t.firstVisit}</p>
+      /* Compact by construction: one row, no reserved personalized area. */
+      <section className={`${BAND} flex flex-col gap-3 px-[18px] py-[15px] sm:flex-row sm:items-center sm:justify-between sm:gap-6`}>
+        <p className="text-[13.5px] leading-relaxed text-[#c2d3e6]">{t.firstVisit}</p>
         <a
           href="/auth/google"
-          className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 motion-reduce:transition-none"
+          className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(180deg,#2f7df5_0%,#1d5fd0_100%)] px-5 text-[13.5px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 motion-reduce:transition-none"
         >
           {t.signInToFollow}
         </a>
@@ -114,75 +144,91 @@ export function HomeAccountPanel({ articles, language = 'en' }: HomeAccountPanel
     .slice(0, 3);
 
   return (
-    <section aria-labelledby="beta-foryou-heading" className={CARD}>
-      <h2 id="beta-foryou-heading" className="text-base font-semibold text-ink-primary">
-        {t.forYouTitle}
-      </h2>
-      <p className="mt-1 text-xs leading-relaxed text-ink-tertiary">{t.forYouNote}</p>
+    <section aria-labelledby="beta-foryou-heading" className={`${BAND} p-[18px]`}>
+      <div className="grid grid-cols-1 gap-x-7 gap-y-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)]">
+        {/* ── FOR YOU ─────────────────────────────────────────────────── */}
+        <div className="min-w-0">
+          <h2 id="beta-foryou-heading" className="text-[15px] font-bold text-white">
+            {t.forYouTitle}
+          </h2>
+          <p className="mt-[3px] text-[11.5px] leading-relaxed text-[#8ca3bd]">{t.forYouNote}</p>
 
-      {forYou.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-tertiary">{t.forYouEmpty}</p>
-      ) : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {forYou.map((article) => (
-            <li key={article.id}>
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex min-h-[44px] flex-col gap-1 rounded-xl border border-border-strong bg-void/70 px-3 py-2 transition-colors hover:border-cyan-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
-              >
-                <span className="text-sm font-semibold leading-snug text-ink-primary">
-                  {article.title}
-                </span>
-                <span className="text-xs text-ink-tertiary">
-                  {article.sourceName}
-                  <Elapsed article={article} language={language} />
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/*
-        The follow list. Rendered once the read settles; `[]` is a real state —
-        signed in, following nothing — and gets the invitation to manage rather
-        than an invitation to sign in.
-      */}
-      {followsLoading ? null : (
-        <div className="mt-4 border-t border-border-strong pt-3">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-ink-secondary">{t.followingTitle}</h3>
-            <a
-              href="/map"
-              className="inline-flex items-center gap-1 text-sm font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
-            >
-              {t.manageFollows}
-              <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
-            </a>
-          </div>
-          {follows === null || follows.length === 0 ? null : (
-            <ul className="mt-2 flex flex-wrap gap-2">
-              {follows.map((iso3) => {
-                const country = findCountryByIso3(iso3);
-                const name =
-                  country === undefined
-                    ? iso3
-                    : getCountryDisplayName(country.iso2, language, country.name);
-                return (
-                  <li
-                    key={iso3}
-                    className="rounded-full border border-border-strong bg-void/70 px-3 py-1 text-xs text-ink-secondary"
+          {forYou.length === 0 ? (
+            /* Signed in, following nothing yet. No invented stories. */
+            <p className="mt-3 text-[13px] text-[#8ca3bd]">{t.forYouEmpty}</p>
+          ) : (
+            <ul className="mt-3.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+              {forYou.map((article) => (
+                <li key={article.id}>
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex h-full min-h-[44px] flex-col overflow-hidden rounded-[10px] border border-[#122a45] bg-[#061424] transition-[transform,border-color] duration-200 hover:-translate-y-[2px] hover:border-[#2a5a8c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                   >
-                    {name}
-                  </li>
-                );
-              })}
+                    {/*
+                      IMAGE-BACKED, as ruled — through the same `StoryVisual`
+                      the story cards use, so a story with no publisher image
+                      falls back to its category's artwork rather than to a
+                      blank or a generic placeholder. No photograph is invented.
+                    */}
+                    <StoryVisual
+                      article={article}
+                      className="aspect-[16/9]"
+                      missingLabel={t.imageUnavailable}
+                      sizes="(min-width: 1024px) 200px, 45vw"
+                    />
+                    <span className="flex flex-1 flex-col gap-1 p-2.5">
+                      <span className="line-clamp-2 text-[12.5px] font-semibold leading-[1.3] text-white">
+                        {article.title}
+                      </span>
+                      <span className="mt-auto text-[11px] text-[#8299b4]">
+                        {article.sourceName}
+                        <Elapsed article={article} language={language} />
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              ))}
             </ul>
           )}
         </div>
-      )}
+
+        {/* ── FOLLOWING ───────────────────────────────────────────────── */}
+        {followsLoading ? null : (
+          <div className="min-w-0 border-t border-[#122a45] pt-4 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[13.5px] font-bold text-white">{t.followingTitle}</h3>
+              <a
+                href="/map"
+                className="inline-flex min-h-[44px] items-center gap-1 text-[12.5px] font-semibold text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 lg:min-h-[28px]"
+              >
+                {t.manageFollows}
+                <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
+              </a>
+            </div>
+            {follows === null || follows.length === 0 ? null : (
+              <ul className="mt-2.5 flex flex-wrap gap-1.5">
+                {follows.map((iso3) => {
+                  const country = findCountryByIso3(iso3);
+                  const name =
+                    country === undefined
+                      ? iso3
+                      : getCountryDisplayName(country.iso2, language, country.name);
+                  return (
+                    <li
+                      key={iso3}
+                      className="rounded-full border border-[#1b3a5c] bg-[#0a1e33] px-3 py-1 text-[12px] text-[#c2d3e6]"
+                    >
+                      {name}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
