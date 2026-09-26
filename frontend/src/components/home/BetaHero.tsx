@@ -3,6 +3,7 @@ import { Crown, Sparkles, Zap, Map as MapIcon, Globe2, Check, ArrowRight } from 
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { HeroGlobe } from '@/components/home/HeroGlobe';
+import { HeroAskField } from '@/components/home/HeroAskField';
 import { PREMIUM_TEASER_SHELL } from '@/components/home/homePresentation';
 import { SixtySecondBrief } from '@/components/home/SixtySecondBrief';
 
@@ -223,13 +224,22 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
         /*
           THE GLOBE HAS TWO FRAMINGS, NOT ONE THAT SHRINKS.
 
-          THE LOWER FEATHER IS LONG ON PURPOSE. Eight stops carry the last
-          ~56% of the globe from full opacity down to nothing, so the bottom
-          quarter dissolves progressively into the page instead of ending at a
-          line: full globe -> atmospheric glow -> faint geography -> clean
-          editorial surface. The globe is still THERE behind the transition —
-          it is not cropped and it did not shrink — it is simply too faint by
-          the time the heading band starts to compete with it.
+          THE LOWER FEATHER IS DEEP ON PURPOSE, AND IT WAS DEEPENED TWICE.
+
+          The first attempt held full opacity to 44% and still had readable
+          geography over the editorial band; the Product Owner rejected it
+          because "the physical globe — coastline, limb, outlines and
+          illuminated geography — remains visibly present too far down."
+
+          Now the Earth itself is fully opaque only to 28% of its own box and
+          is gone by 82%, across eight stops, so the dissolve is long rather
+          than a cut. What continues below is the hero's ATMOSPHERE layers at
+          `-z-20`, which are diffuse blue light with no limb and no coastline —
+          exactly the ruled sequence: full Earth -> atmospheric blue ->
+          increasingly faint geography -> clean dark editorial surface.
+
+          The globe did not shrink. `h-[470px] lg` / `h-[510px] xl` and its
+          position are untouched; only its lower opacity changed.
 
           Below `lg` it is the R4.1/R5.1 phone treatment, which
           `390x844_H3_home_top_dark.png` draws literally: a large Earth whose
@@ -242,7 +252,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
           At `lg` and up it returns to the Product Owner prototype's framing,
           measured and accepted in the premium pass, untouched.
         */
-        className="pointer-events-none absolute -right-[76px] -top-[34px] left-auto -z-10 h-[268px] w-[268px] translate-x-0 opacity-95 [mask-image:radial-gradient(circle_at_58%_46%,#000_62%,rgba(0,0,0,0.42)_84%,transparent_100%)] sm:-right-[54px] sm:-top-[26px] sm:h-[330px] sm:w-[330px] md:h-[390px] md:w-[390px] lg:left-1/2 lg:right-auto lg:top-[18px] lg:h-[470px] lg:w-[470px] lg:-translate-x-[20%] lg:opacity-100 lg:[mask-image:linear-gradient(to_bottom,#000_0%,#000_44%,rgba(0,0,0,0.88)_56%,rgba(0,0,0,0.66)_66%,rgba(0,0,0,0.44)_74%,rgba(0,0,0,0.26)_81%,rgba(0,0,0,0.13)_88%,rgba(0,0,0,0.05)_94%,transparent_100%)] xl:h-[510px] xl:w-[510px] xl:-translate-x-[18%]"
+        className="pointer-events-none absolute -right-[76px] -top-[34px] left-auto -z-10 h-[268px] w-[268px] translate-x-0 opacity-95 [mask-image:radial-gradient(circle_at_58%_46%,#000_62%,rgba(0,0,0,0.42)_84%,transparent_100%)] sm:-right-[54px] sm:-top-[26px] sm:h-[330px] sm:w-[330px] md:h-[390px] md:w-[390px] lg:left-1/2 lg:right-auto lg:top-[18px] lg:h-[470px] lg:w-[470px] lg:-translate-x-[20%] lg:opacity-100 lg:[mask-image:linear-gradient(to_bottom,#000_0%,#000_28%,rgba(0,0,0,0.80)_38%,rgba(0,0,0,0.52)_46%,rgba(0,0,0,0.30)_54%,rgba(0,0,0,0.16)_61%,rgba(0,0,0,0.07)_68%,rgba(0,0,0,0.02)_75%,transparent_82%)] xl:h-[510px] xl:w-[510px] xl:-translate-x-[18%]"
       >
         {/*
           TWO NESTED MASKS, because they do two different jobs and one gradient
@@ -311,82 +321,23 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
           </p>
 
           {/*
-            GET, not POST, and no handler: see the file note. `autoComplete` off
-            keeps a previous question from reappearing as if it were live
-            context.
+            Correction item 6 — the Ask field is a real composer. Pressing
+            anywhere on the pill focuses the input and places the cursor;
+            focusing expands it in a controlled way and, on phone, summons the
+            keyboard and keeps the composer visible.
+
+            Focus navigates nothing and starts nothing. `HeroAskField` renders
+            a plain GET form to /ask with no handler and makes no request of
+            its own: submitting stages a DRAFT on /ask, and the first metered
+            moment is still the reader pressing Send there.
           */}
-          <form
-            action="/ask"
-            method="get"
-            role="search"
-            aria-label={t.askAria}
-            className="mt-3.5 flex w-full max-w-[506px] items-center gap-2 rounded-[14px] border border-[#1b3a68] bg-[linear-gradient(180deg,#17335b_0%,#112750_100%)] p-[5px] pl-[13px] shadow-[inset_0_1px_0_rgba(150,200,255,0.10),0_16px_36px_-22px_rgba(0,0,0,0.9)] transition-colors focus-within:border-[#3d8fd8]"
-          >
-            <Sparkles size={17} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-[#9db8dd]" />
-            <input
-              type="search"
-              name="q"
-              autoComplete="off"
-              placeholder={t.askPlaceholder}
-              aria-label={t.askAria}
-              className="min-h-[44px] min-w-0 flex-1 bg-transparent py-1 text-[14px] text-white outline-none placeholder:text-[#7e99ba] lg:min-h-[32px]"
-            />
-            {/*
-              Measured: a 28px filled circle, not a text button. The label is
-              not lost — it moves to `aria-label`, so the accessible name is
-              exactly the same string it was before.
-            */}
-            {/*
-              TOUCH SIZING HOLDS TO 1280, NOT TO 1024.
+          <HeroAskField
+            placeholder={t.askPlaceholder}
+            ariaLabel={t.askAria}
+            buttonLabel={t.askButton}
+            hint={t.askHint}
+          />
 
-              C1 puts the Product Owner prototype in charge from 1280 and the
-              R5.1 compact desktop/tablet header from 1024-1279 — so 1024-1279
-              is the TABLET range and 1024 itself is iPad landscape. The
-              prototype's measured control sizes therefore return at `xl`
-              (1280), not at `lg` (1024), while layout still changes at `lg`
-              because that is where the composition ruling changes it. Sizes and
-              layout move at different breakpoints here, deliberately.
-            */}
-            {/*
-              C8, as ruled: "Desktop / `lg`+: use the Product Owner prototype
-              circular arrow affordance. Below `lg`: use the R4.1/R5.1 visible
-              `Ask` text button. Maintain >=44px touch target on compact
-              layouts."
-
-              ONE <button>, two appearances — so there is exactly one submit
-              control in the DOM and in the tab order at every width, and the
-              two authorities are reconciled rather than both rendered. The
-              label is visible text below `lg` and the accessible name above it,
-              so it is never lost.
-
-              "Opening/browsing Home must not itself initiate metered AI": this
-              is a GET form to /ask with no handler and no client boundary.
-              Pressing it navigates and stages a draft. Nothing runs until the
-              reader presses Send on /ask.
-            */}
-            <button
-              type="submit"
-              aria-label={t.askButton}
-              className="flex h-[44px] min-w-[76px] shrink-0 items-center justify-center rounded-[11px] bg-[linear-gradient(180deg,#3b8dfb_0%,#1f6ae0_100%)] px-4 text-[14px] font-bold text-white shadow-[0_0_18px_-2px_rgba(59,141,251,0.85)] transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 motion-reduce:transition-none motion-reduce:hover:scale-100 lg:h-[44px] lg:w-[44px] lg:min-w-0 lg:rounded-full lg:px-0 lg:hover:scale-105 xl:h-[30px] xl:w-[30px]"
-            >
-              <span aria-hidden="true" className="lg:hidden">
-                {t.askButton}
-              </span>
-              <ArrowRight size={16} strokeWidth={2.4} aria-hidden="true" className="hidden lg:block" />
-            </button>
-          </form>
-
-          {/* The metered-cost disclosure. Approved copy, stated before the spend. */}
-          <p className="mt-2 flex max-w-xl items-start gap-1.5 text-[11px] leading-snug text-ink-tertiary">
-            <Zap size={13} strokeWidth={2} aria-hidden="true" className="mt-[2px] shrink-0 text-amber-300" />
-            <span>{t.askHint}</span>
-          </p>
-
-          {/*
-            THE THREE ACTIONS. All three are ordinary links to destinations that
-            already exist, and none of them spends anything on arrival.
-          */}
-          {/* Measured: 60px tall, radius ~8, 11px gutters. Fills sampled. */}
           {/*
             C7, as ruled: ">=1024: retain all three Product Owner actions ...
             <1024: follow the R4.1/R5.1 phone authority and use the two compact

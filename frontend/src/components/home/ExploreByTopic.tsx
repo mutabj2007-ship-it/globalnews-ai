@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import Image from 'next/image';
 import {
   Search,
   Globe2,
@@ -241,35 +242,82 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
 
           const body = (
             <>
-              {/* Measured: bare glyph ~25x26px, no tile, 13px in from the
-                  card's top-left. The tile the implementation used to draw is
-                  not in the prototype at all. */}
-              <Icon
-                aria-hidden="true"
-                size={28}
-                strokeWidth={2.1}
-                /* Larger glyph on the compact cards; the approved phone grid
-                   leads with the icon, not the label. */
-                className={`${accent.icon} drop-shadow-[0_0_10px_rgba(255,255,255,0.18)]`}
-              />
-              <span className="mt-[11px] block text-[16px] font-bold leading-[1.15] tracking-[-0.01em] text-white lg:text-[15px]">
-                {label}
-              </span>
               {/*
-                The description is the registry's own module summary, clamped to
-                the prototype's two lines. It is not a second copy of the text:
-                the same string already renders in the modules section below, so
-                the two can never disagree.
+                ── THE IMAGE AREA ──────────────────────────────────────────
+
+                Product Owner addition: "topic cards must no longer be
+                color-only surfaces ... each `Explore by topic` card should
+                include a visual image area so the card feels alive and
+                editorial, not just categorical", structured as image → icon +
+                title → short descriptor → arrow.
+
+                WHICH OF THE THREE PERMITTED SOURCES THIS IS, AND WHY.
+
+                The ruling's first preference is "a real representative topic
+                image from governed Home/topic content". That is not available
+                and would not be honest if it were: the governed feed's
+                categories are the news taxonomy, while these six are
+                INTELLIGENCE MODULES. Putting a specific article's photograph
+                on the Energy card asserts that the article is about Energy,
+                which the data does not say. So this is the third option done
+                properly — "a tasteful topic visual/illustration fallback".
+
+                Each image is abstract editorial artwork in the topic's own
+                accent: a field gradient, one geometric motif, a vignette. No
+                place, no people, no scene, no event, so nothing here can be
+                read as reporting and nothing here can go stale. They are built
+                by `scripts/topic-art/render.py`, a tool the application never
+                imports, and the render is deterministic.
+
+                The category colour language is kept — the surface, icon and
+                arrow are still the topic's — so the image adds recognition
+                rather than replacing the system.
               */}
-              {/* §6: shorter copy. Two measured lines at ~11.5px, clamped. */}
-              <span className="mt-[5px] line-clamp-2 text-[12.5px] leading-[1.3] text-[#8ca3bd] lg:text-[11.5px]">
-                {summary}
+              <span className="relative block h-[86px] w-full shrink-0 overflow-hidden lg:h-[74px] xl:h-[80px]">
+                <Image
+                  src={`/images/topics/${module.id === 'world-intelligence' ? 'world' : module.id}.png`}
+                  alt=""
+                  aria-hidden="true"
+                  fill
+                  sizes="(min-width: 1024px) 200px, 50vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                />
+                {/* Keeps the card's own surface reading through the artwork, so
+                    six cards still read as one family rather than six pictures. */}
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(2,8,18,0.10),rgba(2,8,18,0.62)_72%,rgba(2,8,18,0.92))]"
+                />
               </span>
-              <span
-                aria-hidden="true"
-                className={`mt-auto ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full xl:h-6 xl:w-6 ${accent.arrow} transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0`}
-              >
-                <ArrowRight size={15} strokeWidth={2.6} className="lg:h-[13px] lg:w-[13px]" />
+
+              <span className="flex flex-1 flex-col p-[15px] pt-[13px] xl:p-[16px] xl:pt-[14px]">
+                <span className="flex min-w-0 items-center gap-2">
+                  <Icon
+                    aria-hidden="true"
+                    size={26}
+                    strokeWidth={2.1}
+                    className={`${accent.icon} shrink-0 drop-shadow-[0_0_10px_rgba(255,255,255,0.18)]`}
+                  />
+                  {/* Wraps rather than truncates: "Humanitarian" is the longest of the
+                      six and losing its ending is worse than a second line. */}
+                  <span className="block min-w-0 text-[16px] font-bold leading-[1.1] tracking-[-0.015em] text-white xl:text-[14.5px]">
+                    {label}
+                  </span>
+                </span>
+                {/*
+                  The registry's own module summary where the dictionary gives
+                  no short blurb, so this card and the module section can never
+                  disagree about what a topic is.
+                */}
+                <span className="mt-[9px] line-clamp-3 text-[12.5px] leading-[1.42] text-[#9db2c9] xl:text-[12px]">
+                  {summary}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className={`mt-auto ml-auto inline-flex h-9 w-9 items-center justify-center rounded-full xl:h-8 xl:w-8 ${accent.arrow} transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0`}
+                >
+                  <ArrowRight size={17} strokeWidth={2.6} />
+                </span>
               </span>
             </>
           );

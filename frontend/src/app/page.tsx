@@ -284,7 +284,30 @@ export default async function HomePage(): Promise<JSX.Element> {
             The map component is unchanged and still performs zero
             provider-capable reads on mount or selection.
           */}
-          <div className="grid grid-cols-1 gap-6 lg:gap-[25px] lg:grid-cols-[minmax(0,1fr)_minmax(0,368px)] lg:items-start">
+          {/*
+            `relative z-10` — the editorial band paints ABOVE the hero's layer.
+
+            The hero has no `overflow-hidden` (removing it is what let the globe
+            stop reading as a boxed sprite), so the globe's box extends past the
+            hero's own bottom edge. The Product Owner requires that it never sit
+            on top of "Your world in 60 seconds", LIVE / Powered by GNews, View
+            all, the no-AI note or the story rail. A stacking context here
+            guarantees that by structure rather than by hoping the feather is
+            faint enough.
+
+            `lg:grid-rows-[auto_1fr]` — THE BLANK SPACER FIX.
+
+            The rail spans both rows. With implicit rows, a rail taller than the
+            left column had its excess height DISTRIBUTED between the two rows,
+            which opened a blank band between the stories and Explore by topic —
+            the "large empty region" that was rejected. Pinning row 1 to `auto`
+            makes it exactly as tall as the stories, so Explore by topic starts
+            immediately beneath them and any remaining rail height falls into
+            row 2 BELOW the topics instead of above them. The two columns now
+            flow independently inside one band, which is the ruled behaviour,
+            without giving up the single DOM order the phone flow depends on.
+          */}
+          <div className="relative z-10 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,368px)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-[25px] lg:gap-y-6">
             {/*
               THE LEFT MAIN COLUMN — stories, then topics directly underneath.
 

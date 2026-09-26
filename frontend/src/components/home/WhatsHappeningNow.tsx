@@ -380,7 +380,7 @@ export function WhatsHappeningNow({
             was removed — heading, timestamp, LIVE indicator, View all, the
             chips and the no-AI disclosure all stay.
           */}
-          <div className="gn-deck flex flex-col gap-3 pt-[18px] lg:pt-[22px]">
+          <div className="gn-deck flex flex-col gap-3 pt-[20px] lg:pt-[28px]">
             {rail.length === 0 ? null : (
               /*
                 The rail. Focusable so the arrow keys scroll it, labelled so a

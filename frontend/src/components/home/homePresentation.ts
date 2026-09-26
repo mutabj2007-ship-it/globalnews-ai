@@ -264,7 +264,16 @@ export const TOPIC_FALLBACK: TopicStyle = {
 
 /** Measured: 136x119 card, radius 12, icon ~25px bare, arrow circle 24px. */
 export const TOPIC_CARD_BASE =
-  'group relative flex h-full min-h-[142px] flex-col items-start overflow-hidden rounded-[12px] border border-[#01101f] p-[15px] lg:min-h-[122px] lg:p-[13px] ' +
+  /*
+     CARD SIZE, as ruled: "Prefer approximately 170-190px card height at 1440
+     ... Do not create a giant empty region around tiny cards. The six cards
+     should visually occupy the available left-column band."
+
+     178px at `xl`, 168px at `lg`. Padding moved INTO the content span, because
+     the card now opens with a full-bleed image area — the outer element can no
+     longer carry padding without insetting the artwork.
+  */
+  'group relative flex h-full min-h-[196px] flex-col items-stretch overflow-hidden rounded-[12px] border border-[#01101f] lg:min-h-[168px] xl:min-h-[178px] ' +
   'shadow-[inset_0_1px_0_rgba(148,197,255,0.14),0_18px_40px_-24px_rgba(0,0,0,0.95)] ' +
   'transition-[transform,box-shadow] duration-200 hover:-translate-y-[3px] ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 ' +
