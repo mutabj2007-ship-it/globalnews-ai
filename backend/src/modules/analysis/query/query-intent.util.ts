@@ -1,4 +1,8 @@
-import { resolveCountryByAnyIdentifier, type CountryMeta } from '@globalnews-ai/shared';
+import {
+  resolveCountryByAnyIdentifier,
+  resolveLocationContext,
+  type CountryMeta,
+} from '@globalnews-ai/shared';
 import { resolveCountriesByDemonym } from '../../news/country/country-relevance.util';
 import { blocksGeographicRouting } from './routing-function-words.util';
 import { resolvePolishCountry } from './polish-country-forms.util';
@@ -551,6 +555,11 @@ const ELABORATION_TAILS: readonly RegExp[] = [
   /\s+(?:i|oraz)\s+(?:opowiedz|wyja[śs]nij|wyt[łl]umacz|powiedz|opisz|rozwi[nń])\b.*$/iu,
   /\s+(?:dok[łl]adniej|szczeg[óo][łl]owo|bardziej\s+szczeg[óo][łl]owo)\b.*$/iu,
   /\s+w\s+prostych\s+s[łl]owach\b.*$/iu,
+  /* ASK RETRIEVAL RECALL R2 — "prostym językiem" / "prostymi słowami" are the
+     Polish "in plain language"; without them the Home suggestion's body stayed
+     over the word bound and the whole sentence became the provider query. */
+  /\s+prostym\s+j[ęe]zykiem\b.*$/iu,
+  /\s+prostymi\s+s[łl]owami\b.*$/iu,
   /\s+prosz[eę]\b\s*$/iu,
   /\s+wi[eę]cej\s+o\s+tym\b.*$/iu,
 ];
@@ -579,7 +588,35 @@ function reduceExplanationBody(body: string): string {
     }
   }
 
-  return stripLeadingArticle(reduced);
+  return stripNoveltyModifier(stripLeadingArticle(reduced));
+}
+
+/**
+ * ASK RETRIEVAL RECALL R2 — a leading novelty word frames a concept, it does not
+ * name it: "the new EU AI regulation" asks about the EU AI regulation. Left in,
+ * "new" became part of the provider query and of the phrase the relevance gate
+ * demanded verbatim, so reporting on the "EU AI Act" could never qualify.
+ *
+ * Subtractive only, and refused whenever the word may be part of a name:
+ *   - fewer than two words would remain ("New Deal" stays whole);
+ *   - the next word is Capitalised but not an acronym ("New Zealand",
+ *     "New York", "Nowy Jork") — the proper-noun signal the user wrote;
+ *   - "<word> <next>" resolves as a known place in the shared geography
+ *     (catches a lower-cased "new zealand" / "new delhi").
+ */
+const NOVELTY_MODIFIERS = new Set(['new', 'nowe', 'nowy', 'nowa', 'nowych', 'nowego', 'nowej']);
+
+function stripNoveltyModifier(subject: string): string {
+  const words = subject.trim().split(/\s+/).filter(Boolean);
+  if (words.length < 3) return subject;
+  const [first, next] = words;
+  if (!NOVELTY_MODIFIERS.has(first.toLowerCase())) return subject;
+  const nextIsAcronym = /^\p{Lu}{2,}$/u.test(next);
+  const nextIsCapitalised = /^\p{Lu}/u.test(next);
+  if (nextIsCapitalised && !nextIsAcronym) return subject;
+  const span = `${first} ${next}`;
+  if (resolveCountryByAnyIdentifier(span) || resolveLocationContext(span)) return subject;
+  return words.slice(1).join(' ');
 }
 
 /**

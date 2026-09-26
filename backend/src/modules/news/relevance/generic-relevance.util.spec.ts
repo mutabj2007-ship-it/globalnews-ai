@@ -234,7 +234,15 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
       expect(result.isRelevant).toBe(true);
     });
 
-    it('MULTI-WORD REJECT (unchanged, out of scope per M46 semiconductor boundary): genuine paraphrase is still not accepted', () => {
+    /*
+      ASK RETRIEVAL RECALL R2 — these two were pinned as REJECTED because M46
+      had no safe way to admit them ("out of scope"), not because rejecting them
+      was correct: both articles are plainly about semiconductor exports. They
+      are now admitted by the governed term-parity path — every load-bearing
+      term, in ONE field, with the same inflection tolerance — and the
+      whole-phrase rule itself is unchanged (the reasons prove which rule fired).
+    */
+    it('MULTI-WORD ADMIT (R2 governed term parity): reordered terms in one field are accepted', () => {
       const result = scoreGenericRelevance(
         article({
           title: 'New chip export restrictions target advanced semiconductors',
@@ -242,14 +250,27 @@ describe('scoreGenericRelevance (Milestone #36)', () => {
         }),
         'semiconductor exports',
       );
-      expect(result.isRelevant).toBe(false);
+      expect(result.isRelevant).toBe(true);
+      expect(result.reasons[0]).toMatch(/^governed term-parity match \(title\)/);
     });
 
-    it('MULTI-WORD REJECT (unchanged, out of scope): non-adjacent token insertion is still not accepted', () => {
+    it('MULTI-WORD ADMIT (R2 governed term parity): non-adjacent terms in one field are accepted', () => {
       const result = scoreGenericRelevance(
         article({
           title: 'Washington expands controls on semiconductor technology exports',
           summary: 'The expanded rules cover a wider range of chip-related goods.',
+        }),
+        'semiconductor exports',
+      );
+      expect(result.isRelevant).toBe(true);
+      expect(result.reasons[0]).toMatch(/^governed term-parity match \(title\)/);
+    });
+
+    it('MULTI-WORD REJECT (still): unrelated co-occurrence in a summary without a headline anchor', () => {
+      const result = scoreGenericRelevance(
+        article({
+          title: 'Chip makers report strong quarter',
+          summary: 'Semiconductor revenue rose while exports of cars fell.',
         }),
         'semiconductor exports',
       );

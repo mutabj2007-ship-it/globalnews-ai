@@ -211,7 +211,7 @@ export function deriveGenericNewsQuery(normalizedQuery: string): string {
  * news, latest, etc.) that carry no topical meaning of their own once
  * a query has already failed to match a more specific pattern above.
  */
-const FALLBACK_STOPWORDS = new Set([
+export const FALLBACK_STOPWORDS = new Set([
   'the',
   'a',
   'an',

@@ -684,3 +684,98 @@ describe('ASK/SEARCH R1 CLOSURE — the evidence-state fact reaches the model, t
     expect(response.analysisError).toMatch(/could not be reached reliably/);
   });
 });
+
+/*
+ * ASK RETRIEVAL RECALL R2 — the exact Home suggestion, end to end through the
+ * real AnalysisService and the REAL relevance gate (the harness applies
+ * scoreGenericRelevance exactly where NewsService does). Retrieval must admit
+ * genuinely relevant reporting worded differently from the question, and must
+ * still return zero — without calling AI — when nothing relevant exists.
+ */
+describe('ASK RETRIEVAL RECALL R2 — Home suggestion "Explain the new EU AI regulation in plain English"', () => {
+  const EU_AI_REPORTING = [
+    article(
+      'eu-ai-1',
+      'EU AI Act: what the new rules mean for businesses',
+      'Obligations begin for general-purpose models.',
+    ),
+    article(
+      'eu-ai-2',
+      'EU artificial intelligence regulation enters next phase',
+      'Providers face new transparency duties.',
+    ),
+    article('eu-ai-3', 'Tech firms push back on EU AI rules', 'Industry groups asked for a delay.'),
+  ];
+  const IRRELEVANT = [
+    article('batt-1', 'EU regulation on batteries takes effect', 'New recycling rules apply.'),
+    article(
+      'us-ai-1',
+      'US senators propose federal AI regulation',
+      'A bipartisan bill would create an office.',
+    ),
+  ];
+  const HOME_SUGGESTION = 'Explain the new EU AI regulation in plain English';
+
+  it('admits the relevant reporting with ONE provider request for the framing-free subject, and attempts AI once', async () => {
+    const { service, searchCalls, provider } = harness([...EU_AI_REPORTING, ...IRRELEVANT]);
+
+    const response = await service.analyzeNews(HOME_SUGGESTION);
+
+    expect(searchCalls).toEqual([{ query: 'EU AI regulation', mode: 'generic' }]);
+    expect(response.articles.map((a) => a.id).sort()).toEqual(['eu-ai-1', 'eu-ai-2', 'eu-ai-3']);
+    expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+  });
+
+  it('still returns zero evidence, and never calls AI, when the corpus has nothing admissible', async () => {
+    const { service, searchCalls, provider } = harness(IRRELEVANT);
+
+    const response = await service.analyzeNews(HOME_SUGGESTION);
+
+    expect(response.articles).toHaveLength(0);
+    expect(response.analysis).toBeNull();
+    expect(provider.analyzeNews).not.toHaveBeenCalled();
+    // the bounded M46 fallback is skipped: its reduction equals the primary query
+    expect(searchCalls).toEqual([{ query: 'EU AI regulation', mode: 'generic' }]);
+  });
+
+  it.each([
+    ['What is the new EU AI law?', 'EU AI law'],
+    ['Explain the EU AI Act in simple terms', 'EU AI Act'],
+    ['Can you explain the new EU AI Act?', 'EU AI Act'],
+  ])(
+    'neighbouring shape "%s" searches "%s" and admits the same reporting',
+    async (question, sent) => {
+      const { service, searchCalls, provider } = harness([...EU_AI_REPORTING, ...IRRELEVANT]);
+
+      const response = await service.analyzeNews(question);
+
+      expect(searchCalls[0]).toEqual({ query: sent, mode: 'generic' });
+      expect(response.articles.map((a) => a.id)).toEqual(
+        expect.arrayContaining(['eu-ai-1', 'eu-ai-3']),
+      );
+      expect(response.articles.map((a) => a.id)).not.toContain('batt-1');
+      expect(response.articles.map((a) => a.id)).not.toContain('us-ai-1');
+      expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('PL suggestion searches the framing-free Polish subject and admits Polish EU AI reporting', async () => {
+    const { service, searchCalls, provider } = harness([
+      article(
+        'pl-ai-1',
+        'Nowe przepisy UE o sztucznej inteligencji wchodzą w życie',
+        'Firmy muszą się dostosować.',
+      ),
+      article('pl-batt-1', 'Nowe przepisy UE o bateriach', 'Recykling baterii.'),
+    ]);
+
+    const response = await service.analyzeNews(
+      'Wyjaśnij nowe przepisy UE dotyczące AI prostym językiem',
+      'pl',
+    );
+
+    expect(searchCalls[0].query).toBe('przepisy UE dotyczące AI');
+    expect(response.articles.map((a) => a.id)).toEqual(['pl-ai-1']);
+    expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
+  });
+});
