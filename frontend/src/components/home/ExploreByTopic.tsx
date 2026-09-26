@@ -273,7 +273,10 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                 arrow are still the topic's — so the image adds recognition
                 rather than replacing the system.
               */}
-              <span className="relative block h-[86px] w-full shrink-0 overflow-hidden lg:h-[74px] xl:h-[80px]">
+              {/* Measured against the RENDERED card, not the min-height: the six
+                  settle at ~230px once the longest description wraps, so the
+                  band is 96px — 42%, inside the ruled 40-45%. */}
+              <span className="relative block h-[112px] w-full shrink-0 overflow-hidden lg:h-[104px] xl:h-[108px]">
                 <Image
                   src={`/images/topics/${module.id === 'world-intelligence' ? 'world' : module.id}.png`}
                   alt=""
@@ -282,25 +285,37 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                   sizes="(min-width: 1024px) 200px, 50vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                 />
-                {/* Keeps the card's own surface reading through the artwork, so
-                    six cards still read as one family rather than six pictures. */}
+                {/*
+                  THE SCRIM IS BOTTOM-WEIGHTED, NOT A BLANKET.
+
+                  The previous version ramped darkness across the whole frame,
+                  which is half of why the Product Owner found the image area
+                  "too dark and too close to the card tint, so the image area
+                  reads as empty". The scene now keeps its own luminance for
+                  the upper two thirds and only darkens where it meets the
+                  title, which is the sole place the overlay has a job to do.
+
+                  The module colour treatment is preserved by the card's own
+                  surface gradient behind and below this image, and by the
+                  accent on the icon and arrow — not by dimming the picture.
+                */}
                 <span
                   aria-hidden="true"
-                  className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(2,8,18,0.10),rgba(2,8,18,0.62)_72%,rgba(2,8,18,0.92))]"
+                  className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(2,8,18,0)_0%,rgba(2,8,18,0)_46%,rgba(2,8,18,0.34)_70%,rgba(2,8,18,0.78)_90%,rgba(2,8,18,0.94)_100%)]"
                 />
               </span>
 
               <span className="flex flex-1 flex-col p-[15px] pt-[13px] xl:p-[16px] xl:pt-[14px]">
-                <span className="flex min-w-0 items-center gap-2">
+                <span className="flex min-w-0 items-center gap-2 xl:gap-1.5">
                   <Icon
                     aria-hidden="true"
-                    size={26}
+                    size={24}
                     strokeWidth={2.1}
                     className={`${accent.icon} shrink-0 drop-shadow-[0_0_10px_rgba(255,255,255,0.18)]`}
                   />
                   {/* Wraps rather than truncates: "Humanitarian" is the longest of the
                       six and losing its ending is worse than a second line. */}
-                  <span className="block min-w-0 text-[16px] font-bold leading-[1.1] tracking-[-0.015em] text-white xl:text-[14.5px]">
+                  <span className="block min-w-0 text-[16px] font-bold leading-[1.1] tracking-[-0.02em] text-white xl:text-[14px]">
                     {label}
                   </span>
                 </span>
