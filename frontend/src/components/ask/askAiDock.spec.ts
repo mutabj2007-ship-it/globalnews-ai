@@ -387,3 +387,29 @@ describe('ELASTIC COMPOSER R2 — long pasted questions stay readable', () => {
     expect(CODE).toContain('maxHeight={420}');
   });
 });
+
+
+describe('HERO COMPOSER OVERLAY R3 — elasticity must not reflow Home', () => {
+  const hero = readFileSync(join(__dirname, '../home/HeroAskField.tsx'), 'utf8');
+  const adaptive = readFileSync(join(__dirname, '../ui/AdaptiveTextarea.tsx'), 'utf8');
+
+  it('reserves a fixed document-flow anchor and floats the expanding composer above it', () => {
+    expect(hero).toContain('h-[54px]');
+    expect(hero).toContain('overflow-visible');
+    expect(hero).toContain('data-gn-hero-composer-overlay=""');
+    expect(hero).toMatch(/absolute inset-x-0 top-0 z-50/);
+  });
+
+  it('collapses the floating editor on blur without discarding the staged question', () => {
+    expect(hero).toContain('const collapseAfterBlur');
+    expect(hero).toContain("node.style.overflowY = 'hidden'");
+    expect(hero).toContain('onBlur={collapseAfterBlur}');
+  });
+
+  it('re-measures on refocus so a collapsed long question expands again', () => {
+    const start = adaptive.indexOf('onFocus={(event)');
+    const focusBlock = adaptive.slice(start, start + 700);
+    expect(focusBlock).toContain('resize();');
+    expect(focusBlock).toContain('requestAnimationFrame(resize)');
+  });
+});
