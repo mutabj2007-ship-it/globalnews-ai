@@ -72,6 +72,68 @@ describe('MANDATORY 11 — one semantic article cannot take two Global Developme
     expect(rail.map((item) => item.id)).toEqual(['gnews-1837462', 'gnews-3']);
   });
 
+  it('collapses the same syndicated development across different publishers into one Home card', () => {
+    const headline = 'Woman who accused Jay-Z of sexual assault says her claims were false';
+    const sharedImage = 'https://cdn.example.com/jay-z-story.jpg';
+    const articles = [
+      makeArticle({
+        id: 'npr-copy',
+        title: headline,
+        url: 'https://npr.example/jay-z-claims-false',
+        imageUrl: sharedImage,
+        sourceId: 'npr',
+        sourceName: 'NPR',
+        publishedAt: '2026-09-26T01:00:00.000Z',
+      }),
+      makeArticle({
+        id: 'gpb-copy',
+        title: headline,
+        url: 'https://gpb.example/news/jay-z-claims-false',
+        imageUrl: sharedImage,
+        sourceId: 'gpb',
+        sourceName: 'GPB',
+        publishedAt: '2026-09-26T01:08:00.000Z',
+      }),
+      makeArticle({
+        id: 'other-story',
+        title: 'Distinct world development',
+        url: 'https://example.com/distinct-world-development',
+      }),
+    ];
+
+    const allocation = allocateHomeFeed(articles);
+    const rail = railItems(allocation);
+
+    expect(rail.filter((item) => item.title === headline)).toHaveLength(1);
+    expect(rail.map((item) => item.id)).toEqual(['npr-copy', 'other-story']);
+
+    const inclusive = allocateHomeFeed(articles, 5, 6, 'chronological-inclusive');
+    expect(inclusive.latestUpdates.filter((item) => item.title === headline)).toHaveLength(1);
+  });
+
+  it('keeps materially different updates even when they concern the same event', () => {
+    const articles = [
+      makeArticle({
+        id: 'talks-resume',
+        title: 'Ukraine peace talks resume in Geneva',
+        url: 'https://wire.example/talks-resume',
+        imageUrl: 'https://cdn.example.com/geneva.jpg',
+        publishedAt: '2026-09-26T01:00:00.000Z',
+      }),
+      makeArticle({
+        id: 'talks-collapse',
+        title: 'Ukraine peace talks collapse in Geneva',
+        url: 'https://wire.example/talks-collapse',
+        imageUrl: 'https://cdn.example.com/geneva.jpg',
+        publishedAt: '2026-09-26T01:30:00.000Z',
+      }),
+    ];
+
+    const rail = railItems(allocateHomeFeed(articles));
+
+    expect(rail.map((item) => item.id)).toEqual(['talks-resume', 'talks-collapse']);
+  });
+
   it('collapses fragment, trailing-slash and host-case variants across all three roles', () => {
     const articles = [
       makeArticle({ id: 'a', url: 'https://watchesnews.example/u60' }),
