@@ -1,4 +1,9 @@
-import { normalizeArticleUrl, type NewsArticle } from '@globalnews-ai/shared';
+import {
+  normalizeArticleUrl,
+  normalizeHeadline,
+  STORY_IDENTITY_MAX_PUBLICATION_GAP_MS,
+  type NewsArticle,
+} from '@globalnews-ai/shared';
 
 export interface HomeFeedAllocation {
   /** The single lead story — currently selected by response order (position 0); no popularity/engagement claim is made or implied by this selection. */
@@ -95,6 +100,64 @@ const allocationKey = (article: NewsArticle): string => {
   return url ? `url:${normalizeArticleUrl(url)}` : `id:${article.id}`;
 };
 
+
+/**
+ * HOME EDITORIAL CLUSTER DEDUP R1
+ *
+ * Backend records remain distinct evidence. Home, however, is an editorial
+ * surface: two outlets carrying the same development must not consume two
+ * adjacent card positions merely because their URLs/provider ids differ.
+ *
+ * This is deliberately stricter than fuzzy topic similarity:
+ *   1. the normalized headline must match EXACTLY;
+ *   2. then either the normalized image URL matches, or the two record times
+ *      are within the shared six-hour identity ceiling.
+ *
+ * A different headline always survives, even when it concerns the same people
+ * or event. That preserves genuinely new/opposite updates while collapsing
+ * syndicated copies such as two publishers carrying the same Jay-Z headline.
+ *
+ * Pure presentation allocation only: no article is mutated, no backend record
+ * is deleted, and Analysis/evidence consumers still receive the original feed.
+ */
+function sameHomeEditorialDevelopment(first: NewsArticle, second: NewsArticle): boolean {
+  if (allocationKey(first) === allocationKey(second)) return true;
+
+  const firstHeadline = normalizeHeadline(first.title ?? '');
+  if (firstHeadline.length === 0 || firstHeadline !== normalizeHeadline(second.title ?? '')) {
+    return false;
+  }
+
+  const firstImage = first.imageUrl?.trim();
+  const secondImage = second.imageUrl?.trim();
+  if (
+    firstImage &&
+    secondImage &&
+    normalizeArticleUrl(firstImage) === normalizeArticleUrl(secondImage)
+  ) {
+    return true;
+  }
+
+  const firstAt = Date.parse(first.publishedAt ?? '');
+  const secondAt = Date.parse(second.publishedAt ?? '');
+  if (Number.isNaN(firstAt) || Number.isNaN(secondAt)) return false;
+
+  return Math.abs(firstAt - secondAt) <= STORY_IDENTITY_MAX_PUBLICATION_GAP_MS;
+}
+
+export function collapseHomeEditorialDevelopments(articles: NewsArticle[]): NewsArticle[] {
+  const kept: NewsArticle[] = [];
+
+  for (const article of articles) {
+    if (kept.some((existing) => sameHomeEditorialDevelopment(existing, article))) {
+      continue;
+    }
+    kept.push(article);
+  }
+
+  return kept;
+}
+
 /* C7 — exported so a caller asking for a second policy view can reuse the
    released widths instead of restating 5 and 6 at the call site. */
 export const DEFAULT_IN_FOCUS_COUNT = 5;
@@ -137,7 +200,8 @@ export function allocateHomeFeed(
   discoveryCount: number = DEFAULT_DISCOVERY_COUNT,
   streamPolicy: HomeFeedStreamPolicy = DEFAULT_STREAM_POLICY,
 ): HomeFeedAllocation {
-  const featured = articles[0] ?? null;
+  const editorial = collapseHomeEditorialDevelopments(articles);
+  const featured = editorial[0] ?? null;
   // R4 — keyed on STORY identity, not on `id` alone. Two records of one
   // story arrive with two ids (GNewsProvider hashes the raw url), and the
   // previous id-only set placed both: one as `featured`, the next as the
@@ -149,7 +213,7 @@ export function allocateHomeFeed(
   }
 
   const inFocus: NewsArticle[] = [];
-  for (const article of articles) {
+  for (const article of editorial) {
     if (inFocus.length >= inFocusCount) break;
     const key = allocationKey(article);
     if (usedKeys.has(key)) continue;
@@ -158,7 +222,7 @@ export function allocateHomeFeed(
   }
 
   const discovery: NewsArticle[] = [];
-  for (const article of articles) {
+  for (const article of editorial) {
     if (discovery.length >= discoveryCount) break;
     const key = allocationKey(article);
     if (usedKeys.has(key)) continue;
@@ -201,7 +265,7 @@ export function allocateHomeFeed(
     the rail roles were allocated from, read a second way.
   */
   const streamKeys = new Set<string>();
-  const latestUpdates = articles
+  const latestUpdates = editorial
     .filter((article) => {
       const key = allocationKey(article);
 
