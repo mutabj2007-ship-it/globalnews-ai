@@ -646,7 +646,11 @@ describe('ASK/SEARCH R1 CLOSURE — the evidence-state fact reaches the model, t
     expect(provider.analyzeNews).toHaveBeenCalledTimes(1);
     const input = (provider.analyzeNews as jest.Mock).mock.calls[0][0];
     expect(input.evidenceState).toBe('degraded-fallback');
-    expect(typeof input.newestEvidencePublishedAt).toBe('string');
+    // PR #40 BLOCKER 1 — a typed fact, carrying that article's own basis.
+    expect(input.newestEvidence).toEqual({
+      timestamp: '2026-08-29T06:00:00.000Z',
+      basis: 'publisher',
+    });
   });
 
   it('an explicit re-run after a degraded result gets a fresh retrieval, not a replay', async () => {

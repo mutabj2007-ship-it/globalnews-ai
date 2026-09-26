@@ -21,6 +21,21 @@ import type {
  * development-breadth fact carried to the provider. Mirrors
  * `DevelopmentBreadth` (validation/brief-compliance.util.ts) exactly.
  */
+/**
+ * PR #40 BLOCKER 1 — the AI-facing freshness fact.
+ *
+ *   'publisher'  the outlet stated this publication time.
+ *   'observed'   an aggregator recorded SEEING the report at this time; an
+ *                upper bound on publication, never the publication time.
+ *   'unknown'    `publishedAtBasis` was absent; the time's meaning is unproven.
+ */
+export type EvidenceTimestampBasis = 'publisher' | 'observed' | 'unknown';
+
+export interface EvidenceFreshnessFact {
+  readonly timestamp: string;
+  readonly basis: EvidenceTimestampBasis;
+}
+
 export interface AnalysisDevelopmentBreadth {
   /** Distinct stories after duplicate clustering. */
   readonly clusters: number;
@@ -97,8 +112,13 @@ export interface AnalysisProviderInput {
    * Absent means 'live' semantics for pre-existing callers.
    */
   evidenceState?: AnalysisEvidenceState;
-  /** ASK/SEARCH R1 CLOSURE — newest publishedAt in the evidence set, for the freshness statement. */
-  newestEvidencePublishedAt?: string;
+  /**
+   * PR #40 BLOCKER 1 — the newest evidence timestamp TOGETHER WITH what kind
+   * of time it is, taken from that one article. Never a bare timestamp: an
+   * 'observed' time (GDELT) is only an upper bound on publication, and an
+   * absent basis proves nothing (shared/src/news.ts `publishedAtBasis`).
+   */
+  newestEvidence?: EvidenceFreshnessFact;
 
   /**
    * Optional caller cancellation. AnalysisService uses this only for the

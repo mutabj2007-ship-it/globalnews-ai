@@ -1,7 +1,10 @@
 import {
   buildAnalysisMessages as buildMessagesR1,
   buildEvidenceStateInstruction,
+  describeNewestEvidence,
 } from './build-analysis-prompt.util';
+import { newestEvidenceFreshness } from '../service/analysis.service';
+import type { NewsArticle } from '@globalnews-ai/shared';
 import {
   buildAnalysisMessages,
   buildRelationalPromptSection,
@@ -737,8 +740,6 @@ describe('GEO-4 — the prompt forbids geographic precision exceeding evidence p
 });
 
 describe('ASK/SEARCH R1 CLOSURE — buildEvidenceStateInstruction', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-
   it('adds nothing for live evidence, so the live prompt is byte-identical', () => {
     expect(buildEvidenceStateInstruction('live')).toBe('');
     expect(buildEvidenceStateInstruction(undefined)).toBe('');
@@ -751,7 +752,10 @@ describe('ASK/SEARCH R1 CLOSURE — buildEvidenceStateInstruction', () => {
   it.each(['retained', 'degraded-fallback'] as const)(
     'forbids live/current wording for %s evidence',
     (state) => {
-      const text: string = buildEvidenceStateInstruction(state, '2026-09-25T10:00:00Z');
+      const text: string = buildEvidenceStateInstruction(state, {
+        timestamp: '2026-09-25T10:00:00Z',
+        basis: 'publisher',
+      });
       expect(text).toContain('AUTHORITATIVE EVIDENCE STATE');
       expect(text).toContain('Do NOT describe this evidence');
       expect(text).toContain('"right now"');
@@ -770,4 +774,115 @@ describe('ASK/SEARCH R1 CLOSURE — buildEvidenceStateInstruction', () => {
       expect(system).toContain('AUTHORITATIVE EVIDENCE STATE');
     },
   );
+});
+
+/*
+ * PR #40 BLOCKER 1 — the AI-facing freshness fact is basis-aware.
+ * shared/src/news.ts: 'publisher' is an outlet-stated publication time;
+ * 'observed' is an aggregator observation time (an upper bound only); an
+ * absent basis is unproven and consumers must fail closed.
+ */
+describe('PR #40 BLOCKER 1 — basis-aware evidence freshness', () => {
+  const T = '2026-09-25T10:00:00Z';
+
+  describe.each(['retained', 'degraded-fallback'] as const)('%s evidence', (state) => {
+    it('1. publisher timestamp → publication wording is permitted', () => {
+      const text = buildEvidenceStateInstruction(state, { timestamp: T, basis: 'publisher' });
+      expect(text).toContain(`was published at ${T} (UTC), as stated by its publisher`);
+    });
+
+    it('2. observed timestamp → observation wording, never "published at"', () => {
+      const text = buildEvidenceStateInstruction(state, { timestamp: T, basis: 'observed' });
+      expect(text).toContain(`observed by a news aggregator at ${T} (UTC)`);
+      expect(text).toContain('it is NOT the publication time');
+      expect(text).not.toMatch(/published at/i);
+    });
+
+    it('3. unknown basis → no timestamp and no inferred publication claim', () => {
+      const text = buildEvidenceStateInstruction(state, { timestamp: T, basis: 'unknown' });
+      expect(text).not.toContain(T);
+      expect(text).not.toMatch(/published at/i);
+      expect(text).toContain(
+        'publication time of the newest report in this evidence set is unverified',
+      );
+      expect(text).toContain('Do not state or infer when any of these reports was published');
+    });
+
+    it('the evidence-state instruction itself is unchanged in every case', () => {
+      for (const basis of ['publisher', 'observed', 'unknown'] as const) {
+        const text = buildEvidenceStateInstruction(state, { timestamp: T, basis });
+        expect(text).toContain('AUTHORITATIVE EVIDENCE STATE');
+        expect(text).toContain('Do NOT describe this evidence, or your answer, as live');
+        expect(text).toContain('"right now"');
+      }
+    });
+  });
+
+  it('no freshness fact → no freshness sentence', () => {
+    expect(describeNewestEvidence(undefined)).toBe('');
+  });
+
+  it('live evidence stays byte-identical whatever the freshness fact says', () => {
+    expect(buildEvidenceStateInstruction('live', { timestamp: T, basis: 'observed' })).toBe('');
+    expect(
+      buildMessagesR1('q', [], 500, undefined, 'en', undefined, undefined, undefined, 'live', {
+        timestamp: T,
+        basis: 'publisher',
+      }).system,
+    ).toBe(buildMessagesR1('q', [], 500).system);
+  });
+
+  describe('newestEvidenceFreshness — the one derivation', () => {
+    const report = (
+      id: string,
+      publishedAt: string,
+      basis?: 'publisher' | 'observed',
+    ): NewsArticle =>
+      ({
+        id,
+        title: id,
+        summary: id,
+        url: `https://wire.example/${id}`,
+        sourceId: 'wire',
+        sourceName: 'Example Wire',
+        category: 'world',
+        sourcesCount: 1,
+        publishedAt,
+        ...(basis === undefined ? {} : { publishedAtBasis: basis }),
+      }) as NewsArticle;
+
+    it('mixed evidence: the newest article keeps ITS OWN basis (observed newest)', () => {
+      const fact = newestEvidenceFreshness([
+        report('gnews-old', '2026-09-25T08:00:00Z', 'publisher'),
+        report('gdelt-new', '2026-09-25T09:30:00Z', 'observed'),
+        report('db-mid', '2026-09-25T09:00:00Z'),
+      ]);
+      expect(fact).toEqual({ timestamp: '2026-09-25T09:30:00Z', basis: 'observed' });
+      expect(buildEvidenceStateInstruction('retained', fact)).not.toMatch(/published at/i);
+    });
+
+    it('mixed evidence: a newest publisher article is not downgraded by older observed ones', () => {
+      expect(
+        newestEvidenceFreshness([
+          report('gdelt-old', '2026-09-25T08:00:00Z', 'observed'),
+          report('gnews-new', '2026-09-25T09:30:00Z', 'publisher'),
+        ]),
+      ).toEqual({ timestamp: '2026-09-25T09:30:00Z', basis: 'publisher' });
+    });
+
+    it('mixed evidence: a newest article with no basis is unknown, never borrowed from a neighbour', () => {
+      const fact = newestEvidenceFreshness([
+        report('gnews-old', '2026-09-25T08:00:00Z', 'publisher'),
+        report('retained-new', '2026-09-25T09:30:00Z'),
+      ]);
+      expect(fact).toEqual({ timestamp: '2026-09-25T09:30:00Z', basis: 'unknown' });
+      expect(buildEvidenceStateInstruction('degraded-fallback', fact)).not.toContain(
+        '2026-09-25T09:30:00Z',
+      );
+    });
+
+    it('no evidence → no fact', () => {
+      expect(newestEvidenceFreshness([])).toBeUndefined();
+    });
+  });
 });

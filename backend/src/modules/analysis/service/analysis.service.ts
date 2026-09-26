@@ -29,6 +29,7 @@ import {
 import { NewsService, readProviderFailures } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
 import type { AnalysisProvider } from '../interfaces';
+import type { EvidenceFreshnessFact } from '../interfaces/analysis-provider.interface';
 import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { hasUnsupportedLocalReportingClaim } from '../validation/comparison-coverage.util';
@@ -316,15 +317,27 @@ const ALL_CAPS_CODE_TOKEN_PATTERN = /\b[A-Z]{2,3}\b/g;
  */
 const FAILURE_CACHE_TTL_SECONDS = 15;
 
-/** ASK/SEARCH R1 CLOSURE — the newest publication time in the evidence set, for the model's freshness statement. */
-function newestPublishedAt(articles: readonly NewsArticle[]): string | undefined {
-  let newest: string | undefined;
+/**
+ * ASK/SEARCH R1 CLOSURE, corrected by PR #40 BLOCKER 1 — the newest evidence
+ * timestamp for the model's freshness statement, WITH ITS OWN BASIS.
+ *
+ * The single freshness derivation (it replaces the earlier bare-timestamp
+ * helper; there is no second one). The newest article is chosen by its
+ * timestamp — the only ordering the evidence carries — and the basis returned
+ * is that SAME article's `publishedAtBasis`, never another article's and never
+ * a default. Absent basis is 'unknown', not 'publisher': absence proves nothing.
+ */
+export function newestEvidenceFreshness(
+  articles: readonly NewsArticle[],
+): EvidenceFreshnessFact | undefined {
+  let newest: NewsArticle | undefined;
   for (const article of articles) {
-    if (article.publishedAt && (newest === undefined || article.publishedAt > newest)) {
-      newest = article.publishedAt;
+    if (article.publishedAt && (newest === undefined || article.publishedAt > newest.publishedAt)) {
+      newest = article;
     }
   }
-  return newest;
+  if (newest === undefined) return undefined;
+  return { timestamp: newest.publishedAt, basis: newest.publishedAtBasis ?? 'unknown' };
 }
 
 /**
@@ -2400,7 +2413,7 @@ export class AnalysisService {
               or current; the prompt section enforces the wording.
             */
             evidenceState: retrievalContext.evidenceState,
-            newestEvidencePublishedAt: newestPublishedAt(deduped),
+            newestEvidence: newestEvidenceFreshness(deduped),
             /*
               EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — THE SAME
               `developmentBreadth` COMPUTED ABOVE, AND THE SAME ONE HANDED TO
