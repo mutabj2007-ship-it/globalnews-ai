@@ -407,8 +407,8 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
               placeholder={t.inputPlaceholder}
               maxLength={1000}
               minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}
-              maxHeight={260}
-              maxViewportFraction={0.32}
+              maxHeight={420}
+              maxViewportFraction={0.46}
               keepVisible={false}
               className="w-full rounded-2xl border border-border-strong bg-surface px-4 py-3 text-sm leading-6 text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
             />
