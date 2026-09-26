@@ -441,8 +441,8 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
               placeholder={dictionary.searchWorkspacePlaceholder}
               maxLength={1000}
               minHeight={48}
-              maxHeight={320}
-              maxViewportFraction={0.46}
+              maxHeight={460}
+              maxViewportFraction={0.56}
               keepVisible
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
