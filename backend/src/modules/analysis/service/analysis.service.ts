@@ -36,6 +36,7 @@ import {
   detectAmbiguousCountryMention,
   detectEventAspects,
   isAnaphoricFollowUp,
+  isEventTopic,
   withholdContextOnlyConsequenceClaims,
   withoutAmbiguousCountryMentions,
 } from '../anchor/event-anchor.util';
@@ -732,12 +733,19 @@ export class AnalysisService {
           by the prior AI answer), so the follow-up retrieves the same event.
           The model still receives the reader's actual follow-up; only routing
           changes. An explicit story article anchor keeps precedence.
+
+          R1.1 B3 — only when the prior question names a discrete EVENT. A
+          follow-up to an ordinary analytical subject ("Why does this matter?"
+          after "Explain the EU AI regulation") keeps its pre-R1 routing.
         */
+        const priorNormalized =
+          priorQuestion !== undefined ? normalizeQuery(priorQuestion).normalizedQuery : undefined;
         const anaphoricPriorQuestion =
-          priorQuestion !== undefined &&
+          priorNormalized !== undefined &&
           !storyContext?.articleId &&
-          isAnaphoricFollowUp(normalizedQuery)
-            ? normalizeQuery(priorQuestion).normalizedQuery
+          isAnaphoricFollowUp(normalizedQuery) &&
+          isEventTopic(deriveEventTopic(priorNormalized))
+            ? priorNormalized
             : undefined;
         const retrievalQuery = anaphoricPriorQuestion ?? normalizedQuery;
         /* A bare "Congo" is COD or COG — never silently one of them. */
@@ -2402,6 +2410,8 @@ export class AnalysisService {
         const anchorAspects = detectEventAspects(normalizedQuery);
         if (
           anchorTopic !== undefined &&
+          /* R1.1 B3 — ordinary analytical subjects are never anchored. */
+          isEventTopic(anchorTopic) &&
           retrievalContext.retrievalOutcome === undefined &&
           (anaphoricPriorQuestion !== undefined || asksAboutEvent(anchorAspects))
         ) {

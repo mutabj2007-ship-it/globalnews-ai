@@ -167,14 +167,176 @@ const EFFECT_ASPECT =
 const CROSS_BORDER_ASPECT =
   /\b(?:neighbou?r(?:s|ing)?|cross[- ]border|regional|region|spill[- ]?over|surrounding countries|other countries|borders?)\b|sąsied|sąsiad|region/iu;
 
-/** A sentence that itself LINKS something to the event (EN + PL). */
-const CONSEQUENCE_LINK =
-  /\b(?:after|following|in the wake of|due to|because of|as a result of|in response to|prompted by|triggered by|led to|leads to|prompted|triggered|sparked|forced|resulted in|caused)\b|(?:^|\s)(?:po|wskutek|z powodu|w wyniku|w następstwie|doprowadził\w*)(?=\s)/iu;
-/** A sentence that REPORTS a cause, and one that reports the cause as unknown. */
-const CAUSE_REPORTED =
-  /\b(?:caused by|blamed on|due to|because of|attributed to|the result of|resulted from|engine failure|mechanical failure|pilot error|bad weather|shot down)\b|spowodowan|z powodu|wskutek/iu;
+/**
+ * R1.1 B3 — THE EVENT-LIKENESS GATE. The smallest deterministic test that a
+ * topic names a discrete OCCURRENCE (a crash, an earthquake, an explosion)
+ * rather than an ongoing subject (AI regulation, inflation, interest rates).
+ * Only an event-like topic is anchored; every other question keeps its pre-R1
+ * retrieval and prompt exactly. A closed stem list, matched per topic word with
+ * light inflection — no semantic classifier and no AI call. No existing query
+ * authority carries these semantics: the security and entity lexicons mix in
+ * ongoing subjects (sanctions, war, summit, negotiation) and serve other lanes.
+ */
+const EVENT_NOUN_STEMS_EN = [
+  'crash',
+  'collision',
+  'explosion',
+  'blast',
+  'bombing',
+  'attack',
+  'airstrike',
+  'strike',
+  'shooting',
+  'stabbing',
+  'earthquake',
+  'quake',
+  'flood',
+  'wildfire',
+  'fire',
+  'landslide',
+  'mudslide',
+  'avalanche',
+  'tsunami',
+  'hurricane',
+  'cyclone',
+  'typhoon',
+  'tornado',
+  'storm',
+  'eruption',
+  'collapse',
+  'derailment',
+  'sinking',
+  'shipwreck',
+  'accident',
+  'disaster',
+  'spill',
+  'stampede',
+  'riot',
+  'coup',
+  'assassination',
+  'killing',
+  'massacre',
+  'hijacking',
+  'kidnapping',
+  'outbreak',
+  'incident',
+  'raid',
+  'invasion',
+  'ambush',
+  'blackout',
+  'outage',
+  'cyberattack',
+];
+/* PL stems: Polish inflects the ending, so these are matched as prefixes. */
+const EVENT_NOUN_STEMS_PL = [
+  'katastrof',
+  'wypad',
+  'zderzeni',
+  'wybuch',
+  'eksplozj',
+  'zamach',
+  'atak',
+  'trzęsieni',
+  'powodzi',
+  'powódź',
+  'pożar',
+  'lawin',
+  'osuwisk',
+  'huragan',
+  'erupcj',
+  'zawaleni',
+  'wykolejeni',
+  'strzelanin',
+  'zamieszk',
+  'przewrót',
+  'epidemi',
+  'wyciek',
+  'porwani',
+];
+
+/** R1.1 B3 — true when a topic word names a discrete event (EN + PL). */
+export function isEventTopic(topic: string | undefined): boolean {
+  if (topic === undefined) return false;
+  return tokens(topic).some((raw) => {
+    const word = raw.toLowerCase();
+    return (
+      EVENT_NOUN_STEMS_EN.some(
+        (stem) =>
+          word === stem ||
+          (word.startsWith(stem) && /^(?:s|es|d|ed|ing)$/.test(word.slice(stem.length))),
+      ) ||
+      EVENT_NOUN_STEMS_PL.some((stem) => word.startsWith(stem) && word.length - stem.length <= 4)
+    );
+  });
+}
+
+/*
+ * R1.1 B1 / B2 — RELATIONS ARE DIRECTIONAL AND LOCAL.
+ *
+ * Chronology ("after", "following", "in the wake of", PL "po") is NOT a
+ * relation: "After the crash, officials discussed an Ebola outbreak" reports
+ * sequence, not consequence. A consequence needs an explicit construction in
+ * ONE local statement, in the right direction:
+ *   event → effect      "the crash prompted / led to / forced / triggered …"
+ *   effect ← event      "… in response to / as a result of / because of the crash"
+ * A cause needs the same, pointing the other way, at the event itself:
+ *   "the crash was caused by / blamed on / attributed to …",
+ *   "investigators attributed the crash to …", "X caused the crash",
+ *   "the cause of the crash was …".
+ * Only modifiers may stand between the construction and the event noun;
+ * a connector ("after", "and", "while" …) breaks the link, so
+ * "closed because of fog after the crash" links fog, not the crash.
+ */
+const CONNECTOR_WORDS =
+  'after|before|following|and|or|but|while|during|when|as|then|with|amid|despite|since|until|than|po|oraz|i|ale|podczas|gdy';
+/** Up to four modifier words ("the", "the DR Congo plane") — never a connector. */
+const MODIFIERS = `(?:(?!(?:${CONNECTOR_WORDS})(?!\\p{L}))[^\\s,.;:!?]+\\s+){0,4}`;
+const FORWARD_EFFECT_VERBS =
+  'led to|leads to|lead to|resulted in|results in|caused|causes|prompted|prompts|triggered|triggers|forced|forces|sparked|sparks|doprowadził\\p{L}*|spowodował\\p{L}*|wywołał\\p{L}*|zmusił\\p{L}*';
+const BACKWARD_EFFECT_LINKS =
+  'in response to|as a result of|because of|due to|prompted by|triggered by|caused by|sparked by|forced by|w odpowiedzi na|w wyniku|wskutek|z powodu|w następstwie';
+const EVENT_AUX =
+  '(?:\\s+(?:itself|also|has|have|had|was|were|is|has been|had been|may have been|might have been|could have been|appears to have been|appeared to have been|reportedly|likely|probably|apparently|possibly|allegedly|został\\p{L}*|była|było|był))*';
+const CAUSE_PASSIVE_LINKS =
+  'caused by|blamed on|attributed to|due to|because of|the result of|a result of|resulted from|triggered by|spowodowan\\p{L}*|wywołan\\p{L}*|z powodu|wskutek';
+
+/** The event's head noun (last topic word), lightly inflected, as a regex source. */
+function headSource(topic: string): string {
+  const word = tokens(topic).pop() ?? topic;
+  const stem = word.replace(/(?:es|s|ed|ing)$/i, '');
+  return `(?<!\\p{L})${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\p{L}{0,4}(?!\\p{L})`;
+}
+
+/** Does this sentence explicitly report a consequence OF the event? */
+function consequenceLinkPattern(topic: string): RegExp {
+  const head = headSource(topic);
+  return new RegExp(
+    [
+      `${head}${EVENT_AUX}\\s+(?:${FORWARD_EFFECT_VERBS})(?!\\p{L})(?!\\s+by(?!\\p{L}))`,
+      `(?<!\\p{L})(?:${BACKWARD_EFFECT_LINKS})\\s+${MODIFIERS}${head}`,
+    ].join('|'),
+    'iu',
+  );
+}
+
+/** Does this sentence explicitly report the cause OF the event? */
+function eventCausePattern(topic: string): RegExp {
+  const head = headSource(topic);
+  return new RegExp(
+    [
+      `${head}${EVENT_AUX}\\s+(?:${CAUSE_PASSIVE_LINKS})(?!\\p{L})`,
+      `(?<!\\p{L})(?:attributed|attributes|attributing|blamed|blames|blaming)\\s+${MODIFIERS}${head}\\s+(?:to|on)(?!\\p{L})`,
+      `(?<!\\p{L})(?:caused|triggered)\\s+${MODIFIERS}${head}`,
+      `(?<!\\p{L})(?:cause|causes|reason|reasons)\\s+(?:of|for|behind)\\s+${MODIFIERS}${head}\\s+(?:was|were|is|has been)\\s+(?!(?:not|unknown|unclear|still|under|being)(?!\\p{L}))`,
+      `(?<!\\p{L})przyczyn\\p{L}*\\s+${MODIFIERS}${head}\\s+(?:był\\p{L}*|jest)\\s+(?!(?:nie|nieznan)\\p{L}*)`,
+    ].join('|'),
+    'iu',
+  );
+}
+
+/** A statement that reports the cause as unknown, open or unstated. */
 const CAUSE_UNKNOWN =
-  /\b(?:under investigation|not (?:yet )?(?:known|determined|clear|established)|no cause|unknown cause|cause (?:is|was|remains) (?:unknown|unclear)|investigat)/iu;
+  /\b(?:under investigation|being investigated|not (?:yet )?(?:known|determined|clear|established|given|disclosed)|no cause|unknown cause|cause (?:is|was|remains) (?:unknown|unclear|not known)|(?:unclear|unknown|not (?:yet )?(?:said|say|clear)) what caused|investigators (?:have not|did not|are (?:still )?(?:trying|working)))/iu;
 
 function tokens(text: string): string[] {
   return (text ?? '').split(/[^\p{L}\p{N}]+/u).filter(Boolean);
@@ -323,11 +485,6 @@ function inflectedWordPattern(word: string): RegExp {
   );
 }
 
-/** The event's head noun (last topic word) with light inflection. */
-function headNounPattern(topic: string): RegExp {
-  return inflectedWordPattern(tokens(topic).pop() ?? topic);
-}
-
 /**
  * Every topic word, lightly inflected, inside ONE field — the title, or one
  * summary sentence. Covers "plane crashes" / "plane crashed" for "plane crash",
@@ -354,9 +511,10 @@ export function classifyEventEvidence(
   const about =
     scoreGenericRelevance(article, topic).isRelevant || allTopicWordsInOneField(article, topic);
   if (!about) return 'CONTEXT_ONLY';
-  const head = headNounPattern(topic);
+  /* R1.1 B1 — an explicit, directional link; chronology stays DIRECT_EVENT. */
+  const link = consequenceLinkPattern(topic);
   const linksConsequence = sentences(`${article.title ?? ''}. ${article.summary ?? ''}`).some(
-    (s) => head.test(s) && CONSEQUENCE_LINK.test(s) && !CAUSE_UNKNOWN.test(s),
+    (s) => link.test(s) && !CAUSE_UNKNOWN.test(s),
   );
   return linksConsequence ? 'REPORTED_CONSEQUENCE' : 'DIRECT_EVENT';
 }
@@ -373,7 +531,8 @@ export function deriveEventDisclosures(
     relation: EventEvidenceRelation;
   }>,
 ): EventAnchorDisclosure[] {
-  const head = headNounPattern(topic);
+  const link = consequenceLinkPattern(topic);
+  const eventCause = eventCausePattern(topic);
   const eventLinked = classified.filter((c) => c.relation !== 'CONTEXT_ONLY');
   const eventSentences = eventLinked.flatMap((c) =>
     sentences(`${c.article.title ?? ''}. ${c.article.summary ?? ''}`),
@@ -381,14 +540,15 @@ export function deriveEventDisclosures(
   const disclosures: EventAnchorDisclosure[] = [];
 
   if (aspects.cause) {
-    const causeReported = eventSentences.some(
-      (s) => CAUSE_REPORTED.test(s) && !CAUSE_UNKNOWN.test(s),
-    );
+    /* R1.1 B2 — the cause OF THE EVENT, in one local statement; a causal
+       phrase about anything else in the article never counts. */
+    const causeReported = eventSentences.some((s) => eventCause.test(s) && !CAUSE_UNKNOWN.test(s));
     if (!causeReported) disclosures.push('CAUSE_NOT_ESTABLISHED');
   }
   if (aspects.crossBorder) {
+    /* R1.1 B1 — an explicit consequence link, never mere chronology. */
     const crossBorderReported = eventSentences.some(
-      (s) => head.test(s) && CROSS_BORDER_ASPECT.test(s) && CONSEQUENCE_LINK.test(s),
+      (s) => CROSS_BORDER_ASPECT.test(s) && link.test(s) && !CAUSE_UNKNOWN.test(s),
     );
     if (!crossBorderReported) disclosures.push('CROSS_BORDER_NOT_ESTABLISHED');
   }

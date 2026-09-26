@@ -5,6 +5,7 @@ import {
   detectAmbiguousCountryMention,
   detectEventAspects,
   isAnaphoricFollowUp,
+  isEventTopic,
   withholdContextOnlyConsequenceClaims,
   withoutAmbiguousCountryMentions,
 } from './event-anchor.util';
@@ -84,7 +85,7 @@ describe('classifyEventEvidence — DIRECT_EVENT / REPORTED_CONSEQUENCE / CONTEX
       classifyEventEvidence(
         art(
           'Rwanda closes border crossing after DR Congo plane crash',
-          'Kigali cited security after the crash killed senior officers.',
+          'Kigali closed the crossing in response to the crash, citing security.',
         ),
         topic,
       ),
@@ -152,7 +153,7 @@ describe('deriveEventDisclosures — what the evidence does NOT establish', () =
     const genuine = {
       article: art(
         'Rwanda closes border after DR Congo plane crash',
-        'Neighbouring Rwanda shut the crossing after the crash, officials said.',
+        'The crash prompted neighbouring Rwanda to shut the crossing, officials said.',
       ),
       relation: 'REPORTED_CONSEQUENCE' as const,
     };
@@ -224,5 +225,184 @@ describe('withholdContextOnlyConsequenceClaims', () => {
   it('returns the same object when there is no context', () => {
     const input = { immediateImpacts: [claim(['crash-1'])] };
     expect(withholdContextOnlyConsequenceClaims(input, new Set()).analysis).toBe(input);
+  });
+});
+
+/* ══ R1.1 — CTO remote-review blockers ══════════════════════════════════ */
+
+describe('R1.1 B1 — chronology is not consequence', () => {
+  const topic = 'plane crash';
+  const consequence = { cause: false, effect: true, crossBorder: true };
+  const as =
+    (relation: 'DIRECT_EVENT' | 'REPORTED_CONSEQUENCE') => (title: string, summary: string) => ({
+      article: art(title, summary),
+      relation,
+    });
+
+  it('chronological "after": the crash reporting is kept as DIRECT_EVENT, not a consequence', () => {
+    const a = art(
+      'After the plane crash, officials discussed an unrelated Ebola outbreak',
+      'Health officials said neighbouring countries were on alert.',
+    );
+    expect(classifyEventEvidence(a, topic)).toBe('DIRECT_EVENT');
+    expect(
+      deriveEventDisclosures(consequence, topic, [as('DIRECT_EVENT')(a.title, a.summary)]),
+    ).toContain('CROSS_BORDER_NOT_ESTABLISHED');
+  });
+
+  it.each([
+    ['Following the plane crash, Rwanda held border talks', 'Talks on trade continued.'],
+    [
+      'In the wake of the plane crash, Uganda reported Ebola cases',
+      'Neighbouring countries were on alert.',
+    ],
+    [
+      'Rwanda closes border after DR Congo plane crash',
+      'Officials gave no reason for the closure.',
+    ],
+  ])(
+    'chronology alone — "%s" — is DIRECT_EVENT and establishes no cross-border effect',
+    (title, summary) => {
+      expect(classifyEventEvidence(art(title, summary), topic)).toBe('DIRECT_EVENT');
+      expect(
+        deriveEventDisclosures(consequence, topic, [as('DIRECT_EVENT')(title, summary)]),
+      ).toContain('CROSS_BORDER_NOT_ESTABLISHED');
+    },
+  );
+
+  it('same-sentence coincidence: both subjects, no link, is not a consequence', () => {
+    const title = 'DR Congo mourns plane crash victims as Ebola spreads to neighbouring countries';
+    expect(classifyEventEvidence(art(title), topic)).toBe('DIRECT_EVENT');
+    expect(deriveEventDisclosures(consequence, topic, [as('DIRECT_EVENT')(title, '')])).toContain(
+      'CROSS_BORDER_NOT_ESTABLISHED',
+    );
+  });
+
+  it.each([
+    ['DR Congo plane crash prompted Rwanda to close its border', ''],
+    ['DR Congo plane crash led to border closures in neighbouring Rwanda', ''],
+    ['Neighbouring Rwanda sealed the border as a result of the plane crash', ''],
+    ['The plane crash forced neighbouring Uganda to suspend flights', ''],
+  ])(
+    'explicit consequence — "%s" — is REPORTED_CONSEQUENCE and establishes the cross-border effect',
+    (title, summary) => {
+      expect(classifyEventEvidence(art(title, summary), topic)).toBe('REPORTED_CONSEQUENCE');
+      expect(
+        deriveEventDisclosures(consequence, topic, [as('REPORTED_CONSEQUENCE')(title, summary)]),
+      ).not.toContain('CROSS_BORDER_NOT_ESTABLISHED');
+    },
+  );
+
+  it('explicit response to the event is REPORTED_CONSEQUENCE', () => {
+    const title = 'Rwanda closes border with DR Congo';
+    const summary =
+      'Neighbouring Rwanda closed the crossing in response to the plane crash, officials said.';
+    expect(classifyEventEvidence(art(title, summary), topic)).toBe('REPORTED_CONSEQUENCE');
+    expect(
+      deriveEventDisclosures(consequence, topic, [as('REPORTED_CONSEQUENCE')(title, summary)]),
+    ).not.toContain('CROSS_BORDER_NOT_ESTABLISHED');
+  });
+
+  it('a connector breaks the link: "closed because of fog after the crash" is not a crash consequence', () => {
+    expect(
+      classifyEventEvidence(
+        art('Goma airport closed because of fog after the plane crash', ''),
+        topic,
+      ),
+    ).toBe('DIRECT_EVENT');
+  });
+
+  it('"the crash was caused by …" is the event\'s cause, never a consequence of it', () => {
+    expect(
+      classifyEventEvidence(
+        art('Plane crash in DR Congo', 'The crash was caused by engine failure.'),
+        topic,
+      ),
+    ).toBe('DIRECT_EVENT');
+  });
+});
+
+describe('R1.1 B2 — a cause must be the cause OF the anchored event', () => {
+  const topic = 'plane crash';
+  const cause = { cause: true, effect: false, crossBorder: false };
+  const one = (title: string, summary: string) => [
+    { article: art(title, summary), relation: 'DIRECT_EVENT' as const },
+  ];
+
+  it.each([
+    [
+      'Plane crash in DR Congo kills officers',
+      'The crash cause remains under investigation. Rescue operations were delayed due to bad weather.',
+    ],
+    [
+      'Plane crash in DR Congo kills officers',
+      'Goma airport was closed because of fog after the crash.',
+    ],
+    [
+      'Plane crash in DR Congo kills officers',
+      'The crash investigation was postponed due to security concerns.',
+    ],
+    ['Plane crash in DR Congo kills officers', 'The inquiry was postponed due to security.'],
+    ['Plane crash in DR Congo kills officers', 'The cause of the crash is not yet known.'],
+    ['Plane crash in DR Congo kills officers', 'Officials have not said what caused the crash.'],
+    ['Plane crash in DR Congo kills officers', 'The cause of the crash was not disclosed.'],
+  ])('%s / "%s" → CAUSE_NOT_ESTABLISHED', (title, summary) => {
+    expect(deriveEventDisclosures(cause, topic, one(title, summary))).toEqual([
+      'CAUSE_NOT_ESTABLISHED',
+    ]);
+  });
+
+  it.each([
+    ['Plane crash in DR Congo kills officers', 'The crash was caused by engine failure.'],
+    [
+      'Plane crash in DR Congo kills officers',
+      'Investigators attributed the crash to pilot error.',
+    ],
+    ['Engine failure caused the DR Congo plane crash', ''],
+    [
+      'Plane crash in DR Congo kills officers',
+      'The cause of the crash was a fuel leak, officials said.',
+    ],
+    ['Plane crash in DR Congo kills officers', 'The crash was reportedly blamed on bad weather.'],
+  ])('%s / "%s" → cause established', (title, summary) => {
+    expect(deriveEventDisclosures(cause, topic, one(title, summary))).toEqual([]);
+  });
+
+  it('a causal phrase elsewhere in the article never suppresses the disclosure', () => {
+    expect(
+      deriveEventDisclosures(cause, topic, [
+        ...one('Plane crash in DR Congo kills officers', 'No cause was given.'),
+        ...one(
+          'DR Congo plane crash victims mourned',
+          'Flights were cancelled due to strikes. Roads closed because of flooding.',
+        ),
+      ]),
+    ).toEqual(['CAUSE_NOT_ESTABLISHED']);
+  });
+});
+
+describe('R1.1 B3 — only a discrete event is anchored', () => {
+  it.each([
+    'Why is AI regulation important?',
+    'Why is inflation high in Poland?',
+    'What are the effects of high interest rates?',
+    'Explain the new EU AI regulation in plain English',
+  ])('ordinary analytical subject — "%s" — is not event-like', (q) => {
+    expect(isEventTopic(deriveEventTopic(q))).toBe(false);
+  });
+
+  it.each([
+    ['What caused the plane crash?', 'plane crash'],
+    ['What were the effects of the earthquake?', 'earthquake'],
+    ['Did the explosion affect neighbouring countries?', 'explosion'],
+    ['What caused the plane crash in Congo?', 'plane crash'],
+  ])('genuine event — "%s" — is event-like', (q, topic) => {
+    expect(deriveEventTopic(q)).toBe(topic);
+    expect(isEventTopic(deriveEventTopic(q))).toBe(true);
+  });
+
+  it('PL event nouns are recognised', () => {
+    expect(isEventTopic('katastrofa samolotu')).toBe(true);
+    expect(isEventTopic('inflacja')).toBe(false);
   });
 });

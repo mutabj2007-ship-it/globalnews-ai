@@ -99,7 +99,7 @@ const BOTH = a(
 const GENUINE = a(
   'genuine-1',
   'Rwanda closes border after DR Congo plane crash',
-  'Neighbouring Rwanda shut the crossing after the crash killed senior officers, officials said.',
+  'Neighbouring Rwanda closed the crossing in response to the plane crash, officials said.',
 );
 
 type Corpus = readonly NewsArticle[];
@@ -408,6 +408,91 @@ describe('adversarial fixtures — context never becomes consequence; genuine co
 });
 
 describe('preserved contracts', () => {
+  /* R1.1 B3 — ordinary analytical why/effect questions are NOT events. */
+  const ANALYTICAL = [
+    a(
+      'eu-1',
+      'EU AI regulation enters into force',
+      'The AI regulation sets obligations for AI providers.',
+    ),
+    a(
+      'pl-1',
+      'Inflation in Poland stays high as food prices rise',
+      'Polish inflation remained high in August.',
+    ),
+    a(
+      'ir-1',
+      'High interest rates weigh on borrowers',
+      'The effects of high interest rates reached mortgages.',
+    ),
+    ...CRASH,
+  ];
+  it.each([
+    'Why is AI regulation important?',
+    'Why is inflation high in Poland?',
+    'What are the effects of high interest rates?',
+  ])('R1.1 B3: "%s" gets no anchor, no relation tags and a byte-identical prompt', async (q) => {
+    const h = harness(ANALYTICAL);
+    const r = await h.service.analyzeNews(q, 'en');
+    expect(r.retrievalContext.eventAnchor).toBeUndefined();
+    expect(h.provider.analyzeNews).toHaveBeenCalledTimes(1);
+    const input = h.providerInputs[0];
+    expect(input.eventAnchor).toBeUndefined();
+    expect(input.eventEvidenceRelations).toBeUndefined();
+    const base = buildAnalysisMessages(input.query, input.articles, 1200, undefined, 'en');
+    expect(promptFor(input)).toEqual(base);
+    expect(base.system).not.toContain('AUTHORITATIVE EVENT ANCHOR');
+    expect(base.user).not.toContain('[relation:');
+  });
+
+  it('R1.1 B3: a "this" follow-up to a NON-event question keeps its pre-R1 routing (no prior-question re-anchoring)', async () => {
+    const follow = 'Why does this matter for neighbouring countries?';
+    const withPrior = harness(ANALYTICAL);
+    const r = await withPrior.service.analyzeNews(
+      follow,
+      'en',
+      undefined,
+      'Why is AI regulation important?',
+    );
+    const alone = harness(ANALYTICAL);
+    await alone.service.analyzeNews(follow, 'en');
+    expect(r.retrievalContext.eventAnchor).toBeUndefined();
+    expect(withPrior.searchCalls).toEqual(alone.searchCalls);
+    expect(withPrior.countryCalls).toEqual(alone.countryCalls);
+    expect(withPrior.searchCalls.join(' ')).not.toMatch(/regulation/i);
+  });
+
+  it.each([
+    [
+      'What were the effects of the earthquake?',
+      'earthquake',
+      [a('eq-1', 'Earthquake strikes eastern Turkey', 'The earthquake damaged buildings.')],
+    ],
+    [
+      'Did the explosion affect neighbouring countries?',
+      'explosion',
+      [a('ex-1', 'Explosion at Beirut port', 'The explosion destroyed warehouses.')],
+    ],
+  ] as const)('R1.1 B3: genuine event — "%s" — is anchored', async (q, topic, corpus) => {
+    const h = harness(corpus);
+    const r = await h.service.analyzeNews(q, 'en');
+    expect(r.retrievalContext.eventAnchor).toMatchObject({ topic, source: 'current-question' });
+  });
+
+  it('R1.1 B1: a chronological "after" story is event reporting, never a cross-border consequence', async () => {
+    const chrono = a(
+      'chrono-1',
+      'After the DR Congo plane crash, officials discussed an unrelated Ebola outbreak',
+      'Health officials said neighbouring countries were on alert.',
+    );
+    const h = harness([CRASH[0], CRASH[1], chrono, EBOLA]);
+    const r = await h.service.analyzeNews(T2, 'en', COD_CONTEXT, T1);
+    const anchor = r.retrievalContext.eventAnchor!;
+    expect(relationsById(h.providerInputs[0])['chrono-1']).toBe('DIRECT_EVENT');
+    expect(anchor.consequenceArticleIds).toEqual([]);
+    expect(anchor.disclosures).toContain('CROSS_BORDER_NOT_ESTABLISHED');
+  });
+
   it('a question that does not reason about an event gets no anchor and a byte-identical prompt', async () => {
     const h = harness([
       a('eu-1', 'EU AI Act enters into force', 'The regulation sets obligations for AI providers.'),
