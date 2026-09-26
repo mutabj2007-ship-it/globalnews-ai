@@ -64,11 +64,36 @@ export const AdaptiveTextarea = forwardRef<HTMLTextAreaElement, AdaptiveTextarea
       const viewportCeiling = Math.floor(visibleHeight() * maxViewportFraction);
       const ceiling = Math.max(minHeight, Math.min(maxHeight, viewportCeiling));
 
-      // Reset first so scrollHeight can also shrink after submit / deletion.
-      node.style.height = '0px';
-      const desired = Math.max(minHeight, Math.min(node.scrollHeight, ceiling));
+      /*
+       * R2 — true elasticity.
+       *
+       * The first implementation trusted scrollHeight alone. In the live
+       * Chromium build that still left long pasted questions looking like a
+       * one-line/search control on some surfaces, and the dock fell back to a
+       * tiny internally scrolling strip. Measure after layout, force wrapping,
+       * and keep a content-length floor as a defensive fallback.
+       */
+      node.style.height = 'auto';
+      node.style.whiteSpace = 'pre-wrap';
+      node.style.overflowWrap = 'anywhere';
+
+      const explicitLines = (node.value.match(/\n/g) ?? []).length + 1;
+      const charsPerVisualLine = Math.max(28, Math.floor(node.clientWidth / 8.2));
+      const estimatedLines = Math.max(explicitLines, Math.ceil(node.value.length / charsPerVisualLine));
+      const lineHeight = Number.parseFloat(window.getComputedStyle(node).lineHeight) || 22;
+      const padding =
+        Number.parseFloat(window.getComputedStyle(node).paddingTop) +
+        Number.parseFloat(window.getComputedStyle(node).paddingBottom);
+      const estimatedHeight = estimatedLines * lineHeight + padding + 2;
+
+      const contentHeight = Math.max(node.scrollHeight, estimatedHeight);
+      const desired = Math.max(minHeight, Math.min(contentHeight, ceiling));
+
       node.style.height = `${desired}px`;
-      node.style.overflowY = node.scrollHeight > ceiling ? 'auto' : 'hidden';
+      node.style.maxHeight = `${ceiling}px`;
+      node.style.overflowY = contentHeight > ceiling ? 'auto' : 'hidden';
+      node.style.overflowX = 'hidden';
+      node.style.scrollbarWidth = 'none';
     }, [maxHeight, maxViewportFraction, minHeight, visibleHeight]);
 
     const keepInsideVisualViewport = useCallback(
@@ -126,7 +151,13 @@ export const AdaptiveTextarea = forwardRef<HTMLTextAreaElement, AdaptiveTextarea
         rows={1}
         value={value}
         onInput={(event) => {
+          /*
+           * Paste/input can update layout one frame after the event itself.
+           * Resize now for responsive typing and again on the next frame for
+           * reliable multi-paragraph paste geometry.
+           */
           resize();
+          requestAnimationFrame(resize);
           onInput?.(event);
         }}
         onFocus={(event) => {
@@ -135,7 +166,9 @@ export const AdaptiveTextarea = forwardRef<HTMLTextAreaElement, AdaptiveTextarea
           requestAnimationFrame(() => keepInsideVisualViewport());
           window.setTimeout(() => keepInsideVisualViewport(), 180);
         }}
-        className={`resize-none overflow-y-auto transition-[height] duration-150 ease-out motion-reduce:transition-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+        data-gn-adaptive-composer=""
+        wrap="soft"
+        className={`gn-adaptive-textarea resize-none overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words transition-[height] duration-150 ease-out motion-reduce:transition-none ${className}`}
       />
     );
   },
