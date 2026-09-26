@@ -435,6 +435,7 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
             </label>
             <AdaptiveTextarea
               id="search-workspace-question"
+              aria-label={dictionary.searchWorkspaceAriaLabel}
               value={workspaceQuery}
               onChange={(event) => setWorkspaceQuery(event.target.value)}
               placeholder={dictionary.searchWorkspacePlaceholder}
