@@ -10,6 +10,7 @@ import {
   analysisConsentKey,
   consumeAnalysisConsent,
   grantAnalysisConsent,
+  revokeAnalysisConsent,
 } from '@/lib/analysis/analysisComputeConsent';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { AnalysisFrameSurface } from '@/components/analysis-frame/AnalysisFrameSurface';
@@ -280,6 +281,17 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
       clears any consent held for a previous identity, so back/forward to an
       already-analysed question stages it again instead of silently re-spending.
     */
+    /*
+      PR #40 R2 F1 — the queryless workspace is a request identity of its own.
+      Arriving at it revokes BOTH the consent held for any previous question
+      and any pending grant, so neither a return to that question nor a later
+      arrival can execute without a fresh explicit action.
+    */
+    if (hasResolvedLanguage && !query.trim()) {
+      revokeAnalysisConsent();
+      claimedKeyRef.current = null;
+      if (consentedKey !== null) setConsentedKey(null);
+    }
     if (hasResolvedLanguage && query.trim() && consentedKey !== runKey) {
       if (claimedKeyRef.current === runKey || consumeAnalysisConsent(requestKey)) {
         claimedKeyRef.current = runKey;

@@ -598,6 +598,10 @@ export const en = {
     liveNothingNoStored:
       'Live retrieval found nothing usable, and no stored reporting was available for this question.',
     newestStoredArticle: 'Newest stored article:',
+    /* PR #40 R2 F3 — the freshness time is described by its basis. */
+    newestStoredArticlePublished: 'Newest stored article, published:',
+    newestStoredArticleObserved: 'Newest stored article, seen by a news aggregator (not its publication time):',
+    newestStoredArticleUnverified: 'Newest stored article (time basis unverified):',
     interpretedAs: 'Interpreted',
     interpretedAsMiddle: 'as',
   },

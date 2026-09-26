@@ -2,9 +2,12 @@ import { Radio, Archive, FlaskConical, CircleOff } from 'lucide-react';
 import type { AnalysisRetrievalContext, LanguageCode } from '@globalnews-ai/shared';
 import { formatRelativeTime, formatUtcClock } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { displayRetrievalContext } from '@/components/search/evidenceDisplay';
 
 interface RetrievalContextStatusProps {
   retrievalContext: AnalysisRetrievalContext;
+  /** PR #40 R2 F3 — the rendered response's article count, for legacy payloads without a stamped evidenceState. */
+  articleCount?: number;
   className?: string;
   /** Milestone #47 — defaults to 'en', so every pre-M47 caller renders exactly as before. */
   language?: LanguageCode;
@@ -72,9 +75,12 @@ export interface RetrievalContextText {
 }
 
 export function resolveRetrievalContextText(
-  retrievalContext: AnalysisRetrievalContext,
+  rawRetrievalContext: AnalysisRetrievalContext,
   language: LanguageCode = 'en',
+  articleCount?: number,
 ): RetrievalContextText {
+  /* PR #40 R2 F3 — labelled through the one evidence-state display authority. */
+  const retrievalContext = displayRetrievalContext(rawRetrievalContext, articleCount);
   const {
     dataMode,
     fallbackReason,
@@ -118,8 +124,19 @@ export function resolveRetrievalContextText(
           : t.liveNothingNoStored
         : undefined;
 
+  /*
+    PR #40 R2 F3 — the time is described by its OWN basis: only a
+    publisher-stated time is called a publication time; an aggregator time is
+    called an observation; an unproven time says so.
+  */
+  const freshnessPrefix =
+    retrievalContext.newestArticlePublishedAtBasis === 'publisher'
+      ? t.newestStoredArticlePublished
+      : retrievalContext.newestArticlePublishedAtBasis === 'observed'
+        ? t.newestStoredArticleObserved
+        : t.newestStoredArticleUnverified;
   const freshnessLine = newestArticlePublishedAt
-    ? `${t.newestStoredArticle} ${formatRelativeTime(newestArticlePublishedAt, language)} \u00b7 ${formatUtcClock(newestArticlePublishedAt)}`
+    ? `${freshnessPrefix} ${formatRelativeTime(newestArticlePublishedAt, language)} \u00b7 ${formatUtcClock(newestArticlePublishedAt)}`
     : undefined;
 
   // Milestone #28: when this query's country/city came from fuzzy
@@ -142,13 +159,15 @@ export function resolveRetrievalContextText(
 
 export function RetrievalContextStatus({
   retrievalContext,
+  articleCount,
   className = '',
   language = 'en',
 }: RetrievalContextStatusProps): JSX.Element {
-  const { dataMode } = retrievalContext;
+  const { dataMode } = displayRetrievalContext(retrievalContext, articleCount);
   const { label, correctionLine, explanation, freshnessLine } = resolveRetrievalContextText(
     retrievalContext,
     language,
+    articleCount,
   );
   const Icon = BADGE_ICON[dataMode];
 

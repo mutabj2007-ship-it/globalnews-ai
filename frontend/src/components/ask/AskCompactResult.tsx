@@ -123,7 +123,11 @@ export function AskCompactResult({
     <div data-ask="compact-result" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <AnalysisModeBadge provenance={response.provenance} language={language} />
-        <EvidenceFreshnessNotice retrievalContext={response.retrievalContext} language={language} />
+        <EvidenceFreshnessNotice
+          retrievalContext={response.retrievalContext}
+          articleCount={response.articles.length}
+          language={language}
+        />
         {telemetry.retrievedArticleCount === null && telemetry.reportingClusterCount === null ? null : (
           <span data-ask="telemetry" className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
             {telemetry.retrievedArticleCount === null

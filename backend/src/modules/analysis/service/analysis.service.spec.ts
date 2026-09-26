@@ -1770,6 +1770,77 @@ describe('AnalysisService', () => {
       });
     });
 
+    /*
+      PR #40 R2 F3 — newestArticlePublishedAtBasis is the basis of the SAME
+      article newestArticlePublishedAt came from; absent when unproven.
+    */
+    it.each([
+      [
+        'observed newest, older publisher',
+        [
+          ['a-old', '2026-08-08T18:00:00.000Z', 'publisher'],
+          ['a-new', '2026-08-08T20:58:00.000Z', 'observed'],
+        ],
+        'observed',
+      ],
+      [
+        'publisher newest, older observed',
+        [
+          ['a-old', '2026-08-08T18:00:00.000Z', 'observed'],
+          ['a-new', '2026-08-08T20:58:00.000Z', 'publisher'],
+        ],
+        'publisher',
+      ],
+      [
+        'newest without a basis',
+        [
+          ['a-old', '2026-08-08T18:00:00.000Z', 'publisher'],
+          ['a-new', '2026-08-08T20:58:00.000Z', undefined],
+        ],
+        undefined,
+      ],
+    ] as const)('stamps the newest article basis: %s', async (_, rows, expectedBasis) => {
+      const articles = rows.map(([id, publishedAt, basis]) =>
+        makeArticle({
+          id,
+          title: `Rwanda headline ${id}`,
+          publishedAt,
+          ...(basis === undefined ? {} : { publishedAtBasis: basis }),
+        }),
+      );
+      const countryNewsService = {
+        getCountryNews: jest.fn().mockResolvedValue(
+          makeCountryResponse('RWA', 'Rwanda', articles, {
+            dataMode: 'cached',
+            providers: [],
+            fallbackReason: 'no-live-results',
+            providerDisplayName: 'Stored reporting',
+            newestArticlePublishedAt: '2026-08-08T20:58:00.000Z',
+          }),
+        ),
+      };
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockResolvedValue(validCandidateFor(articles)),
+      };
+      const service = new AnalysisService(
+        { search: jest.fn() } as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService(),
+      );
+
+      const response = await service.analyzeNews('Latest news from Rwanda');
+
+      expect(response.retrievalContext.newestArticlePublishedAt).toBe('2026-08-08T20:58:00.000Z');
+      expect(response.retrievalContext.newestArticlePublishedAtBasis).toBe(expectedBasis);
+      if (expectedBasis === undefined) {
+        expect('newestArticlePublishedAtBasis' in response.retrievalContext).toBe(false);
+      }
+    });
+
     it('preserves city alongside country code/name for a curated-city query', async () => {
       const articles = [
         makeArticle({

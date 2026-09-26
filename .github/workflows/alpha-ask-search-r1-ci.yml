@@ -1,0 +1,55 @@
+name: Alpha Ask/Search R1 CI
+
+# PR #40 — Ask/Search Engineering R1 + Home Click Contract R1.
+# Runs the suites that pin the compute-consent boundary, request counts, the
+# Home click contract, the evidence-state contract and the basis-aware prompt.
+# Additive: no existing workflow is changed or removed.
+
+on:
+  push:
+    branches:
+      - engineering/ask-search-home-click-r1
+  pull_request:
+    branches:
+      - release/alpha-m08-integrated-r1
+
+concurrency:
+  group: alpha-ask-search-r1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --config backend/prisma.config.ts
+      - run: npm run build:shared
+      - name: Compute consent and request counts (frontend)
+        run: |
+          npm test --workspace=frontend -- --runInBand src/components/search/searchComputeRequestCount.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/ask/askDockRequestCount.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/map/checkpointDAiActionSemantics.spec.ts
+      - name: Home click contract (frontend)
+        run: npm test --workspace=frontend -- --runInBand src/components/home/homeClickContract.spec.ts
+      - name: Evidence-state display authority (frontend)
+        run: |
+          npm test --workspace=frontend -- --runInBand src/components/analysis-frame/evidenceDisclosureR1.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/search/evidenceDisplayR2.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/search/RetrievalContextStatus.spec.ts
+      - name: Evidence-state contract and basis-aware prompt (backend)
+        run: |
+          npm test --workspace=backend -- --runInBand src/modules/analysis/service/evidence-state.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/analysis/prompt/build-analysis-prompt.util.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/analysis/query/derive-generic-news-query.util.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/analysis/service/analysis.service.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/analysis/service/natural-query-routing.spec.ts -t "ASK/SEARCH"
+      - name: Frontend build
+        run: npm run build:frontend
+      - name: Backend build
+        run: npm run build:backend

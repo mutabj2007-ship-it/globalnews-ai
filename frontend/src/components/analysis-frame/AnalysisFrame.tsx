@@ -794,7 +794,11 @@ export function AnalysisFrame({
         </div>
         {/* ASK/SEARCH R1 — stored/degraded evidence is disclosed beside the
             AI badge, not only inside Complete Record. Renders nothing when live. */}
-        <EvidenceFreshnessNotice retrievalContext={response.retrievalContext} language={language} />
+        <EvidenceFreshnessNotice
+          retrievalContext={response.retrievalContext}
+          articleCount={response.articles.length}
+          language={language}
+        />
       </header>
 
       {/*

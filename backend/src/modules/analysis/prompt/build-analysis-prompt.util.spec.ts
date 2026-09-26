@@ -886,3 +886,106 @@ describe('PR #40 BLOCKER 1 — basis-aware evidence freshness', () => {
     });
   });
 });
+
+/*
+ * PR #40 R2 F2 — the COMPLETE retained/degraded prompt (system + user) carries
+ * every article's timestamp with its own basis; an unproven timestamp appears
+ * nowhere. The live prompt is byte-identical to the pre-R2 serialization.
+ */
+describe('PR #40 R2 F2 — full buildAnalysisMessages() timestamp basis', () => {
+  const PUB = '2026-09-25T11:00:00Z';
+  const OBS = '2026-09-25T10:00:00Z';
+  const UNK = '2026-09-25T09:00:00Z';
+
+  const item = (id: string, publishedAt: string, basis?: 'publisher' | 'observed'): NewsArticle =>
+    ({
+      id,
+      title: `Headline ${id}`,
+      summary: `Summary ${id}`,
+      url: `https://wire.example/${id}`,
+      sourceId: 'wire',
+      sourceName: `Outlet ${id}`,
+      category: 'world',
+      sourcesCount: 1,
+      publishedAt,
+      ...(basis === undefined ? {} : { publishedAtBasis: basis }),
+    }) as NewsArticle;
+
+  const full = (articles: NewsArticle[], state?: 'live' | 'retained' | 'degraded-fallback') => {
+    const { system, user } = buildMessagesR1(
+      'What is happening right now?',
+      articles,
+      500,
+      undefined,
+      'en',
+      undefined,
+      undefined,
+      undefined,
+      state,
+      state === undefined ? undefined : newestEvidenceFreshness(articles),
+    );
+    return `${system}\n${user}`;
+  };
+
+  describe.each(['retained', 'degraded-fallback'] as const)('%s prompt', (state) => {
+    it('publisher article → publication wording, in system and user text', () => {
+      const text = full([item('pub', PUB, 'publisher')], state);
+      expect(text).toContain(`was published at ${PUB} (UTC), as stated by its publisher`);
+      expect(text).toContain(`(published ${PUB}, as stated by the publisher)`);
+    });
+
+    it('observed article → observation wording only, never "published"', () => {
+      const text = full([item('obs', OBS, 'observed')], state);
+      expect(text).toContain(`observed by a news aggregator at ${OBS} (UTC)`);
+      expect(text).toContain(`(observed by a news aggregator ${OBS}; not the publication time)`);
+      expect(text).not.toMatch(new RegExp(`published[^\n]{0,40}${OBS}`, 'i'));
+      expect(text).not.toContain(`(${OBS})`);
+    });
+
+    it('unknown-basis article → its timestamp appears NOWHERE in the complete prompt', () => {
+      const text = full([item('unk', UNK)], state);
+      expect(text).not.toContain(UNK);
+      expect(text).toContain(
+        'publication time of the newest report in this evidence set is unverified',
+      );
+      expect(text).toContain('"Headline unk" \u2014 Outlet unk\n');
+    });
+
+    it('mixed: newest publisher + older observed + unknown → each keeps its own basis; unknown absent', () => {
+      const text = full(
+        [item('obs', OBS, 'observed'), item('unk', UNK), item('pub', PUB, 'publisher')],
+        state,
+      );
+      expect(text).toContain(`was published at ${PUB} (UTC), as stated by its publisher`);
+      expect(text).toContain(`(published ${PUB}, as stated by the publisher)`);
+      expect(text).toContain(`(observed by a news aggregator ${OBS}; not the publication time)`);
+      expect(text).not.toMatch(new RegExp(`published[^\n]{0,40}${OBS}`, 'i'));
+      expect(text).not.toContain(UNK);
+    });
+  });
+
+  it('live prompt keeps the exact pre-R2 serialization for every basis', () => {
+    const articles = [
+      item('obs', OBS, 'observed'),
+      item('unk', UNK),
+      item('pub', PUB, 'publisher'),
+    ];
+    const live = buildMessagesR1(
+      'q',
+      articles,
+      500,
+      undefined,
+      'en',
+      undefined,
+      undefined,
+      undefined,
+      'live',
+      newestEvidenceFreshness(articles),
+    );
+    const legacy = buildMessagesR1('q', articles, 500);
+    expect(live.system).toBe(legacy.system);
+    expect(live.user).toBe(legacy.user);
+    expect(live.user).toContain(`\u2014 Outlet unk (${UNK})`);
+    expect(live.user).toContain(`\u2014 Outlet obs (${OBS})`);
+  });
+});

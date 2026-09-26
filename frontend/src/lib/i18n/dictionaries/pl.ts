@@ -461,6 +461,9 @@ export const pl: Dictionary = {
     liveNothingNoStored:
       'Wyszukiwanie na żywo nie znalazło niczego użytecznego, a dla tego pytania nie były dostępne żadne relacje z pamięci.',
     newestStoredArticle: 'Najnowszy zapisany artykuł:',
+    newestStoredArticlePublished: 'Najnowszy zapisany artykuł, opublikowany:',
+    newestStoredArticleObserved: 'Najnowszy zapisany artykuł, zauważony przez agregator wiadomości (nie jest to czas publikacji):',
+    newestStoredArticleUnverified: 'Najnowszy zapisany artykuł (podstawa czasu niezweryfikowana):',
     interpretedAs: 'Zinterpretowano',
     interpretedAsMiddle: 'jako',
   },

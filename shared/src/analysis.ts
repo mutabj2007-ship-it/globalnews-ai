@@ -2,6 +2,7 @@ import type {
   NewsArticle,
   NewsDataMode,
   NewsFallbackReason,
+  PublishedAtBasis,
 } from './news';
 
 /**
@@ -846,6 +847,14 @@ export interface AnalysisRetrievalContext {
    * NewsAnalysisResult.generatedAt.
    */
   newestArticlePublishedAt?: string;
+
+  /**
+   * PR #40 R2 F3 — the `publishedAtBasis` of the SAME article
+   * `newestArticlePublishedAt` was taken from. Absent means unproven: a
+   * consumer must not describe `newestArticlePublishedAt` as a publication
+   * time unless this is 'publisher' (shared/src/news.ts).
+   */
+  newestArticlePublishedAtBasis?: PublishedAtBasis;
 
   /**
    * The country the RETAINED reporting establishes. Set by country-aware

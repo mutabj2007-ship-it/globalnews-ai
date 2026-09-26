@@ -85,7 +85,11 @@ export function CompleteRecordView({
           itself survived — retrieval context and the resolved entities
           are facts about the RETRIEVAL, and they outlive an AI failure. */}
       <div data-paf="record-retrieval" className="mt-6 flex flex-col gap-4">
-        <RetrievalContextStatus retrievalContext={response.retrievalContext} language={language} />
+        <RetrievalContextStatus
+          retrievalContext={response.retrievalContext}
+          articleCount={response.articles.length}
+          language={language}
+        />
         <AnalysisModeBadge provenance={response.provenance} language={language} />
         <SourceEntitiesPanel sourceEntities={response.sourceEntities} language={language} />
       </div>

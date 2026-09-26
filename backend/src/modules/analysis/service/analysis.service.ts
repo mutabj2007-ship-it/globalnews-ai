@@ -3656,12 +3656,26 @@ export class AnalysisService {
     geoMatch?: GeoFuzzyMatch,
   ): AnalysisRetrievalContext {
     const isCountryResponse = 'countryCode' in source;
+    const newestArticlePublishedAt = isCountryResponse
+      ? source.newestArticlePublishedAt
+      : undefined;
+    /*
+      PR #40 R2 F3 — the basis of the article that timestamp came from, and only
+      that article's. No match, or no basis on it, leaves the field absent
+      (unproven) rather than defaulting to 'publisher'.
+    */
+    const newestArticlePublishedAtBasis =
+      newestArticlePublishedAt === undefined
+        ? undefined
+        : source.articles.find((article) => article.publishedAt === newestArticlePublishedAt)
+            ?.publishedAtBasis;
 
     return {
       dataMode: source.dataMode,
       providers: source.providers,
       fallbackReason: source.fallbackReason,
-      newestArticlePublishedAt: isCountryResponse ? source.newestArticlePublishedAt : undefined,
+      newestArticlePublishedAt,
+      ...(newestArticlePublishedAtBasis === undefined ? {} : { newestArticlePublishedAtBasis }),
       countryCode: isCountryResponse ? source.countryCode : undefined,
       countryName: isCountryResponse ? source.countryName : undefined,
       providerDisplayName: isCountryResponse ? source.providerDisplayName : undefined,

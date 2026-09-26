@@ -185,6 +185,61 @@ describe('EXPLICIT COMPUTE — exactly one execution', () => {
   });
 });
 
+describe('PR #40 R2 F1 — leaving the authorized identity revokes consent, including via queryless /search', () => {
+  it('Codex sequence 1: run Poland → bare /search → back to ?q=Poland requires a fresh Run', () => {
+    grantAnalysisConsent('/search?q=Poland');
+    arrive('q=Poland');
+    expect(transport).toHaveBeenCalledTimes(1);
+
+    navigateTo('');
+    expect(transport).toHaveBeenCalledTimes(1);
+
+    navigateTo('q=Poland');
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(byData('staged')).toHaveLength(1);
+
+    act(() => byData('run-staged')[0].props.onClick());
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
+
+  it('Codex sequence 2: a pending Poland grant does not survive arrival at bare /search', () => {
+    grantAnalysisConsent('/search?q=Poland');
+    arrive('');
+    expect(transport).toHaveBeenCalledTimes(0);
+
+    navigateTo('q=Poland');
+    expect(transport).toHaveBeenCalledTimes(0);
+    expect(byData('staged')).toHaveLength(1);
+  });
+
+  it('…nor a later full-document arrival (the pending grant itself is revoked, not just hidden)', () => {
+    grantAnalysisConsent('/search?q=Poland');
+    arrive('');
+    act(() => renderer.unmount());
+    arrive('q=Poland');
+    expect(transport).toHaveBeenCalledTimes(0);
+    expect(consumeAnalysisConsent(analysisConsentKey({ q: 'Poland' }))).toBe(false);
+  });
+
+  it('Strict Mode: bare /search then a same-tab granted handoff still runs exactly once', () => {
+    arrive('', true);
+    grantAnalysisConsent('/search?q=Poland');
+    act(() => {
+      currentParams = new URLSearchParams('q=Poland');
+      renderer.update(createElement(StrictMode, null, createElement(SearchPageClient, { initialLanguage: 'en' })));
+    });
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it('the workspace Analyze on bare /search still hands off exactly once', () => {
+    arrive('');
+    act(() => renderer.root.findByProps({ id: 'search-workspace-question' }).props.onChange({ target: { value: 'Poland' } }));
+    act(() => renderer.root.findByProps({ role: 'search' }).props.onSubmit({ preventDefault() {} }));
+    navigateTo('q=Poland');
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('CTO RULING 1 — a language switch is presentation, not compute consent', () => {
   const switchLanguage = (language: 'en' | 'pl'): void => {
     act(() => {

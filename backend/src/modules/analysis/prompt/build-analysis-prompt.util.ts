@@ -8,6 +8,7 @@ import type {
   ComparisonCountryCoverage,
   LanguageCode,
   NewsArticle,
+  PublishedAtBasis,
 } from '@globalnews-ai/shared';
 
 /**
@@ -84,6 +85,12 @@ export interface NormalizedArticleForPrompt {
   summary: string;
   sourceName: string;
   publishedAt: string;
+  /**
+   * PR #40 R2 F2 — this article's own timestamp basis, carried so a
+   * retained/degraded prompt can serialize the time truthfully. Absent means
+   * unproven (shared/src/news.ts `publishedAtBasis`).
+   */
+  publishedAtBasis?: PublishedAtBasis;
 }
 
 /**
@@ -106,6 +113,9 @@ export function normalizeArticlesForPrompt(
       summary: combined.length > maxChars ? `${combined.slice(0, maxChars)}\u2026` : combined,
       sourceName: article.sourceName,
       publishedAt: article.publishedAt,
+      ...(article.publishedAtBasis === undefined
+        ? {}
+        : { publishedAtBasis: article.publishedAtBasis }),
     };
   });
 }
@@ -495,14 +505,44 @@ export function buildRelationalPromptSection(
   include commentary outside the JSON.`;
 }
 
+/**
+ * PR #40 R2 F2 — how ONE article's time is serialized into the evidence list.
+ *
+ * Live evidence keeps the exact pre-existing form, ` (<publishedAt>)`, so the
+ * live prompt stays byte-identical. For retained or degraded evidence every
+ * article's time is qualified by that article's own basis:
+ *
+ *   publisher  " (published <t>, as stated by the publisher)"
+ *   observed   " (observed by a news aggregator <t>; not the publication time)"
+ *   unknown    nothing — an unproven timestamp is omitted entirely.
+ */
+export function serializeArticleTimestamp(
+  article: Pick<NormalizedArticleForPrompt, 'publishedAt' | 'publishedAtBasis'>,
+  evidenceState?: AnalysisEvidenceState,
+): string {
+  if (evidenceState !== 'retained' && evidenceState !== 'degraded-fallback') {
+    return ` (${article.publishedAt})`;
+  }
+  if (!article.publishedAt) return '';
+  switch (article.publishedAtBasis) {
+    case 'publisher':
+      return ` (published ${article.publishedAt}, as stated by the publisher)`;
+    case 'observed':
+      return ` (observed by a news aggregator ${article.publishedAt}; not the publication time)`;
+    default:
+      return '';
+  }
+}
+
 export function buildAnalysisUserPrompt(
   query: string,
   articles: NormalizedArticleForPrompt[],
+  evidenceState?: AnalysisEvidenceState,
 ): string {
   const articleBlocks = articles
     .map(
       (article, index) =>
-        `${index + 1}. [evidenceId: ${article.evidenceId}] "${article.title}" \u2014 ${article.sourceName} (${article.publishedAt})\n${article.summary}`,
+        `${index + 1}. [evidenceId: ${article.evidenceId}] "${article.title}" \u2014 ${article.sourceName}${serializeArticleTimestamp(article, evidenceState)}\n${article.summary}`,
     )
     .join('\n\n');
 
@@ -636,7 +676,7 @@ export function buildAnalysisMessages(
         for the path that did not fail.
       */
       (repairDirective === undefined ? '' : `\n\n${repairDirective}\n`),
-    user: buildAnalysisUserPrompt(query, normalized),
+    user: buildAnalysisUserPrompt(query, normalized, evidenceState),
   };
 }
 

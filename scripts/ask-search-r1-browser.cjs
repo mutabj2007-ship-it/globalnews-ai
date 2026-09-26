@@ -170,10 +170,48 @@ async function instrument(context) {
         await page2.locator('[data-search="run-staged"]').click();
         await page2.waitForTimeout(1500);
         row.afterRun = calls2.length;
+
+        /* 9b — PR #40 R2 F1, Codex sequence 1, on the SAME mounted client:
+           header Search (client-side) to bare /search, then browser Back. */
+        await page2.locator('a[href="/search"]:visible').first().click();
+        await page2.waitForURL((url) => url.pathname === '/search' && !url.search, { timeout: 30000 });
+        await page2.waitForTimeout(600);
+        await page2.goBack();
+        await page2.waitForURL(/\/search\?q=/, { timeout: 30000 });
+        await page2.locator('[data-search="staged"]').waitFor({ timeout: 30000 });
+        await page2.waitForTimeout(800);
+        row.codex1BackToRunQuestion = calls2.length - row.afterRun;
+
         await page2.goto(`${base}/search`, { waitUntil: 'networkidle' });
         await page2.waitForTimeout(500);
         row.queryless = calls2.length - row.afterRun;
         await context2.close();
+
+        /* 9c — PR #40 R2 F1, Codex sequence 2: a pending grant must not survive bare /search. */
+        const context3 = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: vp.isMobile, hasTouch: vp.hasTouch });
+        await context3.addCookies([{ name: 'globalnews-ai-language', value: locale, url: base }]);
+        const calls3 = await instrument(context3);
+        const page3 = await context3.newPage();
+        const plantGrant = () =>
+          page3.evaluate(() =>
+            window.sessionStorage.setItem(
+              'gna:analysis-compute-consent',
+              JSON.stringify({ key: JSON.stringify(['Poland', '', '', '']), at: Date.now() }),
+            ),
+          );
+        await page3.goto(`${base}/`, { waitUntil: 'networkidle' });
+        await plantGrant();
+        await page3.goto(`${base}/search?q=Poland`, { waitUntil: 'networkidle' });
+        await page3.waitForTimeout(1200);
+        row.codex2ControlGrantHonoured = calls3.length; // 1: a valid same-tab grant runs once
+        await plantGrant();
+        await page3.goto(`${base}/search`, { waitUntil: 'networkidle' });
+        await page3.waitForTimeout(600);
+        await page3.goto(`${base}/search?q=Poland`, { waitUntil: 'networkidle' });
+        await page3.waitForTimeout(1200);
+        row.codex2AfterBareSearch = calls3.length - row.codex2ControlGrantHonoured; // 0: revoked by bare /search
+        row.codex2Staged = (await page3.locator('[data-search="staged"]').count()) === 1;
+        await context3.close();
 
         report.push(row);
         console.log(JSON.stringify(row));
@@ -193,6 +231,10 @@ async function instrument(context) {
         assert.equal(row.afterBackHome, 4);
         assert.equal(row.searchArrivalWithQ, 0);
         assert.equal(row.afterRun, 1);
+        assert.equal(row.codex1BackToRunQuestion, 0);
+        assert.equal(row.codex2ControlGrantHonoured, 1);
+        assert.equal(row.codex2AfterBareSearch, 0);
+        assert.equal(row.codex2Staged, true);
         assert.equal(row.queryless, 0);
       }
     }

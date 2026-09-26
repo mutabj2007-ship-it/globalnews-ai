@@ -123,6 +123,17 @@ export function consumeAnalysisConsent(key: string, now: number = Date.now()): b
   return fresh && record.key === key;
 }
 
+/**
+ * PR #40 R2 F1 — clear any pending grant, in memory and in sessionStorage.
+ * Called when the reader lands on the queryless workspace: that arrival is not
+ * the request a grant was written for, so the grant must not outlive it and be
+ * spent by a later arrival the reader did not explicitly start.
+ */
+export function revokeAnalysisConsent(): void {
+  pending = null;
+  writeStored(null);
+}
+
 /** Test-only reset of module state. */
 export function resetAnalysisConsentForTests(): void {
   pending = null;
