@@ -152,10 +152,65 @@ export function isAcronymForm(form: string): boolean {
 
 /** Whole-token, upper-case acronym match, optionally dotted: "US", "U.S.", "U.S". */
 export function containsAcronym(text: string, form: string): boolean {
+  const pattern = new RegExp(`${EDGE_BEFORE}${acronymSource(form)}${EDGE_AFTER}`, 'u');
+  return pattern.test(text ?? '');
+}
+
+const EDGE_BEFORE = '(?<![\\p{L}\\p{N}])';
+const EDGE_AFTER = '(?![\\p{L}\\p{N}])';
+
+/** Case-sensitive source for an acronym form: "US" or dotted "U.S." / "U.S". */
+function acronymSource(form: string): string {
   const letters = form.toUpperCase().split('');
-  const plain = letters.join('');
-  const dotted = letters.map((letter) => `${letter}\\.`).join('');
-  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])(?:${plain}|${dotted}?)(?![\\p{L}\\p{N}])`, 'u');
+  return `(?:${letters.join('')}|${letters.map((letter) => `${letter}\\.`).join('')}?)`;
+}
+
+function escapeForRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** A case-INSENSITIVE source for an ordinary word, without the 'i' flag. */
+function anyCaseSource(word: string): string {
+  return [...word]
+    .map((char) => {
+      const lower = char.toLowerCase();
+      const upper = char.toUpperCase();
+      return lower === upper ? escapeForRegExp(char) : `[${lower}${upper}]`;
+    })
+    .join('');
+}
+
+/**
+ * PR #41 R2.1 B2.1 — THE EXACT-PHRASE RULE RESPECTS GOVERNED CASE.
+ *
+ * The whole-phrase rule compares lower-cased text, so on its own it cannot tell
+ * the country acronym "US" from the pronoun "us". This is the ONE governed-case
+ * authority it consults before accepting an exact multi-word phrase; the token
+ * list is the same `CASE_SENSITIVE_QUERY_FORMS` the parity path uses, and the
+ * acronym shape is the same `acronymSource` — no second table.
+ *
+ * Returns true — changing nothing — when the phrase holds no case-sensitive
+ * token. Otherwise the phrase must occur in `text` with every case-sensitive
+ * token of the SAME kind the query wrote, at that position:
+ *   query "US" (acronym)  → the article must say "US" / "U.S." there;
+ *   query "us" (pronoun)  → the article must say "us" / "Us" there.
+ * Every other word stays case-insensitive, with the gate's regular plural
+ * tolerance, so only the case-sensitive token's meaning is enforced.
+ */
+export function phraseRespectsGovernedCase(phrase: string, text: string): boolean {
+  const words = (phrase ?? '')
+    .split(/\s+/)
+    .map((raw) => raw.replace(/[^\p{L}\p{N}]+/gu, ''))
+    .filter((word) => word.length > 0);
+  if (!words.some((word) => CASE_SENSITIVE_QUERY_FORMS.has(word.toLowerCase()))) return true;
+
+  const parts = words.map((word) => {
+    const lower = word.toLowerCase();
+    if (!CASE_SENSITIVE_QUERY_FORMS.has(lower)) return `${anyCaseSource(lower)}(?:s|es)?`;
+    if (/^\p{Lu}{2,}$/u.test(word)) return acronymSource(lower);
+    return `(?:${lower}|${lower.charAt(0).toUpperCase()}${lower.slice(1)})`;
+  });
+  const pattern = new RegExp(`${EDGE_BEFORE}${parts.join('[^\\p{L}\\p{N}]+')}${EDGE_AFTER}`, 'u');
   return pattern.test(text ?? '');
 }
 

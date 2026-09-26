@@ -4,6 +4,7 @@ import {
   equivalentForms,
   extractParityTerms,
   isAcronymForm,
+  phraseRespectsGovernedCase,
 } from './governed-term-parity';
 
 /**
@@ -630,9 +631,15 @@ export function scoreGenericRelevance(
   // separate, more conservative generic-only regular "+s" rule). This
   // function is used ONLY here — scoreRelationalRelevance() continues
   // to use the original, restored containsWholePhraseWithInflection().
-  const wholePhraseMatched =
-    containsWholePhraseWithGenericInflection(title, normalizedPhrase) ||
-    containsWholePhraseWithGenericInflection(summary, normalizedPhrase);
+  //
+  // PR #41 R2.1 B2.1 — the lower-cased comparison cannot see case, so a phrase
+  // holding a case-sensitive token ("US" vs the pronoun "us") is accepted in a
+  // field only if that SAME field also passes the governed-case check. For every
+  // other phrase phraseRespectsGovernedCase() is true and this rule is unchanged.
+  const wholePhraseIn = (field: string): boolean =>
+    containsWholePhraseWithGenericInflection(field, normalizedPhrase) &&
+    phraseRespectsGovernedCase(searchPhrase, field);
+  const wholePhraseMatched = wholePhraseIn(title) || wholePhraseIn(summary);
 
   if (wholePhraseMatched) {
     return { isRelevant: true, reasons: ['whole-phrase match'] };

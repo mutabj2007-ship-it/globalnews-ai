@@ -265,3 +265,70 @@ describe('R2.1 B3 — a directive is not a regulation / act', () => {
     expect(admits('EU AI directive', 'EU AI liability directive withdrawn')).toBe(true);
   });
 });
+
+/*
+ * PR #41 R2.1 B2.1 — the EXACT-PHRASE rule must not erase the case distinction
+ * between the country acronym "US" and the pronoun "us". Scorer-level, so the
+ * whole-phrase path is exercised, not only extractParityTerms().
+ */
+describe('R2.1 B2.1 — the exact-phrase path respects case-sensitive concept tokens', () => {
+  const score = (phrase: string, title: string, summary = '') =>
+    scoreGenericRelevance(art(title, summary), phrase);
+
+  it('US AI regulation + "US AI regulation …" → admitted as a whole-phrase match', () => {
+    const r = score('US AI regulation', 'US AI regulation bill advances in Congress');
+    expect(r.isRelevant).toBe(true);
+    expect(r.reasons).toEqual(['whole-phrase match']);
+  });
+
+  it('United States AI regulation + "US AI regulation …" → admitted through governed parity', () => {
+    const r = score('United States AI regulation', 'US AI regulation bill advances in Congress');
+    expect(r.isRelevant).toBe(true);
+    expect(r.reasons[0]).toMatch(/^governed term-parity match \(title\): us, ai, regulation$/);
+  });
+
+  it('us ai regulation + "US AI regulation …" → never acquires US country scope via the exact phrase', () => {
+    const r = score('us ai regulation', 'US AI regulation bill advances in Congress');
+    expect(r.reasons).not.toContain('whole-phrase match');
+    // it is an AI-regulation question: any admission names only ai + regulation
+    expect(r.reasons.join(' ')).not.toMatch(/\bus\b/);
+    expect(r.reasons[0]).toBe('governed term-parity match (title): ai, regulation');
+  });
+
+  it('US AI regulation + an article whose matching phrase holds the pronoun "us" → rejected', () => {
+    expect(score('US AI regulation', 'Tell us AI regulation works, readers say').isRelevant).toBe(
+      false,
+    );
+    expect(
+      score('US AI regulation', 'Voters: show us AI regulation that protects jobs').isRelevant,
+    ).toBe(false);
+  });
+
+  it('…and the pronoun phrase cannot borrow an acronym from elsewhere in the same field', () => {
+    expect(
+      score('US AI regulation', 'EU and UK officials: tell us AI regulation works').isRelevant,
+    ).toBe(false);
+  });
+
+  it('conversational "tell us about AI regulation" stays an AI-regulation question', () => {
+    const exact = score('tell us about AI regulation', 'Tell us about AI regulation, readers ask');
+    expect(exact.isRelevant).toBe(true);
+    const other = score('tell us about AI regulation', 'EU AI Act: what the new rules mean');
+    expect(other.isRelevant).toBe(true);
+    expect(other.reasons[0]).toBe('governed term-parity match (title): ai, regulation→act');
+    expect(extractParityTerms('tell us about AI regulation')).toEqual(['ai', 'regulation']);
+  });
+
+  it('phrases without a case-sensitive token keep the exact-phrase rule unchanged', () => {
+    expect(score('EU AI regulation', 'New eu ai regulation explained').reasons).toEqual([
+      'whole-phrase match',
+    ]);
+    expect(score('semiconductor exports', 'Semiconductor exports fall').reasons).toEqual([
+      'whole-phrase match',
+    ]);
+  });
+
+  it('"U.S." is the acronym for the exact-phrase check as well', () => {
+    expect(score('US AI regulation', 'U.S. AI regulation bill advances').isRelevant).toBe(true);
+  });
+});
