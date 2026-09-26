@@ -156,7 +156,20 @@ export function SixtySecondBrief({
         href={lead.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group block transition-colors hover:bg-white/[0.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+        /*
+          FINAL VISUAL CONTRACT item 2: "Add the same restrained premium image
+          hover/zoom/lift treatment as the main editorial cards."
+
+          Same vocabulary as the story cards, deliberately: a small lift on the
+          card and a slow zoom on the image inside its own clipping box, both
+          frozen under `prefers-reduced-motion`. The zoom lives on the image
+          wrapper rather than the card, so the picture grows behind a fixed
+          frame instead of resizing the rail.
+
+          Data selection and refresh are untouched — this pass changes how the
+          card responds to a pointer and nothing about what it shows or when.
+        */
+        className="group block overflow-hidden transition-[transform,background-color] duration-200 hover:-translate-y-[2px] hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
       >
         {/*
             The R4.1/R5.1 phone frame draws this block as headline rows. At 390
