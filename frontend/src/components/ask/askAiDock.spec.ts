@@ -112,7 +112,9 @@ describe('the dock is a real scrollable conversation on phones', () => {
 
   it('submitting clears the composer so the second question is immediately typeable', () => {
     expect(CODE).toMatch(/setPhase\(\{ kind: 'loading', question: asked \}\);\s*setQuestion\(''\);/);
-    expect(CODE).toMatch(/rows=\{phase\.kind === 'idle' && history\.length === 0 \? 2 : 1\}/);
+    expect(CODE).toContain('<AdaptiveTextarea');
+    expect(CODE).toContain("minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}");
+    expect(CODE).toContain('maxViewportFraction={0.32}');
   });
 
   it('the phone sheet uses dynamic viewport height and safe-area padding', () => {
