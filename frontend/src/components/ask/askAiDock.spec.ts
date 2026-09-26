@@ -357,3 +357,33 @@ describe('the released navigation geometry is untouched', () => {
     }
   });
 });
+
+
+describe('ELASTIC COMPOSER R2 — long pasted questions stay readable', () => {
+  const adaptive = readFileSync(join(__dirname, '../ui/AdaptiveTextarea.tsx'), 'utf8');
+  const hero = readFileSync(join(__dirname, '../home/HeroAskField.tsx'), 'utf8');
+  const search = readFileSync(join(__dirname, '../search/SearchPageClient.tsx'), 'utf8');
+  const askParts = readFileSync(join(__dirname, '../ask-frame/AskParts.tsx'), 'utf8');
+  const globals = readFileSync(join(__dirname, '../../app/globals.css'), 'utf8');
+
+  it('measures wrapped content and re-measures pasted text after layout', () => {
+    expect(adaptive).toContain('estimatedLines');
+    expect(adaptive).toContain('node.scrollHeight');
+    expect(adaptive).toContain('requestAnimationFrame(resize)');
+    expect(adaptive).toContain("node.style.overflowX = 'hidden'");
+  });
+
+  it('hides browser scrollbar chrome without disabling internal overflow', () => {
+    expect(adaptive).toContain('gn-adaptive-textarea');
+    expect(globals).toContain('.gn-adaptive-textarea::-webkit-scrollbar');
+    expect(globals).toContain('scrollbar-width: none');
+    expect(adaptive).toContain("node.style.overflowY = contentHeight > ceiling ? 'auto' : 'hidden'");
+  });
+
+  it('gives each free-form composer a meaningful elastic ceiling', () => {
+    expect(hero).toContain('maxHeight={280}');
+    expect(search).toContain('maxHeight={460}');
+    expect(askParts).toContain('maxHeight={420}');
+    expect(CODE).toContain('maxHeight={420}');
+  });
+});
