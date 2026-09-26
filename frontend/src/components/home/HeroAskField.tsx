@@ -114,8 +114,8 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
             aria-label={ariaLabel}
             maxLength={1000}
             minHeight={32}
-            maxHeight={220}
-            maxViewportFraction={0.34}
+            maxHeight={280}
+            maxViewportFraction={0.42}
             keepVisible
             onFocus={() => setActive(true)}
             onBlur={() => setActive(false)}
