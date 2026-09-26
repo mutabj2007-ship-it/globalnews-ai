@@ -80,8 +80,18 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
   }, []);
 
   // Keyboard clearance and smooth content growth are owned by AdaptiveTextarea.
-  // This surface only owns the active visual state.
+  // This surface owns one additional rule: expansion must float OVER the Hero
+  // rather than change the Hero's document-flow height.
 
+  const collapseAfterBlur = (): void => {
+    setActive(false);
+    const node = inputRef.current;
+    if (node === null) return;
+    const collapsed = window.innerWidth >= 1024 ? 32 : 44;
+    node.style.height = `${collapsed}px`;
+    node.style.maxHeight = `${collapsed}px`;
+    node.style.overflowY = 'hidden';
+  };
 
   return (
     <>
@@ -95,11 +105,12 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
         method="get"
         role="search"
         aria-label={ariaLabel}
-        className="mt-3.5 w-full max-w-[506px]"
+        className="relative z-30 mt-3.5 h-[54px] w-full max-w-[506px] overflow-visible xl:h-[42px]"
       >
         <div
           onMouseDown={focusInput}
-          className={`flex w-full items-end gap-2 rounded-[14px] border bg-[linear-gradient(180deg,#17335b_0%,#112750_100%)] p-[5px] pl-[13px] transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none ${
+          data-gn-hero-composer-overlay=""
+          className={`absolute inset-x-0 top-0 z-50 flex w-full items-end gap-2 rounded-[14px] border bg-[linear-gradient(180deg,#17335b_0%,#112750_100%)] p-[5px] pl-[13px] transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none ${
             active
               ? 'border-[#4f9fe6] shadow-[inset_0_1px_0_rgba(150,200,255,0.16),0_0_0_3px_rgba(59,141,251,0.20),0_18px_40px_-22px_rgba(0,0,0,0.9)]'
               : 'border-[#1b3a68] shadow-[inset_0_1px_0_rgba(150,200,255,0.10),0_16px_36px_-22px_rgba(0,0,0,0.9)]'
@@ -118,7 +129,7 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
             maxViewportFraction={0.42}
             keepVisible
             onFocus={() => setActive(true)}
-            onBlur={() => setActive(false)}
+            onBlur={collapseAfterBlur}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
