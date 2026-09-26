@@ -263,3 +263,21 @@
 [data-gn-hud] {
   pointer-events: auto;
 }
+
+
+/*
+ * ELASTIC COMPOSER R2 — browser-owned scrollbar chrome stays out of question
+ * composers. The textarea still scrolls internally after reaching its bounded
+ * maximum height; this only hides the native track/thumb so long pasted text
+ * does not regress into the mechanical strip reported on Alpha.
+ */
+.gn-adaptive-textarea {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.gn-adaptive-textarea::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
