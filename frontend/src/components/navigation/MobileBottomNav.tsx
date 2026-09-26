@@ -46,10 +46,25 @@ export function MobileBottomNav({ language = 'en' }: MobileBottomNavProps): JSX.
           <li key={key} className="flex-1">
             <a
               href={href}
-              className="flex flex-col items-center justify-center gap-1 py-2.5 text-ink-tertiary transition-colors hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+              /*
+                C9, as ruled: "Use 12px labels with minimum 44px touch targets.
+                Do not solve fit problems by making controls unreadably small."
+
+                R5.1 NAVIGATION.md sets the shell this sits in -- "bottom bar
+                58px ... Labels 13/16px, always visible, up to two lines" and
+                "Targets >=44px everywhere; the bottom bar cell is >=90x58px at
+                360px". The label was 10px, which R5.1 itself names as the
+                current Beta behaviour it wanted changed (N11).
+
+                `min-h-[56px]` plus the padding clears 44px on its own, and at
+                360px four equal cells are 90px wide, so the >=90x58 cell holds
+                at the narrowest supported width. `leading-tight` lets a long
+                PL label take a second line instead of being clipped.
+              */
+              className="flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 py-2 text-ink-tertiary transition-colors hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
             >
               <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
-              <span className="font-mono text-[10px] uppercase tracking-wide">{t[key]}</span>
+              <span className="text-center font-mono text-[12px] uppercase leading-tight tracking-tight">{t[key]}</span>
             </a>
           </li>
         ))}

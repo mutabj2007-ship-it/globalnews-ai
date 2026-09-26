@@ -210,7 +210,7 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
           disabled
           aria-disabled="true"
           tabIndex={-1}
-          className="inline-flex min-h-[44px] cursor-not-allowed items-center gap-1.5 text-[13px] font-semibold text-[#6f8aa6] lg:min-h-[28px]"
+          className="inline-flex min-h-[44px] cursor-not-allowed items-center gap-1.5 text-[13px] font-semibold text-[#6f8aa6] xl:min-h-[28px]"
         >
           {t.viewAllTopics}
           <span className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary/70">
@@ -246,11 +246,13 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                   not in the prototype at all. */}
               <Icon
                 aria-hidden="true"
-                size={26}
+                size={28}
                 strokeWidth={2.1}
+                /* Larger glyph on the compact cards; the approved phone grid
+                   leads with the icon, not the label. */
                 className={`${accent.icon} drop-shadow-[0_0_10px_rgba(255,255,255,0.18)]`}
               />
-              <span className="mt-[11px] block text-[15px] font-bold leading-[1.15] tracking-[-0.01em] text-white">
+              <span className="mt-[11px] block text-[16px] font-bold leading-[1.15] tracking-[-0.01em] text-white lg:text-[15px]">
                 {label}
               </span>
               {/*
@@ -260,14 +262,14 @@ export function ExploreByTopic({ language = 'en' }: ExploreByTopicProps): JSX.El
                 the two can never disagree.
               */}
               {/* §6: shorter copy. Two measured lines at ~11.5px, clamped. */}
-              <span className="mt-[5px] line-clamp-2 text-[11.5px] leading-[1.3] text-[#8ca3bd]">
+              <span className="mt-[5px] line-clamp-2 text-[12.5px] leading-[1.3] text-[#8ca3bd] lg:text-[11.5px]">
                 {summary}
               </span>
               <span
                 aria-hidden="true"
-                className={`mt-auto ml-auto inline-flex h-6 w-6 items-center justify-center rounded-full ${accent.arrow} transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0`}
+                className={`mt-auto ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full xl:h-6 xl:w-6 ${accent.arrow} transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0`}
               >
-                <ArrowRight size={13} strokeWidth={2.6} />
+                <ArrowRight size={15} strokeWidth={2.6} className="lg:h-[13px] lg:w-[13px]" />
               </span>
             </>
           );

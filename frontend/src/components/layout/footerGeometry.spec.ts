@@ -699,7 +699,19 @@ describe('M66.8b — what deliberately did NOT change', () => {
     // keeps its own padding, the Footer is still wired here, and PageCanvas
     // is still untouched. The pattern now allows an additional class and
     // nothing else.
-    expect(homePageSource).toMatch(/<main className=\{?[`"]pb-16 lg:pb-0/);
+    //
+    // THE BOTTOM PADDING CHANGED ONCE MORE, AND FOR THE SAME KIND OF REASON.
+    // It was pinned to the literal `pb-16`. The responsive ruling raised
+    // `MobileBottomNav` to a 56px cell plus `env(safe-area-inset-bottom)`
+    // (C9: "12px labels with minimum 44px touch targets"), and 64px of padding
+    // no longer cleared it — the last footer row sat under the bar on a phone.
+    //
+    // What this test is FOR is that <main> still owns bottom spacing that
+    // clears the fixed bar, and that the spacing is dropped at `lg` where the
+    // bar is not rendered. That is what is asserted now, rather than one
+    // spelling of it, so the next legitimate change to the bar's height does
+    // not read as a regression here.
+    expect(homePageSource).toMatch(/<main className=\{?[`"]pb-\d+ lg:pb-0/);
     expect(homePageSource).toMatch(/<Footer language=\{language\} \/>/);
     expect(pageCanvasSource).toMatch(
       /relative mx-auto w-full max-w-cd-page px-cd-14 pb-cd-22 pt-cd-12 lg:px-cd-26 lg:pb-cd-60 lg:pt-cd-20/,

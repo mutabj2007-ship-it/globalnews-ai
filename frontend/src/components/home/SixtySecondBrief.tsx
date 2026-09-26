@@ -1,7 +1,8 @@
 import type { JSX } from 'react';
-import { ImageOff } from 'lucide-react';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { RAIL_CARD_SHELL } from '@/components/home/homePresentation';
+import { StoryVisual } from '@/components/home/StoryVisual';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
@@ -53,14 +54,42 @@ interface SixtySecondBriefProps {
   /** The one `getHomeFeed()` response's latest-updates role. No second fetch. */
   items: NewsArticle[];
   language?: LanguageCode;
+  /**
+   * `rail` is the DESKTOP form, added by the completion ruling:
+   *
+   *   "Add a desktop equivalent. Do not simply copy the tall phone card into
+   *    desktop ... If the rail becomes too tall, use a compact carousel/list
+   *    treatment rather than deleting the feature. On phone, preserve the
+   *    larger existing `Your world in 60 seconds` treatment because the Claude
+   *    Design phone authority optimized that surface intentionally."
+   *
+   * So the two variants are genuinely different shapes of the same governed
+   * data, not one shape scaled. `full` keeps the phone's lead photograph and
+   * its rows. `rail` drops the lead image entirely and renders every item as a
+   * compact row, which is what lets three cards stack in a 368px rail without
+   * it becoming the "giant analyst dashboard" item 7 rules out.
+   *
+   * Neither variant fetches anything. Both read `items`, which is a role of
+   * the single `getHomeFeed()` response the page already has.
+   */
+  variant?: 'full' | 'rail';
+  /** Distinct per variant: both can exist in one document at different widths. */
+  headingId?: string;
 }
 
-export function SixtySecondBrief({ items, language = 'en' }: SixtySecondBriefProps): JSX.Element | null {
+export function SixtySecondBrief({
+  items,
+  language = 'en',
+  variant = 'full',
+  headingId = 'beta-brief-heading',
+}: SixtySecondBriefProps): JSX.Element | null {
+  const isRail = variant === 'rail';
   const t = getDictionary(language).betaHome;
   const categoryLabels = getDictionary(language).map.categories;
 
   const [lead, ...rest] = items;
-  const rows = rest.slice(0, 2);
+  /* The rail has no lead photograph, so it can afford one more headline. */
+  const rows = rest.slice(0, isRail ? 3 : 2);
 
   /*
     ── C7 · THE ALLOCATION, NOT THE EMPTY STATE, WAS THE DEFECT ────────────
@@ -98,41 +127,89 @@ export function SixtySecondBrief({ items, language = 'en' }: SixtySecondBriefPro
 
   return (
     <section
-      aria-labelledby="beta-brief-heading"
-      className="overflow-hidden rounded-2xl border border-border-strong bg-void/80"
+      aria-labelledby={headingId}
+      className={
+        isRail
+          ? `overflow-hidden ${RAIL_CARD_SHELL}`
+          : 'overflow-hidden rounded-2xl border border-border-strong bg-void/80'
+      }
     >
-      <div className="p-4">
-        <h2 id="beta-brief-heading" className="text-lg font-semibold text-ink-primary">
+      <div className={isRail ? 'px-[15px] pb-2 pt-[15px]' : 'p-4'}>
+        <h2
+          id={headingId}
+          className={
+            isRail
+              ? 'text-[15px] font-bold leading-tight text-white'
+              : 'text-lg font-semibold text-ink-primary'
+          }
+        >
           {t.briefTitle}
         </h2>
-        {meta === null ? null : <p className="mt-1 text-xs text-ink-tertiary">{meta}</p>}
+        {meta === null ? null : (
+          <p className={isRail ? 'mt-[3px] text-[11.5px] text-[#8ca3bd]' : 'mt-1 text-xs text-ink-tertiary'}>
+            {meta}
+          </p>
+        )}
       </div>
 
       <a
         href={lead.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+        className="group block transition-colors hover:bg-white/[0.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
       >
-        <div className="relative aspect-[2/1] w-full bg-surface">
-          {lead.imageUrl === undefined ? (
-            <span className="flex h-full w-full items-center justify-center gap-2 text-xs text-ink-tertiary">
-              <ImageOff size={16} strokeWidth={1.75} aria-hidden="true" />
-              {t.imageUnavailable}
-            </span>
-          ) : (
-            <SafeImage
-              src={lead.imageUrl}
-              alt=""
-              fill
-              sizes="(min-width: 1024px) 460px, 100vw"
-              className="object-cover"
-            />
-          )}
-        </div>
-        <div className="p-4">
-          <h3 className="text-base font-semibold leading-snug text-ink-primary">{lead.title}</h3>
-          <p className="mt-1 text-xs text-ink-tertiary">
+        {/*
+            The R4.1/R5.1 phone frame draws this block as headline rows. At 390
+            the 2:1 lead image is ~195px of a first screen the approved design
+            spends on the hero and the search field, so it folds away below
+            `sm`. The lead STORY is untouched -- headline, category, source
+            count and link all remain, and the image returns from `sm` up.
+          */}
+        {/*
+            SIMPLIFICATION RULING: on desktop this card is now the PRIMARY
+            right-rail intelligence surface and "must be image-led, not just a
+            text list" — so the rail keeps the lead image, at a tighter 2.2:1
+            crop that suits a 368px column.
+
+            Below `sm` the phone frame draws this block as headline rows, and
+            the ruling says to preserve the phone treatment, so the image
+            folds away there exactly as before.
+          */}
+        {/*
+          SIMPLIFICATION RULING: this card is the primary right-rail
+          intelligence surface and "must be image-led, not just a text list" —
+          with "the approved visual fallback" where the feed gives no image,
+          and never an invented photograph.
+
+          `StoryVisual` is that system, shared with the story cards: the
+          category's artwork is always painted, the publisher photograph layers
+          over it when there is one, and a failed image reveals the artwork
+          rather than the generic placeholder. Below `sm` the phone frame draws
+          this block as headline rows, so the image folds away there.
+        */}
+        <StoryVisual
+          article={lead}
+          className={isRail ? 'block aspect-[22/10]' : 'hidden aspect-[2/1] sm:block'}
+          missingLabel={t.imageUnavailable}
+          sizes="(min-width: 1024px) 368px, 100vw"
+        />
+        <div className={isRail ? 'px-[15px] pb-3 pt-2.5' : 'p-4'}>
+          <h3
+            className={
+              isRail
+                ? 'line-clamp-2 text-[15px] font-bold leading-[1.28] text-white'
+                : 'text-base font-semibold leading-snug text-ink-primary'
+            }
+          >
+            {lead.title}
+          </h3>
+          {/* The concise briefing the ruling asks for, from the governed
+              summary the feed already supplies. Rail only — the phone form
+              keeps its own rhythm. */}
+          {isRail && lead.summary !== undefined && lead.summary !== '' ? (
+            <p className="mt-[5px] line-clamp-2 text-[12px] leading-[1.42] text-[#93a9c2]">{lead.summary}</p>
+          ) : null}
+          <p className={isRail ? 'mt-1 text-[11px] text-[#8299b4]' : 'mt-1 text-xs text-ink-tertiary'}>
             {categoryLabels[lead.category] ?? lead.category}
             {' · '}
             {pluralWithForms(lead.sourcesCount, language, t.sourceForms)}
@@ -143,17 +220,34 @@ export function SixtySecondBrief({ items, language = 'en' }: SixtySecondBriefPro
       </a>
 
       {rows.length === 0 ? null : (
-        <ul className="border-t border-border-strong">
+        <ul className={isRail ? '' : 'border-t border-border-strong'}>
           {rows.map((item) => (
-            <li key={item.id} className="border-b border-border-strong last:border-b-0">
+            <li
+              key={item.id}
+              className={
+                isRail ? 'border-t border-[#0d2137]' : 'border-b border-border-strong last:border-b-0'
+              }
+            >
               <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex min-h-[44px] flex-col gap-1 p-4 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                className={
+                  isRail
+                    ? 'flex min-h-[44px] flex-col gap-[3px] px-[15px] py-2.5 transition-colors hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none'
+                    : 'flex min-h-[44px] flex-col gap-1 p-4 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none'
+                }
               >
-                <span className="text-sm font-semibold leading-snug text-ink-primary">{item.title}</span>
-                <span className="text-xs text-ink-tertiary">
+                <span
+                  className={
+                    isRail
+                      ? 'line-clamp-2 text-[13px] font-semibold leading-[1.32] text-white'
+                      : 'text-sm font-semibold leading-snug text-ink-primary'
+                  }
+                >
+                  {item.title}
+                </span>
+                <span className={isRail ? 'text-[11px] text-[#8299b4]' : 'text-xs text-ink-tertiary'}>
                   {categoryLabels[item.category] ?? item.category}
                   {' · '}
                   {pluralWithForms(item.sourcesCount, language, t.sourceForms)}

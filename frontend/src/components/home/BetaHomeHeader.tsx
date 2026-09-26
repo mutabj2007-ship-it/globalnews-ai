@@ -80,6 +80,43 @@ import { Logo } from '@/components/ui/Logo';
  * button waits for a registration route to exist. Declared, not overlooked.
  */
 
+/**
+ * ── THE 1024-1279 HEADER, AND WHY THERE ARE TWO NAVS IN THIS FILE ───────
+ *
+ * C1, as ruled:
+ *
+ *   ">=1280: use the newer Product Owner prototype full desktop navigation.
+ *    1024-1279: use the R5.1 approved compact desktop/tablet header with its
+ *    exact four destinations, search, language and account/avatar.
+ *    Do not hide required search/language controls merely to fit the 1280
+ *    header into 1024."
+ *
+ * That is two different navigations, not one navigation that shrinks, so the
+ * file carries both and shows exactly one. The compact set is R5.1
+ * `NAVIGATION.md` verbatim -- "Home / World Map / Ask AI / Intelligence",
+ * with "No Explore, Saved, Watch, Notifications, story route or fifth tab" --
+ * and it is drawn in `1440x900_H3_home_top_categories_dark.png`.
+ *
+ * WHY THIS REPLACED THE EARLIER FIX. The first attempt kept the seven-item
+ * prototype nav at 1024 and hid the search and language controls to make it
+ * fit. It did fit. It was still wrong: at 1024 the approved design is a
+ * four-destination header that HAS those controls, so hiding them solved an
+ * overflow by contradicting the authority that governs that width. The
+ * overflow was a symptom of using the wrong navigation, not of having too
+ * many controls.
+ *
+ * Both navs are `hidden` at the widths where they do not apply, which takes
+ * them out of the accessibility tree as well as out of the layout, so a
+ * screen reader is never offered two primary navigations.
+ */
+
+/** R5.1 NAVIGATION.md, in its order. Home is rendered separately. */
+const COMPACT_DESTINATIONS = [
+  { id: 'map', href: '/map', labelKey: 'worldMap' },
+  { id: 'ask', href: '/ask', labelKey: 'ask' },
+  { id: 'intelligence', href: '#intelligence-modules', labelKey: 'intelligence' },
+] as const;
+
 /** The five primary destinations after Home, in the prototype's order. */
 const PRIMARY_MODULE_IDS = ['economy', 'energy', 'security', 'humanitarian'] as const;
 
@@ -94,6 +131,11 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
   const dict = getDictionary(language);
   const t = dict.navBar;
   const beta = dict.betaHome;
+  /* The four R5.1 destinations already have governed EN and PL labels: they
+     are the ones `MobileBottomNav` prints, which is the same four-destination
+     vocabulary R5.1 specifies at every size. No new dictionary keys, and the
+     tablet header and the phone bar cannot drift apart in wording. */
+  const compact = dict.mobileBottomNav;
   const moduleText = dict.intelligenceModules.modules;
 
   const labelFor = (id: string): string => {
@@ -125,12 +167,20 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
     href: resolve(id),
   }));
 
+  /*
+    1024 is iPad landscape — a TOUCH surface, not merely a small desktop. R5.1's
+    shell floor is "Targets >=44px everywhere", and the ruling is explicit that
+    fit problems are not to be solved by shrinking controls. So the destinations
+    are 44px through the compact header's whole range and only relax to the
+    Product Owner prototype's 32px pill at `xl`, where the header is the
+    mouse-driven desktop one.
+  */
   const navItem =
-    'inline-flex h-[32px] items-center rounded-full px-3.5 text-[13.5px] font-medium text-[#b6c9de] transition-colors hover:bg-white/[0.07] hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none';
+    'inline-flex h-[44px] items-center rounded-full px-3 text-[13px] font-medium text-[#b6c9de] transition-colors hover:bg-white/[0.07] hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none xl:h-[32px] xl:px-3.5 xl:text-[13.5px]';
 
   return (
     <header className="sticky top-0 z-50 hidden border-b border-[#0a3358] bg-[rgba(3,21,45,0.90)] shadow-[0_1px_0_rgba(0,58,106,0.45)] backdrop-blur-[12px] lg:block">
-      <div className="mx-auto flex h-[62px] max-w-cd-page items-center gap-5 px-[26px]">
+      <div className="mx-auto flex h-[64px] max-w-cd-page items-center gap-3 px-4 xl:h-[62px] xl:gap-5 xl:px-[26px]">
         <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label={t.homeAriaLabel}>
           <Logo size={30} gapPx={11} />
           {/*
@@ -144,7 +194,19 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1" aria-label={t.primaryNavigationAriaLabel}>
+        {/* 1024-1279 -- the R5.1 four-destination header. */}
+        <nav className="flex items-center gap-1 xl:hidden" aria-label={t.primaryNavigationAriaLabel}>
+          <Link href="/" aria-current="page" className={`${navItem} bg-[#12365e] text-white shadow-[inset_0_1px_0_rgba(150,200,255,0.18)]`}>
+            {compact.home}
+          </Link>
+          {COMPACT_DESTINATIONS.map((entry) => (
+            <Link key={entry.id} href={entry.href} className={navItem}>
+              {compact[entry.labelKey]}
+            </Link>
+          ))}
+        </nav>
+
+        <nav className="hidden items-center gap-1 xl:flex" aria-label={t.primaryNavigationAriaLabel}>
           {/* Home is the page itself, so it carries the prototype's filled active pill. */}
           <Link
             href="/"
@@ -208,10 +270,51 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
 
         <div className="flex-1" />
 
+        {/*
+          THE SEARCH PILL, 1024-1279. R5.1 draws a wide "Search or ask" control
+          here, not the icon button the prototype uses at 1280.
+
+          N4, as ruled: "Keep the R5.1 Search control in the 1024-1279 header.
+          For now it may navigate to `/search`, but ordinary navigation must not
+          automatically spend AI quota. Do not silently convert the Search pill
+          into Ask AI."
+
+          So it is a Link to `/search` and nothing more. It starts no analysis
+          by being pressed; whatever `/search` does on arrival is that route's
+          own behaviour and a separate engineering matter, which this control is
+          deliberately not being used to paper over.
+        */}
+        <Link
+          href="/search"
+          /*
+            PREFETCH OFF, DELIBERATELY.
+
+            Measured: with the default prefetch, idle Home issued one
+            `GET /search?_rsc=...` — Next speculatively rendering that route's
+            server component. It carries no `q`, and `/search` renders a client
+            component, so nothing metered runs. But N4 records that `/search`
+            auto-runs an analysis on arrival as an open engineering issue, and
+            speculatively rendering a route with that property buys nothing and
+            risks something.
+
+            This is not a fix for that defect and does not touch the visual
+            authority, per the ruling. It removes one avoidable server render.
+          */
+          prefetch={false}
+          className="flex h-[44px] min-w-[176px] items-center gap-2.5 rounded-full border border-[#1b3a68] bg-[#0c1e38] px-3.5 text-[13px] text-[#8fa9c6] transition-colors hover:border-[#2f6ea8] hover:text-[#cfe2f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none xl:hidden"
+        >
+          <span aria-hidden="true" className="relative block h-[13px] w-[13px] shrink-0">
+            <span className="absolute inset-0 rounded-full border-[1.5px] border-current" />
+            <span className="absolute h-[1.5px] w-[7px] bg-current" style={{ transform: 'translate(5px,5px) rotate(45deg)', marginTop: '-4px' }} />
+          </span>
+          <span className="truncate">{t.searchAriaLabel}</span>
+        </Link>
+
         <Link
           href="/search"
           aria-label={t.searchAriaLabel}
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] border border-cd-edge-header transition-colors hover:border-[rgba(34,211,238,0.55)] motion-reduce:transition-none"
+          prefetch={false}
+          className="hidden h-[34px] w-[34px] items-center justify-center rounded-[9px] border border-cd-edge-header xl:flex transition-colors hover:border-[rgba(34,211,238,0.55)] motion-reduce:transition-none"
         >
           <span aria-hidden="true" className="relative block h-[12px] w-[12px]">
             <span className="absolute inset-0 rounded-full border-[1.5px] border-[#9fc6e8]" />
@@ -230,7 +333,7 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
 
         <AccountControl
           signInLabel={t.signIn}
-          signInClassName="rounded-[9px] border border-cd-edge-emphasis-50 bg-gradient-to-b from-[rgba(37,99,235,0.95)] to-[rgba(29,78,216,0.95)] px-5 py-[9px] font-cd-body text-cd-signin text-cd-ink-signin shadow-[0_0_22px_rgba(37,99,235,0.35)] transition-opacity hover:opacity-90"
+          signInClassName="rounded-[9px] border border-cd-edge-emphasis-50 bg-gradient-to-b from-[rgba(37,99,235,0.95)] to-[rgba(29,78,216,0.95)] px-4 py-[9px] font-cd-body text-cd-signin xl:px-5 text-cd-ink-signin shadow-[0_0_22px_rgba(37,99,235,0.35)] transition-opacity hover:opacity-90"
           accountLabel={t.account}
           accountMenuAriaLabel={t.accountMenuAriaLabel}
           signedInAsLabel={t.signedInAs}

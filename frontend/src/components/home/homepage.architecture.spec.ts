@@ -98,44 +98,58 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
     reads on mount and on selection — so the section is no longer a cheaper
     copy of /map; it is a quota-free gateway to it.
   */
-  it('C3 — HomepageSituationMap is MOUNTED on the homepage, and its file is RETAINED', () => {
+  it('SIMPLIFICATION RULING — HomepageSituationMap is NOT mounted on Home, and its file is RETAINED', () => {
     /*
-      DESKTOP COMPOSITION RULING §3 — the map sits to the RIGHT of the story
-      cards, so it mounts inside `HomeSideRail`, which `page.tsx` mounts.
-      "Mounted on the homepage" is still exactly what is asserted; only the
-      file it is written in moved, and the two-step assertion below is what
-      keeps the chain honest rather than assuming it.
+      ══════════════════════════════════════════════════════════════════════
+      THIS TEST WAS INVERTED, DELIBERATELY.
+      ══════════════════════════════════════════════════════════════════════
+
+      It used to assert the opposite — that the map IS mounted on Home — under
+      DESKTOP COMPOSITION RULING §3. The Product Owner superseded that:
+
+        "The `Global Situation Map` is no longer required on Home. Remove it
+         from the Home composition at all responsive breakpoints. This does not
+         remove the Map product or `/map`. `Open Map` remains a prominent Hero
+         action and is the correct gateway to the full geographic intelligence
+         experience."
+
+      So the assertion follows the newer ruling. What the test is FOR is
+      unchanged: it pins where the situation map is and is not, so neither a
+      quiet re-mount nor a quiet deletion can happen without a failure here.
     */
     const railSource = stripComments(readFileSync(join(__dirname, 'HomeSideRail.tsx'), 'utf-8'));
     expect(stripComments(pageSource)).toMatch(/<HomeSideRail/);
-    expect(railSource).toMatch(/<HomepageSituationMap/);
-    expect(railSource).toMatch(/import \{ HomepageSituationMap \}/);
-    // RETAINED, not deleted. If a later cleanup removes the file, this fails —
-    // and so would five direct specs that read it. Mounted or retired, the
-    // component must never quietly disappear.
+    expect(railSource).not.toMatch(/<HomepageSituationMap/);
+    expect(railSource).not.toMatch(/import \{ HomepageSituationMap \}/);
+    /* RETAINED, not deleted — the convention this repository already applies
+       to Hero, GlobalDevelopments, LiveStatusStrip and the engine section. If
+       a later cleanup removes the file this fails, and so would the direct
+       specs that read it. */
     expect(existsSync(join(__dirname, 'HomepageSituationMap.tsx'))).toBe(true);
   });
 
-  it('C3 — the homepage mounts exactly ONE situation-map surface, and /map is untouched', () => {
+  it('SIMPLIFICATION RULING — Home mounts NO situation-map surface, and /map is untouched', () => {
     /*
-      DESKTOP COMPOSITION RULING §3 — the map sits to the RIGHT of the story
-      cards, so it is mounted inside `HomeSideRail` rather than in `page.tsx`.
-      The invariant this test exists for is unchanged and is what still
-      matters: Home renders EXACTLY ONE situation-map surface, reaches for no
-      MapLibre of its own, and leaves /map alone. So the count is taken across
-      the whole Home render path rather than in one file, which also means a
-      future move cannot quietly reintroduce a second map.
+      The invariant this test exists for is the same one it always had: Home
+      must never carry more than one situation-map surface, and must never
+      reach for MapLibre itself. The ruled count is now zero rather than one,
+      and the count is still taken across the whole Home render path rather
+      than in a single file, so a future move cannot reintroduce one quietly.
     */
     const railSource = readFileSync(join(__dirname, 'HomeSideRail.tsx'), 'utf-8');
     const code = stripComments(pageSource) + stripComments(railSource);
-    expect(code.match(/<HomepageSituationMap/g)).toHaveLength(1);
-    // The homepage still never reaches for MapLibre itself — it mounts the
-    // section, which lazy-loads the shared WorldMap behind ssr:false.
+    expect(code.match(/<HomepageSituationMap/g)).toBeNull();
     expect(code).not.toMatch(/<WorldMap/);
-    // And /map itself is untouched: the route file still renders the real
-    // client, so the capability moved nowhere.
+    /*
+      AND THE CAPABILITY MOVED NOWHERE. This is the half of the ruling that
+      matters most — "This does not remove the Map product or `/map`" — so the
+      route is asserted here rather than assumed.
+    */
     const mapRoute = readFileSync(join(__dirname, '../../app/map/page.tsx'), 'utf-8');
     expect(mapRoute).toMatch(/MapPageClient/);
+    /* And the Hero still carries "Open Map" as the gateway the ruling names. */
+    const heroSource = readFileSync(join(__dirname, 'BetaHero.tsx'), 'utf-8');
+    expect(heroSource).toMatch(/href="\/map"/);
   });
 
   it('M66.8c — the World Map remains reachable from the homepage, five ways, none of them the retired section', () => {

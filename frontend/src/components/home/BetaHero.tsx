@@ -3,6 +3,7 @@ import { Crown, Sparkles, Zap, Map as MapIcon, Globe2, Check, ArrowRight } from 
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { HeroGlobe } from '@/components/home/HeroGlobe';
+import { PREMIUM_TEASER_SHELL } from '@/components/home/homePresentation';
 import { SixtySecondBrief } from '@/components/home/SixtySecondBrief';
 
 /**
@@ -219,7 +220,29 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
       */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[16px] -z-10 h-[300px] w-[300px] -translate-x-[34%] opacity-70 [mask-image:linear-gradient(to_bottom,#000_44%,rgba(0,0,0,0.55)_68%,rgba(0,0,0,0.18)_86%,transparent_98%)] sm:h-[360px] sm:w-[360px] sm:-translate-x-[26%] sm:opacity-85 lg:top-[18px] lg:h-[470px] lg:w-[470px] lg:-translate-x-[20%] lg:opacity-100 xl:h-[510px] xl:w-[510px] xl:-translate-x-[18%]"
+        /*
+          THE GLOBE HAS TWO FRAMINGS, NOT ONE THAT SHRINKS.
+
+          THE LOWER FEATHER IS LONG ON PURPOSE. Eight stops carry the last
+          ~56% of the globe from full opacity down to nothing, so the bottom
+          quarter dissolves progressively into the page instead of ending at a
+          line: full globe -> atmospheric glow -> faint geography -> clean
+          editorial surface. The globe is still THERE behind the transition —
+          it is not cropped and it did not shrink — it is simply too faint by
+          the time the heading band starts to compete with it.
+
+          Below `lg` it is the R4.1/R5.1 phone treatment, which
+          `390x844_H3_home_top_dark.png` draws literally: a large Earth whose
+          left limb sits behind the headline's right edge and whose right side
+          is CROPPED BY THE VIEWPORT. It reads as a real object continuing past
+          the screen, which is what makes it premium at 390px. Scaling the
+          desktop framing down instead produced a dim wash behind the type --
+          recognisable as nothing.
+
+          At `lg` and up it returns to the Product Owner prototype's framing,
+          measured and accepted in the premium pass, untouched.
+        */
+        className="pointer-events-none absolute -right-[76px] -top-[34px] left-auto -z-10 h-[268px] w-[268px] translate-x-0 opacity-95 [mask-image:radial-gradient(circle_at_58%_46%,#000_62%,rgba(0,0,0,0.42)_84%,transparent_100%)] sm:-right-[54px] sm:-top-[26px] sm:h-[330px] sm:w-[330px] md:h-[390px] md:w-[390px] lg:left-1/2 lg:right-auto lg:top-[18px] lg:h-[470px] lg:w-[470px] lg:-translate-x-[20%] lg:opacity-100 lg:[mask-image:linear-gradient(to_bottom,#000_0%,#000_44%,rgba(0,0,0,0.88)_56%,rgba(0,0,0,0.66)_66%,rgba(0,0,0,0.44)_74%,rgba(0,0,0,0.26)_81%,rgba(0,0,0,0.13)_88%,rgba(0,0,0,0.05)_94%,transparent_100%)] xl:h-[510px] xl:w-[510px] xl:-translate-x-[18%]"
       >
         {/*
           TWO NESTED MASKS, because they do two different jobs and one gradient
@@ -234,7 +257,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
           illuminated mass is untouched, soft only in the last few percent, so
           the edge is atmosphere rather than a boundary.
         */}
-        <div className="h-full w-full [mask-image:radial-gradient(circle_at_50%_50%,#000_87%,rgba(0,0,0,0.5)_96%,transparent_100%)]">
+        <div className="h-full w-full lg:[mask-image:radial-gradient(circle_at_50%_50%,#000_87%,rgba(0,0,0,0.5)_96%,transparent_100%)]">
           <HeroGlobe />
         </div>
       </div>
@@ -252,7 +275,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
       </span>
 
       <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,232px)] lg:items-start lg:gap-10">
-        <div className="flex max-w-2xl flex-col">
+        <div className="flex max-w-2xl flex-col pr-[96px] sm:pr-[112px] lg:pr-0">
           <h1
             id="beta-hero-heading"
             className="font-display text-[34px] font-extrabold leading-[1.07] tracking-[-0.025em] sm:text-[40px] lg:text-[42px] xl:text-[46px]"
@@ -313,12 +336,43 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
               not lost — it moves to `aria-label`, so the accessible name is
               exactly the same string it was before.
             */}
+            {/*
+              TOUCH SIZING HOLDS TO 1280, NOT TO 1024.
+
+              C1 puts the Product Owner prototype in charge from 1280 and the
+              R5.1 compact desktop/tablet header from 1024-1279 — so 1024-1279
+              is the TABLET range and 1024 itself is iPad landscape. The
+              prototype's measured control sizes therefore return at `xl`
+              (1280), not at `lg` (1024), while layout still changes at `lg`
+              because that is where the composition ruling changes it. Sizes and
+              layout move at different breakpoints here, deliberately.
+            */}
+            {/*
+              C8, as ruled: "Desktop / `lg`+: use the Product Owner prototype
+              circular arrow affordance. Below `lg`: use the R4.1/R5.1 visible
+              `Ask` text button. Maintain >=44px touch target on compact
+              layouts."
+
+              ONE <button>, two appearances — so there is exactly one submit
+              control in the DOM and in the tab order at every width, and the
+              two authorities are reconciled rather than both rendered. The
+              label is visible text below `lg` and the accessible name above it,
+              so it is never lost.
+
+              "Opening/browsing Home must not itself initiate metered AI": this
+              is a GET form to /ask with no handler and no client boundary.
+              Pressing it navigates and stages a draft. Nothing runs until the
+              reader presses Send on /ask.
+            */}
             <button
               type="submit"
               aria-label={t.askButton}
-              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,#3b8dfb_0%,#1f6ae0_100%)] text-white shadow-[0_0_18px_-2px_rgba(59,141,251,0.85)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 motion-reduce:transition-none motion-reduce:hover:scale-100"
+              className="flex h-[44px] min-w-[76px] shrink-0 items-center justify-center rounded-[11px] bg-[linear-gradient(180deg,#3b8dfb_0%,#1f6ae0_100%)] px-4 text-[14px] font-bold text-white shadow-[0_0_18px_-2px_rgba(59,141,251,0.85)] transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 motion-reduce:transition-none motion-reduce:hover:scale-100 lg:h-[44px] lg:w-[44px] lg:min-w-0 lg:rounded-full lg:px-0 lg:hover:scale-105 xl:h-[30px] xl:w-[30px]"
             >
-              <ArrowRight size={16} strokeWidth={2.4} aria-hidden="true" />
+              <span aria-hidden="true" className="lg:hidden">
+                {t.askButton}
+              </span>
+              <ArrowRight size={16} strokeWidth={2.4} aria-hidden="true" className="hidden lg:block" />
             </button>
           </form>
 
@@ -333,35 +387,49 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             already exist, and none of them spends anything on arrival.
           */}
           {/* Measured: 60px tall, radius ~8, 11px gutters. Fills sampled. */}
-          <div className="mt-3 grid w-full max-w-[660px] grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-[11px]">
+          {/*
+            C7, as ruled: ">=1024: retain all three Product Owner actions ...
+            <1024: follow the R4.1/R5.1 phone authority and use the two compact
+            actions: Ask AI about today, Open World Map ... Explore World is
+            therefore omitted from the phone Hero, not deleted from the desktop
+            product."
+
+            Two columns below `lg`, which is how both R5.1 frames draw the pair,
+            three from `lg` up. Explore World carries `hidden lg:flex`, so below
+            `lg` it leaves the layout AND the tab order rather than becoming a
+            third squeezed tile. Its destination is the current-developments
+            anchor, which on a phone is simply the next thing the reader
+            scrolls to, so nothing becomes unreachable by omitting it.
+          */}
+          <div className="mt-3 grid w-full max-w-[660px] grid-cols-2 gap-2.5 lg:grid-cols-3 lg:gap-[11px]">
             <a
               href="#whats-happening-now"
-              className="flex min-h-[44px] items-center gap-3 rounded-[9px] bg-[linear-gradient(105deg,#0a6bd6_0%,#0c42a2_100%)] px-[15px] py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(10,107,214,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(10,107,214,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[60px]"
+              className="hidden min-h-[60px] items-center gap-3 rounded-[9px] bg-[linear-gradient(105deg,#0a6bd6_0%,#0c42a2_100%)] px-[15px] py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(10,107,214,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(10,107,214,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 motion-reduce:transition-none motion-reduce:hover:translate-y-0 lg:flex"
             >
               <Globe2 size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[14px] font-bold leading-tight text-white">{t.exploreWorld}</span>
-                <span className="mt-[2px] text-[11.5px] leading-tight text-white/85">{t.exploreWorldSub}</span>
+                <span className="line-clamp-2 text-[13.5px] font-bold leading-[1.18] text-white lg:line-clamp-none lg:text-[14px] lg:leading-tight">{t.exploreWorld}</span>
+                <span className="mt-[2px] line-clamp-2 text-[11px] leading-[1.25] text-white/85 lg:text-[11.5px] lg:leading-tight">{t.exploreWorldSub}</span>
               </span>
             </a>
             <a
               href="/ask"
-              className="flex min-h-[44px] items-center gap-3 rounded-[9px] bg-[linear-gradient(105deg,#412d9f_0%,#1f328a_100%)] px-[15px] py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(65,45,159,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(65,45,159,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[60px]"
+              className="flex min-h-[56px] flex-col items-start gap-1.5 rounded-[9px] bg-[linear-gradient(105deg,#412d9f_0%,#1f328a_100%)] px-3.5 py-3 lg:min-h-[60px] lg:flex-row lg:items-center lg:gap-3 lg:px-[15px] text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(65,45,159,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(65,45,159,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
-              <Sparkles size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
+              <Sparkles size={20} strokeWidth={1.85} aria-hidden="true" className="mt-[1px] shrink-0 text-white lg:mt-0" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[14px] font-bold leading-tight text-white">{t.askToday}</span>
-                <span className="mt-[2px] text-[11.5px] leading-tight text-white/85">{t.askTodaySub}</span>
+                <span className="line-clamp-2 text-[13.5px] font-bold leading-[1.18] text-white lg:line-clamp-none lg:text-[14px] lg:leading-tight">{t.askToday}</span>
+                <span className="mt-[2px] line-clamp-2 text-[11px] leading-[1.25] text-white/85 lg:text-[11.5px] lg:leading-tight">{t.askTodaySub}</span>
               </span>
             </a>
             <a
               href="/map"
-              className="flex min-h-[44px] items-center gap-3 rounded-[9px] bg-[linear-gradient(105deg,#0b8d6a_0%,#037050_100%)] px-[15px] py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(11,141,106,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(11,141,106,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[60px]"
+              className="flex min-h-[56px] flex-col items-start gap-1.5 rounded-[9px] bg-[linear-gradient(105deg,#0b8d6a_0%,#037050_100%)] px-3.5 py-3 lg:min-h-[60px] lg:flex-row lg:items-center lg:gap-3 lg:px-[15px] text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(11,141,106,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(11,141,106,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
-              <MapIcon size={20} strokeWidth={1.85} aria-hidden="true" className="shrink-0 text-white" />
+              <MapIcon size={20} strokeWidth={1.85} aria-hidden="true" className="mt-[1px] shrink-0 text-white lg:mt-0" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[14px] font-bold leading-tight text-white">{t.openMap}</span>
-                <span className="mt-[2px] text-[11.5px] leading-tight text-white/85">{t.openMapSub}</span>
+                <span className="line-clamp-2 text-[13.5px] font-bold leading-[1.18] text-white lg:line-clamp-none lg:text-[14px] lg:leading-tight">{t.openMap}</span>
+                <span className="mt-[2px] line-clamp-2 text-[11px] leading-[1.25] text-white/85 lg:text-[11.5px] lg:leading-tight">{t.openMapSub}</span>
               </span>
             </a>
           </div>
@@ -385,16 +453,27 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
             not decoration here — this card is where the reader is told what
             costs money.
           */}
+          {/*
+            C10, as ruled: "Do not force the desktop premium card beside/over
+            the phone globe ... `Go further with GlobalNewsAI` must still exist
+            on phone, but as a compact full-width premium teaser lower in the
+            Home flow ... after Explore by topic and before How It Works."
+
+            So this card is now `lg`-and-up only. It is NOT duplicated below
+            `lg`: `HomePremiumTeaser` is a different, smaller component with its
+            own heading id, rendered once by the page in the ruled position. One
+            premium block is visible at any width, and no id appears twice.
+          */}
           <aside
             aria-labelledby="beta-premium-heading"
-            className="relative overflow-hidden rounded-[14px] border border-[#5d4a1f] bg-[#090d19] p-[14px] shadow-[inset_0_1px_0_rgba(255,214,140,0.22),0_26px_64px_-20px_rgba(0,0,0,0.95),0_0_44px_-14px_rgba(245,197,94,0.30)]"
+            className={`relative hidden overflow-hidden p-[14px] lg:block ${PREMIUM_TEASER_SHELL}`}
           >
             {/* Sampled: the card's own fill is near-black `#090d19`, and the
                 gold reads as a warm bloom in its TOP-LEFT corner (`#483c23`),
                 not as a tint across the whole surface. */}
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_8%_4%,rgba(245,197,94,0.20),transparent_62%)]"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_72%_62%_at_6%_2%,rgba(139,110,255,0.22),transparent_64%)]"
             />
             <h2
               id="beta-premium-heading"
@@ -405,7 +484,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
                 size={26}
                 strokeWidth={1.9}
                 aria-hidden="true"
-                className="mt-[1px] shrink-0 text-[#ffe198] drop-shadow-[0_0_12px_rgba(255,206,110,0.75)]"
+                className="mt-[1px] shrink-0 text-[#c4b5fd] drop-shadow-[0_0_12px_rgba(167,139,250,0.7)]"
               />
               <span className="block">{t.premiumTitle}</span>
             </h2>
@@ -424,7 +503,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
                     size={17}
                     strokeWidth={2.6}
                     aria-hidden="true"
-                    className="shrink-0 rounded-full border border-[#6b551f] bg-[#241d0d] p-[3px] text-[#ffd98a]"
+                    className="shrink-0 rounded-full border border-[#4a3a93] bg-[#1b1540] p-[3px] text-[#c4b5fd]"
                   />
                   <span>{capability}</span>
                 </li>
@@ -488,12 +567,12 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
               disabled
               aria-disabled="true"
               tabIndex={-1}
-              className="relative mt-[12px] h-[35px] w-full cursor-not-allowed rounded-[10px] bg-[linear-gradient(180deg,#ebc267_0%,#dcae55_100%)] px-4 text-center text-[13px] font-bold tracking-[0.01em] text-[#452f0a] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_26px_-10px_rgba(235,194,103,0.85)]"
+              className="relative mt-[12px] h-[44px] w-full cursor-not-allowed rounded-[10px] border border-[#4a3a93] bg-[linear-gradient(180deg,#3b2f8f_0%,#2a2168_100%)] px-4 text-center text-[13px] font-bold tracking-[0.01em] text-[#e4dcff] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] xl:h-[35px]"
             >
               {t.premiumCta}
             </button>
 
-            <p className="relative mt-[10px] text-center text-[10.5px] leading-snug text-[#b09a6d]">{t.premiumNote}</p>
+            <p className="relative mt-[10px] text-center text-[10.5px] leading-snug text-[#8b86bb]">{t.premiumNote}</p>
           </aside>
 
           {/*

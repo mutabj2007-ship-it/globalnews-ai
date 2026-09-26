@@ -143,7 +143,7 @@ export function HomepageSituationMap({
         puts the border on the OUTER element and lets the map and the legend sit
         inside it, separated by a rule rather than by two more borders.
       */}
-      <div className={isRail ? `${RAIL_CARD_SHELL} p-[13px]` : undefined}>
+      <div className={isRail ? `${RAIL_CARD_SHELL} p-4 lg:p-[13px]` : undefined}>
         <div className={`${isRail ? 'mb-[11px]' : 'mb-5'} flex flex-wrap items-end justify-between gap-3`}>
           <div className={isRail ? 'w-full' : undefined}>
             {isRail ? (
@@ -163,7 +163,7 @@ export function HomepageSituationMap({
                 <a
                   href="/map"
                   aria-label={t.openFullMap}
-                  className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border border-[#17324f] text-[#9db4cc] transition-colors hover:border-cyan-400/55 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
+                  className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-[10px] border border-[#17324f] xl:h-[26px] xl:w-[26px] xl:rounded-[7px] text-[#9db4cc] transition-colors hover:border-cyan-400/55 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none"
                 >
                   <ArrowUpRight size={15} strokeWidth={2} aria-hidden="true" />
                 </a>
@@ -205,7 +205,7 @@ export function HomepageSituationMap({
                      rendered canvas instead of editing the shared MapLibre
                      style, which stays untouched for /map and every other
                      caller. */
-                  `relative overflow-hidden transition-all duration-500 h-[153px] ${MAP_BOX} [&>div:first-child]:[filter:brightness(1.55)_saturate(1.25)_contrast(1.08)] [&_.maplibregl-ctrl-bottom-left]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden [&_.maplibregl-ctrl-top-right]:hidden`
+                  `relative overflow-hidden transition-all duration-500 h-[210px] sm:h-[280px] lg:h-[153px] ${MAP_BOX} [&>div:first-child]:[filter:brightness(1.72)_saturate(1.5)_contrast(1.16)] [&_.maplibregl-ctrl-bottom-left]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden [&_.maplibregl-ctrl-top-right]:hidden`
                 : `relative overflow-hidden rounded-xl border bg-void transition-all duration-500 h-[360px] sm:h-[440px] ${
                     selectedIso3
                       ? 'border-cyan-400/60 shadow-[0_0_70px_-8px_rgba(34,211,238,0.45)]'
@@ -259,6 +259,39 @@ export function HomepageSituationMap({
             {isRail ? null : (
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(2,7,13,0.55)_100%)]" aria-hidden="true" />
             )}
+
+            {isRail ? (
+              <>
+                {/*
+                  POLISH item 4: "increase premium geographic depth and
+                  legibility without inventing event marks. A richer basemap is
+                  allowed; fake intelligence is not."
+
+                  So the depth added here is ATMOSPHERIC, never informational.
+                  All three layers are `pointer-events-none`, carry
+                  `aria-hidden`, and are fixed gradients: they do not read the
+                  feed, cannot vary with it, and mark no place. Nothing here is
+                  a dot, a ring or a label, so nothing here can be read as an
+                  event.
+
+                  The shared MapLibre style is still untouched. The extra
+                  legibility comes from the filter above, which lifts the
+                  rendered canvas for this one card only.
+                */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_86%_120%_at_50%_112%,rgba(10,74,138,0.42),transparent_68%)]"
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_22%_-10%,rgba(56,189,248,0.16),transparent_66%)]"
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 shadow-[inset_0_0_38px_-8px_rgba(6,32,62,0.9),inset_0_1px_0_rgba(150,205,255,0.10)]"
+                />
+              </>
+            ) : null}
 
             {/*
               VISUAL RICHNESS WITHOUT A SINGLE NEW CLAIM.
@@ -372,7 +405,7 @@ function MapLegend({
       <h3 className={compact ? 'sr-only' : 'font-mono text-[11px] uppercase tracking-widest text-cyan-400'}>
         {t.legendTitle}
       </h3>
-      <ul className={compact ? 'flex flex-wrap items-center justify-between gap-x-2 gap-y-1' : 'mt-3 flex flex-wrap items-center gap-x-5 gap-y-2'}>
+      <ul className={compact ? 'grid grid-cols-2 gap-x-3 gap-y-0.5' : 'mt-3 flex flex-wrap items-center gap-x-5 gap-y-2'}>
         {entries.map((module) => {
           /* The prototype's category name, falling back to the registry's own
              title if a later entry has no legend wording. */
@@ -392,13 +425,13 @@ function MapLegend({
               {isModuleNavigable(module) && module.destination !== undefined ? (
                 <a
                   href={module.destination}
-                  className="flex min-h-[44px] items-center gap-2 text-[12px] text-[#c2d3e6] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none lg:min-h-[24px]"
+                  className="flex min-h-[44px] items-center gap-2 text-[12.5px] text-[#c2d3e6] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none xl:min-h-[24px] xl:text-[12px]"
                 >
                   {dot}
                   {label}
                 </a>
               ) : (
-                <span className="flex min-h-[44px] items-center gap-2 text-[12px] text-ink-tertiary lg:min-h-[24px]">
+                <span className="flex min-h-[44px] items-center gap-2 text-[12.5px] text-ink-tertiary lg:min-h-[24px] lg:text-[12px]">
                   {dot}
                   {label}
                 </span>

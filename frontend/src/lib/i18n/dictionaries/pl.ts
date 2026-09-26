@@ -1815,6 +1815,9 @@ export const pl: Dictionary = {
     pulseTitle: 'Puls świata',
     pulseNote: 'Podgląd poglądowy. Otwórz mapę, aby zobaczyć doniesienia i źródła według krajów.',
     suggestedTitle: 'Sugerowane pytania',
+    /* The Ask rail's supporting line, as ruled. `suggestedNote` stays: it is
+       the no-AI-on-browse guarantee and it is not interchangeable with this. */
+    askRailSubtitle: 'Uzyskaj jasne odpowiedzi poparte źródłami.',
     suggestedNote: 'Dotknięcie sugestii wypełnia pole. Nic nie jest uruchamiane, dopóki nie naciśniesz Wyślij.',
 
     /*

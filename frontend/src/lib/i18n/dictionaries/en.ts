@@ -2267,6 +2267,9 @@ export const en = {
     pulseNote: 'Explanatory preview. Open the map to see country coverage and sources.',
     /* beta.suggested / beta.fillNote — prefill only; nothing runs until Send. */
     suggestedTitle: 'Suggested questions',
+    /* The Ask rail's supporting line, as ruled. `suggestedNote` stays: it is
+       the no-AI-on-browse guarantee and it is not interchangeable with this. */
+    askRailSubtitle: 'Get clear, source-backed answers.',
     suggestedNote: 'Tapping a suggestion fills the box. Nothing runs until you press Send.',
 
     /*

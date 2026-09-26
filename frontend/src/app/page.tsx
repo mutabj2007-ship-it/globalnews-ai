@@ -6,6 +6,7 @@ import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { BetaHero } from '@/components/home/BetaHero';
 import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
 import { HomeSideRail } from '@/components/home/HomeSideRail';
+import { HomePremiumTeaser } from '@/components/home/HomePremiumTeaser';
 import { HomeAccountPanel } from '@/components/home/HomeAccountPanel';
 import { ExploreByTopic } from '@/components/home/ExploreByTopic';
 import { HowItWorks } from '@/components/home/HowItWorks';
@@ -189,7 +190,7 @@ export default async function HomePage(): Promise<JSX.Element> {
       {/* Section 11 of the premium pass: the SAMPLED page background, applied to
           Home's own <main> so the global `bg-void` token, and therefore every
           other accepted surface, is untouched. See `HOME_PAGE_SURFACE`. */}
-      <main className={`pb-16 lg:pb-0 ${HOME_PAGE_SURFACE}`}>
+      <main className={`pb-24 lg:pb-0 ${HOME_PAGE_SURFACE}`}>
         <PageCanvas>
           {/*
             B5-A · C-13 — THE ERROR LANDING IS ALWAYS THE FRONTEND ORIGIN ROOT.
@@ -297,7 +298,28 @@ export default async function HomePage(): Promise<JSX.Element> {
               relationship the ruling refuses: two independent vertical blocks
               instead of one composed band.
             */}
-            <div className="flex min-w-0 flex-col gap-6">
+            {/*
+              ── BELOW `lg` THE RAIL COLLAPSES INTO THE FLOW ──────────────────
+
+              C5/N8, as ruled: "Below 1024 the desktop right rail may collapse
+              into document flow: `stories -> Global Situation Map -> Ask
+              GlobalNewsAI -> Explore by topic`. Map remains visible. Ask
+              remains directly associated with it."
+
+              That is a DOM-order requirement, not a CSS one, so the three
+              blocks are siblings of the grid and the grid places them, rather
+              than topics being nested inside the left column. In source order
+              they are stories -> rail(map, ask) -> topics, which is exactly the
+              ruled phone/tablet flow when the grid is one column.
+
+              At `lg` the explicit placement restores the accepted desktop
+              relationship from the composition ruling — "the right rail spans
+              the same overall vertical band as What's happening now + Explore
+              by topic" — by putting the rail in column 2 spanning both rows and
+              topics back under the stories in column 1. Same pixels at `lg`,
+              correct order below it.
+            */}
+            <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-1">
               <WhatsHappeningNow
                 lead={feed.featured}
                 secondary={feed.inFocus}
@@ -305,10 +327,21 @@ export default async function HomePage(): Promise<JSX.Element> {
                 dataMode={feed.dataMode}
                 language={language}
               />
+            </div>
+            <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+              <HomeSideRail language={language} briefUpdates={feed.briefUpdates} />
+            </div>
+            <div className="min-w-0 lg:col-start-1 lg:row-start-2">
               <ExploreByTopic language={language} />
             </div>
-            <HomeSideRail language={language} />
           </div>
+
+          {/*
+            C10, as ruled: the phone/tablet premium teaser sits "after Explore
+            by topic and before How It Works". It is `lg:hidden`; the desktop
+            hero card is `hidden lg:block`. One premium block at any width.
+          */}
+          <HomePremiumTeaser language={language} />
           {/*
             R2 — TODAY. Placed here deliberately: it is live editorial content,
             so it belongs with the live half of the page, between Global

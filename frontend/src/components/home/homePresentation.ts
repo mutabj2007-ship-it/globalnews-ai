@@ -57,7 +57,19 @@
  */
 export const HOME_PAGE_SURFACE =
   'relative bg-[#010a19] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-[560px] ' +
-  'before:bg-[radial-gradient(ellipse_120%_90%_at_50%_0%,rgba(6,40,78,0.55),transparent_72%)]';
+  'before:bg-[radial-gradient(ellipse_120%_90%_at_50%_0%,rgba(6,40,78,0.55),transparent_72%)] ' +
+  /*
+     POLISH item 6: "substantially reduce the visible engineering-grid
+     treatment below the Hero."
+
+     The grid is painted by `PageCanvas`, which every route shares, so the
+     layer itself is not touched. This descendant selector dims that one layer
+     to roughly a fifth of its opacity, and it is attached to HOME's <main>,
+     so no other accepted surface changes. The hero keeps its own denser field
+     -- that one is drawn by the hero, not the canvas -- and below it the page
+     now reads as a background rather than as graph paper.
+  */
+  '[&_.bg-cd-grid-page]:opacity-[0.22]';
 
 /* ── SURFACES ───────────────────────────────────────────────────────────── */
 
@@ -121,7 +133,7 @@ export const ASK_ROW =
  *   meta                        ->  ~10.5px
  */
 export const SECTION_TITLE =
-  'font-semibold tracking-[-0.02em] text-white text-[24px] lg:text-[27px] xl:text-[28px]';
+  'font-semibold tracking-[-0.02em] text-white text-[21px] sm:text-[24px] lg:text-[27px] xl:text-[28px]';
 export const SECTION_STANDFIRST = 'text-[12.5px] leading-[1.45] text-[#8fa6c0]';
 
 /* ── CATEGORY CHIPS ─────────────────────────────────────────────────────── */
@@ -252,7 +264,7 @@ export const TOPIC_FALLBACK: TopicStyle = {
 
 /** Measured: 136x119 card, radius 12, icon ~25px bare, arrow circle 24px. */
 export const TOPIC_CARD_BASE =
-  'group relative flex h-full min-h-[122px] flex-col items-start overflow-hidden rounded-[12px] border border-[#01101f] p-[13px] ' +
+  'group relative flex h-full min-h-[142px] flex-col items-start overflow-hidden rounded-[12px] border border-[#01101f] p-[15px] lg:min-h-[122px] lg:p-[13px] ' +
   'shadow-[inset_0_1px_0_rgba(148,197,255,0.14),0_18px_40px_-24px_rgba(0,0,0,0.95)] ' +
   'transition-[transform,box-shadow] duration-200 hover:-translate-y-[3px] ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 ' +
@@ -270,3 +282,103 @@ export const LEGEND_COLOUR: Record<string, string> = {
   humanitarian: '#ffca53',
   economy: '#a36ef0',
 };
+
+/* -- CATEGORY TEXT, BELOW `lg` ------------------------------------------- */
+
+/**
+ * C4, as ruled: "Desktop / large screens: use the Product Owner prototype
+ * treatment: category chip over the image, top-left. Below `lg`: use the
+ * R4.1/R5.1 phone treatment: coloured category text above the headline."
+ *
+ * So the same category needs two renderings, and this is the second one. The
+ * hues are the SAME sampled families as `CHIP_STYLE` -- the phone is not a
+ * different palette, it is the same palette in a different role -- lifted to
+ * the text shade R5.1 uses, because a chip's fill colour is unreadable as
+ * 10px type on a dark card.
+ *
+ * `CATEGORY_COLOUR_TOKENS.md` sets the rule this follows: "Story headlines
+ * stay --ink ... Descriptions and meta stay --mut", and text "weight 600
+ * minimum". Only the category word is coloured.
+ *
+ * Note on scope, per the C6 ruling: this is the Home story label, not a
+ * global category-token standard. CC1-CC4 stay open for the shared system.
+ */
+export const CATEGORY_TEXT: Record<string, string> = {
+  science: 'text-[#8ce1da]',
+  technology: 'text-[#8ce1da]',
+  politics: 'text-[#de979f]',
+  business: 'text-[#c4bffb]',
+  health: 'text-[#ffcf7d]',
+  world: 'text-[#93cdf5]',
+  sports: 'text-[#7fe0b6]',
+  entertainment: 'text-[#d9a6f0]',
+  energy: 'text-[#8ce1da]',
+  security: 'text-[#de979f]',
+  economy: 'text-[#dcd9ff]',
+  humanitarian: 'text-[#ffcf7d]',
+};
+
+export const CATEGORY_TEXT_FALLBACK = 'text-[#a9c2dc]';
+
+/** Measured off the R5.1 phone frame: uppercase, tracked, semibold, ~11px. */
+export const CATEGORY_TEXT_BASE =
+  'text-[11px] font-semibold uppercase tracking-[0.07em]';
+
+/* -- THE PHONE PREMIUM TEASER -------------------------------------------- */
+
+/**
+ * C10, as ruled: the premium block does not compete with the phone hero. It
+ * moves to its own full-width teaser after Explore by topic, and -- the part
+ * that is a real change of material, not of position -- "Premium remains
+ * violet/tier language; do not turn it into a gold-payment motif."
+ *
+ * So the phone teaser is violet. The desktop hero card keeps the Product
+ * Owner prototype's gold, because the prototype draws it that way and the
+ * prototype is the controlling desktop composition. If that reading is wrong
+ * and the gold was meant to go everywhere, this one constant is the only
+ * thing that has to change.
+ */
+export const PREMIUM_TEASER_SHELL =
+  'rounded-[14px] border border-[#3c2f7a] bg-[linear-gradient(135deg,#1c1740_0%,#161233_45%,#0a1020_100%)] ' +
+  'shadow-[inset_0_1px_0_rgba(190,170,255,0.20),0_22px_56px_-24px_rgba(0,0,0,0.95),0_0_40px_-16px_rgba(124,92,246,0.45)]';
+
+export const PREMIUM_TEASER_CTA =
+  'inline-flex h-[44px] w-full cursor-not-allowed items-center justify-center rounded-[10px] ' +
+  'border border-[#4a3a93] bg-[linear-gradient(180deg,#3b2f8f_0%,#2a2168_100%)] px-4 ' +
+  'text-[14px] font-bold tracking-[0.01em] text-[#e4dcff] ' +
+  'shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] sm:w-auto sm:min-w-[220px]';
+
+/* -- CATEGORY FALLBACK ARTWORK ------------------------------------------- */
+
+/**
+ * Completion ruling item 3:
+ *
+ *   "If a publisher image is genuinely unavailable: use the approved
+ *    category-specific fallback artwork/visual system. Do not leave an
+ *    empty-looking generic box. Do not invent photographs."
+ *
+ * So this is artwork, not imagery. Each entry is a fixed two-stop gradient in
+ * the subject's own sampled hue plus a faint geometric wash — no place, no
+ * people, no scene, nothing a reader could mistake for a photograph of the
+ * event. The card's own category label sits on top of it and says what the
+ * colour means.
+ *
+ * It is deterministic per category, so the same subject always looks the same,
+ * and it never varies with the feed.
+ */
+export const CATEGORY_ARTWORK: Record<string, string> = {
+  world: 'from-[#0b3a6b] via-[#0a2748] to-[#061831]',
+  politics: 'from-[#4a1b2d] via-[#331726] to-[#141522]',
+  business: 'from-[#241f63] via-[#1a1a4a] to-[#09182d]',
+  technology: 'from-[#0a4a4e] via-[#093237] to-[#051f25]',
+  science: 'from-[#0a4a4e] via-[#093237] to-[#051f25]',
+  health: 'from-[#5a3a14] via-[#3c2a13] to-[#161a20]',
+  sports: 'from-[#0d4a34] via-[#0a3325] to-[#061f1a]',
+  entertainment: 'from-[#3f1c55] via-[#2b143a] to-[#141026]',
+  energy: 'from-[#0a4a4e] via-[#093237] to-[#051f25]',
+  security: 'from-[#4a1b2d] via-[#331726] to-[#141522]',
+  economy: 'from-[#241f63] via-[#1a1a4a] to-[#09182d]',
+  humanitarian: 'from-[#5a3a14] via-[#3c2a13] to-[#161a20]',
+};
+
+export const CATEGORY_ARTWORK_FALLBACK = 'from-[#0e2440] via-[#0a1a30] to-[#061220]';

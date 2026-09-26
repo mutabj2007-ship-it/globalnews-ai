@@ -1,12 +1,19 @@
 import type { JSX } from 'react';
-import { ImageOff, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { StoryRailMotion } from '@/components/home/StoryRailMotion';
+import { StoryVisual } from '@/components/home/StoryVisual';
 import {
   CARD_SHELL_INTERACTIVE,
   CHIP_STYLE,
   CHIP_FALLBACK,
   CHIP_BASE,
+  CATEGORY_TEXT,
+  CATEGORY_TEXT_FALLBACK,
+  CATEGORY_TEXT_BASE,
+  CATEGORY_ARTWORK,
+  CATEGORY_ARTWORK_FALLBACK,
   SECTION_TITLE,
   SECTION_STANDFIRST,
 } from '@/components/home/homePresentation';
@@ -121,7 +128,17 @@ const RADIO_ID = (category: string): string => `gn-cat-${category}`;
   centred now that the box is taller than its text.
 */
 const CHIP_CLASS =
-  'inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-[#17324f] bg-[#0b1c31] px-3 text-[12px] font-medium text-[#a8c0da] transition-colors hover:border-cyan-300/55 hover:bg-[#12293f] hover:text-white motion-reduce:transition-none lg:min-h-[26px]';
+  /*
+    C3, as ruled: "Below `lg`: one horizontal scrollable pill row; never
+    multi-row wrap; active pill visibly filled; clipped/partial next item may
+    indicate scrollability; touch targets remain >=44px."
+
+    `min-h-[44px]` is the ruled floor and it is unconditional until `xl` —
+    1024-1279 is the tablet range, so the pills stay thumb-sized there and only
+    compact to the prototype's row at 1280. `whitespace-nowrap` is what stops a
+    two-word PL label from breaking the strip into a second line at 360px.
+  */
+  'inline-flex min-h-[44px] shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border border-[#17324f] bg-[#0b1c31] px-4 text-[13px] font-medium text-[#a8c0da] transition-colors hover:border-cyan-300/55 hover:bg-[#12293f] hover:text-white motion-reduce:transition-none xl:min-h-[26px] xl:px-3 xl:text-[12px]';
 
 export function WhatsHappeningNow({
   lead,
@@ -221,7 +238,7 @@ export function WhatsHappeningNow({
     <section
       id="whats-happening-now"
       aria-labelledby="beta-now-heading"
-      className="flex scroll-mt-24 flex-col gap-2.5"
+      className="flex scroll-mt-24 flex-col gap-3"
     >
       {rail.length === 0 ? (
         <>
@@ -335,7 +352,7 @@ export function WhatsHappeningNow({
               <div
                 role="radiogroup"
                 aria-label={t.categoryFilterAria}
-                className="gn-chips flex flex-wrap items-center gap-1.5"
+                className="gn-chips -mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:mx-0 xl:flex-wrap xl:gap-1.5 xl:overflow-visible xl:px-0 xl:pb-0"
               >
                 <label htmlFor={RADIO_ID('all')} className={CHIP_CLASS}>
                   {categoryLabels.all}
@@ -352,7 +369,18 @@ export function WhatsHappeningNow({
             </div>
           </div>
 
-          <div className="gn-deck flex flex-col gap-3">
+          {/*
+            BREATHING ROOM, as ruled: "add approximately 16-24px more
+            separation before the story-card rail begins ... Do not reduce
+            typography or card size to recover the space. The cards may move
+            down slightly."
+
+            So this is padding, not a smaller anything: ~18px on phone and
+            ~22px from `lg`, on top of the section's own gap. Nothing above it
+            was removed — heading, timestamp, LIVE indicator, View all, the
+            chips and the no-AI disclosure all stay.
+          */}
+          <div className="gn-deck flex flex-col gap-3 pt-[18px] lg:pt-[22px]">
             {rail.length === 0 ? null : (
               /*
                 The rail. Focusable so the arrow keys scroll it, labelled so a
@@ -361,23 +389,54 @@ export function WhatsHappeningNow({
                 margin plus matching padding keeps the focus ring from being
                 clipped by the scroll container.
               */
-              <ul
-                tabIndex={0}
-                role="group"
-                aria-label={t.storyRailAria}
-                className="-mx-1 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-2 lg:gap-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+              /*
+                COMPLETION RULING item 4. `StoryRailMotion` renders this <ul>
+                and gives it the restrained auto-advance: one card every 7s,
+                smooth, paused whenever the reader is hovering, focused,
+                dragging, swiping or scrolling, resumed after 4.5s of quiet,
+                and disabled outright under `prefers-reduced-motion`.
+
+                It makes NO network requests. The cards below are still
+                server-rendered and passed through as children, so no article
+                data crosses the client boundary and nothing about the rail's
+                motion can cause a provider call or spend quota.
+
+                The native scrollbar is hidden, not the scrolling:
+                `overflow-x-auto` stays, `tabIndex={0}` and `role="group"` move
+                with the element, and `snap-x snap-mandatory` still lands each
+                swipe on a card.
+              */
+              <StoryRailMotion
+                ariaLabel={t.storyRailAria}
+                className="-mx-1 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 lg:gap-[10px] xl:gap-[12px]"
               >
                 {rail.map((article) => (
                   <li
                     key={article.id}
                     data-gn-story=""
                     data-gn-cat={article.category}
-                    className="flex h-[212px] shrink-0 basis-[86%] snap-start sm:basis-[46%] lg:basis-[calc(25%-7.5px)]"
+                    /*
+                       CARD WIDTH BY TIER, not one basis that shrinks.
+
+                       The prototype's four-up rail is measured at 1280, where
+                       the left column is 836px and a card is 202px. At 1024
+                       that same column is ~600px, so four-up gives ~140px
+                       cards and every headline truncates mid-word — a shrunk
+                       desktop, which the ruling refuses.
+
+                       So four-up starts at `xl` (1280), the width it was
+                       measured at, and 1024-1279 shows ~2.4 cards. The rail is
+                       horizontally swipeable at every width, so nothing is
+                       unreachable; the cards are simply legible at each tier.
+                       Below `lg` one card dominates with the next peeking,
+                       which is what tells a thumb it swipes.
+                    */
+                    className="flex h-[322px] shrink-0 basis-[87%] snap-start sm:h-[268px] sm:basis-[54%] md:basis-[44%] lg:h-[312px] lg:basis-[calc(41%-7.5px)] xl:h-[320px] xl:basis-[calc(25%-9px)]"
                   >
                     <RailCard article={article} language={language} />
                   </li>
                 ))}
-              </ul>
+              </StoryRailMotion>
             )}
           </div>
         </>
@@ -406,7 +465,7 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
         */}
         <span className="block transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100">
           {/* Measured: 202 x 91 image on a 212-tall card -> 20:9, 43% of the card. */}
-          <StoryImage article={article} language={language} className="aspect-[20/9]" />
+          <StoryImage article={article} language={language} className="aspect-[16/10] lg:aspect-[16/9] xl:aspect-[16/9]" />
         </span>
 
         {/*
@@ -427,32 +486,66 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
           for this hue family — see `CHIP_STYLE`, which also records why the
           prototype's four domain names cannot be printed on a real story.
         */}
+        {/*
+          C4, as ruled: "Desktop / large screens: use the Product Owner
+          prototype treatment: category chip over the image, top-left. Below
+          `lg`: use the R4.1/R5.1 phone treatment: coloured category text above
+          the headline. Do not force desktop image-overlay chips onto compact
+          phone cards."
+
+          So the chip is `hidden lg:inline-flex` and the coloured text label
+          below lives in the body. The elapsed time follows the same logic: it
+          stays on the image at `lg`+ where the prototype draws it, and joins
+          the meta row below `lg` where R5.1 puts it ("Poland · 6 sources ·
+          2h ago"). Neither is duplicated at any width.
+        */}
         <span
-          className={`absolute left-[11px] top-[11px] ${CHIP_BASE} ${(CHIP_STYLE[article.category] ?? CHIP_FALLBACK).className} shadow-[0_2px_10px_-2px_rgba(0,0,0,0.9)]`}
+          className={`absolute left-[11px] top-[11px] hidden ${CHIP_BASE} ${(CHIP_STYLE[article.category] ?? CHIP_FALLBACK).className} shadow-[0_2px_10px_-2px_rgba(0,0,0,0.9)] lg:inline-flex`}
         >
           {categoryLabels[article.category] ?? article.category}
         </span>
-        <span className="absolute right-[11px] top-[11px] inline-flex items-center text-[10.5px] font-medium text-white/85 [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]">
+        <span className="absolute right-[11px] top-[11px] hidden items-center text-[10.5px] font-medium text-white/85 [text-shadow:0_1px_4px_rgba(0,0,0,0.95)] lg:inline-flex">
           <Elapsed article={article} language={language} />
         </span>
       </span>
 
-      <span className="flex flex-1 flex-col gap-[3px] p-[13px]">
+      <span className="flex flex-1 flex-col gap-[3px] p-4 lg:p-[16px] xl:p-[17px]">
         {/*
           Two clamped lines for the headline and two for the summary. The clamps
           are what hold the rail to one card height: without them a long
           headline makes its own card taller than its neighbours, which is the
           ragged rail the prototype does not have.
         */}
-        {/* Measured: headline ~15px on ~16.5px leading; standfirst ~11.5px. */}
-        <span className="line-clamp-2 text-[15px] font-bold leading-[1.12] tracking-[-0.012em] text-white">
+        {/*
+          C4 below `lg`: the subject in its own colour, above the headline,
+          exactly as R5.1 draws it. Hidden at `lg`+, where the prototype's chip
+          over the image carries the same fact — so the category appears once
+          at every width, never twice and never not at all.
+        */}
+        <span
+          className={`${CATEGORY_TEXT_BASE} ${CATEGORY_TEXT[article.category] ?? CATEGORY_TEXT_FALLBACK} lg:hidden`}
+        >
+          {categoryLabels[article.category] ?? article.category}
+        </span>
+        {/* Measured: headline ~15px on ~16.5px leading at `lg`+; the phone card
+            is far more headline-led, per the approved phone frame. */}
+        <span className="mt-[5px] line-clamp-3 text-[17px] font-bold leading-[1.16] tracking-[-0.012em] text-white sm:line-clamp-3 lg:mt-0 lg:text-[16px] lg:leading-[1.24] xl:text-[15.5px] xl:leading-[1.26]">
           {article.title}
         </span>
-        <span className="mt-[2px] line-clamp-2 text-[11.5px] leading-[1.32] text-[#93a9c2]">{article.summary}</span>
-        <span className="mt-auto flex items-center gap-1.5 pt-1 text-[10.5px] text-[#8299b4]">
+        <span className="mt-[3px] line-clamp-3 text-[13px] leading-[1.38] text-[#93a9c2] sm:line-clamp-3 lg:mt-[7px] lg:text-[12.5px] lg:leading-[1.45] xl:mt-[8px] xl:text-[12px] xl:leading-[1.48]">
+          {article.summary}
+        </span>
+        <span className="mt-auto flex items-center gap-1.5 pt-2 text-[11.5px] tracking-[0.005em] text-[#8299b4] lg:pt-2.5 lg:text-[11px] xl:pt-3">
           <span className="truncate">{article.sourceName}</span>
           <span aria-hidden="true">·</span>
           <span className="shrink-0">{pluralWithForms(article.sourcesCount, language, t.sourceForms)}</span>
+          {/* Below `lg` the age lives here rather than on the image.
+              `Elapsed` supplies its own leading separator, so this row adds
+              none — that is what produced the doubled "· ·" in the first
+              capture. */}
+          <span className="shrink-0 lg:hidden">
+            <Elapsed article={article} language={language} />
+          </span>
         </span>
       </span>
     </a>
@@ -475,26 +568,14 @@ function StoryImage({
   className: string;
 }): JSX.Element {
   const t = getDictionary(language).betaHome;
-
-  if (article.imageUrl === undefined) {
-    return (
-      <span className={`flex w-full items-center justify-center gap-2 bg-surface text-xs text-ink-tertiary ${className}`}>
-        <ImageOff size={16} strokeWidth={1.75} aria-hidden="true" />
-        {t.imageUnavailable}
-      </span>
-    );
-  }
-
+  /* The shared artwork-first visual — see `StoryVisual`. */
   return (
-    <span className={`relative block w-full bg-surface ${className}`}>
-      <SafeImage
-        src={article.imageUrl}
-        alt=""
-        fill
-        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-        className="object-cover"
-      />
-    </span>
+    <StoryVisual
+      article={article}
+      className={className}
+      missingLabel={t.imageUnavailable}
+      sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 41vw, (min-width: 640px) 54vw, 88vw"
+    />
   );
 }
 
