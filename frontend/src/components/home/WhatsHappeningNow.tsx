@@ -149,6 +149,9 @@ export function WhatsHappeningNow({
 }: WhatsHappeningNowProps): JSX.Element {
   const t = getDictionary(language).betaHome;
   const categoryLabels = getDictionary(language).map.categories;
+  /* Governed rail-control labels, already correct in EN and PL — reused rather
+     than earning new keys, so the rail and the retired carousel agree. */
+  const gd = getDictionary(language).globalDevelopments;
 
   /*
     ══════════════════════════════════════════════════════════════════════
@@ -408,6 +411,8 @@ export function WhatsHappeningNow({
               */
               <StoryRailMotion
                 ariaLabel={t.storyRailAria}
+                previousLabel={gd.previousLabel}
+                nextLabel={gd.nextLabel}
                 className="-mx-1 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 lg:gap-[10px] xl:gap-[12px]"
               >
                 {rail.map((article) => (

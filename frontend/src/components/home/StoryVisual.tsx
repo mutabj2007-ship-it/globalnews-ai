@@ -68,7 +68,22 @@ export function StoryVisual({ article, className, missingLabel, sizes }: StoryVi
         aria-hidden="true"
         className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_92%_104%,rgba(0,0,0,0.42),transparent_62%)]"
       />
-      {hasPhoto ? <StoryPhoto src={article.imageUrl as string} sizes={sizes} /> : null}
+      {/*
+        The slow zoom lives INSIDE the clipping box, so the picture grows
+        behind a fixed frame rather than resizing the card. Frozen under
+        `prefers-reduced-motion`. Shared by the story cards, the 60-second
+        card and the For-you cards, so the whole page hovers the same way.
+      */}
+      {hasPhoto ? (
+        <span className="absolute inset-0 block transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100">
+          <StoryPhoto src={article.imageUrl as string} sizes={sizes} />
+        </span>
+      ) : (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 block transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+        />
+      )}
     </span>
   );
 }
