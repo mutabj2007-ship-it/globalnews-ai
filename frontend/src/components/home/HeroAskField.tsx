@@ -1,9 +1,10 @@
 'use client';
 
-import type { JSX } from 'react';
+import type { FormEvent, JSX } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
+import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -93,6 +94,16 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
     node.style.overflowY = 'hidden';
   };
 
+  const stageInAskDock = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const draft = String(new FormData(event.currentTarget).get('q') ?? '').trim();
+    if (draft.length === 0) return;
+
+    openGlobalAsk(draft);
+    inputRef.current?.blur();
+    event.currentTarget.reset();
+  };
+
   return (
     <>
       {/*
@@ -103,6 +114,7 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
       <form
         action="/ask"
         method="get"
+        onSubmit={stageInAskDock}
         role="search"
         aria-label={ariaLabel}
         className="relative z-30 mt-3.5 h-[54px] w-full max-w-[506px] overflow-visible xl:h-[42px]"
