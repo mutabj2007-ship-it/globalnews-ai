@@ -456,3 +456,24 @@ describe('HOME ASK DOCK LAUNCH R1 — Home opens Ask in place with zero spend', 
     expect(dock).toContain('analyzeNews(asked, language, sent, priorQuestion)');
   });
 });
+
+
+describe('HOME ASK NO-ROUTE FALLBACK R2 — Hero submit cannot escape to /ask', () => {
+  const hero = readFileSync(join(__dirname, '../home/HeroAskField.tsx'), 'utf8');
+
+  it('the Home Hero form owns no native /ask action', () => {
+    expect(hero).toContain('onSubmit={stageInAskDock}');
+    expect(hero).not.toContain('action="/ask"');
+    expect(hero).not.toContain("action='/ask'");
+    expect(hero).not.toContain('method="get"');
+  });
+
+  it('stages the exact draft locally and does not navigate', () => {
+    const start = hero.indexOf('const stageInAskDock');
+    const end = hero.indexOf('return (', start);
+    const submitBlock = hero.slice(start, end);
+    expect(submitBlock).toContain('event.preventDefault()');
+    expect(submitBlock).toContain('openGlobalAsk(draft)');
+    expect(submitBlock).not.toMatch(/router\.|location\.|window\.open|href/);
+  });
+});
