@@ -1,6 +1,7 @@
 # HOME CLICK CONTRACT R1
 
-**Base:** `release/alpha-m08-integrated-r1` @ `7e87ec1f59350ba513d00a8cd824a584ad34a8fb`. Work branch: `engineering/ask-search-home-click-r1`.
+**Base:** `release/alpha-m08-integrated-r1` @ `7e87ec1f59350ba513d00a8cd824a584ad34a8fb`. Work branch: `engineering/ask-search-home-click-r1` (local; not pushed).
+**Revision:** R1 closure. The CTO rulings are recorded in §0, and the dock transition row is updated.
 **Scope:** every visible interactive control on Home, on phone and on tablet/desktop. Home was **not redesigned**.
 
 - **Machine-checkable form:** `frontend/src/components/home/homeClickContract.ts`, which is audit data and imported by no product code. It is enforced by `homeClickContract.spec.ts`: 113 assertions, all passing.
@@ -21,6 +22,14 @@ The Ask dock is mounted from the root layout at every width.
 | **Back** | `push`: Next soft navigation.<br>`doc`: full document navigation.<br>`hash`: same-document anchor.<br>`tab`: new tab; Home history is unchanged. |
 | **AI** | Model-quota cost of the click itself. |
 | **Net** | Provider or backend network cost of the click. |
+
+## 0. CTO-RULINGS-CLOSURE
+
+| # | Ruling | Home impact | Status |
+|---|---|---|---|
+| 1 | A language switch after a completed run must not auto-execute; the question is staged and needs an explicit Run analysis. | `hdr.language` / `nav.m.language` stay 0 AI cost everywhere, **including on `/search` after a run**. | **Done.** Consent is bound to (question, language). Browser: switching after a run adds **0**; Run then adds exactly **1**, in the new language. |
+| 2 | Replace "Open full analysis" with the explicit compute label "Run full analysis", with the supporting copy "Starts a new source-backed analysis." | `dock.open-full` renamed (EN "Run full analysis" / PL "Uruchom pełną analizę"), with the note "Starts a new source-backed analysis." / "Rozpoczyna nową analizę opartą na źródłach." | **Done.** The old label is asserted absent in EN and PL. |
+| 3 | Map Analysis must not directly start compute; it opens the workspace with the governed context staged, and Run analysis is explicit. The Map control label is unchanged. | Home → Map (`hero.open-map`, `acct.manage`, `bnav`) costs 0. The Map Analysis control lands on `/search` staged. | **Done.** Pinned: no Map surface can import the consent grant or the transport. The Map label is untouched. |
 
 ## 1. Matrix
 
@@ -58,7 +67,7 @@ The Ask dock is mounted from the root layout at every width.
 | bnav.tabs | Home / World Map / Ask AI / Intelligence | P | `/`, `/map`, `/ask`, `#intelligence-modules` | navigate | = | = | doc / hash | — | int | 0 | route loads | intelligenceModulesR51.spec |
 | dock.launcher | Ask AI / Zapytaj AI | all | toggles the dock | dock | = | = | — | hidden while a dialog covers it | int | 0 | none | askAiDock.spec |
 | dock.submit | Ask / Zapytaj | all | `POST /api/analysis/news` | send | signed-in ceiling | anonymous ceiling | — | disabled when empty or in flight; **R1 guards Enter/requestSubmit too** | int | **1 per Send** | 1 POST | askDockRequestCount.spec (**new**) |
-| dock.open-full | Open full analysis / Otwórz pełną analizę | all | `/search?q=…[&storyTitle&articleId&countryCode]` | navigate | = | = | doc | only when the turn has analysis or articles | int | **1, as the accepted deeper-analysis action** (same-tab only; new tab, copied link or reload lands staged at 0) | 1 POST | searchComputeRequestCount.spec (**new**) |
+| dock.open-full | **Run full analysis / Uruchom pełną analizę** with the note "Starts a new source-backed analysis." / "Rozpoczyna nową analizę opartą na źródłach." (CTO ruling 2) | all | `/search?q=…[&storyTitle&articleId&countryCode]` | navigate | = | = | doc | only when the turn has analysis or articles | int | **1, the explicit deeper-compute action** (same tab only; a new tab, copied link or reload lands staged at 0) | 1 POST | searchComputeRequestCount.spec, evidenceDisclosureR1.spec (**new**) |
 | dock.dashboard-entry | Ask GlobalNews AI ↗ | all | `/ask?q=<draft>` | navigate | = | = | doc | — | int | 0 (stages only) | /ask load | dashboardContext.spec |
 | footer.links | Help & Support, Privacy, Terms, Source Policy, Third-Party Notices | all | `/support`, `/privacy`, `/terms`, `/source-policy`, `/third-party-notices` | navigate | = | = | doc | — | int | 0 | route loads | footerNavHud.spec |
 | auth-error.dismiss | Dismiss / Zamknij | all, when present | hides the banner | toggle | = | = | — | only with an admissible auth-error parameter | int | 0 | none | authErrorBanner.spec |
@@ -83,7 +92,7 @@ The Ask dock is mounted from the root layout at every width.
 | # | Defect | Fix | Evidence |
 |---|---|---|---|
 | F1 | "Sign in to follow" pointed at `/auth/google`, which this origin does not serve (Alpha 404). | `accountSignInUrl('/')`, which produces `/api/auth/google?returnTo=%2F`. This is the same helper every other sign-in uses, and `/` is on the backend `returnTo` allowlist. | `HomeAccountPanel.tsx`; homeClickContract.spec |
-| F2 | "Open full analysis" auto-ran on arrival, including on reload, copy-link and new tab. | It is now the accepted deeper-compute action for **same-tab activation only**, through the governed consent grant. Every other arrival is staged. | ASK-SEARCH-ENGINEERING-R1 |
+| F2 | "Open full analysis" auto-ran on arrival, including on reload, copy-link and new tab, and its label did not say that it computes. | It is now the explicit deeper-compute action for **same-tab activation only**, through the governed consent grant, relabelled **Run full analysis** (CTO ruling 2). Every other arrival is staged. | ASK-SEARCH-ENGINEERING-R1 |
 | F3 | "View all" rendered as a label for a radio that does not exist when there are fewer than 2 categories, so it was a dead control. | Rendered only with the filter. | `WhatsHappeningNow.tsx` |
 | F8 | The World topic card was inert but not exposed as disabled. | `aria-disabled="true"` added; the visual is unchanged. | `ExploreByTopic.tsx` |
 | F10 | The phone header Search link idly prefetched `/search` (network only, no compute). | `prefetch={false}` on both NavBar search links, matching BetaHomeHeader. | `NavBar.tsx` |
