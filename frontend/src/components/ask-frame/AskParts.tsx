@@ -3,6 +3,7 @@
 import type { JSX, ReactNode } from 'react';
 import { ASK_ABSENT, SUGGESTION_CATEGORIES } from '@/lib/ask/askFrame';
 import type { AskStrings } from '@/lib/ask/askStrings';
+import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 
 /** Presentation primitives recovered from the v1.8 authority preview. */
 export const ASK_MICRO = 'font-mono text-[10px] uppercase tracking-[0.14em] text-sp-ink-3';
@@ -168,15 +169,18 @@ export function Composer({
       <label className="sr-only" htmlFor="ask-frame-composer">
         {inputLabel}
       </label>
-      <textarea
+      <AdaptiveTextarea
         id="ask-frame-composer"
         data-ask="composer-input"
-        rows={2}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         maxLength={1000}
-        className="w-full resize-none bg-transparent text-[13px] leading-[1.5] text-sp-ink placeholder:text-sp-ink-3 focus:outline-none"
+        minHeight={48}
+        maxHeight={240}
+        maxViewportFraction={0.34}
+        keepVisible
+        className="w-full bg-transparent text-[13px] leading-[1.5] text-sp-ink placeholder:text-sp-ink-3 focus:outline-none"
       />
       {/*
         THE COST MARKER GETS ITS OWN LINE.
