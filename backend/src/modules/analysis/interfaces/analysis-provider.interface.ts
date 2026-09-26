@@ -1,6 +1,8 @@
 import type {
   AnalysisEvidenceState,
   ComparisonCountryCoverage,
+  EventAnchor,
+  EventEvidenceRelation,
   LanguageCode,
   NewsArticle,
 } from '@globalnews-ai/shared';
@@ -119,6 +121,14 @@ export interface AnalysisProviderInput {
    * absent basis proves nothing (shared/src/news.ts `publishedAtBasis`).
    */
   newestEvidence?: EvidenceFreshnessFact;
+
+  /**
+   * ASK CONVERSATIONAL EVIDENCE ANCHORING R1 — the structured event anchor and
+   * each evidence item's relation to it, aligned with `articles` by index.
+   * Absent for questions that do not reason about an event.
+   */
+  eventAnchor?: EventAnchor;
+  eventEvidenceRelations?: EventEvidenceRelation[];
 
   /**
    * Optional caller cancellation. AnalysisService uses this only for the

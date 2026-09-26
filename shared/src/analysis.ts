@@ -956,6 +956,22 @@ export interface AnalysisRetrievalContext {
    * predates it, and consumers then derive it with the same function.
    */
   evidenceState?: AnalysisEvidenceState;
+  /**
+   * ASK CONVERSATIONAL EVIDENCE ANCHORING R1 — the structured event anchor, when
+   * the question reasons about an event (cause / effect / cross-border) or refers
+   * back to one ("this", "it"). Absent for every other question.
+   */
+  eventAnchor?: import('./event-anchor').EventAnchor;
+  /**
+   * The clarification signal the frontend's recovery surface already reads.
+   * Emitted only when the question cannot be answered without the reader
+   * choosing (e.g. an ambiguous "Congo"); retrieval then withholds evidence
+   * and no AI call is made.
+   */
+  retrievalOutcome?: 'CLARIFICATION_REQUIRED';
+  clarificationReason?: import('./event-anchor').AnalysisClarificationReason;
+  /** ISO-3 candidates the reader must choose between. */
+  clarificationCandidates?: readonly string[];
 }
 
 /**

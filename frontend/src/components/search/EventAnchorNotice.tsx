@@ -1,0 +1,120 @@
+import type { AnalysisRetrievalContext, EventAnchorDisclosure, LanguageCode } from '@globalnews-ai/shared';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+
+/**
+ * ASK CONVERSATIONAL EVIDENCE ANCHORING R1 — THE ONE DISPLAY AUTHORITY FOR
+ * WHAT THE EVENT EVIDENCE DOES AND DOES NOT ESTABLISH.
+ *
+ * The backend decides every fact here deterministically (`eventAnchor` on the
+ * retrieval context): which country the event was interpreted as and from
+ * what, whether any reporting establishes a cause or a neighbouring-country
+ * impact, and whether same-place context was kept apart from the event. This
+ * file only words those codes, in EN and PL, for BOTH the Ask dock and the
+ * analysis frame, so the two surfaces cannot say different things.
+ *
+ * It renders NOTHING when there is no anchor: every question that does not
+ * reason about an event is untouched.
+ */
+
+type Copy = ReturnType<typeof getDictionary>['eventAnchor'];
+
+function countryLabel(ctx: AnalysisRetrievalContext, copy: Copy): string | undefined {
+  const iso3 = ctx.eventAnchor?.countryIso3;
+  if (iso3 === undefined) return undefined;
+  return (copy.countryNames as Record<string, string>)[iso3] ?? ctx.countryName ?? iso3;
+}
+
+const ORDER: readonly EventAnchorDisclosure[] = [
+  'COUNTRY_INTERPRETED_FROM_EVIDENCE',
+  'COUNTRY_FROM_SELECTED_CONTEXT',
+  'CROSS_BORDER_NOT_ESTABLISHED',
+  'CAUSE_NOT_ESTABLISHED',
+  'CONTEXT_SEPARATED',
+];
+
+export interface EventAnchorLine {
+  readonly code: EventAnchorDisclosure | 'CONTEXT_CLAIMS_WITHHELD';
+  readonly text: string;
+}
+
+/** The disclosure sentences, in a fixed order. Empty when there is no anchor. */
+export function resolveEventAnchorLines(
+  ctx: AnalysisRetrievalContext,
+  language: LanguageCode,
+): EventAnchorLine[] {
+  const anchor = ctx.eventAnchor;
+  if (anchor === undefined) return [];
+  const copy = getDictionary(language).eventAnchor;
+  const country = countryLabel(ctx, copy) ?? '';
+  const lines: EventAnchorLine[] = [];
+  for (const code of ORDER) {
+    if (!anchor.disclosures.includes(code)) continue;
+    const text =
+      code === 'COUNTRY_INTERPRETED_FROM_EVIDENCE'
+        ? copy.interpretedFromEvidence.replace('{country}', country)
+        : code === 'COUNTRY_FROM_SELECTED_CONTEXT'
+          ? copy.fromSelectedContext.replace('{country}', country)
+          : code === 'CROSS_BORDER_NOT_ESTABLISHED'
+            ? copy.crossBorderNotEstablished
+            : code === 'CAUSE_NOT_ESTABLISHED'
+              ? copy.causeNotEstablished
+              : copy.contextSeparated;
+    lines.push({ code, text });
+  }
+  if ((anchor.contextOnlyClaimsWithheld ?? 0) > 0) {
+    lines.push({ code: 'CONTEXT_CLAIMS_WITHHELD', text: copy.contextClaimsWithheld });
+  }
+  return lines;
+}
+
+/**
+ * The ambiguous-country clarification: the question and one line per
+ * candidate, named in the reader's language. Undefined unless the backend
+ * asked for exactly this clarification.
+ */
+export function resolveAmbiguousCountryQuestion(
+  ctx: AnalysisRetrievalContext,
+  language: LanguageCode,
+): { question: string; candidates: string[]; sentence: string } | undefined {
+  if (ctx.retrievalOutcome !== 'CLARIFICATION_REQUIRED' || ctx.clarificationReason !== 'AMBIGUOUS_COUNTRY') {
+    return undefined;
+  }
+  const copy = getDictionary(language).eventAnchor;
+  const names = copy.countryNamesFull as Record<string, string>;
+  const candidates = (ctx.clarificationCandidates ?? []).map((iso3) => names[iso3] ?? iso3);
+  return {
+    question: copy.ambiguousCountryQuestion,
+    candidates,
+    /* The one-line form for the Ask dock: fixed copy and country names only, never model text. */
+    sentence: [copy.ambiguousCountryQuestion, ...candidates].join(' · '),
+  };
+}
+
+export function EventAnchorNotice({
+  retrievalContext,
+  language,
+}: {
+  retrievalContext: AnalysisRetrievalContext;
+  language: LanguageCode;
+}): JSX.Element | null {
+  const lines = resolveEventAnchorLines(retrievalContext, language);
+  if (lines.length === 0) return null;
+  const copy = getDictionary(language).eventAnchor;
+  return (
+    <section
+      data-event-anchor="notice"
+      role="note"
+      aria-label={copy.heading}
+      className="rounded-xl border border-border-strong bg-surface px-3 py-2"
+    >
+      <p className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">{copy.heading}</p>
+      <ul className="mt-1 space-y-1 text-xs leading-relaxed text-ink-secondary">
+        {lines.map((line) => (
+          <li key={line.code} data-event-anchor-disclosure={line.code}>
+            {line.text}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

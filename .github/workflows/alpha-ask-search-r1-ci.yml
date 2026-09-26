@@ -10,6 +10,7 @@ on:
     branches:
       - engineering/ask-search-home-click-r1
       - engineering/ask-retrieval-recall-r2
+      - engineering/ask-conversational-evidence-anchoring-r1
   pull_request:
     branches:
       - release/alpha-m08-integrated-r1
@@ -57,6 +58,11 @@ jobs:
           npm test --workspace=backend -- --runInBand src/modules/analysis/query/query-intent.util.spec.ts
       - name: Recall R2.1 blockers (B1 multi-word symmetry, B2 case-aware us, B3 directive is not a regulation)
         run: npm test --workspace=backend -- --runInBand src/modules/news/relevance/governed-term-parity.spec.ts -t "R2.1"
+      - name: Conversational evidence anchoring R1 (event relation, ambiguous country, disclosures)
+        run: |
+          npm test --workspace=backend -- --runInBand src/modules/analysis/anchor/event-anchor.util.spec.ts
+          npm test --workspace=backend -- --runInBand src/modules/analysis/service/conversational-evidence-anchoring.spec.ts
+          npm test --workspace=frontend -- --runInBand src/components/search/eventAnchorNotice.spec.ts
       - name: Frontend build
         run: npm run build:frontend
       - name: Backend build

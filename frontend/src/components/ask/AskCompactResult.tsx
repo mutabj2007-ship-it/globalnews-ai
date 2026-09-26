@@ -4,6 +4,7 @@ import { comparisonCoverageLines, resolveEvidenceState } from '@globalnews-ai/sh
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { EvidenceFreshnessNotice } from '@/components/search/EvidenceFreshnessNotice';
+import { EventAnchorNotice, resolveAmbiguousCountryQuestion } from '@/components/search/EventAnchorNotice';
 import {
   ABSENT_BRIEF,
   buildBriefModel,
@@ -114,9 +115,13 @@ export function AskCompactResult({
   const retrievalUnavailable =
     (response.retrievalContext.evidenceState ??
       resolveEvidenceState(response.retrievalContext, response.articles.length)) === 'degraded-fallback';
-  const noAnswerMessage = retrievalUnavailable
-    ? t.resultNoAnswerProvider
-    : t.resultNoAnswerEvidence;
+  /* ANCHORING R1 — an ambiguous country is asked about, never reported as "no evidence". */
+  const ambiguousCountry = resolveAmbiguousCountryQuestion(response.retrievalContext, language);
+  const noAnswerMessage = ambiguousCountry
+    ? ambiguousCountry.sentence
+    : retrievalUnavailable
+      ? t.resultNoAnswerProvider
+      : t.resultNoAnswerEvidence;
   const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0;
 
   return (
@@ -158,6 +163,8 @@ export function AskCompactResult({
           </ul>
         </section>
       ) : null}
+
+      <EventAnchorNotice retrievalContext={response.retrievalContext} language={language} />
 
       {analysis?.relationalComposition ? (
         <div data-ask="relational-answer" className="rounded-2xl border border-signal/35 bg-signal/10 px-4 py-3">
