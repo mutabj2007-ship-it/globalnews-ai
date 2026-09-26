@@ -6,6 +6,7 @@ import { HeroGlobe } from '@/components/home/HeroGlobe';
 import { HeroAskField } from '@/components/home/HeroAskField';
 import { PREMIUM_TEASER_SHELL } from '@/components/home/homePresentation';
 import { SixtySecondBrief } from '@/components/home/SixtySecondBrief';
+import { HomeAskLauncher } from '@/components/home/HomeAskLauncher';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -363,8 +364,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
                 <span className="mt-[2px] line-clamp-2 text-[11px] leading-[1.25] text-white/85 lg:text-[11.5px] lg:leading-tight">{t.exploreWorldSub}</span>
               </span>
             </a>
-            <a
-              href="/ask"
+            <HomeAskLauncher
               className="flex min-h-[56px] flex-col items-start gap-1.5 rounded-[9px] bg-[linear-gradient(105deg,#412d9f_0%,#1f328a_100%)] px-3.5 py-3 lg:min-h-[60px] lg:flex-row lg:items-center lg:gap-3 lg:px-[15px] text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(65,45,159,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(65,45,159,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
               <Sparkles size={20} strokeWidth={1.85} aria-hidden="true" className="mt-[1px] shrink-0 text-white lg:mt-0" />
@@ -372,7 +372,7 @@ export function BetaHero({ language = 'en', latestUpdates }: BetaHeroProps): JSX
                 <span className="line-clamp-2 text-[13.5px] font-bold leading-[1.18] text-white lg:line-clamp-none lg:text-[14px] lg:leading-tight">{t.askToday}</span>
                 <span className="mt-[2px] line-clamp-2 text-[11px] leading-[1.25] text-white/85 lg:text-[11.5px] lg:leading-tight">{t.askTodaySub}</span>
               </span>
-            </a>
+            </HomeAskLauncher>
             <a
               href="/map"
               className="flex min-h-[56px] flex-col items-start gap-1.5 rounded-[9px] bg-[linear-gradient(105deg,#0b8d6a_0%,#037050_100%)] px-3.5 py-3 lg:min-h-[60px] lg:flex-row lg:items-center lg:gap-3 lg:px-[15px] text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_14px_32px_-18px_rgba(11,141,106,0.95)] transition-[transform,box-shadow] hover:-translate-y-[2px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_20px_40px_-16px_rgba(11,141,106,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
