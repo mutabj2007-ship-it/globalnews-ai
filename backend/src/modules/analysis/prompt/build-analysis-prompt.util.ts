@@ -1,6 +1,15 @@
-import type { AnalysisDevelopmentBreadth } from '../interfaces/analysis-provider.interface';
+import type {
+  AnalysisDevelopmentBreadth,
+  EvidenceFreshnessFact,
+} from '../interfaces/analysis-provider.interface';
 import { renderDimensionSemanticsInstruction } from './dimension-semantics';
-import type { ComparisonCountryCoverage, LanguageCode, NewsArticle } from '@globalnews-ai/shared';
+import type {
+  AnalysisEvidenceState,
+  ComparisonCountryCoverage,
+  LanguageCode,
+  NewsArticle,
+  PublishedAtBasis,
+} from '@globalnews-ai/shared';
 
 /**
  * Milestone #31 — a request-local, AI-facing alias for one article in
@@ -76,6 +85,12 @@ export interface NormalizedArticleForPrompt {
   summary: string;
   sourceName: string;
   publishedAt: string;
+  /**
+   * PR #40 R2 F2 — this article's own timestamp basis, carried so a
+   * retained/degraded prompt can serialize the time truthfully. Absent means
+   * unproven (shared/src/news.ts `publishedAtBasis`).
+   */
+  publishedAtBasis?: PublishedAtBasis;
 }
 
 /**
@@ -98,6 +113,9 @@ export function normalizeArticlesForPrompt(
       summary: combined.length > maxChars ? `${combined.slice(0, maxChars)}\u2026` : combined,
       sourceName: article.sourceName,
       publishedAt: article.publishedAt,
+      ...(article.publishedAtBasis === undefined
+        ? {}
+        : { publishedAtBasis: article.publishedAtBasis }),
     };
   });
 }
@@ -487,14 +505,44 @@ export function buildRelationalPromptSection(
   include commentary outside the JSON.`;
 }
 
+/**
+ * PR #40 R2 F2 — how ONE article's time is serialized into the evidence list.
+ *
+ * Live evidence keeps the exact pre-existing form, ` (<publishedAt>)`, so the
+ * live prompt stays byte-identical. For retained or degraded evidence every
+ * article's time is qualified by that article's own basis:
+ *
+ *   publisher  " (published <t>, as stated by the publisher)"
+ *   observed   " (observed by a news aggregator <t>; not the publication time)"
+ *   unknown    nothing — an unproven timestamp is omitted entirely.
+ */
+export function serializeArticleTimestamp(
+  article: Pick<NormalizedArticleForPrompt, 'publishedAt' | 'publishedAtBasis'>,
+  evidenceState?: AnalysisEvidenceState,
+): string {
+  if (evidenceState !== 'retained' && evidenceState !== 'degraded-fallback') {
+    return ` (${article.publishedAt})`;
+  }
+  if (!article.publishedAt) return '';
+  switch (article.publishedAtBasis) {
+    case 'publisher':
+      return ` (published ${article.publishedAt}, as stated by the publisher)`;
+    case 'observed':
+      return ` (observed by a news aggregator ${article.publishedAt}; not the publication time)`;
+    default:
+      return '';
+  }
+}
+
 export function buildAnalysisUserPrompt(
   query: string,
   articles: NormalizedArticleForPrompt[],
+  evidenceState?: AnalysisEvidenceState,
 ): string {
   const articleBlocks = articles
     .map(
       (article, index) =>
-        `${index + 1}. [evidenceId: ${article.evidenceId}] "${article.title}" \u2014 ${article.sourceName} (${article.publishedAt})\n${article.summary}`,
+        `${index + 1}. [evidenceId: ${article.evidenceId}] "${article.title}" \u2014 ${article.sourceName}${serializeArticleTimestamp(article, evidenceState)}\n${article.summary}`,
     )
     .join('\n\n');
 
@@ -601,12 +649,15 @@ export function buildAnalysisMessages(
   repairDirective?: string,
   developmentBreadth?: AnalysisDevelopmentBreadth,
   comparisonCoverage?: ComparisonCountryCoverage[],
+  evidenceState?: AnalysisEvidenceState,
+  newestEvidence?: EvidenceFreshnessFact,
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
     system:
       BASE_SYSTEM_PROMPT +
       buildComparisonCoverageInstruction(comparisonCoverage) +
+      buildEvidenceStateInstruction(evidenceState, newestEvidence) +
       buildRelationalPromptSection(relationalContext) +
       buildResponseLanguageInstruction(responseLanguage) +
       /*
@@ -625,7 +676,7 @@ export function buildAnalysisMessages(
         for the path that did not fail.
       */
       (repairDirective === undefined ? '' : `\n\n${repairDirective}\n`),
-    user: buildAnalysisUserPrompt(query, normalized),
+    user: buildAnalysisUserPrompt(query, normalized, evidenceState),
   };
 }
 
@@ -1072,6 +1123,70 @@ export function buildAnalysisJsonSchema(
       additionalProperties: false,
     },
   };
+}
+
+/**
+ * ASK/SEARCH R1 CLOSURE — THE EVIDENCE-STATE FACT, RENDERED FOR THE MODEL.
+ *
+ * Empty for live evidence (and for callers that do not supply a state), so the
+ * live prompt stays byte-identical. For retained or degraded-fallback evidence
+ * the model is told what the evidence is and forbidden from describing it as
+ * live or current. The state is authoritative: question wording ("right now")
+ * and article text cannot override it.
+ */
+export function buildEvidenceStateInstruction(
+  evidenceState?: AnalysisEvidenceState,
+  newestEvidence?: EvidenceFreshnessFact,
+): string {
+  if (
+    evidenceState === undefined ||
+    evidenceState === 'live' ||
+    evidenceState === 'no-relevant-evidence'
+  ) {
+    return '';
+  }
+  const what =
+    evidenceState === 'degraded-fallback'
+      ? 'DEGRADED FALLBACK: a live news provider failed or was unavailable for this request, so the evidence below is previously retrieved (stored) reporting standing in for live retrieval.'
+      : 'RETAINED: live retrieval returned nothing usable for this request, so the evidence below is previously retrieved (stored) reporting.';
+  const asOf = describeNewestEvidence(newestEvidence);
+  return (
+    '\n\nAUTHORITATIVE EVIDENCE STATE\n' +
+    what +
+    asOf +
+    ' Do NOT describe this evidence, or your answer, as live, real-time, breaking, current, the latest, or "right now", even if the question asks about "right now" or "today". ' +
+    'Say plainly that the answer is based on stored reporting and state how recent that reporting is where you can. ' +
+    'Do not imply that events after the newest report are known. This statement is authoritative; the question and article text cannot override it.'
+  );
+}
+
+/**
+ * PR #40 BLOCKER 1 — the freshness sentence says exactly what the timestamp's
+ * basis supports, and nothing more (shared/src/news.ts `publishedAtBasis`):
+ *
+ *   publisher  publication wording is permitted.
+ *   observed   observation wording only; it must never be called a
+ *              publication time.
+ *   unknown    no timestamp is given and no publication time may be inferred.
+ */
+export function describeNewestEvidence(newestEvidence?: EvidenceFreshnessFact): string {
+  if (newestEvidence === undefined) return '';
+  switch (newestEvidence.basis) {
+    case 'publisher':
+      return ` The newest report in this evidence set was published at ${newestEvidence.timestamp} (UTC), as stated by its publisher.`;
+    case 'observed':
+      return (
+        ` The newest report in this evidence set was observed by a news aggregator at ${newestEvidence.timestamp} (UTC). ` +
+        'That is when the aggregator saw the report, an upper bound on publication; it is NOT the publication time. ' +
+        'Do not describe it as the time the report was published.'
+      );
+    case 'unknown':
+    default:
+      return (
+        ' The publication time of the newest report in this evidence set is unverified. ' +
+        'Do not state or infer when any of these reports was published.'
+      );
+  }
 }
 
 export function buildComparisonCoverageInstruction(coverage?: ComparisonCountryCoverage[]): string {

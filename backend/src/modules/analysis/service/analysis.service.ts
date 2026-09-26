@@ -23,10 +23,13 @@ import {
   type RequestedRegionScope,
   type RetrievalOutcome,
   type StoryContext,
+  type AnalysisEvidenceState,
+  resolveEvidenceState,
 } from '@globalnews-ai/shared';
 import { NewsService, readProviderFailures } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
 import type { AnalysisProvider } from '../interfaces';
+import type { EvidenceFreshnessFact } from '../interfaces/analysis-provider.interface';
 import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { hasUnsupportedLocalReportingClaim } from '../validation/comparison-coverage.util';
@@ -315,6 +318,29 @@ const ALL_CAPS_CODE_TOKEN_PATTERN = /\b[A-Z]{2,3}\b/g;
 const FAILURE_CACHE_TTL_SECONDS = 15;
 
 /**
+ * ASK/SEARCH R1 CLOSURE, corrected by PR #40 BLOCKER 1 — the newest evidence
+ * timestamp for the model's freshness statement, WITH ITS OWN BASIS.
+ *
+ * The single freshness derivation (it replaces the earlier bare-timestamp
+ * helper; there is no second one). The newest article is chosen by its
+ * timestamp — the only ordering the evidence carries — and the basis returned
+ * is that SAME article's `publishedAtBasis`, never another article's and never
+ * a default. Absent basis is 'unknown', not 'publisher': absence proves nothing.
+ */
+export function newestEvidenceFreshness(
+  articles: readonly NewsArticle[],
+): EvidenceFreshnessFact | undefined {
+  let newest: NewsArticle | undefined;
+  for (const article of articles) {
+    if (article.publishedAt && (newest === undefined || article.publishedAt > newest.publishedAt)) {
+      newest = article;
+    }
+  }
+  if (newest === undefined) return undefined;
+  return { timestamp: newest.publishedAt, basis: newest.publishedAtBasis ?? 'unknown' };
+}
+
+/**
  * Milestone #47 (backend no-evidence response-language correction) —
  * the zero-evidence `analysisError` sentence is GlobalNews AI's own
  * presentation prose (not a raw exception message, not source-derived
@@ -335,8 +361,23 @@ const NO_EVIDENCE_MESSAGE: Partial<Record<LanguageCode, string>> = {
   pl: 'Nie znaleziono powiązanych artykułów dla tego pytania.',
 };
 
-function resolveNoEvidenceMessage(language: LanguageCode): string {
-  return NO_EVIDENCE_MESSAGE[language] ?? NO_EVIDENCE_MESSAGE.en!;
+/*
+ * ASK/SEARCH R1 CLOSURE — a provider failure is never reported as "nothing was
+ * found". When the evidence state is degraded-fallback, the sentence says the
+ * providers could not be reached reliably; only a genuine no-relevant-evidence
+ * state uses the "no related articles" sentence.
+ */
+const PROVIDER_FAILURE_MESSAGE: Partial<Record<LanguageCode, string>> = {
+  en: 'Live news providers could not be reached reliably, and no stored reporting qualified for this question.',
+  pl: 'Nie udało się wiarygodnie połączyć z dostawcami wiadomości, a żadne zapisane doniesienia nie kwalifikowały się do tego pytania.',
+};
+
+function resolveNoEvidenceMessage(
+  language: LanguageCode,
+  evidenceState: AnalysisEvidenceState = 'no-relevant-evidence',
+): string {
+  const table = evidenceState === 'degraded-fallback' ? PROVIDER_FAILURE_MESSAGE : NO_EVIDENCE_MESSAGE;
+  return table[language] ?? table.en!;
 }
 
 /**
@@ -2066,8 +2107,25 @@ export class AnalysisService {
                * before.
                */
               const primaryFailures = readProviderFailures(searchResponse);
+              /*
+               * ASK/SEARCH R1 — FAILURE IS NOT ABSENCE ON THE WIRE.
+               *
+               * When a provider failed (e.g. the GDELT rescue timed out after
+               * GNews answered with nothing relevant) NewsService can still
+               * report `dataMode: 'live'` with no fallbackReason, which the
+               * reader then saw as "the provider returned nothing". The same
+               * `retrievalOutcome()` the region paths already stamp is now
+               * stamped here too: RETAINED_ONLY when retained evidence stood in,
+               * PROVIDER_RATE_LIMITED / PROVIDER_UNAVAILABLE when nothing did.
+               * No retry is added and no evidence is invented.
+               */
+              let genericOutcome: RetrievalOutcome | undefined;
 
               if (searchResponse.articles.length === 0 && primaryFailures.length > 0) {
+                genericOutcome = retrievalOutcome(
+                  0,
+                  new Set(primaryFailures.map((failure) => failure.kind)),
+                );
                 this.logger.warn(
                   'Generic live retrieval was refused/degraded: ' +
                     primaryFailures
@@ -2114,6 +2172,7 @@ export class AnalysisService {
                     dataMode: 'cached',
                     fallbackReason: 'provider-error',
                   };
+                  genericOutcome = 'RETAINED_ONLY';
                   this.logger.warn(
                     `Generic retrieval served ${retained.length} relevance-gated retained article(s) after live provider failure.`,
                   );
@@ -2141,6 +2200,9 @@ export class AnalysisService {
 
               articles = searchResponse.articles;
               retrievalContext = this.toRetrievalContext(searchResponse);
+              if (genericOutcome !== undefined) {
+                retrievalContext = { ...retrievalContext, outcome: genericOutcome };
+              }
             }
           }
         }
@@ -2202,6 +2264,16 @@ export class AnalysisService {
           retrievalContext = { ...retrievalContext, storyContextUsed: !typedScopeOverridesStory };
         }
 
+        /*
+          ASK/SEARCH R1 CLOSURE — every retrieval path converges here, so the
+          evidence-state fact is stamped exactly once, by the one shared
+          derivation. The model, the cache TTL and the UI all read this value.
+        */
+        retrievalContext = {
+          ...retrievalContext,
+          evidenceState: resolveEvidenceState(retrievalContext, articles.length),
+        };
+
         if (articles.length === 0) {
           const empty: AnalysisApiResponse = {
             query: originalQuery,
@@ -2216,7 +2288,10 @@ export class AnalysisService {
             responseLanguage: requestedLanguage,
             analysis: null,
             articles: [],
-            analysisError: resolveNoEvidenceMessage(requestedLanguage),
+            analysisError: resolveNoEvidenceMessage(
+              requestedLanguage,
+              retrievalContext.evidenceState,
+            ),
             retrievalContext,
             sourceEntities: buildSourceEntities([]),
             // Milestone #43: computed over the (empty) original retrieved
@@ -2332,6 +2407,13 @@ export class AnalysisService {
             // prompt to pre-Milestone-#47 behavior — see
             // buildResponseLanguageInstruction()'s own doc comment.
             responseLanguage: requestedLanguage,
+            /*
+              ASK/SEARCH R1 CLOSURE — the model is told what its evidence IS.
+              Retained or degraded evidence must never be written up as live
+              or current; the prompt section enforces the wording.
+            */
+            evidenceState: retrievalContext.evidenceState,
+            newestEvidence: newestEvidenceFreshness(deduped),
             /*
               EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — THE SAME
               `developmentBreadth` COMPUTED ABOVE, AND THE SAME ONE HANDED TO
@@ -2782,6 +2864,24 @@ export class AnalysisService {
    * operator has already set that even lower.
    */
   private cacheTtlFor(response: AnalysisApiResponse, config: AnalysisConfig): number {
+    /*
+      ASK/SEARCH R1 CLOSURE — a retained or degraded answer is NEVER replayed
+      from this cache. An explicit re-run must get a fresh retrieval
+      opportunity; if a provider is still in cooldown it fails fast and the
+      new response discloses the degraded state again, rather than a cached
+      copy standing in for a search that did not happen. In-flight joining
+      of identical concurrent requests is unaffected.
+    */
+    const state = response.retrievalContext.evidenceState;
+    /* Demo ('mock') reporting has no live provider to refresh from, so it is
+       not a stored-instead-of-live answer and keeps the ordinary TTL. */
+    if (
+      response.retrievalContext.dataMode !== 'mock' &&
+      (state === 'retained' || state === 'degraded-fallback')
+    ) {
+      return 0;
+    }
+
     if (response.provenance.status === 'success') {
       return config.cacheTtlSeconds;
     }
@@ -3478,8 +3578,14 @@ export class AnalysisService {
       retrievalContext: {
         dataMode,
         providers: [...providers],
+        /*
+          ASK/SEARCH R1 CLOSURE (D4) — the contract says fallbackReason is
+          present only for cached/unavailable. A 'live' zero-result region used
+          to carry 'no-live-results' beside PROVIDER_RATE_LIMITED; the outcome
+          alone now carries that fact.
+        */
         fallbackReason:
-          articles.length > 0
+          articles.length > 0 || dataMode === 'live'
             ? undefined
             : unavailable.size === attempted.length && attempted.length > 0
               ? 'provider-error'
@@ -3550,12 +3656,26 @@ export class AnalysisService {
     geoMatch?: GeoFuzzyMatch,
   ): AnalysisRetrievalContext {
     const isCountryResponse = 'countryCode' in source;
+    const newestArticlePublishedAt = isCountryResponse
+      ? source.newestArticlePublishedAt
+      : undefined;
+    /*
+      PR #40 R2 F3 — the basis of the article that timestamp came from, and only
+      that article's. No match, or no basis on it, leaves the field absent
+      (unproven) rather than defaulting to 'publisher'.
+    */
+    const newestArticlePublishedAtBasis =
+      newestArticlePublishedAt === undefined
+        ? undefined
+        : source.articles.find((article) => article.publishedAt === newestArticlePublishedAt)
+            ?.publishedAtBasis;
 
     return {
       dataMode: source.dataMode,
       providers: source.providers,
       fallbackReason: source.fallbackReason,
-      newestArticlePublishedAt: isCountryResponse ? source.newestArticlePublishedAt : undefined,
+      newestArticlePublishedAt,
+      ...(newestArticlePublishedAtBasis === undefined ? {} : { newestArticlePublishedAtBasis }),
       countryCode: isCountryResponse ? source.countryCode : undefined,
       countryName: isCountryResponse ? source.countryName : undefined,
       providerDisplayName: isCountryResponse ? source.providerDisplayName : undefined,

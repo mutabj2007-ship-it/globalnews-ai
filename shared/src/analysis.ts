@@ -2,6 +2,7 @@ import type {
   NewsArticle,
   NewsDataMode,
   NewsFallbackReason,
+  PublishedAtBasis,
 } from './news';
 
 /**
@@ -848,6 +849,14 @@ export interface AnalysisRetrievalContext {
   newestArticlePublishedAt?: string;
 
   /**
+   * PR #40 R2 F3 — the `publishedAtBasis` of the SAME article
+   * `newestArticlePublishedAt` was taken from. Absent means unproven: a
+   * consumer must not describe `newestArticlePublishedAt` as a publication
+   * time unless this is 'publisher' (shared/src/news.ts).
+   */
+  newestArticlePublishedAtBasis?: PublishedAtBasis;
+
+  /**
    * The country the RETAINED reporting establishes. Set by country-aware
    * retrieval (CountryNewsService) and, since the R4 article-evidence
    * correction, also by article-anchored retrieval — where it is resolved from
@@ -939,6 +948,54 @@ export interface AnalysisRetrievalContext {
   requestedScope?: RequestedRegionScope;
   comparisonCoverage?: import('./comparison-coverage').ComparisonCountryCoverage[];
   storyContextUsed?: boolean;
+  /**
+   * ASK/SEARCH R1 CLOSURE — the evidence-state fact, stamped by
+   * AnalysisService on every analysis response and passed to the model.
+   * Derived only by `resolveEvidenceState`, so the model, the cache and the UI
+   * read ONE value. Optional for compatibility: absent means a producer that
+   * predates it, and consumers then derive it with the same function.
+   */
+  evidenceState?: AnalysisEvidenceState;
+}
+
+/**
+ * ASK/SEARCH R1 CLOSURE — what the evidence behind an answer IS, as one value.
+ *
+ *   live                  current live retrieval produced the evidence.
+ *   retained              stored (previously retrieved) reporting was used
+ *                         because live retrieval answered with nothing usable.
+ *   degraded-fallback     a live provider FAILED (timeout, rate limit, error);
+ *                         any evidence present is stored reporting standing in.
+ *   no-relevant-evidence  retrieval answered and nothing relevant exists. The
+ *                         only state that is a statement about the corpus.
+ *
+ * Only `live` may be described as current. The other three are never live.
+ */
+export type AnalysisEvidenceState = 'live' | 'retained' | 'degraded-fallback' | 'no-relevant-evidence';
+
+/** The single derivation. Pure; reads only fields the contract already carries. */
+export function resolveEvidenceState(
+  context: Pick<AnalysisRetrievalContext, 'dataMode' | 'fallbackReason' | 'outcome'>,
+  articleCount: number,
+): AnalysisEvidenceState {
+  const failed =
+    context.outcome === 'PROVIDER_UNAVAILABLE' ||
+    context.outcome === 'PROVIDER_RATE_LIMITED' ||
+    context.fallbackReason === 'provider-error';
+
+  if (articleCount === 0) {
+    if (context.outcome === 'NO_RELEVANT_EVIDENCE') return 'no-relevant-evidence';
+    if (failed) return 'degraded-fallback';
+    if (context.dataMode === 'unavailable' && context.fallbackReason !== 'no-live-results') {
+      return 'degraded-fallback';
+    }
+    return 'no-relevant-evidence';
+  }
+
+  if (failed) return 'degraded-fallback';
+  if (context.outcome === 'RETAINED_ONLY') return 'retained';
+  if (context.dataMode === 'live') return 'live';
+  return 'retained';
 }
 
 /**

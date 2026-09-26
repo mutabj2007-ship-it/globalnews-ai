@@ -40,7 +40,8 @@ const searchClientSource = readFileSync(join(__dirname, 'SearchPageClient.tsx'),
  */
 describe('A. storyContext is stable across renders (real lint defect found and fixed)', () => {
   it('storyContext is memoized with useMemo, not a fresh object literal every render', () => {
-    expect(searchClientSource).toMatch(/import \{ useEffect, useMemo, useState \} from 'react'/);
+    // ASK/SEARCH R1 — useRef joins for the per-instance consent claim.
+    expect(searchClientSource).toMatch(/import \{ useEffect, useMemo, useRef, useState \} from 'react'/);
     expect(searchClientSource).toMatch(/const storyContext: StoryContext \| undefined = useMemo\(/);
   });
 
@@ -58,8 +59,10 @@ describe('A. storyContext is stable across renders (real lint defect found and f
     // contract this test exists to protect — an honest, complete
     // dependency array with no suppressed rule — is unchanged and is
     // still asserted above.
+    // ASK/SEARCH R1 — two more honest members: the request identity and
+    // the consent held for it, because arrival no longer implies compute.
     expect(searchClientSource).toMatch(
-      /\}, \[query, language, hasResolvedLanguage, dictionary, storyContext\]\);/,
+      /\}, \[query, language, hasResolvedLanguage, dictionary, storyContext, requestKey, runKey, consentedKey\]\);/,
     );
   });
 
@@ -129,7 +132,7 @@ describe('F. Stale-response protection across rapid navigation (Story A -> Story
   });
 
   it('the effect now correctly re-runs when storyContext changes (memoized identity change reflects a real content change) \u2014 this is what actually triggers the cancel-and-restart behavior between two different stories', () => {
-    expect(searchClientSource).toMatch(/storyContext\]\);/);
+    expect(searchClientSource).toMatch(/storyContext, requestKey, runKey, consentedKey\]\);/);
   });
 });
 

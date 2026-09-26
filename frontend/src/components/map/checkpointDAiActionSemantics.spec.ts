@@ -13,19 +13,25 @@ import { analysisAutoRunDecision, willExecuteAnalysis } from '@/lib/analysis/ana
  * the ambiguous magnifier with an explicit AI action — while preserving the
  * genuine source action separately and distinctly.
  *
- * ─── THE ANSWER: IT AUTO-EXECUTES ────────────────────────────────────────
+ * ─── THE ORIGINAL ANSWER WAS: IT AUTO-EXECUTES ───────────────────────────
  *
- * `SearchPageClient`'s analysis effect calls `analyzeNews` on mount whenever
- * the URL carries a non-empty `q`. There is no intermediate user action. The
- * map pushes `/search?q={article.title}&articleId=…&countryCode=…`, so the
- * click on the map IS the decision to spend model compute.
+ * `SearchPageClient`'s analysis effect used to call `analyzeNews` on mount
+ * whenever the URL carried a non-empty `q`, so the map click WAS the decision
+ * to spend model compute.
+ *
+ * ─── ASK/SEARCH ENGINEERING R1 — THE ANSWER IS NOW: IT DOES NOT ─────────
+ *
+ * A URL is not consent. Arrival stages the question and executes nothing
+ * until an explicit compute action has been accepted — a one-shot grant left
+ * by explicit Send / the dock's deeper-analysis transition, or the staged Run
+ * control. The map's controls therefore navigate at zero AI cost; the counts
+ * below are the proof, and `searchComputeRequestCount.spec.ts` counts the same
+ * thing on the mounted component.
  *
  * ─── A CORRECTION TO AN EASY ASSUMPTION ──────────────────────────────────
  *
  * The map does NOT call `POST /analysis/news` itself. No component on the map
- * surface imports the analysis client. The cost is real but it is spent one
- * route later, which is why the fix is at the affordance and not at a call the
- * map never makes.
+ * surface imports the analysis client.
  */
 
 const stripComments = (src: string): string =>
@@ -46,50 +52,55 @@ describe('D — the AI action is visible, and the source action is not an AI act
   describe('DOES /search AUTO-EXECUTE? — counted, not inferred', () => {
     /**
      * One arrival at /search. Returns how many analysis executions it causes.
-     * `analysisAutoRunDecision` is the real decision the effect now asks, so
-     * this counts the same branch the component takes.
+     * `analysisAutoRunDecision` is the real decision the effect asks, so this
+     * counts the same branch the component takes.
      */
-    const executionsForArrival = (query: string, hasResolvedLanguage = true): number =>
-      willExecuteAnalysis(query, hasResolvedLanguage) ? 1 : 0;
+    const executionsForArrival = (
+      query: string,
+      hasResolvedLanguage = true,
+      hasComputeConsent = false,
+    ): number => (willExecuteAnalysis(query, hasResolvedLanguage, hasComputeConsent) ? 1 : 0);
 
-    it('arriving from the map control executes analysis ONCE, with no user action', () => {
+    it('arriving from the map control executes NOTHING — the URL is not consent', () => {
       /* The exact shape the map pushes: q = the article title. */
-      expect(executionsForArrival('Poland revives tax proposal')).toBe(1);
+      expect(executionsForArrival('Poland revives tax proposal')).toBe(0);
     });
 
-    it('so the map click is the effective AI execution decision point', () => {
-      const decision = analysisAutoRunDecision('Poland revives tax proposal', true);
+    it('so the map click is navigation, and the question is staged', () => {
+      const decision = analysisAutoRunDecision('Poland revives tax proposal', true, false);
 
-      expect(decision).toBe('run');
+      expect(decision).toBe('idle-awaiting-consent');
     });
 
     it('arriving with no question executes NOTHING — the workspace path', () => {
       expect(executionsForArrival('')).toBe(0);
-      expect(executionsForArrival('   ')).toBe(0);
-      expect(analysisAutoRunDecision('', true)).toBe('idle-no-query');
+      expect(executionsForArrival('   ', true, true)).toBe(0);
+      expect(analysisAutoRunDecision('', true, false)).toBe('idle-no-query');
     });
 
     it('an unresolved language executes nothing yet, so one arrival is never two runs', () => {
       /*
         Milestone #47: firing before the language resolves would run in English
         and immediately re-run in the reader's language — TWO executions for one
-        arrival.
+        arrival. That holds even when consent has been granted.
       */
-      expect(executionsForArrival('Poland revives tax proposal', false)).toBe(0);
-      expect(analysisAutoRunDecision('Poland', false)).toBe('idle-language-pending');
+      expect(executionsForArrival('Poland revives tax proposal', false, true)).toBe(0);
+      expect(analysisAutoRunDecision('Poland', false, true)).toBe('idle-language-pending');
     });
 
-    it('a deliberate Open Analysis remains exactly ONE execution', () => {
+    it('a deliberate, accepted Run remains exactly ONE execution', () => {
       const arrivals = ['Poland revives tax proposal'];
-      const total = arrivals.reduce((sum, q) => sum + executionsForArrival(q), 0);
+      const total = arrivals.reduce((sum, q) => sum + executionsForArrival(q, true, true), 0);
 
       expect(total).toBe(1);
     });
 
     it('the effect asks the named decision rather than restating it', () => {
-      expect(searchClient).toContain('const decision = analysisAutoRunDecision(query, hasResolvedLanguage);');
+      expect(searchClient).toContain('const decision = analysisAutoRunDecision(');
       expect(searchClient).toContain("if (decision === 'idle-language-pending') return undefined;");
-      expect(searchClient).toContain("if (decision === 'idle-no-query') {");
+      expect(searchClient).toContain(
+        "if (decision === 'idle-no-query' || decision === 'idle-awaiting-consent') {",
+      );
     });
   });
 

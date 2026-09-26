@@ -169,7 +169,7 @@ describe('article anchor — EN and PL anchor to the SAME article', () => {
 
 describe('article anchor — a language switch reissues with the same context', () => {
   it('the analysis effect re-runs on language and keeps storyContext in its deps', () => {
-    const deps = /\}, \[query, language, hasResolvedLanguage, dictionary, storyContext\]\);/;
+    const deps = /\}, \[query, language, hasResolvedLanguage, dictionary, storyContext, requestKey, runKey, consentedKey\]\);/;
     expect(SOURCE).toMatch(deps);
   });
 

@@ -1,8 +1,9 @@
 'use client';
 
-import { comparisonCoverageLines } from '@globalnews-ai/shared';
+import { comparisonCoverageLines, resolveEvidenceState } from '@globalnews-ai/shared';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
+import { EvidenceFreshnessNotice } from '@/components/search/EvidenceFreshnessNotice';
 import {
   ABSENT_BRIEF,
   buildBriefModel,
@@ -10,6 +11,7 @@ import {
   splitSynthesisParagraphs,
 } from '@/components/analysis-frame/briefModel';
 import { fullAnalysisHref } from '@/lib/ask/storyContextStore';
+import { grantAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 
 /**
@@ -107,9 +109,11 @@ export function AskCompactResult({
   const briefAccepted = !brief.briefWithheld && paragraphs.length > 0;
   const briefAbsent = hasAnalysis && !brief.briefWithheld && paragraphs.length === 0;
 
+  /* ASK/SEARCH R1 — the backend's own outcome, when stamped, decides failure
+     vs absence before dataMode is consulted. */
   const retrievalUnavailable =
-    response.retrievalContext.dataMode === 'unavailable' ||
-    response.retrievalContext.fallbackReason === 'provider-error';
+    (response.retrievalContext.evidenceState ??
+      resolveEvidenceState(response.retrievalContext, response.articles.length)) === 'degraded-fallback';
   const noAnswerMessage = retrievalUnavailable
     ? t.resultNoAnswerProvider
     : t.resultNoAnswerEvidence;
@@ -119,6 +123,11 @@ export function AskCompactResult({
     <div data-ask="compact-result" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <AnalysisModeBadge provenance={response.provenance} language={language} />
+        <EvidenceFreshnessNotice
+          retrievalContext={response.retrievalContext}
+          articleCount={response.articles.length}
+          language={language}
+        />
         {telemetry.retrievedArticleCount === null && telemetry.reportingClusterCount === null ? null : (
           <span data-ask="telemetry" className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
             {telemetry.retrievedArticleCount === null
@@ -260,13 +269,30 @@ export function AskCompactResult({
         place full analytical detail is rendered (§2.3).
       */}
       {canOpenFullAnalysis ? (
+        <div className="flex flex-col items-start gap-0.5">
         <a
           data-ask="open-full"
           href={fullAnalysisHref(question, context)}
+          /*
+            ASK/SEARCH R1 — THIS TRANSITION IS THE ACCEPTED DEEPER-COMPUTE
+            ACTION. A plain same-tab activation leaves a one-shot grant for
+            exactly this href, so /search runs the full analysis once. A
+            modified click (new tab/window), a copied link or a reload carries
+            no grant and lands on the staged question, at zero requests.
+          */
+          onClick={(event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            grantAnalysisConsent(fullAnalysisHref(question, context));
+          }}
           className="self-start rounded-lg px-1 py-0.5 text-sm font-medium text-signal underline decoration-signal/50 underline-offset-4 hover:decoration-signal"
         >
-          {t.openFullAnalysis}
+          {/* CTO ruling 2 — the control starts compute, so it says Run. */}
+          {t.runFullAnalysis}
         </a>
+        <span data-ask="run-full-note" className="px-1 text-xs text-ink-tertiary">
+          {t.runFullAnalysisNote}
+        </span>
+        </div>
       ) : null}
     </div>
   );

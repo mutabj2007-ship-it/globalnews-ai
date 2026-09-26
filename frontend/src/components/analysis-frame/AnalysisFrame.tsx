@@ -6,6 +6,7 @@ import { buildAnalysisWorkspaceModel } from '../search/analysisDimensions';
 import type { PrimaryDimensionKey } from '../search/analysisDimensions';
 import { buildDimensionClaims } from '../search/analysisClaims';
 import { AnalysisModeBadge } from '../search/AnalysisModeBadge';
+import { EvidenceFreshnessNotice } from '../search/EvidenceFreshnessNotice';
 import { useIsomorphicLayoutEffect } from '@/lib/hooks/useIsomorphicLayoutEffect';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { BriefRow, BRIEF_TITLE_ID } from './BriefRow';
@@ -791,6 +792,13 @@ export function AnalysisFrame({
             sizeClass="text-[12px] md:text-[11px]"
           />
         </div>
+        {/* ASK/SEARCH R1 — stored/degraded evidence is disclosed beside the
+            AI badge, not only inside Complete Record. Renders nothing when live. */}
+        <EvidenceFreshnessNotice
+          retrievalContext={response.retrievalContext}
+          articleCount={response.articles.length}
+          language={language}
+        />
       </header>
 
       {/*

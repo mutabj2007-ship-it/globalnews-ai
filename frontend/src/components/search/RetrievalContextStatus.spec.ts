@@ -65,11 +65,12 @@ describe('resolveRetrievalContextText (Milestone #47 — retrieval context local
       );
     });
 
-    it('freshness line matches original English "Newest stored article:" prefix', () => {
+    // PR #40 R2 F3 — no basis on the timestamp: it is not called a publication time.
+    it('freshness line for an unproven timestamp says its basis is unverified', () => {
       const text = resolveRetrievalContextText(
         makeContext({ newestArticlePublishedAt: new Date().toISOString() }),
       );
-      expect(text.freshnessLine).toMatch(/^Newest stored article: /);
+      expect(text.freshnessLine?.startsWith('Newest stored article (time basis unverified): ')).toBe(true);
     });
 
     it('geographic correction line matches original English "Interpreted ... as ..." phrasing', () => {
@@ -119,7 +120,7 @@ describe('resolveRetrievalContextText (Milestone #47 — retrieval context local
         makeContext({ newestArticlePublishedAt: new Date().toISOString() }),
         'pl',
       );
-      expect(text.freshnessLine).toContain('Najnowszy zapisany artykuł:');
+      expect(text.freshnessLine).toContain('Najnowszy zapisany artykuł (podstawa czasu niezweryfikowana):');
       expect(text.freshnessLine).toContain('przed chwilą');
     });
 

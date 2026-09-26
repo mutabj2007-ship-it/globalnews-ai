@@ -42,6 +42,10 @@ export const pl: Dictionary = {
   searchWorkspaceIntro: 'Zadaj pytanie o wydarzenia na świecie i otrzymaj odpowiedź opartą na dowodach z rzeczywistych źródeł.',
   searchWorkspacePlaceholder: 'Co chcesz zrozumieć?',
   searchWorkspaceSubmitLabel: 'Analizuj',
+  analysisStagedNote:
+    'Nic nie zostało jeszcze przeanalizowane. Otwarcie tej strony nie uruchamia analizy — rozpoczyna się ona dopiero po wybraniu „Uruchom analizę”.',
+  analysisStagedRun: 'Uruchom analizę',
+  analysisStagedEdit: 'Edytuj pytanie',
   searchWorkspaceAriaLabel: 'Zadaj pytanie badawcze',
   // M65 — zlokalizowane komunikaty o błędach analizy. Rzeczywisty status
   // HTTP pozostaje na obiekcie błędu; użytkownik nigdy nie widzi liczby.
@@ -79,7 +83,8 @@ export const pl: Dictionary = {
       '\u017badne pozyskane materia\u0142y nie spe\u0142ni\u0142y progu dowodowego dla tego pytania.',
     resultNoAnswerSafety:
       'GlobalNews AI nie wygenerowa\u0142 odpowiedzi bez materia\u0142u dowodowego. Spr\u00f3buj ponownie za chwil\u0119 albo zadaj w\u0119\u017csze pytanie o miejsce, wydarzenie lub okres.',
-    openFullAnalysis: 'Otw\u00f3rz pe\u0142n\u0105 analiz\u0119',
+    runFullAnalysis: 'Uruchom pe\u0142n\u0105 analiz\u0119',
+    runFullAnalysisNote: 'Rozpoczyna now\u0105 analiz\u0119 opart\u0105 na \u017ar\u00f3d\u0142ach.',
     telemetryReports: 'pozyskanych doniesie\u0144',
     telemetryClusters: 'grup doniesie\u0144',
   },
@@ -456,6 +461,9 @@ export const pl: Dictionary = {
     liveNothingNoStored:
       'Wyszukiwanie na żywo nie znalazło niczego użytecznego, a dla tego pytania nie były dostępne żadne relacje z pamięci.',
     newestStoredArticle: 'Najnowszy zapisany artykuł:',
+    newestStoredArticlePublished: 'Najnowszy zapisany artykuł, opublikowany:',
+    newestStoredArticleObserved: 'Najnowszy zapisany artykuł, zauważony przez agregator wiadomości (nie jest to czas publikacji):',
+    newestStoredArticleUnverified: 'Najnowszy zapisany artykuł (podstawa czasu niezweryfikowana):',
     interpretedAs: 'Zinterpretowano',
     interpretedAsMiddle: 'jako',
   },
@@ -2172,7 +2180,7 @@ export const pl: Dictionary = {
     stateNoQuestion: 'NIE ZADANO JESZCZE PYTANIA',
     stateNoQuestionBody: 'Zadaj pytanie, aby otworzy\u0107 analiz\u0119 w tej ramce.',
     stateNoEvidence: '\u017bADNE DONIESIENIA NIE PASOWA\u0141Y DO TEGO PYTANIA',
-    stateNoEvidenceBody: 'Dostawca zosta\u0142 odpytany i nic nie zwr\u00f3ci\u0142 dla tego pytania, wi\u0119c nie podj\u0119to pr\u00f3by analizy AI.',
+    stateNoEvidenceBody: '\u0179r\u00f3d\u0142a wiadomo\u015bci zosta\u0142y przeszukane i odpowiedzia\u0142y, ale \u017cadne z ich doniesie\u0144 nie dotyczy\u0142o tego pytania, wi\u0119c nie podj\u0119to pr\u00f3by analizy AI.',
     stateProviderUnavailable: 'NIE UDA\u0141O SI\u0118 POZYSKA\u0106 DONIESIE\u0143',
     stateProviderUnavailableBody: 'Nie uda\u0142o si\u0119 po\u0142\u0105czy\u0107 z \u017cadnym dostawc\u0105 wiadomo\u015bci ani odczyta\u0107 zapisanych doniesie\u0144, wi\u0119c nie by\u0142o czego analizowa\u0107.',
     stateAnalysisFailed: 'ANALIZA NIEDOST\u0118PNA \u00b7 DONIESIENIA ZACHOWANE',

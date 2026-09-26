@@ -1,4 +1,4 @@
-import type { AnalysisApiResponse } from '@globalnews-ai/shared';
+import { resolveEvidenceState, type AnalysisApiResponse } from '@globalnews-ai/shared';
 
 /**
  * R4 — WHICH TRUTH THE FRAME IS TELLING.
@@ -213,10 +213,18 @@ export function resolveFrameEvidence(
    * consulted first, and `fallbackReason` only refines the answer where
    * the contract actually supplies one.
    */
-  if (response.retrievalContext.dataMode === 'unavailable') {
-    return response.retrievalContext.fallbackReason === 'no-live-results'
-      ? { state: 'no-evidence', articleCount: 0, evidenceSurvives: false, ...NO_KINDS }
-      : { state: 'provider-unavailable', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };
+  /*
+   * ASK/SEARCH R1 CLOSURE — FAILURE IS NOT ABSENCE, DECIDED BY ONE FACT.
+   *
+   * The backend stamps `evidenceState`; an older payload without it is derived
+   * with the SAME shared `resolveEvidenceState`. A degraded fallback (provider
+   * timeout, rate limit, error) with nothing to show is 'provider-unavailable';
+   * only a genuine 'no-relevant-evidence' may say that nothing matched.
+   */
+  const evidenceState =
+    response.retrievalContext.evidenceState ?? resolveEvidenceState(response.retrievalContext, 0);
+  if (evidenceState === 'degraded-fallback') {
+    return { state: 'provider-unavailable', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };
   }
 
   return { state: 'no-evidence', articleCount: 0, evidenceSurvives: false, ...NO_KINDS };

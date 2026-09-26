@@ -64,6 +64,11 @@ export const en = {
   searchWorkspaceIntro: 'Ask a question about world events and get an evidence-grounded answer built from real sources.',
   searchWorkspacePlaceholder: 'What would you like to understand?',
   searchWorkspaceSubmitLabel: 'Analyze',
+  /* ASK/SEARCH R1 — the staged question on /search. Arrival never analyzes. */
+  analysisStagedNote:
+    'Nothing has been analyzed yet. Opening this page does not run analysis — it starts only when you choose Run analysis.',
+  analysisStagedRun: 'Run analysis',
+  analysisStagedEdit: 'Edit question',
   searchWorkspaceAriaLabel: 'Ask a research question',
   // M65 — localized analysis failures. The underlying HTTP status is
   // preserved on the error object; users never see the raw number.
@@ -118,7 +123,9 @@ export const en = {
       'No retrieved reporting met the evidence threshold for this question.',
     resultNoAnswerSafety:
       'GlobalNews AI did not generate an answer without supporting evidence. Try again shortly or ask a narrower question about a place, event, or time period.',
-    openFullAnalysis: 'Open full analysis',
+    /* CTO ruling 2 — a compute-triggering control is never called Open. */
+    runFullAnalysis: 'Run full analysis',
+    runFullAnalysisNote: 'Starts a new source-backed analysis.',
     telemetryReports: 'retrieved reports',
     telemetryClusters: 'reporting clusters',
   },
@@ -591,6 +598,10 @@ export const en = {
     liveNothingNoStored:
       'Live retrieval found nothing usable, and no stored reporting was available for this question.',
     newestStoredArticle: 'Newest stored article:',
+    /* PR #40 R2 F3 — the freshness time is described by its basis. */
+    newestStoredArticlePublished: 'Newest stored article, published:',
+    newestStoredArticleObserved: 'Newest stored article, seen by a news aggregator (not its publication time):',
+    newestStoredArticleUnverified: 'Newest stored article (time basis unverified):',
     interpretedAs: 'Interpreted',
     interpretedAsMiddle: 'as',
   },
@@ -2812,7 +2823,9 @@ export const en = {
     stateNoQuestion: 'NO QUESTION ASKED YET',
     stateNoQuestionBody: 'Ask a question to open an analysis in this frame.',
     stateNoEvidence: 'NO REPORTING MATCHED THIS QUESTION',
-    stateNoEvidenceBody: 'The provider was queried and returned nothing for this question, so no AI analysis was attempted.',
+    /* ASK/SEARCH R1 CLOSURE — only reached when retrieval ANSWERED; a provider
+       failure resolves to the provider-unavailable state instead. */
+    stateNoEvidenceBody: 'News sources were searched and answered, but none of their reporting was relevant to this question, so no AI analysis was attempted.',
     stateProviderUnavailable: 'REPORTING COULD NOT BE RETRIEVED',
     stateProviderUnavailableBody: 'No news provider could be reached and no stored reporting was available, so there was nothing to analyse.',
     stateAnalysisFailed: 'ANALYSIS UNAVAILABLE \u00b7 REPORTING SURVIVES',

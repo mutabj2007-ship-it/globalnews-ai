@@ -6,6 +6,7 @@ import { findCountryByIso3, type LanguageCode, type NewsArticle } from '@globaln
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
 import { useAccount } from '@/lib/hooks/useAccount';
+import { accountSignInUrl } from '@/lib/api/accountLinks';
 import { useCountryFollows } from '@/components/home/useCountryFollows';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { StoryVisual } from '@/components/home/StoryVisual';
@@ -119,8 +120,14 @@ export function HomeAccountPanel({ articles, language = 'en' }: HomeAccountPanel
       /* Compact by construction: one row, no reserved personalized area. */
       <section className={`${BAND} flex flex-col gap-3 px-[18px] py-[15px] sm:flex-row sm:items-center sm:justify-between sm:gap-6`}>
         <p className="text-[13.5px] leading-relaxed text-[#c2d3e6]">{t.firstVisit}</p>
+        {/*
+          HOME CLICK CONTRACT R1 — the bare `/auth/google` path is not served by
+          this origin (Alpha returned 404); the first-party OAuth entry is
+          `/api/auth/google`, built by the same helper every other sign-in uses,
+          returning the reader to Home.
+        */}
         <a
-          href="/auth/google"
+          href={accountSignInUrl('/')}
           className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(180deg,#2f7df5_0%,#1d5fd0_100%)] px-5 text-[13.5px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 motion-reduce:transition-none"
         >
           {t.signInToFollow}

@@ -322,13 +322,18 @@ export function WhatsHappeningNow({
                 "View all" is a second label for the same All radio, worded as
                 the contract words it. It clears the filter; it does not
                 navigate, because there is no all-stories route to navigate to.
+                HOME CLICK CONTRACT R1 — rendered only when the All radio it
+                labels exists; with fewer than two categories it was a dead
+                control pointing at nothing.
               */}
-              <label
-                htmlFor={RADIO_ID('all')}
-                className="inline-flex min-h-[44px] cursor-pointer items-center text-[13px] font-semibold text-cyan-300 underline-offset-4 hover:underline lg:min-h-[32px]"
-              >
-                {t.viewAll}
-              </label>
+              {showFilter ? (
+                <label
+                  htmlFor={RADIO_ID('all')}
+                  className="inline-flex min-h-[44px] cursor-pointer items-center text-[13px] font-semibold text-cyan-300 underline-offset-4 hover:underline lg:min-h-[32px]"
+                >
+                  {t.viewAll}
+                </label>
+              ) : null}
             </div>
 
             </div>
