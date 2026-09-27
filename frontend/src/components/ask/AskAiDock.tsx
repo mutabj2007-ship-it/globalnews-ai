@@ -14,6 +14,7 @@ import { ASK_CANONICAL_ROUTE } from '@/lib/ask/askFrame';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
 import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
+import { useAskGeographyContext } from '@/lib/ask/geographyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openGlobalAsk';
@@ -144,6 +145,20 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
    * has nothing of its own to go stale.
    */
   const storyContext = useAskStoryContext();
+  /*
+   * MAP R1 item 7 — THE SCOPE, WHICH IS NOT AN ANCHOR.
+   *
+   * Published by the Map from its own bounded store while a country is
+   * selected: an ISO code and a label, nothing else. Read live here for the
+   * same reason the story context is — the dock keeps no copy, so what the
+   * reader is shown is always what is published at that moment.
+   *
+   * PRECEDENCE IS STATED, NOT EMERGENT. A story anchor is the more specific
+   * fact, so when one exists it wins and the geography line is not shown. The
+   * two are never merged and never silently combined into one claim.
+   */
+  const geographyContext = useAskGeographyContext();
+  const showGeographyLabel = storyContext === undefined && geographyContext !== undefined;
   const showStoryLabel = storyContext !== undefined && usesStoryContextLabel(
     question.trim() || (phase.kind !== 'idle' ? phase.question : ''),
     question.trim() ? undefined : phase.kind === 'answered'
@@ -491,11 +506,27 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
               */}
               <span
                 data-ask="context-affordance"
-                data-ask-context={showStoryLabel ? 'anchored' : 'generic'}
+                data-ask-context={
+                  showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic'
+                }
                 title={showStoryLabel ? storyContext?.title : undefined}
                 className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border-strong bg-surface px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-secondary"
               >
-                {showStoryLabel ? t.contextChipAnchored : t.contextChipGeneric}
+                {/*
+                  Three states, not two. "Asking about Algeria" names the SCOPE
+                  and deliberately does not use the story wording: a country is
+                  where the question is being asked, not what it is anchored to,
+                  and telling a reader otherwise would be the merge the ruling
+                  forbids.
+                */}
+                {showStoryLabel
+                  ? t.contextChipAnchored
+                  : showGeographyLabel
+                    ? t.askingAboutGeography.replace(
+                        '{place}',
+                        geographyContext?.displayName ?? '',
+                      )
+                    : t.contextChipGeneric}
               </span>
 
               <button
