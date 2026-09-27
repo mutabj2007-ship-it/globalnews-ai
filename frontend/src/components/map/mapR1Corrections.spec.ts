@@ -66,9 +66,19 @@ describe('MAP R1 — the explicit country read reaches the phone', () => {
 
   it('it runs on press and is never wired to selection', () => {
     const body = code(shell);
-    expect(body).toContain('onClick={countryRead.onLoad}');
+    /*
+      MAP / SPATIAL VISUAL CONVERGENCE R2 — the press now goes through ONE
+      handler, `onLoadCountry`, which also raises the sheet to show the answer.
+      The rule is unchanged: the read is called from that press handler and
+      from nowhere else — no effect, no selection path.
+    */
+    expect(body).toContain('onClick={onLoadCountry}');
+    expect(body.match(/countryRead\?\.onLoad\(\)/g)).toHaveLength(1);
+    const at = body.indexOf('const onLoadCountry = useCallback(');
+    expect(body.slice(at, body.indexOf('}, [countryRead', at))).toContain('countryRead?.onLoad();');
     /* No effect, no auto-invocation: the only call site is the handler above. */
-    expect(body).not.toMatch(/useEffect\([^)]*countryRead\.onLoad/);
+    expect(body).not.toMatch(/useEffect\([^)]*countryRead\??\.onLoad/);
+    expect(body).not.toMatch(/useEffect\([^)]*onLoadCountry/);
     expect(body).not.toContain('countryRead.onLoad()');
   });
 

@@ -16,7 +16,7 @@ import {
   type CameraIntent,
 } from '@/lib/map/camera/cameraIntents';
 import type { CameraState } from '@/lib/map/camera/cameraState';
-import { useSelectionCamera } from '@/lib/map/camera/useSelectionCamera';
+import { selectionFitRequestFor, useSelectionCamera } from '@/lib/map/camera/useSelectionCamera';
 import {
   EMPTY_EVIDENCE_SET,
   type EvidenceSet,
@@ -36,6 +36,7 @@ import {
 import { MobilePlaceSearch } from './MobilePlaceSearch';
 import { useMapWorkspace } from './useMapWorkspace';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
+import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
 import { BAND_AVAILABLE } from '@/lib/map/spatial/controlBands';
 import { WatchCta } from '@/components/map/shell/monetization/WatchCta';
 import { WatchComposer } from '@/components/map/shell/monetization/WatchComposer';
@@ -408,7 +409,7 @@ export function MobileSpatialShell({
       */
       if (result.kind === 'COUNTRY' && result.countryIso3) {
         onSelectionChange?.({ kind: 'COUNTRY', id: result.countryIso3 });
-        setStop('HALF');
+        /* R2 — the country sheet is read at PEEK; see `onSelectFromMap`. */
 
         return;
       }
@@ -449,17 +450,71 @@ export function MobileSpatialShell({
   const onSelectFromMap = useCallback(
     (feature: CountryFeature) => {
       onSelectCountry?.(feature);
-      /* A tap on a country is a request to read about it: meet it half way. */
-      setStop((current) => (current === 'PEEK' ? 'HALF' : current));
+      /*
+        MAP / SPATIAL VISUAL CONVERGENCE R2 — the sheet no longer climbs on a
+        tap. PEEK now carries identity, reporting state, Follow and the one
+        primary action, so a selection is answered without covering the map
+        the reader just tapped. The reader raises it; Load raises it to HALF.
+      */
     },
     [onSelectCountry],
   );
 
-  const items = selectionDetail?.items ?? [];
-  const provider = selectionDetail?.providerStatus;
-  const coverage = selectionDetail?.coverage;
+  /*
+    ══ MAP / SPATIAL VISUAL CONVERGENCE R2 · THE PHONE READS WHAT WAS LOADED ══
+
+    MEASURED: after an explicit Load the desktop rail listed the retrieved
+    reporting, and the phone sheet listed nothing — it read only the retained
+    corpus in `selectionDetail`, never the `countryRead` presentation it was
+    already handed. So a reader pressed Load, spent a governed read, and was
+    shown the same empty sheet.
+
+    The phone now reads exactly what the desktop card reads: the explicit read
+    when it has settled, and otherwise the retained corpus. No new request and
+    no new state — only the presentation the owner already builds.
+  */
+  const readSettled =
+    countryRead !== undefined && (countryRead.state === 'READY' || countryRead.state === 'READY_NO_COVERAGE');
+  const loadedItems = readSettled ? (countryRead?.items ?? []) : null;
+  const items = loadedItems !== null && loadedItems.length > 0 ? loadedItems : (selectionDetail?.items ?? []);
+  const provider = (readSettled ? countryRead?.providerStatus : undefined) ?? selectionDetail?.providerStatus;
+  const coverage = (readSettled ? countryRead?.coverage : undefined) ?? selectionDetail?.coverage;
   const identity = selectionDetail?.identity;
   const hasSelection = selectedIso3 !== null && displayName !== null;
+  /* Retrieved counts once the reader has loaded; retained totals before. */
+  const reportCount = loadedItems !== null ? loadedItems.length : (selectedTotal?.reportCount ?? 0);
+  const sourceCount =
+    loadedItems !== null ? (coverage?.publisherCount ?? null) : (selectedTotal?.publisherCount ?? null);
+  const newCount = selectedTotal?.newSinceLastVisit ?? 0;
+
+  const storiesRef = useRef<HTMLElement | null>(null);
+
+  /*
+    Load is the explicit read, and the reader is shown its answer at HALF. The
+    country was framed for the sheet it was selected under; raising the sheet
+    re-frames it through the SAME policy (the country's own fit target, read at
+    resolve time against the new detent) so it stays above the sheet.
+  */
+  const onLoadCountry = useCallback(() => {
+    countryRead?.onLoad();
+    if (stop !== 'PEEK') return;
+    setStop('HALF');
+    const fit = selectionFitRequestFor(selectedIso3);
+    if (fit.kind === 'bounds') focusBounds(fit.bounds);
+  }, [countryRead, stop, selectedIso3, focusBounds]);
+
+  /*
+    SOURCES OPENS THE SOURCES. The route's `onOpenSources` scrolls the DESKTOP
+    rail's retained block, which the phone does not render, so on a phone the
+    control did nothing at all. Here it opens the sheet to FULL and brings the
+    retained set into view — a presentation move, no request.
+  */
+  const openSources = useCallback(() => {
+    setStop('FULL');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => storiesRef.current?.scrollIntoView({ block: 'start' }));
+    });
+  }, []);
 
   /*
     DESIGN v1.6 — the camera pair on the idle UI ramp.
@@ -692,11 +747,38 @@ export function MobileSpatialShell({
       </div>
       )}
 
+      {/*
+        ══ MAP / SPATIAL VISUAL CONVERGENCE R2 · ASK ABOUT THIS COUNTRY ═══════
+
+        Map R1 "Ask on the Map": with a country selected the Ask entry is a chip
+        that rides the sheet's top edge on the right, where the thumb is — not
+        a global launcher parked over the map. It sits on the zoom pair's row
+        and to its left, so the two never share a pixel; at FULL the zoom pair
+        is gone and the chip takes the corner.
+
+        IT OPENS; IT DOES NOT ASK. `openGlobalAsk()` is the same document event
+        every in-place Ask entry dispatches: the dock opens with the country as
+        its published geography context and nothing is sent until Send.
+      */}
+      {hasSelection && selection?.kind === 'COUNTRY' && sheetSurface === null && (
+        <button
+          type="button"
+          data-gn="mobile-ask-about"
+          onClick={() => openGlobalAsk()}
+          style={{ bottom: workspace.zoomBottomPx, right: stop === 'FULL' ? 10 : 10 + MIN_TOUCH_PX + 8, minHeight: MIN_TOUCH_PX }}
+          className="absolute z-30 flex max-w-[calc(100%-82px)] items-center gap-[8px] rounded-full border border-[#3c2f7a] bg-[linear-gradient(105deg,#2b1f6e,#1a2a6e)] px-[14px] text-[13.5px] font-semibold text-[#ece8ff] shadow-[0_6px_20px_rgba(0,0,0,.35)] transition-[bottom,right] duration-200 ease-out active:brightness-125 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[#a78bfa]"
+        >
+          <span aria-hidden="true" className="font-gn-mono text-[11px] text-[#a78bfa]">◆</span>
+          <span className="truncate">{mobile.askAbout.replace('{country}', displayName ?? '')}</span>
+        </button>
+      )}
+
       <MobileBottomSheet
         stop={stop}
         onStopChange={setStop}
         workspaceHeight={workspace.workspacePx}
         bottomOffset={workspace.sheetBottomPx}
+        overlapHandle
         labels={{
           sheetLabel: mobile.sheetLabel,
           handleLabel: mobile.handleLabel,
@@ -838,70 +920,91 @@ export function MobileSpatialShell({
           </p>
         ) : (
           <>
-            {/* ── PEEK · who, how much, what state ─────────────────────── */}
-            <header data-gn="mobile-sheet-identity" className="pt-[2px]">
-              <h2 className="text-[19px] font-semibold leading-tight text-sp-ink">{displayName}</h2>
-              <p className="mt-[3px] font-gn-mono text-[9.5px] uppercase tracking-[0.14em] text-sp-ink-3">
-                {identity?.iso3}
-                {identity?.region ? ` · ${identity.region}` : ''}
-              </p>
+            {/*
+              ══ MAP / SPATIAL VISUAL CONVERGENCE R2 · THE COUNTRY SHEET ═══════
+
+              MEASURED on the Product Owner's iPhone: selecting Iraq turned the
+              page into a stack of full-width slabs — Follow, Load, Open
+              Analysis, Open Sources, Deep Analysis, How This Changed, Clear —
+              with the map reduced to a header illustration. Every action was
+              real; the hierarchy was not.
+
+              The sheet now reads in the order a reader needs it:
+
+                PEEK   identity · reporting state · Follow · ONE primary
+                HALF   what was retrieved (or an intentional "not loaded")
+                FULL   the whole retained set, the deck and the timeline
+
+              and it is designed to be read at PEEK, so a selection no longer
+              pushes the sheet up (see `onSelectFromMap`): the map stays the
+              surface and the country is identified without covering it.
+
+              Nothing here spends. Load is the only control that retrieves, it
+              is the same governed `countryRead.onLoad`, and it is still never
+              wired to selection.
+            */}
+            <header data-gn="mobile-sheet-identity" className="flex items-start gap-[8px]">
+              <div className="min-w-0 flex-1 pt-[1px]">
+                <h2 className="truncate text-[18px] font-semibold leading-[22px] text-sp-ink">{displayName}</h2>
+                <p className="mt-[2px] truncate font-gn-mono text-[9.5px] uppercase tracking-[0.14em] text-sp-ink-3">
+                  {identity?.iso3}
+                  {identity?.region ? ` · ${identity.region}` : ''}
+                </p>
+              </div>
+
+              {/* Follow — one compact, free personalization control. Follow ≠ Watch. */}
+              {follow && (
+                <div className="relative z-10 shrink-0">
+                  <FollowControl
+                    compact
+                    geographyId={follow.countryIso3}
+                    geographyLabel={displayName}
+                    isWatched={follow.isFollowed}
+                    isPending={follow.isPending}
+                    hasFailed={follow.hasFailed}
+                    labels={{ ...spatial.card.follow, follow: spatial.card.actions.follow }}
+                    onToggle={(id, next) => (next ? follow.onFollow(id) : follow.onUnfollow(id))}
+                  />
+                </div>
+              )}
+
+              {/* Clear is quiet: a 44px glyph, never a full-width slab. */}
+              <button
+                type="button"
+                data-gn="mobile-clear-selection"
+                aria-label={mobile.clearSelection}
+                title={mobile.clearSelection}
+                onClick={() => onSelectionChange?.(null)}
+                style={{ minHeight: MIN_TOUCH_PX, minWidth: MIN_TOUCH_PX }}
+                className="relative z-10 flex shrink-0 items-center justify-center rounded-[2px] font-gn-mono text-[17px] leading-none text-sp-ink-3 outline-none transition-colors active:text-sp-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-sp-cyan"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
             </header>
 
-            <div
-              data-gn="mobile-sheet-counts"
-              className="mt-[10px] grid grid-cols-3 gap-px border-y border-sp-line bg-sp-line"
-            >
-              {[
-                [selectedTotal?.reportCount ?? 0, spatial.card.reports],
-                /*
-                  CHECKPOINT H — `?? 0` was the worst of the three fallbacks: it
-                  asserted that zero outlets reported, for a geography whose
-                  publishers simply were not counted. Distinct publishers, or
-                  an em dash.
-                */
-                [selectedTotal?.publisherCount ?? null, spatial.card.sources],
-                [selectedTotal?.newSinceLastVisit ?? 0, spatial.card.newSince],
-              ].map(([value, label]) => (
-                <div key={String(label)} className="bg-sp-panel px-[8px] py-[8px]">
-                  <b className="block font-gn-mono text-[17px] leading-none text-sp-cyan">{value}</b>
-                  <span className="mt-[4px] block font-gn-mono text-[8px] uppercase tracking-[0.12em] text-sp-ink-3">
-                    {label}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {provider && (
-              <p
-                data-gn="mobile-sheet-provider"
-                className="mt-[9px] font-gn-mono text-[9px] uppercase tracking-[0.12em] text-sp-ink-2"
-              >
-                {spatial.card.provider[provider.condition === 'LIVE' ? 'live' : provider.condition === 'DELAYED' ? 'delayed' : 'none']}
-                {provider.providerName ? ` · ${provider.providerName}` : ''}
-              </p>
-            )}
-
             {/*
-              STATE B — THE QUIET MINT GLYPH AT PEEK. §16.1 B lists it beside
-              identity, precision, provenance, evidence count and the state chip.
-
-              It is the SAME control as the primary at HALF, in its stage-2
-              treatment: §6.1a gives stage 2 its own shape deliberately —
-              "recognisable, not loud" — so the glyph and the button are one
-              ladder, not two controls. Only one is ever mounted.
+              THE REPORTING STATE, ONE LINE. The same three truthful values the
+              slab showed — reports, distinct publishers (or an em dash when
+              nobody counted them), new since the last visit — and, once the
+              reader has loaded the country, the counts of what was retrieved.
+              Zero is shown as zero: an empty country is a fact, not a gap.
             */}
+            <p
+              data-gn="mobile-sheet-counts"
+              data-gn-counts-basis={loadedItems !== null ? 'retrieved' : 'retained'}
+              className="mt-[3px] truncate font-gn-mono text-[9.5px] uppercase tracking-[0.12em] text-sp-ink-2"
+            >
+              <b className="font-semibold text-sp-cyan">{reportCount}</b> {spatial.card.reports}
+              <span className="text-sp-ink-3"> · </span>
+              <b className="font-semibold text-sp-cyan">{sourceCount ?? '—'}</b> {spatial.card.sources}
+              <span className="text-sp-ink-3"> · </span>
+              <b className="font-semibold text-sp-cyan">{newCount}</b> {mobile.newShort}
+            </p>
+
             {/*
-              MAP R1 · WATCH IS DORMANT, SO IT IS NOT OFFERED.
-
-              `WATCH_RUNTIME_ACTIVE` is false: there is no Watch module, no
-              cron, no delivery and no backend. The stage-2 mint glyph said a
-              standing assignment could be started here, and on a phone it was
-              the first thing a reader met after selecting a country.
-
-              Gated rather than deleted. The ladder, the stage function and the
-              composer are untouched and correct; what is wrong is offering
-              them while the runtime behind them does not exist. When the
-              runtime lands, the constant moves and this returns unchanged.
+              STATE B — THE QUIET MINT GLYPH AT PEEK, still gated. Watch is
+              dormant (`WATCH_RUNTIME_ACTIVE` is false), so nothing renders; the
+              ladder is untouched and returns unchanged when the runtime lands.
             */}
             {stop === 'PEEK' && WATCH_RUNTIME_ACTIVE && (
               <div data-gn="mobile-peek-watch" className="mt-[10px]">
@@ -913,194 +1016,144 @@ export function MobileSpatialShell({
               </div>
             )}
 
-            {/* ── HALF · the actions, then the newest reporting ─────────── */}
-            {stop !== 'PEEK' && (
-              <div data-gn="mobile-sheet-actions" className="mt-[12px] flex flex-col gap-[8px]">
-                {/*
-                  §16 — WATCH IS THE PRIMARY AT HALF, full width, 44px minimum,
-                  and it sits ABOVE Follow. The ordering is the point: the
-                  standing assignment first, the feed filter beneath it, so the
-                  two never read as variants of one control.
-                */}
-                {/*
-                  MAP R1 — the filled-mint #5BE3A8 primary is not rendered while
-                  Watch is dormant. Part IV reserves that fill for a watch that
-                  is RUNNING, and this file says so itself further up; a
-                  full-width mint primary on selection claimed a live capability
-                  the product does not have. With it gone, FOLLOW becomes the
-                  standing action on the phone sheet, which is the real,
-                  persistent, authenticated one.
-                */}
-                {WATCH_RUNTIME_ACTIVE && (
-                  <WatchCta
-                    stage={watchStage}
-                    labels={spatial.monetization.watch}
-                    onOpenComposer={() => openSheetSurface('watchComposer')}
-                  />
-                )}
+            {/* ── THE ONE PRIMARY, OR THE CONTEXTUAL NAVIGATION ──────────── */}
+            <div data-gn="mobile-sheet-actions" className="mt-[9px] flex flex-col gap-[8px]">
+              {WATCH_RUNTIME_ACTIVE && stop !== 'PEEK' && (
+                <WatchCta
+                  stage={watchStage}
+                  labels={spatial.monetization.watch}
+                  onOpenComposer={() => openSheetSurface('watchComposer')}
+                />
+              )}
 
-                {follow && (
-                  <FollowControl
-                    geographyId={follow.countryIso3}
-                    geographyLabel={displayName}
-                    isWatched={follow.isFollowed}
-                    isPending={follow.isPending}
-                    hasFailed={follow.hasFailed}
-                    labels={spatial.card.follow}
-                    onToggle={(id, next) => (next ? follow.onFollow(id) : follow.onUnfollow(id))}
-                  />
-                )}
+              {/*
+                Before anything is retrieved there is exactly ONE primary: Load.
+                While it runs the same control says so and cannot be pressed
+                twice. After it, Load steps back to a quiet "Retrieve again"
+                beside the navigation it made meaningful.
+              */}
+              {countryRead && !readSettled && (loadActionIsOffered(countryRead.state) || countryRead.state === 'LOADING') && (
+                <button
+                  type="button"
+                  data-gn="mobile-action-load-country"
+                  data-gn-state={countryRead.state}
+                  disabled={countryRead.state === 'LOADING'}
+                  onClick={onLoadCountry}
+                  style={{ minHeight: MIN_TOUCH_PX }}
+                  className="w-full cursor-pointer rounded-[2px] border border-sp-cyan bg-sp-cyan px-[8px] font-gn-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-sp-cyan-on transition-colors hover:bg-sp-cyan-hover disabled:cursor-progress disabled:border-sp-cyan/45 disabled:bg-sp-cyan/[0.14] disabled:text-sp-cyan"
+                >
+                  {countryRead.state === 'LOADING' ? spatial.card.countryRead.loading : spatial.card.countryRead.load}
+                </button>
+              )}
 
-                {/*
-                  §16 — THE TIMELINE IS A FULL-DETENT SURFACE. One line here,
-                  opening a full sheet; never an expansion inside the sheet,
-                  which would make the detent heights meaningless.
-                */}
-                {/*
-                  ══ R2 §16.1 STATES H1 · H2 · THE DECK AND THE COST GATE ══════
-
-                  §16.1 assigns the action deck to FULL. It is TEMPORARY —
-                  collapsed by default, dismissing to the previous state with
-                  nothing spent — and on compact it confirms ONE ACTION AT A
-                  TIME: choosing one opens the cost prompt rather than running
-                  it, because a list of eight priced controls on a 390px screen
-                  is a place to mis-tap, and a mis-tap that spends compute is the
-                  one mistake this gate exists to prevent.
-                */}
-                {stop === 'FULL' && costPromptAction === null && (
-                  <div data-gn="mobile-action-deck" data-gn-surface-class="TEMPORARY">
-                    <ActionDeck
-                      actions={deckActions}
-                      labels={spatial.monetization.deck}
-                      hasWatch={false}
-                      onChooseAction={(id) => setCostPromptAction(id)}
-                    />
-                  </div>
-                )}
-
-                {chosenAction !== null && (
-                  <div className="rounded-[3px] border border-sp-line-2 bg-sp-panel-2 p-[12px]">
-                    <AnalysisCostPrompt
-                      actionLabel={
-                        (spatial.monetization.deck.actions as Readonly<Record<string, string>>)[
-                          chosenAction.id
-                        ] ?? chosenAction.id
-                      }
-                      cost={chosenAction.cost}
-                      labels={spatial.monetization.costPrompt}
-                      onCancel={() => setCostPromptAction(null)}
-                      /*
-                        NO `onRun`. GlobalNewsAI HAS an Analysis system; what
-                        is missing is the MONETIZED DEEP ANALYSIS ACTIVATION
-                        AND ENTITLEMENT CONTRACT, so no paid Run may be
-                        started from here. The Run control renders disabled and
-                        says that exact reason. Wiring it to a handler that
-                        opened the workspace would spend nothing but would
-                        claim an analysis had started.
-                      */
-                    />
-                  </div>
-                )}
-
-                {stop === 'FULL' && (
-                  <button
-                    type="button"
-                    data-gn="mobile-timeline-strip"
-                    onClick={() => openSheetSurface('assessmentTimeline')}
-                    style={{ minHeight: MIN_TOUCH_PX }}
-                    className="flex w-full items-center justify-between gap-[8px] rounded-[2px] border border-[rgba(126,166,186,.14)] bg-[rgba(126,166,186,.045)] px-[10px] font-gn-mono text-[9.5px] uppercase tracking-[0.12em] text-sp-ui-idle"
-                  >
-                    <span>{spatial.monetization.timeline.title}</span>
-                    <span className="text-sp-ink-3">{spatial.monetization.timeline.openLabel}</span>
-                  </button>
-                )}
-
-                {/*
-                  MAP R1 · THE EXPLICIT COUNTRY READ, NOW ON THE PHONE TOO.
-
-                  Desktop has offered this since the retrieval contract landed;
-                  the phone did not, so a reader who selected a country with no
-                  retained reporting had no honest way to ask for any — the
-                  surface simply said nothing was retained and stopped.
-
-                  It is the SAME action, the same state machine and the same
-                  `loadActionIsOffered` authority the card uses. Nothing new is
-                  decided here, and in particular this is NOT wired to
-                  selection: it runs only when the reader presses it, which is
-                  what keeps a country tap at zero requests.
-                */}
-                {countryRead && loadActionIsOffered(countryRead.state) && (
-                  <div data-gn="mobile-country-read">
-                    <p
-                      data-gn="mobile-country-read-state"
-                      className="mb-[6px] font-gn-mono text-[9px] uppercase tracking-[0.12em] text-sp-ink-2"
-                      {...(countryRead.state === 'LOADING' || countryRead.state === 'FAILED'
-                        ? { role: 'status' as const, 'aria-live': 'polite' as const }
-                        : {})}
-                    >
-                      {countryRead.state === 'FAILED'
-                        ? spatial.card.countryRead.failed
-                        : countryRead.state === 'READY_NO_COVERAGE'
-                          ? spatial.card.countryRead.noCoverage
-                          : countryRead.state === 'SELECTED_NOT_LOADED'
-                            ? spatial.card.countryRead.notLoaded
-                            : null}
-                    </p>
-                    <button
-                      type="button"
-                      data-gn="mobile-action-load-country"
-                      onClick={countryRead.onLoad}
-                      style={{ minHeight: MIN_TOUCH_PX }}
-                      className="w-full cursor-pointer rounded-[2px] border border-sp-cyan bg-sp-cyan px-[8px] font-gn-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-sp-cyan-on transition-colors hover:bg-sp-cyan-hover"
-                    >
-                      {countryRead.state === 'READY' || countryRead.state === 'READY_NO_COVERAGE'
-                        ? spatial.card.countryRead.reload
-                        : spatial.card.countryRead.load}
-                    </button>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-[8px]">
+              {/*
+                CONTEXTUAL NAVIGATION — one compact row, never three slabs. It
+                appears once there is something to navigate: retrieved or
+                retained reporting. Analysis hands the country to the Analysis
+                Workspace (the existing route; it is where analysis is spent),
+                Sources opens the retained set, and Retrieve again re-runs the
+                same governed read.
+              */}
+              {(readSettled || items.length > 0) && (
+                <nav data-gn="mobile-sheet-nav" aria-label={spatial.card.countryRead.heading} className="grid grid-cols-[1fr_1fr_auto] gap-[6px]">
                   <button
                     type="button"
                     data-gn="mobile-action-analysis"
                     disabled={!onOpenAnalysis || selection === null}
                     onClick={() => selection && onOpenAnalysis?.(selection)}
                     style={{ minHeight: MIN_TOUCH_PX }}
-                    className="border border-sp-cyan/45 bg-sp-cyan/[0.14] px-[10px] font-gn-mono text-[10px] uppercase tracking-[0.12em] text-sp-cyan disabled:opacity-[.35]"
+                    className="truncate rounded-[2px] border border-sp-cyan/45 bg-sp-cyan/[0.12] px-[8px] font-gn-mono text-[9.5px] uppercase tracking-[0.12em] text-sp-cyan disabled:opacity-[.35]"
                   >
-                    {spatial.card.actions.openAnalysis}
+                    {spatial.card.actions.openAnalysis} <span aria-hidden="true">↗</span>
                   </button>
                   <button
                     type="button"
                     data-gn="mobile-action-sources"
-                    disabled={!onOpenSources || selection === null}
-                    onClick={() => selection && onOpenSources?.(selection)}
+                    disabled={items.length === 0}
+                    onClick={openSources}
                     style={{ minHeight: MIN_TOUCH_PX }}
-                    /* v1.6 AVAILABLE — a working action, readable before it is touched. */
-                    className={`px-[10px] font-gn-mono text-[10px] uppercase tracking-[0.12em] disabled:opacity-[.35] ${BAND_AVAILABLE}`}
+                    className={`truncate rounded-[2px] px-[8px] font-gn-mono text-[9.5px] uppercase tracking-[0.12em] disabled:opacity-[.35] ${BAND_AVAILABLE}`}
                   >
-                    {spatial.card.actions.openSources}
+                    {spatial.card.sources} · {items.length}
                   </button>
-                </div>
-              </div>
+                  {countryRead && readSettled && loadActionIsOffered(countryRead.state) && (
+                    <button
+                      type="button"
+                      data-gn="mobile-action-load-country"
+                      data-gn-state={countryRead.state}
+                      aria-label={spatial.card.countryRead.reload}
+                      title={spatial.card.countryRead.reload}
+                      onClick={onLoadCountry}
+                      style={{ minHeight: MIN_TOUCH_PX, minWidth: MIN_TOUCH_PX }}
+                      className="flex items-center justify-center rounded-[2px] border border-sp-line-2 font-gn-mono text-[15px] leading-none text-sp-ui-idle transition-colors active:text-sp-cyan"
+                    >
+                      <span aria-hidden="true">↻</span>
+                    </button>
+                  )}
+                </nav>
+              )}
+            </div>
+
+            {stop !== 'PEEK' && (
+              <p data-gn="mobile-staging-note" className="mt-[8px] text-[11.5px] leading-[1.45] text-sp-ink-3">
+                {mobile.stagingNote}
+              </p>
             )}
 
-            {stop !== 'PEEK' && coverage && (
+            {/*
+              ── HALF · WHAT THE READ SAID ─────────────────────────────────────
+
+              An unloaded or failed country is shown as INTENTIONALLY unavailable:
+              a bordered statement of what is (not) known and why, in the
+              governed words — never an empty list pretending to be a result.
+            */}
+            {stop !== 'PEEK' && countryRead && countryRead.state !== 'READY' && countryRead.state !== 'UNSELECTED' && (
               <p
-                data-gn="mobile-sheet-coverage"
+                data-gn="mobile-country-read-state"
+                data-gn-state={countryRead.state}
+                className="mt-[12px] rounded-[2px] border border-dashed border-sp-line-2 px-[10px] py-[9px] text-[12px] leading-[1.45] text-sp-ink-2"
+                {...(countryRead.state === 'LOADING' || countryRead.state === 'FAILED'
+                  ? { role: 'status' as const, 'aria-live': 'polite' as const }
+                  : {})}
+              >
+                <span className="mb-[3px] block font-gn-mono text-[8.5px] uppercase tracking-[0.14em] text-sp-ink-3">
+                  {spatial.card.countryRead.heading}
+                </span>
+                {countryRead.state === 'FAILED'
+                  ? spatial.card.countryRead.failed
+                  : countryRead.state === 'READY_NO_COVERAGE'
+                    ? spatial.card.countryRead.noCoverage
+                    : countryRead.state === 'LOADING'
+                      ? spatial.card.countryRead.loading
+                      : spatial.card.countryRead.notLoaded}
+              </p>
+            )}
+
+            {stop !== 'PEEK' && (provider || coverage) && (
+              <p
+                data-gn="mobile-sheet-provider"
                 className="mt-[12px] font-gn-mono text-[9px] uppercase tracking-[0.12em] text-sp-ink-2"
               >
-                {spatial.card.coverage.bands[coverage.band]}
-                {coverage.publisherCount > 0
-                  ? ` · ${coverage.publisherCount} ${spatial.card.coverage.publishers}`
+                {provider
+                  ? `${spatial.card.provider[provider.condition === 'LIVE' ? 'live' : provider.condition === 'DELAYED' ? 'delayed' : 'none']}${provider.providerName ? ` · ${provider.providerName}` : ''}`
                   : ''}
+                {provider && coverage ? ' · ' : ''}
+                {coverage ? spatial.card.coverage.bands[coverage.band] : ''}
               </p>
             )}
 
             {/* ── HALF shows the newest; FULL shows the retained set ────── */}
             {stop !== 'PEEK' && items.length > 0 && (
-              <section data-gn="mobile-sheet-stories" className="mt-[14px]">
+              <section
+                ref={storiesRef}
+                data-gn="mobile-sheet-stories"
+                /*
+                  R2 — every control on the phone sheet meets the 44px floor. The
+                  shared card keeps its dense desktop/Conflict sizes; only here, on
+                  a touch surface, its open, Ask and bookmark controls grow to 44.
+                */
+                className="mt-[12px] scroll-mt-[8px] [&_[data-gn=source-ask]]:h-11 [&_[data-gn=source-open]]:h-11 [&_[data-gn=source-open]]:w-11 [&_button[aria-pressed]]:h-11 [&_button[aria-pressed]]:w-11"
+              >
                 <h3 className="mb-[8px] font-gn-mono text-[9px] uppercase tracking-[0.14em] text-sp-ink-3">
                   {spatial.card.retainedHeading}
                   <span className="float-right">
@@ -1130,18 +1183,55 @@ export function MobileSpatialShell({
               </section>
             )}
 
-            {/* ── FULL · the tail the phone only shows when asked ───────── */}
+            {/*
+              ── FULL · THE TAIL THE PHONE ONLY SHOWS WHEN ASKED ────────────
+
+              §16.1 assigns the action deck to FULL. It is TEMPORARY, collapsed
+              by default, and confirms ONE action at a time through the cost
+              prompt, whose Run stays disabled until the monetized deep-analysis
+              entitlement contract exists. The timeline is one quiet line that
+              opens a full-detent surface.
+            */}
             {stop === 'FULL' && (
-              <button
-                type="button"
-                data-gn="mobile-clear-selection"
-                onClick={() => onSelectionChange?.(null)}
-                style={{ minHeight: MIN_TOUCH_PX }}
-                /* v1.6 AVAILABLE. It was on the disabled ink and looked inert. */
-                className={`mt-[14px] w-full px-[10px] font-gn-mono text-[9.5px] uppercase tracking-[0.12em] ${BAND_AVAILABLE}`}
-              >
-                {mobile.clearSelection}
-              </button>
+              <div className="mt-[16px] flex flex-col gap-[8px] border-t border-sp-line pt-[12px]">
+                {costPromptAction === null && (
+                  <div data-gn="mobile-action-deck" data-gn-surface-class="TEMPORARY">
+                    <ActionDeck
+                      actions={deckActions}
+                      labels={spatial.monetization.deck}
+                      hasWatch={false}
+                      onChooseAction={(id) => setCostPromptAction(id)}
+                    />
+                  </div>
+                )}
+
+                {chosenAction !== null && (
+                  <div className="rounded-[3px] border border-sp-line-2 bg-sp-panel-2 p-[12px]">
+                    <AnalysisCostPrompt
+                      actionLabel={
+                        (spatial.monetization.deck.actions as Readonly<Record<string, string>>)[
+                          chosenAction.id
+                        ] ?? chosenAction.id
+                      }
+                      cost={chosenAction.cost}
+                      labels={spatial.monetization.costPrompt}
+                      onCancel={() => setCostPromptAction(null)}
+                      /* NO `onRun` — see the entitlement note above. */
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  data-gn="mobile-timeline-strip"
+                  onClick={() => openSheetSurface('assessmentTimeline')}
+                  style={{ minHeight: MIN_TOUCH_PX }}
+                  className="flex w-full items-center justify-between gap-[8px] rounded-[2px] border border-[rgba(126,166,186,.14)] bg-[rgba(126,166,186,.045)] px-[10px] font-gn-mono text-[9.5px] uppercase tracking-[0.12em] text-sp-ui-idle"
+                >
+                  <span>{spatial.monetization.timeline.title}</span>
+                  <span className="text-sp-ink-3">{spatial.monetization.timeline.openLabel}</span>
+                </button>
+              </div>
             )}
           </>
         )}

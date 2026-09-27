@@ -72,6 +72,13 @@ export interface FollowControlProps {
   readonly hasFailed?: boolean;
   readonly labels: FollowControlLabels;
   readonly onToggle: (geographyId: string, next: boolean) => void;
+  /**
+   * MAP / SPATIAL VISUAL CONVERGENCE R2 — the phone sheet's compact form: one
+   * short control beside the country identity instead of a full-width slab.
+   * The resting label drops the geography (the identity beside it already
+   * names it); the accessible name, states and API are unchanged.
+   */
+  readonly compact?: boolean;
 }
 
 export function FollowControl({
@@ -82,8 +89,13 @@ export function FollowControl({
   hasFailed = false,
   labels,
   onToggle,
+  compact = false,
 }: FollowControlProps): JSX.Element {
-  const restingLabel = isWatched ? `${labels.watching} ${geographyLabel}` : labels.follow;
+  const restingLabel = isWatched
+    ? compact
+      ? labels.watching
+      : `${labels.watching} ${geographyLabel}`
+    : labels.follow;
   const actionName = isWatched
     ? `${labels.stopWatching} ${geographyLabel}`
     : `${labels.follow} — ${geographyLabel}`;
@@ -99,7 +111,9 @@ export function FollowControl({
         aria-label={actionName}
         disabled={isPending}
         onClick={() => onToggle(geographyId, !isWatched)}
-        className={`group flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-[8px] rounded-[2px] border px-[10px] py-[11px] font-gn-mono text-[10px] uppercase tracking-[0.14em] outline-none transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gn-focus disabled:cursor-progress ${
+        className={`group flex min-h-[44px] ${
+          compact ? 'w-auto whitespace-nowrap px-[12px] py-[8px]' : 'w-full px-[10px] py-[11px]'
+        } cursor-pointer items-center justify-center gap-[8px] rounded-[2px] border font-gn-mono text-[10px] uppercase tracking-[0.14em] outline-none transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gn-focus disabled:cursor-progress ${
           isWatched
             ? /*
                 FILLED AMBER, and it reverts to an outlined amber on hover and

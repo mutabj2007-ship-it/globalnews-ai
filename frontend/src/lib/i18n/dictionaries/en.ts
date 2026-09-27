@@ -108,6 +108,9 @@ export const en = {
       keeps its own wording so a reader can tell the two apart at a glance.
     */
     askingAboutGeography: 'Asking about {place}',
+    /* MAP / SPATIAL VISUAL CONVERGENCE R2 — Map R1 copy table (Ask on the Map). */
+    geographyBasis: 'Country geography · no evidence attached',
+    mapComputeNotice: 'Runs AI analysis. Nothing is sent until you press Send.',
     title: 'Ask GlobalNews AI',
     panelLabel: 'Ask GlobalNews AI',
     close: 'Close',
@@ -1833,6 +1836,11 @@ export const en = {
         noSelection: 'Search for a place above, or tap a country on the map, to see what is retained there.',
         clearSelection: 'Clear selection',
         searchAlternative: 'You can also find a country by typing its name in the search field above; the map is not the only way to reach one.',
+        /* MAP / SPATIAL VISUAL CONVERGENCE R2 — Map R1 copy table. Opening Ask spends nothing. */
+        askAbout: 'Ask about {country}',
+        /* The sheet's one-line reporting state: "0 reports · — sources · 0 new". */
+        newShort: 'new',
+        stagingNote: 'Ask and Open analysis stage this country as context. Nothing runs until you press Send or Run.',
         a11yNote: 'An interactive world map fills this screen. Drag to pan, pinch to zoom, and tap a country to select it. You do not need to use it \u2014 the search field finds and selects any supported country by name, with full keyboard support.',
       },
       /*
