@@ -10,7 +10,7 @@ import {
   mapAskMaxHeight,
   mapAskPanelStyle,
 } from '@/lib/ask/mapAskGeometry';
-import { MIN_MAP_FRACTION, FULL_FRACTION, MobileBottomSheet } from './MobileBottomSheet';
+import { MIN_MAP_FRACTION, FULL_FRACTION, MobileBottomSheet, type MobileBottomSheetProps } from './MobileBottomSheet';
 import { LayersControl } from '@/components/map/shell/d1/LayersControl';
 import { MapControlCluster } from '@/components/map/shell/d1/MapControlCluster';
 import { FollowControl } from '@/components/map/shell/FollowControl';
@@ -179,14 +179,17 @@ describe('THE PHONE COUNTRY SHEET', () => {
 
 describe('THE SHEET HANDLE straddles the edge and keeps its 44px target', () => {
   const html = renderToStaticMarkup(
-    createElement(MobileBottomSheet, {
-      stop: 'PEEK',
-      onStopChange: () => undefined,
-      workspaceHeight: 700,
-      overlapHandle: true,
-      labels: { sheetLabel: 'Sheet', handleLabel: 'Resize', stops: { PEEK: 'Peek', HALF: 'Half', FULL: 'Full' } },
-      children: createElement('p', null, 'content'),
-    }),
+    createElement(
+      MobileBottomSheet,
+      {
+        stop: 'PEEK',
+        onStopChange: () => undefined,
+        workspaceHeight: 700,
+        overlapHandle: true,
+        labels: { sheetLabel: 'Sheet', handleLabel: 'Resize', stops: { PEEK: 'Peek', HALF: 'Half', FULL: 'Full' } },
+      } as Omit<MobileBottomSheetProps, 'children'> as MobileBottomSheetProps,
+      createElement('p', null, 'content'),
+    ),
   );
 
   it('the grip is 44px tall and does not take a full-width row', () => {
