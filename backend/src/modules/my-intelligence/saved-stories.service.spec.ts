@@ -32,9 +32,24 @@ const article = (overrides: Partial<NewsArticle> = {}): NewsArticle =>
     ...overrides,
   }) as NewsArticle;
 
+/**
+ * The Prisma double models a SERIALIZABLE transaction optimistically, the way
+ * PostgreSQL's SSI behaves for this read-count-insert pattern: a transaction
+ * works on the rows as they were when it began, its insert is buffered, and at
+ * commit it is aborted with a write conflict (P2034) if another transaction
+ * committed a SavedStory for the same account in the meantime. The
+ * @@unique([userId, articleRef]) constraint is enforced at commit (P2002).
+ * Every transaction yields between its count and its insert, so concurrent
+ * saves genuinely interleave.
+ */
 function harness(retained: Array<{ article: NewsArticle; countryCodes: string[] }>) {
   const rows: Array<Record<string, unknown>> = [];
   const creates: Array<Record<string, unknown>> = [];
+  const isolationLevels: unknown[] = [];
+  const commitsByUser = new Map<string, number>();
+  let transactions = 0;
+  let writeConflicts = 0;
+
   const persistence = {
     findRetainedByUrl: jest.fn(async (url: string) => {
       const ref = computeArticleRef(url);
@@ -43,21 +58,67 @@ function harness(retained: Array<{ article: NewsArticle; countryCodes: string[] 
     findById: jest.fn(async (id: string) => retained.find((entry) => entry.article.id === id)?.article ?? null),
   } as unknown as ArticlePersistenceService;
 
+  type Key = { userId_articleRef: { userId: string; articleRef: string } };
+  const findIn = (source: Array<Record<string, unknown>>, where: Key) =>
+    source.find(
+      (row) => row.userId === where.userId_articleRef.userId && row.articleRef === where.userId_articleRef.articleRef,
+    ) ?? null;
+  const yieldTurn = () => new Promise((resolve) => setImmediate(resolve));
+
+  /* Reads inside a transaction; exposed so a test can force a count. */
+  const txCount = jest.fn(async (snapshot: Array<Record<string, unknown>>, userId: string) =>
+    snapshot.filter((row) => row.userId === userId).length,
+  );
+  const txCreate = jest.fn();
+
   const prisma = {
+    $transaction: jest.fn(async (work: (tx: unknown) => Promise<unknown>, options?: { isolationLevel?: unknown }) => {
+      transactions += 1;
+      isolationLevels.push(options?.isolationLevel);
+      const snapshot = rows.map((row) => ({ ...row }));
+      const startCommits = new Map(commitsByUser);
+      const pending: Array<Record<string, unknown>> = [];
+
+      const tx = {
+        savedStory: {
+          findUnique: async ({ where }: { where: Key }) => findIn(snapshot, where),
+          count: async ({ where }: { where: { userId: string } }) => {
+            const n = await txCount(snapshot, where.userId);
+            await yieldTurn();
+            return n;
+          },
+          create: async ({ data }: { data: Record<string, unknown> }) => {
+            txCreate(data);
+            const row = { ...data, savedAt: new Date('2026-09-27T09:00:00.000Z') };
+            pending.push(row);
+            return row;
+          },
+        },
+      };
+
+      const result = await work(tx);
+
+      for (const row of pending) {
+        const userId = row.userId as string;
+        if ((commitsByUser.get(userId) ?? 0) !== (startCommits.get(userId) ?? 0)) {
+          writeConflicts += 1;
+          throw Object.assign(new Error('could not serialize access'), { code: 'P2034' });
+        }
+        if (findIn(rows, { userId_articleRef: { userId, articleRef: row.articleRef as string } })) {
+          throw Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
+        }
+      }
+      for (const row of pending) {
+        rows.push(row);
+        creates.push(Object.fromEntries(Object.entries(row).filter(([key]) => key !== 'savedAt')));
+        commitsByUser.set(row.userId as string, (commitsByUser.get(row.userId as string) ?? 0) + 1);
+      }
+      return result;
+    }),
     savedStory: {
-      findUnique: jest.fn(async ({ where }: { where: { userId_articleRef: { userId: string; articleRef: string } } }) =>
-        rows.find(
-          (row) => row.userId === where.userId_articleRef.userId && row.articleRef === where.userId_articleRef.articleRef,
-        ) ?? null,
-      ),
+      findUnique: jest.fn(async ({ where }: { where: Key }) => findIn(rows, where)),
       findMany: jest.fn(async ({ where }: { where: { userId: string } }) => rows.filter((row) => row.userId === where.userId)),
       count: jest.fn(async ({ where }: { where: { userId: string } }) => rows.filter((row) => row.userId === where.userId).length),
-      upsert: jest.fn(async ({ create }: { create: Record<string, unknown> }) => {
-        creates.push(create);
-        const row = { ...create, savedAt: new Date('2026-09-27T09:00:00.000Z') };
-        rows.push(row);
-        return row;
-      }),
       deleteMany: jest.fn(async ({ where }: { where: { userId: string; articleRef: string } }) => {
         const before = rows.length;
         for (let i = rows.length - 1; i >= 0; i -= 1) {
@@ -73,7 +134,29 @@ function harness(retained: Array<{ article: NewsArticle; countryCodes: string[] 
     },
   } as unknown as PrismaService;
 
-  return { service: new SavedStoriesService(prisma, persistence), rows, creates, persistence, prisma };
+  /** Seed `n` already-saved stories for an account (committed, outside any race). */
+  const seed = (userId: string, n: number) => {
+    for (let i = 0; i < n; i += 1) {
+      rows.push({
+        userId,
+        articleRef: computeArticleRef(`https://seed.example.com/story-${i}`),
+        savedAt: new Date('2026-09-01T00:00:00.000Z'),
+      });
+    }
+  };
+
+  return {
+    service: new SavedStoriesService(prisma, persistence),
+    rows,
+    creates,
+    persistence,
+    prisma,
+    txCount,
+    txCreate,
+    seed,
+    isolationLevels,
+    stats: () => ({ transactions, writeConflicts }),
+  };
 }
 
 describe('Saved Story identity', () => {
@@ -94,7 +177,7 @@ describe('Saved Story identity', () => {
     const b = await h.service.save('user-1', article().url);
     expect(b).toEqual(a);
     expect(h.rows).toHaveLength(1);
-    expect(h.prisma.savedStory.upsert).toHaveBeenCalledTimes(1);
+    expect(h.txCreate).toHaveBeenCalledTimes(1);
   });
 
   it('providerArticleId is a hint only: it can never make a different story be saved', async () => {
@@ -180,7 +263,7 @@ describe('forbidden content is never persisted', () => {
 describe('bounds and removal', () => {
   it(`is limited to ${MAX_SAVED_STORIES} stories per account`, async () => {
     const h = harness([{ article: article(), countryCodes: [] }]);
-    (h.prisma.savedStory.count as jest.Mock).mockResolvedValueOnce(MAX_SAVED_STORIES);
+    h.txCount.mockResolvedValueOnce(MAX_SAVED_STORIES);
     await expect(h.service.save('user-1', article().url)).rejects.toBeInstanceOf(ConflictException);
   });
 
@@ -199,5 +282,141 @@ describe('bounds and removal', () => {
     await h.service.save('user-1', article().url);
     expect((await h.service.list('user-2')).stories).toEqual([]);
     expect((await h.service.list('user-1')).stories).toHaveLength(1);
+  });
+});
+
+describe('R1.1 — the Saved Stories cap is concurrency-safe', () => {
+  const storyA = article({ id: 'gnews-a', url: 'https://www.example.com/world/race-a' });
+  const storyB = article({ id: 'gnews-b', url: 'https://www.example.com/world/race-b' });
+  const savedBy = (h: ReturnType<typeof harness>, userId: string) => h.rows.filter((row) => row.userId === userId);
+
+  it('count, cap check and insert run in ONE Serializable transaction', async () => {
+    const h = harness([{ article: storyA, countryCodes: [] }]);
+    await h.service.save('user-1', storyA.url);
+    expect(h.prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(h.isolationLevels).toEqual(['Serializable']);
+    /* No count outside the transaction. */
+    expect(h.prisma.savedStory.count).not.toHaveBeenCalled();
+  });
+
+  it(`at ${MAX_SAVED_STORIES - 1}, two distinct concurrent saves: one succeeds, one is refused, never above ${MAX_SAVED_STORIES}`, async () => {
+    const h = harness([
+      { article: storyA, countryCodes: [] },
+      { article: storyB, countryCodes: [] },
+    ]);
+    h.seed('user-1', MAX_SAVED_STORIES - 1);
+
+    const outcomes = await Promise.allSettled([
+      h.service.save('user-1', storyA.url),
+      h.service.save('user-1', storyB.url),
+    ]);
+
+    const fulfilled = outcomes.filter((outcome) => outcome.status === 'fulfilled');
+    const rejected = outcomes.filter((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected');
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toBeInstanceOf(ConflictException);
+    expect((rejected[0].reason as ConflictException).message).toBe(
+      `Saved Stories is limited to ${MAX_SAVED_STORIES} stories.`,
+    );
+    expect(savedBy(h, 'user-1')).toHaveLength(MAX_SAVED_STORIES);
+    /* The race really happened: both transactions read 199; one lost at commit, retried, and was refused. */
+    expect(h.stats().writeConflicts).toBe(1);
+  });
+
+  it('many concurrent distinct saves at 199 still never exceed the cap', async () => {
+    const stories = Array.from({ length: 6 }, (_, i) =>
+      article({ id: `gnews-r${i}`, url: `https://www.example.com/world/race-many-${i}` }),
+    );
+    const h = harness(stories.map((story) => ({ article: story, countryCodes: [] })));
+    h.seed('user-1', MAX_SAVED_STORIES - 1);
+
+    const outcomes = await Promise.allSettled(stories.map((story) => h.service.save('user-1', story.url)));
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+    for (const outcome of outcomes.filter((o): o is PromiseRejectedResult => o.status === 'rejected')) {
+      expect(outcome.reason).toBeInstanceOf(ConflictException);
+    }
+    expect(savedBy(h, 'user-1')).toHaveLength(MAX_SAVED_STORIES);
+  });
+
+  it('a duplicate save never consumes a slot — even at the cap', async () => {
+    const h = harness([{ article: storyA, countryCodes: [] }]);
+    h.seed('user-1', MAX_SAVED_STORIES - 1);
+    await h.service.save('user-1', storyA.url);
+    expect(savedBy(h, 'user-1')).toHaveLength(MAX_SAVED_STORIES);
+
+    const again = await h.service.save('user-1', `${storyA.url}?utm_source=newsletter`);
+    expect(again.articleRef).toBe(computeArticleRef(storyA.url));
+    expect(savedBy(h, 'user-1')).toHaveLength(MAX_SAVED_STORIES);
+    expect(h.txCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('two concurrent saves of the SAME story at 199 both succeed with one row and one slot', async () => {
+    const h = harness([{ article: storyA, countryCodes: [] }]);
+    h.seed('user-1', MAX_SAVED_STORIES - 1);
+
+    const [a, b] = await Promise.all([
+      h.service.save('user-1', storyA.url),
+      h.service.save('user-1', storyA.url),
+    ]);
+    expect(b.articleRef).toBe(a.articleRef);
+    expect(h.rows.filter((row) => row.articleRef === a.articleRef)).toHaveLength(1);
+    expect(savedBy(h, 'user-1')).toHaveLength(MAX_SAVED_STORIES);
+  });
+
+  it('the cap is per account: another account is unaffected by a full one', async () => {
+    const h = harness([{ article: storyA, countryCodes: [] }]);
+    h.seed('user-1', MAX_SAVED_STORIES);
+    await expect(h.service.save('user-2', storyA.url)).resolves.toMatchObject({ title: storyA.title });
+  });
+
+  it('the @@unique([userId, articleRef]) constraint is preserved', () => {
+    const schema = readFileSync(join(__dirname, '../../../prisma/schema.prisma'), 'utf8');
+    const block = schema.slice(schema.indexOf('model SavedStory {'));
+    const body = block.slice(0, block.indexOf('\n}'));
+    expect(body).toMatch(/@@unique\(\[userId,\s*articleRef\]\)/);
+  });
+});
+
+describe('R1.1 — providerArticleId is the RESOLVED Article.id, never the caller hint', () => {
+  it('a valid URL with a bogus hint stores the resolved Article.id', async () => {
+    const h = harness([{ article: article(), countryCodes: [] }]);
+    await h.service.save('user-1', article().url, 'bogus-client-hint');
+    expect(h.creates[0].providerArticleId).toBe('gnews-123');
+    expect(h.creates[0].articleRef).toBe(computeArticleRef(article().url));
+  });
+
+  it('a hint-only lookup resolving the same URL identity stores the resolved Article.id', async () => {
+    /* The retained row is stored under a tracking-parameter spelling of the same story. */
+    const stored = article({ id: 'gnews-777', url: 'https://www.example.com/world/story-1?utm_campaign=feed' });
+    const h = harness([{ article: stored, countryCodes: [] }]);
+    /* The URL lookup misses; the hint finds the row, whose identity matches the URL. */
+    (h.persistence.findRetainedByUrl as jest.Mock).mockResolvedValueOnce(null);
+
+    const view = await h.service.save('user-1', 'https://www.example.com/world/story-1', '  gnews-777  ');
+    expect(h.persistence.findById).toHaveBeenCalledWith('gnews-777');
+    expect(view.articleRef).toBe(computeArticleRef('https://www.example.com/world/story-1'));
+    expect(h.creates[0].providerArticleId).toBe('gnews-777');
+  });
+
+  it('a mismatched hint cannot change identity: nothing is stored', async () => {
+    const other = article({ id: 'gnews-999', url: 'https://other.example.org/unrelated' });
+    const h = harness([{ article: other, countryCodes: [] }]);
+    await expect(
+      h.service.save('user-1', 'https://www.example.com/world/story-1', 'gnews-999'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(h.rows).toHaveLength(0);
+    expect(h.txCreate).not.toHaveBeenCalled();
+  });
+
+  it('a mismatched hint alongside a retained URL cannot redirect the save or its provider id', async () => {
+    const other = article({ id: 'gnews-999', url: 'https://other.example.org/unrelated' });
+    const h = harness([
+      { article: article(), countryCodes: [] },
+      { article: other, countryCodes: [] },
+    ]);
+    const view = await h.service.save('user-1', article().url, 'gnews-999');
+    expect(view.articleRef).toBe(computeArticleRef(article().url));
+    expect(h.creates[0].providerArticleId).toBe('gnews-123');
   });
 });

@@ -5,7 +5,7 @@ import { CSRF_COOKIE_NAME } from './cookie.util';
 /**
  * Milestone #57 — the double-submit CSRF check. Applied ONLY to
  * state-changing authenticated routes (POST /auth/signout,
- * POST /history, DELETE /history, DELETE /users/me) — never to GET
+ * DELETE /history, DELETE /users/me) — never to GET
  * requests, which must remain safe/idempotent by definition and are
  * not a CSRF target. Fails closed: any missing or mismatched value
  * throws, never falls through to "allow." CORS alone is never relied

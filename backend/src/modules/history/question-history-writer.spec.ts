@@ -8,6 +8,9 @@ import type { PrismaService } from '../../database/prisma.service';
 import { HistoryService, HISTORY_DUPLICATE_WINDOW_MS } from './history.service';
 import { AnalysisRateLimitGuard } from '../analysis/security/analysis-rate-limit.guard';
 import { AnalysisController } from '../analysis/controller/analysis.controller';
+import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import { RequestMethod } from '@nestjs/common';
+import { HistoryController } from './history.controller';
 import type { AnalysisService } from '../analysis/service/analysis.service';
 
 /**
@@ -199,5 +202,45 @@ describe('history is written by the explicit Ask — and only by it', () => {
       'src/modules/analysis/controller/analysis.controller.ts',
       'src/modules/history/history.service.ts',
     ]);
+  });
+});
+
+describe('R1.1 — there is no second, public history writer', () => {
+  const routes = () =>
+    Object.getOwnPropertyNames(HistoryController.prototype)
+      .filter((name) => name !== 'constructor')
+      .map((name) => {
+        const handler = (HistoryController.prototype as unknown as Record<string, object>)[name];
+        return { name, method: Reflect.getMetadata(METHOD_METADATA, handler) as RequestMethod | undefined };
+      })
+      .filter((route) => route.method !== undefined);
+
+  it('HistoryController exposes GET and DELETE /history only — no POST (or any other write verb)', () => {
+    expect(Reflect.getMetadata(PATH_METADATA, HistoryController)).toBe('history');
+    expect(routes().map((route) => RequestMethod[route.method as RequestMethod]).sort()).toEqual(['DELETE', 'GET']);
+    for (const verb of [RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.ALL]) {
+      expect(routes().some((route) => route.method === verb)).toBe(false);
+    }
+  });
+
+  it('HistoryService has no public create(); recordExplicitQuestion is the sole writer', () => {
+    expect((HistoryService.prototype as unknown as Record<string, unknown>).create).toBeUndefined();
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { execSync } = require('child_process') as typeof import('child_process');
+    const writers = execSync('git grep -n -E "searchHistoryEntry[.](create|createMany|upsert|update|updateMany)[(]" -- "src/**/*.ts"', {
+      cwd: `${__dirname}/../../..`,
+    })
+      .toString()
+      .trim()
+      .split('\n')
+      .filter((line) => !line.split(':')[0].endsWith('.spec.ts'));
+    expect(writers).toHaveLength(1);
+    expect(writers[0]).toMatch(/^src\/modules\/history\/history\.service\.ts:/);
+  });
+
+  it('the create-history DTO that fed the removed POST is gone', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { existsSync } = require('fs') as typeof import('fs');
+    expect(existsSync(`${__dirname}/create-history-entry.dto.ts`)).toBe(false);
   });
 });

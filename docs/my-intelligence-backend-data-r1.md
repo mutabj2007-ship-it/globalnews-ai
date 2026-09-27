@@ -10,10 +10,10 @@ The visible My Intelligence UI is Claude H's (`517e450…`, not yet on the remot
 |---|---|---|---|
 | GET | `/users/me/intelligence/feed` | Following / For You / New Since from retained reporting, plus the stable `previousSeenAt` | DB only |
 | GET | `/users/me/saved/stories` | Saved Stories (newest first, ≤200) | DB only |
-| POST | `/users/me/saved/stories` | Save by `{ url, providerArticleId? }`; metadata resolved server-side; idempotent | DB only |
+| POST | `/users/me/saved/stories` | Save by `{ url, providerArticleId? }`. Metadata is resolved server-side, and the stored `providerArticleId` is the resolved `Article.id`, never the hint. Idempotent. The 200 cap is checked in one Serializable transaction (R1.1) | DB only |
 | DELETE | `/users/me/saved/stories/:articleRef` | Unsave; idempotent | DB only |
 | POST | `/users/me/seen` | Existing route. The visit boundary is now repaired (see below) | DB only |
-| GET/DELETE | `/history` | Existing routes. The list is now bounded to 50 | DB only |
+| GET/DELETE | `/history` | Existing routes. The list is now bounded to 50. **R1.1: `POST /history` is removed**; the only writer is `recordExplicitQuestion` behind `POST /analysis/news` | DB only |
 | POST | `/analysis/news` | Existing route. Adds an optional `selection` and the one history writer | the only AI boundary |
 
 **Routing note.** The contract named Saved Stories `/saved/stories`. It is mounted at `/users/me/saved/stories` because `frontend/next.config.mjs` states the authenticated `/api` family set as exactly seven ("NOT ONE MORE"). The resource, semantics and guards are otherwise as contracted, and the prefix can be moved if the CTO prefers a new family.

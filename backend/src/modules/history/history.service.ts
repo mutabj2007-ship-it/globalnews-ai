@@ -30,6 +30,8 @@ export const HISTORY_DUPLICATE_WINDOW_MS = 30_000;
  *
  * MY INTELLIGENCE R1 adds the missing WRITER (recordExplicitQuestion, called
  * from the one analysis entry point), a bounded list and bounded retention.
+ * R1.1 removes create() and POST /history: recordExplicitQuestion is the ONLY
+ * product writer, so a client cannot create Recent Intelligence directly.
  */
 @Injectable()
 export class HistoryService {
@@ -38,13 +40,6 @@ export class HistoryService {
   private readonly inFlight = new Set<string>();
 
   constructor(private readonly prisma: PrismaService) {}
-
-  async create(userId: string, query: string, countryCode: string | undefined): Promise<HistoryEntrySummary> {
-    return this.prisma.searchHistoryEntry.create({
-      data: { userId, query, countryCode },
-      select: { id: true, query: true, countryCode: true, createdAt: true },
-    });
-  }
 
   /**
    * MY INTELLIGENCE R1 — THE ONE HISTORY WRITER.
