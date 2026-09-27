@@ -197,8 +197,8 @@ describe('TOPIC CONTINUITY R1 — the dock carries the subject, visibly and reve
 
 describe('LANE E — every shipped Home suggestion: tap = 0, edit = 0, explicit Ask = exactly 1', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { HOME_SUGGESTED_QUESTIONS } = require('@globalnews-ai/shared') as typeof import('@globalnews-ai/shared');
-  const ALL = [...HOME_SUGGESTED_QUESTIONS.en, ...HOME_SUGGESTED_QUESTIONS.pl];
+  const { HOME_SUGGESTIONS } = require('@globalnews-ai/shared') as typeof import('@globalnews-ai/shared');
+  const ALL = [...HOME_SUGGESTIONS.en, ...HOME_SUGGESTIONS.pl];
 
   it.each(ALL)('"%s" stages in the composer and costs nothing until Send', (suggestion) => {
     transport.mockReturnValue(new Promise(() => undefined));

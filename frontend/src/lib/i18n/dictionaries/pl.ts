@@ -1,4 +1,4 @@
-import { HOME_SUGGESTED_QUESTIONS } from '@globalnews-ai/shared';
+import { HOME_SUGGESTIONS } from '@globalnews-ai/shared';
 import type { Dictionary } from './index';
 import { adminPl } from './adminPl';
 import { supportPl } from './supportPl';
@@ -396,7 +396,7 @@ export const pl: Dictionary = {
     questionMaxLengthReached: 'Osiągnięto maksymalną długość pytania',
     tryPrefix: 'Na przykład:',
     /* LANE E — the canonical list: shared/src/home-suggestions.ts. */
-    exampleQuestions: [...HOME_SUGGESTED_QUESTIONS.pl],
+    exampleQuestions: [...HOME_SUGGESTIONS.pl],
     credibilityLiveSources: 'Źródła na żywo',
     credibilityAiAnalysis: 'Analiza AI',
     credibilityEvidence: 'Kontekst oparty na dowodach',

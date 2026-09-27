@@ -13,7 +13,7 @@ import type { ProcessStep, TrustItem, FooterLinkGroup } from '@/types/home';
 /*
  * LANE E \u2014 the rotating example questions no longer live here. This array had
  * no importer and could only drift from what Home rendered; the one canonical
- * list is HOME_SUGGESTED_QUESTIONS in shared/src/home-suggestions.ts.
+ * list is HOME_SUGGESTIONS in shared/src/home-suggestions.ts.
  */
 
 /**

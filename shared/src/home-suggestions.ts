@@ -29,7 +29,7 @@
  * decision reported above") are the long-term direction and a separate
  * feature; this is the safe static set.
  */
-export const HOME_SUGGESTED_QUESTIONS = {
+export const HOME_SUGGESTIONS = {
   en: [
     'What’s happening in the Middle East right now?',
     'Explain the new EU AI regulation in plain English',

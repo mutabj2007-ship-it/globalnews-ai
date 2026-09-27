@@ -1,6 +1,6 @@
 import {
   ANALYSIS_TOTAL_BUDGET_MS,
-  HOME_SUGGESTED_QUESTIONS,
+  HOME_SUGGESTIONS,
   resolveCountryByAnyIdentifier,
   type CountryNewsResponse,
   type NewsArticle,
@@ -151,8 +151,8 @@ interface SuggestionCase {
   readonly target: NewsArticle;
 }
 
-const EN = HOME_SUGGESTED_QUESTIONS.en;
-const PL = HOME_SUGGESTED_QUESTIONS.pl;
+const EN = HOME_SUGGESTIONS.en;
+const PL = HOME_SUGGESTIONS.pl;
 
 const CASES: readonly SuggestionCase[] = [
   {

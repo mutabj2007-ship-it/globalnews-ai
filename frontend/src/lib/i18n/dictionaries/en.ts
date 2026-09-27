@@ -4,7 +4,7 @@
  * so the SAME rendering code path can look up either language, not to
  * change any existing English wording.
  */
-import { HOME_SUGGESTED_QUESTIONS } from '@globalnews-ai/shared';
+import { HOME_SUGGESTIONS } from '@globalnews-ai/shared';
 import { adminEn } from './adminEn';
 import { supportEn } from './supportEn';
 
@@ -527,7 +527,7 @@ export const en = {
      * LANE E \u2014 the list itself now lives in shared/src/home-suggestions.ts,
      * the one canonical source the backend integrity test also exercises.
      */
-    exampleQuestions: [...HOME_SUGGESTED_QUESTIONS.en] as string[],
+    exampleQuestions: [...HOME_SUGGESTIONS.en] as string[],
     credibilityLiveSources: 'Live sources',
     credibilityAiAnalysis: 'AI analysis',
     credibilityEvidence: 'Evidence-based context',
