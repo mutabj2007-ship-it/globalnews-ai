@@ -189,7 +189,6 @@ describe('A · one shared saved-story state — never one GET per card', () => {
       ['home/SixtySecondBrief.tsx', 'StoryBookmark'],
       ['home/HomeAccountPanel.tsx', 'StoryBookmark'],
       ['map/CountryArticleCard.tsx', 'StoryBookmark'],
-      ['map/shell/SourceCard.tsx', 'StoryBookmark'],
       ['analysis-frame/SourcesReporting.tsx', 'StoryBookmark'],
       ['analysis-frame/EvidenceLibrary.tsx', 'StoryBookmark'],
       ['analysis-frame/SourcesDock.tsx', 'StoryBookmark'],
@@ -199,6 +198,14 @@ describe('A · one shared saved-story state — never one GET per card', () => {
     for (const [file, marker] of surfaces) {
       expect(`${file}: ${readFileSync(join(root, file), 'utf8').includes(`<${marker}`)}`).toBe(`${file}: true`);
     }
+    /*
+      The Spatial map SourceCard is shared with the Conflict dashboard, whose module graph stays
+      account-free: it renders the bookmark through an import-free slot that /map fills.
+    */
+    const sourceCard = readFileSync(join(root, 'map/shell/SourceCard.tsx'), 'utf8');
+    expect(sourceCard).toContain('useContext(StoryBookmarkSlot)');
+    expect(sourceCard).not.toContain("from '@/components/bookmark/StoryBookmark'");
+    expect(readFileSync(join(root, '..', 'app/map/page.tsx'), 'utf8')).toContain('<MapBookmarkProvider>');
     /* No component mounts its own saved-story read any more. */
     const home = readFileSync(join(root, 'my-intelligence/HomeSaveControl.tsx'), 'utf8');
     expect(home).not.toContain('useSavedStories');
