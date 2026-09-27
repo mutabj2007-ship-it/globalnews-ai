@@ -101,6 +101,24 @@ export const PRIVATE_ROUTES: readonly RouteEntry[] = [
       'document here to index.',
   },
   {
+    /*
+      MY INTELLIGENCE R1.2 — a signed-in personal workspace, registered for the
+      same reason /history is: it reads the account session and renders one
+      person's own saved stories, follows and question history. There is no
+      stable public document here to index, so it is noindex and out of the
+      sitemap, and it is recorded in the registry rather than special-cased in
+      the route, so the registry stays the one place that decides.
+    */
+    path: '/my-intelligence',
+    indexability: 'noindex',
+    sitemap: false,
+    userDependent: true,
+    ruling: 'authorization',
+    rationale:
+      "\u00a7B: user-specific personal workspace. Saved stories, followed places and question history " +
+      'belong to one account and are meaningless to any other reader.',
+  },
+  {
     path: '/history',
     indexability: 'noindex',
     sitemap: false,

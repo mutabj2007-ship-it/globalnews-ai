@@ -609,7 +609,22 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
     // CTO-accepted Election adds two provider-free previews; the live route stays closed.
     // K adds the retained Imihigo pair and the provider-free Delivery preview pair.
     // CTO routing ruling 2026-09-23: dedicated idle Ask, full workspace retained.
-    expect(pages).toHaveLength(50);
+    /*
+      MY INTELLIGENCE R1.2 · ONE MORE ROUTE, UNDER THE PRODUCT OWNER'S RULING.
+
+      `/my-intelligence`, added by the authorized frontend implementation lane
+      for the frozen MY-INTELLIGENCE-R1.2 design authority. Same treatment as
+      `/third-party-notices` and the two `/humanitarian` routes above, and for
+      the reason this assertion already gives: the count moves with the tree
+      rather than the assertion being relaxed. The route is registered in
+      `routes.ts` as noindex and out of the sitemap, and the registry test above
+      already asserts that.
+
+      THIS DOES NOT CLEAR THE CARRIED FAILURE. The Windows path-separator defect
+      described further up is untouched, so this spec stays in the carried
+      baseline set exactly as before.
+    */
+    expect(pages).toHaveLength(51);
     expect(pages).toContain('/conflict');
     expect(classify('/conflict').indexability).toBe('noindex');
     expect(pages).toContain('/ask');

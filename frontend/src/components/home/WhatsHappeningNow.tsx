@@ -2,6 +2,7 @@ import type { JSX } from 'react';
 import { Info } from 'lucide-react';
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { HomeSaveControl } from '@/components/my-intelligence/HomeSaveControl';
 import { StoryRailMotion } from '@/components/home/StoryRailMotion';
 import { StoryVisual } from '@/components/home/StoryVisual';
 import {
@@ -461,6 +462,13 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
   const categoryLabels = getDictionary(language).map.categories;
 
   return (
+    /*
+      MY INTELLIGENCE R1.2 — the card link is UNCHANGED, and the save control is
+      its sibling. The wrapper exists only to give that sibling a positioning
+      context; it adds no box, no spacing and no style of its own, so the frozen
+      Home R6 card is byte-identical to what it was.
+    */
+    <div className="relative h-full w-full">
     <a
       href={article.url}
       target="_blank"
@@ -545,7 +553,9 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
         <span className="mt-[3px] line-clamp-3 text-[13px] leading-[1.38] text-[#93a9c2] sm:line-clamp-3 lg:mt-[7px] lg:text-[12.5px] lg:leading-[1.45] xl:mt-[8px] xl:text-[12px] xl:leading-[1.48]">
           {article.summary}
         </span>
-        <span className="mt-auto flex items-center gap-1.5 pt-2 text-[11.5px] tracking-[0.005em] text-[#8299b4] lg:pt-2.5 lg:text-[11px] xl:pt-3">
+        {/* `pr-[52px]` reserves the 44px save control's column so the source
+            line can never run underneath it. */}
+        <span className="mt-auto flex items-center gap-1.5 pr-[52px] pt-2 text-[11.5px] tracking-[0.005em] text-[#8299b4] lg:pt-2.5 lg:text-[11px] xl:pt-3">
           <span className="truncate">{article.sourceName}</span>
           <span aria-hidden="true">·</span>
           <span className="shrink-0">{pluralWithForms(article.sourcesCount, language, t.sourceForms)}</span>
@@ -559,6 +569,8 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
         </span>
       </span>
     </a>
+      <HomeSaveControl url={article.url} language={language} />
+    </div>
   );
 }
 

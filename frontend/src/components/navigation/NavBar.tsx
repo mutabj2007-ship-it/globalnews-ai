@@ -289,6 +289,8 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
         />
 
         <AccountControl
+          myIntelligenceLabel={getDictionary(language).myIntelligence.accountMenuItem}
+          myIntelligenceTag={getDictionary(language).myIntelligence.accountMenuItemTag}
           signInLabel={t.signIn}
           /*
              M66.2 — every released GN-CD-027 value was already exact, including
@@ -475,6 +477,8 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
 
             <div className="mt-6">
               <AccountControl
+                myIntelligenceLabel={getDictionary(language).myIntelligence.accountMenuItem}
+                myIntelligenceTag={getDictionary(language).myIntelligence.accountMenuItemTag}
                 signInLabel={t.signIn}
                 signInClassName="mt-4 w-full rounded-[9px] border border-[rgba(56,189,248,0.5)] bg-gradient-to-b from-[rgba(37,99,235,0.95)] to-[rgba(29,78,216,0.95)] px-5 py-3 text-center text-sm font-semibold text-[#eaf6ff]"
                 accountLabel={t.account}

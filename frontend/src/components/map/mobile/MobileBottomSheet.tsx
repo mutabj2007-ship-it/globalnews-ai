@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { sheetHeightAt, workspaceMapFraction } from '@/lib/map/spatial/mapWorkspace';
 
 /**
  * MOBILE SPATIAL MVP — THE BOTTOM INTELLIGENCE SHEET.
@@ -85,6 +86,15 @@ export const SPATIAL_DETENTS = { peek: PEEK_HEIGHT_PX, half: HALF_FRACTION, full
 export interface MobileBottomSheetProps {
   /** A recovered domain may supply its accepted detents; defaults preserve Spatial. */
   readonly geometry?: { readonly peek: number; readonly half: number; readonly full: number };
+  /**
+   * MAP MOBILE INTERACTION R1 — the available Map workspace A (see
+   * lib/map/spatial/mapWorkspace). When given, every stop is a share of A
+   * rather than of the raw viewport, and the sheet stops measuring for itself.
+   * Absent (the Conflict surface), the sheet keeps its accepted behaviour.
+   */
+  readonly workspaceHeight?: number;
+  /** Where the sheet's bottom edge sits above the viewport bottom — the visible nav block. */
+  readonly bottomOffset?: number;
   readonly stop: SheetStop;
   readonly onStopChange: (stop: SheetStop) => void;
   readonly labels: MobileBottomSheetLabels;
@@ -124,16 +134,20 @@ function heightFor(stop: SheetStop, viewportHeight: number, geometry: NonNullabl
  *
  * Exported so the guard measures what the sheet DOES rather than what its
  * constants imply — the arithmetic above is exactly where the two diverged.
+ *
+ * MAP MOBILE INTERACTION R1 — the argument is the available Map workspace A,
+ * not the raw viewport: it delegates to the one workspace model so this guard
+ * and the sheet cannot disagree.
  */
-export function mapFractionAt(stop: SheetStop, viewportHeight: number): number {
-  if (viewportHeight <= 0) return 1;
-
-  return (viewportHeight - heightFor(stop, viewportHeight)) / viewportHeight;
+export function mapFractionAt(stop: SheetStop, workspaceHeight: number): number {
+  return workspaceMapFraction(stop, workspaceHeight, SPATIAL_DETENTS);
 }
 
 export function MobileBottomSheet({
   stop,
   geometry = SPATIAL_DETENTS,
+  workspaceHeight,
+  bottomOffset = 0,
   onStopChange,
   labels,
   children,
@@ -159,8 +173,16 @@ export function MobileBottomSheet({
     is a fraction of the viewport, so a zero measurement would produce a zero
     sheet; until a real height exists the sheet renders at its PEEK constant,
     which is a number and not a guess.
+
+    MAP MOBILE INTERACTION R1 — only when no workspace is supplied. With one,
+    the workspace model is the single measurement and the raw viewport is not
+    read here at all.
   */
+  const workspaceMode = workspaceHeight !== undefined;
+
   useEffect(() => {
+    if (workspaceMode) return undefined;
+
     const measure = (): void => setViewportHeight(window.innerHeight);
 
     measure();
@@ -171,9 +193,16 @@ export function MobileBottomSheet({
       window.removeEventListener('resize', measure);
       window.removeEventListener('orientationchange', measure);
     };
-  }, []);
+  }, [workspaceMode]);
 
-  const settled = viewportHeight > 0 ? heightFor(stop, viewportHeight, geometry) : geometry.peek;
+  /* One height rule per mode: a share of A when the workspace is supplied. */
+  const reference = workspaceMode ? workspaceHeight : viewportHeight;
+  const stopHeight = useCallback(
+    (candidate: SheetStop): number =>
+      workspaceMode ? sheetHeightAt(candidate, reference, geometry) : heightFor(candidate, reference, geometry),
+    [workspaceMode, reference, geometry],
+  );
+  const settled = reference > 0 ? stopHeight(stop) : geometry.peek;
   const height = dragHeight ?? settled;
 
   const onPointerDown = useCallback(
@@ -191,7 +220,7 @@ export function MobileBottomSheet({
     (event: ReactPointerEvent<HTMLButtonElement>) => {
       const drag = dragRef.current;
 
-      if (drag === null || viewportHeight === 0) return;
+      if (drag === null || reference === 0) return;
 
       /* Upward movement is a NEGATIVE delta and a TALLER sheet. */
       const travelled = drag.startY - event.clientY;
@@ -200,11 +229,11 @@ export function MobileBottomSheet({
 
       const next = drag.startHeight + travelled;
       const min = geometry.peek;
-      const max = heightFor('FULL', viewportHeight, geometry);
+      const max = stopHeight('FULL');
 
       setDragHeight(Math.max(min, Math.min(max, next)));
     },
-    [viewportHeight, geometry],
+    [reference, geometry, stopHeight],
   );
 
   const endDrag = useCallback(
@@ -222,14 +251,14 @@ export function MobileBottomSheet({
       dragRef.current = null;
       setDragHeight(null);
 
-      if (viewportHeight === 0) return;
+      if (reference === 0) return;
 
       /* NEAREST BY DISTANCE, not by direction — see this file's own note. */
       let nearest: SheetStop = 'PEEK';
       let best = Number.POSITIVE_INFINITY;
 
       for (const candidate of SHEET_STOPS) {
-        const distance = Math.abs(heightFor(candidate, viewportHeight, geometry) - landed);
+        const distance = Math.abs(stopHeight(candidate) - landed);
 
         if (distance < best) {
           best = distance;
@@ -239,7 +268,7 @@ export function MobileBottomSheet({
 
       if (nearest !== stop) onStopChange(nearest);
     },
-    [dragHeight, onStopChange, stop, viewportHeight, geometry],
+    [dragHeight, onStopChange, stop, reference, stopHeight],
   );
 
   /* Tap cycles PEEK -> HALF -> FULL -> PEEK, so the sheet works without a drag. */
@@ -263,10 +292,11 @@ export function MobileBottomSheet({
       data-gn="mobile-sheet"
       data-gn-stop={stop}
       data-gn-dragging={dragging ? 'true' : 'false'}
+      data-gn-workspace={workspaceMode ? String(reference) : undefined}
       aria-label={labels.sheetLabel}
-      style={{ height: `${height}px` }}
+      style={{ height: `${height}px`, bottom: `${bottomOffset}px` }}
       className={`pointer-events-auto absolute inset-x-0 bottom-0 z-40 flex flex-col border-t border-sp-line-2 bg-sp-panel ${
-        dragging ? '' : 'transition-[height] duration-200 ease-out'
+        dragging ? '' : 'transition-[height,bottom] duration-200 ease-out'
       }`}
     >
       <button

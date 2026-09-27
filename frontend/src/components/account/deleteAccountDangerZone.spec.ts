@@ -104,9 +104,19 @@ describe('the quick account dropdown can no longer delete an account', () => {
   it('keyboard focus cannot reach deletion from the dropdown — every focusable entry in it is a link or Sign Out', () => {
     const popup = accountControlSource.slice(accountControlSource.indexOf('{menuOpen && ('));
     const focusable = popup.match(/<(a|button|Link)\b/g) ?? [];
-    // Identity <p>, History, Support, Settings, Sign Out — four focusable
-    // controls, none destructive. The trigger itself sits above this slice.
-    expect(focusable).toHaveLength(4);
+    /*
+      Identity <p>, My Intelligence, History, Support, Settings, Sign Out —
+      five focusable controls, none destructive. The trigger itself sits above
+      this slice.
+
+      MY INTELLIGENCE R1.2 moved this count from four to five. What this
+      assertion exists to protect is unchanged and is, if anything, easier to
+      see now: the new entry is a <Link>, so the only thing it can do is
+      navigate, and the match below still finds four Links and one Sign Out
+      button. A count that stayed at four would have gone red for a navigation
+      link while saying "deletion is reachable", which is the wrong alarm.
+    */
+    expect(focusable).toHaveLength(5);
     expect(popup).not.toContain('window.confirm');
   });
 });

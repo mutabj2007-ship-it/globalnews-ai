@@ -7,6 +7,7 @@
 import { HOME_SUGGESTIONS } from '@globalnews-ai/shared';
 import { adminEn } from './adminEn';
 import { supportEn } from './supportEn';
+import { myIntelligenceEn } from './myIntelligenceEn';
 
 export const en = {
   /**
@@ -26,6 +27,13 @@ export const en = {
    * reaches its strings through the same getDictionary(language) call.
    */
   support: supportEn,
+
+  /**
+   * MY INTELLIGENCE R1.2 — the signed-in personal intelligence namespace,
+   * folded in exactly as `admin` and `support` are, so it resolves through the
+   * same getDictionary(language) call and adds no second localization path.
+   */
+  myIntelligence: myIntelligenceEn,
 
   languageSelectorLabel: 'Language',
   yourQuestion: 'Your question',
@@ -94,6 +102,12 @@ export const en = {
   evidenceLanguageLabel: 'Evidence language',
   askAi: {
     launcher: 'Ask AI',
+    /*
+      MAP R1 item 7 — the dock says WHERE it is asking about, and does not call
+      it a story. A geography is a scope, not an anchor; the story line above
+      keeps its own wording so a reader can tell the two apart at a glance.
+    */
+    askingAboutGeography: 'Asking about {place}',
     title: 'Ask GlobalNews AI',
     panelLabel: 'Ask GlobalNews AI',
     close: 'Close',
@@ -1623,7 +1637,7 @@ export const en = {
       card: {
         heading: 'Selected geography',
         scope: 'Evidence',
-        watching: 'Watching',
+        watching: 'Following',
         stateHeading: 'Evidence state',
         ceilingNote: 'This is the level the evidence asserts. Anything finer on the map is reference geography.',
         reports: 'Reports',
@@ -1787,10 +1801,23 @@ export const en = {
         askAiShort: 'Ask AI',
         topicsHeading: 'Topics',
         clearSelection: 'Clear selection',
+        /*
+          MAP R1 — FOLLOW SPEAKS FOLLOW'S VERB.
+
+          These read 'Watching' and 'Stop watching'. Part IV separates Follow
+          from Watch on four axes and the FIRST of them is the verb, so a Follow
+          control whose on-state says "Watching" is the one thing
+          `watchRuntimeGate.ts` states must never happen: "Follow state is never
+          relabelled as Watch." It also claimed a capability the product does
+          not have while WATCH_RUNTIME_ACTIVE is false.
+
+          The control, its hover/focus swap and its API are untouched; only the
+          words change.
+        */
         follow: {
           follow: 'Follow this country',
-          watching: 'Watching',
-          stopWatching: 'Stop watching',
+          watching: 'Following',
+          stopWatching: 'Unfollow',
           pending: 'Saving\u2026',
           failed: 'Follow not saved \u2014 nothing changed',
           signIn: 'Sign in to follow',

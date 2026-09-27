@@ -29,13 +29,13 @@ import { useResolvedRegion } from '@/lib/map/region/useResolvedRegion';
 import { RegionIdentityCard } from '@/components/map/shell/RegionIdentityCard';
 import {
   MobileBottomSheet,
-  FULL_FRACTION,
-  HALF_FRACTION,
   MIN_TOUCH_PX,
-  PEEK_HEIGHT_PX,
+  SPATIAL_DETENTS,
   type SheetStop,
 } from './MobileBottomSheet';
 import { MobilePlaceSearch } from './MobilePlaceSearch';
+import { useMapWorkspace } from './useMapWorkspace';
+import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { BAND_AVAILABLE } from '@/lib/map/spatial/controlBands';
 import { WatchCta } from '@/components/map/shell/monetization/WatchCta';
 import { WatchComposer } from '@/components/map/shell/monetization/WatchComposer';
@@ -48,6 +48,9 @@ import {
   type WatchSensitivity,
 } from '@/lib/map/monetization/watchModel';
 import { watchCtaStage } from '@/lib/map/monetization/watchCtaLadder';
+import { WATCH_RUNTIME_ACTIVE } from '@/lib/map/monetization/watchRuntimeGate';
+import { loadActionIsOffered } from '@/lib/map/retrieval/countryReadRequest';
+import type { CountryReadPresentation } from '@/lib/map/retrieval/countryReadPresentation';
 import { ChangeStrip } from '@/components/map/shell/monetization/ChangeStrip';
 import { ActionDeck, type DeckAction } from '@/components/map/shell/monetization/ActionDeck';
 import { AnalysisCostPrompt } from '@/components/map/shell/monetization/AnalysisCostPrompt';
@@ -122,6 +125,14 @@ export interface MobileSpatialShellProps {
   readonly follow?: FollowRelationship;
   readonly selectionDetail?: SelectionDetail;
   readonly countryStoryCounts?: Record<string, number>;
+  /**
+   * MAP R1 — the explicit country read, passed in rather than re-derived.
+   *
+   * The owner already builds this from Main's own state machine; a second
+   * derivation here would be a second rule to keep in step. Optional, so the
+   * legacy composition and every existing caller render exactly as before.
+   */
+  readonly countryRead?: CountryReadPresentation;
 }
 
 export function MobileSpatialShell({
@@ -140,6 +151,7 @@ export function MobileSpatialShell({
   follow,
   selectionDetail,
   countryStoryCounts,
+  countryRead,
 }: MobileSpatialShellProps): JSX.Element {
   const dictionary = getDictionary(language);
   const spatial = dictionary.map.spatial;
@@ -201,23 +213,34 @@ export function MobileSpatialShell({
 
     `PERMANENT_HUD_PX` on top is the 82px hard cap this shell already declares.
   */
-  const stopRef = useRef<SheetStop>(stop);
-  stopRef.current = stop;
+  /*
+    ══ MAP MOBILE INTERACTION R1 · ONE AVAILABLE-WORKSPACE MODEL ════════════
+
+    Raw-viewport arithmetic is retired. The sheet height, mapFractionAt, this
+    camera fit inset and the zoom anchor all read the SAME layout, derived from
+
+        A = visualViewportHeight − 52px top bar − visible bottom-nav block
+
+    (lib/map/spatial/mapWorkspace). The bottom nav is visible at PEEK and HALF
+    and hidden at FULL and while the keyboard is open, and its visibility is
+    derived in the same computation as A — so a FULL transition settles as
+    nav leaves layout → A recomputes → sheet and camera settle, with no refit
+    from the old nav-visible geometry.
+
+    The fit reads the layout through a ref at RESOLVE time, for the reason
+    R2 gave: what covers the map is what is covering it when the fit happens.
+  */
+  const navHostRef = useRef<HTMLDivElement>(null);
+  const workspace = useMapWorkspace(stop, navHostRef, SPATIAL_DETENTS);
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
 
   const fitInset = useCallback(() => {
-    const viewportHeight = typeof window === 'undefined' ? 0 : window.innerHeight;
+    const current = workspaceRef.current;
 
-    if (viewportHeight <= 0) return { top: PERMANENT_HUD_PX };
+    if (current.workspacePx <= 0) return { top: PERMANENT_HUD_PX };
 
-    const current = stopRef.current;
-    const sheet =
-      current === 'PEEK'
-        ? PEEK_HEIGHT_PX
-        : current === 'HALF'
-          ? Math.floor(viewportHeight * HALF_FRACTION)
-          : Math.floor(viewportHeight * FULL_FRACTION);
-
-    return { top: PERMANENT_HUD_PX, bottom: sheet };
+    return { top: current.fitInset.top, bottom: current.fitInset.bottom };
   }, []);
 
   const availability = useMemo(
@@ -636,7 +659,7 @@ export function MobileSpatialShell({
         data-gn="mobile-zoom"
         role="group"
         aria-label={shell.controlsLabel}
-        style={{ bottom: stop === 'PEEK' ? PEEK_HEIGHT_PX + 16 : `calc(${HALF_FRACTION * 100}dvh + 16px)` }}
+        style={{ bottom: workspace.zoomBottomPx }}
         className="pointer-events-none absolute right-[10px] z-30 flex flex-col gap-[8px] transition-[bottom] duration-200 ease-out [&_button]:pointer-events-auto"
       >
         <button
@@ -667,6 +690,8 @@ export function MobileSpatialShell({
       <MobileBottomSheet
         stop={stop}
         onStopChange={setStop}
+        workspaceHeight={workspace.workspacePx}
+        bottomOffset={workspace.sheetBottomPx}
         labels={{
           sheetLabel: mobile.sheetLabel,
           handleLabel: mobile.handleLabel,
@@ -860,7 +885,20 @@ export function MobileSpatialShell({
               "recognisable, not loud" — so the glyph and the button are one
               ladder, not two controls. Only one is ever mounted.
             */}
-            {stop === 'PEEK' && (
+            {/*
+              MAP R1 · WATCH IS DORMANT, SO IT IS NOT OFFERED.
+
+              `WATCH_RUNTIME_ACTIVE` is false: there is no Watch module, no
+              cron, no delivery and no backend. The stage-2 mint glyph said a
+              standing assignment could be started here, and on a phone it was
+              the first thing a reader met after selecting a country.
+
+              Gated rather than deleted. The ladder, the stage function and the
+              composer are untouched and correct; what is wrong is offering
+              them while the runtime behind them does not exist. When the
+              runtime lands, the constant moves and this returns unchanged.
+            */}
+            {stop === 'PEEK' && WATCH_RUNTIME_ACTIVE && (
               <div data-gn="mobile-peek-watch" className="mt-[10px]">
                 <WatchCta
                   stage={watchStage}
@@ -879,11 +917,22 @@ export function MobileSpatialShell({
                   standing assignment first, the feed filter beneath it, so the
                   two never read as variants of one control.
                 */}
-                <WatchCta
-                  stage={watchStage}
-                  labels={spatial.monetization.watch}
-                  onOpenComposer={() => openSheetSurface('watchComposer')}
-                />
+                {/*
+                  MAP R1 — the filled-mint #5BE3A8 primary is not rendered while
+                  Watch is dormant. Part IV reserves that fill for a watch that
+                  is RUNNING, and this file says so itself further up; a
+                  full-width mint primary on selection claimed a live capability
+                  the product does not have. With it gone, FOLLOW becomes the
+                  standing action on the phone sheet, which is the real,
+                  persistent, authenticated one.
+                */}
+                {WATCH_RUNTIME_ACTIVE && (
+                  <WatchCta
+                    stage={watchStage}
+                    labels={spatial.monetization.watch}
+                    onOpenComposer={() => openSheetSurface('watchComposer')}
+                  />
+                )}
 
                 {follow && (
                   <FollowControl
@@ -959,6 +1008,51 @@ export function MobileSpatialShell({
                     <span>{spatial.monetization.timeline.title}</span>
                     <span className="text-sp-ink-3">{spatial.monetization.timeline.openLabel}</span>
                   </button>
+                )}
+
+                {/*
+                  MAP R1 · THE EXPLICIT COUNTRY READ, NOW ON THE PHONE TOO.
+
+                  Desktop has offered this since the retrieval contract landed;
+                  the phone did not, so a reader who selected a country with no
+                  retained reporting had no honest way to ask for any — the
+                  surface simply said nothing was retained and stopped.
+
+                  It is the SAME action, the same state machine and the same
+                  `loadActionIsOffered` authority the card uses. Nothing new is
+                  decided here, and in particular this is NOT wired to
+                  selection: it runs only when the reader presses it, which is
+                  what keeps a country tap at zero requests.
+                */}
+                {countryRead && loadActionIsOffered(countryRead.state) && (
+                  <div data-gn="mobile-country-read">
+                    <p
+                      data-gn="mobile-country-read-state"
+                      className="mb-[6px] font-gn-mono text-[9px] uppercase tracking-[0.12em] text-sp-ink-2"
+                      {...(countryRead.state === 'LOADING' || countryRead.state === 'FAILED'
+                        ? { role: 'status' as const, 'aria-live': 'polite' as const }
+                        : {})}
+                    >
+                      {countryRead.state === 'FAILED'
+                        ? spatial.card.countryRead.failed
+                        : countryRead.state === 'READY_NO_COVERAGE'
+                          ? spatial.card.countryRead.noCoverage
+                          : countryRead.state === 'SELECTED_NOT_LOADED'
+                            ? spatial.card.countryRead.notLoaded
+                            : null}
+                    </p>
+                    <button
+                      type="button"
+                      data-gn="mobile-action-load-country"
+                      onClick={countryRead.onLoad}
+                      style={{ minHeight: MIN_TOUCH_PX }}
+                      className="w-full cursor-pointer rounded-[2px] border border-sp-cyan bg-sp-cyan px-[8px] font-gn-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-sp-cyan-on transition-colors hover:bg-sp-cyan-hover"
+                    >
+                      {countryRead.state === 'READY' || countryRead.state === 'READY_NO_COVERAGE'
+                        ? spatial.card.countryRead.reload
+                        : spatial.card.countryRead.load}
+                    </button>
+                  </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-[8px]">
@@ -1047,6 +1141,25 @@ export function MobileSpatialShell({
           </>
         )}
       </MobileBottomSheet>
+
+      {/*
+        ══ MAP MOBILE INTERACTION R1 · THE PHONE BOTTOM NAVIGATION ON /map ══
+
+        The product's one phone bottom nav, mounted here with the ruled
+        visibility: PEEK visible, HALF visible, FULL hidden, keyboard open
+        hidden — and restored symmetrically on the way back down. `hidden`
+        takes it out of rendering entirely, and the workspace model measures its
+        real height (safe area included) while it is shown. The sheet sits on
+        top of it (sheetBottomPx), never underneath.
+      */}
+      <div
+        ref={navHostRef}
+        data-gn="map-bottom-nav"
+        data-gn-nav-visible={workspace.navVisible ? 'true' : 'false'}
+        hidden={!workspace.navVisible}
+      >
+        <MobileBottomNav language={language} intelligenceHref="/#intelligence-modules" />
+      </div>
 
       {/*
         ── PART IV §16 · MOBILE SUSTAINED SURFACES ──────────────────────────

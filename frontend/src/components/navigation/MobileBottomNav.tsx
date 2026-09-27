@@ -4,6 +4,12 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 
 interface MobileBottomNavProps {
   language?: LanguageCode;
+  /**
+   * MAP MOBILE INTERACTION R1 — where "Intelligence" points. Home keeps its
+   * in-page anchor (the default); a route without that section, such as /map,
+   * passes the Home-qualified anchor so the destination still exists.
+   */
+  intelligenceHref?: string;
 }
 
 /**
@@ -32,8 +38,13 @@ const NAV_ITEMS = [
   { key: 'intelligence', href: '#intelligence-modules', Icon: Sparkles },
 ] as const;
 
-export function MobileBottomNav({ language = 'en' }: MobileBottomNavProps): JSX.Element {
+export function MobileBottomNav({
+  language = 'en',
+  intelligenceHref = '#intelligence-modules',
+}: MobileBottomNavProps): JSX.Element {
   const t = getDictionary(language).mobileBottomNav;
+  /* Still four plain links: only WHERE "Intelligence" points can change. */
+  const items = NAV_ITEMS.map((item) => (item.key === 'intelligence' ? { ...item, href: intelligenceHref } : item));
 
   return (
     <nav
@@ -42,7 +53,7 @@ export function MobileBottomNav({ language = 'en' }: MobileBottomNavProps): JSX.
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <ul className="flex items-stretch justify-around">
-        {NAV_ITEMS.map(({ key, href, Icon }) => (
+        {items.map(({ key, href, Icon }) => (
           <li key={key} className="flex-1">
             <a
               href={href}

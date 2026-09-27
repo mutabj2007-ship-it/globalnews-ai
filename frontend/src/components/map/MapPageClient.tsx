@@ -86,6 +86,7 @@ import {
 } from '@/lib/map/retrieval/countryReadAction';
 import { countryReadRequestFor, countryReadState } from '@/lib/map/retrieval/countryReadRequest';
 import { countryReadPresentationFrom } from '@/lib/map/retrieval/countryReadPresentation';
+import { usePublishGeographyContext } from '@/lib/ask/geographyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { readLanguageCookie } from '@/lib/i18n/languages';
 
@@ -1576,6 +1577,44 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     };
   }, [cache, cardFilters, language, period, router, selectedCountry, selectedItemId]);
 
+  /*
+    ══ MAP R1 · ITEM 7 · THE SELECTED GEOGRAPHY REACHES ASK ════════════════
+
+    CTO ruling: a selected country is not a story anchor, so it does NOT go
+    through `usePublishStoryContext` — `/map` is not a story-context publisher
+    and `askAiRevA.spec.ts` L4 still pins that set to its two analysis-owning
+    surfaces, untouched.
+
+    It goes through its own bounded store instead: two fields, an ISO code and
+    a label, and nothing else. No article, source, evidence, report or cluster
+    id, and no prior AI output.
+
+    THIS COSTS NOTHING. It is a module-store write inside an effect. Selecting
+    a country still issues zero requests of any class, opening the dock still
+    issues zero, and the only place analysis begins is an explicit Send.
+
+    The DISPLAY name, not the canonical one: this is what the dock shows the
+    reader ("Asking about Algeria"), so it follows the reader's language. The
+    canonical English name stays where it belongs — in the `/search` query
+    string that `handleOpenAnalysis` builds, which is not a display string.
+  */
+  const askGeography = useMemo(
+    () =>
+      selectedCountry === null
+        ? undefined
+        : {
+            countryCode: selectedCountry.iso2,
+            displayName: localisedCountryName(
+              selectedCountry.iso3,
+              selectedCountry.name,
+              language,
+            ),
+          },
+    [language, selectedCountry],
+  );
+
+  usePublishGeographyContext(askGeography);
+
   const hoveredKnownCount = hovered?.country ? countryStoryCounts[hovered.country.iso3] ?? null : null;
 
   /*
@@ -1937,6 +1976,11 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
             follow={selectionFollow ?? undefined}
             selectionDetail={selectionDetail}
             countryStoryCounts={countryStoryCounts}
+            /*
+              MAP R1 — the phone now receives the same explicit country read the
+              desktop rail has always had. One state machine, two surfaces.
+            */
+            countryRead={countryReadPresentation}
           />
         </div>
         )}

@@ -3,6 +3,7 @@
 import type { JSX } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { findCountryByIso3, type LanguageCode, type NewsArticle } from '@globalnews-ai/shared';
+import Link from 'next/link';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
 import { useAccount } from '@/lib/hooks/useAccount';
@@ -152,6 +153,24 @@ export function HomeAccountPanel({ articles, language = 'en' }: HomeAccountPanel
 
   return (
     <section aria-labelledby="beta-foryou-heading" className={`${BAND} p-[18px]`}>
+      {/*
+        MY INTELLIGENCE R1.2 — THE ONE NEW LINK ON HOME.
+
+        A1 is otherwise unchanged: the two-column band, its "For you" column and
+        its Following column with "Manage" are all exactly as Home R6 froze
+        them. This row sits ABOVE the grid rather than inside either column, so
+        it neither competes with the existing "Manage" link for the same corner
+        nor pushes a column out of alignment. It navigates; it runs nothing.
+      */}
+      <div className="mb-3 flex justify-end">
+        <Link
+          href="/my-intelligence"
+          className="inline-flex min-h-[32px] items-center gap-1.5 text-[12.5px] font-semibold text-[#5abff5] hover:text-[#8fd3ff]"
+        >
+          {getDictionary(language).myIntelligence.homeLink}
+          <span aria-hidden="true">&rarr;</span>
+        </Link>
+      </div>
       <div className="grid grid-cols-1 gap-x-7 gap-y-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)]">
         {/* ── FOR YOU ─────────────────────────────────────────────────── */}
         <div className="min-w-0">

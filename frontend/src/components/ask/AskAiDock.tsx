@@ -14,6 +14,7 @@ import { ASK_CANONICAL_ROUTE } from '@/lib/ask/askFrame';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
 import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
+import { useAskGeographyContext } from '@/lib/ask/geographyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openGlobalAsk';
@@ -105,14 +106,53 @@ interface AskAiDockProps {
   language?: LanguageCode;
 }
 
+/**
+ * MY INTELLIGENCE R1.2 — the one route that suppresses the FLOATING LAUNCHER
+ * and nothing else.
+ *
+ * ── THE COLLISION, MEASURED ──────────────────────────────────────────────
+ *
+ * At 390 the launcher is `position: fixed`, 92x44 at top 92 / right 16. The
+ * frozen My Intelligence Select control is 68x44 at top 73 / right 16. They
+ * overlap by 25px vertically and completely horizontally, and the launcher — a
+ * later, global addition the frozen R1.2 frames were drawn without — wins.
+ *
+ * The Product Owner froze the Select placement, so the launcher yields.
+ *
+ * ── WHAT IS SUPPRESSED, AND WHAT EMPHATICALLY IS NOT ─────────────────────
+ *
+ * ONLY the standalone floating button. The dock itself stays mounted and stays
+ * listening, so everything that opens it by intent keeps working:
+ *
+ *   - `openGlobalAsk()` and the GLOBAL_ASK_OPEN_EVENT still open the panel;
+ *   - "Ask about selected" still hands off to it with the selection attached;
+ *   - every explicit Ask / Send / Run still runs;
+ *   - "Ask AI" in the header and the bottom navigation still navigate;
+ *   - every OTHER route keeps the launcher exactly as it was.
+ *
+ * This is narrower than the `/ask` case above, which unmounts the dock
+ * entirely because that route owns its own composer. Here the dock is still
+ * the right surface; it simply must not also advertise itself on top of a
+ * frozen control that already offers the same journey.
+ */
+const LAUNCHER_SUPPRESSED_ROUTES: ReadonlySet<string> = new Set(['/my-intelligence']);
+
 export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   const pathname = usePathname();
   // The dedicated dashboard owns its composer; unmount the global dock entirely.
   if (pathname === ASK_CANONICAL_ROUTE) return null;
-  return <GlobalAskAiDock {...props} />;
+  return (
+    <GlobalAskAiDock
+      {...props}
+      showLauncher={!LAUNCHER_SUPPRESSED_ROUTES.has(pathname ?? '')}
+    />
+  );
 }
 
-function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
+function GlobalAskAiDock({
+  language = 'en',
+  showLauncher = true,
+}: AskAiDockProps & { showLauncher?: boolean }): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
@@ -144,6 +184,20 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
    * has nothing of its own to go stale.
    */
   const storyContext = useAskStoryContext();
+  /*
+   * MAP R1 item 7 — THE SCOPE, WHICH IS NOT AN ANCHOR.
+   *
+   * Published by the Map from its own bounded store while a country is
+   * selected: an ISO code and a label, nothing else. Read live here for the
+   * same reason the story context is — the dock keeps no copy, so what the
+   * reader is shown is always what is published at that moment.
+   *
+   * PRECEDENCE IS STATED, NOT EMERGENT. A story anchor is the more specific
+   * fact, so when one exists it wins and the geography line is not shown. The
+   * two are never merged and never silently combined into one claim.
+   */
+  const geographyContext = useAskGeographyContext();
+  const showGeographyLabel = storyContext === undefined && geographyContext !== undefined;
   const showStoryLabel = storyContext !== undefined && usesStoryContextLabel(
     question.trim() || (phase.kind !== 'idle' ? phase.question : ''),
     question.trim() ? undefined : phase.kind === 'answered'
@@ -295,7 +349,17 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
       const priorQuestion = topicReset || lastQuestion === undefined ? undefined : (subjectOrigin ?? lastQuestion);
       setTopicReset(false);
 
-      analyzeNews(asked, language, sent, priorQuestion)
+      /*
+        MAP MOBILE R1 CONVERGENCE — SUBMISSION PRECEDENCE, STATED:
+          1. story context, when one is published (the more specific anchor);
+          2. otherwise the map geography context, when one is published;
+          3. otherwise a generic Ask.
+        Never both. analyzeNews() narrows the geography to exactly
+        { countryCode, displayName }; the chip's label is presentation only.
+      */
+      const sentGeography = sent === undefined ? geographyContext : undefined;
+
+      analyzeNews(asked, language, sent, priorQuestion, undefined, sentGeography)
         .then((response) => {
           if (requestSeq.current !== seq) return;
           setSubjectOrigin(subjectOriginOf(response, priorQuestion));
@@ -312,7 +376,7 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           });
         });
     },
-    [question, language, dictionary, storyContext, phase, history, topicReset, subjectOrigin],
+    [question, language, dictionary, storyContext, geographyContext, phase, history, topicReset, subjectOrigin],
   );
 
   return (
@@ -321,7 +385,13 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           Mounted from the root layout as its own element, exactly like
           ServiceWorkerRegistrar. It does NOT enter the NavBar's released
           GN-CD item row: that geometry is accepted design, and Ask AI's own
-          chrome/geometry reconciliation is still held. */}
+          chrome/geometry reconciliation is still held.
+
+          `showLauncher` is false on exactly the routes listed in
+          LAUNCHER_SUPPRESSED_ROUTES. Only this button disappears — the panel
+          below, the open event, the story context and every explicit action
+          are untouched. */}
+      {showLauncher && (
       <button
         type="button"
         data-ask="launcher"
@@ -352,6 +422,7 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
         <span aria-hidden="true" className="font-mono text-[11px] text-signal">◆</span>
         {t.launcher}
       </button>
+      )}
 
       {!isOpen ? null : (
         <section
@@ -491,11 +562,27 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
               */}
               <span
                 data-ask="context-affordance"
-                data-ask-context={showStoryLabel ? 'anchored' : 'generic'}
+                data-ask-context={
+                  showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic'
+                }
                 title={showStoryLabel ? storyContext?.title : undefined}
                 className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border-strong bg-surface px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-secondary"
               >
-                {showStoryLabel ? t.contextChipAnchored : t.contextChipGeneric}
+                {/*
+                  Three states, not two. "Asking about Algeria" names the SCOPE
+                  and deliberately does not use the story wording: a country is
+                  where the question is being asked, not what it is anchored to,
+                  and telling a reader otherwise would be the merge the ruling
+                  forbids.
+                */}
+                {showStoryLabel
+                  ? t.contextChipAnchored
+                  : showGeographyLabel
+                    ? t.askingAboutGeography.replace(
+                        '{place}',
+                        geographyContext?.displayName ?? '',
+                      )
+                    : t.contextChipGeneric}
               </span>
 
               <button

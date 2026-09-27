@@ -2,6 +2,7 @@ import { HOME_SUGGESTIONS } from '@globalnews-ai/shared';
 import type { Dictionary } from './index';
 import { adminPl } from './adminPl';
 import { supportPl } from './supportPl';
+import { myIntelligencePl } from './myIntelligencePl';
 
 /**
  * Milestone #47 — Polish dictionary, the first production non-English
@@ -22,6 +23,13 @@ export const pl: Dictionary = {
 
   /** RC-1 - see the note on `support` in en.ts. */
   support: supportPl,
+
+  /**
+   * MY INTELLIGENCE R1.2 — the signed-in personal intelligence namespace,
+   * folded in exactly as `admin` and `support` are, so it resolves through the
+   * same getDictionary(language) call and adds no second localization path.
+   */
+  myIntelligence: myIntelligencePl,
 
   languageSelectorLabel: 'Język',
   yourQuestion: 'Twoje pytanie',
@@ -62,6 +70,7 @@ export const pl: Dictionary = {
   evidenceLanguageLabel: 'Język źródła',
   askAi: {
     launcher: 'Zapytaj AI',
+    askingAboutGeography: 'Pytasz o: {place}',
     title: 'Zapytaj GlobalNews AI',
     panelLabel: 'Zapytaj GlobalNews AI',
     close: 'Zamknij',
@@ -1339,7 +1348,7 @@ export const pl: Dictionary = {
         */
         countryRead: {
           heading: 'Analiza kraju',
-          notLoaded: 'Kraj jest wybrany. Nic nie zostało jeszcze pobrane.',
+          notLoaded: 'Wybrano ten kraj. Niczego jeszcze nie pobrano.',
           loading: 'Pobieranie bieżących doniesień dla tego kraju…',
           noCoverage: 'Sprawdzono. Brak zweryfikowanych doniesień dla tego kraju w tym okresie.',
           failed: 'Nie udało się teraz pobrać doniesień. Możesz spróbować ponownie.',
