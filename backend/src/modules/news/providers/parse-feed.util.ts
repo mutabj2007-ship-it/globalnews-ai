@@ -30,6 +30,8 @@
  *   - interpret. It returns raw strings; dates are parsed by the caller.
  */
 
+import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
+
 export interface ParsedFeedItem {
   readonly title: string;
   readonly link: string;
@@ -125,14 +127,18 @@ function stripFeedTrailer(text: string): string {
   return text.replace(/\s*The post\b[\s\S]*?\bappeared first on\b[\s\S]*$/, '').trim();
 }
 
-/** Strips HTML tags from a description body, then collapses whitespace. */
+/**
+ * Strips HTML tags from a description body, then collapses whitespace.
+ * Unresolved CMS template placeholders are removed last (Article Metadata
+ * Hygiene R1), so a template-only description ends up empty, never patched.
+ */
 function toPlainText(raw: string): string {
   const flattened = unwrap(raw)
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
-  return stripFeedTrailer(flattened);
+  return stripUnresolvedTemplatePlaceholders(stripFeedTrailer(flattened));
 }
 
 /**

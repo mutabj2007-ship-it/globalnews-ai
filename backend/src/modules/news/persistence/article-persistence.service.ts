@@ -3,6 +3,7 @@ import { logWithRequestId } from '../../../observability/log-with-request-id';
 import { readPublishedAtBasis, writePublishedAtBasis } from './published-at-basis.util';
 import type { NewsArticle, NewsCategory } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
+import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
 
 interface FindRecentArticlesOptions {
   limit?: number;
@@ -339,7 +340,9 @@ export class ArticlePersistenceService {
         },
         id: row.article.id,
         title: row.article.title,
-        summary: row.article.summary,
+        // Article Metadata Hygiene R1 — rows persisted before the provider
+        // boundary cleaned descriptions are cleaned again on the way out.
+        summary: stripUnresolvedTemplatePlaceholders(row.article.summary),
         url: row.article.url,
         imageUrl: row.article.imageUrl ?? undefined,
         sourceId: row.article.sourceId,
@@ -464,7 +467,7 @@ export class ArticlePersistenceService {
       return rows.map((row) => ({
         id: row.id,
         title: row.title,
-        summary: row.summary,
+        summary: stripUnresolvedTemplatePlaceholders(row.summary),
         url: row.url,
         imageUrl: row.imageUrl ?? undefined,
         sourceId: row.sourceId,
@@ -526,7 +529,7 @@ export class ArticlePersistenceService {
       return {
         id: row.id,
         title: row.title,
-        summary: row.summary,
+        summary: stripUnresolvedTemplatePlaceholders(row.summary),
         url: row.url,
         imageUrl: row.imageUrl ?? undefined,
         sourceId: row.sourceId,
