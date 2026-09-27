@@ -112,6 +112,8 @@ export const myIntelligenceEn = {
     aiTag: 'AI',
     /* COLOR / ACTION-AWARENESS R1 — selection mode says what it is, how many, how to leave, what costs compute. */
     modeLabel: 'Selection mode',
+    selectStories: 'Select stories',
+    selectAria: 'Select stories. Enter selection mode. Selecting is free.',
     modeDone: 'Selection mode · Done',
     doneAria: 'Done — leave selection mode',
     storiesSelectedOne: '{count} story selected',

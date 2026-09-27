@@ -26,6 +26,39 @@ import type { FixtureStory } from './devFixtures';
  * lightning mark, the AI tag and an accessible name that says "AI action".
  */
 
+/*
+  SELECT SAND-AWARENESS — the real client, with only the transport and the
+  data hook replaced, so "pressing Select sends nothing" is measured on the
+  product's own handler rather than asserted about a component in isolation.
+*/
+jest.mock('@/lib/api/analysisApi', () => ({ analyzeNews: jest.fn() }));
+jest.mock('@/components/search/SearchPageClient', () => ({ resolveAnalysisErrorMessage: () => 'error' }));
+jest.mock('next/link', () => {
+  const react = jest.requireActual('react');
+  return { __esModule: true, default: ({ href, children }: { href: string; children: unknown }) => react.createElement('a', { href }, children) };
+});
+jest.mock('./useMyIntelligenceData', () => {
+  const stories = [0, 1].map((i) => ({
+    articleRef: `${'cd'.repeat(31)}0${i}`,
+    id: `z${i}`,
+    url: `https://example.com/sample/select-${i}`,
+    title: `Select story ${i}`,
+    sourceName: 'Example Wire',
+    publishedAt: '2026-09-26T08:00:00.000Z',
+    countryCode: 'PL',
+    category: 'Economy',
+    savedAt: '2026-09-26T09:00:00.000Z',
+  }));
+  const data = {
+    isLoading: false, isSignedIn: true, userEmail: null, userName: 'Reader', previousSeenAt: null, isFirstVisit: false,
+    boundarySource: 'live', boundaryFailed: false, newSince: [], newSinceCount: 0, newSinceSource: 'live',
+    saved: stories, savedSource: 'live', forYou: [], forYouSource: 'live', follows: [], followsSource: 'live',
+    recent: [], recentSource: 'live', usesFixtures: false, hasError: false, isDegraded: false,
+    savedRefs: new Set(stories.map((s) => s.url)), toggleSaved: () => undefined, retry: () => undefined,
+  };
+  return { useMyIntelligenceData: () => data };
+});
+
 /* A minimal browser window for the rail's scroll measurement. */
 const target = new EventTarget();
 Object.assign(globalThis, { window: Object.assign(target, { innerHeight: 844, innerWidth: 390 }) });
@@ -125,7 +158,7 @@ describe('§3 the selection-mode control replaces the isolated Done', () => {
     expect(button.props.className).toContain('border-2');
     expect(button.props.className).toContain('font-bold');
     expect(button.props.className).toContain('min-h-[44px]');
-    expect(button.props['aria-pressed']).toBe('true');
+    expect(button.props['aria-pressed']).toBe(true);
     expect(button.props['aria-label']).toBe('2 stories selected. Selection mode active. Done — leave selection mode');
   });
 
@@ -141,11 +174,68 @@ describe('§3 the selection-mode control replaces the isolated Done', () => {
     expect(text(button)).not.toContain('AI');
   });
 
-  it('outside selection mode the ordinary Select control is neutral', () => {
+  it('SELECT SAND-AWARENESS — "Select stories" uses the sand selection-control family: 2px, bold, ≥44px', () => {
     toggle({ selecting: false });
     const button = byData('data-mi-control', 'select')[0];
-    expect(text(button)).toBe('Select');
-    expect(button.props.className).not.toContain('#2e2618');
+    expect(text(button)).toBe('Select stories');
+    expect(button.props.className).toContain(MI_SELECTION_MODE_CONTROL);
+    expect(button.props.className).toContain('border-2');
+    expect(button.props.className).toContain('bg-[#2e2618]');
+    expect(button.props.className).toContain('text-[#D9B98A]');
+    expect(button.props.className).toContain('font-bold');
+    expect(button.props.className).toContain('min-h-[44px]');
+    /* Hover and focus deepen the SAME sand; the focus ring is sand, not a new colour. */
+    expect(button.props.className).toContain('hover:bg-[#3a3020]');
+    expect(button.props.className).toContain('focus-visible:border-[#8a7045]');
+    expect(button.props.className).toContain('focus-visible:ring-[#D9B98A]');
+    expect(button.props['aria-label']).toBe('Select stories. Enter selection mode. Selecting is free.');
+    expect(button.props['aria-pressed']).toBe(false);
+  });
+
+  it('SELECT SAND-AWARENESS — Select is not a compute action: no lightning, no AI badge, no price', () => {
+    toggle({ selecting: false });
+    const button = byData('data-mi-control', 'select')[0];
+    expect(hasLightning(button)).toBe(false);
+    expect(text(button)).not.toMatch(/\bAI\b/);
+    expect(`${text(button)} ${button.props['aria-label']}`).not.toMatch(/[$€£]|credit|price|kredyt|cena/i);
+  });
+
+  it('SELECT SAND-AWARENESS — one control changing state: the same element and treatment in both states', () => {
+    toggle({ selecting: false, variant: 'wide' });
+    const idle = byData('data-mi-control', 'select')[0].props.className;
+    act(() => renderer.update(createElement(selection.SelectionModeToggle, { language: 'en', selecting: true, selectedCount: 2, onToggle: () => undefined, variant: 'wide' })));
+    const active = byData('data-mi-control', 'selection-mode-done')[0].props.className;
+    expect(active).toBe(idle);
+  });
+
+  it('SELECT SAND-AWARENESS — pressing Select (phone and wide) on the real client makes zero analysis requests and zero fetches', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { analyzeNews } = require('@/lib/api/analysisApi') as { analyzeNews: jest.Mock };
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { MyIntelligenceClient } = require('./MyIntelligenceClient') as typeof import('./MyIntelligenceClient');
+    const fetchSpy = jest.fn();
+    const originalFetch = global.fetch;
+    global.fetch = fetchSpy as unknown as typeof fetch;
+    analyzeNews.mockReset();
+    mount(createElement(MyIntelligenceClient, { language: 'en' }));
+    for (const variantIndex of [0, 1]) {
+      const select = byData('data-mi-control', 'select')[variantIndex];
+      act(() => select.props.onClick());
+      expect(byData('data-mi-control', 'selection-mode-done').length).toBeGreaterThan(0);
+      act(() => byData('data-mi-control', 'selection-mode-done')[variantIndex].props.onClick());
+    }
+    expect(analyzeNews).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    global.fetch = originalFetch;
+  });
+
+  it('phone keeps the compact "Select"; PL wide reads "Zaznacz artykuły"', () => {
+    toggle({ selecting: false, variant: 'phone' });
+    expect(text(byData('data-mi-control', 'select')[0])).toBe('Select');
+    act(() => renderer.update(createElement(selection.SelectionModeToggle, { language: 'pl', selecting: false, selectedCount: 0, onToggle: () => undefined, variant: 'wide' })));
+    const pl = byData('data-mi-control', 'select')[0];
+    expect(text(pl)).toBe('Zaznacz artykuły');
+    expect(pl.props['aria-label']).toBe('Zaznacz artykuły. Włącz tryb zaznaczania. Zaznaczanie jest bezpłatne.');
   });
 
   it('PL: "Tryb zaznaczania · Gotowe"', () => {

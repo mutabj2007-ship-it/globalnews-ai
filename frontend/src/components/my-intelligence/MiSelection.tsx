@@ -11,6 +11,7 @@ import {
   MI_FOCUS,
   MI_LOCAL_ACTION,
   MI_PILL,
+  MI_SAND_FOCUS,
   MI_SAND_NOTE,
   MI_SELECTION_BAR,
   MI_SELECTION_FILL,
@@ -166,29 +167,27 @@ export function SelectionModeToggle({
   const t = mi.selection;
   const visibility = variant === 'phone' ? 'md:hidden' : 'hidden md:inline-flex';
 
-  if (!selecting) {
-    return (
-      <button
-        type="button"
-        data-mi-control="select"
-        onClick={onToggle}
-        className={`${MI_PILL} ${MI_TARGET} ${MI_FOCUS} ${variant === 'phone' ? 'inline-flex' : ''} h-[44px] shrink-0 items-center gap-1.5 border border-[#1d3a5a] px-3.5 text-[13px] font-semibold text-[#cfe2f2] ${visibility}`}
-      >
-        {mi.select}
-      </button>
-    );
-  }
-
+  /*
+    SELECT SAND-AWARENESS CORRECTION — ONE control in two states, not two
+    buttons. The same element, the same sand treatment and the same size carry
+    "Select stories" into "Selection mode · Done", so the transition reads as
+    the control changing state. Neither state is a compute action: no
+    lightning, no AI tag, and pressing it sends nothing.
+  */
   return (
     <button
       type="button"
-      data-mi-control="selection-mode-done"
-      aria-pressed="true"
-      aria-label={`${selectionStatusLabel(t, selectedCount)} ${t.doneAria}`}
+      data-mi-control={selecting ? 'selection-mode-done' : 'select'}
+      aria-pressed={selecting}
+      aria-label={
+        selecting ? `${selectionStatusLabel(t, selectedCount)} ${t.doneAria}` : t.selectAria
+      }
       onClick={onToggle}
-      className={`${MI_PILL} ${MI_TARGET} ${MI_FOCUS} ${MI_SELECTION_MODE_CONTROL} ${variant === 'phone' ? 'inline-flex' : ''} min-h-[44px] shrink-0 items-center gap-2 px-3.5 text-[13px] ${visibility}`}
+      className={`${MI_PILL} ${MI_TARGET} ${MI_SAND_FOCUS} ${MI_SELECTION_MODE_CONTROL} ${variant === 'phone' ? 'inline-flex' : ''} min-h-[44px] shrink-0 items-center gap-2 px-3.5 text-[13px] transition-colors motion-reduce:transition-none ${visibility}`}
     >
-      {variant === 'phone' ? (
+      {!selecting ? (
+        <span className="whitespace-nowrap">{variant === 'phone' ? mi.select : t.selectStories}</span>
+      ) : variant === 'phone' ? (
         <span className="flex flex-col items-center leading-[1.15]">
           <span className="text-[11px] font-semibold">
             {selectedCount > 0 ? fill(t.countLabel, { count: selectedCount }) : t.modeLabel}

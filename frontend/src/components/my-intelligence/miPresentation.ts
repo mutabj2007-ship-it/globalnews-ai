@@ -110,9 +110,12 @@ export const MI_SAND_TAG =
  * COLOR / ACTION-AWARENESS R1 — the SAME three sand values, applied to the
  * selection workflow. The semantic split is the point:
  *
- *   MI_SELECTION_MODE_CONTROL  warm AWARENESS: "you are in selection mode".
- *                              Done exits the mode and spends nothing, so it
- *                              never carries the lightning mark or the AI tag.
+ *   MI_SELECTION_MODE_CONTROL  warm AWARENESS of the selection workflow — the
+ *                              ONE control that reads "Select stories" and then
+ *                              "Selection mode · Done". Entering and leaving the
+ *                              mode spend nothing, so it never carries the
+ *                              lightning mark or the AI tag. Hover and focus
+ *                              deepen the same sand (border + surface).
  *   MI_AI_ACTION_ON / _OFF     the COMPUTE commitment point: sand, the governed
  *                              lightning mark and the AI tag, on every action
  *                              that would run AI once confirmed.
@@ -120,12 +123,16 @@ export const MI_SAND_TAG =
  *                              neutral cyan, never sand.
  */
 export const MI_SELECTION_MODE_CONTROL =
-  'border-2 border-[#6a5634] bg-[#2e2618] text-[#D9B98A] font-bold hover:border-[#8a7045]';
+  'border-2 border-[#6a5634] bg-[#2e2618] text-[#D9B98A] font-bold ' +
+  'hover:border-[#8a7045] hover:bg-[#3a3020] focus-visible:border-[#8a7045] focus-visible:bg-[#3a3020]';
 export const MI_AI_ACTION_ON =
   'border-[#6a5634] bg-[#2e2618] text-[#D9B98A] hover:border-[#8a7045]';
 export const MI_AI_ACTION_OFF =
   'cursor-not-allowed border-[#3a3020] bg-[#17130c] text-[#7d725f]';
 export const MI_LOCAL_ACTION = 'font-semibold text-[#5abff5]';
+/** The selection-mode control's focus ring: the same sand, never a new colour. */
+export const MI_SAND_FOCUS =
+  'outline-none focus-visible:ring-2 focus-visible:ring-[#D9B98A] focus-visible:ring-offset-2 focus-visible:ring-offset-[#010a19]';
 /** Every visible focus ring on the selection workflow. */
 export const MI_FOCUS =
   'outline-none focus-visible:ring-2 focus-visible:ring-[#5abff5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#010a19]';
