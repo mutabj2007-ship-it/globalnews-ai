@@ -98,7 +98,7 @@ function ActionIcon({ id }: { id: ActionId }): JSX.Element {
  * that asks for confirmation. Pressing it only OPENS the compute sheet; the
  * sheet's own Run / Send is the one control that may start compute.
  */
-function ActionPill({
+export function ActionPill({
   id,
   enabled,
   min,

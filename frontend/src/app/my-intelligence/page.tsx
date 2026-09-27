@@ -1,6 +1,5 @@
 import { cookies } from 'next/headers';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
-import { NavBar } from '@/components/navigation/NavBar';
 import { BetaHomeHeader } from '@/components/home/BetaHomeHeader';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { Footer } from '@/components/layout/Footer';
@@ -44,9 +43,12 @@ export default function MyIntelligencePage({
   return (
     <>
       <BetaHomeHeader language={language} isHome={false} />
-      <div className="lg:hidden">
-        <NavBar language={language} />
-      </div>
+      {/*
+        PREMIUM WORKSPACE R1 · D3 — below lg the page carries its own workspace
+        header (menu · My Intelligence · search · avatar), rendered by the
+        client, instead of the global phone NavBar. The desktop header is
+        unchanged.
+      */}
       <MyIntelligenceClient
         language={language}
         forceFirstVisit={state === 'first-visit'}

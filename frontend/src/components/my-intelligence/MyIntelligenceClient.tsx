@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
 import { ARTICLE_REF_PATTERN, MAX_SELECTED_STORIES, SEARCH_HISTORY_LIST_LIMIT, findCountryByIso3 } from '@globalnews-ai/shared';
 import { FollowingControl } from './MiFollowing';
@@ -12,23 +11,19 @@ import {
   runSelectionAction,
 } from '@/lib/myIntelligence/selection';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { MI_CARD, MI_EYEBROW, MI_GREETING, MI_PAGE, MI_PILL, MI_TARGET } from './miPresentation';
+import { MI_CARD, MI_EYEBROW, MI_GREETING, MI_PAGE } from './miPresentation';
 import { FixtureBanner, StatusBanner, fill } from './MiPrimitives';
 import {
   AuthRequiredCard,
-  FollowingSection,
   ForYouSection,
   NewSinceSection,
   RecentSection,
-  RECENT_PREVIEW_LIMIT,
   SavedSection,
 } from './MiSections';
 import {
   ComputeCommitSheet,
   MI_ACTIONS,
   SelectionIntro,
-  SelectionModeToggle,
-  SelectionPanel,
   SelectionRail,
   SelectionStatus,
   SelectionResultSheet,
@@ -38,10 +33,24 @@ import {
 } from './MiSelection';
 import { useMyIntelligenceData } from './useMyIntelligenceData';
 import { isNewSince } from './newSince';
-
-type TabId = 'overview' | 'saved' | 'following' | 'recent';
-
-const TABS: readonly TabId[] = ['overview', 'saved', 'following', 'recent'];
+import type { WorkspaceView } from './workspace/miWorkspaceModel';
+import { WorkspaceDrawer, WorkspaceRail } from './workspace/WorkspaceNav';
+import {
+  ExploreModule,
+  ForYouModule,
+  GoDeeperCard,
+  HistoryPreview,
+  SavedPreview,
+  SelectPromiseCard,
+  SpecialistModule,
+  WhatChangedCard,
+} from './workspace/WorkspaceDashboard';
+import {
+  DestinationBack,
+  SelectionContextRail,
+  SpecialistsDestination,
+  WorkspacePhoneHeader,
+} from './workspace/WorkspaceChrome';
 
 /**
  * MY INTELLIGENCE — the signed-in personal intelligence workspace.
@@ -90,7 +99,17 @@ export function MyIntelligenceClient({
     forceError,
   });
 
-  const [tab, setTab] = useState<TabId>('overview');
+  /*
+    PREMIUM WORKSPACE R1 — the view, the rail and the drawer. All CLIENT
+    state: the sign-in return validator accepts exactly /my-intelligence, so a
+    view in the URL could not survive sign-in (D2/D4). The rail pin is page
+    state too — this surface keeps no browser storage (D11).
+  */
+  const [view, setView] = useState<WorkspaceView>('today');
+  const [railExpanded, setRailExpanded] = useState(false);
+  const [railPinned, setRailPinned] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [followingRequest, setFollowingRequest] = useState(0);
   const [selecting, setSelecting] = useState(false);
   /* First-use note: page state only — this surface keeps no browser storage. */
   const [introDone, setIntroDone] = useState(false);
@@ -142,11 +161,7 @@ export function MyIntelligenceClient({
 
   const clearSelection = useCallback(() => setSelectedUrls(new Set()), []);
 
-  /* Entering or leaving selection mode is local state only: no request of any kind. */
-  const toggleSelecting = useCallback(() => {
-    setSelecting((on) => !on);
-    if (selecting) clearSelection();
-  }, [clearSelection, selecting]);
+  /* Entering or leaving selection mode is local state only: no request of any kind (enterSelection / leaveSelection below). */
 
   const categories = useMemo(
     () => Array.from(new Set(data.saved.map((story) => story.category))),
@@ -271,226 +286,266 @@ export function MyIntelligenceClient({
     onToggleSelected,
   };
 
-  const counts: Record<TabId, number> = {
-    overview: 0,
+  const counts = {
+    newSince: data.newSinceCount,
     saved: data.saved.length,
     following: data.follows?.length ?? 0,
-    recent: data.recent.length,
+  };
+
+  /*
+    PREMIUM WORKSPACE R1 — "Selected stories", "Briefings from selected
+    stories" and the promise CTA all ENTER selection mode (D8, D10). Entering
+    is local state only; from a view with nothing selectable the reader is
+    taken to Today for me, where the selectable stories are.
+  */
+  const enterSelection = useCallback(() => {
+    setSelecting(true);
+    setView((current) => (current === 'history' || current === 'specialists' ? 'today' : current));
+  }, []);
+
+  const leaveSelection = useCallback(() => {
+    setSelecting(false);
+    clearSelection();
+  }, [clearSelection]);
+
+  const removeSelected = useCallback((url: string) => {
+    setSelectedUrls((current) => {
+      const next = new Set(current);
+      next.delete(url);
+      return next;
+    });
+  }, []);
+
+  const openFollowing = useCallback(() => setFollowingRequest((n) => n + 1), []);
+
+  const initial = (data.userName ?? data.userEmail ?? '').trim().charAt(0).toUpperCase() || null;
+
+  const navProps = {
+    language,
+    view,
+    onView: setView,
+    onFollowing: openFollowing,
+    onSelect: enterSelection,
+    selecting,
+    counts,
+    userName: data.userName,
+    userEmail: data.userEmail,
+    onSignOut: () => {
+      void data.signOut();
+    },
   };
 
   if (signedOut) {
     return (
-      <main className={`${MI_PAGE} min-h-screen px-4 py-16 pb-28 lg:pb-16`}>
-        <AuthRequiredCard language={language} />
-      </main>
+      <>
+        <WorkspacePhoneHeader language={language} initial={null} onMenu={() => undefined} showMenu={false} />
+        <main className={`${MI_PAGE} min-h-screen px-4 py-16 pb-28 lg:pb-16`}>
+          <AuthRequiredCard language={language} />
+        </main>
+      </>
     );
   }
 
-  const showNewSince = tab === 'overview';
-  const showSaved = tab === 'overview' || tab === 'saved';
-  const showForYou = tab === 'overview';
-  const showRecent = tab === 'overview' || tab === 'recent';
-  /* Select is meaningless where there is nothing selectable. */
-  const canSelect = (tab === 'overview' || tab === 'saved') && data.saved.length + data.newSince.length > 0;
+  const w = t.workspace;
+  const backToToday = (): void => setView('today');
 
   return (
-    <main className={`${MI_PAGE} min-h-screen ${selecting && selectedUrls.size > 0 ? 'pb-[340px]' : 'pb-[132px]'} lg:pb-16`}>
-      <div className="mx-auto w-full max-w-[1280px] px-4 py-5 md:px-6 md:py-7 min-[1700px]:max-w-[1400px]">
-        {/* ── Title block ─────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className={MI_EYEBROW}>{t.eyebrow}</p>
-            <h1 className={`${MI_GREETING} mt-1.5`}>
-              {data.userName === null
-                ? t.greetingAnonymous
-                : fill(t.greetingNamed, { name: data.userName })}
-            </h1>
-            <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[13px] leading-[1.5] text-[#93a7bd]">
-              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[14px] w-[14px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 7.5V12l3 2" />
-              </svg>
-              {data.previousSeenAt === null ? (
-                <span>{t.newSince.firstVisit}</span>
-              ) : (
-                <>
-                  <span>
-                    {fill(t.previousVisit, {
-                      date: new Date(data.previousSeenAt).toLocaleString(
-                        language === 'pl' ? 'pl-PL' : 'en-GB',
-                        { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' },
-                      ),
-                    })}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <span>
-                    {data.newSinceCount === 1
-                      ? t.newlyIdentifiedCountOne
-                      : fill(t.newlyIdentifiedCount, { count: data.newSinceCount })}
-                  </span>
-                </>
-              )}
-            </p>
-          </div>
+    <>
+      <WorkspacePhoneHeader language={language} initial={initial} onMenu={() => setDrawerOpen(true)} showMenu />
 
-          {/* Identity is one line. This is not an account page. */}
-          <div className="hidden shrink-0 flex-col items-end gap-1 lg:flex">
-            {data.userEmail !== null && (
-              <span className="text-[12.5px] text-[#7d92aa]">{data.userEmail}</span>
-            )}
-            <Link href="/account/settings" className="text-[12.5px] font-semibold text-[#5abff5]">
-              {t.accountSettings}
-            </Link>
-          </div>
+      <div data-mi-workspace="" className={`${MI_PAGE} flex min-h-screen`}>
+        <WorkspaceRail
+          {...navProps}
+          expanded={railExpanded}
+          pinned={railPinned}
+          onExpandedChange={setRailExpanded}
+          onPinnedChange={(next) => {
+            setRailPinned(next);
+            if (!next) setRailExpanded(false);
+          }}
+        />
 
-          {/* On phone the Select toggle sits at the right of the eyebrow row. */}
-          {canSelect && (
-            <SelectionModeToggle
-              language={language}
-              selecting={selecting}
-              selectedCount={selectedUrls.size}
-              onToggle={toggleSelecting}
-              variant="phone"
-            />
-          )}
-        </div>
-
-        {/* ── Sticky tab bar ──────────────────────────────────────────── */}
-        <div className="sticky top-0 z-30 -mx-4 mt-4 bg-[#010a19]/95 px-4 py-2 backdrop-blur-md md:-mx-6 md:px-6">
-          <div className="flex items-center gap-2">
-            {/*
-              PHONE: four equal grid columns, 13px, no counts, NO horizontal
-              scrolling. The earlier scrolling-pill version clipped the third
-              tab mid-word at 360 and hid the fourth entirely; a grid cannot do
-              that, in either language.
-            */}
-            <div
-              role="tablist"
-              aria-label={t.tabs.ariaLabel}
-              className="grid flex-1 grid-cols-4 gap-1.5 md:flex md:flex-wrap md:gap-2"
-            >
-              {TABS.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === id}
-                  onClick={() => setTab(id)}
-                  className={`${MI_PILL} inline-flex h-[44px] items-center justify-center gap-1.5 border px-1 text-[13px] font-semibold md:px-4 ${
-                    tab === id
-                      ? 'border-[#1b6fa8] bg-[#07304f] text-[#cfe6ff]'
-                      : 'border-[#1d3a5a] text-[#9fb4cb]'
-                  }`}
+        <main
+          className={`min-w-0 flex-1 ${selecting && selectedUrls.size > 0 ? 'pb-[340px]' : 'pb-[132px]'} lg:pb-16 ${
+            selecting ? 'lg:pr-[360px]' : ''
+          }`}
+        >
+          <div className="mx-auto w-full max-w-[1120px] px-4 py-5 md:px-8 md:py-6 min-[1800px]:max-w-[1240px]">
+            {/* ── Status banner slot ──────────────────────────────────────── */}
+            <div className="flex flex-col gap-2.5">
+              {data.hasError && (
+                <StatusBanner
+                  tone="error"
+                  action={
+                    <button
+                      type="button"
+                      onClick={data.retry}
+                      className="rounded-full border border-current px-3 py-1 text-[12.5px] font-semibold"
+                    >
+                      {t.states.retry}
+                    </button>
+                  }
                 >
-                  <span className="truncate">{t.tabs[id]}</span>
-                  {counts[id] > 0 && (
-                    <span className="hidden text-[12px] font-normal text-[#7d92aa] md:inline">
-                      {counts[id]}
-                    </span>
-                  )}
-                </button>
-              ))}
+                  {t.states.error}
+                </StatusBanner>
+              )}
+              {data.isDegraded && <StatusBanner tone="degraded">{t.states.degraded}</StatusBanner>}
+              {data.usesFixtures && <FixtureBanner language={language} />}
+              <SelectionIntro
+                language={language}
+                visible={selecting && selectedUrls.size === 0 && !introDone}
+                onDismiss={() => setIntroDone(true)}
+              />
+            </div>
+            <SelectionStatus language={language} selecting={selecting} selectedCount={selectedUrls.size} />
+
+            {/* ── Header block ────────────────────────────────────────────── */}
+            <div data-mi-header="" className="mt-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between md:gap-6">
+              <div className="min-w-0">
+                <p className={MI_EYEBROW}>{t.eyebrow}</p>
+                <h1 className={`${MI_GREETING} mt-1.5`}>
+                  {data.userName === null ? t.greetingAnonymous : fill(t.greetingNamed, { name: data.userName })}
+                </h1>
+                <p className="mt-2 max-w-[62ch] text-[14.5px] leading-[1.5] text-[#b9cbe0]">{w.subcopy}</p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-3">
+                {/* First visit: no boundary exists, so no previous-visit line is claimed. */}
+                {data.previousSeenAt !== null && (
+                  <p className="font-mono text-[12px] text-[#93a7bd]">
+                    {fill(t.previousVisit, {
+                      date: new Date(data.previousSeenAt).toLocaleString(language === 'pl' ? 'pl-PL' : 'en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }),
+                    })}
+                  </p>
+                )}
+                <FollowingControl
+                  language={language}
+                  follows={data.follows}
+                  newByCountry={newByCountry}
+                  openRequest={followingRequest}
+                />
+              </div>
             </div>
 
-            {canSelect && (
-              <SelectionModeToggle
-                language={language}
-                selecting={selecting}
-                selectedCount={selectedUrls.size}
-                onToggle={toggleSelecting}
-                variant="wide"
-              />
-            )}
-          </div>
-        </div>
+            {/* ── The view ───────────────────────────────────────────────── */}
+            <div className="mt-5">
+              {view === 'today' && (
+                <div data-mi-view="today" className="flex flex-col gap-5">
+                  {/*
+                    Phone order (SPEC.md): What changed → For you → the Select
+                    promise → Explore → Specialists → Saved → History → Go
+                    deeper. Desktop: What changed | promise (7fr | 5fr), then
+                    For you. Row B is `contents` below lg so its two cards join
+                    the outer column and take their phone order.
+                  */}
+                  <div className="max-lg:contents lg:order-1 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-5">
+                    <div className="order-1 min-w-0 lg:order-none">
+                      <WhatChangedCard
+                        stories={data.newSince}
+                        count={data.newSinceCount}
+                        boundary={data.previousSeenAt}
+                        isFirstVisit={data.isFirstVisit}
+                        failed={data.boundaryFailed}
+                        handlers={handlers}
+                        onViewAll={() => setView('newSince')}
+                      />
+                    </div>
+                    <div className="order-3 min-w-0 lg:order-none">
+                      <SelectPromiseCard
+                        language={language}
+                        selecting={selecting}
+                        selectedCount={selectedUrls.size}
+                        onToggle={selecting ? leaveSelection : enterSelection}
+                      />
+                    </div>
+                  </div>
+                  <div className="order-2 min-w-0">
+                    <ForYouModule stories={data.forYou} handlers={handlers} onViewAll={() => setView('forYou')} />
+                  </div>
+                  <div className="order-4 min-w-0">
+                    <ExploreModule language={language} />
+                  </div>
+                  <div className="order-5 min-w-0">
+                    <SpecialistModule language={language} onView={setView} />
+                  </div>
+                  <div className="order-6 grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <SavedPreview stories={data.saved} totalCount={data.saved.length} handlers={handlers} onViewAll={() => setView('saved')} />
+                    <HistoryPreview questions={data.recent} language={language} onViewAll={() => setView('history')} />
+                    <GoDeeperCard language={language} onSelect={enterSelection} />
+                  </div>
+                </div>
+              )}
 
-        {/* ── Status banner slot ──────────────────────────────────────── */}
-        <div className="mt-3 flex flex-col gap-2.5">
-          {data.hasError && (
-            <StatusBanner
-              tone="error"
-              action={
-                <button
-                  type="button"
-                  onClick={data.retry}
-                  className="rounded-full border border-current px-3 py-1 text-[12.5px] font-semibold"
-                >
-                  {t.states.retry}
-                </button>
-              }
-            >
-              {t.states.error}
-            </StatusBanner>
-          )}
-          {data.isDegraded && <StatusBanner tone="degraded">{t.states.degraded}</StatusBanner>}
-          {data.usesFixtures && <FixtureBanner language={language} />}
-          <SelectionIntro
-            language={language}
-            visible={selecting && selectedUrls.size === 0 && !introDone}
-            onDismiss={() => setIntroDone(true)}
-          />
-        </div>
-        <SelectionStatus language={language} selecting={selecting} selectedCount={selectedUrls.size} />
+              {view === 'newSince' && (
+                <div data-mi-view="newSince" className="flex flex-col gap-4">
+                  <DestinationBack language={language} onBack={backToToday} />
+                  {/* D9 — the governed explainer, verbatim, lives here. */}
+                  <NewSinceSection
+                    stories={data.newSince}
+                    count={data.newSinceCount}
+                    boundary={data.previousSeenAt}
+                    isFirstVisit={data.isFirstVisit}
+                    failed={data.boundaryFailed}
+                    handlers={handlers}
+                  />
+                </div>
+              )}
 
-        {/* ── Columns ─────────────────────────────────────────────────── */}
-        <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
-          <div className="flex min-w-0 flex-col gap-4">
-            {showNewSince && (
-              <NewSinceSection
-                stories={data.newSince}
-                count={data.newSinceCount}
-                boundary={data.previousSeenAt}
-                isFirstVisit={data.isFirstVisit}
-                failed={data.boundaryFailed}
-                handlers={handlers}
-              />
-            )}
-            {showSaved && (
-              <SavedSection
-                stories={visibleSaved}
-                totalCount={data.saved.length}
-                categories={categories}
-                activeCategory={category}
-                onCategory={setCategory}
-                handlers={handlers}
-              />
-            )}
-            {showForYou && <ForYouSection stories={data.forYou} handlers={handlers} />}
-          </div>
+              {view === 'forYou' && (
+                <div data-mi-view="forYou" className="flex flex-col gap-4">
+                  <DestinationBack language={language} onBack={backToToday} />
+                  <ForYouSection stories={data.forYou} handlers={handlers} />
+                </div>
+              )}
 
-          <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-[72px]">
-            {selecting && selectedUrls.size > 0 && (
-              <SelectionPanel
-                language={language}
-                selectedCount={selectedUrls.size}
-                onClear={clearSelection}
-                onAction={openSheet}
-              />
-            )}
-            {tab === 'overview' && (
-              /* DENSITY R1 — ONE compact control on Overview, never the country wall. */
-              <FollowingControl language={language} follows={data.follows} newByCountry={newByCountry} />
-            )}
-            {tab === 'following' && (
-              <FollowingSection
-                follows={data.follows}
-                newByCountry={newByCountry}
-                language={language}
-              />
-            )}
-            {showRecent && (
-              <RecentSection
-                questions={data.recent}
-                language={language}
-                limit={tab === 'recent' ? SEARCH_HISTORY_LIST_LIMIT : RECENT_PREVIEW_LIMIT}
-                bounded={tab === 'recent'}
-              />
-            )}
+              {view === 'saved' && (
+                <div data-mi-view="saved" className="flex flex-col gap-4">
+                  <DestinationBack language={language} onBack={backToToday} />
+                  <SavedSection
+                    stories={visibleSaved}
+                    totalCount={data.saved.length}
+                    categories={categories}
+                    activeCategory={category}
+                    onCategory={setCategory}
+                    handlers={handlers}
+                  />
+                </div>
+              )}
+
+              {view === 'history' && (
+                <div data-mi-view="history" className="flex flex-col gap-4">
+                  <DestinationBack language={language} onBack={backToToday} />
+                  <RecentSection questions={data.recent} language={language} limit={SEARCH_HISTORY_LIST_LIMIT} bounded />
+                </div>
+              )}
+
+              {view === 'specialists' && (
+                <SpecialistsDestination language={language} follows={data.follows} onBack={backToToday} />
+              )}
+            </div>
           </div>
-        </div>
+        </main>
       </div>
 
-      {/* The phone/tablet rail. Sits above the bottom navigation, never over it. */}
+      <WorkspaceDrawer {...navProps} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      {/* Desktop: the contextual selection rail, only while selection mode is on. */}
+      {selecting && (
+        <SelectionContextRail
+          language={language}
+          stories={selectedStories}
+          onRemove={removeSelected}
+          onClear={clearSelection}
+          onDone={leaveSelection}
+          onAction={openSheet}
+        />
+      )}
+
+      {/* Phone/tablet: the inherited bottom selection rail, above the bottom navigation. */}
       {selecting && selectedUrls.size > 0 && (
         <SelectionRail
           language={language}
@@ -534,7 +589,7 @@ export function MyIntelligenceClient({
           </div>
         </div>
       )}
-    </main>
+    </>
   );
 }
 
