@@ -961,6 +961,13 @@ export interface AnalysisRetrievalContext {
   comparisonCoverage?: import('./comparison-coverage').ComparisonCountryCoverage[];
   storyContextUsed?: boolean;
   /**
+   * MAP ASK GEOGRAPHY CONTEXT R1 — present only when the request carried a
+   * resolvable geographyContext that was eligible (no selection and no
+   * storyContext). True when its country scoped retrieval; false when a place
+   * typed in the question outranked it.
+   */
+  geographyContextUsed?: boolean;
+  /**
    * ASK/SEARCH R1 CLOSURE — the evidence-state fact, stamped by
    * AnalysisService on every analysis response and passed to the model.
    * Derived only by `resolveEvidenceState`, so the model, the cache and the UI
@@ -1446,3 +1453,29 @@ export interface StoryContext {
   sourceName?: string;
   countryCode?: string;
 }
+
+/**
+ * MAP ASK GEOGRAPHY CONTEXT R1 — the country the reader was looking at on the
+ * map when they opened Ask, with NO story selected.
+ *
+ * - `countryCode` is the retrieval authority: an ISO 3166 alpha-2 or alpha-3
+ *   code that must resolve to a real country, or the context is ignored.
+ * - `displayName` is presentation only. The server validates its bounds and
+ *   never reads it for retrieval, caching or the model prompt.
+ * - It is the WEAKEST scope: a selection, a place typed in the question and a
+ *   storyContext (the more specific anchor) all outrank it.
+ * - It carries no article, source, evidence, report or cluster identity, and
+ *   the server rejects any extra field.
+ *
+ * Sending it never computes anything by itself; only an explicit Send/Run
+ * reaches POST /analysis/news.
+ */
+export interface GeographyContext {
+  countryCode: string;
+  displayName: string;
+}
+
+/** ISO 3166 alpha-2 or alpha-3, either case. */
+export const GEOGRAPHY_COUNTRY_CODE_PATTERN = /^[A-Za-z]{2,3}$/;
+/** Bound on the presentation-only display name. */
+export const MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH = 100;

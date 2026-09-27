@@ -15,6 +15,8 @@ import {
 import { Type } from 'class-transformer';
 import {
   ARTICLE_REF_PATTERN,
+  GEOGRAPHY_COUNTRY_CODE_PATTERN,
+  MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH,
   MAX_SELECTED_STORIES,
   MULTI_STORY_ACTIONS,
   type LanguageCode,
@@ -92,6 +94,26 @@ export class StoryContextDto {
   @IsString()
   @MaxLength(10)
   countryCode?: string;
+}
+
+/**
+ * MAP ASK GEOGRAPHY CONTEXT R1 — the map country the reader had open, with no
+ * story selected. Mirrors GeographyContext in shared/src/analysis.ts. Exactly
+ * two fields: the global ValidationPipe (whitelist + forbidNonWhitelisted)
+ * rejects any article, source, evidence, report or cluster identity sent
+ * alongside them.
+ */
+export class GeographyContextDto {
+  /** The retrieval authority: an ISO alpha-2/alpha-3 code, never a name. */
+  @IsString()
+  @Matches(GEOGRAPHY_COUNTRY_CODE_PATTERN)
+  countryCode!: string;
+
+  /** Presentation only — bounded here, never read by retrieval, cache or prompt. */
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH)
+  displayName!: string;
 }
 
 /**
@@ -174,4 +196,14 @@ export class AnalyzeNewsDto {
   @ValidateNested()
   @Type(() => AnalysisSelectionDto)
   selection?: AnalysisSelectionDto;
+
+  /**
+   * MAP ASK GEOGRAPHY CONTEXT R1 — optional map country with no story. The
+   * weakest scope: a selection, a typed place and storyContext all outrank it.
+   * Absent for every existing caller, whose requests are therefore unchanged.
+   */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => GeographyContextDto)
+  geographyContext?: GeographyContextDto;
 }

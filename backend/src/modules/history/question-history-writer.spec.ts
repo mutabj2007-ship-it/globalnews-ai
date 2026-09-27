@@ -158,6 +158,31 @@ describe('history is written by the explicit Ask — and only by it', () => {
     expect(h.analysis.analyzeNews).toHaveBeenCalledTimes(1);
   });
 
+  it('MAP GEOGRAPHY R1 — with no story, the map country is recorded (its code, never its display name)', async () => {
+    const h = controllerHarness();
+    await h.ask(
+      { query: 'What are the latest developments?', geographyContext: { countryCode: 'POL', displayName: 'Polska' } },
+      { signedIn: true },
+    );
+    expect(h.history.rows).toEqual([
+      expect.objectContaining({ query: 'What are the latest developments?', countryCode: 'POL' }),
+    ]);
+    expect(JSON.stringify(h.history.rows)).not.toContain('Polska');
+  });
+
+  it('MAP GEOGRAPHY R1 — a story context is the more specific anchor: its country is recorded', async () => {
+    const h = controllerHarness();
+    await h.ask(
+      {
+        query: 'What happens next?',
+        storyContext: { title: 't', countryCode: 'KEN' },
+        geographyContext: { countryCode: 'POL', displayName: 'Poland' },
+      },
+      { signedIn: true },
+    );
+    expect(h.history.rows).toEqual([expect.objectContaining({ countryCode: 'KEN' })]);
+  });
+
   it('a failed / no-evidence analysis still records the question (the reader asked it), never an answer', async () => {
     const h = controllerHarness();
     h.analysis.analyzeNews.mockRejectedValueOnce(new Error('provider down'));

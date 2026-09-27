@@ -65,7 +65,7 @@ export class AnalysisController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('news')
   async analyzeNews(
-    @Body() { query, requestedLanguage, storyContext, priorQuestion, selection }: AnalyzeNewsDto,
+    @Body() { query, requestedLanguage, storyContext, priorQuestion, selection, geographyContext }: AnalyzeNewsDto,
     @Req() request: Request,
   ): Promise<AnalysisApiResponse> {
     if (selection) {
@@ -80,9 +80,21 @@ export class AnalysisController {
 
     const userId = readVerifiedAnalysisUserId(request);
     if (userId) {
-      await this.history.recordExplicitQuestion(userId, query, storyContext?.countryCode);
+      /* The story anchor is the more specific context; the map country applies only without one. */
+      await this.history.recordExplicitQuestion(
+        userId,
+        query,
+        storyContext ? storyContext.countryCode : geographyContext?.countryCode,
+      );
     }
 
-    return this.analysisService.analyzeNews(query, requestedLanguage, storyContext, priorQuestion, selection);
+    return this.analysisService.analyzeNews(
+      query,
+      requestedLanguage,
+      storyContext,
+      priorQuestion,
+      selection,
+      geographyContext,
+    );
   }
 }

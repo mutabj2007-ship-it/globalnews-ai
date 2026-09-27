@@ -22,6 +22,7 @@ import {
   type NewsResponse,
   type RequestedRegionScope,
   type RetrievalOutcome,
+  type GeographyContext,
   type StoryContext,
   type AnalysisEvidenceState,
   resolveEvidenceState,
@@ -529,6 +530,13 @@ export class AnalysisService {
      * Absent for every existing caller.
      */
     selection?: AnalysisSelection,
+    /**
+     * MAP ASK GEOGRAPHY CONTEXT R1 — the map country the reader had open with
+     * no story selected. Only its countryCode is read, and only when it
+     * resolves to a real country. displayName is presentation only and is
+     * never read here. See mapGeographyLocation below for the precedence.
+     */
+    geographyContext?: GeographyContext,
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
 
@@ -537,6 +545,21 @@ export class AnalysisService {
       storyContext = undefined;
       priorQuestion = undefined;
     }
+
+    /*
+      MAP ASK GEOGRAPHY CONTEXT R1 — THE WEAKEST CAMERA.
+
+      Eligible only with no selection and no storyContext: a selected story is
+      the more specific anchor, so when one is present the map country adds
+      nothing and is ignored entirely. When eligible it seeds exactly the
+      location a country-only storyContext always seeded, so it is outranked
+      by a typed place in the same way (see typedScopeOverridesStory). It is
+      resolved here, once, because the cache key must know whether it applies.
+    */
+    const mapGeographyLocation: LocationContext | undefined =
+      selection === undefined && storyContext === undefined && geographyContext !== undefined
+        ? this.resolveGeographyContextLocation(geographyContext.countryCode)
+        : undefined;
 
     /**
      * originalQuery is preserved verbatim for display (AnalysisApiResponse.query)
@@ -573,7 +596,9 @@ export class AnalysisService {
       ? `:story:${storyContext.articleId}`
       : storyContext?.countryCode
         ? `:story:${storyContext.countryCode.toLowerCase()}`
-        : '';
+        : mapGeographyLocation
+          ? `:geo:${mapGeographyLocation.country.iso3.toLowerCase()}`
+          : '';
     const priorQuestionKeySegment = priorQuestion
       ? `:prior:${normalizeQuery(priorQuestion).normalizedQuery.toLowerCase()}`
       : '';
@@ -729,7 +754,7 @@ export class AnalysisService {
          */
         const storyAnchoredLocation: LocationContext | undefined = storyContext?.countryCode
           ? this.resolveStoryContextLocation(storyContext.countryCode)
-          : undefined;
+          : mapGeographyLocation;
         /*
          * G-ALPHA-2 STAGE 2 — DEMONYM GEOGRAPHY, LAST IN PRECEDENCE.
          *
@@ -2474,6 +2499,9 @@ export class AnalysisService {
         if (storyContext) {
           retrievalContext = { ...retrievalContext, storyContextUsed: !typedScopeOverridesStory };
         }
+        if (mapGeographyLocation) {
+          retrievalContext = { ...retrievalContext, geographyContextUsed: !typedScopeOverridesStory };
+        }
 
         /*
           ANCHORING R1 — GATES B + C. The structured event anchor.
@@ -4117,6 +4145,19 @@ export class AnalysisService {
     const country = resolveCountryByAnyIdentifier(countryCode.trim());
 
     return country ? { country } : undefined;
+  }
+
+  /**
+   * MAP ASK GEOGRAPHY CONTEXT R1 — stricter than resolveStoryContextLocation:
+   * the code must BE the resolved country's ISO alpha-2 or alpha-3 code, so a
+   * name or alias can never become the retrieval authority. Unresolvable
+   * codes return undefined and the request is routed as if none was sent.
+   */
+  private resolveGeographyContextLocation(countryCode: string): LocationContext | undefined {
+    const code = countryCode.trim().toUpperCase();
+    const country = resolveCountryByAnyIdentifier(code);
+
+    return country && (country.iso2 === code || country.iso3 === code) ? { country } : undefined;
   }
 
   private detectLocation(query: string): LocationContext | undefined {
