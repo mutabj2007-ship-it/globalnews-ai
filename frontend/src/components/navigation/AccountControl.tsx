@@ -23,6 +23,13 @@ export interface AccountControlProps {
   accountMenuAriaLabel: string;
   /** Heading of the identity row inside the OPENED control only. */
   signedInAsLabel: string;
+  /**
+   * MY INTELLIGENCE R1.2 — the label and the "new" tag for the entry that
+   * opens /my-intelligence. Passed in like every other label here, so this
+   * control still has no dictionary of its own and no second localization path.
+   */
+  myIntelligenceLabel: string;
+  myIntelligenceTag: string;
   historyLabel: string;
   /**
    * RC-1 — the user Support entry. Sits in the SIGNED-IN account menu beside
@@ -122,6 +129,8 @@ export function AccountControl({
   accountLabel,
   accountMenuAriaLabel,
   signedInAsLabel,
+  myIntelligenceLabel,
+  myIntelligenceTag,
   historyLabel,
   supportLabel,
   signOutLabel,
@@ -233,6 +242,27 @@ export function AccountControl({
             <span className="block truncate font-medium text-ink-primary">{user.email}</span>
           </p>
           <span aria-hidden="true" className="mb-1 block h-px bg-cyan-500/20" />
+          {/*
+            MY INTELLIGENCE R1.2 — the entry point, first in the menu and marked
+            as new.
+
+            The ORDER of the existing entries is untouched: History, Support,
+            Settings, Sign Out remain in the sequence the Product Owner ruling
+            and RC-1 set, and this item is added ahead of them rather than
+            inserted among them. It is a <Link>: the only thing it can do is
+            navigate, which is the same safety property the rest of this menu
+            was rebuilt around. No `role="menu"` is introduced — CTO amendment 4
+            stands.
+          */}
+          <Link
+            href="/my-intelligence"
+            className="flex items-center justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-surface-hover"
+          >
+            <span>{myIntelligenceLabel}</span>
+            <span className="rounded-[5px] border border-[#1b6fa8] px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-[0.04em] text-[#93cdf5]">
+              {myIntelligenceTag}
+            </span>
+          </Link>
           <Link href="/history" className="rounded px-2 py-1.5 text-left hover:bg-surface-hover">
             {historyLabel}
           </Link>

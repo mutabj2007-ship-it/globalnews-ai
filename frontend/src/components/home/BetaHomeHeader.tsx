@@ -124,10 +124,29 @@ const PRIMARY_MODULE_IDS = ['economy', 'energy', 'security', 'humanitarian'] as 
 const MORE_MODULE_IDS = ['country-intelligence', 'politics', 'conflict', 'market', 'world-intelligence'] as const;
 
 interface BetaHomeHeaderProps {
+  /**
+   * Is the header being rendered on Home itself?
+   *
+   * This header was written for Home, where the Home entry IS the page you are
+   * standing on and carries the prototype's filled active pill. It is now also
+   * rendered on /my-intelligence, a secondary route, where claiming Home as the
+   * current page is wrong twice: it highlights a destination the reader is not
+   * on, and `aria-current="page"` tells assistive technology the same untruth.
+   *
+   * It defaults to `true`, so Home and every existing caller render exactly as
+   * before — same pill, same classes, same attribute. Only a caller that says
+   * `isHome={false}` opts out, which is what the frozen My Intelligence
+   * authority means when it says that route highlights no destination.
+   *
+   * A prop rather than `usePathname()` on purpose: this is a Server Component,
+   * and a hook would turn the whole header into a client tree to answer a
+   * question the caller already knows the answer to.
+   */
+  isHome?: boolean;
   language?: LanguageCode;
 }
 
-export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.Element {
+export function BetaHomeHeader({ language = 'en', isHome = true }: BetaHomeHeaderProps): JSX.Element {
   const dict = getDictionary(language);
   const t = dict.navBar;
   const beta = dict.betaHome;
@@ -196,7 +215,15 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
 
         {/* 1024-1279 -- the R5.1 four-destination header. */}
         <nav className="flex items-center gap-1 xl:hidden" aria-label={t.primaryNavigationAriaLabel}>
-          <Link href="/" aria-current="page" className={`${navItem} bg-[#12365e] text-white shadow-[inset_0_1px_0_rgba(150,200,255,0.18)]`}>
+          <Link
+            href="/"
+            aria-current={isHome ? 'page' : undefined}
+            className={
+              isHome
+                ? `${navItem} bg-[#12365e] text-white shadow-[inset_0_1px_0_rgba(150,200,255,0.18)]`
+                : navItem
+            }
+          >
             {compact.home}
           </Link>
           {COMPACT_DESTINATIONS.map((entry) => (
@@ -210,8 +237,12 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
           {/* Home is the page itself, so it carries the prototype's filled active pill. */}
           <Link
             href="/"
-            aria-current="page"
-            className={`${navItem} bg-[#12365e] text-white shadow-[inset_0_1px_0_rgba(150,200,255,0.18)]`}
+            aria-current={isHome ? 'page' : undefined}
+            className={
+              isHome
+                ? `${navItem} bg-[#12365e] text-white shadow-[inset_0_1px_0_rgba(150,200,255,0.18)]`
+                : navItem
+            }
           >
             {t.navItemLabels.home}
           </Link>
@@ -332,6 +363,8 @@ export function BetaHomeHeader({ language = 'en' }: BetaHomeHeaderProps): JSX.El
         />
 
         <AccountControl
+          myIntelligenceLabel={getDictionary(language).myIntelligence.accountMenuItem}
+          myIntelligenceTag={getDictionary(language).myIntelligence.accountMenuItemTag}
           signInLabel={t.signIn}
           signInClassName="rounded-[9px] border border-cd-edge-emphasis-50 bg-gradient-to-b from-[rgba(37,99,235,0.95)] to-[rgba(29,78,216,0.95)] px-4 py-[9px] font-cd-body text-cd-signin xl:px-5 text-cd-ink-signin shadow-[0_0_22px_rgba(37,99,235,0.35)] transition-opacity hover:opacity-90"
           accountLabel={t.account}
