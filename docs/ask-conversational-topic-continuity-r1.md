@@ -129,3 +129,13 @@ never the prior question alone.
 | Why is inflation high in Poland? → "Why does this matter to consumers?" | `inflation high Poland consumers impact` |
 | High interest rates…economy? → "What about businesses?" | `high interest rates doing economy businesses` |
 | Explain the sanctions on Russia → "How could this affect Poland?" | `sanctions on Russia Poland impact` |
+
+## Known R1 limitation — FOLLOW-UP FOCUS-AWARE ACQUISITION — FUTURE RETRIEVAL IMPROVEMENT
+
+The current-turn focus prioritises evidence inside the corpus retrieved for the
+inherited subject. It does not broaden provider acquisition: no additional or
+focus-specific provider query is issued. When the subject corpus contains
+nothing about the focus, the answer carries `FOCUS_NOT_IN_EVIDENCE` and says so
+honestly. Acquiring focus-specific evidence (for example, a bounded second query
+gated on subject + focus) is a future retrieval-authority change, deliberately
+not made in the R1 convergence.

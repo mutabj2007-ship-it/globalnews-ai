@@ -88,3 +88,46 @@ describe('the continued subject on the Ask dock', () => {
     expect(render(withSubject(undefined), 'en')).not.toContain('data-ask="continuing"');
   });
 });
+
+describe('PRE-MI QUALITY CLOSURE — the resolved compact result carries B and D together', () => {
+  it('Continuing chip + compact event note + inline citations + inference label in one answer', () => {
+    const base = fixture({}) as AnalysisApiResponse;
+    const firstSource = base.analysis!.sources[0];
+    const fact = 'The regulation sets obligations for high-risk AI providers.';
+    const inference = 'It could affect many online services.';
+    const response = {
+      ...base,
+      retrievalContext: {
+        ...base.retrievalContext,
+        conversationSubject: EU,
+        eventAnchor: {
+          topic: 'plane crash',
+          source: 'prior-question',
+          aspects: { cause: true, effect: true, crossBorder: true },
+          directEventArticleIds: [],
+          consequenceArticleIds: [],
+          contextArticleIds: [],
+          disclosures: ['CAUSE_NOT_ESTABLISHED'],
+        },
+      },
+      analysis: {
+        ...base.analysis!,
+        summary: `${fact} ${inference}`,
+        summaryStatements: [
+          { text: fact, kind: 'REPORTED_FACT', sourceArticleIds: [firstSource.articleId] },
+          { text: inference, kind: 'ANALYTICAL_INFERENCE', sourceArticleIds: [] },
+        ],
+      },
+    } as AnalysisApiResponse;
+
+    const html = render(response, 'en', { onStartNewTopic: () => undefined });
+    expect(html).toContain('Continuing: EU AI regulation');
+    expect(html).toContain('data-ask="product-applicability"');
+    expect(html).toContain('data-event-anchor-variant="compact"');
+    expect(html).toContain('data-citation="1"');
+    expect(html).toContain('Analytical inference:');
+    /* D's block sits before the (compact) event note, which sits before the brief. */
+    expect(html.indexOf('data-ask="continuing"')).toBeLessThan(html.indexOf('data-event-anchor="notice"'));
+    expect(html.indexOf('data-event-anchor="notice"')).toBeLessThan(html.indexOf('data-ask="brief"'));
+  });
+});

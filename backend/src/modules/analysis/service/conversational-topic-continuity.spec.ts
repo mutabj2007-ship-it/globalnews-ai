@@ -502,3 +502,49 @@ describe('D.1 — the current turn narrows the inherited subject', () => {
     });
   });
 });
+
+/**
+ * PRE-MI QUALITY CLOSURE — B + D TOGETHER. The subject-continuation answer is
+ * also a cited answer: inline statement citations and the inference label
+ * (Lane B) survive on the EU follow-up (Lane D), and the product question is
+ * still disclosed, never answered from reporting.
+ */
+describe('INTEGRATION — topic continuity with inline citations and inference labels', () => {
+  it('EU follow-up: Continuing subject, cited statements, labelled inference, product disclosure', async () => {
+    const h = harness(CORPUS, (raw, input) => {
+      if (input.query !== EU_T2) return;
+      const ids = new Map(
+        input.articles.map((article, i) => [article.id, `S${i + 1}`]),
+      );
+      const sentence1 = 'The EU AI regulation sets obligations for providers of high-risk AI systems.';
+      const sentence2 = 'It could affect many online services.';
+      const sentence3 = 'The available reporting does not describe GlobalNewsAI itself.';
+      raw.summary = `${sentence1} ${sentence2} ${sentence3}`;
+      raw.summaryStatements = [
+        { text: sentence1, kind: 'REPORTED_FACT', evidenceIds: [ids.get('eu-1')] },
+        { text: sentence2, kind: 'REPORTED_FACT', evidenceIds: [ids.get('eu-2')] },
+        { text: sentence3, kind: 'REPORTED_FACT', evidenceIds: [] },
+      ];
+    });
+    await turn(h, EU_T1);
+    const t = await turn(h, EU_T2, EU_T1);
+
+    expect(t.providerCalls).toBe(1);
+    expect(t.r.retrievalContext.conversationSubject).toMatchObject({
+      subject: 'EU AI regulation',
+      disclosures: ['PRODUCT_APPLICABILITY_NOT_ESTABLISHED'],
+    });
+    expect(t.r.analysis!.summaryStatements).toEqual([
+      {
+        text: 'The EU AI regulation sets obligations for providers of high-risk AI systems.',
+        kind: 'REPORTED_FACT',
+        sourceArticleIds: ['eu-1'],
+      },
+      { text: 'It could affect many online services.', kind: 'ANALYTICAL_INFERENCE', sourceArticleIds: [] },
+    ]);
+    /* Both instruction families reach the model in the one call. */
+    const { system } = promptFor(t.input!);
+    expect(system).toContain('"summaryStatements" ANNOTATES THE BRIEF');
+    expect(system).toContain('CONVERSATION SUBJECT');
+  });
+});
