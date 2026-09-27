@@ -52,7 +52,9 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     /* the submitted value is the trimmed input and nothing else: no synonym
        expansion, no template, no appended keywords, no site: operators */
     expect(CODE).toMatch(/const asked = question\.trim\(\);/);
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion\)/);
+    /* MAP MOBILE R1 CONVERGENCE — the call gained the optional geography scope as
+       its sixth argument; the question is still passed verbatim, first. */
+    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion, undefined, sentGeography\)/);
     expect(CODE).not.toMatch(/asked \+|`\$\{asked\}[^`]/);
   });
 
@@ -189,7 +191,9 @@ describe('opening the panel is not a question', () => {
  */
 describe('ASK RULE A — only bounded context crosses the boundary', () => {
   it('§7.1/§7.2 — a third argument is passed, and its keys are a subset of {title, articleId, countryCode}', () => {
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion\)/);
+    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion, undefined, sentGeography\)/);
+    /* MAP MOBILE R1 CONVERGENCE — the geography is sent ONLY when no story context is: never both. */
+    expect(CODE).toMatch(/const sentGeography = sent === undefined \? geographyContext : undefined;/);
     /* the narrowing lives in ONE place, so no call site can widen it */
     expect(CODE).toMatch(/const sent = transportableContext\(storyContext\);/);
 
@@ -460,7 +464,7 @@ describe('HOME ASK DOCK LAUNCH R1 — Home opens Ask in place with zero spend', 
     const openHandlerEnd = dock.indexOf('}, []);', openHandlerStart);
     const openHandler = dock.slice(openHandlerStart, openHandlerEnd);
     expect(openHandler).not.toContain('analyzeNews(');
-    expect(dock).toContain('analyzeNews(asked, language, sent, priorQuestion)');
+    expect(dock).toContain('analyzeNews(asked, language, sent, priorQuestion, undefined, sentGeography)');
   });
 });
 

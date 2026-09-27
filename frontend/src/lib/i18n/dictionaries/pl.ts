@@ -1340,7 +1340,7 @@ export const pl: Dictionary = {
         */
         countryRead: {
           heading: 'Analiza kraju',
-          notLoaded: 'Kraj jest wybrany. Nic nie zostało jeszcze pobrane.',
+          notLoaded: 'Wybrano ten kraj. Niczego jeszcze nie pobrano.',
           loading: 'Pobieranie bieżących doniesień dla tego kraju…',
           noCoverage: 'Sprawdzono. Brak zweryfikowanych doniesień dla tego kraju w tym okresie.',
           failed: 'Nie udało się teraz pobrać doniesień. Możesz spróbować ponownie.',

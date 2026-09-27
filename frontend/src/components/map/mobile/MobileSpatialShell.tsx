@@ -29,13 +29,13 @@ import { useResolvedRegion } from '@/lib/map/region/useResolvedRegion';
 import { RegionIdentityCard } from '@/components/map/shell/RegionIdentityCard';
 import {
   MobileBottomSheet,
-  FULL_FRACTION,
-  HALF_FRACTION,
   MIN_TOUCH_PX,
-  PEEK_HEIGHT_PX,
+  SPATIAL_DETENTS,
   type SheetStop,
 } from './MobileBottomSheet';
 import { MobilePlaceSearch } from './MobilePlaceSearch';
+import { useMapWorkspace } from './useMapWorkspace';
+import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { BAND_AVAILABLE } from '@/lib/map/spatial/controlBands';
 import { WatchCta } from '@/components/map/shell/monetization/WatchCta';
 import { WatchComposer } from '@/components/map/shell/monetization/WatchComposer';
@@ -213,23 +213,34 @@ export function MobileSpatialShell({
 
     `PERMANENT_HUD_PX` on top is the 82px hard cap this shell already declares.
   */
-  const stopRef = useRef<SheetStop>(stop);
-  stopRef.current = stop;
+  /*
+    ══ MAP MOBILE INTERACTION R1 · ONE AVAILABLE-WORKSPACE MODEL ════════════
+
+    Raw-viewport arithmetic is retired. The sheet height, mapFractionAt, this
+    camera fit inset and the zoom anchor all read the SAME layout, derived from
+
+        A = visualViewportHeight − 52px top bar − visible bottom-nav block
+
+    (lib/map/spatial/mapWorkspace). The bottom nav is visible at PEEK and HALF
+    and hidden at FULL and while the keyboard is open, and its visibility is
+    derived in the same computation as A — so a FULL transition settles as
+    nav leaves layout → A recomputes → sheet and camera settle, with no refit
+    from the old nav-visible geometry.
+
+    The fit reads the layout through a ref at RESOLVE time, for the reason
+    R2 gave: what covers the map is what is covering it when the fit happens.
+  */
+  const navHostRef = useRef<HTMLDivElement>(null);
+  const workspace = useMapWorkspace(stop, navHostRef, SPATIAL_DETENTS);
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
 
   const fitInset = useCallback(() => {
-    const viewportHeight = typeof window === 'undefined' ? 0 : window.innerHeight;
+    const current = workspaceRef.current;
 
-    if (viewportHeight <= 0) return { top: PERMANENT_HUD_PX };
+    if (current.workspacePx <= 0) return { top: PERMANENT_HUD_PX };
 
-    const current = stopRef.current;
-    const sheet =
-      current === 'PEEK'
-        ? PEEK_HEIGHT_PX
-        : current === 'HALF'
-          ? Math.floor(viewportHeight * HALF_FRACTION)
-          : Math.floor(viewportHeight * FULL_FRACTION);
-
-    return { top: PERMANENT_HUD_PX, bottom: sheet };
+    return { top: current.fitInset.top, bottom: current.fitInset.bottom };
   }, []);
 
   const availability = useMemo(
@@ -648,7 +659,7 @@ export function MobileSpatialShell({
         data-gn="mobile-zoom"
         role="group"
         aria-label={shell.controlsLabel}
-        style={{ bottom: stop === 'PEEK' ? PEEK_HEIGHT_PX + 16 : `calc(${HALF_FRACTION * 100}dvh + 16px)` }}
+        style={{ bottom: workspace.zoomBottomPx }}
         className="pointer-events-none absolute right-[10px] z-30 flex flex-col gap-[8px] transition-[bottom] duration-200 ease-out [&_button]:pointer-events-auto"
       >
         <button
@@ -679,6 +690,8 @@ export function MobileSpatialShell({
       <MobileBottomSheet
         stop={stop}
         onStopChange={setStop}
+        workspaceHeight={workspace.workspacePx}
+        bottomOffset={workspace.sheetBottomPx}
         labels={{
           sheetLabel: mobile.sheetLabel,
           handleLabel: mobile.handleLabel,
@@ -1128,6 +1141,25 @@ export function MobileSpatialShell({
           </>
         )}
       </MobileBottomSheet>
+
+      {/*
+        ══ MAP MOBILE INTERACTION R1 · THE PHONE BOTTOM NAVIGATION ON /map ══
+
+        The product's one phone bottom nav, mounted here with the ruled
+        visibility: PEEK visible, HALF visible, FULL hidden, keyboard open
+        hidden — and restored symmetrically on the way back down. `hidden`
+        takes it out of rendering entirely, and the workspace model measures its
+        real height (safe area included) while it is shown. The sheet sits on
+        top of it (sheetBottomPx), never underneath.
+      */}
+      <div
+        ref={navHostRef}
+        data-gn="map-bottom-nav"
+        data-gn-nav-visible={workspace.navVisible ? 'true' : 'false'}
+        hidden={!workspace.navVisible}
+      >
+        <MobileBottomNav language={language} intelligenceHref="/#intelligence-modules" />
+      </div>
 
       {/*
         ── PART IV §16 · MOBILE SUSTAINED SURFACES ──────────────────────────
