@@ -49,6 +49,15 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
  */
 export const COMPACT_SOURCE_LIMIT = 4;
 
+/**
+ * TOPIC CONTINUITY R1 D.1 — the reader's own focus words as one localized list
+ * ("consumers and prices" / "konsumenci i ceny"). Wording only: each item is a
+ * word the reader typed, and nothing is composed from analysis dimensions.
+ */
+function formatFocus(focus: readonly string[], language: LanguageCode): string {
+  return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(focus);
+}
+
 interface AskCompactResultProps {
   readonly response: AnalysisApiResponse;
   readonly question: string;
@@ -186,7 +195,7 @@ export function AskCompactResult({
               {t.continuingSubject.replace('{subject}', response.retrievalContext.conversationSubject.subject)}
               {/* D.1 — the current turn's focus, in the reader's own words. */}
               {(response.retrievalContext.conversationSubject.focus ?? []).length > 0
-                ? ` · ${(response.retrievalContext.conversationSubject.focus ?? []).join(', ')}`
+                ? ` · ${formatFocus(response.retrievalContext.conversationSubject.focus ?? [], language)}`
                 : null}
             </span>
             {onStartNewTopic ? (
@@ -213,7 +222,7 @@ export function AskCompactResult({
             <p data-ask="focus-not-in-evidence" role="note" className="text-xs leading-relaxed text-ink-secondary">
               {t.focusNotInEvidence.replace(
                 '{focus}',
-                (response.retrievalContext.conversationSubject.focus ?? []).join(', '),
+                formatFocus(response.retrievalContext.conversationSubject.focus ?? [], language),
               )}
             </p>
           ) : null}
