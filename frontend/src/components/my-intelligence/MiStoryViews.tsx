@@ -7,6 +7,70 @@ import { MI_CARD, MI_UNAVAILABLE } from './miPresentation';
 import { BookmarkButton, CategoryChip, CountryChip, SelectCheckbox, fill } from './MiPrimitives';
 import { hasObservationTime } from './newSince';
 import type { FixtureStory } from './devFixtures';
+import type { SyntheticEvent } from 'react';
+
+/**
+ * COLOR / ACTION-AWARENESS R1 — THE STORY'S OWN IMAGE, OR AN HONEST FALLBACK.
+ *
+ * The defect: both saved-story views rendered the "no image" placeholder
+ * unconditionally, so a retained story that DID carry an imageUrl never
+ * showed it. The mapping from the live API already carries imageUrl; only the
+ * view discarded it.
+ *
+ * Only an absolute http(s) URL on the story itself is used — nothing is
+ * invented and no decorative stand-in is ever presented as the story's image.
+ * The designed placeholder sits UNDER the image, so a URL that 404s or times
+ * out is hidden and reveals the placeholder instead of a broken-image glyph.
+ */
+export function storyImageSrc(story: Pick<FixtureStory, 'imageUrl'>): string | undefined {
+  const raw = story.imageUrl;
+  if (typeof raw !== 'string' || raw.trim().length === 0) return undefined;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Stateless, so it works identically for every card. */
+export function hideFailedStoryImage(event: SyntheticEvent<HTMLImageElement>): void {
+  event.currentTarget.style.display = 'none';
+}
+
+function StoryImage({
+  story,
+  fallback,
+  className,
+  fallbackClassName,
+}: {
+  story: FixtureStory;
+  fallback: string;
+  className: string;
+  fallbackClassName: string;
+}): JSX.Element {
+  const src = storyImageSrc(story);
+
+  return (
+    <span data-mi-story-image={src ? 'present' : 'missing'} className={`relative overflow-hidden ${className}`}>
+      <span aria-hidden={src ? 'true' : undefined} className={fallbackClassName}>
+        {fallback}
+      </span>
+      {src && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={hideFailedStoryImage}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+    </span>
+  );
+}
 
 interface CommonProps {
   story: FixtureStory;
@@ -169,9 +233,12 @@ export function SavedRow(props: CommonProps): JSX.Element {
           label={blocked ? t.selection.cannotSelect : story.title}
         />
       )}
-      <span className="flex h-[84px] w-[84px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-[#0e2d4d] bg-[linear-gradient(140deg,#0b2742,#061a30)] text-[10px] text-[#54687e]">
-        {t.saved.noImage}
-      </span>
+      <StoryImage
+        story={story}
+        fallback={t.saved.noImage}
+        className="flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-[10px] border border-[#0e2d4d] bg-[linear-gradient(140deg,#0b2742,#061a30)]"
+        fallbackClassName="px-1.5 text-center text-[10px] leading-[1.3] text-[#54687e]"
+      />
       <span className="min-w-0 flex-1">
         <span className="mb-1 block">
           <CategoryChip label={story.category} />
@@ -215,7 +282,12 @@ export function SavedCard(props: CommonProps & { reason?: string }): JSX.Element
       }`}
     >
       <div className="relative flex h-[132px] items-center justify-center bg-[linear-gradient(140deg,#0b2742,#061a30)] text-[11px] text-[#54687e]">
-        {t.saved.noImage}
+        <StoryImage
+          story={story}
+          fallback={t.saved.noImage}
+          className="flex h-full w-full items-center justify-center"
+          fallbackClassName="px-3 text-center"
+        />
         {selecting && (
           <span className="absolute left-2 top-2">
             <SelectCheckbox

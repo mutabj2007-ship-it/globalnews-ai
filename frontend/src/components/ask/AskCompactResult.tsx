@@ -76,6 +76,13 @@ interface AskCompactResultProps {
    */
   readonly onStartNewTopic?: () => void;
   readonly newTopicStarted?: boolean;
+  /**
+   * MY INTELLIGENCE COMPUTE CLOSURE R1 — the /search transition rebuilds a
+   * single-question request. A multi-story SELECTION result cannot be
+   * reproduced by it (it would run a different, unscoped analysis), so that
+   * caller turns the link off. Every other caller keeps the default.
+   */
+  readonly showFullAnalysisLink?: boolean;
 }
 
 export function AskCompactResult({
@@ -85,6 +92,7 @@ export function AskCompactResult({
   context,
   onStartNewTopic,
   newTopicStarted = false,
+  showFullAnalysisLink = true,
 }: AskCompactResultProps): JSX.Element {
   const dictionary = getDictionary(language);
   const t = dictionary.askAi;
@@ -113,9 +121,15 @@ export function AskCompactResult({
     its position in `analysis.sources` as its number.
   */
   const cited = citedSourceNumbers(analysis?.summaryStatements, sources);
+  /*
+    The bound is only honest while the transition that reaches the rest
+    exists. With the /search link off (a selection result), nothing may be
+    left unreachable, so every source is listed.
+  */
+  const sourceLimit = showFullAnalysisLink ? COMPACT_SOURCE_LIMIT : Number.POSITIVE_INFINITY;
   const shown = sources
     .map((source, index) => ({ source, number: index + 1 }))
-    .filter(({ number }) => number <= COMPACT_SOURCE_LIMIT || cited.has(number));
+    .filter(({ number }) => number <= sourceLimit || cited.has(number));
   const truncated = sources.length > shown.length;
 
   /*
@@ -346,7 +360,7 @@ export function AskCompactResult({
         rather than hidden in client state. The full workspace is the only
         place full analytical detail is rendered (§2.3).
       */}
-      {canOpenFullAnalysis ? (
+      {showFullAnalysisLink && (<>{canOpenFullAnalysis ? (
         <div className="flex flex-col items-start gap-0.5">
         <a
           data-ask="open-full"
@@ -371,7 +385,7 @@ export function AskCompactResult({
           {t.runFullAnalysisNote}
         </span>
         </div>
-      ) : null}
+      ) : null}</>)}
     </div>
   );
 }
