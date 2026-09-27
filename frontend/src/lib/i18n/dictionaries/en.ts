@@ -4,6 +4,7 @@
  * so the SAME rendering code path can look up either language, not to
  * change any existing English wording.
  */
+import { HOME_SUGGESTED_QUESTIONS } from '@globalnews-ai/shared';
 import { adminEn } from './adminEn';
 import { supportEn } from './supportEn';
 
@@ -131,10 +132,10 @@ export const en = {
     resultSourcesTruncated: 'Showing {shown} of {total}. Open the full analysis for the rest.',
     resultBriefAbsent: 'This analysis carried no executive brief. That is an absence, not an assessment \u2014 nothing was measured and withheld.',
     resultNoAnswer: 'No answer was produced for this question. The state above says why.',
-    resultNoAnswerProvider:
-      'Live reporting could not be retrieved reliably enough to answer this question.',
+    /* LANE E — two different facts, worded so a reader can tell them apart. */
+    resultNoAnswerProvider: 'Live reporting is temporarily unavailable. Please try again in a moment.',
     resultNoAnswerEvidence:
-      'No retrieved reporting met the evidence threshold for this question.',
+      'No relevant reporting found for this question. Try naming the place, organisation or event.',
     resultNoAnswerSafety:
       'GlobalNews AI did not generate an answer without supporting evidence. Try again shortly or ask a narrower question about a place, event, or time period.',
     /* CTO ruling 2 — a compute-triggering control is never called Open. */
@@ -522,15 +523,11 @@ export const en = {
      * the DATA SOURCE moved from the untranslated homeContent.ts array
      * to this dictionary, so the rotating example is never English
      * while the rest of the Hero is Polish.
+     *
+     * LANE E \u2014 the list itself now lives in shared/src/home-suggestions.ts,
+     * the one canonical source the backend integrity test also exercises.
      */
-    exampleQuestions: [
-      'What\u2019s happening in the Middle East right now?',
-      'Explain the new EU AI regulation in plain English',
-      'Summarize today\u2019s central bank announcement',
-      'What are scientists saying about the latest climate report?',
-      'Break down this week\u2019s tech earnings',
-      'What changed in the election polling this week?',
-    ] as string[],
+    exampleQuestions: [...HOME_SUGGESTED_QUESTIONS.en] as string[],
     credibilityLiveSources: 'Live sources',
     credibilityAiAnalysis: 'AI analysis',
     credibilityEvidence: 'Evidence-based context',

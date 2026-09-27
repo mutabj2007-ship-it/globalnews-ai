@@ -10,17 +10,11 @@ import {
 } from 'lucide-react';
 import type { ProcessStep, TrustItem, FooterLinkGroup } from '@/types/home';
 
-/**
- * Rotating example queries shown in/under the hero search bar.
+/*
+ * LANE E \u2014 the rotating example questions no longer live here. This array had
+ * no importer and could only drift from what Home rendered; the one canonical
+ * list is HOME_SUGGESTED_QUESTIONS in shared/src/home-suggestions.ts.
  */
-export const exampleSearches: string[] = [
-  'What\u2019s happening in the Middle East right now?',
-  'Explain the new EU AI regulation in plain English',
-  'Summarize today\u2019s central bank announcement',
-  'What are scientists saying about the latest climate report?',
-  'Break down this week\u2019s tech earnings',
-  'What changed in the election polling this week?',
-];
 
 /**
  * "How It Works" is a genuine three-step sequence, so numbering here

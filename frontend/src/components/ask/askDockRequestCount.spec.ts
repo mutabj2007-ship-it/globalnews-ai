@@ -194,3 +194,23 @@ describe('TOPIC CONTINUITY R1 — the dock carries the subject, visibly and reve
     expect(transport.mock.calls[1][3]).toBe('What is happening in Sudan?');
   });
 });
+
+describe('LANE E — every shipped Home suggestion: tap = 0, edit = 0, explicit Ask = exactly 1', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { HOME_SUGGESTED_QUESTIONS } = require('@globalnews-ai/shared') as typeof import('@globalnews-ai/shared');
+  const ALL = [...HOME_SUGGESTED_QUESTIONS.en, ...HOME_SUGGESTED_QUESTIONS.pl];
+
+  it.each(ALL)('"%s" stages in the composer and costs nothing until Send', (suggestion) => {
+    transport.mockReturnValue(new Promise(() => undefined));
+    act(() => openGlobalAsk(suggestion));
+    expect(field().props.value).toBe(suggestion);
+    expect(transport).toHaveBeenCalledTimes(0);
+
+    type(`${suggestion} — for Poland`);
+    expect(transport).toHaveBeenCalledTimes(0);
+
+    send();
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(transport.mock.calls[0][0]).toBe(`${suggestion} — for Poland`);
+  });
+});

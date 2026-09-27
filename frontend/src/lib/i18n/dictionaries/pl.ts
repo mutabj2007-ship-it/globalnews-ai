@@ -1,3 +1,4 @@
+import { HOME_SUGGESTED_QUESTIONS } from '@globalnews-ai/shared';
 import type { Dictionary } from './index';
 import { adminPl } from './adminPl';
 import { supportPl } from './supportPl';
@@ -87,9 +88,9 @@ export const pl: Dictionary = {
     resultBriefAbsent: 'Ta analiza nie zawiera\u0142a streszczenia. To brak, a nie ocena \u2014 niczego nie zmierzono ani nie wstrzymano.',
     resultNoAnswer: 'Dla tego pytania nie powsta\u0142a odpowied\u017a. Stan powy\u017cej wyja\u015bnia dlaczego.',
     resultNoAnswerProvider:
-      'Nie uda\u0142o si\u0119 wystarczaj\u0105co wiarygodnie pozyska\u0107 bie\u017c\u0105cych materia\u0142\u00f3w, aby odpowiedzie\u0107 na to pytanie.',
+      'Bie\u017c\u0105ce doniesienia s\u0105 chwilowo niedost\u0119pne. Spr\u00f3buj ponownie za chwil\u0119.',
     resultNoAnswerEvidence:
-      '\u017badne pozyskane materia\u0142y nie spe\u0142ni\u0142y progu dowodowego dla tego pytania.',
+      'Nie znaleziono doniesie\u0144 pasuj\u0105cych do tego pytania. Spr\u00f3buj poda\u0107 miejsce, instytucj\u0119 lub wydarzenie.',
     resultNoAnswerSafety:
       'GlobalNews AI nie wygenerowa\u0142 odpowiedzi bez materia\u0142u dowodowego. Spr\u00f3buj ponownie za chwil\u0119 albo zadaj w\u0119\u017csze pytanie o miejsce, wydarzenie lub okres.',
     runFullAnalysis: 'Uruchom pe\u0142n\u0105 analiz\u0119',
@@ -394,14 +395,8 @@ export const pl: Dictionary = {
     // message, shown when the 1000-character maximum is reached.
     questionMaxLengthReached: 'Osiągnięto maksymalną długość pytania',
     tryPrefix: 'Na przykład:',
-    exampleQuestions: [
-      'Co się teraz dzieje na Bliskim Wschodzie?',
-      'Wyjaśnij nowe przepisy UE dotyczące AI prostym językiem',
-      'Podsumuj dzisiejsze ogłoszenie banku centralnego',
-      'Co mówią naukowcy o najnowszym raporcie klimatycznym?',
-      'Omów wyniki finansowe firm technologicznych z tego tygodnia',
-      'Co zmieniło się w sondażach wyborczych w tym tygodniu?',
-    ],
+    /* LANE E — the canonical list: shared/src/home-suggestions.ts. */
+    exampleQuestions: [...HOME_SUGGESTED_QUESTIONS.pl],
     credibilityLiveSources: 'Źródła na żywo',
     credibilityAiAnalysis: 'Analiza AI',
     credibilityEvidence: 'Kontekst oparty na dowodach',
