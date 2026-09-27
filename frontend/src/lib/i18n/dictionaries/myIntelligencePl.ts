@@ -111,6 +111,8 @@ export const myIntelligencePl = {
     maxReached: 'Możesz zaznaczyć maksymalnie {count} artykułów.',
     aiTag: 'AI',
     modeLabel: 'Tryb zaznaczania',
+    selectStories: 'Zaznacz artykuły',
+    selectAria: 'Zaznacz artykuły. Włącz tryb zaznaczania. Zaznaczanie jest bezpłatne.',
     modeDone: 'Tryb zaznaczania · Gotowe',
     doneAria: 'Gotowe — zakończ tryb zaznaczania',
     storiesSelectedOne: 'Zaznaczone artykuły: {count}',
