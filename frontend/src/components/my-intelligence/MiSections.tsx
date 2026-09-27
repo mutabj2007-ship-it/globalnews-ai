@@ -18,6 +18,7 @@ import {
 } from './miPresentation';
 import { fill } from './MiPrimitives';
 import { NewSinceRow, SavedCard, SavedRow } from './MiStoryViews';
+import { FollowingList } from './MiFollowing';
 import type { FixtureStory } from './devFixtures';
 import type { RecentQuestion } from './useMyIntelligenceData';
 
@@ -204,7 +205,7 @@ export function SavedSection({
               />
             ))}
           </ul>
-          <ul className="mt-3 hidden gap-3 md:grid md:grid-cols-2 min-[1700px]:grid-cols-3">
+          <ul className="mt-3 hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             {stories.map((story) => (
               <SavedCard
                 key={story.id}
@@ -241,7 +242,7 @@ export function ForYouSection({
       {stories.length === 0 ? (
         <p className="mt-3 text-[13px] text-[#7d92aa]">{t.forYou.empty}</p>
       ) : (
-        <ul className="mt-3 grid gap-3 md:grid-cols-2 min-[1700px]:grid-cols-3">
+        <ul className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
           {stories.map((story) => {
             const country = findCountryByIso3(story.countryCode);
             const name =
@@ -291,58 +292,16 @@ export function FollowingSection({
 }): JSX.Element {
   const t = getDictionary(language).myIntelligence;
 
+  /*
+    DENSITY R1 — the Following TAB keeps the list as its content (that is the
+    tab's job), through the SAME FollowingList the Overview popout uses, in a
+    bounded frame with its own scroll: fifty countries never lengthen the page.
+  */
   return (
-    <Section
-      id="mi-following"
-      title={t.following.title}
-      surface={MI_RAIL}
-      action={
-        <Link href="/map" className="text-[12.5px] font-semibold text-[#5abff5]">
-          {t.following.manage}
-        </Link>
-      }
-    >
-      {follows === null || follows.length === 0 ? (
-        <p className="mt-2 text-[13px] text-[#93a7bd]">{t.following.empty}</p>
-      ) : (
-        <ul className="mt-3 flex flex-col">
-          {follows.map((iso3) => {
-            const country = findCountryByIso3(iso3);
-            const name =
-              country === undefined ? iso3 : getCountryDisplayName(country.iso2, language, country.name);
-            const count = newByCountry[country?.iso2 ?? iso3] ?? 0;
-
-            return (
-              <li
-                key={iso3}
-                className="flex items-center justify-between gap-3 border-b border-[#0a2744] py-2.5 last:border-b-0"
-              >
-                <span className="min-w-0">
-                  <span className="block text-[14px] font-semibold text-[#e4eefb]">{name}</span>
-                  <span className="block text-[12px] text-[#7d92aa]">
-                    {count > 0 ? fill(t.following.newSince, { count }) : t.following.nothingNew}
-                  </span>
-                </span>
-                <span
-                  className={`${MI_PILL} ${MI_FOLLOW_ON} inline-flex h-[40px] min-w-[112px] items-center justify-center gap-1.5 px-3 text-[12.5px] font-semibold`}
-                >
-                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[13px] w-[13px]" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m5 12.5 4.5 4.5L19 7.5" />
-                  </svg>
-                  {t.following.following}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      <p className="mt-3 flex items-start gap-2 rounded-[10px] border border-dashed border-[#2b3f56] px-3 py-2.5 text-[12px] leading-[1.45] text-[#7d92aa]">
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="mt-[1px] h-[14px] w-[14px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-          <path d="M3 3l18 18M10.6 5.3A9.6 9.6 0 0 1 12 5c5 0 9 4.5 9 7a11 11 0 0 1-2.2 3.4M6.2 7.4C4 9 3 11.2 3 12c0 2.5 4 7 9 7a9.3 9.3 0 0 0 3.6-.7" />
-        </svg>
-        <span>{t.following.watchDormant}</span>
-      </p>
+    <Section id="mi-following" title={t.following.title} surface={MI_RAIL}>
+      <div className="mt-3 flex max-h-[440px] min-h-0 flex-col">
+        <FollowingList language={language} fallbackFollows={follows} newByCountry={newByCountry} />
+      </div>
     </Section>
   );
 }
@@ -356,14 +315,29 @@ export function FollowingSection({
  * there is nothing to list. That is the truth of the release and the frozen
  * design draws it deliberately rather than papering over it.
  */
+/** DENSITY R1 — Overview never shows more than this many questions. */
+export const RECENT_PREVIEW_LIMIT = 4;
+
 export function RecentSection({
   questions,
   language,
+  limit = RECENT_PREVIEW_LIMIT,
+  bounded = false,
 }: {
   questions: readonly RecentQuestion[];
   language: LanguageCode;
+  /**
+   * The most rows ever put in the DOM. Overview: RECENT_PREVIEW_LIMIT. The
+   * Recent tab: the history API's own list bound. Never unbounded — /history
+   * owns the full list, and a thousand questions must not become a thousand
+   * rows on this page.
+   */
+  limit?: number;
+  /** Give the list its own bounded scroll (the Recent tab). */
+  bounded?: boolean;
 }): JSX.Element {
   const t = getDictionary(language).myIntelligence;
+  const shown = questions.slice(0, Math.max(0, limit));
 
   return (
     <Section
@@ -372,29 +346,33 @@ export function RecentSection({
       surface={MI_ASK_SURFACE}
       action={
         <Link href="/history" className="text-[12.5px] font-semibold text-[#5abff5]">
-          {t.recent.questionHistory}
+          {questions.length > shown.length ? fill(t.recent.viewAll, { count: questions.length }) : t.recent.questionHistory}
         </Link>
       }
     >
       <p className="mt-2 text-[12.5px] leading-[1.5] text-[#93a7bd]">{t.recent.note}</p>
-      {questions.length === 0 ? (
+      {shown.length === 0 ? (
         <p className="mt-3 text-[13px] text-[#7d92aa]">{t.recent.empty}</p>
       ) : (
-        <ul className="mt-3 flex flex-col">
-          {questions.map((entry) => (
+        <ul
+          data-mi-recent-list={shown.length}
+          className={`mt-2 flex flex-col ${bounded ? 'max-h-[440px] overflow-y-auto overscroll-contain' : ''}`}
+        >
+          {shown.map((entry) => (
             <li
               key={entry.id}
-              className="flex items-start justify-between gap-3 border-b border-[#0a2744] py-2.5 last:border-b-0"
+              data-mi-recent-row=""
+              className="flex min-h-[48px] items-center justify-between gap-2 border-b border-[#0a2744] py-1 last:border-b-0"
             >
               <span className="flex min-w-0 items-start gap-2">
-                <svg aria-hidden="true" viewBox="0 0 24 24" className="mt-[3px] h-[15px] w-[15px] shrink-0 text-[#a78bfa]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="mt-[2px] h-[14px] w-[14px] shrink-0 text-[#7d92aa]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M12 7v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
                 </svg>
                 <span className="min-w-0">
-                  <span className="block text-[14px] font-semibold leading-[1.35] text-[#e4eefb]">
+                  <span className="line-clamp-2 text-[13.5px] font-semibold leading-[1.3] text-[#e4eefb] md:line-clamp-1 [overflow-wrap:anywhere]" title={entry.query}>
                     {entry.query}
                   </span>
-                  <span className="block text-[12px] text-[#7d92aa]">
+                  <span className="block text-[11.5px] text-[#7d92aa]">
                     {fill(t.recent.askedOn, { date: formatRelativeTime(entry.createdAt, language) })}
                   </span>
                 </span>
@@ -402,9 +380,13 @@ export function RecentSection({
               {/* `/ask?q=` STAGES a draft. It does not run. The commit is Send, inside Ask. */}
               <Link
                 href={`/ask?q=${encodeURIComponent(entry.query)}`}
-                className={`${MI_PILL} ${MI_TARGET} inline-flex h-[40px] shrink-0 items-center border border-[#1d3a5a] px-3 text-[12.5px] font-semibold text-[#cfe2f2]`}
+                aria-label={fill(t.recent.askAgainAria, { question: entry.query })}
+                title={t.recent.askAgain}
+                className={`${MI_TARGET} inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full border border-[#1d3a5a] text-[#cfe2f2] outline-none focus-visible:ring-2 focus-visible:ring-[#5abff5]`}
               >
-                {t.recent.askAgain}
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[16px] w-[16px]" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" />
+                </svg>
               </Link>
             </li>
           ))}

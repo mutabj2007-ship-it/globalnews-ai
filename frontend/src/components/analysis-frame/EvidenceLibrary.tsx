@@ -3,6 +3,7 @@
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
+import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 
 /**
  * The Evidence Library, as a SEPARATE DESTINATION.
@@ -98,6 +99,10 @@ export function EvidenceLibrary({
                   >
                     {dict.analysisWorkspace.sources.opensInNewTab}
                   </a>
+                  {/* UNIVERSAL BOOKMARK R1 — beside the source link, never inside it. */}
+                  <div className="mt-2 flex justify-end">
+                    <StoryBookmark url={article.url} language={language} />
+                  </div>
                 </div>
               </article>
             </li>

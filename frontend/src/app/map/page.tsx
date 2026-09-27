@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { MapPageClient } from '@/components/map/MapPageClient';
+import { MapBookmarkProvider } from '@/components/bookmark/MapBookmarkProvider';
 /* CHECKPOINT I — the released language reconciliation, now on this route too. */
 import { LanguageSync } from '@/components/i18n/LanguageSync';
 /* CHECKPOINT I — restores the map state the sign-in redirect may not carry. */
@@ -202,7 +203,10 @@ export default function MapPage({ searchParams }: { searchParams?: { from?: stri
             : 'min-h-screen bg-void'
         }
       >
-        <MapPageClient language={language} />
+        {/* UNIVERSAL BOOKMARK R1 — /map fills the account-free bookmark slot; the Conflict branch above does not. */}
+        <MapBookmarkProvider>
+          <MapPageClient language={language} />
+        </MapBookmarkProvider>
       </main>
       {spatial ? (
         <div data-gn="map-route-footer" className="hidden spatial:block">

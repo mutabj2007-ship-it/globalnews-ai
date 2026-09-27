@@ -30,6 +30,7 @@ import {
   stripPosition,
 } from './sourcesReportingGeometry';
 import type { StripLayout } from './sourcesReportingGeometry';
+import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 
 /* ==================================================================== *
  * SOURCES & REPORTING — DESIGN-C2 LOCK 1 (proportions) AND LOCK 2
@@ -216,7 +217,7 @@ function SourceCard({ entry, language, highlighted, relational }: SourceCardProp
         transform: `scale(${CARD_SCALE})`,
         borderRadius: `${CARD_RADIUS}px`,
       }}
-      className={`flex shrink-0 snap-start flex-col overflow-hidden border bg-[#070d14] transition-colors duration-[120ms] ${
+      className={`relative flex shrink-0 snap-start flex-col overflow-hidden border bg-[#070d14] transition-colors duration-[120ms] ${
         highlighted ? 'border-[#67e8f9]' : 'border-[#16202e] hover:border-[#22303f]'
       }`}
     >
@@ -288,6 +289,15 @@ function SourceCard({ entry, language, highlighted, relational }: SourceCardProp
         outlet + age, title, support. Text lives OUTSIDE every transformed
         element, so its rects cannot move.
       */}
+      {/*
+        UNIVERSAL BOOKMARK R1 — over the image corner, as a sibling of both the
+        (aria-hidden) image frame and the title link, so it is reachable by
+        assistive technology and never nested in a link. The locked text block
+        below is untouched.
+      */}
+      <span className="absolute right-2 top-2 z-10">
+        <StoryBookmark url={article.url} language={language} />
+      </span>
       <div
         data-paf="source-card-text"
         className="flex min-w-0 flex-1 flex-col gap-[5px]"

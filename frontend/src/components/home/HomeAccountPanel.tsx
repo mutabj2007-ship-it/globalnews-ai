@@ -11,6 +11,7 @@ import { accountSignInUrl } from '@/lib/api/accountLinks';
 import { useCountryFollows } from '@/components/home/useCountryFollows';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { StoryVisual } from '@/components/home/StoryVisual';
+import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -185,7 +186,8 @@ export function HomeAccountPanel({ articles, language = 'en' }: HomeAccountPanel
           ) : (
             <ul className="mt-3.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
               {forYou.map((article) => (
-                <li key={article.id}>
+                /* UNIVERSAL BOOKMARK R1 — the card link is unchanged; the bookmark is its sibling. */
+                <li key={article.id} className="relative">
                   <a
                     href={article.url}
                     target="_blank"
@@ -214,6 +216,9 @@ export function HomeAccountPanel({ articles, language = 'en' }: HomeAccountPanel
                       </span>
                     </span>
                   </a>
+                  <span className="absolute right-1.5 top-1.5 z-10">
+                    <StoryBookmark url={article.url} language={language} />
+                  </span>
                 </li>
               ))}
             </ul>

@@ -3,7 +3,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
-import { ARTICLE_REF_PATTERN, MAX_SELECTED_STORIES, findCountryByIso3 } from '@globalnews-ai/shared';
+import { ARTICLE_REF_PATTERN, MAX_SELECTED_STORIES, SEARCH_HISTORY_LIST_LIMIT, findCountryByIso3 } from '@globalnews-ai/shared';
+import { FollowingControl } from './MiFollowing';
 import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClient';
 import {
   SELECTION_ACTION_QUESTIONS,
@@ -19,6 +20,7 @@ import {
   ForYouSection,
   NewSinceSection,
   RecentSection,
+  RECENT_PREVIEW_LIMIT,
   SavedSection,
 } from './MiSections';
 import {
@@ -287,7 +289,6 @@ export function MyIntelligenceClient({
   const showNewSince = tab === 'overview';
   const showSaved = tab === 'overview' || tab === 'saved';
   const showForYou = tab === 'overview';
-  const showFollowing = tab === 'overview' || tab === 'following';
   const showRecent = tab === 'overview' || tab === 'recent';
   /* Select is meaningless where there is nothing selectable. */
   const canSelect = (tab === 'overview' || tab === 'saved') && data.saved.length + data.newSince.length > 0;
@@ -466,14 +467,25 @@ export function MyIntelligenceClient({
                 onAction={openSheet}
               />
             )}
-            {showFollowing && (
+            {tab === 'overview' && (
+              /* DENSITY R1 — ONE compact control on Overview, never the country wall. */
+              <FollowingControl language={language} follows={data.follows} newByCountry={newByCountry} />
+            )}
+            {tab === 'following' && (
               <FollowingSection
                 follows={data.follows}
                 newByCountry={newByCountry}
                 language={language}
               />
             )}
-            {showRecent && <RecentSection questions={data.recent} language={language} />}
+            {showRecent && (
+              <RecentSection
+                questions={data.recent}
+                language={language}
+                limit={tab === 'recent' ? SEARCH_HISTORY_LIST_LIMIT : RECENT_PREVIEW_LIMIT}
+                bounded={tab === 'recent'}
+              />
+            )}
           </div>
         </div>
       </div>

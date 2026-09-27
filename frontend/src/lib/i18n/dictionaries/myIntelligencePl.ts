@@ -65,8 +65,9 @@ export const myIntelligencePl = {
     sourceUnavailable:
       'Źródło niedostępne. Link wydawcy już się nie otwiera. Zachowujemy Twoje zapisane odniesienie.',
     noImage: 'Brak zdjęcia',
-    save: 'Zapisz w Mojej analizie',
-    unsave: 'Usuń z zapisanych',
+    save: 'Zapisz artykuł',
+    unsave: 'Usuń zapisany artykuł',
+    saveUnavailable: 'Tego artykułu nie można jeszcze zapisać: nie ma go w zachowanych doniesieniach.',
     savedToast: 'Zapisano w Mojej analizie',
     unsavedToast: 'Usunięto z zapisanych',
     saveFailed: 'Nie udało się zapisać. Spróbuj ponownie.',
@@ -91,6 +92,14 @@ export const myIntelligencePl = {
     empty: 'Zacznij obserwować kraj na Mapie świata, aby zobaczyć go tutaj.',
     watchDormant:
       'Alerty Watch nie są dostępne w tej wersji Beta. Obserwowanie nie wysyła powiadomień.',
+    button: 'Obserwujesz: {count}',
+    listTitle: 'Obserwowane kraje',
+    filterLabel: 'Filtruj kraje',
+    noMatch: 'Żaden obserwowany kraj nie pasuje.',
+    followAria: 'Obserwuj: {country}',
+    unfollowAria: 'Przestań obserwować: {country}',
+    updateFailed: 'Nie udało się zaktualizować: {country}. Spróbuj ponownie.',
+    close: 'Zamknij',
   },
 
   recent: {
@@ -99,6 +108,8 @@ export const myIntelligencePl = {
     note: 'Pojawią się tu wcześniej zadane pytania. Dawne odpowiedzi nie są aktualizowane; „Zapytaj ponownie” otwiera pytanie w Zapytaj AI i nic się nie uruchamia, dopóki nie naciśniesz Wyślij.',
     empty: 'Brak ostatnich analiz.',
     askAgain: 'Zapytaj ponownie',
+    askAgainAria: 'Zapytaj ponownie: {question}',
+    viewAll: 'Pokaż wszystkie ({count})',
     askedOn: 'Zapytano {date}',
   },
 
@@ -111,6 +122,8 @@ export const myIntelligencePl = {
     maxReached: 'Możesz zaznaczyć maksymalnie {count} artykułów.',
     aiTag: 'AI',
     modeLabel: 'Tryb zaznaczania',
+    selectStories: 'Zaznacz artykuły',
+    selectAria: 'Zaznacz artykuły. Włącz tryb zaznaczania. Zaznaczanie jest bezpłatne.',
     modeDone: 'Tryb zaznaczania · Gotowe',
     doneAria: 'Gotowe — zakończ tryb zaznaczania',
     storiesSelectedOne: 'Zaznaczone artykuły: {count}',

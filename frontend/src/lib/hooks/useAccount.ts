@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateSavedStories } from '@/lib/myIntelligence/savedStoriesStore';
 import { useEffect, useState } from 'react';
 import { accountFetch } from '@/lib/api/accountFetch';
 
@@ -52,11 +53,14 @@ export function useAccount(): {
 
   async function signOut(): Promise<void> {
     await accountFetch('/auth/signout', { method: 'POST' });
+    /* UNIVERSAL BOOKMARK R1 — the shared saved-story state belongs to the reader who just left. */
+    invalidateSavedStories();
     setUser(null);
   }
 
   async function deleteAccount(): Promise<void> {
     await accountFetch('/users/me', { method: 'DELETE' });
+    invalidateSavedStories();
     setUser(null);
   }
 

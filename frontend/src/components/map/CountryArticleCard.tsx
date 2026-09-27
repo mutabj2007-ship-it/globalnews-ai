@@ -6,6 +6,7 @@ import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 
 interface CountryArticleCardProps {
   article: NewsArticle;
@@ -77,6 +78,9 @@ export function CountryArticleCard({ article, language = 'en', countryCode }: Co
             </span>
           </div>
         </a>
+
+        {/* UNIVERSAL BOOKMARK R1 — a sibling of the story link, never inside it. */}
+        <StoryBookmark url={article.url} language={language} className="shrink-0" />
 
         <button
           type="button"

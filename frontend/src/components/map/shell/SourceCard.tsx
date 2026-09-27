@@ -1,10 +1,12 @@
 'use client';
 
+import { useContext } from 'react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import type { RetainedItem } from '@/lib/map/selection/selectionIntelligence';
 import type { DisplayPrecision } from '@/lib/map/spatial/precisionModel';
+import { StoryBookmarkSlot } from '@/components/bookmark/bookmarkSlot';
 
 /**
  * SPATIAL M2 · DESIGN REVISION 1.2 — `SourceCard`, Part II §2 (S · M2).
@@ -111,6 +113,7 @@ export function SourceCard({
   const categoryLabel = labels.categories[item.category] ?? item.category;
   const glyph = CATEGORY_GLYPH[item.category] ?? item.category.slice(0, 3).toUpperCase();
   const age = formatRelativeTime(item.publishedAt, language);
+  const Bookmark = useContext(StoryBookmarkSlot);
   const timePrefix = item.timeIsObservedOnly ? labels.seenPrefix : labels.publishedPrefix;
 
   return (
@@ -247,6 +250,13 @@ export function SourceCard({
         >
           <span aria-hidden="true">&#8599;</span>
         </a>
+
+        {/*
+          UNIVERSAL BOOKMARK R1 — beside the source link, never inside it; compact to
+          fit the card. Rendered through the page's slot (bookmarkSlot.ts), so this
+          shared card stays account-free for the Conflict dashboard.
+        */}
+        {Bookmark !== null && <Bookmark url={item.url} language={language} size="compact" />}
 
         {/*
           ── DECLARED DEVIATION · ONE AFFORDANCE MORE THAN THE ANATOMY ───────

@@ -62,8 +62,9 @@ export const myIntelligenceEn = {
     sourceUnavailable:
       'Source unavailable. The publisher link no longer opens. We keep your saved reference.',
     noImage: 'No image',
-    save: 'Save to My Intelligence',
-    unsave: 'Remove from saved',
+    save: 'Save story',
+    unsave: 'Remove saved story',
+    saveUnavailable: 'This story can’t be saved yet: it isn’t in retained reporting.',
     savedToast: 'Saved to My Intelligence',
     unsavedToast: 'Removed from saved',
     saveFailed: "Couldn't save. Try again.",
@@ -89,6 +90,15 @@ export const myIntelligenceEn = {
     /* Part IV: Follow is not Watch, and Watch is inactive on Beta. */
     watchDormant:
       'Watch alerts are not available in this Beta. Following does not send notifications.',
+    /* DENSITY R1 — one compact control, one bounded list. */
+    button: 'Following {count}',
+    listTitle: 'Followed countries',
+    filterLabel: 'Filter countries',
+    noMatch: 'No followed country matches.',
+    followAria: 'Follow {country}',
+    unfollowAria: 'Unfollow {country}',
+    updateFailed: 'Couldn’t update {country}. Try again.',
+    close: 'Close',
   },
 
   recent: {
@@ -98,6 +108,8 @@ export const myIntelligenceEn = {
     /* RECENT_INTELLIGENCE.md — the CURRENT capability is empty. */
     empty: 'No recent intelligence yet.',
     askAgain: 'Ask again',
+    askAgainAria: 'Ask again: {question}',
+    viewAll: 'View all ({count})',
     askedOn: 'Asked {date}',
   },
 
@@ -112,6 +124,8 @@ export const myIntelligenceEn = {
     aiTag: 'AI',
     /* COLOR / ACTION-AWARENESS R1 — selection mode says what it is, how many, how to leave, what costs compute. */
     modeLabel: 'Selection mode',
+    selectStories: 'Select stories',
+    selectAria: 'Select stories. Enter selection mode. Selecting is free.',
     modeDone: 'Selection mode · Done',
     doneAria: 'Done — leave selection mode',
     storiesSelectedOne: '{count} story selected',
