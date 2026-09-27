@@ -49,6 +49,8 @@ export function useMapWorkspace(
   stop: SheetStop,
   navHostRef: RefObject<HTMLElement>,
   detents: WorkspaceDetents,
+  /** The shell's PERMANENT_HUD_PX: top bar + Change Strip, all permanent top chrome. */
+  permanentHudPx: number,
 ): MapWorkspaceLayout {
   const [viewport, setViewport] = useState<ViewportReading>(UNMEASURED);
   const [editableFocused, setEditableFocused] = useState(false);
@@ -112,12 +114,13 @@ export function useMapWorkspace(
         stop,
         {
           visualViewportHeight: viewport.visualHeight,
+          permanentHudPx,
           bottomOcclusionPx: viewport.bottomOcclusionPx,
           navBlockPx,
           keyboardOpen,
         },
         detents,
       ),
-    [stop, viewport, navBlockPx, keyboardOpen, detents],
+    [stop, viewport, navBlockPx, keyboardOpen, detents, permanentHudPx],
   );
 }

@@ -219,7 +219,12 @@ export function MobileSpatialShell({
     Raw-viewport arithmetic is retired. The sheet height, mapFractionAt, this
     camera fit inset and the zoom anchor all read the SAME layout, derived from
 
-        A = visualViewportHeight − 52px top bar − visible bottom-nav block
+        A = visualViewportHeight − PERMANENT_HUD_PX (82: top bar + Change
+            Strip) − visible bottom-nav block
+
+    R1 FINAL CORRECTION — the Change Strip is permanent chrome and does not
+    count toward the ≥26% unobstructed-map floor. The existing HUD authority
+    below is passed in, so there is still exactly one 82.
 
     (lib/map/spatial/mapWorkspace). The bottom nav is visible at PEEK and HALF
     and hidden at FULL and while the keyboard is open, and its visibility is
@@ -231,7 +236,7 @@ export function MobileSpatialShell({
     R2 gave: what covers the map is what is covering it when the fit happens.
   */
   const navHostRef = useRef<HTMLDivElement>(null);
-  const workspace = useMapWorkspace(stop, navHostRef, SPATIAL_DETENTS);
+  const workspace = useMapWorkspace(stop, navHostRef, SPATIAL_DETENTS, PERMANENT_HUD_PX);
   const workspaceRef = useRef(workspace);
   workspaceRef.current = workspace;
 
