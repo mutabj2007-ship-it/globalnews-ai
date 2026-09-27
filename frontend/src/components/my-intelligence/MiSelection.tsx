@@ -326,6 +326,33 @@ function SelectionHeading({
  * for the pill beneath, and they are hidden from assistive technology, which
  * reaches all six pills through DOM order regardless of scroll position.
  */
+/**
+ * The bottom nav's REAL rendered height, safe area included. Its labels may
+ * take two lines (Polish does), so a fixed 56px offset let the rail slide
+ * under a taller nav. Measured and observed; null until measured, and the rail
+ * then falls back to the accepted 56px + safe-area offset.
+ */
+function useBottomNavHeight(): number | null {
+  const [height, setHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const nav = document.querySelector<HTMLElement>('[data-gn-bottom-nav]');
+    if (nav === null) return undefined;
+    const measure = (): void => {
+      const measured = nav.getBoundingClientRect().height;
+      setHeight(measured > 0 ? Math.ceil(measured) : null);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, []);
+
+  return height;
+}
+
 export function SelectionRail({
   language,
   selectedCount,
@@ -338,6 +365,7 @@ export function SelectionRail({
   onAction: (id: ActionId) => void;
 }): JSX.Element {
   const t = getDictionary(language).myIntelligence.selection;
+  const navHeight = useBottomNavHeight();
   const listRef = useRef<HTMLUListElement | null>(null);
   const [position, setPosition] = useState<'start' | 'middle' | 'end'>('start');
 
@@ -364,6 +392,7 @@ export function SelectionRail({
     <div
       data-mi-selection-rail=""
       className={`fixed inset-x-0 bottom-[calc(56px+env(safe-area-inset-bottom))] z-40 ${MI_SELECTION_BAR} lg:hidden`}
+      style={navHeight !== null ? { bottom: `${navHeight}px` } : undefined}
       role="region"
       aria-label={storiesSelectedLabel(t, selectedCount)}
     >
@@ -375,7 +404,7 @@ export function SelectionRail({
         <ul
           ref={listRef}
           onScroll={measure}
-          className="flex snap-x items-center gap-2 overflow-x-auto px-4 pb-3 pt-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex snap-x scroll-px-4 items-center gap-2 overflow-x-auto px-4 pb-3 pt-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           /* Trailing padding clears the chevron, so the final pill is never sliced. */
           style={{ paddingInlineEnd: '56px' }}
         >
