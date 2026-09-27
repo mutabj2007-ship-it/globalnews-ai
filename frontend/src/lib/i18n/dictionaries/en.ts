@@ -1623,7 +1623,7 @@ export const en = {
       card: {
         heading: 'Selected geography',
         scope: 'Evidence',
-        watching: 'Watching',
+        watching: 'Following',
         stateHeading: 'Evidence state',
         ceilingNote: 'This is the level the evidence asserts. Anything finer on the map is reference geography.',
         reports: 'Reports',
@@ -1787,10 +1787,23 @@ export const en = {
         askAiShort: 'Ask AI',
         topicsHeading: 'Topics',
         clearSelection: 'Clear selection',
+        /*
+          MAP R1 — FOLLOW SPEAKS FOLLOW'S VERB.
+
+          These read 'Watching' and 'Stop watching'. Part IV separates Follow
+          from Watch on four axes and the FIRST of them is the verb, so a Follow
+          control whose on-state says "Watching" is the one thing
+          `watchRuntimeGate.ts` states must never happen: "Follow state is never
+          relabelled as Watch." It also claimed a capability the product does
+          not have while WATCH_RUNTIME_ACTIVE is false.
+
+          The control, its hover/focus swap and its API are untouched; only the
+          words change.
+        */
         follow: {
           follow: 'Follow this country',
-          watching: 'Watching',
-          stopWatching: 'Stop watching',
+          watching: 'Following',
+          stopWatching: 'Unfollow',
           pending: 'Saving\u2026',
           failed: 'Follow not saved \u2014 nothing changed',
           signIn: 'Sign in to follow',

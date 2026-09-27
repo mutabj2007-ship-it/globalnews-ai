@@ -1576,6 +1576,32 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     };
   }, [cache, cardFilters, language, period, router, selectedCountry, selectedItemId]);
 
+  /*
+    ══ MAP R1 · ITEM 7 IS HELD, AND THE REASON IS A RULING ══════════════════
+
+    Required correction 7 asks that selecting Algeria and opening the global
+    Ask dock stage Algeria instead of reverting to generic world context.
+
+    The obvious transport is `usePublishStoryContext`, which the dock already
+    reads. It was implemented that way and then REVERTED, because
+    `askAiRevA.spec.ts` L4 pins the publisher set to exactly two files under a
+    CTO ruling: *"both analysis-owning surfaces publish through the same token
+    lifecycle"* — AskFrameScreen and SearchPageClient. `/map` is not an
+    analysis-owning surface, and adding it would have widened an accepted
+    contract from inside a corrections lane.
+
+    Everything INSIDE the selection cluster already carries the geography and
+    is unchanged: Open analysis and Ask-about-a-story both push
+    `countryCode=<iso2>`, Open sources reveals the same selection's cards,
+    Widen the period keeps the country, and Follow passes its iso3. What is
+    missing is only the dock, which sits outside the cluster.
+
+    Reported to the CTO with two routes forward rather than chosen here:
+      · widen L4's publisher set to include /map, under a ruling; or
+      · give the dock a GEOGRAPHY context distinct from story context, which
+        is new architecture and belongs in its own lane.
+  */
+
   const hoveredKnownCount = hovered?.country ? countryStoryCounts[hovered.country.iso3] ?? null : null;
 
   /*
@@ -1937,6 +1963,11 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
             follow={selectionFollow ?? undefined}
             selectionDetail={selectionDetail}
             countryStoryCounts={countryStoryCounts}
+            /*
+              MAP R1 — the phone now receives the same explicit country read the
+              desktop rail has always had. One state machine, two surfaces.
+            */
+            countryRead={countryReadPresentation}
           />
         </div>
         )}
