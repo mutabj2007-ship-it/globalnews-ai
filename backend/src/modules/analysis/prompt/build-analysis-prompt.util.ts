@@ -414,6 +414,22 @@ ${renderDimensionSemanticsInstruction()}
   produce a weaker brief — it produces NO brief. Padding a thin evidence set
   to look structured fails for a different reason — the number of paragraphs
   must follow the evidence, not a target.
+- "summaryStatements" ANNOTATES THE BRIEF; it never adds to it. List every
+  sentence of the brief, in order, each copied EXACTLY as written there
+  (same words, same punctuation; never paraphrased, never spanning two
+  paragraphs), with:
+    * "kind": REPORTED_FACT when the evidence states it; REPORTED_CONSEQUENCE
+      when the evidence itself links an effect to the subject;
+      ANALYTICAL_INFERENCE for any wider implication, possibility or
+      significance that no evidence item reports;
+    * "evidenceIds": the exact evidenceId values that state THAT sentence —
+      only those, never every item you were shown. Empty for
+      ANALYTICAL_INFERENCE.
+  Each sentence is checked against the brief and against the evidence after
+  you answer; a sentence marked as reported whose evidenceIds do not support
+  it is shown to the reader as not established, and speculative wording
+  ("could", "may", "potentially") that no source is quoted as saying is shown
+  as analytical inference whatever kind you give it.
 - For keyFacts, agreements, differences (each position), and timeline
   entries, you may optionally include "evidenceBasis": an object with
   "evidenceId" (one of the exact evidenceId values you already cited for
@@ -998,6 +1014,27 @@ export function buildAnalysisJsonSchema(
         headline: { type: 'string' },
         // C910 - one `summary` string, or the two required brief fields.
         ...briefProperties,
+        /*
+          INLINE CITATIONS R1 — the brief annotated sentence by sentence. Every
+          entry is re-validated by summary-statements.util.ts: exact placement,
+          resolvable evidenceIds, and the inference backstop. Never trusted.
+        */
+        summaryStatements: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              text: { type: 'string' },
+              kind: {
+                type: 'string',
+                enum: ['REPORTED_FACT', 'REPORTED_CONSEQUENCE', 'ANALYTICAL_INFERENCE'],
+              },
+              evidenceIds: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['text', 'kind', 'evidenceIds'],
+            additionalProperties: false,
+          },
+        },
         keyFacts: { type: 'array', items: sourcedClaim },
         /** Milestone #62 Phase 1 — reuses the exact sourcedClaim shape, no new schema family. */
         context: { type: 'array', items: sourcedClaim },
@@ -1117,6 +1154,7 @@ export function buildAnalysisJsonSchema(
         // C910 - must mirror briefProperties exactly: under `strict: true` every
         // declared property has to appear in `required`.
         ...briefRequired,
+        'summaryStatements',
         'keyFacts',
         'context',
         'relevance',

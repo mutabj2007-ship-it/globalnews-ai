@@ -14,6 +14,7 @@ import {
 import { fullAnalysisHref } from '@/lib/ask/storyContextStore';
 import { grantAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { AskCitedBrief, citedSourceNumbers } from './AskCitedBrief';
 
 /**
  * ═══ ASK AI REV A §6 — THE COMPACT RESULT ════════════════════════════════
@@ -88,7 +89,16 @@ export function AskCompactResult({
   const telemetry = buildBriefTelemetry(response, null);
 
   const sources = analysis?.sources ?? [];
-  const shown = sources.slice(0, COMPACT_SOURCE_LIMIT);
+  /*
+    INLINE CITATIONS R1 — a citation must resolve to a source the reader can
+    see under the same number. So the bounded list is the first
+    COMPACT_SOURCE_LIMIT sources PLUS any source the brief cites, each keeping
+    its position in `analysis.sources` as its number.
+  */
+  const cited = citedSourceNumbers(analysis?.summaryStatements, sources);
+  const shown = sources
+    .map((source, index) => ({ source, number: index + 1 }))
+    .filter(({ number }) => number <= COMPACT_SOURCE_LIMIT || cited.has(number));
   const truncated = sources.length > shown.length;
 
   /*
@@ -164,7 +174,7 @@ export function AskCompactResult({
         </section>
       ) : null}
 
-      <EventAnchorNotice retrievalContext={response.retrievalContext} language={language} />
+      <EventAnchorNotice retrievalContext={response.retrievalContext} language={language} compact />
 
       {analysis?.relationalComposition ? (
         <div data-ask="relational-answer" className="rounded-2xl border border-signal/35 bg-signal/10 px-4 py-3">
@@ -215,17 +225,12 @@ export function AskCompactResult({
           ) : null}
 
           {briefAccepted ? (
-            <div data-ask="brief" className="flex flex-col gap-3">
-              {paragraphs.map((paragraph, index) => (
-                <p
-                  key={`${index}-${paragraph.slice(0, 24)}`}
-                  data-ask="brief-paragraph"
-                  className="text-sm leading-relaxed text-ink-primary"
-                >
-                  {paragraph}
-                </p>
-              ))}
-            </div>
+            <AskCitedBrief
+              paragraphs={paragraphs}
+              statements={analysis?.summaryStatements}
+              sources={sources}
+              language={language}
+            />
           ) : null}
 
           <div data-ask="sources" className="flex flex-col gap-2">
@@ -238,8 +243,9 @@ export function AskCompactResult({
               </p>
             ) : (
               <ul className="flex flex-col gap-2">
-                {shown.map((source) => (
-                  <li key={source.articleId} data-ask="source" className="text-sm">
+                {shown.map(({ source, number }) => (
+                  <li key={source.articleId} data-ask="source" data-source-number={number} className="text-sm">
+                    <span className="me-1.5 font-mono text-[11px] text-ink-tertiary">[{number}]</span>
                     <a
                       href={source.url}
                       target="_blank"

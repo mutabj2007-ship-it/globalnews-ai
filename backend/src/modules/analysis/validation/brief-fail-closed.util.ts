@@ -127,7 +127,13 @@ export function withholdExecutiveBrief(
       'The executive brief did not meet the structural requirement for this evidence set.',
   };
 
-  return { ...analysis, summary: '', briefState };
+  /* INLINE CITATIONS R1 — no summary, so nothing left to annotate. */
+  return {
+    ...analysis,
+    summary: '',
+    briefState,
+    ...(analysis.summaryStatements !== undefined ? { summaryStatements: [] } : {}),
+  };
 }
 
 /**

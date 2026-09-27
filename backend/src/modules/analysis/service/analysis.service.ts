@@ -40,6 +40,7 @@ import {
   withholdContextOnlyConsequenceClaims,
   withoutAmbiguousCountryMentions,
 } from '../anchor/event-anchor.util';
+import { demoteContextOnlyConsequenceStatements } from '../validation/summary-statements.util';
 import { NewsService, readProviderFailures } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
 import type { AnalysisProvider } from '../interfaces';
@@ -2824,6 +2825,14 @@ export class AnalysisService {
               new Set(retrievalContext.eventAnchor.contextArticleIds),
             );
             analysisResult = anchored;
+            /* INLINE CITATIONS R1 — the same gate, on the annotated summary. */
+            const { statements } = demoteContextOnlyConsequenceStatements(
+              analysisResult.summaryStatements,
+              new Set(retrievalContext.eventAnchor.contextArticleIds),
+            );
+            if (statements !== undefined) {
+              analysisResult = { ...analysisResult, summaryStatements: statements };
+            }
             retrievalContext = {
               ...retrievalContext,
               eventAnchor: { ...retrievalContext.eventAnchor, contextOnlyClaimsWithheld: withheld },

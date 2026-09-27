@@ -73,6 +73,9 @@ export const pl: Dictionary = {
     contextChipAnchored: 'Pytanie o t\u0119 histori\u0119',
     contextChipGeneric: 'Pytanie o wydarzenia na \u015bwiecie',
     resultSourcesHeading: '\u0179r\u00f3d\u0142a',
+    citationLabel: '\u0179r\u00f3d\u0142o {n}: {title} \u2014 {publisher}',
+    inferenceLabel: 'Wniosek analityczny:',
+    unsupportedLabel: 'Nieustalone w doniesieniach:',
     resultSourcesNone: 'Dla tego pytania nie pozyskano \u017cadnych \u017ar\u00f3de\u0142.',
     resultSourcesTruncated: 'Pokazano {shown} z {total}. Otw\u00f3rz pe\u0142n\u0105 analiz\u0119, aby zobaczy\u0107 reszt\u0119.',
     resultBriefAbsent: 'Ta analiza nie zawiera\u0142a streszczenia. To brak, a nie ocena \u2014 niczego nie zmierzono ani nie wstrzymano.',
@@ -2180,6 +2183,16 @@ export const pl: Dictionary = {
     stateAmbiguousCountryBody:
       'Miejsce w tym pytaniu odpowiada więcej niż jednemu krajowi, a ani pytanie, ani doniesienia nie rozstrzygnęły, o który chodzi. Nie wygenerowano odpowiedzi, zamiast wybierać kraj za Ciebie.',
     ambiguousCountryQuestion: 'O który kraj chodzi?',
+    compactHeading: 'Uwaga o dowodach',
+    compactShowDetails: 'Pokaż, co to oznacza',
+    short: {
+      interpretedFromEvidence: 'Zinterpretowano jako {country} na podstawie doniesień',
+      fromSelectedContext: 'Kraj z Twojego wyboru: {country}',
+      crossBorderNotEstablished: 'Nie ustalono bezpośredniego wpływu na kraje sąsiednie',
+      causeNotEstablished: 'Przyczyna nieustalona',
+      contextSeparated: 'Kontekst z tego samego miejsca pokazano osobno',
+      contextClaimsWithheld: 'Wstrzymano stwierdzenia oparte wyłącznie na kontekście',
+    },
   },
 
   analysisFrame: {
