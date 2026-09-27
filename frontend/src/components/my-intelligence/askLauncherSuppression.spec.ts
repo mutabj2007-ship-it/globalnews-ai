@@ -61,8 +61,15 @@ describe('Ruling 1 — the floating Ask launcher is suppressed on /my-intelligen
 
   it('the frozen Select control was not moved to make room', () => {
     /* Phone: the Select toggle sits in the eyebrow row, as R1.2 froze it. */
-    expect(clientSource).toContain('md:hidden');
-    expect(clientSource).toMatch(/\{selecting \? t\.done : t\.select\}/);
+    /*
+      COLOR / ACTION-AWARENESS R1 — the control's PRESENTATION was replaced by
+      Product Owner ruling ("Selection mode · Done"), but its PLACE was not:
+      the phone variant still renders in the eyebrow row and hides at md.
+    */
+    expect(clientSource).toMatch(/<SelectionModeToggle[\s\S]*?variant="phone"/);
+    expect(selectionSource).toContain("variant === 'phone' ? 'md:hidden' : 'hidden md:inline-flex'");
+    expect(selectionSource).toContain('mi.select');
+    expect(selectionSource).toContain('mi.done');
   });
 
   it('the six actions and the explicit confirmation are untouched by the suppression', () => {

@@ -135,6 +135,8 @@ export const FIXTURE_SAVED: readonly FixtureStory[] = [
   {
     id: 'mi-s1',
     url: 'https://example.com/sample/europe-gas-storage',
+    /* Review fixture: exercises the image-present path (synthetic example.com URL). */
+    imageUrl: 'https://example.com/sample/europe-gas-storage.jpg',
     title: "Europe's gas storage reaches its winter target ahead of schedule",
     sourceName: 'Northline Wire',
     publishedAt: daysAgo(2),
@@ -146,6 +148,8 @@ export const FIXTURE_SAVED: readonly FixtureStory[] = [
   {
     id: 'mi-s2',
     url: 'https://example.com/sample/poland-central-bank-rates',
+    /* Review fixture: an image URL that may fail, exercising the broken-image fallback. */
+    imageUrl: 'https://example.com/sample/poland-central-bank-rates.jpg',
     title: "Poland's central bank holds rates as inflation eases for a third month",
     sourceName: 'Baltic Ledger',
     publishedAt: daysAgo(2),

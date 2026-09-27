@@ -15,7 +15,16 @@ import {
   RecentSection,
   SavedSection,
 } from './MiSections';
-import { ComputeCommitSheet, MI_ACTIONS, SelectionPanel, SelectionRail, type ActionId } from './MiSelection';
+import {
+  ComputeCommitSheet,
+  MI_ACTIONS,
+  SelectionIntro,
+  SelectionModeToggle,
+  SelectionPanel,
+  SelectionRail,
+  SelectionStatus,
+  type ActionId,
+} from './MiSelection';
 import { useMyIntelligenceData } from './useMyIntelligenceData';
 import { isNewSince } from './newSince';
 
@@ -72,6 +81,8 @@ export function MyIntelligenceClient({
 
   const [tab, setTab] = useState<TabId>('overview');
   const [selecting, setSelecting] = useState(false);
+  /* First-use note: page state only — this surface keeps no browser storage. */
+  const [introDone, setIntroDone] = useState(false);
   const [selectedUrls, setSelectedUrls] = useState<ReadonlySet<string>>(new Set());
   const [category, setCategory] = useState<string>(t.saved.filterAll);
   const [sheetAction, setSheetAction] = useState<ActionId | null>(null);
@@ -89,6 +100,8 @@ export function MyIntelligenceClient({
   );
 
   const onToggleSelected = useCallback((url: string) => {
+    /* The first selection means the first-use note has done its job. */
+    setIntroDone(true);
     setSelectedUrls((current) => {
       const next = new Set(current);
       if (next.has(url)) next.delete(url);
@@ -98,6 +111,12 @@ export function MyIntelligenceClient({
   }, []);
 
   const clearSelection = useCallback(() => setSelectedUrls(new Set()), []);
+
+  /* Entering or leaving selection mode is local state only: no request of any kind. */
+  const toggleSelecting = useCallback(() => {
+    setSelecting((on) => !on);
+    if (selecting) clearSelection();
+  }, [clearSelection, selecting]);
 
   const categories = useMemo(
     () => Array.from(new Set(data.saved.map((story) => story.category))),
@@ -160,7 +179,7 @@ export function MyIntelligenceClient({
   const canSelect = (tab === 'overview' || tab === 'saved') && data.saved.length + data.newSince.length > 0;
 
   return (
-    <main className={`${MI_PAGE} min-h-screen pb-[132px] lg:pb-16`}>
+    <main className={`${MI_PAGE} min-h-screen ${selecting && selectedUrls.size > 0 ? 'pb-[340px]' : 'pb-[132px]'} lg:pb-16`}>
       <div className="mx-auto w-full max-w-[1280px] px-4 py-5 md:px-6 md:py-7 min-[1700px]:max-w-[1400px]">
         {/* ── Title block ─────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-4">
@@ -211,18 +230,13 @@ export function MyIntelligenceClient({
 
           {/* On phone the Select toggle sits at the right of the eyebrow row. */}
           {canSelect && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelecting((on) => !on);
-                if (selecting) clearSelection();
-              }}
-              className={`${MI_PILL} ${MI_TARGET} inline-flex h-[44px] shrink-0 items-center gap-1.5 border px-3.5 text-[13px] font-semibold md:hidden ${
-                selecting ? 'border-[#1b6fa8] bg-[#07304f] text-[#93cdf5]' : 'border-[#1d3a5a] text-[#cfe2f2]'
-              }`}
-            >
-              {selecting ? t.done : t.select}
-            </button>
+            <SelectionModeToggle
+              language={language}
+              selecting={selecting}
+              selectedCount={selectedUrls.size}
+              onToggle={toggleSelecting}
+              variant="phone"
+            />
           )}
         </div>
 
@@ -264,18 +278,13 @@ export function MyIntelligenceClient({
             </div>
 
             {canSelect && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelecting((on) => !on);
-                  if (selecting) clearSelection();
-                }}
-                className={`${MI_PILL} ${MI_TARGET} hidden h-[44px] shrink-0 items-center gap-1.5 border px-4 text-[13px] font-semibold md:inline-flex ${
-                  selecting ? 'border-[#1b6fa8] bg-[#07304f] text-[#93cdf5]' : 'border-[#1d3a5a] text-[#cfe2f2]'
-                }`}
-              >
-                {selecting ? t.done : t.select}
-              </button>
+              <SelectionModeToggle
+                language={language}
+                selecting={selecting}
+                selectedCount={selectedUrls.size}
+                onToggle={toggleSelecting}
+                variant="wide"
+              />
             )}
           </div>
         </div>
@@ -300,7 +309,13 @@ export function MyIntelligenceClient({
           )}
           {data.isDegraded && <StatusBanner tone="degraded">{t.states.degraded}</StatusBanner>}
           {data.usesFixtures && <FixtureBanner language={language} />}
+          <SelectionIntro
+            language={language}
+            visible={selecting && selectedUrls.size === 0 && !introDone}
+            onDismiss={() => setIntroDone(true)}
+          />
         </div>
+        <SelectionStatus language={language} selecting={selecting} selectedCount={selectedUrls.size} />
 
         {/* ── Columns ─────────────────────────────────────────────────── */}
         <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">

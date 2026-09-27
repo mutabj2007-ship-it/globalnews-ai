@@ -63,9 +63,18 @@ export const MI_GREETING =
 /** Every interactive target is at least 44px. */
 export const MI_TARGET = 'min-h-[44px] min-w-[44px]';
 
-/** Selection surfaces. The bar fill is also the colour the action rail fades into. */
-export const MI_SELECTION_FILL = '#061a30';
-export const MI_SELECTION_BAR = 'bg-[#061a30] border-t border-[#0e2d4d]';
+/**
+ * Selection surfaces. The bar fill is also the colour the action rail fades into.
+ *
+ * COLOR / ACTION-AWARENESS R1 — the rail is a RAISED intelligence surface:
+ * darker than the page's cards, a 2px sand top rule, and a faint warm lift
+ * around the action zone only. No yellow slab, no gradient wash, no glow ring.
+ */
+export const MI_SELECTION_FILL = '#04111f';
+export const MI_SELECTION_BAR =
+  'bg-[#04111f] border-t-2 border-[#6a5634] shadow-[0_-14px_32px_-20px_rgba(217,185,138,0.28)]';
+/** The desktop panel: the same surface as a card, marked by the same 2px sand rule. */
+export const MI_SELECTION_PANEL = 'border-t-2 border-t-[#6a5634]';
 
 /** Follow toggle, ON. Matches the World chip tone. Ordinary personalisation, not Watch. */
 export const MI_FOLLOW_ON =
@@ -96,6 +105,30 @@ export const MI_SAND_NOTE =
   'bg-[#2e2618] border border-[#6a5634] text-[#D9B98A]';
 export const MI_SAND_TAG =
   'border border-[#6a5634] text-[#D9B98A] text-[10px] leading-none';
+
+/**
+ * COLOR / ACTION-AWARENESS R1 — the SAME three sand values, applied to the
+ * selection workflow. The semantic split is the point:
+ *
+ *   MI_SELECTION_MODE_CONTROL  warm AWARENESS: "you are in selection mode".
+ *                              Done exits the mode and spends nothing, so it
+ *                              never carries the lightning mark or the AI tag.
+ *   MI_AI_ACTION_ON / _OFF     the COMPUTE commitment point: sand, the governed
+ *                              lightning mark and the AI tag, on every action
+ *                              that would run AI once confirmed.
+ *   MI_LOCAL_ACTION            free, local controls (Clear, filters, select):
+ *                              neutral cyan, never sand.
+ */
+export const MI_SELECTION_MODE_CONTROL =
+  'border-2 border-[#6a5634] bg-[#2e2618] text-[#D9B98A] font-bold hover:border-[#8a7045]';
+export const MI_AI_ACTION_ON =
+  'border-[#6a5634] bg-[#2e2618] text-[#D9B98A] hover:border-[#8a7045]';
+export const MI_AI_ACTION_OFF =
+  'cursor-not-allowed border-[#3a3020] bg-[#17130c] text-[#7d725f]';
+export const MI_LOCAL_ACTION = 'font-semibold text-[#5abff5]';
+/** Every visible focus ring on the selection workflow. */
+export const MI_FOCUS =
+  'outline-none focus-visible:ring-2 focus-visible:ring-[#5abff5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#010a19]';
 
 /** Radii from the authority: card 12, sheet 16 phone / 14 desktop, chip 5. */
 export const MI_SHEET = 'rounded-t-[16px] sm:rounded-[14px]';
