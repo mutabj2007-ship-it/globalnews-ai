@@ -5,8 +5,6 @@ import { act, create } from 'react-test-renderer';
 import {
   KEYBOARD_SHRINK_PX,
   NAV_BLOCK_FALLBACK_PX,
-  WORKSPACE_FIT_TOP_PX,
-  WORKSPACE_TOP_BAR_PX,
   ZOOM_GAP_PX,
   availableWorkspace,
   computeMapWorkspace,
@@ -31,7 +29,8 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
  * MAP MOBILE INTERACTION R1 — THE FROZEN RULINGS, ASSERTED
  * ════════════════════════════════════════════════════════════════════════════
  *
- *   A = visualViewportHeight − 52 − visible bottom-nav block
+ *   A = visualViewportHeight − 82 permanent top HUD (52 top bar + 30 Change Strip)
+ *       − visible bottom-nav block
  *   PEEK 148 where space permits · HALF floor(0.52A) · FULL floor(0.74A)
  *   nav: PEEK visible · HALF visible · FULL hidden · keyboard hidden
  *   FULL leaves ≥ 26% of A as unobstructed, pannable map
@@ -41,6 +40,10 @@ const FRONTEND = join(__dirname, '../../../..');
 const read = (path: string): string => readFileSync(join(FRONTEND, path), 'utf8');
 const SHELL = read('src/components/map/mobile/MobileSpatialShell.tsx');
 const SHEET = read('src/components/map/mobile/MobileBottomSheet.tsx');
+
+/* The ONE permanent-HUD authority, read from the shell that declares it. */
+const declared = (name: string): number => Number(new RegExp(`export const ${name} = ([0-9]+);`).exec(SHELL)?.[1]);
+const HUD = declared('TOP_BAR_PX') + declared('CHANGE_STRIP_PX');
 
 /* Real phone frames: layout height and the nav block (57px cell + safe area). */
 const PHONES = [
@@ -54,7 +57,7 @@ const PHONES = [
 const layoutAt = (stop: SheetStop, height: number, nav: number, keyboardOpen = false, occlusion = 0) =>
   computeMapWorkspace(
     stop,
-    { visualViewportHeight: height, bottomOcclusionPx: occlusion, navBlockPx: nav, keyboardOpen },
+    { visualViewportHeight: height, permanentHudPx: HUD, bottomOcclusionPx: occlusion, navBlockPx: nav, keyboardOpen },
     SPATIAL_DETENTS,
   );
 
@@ -90,10 +93,13 @@ describe('§3 phone nav state: PEEK visible · HALF visible · FULL hidden · ke
 });
 
 describe('§4 workspace-based sheet geometry', () => {
-  it('the top bar the ruling subtracts is the shell’s own 52px bar', () => {
-    expect(WORKSPACE_TOP_BAR_PX).toBe(52);
-    expect(SHELL).toContain(`export const TOP_BAR_PX = ${WORKSPACE_TOP_BAR_PX};`);
-    expect(WORKSPACE_FIT_TOP_PX).toBe(52 + 30);
+  it('A subtracts ALL permanent top chrome: the shell’s own PERMANENT_HUD_PX (52 top bar + 30 Change Strip)', () => {
+    expect(HUD).toBe(82);
+    expect(SHELL).toContain('export const PERMANENT_HUD_PX = TOP_BAR_PX + CHANGE_STRIP_PX;');
+    /* The shell hands its authority to the one workspace model; no second 82 exists. */
+    expect(SHELL).toContain('useMapWorkspace(stop, navHostRef, SPATIAL_DETENTS, PERMANENT_HUD_PX)');
+    const model = read('src/lib/map/spatial/mapWorkspace.ts');
+    expect(model).not.toMatch(/=s*(52|82)s*;/);
   });
 
   it.each(PHONES)('$name: A, PEEK, HALF and FULL follow the ruled formulas', ({ height, nav }) => {
@@ -101,8 +107,8 @@ describe('§4 workspace-based sheet geometry', () => {
     const half = layoutAt('HALF', height, nav);
     const full = layoutAt('FULL', height, nav);
 
-    const aWithNav = height - 52 - nav;
-    const aWithoutNav = height - 52;
+    const aWithNav = height - HUD - nav;
+    const aWithoutNav = height - HUD;
 
     expect(peek.workspacePx).toBe(aWithNav);
     expect(half.workspacePx).toBe(aWithNav);
@@ -119,10 +125,14 @@ describe('§4 workspace-based sheet geometry', () => {
     expect(full.sheetBottomPx).toBe(0);
   });
 
-  it.each(PHONES)('$name: at FULL at least 26% of the unobstructed workspace stays map', ({ height, nav }) => {
+  it.each(PHONES)('$name: at FULL ≥26% stays unobstructed map BELOW all permanent chrome and ABOVE the sheet', ({ height, nav }) => {
     const full = layoutAt('FULL', height, nav);
     expect(full.mapFraction).toBeGreaterThanOrEqual(MIN_MAP_FRACTION);
-    expect(full.mapVisiblePx / full.workspacePx).toBeGreaterThanOrEqual(0.26);
+    /* Measured as a screen band: from the HUD's bottom edge to the sheet's top edge. */
+    const sheetTop = height - full.sheetBottomPx - full.sheetHeightPx;
+    const unobstructed = sheetTop - HUD;
+    expect(unobstructed).toBe(full.mapVisiblePx);
+    expect(unobstructed / full.workspacePx).toBeGreaterThanOrEqual(0.26);
   });
 
   it('the floor holds for EVERY integer viewport height from 480 to 1400, with and without a safe area', () => {
@@ -144,14 +154,14 @@ describe('§4 workspace-based sheet geometry', () => {
     /* A 390x844 layout with a 336px keyboard: the visual viewport is 508 tall. */
     const open = layoutAt('HALF', 508, 91, true, 336);
     expect(open.navVisible).toBe(false);
-    expect(open.workspacePx).toBe(508 - 52);
-    expect(open.sheetHeightPx).toBe(Math.floor(0.52 * (508 - 52)));
+    expect(open.workspacePx).toBe(508 - HUD);
+    expect(open.sheetHeightPx).toBe(Math.floor(0.52 * (508 - HUD)));
     /* The sheet rises with the visible viewport rather than hiding under the keyboard. */
     expect(open.sheetBottomPx).toBe(336);
   });
 
   it('A is never negative and an unmeasured viewport renders the PEEK constant', () => {
-    expect(availableWorkspace(60, 91)).toBe(0);
+    expect(availableWorkspace(60, HUD, 91)).toBe(0);
     const unmeasured = layoutAt('HALF', 0, 91);
     expect(unmeasured.workspacePx).toBe(0);
     expect(unmeasured.sheetHeightPx).toBe(148);
@@ -186,7 +196,7 @@ describe('§5 one coherent workspace model at every geometry site', () => {
   it('the camera fit inset is exactly what the sheet and nav cover', () => {
     for (const stop of SHEET_STOPS) {
       const layout = layoutAt(stop, 844, 91);
-      expect(layout.fitInset).toEqual({ top: 82, bottom: layout.sheetBottomPx + layout.sheetHeightPx });
+      expect(layout.fitInset).toEqual({ top: HUD, bottom: layout.sheetBottomPx + layout.sheetHeightPx });
       expect(layout.zoomBottomPx).toBe(layout.sheetBottomPx + layout.sheetHeightPx + ZOOM_GAP_PX);
     }
   });
