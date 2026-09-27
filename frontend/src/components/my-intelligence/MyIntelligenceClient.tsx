@@ -129,7 +129,7 @@ export function MyIntelligenceClient({
 
   const handlers = {
     language,
-    savedRefs: new Set(data.saved.map((story) => story.url)),
+    savedRefs: data.savedRefs,
     onToggleSaved,
     selecting,
     selectedUrls,

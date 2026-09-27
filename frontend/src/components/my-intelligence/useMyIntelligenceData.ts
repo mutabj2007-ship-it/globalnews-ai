@@ -1,9 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { accountFetch } from '@/lib/api/accountFetch';
+import { useCallback, useMemo } from 'react';
+import {
+  normalizeArticleUrl,
+  type MyIntelligenceStory,
+  type SavedStoryView,
+} from '@globalnews-ai/shared';
 import { useAccount } from '@/lib/hooks/useAccount';
-import { useCountryFollows } from '@/components/home/useCountryFollows';
+import {
+  useMyIntelligenceFeed,
+  useQuestionHistory,
+  useSavedStories,
+} from '@/lib/myIntelligence/hooks';
 import {
   FIXTURE_FOLLOWS,
   FIXTURE_FOR_YOU,
@@ -14,44 +22,18 @@ import {
   type FixtureStory,
 } from './devFixtures';
 import { countNewSince, selectNewSince } from './newSince';
-import { savedStoryRef } from './savedStoryIdentity';
 
 /**
- * THE ONE ADAPTER BETWEEN THIS SURFACE AND WHAT ACTUALLY EXISTS.
+ * MY INTELLIGENCE LIVE ADAPTER.
  *
- * Every section states its own provenance. `source: 'live'` means the data
- * came from a capability that exists on the release; `source: 'fixture'` means
- * it came from `devFixtures` because the capability does not exist yet. The
- * page renders a standing banner whenever any section is fixture-backed, so a
- * reviewer is never left to infer which is which.
+ * PR #45 added the retained feed, saved-story persistence and question-history
+ * APIs. The visual R1.2/R1.3 lane originally predated that backend and therefore
+ * rendered fixtures/local state. This adapter is the convergence seam: signed-in
+ * Alpha readers now consume the live backend; fixtures remain review-only and
+ * are used only when NEXT_PUBLIC_MI_DEV_FIXTURES=true and no real session exists.
  *
- * ── WHAT IS LIVE ─────────────────────────────────────────────────────────
- *   account      GET /users/me                    (useAccount)
- *   follows      GET /follows/countries           (useCountryFollows)
- *   history      GET /history                     — real, and really empty:
- *                nothing in the product calls POST /history, so this section
- *                is expected to render its empty state. That is the truth of
- *                the release, and R1.2 draws it deliberately.
- *
- * ── WHAT IS NOT, AND WHY IT IS NOT BUILT HERE ────────────────────────────
- *   saved        No SavedStory model, no /saved route. Building them is
- *                backend persistence, which this lane is forbidden.
- *   new since    Needs the feed plus a previous-visit boundary.
- *   for you      Needs the same feed, filtered by follows.
- *
- * ── THE PREVIOUS-VISIT BOUNDARY IS DELIBERATELY NOT FETCHED ──────────────
- *
- * `POST /users/me/seen` exists, but the capability sheet classifies it REUSE
- * WITH ADDITIVE VISIT-BOUNDARY REPAIR and lists shipping a surface on the
- * unrepaired endpoint among this feature's must-nots: inside the 30-minute
- * throttle a second caller receives the CURRENT visit's own timestamp, so the
- * prior-visit boundary is lost and "new since" silently reads zero. The repair
- * is a backend change and backend work is out of scope here.
- *
- * So this lane builds against the boundary's SHAPE — one nullable ISO string —
- * and reads it from the fixture. `readLiveBoundary` below is written out in
- * full and is never called; it is here so the wiring is obvious to whoever
- * lands the repair, and so that nobody has to guess what this surface expects.
+ * Opening the page still runs zero AI. These hooks perform account reads/writes
+ * only; analysis remains behind an explicit Run/Send boundary elsewhere.
  */
 
 export type SectionSource = 'live' | 'fixture';
@@ -87,6 +69,10 @@ export interface MyIntelligenceData {
   readonly hasError: boolean;
   readonly isDegraded: boolean;
 
+  /**
+   * URLs/normalized URLs currently saved. Kept as a Set so existing visual
+   * components need no persistence knowledge.
+   */
   readonly savedRefs: ReadonlySet<string>;
   readonly toggleSaved: (url: string) => void;
   readonly retry: () => void;
@@ -99,194 +85,207 @@ export interface RecentQuestion {
   readonly createdAt: string;
 }
 
-/**
- * The live boundary read, written and intentionally unused.
- *
- * Landing the §4 repair means: call this instead of the fixture, and delete
- * the fixture branch. Nothing else on this surface changes, because every
- * consumer already reads one nullable ISO string.
- */
-export async function readLiveBoundary(): Promise<{
-  previousSeenAt: string | null;
-  firstVisit: boolean;
-}> {
-  const response = await accountFetch('/users/me/seen', { method: 'POST' });
-  if (!response.ok) throw new Error('boundary_unavailable');
-  const data = (await response.json()) as {
-    previousSeenAt: string | null;
-    firstVisit: boolean;
-  };
-  return { previousSeenAt: data.firstVisit ? null : data.previousSeenAt, firstVisit: data.firstVisit };
+interface Options {
+  readonly forceFirstVisit?: boolean;
+  readonly forceBoundaryFailure?: boolean;
+  readonly forceEmpty?: boolean;
+  readonly forceError?: boolean;
 }
 
-interface Options {
-  /** Render the first-visit state: no boundary at all. */
-  readonly forceFirstVisit?: boolean;
-  /** Render the degraded state: the boundary check failed. */
-  readonly forceBoundaryFailure?: boolean;
-  /** Render the empty state: nothing saved, followed or asked. */
-  readonly forceEmpty?: boolean;
-  /** Render the error state. */
-  readonly forceError?: boolean;
+function firstCountry(codes: readonly string[]): string {
+  return codes[0] ?? 'GLOBAL';
+}
+
+function feedStoryToUi(story: MyIntelligenceStory): FixtureStory {
+  return {
+    articleRef: story.articleRef,
+    id: story.id,
+    url: story.url,
+    title: story.title,
+    sourceName: story.sourceName,
+    publishedAt: story.publishedAt,
+    countryCode: firstCountry(story.countryCodes),
+    category: 'Following',
+    ...(story.firstSeenAt ? { firstSeenAt: story.firstSeenAt } : {}),
+    ...(story.imageUrl ? { imageUrl: story.imageUrl } : {}),
+  };
+}
+
+function savedStoryToUi(story: SavedStoryView): FixtureStory {
+  return {
+    articleRef: story.articleRef,
+    id: story.articleRef,
+    url: story.sourceUrl || story.canonicalUrl,
+    title: story.title,
+    sourceName: story.sourceName,
+    publishedAt: story.publishedAt,
+    countryCode: firstCountry(story.countryCodes),
+    category: 'Saved',
+    savedAt: story.savedAt,
+    ...(story.firstSeenAt ? { firstSeenAt: story.firstSeenAt } : {}),
+    ...(story.imageUrl ? { imageUrl: story.imageUrl } : {}),
+  };
 }
 
 export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData {
   const { user, isLoading: accountLoading } = useAccount();
-  const { follows: liveFollows, isLoading: followsLoading } = useCountryFollows();
+  const feed = useMyIntelligenceFeed();
+  const savedState = useSavedStories();
+  const history = useQuestionHistory();
 
-  const [recent, setRecent] = useState<RecentQuestion[]>([]);
-  const [recentLoading, setRecentLoading] = useState(true);
-  const [savedRefs, setSavedRefs] = useState<ReadonlySet<string>>(new Set());
-  const [nonce, setNonce] = useState(0);
-
-  /*
-    THE DEVELOPMENT-REVIEW ACCOUNT.
-
-    The approved signed-in states cannot be inspected without a session, and
-    this lane has no backend to sign into. When — and only when — fixtures are
-    enabled, a failed account probe presents a fixture reader so the states
-    render. In every other configuration this is exactly `user !== null`, so
-    production behaviour is the real session and nothing else.
-
-    The fixture banner is on the page the whole time this is in effect, so a
-    reviewer is never shown a fixture identity without being told.
-  */
   const fixtureAccount = MI_FIXTURES_ENABLED && !accountLoading && user === null;
   const isSignedIn = user !== null || fixtureAccount;
-
-  /*
-    THE ONLY NETWORK READ THIS COMPONENT ADDS.
-
-    One GET per mount. No interval, no focus listener, no revalidation. The
-    surface reports what one retrieval contained; re-reading it on a timer
-    would imply monitoring, which Part IV reserves for Watch and Watch is off.
-  */
-  useEffect(() => {
-    if (accountLoading) return;
-    if (!isSignedIn || fixtureAccount) {
-      setRecent([]);
-      setRecentLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    accountFetch('/history')
-      .then((response) => (response.ok ? (response.json() as Promise<RecentQuestion[]>) : []))
-      .then((entries) => {
-        if (!cancelled) setRecent(entries);
-      })
-      .catch(() => {
-        if (!cancelled) setRecent([]);
-      })
-      .finally(() => {
-        if (!cancelled) setRecentLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [accountLoading, isSignedIn, fixtureAccount, nonce]);
-
-  /* Saved state starts from the fixture set so the approved collection renders. */
-  useEffect(() => {
-    if (!MI_FIXTURES_ENABLED || options.forceEmpty === true) {
-      setSavedRefs(new Set());
-      return;
-    }
-    setSavedRefs(new Set(FIXTURE_SAVED.map((story) => savedStoryRef(story.url))));
-  }, [options.forceEmpty]);
-
-  const toggleSaved = useCallback((url: string) => {
-    const ref = savedStoryRef(url);
-    setSavedRefs((current) => {
-      const next = new Set(current);
-      if (next.has(ref)) next.delete(ref);
-      else next.add(ref);
-      return next;
-    });
-  }, []);
-
-  const retry = useCallback(() => setNonce((n) => n + 1), []);
-
-  const boundaryFailed = options.forceBoundaryFailure === true;
-  const isFirstVisit = options.forceFirstVisit === true;
-
-  const previousSeenAt = useMemo(() => {
-    if (isFirstVisit || boundaryFailed) return null;
-    return MI_FIXTURES_ENABLED ? FIXTURE_PREVIOUS_SEEN_AT : null;
-  }, [isFirstVisit, boundaryFailed]);
-
   const emptied = options.forceEmpty === true;
 
-  const newSinceAll = useMemo(
-    () => (emptied ? [] : MI_FIXTURES_ENABLED ? FIXTURE_NEW_SINCE : []),
-    [emptied],
+  const liveFeedStories = useMemo(
+    () => (feed.data?.stories ?? []).map(feedStoryToUi),
+    [feed.data],
   );
+  const liveSavedStories = useMemo(
+    () => (savedState.data ?? []).map(savedStoryToUi),
+    [savedState.data],
+  );
+
+  const boundaryFailed =
+    options.forceBoundaryFailure === true || (!fixtureAccount && user !== null && feed.failed);
+
+  const previousSeenAt = useMemo(() => {
+    if (options.forceFirstVisit === true || boundaryFailed) return null;
+    if (fixtureAccount) return FIXTURE_PREVIOUS_SEEN_AT;
+    return feed.data?.previousSeenAt ?? null;
+  }, [boundaryFailed, feed.data?.previousSeenAt, fixtureAccount, options.forceFirstVisit]);
+
+  const isFirstVisit =
+    options.forceFirstVisit === true || (!boundaryFailed && previousSeenAt === null);
+
+  const allFeedStories = useMemo(
+    () => (emptied ? [] : fixtureAccount ? [...FIXTURE_NEW_SINCE, ...FIXTURE_FOR_YOU] : liveFeedStories),
+    [emptied, fixtureAccount, liveFeedStories],
+  );
+
   const newSince = useMemo(
-    () => selectNewSince(newSinceAll, previousSeenAt),
-    [newSinceAll, previousSeenAt],
+    () => (emptied ? [] : selectNewSince(allFeedStories, previousSeenAt)),
+    [allFeedStories, emptied, previousSeenAt],
   );
   const newSinceCount = useMemo(
-    () => countNewSince(newSinceAll, previousSeenAt),
-    [newSinceAll, previousSeenAt],
+    () => (emptied ? 0 : countNewSince(allFeedStories, previousSeenAt)),
+    [allFeedStories, emptied, previousSeenAt],
   );
 
-  const saved = useMemo(() => {
-    if (emptied) return [];
-    return FIXTURE_SAVED.filter((story) => savedRefs.has(savedStoryRef(story.url)));
-  }, [emptied, savedRefs]);
+  const saved = useMemo(
+    () => (emptied ? [] : fixtureAccount ? FIXTURE_SAVED : liveSavedStories),
+    [emptied, fixtureAccount, liveSavedStories],
+  );
 
-  /* For you never repeats an item already shown in New since. */
+  const savedRefs = useMemo(() => {
+    const refs = new Set<string>();
+    for (const story of saved) {
+      refs.add(story.url);
+      refs.add(normalizeArticleUrl(story.url));
+    }
+    if (!fixtureAccount) {
+      for (const story of savedState.data ?? []) {
+        refs.add(story.canonicalUrl);
+        refs.add(story.sourceUrl);
+        refs.add(normalizeArticleUrl(story.canonicalUrl));
+        refs.add(normalizeArticleUrl(story.sourceUrl));
+      }
+    }
+    return refs;
+  }, [fixtureAccount, saved, savedState.data]);
+
   const forYou = useMemo(() => {
-    if (emptied || !MI_FIXTURES_ENABLED) return [];
-    const shown = new Set(newSince.map((story) => savedStoryRef(story.url)));
-    return FIXTURE_FOR_YOU.filter((story) => !shown.has(savedStoryRef(story.url))).slice(0, 3);
-  }, [emptied, newSince]);
-
-  const follows = useMemo(() => {
     if (emptied) return [];
-    if (liveFollows !== null && liveFollows.length > 0) return liveFollows;
-    return MI_FIXTURES_ENABLED ? FIXTURE_FOLLOWS : liveFollows;
-  }, [emptied, liveFollows]);
+    if (fixtureAccount) {
+      const shown = new Set(newSince.map((story) => normalizeArticleUrl(story.url)));
+      return FIXTURE_FOR_YOU.filter((story) => !shown.has(normalizeArticleUrl(story.url))).slice(0, 3);
+    }
 
-  const followsSource: SectionSource =
-    liveFollows !== null && liveFollows.length > 0 ? 'live' : MI_FIXTURES_ENABLED ? 'fixture' : 'live';
+    const shown = new Set(newSince.map((story) => normalizeArticleUrl(story.url)));
+    const savedUrls = new Set(saved.map((story) => normalizeArticleUrl(story.url)));
+    return liveFeedStories
+      .filter((story) => {
+        const ref = normalizeArticleUrl(story.url);
+        return !shown.has(ref) && !savedUrls.has(ref);
+      })
+      .slice(0, 3);
+  }, [emptied, fixtureAccount, liveFeedStories, newSince, saved]);
 
-  const usesFixtures =
-    MI_FIXTURES_ENABLED &&
-    (newSince.length > 0 || saved.length > 0 || forYou.length > 0 || followsSource === 'fixture');
+  const follows = useMemo<readonly string[] | null>(() => {
+    if (emptied) return [];
+    if (fixtureAccount) return FIXTURE_FOLLOWS;
+    if (feed.data === null) return null;
+    return feed.data.followedCountries.map((entry) => entry.countryCode);
+  }, [emptied, feed.data, fixtureAccount]);
+
+  const recent = useMemo<readonly RecentQuestion[]>(
+    () => (emptied || fixtureAccount ? [] : history.data ?? []),
+    [emptied, fixtureAccount, history.data],
+  );
+
+  const toggleSaved = useCallback(
+    (url: string) => {
+      if (fixtureAccount) return;
+      const normalized = normalizeArticleUrl(url);
+      const existing = savedState.data?.find(
+        (story) =>
+          normalizeArticleUrl(story.canonicalUrl) === normalized ||
+          normalizeArticleUrl(story.sourceUrl) === normalized,
+      );
+
+      if (existing) {
+        void savedState.remove(existing.articleRef);
+      } else {
+        void savedState.save({ url });
+      }
+    },
+    [fixtureAccount, savedState],
+  );
+
+  const retry = useCallback(() => {
+    void Promise.all([feed.refresh(), savedState.refresh(), history.refresh()]);
+  }, [feed, history, savedState]);
+
+  const liveFailure =
+    !fixtureAccount &&
+    user !== null &&
+    (feed.failed || savedState.failed || history.failed);
+
+  const source: SectionSource = fixtureAccount ? 'fixture' : 'live';
+  const usesFixtures = fixtureAccount && !emptied;
 
   return {
-    isLoading: accountLoading || followsLoading || recentLoading,
+    isLoading:
+      accountLoading ||
+      (user !== null && (feed.isLoading || savedState.isLoading || history.isLoading)),
     isSignedIn,
     userEmail: user?.email ?? (fixtureAccount ? 'anna@example.com' : null),
     userName: user?.displayName ?? (fixtureAccount ? 'Anna' : null),
 
     previousSeenAt,
     isFirstVisit,
-    boundarySource: MI_FIXTURES_ENABLED ? 'fixture' : 'live',
+    boundarySource: source,
     boundaryFailed,
 
     newSince,
     newSinceCount,
-    newSinceSource: MI_FIXTURES_ENABLED ? 'fixture' : 'live',
+    newSinceSource: source,
 
     saved,
-    savedSource: MI_FIXTURES_ENABLED ? 'fixture' : 'live',
+    savedSource: source,
 
     forYou,
-    forYouSource: MI_FIXTURES_ENABLED ? 'fixture' : 'live',
+    forYouSource: source,
 
     follows,
-    followsSource,
+    followsSource: source,
 
-    /* Real, and really empty — see the header comment. */
-    recent: emptied ? [] : recent,
-    recentSource: 'live',
+    recent,
+    recentSource: source,
 
     usesFixtures,
-    hasError: options.forceError === true,
-    isDegraded: boundaryFailed,
+    hasError: options.forceError === true || liveFailure,
+    isDegraded: boundaryFailed || liveFailure,
 
     savedRefs,
     toggleSaved,

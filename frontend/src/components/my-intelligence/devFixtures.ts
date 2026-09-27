@@ -29,6 +29,8 @@ import type { ObservableRecord } from './newSince';
 export const MI_FIXTURES_ENABLED = process.env.NEXT_PUBLIC_MI_DEV_FIXTURES === 'true';
 
 export interface FixtureStory extends ObservableRecord {
+  /** Server-issued SHA-256 article reference when this row comes from retained live data. */
+  readonly articleRef?: string;
   readonly id: string;
   readonly url: string;
   readonly title: string;
