@@ -127,18 +127,14 @@ function stripFeedTrailer(text: string): string {
   return text.replace(/\s*The post\b[\s\S]*?\bappeared first on\b[\s\S]*$/, '').trim();
 }
 
-/**
- * Strips HTML tags from a description body, then collapses whitespace.
- * Unresolved CMS template placeholders are removed last (Article Metadata
- * Hygiene R1), so a template-only description ends up empty, never patched.
- */
+/** Strips HTML tags from a description body, then collapses whitespace. */
 function toPlainText(raw: string): string {
   const flattened = unwrap(raw)
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
-  return stripUnresolvedTemplatePlaceholders(stripFeedTrailer(flattened));
+  return stripFeedTrailer(flattened);
 }
 
 /**
@@ -211,6 +207,14 @@ function parseItemBlock(block: string): ParsedFeedItem | undefined {
   const description = readElement(block, 'description') ?? readElement(block, 'summary') ?? '';
   const encoded = readNamespacedElement(block, 'content:encoded');
   const syndicatedBody = encoded ? toPlainText(encoded) : '';
+  const plainDescription = toPlainText(description);
+  /*
+   * Article Metadata Hygiene R1 — unresolved CMS template placeholders are
+   * METADATA defects, so only the description/summary is cleaned, and a
+   * template-only description ends up empty, never patched. The syndicated
+   * body is publisher article text and is deliberately not rewritten.
+   */
+  const summary = stripUnresolvedTemplatePlaceholders(plainDescription);
 
   const publishedAt =
     unwrap(readElement(block, 'pubDate') ?? '') ||
@@ -221,20 +225,20 @@ function parseItemBlock(block: string): ParsedFeedItem | undefined {
     title,
     link,
     // Empty stays empty. No summary is ever generated from the title.
-    summary: toPlainText(description),
+    summary,
     /*
      * ONLY KEPT WHEN IT ADDS SOMETHING. Many WordPress feeds emit an identical
      * description and content:encoded; recording the same text twice and calling
      * one of them "body" would overstate the evidence depth, which is the exact
      * failure this field exists to prevent.
      */
-    ...(syndicatedBody.length > 0 && syndicatedBody !== toPlainText(description)
+    ...(syndicatedBody.length > 0 && syndicatedBody !== plainDescription
       ? { syndicatedBody, bodySource: 'content-encoded' as const }
       : {}),
     bodySource:
-      syndicatedBody.length > 0 && syndicatedBody !== toPlainText(description)
+      syndicatedBody.length > 0 && syndicatedBody !== plainDescription
         ? ('content-encoded' as const)
-        : toPlainText(description).length > 0
+        : summary.length > 0
           ? ('description' as const)
           : ('none' as const),
     publishedAt: publishedAt.length > 0 ? publishedAt : undefined,

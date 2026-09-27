@@ -162,6 +162,27 @@ describe('Article Metadata Hygiene R1 — the shared boundaries apply it', () =>
     expect(items.map((item) => item.summary)).toEqual([NAMIBIA_PROSE, '']);
   });
 
+  it('A.1 — the syndicated <content:encoded> body is NOT rewritten; only the description is cleaned', () => {
+    const xml = `<?xml version="1.0"?><rss><channel><title>Feed</title>
+      <item>
+        <title>Configuration guide</title>
+        <link>https://example.com/c</link>
+        <description>%%title%% %%sep%% A short guide to the configuration.</description>
+        <content:encoded><![CDATA[<p>The configuration uses <code>%%example%%</code> as a literal token.</p>
+          <p>Nothing else &amp; nothing more.</p>]]></content:encoded>
+      </item>
+    </channel></rss>`;
+
+    const [item] = parseFeed(xml).items;
+
+    expect(item.summary).toBe('A short guide to the configuration.');
+    // Ordinary HTML/entity/whitespace normalization only — the token survives exactly.
+    expect(item.syndicatedBody).toBe(
+      'The configuration uses %%example%% as a literal token. Nothing else & nothing more.',
+    );
+    expect(item.bodySource).toBe('content-encoded');
+  });
+
   describe('persisted rows written before the fix are cleaned on read-back', () => {
     const storedRow = {
       id: 'article-1',
