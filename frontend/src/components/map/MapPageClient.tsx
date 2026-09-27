@@ -86,6 +86,7 @@ import {
 } from '@/lib/map/retrieval/countryReadAction';
 import { countryReadRequestFor, countryReadState } from '@/lib/map/retrieval/countryReadRequest';
 import { countryReadPresentationFrom } from '@/lib/map/retrieval/countryReadPresentation';
+import { usePublishGeographyContext } from '@/lib/ask/geographyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { readLanguageCookie } from '@/lib/i18n/languages';
 
@@ -1577,30 +1578,42 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
   }, [cache, cardFilters, language, period, router, selectedCountry, selectedItemId]);
 
   /*
-    ══ MAP R1 · ITEM 7 IS HELD, AND THE REASON IS A RULING ══════════════════
+    ══ MAP R1 · ITEM 7 · THE SELECTED GEOGRAPHY REACHES ASK ════════════════
 
-    Required correction 7 asks that selecting Algeria and opening the global
-    Ask dock stage Algeria instead of reverting to generic world context.
+    CTO ruling: a selected country is not a story anchor, so it does NOT go
+    through `usePublishStoryContext` — `/map` is not a story-context publisher
+    and `askAiRevA.spec.ts` L4 still pins that set to its two analysis-owning
+    surfaces, untouched.
 
-    The obvious transport is `usePublishStoryContext`, which the dock already
-    reads. It was implemented that way and then REVERTED, because
-    `askAiRevA.spec.ts` L4 pins the publisher set to exactly two files under a
-    CTO ruling: *"both analysis-owning surfaces publish through the same token
-    lifecycle"* — AskFrameScreen and SearchPageClient. `/map` is not an
-    analysis-owning surface, and adding it would have widened an accepted
-    contract from inside a corrections lane.
+    It goes through its own bounded store instead: two fields, an ISO code and
+    a label, and nothing else. No article, source, evidence, report or cluster
+    id, and no prior AI output.
 
-    Everything INSIDE the selection cluster already carries the geography and
-    is unchanged: Open analysis and Ask-about-a-story both push
-    `countryCode=<iso2>`, Open sources reveals the same selection's cards,
-    Widen the period keeps the country, and Follow passes its iso3. What is
-    missing is only the dock, which sits outside the cluster.
+    THIS COSTS NOTHING. It is a module-store write inside an effect. Selecting
+    a country still issues zero requests of any class, opening the dock still
+    issues zero, and the only place analysis begins is an explicit Send.
 
-    Reported to the CTO with two routes forward rather than chosen here:
-      · widen L4's publisher set to include /map, under a ruling; or
-      · give the dock a GEOGRAPHY context distinct from story context, which
-        is new architecture and belongs in its own lane.
+    The DISPLAY name, not the canonical one: this is what the dock shows the
+    reader ("Asking about Algeria"), so it follows the reader's language. The
+    canonical English name stays where it belongs — in the `/search` query
+    string that `handleOpenAnalysis` builds, which is not a display string.
   */
+  const askGeography = useMemo(
+    () =>
+      selectedCountry === null
+        ? undefined
+        : {
+            countryCode: selectedCountry.iso2,
+            displayName: localisedCountryName(
+              selectedCountry.iso3,
+              selectedCountry.name,
+              language,
+            ),
+          },
+    [language, selectedCountry],
+  );
+
+  usePublishGeographyContext(askGeography);
 
   const hoveredKnownCount = hovered?.country ? countryStoryCounts[hovered.country.iso3] ?? null : null;
 

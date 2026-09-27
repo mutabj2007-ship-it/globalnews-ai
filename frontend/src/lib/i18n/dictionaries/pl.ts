@@ -62,6 +62,7 @@ export const pl: Dictionary = {
   evidenceLanguageLabel: 'Język źródła',
   askAi: {
     launcher: 'Zapytaj AI',
+    askingAboutGeography: 'Pytasz o: {place}',
     title: 'Zapytaj GlobalNews AI',
     panelLabel: 'Zapytaj GlobalNews AI',
     close: 'Zamknij',

@@ -94,6 +94,12 @@ export const en = {
   evidenceLanguageLabel: 'Evidence language',
   askAi: {
     launcher: 'Ask AI',
+    /*
+      MAP R1 item 7 — the dock says WHERE it is asking about, and does not call
+      it a story. A geography is a scope, not an anchor; the story line above
+      keeps its own wording so a reader can tell the two apart at a glance.
+    */
+    askingAboutGeography: 'Asking about {place}',
     title: 'Ask GlobalNews AI',
     panelLabel: 'Ask GlobalNews AI',
     close: 'Close',
