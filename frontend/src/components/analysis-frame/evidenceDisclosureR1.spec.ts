@@ -5,6 +5,7 @@ import { resolveFrameEvidence } from './analysisFrameState';
 import { fixture } from './frameFixtures';
 import { EvidenceFreshnessNotice, evidenceIsLive } from '@/components/search/EvidenceFreshnessNotice';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 /**
  * ASK/SEARCH ENGINEERING R1 — degraded evidence is never presented as live,
@@ -94,7 +95,10 @@ describe('THE ASK DOCK RESULT carries the disclosure beside the AI badge', () =>
 
   it('a rate-limited provider with no answer says so, not "no reporting met the threshold"', () => {
     const out = html(withContext({ dataMode: 'live', outcome: 'PROVIDER_RATE_LIMITED' }, { analysis: false }));
-    expect(out).toContain('Live reporting could not be retrieved reliably');
+    /* LANE E E4 — the wording changed; the distinction this test pins did not. */
+    const t = getDictionary('en').askAi;
+    expect(out).toContain(t.resultNoAnswerProvider);
+    expect(out).not.toContain(t.resultNoAnswerEvidence);
   });
 });
 

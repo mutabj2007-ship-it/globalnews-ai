@@ -19,9 +19,17 @@
  * are stripped, case-folded incorrectly, or treated as ASCII.
  */
 
+import { extractSummaryFrameSubject } from '../query/derive-generic-news-query.util';
+
 const POLISH_SUBJECT_PATTERNS: RegExp[] = [
   // "Co dzieje się teraz w X?" / "Co dzieje się w X?" (teraz optional)
   /^co\s+dzieje\s+si[eę]\s+(?:teraz\s+)?w\s+(.+)$/iu,
+  /*
+    LANE E — the natural Polish word order of the same question, with "na" as
+    well as "w": "Co się teraz dzieje na Bliskim Wschodzie?". The Home
+    suggestion used exactly this form and derived the whole sentence.
+  */
+  /^co\s+si[eę]\s+(?:teraz\s+|obecnie\s+)?dzieje\s+(?:teraz\s+|obecnie\s+)?(?:w|we|na)\s+(.+)$/iu,
   // "Najnowsze informacje o X"
   /^najnowsze\s+informacje\s+o\s+(.+)$/iu,
   // "Jakie są najważniejsze wiadomości z/o/w X?"
@@ -84,6 +92,10 @@ export function derivePolishRetrievalQuery(normalizedQuery: string): string {
   }
 
   const baseWordCount = wordCount(base);
+
+  /* LANE E — "Podsumuj / Streść / Omów X": the one shared summary-frame authority. */
+  const summarySubject = extractSummaryFrameSubject(base);
+  if (summarySubject !== undefined) return summarySubject;
 
   for (const pattern of POLISH_SUBJECT_PATTERNS) {
     const match = base.match(pattern);

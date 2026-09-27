@@ -190,6 +190,9 @@ export function deriveGenericNewsQuery(normalizedQuery: string): string {
 
   const baseWordCount = wordCount(base);
 
+  const summarySubject = extractSummaryFrameSubject(base);
+  if (summarySubject !== undefined) return summarySubject;
+
   for (const pattern of SUBJECT_EXTRACTION_PATTERNS) {
     const match = base.match(pattern);
     const captured = match?.[1] ? stripLeadingThe(match[1].trim()) : undefined;
@@ -200,6 +203,85 @@ export function deriveGenericNewsQuery(normalizedQuery: string): string {
   }
 
   return base;
+}
+
+/*
+ * ════════════════════════════════════════════════════════════════════════════
+ * LANE E — HOME SUGGESTION & FIRST-TURN RETRIEVAL INTEGRITY R1: SUMMARY FRAMES
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * THE MEASURED DEFECT (Gate E-A). The Home suggestion "Summarize today's
+ * central bank announcement" matched no frame, so the whole sentence became
+ * both the provider phrase ("Summarize today s central bank announcement")
+ * and the phrase the relevance gate demanded — and no fallback was even
+ * produced, because none of its words is a fallback stopword. "Break down
+ * this week's tech earnings" failed the same way. Polish "Podsumuj …" /
+ * "Omów …" had no frame at all.
+ *
+ * WHAT THIS ADDS: the same closed, ordered, first-match-wins, deterministic
+ * patterns as every rule above, capturing the subject in group 1 — for the
+ * summary verbs only. The captured subject then loses conversational TIME
+ * FRAMING, but only in the governed positions below (a leading possessive such
+ * as "today's" / "this week's", a leading "the latest" right after the verb,
+ * the Polish "dzisiejsze" / "najnowsze", a trailing "z tego tygodnia"). "Today"
+ * or "latest" anywhere else in a topic is never touched. The result must be
+ * non-empty and strictly shorter than the input, or it is not used.
+ *
+ * WHAT IT NEVER DOES: rewrite with AI, reorder words, or read the noun
+ * "summary" as a command — "Summary of the Paris Agreement" and "Recap of the
+ * match" are left to the existing rules exactly as before.
+ */
+const SUMMARY_FRAME_PATTERNS: readonly RegExp[] = [
+  // "Summarize / Recap the latest news on X"
+  /^(?:summari[sz]e|recap)\s+(?:the\s+)?(?:latest\s+)?(?:news|developments|updates|reporting)\s+(?:on|about|regarding)\s+(.+)$/i,
+  // "Give me a (quick|short|brief) summary of X"
+  /^give\s+me\s+a\s+(?:quick\s+|short\s+|brief\s+)?summary\s+of\s+(.+)$/i,
+  // "Summarize X" / "Summarise X" / "Recap X" / "Break down X" — never "Recap of …"
+  /^(?:summari[sz]e|recap|break\s+down)\s+(?!of\b)(.+)$/i,
+  // PL "Podsumuj / Streść / Omów (mi) (najnowsze) wiadomości o X"
+  /^(?:podsumuj|stre[śs][ćc]|om[óo]w)\s+(?:mi\s+)?(?:najnowsze\s+|ostatnie\s+)?(?:wiadomo[śs]ci|informacje|doniesienia)\s+(?:o|na\s+temat|w\s+sprawie)\s+(.+)$/iu,
+  // PL "Podsumuj / Streść / Omów (mi) X"
+  /^(?:podsumuj|stre[śs][ćc]|om[óo]w)\s+(?:mi\s+)?(.+)$/iu,
+];
+
+/* Conversational time framing, removed ONLY at these governed edges of a summary subject. */
+const LEADING_TIME_FRAMING =
+  /^(?:the\s+)?(?:(?:today|tonight|yesterday)['’]?s|this\s+(?:week|month|year|morning|evening)['’]?s|latest|most\s+recent)\s+/i;
+const LEADING_TIME_FRAMING_PL = /^(?:dzisiejsz\w*|wczorajsz\w*|najnowsz\w*|ostatni\w*)\s+/iu;
+const TRAILING_TIME_FRAMING =
+  /\s+(?:this\s+(?:week|month|year)|today|right\s+now|z\s+(?:dzisiaj|dzi[śs]|tego\s+tygodnia|tego\s+miesi[ąa]ca|ostatniego\s+tygodnia)|w\s+tym\s+(?:tygodniu|miesi[ąa]cu))$/iu;
+
+function stripSummaryTimeFraming(subject: string): string {
+  /* The trailing space lets a subject that is ONLY time framing ("today's") reduce to nothing. */
+  return stripLeadingThe(
+    `${subject} `
+      .replace(LEADING_TIME_FRAMING, '')
+      .replace(LEADING_TIME_FRAMING_PL, '')
+      .trim()
+      .replace(TRAILING_TIME_FRAMING, '')
+      .trim(),
+  );
+}
+
+/**
+ * The subject of a summary-framed question ("Summarize X", "Podsumuj X"), or
+ * undefined when the question is not summary-framed or the subject would not
+ * be strictly shorter than the question. Shared by the Polish retrieval
+ * derivation so the two languages can never drift.
+ */
+export function extractSummaryFrameSubject(question: string): string | undefined {
+  const base = stripTrailingPunctuation(question);
+  const baseWordCount = wordCount(base);
+
+  for (const pattern of SUMMARY_FRAME_PATTERNS) {
+    const match = base.match(pattern);
+    if (!match?.[1]) continue;
+    const subject = stripSummaryTimeFraming(stripLeadingThe(match[1].trim()));
+    if (subject.length > 0 && wordCount(subject) < baseWordCount) return subject;
+    return undefined;
+  }
+
+  return undefined;
 }
 
 /**
