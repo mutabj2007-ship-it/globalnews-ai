@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { RETURN_VISIT_MIN_INTERVAL_MS } from './return-state.constants';
+import { RETURN_VISIT_MIN_INTERVAL_MS, VISIT_ACTIVITY_TOUCH_INTERVAL_MS } from './return-state.constants';
 import { TelemetryService } from '../telemetry/telemetry.service';
 
 export interface UserSummary {
@@ -83,54 +83,96 @@ export class UsersService {
    * independently and stay semantically independent; R0.5 — exposing
    * firstSeenAt on the live path — is E1's and is not solved here.
    */
+  /*
+   * MY INTELLIGENCE R1 — THE VISIT-BOUNDARY REPAIR.
+   *
+   * THE DEFECT. Inside the 30-minute window the previous implementation
+   * returned lastSeenAt itself as "previousSeenAt" — the start of THIS visit,
+   * not the previous one — so a reload moved the boundary; and because it
+   * wrote only once per 30 minutes, 30+ minutes of continuous activity was
+   * later read as a brand-new return visit.
+   *
+   * THE RULE. lastSeenAt stays the ONLY activity clock. User.visitBoundaryAt
+   * is a snapshot of it, taken once per new visit:
+   *   - first-ever visit        → previousSeenAt null; lastSeenAt set.
+   *   - gap ≥ 30 min            → new visit: visitBoundaryAt := old lastSeenAt,
+   *                               lastSeenAt := now.
+   *   - same visit (gap < 30)   → previousSeenAt = visitBoundaryAt, unchanged;
+   *                               lastSeenAt touched at most every 5 min.
+   *
+   * CONCURRENT TABS rotate the boundary EXACTLY ONCE: every write is a
+   * compare-and-set on the lastSeenAt value this request read. A request that
+   * loses the race re-reads and reports the boundary the winner wrote. No
+   * second session mechanism, and no client-side clock.
+   */
   async recordSeen(userId: string, now: Date = new Date()): Promise<ReturnStateView> {
     const existing = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { lastSeenAt: true },
+      select: { lastSeenAt: true, visitBoundaryAt: true },
     });
 
     if (!existing) {
       throw new NotFoundException();
     }
 
-    const previousSeenAt = existing.lastSeenAt;
+    const { lastSeenAt, visitBoundaryAt } = existing;
 
-    if (previousSeenAt === null) {
-      await this.touch(userId, now);
+    if (lastSeenAt === null) {
+      const won = await this.compareAndSet(userId, null, { lastSeenAt: now });
+      if (!won) return this.reportCurrent(userId);
       await this.telemetry.recordAccountEvent('return_visit', userId);
       return { previousSeenAt: null, firstVisit: true, recorded: true };
     }
 
-    const elapsedMs = now.getTime() - previousSeenAt.getTime();
+    const elapsedMs = now.getTime() - lastSeenAt.getTime();
 
-    if (elapsedMs < RETURN_VISIT_MIN_INTERVAL_MS) {
-      // Deliberately NO write. The caller still receives the real
-      // previous value, so a refresh is answered correctly and costs the
-      // database nothing.
-      return {
-        previousSeenAt: previousSeenAt.toISOString(),
-        firstVisit: false,
-        recorded: false,
-      };
+    if (elapsedMs >= RETURN_VISIT_MIN_INTERVAL_MS) {
+      const won = await this.compareAndSet(userId, lastSeenAt, {
+        visitBoundaryAt: lastSeenAt,
+        lastSeenAt: now,
+      });
+      if (!won) return this.reportCurrent(userId);
+      // One event per distinct visit, never per refresh or per tab.
+      await this.telemetry.recordAccountEvent('return_visit', userId);
+      return { previousSeenAt: lastSeenAt.toISOString(), firstVisit: false, recorded: true };
     }
 
-    await this.touch(userId, now);
-    // Emitted only when a visit is actually RECORDED, so the throttled
-    // path above produces neither a write nor an event. The event count
-    // therefore matches the number of distinct visits the platform
-    // observed, not the number of times a page was refreshed.
-    await this.telemetry.recordAccountEvent('return_visit', userId);
+    // Same visit: the boundary never moves; activity extends the visit.
+    const recorded =
+      elapsedMs >= VISIT_ACTIVITY_TOUCH_INTERVAL_MS
+        ? await this.compareAndSet(userId, lastSeenAt, { lastSeenAt: now })
+        : false;
     return {
-      previousSeenAt: previousSeenAt.toISOString(),
-      firstVisit: false,
-      recorded: true,
+      previousSeenAt: visitBoundaryAt ? visitBoundaryAt.toISOString() : null,
+      firstVisit: visitBoundaryAt === null,
+      recorded,
     };
   }
 
-  private async touch(userId: string, now: Date): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { lastSeenAt: now },
+  /** True when this request's write won; false when another request changed lastSeenAt first. */
+  private async compareAndSet(
+    userId: string,
+    expectedLastSeenAt: Date | null,
+    data: { lastSeenAt: Date; visitBoundaryAt?: Date },
+  ): Promise<boolean> {
+    const result = await this.prisma.user.updateMany({
+      where: { id: userId, lastSeenAt: expectedLastSeenAt },
+      data,
     });
+    return result.count === 1;
+  }
+
+  /** The boundary as it now stands, after another request won the write. */
+  private async reportCurrent(userId: string): Promise<ReturnStateView> {
+    const current = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { visitBoundaryAt: true },
+    });
+    const boundary = current?.visitBoundaryAt ?? null;
+    return {
+      previousSeenAt: boundary ? boundary.toISOString() : null,
+      firstVisit: boundary === null,
+      recorded: false,
+    };
   }
 }

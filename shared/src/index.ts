@@ -236,3 +236,4 @@ export * from './comparison-coverage';
 export * from './energy/observation';
 export * from './conflict/validation';
 export * from './home-suggestions';
+export * from './my-intelligence';

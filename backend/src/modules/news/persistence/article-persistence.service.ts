@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { logWithRequestId } from '../../../observability/log-with-request-id';
 import { readPublishedAtBasis, writePublishedAtBasis } from './published-at-basis.util';
-import type { NewsArticle, NewsCategory } from '@globalnews-ai/shared';
+import { normalizeArticleUrl, type NewsArticle, type NewsCategory } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
 
@@ -559,4 +559,64 @@ export class ArticlePersistenceService {
       return null;
     }
   }
+
+  /**
+   * MY INTELLIGENCE R1 — resolve a story from RETAINED reporting by its URL.
+   *
+   * DATABASE ONLY: no provider is reachable from this service. Articles are
+   * stored under the URL the provider reported, so both that spelling and the
+   * normalized one are tried. The governed countries are the ArticleCountry
+   * relations marked relevant (ISO-3), exactly as the country feeds use them.
+   * Never throws: a failure is logged and reads as "not retained".
+   */
+  async findRetainedByUrl(url: string): Promise<RetainedArticleRecord | null> {
+    const trimmed = (url ?? '').trim();
+    if (!trimmed) return null;
+    const candidates = Array.from(new Set([trimmed, normalizeArticleUrl(trimmed)]));
+
+    try {
+      const row = await this.prisma.article.findFirst({
+        where: { url: { in: candidates } },
+        include: { countries: { where: { isRelevant: true }, select: { countryCode: true } } },
+      });
+      if (!row) return null;
+
+      return {
+        article: {
+          id: row.id,
+          title: row.title,
+          summary: stripUnresolvedTemplatePlaceholders(row.summary),
+          url: row.url,
+          imageUrl: row.imageUrl ?? undefined,
+          sourceId: row.sourceId,
+          sourceName: row.sourceName,
+          category: row.category as NewsCategory,
+          sourcesCount: row.sourcesCount,
+          publishedAt: row.publishedAt.toISOString(),
+          publishedAtBasis: readPublishedAtBasis(row.publishedAtBasis),
+          firstSeenAt: row.fetchedAt.toISOString(),
+          confidence: row.confidenceScore ?? undefined,
+          countryCode: row.countryCode ?? undefined,
+          countryName: row.countryName ?? undefined,
+        },
+        countryCodes: Array.from(
+          new Set(row.countries.map((relation: { countryCode: string }) => relation.countryCode)),
+        ).sort(),
+      };
+    } catch (error) {
+      logWithRequestId(
+        this.logger,
+        'warn',
+        'Failed to resolve a retained article by url from database',
+        error instanceof Error ? error : undefined,
+      );
+      return null;
+    }
+  }
+}
+
+/** A retained article plus its governed (relevant) ISO-3 country attributions. */
+export interface RetainedArticleRecord {
+  readonly article: NewsArticle;
+  readonly countryCodes: readonly string[];
 }

@@ -1,6 +1,7 @@
 import type {
   AnalysisDevelopmentBreadth,
   EvidenceFreshnessFact,
+  SelectionPromptContext,
 } from '../interfaces/analysis-provider.interface';
 import { renderDimensionSemanticsInstruction } from './dimension-semantics';
 import type {
@@ -677,6 +678,7 @@ export function buildAnalysisMessages(
   eventAnchor?: EventAnchor,
   eventEvidenceRelations?: readonly EventEvidenceRelation[],
   conversationSubject?: ConversationSubjectAnchor,
+  selection?: SelectionPromptContext,
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
@@ -686,6 +688,7 @@ export function buildAnalysisMessages(
       buildEvidenceStateInstruction(evidenceState, newestEvidence) +
       buildEventAnchorInstruction(eventAnchor) +
       buildConversationSubjectInstruction(conversationSubject) +
+      buildSelectionInstruction(selection) +
       buildRelationalPromptSection(relationalContext) +
       buildResponseLanguageInstruction(responseLanguage) +
       /*
@@ -1258,6 +1261,37 @@ export function describeNewestEvidence(newestEvidence?: EvidenceFreshnessFact): 
  * own previous question. Empty string when no subject is continued, so every
  * other prompt is byte-identical. Carries only the subject span and codes.
  */
+/**
+ * MY INTELLIGENCE R1 — the reader selected specific stories and ran one action
+ * over them. The supplied evidence IS the selection; every existing grounding
+ * rule still binds. Empty string when there is no selection, so every other
+ * prompt is byte-identical.
+ */
+const SELECTION_ACTION_INSTRUCTIONS: Readonly<Record<SelectionPromptContext['action'], string>> = {
+  COMPARE:
+    'COMPARE the selected stories: state what they agree on (agreements) and where they differ (differences), each point cited to the stories that support it.',
+  SUMMARIZE:
+    'SUMMARIZE the selected stories only. Do not add anything they do not report.',
+  ASK_SELECTED:
+    "ANSWER the reader's question using ONLY the selected stories as evidence. If they do not answer it, say so plainly.",
+  EXPLAIN_DISAGREEMENTS:
+    'EXPLAIN DISAGREEMENTS among the selected stories: report only disagreements the stories themselves support, in differences, with each position cited. If they do not disagree, return an empty differences array and say so in the summary; never invent a disagreement.',
+  WHAT_CHANGED:
+    'WHAT CHANGED: using the publication times of the selected stories, state what the more recent reporting adds to or changes from the earlier reporting. Do not claim any memory of previous sessions, alerts or watched situations; the only history is the selected stories themselves.',
+  CREATE_BRIEFING:
+    'CREATE A BRIEFING from the selected stories using the existing structure: the executive brief in summary, keyFacts, context, relevance, impacts and watchNext, each item cited. Nothing beyond the selected stories.',
+};
+
+export function buildSelectionInstruction(selection?: SelectionPromptContext): string {
+  if (selection === undefined) return '';
+  return [
+    '',
+    '',
+    `SELECTED STORIES (${selection.storyCount}): the reader selected these stories and asked for one action over them. The supplied evidence items ARE the selection; use no other reporting and no outside knowledge.`,
+    `- ${SELECTION_ACTION_INSTRUCTIONS[selection.action]}`,
+  ].join('\n');
+}
+
 export function buildConversationSubjectInstruction(subject?: ConversationSubjectAnchor): string {
   if (subject === undefined) return '';
   const lines = [

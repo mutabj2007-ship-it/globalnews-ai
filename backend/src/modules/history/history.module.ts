@@ -7,5 +7,7 @@ import { HistoryService } from './history.service';
   imports: [AuthModule],
   controllers: [HistoryController],
   providers: [HistoryService],
+  // MY INTELLIGENCE R1 — the analysis entry point records explicit questions through it.
+  exports: [HistoryService],
 })
 export class HistoryModule {}
