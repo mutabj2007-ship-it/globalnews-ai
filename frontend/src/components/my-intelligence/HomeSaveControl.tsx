@@ -1,44 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import { useMemo, useState } from 'react';
+import { normalizeArticleUrl, type LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { useSavedStories } from '@/lib/myIntelligence/hooks';
 import { BookmarkButton } from './MiPrimitives';
-import { savedStoryRef } from './savedStoryIdentity';
 
 /**
- * THE HOME BOOKMARK — A SIBLING OF THE CARD LINK, NEVER A CHILD OF IT.
+ * Home bookmark backed by the live My Intelligence saved-story API.
  *
- * ── WHY THIS IS ITS OWN CLIENT COMPONENT ─────────────────────────────────
- *
- * `WhatsHappeningNow` is a Server Component and the frozen Home R6 composition
- * depends on it staying one. Lifting save state into it would turn the whole
- * section into a client tree for the sake of one toggle. So the boundary is
- * drawn here, at the smallest possible leaf: the card, the image, the headline
- * and the meta line all still render on the server.
- *
- * ── WHY IT IS POSITIONED RATHER THAN NESTED ──────────────────────────────
- *
- * The Home story card is one `<a href={article.url} target="_blank">` wrapping
- * image, headline and meta row. An interactive control INSIDE that anchor is
- * a nested-interactive collision: every save would also open a publisher tab,
- * and assistive technology would announce a button inside a link.
- *
- * R1.2 rules the bookmark is a sibling of the card link, in the source/meta
- * row, never overlaid on the image or the headline. It is therefore rendered
- * outside the anchor and positioned over the meta row, and the meta row
- * carries trailing padding so the source line never runs beneath it.
- *
- * ── WHAT PRESSING IT DOES, AND DOES NOT DO ───────────────────────────────
- *
- * It toggles local state and nothing else. There is no SavedStory table, no
- * `/saved` endpoint and no persistence in this lane, so the state lives for
- * the life of the page. Nothing is written to localStorage, sessionStorage,
- * IndexedDB or a cookie. And it runs no AI — saving is a filing action, not an
- * analysis, which is the line the whole surface is built around.
- *
- * The identity it would persist under is already fixed: the canonical,
- * normalized article URL, never the provider article id.
+ * Saving remains ordinary account persistence: it performs no AI and no live
+ * provider retrieval. The server resolves the story from retained reporting
+ * and returns the governed SHA-256 articleRef.
  */
 export function HomeSaveControl({
   url,
@@ -47,12 +20,28 @@ export function HomeSaveControl({
   url: string;
   language: LanguageCode;
 }): JSX.Element {
-  const [isSaved, setIsSaved] = useState(false);
+  const saved = useSavedStories();
   const [showToast, setShowToast] = useState(false);
   const t = getDictionary(language).myIntelligence;
+  const normalized = useMemo(() => normalizeArticleUrl(url), [url]);
 
-  /* Computed so the key this lane would persist under is exercised, not assumed. */
-  void savedStoryRef(url);
+  const existing = saved.data?.find(
+    (story) =>
+      normalizeArticleUrl(story.canonicalUrl) === normalized ||
+      normalizeArticleUrl(story.sourceUrl) === normalized,
+  );
+  const isSaved = existing !== undefined;
+
+  const toggle = (): void => {
+    void (async () => {
+      const ok = existing
+        ? await saved.remove(existing.articleRef)
+        : (await saved.save({ url })) !== null;
+      if (!ok) return;
+      setShowToast(true);
+      window.setTimeout(() => setShowToast(false), 2600);
+    })();
+  };
 
   return (
     <>
@@ -60,11 +49,7 @@ export function HomeSaveControl({
         <BookmarkButton
           isSaved={isSaved}
           language={language}
-          onToggle={() => {
-            setIsSaved((saved) => !saved);
-            setShowToast(true);
-            window.setTimeout(() => setShowToast(false), 2600);
-          }}
+          onToggle={toggle}
         />
       </span>
 
