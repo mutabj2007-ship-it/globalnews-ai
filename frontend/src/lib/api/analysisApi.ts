@@ -1,5 +1,11 @@
-import { ANALYSIS_CLIENT_TIMEOUT_MS } from '@globalnews-ai/shared';
-import type { AnalysisApiResponse, AnalysisSelection, LanguageCode, StoryContext } from '@globalnews-ai/shared';
+import { ANALYSIS_CLIENT_TIMEOUT_MS, resolveGovernedCountryCode } from '@globalnews-ai/shared';
+import type {
+  AnalysisApiResponse,
+  AnalysisSelection,
+  GeographyContext,
+  LanguageCode,
+  StoryContext,
+} from '@globalnews-ai/shared';
 import { resolveAccountApiBase } from './accountBase';
 
 /*
@@ -155,6 +161,29 @@ export class AnalysisApiError extends Error {
 const inFlightAnalysisRequests = new Map<string, Promise<AnalysisApiResponse>>();
 
 /**
+ * MAP MOBILE R1 CONVERGENCE — the geography context as it crosses the wire.
+ *
+ * - EXACTLY two fields, rebuilt here from whatever the caller passed, so no
+ *   article, source, evidence, report, cluster or prior-answer field can ride
+ *   along with it.
+ * - countryCode is NORMALIZED through the canonical shared governed-country
+ *   check (resolveGovernedCountryCode, the backend's own authority): a
+ *   governed ISO2 or ISO3, in either case, becomes that country's ISO3, so
+ *   "PL", "pl" and "POL" are one identity. A code that is not governed is
+ *   sent as-is (upper-cased) and the backend refuses it with a 400; it is
+ *   never silently dropped here.
+ * - displayName is presentation only: it is transported, but it is never
+ *   part of the in-flight identity (see analyzeNews).
+ */
+export function transportableGeography(context: GeographyContext): GeographyContext {
+  return {
+    countryCode:
+      resolveGovernedCountryCode(context.countryCode)?.iso3 ?? context.countryCode.trim().toUpperCase(),
+    displayName: context.displayName,
+  };
+}
+
+/**
  * Calls the GlobalNews AI backend's analysis endpoint. This is the only
  * place the frontend talks to for AI analysis — it never calls OpenAI
  * (or any AI provider) directly, so no AI key ever needs to exist in
@@ -189,6 +218,13 @@ export function analyzeNews(
   priorQuestion?: string,
   /** MY INTELLIGENCE R1 — optional multi-story selection; absent for every existing caller. */
   selection?: AnalysisSelection,
+  /**
+   * MAP MOBILE R1 CONVERGENCE — the map country the reader has selected, with
+   * no story. The WEAKEST scope: a story context (the more specific anchor)
+   * or a selection strips it, so it is never sent combined with either.
+   * Absent for every existing caller, whose requests are unchanged.
+   */
+  geographyContext?: GeographyContext,
 ): Promise<AnalysisApiResponse> {
   /**
    * Milestone #51 Phase B (CTO final correction): prefers
@@ -210,14 +246,24 @@ export function analyzeNews(
   const selectionKeySegment = selection
     ? `:selection:${selection.action}:${selection.stories.map((story) => story.articleRef).join(',')}`
     : '';
-  const key = `${requestedLanguage}:${query.trim()}${storyAnchorKeySegment}${priorKeySegment}${selectionKeySegment}`;
+  /*
+    The geography applies only with no story context and no selection, and it
+    is keyed by its NORMALIZED code alone: the same country labelled
+    "Poland" and "Polska" is one in-flight request, never two.
+  */
+  const geography =
+    geographyContext !== undefined && storyContext === undefined && selection === undefined
+      ? transportableGeography(geographyContext)
+      : undefined;
+  const geographyKeySegment = geography ? `:geo:${geography.countryCode.toLowerCase()}` : '';
+  const key = `${requestedLanguage}:${query.trim()}${storyAnchorKeySegment}${priorKeySegment}${selectionKeySegment}${geographyKeySegment}`;
 
   const existing = inFlightAnalysisRequests.get(key);
   if (existing) {
     return existing;
   }
 
-  const request = performAnalyzeNews(query, requestedLanguage, storyContext, priorQuestion, selection).finally(() => {
+  const request = performAnalyzeNews(query, requestedLanguage, storyContext, priorQuestion, selection, geography).finally(() => {
     // Only delete this key's entry if it still points at THIS promise.
     // Guards against a theoretical race where an older, already-
     // resolved request's cleanup could otherwise delete a NEWER
@@ -270,6 +316,7 @@ async function performAnalyzeNews(
   storyContext?: StoryContext,
   priorQuestion?: string,
   selection?: AnalysisSelection,
+  geographyContext?: GeographyContext,
 ): Promise<AnalysisApiResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -308,6 +355,7 @@ async function performAnalyzeNews(
         ...(storyContext ? { storyContext } : {}),
         ...(priorQuestion ? { priorQuestion } : {}),
         ...(selection ? { selection } : {}),
+        ...(geographyContext ? { geographyContext } : {}),
       }),
       cache: 'no-store',
       signal: controller.signal,

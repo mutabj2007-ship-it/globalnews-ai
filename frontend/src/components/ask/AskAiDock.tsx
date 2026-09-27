@@ -310,7 +310,17 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
       const priorQuestion = topicReset || lastQuestion === undefined ? undefined : (subjectOrigin ?? lastQuestion);
       setTopicReset(false);
 
-      analyzeNews(asked, language, sent, priorQuestion)
+      /*
+        MAP MOBILE R1 CONVERGENCE — SUBMISSION PRECEDENCE, STATED:
+          1. story context, when one is published (the more specific anchor);
+          2. otherwise the map geography context, when one is published;
+          3. otherwise a generic Ask.
+        Never both. analyzeNews() narrows the geography to exactly
+        { countryCode, displayName }; the chip's label is presentation only.
+      */
+      const sentGeography = sent === undefined ? geographyContext : undefined;
+
+      analyzeNews(asked, language, sent, priorQuestion, undefined, sentGeography)
         .then((response) => {
           if (requestSeq.current !== seq) return;
           setSubjectOrigin(subjectOriginOf(response, priorQuestion));
@@ -327,7 +337,7 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           });
         });
     },
-    [question, language, dictionary, storyContext, phase, history, topicReset, subjectOrigin],
+    [question, language, dictionary, storyContext, geographyContext, phase, history, topicReset, subjectOrigin],
   );
 
   return (
