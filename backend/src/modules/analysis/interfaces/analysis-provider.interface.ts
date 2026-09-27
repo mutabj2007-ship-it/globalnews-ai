@@ -139,6 +139,13 @@ export interface AnalysisProviderInput {
   conversationSubject?: ConversationSubjectAnchor;
 
   /**
+   * MY INTELLIGENCE R1 — present only for a multi-story selection: which
+   * action the reader ran and over how many selected stories. The stories
+   * themselves are `articles`, resolved from retained reporting.
+   */
+  selection?: SelectionPromptContext;
+
+  /**
    * Optional caller cancellation. AnalysisService uses this only for the
    * authoritative response deadline: when the reader can no longer receive a
    * result, an in-flight model request must not keep spending tokens merely to
@@ -201,4 +208,10 @@ export interface AnalysisProvider {
 
   /** Produces a candidate analysis. Callers must validate the result before trusting it. */
   analyzeNews(input: AnalysisProviderInput): Promise<unknown>;
+}
+
+/** MY INTELLIGENCE R1 — the selection facts the prompt needs. */
+export interface SelectionPromptContext {
+  readonly action: import('@globalnews-ai/shared').MultiStoryAction;
+  readonly storyCount: number;
 }

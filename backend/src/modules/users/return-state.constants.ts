@@ -21,3 +21,16 @@
  * test that proves the service honours it.
  */
 export const RETURN_VISIT_MIN_INTERVAL_MS = 30 * 60 * 1000;
+
+/**
+ * MY INTELLIGENCE R1 — the visit-boundary repair.
+ *
+ * RETURN_VISIT_MIN_INTERVAL_MS above now means exactly one thing: a request
+ * arriving at least that long after lastSeenAt starts a NEW visit, and only
+ * then is the old lastSeenAt snapshotted into User.visitBoundaryAt.
+ *
+ * Inside a visit, lastSeenAt is touched at most once per this interval, so
+ * continuous activity keeps extending the same visit instead of one day
+ * crossing the 30-minute line and looking like a return.
+ */
+export const VISIT_ACTIVITY_TOUCH_INTERVAL_MS = 5 * 60 * 1000;

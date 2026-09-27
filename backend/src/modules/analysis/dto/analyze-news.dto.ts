@@ -1,14 +1,58 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
+  Matches,
   MaxLength,
   MinLength,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import {
+  ARTICLE_REF_PATTERN,
+  MAX_SELECTED_STORIES,
+  MULTI_STORY_ACTIONS,
+  type LanguageCode,
+  type MultiStoryAction,
+} from '@globalnews-ai/shared';
+
+/**
+ * MY INTELLIGENCE R1 — one selected story: its sha256 URL identity and the
+ * URL it must hash to. Nothing else about the story is accepted from a client;
+ * the server resolves it from retained reporting.
+ */
+export class SelectedStoryRefDto {
+  @IsString()
+  @Matches(ARTICLE_REF_PATTERN)
+  articleRef!: string;
+
+  @IsString()
+  @MaxLength(2000)
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  url!: string;
+}
+
+/**
+ * MY INTELLIGENCE R1 — the bounded multi-story input: one action over 1–8
+ * selected stories (CTO bound). Per-action minimums are enforced by the
+ * controller before anything is recorded or computed.
+ */
+export class AnalysisSelectionDto {
+  @IsIn(MULTI_STORY_ACTIONS)
+  action!: MultiStoryAction;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_SELECTED_STORIES)
+  @ValidateNested({ each: true })
+  @Type(() => SelectedStoryRefDto)
+  stories!: SelectedStoryRefDto[];
+}
 
 /**
  * Milestone #51 Phase B — bounded, optional story-context nested DTO.
@@ -121,4 +165,13 @@ export class AnalyzeNewsDto {
   @MinLength(2)
   @MaxLength(1000)
   priorQuestion?: string;
+
+  /**
+   * MY INTELLIGENCE R1 — optional multi-story selection. Absent for every
+   * existing caller, whose requests are therefore unchanged.
+   */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AnalysisSelectionDto)
+  selection?: AnalysisSelectionDto;
 }

@@ -1,13 +1,21 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import type { AnalysisApiResponse } from '@globalnews-ai/shared';
+import type { Request } from 'express';
+import { MULTI_STORY_MIN_STORIES, type AnalysisApiResponse } from '@globalnews-ai/shared';
 import { AnalysisService } from '../service/analysis.service';
 import { AnalyzeNewsDto } from '../dto';
-import { AnalysisRateLimitGuard } from '../security/analysis-rate-limit.guard';
+import {
+  AnalysisRateLimitGuard,
+  readVerifiedAnalysisUserId,
+} from '../security/analysis-rate-limit.guard';
+import { HistoryService } from '../../history/history.service';
 
 @Controller('analysis')
 export class AnalysisController {
-  constructor(private readonly analysisService: AnalysisService) {}
+  constructor(
+    private readonly analysisService: AnalysisService,
+    private readonly history: HistoryService,
+  ) {}
 
   /**
    * POST /analysis/news
@@ -38,12 +46,43 @@ export class AnalysisController {
    * OpenAI call. The @Throttle below is untouched and remains the
    * short-window burst guard.
    */
+  /**
+   * MY INTELLIGENCE R1 — THE ONE EXPLICIT-COMPUTE BOUNDARY, AND THE ONE
+   * HISTORY WRITER.
+   *
+   * Every surface (Home Ask, the Ask dock, /ask, /search Run, My Intelligence
+   * "Ask about selected" and the other multi-story actions) reaches analysis
+   * only here, and only on an explicit Send / Run / Confirm. So this is where
+   * the reader's question is recorded — once, for a verified signed-in caller,
+   * before the analysis runs (a no-evidence or failed analysis is still a
+   * question the reader asked). Staging, typing, opening Ask and reopening a
+   * history entry never reach this route, so they never write.
+   *
+   * A selection that asks an action to run on fewer stories than it needs is
+   * refused (400) BEFORE anything is recorded or computed.
+   */
   @UseGuards(AnalysisRateLimitGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('news')
-  analyzeNews(
-    @Body() { query, requestedLanguage, storyContext, priorQuestion }: AnalyzeNewsDto,
+  async analyzeNews(
+    @Body() { query, requestedLanguage, storyContext, priorQuestion, selection }: AnalyzeNewsDto,
+    @Req() request: Request,
   ): Promise<AnalysisApiResponse> {
-    return this.analysisService.analyzeNews(query, requestedLanguage, storyContext, priorQuestion);
+    if (selection) {
+      const minimum = MULTI_STORY_MIN_STORIES[selection.action];
+      const distinct = new Set(selection.stories.map((story) => story.articleRef)).size;
+      if (distinct < minimum) {
+        throw new BadRequestException(
+          `${selection.action} needs at least ${minimum} selected ${minimum === 1 ? 'story' : 'stories'}.`,
+        );
+      }
+    }
+
+    const userId = readVerifiedAnalysisUserId(request);
+    if (userId) {
+      await this.history.recordExplicitQuestion(userId, query, storyContext?.countryCode);
+    }
+
+    return this.analysisService.analyzeNews(query, requestedLanguage, storyContext, priorQuestion, selection);
   }
 }

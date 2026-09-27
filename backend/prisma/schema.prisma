@@ -153,10 +153,26 @@ model User {
   /// removes it with the row; no separate deletion path is needed.
   lastSeenAt DateTime?
 
+  /// MY INTELLIGENCE R1 — the STABLE previous-visit boundary.
+  ///
+  /// lastSeenAt stays the ONLY activity clock. This column is a snapshot of
+  /// it, taken exactly once per new visit: when a request arrives ≥30 min
+  /// after lastSeenAt, the old lastSeenAt is copied here by compare-and-set
+  /// (so two tabs opening together rotate it exactly once). Inside a visit it
+  /// never changes, which is what lets "new since your last visit" stay the
+  /// same on reload. NULL means no previous visit is known — "make no return
+  /// claim", never "everything is new". No default: pre-existing rows stay
+  /// NULL. Lives and dies with the User row.
+  visitBoundaryAt DateTime?
+
   /// R1/T3 — a fifth account-owned relation, cascading like the four
   /// above.
   countryFollows     CountryFollow[]
   watchSubscriptions WatchSubscription[]
+
+  /// MY INTELLIGENCE R1 — Saved Stories, cascading like every other
+  /// account-owned relation.
+  savedStories SavedStory[]
 
   /// R3/T7 — account-scoped telemetry. SET NULL, NOT Cascade (CTO
   /// decision): deleting an account severs the link to the person while
@@ -1601,4 +1617,47 @@ model EnergyObservation {
   reviewedBy String?
   reviewRef String?
   @@unique([observationKey, revision])
+}
+
+/// MY INTELLIGENCE R1 — a story an authenticated user saved.
+///
+/// IDENTITY: articleRef = sha256(normalizeArticleUrl(url)), lowercase hex.
+/// Never the provider's article id (a weak 32-bit hash) and never a title:
+/// the canonical URL is the story's identity everywhere in the product.
+/// providerArticleId is kept only as a non-authoritative lookup HINT.
+///
+/// METADATA ONLY. Every field below is resolved SERVER-SIDE from the
+/// retained Article row at save time — a client-supplied title or source is
+/// never trusted. There is deliberately no body, summary, excerpt, AI answer
+/// or briefing column: this table cannot hold publisher text.
+///
+/// RETENTION: cascade-deleted with the User row, like every other
+/// account-owned table.
+model SavedStory {
+  id                String   @id @default(uuid())
+  userId            String
+  /// sha256(normalizeArticleUrl(url)), 64 lowercase hex characters.
+  articleRef        String
+  /// normalizeArticleUrl(sourceUrl).
+  canonicalUrl      String
+  /// The URL exactly as retained on the Article row.
+  sourceUrl         String
+  /// Non-authoritative hint only. Never identity.
+  providerArticleId String?
+  title             String
+  sourceName        String
+  sourceDomain      String
+  publishedAt       DateTime
+  /// 'publisher' | 'observed' — copied from the Article row, never guessed.
+  publishedAtBasis  String
+  imageUrl          String?
+  /// Governed ISO-3166 alpha-3 codes from the Article's country relations.
+  countryCodes      String[]
+  savedAt           DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// A repeat save is a database-level no-op.
+  @@unique([userId, articleRef])
+  @@index([userId, savedAt])
 }

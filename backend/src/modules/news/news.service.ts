@@ -481,6 +481,17 @@ export class NewsService {
   }
 
   /**
+   * MY INTELLIGENCE R1 — a selected story, resolved from RETAINED reporting by
+   * its URL. Database only: no provider is called and no publisher page is
+   * fetched.
+   */
+  async findRetainedArticleByUrl(url: string): Promise<NewsArticle | null> {
+    const record = await this.articlePersistence.findRetainedByUrl(url);
+
+    return record === null ? null : withDerivedEvidenceFields(record.article);
+  }
+
+  /**
    * C907 §8 — PREVIOUSLY RETRIEVED REPORTING FOR ONE COUNTRY.
    *
    * A thin delegate, and deliberately nothing more. The persistence layer

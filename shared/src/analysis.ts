@@ -981,6 +981,12 @@ export interface AnalysisRetrievalContext {
    */
   conversationSubject?: import('./conversation-subject').ConversationSubjectAnchor;
   /**
+   * MY INTELLIGENCE R1 — present only on a multi-story selection analysis:
+   * which action ran and how many of the selected stories resolved to
+   * retained reporting.
+   */
+  selection?: import('./my-intelligence').AnalysisSelectionOutcome;
+  /**
    * The clarification signal the frontend's recovery surface already reads.
    * Emitted only when the question cannot be answered without the reader
    * choosing (e.g. an ambiguous "Congo"); retrieval then withholds evidence

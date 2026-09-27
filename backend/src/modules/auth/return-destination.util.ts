@@ -66,6 +66,8 @@ const ALLOWED_EXACT_DESTINATIONS: ReadonlySet<string> = new Set([
   '/map',
   '/search',
   '/workspace',
+  /* MY INTELLIGENCE R1 — the exact route only; no prefix, query or wildcard. */
+  '/my-intelligence',
 ]);
 
 /**

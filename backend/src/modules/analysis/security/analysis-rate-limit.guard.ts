@@ -53,6 +53,21 @@ export interface AnalysisCallerIdentity {
   tier: AnalysisCallerTier;
   /** `ip:<addr>` or `user:<id>`. Never a caller-supplied value — see resolveIdentity. */
   key: string;
+  /** MY INTELLIGENCE R1 — present only for a verified (session + CSRF) caller. */
+  userId?: string;
+}
+
+/**
+ * MY INTELLIGENCE R1 — the account this guard VERIFIED for the current request
+ * (valid session cookie AND matching double-submit CSRF), or undefined for an
+ * anonymous caller. The analysis controller reads it to record the explicit
+ * question in history. It is never a caller-supplied value.
+ */
+const VERIFIED_ANALYSIS_USER = Symbol('verifiedAnalysisUser');
+
+export function readVerifiedAnalysisUserId(request: unknown): string | undefined {
+  const value = (request as Record<symbol, unknown> | undefined)?.[VERIFIED_ANALYSIS_USER];
+  return typeof value === 'string' ? value : undefined;
 }
 
 interface WindowCounter {
@@ -123,6 +138,10 @@ export class AnalysisRateLimitGuard implements CanActivate {
           : 'You have reached the anonymous analysis limit. Please try again shortly, or sign in.',
         HttpStatus.TOO_MANY_REQUESTS,
       );
+    }
+
+    if (identity.tier === 'authenticated' && identity.userId) {
+      (request as unknown as Record<symbol, unknown>)[VERIFIED_ANALYSIS_USER] = identity.userId;
     }
 
     return true;
@@ -203,7 +222,9 @@ export class AnalysisRateLimitGuard implements CanActivate {
       return anonymous;
     }
 
-    return session ? { tier: 'authenticated', key: `user:${session.userId}` } : anonymous;
+    return session
+      ? { tier: 'authenticated', key: `user:${session.userId}`, userId: session.userId }
+      : anonymous;
   }
 
   /**

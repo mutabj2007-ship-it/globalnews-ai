@@ -1,3 +1,4 @@
+import { HistoryModule } from '../history/history.module';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NewsModule } from '../news/news.module';
@@ -23,7 +24,7 @@ import type { AnalysisProvider } from './interfaces';
   // PH-1 — AuthModule exports SessionService, which AnalysisRateLimitGuard uses
   // to resolve an EXISTING session server-side. No new auth mechanism is
   // introduced and the route does not become authenticated.
-  imports: [NewsModule, AuthModule],
+  imports: [NewsModule, AuthModule, HistoryModule],
   controllers: [AnalysisController],
   providers: [
     AnalysisService,

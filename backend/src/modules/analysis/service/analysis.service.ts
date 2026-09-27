@@ -27,7 +27,11 @@ import {
   resolveEvidenceState,
   type EventAnchorDisclosure,
   type EventEvidenceRelation,
+  type AnalysisSelection,
+  type AnalysisSelectionOutcome,
+  MULTI_STORY_MIN_STORIES,
 } from '@globalnews-ai/shared';
+import { articleRefMatchesUrl } from '../../news/identity/article-ref.util';
 import {
   asksAboutEvent,
   classifyEventEvidence,
@@ -517,8 +521,22 @@ export class AnalysisService {
      */
     storyContext?: StoryContext,
     priorQuestion?: string,
+    /**
+     * MY INTELLIGENCE R1 — an optional multi-story selection (1–8 stories,
+     * bounds validated by the DTO and controller). When present, the selected
+     * stories ARE the evidence: they are resolved from retained reporting and
+     * no retrieval, story anchor, event anchor or conversation subject runs.
+     * Absent for every existing caller.
+     */
+    selection?: AnalysisSelection,
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
+
+    if (selection !== undefined) {
+      /* The selection is the whole scope: no story or conversation context applies. */
+      storyContext = undefined;
+      priorQuestion = undefined;
+    }
 
     /**
      * originalQuery is preserved verbatim for display (AnalysisApiResponse.query)
@@ -559,7 +577,11 @@ export class AnalysisService {
     const priorQuestionKeySegment = priorQuestion
       ? `:prior:${normalizeQuery(priorQuestion).normalizedQuery.toLowerCase()}`
       : '';
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}`;
+    /* MY INTELLIGENCE R1 — a selection is keyed by its action and exact story set. */
+    const selectionKeySegment = selection
+      ? `:selection:${selection.action}:${[...new Set(selection.stories.map((story) => story.articleRef))].sort().join(',')}`
+      : '';
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -1131,7 +1153,34 @@ export class AnalysisService {
         // computes for retrieval — no second parser, no reinterpretation.
         let relationalContext: { x: string; y: string } | undefined;
 
-        if (followUpRelation) {
+        /*
+          MY INTELLIGENCE R1 — the selected stories are resolved from RETAINED
+          reporting before any other branch is considered. No provider search,
+          no country feed and no publisher page: each story's URL must hash to
+          the articleRef the client sent, and must exist in the Article table.
+        */
+        const selectionResolution =
+          selection !== undefined ? await this.resolveSelectedStories(selection) : undefined;
+
+        if (selectionResolution !== undefined) {
+          articles = selectionResolution.articles;
+          const newest = [...articles].sort(
+            (left, right) => Date.parse(right.publishedAt) - Date.parse(left.publishedAt),
+          )[0];
+          retrievalContext = {
+            /* Retained reporting, honestly labelled as stored — never "live". */
+            dataMode: 'cached',
+            providers: [],
+            articlesRetrieved: articles.length,
+            ...(newest
+              ? {
+                  newestArticlePublishedAt: newest.publishedAt,
+                  ...(newest.publishedAtBasis ? { newestArticlePublishedAtBasis: newest.publishedAtBasis } : {}),
+                }
+              : {}),
+            selection: selectionResolution.outcome,
+          };
+        } else if (followUpRelation) {
           const providerQuery = makeProviderSafeNewsQuery(followUpRelation.providerQuery);
           const response = providerQuery
             ? await this.newsService.search(providerQuery, SEARCH_POOL_SIZE, {
@@ -2438,6 +2487,8 @@ export class AnalysisService {
         const anchorTopic = deriveEventTopic(retrievalQuery);
         const anchorAspects = detectEventAspects(normalizedQuery);
         if (
+          /* MY INTELLIGENCE R1 — a selection's evidence is exactly what was selected. */
+          selection === undefined &&
           anchorTopic !== undefined &&
           /* R1.1 B3 — ordinary analytical subjects are never anchored. */
           isEventTopic(anchorTopic) &&
@@ -2689,6 +2740,10 @@ export class AnalysisService {
               : {}),
             ...(retrievalContext.conversationSubject !== undefined
               ? { conversationSubject: retrievalContext.conversationSubject }
+              : {}),
+            /* MY INTELLIGENCE R1 — the action's instructions, for a selection only. */
+            ...(selection !== undefined
+              ? { selection: { action: selection.action, storyCount: deduped.length } }
               : {}),
             newestEvidence: newestEvidenceFreshness(deduped),
             /*
@@ -3189,6 +3244,52 @@ export class AnalysisService {
     }
 
     return Math.min(config.cacheTtlSeconds, FAILURE_CACHE_TTL_SECONDS);
+  }
+
+  /**
+   * MY INTELLIGENCE R1 — resolve a multi-story selection to RETAINED evidence.
+   *
+   * Each story is accepted only when its URL hashes to the articleRef the
+   * client sent (so a client cannot relabel one story as another) AND the URL
+   * exists in retained reporting. Resolution is database-only: nothing here
+   * searches a provider or fetches a publisher page. Duplicate refs count once;
+   * order is the reader's selection order. Stories that do not resolve are
+   * reported, never silently replaced — and if too few resolve, the existing
+   * zero-evidence path answers without any AI call.
+   */
+  private async resolveSelectedStories(
+    selection: AnalysisSelection,
+  ): Promise<{ articles: NewsArticle[]; outcome: AnalysisSelectionOutcome }> {
+    const seen = new Set<string>();
+    const unique = selection.stories.filter((story) => {
+      if (seen.has(story.articleRef)) return false;
+      seen.add(story.articleRef);
+      return true;
+    });
+
+    const resolved = await Promise.all(
+      unique.map(async (story) =>
+        articleRefMatchesUrl(story.articleRef, story.url)
+          ? { story, article: await this.newsService.findRetainedArticleByUrl(story.url) }
+          : { story, article: null },
+      ),
+    );
+
+    const articles = resolved
+      .map((entry) => entry.article)
+      .filter((article): article is NewsArticle => article !== null);
+    const minimum = MULTI_STORY_MIN_STORIES[selection.action];
+
+    return {
+      /* Fewer than the action needs is no evidence at all: the AI is never asked. */
+      articles: articles.length >= minimum ? articles : [],
+      outcome: {
+        action: selection.action,
+        requested: unique.length,
+        resolved: articles.length,
+        unresolvedRefs: resolved.filter((entry) => entry.article === null).map((entry) => entry.story.articleRef),
+      },
+    };
   }
 
   /**

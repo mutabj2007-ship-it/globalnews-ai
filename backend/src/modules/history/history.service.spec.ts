@@ -6,6 +6,7 @@ describe('HistoryService (Milestone #57)', () => {
     return {
       searchHistoryEntry: {
         create: jest.fn().mockResolvedValue(undefined),
+        findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         ...overrides,
@@ -13,39 +14,38 @@ describe('HistoryService (Milestone #57)', () => {
     } as unknown as PrismaService;
   }
 
-  it('create persists only query, countryCode, and userId \u2014 never anything AI-response-shaped', async () => {
-    const createSpy = jest.fn().mockResolvedValue({
-      id: 'h1',
-      query: 'Rwanda migration policy',
-      countryCode: 'RWA',
-      createdAt: new Date(),
-    });
+  /*
+    MY INTELLIGENCE R1.1 — create() is gone: the ONE writer is
+    recordExplicitQuestion(), reached only from the verified analysis boundary.
+    The same "never anything AI-response-shaped" guarantee is pinned on it.
+  */
+  it('the one writer persists only query, countryCode and userId — never anything AI-response-shaped', async () => {
+    const createSpy = jest.fn().mockResolvedValue({});
     const prisma = makeFakePrisma({ create: createSpy });
     const service = new HistoryService(prisma);
 
-    await service.create('user-1', 'Rwanda migration policy', 'RWA');
+    await service.recordExplicitQuestion('user-1', 'Rwanda migration policy', 'RWA', new Date('2026-09-27T10:00:00.000Z'));
 
     const callArgs = createSpy.mock.calls[0][0];
-    expect(callArgs.data).toEqual({ userId: 'user-1', query: 'Rwanda migration policy', countryCode: 'RWA' });
-    expect(callArgs.data).not.toHaveProperty('analysis');
-    expect(callArgs.data).not.toHaveProperty('response');
-    expect(callArgs.data).not.toHaveProperty('articleId');
-    expect(callArgs.data).not.toHaveProperty('evidence');
+    expect(Object.keys(callArgs.data).sort()).toEqual(['countryCode', 'createdAt', 'query', 'userId']);
+    expect(callArgs.data).toMatchObject({ userId: 'user-1', query: 'Rwanda migration policy', countryCode: 'RWA' });
+    for (const forbidden of ['analysis', 'response', 'articleId', 'evidence']) {
+      expect(callArgs.data).not.toHaveProperty(forbidden);
+    }
   });
 
-  it('create works with countryCode omitted (a plain generic question)', async () => {
-    const createSpy = jest.fn().mockResolvedValue({
-      id: 'h1',
-      query: 'What happened in the markets today?',
-      countryCode: null,
-      createdAt: new Date(),
-    });
+  it('the one writer stores a null country for a plain generic question', async () => {
+    const createSpy = jest.fn().mockResolvedValue({});
     const prisma = makeFakePrisma({ create: createSpy });
     const service = new HistoryService(prisma);
 
-    await service.create('user-1', 'What happened in the markets today?', undefined);
+    await service.recordExplicitQuestion('user-1', 'What happened in the markets today?');
 
-    expect(createSpy.mock.calls[0][0].data.countryCode).toBeUndefined();
+    expect(createSpy.mock.calls[0][0].data.countryCode).toBeNull();
+  });
+
+  it('there is no create(): nothing but the verified analysis boundary can write history', () => {
+    expect((HistoryService.prototype as unknown as Record<string, unknown>).create).toBeUndefined();
   });
 
   it('listForUser scopes strictly to the requesting user\u2019s own userId \u2014 the sole safeguard preventing cross-user history access', async () => {

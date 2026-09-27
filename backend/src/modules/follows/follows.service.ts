@@ -68,7 +68,7 @@ interface PrismaErrorLike {
   cause?: DriverConflictCause;
 }
 
-function isWriteConflict(error: unknown): boolean {
+export function isWriteConflict(error: unknown): boolean {
   const candidate = error as PrismaErrorLike;
 
   if (candidate?.code === TRANSACTION_WRITE_CONFLICT) return true;
