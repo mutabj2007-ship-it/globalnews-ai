@@ -90,6 +90,15 @@ export const myIntelligenceEn = {
     /* Part IV: Follow is not Watch, and Watch is inactive on Beta. */
     watchDormant:
       'Watch alerts are not available in this Beta. Following does not send notifications.',
+    /* DENSITY R1 — one compact control, one bounded list. */
+    button: 'Following {count}',
+    listTitle: 'Followed countries',
+    filterLabel: 'Filter countries',
+    noMatch: 'No followed country matches.',
+    followAria: 'Follow {country}',
+    unfollowAria: 'Unfollow {country}',
+    updateFailed: 'Couldn’t update {country}. Try again.',
+    close: 'Close',
   },
 
   recent: {
@@ -99,6 +108,8 @@ export const myIntelligenceEn = {
     /* RECENT_INTELLIGENCE.md — the CURRENT capability is empty. */
     empty: 'No recent intelligence yet.',
     askAgain: 'Ask again',
+    askAgainAria: 'Ask again: {question}',
+    viewAll: 'View all ({count})',
     askedOn: 'Asked {date}',
   },
 

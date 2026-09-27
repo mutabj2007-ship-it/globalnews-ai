@@ -92,6 +92,14 @@ export const myIntelligencePl = {
     empty: 'Zacznij obserwować kraj na Mapie świata, aby zobaczyć go tutaj.',
     watchDormant:
       'Alerty Watch nie są dostępne w tej wersji Beta. Obserwowanie nie wysyła powiadomień.',
+    button: 'Obserwujesz: {count}',
+    listTitle: 'Obserwowane kraje',
+    filterLabel: 'Filtruj kraje',
+    noMatch: 'Żaden obserwowany kraj nie pasuje.',
+    followAria: 'Obserwuj: {country}',
+    unfollowAria: 'Przestań obserwować: {country}',
+    updateFailed: 'Nie udało się zaktualizować: {country}. Spróbuj ponownie.',
+    close: 'Zamknij',
   },
 
   recent: {
@@ -100,6 +108,8 @@ export const myIntelligencePl = {
     note: 'Pojawią się tu wcześniej zadane pytania. Dawne odpowiedzi nie są aktualizowane; „Zapytaj ponownie” otwiera pytanie w Zapytaj AI i nic się nie uruchamia, dopóki nie naciśniesz Wyślij.',
     empty: 'Brak ostatnich analiz.',
     askAgain: 'Zapytaj ponownie',
+    askAgainAria: 'Zapytaj ponownie: {question}',
+    viewAll: 'Pokaż wszystkie ({count})',
     askedOn: 'Zapytano {date}',
   },
 
