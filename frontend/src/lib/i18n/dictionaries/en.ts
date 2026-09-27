@@ -113,6 +113,20 @@ export const en = {
     contextChipAnchored: 'Asking about this story',
     contextChipGeneric: 'Asking about world events',
     resultSourcesHeading: 'Sources',
+    /*
+      INLINE CITATIONS R1 — the markers after a brief sentence, and the labels
+      for the two statement kinds that are never presented as reported.
+    */
+    citationLabel: 'Source {n}: {title} — {publisher}',
+    inferenceLabel: 'Analytical inference:',
+    unsupportedLabel: 'Not established by the reporting:',
+    /* TOPIC CONTINUITY R1 — the continued subject, and the way to drop it. */
+    continuingSubject: 'Continuing: {subject}',
+    startNewTopic: 'Start a new topic',
+    newTopicStarted: 'Your next question starts a new topic',
+    productApplicabilityNotEstablished:
+      'Exact applicability to GlobalNewsAI cannot be established from this reporting: none of these sources describes GlobalNewsAI itself.',
+    focusNotInEvidence: 'None of the retrieved reports addresses {focus} directly; this answer rests on reporting about the subject itself.',
     resultSourcesNone: 'No sources were retrieved for this question.',
     resultSourcesTruncated: 'Showing {shown} of {total}. Open the full analysis for the rest.',
     resultBriefAbsent: 'This analysis carried no executive brief. That is an absence, not an assessment \u2014 nothing was measured and withheld.',
@@ -2818,6 +2832,17 @@ export const en = {
     stateAmbiguousCountryBody:
       'The place in this question names more than one country, and neither the question nor the reporting settled which one you mean. No answer was generated rather than choosing the country for you.',
     ambiguousCountryQuestion: 'Which country do you mean?',
+    /* INLINE CITATIONS R1 B3 — the compact one-line note on the Ask dock; the full sentences above stay one tap away. */
+    compactHeading: 'Evidence note',
+    compactShowDetails: 'Show what this means',
+    short: {
+      interpretedFromEvidence: 'Interpreted as {country} from reporting',
+      fromSelectedContext: 'Country from your selection: {country}',
+      crossBorderNotEstablished: 'No direct neighbouring-country impact established',
+      causeNotEstablished: 'Cause not established',
+      contextSeparated: 'Same-place context kept separate',
+      contextClaimsWithheld: 'Context-only effect claims withheld',
+    },
   },
 
   analysisFrame: {

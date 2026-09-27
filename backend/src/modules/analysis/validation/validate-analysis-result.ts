@@ -31,6 +31,10 @@ import {
 } from './resolve-relational-evidence-assessment.util';
 import { buildRelationalComposition } from './build-relational-composition.util';
 import { deriveTrustState } from './derive-trust-state.util';
+import {
+  isUnreportedAnalyticalInference,
+  validateSummaryStatements,
+} from './summary-statements.util';
 import type { RoleAttribution } from './entity-role-geography.util';
 import {
   extractEvidenceAttributions,
@@ -178,6 +182,12 @@ interface EvidenceContext {
   groundingCensus: Map<string, DimensionGroundingCensus>;
 }
 
+/** INFERENCE LABEL R1 — the dimensions that may only carry reported effects. */
+const INFERENCE_GUARDED_FIELDS: ReadonlySet<string> = new Set([
+  'immediateImpacts',
+  'spilloverImplications',
+]);
+
 function validateSourcedClaims(
   candidate: unknown,
   ctx: EvidenceContext,
@@ -254,6 +264,19 @@ function validateSourcedClaims(
       ctx.evidenceTextMap,
       sourceArticleIds,
     );
+    /*
+      INFERENCE LABEL R1 — an effect the reporting does not state is analytical
+      inference, and inference never enters the impact dimensions. A speculative
+      claim survives there only when it is attributed, or when its verified
+      excerpt itself carries the speculation (i.e. the reporting says it).
+    */
+    if (
+      INFERENCE_GUARDED_FIELDS.has(field) &&
+      assertion !== 'REPORTED_STATEMENT' &&
+      isUnreportedAnalyticalInference(obj.claim, evidenceBasis?.excerpt)
+    ) {
+      continue;
+    }
     const relationalSupport = resolveRelationalSupport(
       obj.relationshipAssessmentIds,
       ctx.assessmentsById,
@@ -333,6 +356,8 @@ function validateAffectedParties(candidate: unknown, ctx: EvidenceContext): Affe
       ctx.evidenceTextMap,
       sourceArticleIds,
     );
+    /* INFERENCE LABEL R1 — same rule as the impact dimensions, on the effect. */
+    if (isUnreportedAnalyticalInference(obj.effect, evidenceBasis?.excerpt)) continue;
     result.push({
       party: obj.party,
       partyType: obj.partyType as AffectedParty['partyType'],
@@ -933,5 +958,7 @@ export function validateAnalysisResult(
     // Milestone #42 — always present (required field), including in
     // mock mode (hard override to 'insufficient').
     trustState,
+    // INLINE CITATIONS R1 — the summary annotated, re-validated span by span.
+    summaryStatements: validateSummaryStatements(obj.summaryStatements, obj.summary, evidenceMap),
   };
 }

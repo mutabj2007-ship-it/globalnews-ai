@@ -35,6 +35,8 @@ const ORDER: readonly EventAnchorDisclosure[] = [
 export interface EventAnchorLine {
   readonly code: EventAnchorDisclosure | 'CONTEXT_CLAIMS_WITHHELD';
   readonly text: string;
+  /** INLINE CITATIONS R1 B3 — the same fact as a short fragment, for the compact note. */
+  readonly short: string;
 }
 
 /** The disclosure sentences, in a fixed order. Empty when there is no anchor. */
@@ -49,6 +51,17 @@ export function resolveEventAnchorLines(
   const lines: EventAnchorLine[] = [];
   for (const code of ORDER) {
     if (!anchor.disclosures.includes(code)) continue;
+    const short = (
+      code === 'COUNTRY_INTERPRETED_FROM_EVIDENCE'
+        ? copy.short.interpretedFromEvidence
+        : code === 'COUNTRY_FROM_SELECTED_CONTEXT'
+          ? copy.short.fromSelectedContext
+          : code === 'CROSS_BORDER_NOT_ESTABLISHED'
+            ? copy.short.crossBorderNotEstablished
+            : code === 'CAUSE_NOT_ESTABLISHED'
+              ? copy.short.causeNotEstablished
+              : copy.short.contextSeparated
+    ).replace('{country}', country);
     const text =
       code === 'COUNTRY_INTERPRETED_FROM_EVIDENCE'
         ? copy.interpretedFromEvidence.replace('{country}', country)
@@ -59,10 +72,14 @@ export function resolveEventAnchorLines(
             : code === 'CAUSE_NOT_ESTABLISHED'
               ? copy.causeNotEstablished
               : copy.contextSeparated;
-    lines.push({ code, text });
+    lines.push({ code, text, short });
   }
   if ((anchor.contextOnlyClaimsWithheld ?? 0) > 0) {
-    lines.push({ code: 'CONTEXT_CLAIMS_WITHHELD', text: copy.contextClaimsWithheld });
+    lines.push({
+      code: 'CONTEXT_CLAIMS_WITHHELD',
+      text: copy.contextClaimsWithheld,
+      short: copy.short.contextClaimsWithheld,
+    });
   }
   return lines;
 }
@@ -93,13 +110,46 @@ export function resolveAmbiguousCountryQuestion(
 export function EventAnchorNotice({
   retrievalContext,
   language,
+  compact = false,
 }: {
   retrievalContext: AnalysisRetrievalContext;
   language: LanguageCode;
+  /**
+   * INLINE CITATIONS R1 B3 — PRESENTATION ONLY. One line of short fragments
+   * ("Evidence note · Cause not established · …") with the full sentences one
+   * tap away. The same codes, in the same order, from the same resolver: the
+   * compact note can say less, never something different.
+   */
+  compact?: boolean;
 }): JSX.Element | null {
   const lines = resolveEventAnchorLines(retrievalContext, language);
   if (lines.length === 0) return null;
   const copy = getDictionary(language).eventAnchor;
+  if (compact) {
+    return (
+      <section data-event-anchor="notice" data-event-anchor-variant="compact" role="note" aria-label={copy.heading}>
+        <details className="group text-xs leading-relaxed text-ink-secondary">
+          <summary className="cursor-pointer list-none rounded-md py-1 [&::-webkit-details-marker]:hidden">
+            <span className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">{copy.compactHeading}</span>
+            {lines.map((line) => (
+              <span key={line.code} data-event-anchor-short={line.code}>
+                {' · '}
+                {line.short}
+              </span>
+            ))}
+            <span className="sr-only"> — {copy.compactShowDetails}</span>
+          </summary>
+          <ul className="mt-1 space-y-1 border-s-2 border-border-strong ps-3">
+            {lines.map((line) => (
+              <li key={line.code} data-event-anchor-disclosure={line.code}>
+                {line.text}
+              </li>
+            ))}
+          </ul>
+        </details>
+      </section>
+    );
+  }
   return (
     <section
       data-event-anchor="notice"

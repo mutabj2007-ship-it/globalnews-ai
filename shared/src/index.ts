@@ -16,6 +16,8 @@ export const SHARED_PACKAGE_NAME = '@globalnews-ai/shared';
 export * from './news';
 export * from './analysis';
 export * from './event-anchor';
+export * from './summary-statements';
+export * from './conversation-subject';
 export * from './analysis-budget';
 export * from './countries';
 export * from './query-normalization';

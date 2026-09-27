@@ -9,6 +9,7 @@ import type {
 } from '@globalnews-ai/shared';
 import type { NewsProvider, NewsSearchOptions } from '../interfaces';
 import { classifyCategory } from '../classification/classify-category.util';
+import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
 
 const GNEWS_BASE_URL = 'https://gnews.io/api/v4';
 const DEFAULT_LIMIT = 10;
@@ -641,10 +642,15 @@ export class GNewsProvider implements NewsProvider {
     raw: GNewsApiArticle & { title: string; url: string; publishedAt: string },
     categoryHint?: NewsCategory,
   ): NewsArticle {
+    // Article Metadata Hygiene R1 — an unresolved CMS template in the
+    // publisher description is removed here, before it can reach summary
+    // or the category classifier. Clean descriptions pass through unchanged.
+    const summary = stripUnresolvedTemplatePlaceholders(raw.description ?? '');
+
     return {
       id: this.buildStableId(raw.url),
       title: raw.title,
-      summary: raw.description ?? '',
+      summary,
       url: raw.url,
       imageUrl: raw.image || undefined,
       sourceId: this.slugify(raw.source?.name ?? 'gnews'),
@@ -654,7 +660,7 @@ export class GNewsProvider implements NewsProvider {
       // text instead of defaulting everything to "world". When we
       // explicitly requested a category (via /category/:category),
       // that request is trusted as the hint.
-      category: classifyCategory({ title: raw.title, summary: raw.description }, categoryHint),
+      category: classifyCategory({ title: raw.title, summary }, categoryHint),
       sourcesCount: 1,
       // RC-1 / RC-H1 H-2 — the provider's own value, verbatim. There is no
       // fallback here and there must never be one again: normalize() above

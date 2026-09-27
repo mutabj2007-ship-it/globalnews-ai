@@ -1,6 +1,7 @@
 import type {
   AnalysisEvidenceState,
   ComparisonCountryCoverage,
+  ConversationSubjectAnchor,
   EventAnchor,
   EventEvidenceRelation,
   LanguageCode,
@@ -129,6 +130,13 @@ export interface AnalysisProviderInput {
    */
   eventAnchor?: EventAnchor;
   eventEvidenceRelations?: EventEvidenceRelation[];
+
+  /**
+   * TOPIC CONTINUITY R1 — the continued non-event subject, when this answer
+   * continues one. Only its subject span and disclosure codes reach the prompt;
+   * nothing from any prior answer does.
+   */
+  conversationSubject?: ConversationSubjectAnchor;
 
   /**
    * Optional caller cancellation. AnalysisService uses this only for the

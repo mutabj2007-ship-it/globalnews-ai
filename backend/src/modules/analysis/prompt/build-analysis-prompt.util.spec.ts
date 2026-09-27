@@ -545,6 +545,12 @@ describe('Milestone #62 Phase 4 (final) — watchNext schema and prompt instruct
       'query',
       'headline',
       'summary',
+      /*
+        INLINE CITATIONS R1 — CTO-authorized "smallest contract addition": an
+        annotation OF the summary (exact spans, kinds, citations), not a new
+        intelligence dimension. It adds no content the summary does not hold.
+      */
+      'summaryStatements',
       'keyFacts',
       'context',
       'relevance',

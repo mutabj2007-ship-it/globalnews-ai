@@ -33,6 +33,37 @@ export interface AdaptiveTextareaProps
   keepVisible?: boolean;
 }
 
+/**
+ * SEARCH COMPOSER 1000-CHAR GEOMETRY R1 — the sizing arithmetic, moved VERBATIM
+ * out of resize() below so it can be measured without a DOM. Behaviour for
+ * every caller is unchanged: resize() now calls exactly these two functions.
+ */
+export function estimateComposerContentHeight(input: {
+  readonly value: string;
+  readonly clientWidth: number;
+  readonly lineHeight: number;
+  readonly padding: number;
+}): number {
+  const explicitLines = (input.value.match(/\n/g) ?? []).length + 1;
+  const charsPerVisualLine = Math.max(28, Math.floor(input.clientWidth / 8.2));
+  const estimatedLines = Math.max(explicitLines, Math.ceil(input.value.length / charsPerVisualLine));
+  return estimatedLines * input.lineHeight + input.padding + 2;
+}
+
+export function computeComposerGeometry(input: {
+  readonly visibleHeight: number;
+  readonly minHeight: number;
+  readonly maxHeight: number;
+  readonly maxViewportFraction: number;
+  /** max(scrollHeight, estimated content height) */
+  readonly contentHeight: number;
+}): { readonly height: number; readonly ceiling: number; readonly overflowY: 'auto' | 'hidden' } {
+  const viewportCeiling = Math.floor(input.visibleHeight * input.maxViewportFraction);
+  const ceiling = Math.max(input.minHeight, Math.min(input.maxHeight, viewportCeiling));
+  const height = Math.max(input.minHeight, Math.min(input.contentHeight, ceiling));
+  return { height, ceiling, overflowY: input.contentHeight > ceiling ? 'auto' : 'hidden' };
+}
+
 export const AdaptiveTextarea = forwardRef<HTMLTextAreaElement, AdaptiveTextareaProps>(
   function AdaptiveTextarea(
     {
@@ -61,9 +92,6 @@ export const AdaptiveTextarea = forwardRef<HTMLTextAreaElement, AdaptiveTextarea
       const node = localRef.current;
       if (node === null) return;
 
-      const viewportCeiling = Math.floor(visibleHeight() * maxViewportFraction);
-      const ceiling = Math.max(minHeight, Math.min(maxHeight, viewportCeiling));
-
       /*
        * R2 — true elasticity.
        *
@@ -77,21 +105,29 @@ export const AdaptiveTextarea = forwardRef<HTMLTextAreaElement, AdaptiveTextarea
       node.style.whiteSpace = 'pre-wrap';
       node.style.overflowWrap = 'anywhere';
 
-      const explicitLines = (node.value.match(/\n/g) ?? []).length + 1;
-      const charsPerVisualLine = Math.max(28, Math.floor(node.clientWidth / 8.2));
-      const estimatedLines = Math.max(explicitLines, Math.ceil(node.value.length / charsPerVisualLine));
       const lineHeight = Number.parseFloat(window.getComputedStyle(node).lineHeight) || 22;
       const padding =
         Number.parseFloat(window.getComputedStyle(node).paddingTop) +
         Number.parseFloat(window.getComputedStyle(node).paddingBottom);
-      const estimatedHeight = estimatedLines * lineHeight + padding + 2;
+      const estimatedHeight = estimateComposerContentHeight({
+        value: node.value,
+        clientWidth: node.clientWidth,
+        lineHeight,
+        padding,
+      });
 
       const contentHeight = Math.max(node.scrollHeight, estimatedHeight);
-      const desired = Math.max(minHeight, Math.min(contentHeight, ceiling));
+      const { height: desired, ceiling, overflowY } = computeComposerGeometry({
+        visibleHeight: visibleHeight(),
+        minHeight,
+        maxHeight,
+        maxViewportFraction,
+        contentHeight,
+      });
 
       node.style.height = `${desired}px`;
       node.style.maxHeight = `${ceiling}px`;
-      node.style.overflowY = contentHeight > ceiling ? 'auto' : 'hidden';
+      node.style.overflowY = overflowY;
       node.style.overflowX = 'hidden';
       node.style.scrollbarWidth = 'none';
     }, [maxHeight, maxViewportFraction, minHeight, visibleHeight]);

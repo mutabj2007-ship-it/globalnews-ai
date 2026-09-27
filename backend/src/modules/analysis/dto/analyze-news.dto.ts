@@ -109,10 +109,12 @@ export class AnalyzeNewsDto {
   storyContext?: StoryContextDto;
 
   /**
-   * ASK CONVERSATION R1 — the immediately preceding USER question only.
-   * No AI answer, evidence identity, source list or retrieval output may cross
-   * this boundary. It exists solely to resolve a bounded follow-up such as
-   * "What about Rwanda?" against the relation the reader just asked about.
+   * ASK CONVERSATION R1 — one preceding USER question only: the immediately
+   * preceding one, or (TOPIC CONTINUITY R1) the user question that established
+   * the subject the conversation is still continuing. No AI answer, evidence
+   * identity, source list or retrieval output may cross this boundary. It
+   * exists solely to resolve a bounded follow-up such as "What about Rwanda?"
+   * or "How will this affect X?" against what the reader asked about.
    */
   @IsOptional()
   @IsString()

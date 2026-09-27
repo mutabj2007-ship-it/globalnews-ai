@@ -1,3 +1,4 @@
+import type { SummaryStatement } from './summary-statements';
 import type {
   NewsArticle,
   NewsDataMode,
@@ -701,6 +702,17 @@ export interface NewsAnalysisResult {
    * it. A freshly produced analysis always carries it.
    */
   briefState?: ExecutiveBriefState;
+
+  /**
+   * ASK INLINE EVIDENCE CITATIONS R1 — the summary, annotated. Each entry is
+   * an exact span of `summary` with its kind and, for reported kinds only, the
+   * article ids validated for that span. See summary-statements.ts.
+   *
+   * OPTIONAL AND ADDITIVE. Absent or empty means "no annotation" and readers
+   * render `summary` exactly as before. Always empty when the brief is
+   * withheld, because there is then no summary to annotate.
+   */
+  summaryStatements?: SummaryStatement[];
 }
 
 /**
@@ -962,6 +974,12 @@ export interface AnalysisRetrievalContext {
    * back to one ("this", "it"). Absent for every other question.
    */
   eventAnchor?: import('./event-anchor').EventAnchor;
+  /**
+   * ASK CONVERSATIONAL TOPIC CONTINUITY R1 — present only when this answer
+   * continues a non-event subject from the reader's prior question. Never set
+   * alongside an event anchor for the same continuation. See conversation-subject.ts.
+   */
+  conversationSubject?: import('./conversation-subject').ConversationSubjectAnchor;
   /**
    * The clarification signal the frontend's recovery surface already reads.
    * Emitted only when the question cannot be answered without the reader

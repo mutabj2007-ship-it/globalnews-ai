@@ -6,6 +6,7 @@ import { renderDimensionSemanticsInstruction } from './dimension-semantics';
 import type {
   AnalysisEvidenceState,
   ComparisonCountryCoverage,
+  ConversationSubjectAnchor,
   EventAnchor,
   EventEvidenceRelation,
   LanguageCode,
@@ -414,6 +415,22 @@ ${renderDimensionSemanticsInstruction()}
   produce a weaker brief — it produces NO brief. Padding a thin evidence set
   to look structured fails for a different reason — the number of paragraphs
   must follow the evidence, not a target.
+- "summaryStatements" ANNOTATES THE BRIEF; it never adds to it. List every
+  sentence of the brief, in order, each copied EXACTLY as written there
+  (same words, same punctuation; never paraphrased, never spanning two
+  paragraphs), with:
+    * "kind": REPORTED_FACT when the evidence states it; REPORTED_CONSEQUENCE
+      when the evidence itself links an effect to the subject;
+      ANALYTICAL_INFERENCE for any wider implication, possibility or
+      significance that no evidence item reports;
+    * "evidenceIds": the exact evidenceId values that state THAT sentence —
+      only those, never every item you were shown. Empty for
+      ANALYTICAL_INFERENCE.
+  Each sentence is checked against the brief and against the evidence after
+  you answer; a sentence marked as reported whose evidenceIds do not support
+  it is shown to the reader as not established, and speculative wording
+  ("could", "may", "potentially") that no source is quoted as saying is shown
+  as analytical inference whatever kind you give it.
 - For keyFacts, agreements, differences (each position), and timeline
   entries, you may optionally include "evidenceBasis": an object with
   "evidenceId" (one of the exact evidenceId values you already cited for
@@ -659,6 +676,7 @@ export function buildAnalysisMessages(
   newestEvidence?: EvidenceFreshnessFact,
   eventAnchor?: EventAnchor,
   eventEvidenceRelations?: readonly EventEvidenceRelation[],
+  conversationSubject?: ConversationSubjectAnchor,
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
@@ -667,6 +685,7 @@ export function buildAnalysisMessages(
       buildComparisonCoverageInstruction(comparisonCoverage) +
       buildEvidenceStateInstruction(evidenceState, newestEvidence) +
       buildEventAnchorInstruction(eventAnchor) +
+      buildConversationSubjectInstruction(conversationSubject) +
       buildRelationalPromptSection(relationalContext) +
       buildResponseLanguageInstruction(responseLanguage) +
       /*
@@ -998,6 +1017,27 @@ export function buildAnalysisJsonSchema(
         headline: { type: 'string' },
         // C910 - one `summary` string, or the two required brief fields.
         ...briefProperties,
+        /*
+          INLINE CITATIONS R1 — the brief annotated sentence by sentence. Every
+          entry is re-validated by summary-statements.util.ts: exact placement,
+          resolvable evidenceIds, and the inference backstop. Never trusted.
+        */
+        summaryStatements: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              text: { type: 'string' },
+              kind: {
+                type: 'string',
+                enum: ['REPORTED_FACT', 'REPORTED_CONSEQUENCE', 'ANALYTICAL_INFERENCE'],
+              },
+              evidenceIds: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['text', 'kind', 'evidenceIds'],
+            additionalProperties: false,
+          },
+        },
         keyFacts: { type: 'array', items: sourcedClaim },
         /** Milestone #62 Phase 1 — reuses the exact sourcedClaim shape, no new schema family. */
         context: { type: 'array', items: sourcedClaim },
@@ -1117,6 +1157,7 @@ export function buildAnalysisJsonSchema(
         // C910 - must mirror briefProperties exactly: under `strict: true` every
         // declared property has to appear in `required`.
         ...briefRequired,
+        'summaryStatements',
         'keyFacts',
         'context',
         'relevance',
@@ -1212,6 +1253,39 @@ export function describeNewestEvidence(newestEvidence?: EvidenceFreshnessFact): 
  * this text alone: the backend withholds any effect / spillover / affected-party
  * claim whose only support is CONTEXT_ONLY evidence.
  */
+/**
+ * TOPIC CONTINUITY R1 — the reader's follow-up continues a subject from their
+ * own previous question. Empty string when no subject is continued, so every
+ * other prompt is byte-identical. Carries only the subject span and codes.
+ */
+export function buildConversationSubjectInstruction(subject?: ConversationSubjectAnchor): string {
+  if (subject === undefined) return '';
+  const lines = [
+    '',
+    '',
+    'CONVERSATION SUBJECT (from the reader\'s own previous question, not from any previous answer):',
+    `- The question is a follow-up about: "${subject.subject}". Read "this", "it" and similar words in the question as referring to that subject. The evidence was retrieved for that subject.`,
+    '- Answer the question exactly as the reader asked it. Nothing from an earlier answer is supplied, and nothing may be assumed from one.',
+  ];
+  if (subject.focus.length > 0) {
+    lines.push(
+      `- Within that subject, the reader's current focus is: ${subject.focus.join(', ')}. Evidence addressing that focus is listed first. State what the evidence reports about it; an effect on it that no evidence item reports is analytical inference, never a reported fact.`,
+    );
+  }
+  if (subject.disclosures.includes('FOCUS_NOT_IN_EVIDENCE')) {
+    lines.push(
+      `- No evidence item addresses ${subject.focus.join(', ')} directly. Say so plainly, answer only from what the evidence reports about the subject itself, and do not present any effect on ${subject.focus.join(', ')} as established.`,
+    );
+  }
+  if (subject.disclosures.includes('PRODUCT_APPLICABILITY_NOT_ESTABLISHED')) {
+    lines.push(
+      '- The reader asks how the subject applies to GlobalNewsAI itself. The evidence is external reporting about the subject; NO evidence item and NO supplied source describes GlobalNewsAI, its features, data practices, users, size, location or legal status.',
+      '- Therefore: never state, assume or imply any characteristic of GlobalNewsAI, and never conclude whether or how the subject applies to it. Say plainly that exact applicability to GlobalNewsAI cannot be established from the available evidence. You MAY explain, from the evidence, which requirements of the subject would be relevant to verify for a service of this kind, framed as what would need checking, not as findings.',
+    );
+  }
+  return lines.join('\n');
+}
+
 export function buildEventAnchorInstruction(anchor?: EventAnchor): string {
   if (anchor === undefined) return '';
   const refersBack =
