@@ -136,3 +136,61 @@ describe('Home Ask dock — request counts', () => {
     expect(field().props.maxLength).toBe(1000);
   });
 });
+
+describe('TOPIC CONTINUITY R1 — the dock carries the subject, visibly and reversibly', () => {
+  const continuing = {
+    analysis: { summary: 'MODEL OUTPUT MUST NEVER BE SENT BACK' },
+    articles: [],
+    retrievalContext: {
+      storyContextUsed: false,
+      conversationSubject: { subject: 'EU AI regulation', source: 'prior-question', disclosures: [] },
+    },
+  } as unknown as AnalysisApiResponse;
+
+  const resultProps = () =>
+    renderer.root.findAll((node) => typeof node.props.onStartNewTopic === 'function')[0]?.props;
+
+  it('a chain keeps the subject: turn 3 sends the question that ESTABLISHED it, still user text only', async () => {
+    transport
+      .mockResolvedValueOnce(answer)
+      .mockResolvedValueOnce(continuing)
+      .mockReturnValueOnce(new Promise(() => undefined));
+    act(() => openGlobalAsk('Explain the new EU AI regulation in plain English'));
+    await act(async () => send());
+    type('How will this affect GlobalNewsAI?');
+    await act(async () => send());
+    type('What about businesses?');
+    send();
+
+    expect(transport).toHaveBeenCalledTimes(3);
+    expect(transport.mock.calls[1][3]).toBe('Explain the new EU AI regulation in plain English');
+    expect(transport.mock.calls[2][0]).toBe('What about businesses?');
+    expect(transport.mock.calls[2][3]).toBe('Explain the new EU AI regulation in plain English');
+    expect(JSON.stringify(transport.mock.calls)).not.toContain('MODEL OUTPUT');
+  });
+
+  it('"Start a new topic" costs 0 requests, and the next Send carries no prior question', async () => {
+    transport.mockResolvedValueOnce(continuing).mockReturnValueOnce(new Promise(() => undefined));
+    act(() => openGlobalAsk('How will this affect GlobalNewsAI?'));
+    await act(async () => send());
+    expect(transport).toHaveBeenCalledTimes(1);
+
+    act(() => resultProps().onStartNewTopic());
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(resultProps().newTopicStarted).toBe(true);
+
+    type('What about inflation in Poland?');
+    send();
+    expect(transport).toHaveBeenCalledTimes(2);
+    expect(transport.mock.calls[1][3]).toBeUndefined();
+  });
+
+  it('without a continued subject, the ordinary follow-up rule is unchanged', async () => {
+    transport.mockResolvedValueOnce(answer).mockReturnValueOnce(new Promise(() => undefined));
+    act(() => openGlobalAsk('What is happening in Sudan?'));
+    await act(async () => send());
+    type('Why does it matter?');
+    send();
+    expect(transport.mock.calls[1][3]).toBe('What is happening in Sudan?');
+  });
+});

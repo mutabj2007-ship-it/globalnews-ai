@@ -160,6 +160,16 @@ const ANAPHOR =
   /\b(?:this|that|it|these|those)\b|\bthe\s+(?:crash|event|incident|attack|accident|disaster|explosion|outbreak|strike|blast|shooting|collapse|deal|decision|vote|election|killing|killings|protest|protests|fire|flood|earthquake)\b/i;
 const ANAPHOR_PL = /(?:^|\s)(?:to|tego|tym|ten|ta|te|tej|temu|tę)(?=\s|[?!.,;:]|$)/iu;
 
+/**
+ * TOPIC CONTINUITY R1 — the SAME anaphor vocabulary, exposed as a predicate so
+ * the conversation-subject authority does not grow a second list that drifts.
+ * It says only that the question refers back; what it refers back to (an event
+ * or a subject) is decided by the caller's own authority.
+ */
+export function hasAnaphoricReference(question: string, polish = true): boolean {
+  return ANAPHOR.test(question) || (polish && ANAPHOR_PL.test(question));
+}
+
 const CAUSE_ASPECT =
   /\b(?:cause[ds]?|causing|why|reasons?|blamed?|behind)\b|przyczyn|dlaczego|czemu/iu;
 const EFFECT_ASPECT =

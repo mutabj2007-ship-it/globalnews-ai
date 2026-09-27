@@ -81,8 +81,15 @@ import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openG
 type AskPhase =
   | { kind: 'idle' }
   | { kind: 'loading'; question: string }
-  | { kind: 'answered'; question: string; response: AnalysisApiResponse; context: StoryContext | undefined }
-  | { kind: 'failed'; question: string; message: string };
+  | {
+      kind: 'answered';
+      question: string;
+      response: AnalysisApiResponse;
+      context: StoryContext | undefined;
+      /* TOPIC CONTINUITY R1 — the prior USER question this turn was sent with. */
+      prior?: string;
+    }
+  | { kind: 'failed'; question: string; message: string; prior?: string };
 
 type SettledAskTurn = Extract<AskPhase, { kind: 'answered' | 'failed' }>;
 
@@ -102,6 +109,8 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
   const [history, setHistory] = useState<SettledAskTurn[]>([]);
+  /* TOPIC CONTINUITY R1 — the reader dropped the continued subject; the next Send carries no prior question. */
+  const [topicReset, setTopicReset] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const conversationRef = useRef<HTMLDivElement | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
@@ -257,17 +266,30 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
         is exactly the inversion Rev A's change log owns.
       */
       const sent = transportableContext(storyContext);
-      const priorQuestion =
+      /*
+        TOPIC CONTINUITY R1 — still ONE prior USER question, never an answer.
+        When the last answer continued a subject, the question that ESTABLISHED
+        that subject is sent again, so a chain ("…this…" → "What about
+        businesses?") keeps its subject. "Start a new topic" sends none.
+      */
+      const last: SettledAskTurn | undefined =
         phase.kind === 'answered' || phase.kind === 'failed'
-          ? phase.question
+          ? phase
           : history.length > 0
-            ? history[history.length - 1].question
+            ? history[history.length - 1]
             : undefined;
+      const continuing =
+        last?.kind === 'answered' &&
+        last.response.retrievalContext.conversationSubject !== undefined &&
+        last.prior !== undefined;
+      const priorQuestion =
+        topicReset || last === undefined ? undefined : continuing ? last.prior : last.question;
+      setTopicReset(false);
 
       analyzeNews(asked, language, sent, priorQuestion)
         .then((response) => {
           if (requestSeq.current !== seq) return;
-          setPhase({ kind: 'answered', question: asked, response, context: sent });
+          setPhase({ kind: 'answered', question: asked, response, context: sent, prior: priorQuestion });
         })
         .catch((error: unknown) => {
           if (requestSeq.current !== seq) return;
@@ -276,10 +298,11 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
             kind: 'failed',
             question: asked,
             message: resolveAnalysisErrorMessage(error, dictionary),
+            prior: priorQuestion,
           });
         });
     },
-    [question, language, dictionary, storyContext, phase, history],
+    [question, language, dictionary, storyContext, phase, history, topicReset],
   );
 
   return (
@@ -417,6 +440,8 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
                 question={phase.question}
                 language={language}
                 context={phase.context}
+                newTopicStarted={topicReset}
+                onStartNewTopic={() => setTopicReset(true)}
               />
             ) : null}
           </div>

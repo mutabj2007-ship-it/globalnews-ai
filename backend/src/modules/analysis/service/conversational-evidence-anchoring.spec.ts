@@ -445,21 +445,26 @@ describe('preserved contracts', () => {
     expect(base.user).not.toContain('[relation:');
   });
 
-  it('R1.1 B3: a "this" follow-up to a NON-event question keeps its pre-R1 routing (no prior-question re-anchoring)', async () => {
+  /*
+    TOPIC CONTINUITY R1 — CTO-authorized change. R1.1 B3 pinned that a "this"
+    follow-up to a NON-event question is never EVENT-anchored; that still holds
+    and is asserted first. Its second half pinned the pre-D routing (the
+    follow-up searched its own words), which is the Gate D-A defect: it now
+    continues the subject through the SEPARATE conversation-subject authority,
+    by the prior user question, with no event anchor and no event relations.
+  */
+  it('R1.1 B3: a "this" follow-up to a NON-event question is never event-anchored; it continues the subject separately', async () => {
     const follow = 'Why does this matter for neighbouring countries?';
+    const prior = 'Why is AI regulation important?';
     const withPrior = harness(ANALYTICAL);
-    const r = await withPrior.service.analyzeNews(
-      follow,
-      'en',
-      undefined,
-      'Why is AI regulation important?',
-    );
-    const alone = harness(ANALYTICAL);
-    await alone.service.analyzeNews(follow, 'en');
+    const r = await withPrior.service.analyzeNews(follow, 'en', undefined, prior);
+    const priorAlone = harness(ANALYTICAL);
+    await priorAlone.service.analyzeNews(prior, 'en');
     expect(r.retrievalContext.eventAnchor).toBeUndefined();
-    expect(withPrior.searchCalls).toEqual(alone.searchCalls);
-    expect(withPrior.countryCalls).toEqual(alone.countryCalls);
-    expect(withPrior.searchCalls.join(' ')).not.toMatch(/regulation/i);
+    expect(withPrior.providerInputs[0]?.eventEvidenceRelations).toBeUndefined();
+    expect(r.retrievalContext.conversationSubject).toMatchObject({ source: 'prior-question' });
+    expect(withPrior.searchCalls).toEqual(priorAlone.searchCalls);
+    expect(withPrior.countryCalls).toEqual(priorAlone.countryCalls);
   });
 
   it.each([

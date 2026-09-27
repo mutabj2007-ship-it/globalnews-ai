@@ -1,0 +1,65 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import type { AnalysisApiResponse, ConversationSubjectAnchor } from '@globalnews-ai/shared';
+import { AskCompactResult } from './AskCompactResult';
+import { fixture } from '../analysis-frame/frameFixtures';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+
+/**
+ * ASK CONVERSATIONAL TOPIC CONTINUITY R1 — the continued subject is visible,
+ * reversible, worded in the reader's language, and says so when the question
+ * about GlobalNewsAI itself cannot be answered from external reporting.
+ */
+
+const withSubject = (subject?: ConversationSubjectAnchor): AnalysisApiResponse => {
+  const base = fixture({}) as AnalysisApiResponse;
+  return {
+    ...base,
+    retrievalContext: { ...base.retrievalContext, ...(subject ? { conversationSubject: subject } : {}) },
+  } as AnalysisApiResponse;
+};
+
+const render = (response: AnalysisApiResponse, language: 'en' | 'pl', extra: Record<string, unknown> = {}) =>
+  renderToStaticMarkup(
+    createElement(AskCompactResult as never, { response, question: 'q', language, context: undefined, ...extra } as never),
+  );
+
+const EU: ConversationSubjectAnchor = {
+  subject: 'EU AI regulation',
+  source: 'prior-question',
+  disclosures: ['PRODUCT_APPLICABILITY_NOT_ESTABLISHED'],
+};
+
+describe('the continued subject on the Ask dock', () => {
+  it.each(['en', 'pl'] as const)('%s: "Continuing: …" and the product-applicability note', (language) => {
+    const t = getDictionary(language).askAi;
+    const html = render(withSubject(EU), language, { onStartNewTopic: () => undefined });
+    expect(html).toContain(t.continuingSubject.replace('{subject}', 'EU AI regulation'));
+    expect(html).toContain(t.productApplicabilityNotEstablished);
+    expect(html).toContain(t.startNewTopic);
+    expect(html).toContain('data-ask="new-topic"');
+  });
+
+  it('EN wording, exactly as the ruling describes it', () => {
+    const html = render(withSubject(EU), 'en');
+    expect(html).toContain('Continuing: EU AI regulation');
+    expect(html).not.toMatch(/prior-question|conversationSubject|PRODUCT_APPLICABILITY/);
+  });
+
+  it('after "Start a new topic" the control says the next question starts fresh', () => {
+    const html = render(withSubject(EU), 'en', { onStartNewTopic: () => undefined, newTopicStarted: true });
+    expect(html).toContain(getDictionary('en').askAi.newTopicStarted);
+    expect(html).toContain('aria-pressed="true"');
+  });
+
+  it('past turns show the subject but offer no control', () => {
+    expect(render(withSubject(EU), 'en')).not.toContain('data-ask="new-topic"');
+  });
+
+  it('no product question → no product note; no continued subject → nothing at all', () => {
+    const plainSubject = render(withSubject({ ...EU, disclosures: [] }), 'en');
+    expect(plainSubject).toContain('Continuing: EU AI regulation');
+    expect(plainSubject).not.toContain('data-ask="product-applicability"');
+    expect(render(withSubject(undefined), 'en')).not.toContain('data-ask="continuing"');
+  });
+});
