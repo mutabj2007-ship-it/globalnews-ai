@@ -1902,9 +1902,33 @@ export function GlobalMapShell({
           data-gn-hud-reserve
           className={`${HUD_ISLAND} absolute bottom-4 left-4 z-20 flex max-h-[calc(100%-96px)] flex-col-reverse items-start gap-2 overflow-y-auto`}
         >
+        {/*
+          MAP / SPATIAL VISUAL CONVERGENCE R2 — THE TRUST STATEMENT JOINS THE
+          COLUMN. It was its own island pinned bottom-left at 12px while this
+          column is pinned bottom-left at 16px, so the banner and the control
+          row were drawn over each other. In the column it is the bottom-most
+          line, the controls sit on it, and the two cannot overlap at any width.
+          Non-interactive surfaces keep their one-column island below.
+        */}
+        {hud.interactive && hud.precisionBanner && (
+          <div data-gn="map-precision-island" className="max-w-[min(420px,100%)]">
+            <PrecisionBanner
+              precision={selectedTotal?.finestPrecision}
+              provenance={selectedProvenance}
+              zoom={session.camera.zoom}
+              availableGeometry={availableGeometry}
+              drawnCoarser={
+                selectedTotal !== undefined &&
+                isFinerThan(selectedTotal.finestPrecision, availableGeometry)
+              }
+              labels={spatial.banner}
+            />
+          </div>
+        )}
         {hud.interactive && (
         <MapControlCluster
           positioned={false}
+          direction="row"
           label={shell.lowerLeftControlsLabel}
           globeLocator={
             <GlobeLocator
@@ -1926,6 +1950,7 @@ export function GlobalMapShell({
           }
           layers={
             specialistLayers ? <span /> : <LayersControl
+              collapsible
               state={layers}
               /*
                 ══ THE MISSING RENDER CONNECTION — MAP-GRID-CONTROL-1 AND
@@ -2240,7 +2265,7 @@ export function GlobalMapShell({
           attribution exactly where they were — those surfaces are wide
           enough for two corners to be two corners.
         */}
-        {(hud.precisionBanner || !hud.interactive) && (
+        {!hud.interactive && (
           <div
             data-gn-hud-reserve
             className={`${HUD_ISLAND} absolute bottom-[12px] left-[12px] z-20 ${

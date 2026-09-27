@@ -51,6 +51,12 @@ export interface MapControlClusterProps {
    * self-anchored behaviour for any other caller.
    */
   readonly positioned?: boolean;
+  /**
+   * MAP / SPATIAL VISUAL CONVERGENCE R2 — `row` lays the three controls side
+   * by side along the map's lower edge: "the globe locator …, then Layers and
+   * 3D as separate controls". The ORDER is still `LOWER_LEFT_CLUSTER`'s.
+   */
+  readonly direction?: 'column' | 'row';
 }
 
 export function MapControlCluster({
@@ -59,6 +65,7 @@ export function MapControlCluster({
   threeD = null,
   label,
   positioned = true,
+  direction = 'column',
 }: MapControlClusterProps): JSX.Element {
   const slots: Readonly<Record<MapControlId, JSX.Element | null>> = {
     'globe-locator': globeLocator,
@@ -74,7 +81,7 @@ export function MapControlCluster({
       data-gn-cluster="lower-left"
       role="group"
       aria-label={label}
-      className={`pointer-events-auto flex flex-col items-start gap-2${
+      className={`pointer-events-auto flex ${direction === 'row' ? 'flex-row items-end' : 'flex-col items-start'} gap-2${
         positioned ? ' absolute bottom-4 left-4 z-10' : ''
       }`}
     >
