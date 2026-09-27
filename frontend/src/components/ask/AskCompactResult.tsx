@@ -121,9 +121,15 @@ export function AskCompactResult({
     its position in `analysis.sources` as its number.
   */
   const cited = citedSourceNumbers(analysis?.summaryStatements, sources);
+  /*
+    The bound is only honest while the transition that reaches the rest
+    exists. With the /search link off (a selection result), nothing may be
+    left unreachable, so every source is listed.
+  */
+  const sourceLimit = showFullAnalysisLink ? COMPACT_SOURCE_LIMIT : Number.POSITIVE_INFINITY;
   const shown = sources
     .map((source, index) => ({ source, number: index + 1 }))
-    .filter(({ number }) => number <= COMPACT_SOURCE_LIMIT || cited.has(number));
+    .filter(({ number }) => number <= sourceLimit || cited.has(number));
   const truncated = sources.length > shown.length;
 
   /*
