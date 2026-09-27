@@ -1,4 +1,5 @@
 import type { SummaryStatement } from './summary-statements';
+import { findCountryByIso2, findCountryByIso3, type CountryMeta } from './countries';
 import type {
   NewsArticle,
   NewsDataMode,
@@ -961,6 +962,13 @@ export interface AnalysisRetrievalContext {
   comparisonCoverage?: import('./comparison-coverage').ComparisonCountryCoverage[];
   storyContextUsed?: boolean;
   /**
+   * MAP ASK GEOGRAPHY CONTEXT R1 — present only when the request carried a
+   * resolvable geographyContext that was eligible (no selection and no
+   * storyContext). True when its country scoped retrieval; false when a place
+   * typed in the question outranked it.
+   */
+  geographyContextUsed?: boolean;
+  /**
    * ASK/SEARCH R1 CLOSURE — the evidence-state fact, stamped by
    * AnalysisService on every analysis response and passed to the model.
    * Derived only by `resolveEvidenceState`, so the model, the cache and the UI
@@ -1445,4 +1453,48 @@ export interface StoryContext {
   url?: string;
   sourceName?: string;
   countryCode?: string;
+}
+
+/**
+ * MAP ASK GEOGRAPHY CONTEXT R1 — the country the reader was looking at on the
+ * map when they opened Ask, with NO story selected.
+ *
+ * - `countryCode` is the retrieval authority: an ISO 3166 alpha-2 or alpha-3
+ *   code of a GOVERNED country (the shared COUNTRIES registry). Anything else
+ *   — a name, an alias, a numeric code, an unknown code — is rejected (400),
+ *   never silently ignored. See resolveGovernedCountryCode.
+ * - `displayName` is presentation only. The server validates its bounds and
+ *   never reads it for retrieval, caching or the model prompt.
+ * - It is the WEAKEST scope: a selection, a place typed in the question and a
+ *   storyContext (the more specific anchor) all outrank it.
+ * - It carries no article, source, evidence, report or cluster identity, and
+ *   the server rejects any extra field.
+ *
+ * Sending it never computes anything by itself; only an explicit Send/Run
+ * reaches POST /analysis/news.
+ */
+export interface GeographyContext {
+  countryCode: string;
+  displayName: string;
+}
+
+/** The SHAPE of an ISO 3166 alpha-2 or alpha-3 code; governance is resolveGovernedCountryCode. */
+export const GEOGRAPHY_COUNTRY_CODE_PATTERN = /^[A-Za-z]{2,3}$/;
+/** Bound on the presentation-only display name. */
+export const MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH = 100;
+
+/**
+ * MAP ASK GEOGRAPHY CONTEXT R1.1 — the governed-country check, over the one
+ * shared COUNTRIES registry (no second country list).
+ *
+ * A two-letter code is looked up ONLY as ISO alpha-2 and a three-letter code
+ * ONLY as ISO alpha-3, so a name ("Poland"), an alias ("UK"), a numeric code
+ * ("616") or an unknown code ("ZZ", "ZZZ") never resolves. Lower case is
+ * accepted and normalized deterministically to upper case ("pl" -> PL); no
+ * whitespace is trimmed or tolerated.
+ */
+export function resolveGovernedCountryCode(countryCode: unknown): CountryMeta | undefined {
+  if (typeof countryCode !== 'string' || !GEOGRAPHY_COUNTRY_CODE_PATTERN.test(countryCode)) return undefined;
+  const code = countryCode.toUpperCase();
+  return code.length === 2 ? findCountryByIso2(code) : findCountryByIso3(code);
 }

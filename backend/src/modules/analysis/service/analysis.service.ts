@@ -1,9 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   normalizeQuery,
   resolveServerBudgetMs,
   resolveLocationContext,
   resolveCountryByAnyIdentifier,
+  resolveGovernedCountryCode,
   resolveCountryByCity,
   resolveGeoTypo,
   type AnalysisApiResponse,
@@ -22,6 +23,7 @@ import {
   type NewsResponse,
   type RequestedRegionScope,
   type RetrievalOutcome,
+  type GeographyContext,
   type StoryContext,
   type AnalysisEvidenceState,
   resolveEvidenceState,
@@ -529,6 +531,13 @@ export class AnalysisService {
      * Absent for every existing caller.
      */
     selection?: AnalysisSelection,
+    /**
+     * MAP ASK GEOGRAPHY CONTEXT R1 — the map country the reader had open with
+     * no story selected. Only its countryCode is read, and only when it
+     * resolves to a real country. displayName is presentation only and is
+     * never read here. See mapGeographyLocation below for the precedence.
+     */
+    geographyContext?: GeographyContext,
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
 
@@ -537,6 +546,34 @@ export class AnalysisService {
       storyContext = undefined;
       priorQuestion = undefined;
     }
+
+    /*
+      MAP ASK GEOGRAPHY CONTEXT R1 — THE WEAKEST CAMERA.
+
+      Eligible only with no selection and no storyContext: a selected story is
+      the more specific anchor, so when one is present the map country adds
+      nothing and is ignored entirely. When eligible it seeds exactly the
+      location a country-only storyContext always seeded, so it is outranked
+      by a typed place in the same way (see typedScopeOverridesStory). It is
+      resolved here, once, because the cache key must know whether it applies.
+
+      R1.1 — NO SILENT FALLBACK. A supplied geography context must name a
+      governed country (the DTO already returns 400 for anything else); this
+      re-check means no caller can reach generic routing with a structured
+      geography the service quietly dropped. It is checked whenever supplied,
+      even when a selection or story context will outrank it.
+    */
+    const governedGeographyCountry =
+      geographyContext !== undefined ? resolveGovernedCountryCode(geographyContext.countryCode) : undefined;
+    if (geographyContext !== undefined && governedGeographyCountry === undefined) {
+      throw new BadRequestException(
+        'geographyContext.countryCode must be the ISO alpha-2 or alpha-3 code of a governed country',
+      );
+    }
+    const mapGeographyLocation: LocationContext | undefined =
+      selection === undefined && storyContext === undefined && governedGeographyCountry !== undefined
+        ? { country: governedGeographyCountry }
+        : undefined;
 
     /**
      * originalQuery is preserved verbatim for display (AnalysisApiResponse.query)
@@ -573,7 +610,9 @@ export class AnalysisService {
       ? `:story:${storyContext.articleId}`
       : storyContext?.countryCode
         ? `:story:${storyContext.countryCode.toLowerCase()}`
-        : '';
+        : mapGeographyLocation
+          ? `:geo:${mapGeographyLocation.country.iso3.toLowerCase()}`
+          : '';
     const priorQuestionKeySegment = priorQuestion
       ? `:prior:${normalizeQuery(priorQuestion).normalizedQuery.toLowerCase()}`
       : '';
@@ -729,7 +768,7 @@ export class AnalysisService {
          */
         const storyAnchoredLocation: LocationContext | undefined = storyContext?.countryCode
           ? this.resolveStoryContextLocation(storyContext.countryCode)
-          : undefined;
+          : mapGeographyLocation;
         /*
          * G-ALPHA-2 STAGE 2 — DEMONYM GEOGRAPHY, LAST IN PRECEDENCE.
          *
@@ -2473,6 +2512,9 @@ export class AnalysisService {
 
         if (storyContext) {
           retrievalContext = { ...retrievalContext, storyContextUsed: !typedScopeOverridesStory };
+        }
+        if (mapGeographyLocation) {
+          retrievalContext = { ...retrievalContext, geographyContextUsed: !typedScopeOverridesStory };
         }
 
         /*
