@@ -961,6 +961,13 @@ export interface AnalysisRetrievalContext {
   comparisonCoverage?: import('./comparison-coverage').ComparisonCountryCoverage[];
   storyContextUsed?: boolean;
   /**
+   * MAP ASK GEOGRAPHY CONTEXT R1 — true when a request's `geographyContext`
+   * seeded the country-aware retrieval path, false when one was sent but a
+   * typed scope outranked it. Absent when the request carried none, or when
+   * a story context / selection governed the request instead.
+   */
+  geographyContextUsed?: boolean;
+  /**
    * ASK/SEARCH R1 CLOSURE — the evidence-state fact, stamped by
    * AnalysisService on every analysis response and passed to the model.
    * Derived only by `resolveEvidenceState`, so the model, the cache and the UI
@@ -1445,4 +1452,27 @@ export interface StoryContext {
   url?: string;
   sourceName?: string;
   countryCode?: string;
+}
+
+/**
+ * MAP ASK GEOGRAPHY CONTEXT R1 — the selected map country, staged in Ask.
+ *
+ * A COUNTRY IS NOT A STORY ANCHOR. This is deliberately a separate shape from
+ * StoryContext, never converted into one, and travels beside it in the
+ * analysis request as `geographyContext`.
+ *
+ *   countryCode — ISO 3166-1 alpha-3, the ONLY retrieval identifier. The
+ *                 backend validates it against the governed country registry
+ *                 (ALL_ISO3_CODES) and rejects anything else with a 400.
+ *   displayName — presentation only (e.g. "Algeria" / "Algieria"). It never
+ *                 drives retrieval, the cache key or the in-flight dedup key.
+ *
+ * It carries no article, source, evidence, report or cluster identity, no
+ * prior AI answer and no supplied evidence; the backend DTO forbids every
+ * other property. A present story context is more specific and outranks it;
+ * the two are never merged into one evidence scope.
+ */
+export interface AskGeographyContext {
+  countryCode: string;
+  displayName: string;
 }

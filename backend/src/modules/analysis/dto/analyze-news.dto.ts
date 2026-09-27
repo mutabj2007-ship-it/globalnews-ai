@@ -12,8 +12,9 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  ALL_ISO3_CODES,
   ARTICLE_REF_PATTERN,
   MAX_SELECTED_STORIES,
   MULTI_STORY_ACTIONS,
@@ -95,6 +96,32 @@ export class StoryContextDto {
 }
 
 /**
+ * MAP ASK GEOGRAPHY CONTEXT R1 — mirrors AskGeographyContext in
+ * shared/src/analysis.ts. Exactly two fields; the global ValidationPipe runs
+ * with `forbidNonWhitelisted`, so an articleId, sourceId, evidenceId,
+ * reportId, clusterId, prior answer or supplied evidence is a 400 before the
+ * controller body runs.
+ *
+ * `countryCode` is validated against the governed registry (ALL_ISO3_CODES),
+ * the same convention FollowCountryDto uses: a well-formed but unknown code
+ * ("XXX"), an ISO2 code or a country NAME is rejected rather than guessed at.
+ * `displayName` is bounded presentation text and is never read by retrieval.
+ */
+export class GeographyContextDto {
+  @IsString()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsIn(ALL_ISO3_CODES)
+  countryCode!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  displayName!: string;
+}
+
+/**
  * Milestone #47 — the exact closed set the DTO validates
  * `requestedLanguage` against. Deliberately duplicated as a plain
  * array (not imported as a runtime value from shared/src/analysis.ts,
@@ -151,6 +178,17 @@ export class AnalyzeNewsDto {
   @ValidateNested()
   @Type(() => StoryContextDto)
   storyContext?: StoryContextDto;
+
+  /**
+   * MAP ASK GEOGRAPHY CONTEXT R1 — optional selected-country context from Map
+   * Ask. Beside `storyContext`, never merged into it: a present story context
+   * is more specific and governs the request. Absent for every existing
+   * caller, whose requests are therefore unchanged.
+   */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => GeographyContextDto)
+  geographyContext?: GeographyContextDto;
 
   /**
    * ASK CONVERSATION R1 — one preceding USER question only: the immediately

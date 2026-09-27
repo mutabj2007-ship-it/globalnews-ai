@@ -22,6 +22,7 @@ import {
   type NewsResponse,
   type RequestedRegionScope,
   type RetrievalOutcome,
+  type AskGeographyContext,
   type StoryContext,
   type AnalysisEvidenceState,
   resolveEvidenceState,
@@ -529,6 +530,12 @@ export class AnalysisService {
      * Absent for every existing caller.
      */
     selection?: AnalysisSelection,
+    /**
+     * MAP ASK GEOGRAPHY CONTEXT R1 — the selected map country staged in Ask.
+     * Only `countryCode` is read; `displayName` is presentation and is never
+     * consulted here. Absent for every existing caller.
+     */
+    geographyContext?: AskGeographyContext,
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
 
@@ -537,6 +544,21 @@ export class AnalysisService {
       storyContext = undefined;
       priorQuestion = undefined;
     }
+
+    /*
+      MAP ASK GEOGRAPHY CONTEXT R1 — PRECEDENCE, DECIDED ONCE, HERE.
+
+      A country is not a story anchor. A present story context is more
+      specific and governs the request; a selection is the whole scope. In
+      either case the geography context is dropped outright — never merged
+      into a new evidence scope. Otherwise its countryCode (re-resolved
+      through the governed registry, the DTO having already rejected anything
+      outside it) seeds the same country-aware location a story country does.
+    */
+    const geographyAnchoredLocation: LocationContext | undefined =
+      geographyContext !== undefined && storyContext === undefined && selection === undefined
+        ? this.resolveStoryContextLocation(geographyContext.countryCode)
+        : undefined;
 
     /**
      * originalQuery is preserved verbatim for display (AnalysisApiResponse.query)
@@ -574,6 +596,10 @@ export class AnalysisService {
       : storyContext?.countryCode
         ? `:story:${storyContext.countryCode.toLowerCase()}`
         : '';
+    /* Keyed by the RESOLVED country only — displayName can never split or join entries. */
+    const geographyKeySegment = geographyAnchoredLocation
+      ? `:geo:${geographyAnchoredLocation.country.iso3.toLowerCase()}`
+      : '';
     const priorQuestionKeySegment = priorQuestion
       ? `:prior:${normalizeQuery(priorQuestion).normalizedQuery.toLowerCase()}`
       : '';
@@ -581,7 +607,7 @@ export class AnalysisService {
     const selectionKeySegment = selection
       ? `:selection:${selection.action}:${[...new Set(selection.stories.map((story) => story.articleRef))].sort().join(',')}`
       : '';
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}`;
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${geographyKeySegment}${priorQuestionKeySegment}${selectionKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -727,9 +753,16 @@ export class AnalysisService {
          * falls through to the exact pre-#51 detectLocation() call —
          * ordinary homepage/search Q&A is byte-for-byte unaffected.
          */
+        /*
+          MAP ASK GEOGRAPHY CONTEXT R1 — the selected country is the fallback
+          ONLY when no story context is present (geographyAnchoredLocation is
+          already undefined otherwise), so it takes the story country's exact
+          position below: typed scope still outranks it, and it can never
+          supply an article anchor.
+        */
         const storyAnchoredLocation: LocationContext | undefined = storyContext?.countryCode
           ? this.resolveStoryContextLocation(storyContext.countryCode)
-          : undefined;
+          : geographyAnchoredLocation;
         /*
          * G-ALPHA-2 STAGE 2 — DEMONYM GEOGRAPHY, LAST IN PRECEDENCE.
          *
@@ -2473,6 +2506,8 @@ export class AnalysisService {
 
         if (storyContext) {
           retrievalContext = { ...retrievalContext, storyContextUsed: !typedScopeOverridesStory };
+        } else if (geographyAnchoredLocation) {
+          retrievalContext = { ...retrievalContext, geographyContextUsed: !typedScopeOverridesStory };
         }
 
         /*

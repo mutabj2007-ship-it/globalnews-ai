@@ -65,7 +65,8 @@ export class AnalysisController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('news')
   async analyzeNews(
-    @Body() { query, requestedLanguage, storyContext, priorQuestion, selection }: AnalyzeNewsDto,
+    @Body()
+    { query, requestedLanguage, storyContext, priorQuestion, selection, geographyContext }: AnalyzeNewsDto,
     @Req() request: Request,
   ): Promise<AnalysisApiResponse> {
     if (selection) {
@@ -83,6 +84,13 @@ export class AnalysisController {
       await this.history.recordExplicitQuestion(userId, query, storyContext?.countryCode);
     }
 
-    return this.analysisService.analyzeNews(query, requestedLanguage, storyContext, priorQuestion, selection);
+    return this.analysisService.analyzeNews(
+      query,
+      requestedLanguage,
+      storyContext,
+      priorQuestion,
+      selection,
+      geographyContext,
+    );
   }
 }

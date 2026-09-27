@@ -1,5 +1,11 @@
 import { ANALYSIS_CLIENT_TIMEOUT_MS } from '@globalnews-ai/shared';
-import type { AnalysisApiResponse, AnalysisSelection, LanguageCode, StoryContext } from '@globalnews-ai/shared';
+import type {
+  AnalysisApiResponse,
+  AnalysisSelection,
+  AskGeographyContext,
+  LanguageCode,
+  StoryContext,
+} from '@globalnews-ai/shared';
 import { resolveAccountApiBase } from './accountBase';
 
 /*
@@ -189,6 +195,12 @@ export function analyzeNews(
   priorQuestion?: string,
   /** MY INTELLIGENCE R1 — optional multi-story selection; absent for every existing caller. */
   selection?: AnalysisSelection,
+  /**
+   * MAP ASK GEOGRAPHY CONTEXT R1 — the selected map country, beside (never
+   * inside) storyContext. Only countryCode enters the dedup key; displayName
+   * is presentation and never distinguishes two requests.
+   */
+  geographyContext?: AskGeographyContext,
 ): Promise<AnalysisApiResponse> {
   /**
    * Milestone #51 Phase B (CTO final correction): prefers
@@ -210,14 +222,23 @@ export function analyzeNews(
   const selectionKeySegment = selection
     ? `:selection:${selection.action}:${selection.stories.map((story) => story.articleRef).join(',')}`
     : '';
-  const key = `${requestedLanguage}:${query.trim()}${storyAnchorKeySegment}${priorKeySegment}${selectionKeySegment}`;
+  const geography = transportableGeographyContext(geographyContext);
+  const geographyKeySegment = geography ? `:geo:${geography.countryCode.toUpperCase()}` : '';
+  const key = `${requestedLanguage}:${query.trim()}${storyAnchorKeySegment}${geographyKeySegment}${priorKeySegment}${selectionKeySegment}`;
 
   const existing = inFlightAnalysisRequests.get(key);
   if (existing) {
     return existing;
   }
 
-  const request = performAnalyzeNews(query, requestedLanguage, storyContext, priorQuestion, selection).finally(() => {
+  const request = performAnalyzeNews(
+    query,
+    requestedLanguage,
+    storyContext,
+    priorQuestion,
+    selection,
+    geography,
+  ).finally(() => {
     // Only delete this key's entry if it still points at THIS promise.
     // Guards against a theoretical race where an older, already-
     // resolved request's cleanup could otherwise delete a NEWER
@@ -232,6 +253,23 @@ export function analyzeNews(
 
   inFlightAnalysisRequests.set(key, request);
   return request;
+}
+
+/**
+ * MAP ASK GEOGRAPHY CONTEXT R1 — narrows whatever the caller holds to exactly
+ * `{ countryCode, displayName }`, so no article, source, evidence, report or
+ * cluster identity and no prior answer can ride along (the backend would
+ * reject the request with a 400 if one did). Anything without both fields as
+ * non-empty strings is not sent at all.
+ */
+export function transportableGeographyContext(
+  context: AskGeographyContext | undefined,
+): AskGeographyContext | undefined {
+  if (!context) return undefined;
+  const { countryCode, displayName } = context;
+  if (typeof countryCode !== 'string' || typeof displayName !== 'string') return undefined;
+  if (!countryCode.trim() || !displayName.trim()) return undefined;
+  return { countryCode: countryCode.trim(), displayName: displayName.trim() };
 }
 
 /**
@@ -270,6 +308,7 @@ async function performAnalyzeNews(
   storyContext?: StoryContext,
   priorQuestion?: string,
   selection?: AnalysisSelection,
+  geographyContext?: AskGeographyContext,
 ): Promise<AnalysisApiResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -308,6 +347,7 @@ async function performAnalyzeNews(
         ...(storyContext ? { storyContext } : {}),
         ...(priorQuestion ? { priorQuestion } : {}),
         ...(selection ? { selection } : {}),
+        ...(geographyContext ? { geographyContext } : {}),
       }),
       cache: 'no-store',
       signal: controller.signal,
