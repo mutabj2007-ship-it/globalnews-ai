@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
 import { usePathname } from 'next/navigation';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { analyzeNews } from '@/lib/api/analysisApi';
@@ -9,6 +9,7 @@ import { LoadingStages } from '@/components/search/LoadingStages';
 import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClient';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
+import { mapAskLayoutFor, mapAskPanelStyle, type MapAskLayout } from '@/lib/ask/mapAskGeometry';
 import { dashboardHref } from '@/lib/ask/dashboardContext';
 import { ASK_CANONICAL_ROUTE } from '@/lib/ask/askFrame';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
@@ -137,6 +138,29 @@ interface AskAiDockProps {
  */
 const LAUNCHER_SUPPRESSED_ROUTES: ReadonlySet<string> = new Set(['/my-intelligence']);
 
+/**
+ * ═══ MAP / SPATIAL VISUAL CONVERGENCE R2 — ASK ON THE MAP ══════════════════
+ *
+ * MEASURED on the Product Owner's iPhone: opening Ask on /map raised the
+ * generic 86dvh phone sheet, which left the map as a strip under the HUD —
+ * the country the reader was asking about disappeared behind the question.
+ *
+ * On /map ONLY, the SAME dock (same state, same submit, same transport, same
+ * zero-request open/focus/type) takes the Spatial Ask geometry of the Map R1
+ * authority ("Ask on the Map"):
+ *
+ *   phone  <861    a composer sheet above the bottom nav (or the keyboard),
+ *                  sized to its content and capped so the map keeps its ≥26%
+ *                  floor under the 82px HUD — the Map sheet's own rule;
+ *   861–1279       the contextual rail column: Ask is intelligence, and the
+ *                  rail is where intelligence lives, so the map stays whole;
+ *   ≥1280          a 440px panel beside the 372px rail, bottom-aligned.
+ *
+ * The numbers live in `lib/ask/mapAskGeometry`. Every other route renders
+ * exactly as before; `/ask` still unmounts the dock.
+ */
+const MAP_ROUTE = '/map';
+
 export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   const pathname = usePathname();
   // The dedicated dashboard owns its composer; unmount the global dock entirely.
@@ -145,6 +169,7 @@ export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
     <GlobalAskAiDock
       {...props}
       showLauncher={!LAUNCHER_SUPPRESSED_ROUTES.has(pathname ?? '')}
+      mapSurface={pathname === MAP_ROUTE}
     />
   );
 }
@@ -152,7 +177,8 @@ export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
 function GlobalAskAiDock({
   language = 'en',
   showLauncher = true,
-}: AskAiDockProps & { showLauncher?: boolean }): JSX.Element {
+  mapSurface = false,
+}: AskAiDockProps & { showLauncher?: boolean; mapSurface?: boolean }): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
@@ -168,6 +194,9 @@ function GlobalAskAiDock({
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const conversationRef = useRef<HTMLDivElement | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
+  /* MAP R2 — the Spatial Ask geometry, measured only on /map (see MAP_ROUTE). */
+  const [mapLayout, setMapLayout] = useState<MapAskLayout | null>(null);
+  const [mapViewport, setMapViewport] = useState<{ height: number; navInset: number }>({ height: 0, navInset: 0 });
   /* guards a response arriving after the reader asked something else */
   const requestSeq = useRef(0);
 
@@ -285,6 +314,61 @@ function GlobalAskAiDock({
     };
   }, [isOpen]);
 
+  /* MAP R2 — which Spatial Ask geometry this width takes. Width only; no request. */
+  useEffect(() => {
+    if (!mapSurface) {
+      setMapLayout(null);
+      return undefined;
+    }
+    const measure = (): void => setMapLayout(mapAskLayoutFor(window.innerWidth));
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [mapSurface]);
+
+  /*
+    MAP R2 — the phone composer sits ON the Map's bottom nav while the nav is
+    shown and on the keyboard while it is not, and never climbs past the map's
+    floor. Both are read from the rendered page: the nav's real top edge (the
+    Map shell hides it at FULL and while the keyboard is open) and the visual
+    viewport. Presentation only — nothing here sends anything.
+  */
+  useEffect(() => {
+    if (!isOpen || mapLayout !== 'compact') return undefined;
+    let raf = 0;
+    let late = 0;
+    const read = (): void => {
+      const nav = document.querySelector('[data-gn="map-bottom-nav"]:not([hidden]) nav');
+      const top = nav?.getBoundingClientRect().top;
+      setMapViewport({
+        height: window.visualViewport?.height ?? window.innerHeight,
+        navInset:
+          top !== undefined && top < window.innerHeight ? Math.max(0, Math.round(window.innerHeight - top)) : 0,
+      });
+    };
+    const measure = (): void => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(late);
+      raf = window.requestAnimationFrame(read);
+      /* the shell re-renders its nav after a focus change; read once more after it */
+      late = window.setTimeout(read, 160);
+    };
+    measure();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener('resize', measure);
+    window.addEventListener('resize', measure);
+    document.addEventListener('focusin', measure);
+    document.addEventListener('focusout', measure);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(late);
+      viewport?.removeEventListener('resize', measure);
+      window.removeEventListener('resize', measure);
+      document.removeEventListener('focusin', measure);
+      document.removeEventListener('focusout', measure);
+    };
+  }, [isOpen, mapLayout]);
+
   /* Escape closes, because a panel that traps the reader is a trap. */
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -379,6 +463,26 @@ function GlobalAskAiDock({
     [question, language, dictionary, storyContext, geographyContext, phase, history, topicReset, subjectOrigin],
   );
 
+  /*
+    MAP R2 — the panel geometry per Spatial Ask layout. `null` everywhere but
+    /map, where the generic classes below are not used at all.
+  */
+  const onMap = mapLayout !== null;
+  const mapPanelStyle: CSSProperties | undefined =
+    mapLayout === null
+      ? undefined
+      : mapAskPanelStyle(mapLayout, {
+          visualViewportHeight: mapViewport.height,
+          navInset: mapViewport.navInset,
+          keyboardInset,
+        });
+  const mapPanelClass =
+    mapLayout === 'compact'
+      ? 'fixed inset-x-0 z-50 flex flex-col overflow-hidden rounded-t-[16px] border border-b-0 border-[#3c2f7a] bg-[#04162b] shadow-[0_-12px_40px_rgba(0,0,0,.45)] [&_button[aria-pressed]]:h-11 [&_button[aria-pressed]]:w-11'
+      : mapLayout === 'rail'
+        ? 'fixed z-50 flex flex-col overflow-hidden border-s border-[#3c2f7a] bg-[#04162b] shadow-[-12px_0_32px_rgba(0,0,0,.35)]'
+        : 'fixed z-50 flex flex-col overflow-hidden rounded-[14px] border border-[#3c2f7a] bg-[#04162b] shadow-2xl';
+
   return (
     <>
       {/* ── THE ENTRY CONTROL ───────────────────────────────────────────
@@ -391,6 +495,9 @@ function GlobalAskAiDock({
           LAUNCHER_SUPPRESSED_ROUTES. Only this button disappears — the panel
           below, the open event, the story context and every explicit action
           are untouched. */}
+      {/* MAP R2 — on a phone Map the entry is the Map's own "Ask about {country}"
+          chip (and the bottom nav's Ask AI); a second floating launcher would
+          sit on the map the reader is using. */}
       {showLauncher && (
       <button
         type="button"
@@ -415,7 +522,12 @@ function GlobalAskAiDock({
           command bar, the mode badge and the reader's own question
           heading — which is where R1 put the launcher, and was wrong.
         */
-        style={{ ...(anchor === 'top' ? { top: COMPACT_TOP_PX, bottom: 'auto' } : { bottom: bottomOffset }), visibility: coveredByDialog && !isOpen ? 'hidden' : undefined }}
+        style={{
+          ...(anchor === 'top' ? { top: COMPACT_TOP_PX, bottom: 'auto' } : { bottom: bottomOffset }),
+          visibility: coveredByDialog && !isOpen ? 'hidden' : undefined,
+          /* MAP R2 — see the note above the gate: not displayed on the phone Map. */
+          ...(mapLayout === 'compact' ? { display: 'none' } : {}),
+        }}
         data-ask-anchor={anchor}
         className="fixed end-4 bottom-4 z-40 inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink-primary shadow-lg transition-colors spatial:bottom-4 spatial:top-auto hover:border-signal focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
       >
@@ -430,8 +542,9 @@ function GlobalAskAiDock({
           data-ask="panel"
           data-ask-phase={phase.kind}
           aria-label={t.panelLabel}
-          style={{ bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
-          className={[
+          data-ask-geometry={mapLayout === null ? 'dock' : `map-${mapLayout}`}
+          style={mapPanelStyle ?? { bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
+          className={onMap ? mapPanelClass : [
             'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
             /* MOBILE — a bottom sheet. Full width, capped height, rounded top. */
             'inset-x-0 bottom-0 h-[86dvh] max-h-[86dvh] rounded-t-2xl',
@@ -441,13 +554,22 @@ function GlobalAskAiDock({
             'lg:w-[min(680px,46vw)]',
           ].join(' ')}
         >
-          <header className="flex items-center justify-between gap-3 border-b border-border bg-surface-raised/95 px-4 py-3 backdrop-blur">
-            <h2 className="font-display text-base font-medium text-ink-primary"><a data-ask="dashboard-entry" href={dashboardHref(question || (phase.kind !== 'idle' ? phase.question : ''), storyContext)}>{t.title} ↗</a></h2>
+          <header
+            className={
+              onMap
+                ? 'flex items-center justify-between gap-3 border-b border-[#3c2f7a]/60 px-4 py-2'
+                : 'flex items-center justify-between gap-3 border-b border-border bg-surface-raised/95 px-4 py-3 backdrop-blur'
+            }
+          >
+            <h2 className={onMap ? 'flex items-center gap-2 text-[15px] font-semibold text-[#ece8ff]' : 'font-display text-base font-medium text-ink-primary'}>
+              {onMap ? <span aria-hidden="true" className="font-mono text-[11px] text-[#a78bfa]">◆</span> : null}
+              <a data-ask="dashboard-entry" href={dashboardHref(question || (phase.kind !== 'idle' ? phase.question : ''), storyContext)}>{t.title} ↗</a>
+            </h2>
             <button
               type="button"
               data-ask="close"
               onClick={() => setIsOpen(false)}
-              className="min-h-[44px] rounded-xl px-3 text-sm text-ink-secondary hover:text-ink-primary"
+              className={onMap ? 'min-h-[44px] min-w-[44px] rounded-xl px-2 text-sm text-[#b8b2e6] hover:text-white' : 'min-h-[44px] rounded-xl px-3 text-sm text-ink-secondary hover:text-ink-primary'}
             >
               {t.close}
             </button>
@@ -455,7 +577,11 @@ function GlobalAskAiDock({
 
           <div
             ref={conversationRef}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-surface px-4 py-4 sm:px-5 sm:py-5"
+            className={
+              onMap
+                ? `min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 ${phase.kind === 'idle' && history.length === 0 ? 'py-2' : 'py-4'}`
+                : 'min-h-0 flex-1 overflow-y-auto overscroll-contain bg-surface px-4 py-4 sm:px-5 sm:py-5'
+            }
             data-ask="body"
             data-ask-scroll="conversation"
           >
@@ -527,6 +653,70 @@ function GlobalAskAiDock({
             ) : null}
           </div>
 
+          {onMap ? (
+            /*
+              MAP R2 — THE SPATIAL COMPOSER (Map R1 "Ask on the Map"): the
+              scope chip and its basis first, then the draft, then the compute
+              line beside Send. The SAME form, the SAME `submit`, the SAME
+              textarea id and the SAME context read — only the order and the
+              skin differ. 16px type so a phone does not zoom on focus.
+            */
+            <div data-ask="composer" className="shrink-0 border-t border-[#3c2f7a]/60 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+              <form onSubmit={submit} data-ask="form" className="flex flex-col gap-[10px] px-[14px] py-[12px]">
+                <div className="flex flex-wrap items-center gap-x-[10px] gap-y-[4px]">
+                  <span
+                    data-ask="context-affordance"
+                    data-ask-context={
+                      showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic'
+                    }
+                    title={showStoryLabel ? storyContext?.title : undefined}
+                    className="inline-flex min-h-[32px] max-w-full items-center truncate rounded-full border border-[#1b6fa8] bg-[#07304f] px-[12px] text-[13px] font-semibold text-[#93cdf5]"
+                  >
+                    {showStoryLabel
+                      ? t.contextChipAnchored
+                      : showGeographyLabel
+                        ? t.askingAboutGeography.replace('{place}', geographyContext?.displayName ?? '')
+                        : t.contextChipGeneric}
+                  </span>
+                  {showGeographyLabel && (
+                    <span data-ask="context-basis" className="text-[12px] text-[#8fa6c0]">
+                      {t.geographyBasis}
+                    </span>
+                  )}
+                </div>
+                <label className="sr-only" htmlFor="ask-ai-question">
+                  {t.inputLabel}
+                </label>
+                <AdaptiveTextarea
+                  id="ask-ai-question"
+                  ref={inputRef}
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  placeholder={t.inputPlaceholder}
+                  maxLength={1000}
+                  minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}
+                  maxHeight={220}
+                  maxViewportFraction={0.3}
+                  keepVisible={false}
+                  className="w-full rounded-[10px] border border-[#3c2f7a] bg-[#12263f] px-[12px] py-[10px] text-[16px] leading-[1.45] text-[#eef2f8] placeholder:text-[#8fa6c0] focus:border-[#a78bfa] focus:outline-none"
+                />
+                <div className="flex items-center justify-between gap-[10px]">
+                  <p data-ask="compute-notice" className="min-w-0 text-[12px] leading-[1.4] text-[#e5d2b0]">
+                    <span aria-hidden="true" className="me-1 text-[#d9b98a]">ϟ</span>
+                    {t.mapComputeNotice}
+                  </p>
+                  <button
+                    type="submit"
+                    data-ask="submit"
+                    disabled={question.trim().length === 0 || phase.kind === 'loading'}
+                    className="min-h-[44px] min-w-[96px] shrink-0 rounded-[10px] border border-[#d9b98a] bg-[linear-gradient(105deg,#412d9f,#1f328a)] px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t.submit}
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
           <div data-ask="composer" className="shrink-0 border-t border-border bg-surface-raised/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
           <form onSubmit={submit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
             <label className="sr-only" htmlFor="ask-ai-question">
@@ -596,6 +786,7 @@ function GlobalAskAiDock({
             </div>
           </form>
           </div>
+          )}
         </section>
       )}
     </>
