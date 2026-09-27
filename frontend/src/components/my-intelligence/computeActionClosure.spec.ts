@@ -82,6 +82,7 @@ const data: MyIntelligenceData = {
   savedRefs: new Set(SAVED.map((s) => s.url)),
   toggleSaved: () => undefined,
   retry: () => undefined,
+  signOut: async () => undefined,
 };
 jest.mock('./useMyIntelligenceData', () => ({ useMyIntelligenceData: () => data }));
 
@@ -111,8 +112,13 @@ function mount(): void {
   act(() => {
     renderer = create(createElement(MyIntelligenceClient, { language: 'en' }), { createNodeMock: () => ({ focus() {}, scrollBy() {}, scrollLeft: 0, scrollWidth: 0, clientWidth: 0 }) });
   });
-  /* The Saved tab lists every saved story. */
-  press(all((n) => n.props.role === 'tab' && text(n).startsWith('Saved'))[0]);
+  /*
+    PREMIUM WORKSPACE R1 — the Saved DESTINATION lists every saved story. It
+    is reached from the workspace rail (the tablist is gone, D2); the rail's
+    "Selected stories" item carries data-mi-control="select" and the context
+    rail's Done carries "selection-mode-done", so the steps below are unchanged.
+  */
+  press(all((n) => n.type === 'button' && n.props['aria-label'] === 'Saved')[0]);
 }
 const enterSelection = (): void => press(one('data-mi-control', 'select'));
 const select = (...indices: number[]): void => {
