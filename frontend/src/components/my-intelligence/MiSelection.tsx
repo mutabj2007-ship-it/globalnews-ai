@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, LanguageCode, MultiStoryAction } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import {
   MI_AI_ACTION_OFF,
   MI_AI_ACTION_ON,
+  MI_BANNER_ERROR,
   MI_CARD,
   MI_FOCUS,
   MI_LOCAL_ACTION,
@@ -19,6 +20,7 @@ import {
   MI_TARGET,
 } from './miPresentation';
 import { AiTag, fill } from './MiPrimitives';
+import { AskCompactResult } from '@/components/ask/AskCompactResult';
 
 export type ActionId =
   | 'compare'
@@ -492,6 +494,33 @@ export function SelectionPanel({
 }
 
 /**
+ * COMPUTE-ACTION CLOSURE R1 — the six UI actions, mapped EXACTLY onto the
+ * governed multi-story actions. No other action exists.
+ */
+export const MI_ACTION_TO_MULTI_STORY: Readonly<Record<ActionId, MultiStoryAction>> = {
+  compare: 'COMPARE',
+  summarize: 'SUMMARIZE',
+  askAbout: 'ASK_SELECTED',
+  explain: 'EXPLAIN_DISAGREEMENTS',
+  whatChanged: 'WHAT_CHANGED',
+  briefing: 'CREATE_BRIEFING',
+};
+
+export type ComputeRunStatus = 'idle' | 'running' | 'failed';
+
+function actionTitle(t: ReturnType<typeof getDictionary>['myIntelligence']['compute'], action: ActionId, count: number): string {
+  const titles: Record<ActionId, string> = {
+    compare: fill(t.titleCompare, { count }),
+    summarize: fill(t.titleSummarize, { count }),
+    askAbout: fill(t.titleAsk, { count }),
+    explain: fill(t.titleExplain, { count }),
+    whatChanged: fill(t.titleWhatChanged, { count }),
+    briefing: fill(t.titleBriefing, { count }),
+  };
+  return titles[action];
+}
+
+/**
  * THE COMPUTE-COMMIT SHEET — the one place on this surface where AI can start.
  *
  * Everything before this point is free of compute: browsing, saving,
@@ -502,19 +531,35 @@ export function SelectionPanel({
  *
  * The primary says Run or Send, never Open — the CTO ruling that a
  * compute-triggering control must name the compute.
+ *
+ * COMPUTE-ACTION CLOSURE R1 — the primary is now the real commitment: it hands
+ * the typed question to the caller, which crosses the governed selection
+ * compute boundary exactly once. While that runs the primary is disabled
+ * and says so, Cancel and Esc are held, and the selection stays intact. A
+ * failure stays HERE, with the selection, and the primary becomes an explicit
+ * "Try again". Stories without a governed reference are listed as left out —
+ * never sent as a bare URL.
  */
 export function ComputeCommitSheet({
   language,
   action,
   storyTitles,
+  excludedCount = 0,
+  status = 'idle',
+  errorMessage,
   onCancel,
   onConfirm,
 }: {
   language: LanguageCode;
   action: ActionId;
+  /** The selected stories that WILL be sent: each carries a governed reference. */
   storyTitles: readonly string[];
+  /** Selected stories refused locally because they carry no governed reference. */
+  excludedCount?: number;
+  status?: ComputeRunStatus;
+  errorMessage?: string;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (question: string) => void;
 }): JSX.Element {
   const mi = getDictionary(language).myIntelligence;
   const t = mi.compute;
@@ -523,25 +568,23 @@ export function ComputeCommitSheet({
 
   const isAsk = action === 'askAbout';
   const count = storyTitles.length;
+  const min = MI_ACTIONS.find((entry) => entry.id === action)?.min ?? 1;
+  const running = status === 'running';
+  const tooFew = count < min;
+  const questionMissing = isAsk && question.trim().length < 2;
+  const blocked = running || tooFew || questionMissing;
 
-  const titles: Record<ActionId, string> = {
-    compare: fill(t.titleCompare, { count }),
-    summarize: fill(t.titleSummarize, { count }),
-    askAbout: fill(t.titleAsk, { count }),
-    explain: fill(t.titleExplain, { count }),
-    whatChanged: fill(t.titleWhatChanged, { count }),
-    briefing: fill(t.titleBriefing, { count }),
-  };
-
-  /* Focus moves into the sheet, and Esc closes it. */
+  /* Focus moves into the sheet, and Esc closes it — except while a Run is in flight. */
   useEffect(() => {
     dialogRef.current?.focus();
+  }, []);
+  useEffect(() => {
     function onKey(event: KeyboardEvent): void {
-      if (event.key === 'Escape') onCancel();
+      if (event.key === 'Escape' && !running) onCancel();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
+  }, [onCancel, running]);
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[rgba(2,6,14,0.72)] sm:items-center">
@@ -549,18 +592,20 @@ export function ComputeCommitSheet({
         type="button"
         aria-hidden="true"
         tabIndex={-1}
-        onClick={onCancel}
+        onClick={running ? undefined : onCancel}
         className="absolute inset-0 cursor-default"
       />
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={titles[action]}
+        aria-label={actionTitle(t, action, count)}
+        aria-busy={running}
+        data-mi-compute-sheet={status}
         tabIndex={-1}
         className={`${MI_SHEET} relative z-10 flex max-h-[88vh] w-full max-w-[520px] flex-col overflow-y-auto border border-[#0e2d4d] bg-[#04162b] p-5 outline-none`}
       >
-        <h2 className="text-[17px] font-bold leading-[1.25] text-white">{titles[action]}</h2>
+        <h2 className="text-[17px] font-bold leading-[1.25] text-white">{actionTitle(t, action, count)}</h2>
 
         {/* On a phone keyboard the list collapses to a count so the draft stays readable. */}
         <p className="mt-2 text-[12.5px] text-[#7d92aa] sm:hidden">
@@ -574,6 +619,17 @@ export function ComputeCommitSheet({
           ))}
         </ul>
 
+        {excludedCount > 0 && (
+          <p data-mi-excluded={excludedCount} role="note" className="mt-2 text-[12.5px] leading-[1.45] text-[#cfe2f2]">
+            {fill(excludedCount === 1 ? t.missingRefOne : t.missingRefOther, { count: excludedCount })}
+          </p>
+        )}
+        {tooFew && (
+          <p data-mi-too-few="" role="note" className="mt-2 text-[12.5px] leading-[1.45] text-[#cfe2f2]">
+            {fill(t.tooFewVerified, { count: min })}
+          </p>
+        )}
+
         {isAsk && (
           <label className="mt-3 flex flex-col gap-1.5">
             <span className="text-[12.5px] font-semibold text-[#cfe2f2]">{t.questionLabel}</span>
@@ -581,12 +637,13 @@ export function ComputeCommitSheet({
               value={question}
               maxLength={1000}
               rows={3}
+              disabled={running}
               onChange={(event) => setQuestion(event.target.value)}
               placeholder={t.questionPlaceholder}
               className="w-full resize-y rounded-[10px] border border-[#1d3a5a] bg-[#02101f] p-3 text-[14px] text-[#e4eefb] outline-none focus:border-[#2f6ea8]"
             />
             <span className="flex items-center justify-between text-[11.5px] text-[#7d92aa]">
-              <span>{t.draftOnly}</span>
+              <span>{questionMissing ? t.questionRequired : t.draftOnly}</span>
               <span>{question.length}/1000</span>
             </span>
           </label>
@@ -599,26 +656,159 @@ export function ComputeCommitSheet({
           <span>{t.sandNote}</span>
         </p>
 
+        {running && (
+          <p data-mi-running="" role="status" className="mt-2 text-[12.5px] leading-[1.45] text-[#cfe2f2]">
+            {t.runningNote}
+          </p>
+        )}
+        {status === 'failed' && (
+          <div data-mi-run-failed="" role="alert" className={`${MI_BANNER_ERROR} mt-2 rounded-[10px] px-3 py-2.5 text-[12.5px] leading-[1.45]`}>
+            <p className="font-semibold">{t.failedTitle}</p>
+            {errorMessage !== undefined && <p className="mt-0.5">{errorMessage}</p>}
+          </div>
+        )}
+
         <p className="mt-2 text-[11.5px] leading-[1.4] text-[#7d92aa]">{t.languageNote}</p>
 
         <div className="mt-4 flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className={`${MI_PILL} ${MI_TARGET} inline-flex h-[44px] items-center border border-[#1d3a5a] px-4 text-[13.5px] font-semibold text-[#cfe2f2]`}
+            disabled={running}
+            className={`${MI_PILL} ${MI_TARGET} ${MI_FOCUS} inline-flex h-[44px] items-center border border-[#1d3a5a] px-4 text-[13.5px] font-semibold text-[#cfe2f2] disabled:opacity-50`}
           >
             {t.cancel}
           </button>
           <button
             type="button"
-            disabled={isAsk && question.trim().length === 0}
-            onClick={onConfirm}
-            className={`${MI_PILL} ${MI_TARGET} inline-flex h-[44px] items-center gap-2 border border-[#6a5634] bg-[#2e2618] px-4 text-[13.5px] font-bold text-[#D9B98A] disabled:opacity-50`}
+            data-mi-control="run"
+            disabled={blocked}
+            aria-disabled={blocked}
+            onClick={() => {
+              if (!blocked) onConfirm(question);
+            }}
+            className={`${MI_PILL} ${MI_TARGET} ${MI_FOCUS} inline-flex h-[44px] items-center gap-2 border border-[#6a5634] bg-[#2e2618] px-4 text-[13.5px] font-bold text-[#D9B98A] disabled:opacity-50`}
           >
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="currentColor">
-              <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
-            </svg>
-            {isAsk ? t.send : action === 'compare' ? t.run : t.runGeneric}
+            {running ? (
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[14px] w-[14px] animate-spin motion-reduce:animate-none" fill="none" stroke="currentColor" strokeWidth="2.4">
+                <path d="M12 3a9 9 0 1 0 9 9" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="currentColor">
+                <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
+              </svg>
+            )}
+            {running
+              ? t.running
+              : status === 'failed'
+                ? t.retry
+                : isAsk
+                  ? t.send
+                  : action === 'compare'
+                    ? t.run
+                    : t.runGeneric}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * THE RESULT — ONE RESPONSE, THROUGH THE EXISTING READER.
+ *
+ * The analysis itself is rendered by `AskCompactResult`, the governed reader
+ * of an AnalysisApiResponse (execution badge, brief, cited sources,
+ * telemetry). Nothing here re-renders analysis. This wrapper adds only the
+ * SELECTION facts the response already carries in retrievalContext.selection:
+ * which action ran, how many selected stories resolved, and which did not.
+ *
+ * The /search transition is switched off for this result: it rebuilds a
+ * single-question request, and would run a different, unscoped analysis
+ * rather than reopen this one. The note says so rather than offering it.
+ */
+export function SelectionResultSheet({
+  language,
+  action,
+  response,
+  question,
+  titlesByRef,
+  onClose,
+}: {
+  language: LanguageCode;
+  action: ActionId;
+  response: AnalysisApiResponse;
+  question: string;
+  titlesByRef: Readonly<Record<string, string>>;
+  onClose: () => void;
+}): JSX.Element {
+  const t = getDictionary(language).myIntelligence.compute;
+  const selection = response.retrievalContext?.selection;
+  const requested = selection?.requested ?? Object.keys(titlesByRef).length;
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    dialogRef.current?.focus();
+    function onKey(event: KeyboardEvent): void {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[rgba(2,6,14,0.72)] sm:items-center">
+      <button type="button" aria-hidden="true" tabIndex={-1} onClick={onClose} className="absolute inset-0 cursor-default" />
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={actionTitle(t, action, requested)}
+        data-mi-result={selection?.action ?? MI_ACTION_TO_MULTI_STORY[action]}
+        tabIndex={-1}
+        className={`${MI_SHEET} relative z-10 flex max-h-[90vh] w-full max-w-[640px] flex-col overflow-y-auto border border-[#0e2d4d] bg-[#04162b] p-5 outline-none`}
+      >
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#D9B98A]">{t.resultLabel}</p>
+        <h2 className="mt-0.5 text-[17px] font-bold leading-[1.25] text-white">{actionTitle(t, action, requested)}</h2>
+
+        {selection !== undefined && (
+          <div data-mi-result-selection="" className="mt-2 flex flex-col gap-1 text-[12.5px] leading-[1.45]">
+            <p data-mi-resolved={`${selection.resolved}/${selection.requested}`} className="text-[#cfe2f2]">
+              {fill(t.resultResolved, { resolved: selection.resolved, requested: selection.requested })}
+            </p>
+            {selection.unresolvedRefs.length > 0 && (
+              <div data-mi-unresolved={selection.unresolvedRefs.length}>
+                <p className="text-[#cfe2f2]">{t.resultUnresolved}</p>
+                <ul className="mt-0.5 flex flex-col gap-0.5 text-[#93a7bd]">
+                  {selection.unresolvedRefs.map((ref) => (
+                    <li key={ref}>· {titlesByRef[ref] ?? `${ref.slice(0, 12)}…`}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-4">
+          <AskCompactResult
+            response={response}
+            question={question}
+            language={language}
+            context={undefined}
+            showFullAnalysisLink={false}
+          />
+        </div>
+
+        <p className="mt-3 text-[11.5px] leading-[1.45] text-[#7d92aa]">{t.resultFullNote}</p>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            data-mi-control="close-result"
+            onClick={onClose}
+            className={`${MI_PILL} ${MI_TARGET} ${MI_FOCUS} ${MI_LOCAL_ACTION} inline-flex h-[44px] items-center border border-[#1d3a5a] px-4 text-[13.5px]`}
+          >
+            {t.close}
           </button>
         </div>
       </div>

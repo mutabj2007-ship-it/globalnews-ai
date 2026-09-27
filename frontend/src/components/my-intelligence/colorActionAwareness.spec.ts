@@ -267,11 +267,22 @@ describe('§12 accessibility: the selection state is announced', () => {
   });
 });
 
-describe('zero compute: nothing on the selection workflow can reach analysis', () => {
-  it('neither the client nor the selection components import or call the analysis transport', () => {
+describe('compute boundary: only the explicit Run reaches analysis, and only through runSelectionAction', () => {
+  it('no component calls the analysis transport or fetch directly', () => {
     for (const file of ['MyIntelligenceClient.tsx', 'MiSelection.tsx', 'MiStoryViews.tsx']) {
       const source = read(file);
-      expect(`${file}: ${/analyzeNews|runSelectionAction|fetch\(/.test(source)}`).toBe(`${file}: false`);
+      expect(`${file}: ${/analyzeNews|fetch\(/.test(source)}`).toBe(`${file}: false`);
+    }
+  });
+
+  it('COMPUTE-ACTION CLOSURE R1 — runSelectionAction is called exactly once, inside the Run handler', () => {
+    const client = read('MyIntelligenceClient.tsx');
+    expect(client.match(/runSelectionAction\(/g) ?? []).toHaveLength(1);
+    const handler = client.slice(client.indexOf('const onConfirm = useCallback('));
+    expect(handler.indexOf('runSelectionAction(')).toBeGreaterThan(-1);
+    expect(handler.indexOf('runSelectionAction(')).toBeLessThan(handler.indexOf('\n  );'));
+    for (const file of ['MiSelection.tsx', 'MiStoryViews.tsx']) {
+      expect(read(file)).not.toContain('runSelectionAction');
     }
   });
 });

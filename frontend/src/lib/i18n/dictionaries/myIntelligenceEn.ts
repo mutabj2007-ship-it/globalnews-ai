@@ -108,6 +108,7 @@ export const myIntelligenceEn = {
     summary: 'Choose stories, then pick an action. Each action asks you to confirm before it runs.',
     pickAction: 'Pick an action ({count})',
     selectAtLeast: 'Select at least {count}',
+    maxReached: 'You can select up to {count} stories.',
     aiTag: 'AI',
     /* COLOR / ACTION-AWARENESS R1 — selection mode says what it is, how many, how to leave, what costs compute. */
     modeLabel: 'Selection mode',
@@ -155,6 +156,21 @@ export const myIntelligenceEn = {
     send: 'Send question',
     /* Capability sheet CTO ruling: presentation changes never re-run compute. */
     languageNote: "Changing language doesn't rerun any analysis.",
+    /* COMPUTE-ACTION CLOSURE R1 — the explicit Run, its progress, its failure and its result. */
+    running: 'Running…',
+    runningNote: 'Your selected stories stay selected while this runs.',
+    retry: 'Try again',
+    failedTitle: 'The analysis did not complete. Your selection is kept.',
+    missingRefOne: '{count} selected story can’t be sent: it has no verified story reference, so it is left out.',
+    missingRefOther: '{count} selected stories can’t be sent: they have no verified story reference, so they are left out.',
+    tooFewVerified: 'Not enough verified stories for this action (it needs {count}).',
+    questionRequired: 'Type a question to send.',
+    resultLabel: 'Result',
+    resultResolved: 'Resolved {resolved} of {requested} selected stories',
+    resultUnresolved: 'Not found in retained reporting:',
+    resultFullNote:
+      'This is the full result for your selected stories. The Analysis Workspace opens single questions, so it can’t reopen this selection without running a different analysis.',
+    close: 'Close',
   },
 
   states: {

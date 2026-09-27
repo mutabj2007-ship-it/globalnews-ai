@@ -76,6 +76,13 @@ interface AskCompactResultProps {
    */
   readonly onStartNewTopic?: () => void;
   readonly newTopicStarted?: boolean;
+  /**
+   * MY INTELLIGENCE COMPUTE CLOSURE R1 — the /search transition rebuilds a
+   * single-question request. A multi-story SELECTION result cannot be
+   * reproduced by it (it would run a different, unscoped analysis), so that
+   * caller turns the link off. Every other caller keeps the default.
+   */
+  readonly showFullAnalysisLink?: boolean;
 }
 
 export function AskCompactResult({
@@ -85,6 +92,7 @@ export function AskCompactResult({
   context,
   onStartNewTopic,
   newTopicStarted = false,
+  showFullAnalysisLink = true,
 }: AskCompactResultProps): JSX.Element {
   const dictionary = getDictionary(language);
   const t = dictionary.askAi;
@@ -346,7 +354,7 @@ export function AskCompactResult({
         rather than hidden in client state. The full workspace is the only
         place full analytical detail is rendered (§2.3).
       */}
-      {canOpenFullAnalysis ? (
+      {showFullAnalysisLink && (<>{canOpenFullAnalysis ? (
         <div className="flex flex-col items-start gap-0.5">
         <a
           data-ask="open-full"
@@ -371,7 +379,7 @@ export function AskCompactResult({
           {t.runFullAnalysisNote}
         </span>
         </div>
-      ) : null}
+      ) : null}</>)}
     </div>
   );
 }

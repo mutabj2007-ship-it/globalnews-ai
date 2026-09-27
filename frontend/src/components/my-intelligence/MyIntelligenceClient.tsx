@@ -1,9 +1,15 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import type { LanguageCode } from '@globalnews-ai/shared';
-import { findCountryByIso3 } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
+import { ARTICLE_REF_PATTERN, MAX_SELECTED_STORIES, findCountryByIso3 } from '@globalnews-ai/shared';
+import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClient';
+import {
+  SELECTION_ACTION_QUESTIONS,
+  SelectionActionError,
+  runSelectionAction,
+} from '@/lib/myIntelligence/selection';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { MI_CARD, MI_EYEBROW, MI_GREETING, MI_PAGE, MI_PILL, MI_TARGET } from './miPresentation';
 import { FixtureBanner, StatusBanner, fill } from './MiPrimitives';
@@ -23,7 +29,10 @@ import {
   SelectionPanel,
   SelectionRail,
   SelectionStatus,
+  SelectionResultSheet,
+  MI_ACTION_TO_MULTI_STORY,
   type ActionId,
+  type ComputeRunStatus,
 } from './MiSelection';
 import { useMyIntelligenceData } from './useMyIntelligenceData';
 import { isNewSince } from './newSince';
@@ -87,6 +96,21 @@ export function MyIntelligenceClient({
   const [category, setCategory] = useState<string>(t.saved.filterAll);
   const [sheetAction, setSheetAction] = useState<ActionId | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  /*
+    COMPUTE-ACTION CLOSURE R1 — the one explicit Run. `inFlight` is the
+    double-submit guard: a second tap while a request is running is ignored
+    before anything is sent, independent of how fast React re-renders the
+    disabled button.
+  */
+  const [runStatus, setRunStatus] = useState<ComputeRunStatus>('idle');
+  const [runError, setRunError] = useState<string | undefined>(undefined);
+  const [result, setResult] = useState<{
+    action: ActionId;
+    response: AnalysisApiResponse;
+    question: string;
+    titlesByRef: Readonly<Record<string, string>>;
+  } | null>(null);
+  const inFlight = useRef(false);
 
   const signedOut = forceSignedOut === true || (!data.isLoading && !data.isSignedIn);
 
@@ -105,10 +129,14 @@ export function MyIntelligenceClient({
     setSelectedUrls((current) => {
       const next = new Set(current);
       if (next.has(url)) next.delete(url);
-      else next.add(url);
+      else if (next.size >= MAX_SELECTED_STORIES) {
+        /* The governed bound: at most 8 selected stories per action. Nothing is added. */
+        setToast(fill(t.selection.maxReached, { count: MAX_SELECTED_STORIES }));
+        return current;
+      } else next.add(url);
       return next;
     });
-  }, []);
+  }, [t.selection.maxReached]);
 
   const clearSelection = useCallback(() => setSelectedUrls(new Set()), []);
 
@@ -141,10 +169,96 @@ export function MyIntelligenceClient({
     return out;
   }, [data.newSince, data.previousSeenAt]);
 
-  const selectedTitles = useMemo(() => {
+  /*
+    The selected stories, once each, in the order they were selected. A story
+    listed in two sections is ONE selection.
+  */
+  const selectedStories = useMemo(() => {
     const pool = [...data.newSince, ...data.saved, ...data.forYou];
-    return pool.filter((story) => selectedUrls.has(story.url)).map((story) => story.title);
+    return [...selectedUrls]
+      .map((url) => pool.find((story) => story.url === url))
+      .filter((story): story is (typeof pool)[number] => story !== undefined);
   }, [data.forYou, data.newSince, data.saved, selectedUrls]);
+
+  /*
+    Only a story carrying its GOVERNED reference — the server-issued sha256
+    articleRef from the live feed or saved-story data — can be sent. One
+    without it is refused and shown as left out; it is never sent as a bare
+    URL and never looked up by search.
+  */
+  const verifiedStories = useMemo(
+    () =>
+      selectedStories.filter(
+        (story): story is (typeof selectedStories)[number] & { articleRef: string } =>
+          typeof story.articleRef === 'string' && ARTICLE_REF_PATTERN.test(story.articleRef),
+      ),
+    [selectedStories],
+  );
+  const excludedCount = selectedStories.length - verifiedStories.length;
+
+  const openSheet = useCallback((id: ActionId) => {
+    setRunStatus('idle');
+    setRunError(undefined);
+    setSheetAction(id);
+  }, []);
+
+  const closeSheet = useCallback(() => {
+    if (inFlight.current) return;
+    setSheetAction(null);
+    setRunStatus('idle');
+    setRunError(undefined);
+  }, []);
+
+  const dictionary = getDictionary(language);
+
+  const onConfirm = useCallback(
+    (question: string) => {
+      if (sheetAction === null || inFlight.current) return;
+      const action = sheetAction;
+      const multiStory = MI_ACTION_TO_MULTI_STORY[action];
+      const typed = action === 'askAbout' ? question.trim() : undefined;
+      const stories = verifiedStories.map((story) => ({ articleRef: story.articleRef, url: story.url }));
+      const titlesByRef = Object.fromEntries(verifiedStories.map((story) => [story.articleRef, story.title]));
+
+      inFlight.current = true;
+      setRunStatus('running');
+      setRunError(undefined);
+
+      /* THE ONE COMPUTE CALL: the governed boundary, then the existing client, then POST /analysis/news. */
+      runSelectionAction(multiStory, stories, language, typed)
+        .then((response) => {
+          setResult({
+            action,
+            response,
+            question: typed ?? SELECTION_ACTION_QUESTIONS[language === 'pl' ? 'pl' : 'en'][multiStory],
+            titlesByRef,
+          });
+          setSheetAction(null);
+          setRunStatus('idle');
+        })
+        .catch((error: unknown) => {
+          /* The selection is untouched; the sheet stays open with an explicit retry. */
+          setRunStatus('failed');
+          if (error instanceof SelectionActionError) {
+            setRunError(
+              error.reason === 'question-required'
+                ? t.compute.questionRequired
+                : error.reason === 'too-many'
+                  ? fill(t.selection.maxReached, { count: MAX_SELECTED_STORIES })
+                  : fill(t.compute.tooFewVerified, {
+                      count: MI_ACTIONS.find((entry) => entry.id === action)?.min ?? 1,
+                    }),
+            );
+          } else {
+            setRunError(resolveAnalysisErrorMessage(error, dictionary));
+          }
+        })
+        .finally(() => {
+          inFlight.current = false;
+        });
+    },
+    [dictionary, language, sheetAction, t.compute.questionRequired, t.compute.tooFewVerified, t.selection.maxReached, verifiedStories],
+  );
 
   const handlers = {
     language,
@@ -349,7 +463,7 @@ export function MyIntelligenceClient({
                 language={language}
                 selectedCount={selectedUrls.size}
                 onClear={clearSelection}
-                onAction={setSheetAction}
+                onAction={openSheet}
               />
             )}
             {showFollowing && (
@@ -370,7 +484,7 @@ export function MyIntelligenceClient({
           language={language}
           selectedCount={selectedUrls.size}
           onClear={clearSelection}
-          onAction={setSheetAction}
+          onAction={openSheet}
         />
       )}
 
@@ -378,9 +492,23 @@ export function MyIntelligenceClient({
         <ComputeCommitSheet
           language={language}
           action={sheetAction}
-          storyTitles={selectedTitles}
-          onCancel={() => setSheetAction(null)}
-          onConfirm={() => setSheetAction(null)}
+          storyTitles={verifiedStories.map((story) => story.title)}
+          excludedCount={excludedCount}
+          status={runStatus}
+          errorMessage={runError}
+          onCancel={closeSheet}
+          onConfirm={onConfirm}
+        />
+      )}
+
+      {result !== null && (
+        <SelectionResultSheet
+          language={language}
+          action={result.action}
+          response={result.response}
+          question={result.question}
+          titlesByRef={result.titlesByRef}
+          onClose={() => setResult(null)}
         />
       )}
 

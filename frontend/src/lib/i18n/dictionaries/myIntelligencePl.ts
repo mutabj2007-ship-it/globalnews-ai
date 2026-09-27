@@ -108,6 +108,7 @@ export const myIntelligencePl = {
     summary: 'Wybierz artykuły, a potem działanie. Każde działanie prosi o potwierdzenie, zanim się uruchomi.',
     pickAction: 'Wybierz działanie ({count})',
     selectAtLeast: 'Zaznacz co najmniej {count}',
+    maxReached: 'Możesz zaznaczyć maksymalnie {count} artykułów.',
     aiTag: 'AI',
     modeLabel: 'Tryb zaznaczania',
     modeDone: 'Tryb zaznaczania · Gotowe',
@@ -153,6 +154,20 @@ export const myIntelligencePl = {
     runGeneric: 'Uruchom analizę',
     send: 'Wyślij pytanie',
     languageNote: 'Zmiana języka nie uruchamia ponownie żadnej analizy.',
+    running: 'Trwa analiza…',
+    runningNote: 'Zaznaczone artykuły pozostają zaznaczone w trakcie analizy.',
+    retry: 'Spróbuj ponownie',
+    failedTitle: 'Analiza nie została ukończona. Zaznaczenie zostało zachowane.',
+    missingRefOne: 'Pominięte artykuły bez zweryfikowanego identyfikatora: {count}.',
+    missingRefOther: 'Pominięte artykuły bez zweryfikowanego identyfikatora: {count}.',
+    tooFewVerified: 'Za mało zweryfikowanych artykułów dla tego działania (wymagane: {count}).',
+    questionRequired: 'Wpisz pytanie, aby je wysłać.',
+    resultLabel: 'Wynik',
+    resultResolved: 'Odnalezione artykuły: {resolved} z {requested}',
+    resultUnresolved: 'Nie znaleziono w zachowanych doniesieniach:',
+    resultFullNote:
+      'To pełny wynik dla zaznaczonych artykułów. Obszar analizy otwiera pojedyncze pytania, więc nie może ponownie otworzyć tego zaznaczenia bez uruchomienia innej analizy.',
+    close: 'Zamknij',
   },
 
   states: {
