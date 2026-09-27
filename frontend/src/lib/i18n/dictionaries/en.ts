@@ -7,6 +7,7 @@
 import { HOME_SUGGESTIONS } from '@globalnews-ai/shared';
 import { adminEn } from './adminEn';
 import { supportEn } from './supportEn';
+import { myIntelligenceEn } from './myIntelligenceEn';
 
 export const en = {
   /**
@@ -26,6 +27,13 @@ export const en = {
    * reaches its strings through the same getDictionary(language) call.
    */
   support: supportEn,
+
+  /**
+   * MY INTELLIGENCE R1.2 — the signed-in personal intelligence namespace,
+   * folded in exactly as `admin` and `support` are, so it resolves through the
+   * same getDictionary(language) call and adds no second localization path.
+   */
+  myIntelligence: myIntelligenceEn,
 
   languageSelectorLabel: 'Language',
   yourQuestion: 'Your question',
