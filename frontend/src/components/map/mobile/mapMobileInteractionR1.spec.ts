@@ -21,6 +21,7 @@ import {
   SHEET_STOPS,
   SPATIAL_DETENTS,
   mapFractionAt,
+  type MobileBottomSheetProps,
   type SheetStop,
 } from './MobileBottomSheet';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -207,19 +208,14 @@ describe('§5 one coherent workspace model at every geometry site', () => {
   it('in workspace mode the rendered sheet takes its height from A and stands on the nav', () => {
     let renderer!: ReturnType<typeof create>;
     act(() => {
-      renderer = create(
-        createElement(
-          MobileBottomSheet,
-          {
-            stop: 'HALF',
-            onStopChange: () => undefined,
-            workspaceHeight: 701,
-            bottomOffset: 91,
-            labels: { sheetLabel: 's', handleLabel: 'h', stops: { PEEK: 'p', HALF: 'h', FULL: 'f' } },
-            children: 'content',
-          },
-        ),
-      );
+      const props = {
+        stop: 'HALF',
+        onStopChange: () => undefined,
+        workspaceHeight: 701,
+        bottomOffset: 91,
+        labels: { sheetLabel: 's', handleLabel: 'h', stops: { PEEK: 'p', HALF: 'h', FULL: 'f' } },
+      } as unknown as MobileBottomSheetProps;
+      renderer = create(createElement(MobileBottomSheet, props, 'content'));
     });
     const section = renderer.root.findByProps({ 'data-gn': 'mobile-sheet' });
     expect(section.props.style).toEqual({ height: `${Math.floor(0.52 * 701)}px`, bottom: '91px' });
