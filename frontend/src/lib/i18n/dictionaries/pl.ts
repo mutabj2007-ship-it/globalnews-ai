@@ -78,6 +78,7 @@ export const pl: Dictionary = {
     newTopicStarted: 'Nast\u0119pne pytanie rozpocznie nowy temat',
     productApplicabilityNotEstablished:
       'Na podstawie tych doniesie\u0144 nie da si\u0119 ustali\u0107, jak dok\u0142adnie dotyczy to GlobalNewsAI: \u017cadne z tych \u017ar\u00f3de\u0142 nie opisuje samego GlobalNewsAI.',
+    focusNotInEvidence: '\u017badne z pozyskanych doniesie\u0144 nie odnosi si\u0119 bezpo\u015brednio do: {focus}; odpowied\u017a opiera si\u0119 na doniesieniach o samym temacie.',
     resultSourcesNone: 'Dla tego pytania nie pozyskano \u017cadnych \u017ar\u00f3de\u0142.',
     resultSourcesTruncated: 'Pokazano {shown} z {total}. Otw\u00f3rz pe\u0142n\u0105 analiz\u0119, aby zobaczy\u0107 reszt\u0119.',
     resultBriefAbsent: 'Ta analiza nie zawiera\u0142a streszczenia. To brak, a nie ocena \u2014 niczego nie zmierzono ani nie wstrzymano.',

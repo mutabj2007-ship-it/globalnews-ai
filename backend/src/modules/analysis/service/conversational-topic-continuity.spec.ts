@@ -189,6 +189,9 @@ describe('1 — the live defect: EU AI regulation → "how will this affect Glob
     expect(t2.input!.query).toBe(EU_T2);
     expect(t2.r.retrievalContext.conversationSubject).toEqual({
       subject: 'EU AI regulation',
+      /* D.1 — "GlobalNewsAI" is disclosed, never searched; "should I be scared" is framing. */
+      focus: [],
+      retrievalMeaning: 'EU AI regulation',
       source: 'prior-question',
       disclosures: ['PRODUCT_APPLICABILITY_NOT_ESTABLISHED'],
     });
@@ -209,7 +212,10 @@ describe('1 — the live defect: EU AI regulation → "how will this affect Glob
   it('a subject follow-up that is not about the product carries no product disclosure', async () => {
     const h = harness(CORPUS);
     const t2 = await turn(h, 'Why does this matter to AI companies?', EU_T1);
-    expect(t2.r.retrievalContext.conversationSubject?.disclosures).toEqual([]);
+    const disclosures = t2.r.retrievalContext.conversationSubject?.disclosures ?? [];
+    expect(disclosures).not.toContain('PRODUCT_APPLICABILITY_NOT_ESTABLISHED');
+    /* D.1 — no EU report names "companies", and the answer is told so. */
+    expect(disclosures).toContain('FOCUS_NOT_IN_EVIDENCE');
     expect(promptFor(t2.input!).system).not.toContain('GlobalNewsAI');
   });
 });
@@ -223,7 +229,7 @@ describe('2–4 — the other required shapes', () => {
     expect(t2.country).toEqual(['POL']);
     expect(t2.providerCalls).toBe(1);
     expect(t2.input!.query).toBe('Why does this matter to consumers?');
-    expect(t2.r.retrievalContext.conversationSubject?.subject).toBe('Why is inflation high in Poland');
+    expect(t2.r.retrievalContext.conversationSubject?.subject).toBe('inflation high Poland');
   });
 
   it('3: "What are high interest rates doing to the economy?" → "What about businesses?" routes exactly as Turn 1 did', async () => {
@@ -328,6 +334,8 @@ describe('9–10 — language and EN/PL follow-up forms', () => {
     const t = await turn(h, 'Jak to wpłynie na GlobalNewsAI?', prior, 'pl');
     expect(t.r.retrievalContext.conversationSubject).toEqual({
       subject: 'unijne przepisy o sztucznej inteligencji',
+      focus: [],
+      retrievalMeaning: 'unijne przepisy o sztucznej inteligencji',
       source: 'prior-question',
       disclosures: ['PRODUCT_APPLICABILITY_NOT_ESTABLISHED'],
     });
@@ -368,5 +376,129 @@ describe('11–12 — compute invariants', () => {
     await turn(h, EU_T2);
     const t = await turn(h, EU_T2, EU_T1);
     expect(t.r.retrievalContext.conversationSubject?.subject).toBe('EU AI regulation');
+  });
+});
+
+/**
+ * D.1 — FOLLOW-UP RETRIEVAL INTENT COMPOSITION.
+ *
+ * Retrieval meaning = INHERITED SUBJECT + CURRENT-TURN EVIDENCE-BEARING FOCUS.
+ * The subject still decides what is fetched (every gate unchanged); the focus
+ * decides which of that evidence reaches the model ahead of the 8-report cap,
+ * and is disclosed when nothing retrieved addresses it.
+ */
+describe('D.1 — the current turn narrows the inherited subject', () => {
+  /* Distinct stories, so duplicate clustering keeps them apart. */
+  const POLAND_TOPICS = ['central bank holds rates', 'zloty weakens against euro', 'fuel tax debate in Sejm', 'food exporters report record year', 'rail strike ends in Warsaw', 'Gdansk port expansion approved', 'farm protests near border', 'energy grid upgrade funded', 'housing permits climb in Krakow'];
+  const polandPool = [
+    ...POLAND_TOPICS.map((topic, i) =>
+      a(`pl-g${i}`, `Poland inflation and ${topic}`, `Poland: ${topic}, officials said.`, 'PL'),
+    ),
+    a('pl-consumers', 'Polish consumers cut spending as inflation bites', 'Households in Poland face higher bills.', 'PL'),
+  ];
+  const SANCTIONS_TOPICS = ['target shipping insurers', 'add diamond import ban', 'freeze bank assets', 'hit aluminium trade', 'curb software exports', 'list new oligarchs', 'close oil price cap loophole', 'restrict fertilizer sales', 'ban luxury car exports'];
+  const sanctionsPool = [
+    ...SANCTIONS_TOPICS.map((topic, i) =>
+      a(`sa-g${i}`, `Sanctions on Russia ${topic}`, `The new sanctions on Russia ${topic}.`),
+    ),
+    a('sa-poland', 'Sanctions on Russia leave Poland facing gas price rise', 'Polish importers seek new suppliers.'),
+  ];
+
+  it('1: EU AI regulation → GlobalNewsAI: retrieval stays on the regulation; product and "scared" never enter it', async () => {
+    const h = harness(CORPUS);
+    const t = await turn(h, EU_T2, EU_T1);
+    const subject = t.r.retrievalContext.conversationSubject!;
+    expect(subject.retrievalMeaning).toBe('EU AI regulation');
+    expect(subject.focus).toEqual([]);
+    expect(t.search).toEqual(['EU AI regulation']);
+    expect(`${t.search.join(' ')} ${subject.retrievalMeaning}`).not.toMatch(/GlobalNewsAI|scared|general/i);
+    expect(subject.disclosures).toContain('PRODUCT_APPLICABILITY_NOT_ESTABLISHED');
+    expect(t.input!.query).toBe(EU_T2);
+  });
+
+  it('2: Poland inflation → consumers: the consumer report reaches the model FIRST, even from beyond the cap', async () => {
+    const h = harness(polandPool);
+    const t = await turn(h, 'Why does this matter to consumers?', 'Why is inflation high in Poland?');
+    const subject = t.r.retrievalContext.conversationSubject!;
+    expect(subject.retrievalMeaning).toBe('inflation high Poland consumers impact');
+    expect(subject.focus).toEqual(['consumers']);
+    expect(t.input!.articles[0].id).toBe('pl-consumers');
+    expect(t.input!.articles).toHaveLength(8);
+    expect(subject.disclosures).not.toContain('FOCUS_NOT_IN_EVIDENCE');
+
+    /* Material: without the focus (the pre-D.1 prior-question-only retrieval), the cap drops it. */
+    const control = harness(polandPool);
+    const c = await turn(control, 'Why is inflation high in Poland?');
+    expect(c.input!.articles.map((x) => x.id)).not.toContain('pl-consumers');
+  });
+
+  it('3: interest rates → businesses: the business focus is part of the retrieval meaning', async () => {
+    const h = harness(CORPUS);
+    const t = await turn(h, 'What about businesses?', 'What are high interest rates doing to the economy?');
+    const subject = t.r.retrievalContext.conversationSubject!;
+    expect(subject.focus).toEqual(['businesses']);
+    expect(subject.retrievalMeaning).toBe('high interest rates doing economy businesses');
+    expect(subject.retrievalMeaning).not.toMatch(/what about/i);
+  });
+
+  it('4: sanctions → Poland: the Poland-linked sanctions report is selected first', async () => {
+    const h = harness(sanctionsPool);
+    const t = await turn(h, 'How could this affect Poland?', 'Explain the sanctions on Russia');
+    const subject = t.r.retrievalContext.conversationSubject!;
+    expect(subject.retrievalMeaning).toBe('sanctions on Russia Poland impact');
+    expect(subject.focus).toEqual(['Poland']);
+    expect(t.search).toEqual(['sanctions on Russia']);
+    expect(t.input!.articles[0].id).toBe('sa-poland');
+    expect(promptFor(t.input!).system).toContain("the reader's current focus is: Poland");
+  });
+
+  it('4: when no retrieved report addresses the focus, the answer says so instead of implying it', async () => {
+    const h = harness(sanctionsPool.slice(0, 9));
+    const t = await turn(h, 'How could this affect Poland?', 'Explain the sanctions on Russia');
+    expect(t.r.retrievalContext.conversationSubject!.disclosures).toContain('FOCUS_NOT_IN_EVIDENCE');
+    expect(promptFor(t.input!).system).toContain('No evidence item addresses Poland directly');
+    expect(t.providerCalls).toBe(1);
+  });
+
+  it('5: a new unrelated subject still overrides — no inherited subject, no focus composition', async () => {
+    const h = harness(CORPUS);
+    const t = await turn(h, 'What about inflation in Poland?', EU_T1);
+    expect(t.r.retrievalContext.conversationSubject).toBeUndefined();
+  });
+
+  it('6: the EventAnchor path is unchanged — no subject, no focus reordering of event evidence', async () => {
+    const h = harness(CORPUS);
+    const t = await turn(h, 'Does this influence the neighboring countries?', 'What caused the plane crash in Congo?');
+    expect(t.r.retrievalContext.eventAnchor).toMatchObject({ topic: 'plane crash' });
+    expect(t.r.retrievalContext.conversationSubject).toBeUndefined();
+  });
+
+  it('7: previous AI prose is absent from the composed retrieval meaning and the prompt', async () => {
+    const h = harness(polandPool, (raw, input) => {
+      if (input.query === 'Why is inflation high in Poland?') raw.summary = 'ZX-PRIOR-ANSWER inflation consumers wages';
+    });
+    await turn(h, 'Why is inflation high in Poland?');
+    const t = await turn(h, 'Why does this matter to consumers?', 'Why is inflation high in Poland?');
+    expect(t.r.retrievalContext.conversationSubject!.retrievalMeaning).not.toContain('ZX-PRIOR');
+    const { system, user } = promptFor(t.input!);
+    expect(`${system}\n${user}`).not.toContain('ZX-PRIOR');
+  });
+
+  it.each([
+    ['A co z firmami?', ['firmami'], 'inflacja Polsce wysoka firmami'],
+    ['Jak to wpłynie na konsumentów?', ['konsumentów'], 'inflacja Polsce wysoka konsumentów impact'],
+  ])('8: PL "%s" keeps the Polish focus', async (followUp, focus, meaning) => {
+    const h = harness(CORPUS);
+    const t = await turn(h, followUp, 'Dlaczego inflacja w Polsce jest wysoka?', 'pl');
+    expect(t.r.retrievalContext.conversationSubject).toMatchObject({ focus, retrievalMeaning: meaning });
+  });
+
+  it('8: EN aspects and targets are kept, conversational framing is not', async () => {
+    const h = harness(CORPUS);
+    const t = await turn(h, 'What about enforcement and timing?', EU_T1);
+    expect(t.r.retrievalContext.conversationSubject).toMatchObject({
+      focus: ['enforcement', 'timing'],
+      retrievalMeaning: 'EU AI regulation enforcement timing',
+    });
   });
 });

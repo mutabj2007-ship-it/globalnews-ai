@@ -184,6 +184,10 @@ export function AskCompactResult({
               className="rounded-full border border-border-strong px-2.5 py-0.5 text-xs text-ink-secondary"
             >
               {t.continuingSubject.replace('{subject}', response.retrievalContext.conversationSubject.subject)}
+              {/* D.1 — the current turn's focus, in the reader's own words. */}
+              {(response.retrievalContext.conversationSubject.focus ?? []).length > 0
+                ? ` · ${(response.retrievalContext.conversationSubject.focus ?? []).join(', ')}`
+                : null}
             </span>
             {onStartNewTopic ? (
               <button
@@ -203,6 +207,14 @@ export function AskCompactResult({
           ) ? (
             <p data-ask="product-applicability" role="note" className="text-xs leading-relaxed text-ink-secondary">
               {t.productApplicabilityNotEstablished}
+            </p>
+          ) : null}
+          {response.retrievalContext.conversationSubject.disclosures.includes('FOCUS_NOT_IN_EVIDENCE') ? (
+            <p data-ask="focus-not-in-evidence" role="note" className="text-xs leading-relaxed text-ink-secondary">
+              {t.focusNotInEvidence.replace(
+                '{focus}',
+                (response.retrievalContext.conversationSubject.focus ?? []).join(', '),
+              )}
             </p>
           ) : null}
         </div>

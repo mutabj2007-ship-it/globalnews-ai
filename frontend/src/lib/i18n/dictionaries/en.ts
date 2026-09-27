@@ -119,6 +119,7 @@ export const en = {
     newTopicStarted: 'Your next question starts a new topic',
     productApplicabilityNotEstablished:
       'Exact applicability to GlobalNewsAI cannot be established from this reporting: none of these sources describes GlobalNewsAI itself.',
+    focusNotInEvidence: 'None of the retrieved reports addresses {focus} directly; this answer rests on reporting about the subject itself.',
     resultSourcesNone: 'No sources were retrieved for this question.',
     resultSourcesTruncated: 'Showing {shown} of {total}. Open the full analysis for the rest.',
     resultBriefAbsent: 'This analysis carried no executive brief. That is an absence, not an assessment \u2014 nothing was measured and withheld.',

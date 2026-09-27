@@ -96,3 +96,36 @@ GDELT DOC, curated RSS), all `REPORTING`. No official-journal or regulator sourc
 is retrievable for a law question today. So no small safe reuse exists: preferring
 primary legal sources for policy explanations needs a separate retrieval-authority
 lane (an official-source provider plus role-aware ranking). It is not part of D.
+
+## D.1 — follow-up retrieval intent composition
+
+Retrieval meaning = **inherited subject + current-turn evidence-bearing focus**,
+never the prior question alone.
+
+- **Focus.** The follow-up's own words, minus anaphors, question/function words
+  (the existing `FALLBACK_STOPWORDS` plus a closed EN/PL conversational list),
+  framing ("in general", "should I be scared"), the product's own name, and
+  words the inherited subject already carries. What remains are targets and
+  aspects: `consumers`, `businesses`, `Poland`, `enforcement`, `timing`.
+- **Where it acts.** The inherited subject still decides what is fetched, so
+  every relevance gate and provider query is unchanged. The focus decides which
+  of that evidence reaches the model first, ahead of the 8-report cap (from a
+  pool of 20). It is stated on the answer as `retrievalMeaning`, and is also
+  passed to the model.
+- **Why not append it to the provider phrase.** The generic relevance gate
+  compares against the phrase it was sent. "sanctions on Russia Poland" would
+  then be required verbatim and admit almost nothing, which is blind
+  concatenation.
+- **Honesty.** When no retrieved report addresses the focus, the answer carries
+  `FOCUS_NOT_IN_EVIDENCE` and the model is told not to present an effect on the
+  focus as established.
+- **Aspect ellipses.** "What about enforcement and timing?" continues the
+  subject. The closed ellipsis list now covers aspects as well as audiences.
+  "What about inflation in Poland?" is still a new subject.
+
+| Follow-up | Retrieval meaning |
+|---|---|
+| EU AI regulation → "how will this affect GlobalNewsAI…? Should I be scared?" | `EU AI regulation` (+ product-applicability disclosure) |
+| Why is inflation high in Poland? → "Why does this matter to consumers?" | `inflation high Poland consumers impact` |
+| High interest rates…economy? → "What about businesses?" | `high interest rates doing economy businesses` |
+| Explain the sanctions on Russia → "How could this affect Poland?" | `sanctions on Russia Poland impact` |

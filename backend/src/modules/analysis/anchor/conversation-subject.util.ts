@@ -1,6 +1,10 @@
 import type { ConversationSubjectDisclosure } from '@globalnews-ai/shared';
 import { classifyQueryIntent } from '../query/query-intent.util';
-import { deriveGenericNewsQuery } from '../query/derive-generic-news-query.util';
+import {
+  deriveFallbackNewsQuery,
+  deriveGenericNewsQuery,
+  FALLBACK_STOPWORDS,
+} from '../query/derive-generic-news-query.util';
 import { deriveEventTopic, hasAnaphoricReference, isEventTopic } from './event-anchor.util';
 
 /**
@@ -41,13 +45,23 @@ const EXPLETIVE_IT =
   /\b(?:is|was)\s+it\s+true\s+that\b|\bit\s+(?:is|was)\s+(?:true|said|reported|possible|likely|clear)\s+that\b/i;
 
 /**
- * An audience ellipsis: the reader keeps the subject and changes only WHO it is
- * about. A closed list — a new SUBJECT after "what about" is a fresh question.
+ * An audience or aspect ellipsis: the reader keeps the subject and changes
+ * only WHO it is about ("businesses") or WHICH ASPECT of it ("enforcement",
+ * "timing"). A closed list — a new SUBJECT after "what about" ("inflation in
+ * Poland") is a fresh question.
  */
-const AUDIENCE_ELLIPSIS_EN =
-  /^(?:and\s+|but\s+)?(?:what|how)\s+about\s+(?:for\s+)?(?:the\s+)?(?:small\s+|smaller\s+|ordinary\s+|local\s+)?(?:businesses|business|companies|firms|consumers|households|families|workers|employees|investors|farmers|exporters|importers|banks|borrowers|savers|retirees|pensioners|students|young\s+people|users|citizens)\s*\??$/i;
-const AUDIENCE_ELLIPSIS_PL =
-  /^(?:a\s+)?(?:co\s+z|jak\s+z|a\s+dla|dla)?\s*(?:ma[łl]ymi\s+)?(?:firmami|firmy|firm|przedsi[ęe]biorstwami|przedsi[ęe]biorstwa|konsumentami|konsumenci|konsument[óo]w|gospodarstwami\s+domowymi|rodzinami|rodziny|pracownikami|pracownicy|inwestorami|inwestorzy|rolnikami|rolnicy|eksporterami|bankami|banki|kredytobiorcami|emerytami|emeryci|studentami|u[żz]ytkownikami|obywatelami)\s*\??$/iu;
+const ELLIPSIS_TERMS_EN =
+  '(?:small\\s+|smaller\\s+|ordinary\\s+|local\\s+)?(?:businesses|business|companies|firms|consumers|households|families|workers|employees|investors|farmers|exporters|importers|banks|borrowers|savers|retirees|pensioners|students|young\\s+people|users|citizens|enforcement|implementation|timing|timeline|deadlines?|penalties|fines|costs?|prices|jobs|employment|wages|compliance|exemptions|risks|benefits|next\\s+steps)';
+const AUDIENCE_ELLIPSIS_EN = new RegExp(
+  `^(?:and\\s+|but\\s+)?(?:what|how)\\s+about\\s+(?:for\\s+)?(?:the\\s+)?${ELLIPSIS_TERMS_EN}(?:\\s*(?:,|and|or)\\s*(?:the\\s+)?${ELLIPSIS_TERMS_EN})*\\s*\\??$`,
+  'i',
+);
+const ELLIPSIS_TERMS_PL =
+  '(?:ma[łl]ymi\\s+)?(?:firmami|firmy|firm|przedsi[ęe]biorstwami|przedsi[ęe]biorstwa|konsumentami|konsumenci|konsument[óo]w|gospodarstwami\\s+domowymi|rodzinami|rodziny|pracownikami|pracownicy|inwestorami|inwestorzy|rolnikami|rolnicy|eksporterami|bankami|banki|kredytobiorcami|emerytami|emeryci|studentami|u[żz]ytkownikami|obywatelami|egzekwowaniem|egzekwowanie|wdro[żz]eniem|wdro[żz]enie|terminami|terminy|karami|kary|kosztami|koszty|cenami|ceny|zatrudnieniem|zatrudnienie|p[łl]acami|p[łl]ace)';
+const AUDIENCE_ELLIPSIS_PL = new RegExp(
+  `^(?:a\\s+)?(?:co\\s+z|jak\\s+z|a\\s+dla|dla)?\\s*${ELLIPSIS_TERMS_PL}(?:\\s*(?:,|i|oraz|lub)\\s*${ELLIPSIS_TERMS_PL})*\\s*\\??$`,
+  'iu',
+);
 
 /* The product itself: facts about it are not in any evidence channel. */
 const PRODUCT_SELF_REFERENCE =
@@ -106,7 +120,21 @@ export function deriveConversationSubject(priorQuestion: string): string | undef
   if (explanation !== undefined) return explanation;
 
   const derived = deriveGenericNewsQuery(base);
-  return derived.length > 0 && derived !== base ? derived : base;
+  if (derived.length > 0 && derived !== base) return derived;
+  /*
+    D.1 — no subject frame matched ("Why is inflation high in Poland?"). The
+    existing fallback reduction drops question/function words and keeps the
+    user's content words in order ("inflation high Poland"): still a span of
+    what they wrote, and a subject rather than a sentence.
+  */
+  if (looksPolish(base)) {
+    /* The same reduction with the closed Polish list: "inflacja Polsce wysoka". */
+    const kept = base
+      .split(/\s+/)
+      .filter((word) => word.length > 0 && !CONVERSATIONAL_FILLER_PL.has(word.toLowerCase()));
+    return kept.length > 0 ? kept.join(' ') : base;
+  }
+  return deriveFallbackNewsQuery(base) ?? base;
 }
 
 /** Deterministic disclosures for a continued subject. Codes only. */
@@ -114,4 +142,133 @@ export function deriveConversationSubjectDisclosures(
   followUp: string,
 ): ConversationSubjectDisclosure[] {
   return PRODUCT_SELF_REFERENCE.test(followUp) ? ['PRODUCT_APPLICABILITY_NOT_ESTABLISHED'] : [];
+}
+
+/*
+ * ── D.1 — THE CURRENT TURN'S EVIDENCE-BEARING MODIFIER ─────────────────────
+ *
+ * Retrieval meaning = INHERITED SUBJECT + CURRENT-TURN FOCUS, never the prior
+ * question alone and never a blind concatenation. The focus is what is left of
+ * the follow-up once everything that cannot bear on evidence is removed:
+ * anaphors ("this", "to"), question and function words (the existing
+ * FALLBACK_STOPWORDS authority plus the closed conversational list below),
+ * conversational framing ("should I be scared", "in general"), the product's
+ * own name (a question about GlobalNewsAI is disclosed, never searched), and
+ * words the inherited subject already carries. What remains are targets and
+ * aspects: "consumers", "businesses", "Poland", "prices", "enforcement".
+ */
+
+/* Conversational framing and affect: meaning for the reader, none for evidence. */
+const CONVERSATIONAL_FILLER = new Set([
+  'will', 'would', 'could', 'can', 'may', 'might', 'should', 'shall', 'must', 'does', 'do', 'did',
+  'has', 'have', 'had', 'i', 'we', 'you', 'your', 'my', 'our', 'it', 'its', 'they', 'them', 'their',
+  'there', 'then', 'also', 'else', 'so', 'very', 'really', 'actually', 'just', 'general', 'generally',
+  'overall', 'scared', 'afraid', 'worried', 'worry', 'concerned', 'fear', 'anything', 'something',
+  'everything', 'much', 'more', 'less', 'any', 'all', 'by', 'from', 'into', 'as', 'if', 'than',
+  'think', 'mean', 'means', 'please', 'explain', 'describe', 'still', 'too', 'which', 'whom', 'whose',
+  'matter', 'matters', 'mattering', 'affect', 'affects', 'affected', 'affecting', 'impact', 'impacts',
+  'effect', 'effects', 'influence', 'influences', 'consequence', 'consequences', 'implications',
+]);
+
+/* Polish function words, anaphors and framing, same closed discipline. */
+const CONVERSATIONAL_FILLER_PL = new Set([
+  'a', 'i', 'oraz', 'czy', 'jak', 'co', 'dlaczego', 'czemu', 'na', 'w', 'we', 'z', 'ze', 'o', 'do',
+  'dla', 'od', 'po', 'przez', 'się', 'sie', 'jest', 'są', 'sa', 'to', 'tego', 'tym', 'ten',
+  'ta', 'te', 'tej', 'temu', 'tę', 'mnie', 'mi', 'ja', 'my', 'nas', 'wpłynie', 'wplynie',
+  'wpływa', 'wplywa', 'wpływ', 'wplyw', 'wpływu', 'znaczenie', 'ma', 'mieć', 'może',
+  'moze', 'będzie', 'bedzie', 'ogólnie', 'ogolnie', 'bać', 'bac', 'powinienem',
+  'powinnam', 'naprawdę', 'skutki', 'skutek', 'konsekwencje',
+]);
+
+/* An aspect word keeps the meaning honest ("… impact") without joining the evidence match. */
+const ASPECT_WORDS = /^(?:matter|matters|affect|affects|affected|affecting|impacts?|effects?|influences?|consequences?|implications?|wp[łl]yw\w*|wp[łl]yn\w*|skutk\w*|konsekwencj\w*|znaczeni\w*)$/iu;
+
+const PRODUCT_TOKENS = /^(?:globalnewsai|platform\w*|app|aplikacj\w*|serwis\w*|site|website|service|product)$/iu;
+const PRODUCT_SELF_REFERENCE_ALL = new RegExp(PRODUCT_SELF_REFERENCE.source, 'giu');
+
+const tokenize = (text: string): string[] =>
+  text
+    .replace(PRODUCT_SELF_REFERENCE_ALL, ' ')
+    .split(/[^\p{L}\p{N}'’-]+/u)
+    .map((word) => word.replace(/^['’-]+|['’-]+$/g, ''))
+    .filter((word) => word.length > 0);
+
+/** A word's matching stem: plural endings off (EN), an inflection tail off (PL). */
+function stemOf(word: string): string {
+  const lower = word.toLowerCase();
+  if (/[ąćęłńóśźż]/u.test(lower) || !/^[a-z0-9'-]+$/.test(lower)) {
+    return lower.length > 5 ? lower.slice(0, lower.length - 3) : lower.slice(0, Math.max(4, lower.length - 1));
+  }
+  if (lower.endsWith('ies')) return lower.slice(0, -3);
+  if (lower.endsWith('sses') || lower.endsWith('shes') || lower.endsWith('ches')) return lower.slice(0, -2);
+  if (lower.endsWith('s') && !lower.endsWith('ss')) return lower.slice(0, -1);
+  return lower;
+}
+
+export interface FollowUpFocus {
+  /** Target words that must appear in a report for it to address the focus. */
+  readonly terms: readonly string[];
+  /** True when the follow-up asks about effect/impact/significance. */
+  readonly asksImpact: boolean;
+}
+
+export function deriveFollowUpFocus(followUp: string, inheritedSubject: string): FollowUpFocus {
+  const subjectStems = new Set(tokenize(inheritedSubject).map(stemOf));
+  const terms: string[] = [];
+  let asksImpact = false;
+
+  for (const word of tokenize(followUp)) {
+    const lower = word.toLowerCase();
+    if (ASPECT_WORDS.test(lower)) asksImpact = true;
+    if (
+      FALLBACK_STOPWORDS.has(lower) ||
+      CONVERSATIONAL_FILLER.has(lower) ||
+      CONVERSATIONAL_FILLER_PL.has(lower) ||
+      PRODUCT_TOKENS.test(lower) ||
+      subjectStems.has(stemOf(word)) ||
+      /^\p{N}+$/u.test(word) ||
+      word.length < 3
+    ) {
+      continue;
+    }
+    if (!terms.some((term) => stemOf(term) === stemOf(word))) terms.push(word);
+  }
+
+  return { terms, asksImpact };
+}
+
+/** The stated retrieval meaning: inherited subject + focus (+ "impact" when asked). */
+export function composeRetrievalMeaning(subject: string, focus: FollowUpFocus): string {
+  return [subject, ...focus.terms, ...(focus.asksImpact && focus.terms.length > 0 ? ['impact'] : [])].join(' ');
+}
+
+/** True when a report's own title or summary addresses at least one focus term. */
+export function addressesFocus(
+  article: { readonly title?: string; readonly summary?: string },
+  terms: readonly string[],
+): boolean {
+  if (terms.length === 0) return false;
+  const words = tokenize(`${article.title ?? ''} ${article.summary ?? ''}`).map((word) => word.toLowerCase());
+  return terms.some((term) => {
+    const stem = stemOf(term);
+    return words.some((word) => word.startsWith(stem));
+  });
+}
+
+/**
+ * Evidence reaches the model in this order: reports that address the focus
+ * first, the rest after, each group in its original order. Nothing is
+ * added or dropped here — the existing cap decides what is sent — so the
+ * focus changes WHICH subject evidence survives, never whether it is about
+ * the subject.
+ */
+export function orderByFocus<T extends { readonly title?: string; readonly summary?: string }>(
+  articles: readonly T[],
+  terms: readonly string[],
+): T[] {
+  if (terms.length === 0) return [...articles];
+  return [
+    ...articles.filter((article) => addressesFocus(article, terms)),
+    ...articles.filter((article) => !addressesFocus(article, terms)),
+  ];
 }

@@ -1229,6 +1229,16 @@ export function buildConversationSubjectInstruction(subject?: ConversationSubjec
     `- The question is a follow-up about: "${subject.subject}". Read "this", "it" and similar words in the question as referring to that subject. The evidence was retrieved for that subject.`,
     '- Answer the question exactly as the reader asked it. Nothing from an earlier answer is supplied, and nothing may be assumed from one.',
   ];
+  if (subject.focus.length > 0) {
+    lines.push(
+      `- Within that subject, the reader's current focus is: ${subject.focus.join(', ')}. Evidence addressing that focus is listed first. State what the evidence reports about it; an effect on it that no evidence item reports is analytical inference, never a reported fact.`,
+    );
+  }
+  if (subject.disclosures.includes('FOCUS_NOT_IN_EVIDENCE')) {
+    lines.push(
+      `- No evidence item addresses ${subject.focus.join(', ')} directly. Say so plainly, answer only from what the evidence reports about the subject itself, and do not present any effect on ${subject.focus.join(', ')} as established.`,
+    );
+  }
   if (subject.disclosures.includes('PRODUCT_APPLICABILITY_NOT_ESTABLISHED')) {
     lines.push(
       '- The reader asks how the subject applies to GlobalNewsAI itself. The evidence is external reporting about the subject; NO evidence item and NO supplied source describes GlobalNewsAI, its features, data practices, users, size, location or legal status.',

@@ -86,12 +86,26 @@ type AskPhase =
       question: string;
       response: AnalysisApiResponse;
       context: StoryContext | undefined;
-      /* TOPIC CONTINUITY R1 — the prior USER question this turn was sent with. */
-      prior?: string;
+      /*
+        TOPIC CONTINUITY R1 — USER TEXT ONLY: the reader's own earlier question
+        that established the subject this answer continued. Absent when the
+        answer continued nothing, so the next follow-up refers to THIS question.
+      */
+      subjectOrigin?: string;
     }
-  | { kind: 'failed'; question: string; message: string; prior?: string };
+  | { kind: 'failed'; question: string; message: string; subjectOrigin?: undefined };
 
 type SettledAskTurn = Extract<AskPhase, { kind: 'answered' | 'failed' }>;
+
+/**
+ * TOPIC CONTINUITY R1 — kept OUTSIDE the submit path on purpose: the only
+ * thing read from a response is whether the backend continued a subject, and
+ * the only thing returned is a question the READER typed (the one sent as
+ * priorQuestion). No answer text, source or evidence identity crosses here.
+ */
+function subjectOriginOf(response: AnalysisApiResponse, sentPrior: string | undefined): string | undefined {
+  return response.retrievalContext.conversationSubject !== undefined ? sentPrior : undefined;
+}
 
 interface AskAiDockProps {
   language?: LanguageCode;
@@ -272,24 +286,25 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
         that subject is sent again, so a chain ("…this…" → "What about
         businesses?") keeps its subject. "Start a new topic" sends none.
       */
-      const last: SettledAskTurn | undefined =
-        phase.kind === 'answered' || phase.kind === 'failed'
-          ? phase
+      const priorQuestion = topicReset
+        ? undefined
+        : phase.kind === 'answered' || phase.kind === 'failed'
+          ? (phase.subjectOrigin ?? phase.question)
           : history.length > 0
-            ? history[history.length - 1]
+            ? (history[history.length - 1].subjectOrigin ?? history[history.length - 1].question)
             : undefined;
-      const continuing =
-        last?.kind === 'answered' &&
-        last.response.retrievalContext.conversationSubject !== undefined &&
-        last.prior !== undefined;
-      const priorQuestion =
-        topicReset || last === undefined ? undefined : continuing ? last.prior : last.question;
       setTopicReset(false);
 
       analyzeNews(asked, language, sent, priorQuestion)
         .then((response) => {
           if (requestSeq.current !== seq) return;
-          setPhase({ kind: 'answered', question: asked, response, context: sent, prior: priorQuestion });
+          setPhase({
+            kind: 'answered',
+            question: asked,
+            response,
+            context: sent,
+            subjectOrigin: subjectOriginOf(response, priorQuestion),
+          });
         })
         .catch((error: unknown) => {
           if (requestSeq.current !== seq) return;
@@ -298,7 +313,6 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
             kind: 'failed',
             question: asked,
             message: resolveAnalysisErrorMessage(error, dictionary),
-            prior: priorQuestion,
           });
         });
     },

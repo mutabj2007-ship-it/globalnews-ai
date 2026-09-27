@@ -41,9 +41,13 @@ import {
   withoutAmbiguousCountryMentions,
 } from '../anchor/event-anchor.util';
 import {
+  addressesFocus,
+  composeRetrievalMeaning,
   deriveConversationSubject,
   deriveConversationSubjectDisclosures,
+  deriveFollowUpFocus,
   isSubjectFollowUp,
+  orderByFocus,
 } from '../anchor/conversation-subject.util';
 import { NewsService, readProviderFailures } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
@@ -2476,12 +2480,30 @@ export class AnalysisService {
           from the follow-up's own words.
         */
         if (continuedSubject !== undefined && retrievalContext.eventAnchor === undefined) {
+          /*
+            D.1 — INHERITED SUBJECT + CURRENT-TURN FOCUS. The subject decided
+            what was fetched (every gate unchanged); the follow-up's own
+            evidence-bearing words decide which of that evidence reaches the
+            model first, ahead of the cap. If none of it addresses the focus,
+            the answer says so rather than implying it does.
+          */
+          const focus = deriveFollowUpFocus(normalizedQuery, continuedSubject);
+          articles = orderByFocus(articles, focus.terms);
+          const focusUnaddressed =
+            focus.terms.length > 0 &&
+            articles.length > 0 &&
+            !articles.some((article) => addressesFocus(article, focus.terms));
           retrievalContext = {
             ...retrievalContext,
             conversationSubject: {
               subject: continuedSubject,
+              focus: focus.terms,
+              retrievalMeaning: composeRetrievalMeaning(continuedSubject, focus),
               source: 'prior-question',
-              disclosures: deriveConversationSubjectDisclosures(normalizedQuery),
+              disclosures: [
+                ...deriveConversationSubjectDisclosures(normalizedQuery),
+                ...(focusUnaddressed ? (['FOCUS_NOT_IN_EVIDENCE'] as const) : []),
+              ],
             },
           };
         }

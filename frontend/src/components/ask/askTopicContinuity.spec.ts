@@ -26,9 +26,34 @@ const render = (response: AnalysisApiResponse, language: 'en' | 'pl', extra: Rec
 
 const EU: ConversationSubjectAnchor = {
   subject: 'EU AI regulation',
+  focus: [],
+  retrievalMeaning: 'EU AI regulation',
   source: 'prior-question',
   disclosures: ['PRODUCT_APPLICABILITY_NOT_ESTABLISHED'],
 };
+
+describe('D.1 — the current focus, shown and disclosed', () => {
+  const POLAND: ConversationSubjectAnchor = {
+    subject: 'inflation high Poland',
+    focus: ['consumers'],
+    retrievalMeaning: 'inflation high Poland consumers impact',
+    source: 'prior-question',
+    disclosures: [],
+  };
+
+  it('the chip names the subject and the focus, never the retrieval plumbing', () => {
+    const html = render(withSubject(POLAND), 'en');
+    expect(html).toContain('Continuing: inflation high Poland · consumers');
+    expect(html).not.toContain('retrievalMeaning');
+    expect(html).not.toContain('data-ask="focus-not-in-evidence"');
+  });
+
+  it.each(['en', 'pl'] as const)('%s: an unaddressed focus is disclosed in the reader’s language', (language) => {
+    const html = render(withSubject({ ...POLAND, disclosures: ['FOCUS_NOT_IN_EVIDENCE'] }), language);
+    expect(html).toContain('data-ask="focus-not-in-evidence"');
+    expect(html).toContain(getDictionary(language).askAi.focusNotInEvidence.replace('{focus}', 'consumers'));
+  });
+});
 
 describe('the continued subject on the Ask dock', () => {
   it.each(['en', 'pl'] as const)('%s: "Continuing: …" and the product-applicability note', (language) => {
