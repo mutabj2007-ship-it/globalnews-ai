@@ -12,7 +12,7 @@ Base: release `30fd93637094041e9b046df7c6f68e7648c6e354`. Backend + shared only;
 
 | Field | Rule |
 |---|---|
-| `countryCode` | **Retrieval authority.** ISO alpha-2 or alpha-3 (`GEOGRAPHY_COUNTRY_CODE_PATTERN`). It must be the resolved country's own ISO code; a name, alias or unknown code is ignored, never guessed. |
+| `countryCode` | **Retrieval authority. R1.1:** it must be the ISO alpha-2 or alpha-3 code of a governed country in the shared `COUNTRIES` registry (`resolveGovernedCountryCode`). A 2-letter code is looked up only as alpha-2 and a 3-letter code only as alpha-3. Lower case is normalized to upper case (`pl` → `PL`). A name (`Poland`), an alias (`UK`), a numeric code (`616`) or an unknown code (`ZZ`, `ZZZ`) is a **400**. The service re-checks it and refuses too, so a supplied geography is never silently dropped. |
 | `displayName` | **Presentation only.** 1–`MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH` (100) characters. It is validated and then never read by retrieval, the cache key, the model prompt or history. |
 | anything else | Rejected with a 400 by the global `ValidationPipe` (`forbidNonWhitelisted`). No article, source, evidence, report or cluster ids. |
 

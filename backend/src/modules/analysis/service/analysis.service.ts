@@ -1,9 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   normalizeQuery,
   resolveServerBudgetMs,
   resolveLocationContext,
   resolveCountryByAnyIdentifier,
+  resolveGovernedCountryCode,
   resolveCountryByCity,
   resolveGeoTypo,
   type AnalysisApiResponse,
@@ -555,10 +556,23 @@ export class AnalysisService {
       location a country-only storyContext always seeded, so it is outranked
       by a typed place in the same way (see typedScopeOverridesStory). It is
       resolved here, once, because the cache key must know whether it applies.
+
+      R1.1 — NO SILENT FALLBACK. A supplied geography context must name a
+      governed country (the DTO already returns 400 for anything else); this
+      re-check means no caller can reach generic routing with a structured
+      geography the service quietly dropped. It is checked whenever supplied,
+      even when a selection or story context will outrank it.
     */
+    const governedGeographyCountry =
+      geographyContext !== undefined ? resolveGovernedCountryCode(geographyContext.countryCode) : undefined;
+    if (geographyContext !== undefined && governedGeographyCountry === undefined) {
+      throw new BadRequestException(
+        'geographyContext.countryCode must be the ISO alpha-2 or alpha-3 code of a governed country',
+      );
+    }
     const mapGeographyLocation: LocationContext | undefined =
-      selection === undefined && storyContext === undefined && geographyContext !== undefined
-        ? this.resolveGeographyContextLocation(geographyContext.countryCode)
+      selection === undefined && storyContext === undefined && governedGeographyCountry !== undefined
+        ? { country: governedGeographyCountry }
         : undefined;
 
     /**
@@ -4145,19 +4159,6 @@ export class AnalysisService {
     const country = resolveCountryByAnyIdentifier(countryCode.trim());
 
     return country ? { country } : undefined;
-  }
-
-  /**
-   * MAP ASK GEOGRAPHY CONTEXT R1 — stricter than resolveStoryContextLocation:
-   * the code must BE the resolved country's ISO alpha-2 or alpha-3 code, so a
-   * name or alias can never become the retrieval authority. Unresolvable
-   * codes return undefined and the request is routed as if none was sent.
-   */
-  private resolveGeographyContextLocation(countryCode: string): LocationContext | undefined {
-    const code = countryCode.trim().toUpperCase();
-    const country = resolveCountryByAnyIdentifier(code);
-
-    return country && (country.iso2 === code || country.iso3 === code) ? { country } : undefined;
   }
 
   private detectLocation(query: string): LocationContext | undefined {

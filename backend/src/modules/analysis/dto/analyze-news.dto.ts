@@ -10,15 +10,17 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateBy,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ARTICLE_REF_PATTERN,
   GEOGRAPHY_COUNTRY_CODE_PATTERN,
   MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH,
   MAX_SELECTED_STORIES,
   MULTI_STORY_ACTIONS,
+  resolveGovernedCountryCode,
   type LanguageCode,
   type MultiStoryAction,
 } from '@globalnews-ai/shared';
@@ -104,9 +106,24 @@ export class StoryContextDto {
  * alongside them.
  */
 export class GeographyContextDto {
-  /** The retrieval authority: an ISO alpha-2/alpha-3 code, never a name. */
+  /**
+   * The retrieval authority. R1.1: it must be the ISO alpha-2 or alpha-3 code
+   * of a GOVERNED country in the shared COUNTRIES registry, or the request is
+   * rejected with a 400 — a supplied geography is never silently dropped.
+   * Lower case is normalized deterministically to upper case (pl -> PL).
+   */
+  @Transform(({ value }) =>
+    typeof value === 'string' && GEOGRAPHY_COUNTRY_CODE_PATTERN.test(value) ? value.toUpperCase() : value,
+  )
   @IsString()
-  @Matches(GEOGRAPHY_COUNTRY_CODE_PATTERN)
+  @ValidateBy({
+    name: 'isGovernedCountryCode',
+    validator: {
+      validate: (value: unknown) => resolveGovernedCountryCode(value) !== undefined,
+      defaultMessage: () =>
+        'geographyContext.countryCode must be the ISO alpha-2 or alpha-3 code of a governed country',
+    },
+  })
   countryCode!: string;
 
   /** Presentation only — bounded here, never read by retrieval, cache or prompt. */

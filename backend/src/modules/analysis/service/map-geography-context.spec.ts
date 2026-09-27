@@ -1,10 +1,12 @@
 import { execSync } from 'child_process';
-import { ValidationPipe, type ArgumentMetadata } from '@nestjs/common';
+import { BadRequestException, ValidationPipe, type ArgumentMetadata } from '@nestjs/common';
 import type { AnalysisApiResponse, CountryNewsResponse, NewsArticle, NewsResponse } from '@globalnews-ai/shared';
 import {
   ANALYSIS_TOTAL_BUDGET_MS,
+  COUNTRIES,
   MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH,
   resolveCountryByAnyIdentifier,
+  resolveGovernedCountryCode,
 } from '@globalnews-ai/shared';
 
 import type { AnalysisProvider } from '../interfaces';
@@ -171,15 +173,58 @@ describe('the geography context is the map camera when no story is selected', ()
     expect(withGeo.countryCalls).not.toEqual(without.countryCalls);
   });
 
-  it('a code that does not resolve, or a name instead of a code, is ignored — never guessed', async () => {
-    for (const countryCode of ['ZZZ', 'XX']) {
+  it.each(['ZZZ', 'ZZ', 'Poland', 'UK', '616'])(
+    'R1.1 — no silent fallback: the service itself refuses an ungoverned code (%s) before any retrieval',
+    async (countryCode) => {
       const h = harness();
-      const response = await h.service.analyzeNews(OPEN_QUESTION, 'en', undefined, undefined, undefined, {
-        countryCode,
-        displayName: 'Nowhere',
-      });
+      await expect(
+        h.service.analyzeNews(OPEN_QUESTION, 'en', undefined, undefined, undefined, {
+          countryCode,
+          displayName: 'Nowhere',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(h.countryCalls).toEqual([]);
-      expect(response.retrievalContext?.geographyContextUsed).toBeUndefined();
+      expect(h.searchCalls).toEqual([]);
+      expect(h.provider.analyzeNews).not.toHaveBeenCalled();
+    },
+  );
+
+  it('R1.1 — an ungoverned code is refused even when a story context would outrank it', async () => {
+    const h = harness();
+    await expect(
+      h.service.analyzeNews(OPEN_QUESTION, 'en', { title: 't', countryCode: 'KEN' }, undefined, undefined, {
+        countryCode: 'ZZZ',
+        displayName: 'Nowhere',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(h.countryCalls).toEqual([]);
+  });
+});
+
+describe('R1.1 — the governed-country check reuses the shared COUNTRIES registry', () => {
+  it.each([
+    ['POL', 'POL'],
+    ['PL', 'POL'],
+    ['pol', 'POL'],
+    ['pl', 'POL'],
+    ['USA', 'USA'],
+  ])('%s resolves to the governed country %s', (code, iso3) => {
+    const governed = resolveGovernedCountryCode(code);
+    expect(governed?.iso3).toBe(iso3);
+    expect(COUNTRIES).toContain(governed);
+  });
+
+  it.each(['ZZZ', 'ZZ', 'Poland', 'poland', 'UK', 'Britain', '616', '', ' POL', 'POL ', 'P', 'POLA', 42, null, undefined])(
+    '%p does not resolve',
+    (code) => {
+      expect(resolveGovernedCountryCode(code)).toBeUndefined();
+    },
+  );
+
+  it('a two-letter code is only ever an ISO alpha-2 and a three-letter one only an ISO alpha-3', () => {
+    for (const country of COUNTRIES) {
+      expect(resolveGovernedCountryCode(country.iso2)).toBe(country);
+      expect(resolveGovernedCountryCode(country.iso3)).toBe(country);
     }
   });
 });
@@ -313,14 +358,44 @@ describe('the request contract: exactly { countryCode, displayName }', () => {
   );
 
   it.each([
-    ['a country name as the code', { countryCode: 'Poland', displayName: 'Poland' }],
-    ['a numeric code', { countryCode: '616', displayName: 'Poland' }],
+    ['POL', 'POL'],
+    ['PL', 'PL'],
+  ])('R1.1 — the governed code %s is accepted unchanged', async (countryCode, expected) => {
+    const dto = await accept({ query: OPEN_QUESTION, geographyContext: { countryCode, displayName: 'Poland' } });
+    expect(dto.geographyContext?.countryCode).toBe(expected);
+  });
+
+  it.each([
+    ['pol', 'POL'],
+    ['pl', 'PL'],
+  ])('R1.1 — PINNED: lower-case %s is accepted and normalized deterministically to %s', async (countryCode, expected) => {
+    const dto = await accept({ query: OPEN_QUESTION, geographyContext: { countryCode, displayName: 'Poland' } });
+    expect(dto.geographyContext?.countryCode).toBe(expected);
+  });
+
+  it.each([
+    ['an unknown alpha-3 (ZZZ)', 'ZZZ'],
+    ['an unknown alpha-2 (ZZ)', 'ZZ'],
+    ['a country name (Poland)', 'Poland'],
+    ['a numeric code (616)', '616'],
+    ['an alias (UK)', 'UK'],
+    ['an alias (Britain)', 'Britain'],
+    ['a padded code', ' POL'],
+  ])('R1.1 — rejects %s with a 400 naming countryCode', async (_label, countryCode) => {
+    const rejection = accept({ query: OPEN_QUESTION, geographyContext: { countryCode, displayName: 'Poland' } });
+    await expect(rejection).rejects.toBeInstanceOf(BadRequestException);
+    await expect(rejection).rejects.toMatchObject({
+      response: { message: expect.arrayContaining([expect.stringContaining('countryCode')]) },
+    });
+  });
+
+  it.each([
     ['a missing code', { displayName: 'Poland' }],
     ['a missing display name', { countryCode: 'POL' }],
     ['an empty display name', { countryCode: 'POL', displayName: '' }],
     ['an over-long display name', { countryCode: 'POL', displayName: 'P'.repeat(MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH + 1) }],
   ])('rejects %s', async (_label, geographyContext) => {
-    await expect(accept({ query: OPEN_QUESTION, geographyContext })).rejects.toThrow();
+    await expect(accept({ query: OPEN_QUESTION, geographyContext })).rejects.toBeInstanceOf(BadRequestException);
   });
 });
 
