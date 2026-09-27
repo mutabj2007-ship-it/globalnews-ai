@@ -326,6 +326,14 @@ describe('§9 story images: the story’s own image, or an honest fallback', () 
     expect(text(slot)).toBe(getDictionary('en').myIntelligence.saved.noImage);
   });
 
+  it('the desktop card image slot FILLS its header (no relative/absolute conflict collapsing it)', () => {
+    const View = views.SavedCard as unknown as (props: Record<string, unknown>) => JSX.Element;
+    mount(createElement(View, { ...common, story: story('https://example.com/a.jpg') }));
+    const slot = byData('data-mi-story-image', 'present')[0];
+    expect(slot.props.className).toContain('h-full w-full');
+    expect(slot.props.className).not.toMatch(/\babsolute\b/);
+  });
+
   it('a failed image is hidden, revealing the fallback', () => {
     const style: Record<string, string> = {};
     views.hideFailedStoryImage({ currentTarget: { style } } as never);

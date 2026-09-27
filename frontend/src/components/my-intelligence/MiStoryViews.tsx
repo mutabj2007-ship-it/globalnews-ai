@@ -285,7 +285,7 @@ export function SavedCard(props: CommonProps & { reason?: string }): JSX.Element
         <StoryImage
           story={story}
           fallback={t.saved.noImage}
-          className="absolute inset-0 flex items-center justify-center"
+          className="flex h-full w-full items-center justify-center"
           fallbackClassName="px-3 text-center"
         />
         {selecting && (
