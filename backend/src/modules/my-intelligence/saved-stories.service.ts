@@ -81,7 +81,10 @@ export class SavedStoriesService {
       where: { userId_articleRef: { userId, articleRef } },
     });
     /* Idempotent: a repeat save returns the story already saved, unchanged. */
-    if (existing) return toView(existing);
+    if (existing) {
+      const retained = await this.articles.findRetainedByUrl(existing.sourceUrl);
+      return toView(existing, retained?.article.firstSeenAt);
+    }
 
     const record = await this.resolveRetained(url, providerArticleId, articleRef);
     if (!record) {

@@ -1,5 +1,5 @@
 import { ANALYSIS_CLIENT_TIMEOUT_MS } from '@globalnews-ai/shared';
-import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, AnalysisSelection, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { resolveAccountApiBase } from './accountBase';
 
 /*
@@ -187,6 +187,8 @@ export function analyzeNews(
    */
   storyContext?: StoryContext,
   priorQuestion?: string,
+  /** MY INTELLIGENCE R1 — optional multi-story selection; absent for every existing caller. */
+  selection?: AnalysisSelection,
 ): Promise<AnalysisApiResponse> {
   /**
    * Milestone #51 Phase B (CTO final correction): prefers
@@ -205,14 +207,17 @@ export function analyzeNews(
       ? `:story:${storyContext.countryCode.toLowerCase()}`
       : '';
   const priorKeySegment = priorQuestion ? `:prior:${priorQuestion.trim()}` : '';
-  const key = `${requestedLanguage}:${query.trim()}${storyAnchorKeySegment}${priorKeySegment}`;
+  const selectionKeySegment = selection
+    ? `:selection:${selection.action}:${selection.stories.map((story) => story.articleRef).join(',')}`
+    : '';
+  const key = `${requestedLanguage}:${query.trim()}${storyAnchorKeySegment}${priorKeySegment}${selectionKeySegment}`;
 
   const existing = inFlightAnalysisRequests.get(key);
   if (existing) {
     return existing;
   }
 
-  const request = performAnalyzeNews(query, requestedLanguage, storyContext, priorQuestion).finally(() => {
+  const request = performAnalyzeNews(query, requestedLanguage, storyContext, priorQuestion, selection).finally(() => {
     // Only delete this key's entry if it still points at THIS promise.
     // Guards against a theoretical race where an older, already-
     // resolved request's cleanup could otherwise delete a NEWER
@@ -264,6 +269,7 @@ async function performAnalyzeNews(
   requestedLanguage: LanguageCode,
   storyContext?: StoryContext,
   priorQuestion?: string,
+  selection?: AnalysisSelection,
 ): Promise<AnalysisApiResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -301,6 +307,7 @@ async function performAnalyzeNews(
         requestedLanguage,
         ...(storyContext ? { storyContext } : {}),
         ...(priorQuestion ? { priorQuestion } : {}),
+        ...(selection ? { selection } : {}),
       }),
       cache: 'no-store',
       signal: controller.signal,
