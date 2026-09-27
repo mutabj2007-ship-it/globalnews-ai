@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { railLayers, type LayerDefinition } from '@/lib/map/layers/layerRegistry';
 import {
   GRATICULE_RAIL_KEY,
@@ -61,23 +62,66 @@ export interface LayersControlProps {
    * about scale, and inventing one would be worse than staying quiet.
    */
   readonly zoom?: number;
+  /**
+   * MAP / SPATIAL VISUAL CONVERGENCE R2 — D1 §3d names Layers a CONTROL beside
+   * the globe locator and 3D, not a standing panel. Collapsible, it is one
+   * 44px control and the rows open above it on demand; the always-open list
+   * was taller than the map's lower third and collided with the legend and
+   * the precision banner. Absent, the component renders exactly as before.
+   */
+  readonly collapsible?: boolean;
 }
 
-export function LayersControl({
+export function LayersControl(props: LayersControlProps): JSX.Element {
+  const [open, setOpen] = useState(false);
+
+  if (props.collapsible !== true) return <LayerPanel {...props} />;
+
+  const onCount = (props.layers ?? railLayers()).filter(
+    (layer) => layer.runtime === 'LIVE' && props.state[layer.id] === true,
+  ).length;
+
+  return (
+    <div data-gn-control="layers" data-gn-cluster="lower-left" data-gn-layers-open={open ? 'true' : 'false'} className="flex flex-col-reverse items-start gap-2">
+      <button
+        type="button"
+        data-gn="layers-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((was) => !was)}
+        className={`flex h-11 items-center gap-2 rounded-[9px] border bg-[rgba(5,8,13,0.86)] px-3 font-gn-mono text-[11px] uppercase tracking-[0.12em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gn-focus ${
+          open
+            ? 'border-[rgba(34,211,238,0.55)] text-sp-cyan'
+            : 'border-[#22303f] text-[#a9bccf] hover:border-[rgba(34,211,238,0.55)]'
+        }`}
+      >
+        <span aria-hidden="true" className="inline-block h-[9px] w-[9px] rotate-45 border border-current" />
+        {props.labels.title}
+        <span aria-hidden="true" className="text-[#54687f]">{onCount}</span>
+      </button>
+      {open && (
+        <div data-gn="layers-popover" className="w-[272px]">
+          <LayerPanel {...props} embedded />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LayerPanel({
   state,
   labels,
   onToggle,
   layers,
   zoom,
-}: LayersControlProps): JSX.Element {
+  embedded = false,
+}: LayersControlProps & { readonly embedded?: boolean }): JSX.Element {
   const rows = layers ?? railLayers();
 
   return (
     <section
-      data-gn-control="layers"
-      data-gn-cluster="lower-left"
+      {...(embedded ? {} : { 'data-gn-control': 'layers', 'data-gn-cluster': 'lower-left' })}
       aria-label={labels.title}
-      className="rounded-[9px] border border-[#22303f] bg-[rgba(5,8,13,0.86)] p-2"
+      className="rounded-[9px] border border-[#22303f] bg-[rgba(5,8,13,0.94)] p-2"
     >
       <h2 className="px-1 pb-1 font-gn-mono text-[11px] uppercase tracking-[0.16em] text-[#54687f]">
         {labels.title}

@@ -379,6 +379,33 @@ const EMPTY_FILTERS: ReadonlySet<NewsCategory> = new Set<NewsCategory>();
 const formatAgeHours = (hours: number): string =>
   hours < 1 ? '<1H' : hours < 48 ? `${Math.round(hours)}H` : `${Math.round(hours / 24)}D`;
 
+/**
+ * MAP / SPATIAL VISUAL CONVERGENCE R2 FINAL — THE STATEMENT AND THE LIST
+ * CANNOT CONTRADICT EACH OTHER.
+ *
+ * MEASURED: after a successful Load on a country with no RETAINED map
+ * evidence, the rail said "No retained evidence for this area" directly above
+ * the reporting the reader had just retrieved.
+ *
+ * The statement is shown while it is the reader's whole answer:
+ *   not loaded (or loading) + nothing retained  → shown, truthfully
+ *   READY_NO_COVERAGE (checked, nothing found)  → shown, with the governed
+ *                                                 no-coverage line below it
+ *   FAILED                                      → shown, with the governed
+ *                                                 failure line below it
+ *   READY with one or more retrieved items      → NOT shown; the retrieved
+ *                                                 reporting is the answer
+ *
+ * The country-read block keeps its own governed copy in every state; only the
+ * no-retained statement yields, and only to a list that actually exists.
+ */
+export function showsNoRetainedEvidenceStatement(
+  countryReadState: CountryReadState | undefined,
+  retrievedItemCount: number,
+): boolean {
+  return !(countryReadState === 'READY' && retrievedItemCount > 0);
+}
+
 export function EvidenceSelectionCard({
   displayName,
   total,
@@ -803,10 +830,17 @@ export function EvidenceSelectionCard({
     to the honest no-evidence card AND STILL EXPOSE THE FOLLOW CONTROL."
   */
   if (total === undefined || total.recordCount === 0) {
+    const noRetainedStatement = showsNoRetainedEvidenceStatement(countryReadState, items?.length ?? 0);
+
     return (
-      <div data-gn="evidence-selection-card" data-gn-state="no-evidence" className={className}>
+      <div
+        data-gn="evidence-selection-card"
+        data-gn-state={noRetainedStatement ? 'no-evidence' : 'retrieved'}
+        className={className}
+      >
         {header}
         {providerBlock}
+        {noRetainedStatement && (
         <Section gn="card-no-evidence">
           <div className="border border-sp-muted/40 bg-sp-muted/[0.08] px-[10px] py-[8px]">
             <p className="font-gn-mono text-[9px] uppercase tracking-[0.14em] text-sp-muted">
@@ -817,6 +851,7 @@ export function EvidenceSelectionCard({
             </p>
           </div>
         </Section>
+        )}
         {watchBlock}
         {followBlock}
         {countryReadBlock}

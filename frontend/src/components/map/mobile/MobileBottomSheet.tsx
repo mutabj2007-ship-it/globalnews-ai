@@ -95,6 +95,18 @@ export interface MobileBottomSheetProps {
   readonly workspaceHeight?: number;
   /** Where the sheet's bottom edge sits above the viewport bottom — the visible nav block. */
   readonly bottomOffset?: number;
+  /**
+   * MAP / SPATIAL VISUAL CONVERGENCE R2 — the handle stops costing a 44px ROW.
+   *
+   * It keeps its 44px touch target, but as a centred grip that straddles the
+   * sheet's top edge (12px above it, 32px into it) rather than a full-width
+   * band above the content. At PEEK that band was 44 of the sheet's 148px, so
+   * the compact country state could not fit its identity, reporting state and
+   * one primary action. Content now starts 18px down, under the grip's lower
+   * half, and controls in it stack above the grip. Absent (the Conflict
+   * surface), the accepted full-width handle is unchanged.
+   */
+  readonly overlapHandle?: boolean;
   readonly stop: SheetStop;
   readonly onStopChange: (stop: SheetStop) => void;
   readonly labels: MobileBottomSheetLabels;
@@ -148,6 +160,7 @@ export function MobileBottomSheet({
   geometry = SPATIAL_DETENTS,
   workspaceHeight,
   bottomOffset = 0,
+  overlapHandle = false,
   onStopChange,
   labels,
   children,
@@ -315,7 +328,11 @@ export function MobileBottomSheet({
           The 44 px height is the touch target; the 4 px bar inside it is only
           what the target looks like.
         */
-        className="flex h-[44px] w-full shrink-0 cursor-grab touch-none items-center justify-center outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-sp-cyan active:cursor-grabbing"
+        className={`${
+          overlapHandle
+            ? 'absolute left-1/2 top-[-12px] z-[5] h-[44px] w-[112px] -translate-x-1/2 items-start pt-[17px]'
+            : 'h-[44px] w-full shrink-0 items-center'
+        } flex cursor-grab touch-none justify-center outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-sp-cyan active:cursor-grabbing`}
       >
         <span aria-hidden="true" className="h-[4px] w-[44px] rounded-full bg-sp-line-2" />
       </button>
@@ -327,7 +344,7 @@ export function MobileBottomSheet({
           flick at the end of the list from scrolling the page behind it, which
           on a phone reads as the whole app coming loose.
         */
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[14px] pb-[18px]"
+        className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-[14px] ${overlapHandle ? 'pb-[10px] pt-[18px]' : 'pb-[18px]'}`}
       >
         {children}
       </div>

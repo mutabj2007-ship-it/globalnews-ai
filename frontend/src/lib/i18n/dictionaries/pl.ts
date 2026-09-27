@@ -71,6 +71,8 @@ export const pl: Dictionary = {
   askAi: {
     launcher: 'Zapytaj AI',
     askingAboutGeography: 'Pytasz o: {place}',
+    geographyBasis: 'Geografia kraju · bez dołączonych dowodów',
+    mapComputeNotice: 'Uruchamia analizę AI. Nic nie zostanie wysłane, dopóki nie naciśniesz Wyślij.',
     title: 'Zapytaj GlobalNews AI',
     panelLabel: 'Zapytaj GlobalNews AI',
     close: 'Zamknij',
@@ -1418,6 +1420,9 @@ export const pl: Dictionary = {
         stops: { PEEK: 'Podgl\u0105d', HALF: 'Po\u0142owa', FULL: 'Pe\u0142ny' },
         noSelection: 'Wyszukaj miejsce powy\u017cej lub dotknij kraju na mapie, aby zobaczy\u0107, co jest tam zachowane.',
         clearSelection: 'Wyczy\u015b\u0107 wyb\u00f3r',
+        askAbout: 'Zapytaj o kraj: {country}',
+        newShort: 'nowe',
+        stagingNote: '\u201eZapytaj\u201d i \u201eOtw\u00f3rz analiz\u0119\u201d dodaj\u0105 ten kraj jako kontekst. Nic nie dzia\u0142a, dop\u00f3ki nie naci\u015bniesz Wy\u015blij lub Uruchom.',
         searchAlternative: 'Kraj mo\u017cesz te\u017c znale\u017a\u0107, wpisuj\u0105c jego nazw\u0119 w polu wyszukiwania powy\u017cej; mapa nie jest jedyn\u0105 drog\u0105.',
         a11yNote: 'Interaktywna mapa \u015bwiata wype\u0142nia ten ekran. Przeci\u0105gnij, aby przesun\u0105\u0107, zbli\u017c palce, aby powi\u0119kszy\u0107, dotknij kraju, aby go wybra\u0107. Nie musisz jej u\u017cywa\u0107 \u2014 pole wyszukiwania znajdzie i wybierze ka\u017cdy obs\u0142ugiwany kraj po nazwie, z pe\u0142n\u0105 obs\u0142ug\u0105 klawiatury.',
       },

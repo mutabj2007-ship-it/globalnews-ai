@@ -22,6 +22,11 @@
  *   HALF = floor(0.52 × A)
  *   FULL = floor(0.74 × A), with the nav hidden FIRST and A recomputed
  *
+ * CLOSED — CTO / Product Owner, Map / Spatial Visual Convergence R2 final:
+ * these are the authoritative MAP detents, with the ≈26% map floor. The
+ * Spatial v1.7 / R5.1 figures (54px / 50% / 90%) are not used for the Map;
+ * the Conflict sheet keeps its own separately governed geometry.
+ *
  * The nav is visible at PEEK and HALF and hidden at FULL and whenever the
  * keyboard is open. Because visibility is derived from the detent in the same
  * computation that derives A, a FULL transition settles in the ruled order —
