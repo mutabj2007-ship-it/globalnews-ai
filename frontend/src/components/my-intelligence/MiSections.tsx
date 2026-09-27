@@ -205,7 +205,7 @@ export function SavedSection({
               />
             ))}
           </ul>
-          <ul className="mt-3 hidden gap-3 md:grid md:grid-cols-2 min-[1700px]:grid-cols-3">
+          <ul className="mt-3 hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             {stories.map((story) => (
               <SavedCard
                 key={story.id}
@@ -242,7 +242,7 @@ export function ForYouSection({
       {stories.length === 0 ? (
         <p className="mt-3 text-[13px] text-[#7d92aa]">{t.forYou.empty}</p>
       ) : (
-        <ul className="mt-3 grid gap-3 md:grid-cols-2 min-[1700px]:grid-cols-3">
+        <ul className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
           {stories.map((story) => {
             const country = findCountryByIso3(story.countryCode);
             const name =
