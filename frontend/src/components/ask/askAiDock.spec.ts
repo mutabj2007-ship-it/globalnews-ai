@@ -379,12 +379,15 @@ describe('ELASTIC COMPOSER R2 — long pasted questions stay readable', () => {
     expect(adaptive).toContain('gn-adaptive-textarea');
     expect(globals).toContain('.gn-adaptive-textarea::-webkit-scrollbar');
     expect(globals).toContain('scrollbar-width: none');
-    expect(adaptive).toContain("node.style.overflowY = contentHeight > ceiling ? 'auto' : 'hidden'");
+    /* COMPOSER GEOMETRY R1 — the same rule, now in the extracted pure helper. */
+    expect(adaptive).toContain("overflowY: input.contentHeight > ceiling ? 'auto' : 'hidden'");
+    expect(adaptive).toContain('node.style.overflowY = overflowY');
   });
 
   it('gives each free-form composer a meaningful elastic ceiling', () => {
     expect(hero).toContain('maxHeight={280}');
-    expect(search).toContain('maxHeight={460}');
+    /* COMPOSER GEOMETRY R1 — Search's bounded ceiling lives in searchComposerGeometry.ts. */
+    expect(search).toContain('maxHeight={SEARCH_COMPOSER_GEOMETRY.maxHeight}');
     expect(askParts).toContain('maxHeight={420}');
     expect(CODE).toContain('maxHeight={420}');
   });

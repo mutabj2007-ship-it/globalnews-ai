@@ -21,6 +21,7 @@ import { resolveStoryTitle, usePublishStoryContext } from '@/lib/ask/storyContex
 import { resolveInitialLanguage } from '@/lib/i18n/languages';
 import { getDictionary, type Dictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
+import { SEARCH_COMPOSER_GEOMETRY } from './searchComposerGeometry';
 
 interface SearchPageClientProps {
   /**
@@ -505,7 +506,13 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
             role="search"
             aria-label={dictionary.searchWorkspaceAriaLabel}
             onSubmit={handleWorkspaceSubmit}
-            className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-end"
+            /*
+              COMPOSER GEOMETRY R1 — Analyze sits BESIDE the composer at every
+              width, bottom-aligned. Stacked below it on phones, the control
+              was pushed down by every line and could fall behind the software
+              keyboard, which keepVisible only clears for the textarea itself.
+            */
+            className="mt-6 flex flex-row items-end gap-2 sm:gap-3"
           >
             <label className="sr-only" htmlFor="search-workspace-question">
               {dictionary.searchWorkspaceAriaLabel}
@@ -517,9 +524,9 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
               onChange={(event) => setWorkspaceQuery(event.target.value)}
               placeholder={dictionary.searchWorkspacePlaceholder}
               maxLength={1000}
-              minHeight={48}
-              maxHeight={460}
-              maxViewportFraction={0.56}
+              minHeight={SEARCH_COMPOSER_GEOMETRY.minHeight}
+              maxHeight={SEARCH_COMPOSER_GEOMETRY.maxHeight}
+              maxViewportFraction={SEARCH_COMPOSER_GEOMETRY.maxViewportFraction}
               keepVisible
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
@@ -527,11 +534,11 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
                   event.currentTarget.form?.requestSubmit();
                 }
               }}
-              className="w-full flex-1 rounded-2xl border border-border bg-surface px-4 py-3 text-sm leading-6 text-ink-primary placeholder:text-ink-tertiary focus:border-cyan-400 focus:outline-none"
+              className="w-full min-w-0 flex-1 rounded-2xl border border-border bg-surface px-4 py-3 text-sm leading-6 text-ink-primary placeholder:text-ink-tertiary focus:border-cyan-400 focus:outline-none"
             />
             <button
               type="submit"
-              className="rounded-2xl bg-gradient-to-b from-[#2563eb] to-[#1d4ed8] px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className="min-h-[48px] shrink-0 rounded-2xl bg-gradient-to-b from-[#2563eb] to-[#1d4ed8] px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:px-6"
             >
               {dictionary.searchWorkspaceSubmitLabel}
             </button>
