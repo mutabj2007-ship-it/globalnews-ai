@@ -1,3 +1,4 @@
+import type { SummaryStatement } from './summary-statements';
 import type {
   NewsArticle,
   NewsDataMode,
@@ -701,6 +702,17 @@ export interface NewsAnalysisResult {
    * it. A freshly produced analysis always carries it.
    */
   briefState?: ExecutiveBriefState;
+
+  /**
+   * ASK INLINE EVIDENCE CITATIONS R1 — the summary, annotated. Each entry is
+   * an exact span of `summary` with its kind and, for reported kinds only, the
+   * article ids validated for that span. See summary-statements.ts.
+   *
+   * OPTIONAL AND ADDITIVE. Absent or empty means "no annotation" and readers
+   * render `summary` exactly as before. Always empty when the brief is
+   * withheld, because there is then no summary to annotate.
+   */
+  summaryStatements?: SummaryStatement[];
 }
 
 /**

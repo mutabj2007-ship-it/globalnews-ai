@@ -532,3 +532,131 @@ describe('preserved contracts', () => {
     expect(r.retrievalContext.eventAnchor?.disclosures).toContain('CROSS_BORDER_NOT_ESTABLISHED');
   });
 });
+
+/**
+ * ASK INLINE EVIDENCE CITATIONS + INFERENCE LABEL R1 — the same two turns, now
+ * with the model annotating its brief. The annotation below reproduces the live
+ * Alpha failure: speculation written (and even annotated) as fact, and wider
+ * implications with no label at all.
+ */
+describe('INLINE CITATIONS R1 — the exact two-turn Congo conversation', () => {
+  type Line = readonly [text: string, kind: string, articleIds: readonly string[]];
+
+  function annotating(lines: readonly Line[], extra?: (raw: Record<string, unknown>, ids: Map<string, string>, input: AnalysisProviderInput) => void) {
+    return (raw: Record<string, unknown>, input: AnalysisProviderInput) => {
+      const ids = new Map(
+        buildEvidenceReferences(input.articles).map((ref) => [ref.articleId, ref.evidenceId]),
+      );
+      raw.summary = lines.map(([text]) => text).join(' ');
+      raw.summaryStatements = lines.map(([text, kind, articleIds]) => ({
+        text,
+        kind,
+        evidenceIds: articleIds.map((id) => ids.get(id) ?? id),
+      }));
+      extra?.(raw, ids, input);
+    };
+  }
+
+  it('Turn 1: reported sentences carry their validated sources; the speculation is labelled inference', async () => {
+    const h = harness(
+      [...CRASH, EBOLA, MINE],
+      annotating([
+        ['A military plane crashed near Goma, killing senior officers.', 'REPORTED_FACT', ['crash-1', 'crash-3']],
+        ['The exact cause remains under investigation.', 'REPORTED_FACT', ['crash-2', 'crash-4']],
+        ['The deaths could potentially affect military operations in the east.', 'REPORTED_FACT', ['crash-1']],
+      ]),
+    );
+    const r = await h.service.analyzeNews(T1, 'en');
+
+    expect(h.provider.analyzeNews).toHaveBeenCalledTimes(1);
+    /* crash-1 is deduplicated away before the model: it was never shown, so it can never be cited. */
+    expect(h.providerInputs[0].articles.map((x) => x.id)).not.toContain('crash-1');
+    const analysis = r.analysis!;
+    expect(analysis.briefState?.availability).toBe('accepted');
+    expect(analysis.summaryStatements).toEqual([
+      { text: 'A military plane crashed near Goma, killing senior officers.', kind: 'REPORTED_FACT', sourceArticleIds: ['crash-3'] },
+      { text: 'The exact cause remains under investigation.', kind: 'REPORTED_FACT', sourceArticleIds: ['crash-2', 'crash-4'] },
+      { text: 'The deaths could potentially affect military operations in the east.', kind: 'ANALYTICAL_INFERENCE', sourceArticleIds: [] },
+    ]);
+    /* Every cited id is a source the reader is shown. */
+    const sourceIds = new Set(analysis.sources.map((s) => s.articleId));
+    for (const s of analysis.summaryStatements ?? []) {
+      for (const id of s.sourceArticleIds) expect(sourceIds.has(id)).toBe(true);
+    }
+  });
+
+  it('Turn 2: context-cited consequence is not established; unlabelled implication is labelled; impacts stay reported-only', async () => {
+    const h = harness(
+      [...CRASH, EBOLA, MINE],
+      annotating(
+        [
+          ['The available reporting does not yet establish a direct impact on neighbouring countries from the plane crash itself.', 'REPORTED_FACT', []],
+          ['Neighbouring countries are on alert.', 'REPORTED_CONSEQUENCE', ['ebola-1']],
+          ['Senior army commanders were among the dead.', 'REPORTED_FACT', ['crash-1', 'crash-2']],
+          ['It may have indirect implications for regional security.', 'ANALYTICAL_INFERENCE', []],
+        ],
+        (raw, ids, input) => {
+          const crash = input.articles.find((x) => x.id === 'crash-1')!;
+          const claim = (text: string) => ({
+            claim: text,
+            evidenceIds: [ids.get('crash-1')],
+            evidenceBasis: { evidenceId: ids.get('crash-1'), excerpt: crash.title },
+            relationshipAssessmentIds: [],
+          });
+          raw.spilloverImplications = [claim('The crash could weaken regional security.')];
+          raw.immediateImpacts = [claim('Senior officers were killed.')];
+        },
+      ),
+    );
+    const r = await h.service.analyzeNews(T2, 'en', COD_CONTEXT, T1);
+
+    expect(h.provider.analyzeNews).toHaveBeenCalledTimes(1);
+    const analysis = r.analysis!;
+    expect(analysis.summaryStatements).toEqual([
+      { text: 'Neighbouring countries are on alert.', kind: 'UNSUPPORTED', sourceArticleIds: [] },
+      { text: 'Senior army commanders were among the dead.', kind: 'REPORTED_FACT', sourceArticleIds: ['crash-1', 'crash-2'] },
+      { text: 'It may have indirect implications for regional security.', kind: 'ANALYTICAL_INFERENCE', sourceArticleIds: [] },
+    ]);
+    /* Inference never enters the impact dimensions. */
+    expect(analysis.spilloverImplications).toEqual([]);
+    expect(analysis.immediateImpacts.map((c) => c.claim)).toEqual(['Senior officers were killed.']);
+    /* PR #42 provenance truth is untouched. */
+    expect(r.retrievalContext.eventAnchor?.disclosures).toEqual(
+      expect.arrayContaining(['CROSS_BORDER_NOT_ESTABLISHED', 'CAUSE_NOT_ESTABLISHED', 'CONTEXT_SEPARATED']),
+    );
+  });
+
+  it('prior AI prose is never sent back: Turn 2 carries only the prior USER question', async () => {
+    const h = harness(
+      [...CRASH, EBOLA, MINE],
+      annotating([['A military plane crashed near Goma.', 'REPORTED_FACT', ['crash-1']]]),
+    );
+    const first = await h.service.analyzeNews(T1, 'en');
+    await h.service.analyzeNews(T2, 'en', COD_CONTEXT, T1);
+    expect(h.provider.analyzeNews).toHaveBeenCalledTimes(2);
+    const prompt = promptFor(h.providerInputs[1]);
+    expect(`${prompt.system}\n${prompt.user}`).not.toContain(first.analysis!.summary);
+  });
+
+  it('context-only (Anchoring R1) and zero evidence still spend no provider call', async () => {
+    const h = harness([MINE]);
+    const r = await h.service.analyzeNews(T2, 'en', undefined, T1);
+    expect(h.provider.analyzeNews).not.toHaveBeenCalled();
+    expect(r.analysis).toBeNull();
+  });
+
+  it('PL: Polish speculation in the brief is labelled inference', async () => {
+    const h = harness(
+      [...CRASH, EBOLA],
+      annotating([
+        ['Samolot wojskowy rozbił się w pobliżu Gomy.', 'REPORTED_FACT', ['crash-1']],
+        ['Śmierć dowódców może wpłynąć na operacje wojskowe.', 'REPORTED_FACT', ['crash-2']],
+      ]),
+    );
+    const r = await h.service.analyzeNews('Czy to wpływa na sąsiednie kraje?', 'pl', COD_CONTEXT, T1);
+    expect(r.analysis!.summaryStatements?.map((s) => s.kind)).toEqual([
+      'REPORTED_FACT',
+      'ANALYTICAL_INFERENCE',
+    ]);
+  });
+});

@@ -136,8 +136,10 @@ describe('relational answers lead with the backend-authoritative conclusion', ()
     const compact = readFileSync(join(__dirname, 'AskCompactResult.tsx'), 'utf8');
     expect(compact).toContain('data-ask="relational-answer"');
     expect(compact).toContain('analysis.relationalComposition.summary');
+    /* INLINE CITATIONS R1 — the brief (data-ask="brief") is now rendered by AskCitedBrief. */
+    expect(compact.indexOf('<AskCitedBrief')).toBeGreaterThan(0);
     expect(compact.indexOf('data-ask="relational-answer"')).toBeLessThan(
-      compact.indexOf('data-ask="brief"'),
+      compact.indexOf('<AskCitedBrief'),
     );
   });
 
