@@ -50,6 +50,15 @@ import { AskCitedBrief, citedSourceNumbers } from './AskCitedBrief';
  */
 export const COMPACT_SOURCE_LIMIT = 4;
 
+/**
+ * TOPIC CONTINUITY R1 D.1 — the reader's own focus words as one localized list
+ * ("consumers and prices" / "konsumenci i ceny"). Wording only: each item is a
+ * word the reader typed, and nothing is composed from analysis dimensions.
+ */
+function formatFocus(focus: readonly string[], language: LanguageCode): string {
+  return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(focus);
+}
+
 interface AskCompactResultProps {
   readonly response: AnalysisApiResponse;
   readonly question: string;
@@ -61,6 +70,12 @@ interface AskCompactResultProps {
    * already be something else.
    */
   readonly context: StoryContext | undefined;
+  /**
+   * TOPIC CONTINUITY R1 — drop the continued subject for the NEXT question.
+   * Display state only: pressing it sends nothing. Omitted on past turns.
+   */
+  readonly onStartNewTopic?: () => void;
+  readonly newTopicStarted?: boolean;
 }
 
 export function AskCompactResult({
@@ -68,6 +83,8 @@ export function AskCompactResult({
   question,
   language = 'en',
   context,
+  onStartNewTopic,
+  newTopicStarted = false,
 }: AskCompactResultProps): JSX.Element {
   const dictionary = getDictionary(language);
   const t = dictionary.askAi;
@@ -172,6 +189,54 @@ export function AskCompactResult({
             )}
           </ul>
         </section>
+      ) : null}
+
+      {response.retrievalContext.conversationSubject ? (
+        /*
+          TOPIC CONTINUITY R1 — visible and reversible. The subject is a span of
+          the reader's own earlier question; the note is backend codes worded here.
+        */
+        <div data-ask="continuing" className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              data-ask="continuing-subject"
+              className="rounded-full border border-border-strong px-2.5 py-0.5 text-xs text-ink-secondary"
+            >
+              {t.continuingSubject.replace('{subject}', response.retrievalContext.conversationSubject.subject)}
+              {/* D.1 — the current turn's focus, in the reader's own words. */}
+              {(response.retrievalContext.conversationSubject.focus ?? []).length > 0
+                ? ` · ${formatFocus(response.retrievalContext.conversationSubject.focus ?? [], language)}`
+                : null}
+            </span>
+            {onStartNewTopic ? (
+              <button
+                type="button"
+                data-ask="new-topic"
+                aria-pressed={newTopicStarted}
+                onClick={onStartNewTopic}
+                disabled={newTopicStarted}
+                className="min-h-[32px] rounded-full px-2 text-xs text-signal underline decoration-signal/40 underline-offset-4 hover:decoration-signal disabled:text-ink-tertiary disabled:no-underline"
+              >
+                {newTopicStarted ? t.newTopicStarted : t.startNewTopic}
+              </button>
+            ) : null}
+          </div>
+          {response.retrievalContext.conversationSubject.disclosures.includes(
+            'PRODUCT_APPLICABILITY_NOT_ESTABLISHED',
+          ) ? (
+            <p data-ask="product-applicability" role="note" className="text-xs leading-relaxed text-ink-secondary">
+              {t.productApplicabilityNotEstablished}
+            </p>
+          ) : null}
+          {response.retrievalContext.conversationSubject.disclosures.includes('FOCUS_NOT_IN_EVIDENCE') ? (
+            <p data-ask="focus-not-in-evidence" role="note" className="text-xs leading-relaxed text-ink-secondary">
+              {t.focusNotInEvidence.replace(
+                '{focus}',
+                formatFocus(response.retrievalContext.conversationSubject.focus ?? [], language),
+              )}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       <EventAnchorNotice retrievalContext={response.retrievalContext} language={language} compact />

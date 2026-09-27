@@ -81,10 +81,25 @@ import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openG
 type AskPhase =
   | { kind: 'idle' }
   | { kind: 'loading'; question: string }
-  | { kind: 'answered'; question: string; response: AnalysisApiResponse; context: StoryContext | undefined }
+  | {
+      kind: 'answered';
+      question: string;
+      response: AnalysisApiResponse;
+      context: StoryContext | undefined;
+    }
   | { kind: 'failed'; question: string; message: string };
 
 type SettledAskTurn = Extract<AskPhase, { kind: 'answered' | 'failed' }>;
+
+/**
+ * TOPIC CONTINUITY R1 — kept OUTSIDE the submit path on purpose: the only
+ * thing read from a response is whether the backend continued a subject, and
+ * the only thing returned is a question the READER typed (the one sent as
+ * priorQuestion). No answer text, source or evidence identity crosses here.
+ */
+function subjectOriginOf(response: AnalysisApiResponse, sentPrior: string | undefined): string | undefined {
+  return response.retrievalContext.conversationSubject !== undefined ? sentPrior : undefined;
+}
 
 interface AskAiDockProps {
   language?: LanguageCode;
@@ -102,6 +117,14 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
   const [history, setHistory] = useState<SettledAskTurn[]>([]);
+  /* TOPIC CONTINUITY R1 — the reader dropped the continued subject; the next Send carries no prior question. */
+  const [topicReset, setTopicReset] = useState(false);
+  /*
+    TOPIC CONTINUITY R1 — USER TEXT ONLY: the reader's own earlier question
+    that established the subject the LAST settled answer continued. Undefined
+    when it continued nothing, so the next follow-up refers to that question.
+  */
+  const [subjectOrigin, setSubjectOrigin] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const conversationRef = useRef<HTMLDivElement | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
@@ -257,20 +280,30 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
         is exactly the inversion Rev A's change log owns.
       */
       const sent = transportableContext(storyContext);
-      const priorQuestion =
+      /*
+        TOPIC CONTINUITY R1 — still ONE prior USER question, never an answer.
+        When the last answer continued a subject, the question that ESTABLISHED
+        that subject is sent again, so a chain ("…this…" → "What about
+        businesses?") keeps its subject. "Start a new topic" sends none.
+      */
+      const lastQuestion =
         phase.kind === 'answered' || phase.kind === 'failed'
           ? phase.question
           : history.length > 0
             ? history[history.length - 1].question
             : undefined;
+      const priorQuestion = topicReset || lastQuestion === undefined ? undefined : (subjectOrigin ?? lastQuestion);
+      setTopicReset(false);
 
       analyzeNews(asked, language, sent, priorQuestion)
         .then((response) => {
           if (requestSeq.current !== seq) return;
+          setSubjectOrigin(subjectOriginOf(response, priorQuestion));
           setPhase({ kind: 'answered', question: asked, response, context: sent });
         })
         .catch((error: unknown) => {
           if (requestSeq.current !== seq) return;
+          setSubjectOrigin(undefined);
           /* the SAME error mapping /search uses, imported rather than copied */
           setPhase({
             kind: 'failed',
@@ -279,7 +312,7 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           });
         });
     },
-    [question, language, dictionary, storyContext, phase, history],
+    [question, language, dictionary, storyContext, phase, history, topicReset, subjectOrigin],
   );
 
   return (
@@ -417,6 +450,8 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
                 question={phase.question}
                 language={language}
                 context={phase.context}
+                newTopicStarted={topicReset}
+                onStartNewTopic={() => setTopicReset(true)}
               />
             ) : null}
           </div>

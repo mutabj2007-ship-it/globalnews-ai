@@ -975,6 +975,12 @@ export interface AnalysisRetrievalContext {
    */
   eventAnchor?: import('./event-anchor').EventAnchor;
   /**
+   * ASK CONVERSATIONAL TOPIC CONTINUITY R1 — present only when this answer
+   * continues a non-event subject from the reader's prior question. Never set
+   * alongside an event anchor for the same continuation. See conversation-subject.ts.
+   */
+  conversationSubject?: import('./conversation-subject').ConversationSubjectAnchor;
+  /**
    * The clarification signal the frontend's recovery surface already reads.
    * Emitted only when the question cannot be answered without the reader
    * choosing (e.g. an ambiguous "Congo"); retrieval then withholds evidence

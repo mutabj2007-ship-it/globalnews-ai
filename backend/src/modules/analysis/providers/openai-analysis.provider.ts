@@ -104,6 +104,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     newestEvidence,
     eventAnchor,
     eventEvidenceRelations,
+    conversationSubject,
     signal,
   }: AnalysisProviderInput): Promise<unknown> {
     const config = this.analysisConfig.get();
@@ -137,6 +138,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       newestEvidence,
       eventAnchor,
       eventEvidenceRelations,
+      conversationSubject,
     );
     const maxAttempts = comparisonCoverage?.length ? 1 : config.retryAttempts + 1;
     const startedAt = Date.now();

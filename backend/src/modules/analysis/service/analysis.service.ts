@@ -41,6 +41,15 @@ import {
   withoutAmbiguousCountryMentions,
 } from '../anchor/event-anchor.util';
 import { demoteContextOnlyConsequenceStatements } from '../validation/summary-statements.util';
+import {
+  addressesFocus,
+  composeRetrievalMeaning,
+  deriveConversationSubject,
+  deriveConversationSubjectDisclosures,
+  deriveFollowUpFocus,
+  isSubjectFollowUp,
+  orderByFocus,
+} from '../anchor/conversation-subject.util';
 import { NewsService, readProviderFailures } from '../../news/news.service';
 import { CountryNewsService } from '../../news/country/country-news.service';
 import type { AnalysisProvider } from '../interfaces';
@@ -748,7 +757,26 @@ export class AnalysisService {
           isEventTopic(deriveEventTopic(priorNormalized))
             ? priorNormalized
             : undefined;
-        const retrievalQuery = anaphoricPriorQuestion ?? normalizedQuery;
+        /*
+          TOPIC CONTINUITY R1 — THE NON-EVENT CASE, A SEPARATE AUTHORITY.
+
+          Considered only when the event path above did not fire. A bounded
+          follow-up that refers back ("How will this affect GlobalNewsAI?",
+          "What about businesses?") to a NON-event subject is routed by the
+          prior USER question, so the existing routing authorities re-derive
+          the subject exactly as they did on the turn that introduced it. The
+          model still receives the reader's actual follow-up. A follow-up that
+          names its own subject is never touched.
+        */
+        const continuedSubject =
+          anaphoricPriorQuestion === undefined &&
+          priorNormalized !== undefined &&
+          !storyContext?.articleId &&
+          isSubjectFollowUp(normalizedQuery)
+            ? deriveConversationSubject(priorNormalized)
+            : undefined;
+        const subjectPriorQuestion = continuedSubject !== undefined ? priorNormalized : undefined;
+        const retrievalQuery = anaphoricPriorQuestion ?? subjectPriorQuestion ?? normalizedQuery;
         /* A bare "Congo" is COD or COG — never silently one of them. */
         const ambiguousCountry = detectAmbiguousCountryMention(retrievalQuery);
         let countryInterpretation: EventAnchorDisclosure | undefined;
@@ -2447,6 +2475,41 @@ export class AnalysisService {
         }
 
         /*
+          TOPIC CONTINUITY R1 — the continued subject is stated on the answer,
+          so the reader sees what was carried and can drop it. The subject is a
+          span of the prior user question; the disclosures are codes derived
+          from the follow-up's own words.
+        */
+        if (continuedSubject !== undefined && retrievalContext.eventAnchor === undefined) {
+          /*
+            D.1 — INHERITED SUBJECT + CURRENT-TURN FOCUS. The subject decided
+            what was fetched (every gate unchanged); the follow-up's own
+            evidence-bearing words decide which of that evidence reaches the
+            model first, ahead of the cap. If none of it addresses the focus,
+            the answer says so rather than implying it does.
+          */
+          const focus = deriveFollowUpFocus(normalizedQuery, continuedSubject);
+          articles = orderByFocus(articles, focus.terms);
+          const focusUnaddressed =
+            focus.terms.length > 0 &&
+            articles.length > 0 &&
+            !articles.some((article) => addressesFocus(article, focus.terms));
+          retrievalContext = {
+            ...retrievalContext,
+            conversationSubject: {
+              subject: continuedSubject,
+              focus: focus.terms,
+              retrievalMeaning: composeRetrievalMeaning(continuedSubject, focus),
+              source: 'prior-question',
+              disclosures: [
+                ...deriveConversationSubjectDisclosures(normalizedQuery),
+                ...(focusUnaddressed ? (['FOCUS_NOT_IN_EVIDENCE'] as const) : []),
+              ],
+            },
+          };
+        }
+
+        /*
           ASK/SEARCH R1 CLOSURE — every retrieval path converges here, so the
           evidence-state fact is stamped exactly once, by the one shared
           derivation. The model, the cache TTL and the UI all read this value.
@@ -2623,6 +2686,9 @@ export class AnalysisService {
                         : ('DIRECT_EVENT' as const),
                   ),
                 }
+              : {}),
+            ...(retrievalContext.conversationSubject !== undefined
+              ? { conversationSubject: retrievalContext.conversationSubject }
               : {}),
             newestEvidence: newestEvidenceFreshness(deduped),
             /*
