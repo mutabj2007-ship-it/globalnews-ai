@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
-  QUESTION_HISTORY_LIST_LIMIT,
-  QUESTION_HISTORY_RETENTION_LIMIT,
+  SEARCH_HISTORY_LIST_LIMIT,
+  SEARCH_HISTORY_RETENTION_LIMIT,
 } from '@globalnews-ai/shared';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -58,7 +58,7 @@ export class HistoryService {
    *
    * One explicit action → at most one entry: the same question inside
    * HISTORY_DUPLICATE_WINDOW_MS is recorded once. Retention is bounded: the
-   * newest QUESTION_HISTORY_RETENTION_LIMIT entries are kept per account.
+   * newest SEARCH_HISTORY_RETENTION_LIMIT entries are kept per account.
    *
    * NEVER THROWS. History is a record of the question, not a precondition of
    * answering it; a failure is logged and the analysis proceeds.
@@ -117,7 +117,7 @@ export class HistoryService {
     return this.prisma.searchHistoryEntry.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: QUESTION_HISTORY_LIST_LIMIT,
+      take: SEARCH_HISTORY_LIST_LIMIT,
       select: { id: true, query: true, countryCode: true, createdAt: true },
     });
   }
@@ -126,12 +126,12 @@ export class HistoryService {
     await this.prisma.searchHistoryEntry.deleteMany({ where: { userId } });
   }
 
-  /** Keeps the newest QUESTION_HISTORY_RETENTION_LIMIT entries for this account. */
+  /** Keeps the newest SEARCH_HISTORY_RETENTION_LIMIT entries for this account. */
   private async prune(userId: string): Promise<void> {
     const overflow = await this.prisma.searchHistoryEntry.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      skip: QUESTION_HISTORY_RETENTION_LIMIT,
+      skip: SEARCH_HISTORY_RETENTION_LIMIT,
       select: { id: true },
     });
     if (overflow.length === 0) return;

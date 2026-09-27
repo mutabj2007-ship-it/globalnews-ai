@@ -76,9 +76,9 @@ export interface SavedStoryListResponse {
 /* ── RECENT INTELLIGENCE (QUESTION HISTORY) ───────────────────────────── */
 
 /** The newest entries returned to the reader. */
-export const QUESTION_HISTORY_LIST_LIMIT = 50;
+export const SEARCH_HISTORY_LIST_LIMIT = 50;
 /** Entries retained per account; older ones are pruned on write. */
-export const QUESTION_HISTORY_RETENTION_LIMIT = 200;
+export const SEARCH_HISTORY_RETENTION_LIMIT = 200;
 
 export interface QuestionHistoryEntryView {
   readonly id: string;

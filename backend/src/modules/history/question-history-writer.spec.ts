@@ -1,7 +1,7 @@
 import { BadRequestException, type ExecutionContext } from '@nestjs/common';
 import {
-  QUESTION_HISTORY_LIST_LIMIT,
-  QUESTION_HISTORY_RETENTION_LIMIT,
+  SEARCH_HISTORY_LIST_LIMIT,
+  SEARCH_HISTORY_RETENTION_LIMIT,
   type AnalysisApiResponse,
 } from '@globalnews-ai/shared';
 import type { PrismaService } from '../../database/prisma.service';
@@ -93,17 +93,17 @@ describe('the one history writer', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it(`retention is bounded to ${QUESTION_HISTORY_RETENTION_LIMIT}; the list to ${QUESTION_HISTORY_LIST_LIMIT}`, async () => {
+  it(`retention is bounded to ${SEARCH_HISTORY_RETENTION_LIMIT}; the list to ${SEARCH_HISTORY_LIST_LIMIT}`, async () => {
     const { service, rows } = historyDouble();
     const base = Date.parse('2026-09-01T00:00:00.000Z');
-    for (let i = 0; i < QUESTION_HISTORY_RETENTION_LIMIT + 5; i += 1) {
+    for (let i = 0; i < SEARCH_HISTORY_RETENTION_LIMIT + 5; i += 1) {
       await service.recordExplicitQuestion('user-1', `Question ${i}`, undefined, new Date(base + i * 60_000));
     }
-    expect(rows).toHaveLength(QUESTION_HISTORY_RETENTION_LIMIT);
+    expect(rows).toHaveLength(SEARCH_HISTORY_RETENTION_LIMIT);
     expect(rows.some((row) => row.query === 'Question 0')).toBe(false);
     const list = await service.listForUser('user-1');
-    expect(list).toHaveLength(QUESTION_HISTORY_LIST_LIMIT);
-    expect(list[0].query).toBe(`Question ${QUESTION_HISTORY_RETENTION_LIMIT + 4}`);
+    expect(list).toHaveLength(SEARCH_HISTORY_LIST_LIMIT);
+    expect(list[0].query).toBe(`Question ${SEARCH_HISTORY_RETENTION_LIMIT + 4}`);
   });
 
   it('never throws: a database failure is logged and the analysis proceeds', async () => {
