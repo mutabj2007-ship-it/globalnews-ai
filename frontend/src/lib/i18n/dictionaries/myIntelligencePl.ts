@@ -8,10 +8,13 @@
  *
  * "Intelligence" is rendered "Analiza", which is the word the shipped Polish
  * dictionary already uses for the Intelligence destination in
- * `mobileBottomNav`. The design package's Polish frames render that tab as
- * "Wywiad"; the release dictionary is implementation truth and wins, and the
- * difference is recorded in the delivery note rather than silently resolved
- * one way in code and the other in the frames.
+ * `mobileBottomNav`. The R1.2 Polish frames render that tab as "Wywiad".
+ *
+ * APPROVED LOCALIZATION DELTA FROM THE R1.2 FRAME — CTO ruling 3 of the R1.3
+ * reconciliation: the implementation authority for this label is "Analiza",
+ * not "Wywiad", and it is not to be changed back. The frames are the older
+ * artefact here; one Polish word for one destination cannot mean two things in
+ * the same product, and the shipped dictionary is what readers already see.
  */
 export const myIntelligencePl = {
   eyebrow: 'MOJA ANALIZA',

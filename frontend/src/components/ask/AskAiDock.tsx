@@ -105,14 +105,53 @@ interface AskAiDockProps {
   language?: LanguageCode;
 }
 
+/**
+ * MY INTELLIGENCE R1.2 — the one route that suppresses the FLOATING LAUNCHER
+ * and nothing else.
+ *
+ * ── THE COLLISION, MEASURED ──────────────────────────────────────────────
+ *
+ * At 390 the launcher is `position: fixed`, 92x44 at top 92 / right 16. The
+ * frozen My Intelligence Select control is 68x44 at top 73 / right 16. They
+ * overlap by 25px vertically and completely horizontally, and the launcher — a
+ * later, global addition the frozen R1.2 frames were drawn without — wins.
+ *
+ * The Product Owner froze the Select placement, so the launcher yields.
+ *
+ * ── WHAT IS SUPPRESSED, AND WHAT EMPHATICALLY IS NOT ─────────────────────
+ *
+ * ONLY the standalone floating button. The dock itself stays mounted and stays
+ * listening, so everything that opens it by intent keeps working:
+ *
+ *   - `openGlobalAsk()` and the GLOBAL_ASK_OPEN_EVENT still open the panel;
+ *   - "Ask about selected" still hands off to it with the selection attached;
+ *   - every explicit Ask / Send / Run still runs;
+ *   - "Ask AI" in the header and the bottom navigation still navigate;
+ *   - every OTHER route keeps the launcher exactly as it was.
+ *
+ * This is narrower than the `/ask` case above, which unmounts the dock
+ * entirely because that route owns its own composer. Here the dock is still
+ * the right surface; it simply must not also advertise itself on top of a
+ * frozen control that already offers the same journey.
+ */
+const LAUNCHER_SUPPRESSED_ROUTES: ReadonlySet<string> = new Set(['/my-intelligence']);
+
 export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   const pathname = usePathname();
   // The dedicated dashboard owns its composer; unmount the global dock entirely.
   if (pathname === ASK_CANONICAL_ROUTE) return null;
-  return <GlobalAskAiDock {...props} />;
+  return (
+    <GlobalAskAiDock
+      {...props}
+      showLauncher={!LAUNCHER_SUPPRESSED_ROUTES.has(pathname ?? '')}
+    />
+  );
 }
 
-function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
+function GlobalAskAiDock({
+  language = 'en',
+  showLauncher = true,
+}: AskAiDockProps & { showLauncher?: boolean }): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
@@ -321,7 +360,13 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
           Mounted from the root layout as its own element, exactly like
           ServiceWorkerRegistrar. It does NOT enter the NavBar's released
           GN-CD item row: that geometry is accepted design, and Ask AI's own
-          chrome/geometry reconciliation is still held. */}
+          chrome/geometry reconciliation is still held.
+
+          `showLauncher` is false on exactly the routes listed in
+          LAUNCHER_SUPPRESSED_ROUTES. Only this button disappears — the panel
+          below, the open event, the story context and every explicit action
+          are untouched. */}
+      {showLauncher && (
       <button
         type="button"
         data-ask="launcher"
@@ -352,6 +397,7 @@ function GlobalAskAiDock({ language = 'en' }: AskAiDockProps): JSX.Element {
         <span aria-hidden="true" className="font-mono text-[11px] text-signal">◆</span>
         {t.launcher}
       </button>
+      )}
 
       {!isOpen ? null : (
         <section
