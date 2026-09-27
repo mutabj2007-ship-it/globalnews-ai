@@ -5,6 +5,7 @@ import { SafeImage } from '@/components/ui/SafeImage';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import type { RetainedItem } from '@/lib/map/selection/selectionIntelligence';
 import type { DisplayPrecision } from '@/lib/map/spatial/precisionModel';
+import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 
 /**
  * SPATIAL M2 · DESIGN REVISION 1.2 — `SourceCard`, Part II §2 (S · M2).
@@ -247,6 +248,9 @@ export function SourceCard({
         >
           <span aria-hidden="true">&#8599;</span>
         </a>
+
+        {/* UNIVERSAL BOOKMARK R1 — beside the source link, never inside it; compact to fit the card. */}
+        <StoryBookmark url={item.url} language={language} size="compact" />
 
         {/*
           ── DECLARED DEVIATION · ONE AFFORDANCE MORE THAN THE ANATOMY ───────

@@ -1,3 +1,4 @@
+import { resetSavedStoriesStoreForTest } from './savedStoriesStore';
 import { createElement } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { MAX_SELECTED_STORIES, type SelectedStoryRef } from '@globalnews-ai/shared';
@@ -49,7 +50,15 @@ const FEED = { previousSeenAt: null, followedCountries: [], stories: [], newSinc
 const SAVED = { stories: [], limit: 200 };
 const HISTORY = [{ id: 'h1', query: 'Why is inflation high in Poland?', countryCode: null, createdAt: '2026-09-27T08:00:00.000Z' }];
 
+/*
+  UNIVERSAL BOOKMARK R1 — the saved-story list is ONE shared store, read only
+  when a session hint exists. These tests model a signed-in reader, so the hint
+  cookie is present, and the store is reset so each test starts from a clean read.
+*/
+Object.assign(globalThis, { document: { cookie: 'gna_csrf=signed-in-reader' } });
+
 beforeEach(() => {
+  resetSavedStoriesStoreForTest();
   fetchMock.mockReset();
   analyzeMock.mockReset();
   stageMock.mockReset();

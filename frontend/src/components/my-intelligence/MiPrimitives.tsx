@@ -33,13 +33,22 @@ export function BookmarkButton({
   onToggle,
   language,
   className = '',
+  size = 'default',
 }: {
   isSaved: boolean;
   onToggle: () => void;
   language: LanguageCode;
   className?: string;
+  /**
+   * UNIVERSAL BOOKMARK R1 — 44px wherever the geometry permits (the default).
+   * 'compact' (32px) only on dense rows whose own controls are smaller, such as
+   * the Spatial map source card; same states, same labels, same colours.
+   */
+  size?: 'default' | 'compact';
 }): JSX.Element {
   const t = getDictionary(language).myIntelligence.saved;
+  const box = size === 'compact' ? 'h-[32px] w-[32px]' : 'h-[44px] w-[44px]';
+  const glyph = size === 'compact' ? 'h-[15px] w-[15px]' : 'h-[18px] w-[18px]';
 
   return (
     <button
@@ -61,14 +70,15 @@ export function BookmarkButton({
         event.stopPropagation();
         onToggle();
       }}
-      className={`inline-flex h-[44px] w-[44px] items-center justify-center rounded-full border transition-colors motion-reduce:transition-none ${
+      data-bookmark={isSaved ? 'saved' : 'unsaved'}
+      className={`inline-flex ${box} items-center justify-center rounded-full border bg-[#04162b]/80 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#5abff5] focus-visible:ring-offset-1 focus-visible:ring-offset-[#010a19] motion-reduce:transition-none ${
         isSaved ? MI_SAVED_ON : MI_SAVED_OFF
       } ${className}`}
     >
       <svg
         aria-hidden="true"
         viewBox="0 0 24 24"
-        className="h-[18px] w-[18px]"
+        className={glyph}
         fill={isSaved ? 'currentColor' : 'none'}
         stroke="currentColor"
         strokeWidth="1.8"

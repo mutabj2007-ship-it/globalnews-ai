@@ -62,8 +62,9 @@ export const myIntelligenceEn = {
     sourceUnavailable:
       'Source unavailable. The publisher link no longer opens. We keep your saved reference.',
     noImage: 'No image',
-    save: 'Save to My Intelligence',
-    unsave: 'Remove from saved',
+    save: 'Save story',
+    unsave: 'Remove saved story',
+    saveUnavailable: 'This story can’t be saved yet: it isn’t in retained reporting.',
     savedToast: 'Saved to My Intelligence',
     unsavedToast: 'Removed from saved',
     saveFailed: "Couldn't save. Try again.",

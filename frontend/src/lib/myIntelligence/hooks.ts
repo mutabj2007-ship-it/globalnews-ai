@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import type {
   MyIntelligenceFeedResponse,
   QuestionHistoryEntryView,
@@ -8,6 +8,15 @@ import type {
   SaveStoryRequest,
 } from '@globalnews-ai/shared';
 import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
+import {
+  ensureSavedStoriesLoaded,
+  getSavedStoriesSnapshot,
+  getServerSavedStoriesSnapshot,
+  refreshSavedStories,
+  removeSavedStoryByRef,
+  saveSavedStory,
+  subscribeSavedStories,
+} from './savedStoriesStore';
 import {
   fetchMyIntelligenceFeed,
   fetchQuestionHistory,
@@ -75,54 +84,48 @@ export interface SavedStoriesState extends LoadState<readonly SavedStoryView[]> 
   readonly save: (request: SaveStoryRequest) => Promise<SavedStoryView | null>;
   readonly remove: (articleRef: string) => Promise<boolean>;
   readonly isSaved: (articleRef: string) => boolean;
+  /** UNIVERSAL BOOKMARK R1 — no session: saving needs sign-in. Nothing is shown as saved. */
+  readonly signedOut: boolean;
+  /** Why the last save failed: the server could not resolve the story, or another error. */
+  readonly failureKind: 'unavailable' | 'error' | null;
 }
 
+/**
+ * DENSITY + UNIVERSAL BOOKMARK R1 — a SUBSCRIBER to the one shared saved-story
+ * store (savedStoriesStore.ts), not a reader of its own. Every caller on a page
+ * — My Intelligence and every bookmark on every card — shares one GET, and a
+ * save or unsave made anywhere is seen everywhere. The public shape is
+ * unchanged, so existing callers need no edits.
+ */
 export function useSavedStories(): SavedStoriesState {
-  const base = useAccountRead(async () => (await fetchSavedStories()).stories);
-  const [stories, setStories] = useState<readonly SavedStoryView[] | null>(null);
-  const [pendingRef, setPendingRef] = useState<string | null>(null);
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const snapshot = useSyncExternalStore(
+    subscribeSavedStories,
+    getSavedStoriesSnapshot,
+    getServerSavedStoriesSnapshot,
+  );
 
-  useEffect(() => setStories(base.data), [base.data]);
-
-  const save = useCallback(async (request: SaveStoryRequest) => {
-    setPendingRef(request.url);
-    setFailedUrl(null);
-    try {
-      const saved = await saveStory(request);
-      setStories((current) =>
-        current?.some((story) => story.articleRef === saved.articleRef)
-          ? current
-          : [saved, ...(current ?? [])],
-      );
-      return saved;
-    } catch {
-      setFailedUrl(request.url);
-      return null;
-    } finally {
-      setPendingRef(null);
-    }
-  }, []);
-
-  const remove = useCallback(async (articleRef: string) => {
-    setPendingRef(articleRef);
-    try {
-      await removeSavedStory(articleRef);
-      setStories((current) => current?.filter((story) => story.articleRef !== articleRef) ?? current);
-      return true;
-    } catch {
-      return false;
-    } finally {
-      setPendingRef(null);
-    }
+  useEffect(() => {
+    void ensureSavedStoriesLoaded();
   }, []);
 
   const isSaved = useCallback(
-    (articleRef: string) => stories?.some((story) => story.articleRef === articleRef) ?? false,
-    [stories],
+    (articleRef: string) => snapshot.data?.some((story) => story.articleRef === articleRef) ?? false,
+    [snapshot.data],
   );
 
-  return { ...base, data: stories, pendingRef, failedUrl, save, remove, isSaved };
+  return {
+    data: snapshot.data,
+    isLoading: snapshot.isLoading,
+    failed: snapshot.failed,
+    refresh: refreshSavedStories,
+    pendingRef: snapshot.pendingKey,
+    failedUrl: snapshot.failedUrl,
+    save: saveSavedStory,
+    remove: removeSavedStoryByRef,
+    isSaved,
+    signedOut: snapshot.signedOut,
+    failureKind: snapshot.failureKind,
+  };
 }
 
 export interface QuestionHistoryState extends LoadState<readonly QuestionHistoryEntryView[]> {

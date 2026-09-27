@@ -6,6 +6,7 @@ import { StoryVisual } from '@/components/home/StoryVisual';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -152,6 +153,8 @@ export function SixtySecondBrief({
         )}
       </div>
 
+      {/* UNIVERSAL BOOKMARK R1 — the lead link is unchanged; the bookmark is its sibling. */}
+      <div className="relative">
       <a
         href={lead.url}
         target="_blank"
@@ -242,6 +245,10 @@ export function SixtySecondBrief({
           </p>
         </div>
       </a>
+      <span className="absolute right-2 top-2 z-10">
+        <StoryBookmark url={lead.url} language={language} />
+      </span>
+      </div>
 
       {rows.length === 0 ? null : (
         <ul className={isRail ? '' : 'border-t border-border-strong'}>
@@ -252,6 +259,8 @@ export function SixtySecondBrief({
                 isRail ? 'border-t border-[#0d2137]' : 'border-b border-border-strong last:border-b-0'
               }
             >
+              <div className="flex items-center gap-1 pe-2">
+              <div className="min-w-0 flex-1">
               <a
                 href={item.url}
                 target="_blank"
@@ -277,6 +286,9 @@ export function SixtySecondBrief({
                   {pluralWithForms(item.sourcesCount, language, t.sourceForms)}
                 </span>
               </a>
+              </div>
+              <StoryBookmark url={item.url} language={language} className="shrink-0" />
+              </div>
             </li>
           ))}
         </ul>

@@ -40,6 +40,7 @@ import {
 } from './RelationalEvidencePanel';
 import { assessmentsFor, EMPTY_RELATIONAL_EVIDENCE } from './relationalEvidence';
 import type { RelationalEvidenceModel } from './relationalEvidence';
+import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 
 /* ------------------------------------------------------------------ *
  * THE SOURCE THUMBNAIL
@@ -280,6 +281,10 @@ export const SourcesDock = forwardRef<HTMLDivElement, SourcesDockProps>(function
                   >
                     {dict.analysisWorkspace.sources.opensInNewTab}
                   </a>
+                  {/* UNIVERSAL BOOKMARK R1 — beside the source link, never inside it. */}
+                  <div className="mt-2 flex justify-end">
+                    <StoryBookmark url={entry.article.url} language={language} />
+                  </div>
                 </article>
               </li>
             ))}

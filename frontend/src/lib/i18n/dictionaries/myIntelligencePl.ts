@@ -65,8 +65,9 @@ export const myIntelligencePl = {
     sourceUnavailable:
       'Źródło niedostępne. Link wydawcy już się nie otwiera. Zachowujemy Twoje zapisane odniesienie.',
     noImage: 'Brak zdjęcia',
-    save: 'Zapisz w Mojej analizie',
-    unsave: 'Usuń z zapisanych',
+    save: 'Zapisz artykuł',
+    unsave: 'Usuń zapisany artykuł',
+    saveUnavailable: 'Tego artykułu nie można jeszcze zapisać: nie ma go w zachowanych doniesieniach.',
     savedToast: 'Zapisano w Mojej analizie',
     unsavedToast: 'Usunięto z zapisanych',
     saveFailed: 'Nie udało się zapisać. Spróbuj ponownie.',

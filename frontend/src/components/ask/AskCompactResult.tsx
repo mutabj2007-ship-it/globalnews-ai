@@ -15,6 +15,7 @@ import { fullAnalysisHref } from '@/lib/ask/storyContextStore';
 import { grantAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AskCitedBrief, citedSourceNumbers } from './AskCitedBrief';
+import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 
 /**
  * ═══ ASK AI REV A §6 — THE COMPACT RESULT ════════════════════════════════
@@ -335,6 +336,10 @@ export function AskCompactResult({
                     </a>
                     <span className="ms-2 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
                       {source.publisher}
+                    </span>
+                    {/* UNIVERSAL BOOKMARK R1 — a sibling of the source link; compact to fit the dock. */}
+                    <span className="ms-2 inline-flex align-middle">
+                      <StoryBookmark url={source.url} language={language} size="compact" />
                     </span>
                   </li>
                 ))}

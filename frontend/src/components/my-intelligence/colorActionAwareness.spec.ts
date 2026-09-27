@@ -427,12 +427,16 @@ describe('§9 story images: the story’s own image, or an honest fallback', () 
     expect(text(slot)).toBe(getDictionary('en').myIntelligence.saved.noImage);
   });
 
-  it('the desktop card image slot FILLS its header (no relative/absolute conflict collapsing it)', () => {
+  it('DENSITY R1 — the card image is a fixed compact thumbnail (76 / 96 / 104px), never a collapsing overlay', () => {
     const View = views.SavedCard as unknown as (props: Record<string, unknown>) => JSX.Element;
     mount(createElement(View, { ...common, story: story('https://example.com/a.jpg') }));
     const slot = byData('data-mi-story-image', 'present')[0];
-    expect(slot.props.className).toContain('h-full w-full');
+    for (const size of ['h-[76px] w-[76px]', 'md:h-[96px] md:w-[96px]', 'xl:h-[104px] xl:w-[104px]']) {
+      expect(slot.props.className).toContain(size);
+    }
     expect(slot.props.className).not.toMatch(/\babsolute\b/);
+    /* No full-width hero media on an ordinary My Intelligence card. */
+    expect(slot.props.className).not.toMatch(/h-\[132px\]|aspect-\[16\/9\]/);
   });
 
   it('a failed image is hidden, revealing the fallback', () => {

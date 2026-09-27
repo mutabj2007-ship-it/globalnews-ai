@@ -275,38 +275,41 @@ export function SavedCard(props: CommonProps & { reason?: string }): JSX.Element
   const t = getDictionary(language).myIntelligence;
   const blocked = story.sourceUnavailable === true;
 
+  /*
+    DENSITY R1 — an intelligence row, not a photo card. The story's own image
+    stays (76px phone, 96px tablet, 104px desktop, cropped with object-cover,
+    never stretched), beside the text instead of above it, so a desktop
+    viewport shows materially more stories. The selection checkbox leads and
+    the bookmark trails, so the two can never overlap.
+  */
   return (
     <li
-      className={`${MI_CARD} relative flex flex-col overflow-hidden ${
+      data-mi-story-card=""
+      className={`${MI_CARD} relative flex items-start gap-3 p-3 ${
         isSelected ? 'border-[#5abff5] bg-[#061c33]' : ''
       }`}
     >
-      <div className="relative flex h-[132px] items-center justify-center bg-[linear-gradient(140deg,#0b2742,#061a30)] text-[11px] text-[#54687e]">
-        <StoryImage
-          story={story}
-          fallback={t.saved.noImage}
-          className="flex h-full w-full items-center justify-center"
-          fallbackClassName="px-3 text-center"
-        />
-        {selecting && (
-          <span className="absolute left-2 top-2">
-            <SelectCheckbox
-              checked={isSelected}
-              disabled={blocked}
-              onChange={onToggleSelected}
-              label={blocked ? t.selection.cannotSelect : story.title}
-            />
-          </span>
-        )}
-        <span className="absolute right-2 top-2">
-          <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} />
+      {selecting && (
+        <span className="shrink-0 self-center">
+          <SelectCheckbox
+            checked={isSelected}
+            disabled={blocked}
+            onChange={onToggleSelected}
+            label={blocked ? t.selection.cannotSelect : story.title}
+          />
         </span>
-      </div>
-      <div className="flex flex-1 flex-col gap-1.5 p-3.5">
+      )}
+      <StoryImage
+        story={story}
+        fallback={t.saved.noImage}
+        className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-[10px] border border-[#0e2d4d] bg-[linear-gradient(140deg,#0b2742,#061a30)] md:h-[96px] md:w-[96px] xl:h-[104px] xl:w-[104px]"
+        fallbackClassName="px-1.5 text-center text-[10px] leading-[1.3] text-[#54687e]"
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         <CategoryChip label={story.category} />
         <StoryTitle
           story={story}
-          className="block text-[15px] font-bold leading-[1.28] text-white [overflow-wrap:anywhere]"
+          className="block text-[14.5px] font-bold leading-[1.28] text-white [overflow-wrap:anywhere] md:text-[15px]"
         />
         {reason !== undefined && (
           <p className="text-[12px] italic leading-[1.4] text-[#93a7bd]">{reason}</p>
@@ -323,6 +326,7 @@ export function SavedCard(props: CommonProps & { reason?: string }): JSX.Element
         />
         {blocked && <UnavailableNotice language={language} />}
       </div>
+      <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="shrink-0" />
     </li>
   );
 }
