@@ -135,6 +135,8 @@ export * from './security';
 export * from './security/absence';
 /* ASK R2 INTEGRATION R1 · B-1 — the one external URL boundary (every publisher/source href). */
 export * from './security/externalUrl';
+/* ASK R2 INTEGRATION R1 · GATE D — Reference providers (disjoint from OFFICIAL), roles, answer states. */
+export * from './reference/referenceProviders';
 
 /*
   THE GENERIC NON-NUMERIC OBSERVATION CONTRACT — MAIN-POLITICS-PLATFORM-PROMOTION-R3 #1.

@@ -26,7 +26,7 @@ import {
   type AddressResolver,
   type SafeFetchPolicy,
 } from './official-artifact-safe-fetch';
-import { makeSafeWireFetch } from './safe-wire-fetch.node';
+import { makeSafeWireFetch, SafeWireFetchConfigurationRefused } from './safe-wire-fetch.node';
 
 const GOVERNED_HOST = 'statistics.gov.rw';
 const PUBLIC_IP = '93.184.216.34';
@@ -52,6 +52,7 @@ function harness(opts: {
   resolverThrows?: boolean;
   connectorThrows?: Error;
   credential?: Parameters<typeof makeSafeWireFetch>[0]['credential'];
+  userAgent?: string;
 }) {
   const rec: Recorder = { calls: [], resolutions: [] };
   let resolveIdx = 0;
@@ -87,6 +88,7 @@ function harness(opts: {
     policy: POLICY,
     resolveHost: (p) => (p === 'rw-nisr' ? GOVERNED_HOST : undefined),
     ...(opts.credential === undefined ? {} : { credential: opts.credential }),
+    ...(opts.userAgent === undefined ? {} : { userAgent: opts.userAgent }),
   });
 
   return { fetch, rec };
@@ -404,4 +406,29 @@ describe('C-P13 · no policy is duplicated in the driver', () => {
     expect(/setInterval|setTimeout\(|cron|schedule/i.test(code)).toBe(false);
     expect(/for\s*\(\s*let\s+attempt/.test(code)).toBe(false);
   });
+});
+
+describe('ASK R2 INTEGRATION R1 · Gate D — the identifying User-Agent', () => {
+  it('is sent on the request when configured', async () => {
+    const { fetch, rec } = harness({
+      userAgent: 'GlobalNewsAI-Reference/1.0 (+https://example.test)',
+    });
+    await fetch(REQUEST, new AbortController().signal);
+    expect(rec.calls[0]!.headers['User-Agent']).toBe(
+      'GlobalNewsAI-Reference/1.0 (+https://example.test)',
+    );
+  });
+
+  it('is absent when not configured — no default identity is invented', async () => {
+    const { fetch, rec } = harness({});
+    await fetch(REQUEST, new AbortController().signal);
+    expect(rec.calls[0]!.headers['User-Agent']).toBeUndefined();
+  });
+
+  it.each(['bad\r\nX-Injected: 1', 'tab\there', '', 'x'.repeat(257)])(
+    'refuses a value a header cannot safely carry (%j) at construction',
+    (userAgent) => {
+      expect(() => harness({ userAgent })).toThrow(SafeWireFetchConfigurationRefused);
+    },
+  );
 });

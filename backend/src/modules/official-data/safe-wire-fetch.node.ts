@@ -222,10 +222,27 @@ export interface SafeWireFetchDeps {
   /** C-3.3 — THE SAME INSTANCE the transport is given. Two resolvers is a silent fork. */
   readonly resolveHost: ProviderHostResolver;
   readonly credential?: OriginBoundCredential;
+  /**
+   * ASK R2 INTEGRATION R1 · GATE D — an identifying User-Agent (contract §6: Wikimedia
+   * requires one). A TRANSPORT CONSTANT fixed at construction, never caller text: it is
+   * not a credential, so it may travel across a redirect, and a value a header cannot
+   * safely carry (control characters, CR/LF) is refused here, before any request exists.
+   */
+  readonly userAgent?: string;
+}
+
+export class SafeWireFetchConfigurationRefused extends Error {
+  constructor(readonly reason: string) {
+    super(`SAFE_WIRE_FETCH_CONFIGURATION_REFUSED:${reason}`);
+    this.name = 'SafeWireFetchConfigurationRefused';
+  }
 }
 
 export function makeSafeWireFetch(deps: SafeWireFetchDeps): WireFetch {
-  const { resolver, connector, policy, resolveHost, credential } = deps;
+  const { resolver, connector, policy, resolveHost, credential, userAgent } = deps;
+  if (userAgent !== undefined && !/^[\x20-\x7e]{1,256}$/.test(userAgent)) {
+    throw new SafeWireFetchConfigurationRefused('USER_AGENT_NOT_PRINTABLE_ASCII');
+  }
 
   return async function safeWireFetch(
     request: OfficialDataTransportRequest,
@@ -292,6 +309,7 @@ export function makeSafeWireFetch(deps: SafeWireFetchDeps): WireFetch {
       /* ── 4 · HEADERS, REBUILT ON EVERY PASS ────────────────────────────── */
       const target = new URL(url);
       const headers: Record<string, string> = { Accept: request.accept };
+      if (userAgent !== undefined) headers['User-Agent'] = userAgent;
       if (carryHeaders) {
         /* The credential is attached ONLY to its exact bound origin, so there is no
            branch in which it travels. `dropAllHeaders` is the belt; this is the braces. */
