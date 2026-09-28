@@ -132,7 +132,7 @@ async function main(): Promise<void> {
             sourceTimestamp: p1.evidence.sourceTimestamp,
             title: p1.evidence.canonicalTitle,
           }
-        : { kind: p1.kind, ...p1 },
+        : { ...p1 },
   });
 
   /* P2 — PL edition page, separate edition */
@@ -153,7 +153,7 @@ async function main(): Promise<void> {
             sourceTimestamp: p2.evidence.sourceTimestamp,
             title: p2.evidence.canonicalTitle,
           }
-        : { kind: p2.kind, ...p2 },
+        : { ...p2 },
   });
 
   /* P3 — missing page */

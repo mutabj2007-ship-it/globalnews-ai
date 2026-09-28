@@ -49,7 +49,10 @@ export interface ComputeControlsConfig {
 
 /** Env name → [field, conservative default, PO-owned?]. */
 export const COMPUTE_CONTROL_KNOBS = {
-  ASK_UNITS_PER_REQUEST_MAX: ['unitsPerRequestMax', 12_000, true],
+  /* Gate E: 16k, not 12k — the landed analysis limits (8 × 1200-char articles, 2000 completion
+     tokens × output weight 4) estimate up to ~12.2k for a 1000-char question, so 12k refused
+     every long question. Still a placeholder: the PO sets the ruled value. */
+  ASK_UNITS_PER_REQUEST_MAX: ['unitsPerRequestMax', 16_000, true],
   ASK_GLOBAL_UNITS_PER_HOUR: ['globalUnitsPerHour', 300_000, true],
   ASK_GLOBAL_UNITS_PER_DAY: ['globalUnitsPerDay', 1_500_000, true],
   ASK_PROVIDER_UNITS_PER_HOUR: ['providerUnitsPerHour', 300_000, true],

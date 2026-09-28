@@ -171,6 +171,13 @@ import {
   AnalysisValidationError,
 } from '../validation/validate-analysis-result';
 import { asksAboutCoverage } from '../query/coverage-question.util';
+import type { AnalysisProviderInput } from '../interfaces';
+
+/** ASK R2 INTEGRATION R1 · GATE E — see `analyzeNews(…, executionPolicy)`. */
+export interface AnalysisExecutionPolicy {
+  readonly maxModelAttempts?: number;
+  readonly usageSink?: AnalysisProviderInput['usageSink'];
+}
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import {
   decideContextEligibility,
@@ -531,6 +538,12 @@ export class AnalysisService {
      * never read here. See mapGeographyLocation below for the precedence.
      */
     geographyContext?: GeographyContext,
+    /**
+     * ASK R2 INTEGRATION R1 · GATE E — the public Ask execution policy: a model-attempt
+     * ceiling and a usage sink for the compute meter. Absent for every existing caller,
+     * so /analysis is unchanged.
+     */
+    executionPolicy?: AnalysisExecutionPolicy,
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
 
@@ -2828,6 +2841,13 @@ export class AnalysisService {
             */
             developmentBreadth,
             signal: responseAbort.signal,
+            /* ASK R2 INTEGRATION R1 · GATE E — present only for the public Ask path. */
+            ...(executionPolicy?.maxModelAttempts === undefined
+              ? {}
+              : { maxModelAttempts: executionPolicy.maxModelAttempts }),
+            ...(executionPolicy?.usageSink === undefined
+              ? {}
+              : { usageSink: executionPolicy.usageSink }),
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;

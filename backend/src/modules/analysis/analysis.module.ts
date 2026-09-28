@@ -47,6 +47,8 @@ import type { AnalysisProvider } from './interfaces';
       inject: [ConfigService, MockAnalysisProvider, OpenAiAnalysisProvider],
     },
   ],
-  exports: [AnalysisService],
+  // ASK R2 INTEGRATION R1 · Gate E: the Ask execution adapter reads the active provider id
+  // (breaker and meter scope) and the analysis limits (unit estimate).
+  exports: [AnalysisService, ANALYSIS_PROVIDER, AnalysisConfigService],
 })
 export class AnalysisModule {}

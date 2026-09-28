@@ -157,6 +157,21 @@ export interface AnalysisProviderInput {
   signal?: AbortSignal;
 
   /**
+   * ASK R2 INTEGRATION R1 · GATE E — a CALLER-IMPOSED ceiling on model attempts. The
+   * public Ask path passes `ASK_MODEL_MAX_ATTEMPTS` (1, F 02 R-1: no retry multiplies a
+   * reader's spend). Absent → the provider's own accepted policy, unchanged for /analysis.
+   * A provider may only ever make FEWER attempts than this, never more.
+   */
+  maxModelAttempts?: number;
+
+  /**
+   * ASK R2 INTEGRATION R1 · GATE E — where the provider reports the tokens a successful
+   * call actually used, so the compute meter settles on ACTUAL units (F 01 L-9/L-14).
+   * Called at most once, only on success, with counts only — never content or keys.
+   */
+  usageSink?: (usage: { readonly promptTokens: number; readonly completionTokens: number }) => void;
+
+  /**
    * @deprecated EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — NOT SUPPLIED
    * BY ANY CALLER. The synchronous repair was removed by Alpha Budget R1
    * (`shared/src/analysis-budget.ts` derives the total WITHOUT it), so

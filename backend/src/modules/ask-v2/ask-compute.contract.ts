@@ -47,6 +47,18 @@ export interface AskExecutionPort {
   ): Promise<ExecutionResult>;
 }
 
+/**
+ * ASK R2 INTEGRATION R1 · GATE E — a CONTROL refused the execution (switch off, breaker
+ * open, budget exhausted, plan revision changed, model failed). Thrown, never returned as
+ * success, so no StoredResult is written; AskV2Service records `code` as the failureCode.
+ */
+export class AskExecutionRefused extends ServiceUnavailableException {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = 'AskExecutionRefused';
+  }
+}
+
 /** Explicit HOLD. Binding an adapter is CTO integration work, not a retrieval rewrite. */
 export const UNWIRED_ASK_EXECUTION_PORT: AskExecutionPort = {
   async prepare() {

@@ -14,6 +14,7 @@ import type { ComputeOperation } from '../../generated/prisma/client';
 import {
   ASK_EXECUTION_PORT,
   AskExecutionPort,
+  AskExecutionRefused,
   AskPlan,
   AskRequest,
   classifyCompute,
@@ -414,8 +415,13 @@ export class AskV2Service {
           Object.freeze(claim.plan),
           id,
         );
-      } catch {
-        await this.release(userId, id, 'EXECUTION_FAILED');
+      } catch (error) {
+        /* ASK R2 INTEGRATION R1 · Gate E — a control's refusal is named, not generic. */
+        const code =
+          error instanceof AskExecutionRefused && /^[A-Z0-9_:.-]{1,120}$/i.test(error.code)
+            ? error.code
+            : 'EXECUTION_FAILED';
+        await this.release(userId, id, code);
         return this.getOperation(userId, id);
       }
       // A DB settlement failure leaves RUNNING. Retrying execute must not call the provider again.
