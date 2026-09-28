@@ -285,7 +285,7 @@ describe('the extraction cannot change without its version changing', () => {
     WHEN THIS FAILS, THE EXTRACTION CHANGED. Bump `PDF_SYNC_TEXT_VERSION` and update the
     pin below in the same commit. Updating the pin alone is the one thing that defeats it.
   */
-  const PINNED_VERSION = '1.0.0';
+  const PINNED_VERSION = '1.1.0';
 
   it('the pinned version is the one the extractor reports', () => {
     expect(PDF_SYNC_TEXT_VERSION).toBe(PINNED_VERSION);

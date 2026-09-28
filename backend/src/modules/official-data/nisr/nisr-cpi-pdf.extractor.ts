@@ -45,11 +45,36 @@ import type {
 } from '@globalnews-ai/shared';
 
 import {
+  PDF_DECODE_BOUND_REFUSALS,
   PDF_READ_LIMITS,
   PDF_SYNC_TEXT_VERSION,
   readPdfTextLayer,
+  readPdfTextLayerOutcome,
+  type PdfReadRefusal,
   type PdfTextRun,
 } from '../pdf/pdf-sync-text';
+
+/**
+ * ASK R2 INTEGRATION R1 · B-2 FC-5 — every decode-bound refusal is a SECURITY event:
+ * a stable code, the refusal key, the compressed length, the bound and the document hash.
+ * Never the document bytes. A corrupt file (`FLATE_INFLATE_FAILED` and the rest) is not an
+ * attack signal and is not reported here.
+ */
+export const PDF_DECODE_BOUND_SECURITY_EVENT = 'PDF_DECODE_BOUND_REFUSAL' as const;
+
+function reportBoundRefusal(bytes: Uint8Array, refusal: PdfReadRefusal): void {
+  if (!(PDF_DECODE_BOUND_REFUSALS as readonly string[]).includes(refusal.key)) return;
+  // eslint-disable-next-line no-console
+  console.warn(
+    JSON.stringify({
+      event: PDF_DECODE_BOUND_SECURITY_EVENT,
+      key: refusal.key,
+      compressedLength: refusal.compressedLength,
+      bound: refusal.bound,
+      documentSha256: createHash('sha256').update(bytes).digest('hex'),
+    }),
+  );
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
  * 1 · IDENTITY
@@ -184,7 +209,8 @@ const ENGLISH_EDITION_MARKERS: readonly string[] = [
 
 export function extractNisrCpiTextLayer(bytes: Uint8Array): NisrCpiTextLayer | null {
   try {
-    const layer = readPdfTextLayer(bytes, PDF_READ_LIMITS);
+    const { layer, refusal } = readPdfTextLayerOutcome(bytes, PDF_READ_LIMITS);
+    if (refusal !== null) reportBoundRefusal(bytes, refusal);
     if (layer === null) return null;
 
     const lines = toLines(layer.runs);
@@ -307,9 +333,13 @@ export const NISR_CPI_PRODUCTION_EXTRACTOR: NisrCpiTextLayerExtractor = Object.f
  * would fail in one environment and pass in the other, which is worse than not checking.
  */
 export function nisrCpiExtractionFingerprint(): string {
-  return createHash('sha256')
-    .update(readPdfTextLayer.toString())
-    .update(extractNisrCpiTextLayer.toString())
-    .update(toLines.toString())
-    .digest('hex');
+  return (
+    createHash('sha256')
+      .update(readPdfTextLayer.toString())
+      /* B-2: the reader's work now lives in the outcome form; readPdfTextLayer delegates to it. */
+      .update(readPdfTextLayerOutcome.toString())
+      .update(extractNisrCpiTextLayer.toString())
+      .update(toLines.toString())
+      .digest('hex')
+  );
 }
