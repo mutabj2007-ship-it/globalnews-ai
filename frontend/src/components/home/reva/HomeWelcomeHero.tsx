@@ -52,7 +52,7 @@ export function HomeWelcomeHero({ language }: { language: LanguageCode }): JSX.E
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5abff5]">{t.eyebrow}</p>
         <h1
           id="home-hero-heading"
-          className="mt-3 font-display text-[34px] font-extrabold leading-[1.02] tracking-[-0.03em] text-white min-[380px]:text-[38px] md:text-[52px] lg:text-[60px] gn-xl:text-[72px]"
+          className="mt-3 font-display text-[34px] font-extrabold leading-[1.02] tracking-[-0.03em] text-white min-[380px]:text-[38px] md:text-[60px] gn-xl:text-[72px]"
         >
           <span className="block">{t.titleA}</span>
           <span className="block">{t.titleB}</span>
