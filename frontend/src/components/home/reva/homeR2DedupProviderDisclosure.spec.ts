@@ -32,7 +32,7 @@ jest.mock('@/components/ui/SafeImage', () => ({ SafeImage: () => null }));
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { WorldIn60Seconds } = require('./WorldIn60Seconds') as typeof import('./WorldIn60Seconds');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { allocateWorldIn60 } = require('./worldIn60Allocation') as typeof import('./worldIn60Allocation');
+const { allocateWorldIn60, allocateHomeFirstScreen, preferImageLead } = require('./worldIn60Allocation') as typeof import('./worldIn60Allocation');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { WhatsHappeningNow } = require('../WhatsHappeningNow') as typeof import('../WhatsHappeningNow');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -64,10 +64,12 @@ function story(i: number, overrides: Partial<NewsArticle> = {}): NewsArticle {
 }
 const response = (n: number): NewsArticle[] => Array.from({ length: n }, (_, i) => story(i));
 
+/* What the page renders: the first-screen partition of the one allocated response. */
 function homeRoles(articles: NewsArticle[]) {
   const feed = allocateHomeFeed(articles);
-  const whats = [...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery];
-  return { feed, whats, w60: allocateWorldIn60(feed) };
+  const screen = allocateHomeFirstScreen(feed);
+  const whats = [...(screen.featured === null ? [] : [screen.featured]), ...screen.inFocus, ...screen.discovery];
+  return { feed, screen, whats, w60: screen.worldIn60 };
 }
 const ids = (list: readonly NewsArticle[]): Set<string> => new Set(list.map((a) => a.id));
 const urls = (list: readonly NewsArticle[]): Set<string> => new Set(list.map((a) => normalizeArticleUrl(a.url)));
@@ -94,9 +96,10 @@ describe('DATA SEPARATION — What’s happening now and the 60-second module ar
 
   it('page wiring: What’s happening reads featured/inFocus/discovery; 60 s reads the disjoint pool, never the merged one', () => {
     expect(PAGE).toMatch(/lead=\{feed\.featured\}/);
-    expect(PAGE).toMatch(/secondary=\{feed\.inFocus\}/);
-    expect(PAGE).toMatch(/discovery=\{feed\.discovery\}/);
-    expect(PAGE).toMatch(/const worldIn60 = allocateWorldIn60\(feed\);/);
+    expect(PAGE).toMatch(/secondary=\{firstScreen\.inFocus\}/);
+    expect(PAGE).toMatch(/discovery=\{firstScreen\.discovery\}/);
+    expect(PAGE).toMatch(/const firstScreen = allocateHomeFirstScreen\(feed\);/);
+    expect(PAGE).toMatch(/const worldIn60 = firstScreen\.worldIn60;/);
     expect(PAGE).toMatch(/<WorldIn60Seconds items=\{worldIn60\}/);
     expect(code(PAGE)).not.toMatch(/newestFirst/);
   });
@@ -118,19 +121,49 @@ describe('DATA SEPARATION — What’s happening now and the 60-second module ar
     expect(pool.map((a) => a.id)).toEqual(['s90', 's91']);
   });
 
-  it('fewer than five distinct latest stories: renders fewer, no duplicate filling', () => {
-    const { whats, w60 } = homeRoles(response(15));
-    expect(w60).toHaveLength(3);
+  it('few leftovers (15 stories): stories MOVE from the What’s happening tail — five in 60 s, still disjoint', () => {
+    const { feed, whats, w60 } = homeRoles(response(15));
+    expect(feed.latestUpdates).toHaveLength(3);
+    expect(w60).toHaveLength(5);
+    expect(whats).toHaveLength(10);
+    expect(intersect(ids(whats), ids(w60))).toEqual([]);
+    expect(intersect(urls(whats), urls(w60))).toEqual([]);
     const html = renderW60(w60);
     expect(html.match(/data-home-w60-lead=""/g)).toHaveLength(1);
-    expect(html.match(/data-home-w60-row=""/g)).toHaveLength(2);
+    expect(html.match(/data-home-w60-row=""/g)).toHaveLength(4);
     for (const a of whats) expect(html).not.toContain(`href="${a.url}"`);
-    for (const a of w60) expect(html).toContain(a.title);
   });
 
-  it('narrow response: no invented story, truthful empty note, no "five" promise', () => {
-    const { whats, w60 } = homeRoles(response(9));
-    expect(whats).toHaveLength(9);
+  it.each([
+    [10, 5, 5], // GNews Free-sized response: nothing left over, the image-led lead stays
+    [7, 3, 4],
+    [5, 1, 4],
+    [2, 1, 1],
+  ])('small %i-story response keeps the image-led 60 s lead (%i stories) with no shared story', (n, w60Count, whatsCount) => {
+    const { feed, whats, w60 } = homeRoles(response(n));
+    expect(feed.latestUpdates).toEqual([]);
+    expect(w60).toHaveLength(w60Count);
+    expect(whats).toHaveLength(whatsCount);
+    expect(whats[0].id).toBe('s0'); // featured never moves
+    expect(intersect(ids(whats), ids(w60))).toEqual([]);
+    expect(intersect(urls(whats), urls(w60))).toEqual([]);
+    expect(ids([...whats, ...w60]).size).toBe(n); // a partition: nothing dropped, nothing invented
+    const html = renderW60(w60);
+    expect(html.match(/data-home-w60-lead=""/g)).toHaveLength(1);
+    expect(html).not.toContain('data-home-w60-empty');
+  });
+
+  it('the lead prefers a story with a real image', () => {
+    const items = [story(1, { imageUrl: undefined }), story(2), story(3)];
+    expect(preferImageLead(items).map((a) => a.id)).toEqual(['s2', 's1', 's3']);
+    expect(preferImageLead([story(4), story(5, { imageUrl: undefined })]).map((a) => a.id)).toEqual(['s4', 's5']);
+    const html = renderW60(items);
+    expect(html.indexOf(story(2).url)).toBeLessThan(html.indexOf(story(1).url));
+  });
+
+  it('one-story response: no invented story, truthful empty note, no "five" promise', () => {
+    const { whats, w60 } = homeRoles(response(1));
+    expect(whats).toHaveLength(1);
     expect(w60).toEqual([]);
     for (const language of ['en', 'pl'] as const) {
       const html = renderW60(w60, language);

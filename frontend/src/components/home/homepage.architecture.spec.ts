@@ -187,8 +187,9 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
   */
   it('WhatsHappeningNow receives the real curated roles (featured/inFocus/discovery), not a fabricated shape', () => {
     expect(pageSource).toMatch(/lead=\{feed\.featured\}/);
-    expect(pageSource).toMatch(/secondary=\{feed\.inFocus\}/);
-    expect(pageSource).toMatch(/discovery=\{feed\.discovery\}/);
+    /* HOME R2 DEDUP R1 — the same curated roles, after the first-screen partition with the 60-second module. */
+    expect(pageSource).toMatch(/secondary=\{firstScreen\.inFocus\}/);
+    expect(pageSource).toMatch(/discovery=\{firstScreen\.discovery\}/);
   });
 
   it('STEP 4 — the two surfaces read DIFFERENT roles of the same single response', () => {

@@ -9,7 +9,7 @@ import { HomeUtilityHeader } from '@/components/home/reva/HomeUtilityHeader';
 import { HomeProductRail } from '@/components/home/reva/HomeProductRail';
 import { HomeWelcomeHero } from '@/components/home/reva/HomeWelcomeHero';
 import { WorldIn60Seconds } from '@/components/home/reva/WorldIn60Seconds';
-import { allocateWorldIn60 } from '@/components/home/reva/worldIn60Allocation';
+import { allocateHomeFirstScreen } from '@/components/home/reva/worldIn60Allocation';
 import { SuggestedInvestigations } from '@/components/home/reva/SuggestedInvestigations';
 import { HomeForYou } from '@/components/home/reva/HomeForYou';
 import { ExploreIntelligence } from '@/components/home/reva/ExploreIntelligence';
@@ -101,9 +101,14 @@ export default async function HomePage(): Promise<JSX.Element> {
     HOME R2 STORY DEDUPLICATION R1 — the 60-second module no longer reads that
     pool. It shares the first screen with What's happening now (featured +
     inFocus + discovery), so it reads its OWN disjoint pool: `latestUpdates`
-    minus every What's happening story by id and canonical URL. On a narrow
-    response that pool is short or empty and the module shows fewer stories —
-    it is never padded with a story already shown beside it.
+    minus every What's happening story by id and canonical URL. It is never
+    padded with a story already shown beside it.
+
+    PO follow-up: the 60-second image must not disappear. On a small response
+    (few leftovers) allocateHomeFirstScreen MOVES the lowest-priority What's
+    happening stories into the 60-second module — removed from What's
+    happening, never copied — while What's happening keeps its four visible
+    cards. One partition of the one response; `featured` never moves.
   */
   const seenIds = new Set<string>();
   const homeArticles = [...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery, ...feed.latestUpdates].filter((article) => {
@@ -111,7 +116,8 @@ export default async function HomePage(): Promise<JSX.Element> {
     seenIds.add(article.id);
     return true;
   });
-  const worldIn60 = allocateWorldIn60(feed);
+  const firstScreen = allocateHomeFirstScreen(feed);
+  const worldIn60 = firstScreen.worldIn60;
 
   return (
     <>
@@ -168,11 +174,11 @@ export default async function HomePage(): Promise<JSX.Element> {
                   </aside>
                   <div className="min-w-0 self-start [grid-area:whats]">
                     <WhatsHappeningNow
-                      lead={feed.featured}
-                      secondary={feed.inFocus}
-                      discovery={feed.discovery}
-                      dataMode={feed.dataMode}
                       language={language}
+                      lead={feed.featured}
+                      secondary={firstScreen.inFocus}
+                      discovery={firstScreen.discovery}
+                      dataMode={feed.dataMode}
                     />
                   </div>
                   <div data-home-suggested-row="" className="min-w-0 [grid-area:sugg]">

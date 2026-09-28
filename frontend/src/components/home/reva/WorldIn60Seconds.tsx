@@ -8,6 +8,7 @@ import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 import { CATEGORY_TEXT, CATEGORY_TEXT_BASE, CATEGORY_TEXT_FALLBACK } from '@/components/home/homePresentation';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { useHomeSession } from './HomeSession';
+import { preferImageLead } from './worldIn60Allocation';
 
 /**
  * HOME REV A — YOUR WORLD IN 60 SECONDS, IMAGE-LED ON EVERY DEVICE (REQUIRED).
@@ -18,8 +19,10 @@ import { useHomeSession } from './HomeSession';
  *   caller had drifted to the whole merged Home pool, which put the same stories
  *   on both sides. No extra fetch, no AI. Signed in (D5): followed places first,
  *   from that same list. Up to five; FEWER when fewer distinct stories remain,
- *   never padded. Empty: a one-line truthful note (`showEmptyState`) so the
- *   right rail is not a silent blank beside a full What's happening now.
+ *   never padded. PO follow-up: on a small response, stories MOVE here from
+ *   the tail of What's happening now (allocateHomeFirstScreen) so the image-led
+ *   lead stays; nothing is shown twice. Empty only for a one-story response:
+ *   then a one-line truthful note (`showEmptyState`).
  * - Lead: the story's REAL image in a fixed box, or the governed "No image"
  *   fallback in the same box (StoryVisual) — never stock or generated imagery.
  *   Heights: 1920 → 176 · 1440/1280 → 150 · in flow on tablet → 190 (lead
@@ -57,7 +60,10 @@ export function WorldIn60Seconds({
   const categoryLabels = dict.map.categories;
   const { user, follows } = useHomeSession();
   const signedIn = user !== null;
-  const ordered = orderFollowedFirst(items, signedIn ? follows : null).slice(0, 5);
+  const hasFollows = signedIn && follows !== null && follows.length > 0;
+  /* PO follow-up: the lead is image-led — a story with a real image leads the shown five (followed-first still wins when the reader follows places). */
+  const top = orderFollowedFirst(items, signedIn ? follows : null).slice(0, 5);
+  const ordered = hasFollows ? top : preferImageLead(top);
   const [lead, ...rows] = ordered;
   if (lead === undefined) {
     if (!showEmptyState) return null;
@@ -86,7 +92,7 @@ export function WorldIn60Seconds({
       <h2 id="home-w60-heading" className="text-[18px] font-bold leading-tight text-white">
         {t.title}
       </h2>
-      <p className="mt-1 text-[12.5px] text-[#8ca3bd]">{signedIn && follows !== null && follows.length > 0 ? t.noteSigned : t.note}</p>
+      <p className="mt-1 text-[12.5px] text-[#8ca3bd]">{hasFollows ? t.noteSigned : t.note}</p>
 
       <div className="mt-3 flex flex-col gap-3 [@container(min-width:520px)]:grid [@container(min-width:520px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] [@container(min-width:520px)]:gap-5">
         <div className="min-w-0">
