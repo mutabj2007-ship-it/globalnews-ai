@@ -396,7 +396,11 @@ describe('ELASTIC COMPOSER R2 — long pasted questions stay readable', () => {
     expect(hero).toContain('maxHeight={280}');
     /* COMPOSER GEOMETRY R1 — Search's bounded ceiling lives in searchComposerGeometry.ts. */
     expect(search).toContain('maxHeight={SEARCH_COMPOSER_GEOMETRY.maxHeight}');
-    expect(askParts).toContain('maxHeight={420}');
+    /* ASK R2 CLAUDE DESIGN RECONCILIATION R1 — /ask follows D25 04: ~6 lines, 220 desktop / 140 phone. */
+    expect(askParts).toContain('maxHeight={maxHeight}');
+    expect(
+      readFileSync(join(__dirname, '../ask-frame/AskFrameScreen.tsx'), 'utf8'),
+    ).toContain('maxHeight={compact ? 140 : 220}');
     expect(CODE).toContain('maxHeight={420}');
   });
 });

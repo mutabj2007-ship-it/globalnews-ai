@@ -23,15 +23,38 @@ import { localisedCountryName } from '@/lib/map/geography/displayName';
  * exactly what D25's "Open full analysis" must not do.
  */
 
+/* ASK R2 CLAUDE DESIGN RECONCILIATION R1 — the D25 BADGE palette, per engine state. */
 const TONE_CLASS: Readonly<Record<AskR2View['tone'], string>> = {
-  reference: 'border border-dashed border-[#b4c0cf]/60 bg-transparent text-[#b4c0cf]',
-  verified: 'border border-[#7cc4f7]/70 bg-[#0d2238] text-[#e8eef8]',
-  current: 'border border-[#d5e4f2]/40 bg-[#0f1b29] text-[#e8eef8]',
-  clarification: 'border border-[#e9c46a]/60 bg-[#221c0c] text-[#f3e6c4]',
-  partial: 'border border-[#8fb3d9]/50 bg-[#0f1b29] text-[#e8eef8]',
-  insufficient: 'border border-[#c98a8a]/50 bg-[#1f1214] text-[#f1dada]',
-  unavailable: 'border border-[#8a96a6]/50 bg-[#12161c] text-[#c5ccd6]',
+  reference: 'border border-[#3a4a5e] bg-[#1a2230] text-[#c3ccd8]',
+  verified: 'border border-[#1b6fa8] bg-[#07304f] text-[#8fd3ff]',
+  current: 'border border-[#1b6fa8] bg-[#07304f] text-[#8fd3ff]',
+  clarification: 'border border-[#2a6d9e] bg-[#0a2a47] text-[#bfe3fb]',
+  partial: 'border border-[#6b5a20] bg-[#2a2410] text-[#f3d36b]',
+  insufficient: 'border border-[#6b3236] bg-[#2d1618] text-[#f2a5a5]',
+  unavailable: 'border border-[#3a4a5e] bg-[#12161c] text-[#c5ccd6]',
 };
+
+/* D25 answer surfaces: Reference is dashed and muted, never styled like current evidence. */
+const CARD_CLASS: Readonly<Record<AskR2View['tone'], string>> = {
+  reference: 'border border-dashed border-[#4a5a6e] bg-[#0e1520] text-[#c3ccd8]',
+  verified:
+    'border border-[#0e2d4d] bg-[linear-gradient(#082038,#041a30_46%,#02152b)] text-[#e6eef6]',
+  current:
+    'border border-[#0e2d4d] bg-[linear-gradient(#082038,#041a30_46%,#02152b)] text-[#e6eef6]',
+  clarification: 'border border-[#2a6d9e] bg-[linear-gradient(#08263f,#051a2e)] text-[#e6eef6]',
+  partial:
+    'border border-[#0e2d4d] bg-[linear-gradient(#082038,#041a30_46%,#02152b)] text-[#e6eef6]',
+  insufficient: 'border border-[#4a2a2e] bg-[#0b1522] text-[#cfe2f2]',
+  unavailable: 'border border-[#3a4a5e] bg-[#12161c] text-[#c5ccd6]',
+};
+
+const EYEBROW =
+  'font-mono text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-[#6f89a8]';
+const TURN = 'mb-6 flex flex-col';
+/* D25 qFs: 21 phone · 26 desktop · 30 at 1920. */
+const QUESTION =
+  'mb-3 mt-2.5 text-[21px] font-bold leading-[1.2] tracking-[-0.015em] text-white md:text-[26px] min-[1900px]:text-[30px]';
+const CARD = 'rounded-[12px] p-3.5 md:p-5';
 
 export function AskR2TurnView({
   turn,
@@ -52,15 +75,14 @@ export function AskR2TurnView({
 
   if (payload === null) {
     return (
-      <article
-        data-ask-turn
-        data-ask="turn"
-        data-ask-state="unavail"
-        className="mb-5 border-b border-sp-line pb-4"
-      >
-        <p className="text-[11px] uppercase tracking-[0.08em] text-sp-ink-3">{s.youAsked}</p>
-        <h2 className="mb-3 text-[15px] font-semibold leading-[1.45]">{turn.question}</h2>
-        <p role="alert" data-ask="unavailable" className="text-[15px] leading-[1.55]">
+      <article data-ask-turn data-ask="turn" data-ask-state="unavail" className={TURN}>
+        <p className={EYEBROW}>{s.youAsked}</p>
+        <h2 className={QUESTION}>{turn.question}</h2>
+        <p
+          role="alert"
+          data-ask="unavailable"
+          className={`rounded-[12px] p-3.5 text-[15px] leading-[1.55] md:p-5 ${CARD_CLASS.unavailable}`}
+        >
           {s.unavailable}
         </p>
       </article>
@@ -71,57 +93,59 @@ export function AskR2TurnView({
   const operationId = turn.operation?.operationId;
 
   return (
-    <article
-      data-ask-turn
-      data-ask="turn"
-      data-ask-state={view.badge}
-      className="mb-5 border-b border-sp-line pb-4"
-    >
-      <p className="text-[11px] uppercase tracking-[0.08em] text-sp-ink-3">{s.youAsked}</p>
-      <h2 className="mb-2 text-[15px] font-semibold leading-[1.45]">{turn.question}</h2>
+    <article data-ask-turn data-ask="turn" data-ask-state={view.badge} className={TURN}>
+      <p className={EYEBROW}>{s.youAsked}</p>
+      <h2 className={QUESTION}>{turn.question}</h2>
 
-      <div data-ask="engine-state" className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span
-          data-ask-badge={view.badge}
-          className={`inline-flex min-h-[24px] items-center rounded px-2 text-[11px] font-semibold tracking-[0.06em] ${TONE_CLASS[view.tone]}`}
-        >
-          {view.badgeText}
+      <div data-ask="scope" className="mb-3 flex flex-wrap items-center gap-1.5">
+        <span className="me-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6f89a8]">
+          {s.scope}
         </span>
-        <span data-ask="freshness" className="text-[12px] text-sp-ink-2">
-          {view.freshness}
-        </span>
-        {turn.expired === true && (
-          <span data-ask="expired" className="text-[12px] text-sp-ink-2">
-            {s.expiredNote}
-          </span>
-        )}
-      </div>
-
-      <div data-ask="scope" className="mb-3 flex flex-wrap items-center gap-1.5 text-[12px]">
-        <span className="text-[11px] uppercase tracking-[0.08em] text-sp-ink-3">{s.scope}</span>
         {view.chips.items.map((chip, i) => (
           <span
             key={`${chip.kind}-${i}`}
             data-ask-chip={chip.kind}
             data-ask-chip-kept={chip.kept ? 'true' : undefined}
-            className={`rounded-full border px-2 py-0.5 ${chip.kept ? 'border-dashed border-[#c98a8a]/60' : 'border-sp-line'}`}
+            className={`inline-flex h-7 items-center whitespace-nowrap rounded-[14px] border bg-[#06223d] px-2.5 text-[13px] font-semibold text-[#cfe2f2] ${chip.kept ? 'border-dashed border-[#c98a8a]/60' : 'border-[#1d4a73]'}`}
           >
             {chip.label}
           </span>
         ))}
-        {view.chips.note !== null && <span className="text-sp-ink-2">{view.chips.note}</span>}
+        {view.chips.note !== null && (
+          <span className="text-[13px] italic text-[#8fa6c0]">{view.chips.note}</span>
+        )}
+      </div>
+
+      <div data-ask="engine-state" className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <span
+          data-ask-badge={view.badge}
+          className={`inline-flex h-[26px] items-center whitespace-nowrap rounded-[6px] px-2.5 font-mono text-[11px] font-bold tracking-[0.08em] ${TONE_CLASS[view.tone]}`}
+        >
+          {view.badgeText}
+        </span>
+        <span data-ask="freshness" className="font-mono text-[12px] leading-[1.3] text-[#8299b4]">
+          {view.freshness}
+        </span>
+        {turn.expired === true && (
+          <span data-ask="expired" className="font-mono text-[12px] text-[#8299b4]">
+            {s.expiredNote}
+          </span>
+        )}
       </div>
 
       {view.badge === 'clar' ? (
-        <section data-ask="clarification" className={`rounded p-3 ${TONE_CLASS.clarification}`}>
+        <section
+          data-ask="clarification"
+          className={`flex flex-col gap-3 ${CARD} ${CARD_CLASS.clarification}`}
+        >
           {view.clarification.candidates.length > 0 ? (
             <>
-              <p className="text-[15px] leading-[1.55]">{s.whichOne}</p>
-              <ul data-ask="clarification-candidates" className="mt-2 flex flex-wrap gap-2">
+              <p className="text-[19px] font-bold leading-[1.2] md:text-[22px]">{s.whichOne}</p>
+              <ul data-ask="clarification-candidates" className="flex flex-col gap-2">
                 {view.clarification.candidates.map((name) => (
                   <li
                     key={name}
-                    className="rounded-full border border-[#e9c46a]/60 px-2 py-0.5 text-[13px]"
+                    className="flex min-h-[48px] items-center rounded-[10px] border border-[#1d4a73] bg-[#06223d] px-3.5 text-[15px] font-semibold"
                   >
                     {name}
                   </li>
@@ -129,36 +153,48 @@ export function AskR2TurnView({
               </ul>
             </>
           ) : view.clarification.lead !== null ? (
-            <p data-ask="clarification-lead" className="text-[15px] leading-[1.55]">
+            <p data-ask="clarification-lead" className="text-[16px] leading-[1.55]">
               {view.clarification.lead}
             </p>
           ) : (
-            <p className="text-[15px] leading-[1.55]">{s.freshness.nothingRan}</p>
+            <p className="text-[16px] leading-[1.55]">{s.freshness.nothingRan}</p>
           )}
-          <p className="mt-2 text-[12px]">
+          <p className="font-mono text-[12px] text-[#6f89a8]">
             {view.clarification.byExecutor ? s.clarificationFooterNoAi : s.clarificationFooter}
           </p>
-          <p className="mt-1 text-[12px]">{s.sourcesAfterChoice}</p>
+          {/* At ≥1280 the Sources column states this instead; never both (CTO ruling). */}
+          <p data-ask="sources-after-choice" className="font-mono text-[12px] text-[#6f89a8]">
+            {s.sourcesAfterChoice}
+          </p>
         </section>
       ) : view.badge === 'unavail' ? (
         <p
           role="alert"
           data-ask="unavailable"
           data-ask-basis={payload.answer.basis}
-          className={`rounded p-3 text-[15px] leading-[1.55] ${TONE_CLASS.unavailable}`}
+          className={`text-[15px] leading-[1.55] ${CARD} ${CARD_CLASS.unavailable}`}
         >
           {view.unavailableText}
         </p>
       ) : (
-        <section data-ask="answer" className={`rounded p-3 ${TONE_CLASS[view.tone]}`}>
+        <section
+          data-ask="answer"
+          className={`flex flex-col gap-3.5 ${CARD} ${CARD_CLASS[view.tone]}`}
+        >
+          <p className={EYEBROW}>{s.answer}</p>
           {view.badge === 'ref' && !view.citable && (
-            <div data-ask="reference-note" className="mb-2 text-[13px] leading-[1.5]">
-              <p className="font-semibold">{s.referenceNoteTitle}</p>
+            <div
+              data-ask="reference-note"
+              className="rounded-[8px] border border-dashed border-[#4a5a6e] bg-[#121a26] px-3 py-2.5 text-[13px] leading-[1.45] text-[#a9b6c6]"
+            >
+              <p className="font-bold text-[#d3dbe5]">{s.referenceNoteTitle}</p>
               <p>{s.referenceNoteBody}</p>
             </div>
           )}
           {view.badge === 'insuf' && (
-            <p className="mb-2 text-[15px] font-semibold leading-[1.45]">{s.insufficientTitle}</p>
+            <p className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
+              {s.insufficientTitle}
+            </p>
           )}
           {payload.analysis !== null && (
             <AskCompactResult
@@ -170,7 +206,7 @@ export function AskR2TurnView({
             />
           )}
           {view.badge === 'ref' && view.sourceCount === 0 && (
-            <p data-ask="no-citable" className="mt-2 text-[12px]">
+            <p data-ask="no-citable" className="font-mono text-[12px] text-[#8fa6c0]">
               {s.noCitable}
             </p>
           )}
@@ -180,15 +216,19 @@ export function AskR2TurnView({
       {((view.handoffs.openFull && !displayOnly) ||
         (view.handoffs.runDeeper && onRunDeeper !== undefined)) &&
         operationId !== undefined && (
-          <div data-ask="handoffs" className="mt-3 flex flex-wrap gap-3">
+          <div data-ask="handoffs" className="mt-4 flex flex-wrap gap-2.5">
             {view.handoffs.openFull && !displayOnly && (
               <a
                 data-ask="open-full-analysis"
                 href={openFullAnalysisHref(operationId)}
-                className="inline-flex min-h-[44px] flex-col justify-center rounded border border-[#4a9de0] px-3 text-[13px] text-[#93cdf5]"
+                className="flex min-h-[56px] flex-[1_1_220px] flex-col justify-center gap-1 rounded-[12px] border border-[#1b6fa8] px-4 py-2.5 hover:bg-[#07304f]"
               >
-                <span className="font-semibold">{s.openFull}</span>
-                <span className="text-[11px] text-sp-ink-2">{s.openFullMeta}</span>
+                <span className="text-[15px] font-bold leading-[1.1] text-[#cfe2f2]">
+                  {s.openFull}
+                </span>
+                <span className="font-mono text-[11px] leading-[1.2] text-[#8299b4]">
+                  {s.openFullMeta}
+                </span>
               </a>
             )}
             {view.handoffs.runDeeper && onRunDeeper !== undefined && (
@@ -196,10 +236,14 @@ export function AskR2TurnView({
                 type="button"
                 data-ask="run-deeper"
                 onClick={() => onRunDeeper(turn.question)}
-                className="inline-flex min-h-[44px] flex-col justify-center rounded border-2 border-[#6a5634] bg-[#2e2618] px-3 text-left text-[13px] text-[#D9B98A]"
+                className="flex min-h-[56px] flex-[1_1_220px] flex-col justify-center gap-1 rounded-[12px] border-2 border-[#6a5634] bg-[#2e2618] px-4 py-2.5 text-left hover:bg-[#3a3020]"
               >
-                <span className="font-semibold">{s.runDeep}</span>
-                <span className="text-[11px]">{s.runDeepMeta}</span>
+                <span className="text-[15px] font-bold leading-[1.1] text-[#D9B98A]">
+                  {s.runDeep}
+                </span>
+                <span className="font-mono text-[11px] leading-[1.2] text-[#c9b48c]">
+                  {s.runDeepMeta}
+                </span>
               </button>
             )}
           </div>

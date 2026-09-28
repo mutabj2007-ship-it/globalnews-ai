@@ -1,3 +1,8 @@
+/*
+  ASK R2 CLAUDE DESIGN RECONCILIATION R1 — the frozen D25 workspace geometry
+  (GNAI_ASK_INTELLIGENCE_WORKSPACE_R2_FINAL_DESIGN_AUTHORITY_D25). No map, no split, no
+  resize handle: Ask beside the Map is /map's composition, not this route's.
+*/
 .frame {
   font-family: var(--font-cd-body), system-ui, sans-serif;
   height: calc(var(--ask-visible-height, 100dvh) - var(--ask-top, 62px));
@@ -5,80 +10,162 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--sp-bg, #05090f);
-  color: #e8eef8;
+  background: radial-gradient(120% 60% at 20% 0%, #04203d 0%, #010a19 60%);
+  color: #e6eef6;
 }
-.header {
-  display: flex;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 14px;
-  border-bottom: 1px solid #22303f;
-  background: #0b131d;
-}
-.body {
-  position: relative;
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  gap: 10px;
-  padding: 10px;
-}
-.map {
-  width: var(--ask-map-percent);
-  min-width: 0;
-  height: 100%;
-  flex-shrink: 0;
-}
-.panel {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-  border: 1px solid #22303f;
-  background: #0f1823;
-}
+
+/* ONE scroll area — the conversation. The composer bar below it never scrolls away. */
 .reader {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 12px;
 }
-.reader section {
+
+/* ≥1024: a single centred 760 column (D25 12; DECISIONS_LOG inspection fix 5). */
+.grid,
+.composerGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 760px;
+  margin: 0 auto;
+}
+.grid {
+  padding: 28px 24px 32px;
+}
+.composerGrid {
+  padding: 14px 24px 16px;
+}
+.thread {
+  min-width: 0;
+}
+
+/* Sources sit inline in the answer below 1280 (D25 01 region 4). */
+.sourcesColumn {
+  display: none;
+}
+
+/* ≥1280 with a question: thread + Sources column 340, gap 28, 1100 wide (D25 01, 12). */
+@media (min-width: 1280px) {
+  .frame[data-ask-sources-column='true'] .grid,
+  .frame[data-ask-sources-column='true'] .composerGrid {
+    max-width: 1100px;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    column-gap: 28px;
+  }
+  .frame[data-ask-sources-column='true'] .sourcesColumn {
+    display: block;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    min-width: 0;
+  }
+  /*
+    The column IS the latest answer's source list; its inline copy steps aside. The same
+    holds for a clarification's "Sources appear after you choose": the column says it, the
+    card does not — one instance per visible layout.
+  */
+  .frame[data-ask-sources-column='true']
+    [data-ask-latest]
+    :global([data-ask='sources-after-choice']) {
+    display: none;
+  }
+  .frame[data-ask-sources-column='true'] [data-ask-latest] :global([data-ask='sources']) {
+    display: none;
+  }
+}
+/* 1920: 1280 wide, Sources 400. */
+@media (min-width: 1900px) {
+  .frame[data-ask-sources-column='true'] .grid,
+  .frame[data-ask-sources-column='true'] .composerGrid {
+    max-width: 1280px;
+    grid-template-columns: minmax(0, 1fr) 400px;
+  }
+}
+
+.composerBar {
+  flex-shrink: 0;
+  border-top: 1px solid #0a2744;
+  background: rgba(2, 15, 32, 0.96);
+}
+
+/* D25 00-empty. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 64px;
+}
+.emptyTitle {
+  margin: 0;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  color: #fff;
+}
+.emptyLead {
+  margin: 0;
+  max-width: 560px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #b6c9de;
+  text-wrap: pretty;
+}
+@media (min-width: 1900px) {
+  .emptyTitle {
+    font-size: 48px;
+  }
+}
+
+/* Question heading (D25 qFs: 26 · 30 at 1920 · 21 phone). */
+.question {
+  margin: 8px 0 12px;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  text-wrap: pretty;
+}
+@media (min-width: 1900px) {
+  .question {
+    font-size: 30px;
+  }
+}
+.legacyTurn {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #0a2744;
+}
+.earlier {
+  padding: 14px 16px;
+  border: 1px solid #0e2d4d;
+  border-radius: 12px;
+  background: #03152a;
+}
+.contextChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
   margin-bottom: 12px;
+  padding-left: 12px;
+  border: 1px solid #1d4a73;
+  border-radius: 999px;
+  background: #06223d;
+  font-size: 13px;
+  font-weight: 600;
+  color: #cfe2f2;
 }
-.composer {
-  flex-shrink: 0;
-  padding: 10px;
-  border-top: 1px solid #22303f;
+
+/* Answer prose reads at D25 paragraph size (pFs 17 · 16 phone, line 1.6). */
+.thread :global([data-ask='brief']) p {
+  font-size: 17px;
+  line-height: 1.6;
+  max-width: 42em;
 }
-.resize {
-  width: 8px;
-  flex-shrink: 0;
-  margin: 0 -9px;
-  z-index: 2;
-  cursor: col-resize;
-  touch-action: none;
-}
-.resize:focus-visible {
-  outline: 2px solid #4a9de0;
-}
-.panel[data-fullmap='true'] {
-  position: absolute;
-  bottom: 26px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(640px, 72vw);
-  max-height: 80%;
-  flex: none;
-  border-radius: 6px;
-  box-shadow: 0 10px 30px #0007;
-}
+
 /*
   ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — D25 11 FULL-SCREEN MOBILE AUTHORITY.
   "PHONE MAP MAY BE PARTIAL. PHONE ASK MAY NOT." Phones and 768 portrait: the surface
@@ -90,12 +177,6 @@
 .phoneStrip {
   display: none;
 }
-.reader p,
-.reader li {
-  font-size: 15px;
-  line-height: 1.55;
-  max-width: 38em;
-}
 @media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {
   .frame {
     position: fixed;
@@ -104,20 +185,15 @@
     height: var(--ask-visible-height, 100dvh);
     min-height: 0;
   }
-  .header,
-  .panelTitle,
-  .resize {
-    display: none;
-  }
   .phoneHeader {
     display: flex;
     flex-shrink: 0;
     align-items: center;
     gap: 8px;
     height: 56px;
-    padding: 0 10px;
-    border-bottom: 1px solid #22303f;
-    background: #0b131d;
+    padding: 0 8px;
+    border-bottom: 1px solid #0a2744;
+    background: rgba(2, 15, 32, 0.96);
   }
   .phoneStrip {
     display: flex;
@@ -125,74 +201,38 @@
     align-items: center;
     gap: 6px;
     height: 44px;
-    padding: 0 14px;
+    padding: 0 16px;
     overflow-x: auto;
     white-space: nowrap;
-    border-bottom: 1px solid #22303f;
-    background: #08111a;
+    border-bottom: 1px solid #0a2744;
+    background: #02101f;
     font-size: 13px;
+    scrollbar-width: none;
   }
-  .body {
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    gap: 0;
+  .grid,
+  .composerGrid {
+    max-width: none;
   }
-  .map {
-    display: none;
+  .grid {
+    padding: 16px 16px 24px;
   }
-  .panel {
-    position: static;
-    flex: 1;
-    width: 100%;
-    border: 0;
-    border-radius: 0;
+  .composerGrid {
+    padding: 10px 12px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
-  .reader {
-    padding: 12px 14px;
+  .empty {
+    padding-top: 24px;
   }
-  .reader p,
-  .reader li {
-    max-width: 34em;
+  .emptyTitle {
+    font-size: 30px;
   }
-  .composer {
-    padding: 8px 10px;
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  .emptyLead {
+    font-size: 16px;
   }
-}
-/*
-  1024 LANDSCAPE — D26 APPROVED: a dedicated 460 px Ask pane flush right, full remaining
-  height, beside a Map that keeps meaningful width (D25 12).
-*/
-@media (min-width: 861px) and (max-width: 1279px) and (orientation: landscape) {
-  .header,
-  .resize {
-    display: none;
+  .question {
+    font-size: 21px;
   }
-  .body {
-    padding: 0;
-    gap: 0;
+  .thread :global([data-ask='brief']) p {
+    font-size: 16px;
   }
-  .map {
-    flex: 1;
-    width: auto;
-  }
-  .panel {
-    flex: none;
-    width: 460px;
-    border-width: 0 0 0 1px;
-  }
-  .panel[data-fullmap='true'] {
-    position: static;
-    transform: none;
-    width: 460px;
-    max-height: none;
-    border-radius: 0;
-    box-shadow: none;
-  }
-}
-
-.reader[data-tab='sources'] :global([data-ask='brief']),
-.reader[data-tab='sources'] :global([data-ask='relational-answer']) {
-  display: none;
 }
