@@ -498,6 +498,74 @@ describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zer
     expect(backgroundMax).toBeLessThanOrEqual(ceiling);
     expect(backgroundMax).toBeLessThan(reportingMax);
   });
+
+  /*
+    CTO POST-#66 CLOSURE — qualification family 1/2: MIXED background + current. A question
+    with a stable part AND a present-day part (frozen C: `e.time.requirement === 'RECENT'`
+    from a stated-now period, or a present-tense/geographic/domain signal — see
+    `deriveEvidenceNeeds` in planner.ts) must put NEWS_REPORTING into `required`, so
+    `required.length` is never 0 and the terminal is never REFERENCE_BACKGROUND_ONLY. That
+    is the whole proof: a mixed question can only ever reach `execute()`'s existing,
+    unmodified Reporting path (§4 above `executeBackground` is never invoked), so a current
+    claim structurally cannot be silently answered from model background — there is no
+    branch in this adapter that would let it.
+  */
+  describe('CTO POST-#66 CLOSURE — mixed background + current, never a silent fallback', () => {
+    it.each([
+      'What is NATO and what is it doing in Poland today?',
+      'What is inflation and what is the inflation rate today?',
+    ])(
+      '%s → NOT REFERENCE_BACKGROUND_ONLY; execute() reaches Reporting, never the background provider',
+      async (q) => {
+        const { adapter, calls } = harness({});
+        const plan = await adapter.prepare(req(q));
+        expect(plan.contract).not.toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+        await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+        expect(calls.background).toEqual([]);
+        expect(calls.analysis).toHaveLength(1);
+      },
+    );
+  });
+
+  /*
+    CTO POST-#66 CLOSURE — qualification family 2/2: BACKGROUND + FOLLOW-UP. A single
+    adapter instance carries no per-turn state (`execute` reads only its arguments — the
+    request, the plan Frozen C already computed, and the operation id), so this proves the
+    provenance boundary holds ACROSS a conversation, not just within one call: three
+    resolved turns (the upstream continuation/pronoun resolution that turns "Why was it
+    created?" into a self-contained question is a different, already-tested layer — this
+    adapter only ever sees the resolved text) run through the SAME harness, and the
+    background/Reporting call counts must move independently, per turn, with no leakage
+    from the prior turn's classification.
+  */
+  describe('CTO POST-#66 CLOSURE — background + follow-up, provenance boundary across turns', () => {
+    it('stable → stable → current: each turn is classified and executed on its own, no state carried over', async () => {
+      const { adapter, calls } = harness({});
+
+      const turn1 = 'What is NATO?';
+      const plan1 = await adapter.prepare(req(turn1));
+      expect(plan1.contract).toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+      await inRequest(() => adapter.execute(req(turn1), plan1, 'op-1'));
+      expect(calls.background).toHaveLength(1);
+      expect(calls.analysis).toHaveLength(0);
+
+      const turn2 = 'Why was NATO created?';
+      const plan2 = await adapter.prepare(req(turn2));
+      expect(plan2.contract).toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+      await inRequest(() => adapter.execute(req(turn2), plan2, 'op-2'));
+      expect(calls.background).toHaveLength(2);
+      expect(calls.analysis).toHaveLength(0);
+
+      const turn3 = 'What is NATO doing in Poland today?';
+      const plan3 = await adapter.prepare(req(turn3));
+      expect(plan3.contract).not.toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+      await inRequest(() => adapter.execute(req(turn3), plan3, 'op-3'));
+      /* the boundary: turn 3's current claim does not touch the background provider, and
+         turns 1–2's background answers did not touch Reporting. */
+      expect(calls.background).toHaveLength(2);
+      expect(calls.analysis).toHaveLength(1);
+    });
+  });
 });
 
 describe('GATE H — Main R1.1 execution rows', () => {
