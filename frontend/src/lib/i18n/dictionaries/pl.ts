@@ -3,6 +3,7 @@ import type { Dictionary } from './index';
 import { adminPl } from './adminPl';
 import { supportPl } from './supportPl';
 import { myIntelligencePl } from './myIntelligencePl';
+import { homeRevaPl } from './homeRevaPl';
 
 /**
  * Milestone #47 — Polish dictionary, the first production non-English
@@ -30,6 +31,8 @@ export const pl: Dictionary = {
    * same getDictionary(language) call and adds no second localization path.
    */
   myIntelligence: myIntelligencePl,
+  /* HOME WELCOME & DISCOVERY R1 REV A — Home copy. */
+  homeReva: homeRevaPl,
 
   languageSelectorLabel: 'Język',
   yourQuestion: 'Twoje pytanie',

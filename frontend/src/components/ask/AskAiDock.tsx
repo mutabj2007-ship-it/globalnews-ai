@@ -136,7 +136,14 @@ interface AskAiDockProps {
  * the right surface; it simply must not also advertise itself on top of a
  * frozen control that already offers the same journey.
  */
-const LAUNCHER_SUPPRESSED_ROUTES: ReadonlySet<string> = new Set(['/my-intelligence']);
+/*
+ * HOME WELCOME & DISCOVERY R1 REV A — Home joins the list. Rev A's IA ruling:
+ * the secondary Ask on Home is the compact HEADER launcher once the Hero
+ * composer scrolls out (desktop, D2), and phone uses the existing Ask AI tab —
+ * "no floating button". Exactly as for My Intelligence, only the floating
+ * button yields: the Hero composer's staging still opens this dock.
+ */
+const LAUNCHER_SUPPRESSED_ROUTES: ReadonlySet<string> = new Set(['/my-intelligence', '/']);
 
 /**
  * ═══ MAP / SPATIAL VISUAL CONVERGENCE R2 — ASK ON THE MAP ══════════════════

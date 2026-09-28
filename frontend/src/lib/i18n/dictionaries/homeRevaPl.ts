@@ -1,0 +1,123 @@
+import type { HomeRevaDictionary } from './homeRevaEn';
+
+/**
+ * HOME WELCOME & DISCOVERY R1 REV A — Home copy (PL).
+ * Authority: r6/HOME-WELCOME-DISCOVERY-R1-REV-A/COPY_EN_PL.md. "Moja analiza"
+ * is the established Polish product name for My Intelligence.
+ */
+export const homeRevaPl: HomeRevaDictionary = {
+  rail: {
+    ariaLabel: 'Nawigacja produktu',
+    sections: {
+      intelligence: 'Analiza',
+      specialists: 'Specjaliści',
+      deep: 'Pogłębiona analiza',
+      account: 'Konto i ustawienia',
+    },
+    home: 'Start',
+    worldMap: 'Mapa świata',
+    askAi: 'Zapytaj AI',
+    myIntelligence: 'Moja analiza',
+    myIntelligenceAnon: 'Dostępne po zalogowaniu',
+    analysisWorkspace: 'Obszar analizy',
+    elections: 'Wybory',
+    imihigo: 'Imihigo',
+    account: 'Konto',
+    accountAnon: 'Zaloguj się, aby personalizować',
+    preferences: 'Preferencje',
+    language: 'Język i region',
+    languageSub: 'Język interfejsu, format daty',
+    plan: 'Plan i użycie',
+    settings: 'Ustawienia',
+    soon: 'Wkrótce',
+    preview: 'Podgląd',
+    collapse: 'Zwiń',
+    expand: 'Rozwiń nawigację',
+  },
+  header: {
+    askLauncher: 'Zapytaj GlobalNewsAI',
+    askLauncherAria: 'Wróć do pola pytania na górze strony głównej',
+  },
+  hero: {
+    eyebrow: 'Globalna analiza ze źródłami',
+    titleA: 'Zrozum,',
+    titleB: 'co się zmienia.',
+    sub: 'Wydarzenia na świecie. Szerszy kontekst. Dowody, które możesz sprawdzić.',
+    composerPlaceholder: 'Zapytaj o dowolny kraj, wydarzenie lub trend…',
+    composerAria: 'Zadaj pytanie GlobalNewsAI',
+    ask: 'Zapytaj',
+    note: 'Otwiera Zapytaj AI z Twoim pytaniem. Nic się nie uruchamia, dopóki nie naciśniesz Wyślij.',
+    staged: 'Dodano do Zapytaj AI: „{question}”',
+    exploreWorld: 'Przeglądaj świat',
+    askGlobalNews: 'Zapytaj GlobalNewsAI',
+    openMap: 'Otwórz mapę',
+    globeLabel: 'Otwórz mapę świata',
+    welcomeNamed: 'Witaj ponownie, {name}',
+    welcome: 'Witaj ponownie',
+    newSince: '{count} nowych od poprzedniej wizyty · Moja analiza',
+  },
+  w60: {
+    title: 'Twój świat w 60 sekund',
+    note: 'Pięć najnowszych artykułów ze strony głównej, ze źródłami.',
+    noteSigned: 'Najnowsze artykuły, najpierw obserwowane miejsca.',
+    noImage: 'Brak zdjęcia',
+  },
+  suggested: {
+    title: 'Proponowane pytania',
+    note: 'Dodaje pytanie do Zapytaj AI. Nic się nie uruchamia, dopóki nie naciśniesz Wyślij.',
+  },
+  explore: {
+    title: 'Przeglądaj obszary analizy',
+    note: 'Specjalistyczne spojrzenia na te same doniesienia.',
+    domains: {
+      world: { name: 'Świat', line: 'Mapa doniesień według kraju.' },
+      politics: { name: 'Polityka', line: 'Rządy, wybory i polityka.' },
+      economy: { name: 'Gospodarka', line: 'Wzrost, inflacja, handel i praca.' },
+      energy: { name: 'Energia', line: 'Dostawy, ceny i transformacja.' },
+      security: { name: 'Bezpieczeństwo', line: 'Konflikty i bezpieczeństwo.' },
+      humanitarian: { name: 'Pomoc humanitarna', line: 'Kryzysy, pomoc i przesiedlenia.' },
+      markets: { name: 'Rynki', line: 'Waluty, stopy i rynki.' },
+    },
+    specialists: 'Specjaliści',
+    elections: 'Wybory',
+    imihigo: 'Imihigo',
+    rwanda: 'Rwanda',
+    preview: 'Podgląd',
+  },
+  deep: {
+    title: 'Pogłębiona analiza',
+    body: 'Głębsza analiza wymagająca większej mocy obliczeniowej jest planowana na później. Nie jest częścią wersji Beta.',
+    tag: 'Poza wersją Beta',
+  },
+  bridge: {
+    eyebrow: 'Moja analiza',
+    signedTitle: 'Twoja analiza, po Twojemu',
+    signedBody: 'Zapisuj artykuły, obserwuj kraje i korzystaj z osobistego widoku w Mojej analizie.',
+    newSince: '{count} nowych od poprzedniej wizyty',
+    open: 'Otwórz Moją analizę',
+    anonTitle: 'Dopasuj GlobalNewsAI do siebie',
+    anonBody: 'Zaloguj się, aby obserwować kraje, zapisywać artykuły i widzieć, co nowego od ostatniej wizyty.',
+    about: 'Czym jest Moja analiza',
+    signIn: 'Zaloguj się',
+  },
+  how: {
+    title: 'Jak to działa',
+    steps: [
+      { title: 'Zapytaj lub przeglądaj', body: 'Zacznij od pytania, kraju na mapie lub najnowszych doniesień.' },
+      { title: 'GlobalNewsAI czyta doniesienia', body: 'Zbiera dostępne mu doniesienia i porównuje, co mówią różne źródła.' },
+      { title: 'Otrzymujesz odpowiedź ze źródłami', body: 'Odpowiedzi prowadzą do artykułów, na których się opierają. Więcej w Obszarze analizy.' },
+    ],
+  },
+  trust: {
+    title: 'Zbudowane na zaufaniu',
+    intro: 'Oryginalne doniesienia i wygenerowana analiza pozostają oddzielone, a źródło zawsze możesz sprawdzić.',
+    principles: [
+      { title: 'Linki do źródeł', body: 'Odpowiedzi prowadzą do artykułów, na których się opierają.' },
+      { title: 'Różne punkty widzenia', body: 'Gdy doniesienia się różnią, źródła są pokazane obok siebie.' },
+      { title: 'AI wyraźnie oznaczone', body: 'Wygenerowany tekst jest oznaczony jako analiza AI.' },
+      { title: 'Widoczna aktualność', body: 'Każda pozycja pokazuje, kiedy została opublikowana lub wykryta.' },
+      { title: 'Doniesienia pozostają osobno', body: 'Artykuły wydawców otwierają się u wydawcy, bez zmian.' },
+    ],
+    methodology: 'Jak działa GlobalNewsAI: metodologia',
+  },
+};

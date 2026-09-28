@@ -242,7 +242,7 @@ export function WhatsHappeningNow({
     <section
       id="whats-happening-now"
       aria-labelledby="beta-now-heading"
-      className="flex scroll-mt-24 flex-col gap-3"
+      className="flex scroll-mt-24 flex-col gap-3 [container-type:inline-size]"
     >
       {rail.length === 0 ? (
         <>
@@ -442,7 +442,11 @@ export function WhatsHappeningNow({
                        Below `lg` one card dominates with the next peeking,
                        which is what tells a thumb it swipes.
                     */
-                    className="flex h-[322px] shrink-0 basis-[87%] snap-start sm:h-[268px] sm:basis-[54%] md:basis-[44%] lg:h-[312px] lg:basis-[calc(41%-7.5px)] xl:h-[320px] xl:basis-[calc(25%-9px)]"
+                    /* HOME REV A — card width follows the COLUMN, not the viewport: with the
+                       left product rail and the right 60-second rail the story
+                       column is ~740 px at 1440, which shows three cards; four
+                       only once the column itself reaches 1000 px. */
+                    className="flex h-[322px] shrink-0 basis-[87%] snap-start sm:h-[268px] [@container(min-width:520px)]:basis-[calc(50%-6px)] [@container(min-width:700px)]:h-[312px] [@container(min-width:700px)]:basis-[calc(33.333%-8px)] [@container(min-width:1000px)]:h-[320px] [@container(min-width:1000px)]:basis-[calc(25%-9px)]"
                   >
                     <RailCard article={article} language={language} />
                   </li>

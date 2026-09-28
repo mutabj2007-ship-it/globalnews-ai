@@ -27,7 +27,8 @@ const dashboardSource = readFileSync(join(__dirname, 'workspace', 'WorkspaceDash
 describe('Ruling 1 — the floating Ask launcher is suppressed on /my-intelligence only', () => {
   it('the suppression is keyed on an explicit route set, not a scattered condition', () => {
     expect(dockSource).toContain('LAUNCHER_SUPPRESSED_ROUTES');
-    expect(dockSource).toMatch(/LAUNCHER_SUPPRESSED_ROUTES[^=]*=\s*new Set\(\['\/my-intelligence'\]\)/);
+    /* HOME WELCOME & DISCOVERY R1 REV A adds '/': there the header launcher (desktop) and the Ask AI tab (phone) replace the floating button. */
+    expect(dockSource).toMatch(/LAUNCHER_SUPPRESSED_ROUTES[^=]*=\s*new Set\(\['\/my-intelligence', '\/'\]\)/);
   });
 
   it('only the launcher BUTTON is conditional — the panel is not', () => {
