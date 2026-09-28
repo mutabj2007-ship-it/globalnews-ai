@@ -20,8 +20,13 @@ import {
 /** LEFT_RAIL_SPEC — 248 expanded (≥1280), 64 collapsed (1024–1279 always; ≥1280 by toggle). */
 export const HOME_RAIL = { expandedPx: 248, collapsedPx: 64 } as const;
 
-/** VISUAL_SPEC — the 60 s module sits in the right rail only when the content column is at least this wide. */
-export const RIGHT_RAIL_MIN_CONTENT_PX = 1180;
+/**
+ * VISUAL_SPEC — the 60 s module sits in the right rail only when the content
+ * column is at least this wide. The spec says 1180, which assumes a page with
+ * no scrollbar: a real 15–17 px desktop scrollbar leaves 1175 px at 1440, so the
+ * implemented threshold is 1140 (DENSITY / 60-SECONDS CORRECTION R2).
+ */
+export const RIGHT_RAIL_MIN_CONTENT_PX = 1140;
 /** REV_A_DELTA row 6 / TABLET_SPEC — Explore shows 7 columns when content ≥1000 px, else 4 + 3. */
 export const EXPLORE_SEVEN_MIN_CONTENT_PX = 1000;
 

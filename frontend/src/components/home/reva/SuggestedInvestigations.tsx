@@ -11,6 +11,10 @@ import { STAGE_QUESTION_EVENT } from './homeRevaModel';
  * (`hero.exampleQuestions`, the same list the current Home rail shows). No AI
  * generation, no provider fetch, nothing dynamic invented.
  *
+ * DENSITY / 60-SECONDS CORRECTION R2: the module follows the key elements
+ * (Hero → 60 s → stories) and, where the content column is ≥1000 px, lays its
+ * three questions out as one row.
+ *
  * Pressing one FILLS the Hero composer (a local event) — it is staged, not
  * sent: nothing runs until the reader submits and then presses Send in Ask.
  */
@@ -29,7 +33,7 @@ export function SuggestedInvestigations({
       <h2 id="home-suggested-heading" className="text-[17px] font-bold text-white">
         {title}
       </h2>
-      <ul className="mt-3 flex flex-col gap-2">
+      <ul className="mt-3 grid grid-cols-1 gap-2 [@container_home-content_(min-width:1000px)]:grid-cols-3">
         {questions.slice(0, 3).map((question) => (
           <li key={question}>
             <button

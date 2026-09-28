@@ -44,10 +44,11 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
       '<NavBar',
       '<HomeProductRail',
       '<HomeWelcomeHero',
-      /* DENSITY R1 — DOM order is Hero → 60-second rail → What's happening (the ruled phone order). */
+      /* DENSITY R1/R2 — DOM order is the priority order: Hero → 60 s → What's happening → questions. */
       '<WorldIn60Seconds',
-      '<SuggestedInvestigations',
       '<WhatsHappeningNow',
+      /* R2 — the questions come after the key elements. */
+      '<SuggestedInvestigations',
       '<HomeForYou',
       '<ExploreIntelligence',
       '<DeepIntelligenceRow',
