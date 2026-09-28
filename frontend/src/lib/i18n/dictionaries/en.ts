@@ -2881,13 +2881,11 @@ export const en = {
     */
     stateNoPriorSubject: 'NO EARLIER QUESTION TO CONTINUE',
     noPriorSubjectQuestion:
-      'There’s no earlier question to continue. What would you like to know about {places}?',
-    stateIdentityRequired: 'SIGN IN TO ASK ABOUT YOUR SAVED STORIES',
-    identityRequiredBody:
-      'This question is about your own saved stories, so it needs you to be signed in. Sign in and ask again — nothing was searched.',
-    statePersonalUnavailable: 'YOUR SAVED STORIES AREN’T AVAILABLE HERE',
-    personalUnavailableBody:
-      'Ask can’t read your saved stories yet, so it can’t answer this from them — nothing was searched in their place.',
+      "There's no earlier question to continue. What would you like to know about this place?",
+    stateIdentityRequired: 'SIGN-IN REQUIRED',
+    identityRequiredBody: 'Sign in to compare your saved stories.',
+    statePersonalUnavailable: 'NOT AVAILABLE YET',
+    personalUnavailableBody: "Comparing your saved stories isn't available yet.",
     /* INLINE CITATIONS R1 B3 — the compact one-line note on the Ask dock; the full sentences above stay one tap away. */
     compactHeading: 'Evidence note',
     compactShowDetails: 'Show what this means',

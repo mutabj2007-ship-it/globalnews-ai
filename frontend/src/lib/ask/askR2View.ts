@@ -126,7 +126,13 @@ export function askR2View(
     template.replace('{when}', when ?? '—').replace('{sources}', s.sourcesLabel(sourceCount));
 
   const basis = payload.answer.basis;
-  const unavailableText = s.unavailableBecause[basis] ?? s.unavailable;
+  /* MC-055: an executor that is not wired for the reader's own library is named as such;
+     EXECUTOR_NOT_WIRED stays a diagnostic basis, never the reader's sentence for it. */
+  const personalNotWired =
+    basis === 'EXECUTOR_NOT_WIRED' && (payload.answer.missingRoles ?? []).includes('PERSONAL');
+  const unavailableText = personalNotWired
+    ? s.personalNotAvailable
+    : (s.unavailableBecause[basis] ?? s.unavailable);
   const byExecutor = basis.startsWith('LANDED_');
 
   let freshness: string;
@@ -181,13 +187,8 @@ export function askR2View(
         basis === 'NO_PRIOR_SUBJECT'
           ? []
           : (payload.answer.candidates ?? []).map((iso3) => placeName(iso3)),
-      lead:
-        basis === 'NO_PRIOR_SUBJECT'
-          ? s.noPriorSubject.replace(
-              '{places}',
-              (payload.answer.candidates ?? []).map((iso3) => placeName(iso3)).join(', '),
-            )
-          : null,
+      /* MC-070: the place is kept as the plan's GEOGRAPHY chip, not inflected into the sentence. */
+      lead: basis === 'NO_PRIOR_SUBJECT' ? s.noPriorSubject : null,
     },
   };
 }

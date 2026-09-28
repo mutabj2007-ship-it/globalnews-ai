@@ -185,7 +185,7 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
   it.each([
     ['REFERENCE_UNAVAILABLE', /Reference knowledge is not connected/],
     ['EXECUTOR_NOT_WIRED', /needs a source Ask cannot read yet/],
-    ['PLAN_IDENTITY_REQUIRED', /Sign in to ask about your own saved stories/],
+    ['PLAN_IDENTITY_REQUIRED', /^Sign in to compare your saved stories\.$/],
     ['PLAN_CAPABILITY_UNAVAILABLE', /needs a capability Ask does not have/],
   ])('%s is named, never "Ask is unavailable" and never "no reporting"', (basis, text) => {
     const v = askR2View(
@@ -292,10 +292,10 @@ describe('ALPHA ENABLEMENT R1 — MC-070: a continuation with nothing to continu
       (iso3) => (lang === 'en' ? names : plNames)[iso3] ?? iso3,
     );
 
-  it('EN: says there is no earlier question and asks what to know about Kenya — no choice list', () => {
+  it('EN: says there is no earlier question and asks what to know about this place — no choice list', () => {
     const v = noPrior('en');
     expect(v.clarification.lead).toBe(
-      'There’s no earlier question to continue from — each question here is answered on its own. What would you like to know about Kenya?',
+      "There's no earlier question to continue. What would you like to know about this place?",
     );
     expect(v.clarification.candidates).toEqual([]);
     expect(v.freshness).toBe(EN.freshness.nothingRan);
@@ -306,8 +306,36 @@ describe('ALPHA ENABLEMENT R1 — MC-070: a continuation with nothing to continu
   it('PL: the same, in Polish', () => {
     const v = noPrior('pl');
     expect(v.clarification.lead).toBe(
-      'Nie ma wcześniejszego pytania do kontynuowania — każde pytanie jest tu rozpatrywane osobno. Co chcesz wiedzieć o: Kenia?',
+      'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o tym miejscu?',
     );
     expect(v.freshness).toBe(PL.freshness.nothingRan);
+  });
+});
+
+describe('ALPHA ENABLEMENT R1 — MC-055: signed in, the saved-stories executor is not wired', () => {
+  const personal = (lang: 'en' | 'pl', missingRoles: string[]) =>
+    askR2View(
+      payload('CAPABILITY_UNAVAILABLE', {
+        answer: { state: 'CAPABILITY_UNAVAILABLE', basis: 'EXECUTOR_NOT_WIRED', missingRoles },
+        analysis: null,
+      }),
+      lang === 'en' ? EN : PL,
+      lang,
+    );
+
+  it('EN / PL: the Product sentence, never the diagnostic basis', () => {
+    expect(personal('en', ['PERSONAL']).unavailableText).toBe(
+      "Comparing your saved stories isn't available yet.",
+    );
+    expect(personal('pl', ['PERSONAL']).unavailableText).toBe(
+      'Porównywanie zapisanych artykułów nie jest jeszcze dostępne.',
+    );
+    expect(personal('en', ['PERSONAL']).unavailableText).not.toMatch(/EXECUTOR_NOT_WIRED/);
+  });
+
+  it('another unwired executor keeps its own sentence', () => {
+    expect(personal('en', ['OFFICIAL']).unavailableText).toBe(
+      EN.unavailableBecause.EXECUTOR_NOT_WIRED,
+    );
   });
 });

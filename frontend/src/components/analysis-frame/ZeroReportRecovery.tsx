@@ -202,6 +202,19 @@ export function ZeroReportRecovery({
           {heading}
         </h2>
         <p className="mt-3 font-gn-sans text-[15px] leading-[1.6] text-[#d5e1ee]">{body}</p>
+        {askedNotSearched === undefined || askedNotSearched.places.length === 0 ? null : (
+          <ul data-paf="asked-places" className="mt-3 flex flex-wrap gap-2">
+            {askedNotSearched.places.map((place) => (
+              <li
+                key={place}
+                data-ask-place={place}
+                className="rounded-sm border border-[#2a3a4d] px-2 py-0.5 font-gn-sans text-[13px] text-[#d5e1ee]"
+              >
+                {place}
+              </li>
+            ))}
+          </ul>
+        )}
 
         {clarificationWhy === null ? null : (
           <p

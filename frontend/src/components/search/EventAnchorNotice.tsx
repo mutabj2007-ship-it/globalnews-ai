@@ -12,19 +12,22 @@ import { localisedCountryName } from '@/lib/map/geography/displayName';
 export function resolveAskedNotSearched(
   ctx: AnalysisRetrievalContext,
   language: LanguageCode,
-): { code: string; heading: string; body: string; sentence: string } | undefined {
+):
+  | { code: string; heading: string; body: string; sentence: string; places: readonly string[] }
+  | undefined {
   if (ctx.retrievalOutcome !== 'CLARIFICATION_REQUIRED') return undefined;
   const copy = getDictionary(language).eventAnchor;
   if (ctx.clarificationReason === 'NO_PRIOR_SUBJECT') {
-    const places = (ctx.clarificationCandidates ?? [])
-      .map((iso3) => localisedCountryName(iso3, language) ?? iso3)
-      .join(', ');
-    const sentence = copy.noPriorSubjectQuestion.replace('{places}', places);
+    const places = (ctx.clarificationCandidates ?? []).map(
+      (iso3) => localisedCountryName(iso3, language) ?? iso3,
+    );
+    /* The place is shown beside the sentence (a chip), never inflected into it. */
     return {
       code: 'NO_PRIOR_SUBJECT',
       heading: copy.stateNoPriorSubject,
-      body: sentence,
-      sentence,
+      body: copy.noPriorSubjectQuestion,
+      sentence: copy.noPriorSubjectQuestion,
+      places,
     };
   }
   if (ctx.clarificationReason === 'IDENTITY_REQUIRED') {
@@ -33,6 +36,7 @@ export function resolveAskedNotSearched(
       heading: copy.stateIdentityRequired,
       body: copy.identityRequiredBody,
       sentence: copy.identityRequiredBody,
+      places: [],
     };
   }
   if (ctx.clarificationReason === 'PERSONAL_LIBRARY_UNAVAILABLE') {
@@ -41,6 +45,7 @@ export function resolveAskedNotSearched(
       heading: copy.statePersonalUnavailable,
       body: copy.personalUnavailableBody,
       sentence: copy.personalUnavailableBody,
+      places: [],
     };
   }
   return undefined;

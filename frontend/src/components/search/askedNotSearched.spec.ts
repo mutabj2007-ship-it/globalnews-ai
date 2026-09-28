@@ -22,8 +22,9 @@ describe('MC-070 — a first-turn continuation names no earlier subject and keep
     );
     expect(r?.code).toBe('NO_PRIOR_SUBJECT');
     expect(r?.sentence).toBe(
-      'There’s no earlier question to continue. What would you like to know about Kenya?',
+      "There's no earlier question to continue. What would you like to know about this place?",
     );
+    expect(r?.places).toEqual(['Kenya']);
   });
 
   it('PL', () => {
@@ -32,28 +33,32 @@ describe('MC-070 — a first-turn continuation names no earlier subject and keep
       'pl',
     );
     expect(r?.sentence).toBe(
-      'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o: Kenia?',
+      'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o tym miejscu?',
     );
+    expect(r?.places).toEqual(['Kenia']);
   });
 });
 
 describe('MC-055 — the reader’s own saved stories', () => {
-  it('signed out: sign in, nothing searched (EN / PL)', () => {
-    expect(
-      resolveAskedNotSearched(ctx({ clarificationReason: 'IDENTITY_REQUIRED' }), 'en')?.body,
-    ).toMatch(/needs you to be signed in.*nothing was searched/);
-    expect(
-      resolveAskedNotSearched(ctx({ clarificationReason: 'IDENTITY_REQUIRED' }), 'pl')?.body,
-    ).toMatch(/wymaga zalogowania.*niczego nie wyszukano/);
+  it('signed out: sign in (EN / PL, Product ruling)', () => {
+    const en = resolveAskedNotSearched(ctx({ clarificationReason: 'IDENTITY_REQUIRED' }), 'en');
+    const pl = resolveAskedNotSearched(ctx({ clarificationReason: 'IDENTITY_REQUIRED' }), 'pl');
+    expect(en?.sentence).toBe('Sign in to compare your saved stories.');
+    expect(pl?.sentence).toBe('Zaloguj się, aby porównać zapisane artykuły.');
+    expect(en?.places).toEqual([]);
   });
 
-  it('signed in: the library is not reachable here, nothing searched in its place', () => {
-    const r = resolveAskedNotSearched(
+  it('signed in: not available yet (EN / PL, Product ruling)', () => {
+    const en = resolveAskedNotSearched(
       ctx({ clarificationReason: 'PERSONAL_LIBRARY_UNAVAILABLE' }),
       'en',
     );
-    expect(r?.heading).toBe('YOUR SAVED STORIES AREN’T AVAILABLE HERE');
-    expect(r?.body).toMatch(/nothing was searched in their place/);
+    const pl = resolveAskedNotSearched(
+      ctx({ clarificationReason: 'PERSONAL_LIBRARY_UNAVAILABLE' }),
+      'pl',
+    );
+    expect(en?.sentence).toBe("Comparing your saved stories isn't available yet.");
+    expect(pl?.sentence).toBe('Porównywanie zapisanych artykułów nie jest jeszcze dostępne.');
   });
 });
 

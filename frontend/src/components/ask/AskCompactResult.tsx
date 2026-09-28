@@ -284,6 +284,19 @@ export function AskCompactResult({
           <p className="text-sm font-medium leading-relaxed text-ink-primary">
             {noAnswerMessage}
           </p>
+          {askedNotSearched && askedNotSearched.places.length > 0 ? (
+            <ul data-ask="asked-places" className="mt-2 flex flex-wrap gap-1.5">
+              {askedNotSearched.places.map((place) => (
+                <li
+                  key={place}
+                  data-ask-place={place}
+                  className="rounded-sm border border-border-strong px-2 py-0.5 text-xs text-ink-primary"
+                >
+                  {place}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {/* "Try again shortly / ask a narrower question" is advice for a question that WAS
               searched; a question asked instead of searched already says what to do. */}
           {askedNotSearched ? null : (

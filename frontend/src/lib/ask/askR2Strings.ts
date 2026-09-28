@@ -69,8 +69,10 @@ export interface AskR2Strings {
   readonly askedBeforeAnswering: string;
   /** GATE H (MD-005) — an opened stored result past its validity. */
   readonly expiredNote: string;
-  /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue. */
+  /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
+  /** ALPHA ENABLEMENT R1 (MC-055) — signed in, the reader's own saved stories cannot be read yet. */
+  readonly personalNotAvailable: string;
   sourcesLabel(n: number): string;
 }
 
@@ -130,8 +132,7 @@ const EN: AskR2Strings = {
       'Reference knowledge is not connected for this question, so it is not answered as fact. No news reporting was used in its place.',
     EXECUTOR_NOT_WIRED:
       'This question needs a source Ask cannot read yet — such as your saved stories, an official release or a specialist assessment. Nothing was answered from news in its place.',
-    PLAN_IDENTITY_REQUIRED:
-      'Sign in to ask about your own saved stories or interests. Nothing was run.',
+    PLAN_IDENTITY_REQUIRED: 'Sign in to compare your saved stories.',
     PLAN_CAPABILITY_UNAVAILABLE:
       'This kind of question needs a capability Ask does not have — such as calculations, files, code, official releases or specialist assessments. Nothing was run.',
   },
@@ -141,7 +142,8 @@ const EN: AskR2Strings = {
   askedBeforeAnswering: 'One question before answering · no AI used',
   expiredNote: 'This saved answer has expired · shown as it was, not re-checked',
   noPriorSubject:
-    'There’s no earlier question to continue from — each question here is answered on its own. What would you like to know about {places}?',
+    "There's no earlier question to continue. What would you like to know about this place?",
+  personalNotAvailable: "Comparing your saved stories isn't available yet.",
   sourcesLabel: (n) => `${n} ${n === 1 ? 'source' : 'sources'}`,
 };
 
@@ -210,8 +212,7 @@ const PL: AskR2Strings = {
       'Wiedza referencyjna nie jest podłączona dla tego pytania, więc nie odpowiadamy na nie jako na fakt. Nie użyto zamiast niej doniesień prasowych.',
     EXECUTOR_NOT_WIRED:
       'To pytanie wymaga źródła, którego Zapytaj AI jeszcze nie czyta — np. Twoich zapisanych materiałów, oficjalnej publikacji lub oceny specjalisty. Nie odpowiedziano zamiast tego na podstawie wiadomości.',
-    PLAN_IDENTITY_REQUIRED:
-      'Zaloguj się, aby pytać o swoje zapisane materiały lub zainteresowania. Nic nie uruchomiono.',
+    PLAN_IDENTITY_REQUIRED: 'Zaloguj się, aby porównać zapisane artykuły.',
     PLAN_CAPABILITY_UNAVAILABLE:
       'Ten rodzaj pytania wymaga funkcji, której Zapytaj AI nie ma — np. obliczeń, plików, kodu, oficjalnych publikacji lub ocen specjalistów. Nic nie uruchomiono.',
   },
@@ -221,7 +222,8 @@ const PL: AskR2Strings = {
   askedBeforeAnswering: 'Jedno pytanie przed odpowiedzią · nie użyto AI',
   expiredNote: 'Ta zapisana odpowiedź wygasła · pokazana bez ponownego sprawdzenia',
   noPriorSubject:
-    'Nie ma wcześniejszego pytania do kontynuowania — każde pytanie jest tu rozpatrywane osobno. Co chcesz wiedzieć o: {places}?',
+    'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o tym miejscu?',
+  personalNotAvailable: 'Porównywanie zapisanych artykułów nie jest jeszcze dostępne.',
   sourcesLabel: plSources,
 };
 
