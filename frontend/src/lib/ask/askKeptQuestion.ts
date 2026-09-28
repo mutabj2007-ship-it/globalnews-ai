@@ -1,0 +1,40 @@
+import { accountSignInUrl } from '@/lib/api/accountLinks';
+
+/**
+ * ASK R2 SIGNED-OUT FALLBACK REMOVAL R1 — the question a signed-out reader typed survives
+ * the sign-in round trip.
+ *
+ * The existing sign-in mechanic (`/api/auth/google?returnTo=…`) returns only to an exact,
+ * allowlisted path — `/ask`, never `/ask?q=…` — so the question cannot ride in the URL (and
+ * should not: it would land in history and logs). It is kept for THIS TAB in
+ * sessionStorage, read ONCE on return, removed, and placed in the composer as a draft.
+ * Nothing is ever sent from here. Storage is optional: when it is unavailable the reader
+ * simply retypes.
+ */
+export const ASK_KEPT_QUESTION_KEY = 'globalnews-ai:ask-kept-question';
+/** The composer's own bound. */
+const MAX_KEPT_LENGTH = 1000;
+
+/** Where "Sign in to ask" goes: the existing Google sign-in, back to /ask. */
+export const ASK_SIGN_IN_HREF = accountSignInUrl('/ask');
+
+export function keepQuestion(question: string): void {
+  const q = question.trim().slice(0, MAX_KEPT_LENGTH);
+  if (q.length === 0) return;
+  try {
+    sessionStorage.setItem(ASK_KEPT_QUESTION_KEY, q);
+  } catch {
+    /* storage is optional */
+  }
+}
+
+/** Read once and forget. */
+export function readKeptQuestion(): string | null {
+  try {
+    const q = sessionStorage.getItem(ASK_KEPT_QUESTION_KEY);
+    sessionStorage.removeItem(ASK_KEPT_QUESTION_KEY);
+    return q !== null && q.trim().length > 0 ? q.slice(0, MAX_KEPT_LENGTH) : null;
+  } catch {
+    return null;
+  }
+}

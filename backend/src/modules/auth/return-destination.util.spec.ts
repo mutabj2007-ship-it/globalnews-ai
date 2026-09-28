@@ -293,3 +293,22 @@ describe('hasSafeRelativeShape - the structural gate, isolated', () => {
     expect(hasSafeRelativeShape(input)).toBe(false);
   });
 });
+
+describe('sign-in may return to /ask — exactly, and nothing looser (Ask R2 signed-out R1)', () => {
+  it('/ask is allowed', () => {
+    expect(validateReturnDestination('/ask')).toBe('/ask');
+  });
+
+  it.each([
+    '/ask/',
+    '/ask?q=hello',
+    '/ask?operation=op-1',
+    '/ask#composer',
+    '/ask-evil',
+    '/asks',
+    '//ask',
+    'https://evil.example/ask',
+  ])('%s is refused', (path) => {
+    expect(validateReturnDestination(path)).toBeNull();
+  });
+});
