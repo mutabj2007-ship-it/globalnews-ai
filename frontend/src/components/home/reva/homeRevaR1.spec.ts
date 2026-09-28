@@ -372,8 +372,8 @@ describe('§7 — Your world in 60 seconds: image-led, from Home’s loaded repo
     expect(orderFollowedFirst(items, null).map((a) => a.id)).toEqual(['a1', 'a2', 'a3']);
   });
 
-  it('page feeds it the ONE Home response, newest first — no extra fetch', () => {
-    expect(PAGE).toMatch(/<WorldIn60Seconds items=\{newestFirst\}/);
+  it('page feeds it a disjoint pool of the ONE Home response — no extra fetch', () => {
+    expect(PAGE).toMatch(/<WorldIn60Seconds items=\{worldIn60\}/);
     expect(code(PAGE).match(/getHomeFeed\(/g)).toHaveLength(1);
     expect(code(read('WorldIn60Seconds.tsx'))).not.toMatch(/fetch\(|accountFetch|analyzeNews/);
   });

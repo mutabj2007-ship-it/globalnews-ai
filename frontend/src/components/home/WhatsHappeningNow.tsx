@@ -318,7 +318,8 @@ export function WhatsHappeningNow({
             </h2>
 
             <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
-              <DataModeLabel dataMode={dataMode} language={language} />
+              {/* HOME R2 PROVIDER DISCLOSURE R1 — provider-neutral Home provenance; every state still shown. */}
+              <DataModeLabel dataMode={dataMode} language={language} labels={getDictionary(language).homeReva.provenance} />
               {/*
                 "View all" is a second label for the same All radio, worded as
                 the contract words it. It clears the filter; it does not

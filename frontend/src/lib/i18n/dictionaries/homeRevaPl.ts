@@ -55,9 +55,17 @@ export const homeRevaPl: HomeRevaDictionary = {
   },
   w60: {
     title: 'Twój świat w 60 sekund',
-    note: 'Pięć najnowszych artykułów ze strony głównej, ze źródłami.',
+    note: 'Najnowsze artykuły ze strony głównej, ze źródłami.',
     noteSigned: 'Najnowsze artykuły, najpierw obserwowane miejsca.',
+    empty: 'Wszystkie artykuły z tej aktualizacji są już w sekcji „Co dzieje się teraz”.',
     noImage: 'Brak zdjęcia',
+  },
+  provenance: {
+    live: 'RELACJE NA ŻYWO',
+    cached: 'Z PAMIĘCI · Wcześniej pobrane relacje',
+    mock: 'TRYB DEMO · Wyłącznie treść przykładowa',
+    unavailable: 'BRAK DOSTĘPNYCH RELACJI',
+    unknown: 'STATUS DANYCH NIEZNANY',
   },
   suggested: {
     title: 'Proponowane pytania',

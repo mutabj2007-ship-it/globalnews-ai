@@ -9,6 +9,7 @@ import { HomeUtilityHeader } from '@/components/home/reva/HomeUtilityHeader';
 import { HomeProductRail } from '@/components/home/reva/HomeProductRail';
 import { HomeWelcomeHero } from '@/components/home/reva/HomeWelcomeHero';
 import { WorldIn60Seconds } from '@/components/home/reva/WorldIn60Seconds';
+import { allocateWorldIn60 } from '@/components/home/reva/worldIn60Allocation';
 import { SuggestedInvestigations } from '@/components/home/reva/SuggestedInvestigations';
 import { HomeForYou } from '@/components/home/reva/HomeForYou';
 import { ExploreIntelligence } from '@/components/home/reva/ExploreIntelligence';
@@ -94,11 +95,15 @@ export default async function HomePage(): Promise<JSX.Element> {
   const t = dict.homeReva;
   const feed = await getHomeFeed(language);
   /*
-    Every module reads a role of the ONE Home response. For you and the 60-second
-    module both need the whole loaded pool: de-duplicated by id, and for the
-    60-second module newest first (W60_MEDIA_SPEC: "the first five stories
-    already loaded for Home"). `latestUpdates` alone can be empty once the
-    allocator has placed every story in its curated roles.
+    Every module reads a role of the ONE Home response. For you (signed in, below
+    the fold) reads the whole loaded pool, de-duplicated by id.
+
+    HOME R2 STORY DEDUPLICATION R1 — the 60-second module no longer reads that
+    pool. It shares the first screen with What's happening now (featured +
+    inFocus + discovery), so it reads its OWN disjoint pool: `latestUpdates`
+    minus every What's happening story by id and canonical URL. On a narrow
+    response that pool is short or empty and the module shows fewer stories —
+    it is never padded with a story already shown beside it.
   */
   const seenIds = new Set<string>();
   const homeArticles = [...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery, ...feed.latestUpdates].filter((article) => {
@@ -106,7 +111,7 @@ export default async function HomePage(): Promise<JSX.Element> {
     seenIds.add(article.id);
     return true;
   });
-  const newestFirst = [...homeArticles].sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+  const worldIn60 = allocateWorldIn60(feed);
 
   return (
     <>
@@ -159,7 +164,7 @@ export default async function HomePage(): Promise<JSX.Element> {
                     data-home-right-rail=""
                     className="flex min-w-0 flex-col gap-4 self-start [grid-area:rail] [@container(min-width:1140px)]:pt-6"
                   >
-                    <WorldIn60Seconds items={newestFirst} language={language} />
+                    <WorldIn60Seconds items={worldIn60} language={language} showEmptyState={feed.featured !== null} />
                   </aside>
                   <div className="min-w-0 self-start [grid-area:whats]">
                     <WhatsHappeningNow
