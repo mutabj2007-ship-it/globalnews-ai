@@ -67,6 +67,8 @@ export interface AskR2Strings {
   readonly whichOne: string;
   readonly clarificationFooterNoAi: string;
   readonly askedBeforeAnswering: string;
+  /** GATE H (MD-005) — an opened stored result past its validity. */
+  readonly expiredNote: string;
   sourcesLabel(n: number): string;
 }
 
@@ -135,6 +137,7 @@ const EN: AskR2Strings = {
   whichOne: 'Which one do you mean?',
   clarificationFooterNoAi: 'No AI used · nothing was answered',
   askedBeforeAnswering: 'One question before answering · no AI used',
+  expiredNote: 'This saved answer has expired · shown as it was, not re-checked',
   sourcesLabel: (n) => `${n} ${n === 1 ? 'source' : 'sources'}`,
 };
 
@@ -212,6 +215,7 @@ const PL: AskR2Strings = {
   whichOne: 'Które z nich masz na myśli?',
   clarificationFooterNoAi: 'Nie użyto AI · nie udzielono odpowiedzi',
   askedBeforeAnswering: 'Jedno pytanie przed odpowiedzią · nie użyto AI',
+  expiredNote: 'Ta zapisana odpowiedź wygasła · pokazana bez ponownego sprawdzenia',
   sourcesLabel: plSources,
 };
 

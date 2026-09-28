@@ -37,6 +37,8 @@ export interface AskR2Turn {
   readonly payload?: AskR2Payload | null;
   /** A control refused it (failureCode) or the request failed — nothing was stored. */
   readonly failure?: string;
+  /** GATE H (MD-005) — a stored result read after its validity: shown as it was, and said so. */
+  readonly expired?: boolean;
 }
 
 export type AskR2Availability = 'unknown' | 'r2' | 'legacy';

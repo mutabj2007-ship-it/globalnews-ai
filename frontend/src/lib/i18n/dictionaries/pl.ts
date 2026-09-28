@@ -75,6 +75,8 @@ export const pl: Dictionary = {
     launcher: 'Zapytaj AI',
     askingAboutGeography: 'Pytasz o: {place}',
     geographyBasis: 'Geografia kraju · bez dołączonych dowodów',
+    geographyOutranked: 'Wybrany kraj: {place} · nie użyto — pytanie wskazuje inne miejsce',
+    geographyNotApplied: 'Wybrany kraj: {place} · nie dotyczy tego pytania',
     mapComputeNotice: 'Uruchamia analizę AI. Nic nie zostanie wysłane, dopóki nie naciśniesz Wyślij.',
     title: 'Zapytaj GlobalNews AI',
     panelLabel: 'Zapytaj GlobalNews AI',

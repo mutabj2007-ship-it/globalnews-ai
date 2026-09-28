@@ -16,6 +16,7 @@ import {
   type AskR2Turn,
 } from '@/lib/ask/useAskR2Conversation';
 import { askR2PayloadOf, askV2Api } from '@/lib/api/askV2Api';
+import { revokeAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { splitFor, type MapSplitMode } from '@/lib/map/d1/mapComposition';
 import { WORLD_CAMERA, type CameraState } from '@/lib/map/camera/cameraState';
 import { computeFeatureCenter, type CountryFeature } from '@/lib/map/countryGeometry';
@@ -99,12 +100,20 @@ export function AskFrameScreen({ locale }: { readonly locale: AskLocale }): JSX.
   /* "Open full analysis": ONE display-only read of the stored operation. No AI, no provider. */
   useEffect(() => {
     if (operationId === null) return;
+    /* GATE H (H-T12 / H-G4) — an operation arrival is a READ. It revokes any pending
+       analysis grant, so no later arrival can spend a grant this navigation did not make. */
+    revokeAnalysisConsent();
     let live = true;
     void askV2Api.operation(operationId).then((read) => {
       if (!live) return;
       setOpened(
         read.ok
-          ? { question: '', operation: read.value, payload: askR2PayloadOf(read.value) }
+          ? {
+              question: '',
+              operation: read.value,
+              payload: askR2PayloadOf(read.value),
+              expired: read.value.result?.expired === true,
+            }
           : { question: '', failure: read.reason },
       );
     });

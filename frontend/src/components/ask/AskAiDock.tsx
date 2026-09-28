@@ -19,7 +19,7 @@ import { useAskGeographyContext } from '@/lib/ask/geographyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openGlobalAsk';
-import { mapGeographyChipShown } from '@/lib/ask/effectiveContext';
+import { mapGeographyChipShown, readEffectiveContext } from '@/lib/ask/effectiveContext';
 
 /**
  * ═══ ASK AI — PHASE 1 ════════════════════════════════════════════════════
@@ -244,6 +244,25 @@ function GlobalAskAiDock({
    */
   const geographyContext = useAskGeographyContext();
   /*
+    ASK R2 INTEGRATION R1 · GATE H (G F3-C1 / F3-C3) — the Map country is the thread's
+    context, as the story anchor is on /ask (useAskConversation). When it changes — A→B,
+    and A→B→A — an answer still in flight for the old country is discarded, and the next
+    question starts a new topic (shown), so no prior question crosses a geography change.
+    Earlier settled turns stay visible as history.
+  */
+  const geographyIdentity = geographyContext?.countryCode;
+  const geographySeen = useRef(false);
+  useEffect(() => {
+    if (!geographySeen.current) {
+      geographySeen.current = true;
+      return;
+    }
+    requestSeq.current += 1;
+    setSubjectOrigin(undefined);
+    setTopicReset(true);
+    setPhase((current) => (current.kind === 'loading' ? { kind: 'idle' } : current));
+  }, [geographyIdentity]);
+  /*
    * ASK R2 INTEGRATION R1 · G SEAM D — the chip reads WHAT SCOPED THE ANSWER, not
    * which store is occupied. While drafting, the country on offer is shown; once
    * answered, only a Map country the server says it USED is named. "What is NATO?"
@@ -263,6 +282,28 @@ function GlobalAskAiDock({
     question.trim() ? undefined : phase.kind === 'answered'
       ? phase.response.retrievalContext.storyContextUsed : undefined,
   );
+  /*
+    ASK R2 INTEGRATION R1 · GATE H (G V5-C2 / V6-C1) — three facts, three renderings. After
+    an answer, a selected Map country the server did not use stays VISIBLE as available and
+    not used — outranked (stamped false) or not applied (never eligible, stamp absent) —
+    and is never credited as the scope. Nothing is cleared: it applies to the next question.
+  */
+  const mapGeographyUnused: 'PRESENT_UNUSED' | 'NOT_ELIGIBLE' | null = (() => {
+    if (question.trim() || phase.kind !== 'answered') return null;
+    if (storyContext !== undefined || geographyContext === undefined) return null;
+    const effect = readEffectiveContext(phase.response.retrievalContext, {
+      storyContextPresent: false,
+      geographyContextPresent: true,
+    }).mapGeography;
+    return effect === 'PRESENT_UNUSED' || effect === 'NOT_ELIGIBLE' ? effect : null;
+  })();
+  const mapGeographyUnusedText =
+    mapGeographyUnused === null
+      ? null
+      : (mapGeographyUnused === 'PRESENT_UNUSED'
+          ? t.geographyOutranked
+          : t.geographyNotApplied
+        ).replace('{place}', geographyContext?.displayName ?? '');
 
   /*
    * R2 FINDING 2 — WHERE THE LAUNCHER SITS IS A SURFACE QUESTION.
@@ -717,6 +758,15 @@ function GlobalAskAiDock({
                       {t.geographyBasis}
                     </span>
                   )}
+                  {mapGeographyUnusedText !== null && (
+                    <span
+                      data-ask="context-unused"
+                      data-ask-context-effect={mapGeographyUnused ?? undefined}
+                      className="text-[12px] text-[#8fa6c0]"
+                    >
+                      {mapGeographyUnusedText}
+                    </span>
+                  )}
                 </div>
                 <label className="sr-only" htmlFor="ask-ai-question">
                   {t.inputLabel}
@@ -799,15 +849,24 @@ function GlobalAskAiDock({
                   and telling a reader otherwise would be the merge the ruling
                   forbids.
                 */}
-                {showStoryLabel
-                  ? t.contextChipAnchored
-                  : showGeographyLabel
-                    ? t.askingAboutGeography.replace(
-                        '{place}',
-                        geographyContext?.displayName ?? '',
-                      )
-                    : t.contextChipGeneric}
-              </span>
+                    {showStoryLabel
+                      ? t.contextChipAnchored
+                      : showGeographyLabel
+                        ? t.askingAboutGeography.replace(
+                            '{place}',
+                            geographyContext?.displayName ?? '',
+                          )
+                        : t.contextChipGeneric}
+                  </span>
+                  {mapGeographyUnusedText !== null && (
+                    <span
+                      data-ask="context-unused"
+                      data-ask-context-effect={mapGeographyUnused ?? undefined}
+                      className="text-[11px] text-ink-secondary"
+                    >
+                      {mapGeographyUnusedText}
+                    </span>
+                  )}
 
               <button
                 type="submit"

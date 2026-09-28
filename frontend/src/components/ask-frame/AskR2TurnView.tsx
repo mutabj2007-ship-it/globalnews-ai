@@ -90,6 +90,11 @@ export function AskR2TurnView({
         <span data-ask="freshness" className="text-[12px] text-sp-ink-2">
           {view.freshness}
         </span>
+        {turn.expired === true && (
+          <span data-ask="expired" className="text-[12px] text-sp-ink-2">
+            {s.expiredNote}
+          </span>
+        )}
       </div>
 
       <div data-ask="scope" className="mb-3 flex flex-wrap items-center gap-1.5 text-[12px]">

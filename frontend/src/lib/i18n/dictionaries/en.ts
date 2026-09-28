@@ -113,6 +113,13 @@ export const en = {
     askingAboutGeography: 'Asking about {place}',
     /* MAP / SPATIAL VISUAL CONVERGENCE R2 — Map R1 copy table (Ask on the Map). */
     geographyBasis: 'Country geography · no evidence attached',
+    /*
+      ASK R2 INTEGRATION R1 · GATE H (G V5-C2 / V6-C1) — after an answer, a selected Map
+      country the server did NOT use is shown as available-and-not-used, never as the scope
+      and never hidden. Integration-authored; flagged for Product copy review.
+    */
+    geographyOutranked: 'Selected: {place} · not used — your question named another place',
+    geographyNotApplied: 'Selected: {place} · not applied to this question',
     mapComputeNotice: 'Runs AI analysis. Nothing is sent until you press Send.',
     title: 'Ask GlobalNews AI',
     panelLabel: 'Ask GlobalNews AI',
