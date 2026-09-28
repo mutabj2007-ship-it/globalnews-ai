@@ -45,7 +45,8 @@ describe('M66.14B — one owner, final architecture from the first commit', () =
   it('is retired from Home with the two surfaces it linked, and kept on disk', () => {
     expect(page).not.toMatch(/<HeroFocusProvider/);
     expect(page).not.toMatch(/<GlobalDevelopments/);
-    expect(page).toMatch(/<BetaHero /);
+    /* HOME REV A — the Hero mount point is HomeWelcomeHero; the provider stays retired. */
+    expect(page).toMatch(/<HomeWelcomeHero /);
     expect(provider.length).toBeGreaterThan(0);
   });
 

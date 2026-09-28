@@ -15,7 +15,7 @@ import { ExploreIntelligence } from '@/components/home/reva/ExploreIntelligence'
 import { DeepIntelligenceRow } from '@/components/home/reva/DeepIntelligenceRow';
 import { HomeBridge } from '@/components/home/reva/HomeBridge';
 import { HomeBuiltOnTrust, HomeHowItWorks } from '@/components/home/reva/HomeHowAndTrust';
-import { HomeFooter } from '@/components/home/reva/HomeFooter';
+import { Footer } from '@/components/layout/Footer';
 import { getHomeFeed } from '@/lib/homeFeed';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -59,7 +59,7 @@ import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
  * (still the My Intelligence page header), BetaHero (its gold "Go further /
  * Plans coming soon" card and coloured CTA tiles have no Rev A equivalent),
  * HomeSideRail, ExploreByTopic, HomePremiumTeaser, HomeAccountPanel, HowItWorks,
- * TrustSection, and (on Home only) the shared Footer — see HomeFooter. PageCanvas is no longer the Home wrapper: Rev A sets its own
+ * TrustSection. PageCanvas is no longer the Home wrapper: Rev A sets its own
  * content geometry beside the rail.
  */
 
@@ -159,9 +159,14 @@ export default async function HomePage(): Promise<JSX.Element> {
                 </div>
               </div>
             </main>
-            <HomeFooter language={language} />
           </div>
         </div>
+        {/*
+          The ONE shared Footer (M66.8b: no route-specific variant), unmodified,
+          below the rail + content row at full width — beside the rail its
+          full-width composition squeezes. Legal/support layer only (CTO §4).
+        */}
+        <Footer language={language} />
         <MobileBottomNav language={language} />
       </HomeSessionProvider>
     </>

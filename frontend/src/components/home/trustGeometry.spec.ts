@@ -488,8 +488,10 @@ describe('M66.6 — protected surfaces are untouched', () => {
       subject is unchanged — where these two surfaces live, and whether their
       files survive — which is exactly what M66.6 set out to protect.
     */
-    expect(pageSource).toMatch(/<TrustSection/);
-    expect(pageSource).toMatch(/<HowItWorks/);
+    /* HOME WELCOME & DISCOVERY R1 REV A — both remain REAL Home body sections (CTO §13), now as the Rev A
+       sections; the M66.6 files are kept on disk, unimported by Home. */
+    expect(pageSource).toMatch(/<HomeBuiltOnTrust/);
+    expect(pageSource).toMatch(/<HomeHowItWorks/);
     expect(existsSync(join(__dirname, 'TrustSection.tsx'))).toBe(true);
     expect(existsSync(join(__dirname, 'HowItWorks.tsx'))).toBe(true);
   });
