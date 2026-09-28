@@ -139,6 +139,10 @@ export const myIntelligencePl = {
     introCompute: 'AI uruchamia się dopiero wtedy, gdy potwierdzisz działanie AI.',
     introDismiss: 'Rozumiem',
     cannotSelect: 'Nie można zaznaczyć tego artykułu, ponieważ jego źródło jest niedostępne.',
+    hookSelect: 'Zaznacz ten artykuł do działań analitycznych: {title}',
+    hookRemove: 'Usuń ten artykuł z zaznaczonych: {title}',
+    hookTitle: 'Zaznacz do analizy',
+    hookHint: 'Użyj piaskowych przycisków + przy artykułach, aby zaznaczyć to, co chcesz przeanalizować.',
     actions: {
       compare: 'Porównaj',
       summarize: 'Podsumuj',

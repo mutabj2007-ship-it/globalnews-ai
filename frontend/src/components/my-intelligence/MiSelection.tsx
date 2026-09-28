@@ -249,6 +249,8 @@ export function SelectionIntro({
     >
       <div className="flex flex-col gap-1">
         <p className="text-[#e4eefb]">{t.introBody}</p>
+        {/* INTEREST + SELECTION HOOK R1 — the intro teaches the sand + control. */}
+        <p data-mi-hook-hint="" className="text-[#D9B98A]">{t.hookHint}</p>
         <p className="flex items-center gap-1.5 text-[#D9B98A]">
           <ComputeMark className="h-[12px] w-[12px]" />
           <span>{t.introCompute}</span>

@@ -277,13 +277,28 @@ export function MyIntelligenceClient({
     [dictionary, language, sheetAction, t.compute.questionRequired, t.compute.tooFewVerified, t.selection.maxReached, verifiedStories],
   );
 
+  /*
+    INTEREST + SELECTION HOOK R1 — THE HOOK IS ALSO THE DOOR. Pressed outside
+    selection mode it enters the mode AND selects that story, which opens the
+    desktop context rail / the phone selection rail. Local state only: no
+    request of any kind. Inside the mode it toggles exactly as before, with
+    the same maximum-selection rule.
+  */
+  const onHookToggle = useCallback(
+    (url: string) => {
+      if (!selecting) setSelecting(true);
+      onToggleSelected(url);
+    },
+    [onToggleSelected, selecting],
+  );
+
   const handlers = {
     language,
     savedRefs: data.savedRefs,
     onToggleSaved,
     selecting,
     selectedUrls,
-    onToggleSelected,
+    onToggleSelected: onHookToggle,
   };
 
   const counts = {

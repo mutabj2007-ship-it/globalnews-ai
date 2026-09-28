@@ -225,13 +225,20 @@ export function ForYouModule({
       {shown.length === 0 ? (
         <p className={`${MI_RAIL} mt-3 p-4 text-[13.5px] text-[#7d92aa]`}>{t.forYou.empty}</p>
       ) : (
-        <ul className={`mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3 ${PHONE_BOUND_3}`} data-mi-cards={shown.length}>
+        /*
+          INTEREST + SELECTION HOOK R1 — width-driven, not breakpoint-driven: a card
+          is never narrower than 310px, so opening the 360px selection rail drops
+          the grid from 3 to 2 columns instead of squeezing the cards. The 24px
+          column gap is wider than the hook's straddle.
+        */
+        <ul className={`mt-3 grid gap-x-6 gap-y-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr))] ${PHONE_BOUND_3}`} data-mi-cards={shown.length}>
           {shown.map((story) => {
             const country = findCountryByIso3(story.countryCode);
             const name = country === undefined ? story.countryCode : getCountryDisplayName(country.iso2, language, country.name);
             return (
                 <SavedCard
                   key={story.id}
+                  compact
                   story={story}
                   language={language}
                   reason={fill(t.forYou.reason, { country: name })}

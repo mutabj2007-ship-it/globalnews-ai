@@ -123,7 +123,8 @@ function mount(): void {
 const enterSelection = (): void => press(one('data-mi-control', 'select'));
 const select = (...indices: number[]): void => {
   for (const i of indices) {
-    press(all((n) => n.props.role === 'checkbox' && n.props['aria-label'] === `Story ${i}`)[0]);
+    /* INTEREST + SELECTION HOOK R1 — the sand hook's label ends with the story title. */
+    press(all((n) => n.props.role === 'checkbox' && String(n.props['aria-label']).endsWith(`: Story ${i}`))[0]);
   }
 };
 const chooseAction = (id: string): void => press(all((n) => n.props['data-mi-action'] === id && !n.props.disabled)[0]);

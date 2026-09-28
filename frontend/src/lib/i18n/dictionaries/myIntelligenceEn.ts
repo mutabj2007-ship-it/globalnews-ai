@@ -141,6 +141,11 @@ export const myIntelligenceEn = {
     introCompute: 'AI runs only when you confirm an AI action.',
     introDismiss: 'Got it',
     cannotSelect: 'This story cannot be selected because its source is unavailable.',
+    /* INTEREST + SELECTION HOOK R1 — the sand selection hook. Selecting is free: no AI wording here. */
+    hookSelect: 'Select this story for intelligence actions: {title}',
+    hookRemove: 'Remove this story from selected stories: {title}',
+    hookTitle: 'Select for intelligence',
+    hookHint: 'Use the sand + controls on stories to select what you want to analyze.',
     actions: {
       compare: 'Compare',
       summarize: 'Summarize',
