@@ -9,7 +9,7 @@ import { HomeUtilityHeader } from '@/components/home/reva/HomeUtilityHeader';
 import { HomeProductRail } from '@/components/home/reva/HomeProductRail';
 import { HomeWelcomeHero } from '@/components/home/reva/HomeWelcomeHero';
 import { WorldIn60Seconds } from '@/components/home/reva/WorldIn60Seconds';
-import { allocateWorldIn60 } from '@/components/home/reva/worldIn60Allocation';
+import { allocateHomeFirstScreen } from '@/components/home/reva/worldIn60Allocation';
 import { SuggestedInvestigations } from '@/components/home/reva/SuggestedInvestigations';
 import { HomeForYou } from '@/components/home/reva/HomeForYou';
 import { ExploreIntelligence } from '@/components/home/reva/ExploreIntelligence';
@@ -101,9 +101,16 @@ export default async function HomePage(): Promise<JSX.Element> {
     HOME R2 STORY DEDUPLICATION R1 — the 60-second module no longer reads that
     pool. It shares the first screen with What's happening now (featured +
     inFocus + discovery), so it reads its OWN disjoint pool: `latestUpdates`
-    minus every What's happening story by id and canonical URL. On a narrow
-    response that pool is short or empty and the module shows fewer stories —
-    it is never padded with a story already shown beside it.
+    minus every What's happening story by id and canonical URL. It is never
+    padded with a story already shown beside it.
+
+    W60 STARVATION CORRECTION R1 — on a narrow live response that remainder is
+    empty, which left the right rail as an empty-state card. The first screen is
+    now ONE partition (allocateHomeFirstScreen): the 60-second module takes the
+    disjoint remainder, then TRANSFERS governed brief stories (`briefUpdates`)
+    out of What's happening — moved, never copied, never the featured story —
+    while What's happening keeps its floor (≥3 at normal widths). Both modules
+    are populated whenever the response has at least two distinct stories.
   */
   const seenIds = new Set<string>();
   const homeArticles = [...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery, ...feed.latestUpdates].filter((article) => {
@@ -111,7 +118,9 @@ export default async function HomePage(): Promise<JSX.Element> {
     seenIds.add(article.id);
     return true;
   });
-  const worldIn60 = allocateWorldIn60(feed);
+  const firstScreen = allocateHomeFirstScreen(feed);
+  const worldIn60 = firstScreen.worldIn60;
+  const whats = firstScreen.whats;
 
   return (
     <>
@@ -164,13 +173,13 @@ export default async function HomePage(): Promise<JSX.Element> {
                     data-home-right-rail=""
                     className="flex min-w-0 flex-col gap-4 self-start [grid-area:rail] [@container(min-width:1140px)]:pt-6"
                   >
-                    <WorldIn60Seconds items={worldIn60} language={language} showEmptyState={feed.featured !== null} />
+                    <WorldIn60Seconds items={worldIn60} language={language} showEmptyState={whats.featured !== null} />
                   </aside>
                   <div className="min-w-0 self-start [grid-area:whats]">
                     <WhatsHappeningNow
-                      lead={feed.featured}
-                      secondary={feed.inFocus}
-                      discovery={feed.discovery}
+                      lead={whats.featured}
+                      secondary={whats.inFocus}
+                      discovery={whats.discovery}
                       dataMode={feed.dataMode}
                       language={language}
                     />

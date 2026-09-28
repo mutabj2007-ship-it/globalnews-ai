@@ -186,9 +186,9 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
     assertion now also guards against silently dropping it again.
   */
   it('WhatsHappeningNow receives the real curated roles (featured/inFocus/discovery), not a fabricated shape', () => {
-    expect(pageSource).toMatch(/lead=\{feed\.featured\}/);
-    expect(pageSource).toMatch(/secondary=\{feed\.inFocus\}/);
-    expect(pageSource).toMatch(/discovery=\{feed\.discovery\}/);
+    expect(pageSource).toMatch(/lead=\{whats\.featured\}/);
+    expect(pageSource).toMatch(/secondary=\{whats\.inFocus\}/);
+    expect(pageSource).toMatch(/discovery=\{whats\.discovery\}/);
   });
 
   it('STEP 4 — the two surfaces read DIFFERENT roles of the same single response', () => {

@@ -28,6 +28,20 @@ ONE getHomeFeed() → allocateHomeFeed (exclusive)
         deduped internally; empty → one-line truthful note
 ```
 
+**Superseded by W60 Starvation Correction R1** (`fix/home-r2-w60-starvation-r1`). On live
+Alpha the exclusive remainder was empty, so the 60-second module showed the note beside a
+full What's happening. The first screen is now one partition (`allocateHomeFirstScreen`):
+
+```
+ONE getHomeFeed() → allocateHomeFeed (exclusive) + briefUpdates (same response)
+  A. worldIn60 ← latestUpdates minus What's happening (id + canonical URL)
+  B. while worldIn60 < 5: TRANSFER briefUpdates stories out of inFocus/discovery
+     (moved, never copied; featured never moves)
+  C. What's happening keeps ≥ floor: 0–1 → all, 2 → 1, 3 → 2, ≥4 → 3
+  D. worldIn60 newest first, then the module's followed-places preference
+Both modules populated whenever ≥2 distinct stories; the note shows only for a 1-story response.
+```
+
 ## 3. Provider disclosure
 
 Home's badge uses Home-specific provider-neutral labels through a bounded `labels` prop on

@@ -92,11 +92,12 @@ describe('DATA SEPARATION — What’s happening now and the 60-second module ar
     for (const href of shown) expect(urls(whats).has(normalizeArticleUrl(href))).toBe(false);
   });
 
-  it('page wiring: What’s happening reads featured/inFocus/discovery; 60 s reads the disjoint pool, never the merged one', () => {
-    expect(PAGE).toMatch(/lead=\{feed\.featured\}/);
-    expect(PAGE).toMatch(/secondary=\{feed\.inFocus\}/);
-    expect(PAGE).toMatch(/discovery=\{feed\.discovery\}/);
-    expect(PAGE).toMatch(/const worldIn60 = allocateWorldIn60\(feed\);/);
+  it('page wiring: both modules read ONE first-screen partition, never the merged pool', () => {
+    /* W60 STARVATION R1 — the partition replaces the one-sided subtraction. */
+    expect(PAGE).toMatch(/lead=\{whats\.featured\}/);
+    expect(PAGE).toMatch(/secondary=\{whats\.inFocus\}/);
+    expect(PAGE).toMatch(/discovery=\{whats\.discovery\}/);
+    expect(PAGE).toMatch(/const firstScreen = allocateHomeFirstScreen\(feed\);/);
     expect(PAGE).toMatch(/<WorldIn60Seconds items=\{worldIn60\}/);
     expect(code(PAGE)).not.toMatch(/newestFirst/);
   });
@@ -128,7 +129,8 @@ describe('DATA SEPARATION — What’s happening now and the 60-second module ar
     for (const a of w60) expect(html).toContain(a.title);
   });
 
-  it('narrow response: no invented story, truthful empty note, no "five" promise', () => {
+  /* W60 STARVATION R1 — the page no longer shows this empty remainder (see homeW60StarvationR1.spec.ts); the pure helper and the component's empty state are still pinned here. */
+  it('narrow response: the disjoint remainder is empty; the empty state stays truthful, no "five" promise', () => {
     const { whats, w60 } = homeRoles(response(9));
     expect(whats).toHaveLength(9);
     expect(w60).toEqual([]);
@@ -140,7 +142,7 @@ describe('DATA SEPARATION — What’s happening now and the 60-second module ar
     }
     // Empty feed (nothing in What's happening either): the module is simply absent.
     expect(renderW60([], 'en', false)).toBe('');
-    expect(PAGE).toMatch(/showEmptyState=\{feed\.featured !== null\}/);
+    expect(PAGE).toMatch(/showEmptyState=\{whats\.featured !== null\}/);
   });
 
   it('copy is count-neutral in EN and PL', () => {
