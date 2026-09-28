@@ -24,6 +24,7 @@ import { TrustedProxyStartupValidator } from './security/trusted-proxy.config';
 import { PublicBackendOriginStartupValidator } from './security/public-backend-origin.config';
 import { PublicOAuthCallbackBaseStartupValidator } from './security/public-oauth-callback-base.config';
 import { AuthSecretsStartupValidator } from './security/auth-secrets.config';
+import { EgressDeclarationReporter } from './security/egress-declaration';
 import { LoggingInterceptor } from './observability/logging.interceptor';
 import { GlobalExceptionFilter } from './observability/global-exception.filter';
 import { RequestIdMiddleware } from './observability/request-id.middleware';
@@ -269,6 +270,9 @@ import {
     // same function main.ts calls before app.listen(), so the DI guard and the
     // real boot gate can never disagree. Outside production it is a no-op.
     AuthSecretsStartupValidator,
+    // ASK R2 INTEGRATION R1 · §11 — the declared egress mode (DIRECT, address-bound) as a
+    // runtime value, announced at boot beside the validators above (F 04 EG-3, F 07 T-23).
+    EgressDeclarationReporter,
     // Milestone #55 (unmatched-route correlation fix) — must be
     // registered as a provider so Nest's DI can construct it for
     // consumer.apply() in configure() below.
