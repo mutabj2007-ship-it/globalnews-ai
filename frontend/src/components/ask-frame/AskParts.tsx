@@ -1,143 +1,53 @@
 'use client';
 
-import type { JSX, ReactNode } from 'react';
-import { ASK_ABSENT, SUGGESTION_CATEGORIES } from '@/lib/ask/askFrame';
-import type { AskStrings } from '@/lib/ask/askStrings';
+import type { JSX } from 'react';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 
-/** Presentation primitives recovered from the v1.8 authority preview. */
-export const ASK_MICRO = 'font-mono text-[10px] uppercase tracking-[0.14em] text-sp-ink-3';
-export const ASK_LABEL = 'font-mono text-[11px] uppercase tracking-[0.12em] text-sp-ink-2';
-const PANEL = 'border border-sp-line bg-sp-panel';
+/**
+ * ASK R2 CLAUDE DESIGN RECONCILIATION R1 — presentation primitives of the frozen D25
+ * authority (GNAI_ASK_INTELLIGENCE_WORKSPACE_R2_FINAL_DESIGN_AUTHORITY_D25, SHA256
+ * 4ca6c22d9e995901b9b61fd5e55080885913138d9877c296ed8acfd21399ed53). The v1.8 dashboard
+ * primitives (Situation context, five absent suggestion rows, Watch, Recent alerts) are
+ * not in D25's idle state and are gone; D25 01 lists every region the workspace has.
+ */
+
+/** D25 micro label: mono 11 / .12em, the eyebrow every Ask section carries. */
+export const ASK_EYEBROW =
+  'font-mono text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-[#8fa6c0]';
 
 /**
- * A REGION. Present or absent — never "present but pretending".
+ * QUESTIONS WORTH ASKING — ONE CARD, ONE TRUTHFUL SENTENCE.
  *
- * `data-ask-region` is what the first-viewport guard walks, so the id is the
- * contract rather than the heading text, which a translator may change.
+ * D25 00-empty: the card states that no question is available yet and that this is not a
+ * claim that nothing is worth asking. No rows are drawn for questions that do not exist.
  */
-export function Region({
-  id,
+export function QuestionsWorthAsking({
   label,
-  children,
-  className = '',
+  statement,
 }: {
-  readonly id: string;
   readonly label: string;
-  readonly children?: ReactNode;
-  readonly className?: string;
+  readonly statement: string;
 }): JSX.Element {
   return (
-    <section data-ask-region={id} aria-label={label} className={className}>
-      <h2 className={`${ASK_LABEL} mb-[6px]`}>{label}</h2>
-      {children}
+    <section
+      data-ask="suggestions"
+      aria-label={label}
+      className="mt-3 flex flex-col gap-1.5 rounded-[10px] border border-[#0e2d4d] bg-[#03152a] p-3.5"
+    >
+      <h2 className={ASK_EYEBROW}>{label}</h2>
+      <p data-ask="statement" className="text-[13px] leading-[1.55] text-[#b6c9de]">
+        {statement}
+      </p>
     </section>
   );
 }
 
 /**
- * A QUIET STATEMENT.
- *
- * No value parameter, deliberately. The Market round learned this the hard way:
- * a statement component that could print a value printed the same sentence four
- * times on one screen the moment there was no value to print. This one renders
- * the sentence it was given and nothing else.
+ * Persistent composer (D25 04). Only form submission starts research; opening, focusing
+ * and typing request nothing. One row: the field grows to ~6 lines (220 px desktop,
+ * 140 px phone) and then scrolls inside itself; Ask stays at its right. The cost line
+ * sits under the row, never as a caption on the button.
  */
-export function Statement({ text }: { readonly text: string }): JSX.Element {
-  return (
-    <p data-ask="statement" className="text-[12px] leading-[1.55] text-sp-ink-2">
-      {text}
-    </p>
-  );
-}
-
-/** The absent mark. It is a mark, not a number, and it never becomes one. */
-export function Absent({ label }: { readonly label: string }): JSX.Element {
-  return (
-    <span data-ask="absent" className="inline-flex items-baseline gap-[6px]">
-      <span className={ASK_MICRO}>{label}</span>
-      <span className="font-mono text-[13px] text-sp-ink-3" aria-label={`${label}: ${ASK_ABSENT}`}>
-        {ASK_ABSENT}
-      </span>
-    </span>
-  );
-}
-
-/**
- * A CHANGE-STATE CHIP POSITION, WITH NO STATE IN IT.
- *
- * Specification §9: the seven states are inherited and Ask introduces none of
- * its own. At Alpha no change record reaches this frame, so the chip's PLACE is
- * rendered and no member is selected — the same discipline the Security
- * severity ladder uses, and for the same reason: showing the instrument is
- * honest, showing a reading is not.
- */
-export function ChangeChipSlot({ label }: { readonly label: string }): JSX.Element {
-  return (
-    <span
-      data-ask="change-chip-slot"
-      data-ask-selected="false"
-      className="inline-flex items-center gap-[6px] rounded-[3px] border border-dashed border-sp-line px-[7px] py-[3px]"
-    >
-      <span className={ASK_MICRO}>{label}</span>
-      <span className="font-mono text-[11px] text-sp-ink-3">{ASK_ABSENT}</span>
-    </span>
-  );
-}
-
-/**
- * A SUGGESTED-QUESTION ROW THAT CANNOT CARRY A QUESTION.
- *
- * It takes a CATEGORY and nothing else. Specification §6 names five categories
- * and says the rows come from the change digest; Master Authority §12 says the
- * digest is what feeds them; the digest does not exist here. So the row shows
- * where a question of that kind will sit, carries its change-state chip
- * position, and prints the absent mark where the question goes.
- *
- * No handler: a row that looked pressable and did nothing
- * is the dead-control case this codebase has already ruled against by name.
- */
-export function SuggestionRow({
-  category,
-  categoryLabel,
-  stateLabel,
-}: {
-  readonly category: string;
-  readonly categoryLabel: string;
-  readonly stateLabel: string;
-}): JSX.Element {
-  return (
-    <li
-      data-ask="suggestion-row"
-      data-ask-category={category}
-      className="flex min-h-[44px] items-center justify-between gap-[10px] border-b border-sp-line px-[10px] py-[9px] last:border-b-0"
-    >
-      <span className="flex items-center gap-[9px]">
-        <ChangeChipSlot label={stateLabel} />
-        <span className="font-mono text-[13px] text-sp-ink-3">{ASK_ABSENT}</span>
-      </span>
-      <span className={ASK_MICRO}>{categoryLabel}</span>
-    </li>
-  );
-}
-
-/** The five rows, in the specification's order. The list is never shortened. */
-export function SuggestionList({ t }: { readonly t: AskStrings }): JSX.Element {
-  return (
-    <ul data-ask="suggestions" className={`${PANEL} rounded-[4px]`}>
-      {SUGGESTION_CATEGORIES.map((category) => (
-        <SuggestionRow
-          key={category}
-          category={category}
-          categoryLabel={t.suggestionCategories[category]}
-          stateLabel={t.regions.changeStrip}
-        />
-      ))}
-    </ul>
-  );
-}
-
-/** Persistent composer; only form submission starts analysis. */
 export function Composer({
   value,
   onChange,
@@ -147,6 +57,7 @@ export function Composer({
   costNote,
   onSubmit,
   pending = false,
+  maxHeight,
 }: {
   readonly value: string;
   readonly onChange: (next: string) => void;
@@ -156,7 +67,10 @@ export function Composer({
   readonly costNote: string;
   readonly onSubmit?: () => void;
   readonly pending?: boolean;
+  /** D25 04: 220 on desktop, 140 on full-screen phone / 768 portrait. */
+  readonly maxHeight: 220 | 140;
 }): JSX.Element {
+  const ready = !pending && value.trim().length > 0 && onSubmit !== undefined;
   return (
     <form
       data-ask="composer"
@@ -164,74 +78,48 @@ export function Composer({
         event.preventDefault();
         onSubmit?.();
       }}
-      className={`${PANEL} rounded-[4px] p-[10px]`}
+      className="flex min-w-0 flex-col gap-2"
     >
-      <label className="sr-only" htmlFor="ask-frame-composer">
-        {inputLabel}
-      </label>
-      <AdaptiveTextarea
-        id="ask-frame-composer"
-        data-ask="composer-input"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        maxLength={1000}
-        minHeight={48}
-        maxHeight={420}
-        maxViewportFraction={0.50}
-        keepVisible
-        className="w-full bg-transparent text-[13px] leading-[1.5] text-sp-ink placeholder:text-sp-ink-3 focus:outline-none"
-      />
-      {/*
-        THE COST MARKER GETS ITS OWN LINE.
-        `AI-COST-MAP.md` enforcement rule 1 requires it in the same surface that
-        triggers the spend, and at 452px it was wrapping to two lines beside the
-        button and reading as a caption on it. Above the row it is a statement
-        about the action, which is what it is.
-      */}
-      <p className={`${ASK_MICRO} mt-[8px] normal-case tracking-normal`}>{costNote}</p>
-      <div className="mt-[7px] flex items-center justify-end gap-[10px]">
+      <div
+        className={`flex min-h-[56px] items-end gap-2 rounded-[14px] border bg-[#061a30] py-1.5 pe-1.5 ps-4 focus-within:border-[#5abff5] ${
+          value.trim() ? 'border-[#5abff5]' : 'border-[#1d4a73]'
+        }`}
+      >
+        <label className="sr-only" htmlFor="ask-frame-composer">
+          {inputLabel}
+        </label>
+        <AdaptiveTextarea
+          id="ask-frame-composer"
+          data-ask="composer-input"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          maxLength={1000}
+          minHeight={32}
+          maxHeight={maxHeight}
+          maxViewportFraction={0.4}
+          keepVisible
+          className="min-w-0 flex-1 self-center bg-transparent py-1.5 text-[16px] leading-[1.45] text-white placeholder:text-[#6f89a8] focus:outline-none"
+        />
         <button
           type="submit"
           data-ask="send"
-          disabled={pending || !value.trim() || !onSubmit}
-          className="inline-flex min-h-[44px] items-center rounded-[4px] border border-sp-cyan/55 bg-sp-cyan/15 px-[16px] text-[12px] font-semibold text-sp-cyan"
+          disabled={!ready}
+          className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[10px] border border-[#1b6fa8] px-[18px] text-[14px] font-bold text-[#e6f5ff] ${
+            ready ? 'bg-[#0a6bd6]' : 'bg-[#07304f] opacity-55'
+          }`}
         >
           {submitLabel}
+          {ready && (
+            <span aria-hidden="true" className="text-[15px] leading-none">
+              ↑
+            </span>
+          )}
         </button>
       </div>
+      <p data-ask="cost-note" className="font-mono text-[11px] leading-[1.3] text-[#6f89a8]">
+        {costNote}
+      </p>
     </form>
-  );
-}
-
-/**
- * THE VIOLET TIER BOUNDARY, IN THE MONETIZATION LANGUAGE'S OWN WORDS.
- *
- * `spatial.monetization.activation.unavailableTitle` / `unavailableBody` are
- * the product's accepted answer to "why can I not turn this on": *"No
- * activation or entitlement contract is configured for monitoring, so nothing
- * here can be activated or charged for."* Reused verbatim, in EN and PL,
- * rather than re-worded — a second phrasing of the same state is a second
- * product answer.
- *
- * Violet because Part IV assigns violet to a tier boundary and this is one.
- * Never gold: activation §12, and the codebase's own rule that mint, violet and
- * sand are the whole language.
- */
-export function TierBoundary({
-  title,
-  body,
-}: {
-  readonly title: string;
-  readonly body: string;
-}): JSX.Element {
-  return (
-    <div
-      data-ask="tier-boundary"
-      className="rounded-[4px] border border-[#3d3266] bg-[rgba(45,36,80,.45)] p-[10px]"
-    >
-      <p className="text-[12px] font-semibold text-[#b9a2f0]">{title}</p>
-      <p className="mt-[4px] text-[11px] leading-[1.5] text-sp-ink-2">{body}</p>
-    </div>
   );
 }
