@@ -137,11 +137,12 @@ export function AskFrameScreen({ locale }: { readonly locale: AskLocale }): JSX.
     const update = () => {
       const node = layout.current;
       if (node) {
+        /* Full-screen phone / 768 only: the keyboard-aware height. Desktop needs no
+           measurement — the page column sizes the frame (composer clipping fix R1). */
         node.style.setProperty(
           '--ask-visible-height',
           `${viewport?.height ?? window.innerHeight}px`,
         );
-        node.style.setProperty('--ask-top', `${node.getBoundingClientRect().top}px`);
       }
     };
     update();
