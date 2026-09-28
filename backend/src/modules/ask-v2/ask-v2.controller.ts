@@ -47,7 +47,10 @@ export function applyAskPrivacyHeaders(response: {
 export class AskV2EnabledGuard implements CanActivate {
   constructor(private readonly config: ConfigService) {}
   canActivate(context: ExecutionContext): boolean {
-    applyAskPrivacyHeaders(context.switchToHttp().getResponse());
+    /* Headers only where there is an HTTP response to carry them; the enable decision never
+       depends on it (a non-HTTP context is still refused with the same 404). */
+    const response = context.switchToHttp?.()?.getResponse?.();
+    if (response && typeof response.setHeader === 'function') applyAskPrivacyHeaders(response);
     if (this.config.get<string>('ASK_V2_ENABLED') !== 'true') throw new NotFoundException();
     return true;
   }
