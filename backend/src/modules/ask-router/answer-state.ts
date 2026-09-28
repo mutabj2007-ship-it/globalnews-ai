@@ -21,6 +21,11 @@
  *       CAPABILITY_UNAVAILABLE; INSUFFICIENT is reachable ONLY after execution.
  *   Clarification is a successful terminal costing no provider/model execution
  *       CLARIFICATION_REQUIRED is derived from the plan alone, before any evidence.
+ *   A reference question that produced nothing is not "no reporting found" (Main MC-033,
+ *   MC-041, GATE H)
+ *       REFERENCE is the class that was needed and is not available (the Reference provider
+ *       ships disabled), so the state is CAPABILITY_UNAVAILABLE naming REFERENCE — a typed
+ *       refusal. INSUFFICIENT would claim an absence of REPORTING the plan never required.
  *
  * Codes only; the frontend owns every word.
  */
@@ -58,6 +63,18 @@ export interface AnswerStateDecision {
   readonly basis: string;
   /** Roles the plan required that execution did not obtain. */
   readonly missingRoles: readonly AskEvidenceRole[];
+}
+
+/** The Ask evidence roles the plan REQUIRES (MODEL_PRIOR has none). */
+export function requiredRolesOf(plan: RoutingPlan): AskEvidenceRole[] {
+  return [
+    ...new Set(
+      plan.evidenceRequests
+        .filter((r) => r.required)
+        .map((r) => ROLE_OF_EVIDENCE_CLASS[r.evidenceClass])
+        .filter((r): r is AskEvidenceRole => r !== null),
+    ),
+  ];
 }
 
 /** The plan-only decision: terminals that end before any evidence exists. */
@@ -100,12 +117,22 @@ export function deriveAnswerState(
   obtained?: ObtainedEvidence,
 ): AnswerStateDecision {
   const early = answerStateBeforeExecution(plan);
-  /* Nothing was produced: a reference plan must not be shown as an empty "background". */
-  if (
-    obtained?.producedAnswer === false &&
-    (early === null || early.state === 'REFERENCE_BACKGROUND')
-  ) {
-    return { state: 'INSUFFICIENT', basis: 'NO_ANSWER_PRODUCED', missingRoles: [] };
+  if (obtained?.producedAnswer === false) {
+    /* Nothing was produced. A reference plan needed REFERENCE, and it is unavailable. */
+    if (early !== null && early.state === 'REFERENCE_BACKGROUND') {
+      return {
+        state: 'CAPABILITY_UNAVAILABLE',
+        basis: 'REFERENCE_UNAVAILABLE',
+        missingRoles: ['REFERENCE'],
+      };
+    }
+    if (early === null) {
+      return {
+        state: 'INSUFFICIENT',
+        basis: 'NO_ANSWER_PRODUCED',
+        missingRoles: requiredRolesOf(plan),
+      };
+    }
   }
   if (early !== null) return early;
   if (plan.terminalState === 'AWAITING_COMPUTE_CONSENT') {
@@ -115,14 +142,7 @@ export function deriveAnswerState(
   const items = obtained?.items ?? {};
   const has = (role: AskEvidenceRole): boolean => (items[role] ?? 0) > 0;
 
-  const requiredRoles = [
-    ...new Set(
-      plan.evidenceRequests
-        .filter((r) => r.required)
-        .map((r) => ROLE_OF_EVIDENCE_CLASS[r.evidenceClass])
-        .filter((r): r is AskEvidenceRole => r !== null),
-    ),
-  ];
+  const requiredRoles = requiredRolesOf(plan);
   const missingRoles = requiredRoles.filter((r) => !has(r));
 
   /* Current status (frozen ruling 3): the contract's admissible outcomes, and only those. */

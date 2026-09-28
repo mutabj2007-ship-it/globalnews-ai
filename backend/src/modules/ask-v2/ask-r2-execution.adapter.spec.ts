@@ -247,7 +247,7 @@ describe('execute — the one bounded call, settled on actual units', () => {
     expect(calls.settle).toEqual([['res-1', 0, 'NO_EVIDENCE']]);
   });
 
-  it('a reference question with no evidence is INSUFFICIENT — never an empty "background"', async () => {
+  it('GATE H (Main MC-033): a reference question that produced nothing is a TYPED refusal naming REFERENCE — never "no reporting found"', async () => {
     const { adapter } = harness({
       analysis: async () => ({
         analysis: null,
@@ -257,9 +257,11 @@ describe('execute — the one bounded call, settled on actual units', () => {
     });
     const plan = await adapter.prepare(req('What is inflation?'));
     const result = await inRequest(() => adapter.execute(req('What is inflation?'), plan, 'op-1'));
-    expect((JSON.parse(result.payloadJson) as { answer: { state: string } }).answer.state).toBe(
-      'INSUFFICIENT',
-    );
+    expect((JSON.parse(result.payloadJson) as { answer: unknown }).answer).toEqual({
+      state: 'CAPABILITY_UNAVAILABLE',
+      basis: 'REFERENCE_UNAVAILABLE',
+      missingRoles: ['REFERENCE'],
+    });
   });
 
   it('a provider failure WITH retrieved articles is still MODEL_FAILURE', async () => {
@@ -312,5 +314,101 @@ describe('execute — the one bounded call, settled on actual units', () => {
     );
     expect(max).toBe(12_150);
     expect(max).toBeLessThanOrEqual(ceiling);
+  });
+});
+
+describe('GATE H — Main R1.1 execution rows', () => {
+  it('MC-047/MC-050: a computation or an attached file is a typed refusal with ZERO AI and no control touched', async () => {
+    for (const q of ['Solve x^3 - 4x + 1 = 0', 'Summarise the PDF I attached']) {
+      const { adapter, calls } = harness({});
+      const plan = await adapter.prepare(req(q));
+      const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+      const payload = JSON.parse(result.payloadJson) as {
+        aiExecuted: boolean;
+        answer: { state: string };
+      };
+      expect(payload).toMatchObject({
+        aiExecuted: false,
+        answer: { state: 'CAPABILITY_UNAVAILABLE' },
+      });
+      expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+    }
+  });
+
+  it('executor guard: a signed-in personal question is not answered from reporting (EXECUTOR_NOT_WIRED, ZERO AI)', async () => {
+    const q = 'What have I saved about Rwanda?';
+    const { adapter, calls } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req(q)));
+    const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+    const payload = JSON.parse(result.payloadJson) as { aiExecuted: boolean; answer: unknown };
+    expect(payload.answer).toEqual({
+      state: 'CAPABILITY_UNAVAILABLE',
+      basis: 'EXECUTOR_NOT_WIRED',
+      missingRoles: ['PERSONAL'],
+    });
+    expect(payload.aiExecuted).toBe(false);
+    expect(calls.analysis).toEqual([]);
+    expect(calls.reserve).toEqual([]);
+  });
+
+  it('anonymous: the same personal question is IDENTITY_REQUIRED (frozen B7a), ZERO AI', async () => {
+    const q = 'What have I saved about Rwanda?';
+    const { adapter, calls } = harness({});
+    const anon = <T>(work: () => Promise<T>) =>
+      askRequestContext.run({ accountId: null, ipScope: 'ip:v4:203.0.113.7' }, work);
+    const plan = await anon(() => adapter.prepare(req(q)));
+    const result = await anon(() => adapter.execute(req(q), plan, 'op-1'));
+    expect(JSON.parse(result.payloadJson)).toMatchObject({
+      aiExecuted: false,
+      answer: { state: 'CAPABILITY_UNAVAILABLE', basis: 'PLAN_IDENTITY_REQUIRED' },
+      route: { terminalState: 'IDENTITY_REQUIRED' },
+    });
+    expect(calls.analysis).toEqual([]);
+  });
+
+  it('MC-069: the landed path ASKED ("Congo") — returned as a clarification with its candidates, no model', async () => {
+    const q = 'What is happening in Congo?';
+    const { adapter, calls } = harness({
+      analysis: async () => ({
+        analysis: null,
+        articles: [],
+        retrievalContext: {
+          retrievalOutcome: 'CLARIFICATION_REQUIRED',
+          clarificationReason: 'AMBIGUOUS_COUNTRY',
+          clarificationCandidates: ['COD', 'COG'],
+        } as never,
+      }),
+    });
+    const plan = await adapter.prepare(req(q));
+    const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+    const payload = JSON.parse(result.payloadJson) as {
+      aiExecuted: boolean;
+      answer: unknown;
+      chips: unknown;
+    };
+    expect(payload.answer).toEqual({
+      state: 'CLARIFICATION_REQUIRED',
+      basis: 'LANDED_AMBIGUOUS_COUNTRY',
+      missingRoles: [],
+      candidates: ['COD', 'COG'],
+    });
+    expect(payload.aiExecuted).toBe(false);
+    /* the chips never claim either candidate */
+    expect(JSON.stringify(payload.chips)).not.toMatch(/COD|COG/);
+    /* nothing was spent: the reservation settles 0, the breaker is told nothing failed */
+    expect(calls.settle).toEqual([['res-1', 0, 'NO_EVIDENCE']]);
+    expect(calls.record).toEqual([['openai', 'REFUSAL', false]]);
+  });
+
+  it('MC-071: a closed past period is HISTORICAL against the request instant and is offered, not run', async () => {
+    const q = 'What happened in Rwanda in 1994?';
+    const { adapter, calls } = harness({});
+    const plan = await adapter.prepare(req(q));
+    const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+    expect(JSON.parse(result.payloadJson)).toMatchObject({
+      aiExecuted: false,
+      answer: { state: 'CLARIFICATION_REQUIRED', basis: 'PLAN_BROADENING_OFFERED' },
+    });
+    expect(calls.analysis).toEqual([]);
   });
 });

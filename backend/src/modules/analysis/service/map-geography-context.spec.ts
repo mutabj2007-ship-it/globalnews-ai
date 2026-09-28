@@ -1,22 +1,18 @@
 import { execSync } from 'child_process';
 import { BadRequestException, ValidationPipe, type ArgumentMetadata } from '@nestjs/common';
-import type { AnalysisApiResponse, CountryNewsResponse, NewsArticle, NewsResponse } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, NewsArticle } from '@globalnews-ai/shared';
 import {
-  ANALYSIS_TOTAL_BUDGET_MS,
   COUNTRIES,
   MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH,
   resolveCountryByAnyIdentifier,
   resolveGovernedCountryCode,
 } from '@globalnews-ai/shared';
 
-import type { AnalysisProvider } from '../interfaces';
-import type { AnalysisConfigService } from '../config/analysis-config.service';
-import { AnalysisService } from './analysis.service';
 import { AnalysisController } from '../controller/analysis.controller';
 import { AnalyzeNewsDto } from '../dto';
 import type { HistoryService } from '../../history/history.service';
 import { computeArticleRef } from '../../news/identity/article-ref.util';
-import { scoreCountryRelevance } from '../../news/country/country-relevance.util';
+import { harness } from './map-geography-context.harness-spec';
 
 /**
  * MAP ASK GEOGRAPHY CONTEXT R1 — the map country with no story selected.
@@ -25,97 +21,12 @@ import { scoreCountryRelevance } from '../../news/country/country-relevance.util
  * CountryNewsService are stubbed at their own boundaries; the country stub
  * applies the REAL country-relevance gate. The analysis provider records what
  * it was given and then THROWS, so any claim about what reached the model is
- * read from the provider's own input.
+ * read from the provider's own input. The harness itself lives in
+ * map-geography-context.harness-spec.ts (one definition, reused by the G matrix run).
  */
 
 /* A display name that must never be read by retrieval, cache or prompt. */
 const DISPLAY_SENTINEL = 'Zzyzx Presentation Label';
-
-function harness(corpus: NewsArticle[] = []) {
-  const countryCalls: string[] = [];
-  const searchCalls: string[] = [];
-  const providerInputs: unknown[] = [];
-
-  const newsService = {
-    search: jest.fn(async (query: string): Promise<NewsResponse> => {
-      searchCalls.push(query);
-      return {
-        articles: [],
-        totalResults: 0,
-        providers: ['gnews'],
-        dataMode: 'live',
-        generatedAt: new Date().toISOString(),
-      } as NewsResponse;
-    }),
-    topHeadlines: jest.fn(
-      async (): Promise<NewsResponse> =>
-        ({
-          articles: [],
-          totalResults: 0,
-          providers: ['gnews'],
-          dataMode: 'live',
-          generatedAt: new Date().toISOString(),
-        }) as NewsResponse,
-    ),
-    findArticleById: jest.fn(async () => null),
-    findRetainedArticleByUrl: jest.fn(async () => null),
-    findRetainedByCountry: jest.fn(async () => []),
-    findRetainedByQuery: jest.fn(async () => []),
-  };
-
-  const countryNewsService = {
-    getCountryNews: jest.fn(async (identifier: string): Promise<CountryNewsResponse> => {
-      countryCalls.push(identifier);
-      const country = resolveCountryByAnyIdentifier(identifier);
-      const articles = country
-        ? corpus.filter((candidate) => scoreCountryRelevance(candidate, country).isRelevant)
-        : [];
-      return {
-        countryCode: country?.iso3 ?? identifier,
-        countryName: country?.name ?? identifier,
-        articles,
-        totalResults: articles.length,
-        providers: ['gnews'],
-        dataMode: 'live',
-        generatedAt: new Date().toISOString(),
-      } as unknown as CountryNewsResponse;
-    }),
-  };
-
-  const provider: AnalysisProvider = {
-    id: 'mock-analysis',
-    displayName: 'Mock',
-    isMock: true,
-    analyzeNews: jest.fn(async (...args: unknown[]) => {
-      providerInputs.push(args);
-      throw new Error('analysis provider reached');
-    }),
-  };
-
-  const config = {
-    get: () => ({
-      maxArticles: 8,
-      maxArticleChars: 1200,
-      timeoutMs: 20000,
-      totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
-      cacheTtlSeconds: 0,
-      openAiApiKey: undefined,
-      openAiModel: 'gpt-4o-mini',
-      executionMode: 'development' as const,
-      retryAttempts: 2,
-      retryBaseDelayMs: 300,
-      maxCompletionTokens: 2000,
-    }),
-  } as unknown as AnalysisConfigService;
-
-  return {
-    service: new AnalysisService(newsService as never, countryNewsService as never, provider, config),
-    countryCalls,
-    searchCalls,
-    providerInputs,
-    provider,
-  };
-}
 
 const iso3Of = (identifier: string) => resolveCountryByAnyIdentifier(identifier)?.iso3;
 

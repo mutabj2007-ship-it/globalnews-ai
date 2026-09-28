@@ -183,6 +183,7 @@ import {
   decideContextEligibility,
   readSubjectInEitherLanguage,
 } from '../../ask-router/normalization/semantic-subject';
+import { polishOfficeGeographyCountryCode } from '../../ask-router/normalization/qualified-reading';
 
 /**
  * PROVIDER-SAFETY EDGE CLOSURE — the retrieval context for a question that has
@@ -1140,7 +1141,7 @@ export class AnalysisService {
                 names Türkiye through the office construction; "the cost of turkey at
                 christmas" has no office noun and resolves nothing here.
               */
-              this.resolveOfficeGeographyLocation(retrievalQuery));
+              this.resolveOfficeGeographyLocation(retrievalQuery, requestedLanguage));
         /*
           ANCHORING R1 — GATE F. The shared resolver maps a bare "Congo" to one
           country. That is a guess, not an interpretation, so it is not used as a
@@ -1164,7 +1165,14 @@ export class AnalysisService {
         const typedScopeOverridesStory =
           declaredRegion !== undefined ||
           classification.countries.length > 0 ||
-          typedLocation !== undefined;
+          typedLocation !== undefined ||
+          /*
+            ASK R2 INTEGRATION R1 · GATE H (G V7-C3) — the reader NAMED a place, an
+            ambiguous one, that the story or Map country is not a candidate for. The
+            selected context must not silently answer for "Congo"; the ambiguous-country
+            branch below asks, or lets the event evidence decide.
+          */
+          (ambiguousCountry !== undefined && countryInterpretation === undefined);
 
         /*
           ASK R2 INTEGRATION R1 · G FINAL ADDENDUM SEAM — inherited Map context
@@ -4200,8 +4208,14 @@ export class AnalysisService {
    * exactly like an unresolvable free-text query already does.
    */
   /** G producer A, handed to the landed resolver: the same LocationContext shape, no new type. */
-  private resolveOfficeGeographyLocation(query: string): LocationContext | undefined {
-    const code = officeGeographyCountryCode(query);
+  private resolveOfficeGeographyLocation(
+    query: string,
+    language: LanguageCode = 'en',
+  ): LocationContext | undefined {
+    /* GATE H — and its Polish construction, read by the ONE qualified-reading boundary. */
+    const code =
+      officeGeographyCountryCode(query) ??
+      (language === 'pl' ? polishOfficeGeographyCountryCode(query) : null);
     return code === null ? undefined : this.resolveStoryContextLocation(code);
   }
 

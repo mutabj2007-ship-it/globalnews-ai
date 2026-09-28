@@ -13,7 +13,11 @@ import { OperationalSwitchService } from '../compute-controls/operational-switch
 import { ASK_MODEL_MAX_ATTEMPTS } from '../compute-controls/compute-controls.config';
 import { SpecialistClaimRegistry } from '../specialist/specialist-claim.registry';
 import { routeAskR2, missingSeams, type AskR2Route } from '../ask-router/ask-r2-route';
-import { answerStateBeforeExecution, deriveAnswerState } from '../ask-router/answer-state';
+import {
+  answerStateBeforeExecution,
+  deriveAnswerState,
+  requiredRolesOf,
+} from '../ask-router/answer-state';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
 import { planChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
@@ -43,6 +47,8 @@ import { askRequestContext } from './ask-request-context';
  *   execute   1  re-route (pure) and require the same revision the quote was made on;
  *             2  a terminal that needs no model — clarification, broadening, capability
  *                unavailable, identity — returns its deterministic answer with ZERO AI;
+ *                a plan that REQUIRES evidence this executor cannot supply (anything but
+ *                reporting) is CAPABILITY_UNAVAILABLE / EXECUTOR_NOT_WIRED, ZERO AI (GATE H);
  *             3  otherwise, in this order, each failing CLOSED with a named control:
  *                  ASK_R2_ENABLED and ASK_PUBLIC_COMPUTE_ENABLED (two-key switches, F 03)
  *                  the server-held request context (account + IP scope) must exist
@@ -53,7 +59,9 @@ import { askRequestContext } from './ask-request-context';
  *                approved provider architecture) with `maxModelAttempts =
  *                ASK_MODEL_MAX_ATTEMPTS` (1) and a usage sink;
  *             5  settle the reservation on ACTUAL units, record the breaker outcome;
- *             6  derive the §7 answer state (the one derivation) and return a display
+ *             6  a landed clarification (e.g. an ambiguous country) is returned as the
+ *                reader's question, with its candidates (GATE H);
+ *             7  derive the §7 answer state (the one derivation) and return a display
  *                artifact.
  *
  * A refusal is THROWN as `AskExecutionRefused(code)`, never returned as a success: a
@@ -71,8 +79,14 @@ export const ASK_R2_PAYLOAD_SCHEMA = 'ask-r2-result/1';
 /** How long a prepared plan (and so its stored result) stays valid. */
 const PLAN_VALIDITY_MS = 15 * 60 * 1000;
 
-/** Frozen C routing inputs for one Ask V2 request. Explicit Send IS the compute consent. */
+/**
+ * Frozen C routing inputs for one Ask V2 request. Explicit Send IS the compute consent.
+ * GATE H: the request instant (for a HISTORICAL period) and whether the caller holds a
+ * verified account identity (frozen B7: a personal question is IDENTITY_REQUIRED without
+ * one) are server-held facts of THIS request, never read from the question or the client.
+ */
 function routeFor(request: Readonly<AskRequest>, deps: PlannerDeps): AskR2Route {
+  const who = askRequestContext.getStore();
   return routeAskR2(
     {
       originalQuestion: request.question,
@@ -81,9 +95,29 @@ function routeFor(request: Readonly<AskRequest>, deps: PlannerDeps): AskR2Route 
       displayLanguage: request.language,
       origin: 'ASK',
     },
-    { computeConsent: 'GRANTED' },
+    {
+      computeConsent: 'GRANTED',
+      requestInstant: new Date().toISOString(),
+      ...(who === undefined ? {} : { identityVerified: who.accountId !== null }),
+    },
     deps,
   );
+}
+
+/**
+ * GATE H — the ONE evidence role this executor can supply. The landed analysis path
+ * retrieves reporting; it cannot read an official artifact, a specialist assessment, a
+ * personal library, a file or a computation. A plan that REQUIRES any of those is not run
+ * against reporting instead: that would be the silent substitution frozen C forbids.
+ */
+const EXECUTOR_SUPPLIES: ReadonlySet<string> = new Set(['REPORTING']);
+
+interface AnswerDecision {
+  readonly state: string;
+  readonly basis: string;
+  readonly missingRoles: readonly string[];
+  /** A landed clarification's candidates (e.g. COD/COG), codes only. */
+  readonly candidates?: readonly string[];
 }
 
 /** Everything about the route that could change what is retrieved or answered. */
@@ -203,6 +237,17 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     if (early !== null && early.state !== 'REFERENCE_BACKGROUND') {
       return this.result(plan, route, operationId, early, null, false);
     }
+    const unsupplied = requiredRolesOf(route.plan).filter((r) => !EXECUTOR_SUPPLIES.has(r));
+    if (unsupplied.length > 0) {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        { state: 'CAPABILITY_UNAVAILABLE', basis: 'EXECUTOR_NOT_WIRED', missingRoles: unsupplied },
+        null,
+        false,
+      );
+    }
 
     /* 3 · controls, in order, each failing closed. */
     if (!(await this.switches.isEnabled('ASK_R2_ENABLED')))
@@ -284,7 +329,25 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       throw new AskExecutionRefused(`MODEL_${outcome}`);
     }
 
-    /* 6 · the §7 answer state — the one derivation. */
+    /* 6 · the landed path ASKED the reader (e.g. a bare "Congo", Main MC-069): its own
+       clarification, with its candidates, and no model call was made. */
+    const landed = response.retrievalContext;
+    if (landed?.retrievalOutcome === 'CLARIFICATION_REQUIRED') {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        {
+          state: 'CLARIFICATION_REQUIRED',
+          basis: `LANDED_${landed.clarificationReason ?? 'CLARIFICATION'}`,
+          missingRoles: [],
+          candidates: [...(landed.clarificationCandidates ?? [])],
+        },
+        response,
+        false,
+      );
+    }
+    /* 7 · the §7 answer state — the one derivation. */
     const answer = deriveAnswerState(route.plan, {
       items: { REPORTING: response.articles.length },
       producedAnswer: response.analysis !== null,
@@ -297,7 +360,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     plan: Readonly<AskPlan>,
     route: AskR2Route,
     operationId: string,
-    answer: { state: string; basis: string; missingRoles: readonly string[] },
+    answer: AnswerDecision,
     analysis: AnalysisApiResponse | null,
     aiExecuted: boolean,
   ): ExecutionResult {

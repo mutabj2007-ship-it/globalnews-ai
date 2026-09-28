@@ -180,3 +180,94 @@ describe('payload narrowing', () => {
     expect(formatUtc(undefined, 'en')).toBeNull();
   });
 });
+
+describe('GATE H — typed refusals say what is missing; executor clarifications offer the choices', () => {
+  it.each([
+    ['REFERENCE_UNAVAILABLE', /Reference knowledge is not connected/],
+    ['EXECUTOR_NOT_WIRED', /needs a source Ask cannot read yet/],
+    ['PLAN_IDENTITY_REQUIRED', /Sign in to ask about your own saved stories/],
+    ['PLAN_CAPABILITY_UNAVAILABLE', /needs a capability Ask does not have/],
+  ])('%s is named, never "Ask is unavailable" and never "no reporting"', (basis, text) => {
+    const v = askR2View(
+      payload('CAPABILITY_UNAVAILABLE', {
+        answer: { state: 'CAPABILITY_UNAVAILABLE', basis, missingRoles: [] },
+        analysis: null,
+      }),
+      EN,
+      'en',
+    );
+    expect(v.unavailableText).toMatch(text);
+    expect(v.unavailableText).not.toBe(EN.unavailable);
+    expect(v.freshness).toBe(EN.noAnswer);
+    expect(`${v.unavailableText} ${v.freshness}`).not.toMatch(
+      /matching report|no reporting found/i,
+    );
+    expect(v.citable).toBe(false);
+    expect(v.handoffs).toEqual({ openFull: false, runDeeper: false });
+  });
+
+  it('an unknown basis keeps the generic "Ask is unavailable" copy', () => {
+    const v = askR2View(
+      payload('CAPABILITY_UNAVAILABLE', {
+        answer: { state: 'CAPABILITY_UNAVAILABLE', basis: 'SOMETHING_ELSE', missingRoles: [] },
+        analysis: null,
+      }),
+      EN,
+      'en',
+    );
+    expect(v.unavailableText).toBe(EN.unavailable);
+  });
+
+  it('PL typed refusals are Polish', () => {
+    const v = askR2View(
+      payload('CAPABILITY_UNAVAILABLE', {
+        answer: {
+          state: 'CAPABILITY_UNAVAILABLE',
+          basis: 'REFERENCE_UNAVAILABLE',
+          missingRoles: ['REFERENCE'],
+        },
+        analysis: null,
+      }),
+      PL,
+      'pl',
+    );
+    expect(v.unavailableText).toMatch(/Wiedza referencyjna/);
+    expect(v.freshness).toBe(PL.noAnswer);
+  });
+
+  it('an executor clarification (Congo) localises its candidates and says no AI was used', () => {
+    const names: Record<string, string> = { COD: 'DR Congo', COG: 'Republic of the Congo' };
+    const v = askR2View(
+      payload('CLARIFICATION_REQUIRED', {
+        answer: {
+          state: 'CLARIFICATION_REQUIRED',
+          basis: 'LANDED_AMBIGUOUS_COUNTRY',
+          missingRoles: [],
+          candidates: ['COD', 'COG'],
+        },
+        analysis: null,
+      }),
+      EN,
+      'en',
+      (iso3) => names[iso3] ?? iso3,
+    );
+    expect(v.clarification).toEqual({
+      byExecutor: true,
+      candidates: ['DR Congo', 'Republic of the Congo'],
+    });
+    expect(v.freshness).toBe(EN.askedBeforeAnswering);
+  });
+
+  it('a plan clarification keeps D25’s "nothing has run"', () => {
+    const v = askR2View(
+      payload('CLARIFICATION_REQUIRED', {
+        answer: { state: 'CLARIFICATION_REQUIRED', basis: 'PLAN_CLARIFICATION', missingRoles: [] },
+        analysis: null,
+      }),
+      EN,
+      'en',
+    );
+    expect(v.clarification).toEqual({ byExecutor: false, candidates: [] });
+    expect(v.freshness).toBe(EN.freshness.nothingRan);
+  });
+});

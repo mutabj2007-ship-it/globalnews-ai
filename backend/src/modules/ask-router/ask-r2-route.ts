@@ -48,6 +48,7 @@ import type {
 import { detectOfficeGeography } from '../analysis/context-producers/office-geography.producer';
 import type { InheritedContextEligibility } from '../analysis/context-producers/addendum.contract';
 import {
+  DEMONYM_SOURCE,
   normalizeAskQuestion,
   type NormalizationFailure,
   type NormalizationOutcome,
@@ -56,6 +57,8 @@ import {
 } from './normalization/qualified-reading';
 import { decideContextEligibility } from './normalization/semantic-subject';
 import { readLandedClassifiers, type LandedReadingTrace } from './landed-readings';
+import { readCapabilityRequests, type CapabilityRequestKind } from './capability-producers';
+import { detectAmbiguousCountryMention } from '../analysis/anchor/event-anchor.util';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -71,6 +74,11 @@ export interface AskRouteContext {
   readonly declaredRegion?: string;
   readonly identityVerified?: boolean;
   readonly computeConsent?: 'ABSENT' | 'GRANTED';
+  /**
+   * GATE H — the server-held instant of the request (ISO), supplied by the executor. The
+   * route never reads a clock; with no instant, a stated absolute period is never HISTORICAL.
+   */
+  readonly requestInstant?: string;
 }
 
 /** IC-8: what fed what, recorded on every route so a missing seam is observable. */
@@ -86,6 +94,8 @@ export interface SeamTrace {
     readonly statedPeriod: string | null;
     readonly readerCategory: string | null;
     readonly currentStatus: string | null;
+    /** GATE H (S6) — the capability-request producers ran; the kinds whose marker fired. */
+    readonly capability: readonly CapabilityRequestKind[] | null;
   };
 }
 
@@ -116,7 +126,12 @@ export function missingSeams(route: AskR2Route): readonly string[] {
   if (s.landed === null) missing.push('LANDED_READINGS');
   else if (s.landed.queryIntent !== 'classifyQueryIntent') missing.push('LANDED_INTENT');
   if (route.outcome.status !== 'NOT_READ') {
-    const read = route.outcome.reading.domains.map((d) => d.value).join(',');
+    /* The domains the reader's words carry: the reading's, plus a specialist domain the
+       reader explicitly NAMED (GATE H S6 — frozen D3a/R1 key such a leg on this axis). */
+    const readDomains: string[] = route.outcome.reading.domains.map((d) => d.value);
+    for (const d of route.source.explicitSpecialistDomains ?? [])
+      if (!readDomains.includes(d)) readDomains.push(d);
+    const read = readDomains.join(',');
     if (route.source.reading.analyticalDomains.join(',') !== read)
       missing.push('READING_TO_LANDED_DOMAINS');
     if (route.envelope.domains.domains.join(',') !== read)
@@ -127,19 +142,36 @@ export function missingSeams(route: AskR2Route): readonly string[] {
   }
   if (s.axesDerivedIn !== NORMALIZATION_VOCABULARY) missing.push('AXES_NOT_DERIVED');
   if (s.eligibility === 'NOT_EVALUATED') missing.push('QQ10_ELIGIBILITY');
+  if (s.producers.capability === null) missing.push('CAPABILITY_PRODUCERS');
   return missing;
 }
 
 /* ── the reading → frozen input bindings ─────────────────────────────────── */
 
-function temporalRequirementOf(reading: QualifiedReading): TemporalRequirement {
+/** Every four-digit year the reader stated, e.g. "1994", "2019–2021". */
+function statedYears(statedPeriod: string): number[] {
+  return [...statedPeriod.matchAll(/(?<!\d)(1[5-9]\d{2}|20\d{2})(?!\d)/g)].map((m) => Number(m[1]));
+}
+
+function temporalRequirementOf(
+  reading: QualifiedReading,
+  requestInstant?: string,
+): TemporalRequirement {
   /* A current office/status is as-of-now by nature (frozen rows B2, W2). */
   if (reading.shape.officeConstruction) return 'AS_OF_NOW';
   /* A stated period: relative-to-ask → RECENT (frozen G1, L1, L2); an absolute date or
-     range → EXPLICIT_WINDOW. HISTORICAL is NOT produced: telling "1994" from "2026"
-     needs the request instant, and no producer on this path holds a clock (G C). */
+     range → EXPLICIT_WINDOW, or HISTORICAL when it closed before the request instant. */
   if (reading.statedTime !== undefined) {
-    return reading.statedTime.anchor === 'RELATIVE_TO_ASK' ? 'RECENT' : 'EXPLICIT_WINDOW';
+    if (reading.statedTime.anchor === 'RELATIVE_TO_ASK') return 'RECENT';
+    /* GATE H (Main MC-071) — a period CLOSED before the request's own year is HISTORICAL
+       (frozen H1). Decided against the server-held request instant, never a clock read here;
+       the current year stays an explicit window ("What were the results in 2026?"). */
+    const askedIn =
+      requestInstant === undefined ? Number.NaN : new Date(requestInstant).getUTCFullYear();
+    const years = statedYears(reading.statedTime.statedPeriod);
+    if (Number.isFinite(askedIn) && years.length > 0 && years.every((y) => y < askedIn))
+      return 'HISTORICAL';
+    return 'EXPLICIT_WINDOW';
   }
   if (reading.currentness.value === 'CURRENT') return 'RECENT';
   return 'NONE';
@@ -148,7 +180,10 @@ function temporalRequirementOf(reading: QualifiedReading): TemporalRequirement {
 /** The first place the reader TYPED (read from the text), never a surface-supplied one. */
 function typedGeographyOf(reading: QualifiedReading): string | undefined {
   const typed = reading.geography.find(
-    (g) => g.provenance !== 'SUPPLIED_BY_SURFACE' && g.value !== 'CONTESTED',
+    (g) =>
+      g.provenance !== 'SUPPLIED_BY_SURFACE' &&
+      g.value !== 'CONTESTED' &&
+      g.source !== DEMONYM_SOURCE,
   );
   if (typed !== undefined) return typed.value;
   /* G producer A: a current-office construction names its country ("the president of
@@ -158,6 +193,15 @@ function typedGeographyOf(reading: QualifiedReading): string | undefined {
     return detectOfficeGeography(reading.originalQuestion)?.countryCode ?? undefined;
   }
   return undefined;
+}
+
+/**
+ * GATE H (G V4-C1/V4-C4) — a country reached through a demonym ("Rwandan") is ENTITY
+ * geography: the landed demonym resolver is its producer, and frozen C ranks it below a
+ * typed place and makes it effective only when reporting requires geography.
+ */
+function entityGeographyOf(reading: QualifiedReading): string | undefined {
+  return reading.geography.find((g) => g.source === DEMONYM_SOURCE)?.value;
 }
 
 function classificationFor(failure: NormalizationFailure): LanguageClassification {
@@ -174,15 +218,27 @@ export function composeEnvelopeSource(
   landed: ReturnType<typeof readLandedClassifiers>['reading'],
   eligibility: InheritedContextEligibility,
   ctx: AskRouteContext,
+  capability: ReturnType<typeof readCapabilityRequests>['source'] = {},
 ): EnvelopeSource {
   const typed = typedGeographyOf(reading);
-  const mapCountry = eligibility.suppresses.includes('MAP_GEOGRAPHY_CONTEXT')
-    ? undefined
-    : ctx.mapContextCountry;
+  const entity = typed === undefined ? entityGeographyOf(reading) : undefined;
+  /* GATE H (Main MC-069) — the reader typed a place that names several countries. An
+     inherited Map country may settle it only when it IS one of them; otherwise it would
+     silently answer for a place the reader did not name. */
+  const contested = reading.geography.some((g) => g.value === 'CONTESTED')
+    ? detectAmbiguousCountryMention(reading.originalQuestion)
+    : undefined;
+  const mapCountry =
+    eligibility.suppresses.includes('MAP_GEOGRAPHY_CONTEXT') ||
+    (contested !== undefined &&
+      (ctx.mapContextCountry === undefined ||
+        !contested.candidates.includes(ctx.mapContextCountry)))
+      ? undefined
+      : ctx.mapContextCountry;
   const storyCountry = eligibility.suppresses.includes('STORY_COUNTRY_HINT')
     ? undefined
     : ctx.storyAnchorCountry;
-  const requirement = temporalRequirementOf(reading);
+  const requirement = temporalRequirementOf(reading, ctx.requestInstant);
 
   return {
     rawQuestion: reading.originalQuestion,
@@ -194,6 +250,9 @@ export function composeEnvelopeSource(
     ...(typed === undefined
       ? {}
       : { typedGeography: { value: typed, precision: 'COUNTRY' as const } }),
+    ...(entity === undefined
+      ? {}
+      : { entityGeography: { value: entity, precision: 'COUNTRY' as const } }),
     ...(storyCountry === undefined ? {} : { storyAnchorCountry: storyCountry }),
     ...(mapCountry === undefined ? {} : { mapContextCountry: mapCountry }),
     /* Frozen B3: the topic axis carries the category the reader NAMED — G producer B's
@@ -210,6 +269,7 @@ export function composeEnvelopeSource(
             reading.shape.officeTerm === undefined ? [] : [reading.shape.officeTerm],
         }
       : {}),
+    ...capability,
     reading: landed,
   };
 }
@@ -258,6 +318,7 @@ export function routeAskR2(
           statedPeriod: null,
           readerCategory: null,
           currentStatus: null,
+          capability: null,
         },
       },
     };
@@ -276,7 +337,22 @@ export function routeAskR2(
     intentClass: landed.reading.queryIntent,
   });
 
-  const source = composeEnvelopeSource(reading, landed.reading, eligibility, ctx);
+  const capability = readCapabilityRequests(reading.originalQuestion, reading.sourceLanguage, {
+    hasResolvedArticleAnchor: ctx.hasResolvedArticleAnchor === true,
+  });
+  /* A specialist the reader explicitly named keys its leg on the domain axis (frozen D3a:
+     the requested domain is both read and explicit). Appended, never substituted. */
+  const namedDomains = (capability.source.explicitSpecialistDomains ?? []).filter(
+    (d) => !landed.reading.analyticalDomains.includes(d),
+  );
+  const landedReading =
+    namedDomains.length === 0
+      ? landed.reading
+      : {
+          ...landed.reading,
+          analyticalDomains: [...landed.reading.analyticalDomains, ...namedDomains],
+        };
+  const source = composeEnvelopeSource(reading, landedReading, eligibility, ctx, capability.source);
 
   /* Axes derived in the normalization vocabulary; language axis restored to the truth. */
   const derived = buildEnvelope({ ...source, questionLanguage: NORMALIZATION_VOCABULARY });
@@ -310,6 +386,7 @@ export function routeAskR2(
         currentStatus: reading.shape.officeConstruction
           ? (reading.shape.officeTerm ?? 'office')
           : null,
+        capability: [...new Set(capability.trace.map((t) => t.kind))],
       },
     },
   };

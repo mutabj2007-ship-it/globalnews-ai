@@ -48,6 +48,16 @@ export interface AskR2View {
     readonly items: readonly AskR2ChipView[];
     readonly note: string | null;
   };
+  /**
+   * GATE H — a typed refusal names WHAT is missing (by the server's basis); a clarification
+   * the executor asked carries its choices, already localised. The plan-only clarification
+   * keeps D25's "nothing has run" wording; an executor clarification says no AI was used.
+   */
+  readonly unavailableText: string;
+  readonly clarification: {
+    readonly byExecutor: boolean;
+    readonly candidates: readonly string[];
+  };
 }
 
 const BADGE_OF: Readonly<Record<AskAnswerState, AskR2Badge>> = {
@@ -113,13 +123,19 @@ export function askR2View(
   const fill = (template: string, when: string | null): string =>
     template.replace('{when}', when ?? '—').replace('{sources}', s.sourcesLabel(sourceCount));
 
+  const basis = payload.answer.basis;
+  const unavailableText = s.unavailableBecause[basis] ?? s.unavailable;
+  const byExecutor = basis.startsWith('LANDED_');
+
   let freshness: string;
   /* Model-only background says it was not checked; background drawn from real sources says when. */
   if (badge === 'ref')
     freshness =
       sourceCount > 0 ? fill(s.freshness.referenceWithSources, checkedAt) : s.freshness.reference;
-  else if (badge === 'clar') freshness = s.freshness.nothingRan;
-  else if (badge === 'unavail') freshness = s.unavailable;
+  else if (badge === 'clar')
+    freshness = byExecutor ? s.askedBeforeAnswering : s.freshness.nothingRan;
+  else if (badge === 'unavail')
+    freshness = basis in s.unavailableBecause ? s.noAnswer : s.unavailable;
   else if (badge === 'insuf') freshness = fill(s.freshness.zero, checkedAt);
   else if (badge === 'cur') freshness = fill(s.freshness.retainedTo, retainedTo);
   else freshness = fill(s.freshness.checked, checkedAt);
@@ -156,5 +172,10 @@ export function askR2View(
     sourceCount,
     handoffs: { openFull: HANDOFF_BADGES.has(badge), runDeeper: HANDOFF_BADGES.has(badge) },
     chips: { mode: c.kind, items, note },
+    unavailableText,
+    clarification: {
+      byExecutor,
+      candidates: (payload.answer.candidates ?? []).map((iso3) => placeName(iso3)),
+    },
   };
 }

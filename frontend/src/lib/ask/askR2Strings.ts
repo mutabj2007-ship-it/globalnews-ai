@@ -55,6 +55,18 @@ export interface AskR2Strings {
   readonly insufficientTitle: string;
   readonly unavailable: string;
   readonly noCitable: string;
+  /**
+   * GATE H — INTEGRATION-AUTHORED, flagged for Product copy review. A typed refusal says
+   * WHAT is missing, keyed by the server's answer basis; `unavailable` stays the copy for
+   * "Ask itself is not available".
+   */
+  readonly unavailableBecause: Readonly<Record<string, string>>;
+  /** GATE H — the freshness line of a typed refusal: nothing was presented as fact. */
+  readonly noAnswer: string;
+  /** GATE H — a clarification the executor asked (e.g. an ambiguous country), with choices. */
+  readonly whichOne: string;
+  readonly clarificationFooterNoAi: string;
+  readonly askedBeforeAnswering: string;
   sourcesLabel(n: number): string;
 }
 
@@ -109,6 +121,20 @@ const EN: AskR2Strings = {
   insufficientTitle: 'Not enough matching reporting',
   unavailable: 'Ask is unavailable right now. Nothing was run.',
   noCitable: 'No citable sources',
+  unavailableBecause: {
+    REFERENCE_UNAVAILABLE:
+      'Reference knowledge is not connected for this question, so it is not answered as fact. No news reporting was used in its place.',
+    EXECUTOR_NOT_WIRED:
+      'This question needs a source Ask cannot read yet — such as your saved stories, an official release or a specialist assessment. Nothing was answered from news in its place.',
+    PLAN_IDENTITY_REQUIRED:
+      'Sign in to ask about your own saved stories or interests. Nothing was run.',
+    PLAN_CAPABILITY_UNAVAILABLE:
+      'This kind of question needs a capability Ask does not have — such as calculations, files, code, official releases or specialist assessments. Nothing was run.',
+  },
+  noAnswer: 'No answer given · nothing presented as fact',
+  whichOne: 'Which one do you mean?',
+  clarificationFooterNoAi: 'No AI used · nothing was answered',
+  askedBeforeAnswering: 'One question before answering · no AI used',
   sourcesLabel: (n) => `${n} ${n === 1 ? 'source' : 'sources'}`,
 };
 
@@ -172,6 +198,20 @@ const PL: AskR2Strings = {
   insufficientTitle: 'Za mało pasujących doniesień',
   unavailable: 'Zapytaj AI jest teraz niedostępne. Nic nie zostało uruchomione.',
   noCitable: 'Brak źródeł do przytoczenia',
+  unavailableBecause: {
+    REFERENCE_UNAVAILABLE:
+      'Wiedza referencyjna nie jest podłączona dla tego pytania, więc nie odpowiadamy na nie jako na fakt. Nie użyto zamiast niej doniesień prasowych.',
+    EXECUTOR_NOT_WIRED:
+      'To pytanie wymaga źródła, którego Zapytaj AI jeszcze nie czyta — np. Twoich zapisanych materiałów, oficjalnej publikacji lub oceny specjalisty. Nie odpowiedziano zamiast tego na podstawie wiadomości.',
+    PLAN_IDENTITY_REQUIRED:
+      'Zaloguj się, aby pytać o swoje zapisane materiały lub zainteresowania. Nic nie uruchomiono.',
+    PLAN_CAPABILITY_UNAVAILABLE:
+      'Ten rodzaj pytania wymaga funkcji, której Zapytaj AI nie ma — np. obliczeń, plików, kodu, oficjalnych publikacji lub ocen specjalistów. Nic nie uruchomiono.',
+  },
+  noAnswer: 'Brak odpowiedzi · nic nie przedstawiono jako faktu',
+  whichOne: 'Które z nich masz na myśli?',
+  clarificationFooterNoAi: 'Nie użyto AI · nie udzielono odpowiedzi',
+  askedBeforeAnswering: 'Jedno pytanie przed odpowiedzią · nie użyto AI',
   sourcesLabel: plSources,
 };
 

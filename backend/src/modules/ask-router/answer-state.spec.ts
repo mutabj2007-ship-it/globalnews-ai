@@ -148,14 +148,31 @@ describe('§7 — after execution', () => {
 });
 
 describe('§7 — execution that produced nothing', () => {
-  it('a reference plan that produced no answer is INSUFFICIENT, never an empty background', () => {
+  /* GATE H — superseded pin. Gate D had this INSUFFICIENT / NO_ANSWER_PRODUCED; Main R1.1
+     MC-033/MC-041 rule that an absence-of-reporting claim is the false statement for a
+     reference question, and that the honest outcome names REFERENCE as the missing class. */
+  it.each([
+    ['What is inflation?', 'en'],
+    ['Czym jest inflacja?', 'pl'],
+    ['Who was Hitler?', 'en'],
+  ] as const)(
+    'a reference plan that produced no answer is CAPABILITY_UNAVAILABLE naming REFERENCE: %s',
+    (q, lg) => {
+      expect(deriveAnswerState(planFor(q, lg), { items: {}, producedAnswer: false })).toEqual({
+        state: 'CAPABILITY_UNAVAILABLE',
+        basis: 'REFERENCE_UNAVAILABLE',
+        missingRoles: ['REFERENCE'],
+      });
+    },
+  );
+
+  it('a reporting plan that produced nothing stays INSUFFICIENT and names the missing role', () => {
     expect(
-      deriveAnswerState(planFor('What is inflation?'), { items: {}, producedAnswer: false }),
-    ).toEqual({
-      state: 'INSUFFICIENT',
-      basis: 'NO_ANSWER_PRODUCED',
-      missingRoles: [],
-    });
+      deriveAnswerState(planFor('What is happening in Kenya?'), {
+        items: {},
+        producedAnswer: false,
+      }),
+    ).toEqual({ state: 'INSUFFICIENT', basis: 'NO_ANSWER_PRODUCED', missingRoles: ['REPORTING'] });
   });
 
   it('a clarification plan is unaffected (nothing was meant to run)', () => {

@@ -30,6 +30,10 @@
  *      eligibility rule consumes (see `semantic-subject.ts`).
  *   5. C-3' settlement forms are built from the landed gazetteer module rather than by
  *      re-reading its JSON file.
+ *   6. GATE H (Main R1.1 MC-052, MC-069), two residuals at the geography boundary:
+ *      a token already read as a stated date is not also a place ("August 2026" is not
+ *      Augusta, USA), and an unqualified ambiguous country name ("Congo") is CONTESTED
+ *      through the landed `detectAmbiguousCountryMention`, never the resolver's pick.
  *
  * Everything else — resources, whole-token matching, provenance values, loss detection,
  * failure states, the C-1/C-2/C-3' corrections — is L's, unchanged in meaning.
@@ -42,6 +46,9 @@ import {
 import { classifyQueryIntent } from '../../analysis/query/query-intent.util';
 import { resolvePolishCountry } from '../../analysis/query/polish-country-forms.util';
 import { resolveGeography } from '../../geo/geo-resolver';
+import { detectAmbiguousCountryMention } from '../../analysis/anchor/event-anchor.util';
+import { resolveCountriesByDemonym } from '../../news/country/country-relevance.util';
+import { resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
 import { allCities, allExonyms } from '../../geo/geo-gazetteer';
 import { detectStatedPeriod } from '../../analysis/context-producers/stated-period.producer';
 import { detectReaderTopic } from '../../analysis/context-producers/reader-topic.producer';
@@ -387,6 +394,15 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
   const pl = req.sourceLanguage === 'pl';
   const toks = tokens(text);
 
+  /* GATE H (Main MC-078) — "no signal" and "a news topic" must stop being the same output.
+     A question written in another language than the one declared is not read as if it were
+     the declared one (it resolved "Lage" to a German city and answered from news). */
+  const declaredWords = toks.filter((t) => (pl ? PL_FUNCTION_WORDS : EN_FUNCTION_WORDS).has(t));
+  const foreignWords = toks.filter((t) => FOREIGN_FUNCTION_WORDS.has(t));
+  if (foreignWords.length >= 2 && foreignWords.length > declaredWords.length) {
+    return { status: 'NOT_READ', failure: 'LANGUAGE_DECLARATION_CONFLICT', losses: [] };
+  }
+
   /* domains — language-keyed, whole token, provenance-carrying */
   const domains: ReadingElement<AnalyticalDomain>[] = [];
   if (pl) {
@@ -437,7 +453,40 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
     }
   } else if (geo.precision !== 'UNKNOWN') {
     const chosen = geo.place ? [geo.place] : geo.candidates;
-    for (const p of chosen) readPlace(p.country.iso3, geo.matchedText, 'resolveGeography');
+    /* GATE H (G V4-C1/V4-C4) — a demonym ("Rwandan") is ENTITY geography, provenance-
+       distinct from a typed place; the landed demonym resolver is the producer. */
+    const demonym =
+      geo.matchedText !== undefined && resolveCountriesByDemonym(geo.matchedText).length > 0;
+    for (const p of chosen)
+      readPlace(p.country.iso3, geo.matchedText, demonym ? DEMONYM_SOURCE : 'resolveGeography');
+  } else if (!pl) {
+    /* GATE H (G V2-C1) — the canonical resolver treats capitalisation as evidence, so
+       "security developments in kenya" named nothing on /ask while the Map dock (the landed
+       COUNTRY_CONTEXT_PATTERN) read Kenya. Same pattern here: a governed country NAME after a
+       place preposition, never an ISO code ("in it", "in us") and never a lowercase
+       homograph ("in turkey"). */
+    const m =
+      /\b(?:in|from|about|across|inside|within)\s+((?:the\s+)?[a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,2})/i.exec(
+        text,
+      );
+    const words =
+      m?.[1]
+        ?.toLowerCase()
+        .replace(/^the\s+/, '')
+        .split(/\s+/) ?? [];
+    for (let k = words.length; k >= 1; k -= 1) {
+      const candidate = words.slice(0, k).join(' ');
+      if (candidate.length < 4 || LOWERCASE_HOMOGRAPHS.has(candidate)) continue;
+      const c = resolveCountryByAnyIdentifier(candidate);
+      if (
+        c !== undefined &&
+        candidate.toUpperCase() !== c.iso2 &&
+        candidate.toUpperCase() !== c.iso3
+      ) {
+        readPlace(c.iso3, candidate, 'COUNTRY_CONTEXT_PATTERN (landed parity, case-insensitive)');
+        break;
+      }
+    }
   }
   if (pl) {
     for (const t of toks) {
@@ -582,6 +631,43 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
 
   const firstDomain = domains[0];
   const statedTime = readStatedTime(text, pl);
+
+  /* GATE H — Main MC-052: one token, one reading. A place the resolver found INSIDE a span
+     already read as a date or stated period ("August" in "August 2026") is dropped. */
+  const timeSpans = [...dates, ...periods]
+    .map((d) => d.matchedText?.toLowerCase())
+    .concat(statedTime?.statedPeriod.toLowerCase())
+    .filter((t): t is string => t !== undefined && t.length > 0);
+  for (let i = geography.length - 1; i >= 0; i -= 1) {
+    const g = geography[i]!;
+    const at = g.matchedText?.toLowerCase();
+    if (
+      g.provenance === 'CANONICAL_RESOLVER' &&
+      at !== undefined &&
+      timeSpans.some((t) => t.includes(at))
+    )
+      geography.splice(i, 1);
+  }
+  /* GATE H — Main MC-069: "Congo" names two countries. The landed ambiguity rule decides;
+     the resolver's arbitrary candidate is removed and the place is read as CONTESTED. */
+  const ambiguous = detectAmbiguousCountryMention(text);
+  if (ambiguous !== undefined) {
+    for (let i = geography.length - 1; i >= 0; i -= 1) {
+      const g = geography[i]!;
+      if (g.provenance !== 'SUPPLIED_BY_SURFACE' && ambiguous.candidates.includes(g.value))
+        geography.splice(i, 1);
+    }
+    if (!geography.some((g) => g.value === 'CONTESTED')) {
+      geography.push(
+        el(
+          'CONTESTED',
+          ambiguous.mention,
+          'CANONICAL_RESOLVER',
+          'detectAmbiguousCountryMention (landed, ANCHORING R1 F)',
+        ),
+      );
+    }
+  }
   const readerCategory = readCategory(text, toks, pl);
   const reading: QualifiedReading = {
     originalQuestion: req.originalQuestion,
@@ -620,11 +706,230 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
     defeaters,
   };
 
+  /* GATE H (Main MC-078) — nothing was read at all: no word of the declared language, no
+     place, domain, entity, number, date, period or category, and no capitalised name. That
+     is "no signal", and it is disclosed as such instead of being searched as news. */
+  const contentFree =
+    declaredWords.length === 0 &&
+    geography.length === 0 &&
+    domains.length === 0 &&
+    entities.length === 0 &&
+    numbers.length === 0 &&
+    dates.length === 0 &&
+    periods.length === 0 &&
+    readerCategory === undefined &&
+    !/(?:^|[^\p{L}])\p{Lu}\p{Ll}/u.test(req.originalQuestion);
+  if (contentFree) return { status: 'NOT_READ', failure: 'NO_READABLE_CONTENT', losses: [] };
+
   const loadBearing = losses.filter((l) => LOAD_BEARING_LOSSES.includes(l.kind));
   if (loadBearing.length > 0) return { status: 'NOT_READ', failure: 'LOAD_BEARING_LOSS', losses };
   if (losses.length > 0) return { status: 'DEGRADED', reading, losses };
   return { status: 'QUALIFIED', reading, losses: [] };
 }
+
+/*
+ * GATE H (Main MC-078) — closed function-word sets. Evidence of WHICH language a question is
+ * written in, never a reading of it: a question in the declared language uses these words;
+ * one in another language uses that language's. The foreign set holds only words that are
+ * not also English or Polish words ("die", "in", "o", "a" are excluded on purpose).
+ */
+const EN_FUNCTION_WORDS: ReadonlySet<string> = new Set([
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'what',
+  'who',
+  'whom',
+  'how',
+  'why',
+  'when',
+  'where',
+  'which',
+  'in',
+  'on',
+  'of',
+  'for',
+  'about',
+  'to',
+  'and',
+  'or',
+  'does',
+  'do',
+  'did',
+  'has',
+  'have',
+  'had',
+  'this',
+  'that',
+  'these',
+  'those',
+  'with',
+  'from',
+  'at',
+  'by',
+  'it',
+  'will',
+  'can',
+  'there',
+  'any',
+  'me',
+  'my',
+  'i',
+  'tell',
+  'show',
+  'give',
+  'news',
+  'latest',
+  'happening',
+  'happened',
+  'explain',
+  'compare',
+  'and',
+  'than',
+  'between',
+]);
+const PL_FUNCTION_WORDS: ReadonlySet<string> = new Set([
+  'co',
+  'jak',
+  'jest',
+  'są',
+  'był',
+  'była',
+  'było',
+  'byli',
+  'w',
+  'we',
+  'na',
+  'o',
+  'z',
+  'ze',
+  'kto',
+  'kim',
+  'czym',
+  'dlaczego',
+  'gdzie',
+  'kiedy',
+  'czy',
+  'i',
+  'oraz',
+  'się',
+  'to',
+  'ten',
+  'ta',
+  'jaki',
+  'jaka',
+  'jakie',
+  'od',
+  'do',
+  'dla',
+  'po',
+  'przez',
+  'nie',
+  'który',
+  'która',
+  'które',
+  'mi',
+  'mnie',
+  'moje',
+  'pokaż',
+  'powiedz',
+  'wyjaśnij',
+  'porównaj',
+  'dzieje',
+  'wiadomości',
+  'między',
+  'a',
+]);
+const FOREIGN_FUNCTION_WORDS: ReadonlySet<string> = new Set([
+  /* de */ 'der',
+  'das',
+  'ist',
+  'und',
+  'wie',
+  'wer',
+  'nicht',
+  'ein',
+  'eine',
+  'ich',
+  'mit',
+  'für',
+  'auf',
+  'sind',
+  'warum',
+  'wo',
+  'wann',
+  'welche',
+  'gibt',
+  'es',
+  'im',
+  'dem',
+  'des',
+  /* fr */ 'le',
+  'la',
+  'les',
+  'est',
+  'et',
+  'qui',
+  'que',
+  'quoi',
+  'une',
+  'dans',
+  'pour',
+  'sur',
+  'pourquoi',
+  'comment',
+  'quel',
+  'quelle',
+  'sont',
+  'du',
+  'au',
+  'aux',
+  /* es / pt / it */ 'el',
+  'los',
+  'las',
+  'qué',
+  'cómo',
+  'quién',
+  'una',
+  'por',
+  'para',
+  'está',
+  'cuál',
+  'dónde',
+  'il',
+  'che',
+  'di',
+  'è',
+  'sono',
+  'perché',
+  'não',
+  'são',
+  'qual',
+  'onde',
+  'uma',
+]);
+
+/** The reading source that marks a place read from a demonym (entity geography). */
+export const DEMONYM_SOURCE = 'resolveGeography:DEMONYM';
+
+/** Country names that are ordinary lowercase words; read only when the reader capitalises. */
+const LOWERCASE_HOMOGRAPHS: ReadonlySet<string> = new Set([
+  'turkey',
+  'chad',
+  'jordan',
+  'georgia',
+  'china',
+  'japan',
+  'niger',
+  'guinea',
+  'panama',
+]);
 
 /** Keys a reading must never carry (L N-1). Asserted by spec. */
 export const FORBIDDEN_READING_KEYS: readonly string[] = [
@@ -634,3 +939,27 @@ export const FORBIDDEN_READING_KEYS: readonly string[] = [
   'confidence',
   'questionClass',
 ];
+
+/**
+ * GATE H (Main MC-002/004/006/008/010) — the Polish office construction's country, for the
+ * landed Map-dock path. "Kto jest obecnie prezydentem Rwandy?" names Rwanda as plainly as
+ * "Who is the current president of Rwanda?" does; G producer A reads only the English
+ * construction, so a Polish reader on the Map got the selected Map country instead. This is
+ * the SAME reading the Ask R2 route uses (one boundary, no second country table): the first
+ * place the reader typed, only when the question is a Polish office construction.
+ */
+export function polishOfficeGeographyCountryCode(text: string): string | null {
+  if (!PL_OFFICE_CONSTRUCTION.test(text)) return null;
+  const outcome = normalizeAskQuestion({
+    originalQuestion: text,
+    sourceLanguage: 'pl',
+    normalizationLanguage: 'pl',
+    displayLanguage: 'pl',
+    origin: 'ASK',
+  });
+  if (outcome.status === 'NOT_READ') return null;
+  const typed = outcome.reading.geography.find(
+    (g) => g.provenance !== 'SUPPLIED_BY_SURFACE' && g.value !== 'CONTESTED',
+  );
+  return typed?.value ?? null;
+}

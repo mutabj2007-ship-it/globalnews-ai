@@ -58,6 +58,8 @@ export interface AskR2Payload {
     readonly state: AskAnswerState;
     readonly basis: string;
     readonly missingRoles: readonly string[];
+    /** A clarification the executor asked, with its choices (ISO3 codes), e.g. COD/COG. */
+    readonly candidates?: readonly string[];
   };
   /** When the server decided the answer (execution time). */
   readonly checkedAt?: string;

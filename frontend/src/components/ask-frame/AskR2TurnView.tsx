@@ -109,17 +109,36 @@ export function AskR2TurnView({
 
       {view.badge === 'clar' ? (
         <section data-ask="clarification" className={`rounded p-3 ${TONE_CLASS.clarification}`}>
-          <p className="text-[15px] leading-[1.55]">{s.freshness.nothingRan}</p>
-          <p className="mt-2 text-[12px]">{s.clarificationFooter}</p>
+          {view.clarification.candidates.length > 0 ? (
+            <>
+              <p className="text-[15px] leading-[1.55]">{s.whichOne}</p>
+              <ul data-ask="clarification-candidates" className="mt-2 flex flex-wrap gap-2">
+                {view.clarification.candidates.map((name) => (
+                  <li
+                    key={name}
+                    className="rounded-full border border-[#e9c46a]/60 px-2 py-0.5 text-[13px]"
+                  >
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="text-[15px] leading-[1.55]">{s.freshness.nothingRan}</p>
+          )}
+          <p className="mt-2 text-[12px]">
+            {view.clarification.byExecutor ? s.clarificationFooterNoAi : s.clarificationFooter}
+          </p>
           <p className="mt-1 text-[12px]">{s.sourcesAfterChoice}</p>
         </section>
       ) : view.badge === 'unavail' ? (
         <p
           role="alert"
           data-ask="unavailable"
+          data-ask-basis={payload.answer.basis}
           className={`rounded p-3 text-[15px] leading-[1.55] ${TONE_CLASS.unavailable}`}
         >
-          {s.unavailable}
+          {view.unavailableText}
         </p>
       ) : (
         <section data-ask="answer" className={`rounded p-3 ${TONE_CLASS[view.tone]}`}>
