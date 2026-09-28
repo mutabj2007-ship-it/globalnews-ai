@@ -40,25 +40,48 @@ describe('MC-070 — a first-turn continuation names no earlier subject and keep
 });
 
 describe('MC-055 — the reader’s own saved stories', () => {
-  it('signed out: sign in (EN / PL, Product ruling)', () => {
-    const en = resolveAskedNotSearched(ctx({ clarificationReason: 'IDENTITY_REQUIRED' }), 'en');
-    const pl = resolveAskedNotSearched(ctx({ clarificationReason: 'IDENTITY_REQUIRED' }), 'pl');
-    expect(en?.sentence).toBe('Sign in to compare your saved stories.');
-    expect(pl?.sentence).toBe('Zaloguj się, aby porównać zapisane artykuły.');
-    expect(en?.places).toEqual([]);
+  type Scope = 'SAVED_STORIES' | 'INTERESTS' | undefined;
+  const sentence = (
+    reason: 'IDENTITY_REQUIRED' | 'PERSONAL_LIBRARY_UNAVAILABLE',
+    scope: Scope,
+    lang: 'en' | 'pl',
+  ) =>
+    resolveAskedNotSearched(
+      ctx({ clarificationReason: reason, clarificationPersonalScope: scope }),
+      lang,
+    )?.sentence;
+
+  it.each([
+    ['SAVED_STORIES', 'en', 'Sign in to compare your saved stories.'],
+    ['SAVED_STORIES', 'pl', 'Zaloguj się, aby porównać zapisane artykuły.'],
+    ['INTERESTS', 'en', 'Sign in to use your interests.'],
+    ['INTERESTS', 'pl', 'Zaloguj się, aby korzystać ze swoich zainteresowań.'],
+    [undefined, 'en', 'Sign in to use your saved information.'],
+    [undefined, 'pl', 'Zaloguj się, aby korzystać z zapisanych informacji.'],
+  ] as const)('signed out · %s %s', (scope, lang, text) => {
+    expect(sentence('IDENTITY_REQUIRED', scope, lang)).toBe(text);
   });
 
-  it('signed in: not available yet (EN / PL, Product ruling)', () => {
-    const en = resolveAskedNotSearched(
-      ctx({ clarificationReason: 'PERSONAL_LIBRARY_UNAVAILABLE' }),
-      'en',
-    );
-    const pl = resolveAskedNotSearched(
-      ctx({ clarificationReason: 'PERSONAL_LIBRARY_UNAVAILABLE' }),
-      'pl',
-    );
-    expect(en?.sentence).toBe("Comparing your saved stories isn't available yet.");
-    expect(pl?.sentence).toBe('Porównywanie zapisanych artykułów nie jest jeszcze dostępne.');
+  it.each([
+    ['SAVED_STORIES', 'en', "Comparing your saved stories isn't available yet."],
+    ['SAVED_STORIES', 'pl', 'Porównywanie zapisanych artykułów nie jest jeszcze dostępne.'],
+    ['INTERESTS', 'en', "Using your interests isn't available yet."],
+    ['INTERESTS', 'pl', 'Korzystanie z zainteresowań nie jest jeszcze dostępne.'],
+    [undefined, 'en', "Your saved information isn't available here yet."],
+    [undefined, 'pl', 'Twoje zapisane informacje nie są jeszcze tutaj dostępne.'],
+  ] as const)('signed in, unavailable · %s %s', (scope, lang, text) => {
+    expect(sentence('PERSONAL_LIBRARY_UNAVAILABLE', scope, lang)).toBe(text);
+  });
+
+  it('an interests question never receives the saved-stories words; no place chip', () => {
+    for (const lang of ['en', 'pl'] as const)
+      for (const reason of ['IDENTITY_REQUIRED', 'PERSONAL_LIBRARY_UNAVAILABLE'] as const)
+        expect(sentence(reason, 'INTERESTS', lang)).not.toMatch(
+          /saved stories|zapisan\p{L}* artykuł/u,
+        );
+    expect(
+      resolveAskedNotSearched(ctx({ clarificationReason: 'IDENTITY_REQUIRED' }), 'en')?.places,
+    ).toEqual([]);
   });
 });
 

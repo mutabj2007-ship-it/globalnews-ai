@@ -71,8 +71,14 @@ export interface AskR2Strings {
   readonly expiredNote: string;
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
-  /** ALPHA ENABLEMENT R1 (MC-055) — signed in, the reader's own saved stories cannot be read yet. */
-  readonly personalNotAvailable: string;
+  /**
+   * ALPHA ENABLEMENT R1 (MC-055) — the reader's own library, by the scope the server read:
+   * `signIn` without identity, `notAvailable` when its executor is not wired. NEUTRAL when
+   * the payload names no scope.
+   */
+  readonly personal: Readonly<
+    Record<'SAVED_STORIES' | 'INTERESTS' | 'NEUTRAL', { signIn: string; notAvailable: string }>
+  >;
   sourcesLabel(n: number): string;
 }
 
@@ -132,7 +138,7 @@ const EN: AskR2Strings = {
       'Reference knowledge is not connected for this question, so it is not answered as fact. No news reporting was used in its place.',
     EXECUTOR_NOT_WIRED:
       'This question needs a source Ask cannot read yet — such as your saved stories, an official release or a specialist assessment. Nothing was answered from news in its place.',
-    PLAN_IDENTITY_REQUIRED: 'Sign in to compare your saved stories.',
+    PLAN_IDENTITY_REQUIRED: 'Sign in to use your saved information.',
     PLAN_CAPABILITY_UNAVAILABLE:
       'This kind of question needs a capability Ask does not have — such as calculations, files, code, official releases or specialist assessments. Nothing was run.',
   },
@@ -143,7 +149,20 @@ const EN: AskR2Strings = {
   expiredNote: 'This saved answer has expired · shown as it was, not re-checked',
   noPriorSubject:
     "There's no earlier question to continue. What would you like to know about this place?",
-  personalNotAvailable: "Comparing your saved stories isn't available yet.",
+  personal: {
+    SAVED_STORIES: {
+      signIn: 'Sign in to compare your saved stories.',
+      notAvailable: "Comparing your saved stories isn't available yet.",
+    },
+    INTERESTS: {
+      signIn: 'Sign in to use your interests.',
+      notAvailable: "Using your interests isn't available yet.",
+    },
+    NEUTRAL: {
+      signIn: 'Sign in to use your saved information.',
+      notAvailable: "Your saved information isn't available here yet.",
+    },
+  },
   sourcesLabel: (n) => `${n} ${n === 1 ? 'source' : 'sources'}`,
 };
 
@@ -212,7 +231,7 @@ const PL: AskR2Strings = {
       'Wiedza referencyjna nie jest podłączona dla tego pytania, więc nie odpowiadamy na nie jako na fakt. Nie użyto zamiast niej doniesień prasowych.',
     EXECUTOR_NOT_WIRED:
       'To pytanie wymaga źródła, którego Zapytaj AI jeszcze nie czyta — np. Twoich zapisanych materiałów, oficjalnej publikacji lub oceny specjalisty. Nie odpowiedziano zamiast tego na podstawie wiadomości.',
-    PLAN_IDENTITY_REQUIRED: 'Zaloguj się, aby porównać zapisane artykuły.',
+    PLAN_IDENTITY_REQUIRED: 'Zaloguj się, aby korzystać z zapisanych informacji.',
     PLAN_CAPABILITY_UNAVAILABLE:
       'Ten rodzaj pytania wymaga funkcji, której Zapytaj AI nie ma — np. obliczeń, plików, kodu, oficjalnych publikacji lub ocen specjalistów. Nic nie uruchomiono.',
   },
@@ -223,7 +242,20 @@ const PL: AskR2Strings = {
   expiredNote: 'Ta zapisana odpowiedź wygasła · pokazana bez ponownego sprawdzenia',
   noPriorSubject:
     'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o tym miejscu?',
-  personalNotAvailable: 'Porównywanie zapisanych artykułów nie jest jeszcze dostępne.',
+  personal: {
+    SAVED_STORIES: {
+      signIn: 'Zaloguj się, aby porównać zapisane artykuły.',
+      notAvailable: 'Porównywanie zapisanych artykułów nie jest jeszcze dostępne.',
+    },
+    INTERESTS: {
+      signIn: 'Zaloguj się, aby korzystać ze swoich zainteresowań.',
+      notAvailable: 'Korzystanie z zainteresowań nie jest jeszcze dostępne.',
+    },
+    NEUTRAL: {
+      signIn: 'Zaloguj się, aby korzystać z zapisanych informacji.',
+      notAvailable: 'Twoje zapisane informacje nie są jeszcze tutaj dostępne.',
+    },
+  },
   sourcesLabel: plSources,
 };
 

@@ -406,6 +406,12 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           clarification: route.plan.clarification.map((c) => c.code),
           normalization: route.outcome.status,
           questionLanguage: route.envelope.language.questionLanguage,
+          /* MC-055 — which personal library the question is about (wording only). */
+          personalScope:
+            route.envelope.personal.scope === 'SAVED_STORIES' ||
+            route.envelope.personal.scope === 'INTERESTS'
+              ? route.envelope.personal.scope
+              : null,
         },
         /* D25 05: chips from the effective server plan only, in the order asked. */
         chips: planChips(route.envelope, route.plan, placeSpansOf(route)),

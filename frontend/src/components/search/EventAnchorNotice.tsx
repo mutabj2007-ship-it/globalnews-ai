@@ -30,21 +30,35 @@ export function resolveAskedNotSearched(
       places,
     };
   }
+  /* Saved stories and interests each have their own words; no scope → the neutral ones. */
+  const scope = ctx.clarificationPersonalScope;
   if (ctx.clarificationReason === 'IDENTITY_REQUIRED') {
+    const sentence =
+      scope === 'SAVED_STORIES'
+        ? copy.identityRequiredBody
+        : scope === 'INTERESTS'
+          ? copy.identityRequiredInterestsBody
+          : copy.identityRequiredNeutralBody;
     return {
       code: 'IDENTITY_REQUIRED',
       heading: copy.stateIdentityRequired,
-      body: copy.identityRequiredBody,
-      sentence: copy.identityRequiredBody,
+      body: sentence,
+      sentence,
       places: [],
     };
   }
   if (ctx.clarificationReason === 'PERSONAL_LIBRARY_UNAVAILABLE') {
+    const sentence =
+      scope === 'SAVED_STORIES'
+        ? copy.personalUnavailableBody
+        : scope === 'INTERESTS'
+          ? copy.personalUnavailableInterestsBody
+          : copy.personalUnavailableNeutralBody;
     return {
       code: 'PERSONAL_LIBRARY_UNAVAILABLE',
       heading: copy.statePersonalUnavailable,
-      body: copy.personalUnavailableBody,
-      sentence: copy.personalUnavailableBody,
+      body: sentence,
+      sentence,
       places: [],
     };
   }

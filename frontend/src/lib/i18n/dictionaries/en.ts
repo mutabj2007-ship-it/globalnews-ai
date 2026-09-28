@@ -2884,8 +2884,12 @@ export const en = {
       "There's no earlier question to continue. What would you like to know about this place?",
     stateIdentityRequired: 'SIGN-IN REQUIRED',
     identityRequiredBody: 'Sign in to compare your saved stories.',
+    identityRequiredInterestsBody: 'Sign in to use your interests.',
+    identityRequiredNeutralBody: 'Sign in to use your saved information.',
     statePersonalUnavailable: 'NOT AVAILABLE YET',
     personalUnavailableBody: "Comparing your saved stories isn't available yet.",
+    personalUnavailableInterestsBody: "Using your interests isn't available yet.",
+    personalUnavailableNeutralBody: "Your saved information isn't available here yet.",
     /* INLINE CITATIONS R1 B3 — the compact one-line note on the Ask dock; the full sentences above stay one tap away. */
     compactHeading: 'Evidence note',
     compactShowDetails: 'Show what this means',

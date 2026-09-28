@@ -52,6 +52,8 @@ export interface AskR2Payload {
     readonly clarification: readonly string[];
     readonly normalization: string;
     readonly questionLanguage: string | null;
+    /** ALPHA ENABLEMENT R1 (MC-055) — the personal library asked about; selects wording only. */
+    readonly personalScope?: 'SAVED_STORIES' | 'INTERESTS' | null;
   };
   readonly chips: AskPlanChips;
   readonly answer: {

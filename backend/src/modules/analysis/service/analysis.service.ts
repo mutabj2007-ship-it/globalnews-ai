@@ -1277,7 +1277,8 @@ export class AnalysisService {
         */
         const preExecutionClarification: AnalysisRetrievalContext | undefined = (() => {
           if (selection !== undefined || storyContext !== undefined) return undefined;
-          if (readCapabilityRequests(rawQuery, requestedLanguage).source.personalRequested) {
+          const personal = readCapabilityRequests(rawQuery, requestedLanguage).source;
+          if (personal.personalRequested) {
             return {
               ...NON_RETRIEVABLE_QUERY_CONTEXT,
               retrievalOutcome: 'CLARIFICATION_REQUIRED',
@@ -1285,6 +1286,10 @@ export class AnalysisService {
                 callerIdentity?.verified === true
                   ? 'PERSONAL_LIBRARY_UNAVAILABLE'
                   : 'IDENTITY_REQUIRED',
+              ...(personal.personalScope === 'SAVED_STORIES' ||
+              personal.personalScope === 'INTERESTS'
+                ? { clarificationPersonalScope: personal.personalScope }
+                : {}),
             };
           }
           const continuation =

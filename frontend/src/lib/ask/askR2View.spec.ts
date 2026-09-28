@@ -185,7 +185,7 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
   it.each([
     ['REFERENCE_UNAVAILABLE', /Reference knowledge is not connected/],
     ['EXECUTOR_NOT_WIRED', /needs a source Ask cannot read yet/],
-    ['PLAN_IDENTITY_REQUIRED', /^Sign in to compare your saved stories\.$/],
+    ['PLAN_IDENTITY_REQUIRED', /^Sign in to use your saved information\.$/],
     ['PLAN_CAPABILITY_UNAVAILABLE', /needs a capability Ask does not have/],
   ])('%s is named, never "Ask is unavailable" and never "no reporting"', (basis, text) => {
     const v = askR2View(
@@ -312,29 +312,64 @@ describe('ALPHA ENABLEMENT R1 — MC-070: a continuation with nothing to continu
   });
 });
 
-describe('ALPHA ENABLEMENT R1 — MC-055: signed in, the saved-stories executor is not wired', () => {
-  const personal = (lang: 'en' | 'pl', missingRoles: string[]) =>
-    askR2View(
+describe('ALPHA ENABLEMENT R1 — MC-055: the reader’s own library, worded by the server’s scope', () => {
+  type Scope = 'SAVED_STORIES' | 'INTERESTS' | null;
+  const personal = (
+    lang: 'en' | 'pl',
+    basis: string,
+    missingRoles: string[],
+    personalScope: Scope,
+  ) => {
+    const base = payload('CAPABILITY_UNAVAILABLE');
+    return askR2View(
       payload('CAPABILITY_UNAVAILABLE', {
-        answer: { state: 'CAPABILITY_UNAVAILABLE', basis: 'EXECUTOR_NOT_WIRED', missingRoles },
+        route: { ...base.route, personalScope },
+        answer: { state: 'CAPABILITY_UNAVAILABLE', basis, missingRoles },
         analysis: null,
       }),
       lang === 'en' ? EN : PL,
       lang,
-    );
+    ).unavailableText;
+  };
 
-  it('EN / PL: the Product sentence, never the diagnostic basis', () => {
-    expect(personal('en', ['PERSONAL']).unavailableText).toBe(
-      "Comparing your saved stories isn't available yet.",
-    );
-    expect(personal('pl', ['PERSONAL']).unavailableText).toBe(
-      'Porównywanie zapisanych artykułów nie jest jeszcze dostępne.',
-    );
-    expect(personal('en', ['PERSONAL']).unavailableText).not.toMatch(/EXECUTOR_NOT_WIRED/);
+  it.each([
+    ['en', 'SAVED_STORIES', "Comparing your saved stories isn't available yet."],
+    ['pl', 'SAVED_STORIES', 'Porównywanie zapisanych artykułów nie jest jeszcze dostępne.'],
+    ['en', 'INTERESTS', "Using your interests isn't available yet."],
+    ['pl', 'INTERESTS', 'Korzystanie z zainteresowań nie jest jeszcze dostępne.'],
+    ['en', null, "Your saved information isn't available here yet."],
+    ['pl', null, 'Twoje zapisane informacje nie są jeszcze tutaj dostępne.'],
+  ] as const)('signed in, not wired · %s %s', (lang, scope, text) => {
+    expect(personal(lang, 'EXECUTOR_NOT_WIRED', ['PERSONAL'], scope)).toBe(text);
   });
 
-  it('another unwired executor keeps its own sentence', () => {
-    expect(personal('en', ['OFFICIAL']).unavailableText).toBe(
+  it.each([
+    ['en', 'SAVED_STORIES', 'Sign in to compare your saved stories.'],
+    ['pl', 'SAVED_STORIES', 'Zaloguj się, aby porównać zapisane artykuły.'],
+    ['en', 'INTERESTS', 'Sign in to use your interests.'],
+    ['pl', 'INTERESTS', 'Zaloguj się, aby korzystać ze swoich zainteresowań.'],
+    ['en', null, 'Sign in to use your saved information.'],
+    ['pl', null, 'Zaloguj się, aby korzystać z zapisanych informacji.'],
+  ] as const)('signed out · %s %s', (lang, scope, text) => {
+    expect(personal(lang, 'PLAN_IDENTITY_REQUIRED', [], scope)).toBe(text);
+  });
+
+  it('an interests question never receives the saved-stories words', () => {
+    for (const lang of ['en', 'pl'] as const)
+      for (const [basis, roles] of [
+        ['EXECUTOR_NOT_WIRED', ['PERSONAL']],
+        ['PLAN_IDENTITY_REQUIRED', []],
+      ] as const)
+        expect(personal(lang, basis, [...roles], 'INTERESTS')).not.toMatch(
+          /saved stories|zapisan\p{L}* artykuł/u,
+        );
+  });
+
+  it('never the diagnostic basis; another unwired executor keeps its own sentence', () => {
+    expect(personal('en', 'EXECUTOR_NOT_WIRED', ['PERSONAL'], 'SAVED_STORIES')).not.toMatch(
+      /EXECUTOR_NOT_WIRED/,
+    );
+    expect(personal('en', 'EXECUTOR_NOT_WIRED', ['OFFICIAL'], null)).toBe(
       EN.unavailableBecause.EXECUTOR_NOT_WIRED,
     );
   });

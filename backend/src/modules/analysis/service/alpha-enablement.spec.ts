@@ -74,6 +74,38 @@ describe('MC-055 — personal questions: identity first, nothing searched, nothi
     for (const r of [out, signedIn, outAgain]) expect(r.articles).toEqual([]);
   });
 
+  it.each([
+    ['Compare my saved stories', 'en', 'SAVED_STORIES'],
+    ['Porównaj moje zapisane materiały', 'pl', 'SAVED_STORIES'],
+    ['What is new in my interests?', 'en', 'INTERESTS'],
+    ['Co nowego w tematach, które śledzę?', 'pl', 'INTERESTS'],
+  ] as const)(
+    'the producer’s scope travels with the state (wording only): %s → %s, 0 provider / 0 model',
+    async (q, lg, scope) => {
+      for (const verified of [false, true]) {
+        const h = harness();
+        const r = await h.service.analyzeNews(
+          q,
+          lg,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { verified },
+        );
+        expect(r.retrievalContext).toMatchObject({
+          retrievalOutcome: 'CLARIFICATION_REQUIRED',
+          clarificationReason: verified ? 'PERSONAL_LIBRARY_UNAVAILABLE' : 'IDENTITY_REQUIRED',
+          clarificationPersonalScope: scope,
+        });
+        expect(r.analysis).toBeNull();
+        expect(r.articles).toEqual([]);
+        expect(calls(h)).toEqual({ provider: 0, searches: 0, countries: 0 });
+      }
+    },
+  );
+
   it('a news question is untouched (still searched)', async () => {
     const h = harness();
     const r = await h.service.analyzeNews('What is happening in Kenya?', 'en');

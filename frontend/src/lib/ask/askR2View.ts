@@ -130,9 +130,14 @@ export function askR2View(
      EXECUTOR_NOT_WIRED stays a diagnostic basis, never the reader's sentence for it. */
   const personalNotWired =
     basis === 'EXECUTOR_NOT_WIRED' && (payload.answer.missingRoles ?? []).includes('PERSONAL');
+  const scope = payload.route?.personalScope;
+  const personalCopy =
+    scope === 'SAVED_STORIES' || scope === 'INTERESTS' ? s.personal[scope] : s.personal.NEUTRAL;
   const unavailableText = personalNotWired
-    ? s.personalNotAvailable
-    : (s.unavailableBecause[basis] ?? s.unavailable);
+    ? personalCopy.notAvailable
+    : basis === 'PLAN_IDENTITY_REQUIRED'
+      ? personalCopy.signIn
+      : (s.unavailableBecause[basis] ?? s.unavailable);
   const byExecutor = basis.startsWith('LANDED_');
 
   let freshness: string;
