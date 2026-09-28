@@ -26,43 +26,33 @@ function stripComments(src: string): string {
 }
 
 describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed as a duplicate presentation of feed.latestUpdates)', () => {
-  it('renders sections in the approved current order: NavBar, BetaHero, WhatsHappeningNow, ExploreByTopic, HowItWorks, TrustSection, Footer, MobileBottomNav', () => {
-    // M65.1 — the two per-breakpoint Intelligence Engine renderers were
-    // replaced by ONE section that serves every breakpoint.
-    // M66.8c — HomepageSituationMap is retired from this render path. The
-    // ORDER contract this test protects is otherwise unchanged; the marker
-    // was removed, not reordered, and its component file remains on disk.
+  /*
+    HOME WELCOME & DISCOVERY R1 REV A — the ORDER contract is kept and re-pointed
+    at the Rev A composition (REV_A_DELTA row 8, IA_PAGE_HIERARCHY): utility
+    header, NavBar (<1024), product rail, Hero, What's happening, the 60-second
+    rail, For you, Explore intelligence, Deep Intelligence, the My Intelligence
+    bridge, How it works, Built on trust, footer, bottom nav.
+
+    The superseded markers (BetaHero, ExploreByTopic, HowItWorks, TrustSection,
+    HomeSideRail, HomePremiumTeaser, HomeAccountPanel, BetaHomeHeader) are
+    RETIRED from Home and KEPT on disk — this repository's convention — and the
+    loop below asserts both halves.
+  */
+  it('renders sections in the approved Rev A order, and the superseded sections are retired but kept on disk', () => {
     const order = [
+      '<HomeUtilityHeader',
       '<NavBar',
-      /* H2 · Issue #29 — BetaHero replaces Hero at this mount point
-         (H0 zone Z6-Z9). The ORDER contract this list protects is
-         unchanged; only the section's identity moved. */
-      '<BetaHero',
-      /* H3 · Issue #29 — the approved R4.1 composition. LiveStatusStrip and
-         GlobalDevelopments are retired from Home (files kept on disk), and
-         WhatsHappeningNow carries the editorial area plus the degraded-feed
-         state the strip used to carry. The ORDER contract is unchanged. */
+      '<HomeProductRail',
+      '<HomeWelcomeHero',
       '<WhatsHappeningNow',
-      /* DESKTOP COMPOSITION RULING §3 — the Global Situation Map sits to the
-         RIGHT of the story cards, not below them, so it is mounted inside
-         HomeSideRail rather than in this file. Its marker leaves this list
-         because the list protects THIS file's order; the map's placement is
-         now asserted where it lives. */
-      /* DESKTOP COMPOSITION RULING §1 — ExploreByTopic moves INSIDE the
-         left main column, directly beneath the story rail, so the right rail
-         spans the same vertical band as stories + topics. The ruling calls
-         that relationship "the key design", and a sibling section could only
-         ever begin after the rail ended. */
-      '<ExploreByTopic',
-      /* DESKTOP COMPOSITION RULING §6/§7 — the nine-card Intelligence Engine
-         LEAVES HOME for a future separate intelligence/topics page:
-         "the full nine-card Intelligence Engine is no longer required inside
-         this first high-engagement Home composition". IntelligenceModulesSection
-         and EngineEnergyField are retired from this render path, not deleted;
-         both files stay on disk and their own specs read those files rather
-         than this one. */
-      '<HowItWorks',
-      '<TrustSection',
+      '<WorldIn60Seconds',
+      '<SuggestedInvestigations',
+      '<HomeForYou',
+      '<ExploreIntelligence',
+      '<DeepIntelligenceRow',
+      '<HomeBridge',
+      '<HomeHowItWorks',
+      '<HomeBuiltOnTrust',
       '<Footer',
       '<MobileBottomNav',
     ];
@@ -71,6 +61,11 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
       const index = pageSource.indexOf(marker);
       expect(index).toBeGreaterThan(lastIndex);
       lastIndex = index;
+    }
+    const code = stripComments(pageSource);
+    for (const retired of ['BetaHero', 'ExploreByTopic', 'HowItWorks', 'TrustSection', 'HomeSideRail', 'HomePremiumTeaser', 'HomeAccountPanel', 'BetaHomeHeader']) {
+      expect(code).not.toMatch(new RegExp(`<${retired}[\\s/>]`));
+      expect(existsSync(join(__dirname, `${retired}.tsx`))).toBe(true);
     }
   });
 
@@ -118,7 +113,9 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
       quiet re-mount nor a quiet deletion can happen without a failure here.
     */
     const railSource = stripComments(readFileSync(join(__dirname, 'HomeSideRail.tsx'), 'utf-8'));
-    expect(stripComments(pageSource)).toMatch(/<HomeSideRail/);
+    /* REV A — HomeSideRail is retired from Home (the 60-second rail replaces it). The invariant is unchanged: no situation map on Home. */
+    expect(stripComments(pageSource)).not.toMatch(/<HomeSideRail/);
+    expect(stripComments(pageSource)).not.toMatch(/<HomepageSituationMap/);
     expect(railSource).not.toMatch(/<HomepageSituationMap/);
     expect(railSource).not.toMatch(/import \{ HomepageSituationMap \}/);
     /* RETAINED, not deleted — the convention this repository already applies
@@ -176,7 +173,8 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
   it('Hero is the sole presentation of feed.latestUpdates (M60 Phase 2 deduplication — the former separate LatestNowRail import/render was removed from page.tsx; the source file itself is preserved, unimported, per the "do not destroy potentially reusable code" instruction)', () => {
     expect(pageSource).not.toMatch(/<LatestNowRail/);
     expect(pageSource).not.toMatch(/import \{ LatestNowRail \}/);
-    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.briefUpdates\}/);
+    /* REV A — the 60-second module presents the loaded pool, newest first (W60_MEDIA_SPEC). */
+    expect(pageSource).toMatch(/<WorldIn60Seconds items=\{newestFirst\}/);
   });
 
   /*
@@ -199,7 +197,7 @@ describe('Homepage current architecture (M60 Phase 2 — LatestNowRail removed a
       Developments takes the three CURATED roles, which that same module
       guarantees are mutually distinct. One response, two jobs.
     */
-    expect(pageSource).toMatch(/<BetaHero language=\{language\} latestUpdates=\{feed\.briefUpdates\}/);
+    expect(pageSource).toMatch(/<WorldIn60Seconds items=\{newestFirst\}/);
     expect(pageSource).not.toMatch(/latestUpdates=\{feed\.(featured|inFocus|discovery)\}/);
     expect(pageSource).not.toMatch(/(lead|secondary|discovery)=\{feed\.latestUpdates\}/);
   });

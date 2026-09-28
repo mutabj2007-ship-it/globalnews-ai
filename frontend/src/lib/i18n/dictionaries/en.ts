@@ -8,6 +8,7 @@ import { HOME_SUGGESTIONS } from '@globalnews-ai/shared';
 import { adminEn } from './adminEn';
 import { supportEn } from './supportEn';
 import { myIntelligenceEn } from './myIntelligenceEn';
+import { homeRevaEn } from './homeRevaEn';
 
 export const en = {
   /**
@@ -34,6 +35,8 @@ export const en = {
    * same getDictionary(language) call and adds no second localization path.
    */
   myIntelligence: myIntelligenceEn,
+  /* HOME WELCOME & DISCOVERY R1 REV A — Home copy. */
+  homeReva: homeRevaEn,
 
   languageSelectorLabel: 'Language',
   yourQuestion: 'Your question',

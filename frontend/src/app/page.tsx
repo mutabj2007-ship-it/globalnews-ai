@@ -1,19 +1,21 @@
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
-import { BetaHomeHeader } from '@/components/home/BetaHomeHeader';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
-import { BetaHero } from '@/components/home/BetaHero';
 import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
-import { HomeSideRail } from '@/components/home/HomeSideRail';
-import { HomePremiumTeaser } from '@/components/home/HomePremiumTeaser';
-import { HomeAccountPanel } from '@/components/home/HomeAccountPanel';
-import { ExploreByTopic } from '@/components/home/ExploreByTopic';
-import { HowItWorks } from '@/components/home/HowItWorks';
-import { TrustSection } from '@/components/home/TrustSection';
-import { Footer } from '@/components/layout/Footer';
-import { PageCanvas } from '@/components/layout/PageCanvas';
 import { HOME_PAGE_SURFACE } from '@/components/home/homePresentation';
+import { HomeSessionProvider } from '@/components/home/reva/HomeSession';
+import { HomeUtilityHeader } from '@/components/home/reva/HomeUtilityHeader';
+import { HomeProductRail } from '@/components/home/reva/HomeProductRail';
+import { HomeWelcomeHero } from '@/components/home/reva/HomeWelcomeHero';
+import { WorldIn60Seconds } from '@/components/home/reva/WorldIn60Seconds';
+import { SuggestedInvestigations } from '@/components/home/reva/SuggestedInvestigations';
+import { HomeForYou } from '@/components/home/reva/HomeForYou';
+import { ExploreIntelligence } from '@/components/home/reva/ExploreIntelligence';
+import { DeepIntelligenceRow } from '@/components/home/reva/DeepIntelligenceRow';
+import { HomeBridge } from '@/components/home/reva/HomeBridge';
+import { HomeBuiltOnTrust, HomeHowItWorks } from '@/components/home/reva/HomeHowAndTrust';
+import { Footer } from '@/components/layout/Footer';
 import { getHomeFeed } from '@/lib/homeFeed';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -22,104 +24,45 @@ import { SiteStructuredData } from '@/components/seo/SiteStructuredData';
 import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
 
 /**
- * Master Frontend Recomposition — final homepage architecture:
+ * HOME WELCOME & DISCOVERY R1 REV A — THE HOME COMPOSITION.
  *
- *   NavBar (already has a compact mobile header — logo/search/menu —
- *           confirmed via direct inspection before this recomposition;
- *           no separate MobileHeader component was needed)
- *   LiveStatusStrip
- *   Hero                 (three-zone: search/ask left, dominant world
- *                          visual center, Global Intelligence
- *                          latest-updates panel right — this panel is
- *                          now the SOLE presentation of
- *                          feed.latestUpdates; the former separate
- *                          LatestNowRail section, which duplicated the
- *                          exact same data immediately above Hero, was
- *                          removed here as part of the M60 Phase 2
- *                          homepage deduplication correction —
- *                          LatestNowRail.tsx itself is intentionally
- *                          left in the repository, unrendered, rather
- *                          than deleted, per the explicit "don't
- *                          destroy potentially reusable code
- *                          unnecessarily" instruction)
- *   GlobalDevelopments   (ONE coherent editorial surface: lead + 4
- *                          secondary — replaces the former separate
- *                          NewsroomSection + CategoryCards sections)
- *   IntelligenceEngineSection
- *                        (M65.1 — ONE section for every breakpoint,
- *                         reconstructed from the approved Claude Design
- *                         Intelligence Engine reference and rendering
- *                         from the SAME canonical INTELLIGENCE_MODULES
- *                         config. Replaces IntelligenceModulesDesktop and
- *                         IntelligenceModulesMobile, which are RETIRED
- *                         from this render path — their files are
- *                         retained, unimported, pending a separate
- *                         cleanup decision.)
- *   HowItWorks
- *   TrustSection         (compacted this round)
- *   Footer
- *   MobileBottomNav      (fixed, lg:hidden, real destinations only)
+ * Authority: r6/HOME-WELCOME-DISCOVERY-R1-REV-A (package SHA256 ae143a26…9670)
+ * and the CTO's queued implementation authority. Three information layers:
  *
- * Retired from this composition (NOT deleted from the repository —
- * see the Master Frontend Recomposition implementation report for the
- * full retire/retain audit): NewsroomSection, FeaturedStory,
- * InFocusSidebar, CategoryCards, LatestUpdatesFeed, WorldMapGateway,
- * LatestNowRail (M60 Phase 2 — duplicated Hero's own live-updates
- * panel; see above), WorldMapAnimatedVisual (still used, but now via
- * Hero rather than its own gateway section), HomepageSituationMap
- * (M66.8c — see below). Their underlying
- * reusable pieces —
- * SafeImage usage patterns, CARD_INTERACTION_CLASSES, DataModeLabel,
- * getCountryDisplayName, formatRelativeTime/formatUtcClock,
- * pluralWithForms — are all still in active use by the new components
- * above.
+ *   LEFT RAIL  (≥1024)  product navigation only — HomeProductRail
+ *   HOME BODY           Hero → What's happening now | right rail (60 s, Suggested)
+ *                       → [signed: For you + Following] → Explore intelligence
+ *                       → Deep Intelligence → My Intelligence bridge
+ *                       → How it works → Built on trust
+ *   FOOTER              legal / support (unchanged real routes)
  *
- * M66.1 — the sections above render inside <PageCanvas>, the shared Claude
- * Design presentation foundation (GN-CD-300 §F/§G, GN-CD-302 §E.1). <main> keeps
- * its exact `pb-16 lg:pb-0` class list, no section's own width or padding is
- * rewritten (CTO decision D5), and every data path below is unchanged.
- * PageCanvas fetches nothing and holds no state — it is presentation
- * infrastructure only.
+ * Header: ≥1024 the Rev A utility header (quick actions only); below 1024 the
+ * existing NavBar and the existing four-item bottom navigation, unchanged.
  *
- * C3 (BETA HOME CLOSURE R2) SUPERSEDES THE M66.8c NOTE BELOW. HomepageSituationMap
- * is no longer retired: the R2 contract requires the Global Situation Map card on
- * Home, and it is mounted in the editorial column above. The reasoning M66.8c
- * recorded is kept verbatim underneath because it is still the reason the card
- * had been removed, and because one of its premises no longer holds — the
- * section makes no fetchCountryNews() call at all now, on load or on selection.
+ * ONE STATIC DOM ORDER SERVES BOTH STATES. Signed-in order is For you → Explore
+ * → Deep → bridge; anonymous is Explore → Deep → "Make GlobalNewsAI yours".
+ * For you renders nothing for an anonymous reader and the bridge renders the
+ * right variant, so both orders hold without reshuffling server markup.
  *
- * M66.8c — HOMEPAGE COMPOSITION CLOSE. HomepageSituationMap is retired from
- * this render path, leaving five canvas sections: Hero, GlobalDevelopments,
- * IntelligenceEngineSection, HowItWorks, TrustSection.
+ * RIGHT RAIL PLACEMENT is a CONTAINER query on the content column: at ≥1180 px
+ * the 60-second module and Suggested investigations sit beside Hero + What's
+ * happening; narrower (1280 with the expanded rail, tablet, phone) they flow
+ * directly after What's happening. The DOM order is hero → stories → rail, so
+ * reading order is the same either way and nothing is rendered twice.
  *
- * The released Claude Design homepage composition is five sections — Hero,
- * Trending, Intelligence Engine, Built on Trust, Footer — and the situation
- * map was never one of them. It was also a strict subset of /map: the same
- * WorldMap component, the same fetchCountryNews() call, and a summary that
- * CoverageMetrics already computes more fully there, plus country search,
- * hover tooltips, a category filter and article cards that the homepage
- * section never had. Nothing was lost by removing it, and /map is unchanged.
+ * DATA: still exactly ONE getHomeFeed() call; every module reads a role of that
+ * one response. No AI on render, no per-module provider call. Account-aware
+ * islands share ONE account read through HomeSessionProvider (a client boundary
+ * that takes the server-rendered page as children).
  *
- * HomepageSituationMap.tsx REMAINS ON DISK, unimported — the same
- * retire-don't-delete convention already applied to LatestNowRail above and to
- * IntelligenceModulesDesktop/Mobile below. Its five direct specs
- * (HomepageSituationMap, situationMapVisualPolish, emptyPanelEvidenceFixes,
- * responsiveAccessibilityHardening, hudPanelGeometry) read the component file
- * rather than this one, so all five continue to pass untouched.
- *
- * /map is reachable from five places that are NOT this section: the NavBar
- * "World Map" item, MobileBottomNav, two Hero CTAs and the Hero live-feed
- * panel's own link. Removing the section removed no route and no affordance.
- * HowItWorks stays for now — M66.6-DEFERRED-001 is separate work.
- *
- * Single homepage fetch preserved unchanged: getHomeFeed() still makes
- * exactly one fetchTopHeadlines(12, language) call — Hero's live-updates
- * panel and GlobalDevelopments both derive from that SAME feed object.
- * M66.8c removed no fetch, because the retired section made none on load:
- * its one real fetchCountryNews() call was strictly user-interaction-
- * triggered and never part of this page's initial render. The request count
- * for this page is therefore identical before and after.
+ * RETIRED FROM HOME, NOT DELETED (this codebase's convention): BetaHomeHeader
+ * (still the My Intelligence page header), BetaHero (its gold "Go further /
+ * Plans coming soon" card and coloured CTA tiles have no Rev A equivalent),
+ * HomeSideRail, ExploreByTopic, HomePremiumTeaser, HomeAccountPanel, HowItWorks,
+ * TrustSection. PageCanvas is no longer the Home wrapper: Rev A sets its own
+ * content geometry beside the rail.
  */
+
 /*
  * ALPHA-SEO-FOUNDATION-1 — the home page's own metadata.
  *
@@ -147,319 +90,85 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function HomePage(): Promise<JSX.Element> {
   const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
-
+  const dict = getDictionary(language);
+  const t = dict.homeReva;
   const feed = await getHomeFeed(language);
-
-  /**
-   * M65 — ONE freshness instant per request, resolved here in the Server
-   * Component and passed to BOTH status presentations (LiveStatusStrip's
-   * mobile strip and Hero's desktop DATA STATUS row). Hero is a Client
-   * Component: generating this there would let the two surfaces capture
-   * different instants and genuinely disagree. Honest limitation, stated
-   * plainly: this is the page-render time, not the feed-fetch time — the
-   * same thing the strip previously showed, now merely consistent across
-   * both surfaces instead of computed twice.
-   */
-  const updatedAt = new Date().toISOString();
+  /*
+    Every module reads a role of the ONE Home response. For you and the 60-second
+    module both need the whole loaded pool: de-duplicated by id, and for the
+    60-second module newest first (W60_MEDIA_SPEC: "the first five stories
+    already loaded for Home"). `latestUpdates` alone can be empty once the
+    allocator has placed every story in its curated roles.
+  */
+  const seenIds = new Set<string>();
+  const homeArticles = [...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery, ...feed.latestUpdates].filter((article) => {
+    if (seenIds.has(article.id)) return false;
+    seenIds.add(article.id);
+    return true;
+  });
+  const newestFirst = [...homeArticles].sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
 
   return (
     <>
-      {/*
-        ALPHA-SEO-FOUNDATION-1 — `WebSite` + `Organization` JSON-LD.
-
-        A `<script type="application/ld+json">` renders no box and no text
-        node, so the released home composition below is untouched: NavBar
-        remains the first visible element and nothing is wrapped.
-      */}
       <SiteStructuredData />
-      {/*
-        Z1 — HOME'S OWN DESKTOP HEADER, per DESKTOP FIDELITY CORRECTION R2 §1.
+      <HomeSessionProvider>
+        <HomeUtilityHeader language={language} />
+        <div className="lg:hidden">
+          <NavBar language={language} />
+        </div>
+        <div className="lg:flex">
+          <HomeProductRail language={language} />
+          {/* The content column is the size container every Rev A breakpoint rule measures. */}
+          <div data-home-content="" className="min-w-0 flex-1 [container-type:inline-size]">
+            <main className={`pb-24 lg:pb-0 ${HOME_PAGE_SURFACE}`}>
+              <div className="mx-auto w-full max-w-[1600px] px-4 md:px-10 gn-xl:px-12">
+                <AuthErrorBanner language={language} />
+                <div
+                  data-home-band=""
+                  className="grid grid-cols-1 gap-x-8 gap-y-6 [grid-template-areas:'hero'_'whats'_'rail'] [@container(min-width:1180px)]:[grid-template-areas:'hero_rail'_'whats_rail'] [@container(min-width:1180px)]:[grid-template-columns:minmax(0,1fr)_340px] [@container(min-width:1560px)]:[grid-template-columns:minmax(0,1fr)_380px]"
+                >
+                  <div className="min-w-0 [grid-area:hero]">
+                    <HomeWelcomeHero language={language} />
+                  </div>
+                  <div className="min-w-0 [grid-area:whats]">
+                    <WhatsHappeningNow
+                      lead={feed.featured}
+                      secondary={feed.inFocus}
+                      discovery={feed.discovery}
+                      dataMode={feed.dataMode}
+                      language={language}
+                    />
+                  </div>
+                  <aside
+                    aria-label={t.w60.title}
+                    data-home-right-rail=""
+                    className="flex min-w-0 flex-col gap-4 [grid-area:rail] [@container(min-width:1180px)]:pt-6"
+                  >
+                    <WorldIn60Seconds items={newestFirst} language={language} />
+                    <SuggestedInvestigations title={t.suggested.title} note={t.suggested.note} questions={dict.hero.exampleQuestions} />
+                  </aside>
+                </div>
 
-        At and above `lg`, Home renders `BetaHomeHeader`, which follows the
-        Product Owner prototype and resolves every destination from
-        `INTELLIGENCE_MODULES`. Below `lg` the existing `NavBar` chrome serves
-        unchanged, which is why it is wrapped rather than replaced: the mobile
-        header, its sheet and its bottom nav are untouched, and `NavBar` itself
-        is not modified at all. `NAV_MODEL` and CTO decision D1 stand on every
-        other surface exactly as before.
-      */}
-      <BetaHomeHeader language={language} />
-      <div className="lg:hidden">
-        <NavBar language={language} />
-      </div>
-      {/* Section 11 of the premium pass: the SAMPLED page background, applied to
-          Home's own <main> so the global `bg-void` token, and therefore every
-          other accepted surface, is untouched. See `HOME_PAGE_SURFACE`. */}
-      <main className={`pb-24 lg:pb-0 ${HOME_PAGE_SURFACE}`}>
-        <PageCanvas>
-          {/*
-            B5-A · C-13 — THE ERROR LANDING IS ALWAYS THE FRONTEND ORIGIN ROOT.
-
-            A failed or cancelled sign-in never carries a returnTo, so this is
-            the only surface that has to read the parameter, and it is mounted
-            here rather than in the layout for exactly that reason.
-
-            THIS FILE STAYS A SERVER COMPONENT. AuthErrorBanner is a client
-            component that renders nothing at all unless the parameter is
-            present and admissible, so on every ordinary visit it contributes no
-            box, no text node and no layout shift.
-          */}
-          <AuthErrorBanner language={language} />
-          {/*
-            M66.14B — HeroFocusProvider owns the hero's focus state and wraps
-            BOTH consumers, because Hero and GlobalDevelopments are siblings
-            and Hero-owned state could never reach TrendingCard.
-
-            THIS FILE STAYS A SERVER COMPONENT. The provider receives its
-            children as a prop, so everything below is still server-rendered;
-            only the provider module itself joins the client bundle.
-
-            GlobalDevelopments is inside it from the first commit even though
-            TrendingCard does not participate until B-2 — the architecture is
-            final now, so B-2 adds a consumer rather than replacing anything.
-          */}
-          {/*
-            H2/H3 · Issue #29 — the approved Beta Home composition.
-
-            BetaHero carries the headline, the Ask entry, the CTA pair and the
-            "Your world in 60 seconds" brief; WhatsHappeningNow carries the
-            editorial area. Together they replace Hero, GlobalDevelopments and
-            LiveStatusStrip.
-
-            THREE RETIREMENTS, ONE REASON EACH, and all three files stay on
-            disk unimported — the convention this file already applies to
-            TodaySection, LatestNowRail, HomepageSituationMap and the engine
-            section:
-
-              Hero                 superseded composition and copy, and its Ask
-                                   submit spent metered AI from Home (C1).
-              GlobalDevelopments   the same feed in the superseded M66
-                                   presentation; the approved lead + four-up
-                                   composition replaces it.
-              LiveStatusStrip      a band above the hero that appears in no
-                                   approved frame. Its degraded-data duty moved
-                                   into WhatsHappeningNow, which is why the two
-                                   changes land together rather than leaving
-                                   Home briefly silent about a failed feed.
-
-            HeroFocusProvider goes with them: it existed to link the old hero's
-            focus state to GlobalDevelopments, and neither survives. It is a
-            client boundary, so removing it also returns this stretch of Home
-            to pure server rendering.
-
-            The single getHomeFeed() call is unchanged; both sections read
-            different roles of that one response.
-          */}
-          <BetaHero language={language} latestUpdates={feed.briefUpdates} />
-          {/*
-            H5 · Issue #29 — the approved two-column editorial band: the
-            current-developments column beside the Home side rail, exactly as
-            the R4.1 frames place them. One column on phone and tablet, where
-            the approved phone frames stack the rail beneath the feed.
-          */}
-          {/*
-            C3 · THE GLOBAL SITUATION MAP JOINS THE EDITORIAL COLUMN.
-
-            `HomepageSituationMap` is RESTORED from retirement rather than
-            rebuilt. It already reuses /map's own `WorldMap` through the same
-            `next/dynamic({ ssr: false })` pattern, so MapLibre never enters the
-            initial bundle, and it performs ZERO provider-capable country reads
-            on mount and on selection. Selecting a country changes geographic
-            scope and nothing else; the explicit retrieval action stays on the
-            full map, so exploring geography on Home still cannot spend quota.
-
-            It supersedes the rail's World Pulse thumbnail, which stood in for
-            exactly this surface. See the note in HomeSideRail.
-          */}
-          {/*
-            Z4/Z5/Z6 — THE PROTOTYPE'S TWO-COLUMN BAND.
-
-            The Product Owner's desktop prototype puts the story rail on the
-            left and the Global Situation Map above the Ask card on the right.
-            `HomepageSituationMap` therefore moves INTO `HomeSideRail` and is
-            no longer stacked beneath the stories in the left column, which is
-            what made this band read as one tall column with a thin rail beside
-            it. The rail widens to the prototype's proportion to carry it.
-
-            The map component is unchanged and still performs zero
-            provider-capable reads on mount or selection.
-          */}
-          {/*
-            `relative z-10` — the editorial band paints ABOVE the hero's layer.
-
-            The hero has no `overflow-hidden` (removing it is what let the globe
-            stop reading as a boxed sprite), so the globe's box extends past the
-            hero's own bottom edge. The Product Owner requires that it never sit
-            on top of "Your world in 60 seconds", LIVE / Powered by GNews, View
-            all, the no-AI note or the story rail. A stacking context here
-            guarantees that by structure rather than by hoping the feather is
-            faint enough.
-
-            `lg:grid-rows-[auto_1fr]` — THE BLANK SPACER FIX.
-
-            The rail spans both rows. With implicit rows, a rail taller than the
-            left column had its excess height DISTRIBUTED between the two rows,
-            which opened a blank band between the stories and Explore by topic —
-            the "large empty region" that was rejected. Pinning row 1 to `auto`
-            makes it exactly as tall as the stories, so Explore by topic starts
-            immediately beneath them and any remaining rail height falls into
-            row 2 BELOW the topics instead of above them. The two columns now
-            flow independently inside one band, which is the ruled behaviour,
-            without giving up the single DOM order the phone flow depends on.
-          */}
-          <div className="relative z-10 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,368px)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-[25px] lg:gap-y-6">
-            {/*
-              THE LEFT MAIN COLUMN — stories, then topics directly underneath.
-
-              DESKTOP COMPOSITION RULING §1: *"The right rail spans the same
-              overall vertical band as `What's happening now + Explore by
-              topic`. This relationship is the key design."*
-
-              That is why `ExploreByTopic` is INSIDE this column rather than a
-              section of its own below the band. Rendered as a sibling section
-              it could only ever start after the rail ended, which is the
-              relationship the ruling refuses: two independent vertical blocks
-              instead of one composed band.
-            */}
-            {/*
-              ── BELOW `lg` THE RAIL COLLAPSES INTO THE FLOW ──────────────────
-
-              C5/N8, as ruled: "Below 1024 the desktop right rail may collapse
-              into document flow: `stories -> Global Situation Map -> Ask
-              GlobalNewsAI -> Explore by topic`. Map remains visible. Ask
-              remains directly associated with it."
-
-              That is a DOM-order requirement, not a CSS one, so the three
-              blocks are siblings of the grid and the grid places them, rather
-              than topics being nested inside the left column. In source order
-              they are stories -> rail(map, ask) -> topics, which is exactly the
-              ruled phone/tablet flow when the grid is one column.
-
-              At `lg` the explicit placement restores the accepted desktop
-              relationship from the composition ruling — "the right rail spans
-              the same overall vertical band as What's happening now + Explore
-              by topic" — by putting the rail in column 2 spanning both rows and
-              topics back under the stories in column 1. Same pixels at `lg`,
-              correct order below it.
-            */}
-            <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-1">
-              <WhatsHappeningNow
-                lead={feed.featured}
-                secondary={feed.inFocus}
-                discovery={feed.discovery}
-                dataMode={feed.dataMode}
-                language={language}
-              />
-            </div>
-            <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-              <HomeSideRail language={language} briefUpdates={feed.briefUpdates} />
-            </div>
-            <div className="min-w-0 lg:col-start-1 lg:row-start-2">
-              <ExploreByTopic language={language} />
-            </div>
+                <div className="mt-10 flex flex-col gap-10 pb-12 md:mt-12 md:gap-12">
+                  <HomeForYou articles={homeArticles} language={language} />
+                  <ExploreIntelligence language={language} />
+                  <DeepIntelligenceRow language={language} />
+                  <HomeBridge language={language} />
+                  <HomeHowItWorks language={language} />
+                  <HomeBuiltOnTrust language={language} />
+                </div>
+              </div>
+            </main>
           </div>
-
-          {/*
-            C10, as ruled: the phone/tablet premium teaser sits "after Explore
-            by topic and before How It Works". It is `lg:hidden`; the desktop
-            hero card is `hidden lg:block`. One premium block at any width.
-          */}
-          <HomePremiumTeaser language={language} />
-          {/*
-            R2 — TODAY. Placed here deliberately: it is live editorial content,
-            so it belongs with the live half of the page, between Global
-            Developments and the explanatory sections below.
-
-            It sits OUTSIDE HeroFocusProvider because it consumes no hero focus
-            and writes none. Keeping it out means the provider's subtree is
-            still exactly the two surfaces that participate in that chain.
-
-            `feed.today` is derived from the SAME single getHomeFeed()
-            response — no second request, no new route, and the corpus width is
-            unchanged. This file stays a Server Component; TodayWorkspace is a
-            Client Component only because the country filter is state.
-
-            R7 — TodayWorkspace REPLACES TodaySection at this mount point, and
-            replaces nothing else. Hero, Global Developments, the Intelligence
-            Engine, How It Works and Trust are untouched; there is no new
-            route; and production `html`/`body` keep their normal scrolling.
-            The R7 fixed shell is scoped to the workspace element itself.
-
-            TodaySection.tsx is RETIRED, NOT DELETED — the convention this
-            codebase already applies to LatestNowRail, HomepageSituationMap and
-            IntelligenceModulesDesktop. It stays on disk, unimported by any
-            route, so the released surface remains inspectable beside the one
-            that replaced it.
-          */}
-          {/*
-            GATE A · R5.1 — IntelligenceModulesSection REPLACES
-            IntelligenceEngineSection at this mount point, and replaces nothing
-            else. `HOME_R4.1_DELTA.md` changes exactly one section of Home and
-            declares the rest untouched, so Hero, Global Developments, the Today
-            workspace, How It Works, Trust, the header, the footer and the
-            bottom bar are all unchanged here.
-
-            The engine files are RETIRED, NOT DELETED — the convention this file
-            already applies to TodaySection, LatestNowRail, HomepageSituationMap
-            and IntelligenceModulesDesktop/Mobile. IntelligenceEngineSection,
-            IntelligenceEngineRing and intelligenceEngineGeometry stay on disk,
-            unimported by any route, so the released surface stays inspectable
-            beside the one that replaced it.
-
-            WHY IT WAS REPLACED: measured on the built page at 1440, 430, 390
-            and 360 in EN and PL, every module title, every status badge and the
-            summary line were in the DOM but absent from rendered innerText —
-            the radial ring keeps them in hover/focus panels. A first-time
-            reader saw no module name as text. `id="intelligence-modules"`
-            moves with the section, so MobileBottomNav's Intelligence tab, one
-            of the four approved destinations, still resolves.
-          */}
-          {/*
-            H5 · Issue #29 — THREE SECTIONS RETIRED FROM HOME.
-
-            TodayWorkspace, HowItWorks and TrustSection appear in NO approved
-            R4.1 or R5.1 Home frame, and none of the 139 keys in the approved
-            Home copy catalogue names them. Under the contract's precedence
-            rule 4 — "current implementation only as code to modify, never as
-            missing design authority" — their presence here was not evidence
-            that the approved Home contains them.
-
-            RETIRED, NOT DELETED: all three files stay on disk, unimported,
-            like TodaySection, LatestNowRail, HomepageSituationMap, Hero,
-            GlobalDevelopments and LiveStatusStrip before them. Their own
-            specs read those files rather than this one, so they keep passing.
-
-            The Intelligence modules section stays exactly as accepted at
-            c3dd01a — H4 is preserved and regression-tested, not rebuilt.
-          */}
-          {/*
-            C4 · EXPLORE BY TOPIC. Six entries read out of INTELLIGENCE_MODULES,
-            so their names and destinations are the registry's rather than a
-            second list. It sits immediately above the nine-card Engine because
-            "View all topics" is an anchor into it.
-          */}
-          {/*
-            PERSONALIZATION, below the prototype's high-engagement band.
-
-            `HomeAccountPanel` is unchanged and still state-aware: signed out it
-            invites, signed in it renders For you, Following and Manage from the
-            real account and follow APIs, and it never shows "Sign in" to
-            someone already signed in. It reads the stories the page already
-            holds, so "For you" needs no second request.
-          */}
-          <div className="mx-auto w-full max-w-md lg:max-w-none">
-            <HomeAccountPanel
-              articles={[...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery]}
-              language={language}
-            />
-          </div>
-
-          <HowItWorks language={language} />
-          <TrustSection language={language} />
-        </PageCanvas>
-      </main>
-      <Footer language={language} />
-      <MobileBottomNav language={language} />
+        </div>
+        {/*
+          The ONE shared Footer (M66.8b: no route-specific variant), unmodified,
+          below the rail + content row at full width — beside the rail its
+          full-width composition squeezes. Legal/support layer only (CTO §4).
+        */}
+        <Footer language={language} />
+        <MobileBottomNav language={language} />
+      </HomeSessionProvider>
     </>
   );
 }

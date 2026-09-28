@@ -13,8 +13,10 @@ const exploreSource = readFileSync(join(__dirname, 'ExploreByTopic.tsx'), 'utf-8
 
 describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase 2 — LatestNowRail removed as a duplicate presentation of feed.latestUpdates)', () => {
   it('renders sections in the approved order', () => {
+    /* HOME REV A — HomeWelcomeHero is the Hero mount point and Explore
+       intelligence replaces ExploreByTopic; the ORDER contract is unchanged. */
     const order = [
-      '<BetaHero',
+      '<HomeWelcomeHero',
       /* H3 · Issue #29 — the approved R4.1 composition. LiveStatusStrip and
          GlobalDevelopments are retired from Home (files kept on disk), and
          WhatsHappeningNow carries the editorial area plus the degraded-feed
@@ -32,7 +34,7 @@ describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase
          IntelligenceEngineSection at this mount point (HOME_R4.1_DELTA.md).
          The engine file is retired, not deleted. The ORDER contract this list
          exists to protect is unchanged; only the section's identity moved. */
-      '<ExploreByTopic',
+      '<ExploreIntelligence',
     ];
     let lastIndex = -1;
     for (const marker of order) {
@@ -65,7 +67,9 @@ describe('Final homepage recomposition (Master Frontend Recomposition; M60 Phase
   });
 
   it('main content has bottom padding on mobile so the fixed bottom nav never covers content', () => {
-    expect(pageSource).toMatch(/pb-16 lg:pb-0/);
+    /* HOME REV A — asserted on the executable <main> class rather than prose. The
+       main already cleared the bar with pb-24 (the old pb-16 matched a comment). */
+    expect(pageSource).toMatch(/<main className=\{`pb-24 lg:pb-0 /);
   });
 
   /**

@@ -596,7 +596,8 @@ describe('M66.8d — scope discipline', () => {
       retirement this assertion pinned. Inverted, not deleted: the subject is
       still where the surface lives and whether its file survives.
     */
-    expect(pageSource).toMatch(/<HowItWorks/);
+    /* HOME REV A — How it works stays a real Home body section as HomeHowItWorks; HowItWorks.tsx is kept. */
+    expect(pageSource).toMatch(/<HomeHowItWorks/);
     expect(existsSync(join(__dirname, 'HowItWorks.tsx'))).toBe(true);
   });
 
