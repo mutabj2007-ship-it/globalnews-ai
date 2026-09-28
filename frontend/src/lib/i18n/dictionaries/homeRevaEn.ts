@@ -57,9 +57,24 @@ export const homeRevaEn = {
   },
   w60: {
     title: 'Your world in 60 seconds',
-    note: 'Five of the latest stories on Home, with their sources.',
+    /* HOME R2 DEDUP R1 — count-neutral: the module shows up to five, and fewer when fewer distinct stories remain. */
+    note: 'Latest stories on Home, with their sources.',
     noteSigned: 'Latest stories, places you follow first.',
+    /* Shown only when every story in this update is already in What's happening now. */
+    empty: 'Every story in this update is already in What’s happening now.',
     noImage: 'No image',
+  },
+  /*
+    HOME R2 PROVIDER DISCLOSURE R1 — Home's provenance badge, provider-neutral.
+    Same five truthful states as `liveStatusStrip`; only the live label drops
+    the aggregator brand. Provider identity stays in Source Policy.
+  */
+  provenance: {
+    live: 'LIVE REPORTING',
+    cached: 'CACHED · Previously retrieved reporting',
+    mock: 'DEMO MODE · Sample content only',
+    unavailable: 'NO REPORTING AVAILABLE',
+    unknown: 'DATA STATUS UNKNOWN',
   },
   suggested: {
     title: 'Suggested investigations',

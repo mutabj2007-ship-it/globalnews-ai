@@ -8,6 +8,22 @@ interface DataModeLabelProps {
   className?: string;
   /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
   language?: LanguageCode;
+  /**
+   * HOME R2 PROVIDER DISCLOSURE R1 — a bounded presentation mode. A surface may
+   * supply its own wording for the same states (Home: provider-neutral "LIVE
+   * REPORTING" instead of "LIVE · Powered by GNews"). When given, `unavailable`
+   * is shown as its own state. Omitted: the shared `liveStatusStrip` labels,
+   * exactly as before, for every other caller.
+   */
+  labels?: DataModeLabels;
+}
+
+export interface DataModeLabels {
+  live: string;
+  cached: string;
+  mock: string;
+  unavailable: string;
+  unknown: string;
 }
 
 /**
@@ -36,10 +52,11 @@ export function DataModeLabel({
   dataMode,
   className = '',
   language = 'en',
+  labels,
 }: DataModeLabelProps): JSX.Element {
   const isLive = dataMode === 'live';
   const isCached = dataMode === 'cached';
-  const t = getDictionary(language).liveStatusStrip;
+  const t = labels ?? getDictionary(language).liveStatusStrip;
 
   const label =
     dataMode === 'live'
@@ -48,7 +65,9 @@ export function DataModeLabel({
         ? t.cached
         : dataMode === 'mock'
           ? t.mock
-          : t.unknown;
+          : dataMode === 'unavailable' && labels !== undefined
+            ? labels.unavailable
+            : t.unknown;
 
   return (
     <span

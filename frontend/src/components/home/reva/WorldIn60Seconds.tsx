@@ -13,8 +13,13 @@ import { useHomeSession } from './HomeSession';
  * HOME REV A — YOUR WORLD IN 60 SECONDS, IMAGE-LED ON EVERY DEVICE (REQUIRED).
  *
  * Authority: W60_MEDIA_SPEC.md, CTO §7.
- * - Source: the stories Home ALREADY loaded (`feed.latestUpdates`). No extra
- *   fetch, no AI. Signed in (D5): followed places first, from that same list.
+ * - Source: the stories Home ALREADY loaded — `feed.latestUpdates` minus every
+ *   What's happening now story (allocateWorldIn60, HOME R2 DEDUP R1). Rev A's
+ *   caller had drifted to the whole merged Home pool, which put the same stories
+ *   on both sides. No extra fetch, no AI. Signed in (D5): followed places first,
+ *   from that same list. Up to five; FEWER when fewer distinct stories remain,
+ *   never padded. Empty: a one-line truthful note (`showEmptyState`) so the
+ *   right rail is not a silent blank beside a full What's happening now.
  * - Lead: the story's REAL image in a fixed box, or the governed "No image"
  *   fallback in the same box (StoryVisual) — never stock or generated imagery.
  *   Heights: 1920 → 176 · 1440/1280 → 150 · in flow on tablet → 190 (lead
@@ -37,7 +42,16 @@ export function orderFollowedFirst(items: readonly NewsArticle[], followsIso3: r
   return [...first, ...rest];
 }
 
-export function WorldIn60Seconds({ items, language }: { items: readonly NewsArticle[]; language: LanguageCode }): JSX.Element | null {
+export function WorldIn60Seconds({
+  items,
+  language,
+  showEmptyState = false,
+}: {
+  items: readonly NewsArticle[];
+  language: LanguageCode;
+  /** True when What's happening now holds stories, so "all of them are there" is a true statement. */
+  showEmptyState?: boolean;
+}): JSX.Element | null {
   const dict = getDictionary(language);
   const t = dict.homeReva.w60;
   const categoryLabels = dict.map.categories;
@@ -45,7 +59,22 @@ export function WorldIn60Seconds({ items, language }: { items: readonly NewsArti
   const signedIn = user !== null;
   const ordered = orderFollowedFirst(items, signedIn ? follows : null).slice(0, 5);
   const [lead, ...rows] = ordered;
-  if (lead === undefined) return null;
+  if (lead === undefined) {
+    if (!showEmptyState) return null;
+    return (
+      <section
+        aria-labelledby="home-w60-heading"
+        data-home-w60=""
+        data-home-w60-empty=""
+        className="rounded-[14px] border border-[#122a45] bg-[#061527] p-4 md:p-[18px]"
+      >
+        <h2 id="home-w60-heading" className="text-[18px] font-bold leading-tight text-white">
+          {t.title}
+        </h2>
+        <p className="mt-1 text-[12.5px] text-[#8ca3bd]">{t.empty}</p>
+      </section>
+    );
+  }
   const leadAge = formatObservationalTime(lead.publishedAt, lead.publishedAtBasis, language);
 
   return (
