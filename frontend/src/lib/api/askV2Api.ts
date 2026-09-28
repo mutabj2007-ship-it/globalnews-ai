@@ -11,9 +11,11 @@ import { accountFetch } from './accountFetch';
  * provider-free. There is no second result store and no client-side result cache here.
  *
  * AVAILABILITY IS A FACT THE SERVER STATES. `ASK_V2_ENABLED` is default OFF and the routes
- * then answer 404; a signed-out reader gets 401. Both are NAMED outcomes (`UNAVAILABLE`,
- * `SIGNED_OUT`), so the caller falls back to the existing Ask — the contract's rollback path —
- * rather than guessing. Every mutation goes through `accountFetch` (session cookie + CSRF).
+ * then answer 404; a signed-out reader gets 401. Both are NAMED outcomes, so the caller acts
+ * on what the server said rather than guessing: `UNAVAILABLE` (Ask V2 disabled) takes the
+ * existing Ask — the contract's rollback path — while `SIGNED_OUT` is a sign-in requirement
+ * and NEVER falls back to it (PR #66). Every mutation goes through `accountFetch` (session
+ * cookie + CSRF).
  */
 
 export type AskV2Language = 'en' | 'pl';
