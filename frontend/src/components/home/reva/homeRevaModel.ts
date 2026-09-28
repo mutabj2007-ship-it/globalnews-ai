@@ -1,4 +1,12 @@
 import { INTELLIGENCE_MODULES, isModuleNavigable } from '@/lib/intelligenceModules';
+import {
+  CATEGORY_ARTWORK,
+  CATEGORY_TEXT,
+  CHIP_STYLE,
+  TOPIC_FALLBACK,
+  TOPIC_STYLE,
+  type TopicStyle,
+} from '@/components/home/homePresentation';
 
 /**
  * HOME WELCOME & DISCOVERY R1 REV A — THE PURE MODEL.
@@ -25,24 +33,51 @@ export const W60_ROWS = { desktop: 4, phone: 2 } as const;
 export type ExploreDomainKey = 'world' | 'politics' | 'economy' | 'energy' | 'security' | 'humanitarian' | 'markets';
 
 /**
- * CARD_ARROW_RULE — the domain accents, verbatim. World's registry entry
- * (`world-intelligence`) has no destination, so World resolves to the live
- * country map (`country-intelligence` → /map), which is what its line says:
- * "Live map of reporting by country."
+ * The seven Explore domains. World's registry entry (`world-intelligence`) has
+ * no destination, so World resolves to the live country map
+ * (`country-intelligence` → /map), which is what its line says: "Live map of
+ * reporting by country."
+ *
+ * `topicStyle` names the domain's EXISTING Home colour family in
+ * `TOPIC_STYLE` (homePresentation.ts) — the governed surfaces the current
+ * Home's topic cards already use. Politics has no TOPIC_STYLE entry (it was
+ * not on the current Home), so it is composed from the existing Home POLITICS
+ * category tokens instead (see `POLITICS_TOPIC_STYLE`). No new palette.
  */
-export const EXPLORE_DOMAINS: readonly { key: ExploreDomainKey; moduleId: string; accent: string }[] = [
-  { key: 'world', moduleId: 'country-intelligence', accent: '#5abff5' },
-  { key: 'politics', moduleId: 'politics', accent: '#9fc3ff' },
-  { key: 'economy', moduleId: 'economy', accent: '#7fd4c1' },
-  { key: 'energy', moduleId: 'energy', accent: '#f0c36a' },
-  { key: 'security', moduleId: 'security', accent: '#f39a8f' },
-  { key: 'humanitarian', moduleId: 'humanitarian', accent: '#c7a6f2' },
-  { key: 'markets', moduleId: 'market', accent: '#8fd0f5' },
+export const EXPLORE_DOMAINS: readonly { key: ExploreDomainKey; moduleId: string; topicStyle: string }[] = [
+  { key: 'world', moduleId: 'country-intelligence', topicStyle: 'world-intelligence' },
+  { key: 'politics', moduleId: 'politics', topicStyle: 'politics' },
+  { key: 'economy', moduleId: 'economy', topicStyle: 'economy' },
+  { key: 'energy', moduleId: 'energy', topicStyle: 'energy' },
+  { key: 'security', moduleId: 'security', topicStyle: 'security' },
+  { key: 'humanitarian', moduleId: 'humanitarian', topicStyle: 'humanitarian' },
+  { key: 'markets', moduleId: 'market', topicStyle: 'market' },
 ];
+
+/**
+ * HOME REV A COLOR RECONCILIATION — Politics, from EXISTING Home Politics tokens
+ * only (homePresentation.ts): the category ARTWORK gradient (maroon,
+ * #4a1b2d → #331726 → #141522), the category TEXT accent (#de979f) for the
+ * glyph, the category CHIP (#2d1728 fill, #3d131d edge, #de979f text) for the
+ * arrow, and the shared TOPIC_FALLBACK hover. The registry's module accent
+ * ('violet') is deliberately NOT used: violet is the governed tier boundary.
+ */
+export const POLITICS_TOPIC_STYLE: TopicStyle = {
+  surface: `bg-gradient-to-br ${CATEGORY_ARTWORK.politics}`,
+  icon: CATEGORY_TEXT.politics,
+  arrow: `border ${CHIP_STYLE.politics.className}`,
+  hover: TOPIC_FALLBACK.hover,
+};
+
+export function domainStyle(topicStyle: string): TopicStyle {
+  if (topicStyle === 'politics') return POLITICS_TOPIC_STYLE;
+  return TOPIC_STYLE[topicStyle] ?? TOPIC_FALLBACK;
+}
 
 export interface ResolvedDomain {
   key: ExploreDomainKey;
-  accent: string;
+  topicStyle: string;
+  style: TopicStyle;
   href: string | null;
   /** Truthful: a domain is "Preview" while only a *-visual-preview route exists for it. */
   preview: boolean;
@@ -51,7 +86,7 @@ export interface ResolvedDomain {
 export function resolveDomain(entry: (typeof EXPLORE_DOMAINS)[number]): ResolvedDomain {
   const entryModule = INTELLIGENCE_MODULES.find((m) => m.id === entry.moduleId);
   const href = entryModule !== undefined && isModuleNavigable(entryModule) && entryModule.destination !== undefined ? entryModule.destination : null;
-  return { key: entry.key, accent: entry.accent, href, preview: href !== null && /-visual-preview$/.test(href) };
+  return { key: entry.key, topicStyle: entry.topicStyle, style: domainStyle(entry.topicStyle), href, preview: href !== null && /-visual-preview$/.test(href) };
 }
 
 export const RESOLVED_DOMAINS: readonly ResolvedDomain[] = EXPLORE_DOMAINS.map(resolveDomain);

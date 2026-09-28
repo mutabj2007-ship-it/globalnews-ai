@@ -21,9 +21,14 @@ import { RESOLVED_DOMAINS, SPECIALIST_LINKS, type ExploreDomainKey } from './hom
  *
  * Seven PRODUCT cards, each a whole-card link whose text is its name and its
  * one crawlable line. Every card carries its OWN circular arrow in its
- * lower-right corner: 40 px on tablet/desktop, a 26 px outline arrow on phone;
- * domain-accent border and icon on #041426; visible without hover; no
- * animation; aria-hidden (the link text already describes the destination).
+ * lower-right corner: 40 px on tablet/desktop, 26 px on phone; visible without
+ * hover; no animation; aria-hidden (the link text already describes the destination).
+ *
+ * HOME REV A COLOR RECONCILIATION (CTO): each card wears its domain's EXISTING
+ * Home colour family — surface, glyph and arrow from TOPIC_STYLE (the current
+ * Home's governed topic-card surfaces), Politics from the existing Home
+ * Politics category tokens (see homeRevaModel `POLITICS_TOPIC_STYLE`). Only
+ * product cards are tinted; story cards and the 60-second module are not.
  *
  * Layout: 7 columns when the content column is ≥1000 px, else 4 + 3
  * (container query); phone: a horizontal rail of 150 px tiles.
@@ -63,21 +68,21 @@ export function ExploreIntelligence({ language }: { language: LanguageCode }): J
               <a
                 href={domain.href}
                 data-home-explore-card={domain.key}
-                className="relative flex h-[118px] flex-col rounded-[12px] border border-[#15314f] bg-[#061527] p-3 pb-9 transition-colors hover:border-[#2a5a8c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5abff5] motion-reduce:transition-none md:h-full md:min-h-[124px] md:pb-[58px]"
+                data-home-explore-family={domain.topicStyle}
+                className={`relative flex h-[118px] flex-col rounded-[12px] border border-[#01101f] p-3 pb-9 shadow-[inset_0_1px_0_rgba(148,197,255,0.14),0_18px_40px_-24px_rgba(0,0,0,0.95)] transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5abff5] motion-reduce:transition-none md:h-full md:min-h-[124px] md:pb-[58px] ${domain.style.surface} ${domain.style.hover}`}
               >
                 <span className="flex items-start justify-between gap-2">
-                  <Icon aria-hidden="true" className="h-5 w-5 shrink-0" style={{ color: domain.accent }} />
+                  <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${domain.style.icon}`} />
                   {domain.preview ? (
                     <span className="rounded-[4px] border border-[#3a3326] px-1.5 py-[1px] text-[10px] font-semibold text-[#c9ae86]">{t.preview}</span>
                   ) : null}
                 </span>
                 <span className="mt-2 block text-[15px] font-bold leading-tight text-white">{copy.name}</span>
-                <span className="mt-1 line-clamp-2 block text-[12px] leading-[1.35] text-[#93a9c2]">{copy.line}</span>
+                <span className="mt-1 line-clamp-2 block text-[12px] leading-[1.35] text-[#9db2c9]">{copy.line}</span>
                 <span
                   aria-hidden="true"
                   data-home-explore-arrow=""
-                  className="absolute bottom-[10px] right-[10px] inline-flex h-[26px] w-[26px] items-center justify-center rounded-full border md:h-10 md:w-10"
-                  style={{ borderColor: domain.accent, color: domain.accent, backgroundColor: '#041426' }}
+                  className={`absolute bottom-[10px] right-[10px] inline-flex h-[26px] w-[26px] items-center justify-center rounded-full md:h-10 md:w-10 ${domain.style.arrow}`}
                 >
                   <ArrowRight className="h-[14px] w-[14px] md:h-5 md:w-5" strokeWidth={2.2} />
                 </span>

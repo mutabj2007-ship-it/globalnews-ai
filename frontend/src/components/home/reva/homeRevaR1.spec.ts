@@ -146,17 +146,9 @@ describe('§9 — Explore intelligence: seven product cards, truthful tags, per-
     expect(model.RESOLVED_DOMAINS.filter((d) => d.preview).map((d) => d.key)).toEqual(['politics', 'economy', 'security']);
   });
 
-  it('CARD_ARROW_RULE accents verbatim; the arrow is aria-hidden, 40 px (26 px phone), inside the card', () => {
-    expect(Object.fromEntries(model.EXPLORE_DOMAINS.map((d) => [d.key, d.accent]))).toEqual({
-      world: '#5abff5',
-      politics: '#9fc3ff',
-      economy: '#7fd4c1',
-      energy: '#f0c36a',
-      security: '#f39a8f',
-      humanitarian: '#c7a6f2',
-      markets: '#8fd0f5',
-    });
+  it('the arrow is aria-hidden, 40 px (26 px phone), inside the card, and wears its card’s domain family', () => {
     const explore = read('ExploreIntelligence.tsx');
+    expect(explore).toContain('${domain.style.arrow}');
     expect(explore).toMatch(/aria-hidden="true"\s+data-home-explore-arrow/);
     expect(explore).toContain('h-[26px] w-[26px]');
     expect(explore).toContain('md:h-10 md:w-10');
@@ -166,6 +158,112 @@ describe('§9 — Explore intelligence: seven product cards, truthful tags, per-
 
   it('no invented KPI, count or live state on the cards', () => {
     expect(code(read('ExploreIntelligence.tsx'))).not.toMatch(/live|count|\d+\s*(stories|sources)/i);
+  });
+});
+
+describe('HOME REV A COLOR RECONCILIATION — existing Home colour families, no new palette', () => {
+  /* eslint-disable @typescript-eslint/no-var-requires */
+  const presentation = require('@/components/home/homePresentation') as typeof import('@/components/home/homePresentation');
+  /* eslint-enable @typescript-eslint/no-var-requires */
+  const WATCH_MINT = /#5be3a8/i;
+  const SAND = /#d9b98a|#6a5634|#2e2618|#8a7045/i;
+
+  it('Explore cards no longer share one generic surface: seven domains, seven distinct surfaces', () => {
+    const surfaces = model.RESOLVED_DOMAINS.map((d) => d.style.surface);
+    expect(new Set(surfaces).size).toBe(7);
+    expect(code(read('ExploreIntelligence.tsx'))).not.toContain('bg-[#061527]');
+  });
+
+  it('six domains map to their EXISTING TOPIC_STYLE family verbatim (surface, glyph, arrow, hover)', () => {
+    const expected: Record<string, string> = {
+      world: 'world-intelligence',
+      economy: 'economy',
+      energy: 'energy',
+      security: 'security',
+      humanitarian: 'humanitarian',
+      markets: 'market',
+    };
+    for (const [key, topic] of Object.entries(expected)) {
+      const domain = model.RESOLVED_DOMAINS.find((d) => d.key === key);
+      expect(domain?.style).toBe(presentation.TOPIC_STYLE[topic]);
+    }
+    /* The ruled families, as the governed tokens spell them. */
+    expect(presentation.TOPIC_STYLE['world-intelligence']?.surface).toContain('#032f6f_0%,#042858_38%,#061831_100%');
+    expect(presentation.TOPIC_STYLE.economy?.surface).toContain('#1a1a4a_0%,#181b44_38%,#09182d_100%');
+    expect(presentation.TOPIC_STYLE.energy?.surface).toContain('#003831_0%,#0a2c2b_38%,#051f25_100%');
+    expect(presentation.TOPIC_STYLE.security?.surface).toContain('#391525_0%,#2e1a22_38%,#141522_100%');
+    expect(presentation.TOPIC_STYLE.humanitarian?.surface).toContain('#4a2d14_0%,#362816_38%,#161a20_100%');
+    expect(presentation.TOPIC_STYLE.market?.surface).toContain('#131c2b_0%,#0d1a2a_38%,#091626_100%');
+  });
+
+  it('Politics uses the existing Home POLITICS category family (maroon), never the tier violet', () => {
+    const politics = model.RESOLVED_DOMAINS.find((d) => d.key === 'politics')?.style;
+    expect(politics?.surface).toContain(presentation.CATEGORY_ARTWORK.politics);
+    expect(politics?.icon).toBe(presentation.CATEGORY_TEXT.politics);
+    expect(politics?.arrow).toContain(presentation.CHIP_STYLE.politics?.className ?? 'missing');
+    expect(JSON.stringify(politics)).not.toMatch(/#8c86ee|violet/i);
+  });
+
+  it('Hero: line two keeps the current cyan → teal accent; line one stays white', () => {
+    const hero = read('HomeWelcomeHero.tsx');
+    expect(hero).toMatch(/data-home-hero-accent=""\s+className="block bg-\[linear-gradient\(90deg,#5abff5_0%,#4fd8e6_44%,#5df9e1_74%,#61fcea_100%\)\] [^"]*bg-clip-text[^"]*text-transparent/);
+    /* The descender guard nets to zero (pb + equal -mb), so the Rev A geometry is unchanged. */
+    expect(hero).toContain('-mb-[0.06em] bg-clip-text pb-[0.06em]');
+    expect(hero).toMatch(/text-white[^"]*"\s*>\s*\{\/\*[^*]*\*\/\}\s*<span className="block">\{t\.titleA\}<\/span>/);
+  });
+
+  it('Hero reuses the current Home atmosphere layers verbatim from BetaHero', () => {
+    const atmosphere = read('HeroAtmosphere.tsx');
+    const beta = readFileSync(join(DIR, '../BetaHero.tsx'), 'utf8');
+    for (const layer of [
+      'bg-[linear-gradient(180deg,#00101f_0%,#001729_34%,#04223f_58%,#020d1c_100%)]',
+      'rgba(20,124,214,0.42)',
+      'rgba(64,182,255,0.30)',
+      'rgba(124,92,246,0.22)',
+      'bg-[linear-gradient(0deg,rgba(2,52,84,0.40),transparent_86%)]',
+      'rgba(2,6,12,0.62)',
+    ]) {
+      expect(atmosphere).toContain(layer);
+      expect(beta).toContain(layer);
+    }
+    expect(read('HomeWelcomeHero.tsx')).toContain('<HeroAtmosphere />');
+  });
+
+  it('the three Hero routes stay visually distinct: blue, violet/indigo, teal/green (the current families)', () => {
+    const hero = read('HomeWelcomeHero.tsx');
+    expect(hero).toContain('#0a6bd6_0%,#0c42a2_100%');
+    expect(hero).toContain('#412d9f_0%,#1f328a_100%');
+    expect(hero).toContain('#0b8d6a_0%,#037050_100%');
+    for (const [route, family] of [['explore', 'ROUTE_EXPLORE'], ['ask', 'ROUTE_ASK'], ['map', 'ROUTE_MAP']]) {
+      expect(hero).toMatch(new RegExp(`data-home-route="${route}" className=\\{\`\\$\\{route\\} \\$\\{${family}\\}\`\\}`));
+    }
+  });
+
+  it('Watch mint is not introduced anywhere in the Rev A Home', () => {
+    for (const file of REVA_FILES) expect(read(file)).not.toMatch(WATCH_MINT);
+    for (const domain of model.RESOLVED_DOMAINS) expect(JSON.stringify(domain.style)).not.toMatch(WATCH_MINT);
+  });
+
+  it('Sand (AI-compute family) is not used by Home navigation: rail, header, routes, bridge, Explore', () => {
+    for (const file of ['HomeProductRail.tsx', 'HomeUtilityHeader.tsx', 'HeaderAskLauncher.tsx', 'HomeWelcomeHero.tsx', 'HomeBridge.tsx', 'ExploreIntelligence.tsx', 'HomeComposer.tsx']) {
+      expect(read(file)).not.toMatch(SAND);
+    }
+    for (const domain of model.RESOLVED_DOMAINS) expect(JSON.stringify(domain.style)).not.toMatch(SAND);
+  });
+
+  it('Deep Intelligence keeps the restrained violet tier boundary; the bridge stays cyan/blue', () => {
+    expect(read('DeepIntelligenceRow.tsx')).toContain('border-[#8C86EE]');
+    const bridge = read('HomeBridge.tsx');
+    expect(bridge).toContain('bg-[#0a6bd6]');
+    expect(bridge).not.toMatch(/#8c86ee|violet/i);
+  });
+
+  it('story cards and the 60-second module are NOT tinted by domain; the rail stays restrained navy', () => {
+    for (const file of ['WorldIn60Seconds.tsx', 'HomeProductRail.tsx']) {
+      const body = read(file);
+      expect(body).not.toMatch(/TOPIC_STYLE|domainStyle|style\.surface/);
+    }
+    expect(read('HomeProductRail.tsx')).toContain('bg-[#020f22]');
   });
 });
 
