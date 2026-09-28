@@ -60,7 +60,16 @@
     align-self: start;
     min-width: 0;
   }
-  /* The column IS the latest answer's source list; its inline copy steps aside. */
+  /*
+    The column IS the latest answer's source list; its inline copy steps aside. The same
+    holds for a clarification's "Sources appear after you choose": the column says it, the
+    card does not — one instance per visible layout.
+  */
+  .frame[data-ask-sources-column='true']
+    [data-ask-latest]
+    :global([data-ask='sources-after-choice']) {
+    display: none;
+  }
   .frame[data-ask-sources-column='true'] [data-ask-latest] :global([data-ask='sources']) {
     display: none;
   }

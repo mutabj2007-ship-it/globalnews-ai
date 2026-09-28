@@ -162,7 +162,10 @@ export function AskR2TurnView({
           <p className="font-mono text-[12px] text-[#6f89a8]">
             {view.clarification.byExecutor ? s.clarificationFooterNoAi : s.clarificationFooter}
           </p>
-          <p className="font-mono text-[12px] text-[#6f89a8]">{s.sourcesAfterChoice}</p>
+          {/* At ≥1280 the Sources column states this instead; never both (CTO ruling). */}
+          <p data-ask="sources-after-choice" className="font-mono text-[12px] text-[#6f89a8]">
+            {s.sourcesAfterChoice}
+          </p>
         </section>
       ) : view.badge === 'unavail' ? (
         <p
