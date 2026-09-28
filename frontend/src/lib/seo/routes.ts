@@ -127,6 +127,33 @@ export const PRIVATE_ROUTES: readonly RouteEntry[] = [
     rationale: '§B: "History where user-specific". Reads the account session and renders that user\'s own queries.',
   },
   {
+    /*
+      ASK RECENT + SAVED CONTINUITY R1 — the two standalone Ask continuity
+      surfaces, registered for the same reason /history and /my-intelligence are:
+      each reads the account session and renders one reader's own Ask material.
+      Registered in the registry rather than special-cased in the route, so the
+      registry stays the one place that decides indexability.
+    */
+    path: '/ask/recent',
+    indexability: 'noindex',
+    sitemap: false,
+    userDependent: true,
+    ruling: 'authorization',
+    rationale:
+      "\u00a7B: user-specific. One reader's own Ask conversations, their first questions and when they " +
+      'were last active. Meaningless to any other reader and not a stable public document.',
+  },
+  {
+    path: '/saved',
+    indexability: 'noindex',
+    sitemap: false,
+    userDependent: true,
+    ruling: 'authorization',
+    rationale:
+      "\u00a7B: user-specific. The questions one account saved. The bookmark is a relation to that " +
+      "reader's own Ask turns and exists only inside their session.",
+  },
+  {
     path: '/account/settings',
     indexability: 'noindex',
     sitemap: false,
