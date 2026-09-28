@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  interestsForStory,
   isNewSince,
   type MyIntelligenceCountryFeed,
   type MyIntelligenceFeedResponse,
@@ -8,6 +9,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { ArticlePersistenceService } from '../news/persistence/article-persistence.service';
 import { computeArticleRef } from '../news/identity/article-ref.util';
+import { detectArticleDomains } from '../analysis/query/detect-analytical-domains.util';
 
 /** Retained reporting per followed country, newest first. */
 export const FEED_STORIES_PER_COUNTRY = 10;
@@ -90,6 +92,14 @@ export class MyIntelligenceFeedService {
           countryCodes: [countryCode],
           ...(article.firstSeenAt ? { firstSeenAt: article.firstSeenAt } : {}),
           newSince,
+          /*
+            INTEREST + SELECTION HOOK R1 — the retained article's own category
+            and the interests it deterministically matches, from its retained
+            title + summary through the ONE canonical classifier. No AI, no
+            provider: this is arithmetic on data already in the row.
+          */
+          category: article.category,
+          interests: interestsForStory(article.category, detectArticleDomains(article)),
         });
       }
       followedCountries.push({ countryCode, storyCount: articles.length, newSinceCount });

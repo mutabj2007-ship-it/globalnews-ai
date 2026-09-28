@@ -173,6 +173,8 @@ model User {
   /// MY INTELLIGENCE R1 — Saved Stories, cascading like every other
   /// account-owned relation.
   savedStories SavedStory[]
+  /// INTEREST + SELECTION HOOK R1 — explicit reader interests (governed ids only).
+  intelligenceInterests UserIntelligenceInterest[]
 
   /// R3/T7 — account-scoped telemetry. SET NULL, NOT Cascade (CTO
   /// decision): deleting an account severs the link to the person while
@@ -1660,4 +1662,21 @@ model SavedStory {
   /// A repeat save is a database-level no-op.
   @@unique([userId, articleRef])
   @@index([userId, savedAt])
+}
+
+/// INTEREST + SELECTION HOOK R1 — explicit, reader-controlled My Intelligence
+/// interests. One row per (user, interest). `interest` is a governed id from
+/// MY_INTELLIGENCE_INTERESTS in shared/src/my-intelligence.ts, validated before
+/// any write and enforced by a CHECK constraint: never free text, never
+/// inferred, never AI-generated. Deleted with the account (cascade).
+model UserIntelligenceInterest {
+  id        String   @id @default(uuid())
+  userId    String
+  interest  String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, interest])
+  @@index([userId])
 }
