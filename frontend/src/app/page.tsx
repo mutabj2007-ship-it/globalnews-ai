@@ -44,7 +44,7 @@ import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
  * For you renders nothing for an anonymous reader and the bridge renders the
  * right variant, so both orders hold without reshuffling server markup.
  *
- * RIGHT RAIL PLACEMENT is a CONTAINER query on the content column: at ≥1180 px
+ * RIGHT RAIL PLACEMENT is a CONTAINER query on the content column: at ≥1140 px
  * the 60-second module and Suggested investigations sit beside Hero + What's
  * happening; narrower (1280 with the expanded rail, tablet, phone) they flow
  * directly after What's happening. The DOM order is hero → stories → rail, so
@@ -119,18 +119,49 @@ export default async function HomePage(): Promise<JSX.Element> {
         <div className="lg:flex">
           <HomeProductRail language={language} />
           {/* The content column is the size container every Rev A breakpoint rule measures. */}
-          <div data-home-content="" className="min-w-0 flex-1 [container-type:inline-size]">
+          {/*
+            The content column is the size container every Rev A breakpoint rule
+            measures. DENSITY R1 names it (`home-content`) so modules that are
+            their own containers (the 60-second module) can still ask how wide
+            the whole column is.
+          */}
+          <div data-home-content="" className="min-w-0 flex-1 [container-name:home-content] [container-type:inline-size]">
             <main className={`pb-24 lg:pb-0 ${HOME_PAGE_SURFACE}`}>
               <div className="mx-auto w-full max-w-[1600px] px-4 md:px-10 gn-xl:px-12">
                 <AuthErrorBanner language={language} />
+                {/*
+                  HOME REV A — DENSITY / ORDER / 60-SECONDS CORRECTION R2.
+                  Priority everywhere: Hero → Your world in 60 seconds → What's
+                  happening now → Suggested investigations. DOM follows it.
+                  - phone (<700 content): exactly that, stacked.
+                  - tablet (700–999): Rev A tablet order kept — hero → stories →
+                    60 s → questions.
+                  - 1000–1139 (e.g. 1280 with the expanded rail): stacked in the
+                    priority order, the 60 s module two-column with a 240 px lead.
+                  - wide (≥1140 content — 1440 with a 15–17 px desktop scrollbar
+                    leaves 1175 px, so the Rev A 1180 threshold would silently
+                    drop real Windows/Linux desktops into the stacked layout):
+                    the 60-second module is the right rail beside
+                    Hero AND stories (360 px; 420 px ≥1560), the stories sit under
+                    the Hero four across, and Suggested investigations follows
+                    both as one full-width row — so no empty band opens under the
+                    Hero, whatever the module's height.
+                */}
                 <div
                   data-home-band=""
-                  className="grid grid-cols-1 gap-x-8 gap-y-6 [grid-template-areas:'hero'_'whats'_'rail'] [@container(min-width:1180px)]:[grid-template-areas:'hero_rail'_'whats_rail'] [@container(min-width:1180px)]:[grid-template-columns:minmax(0,1fr)_340px] [@container(min-width:1560px)]:[grid-template-columns:minmax(0,1fr)_380px]"
+                  className="grid grid-cols-1 gap-x-6 gap-y-6 [grid-template-areas:'hero'_'rail'_'whats'_'sugg'] [@container(min-width:700px)_and_(max-width:999.98px)]:[grid-template-areas:'hero'_'whats'_'rail'_'sugg'] [@container(min-width:1140px)]:[grid-template-areas:'hero_rail'_'whats_rail'_'sugg_sugg'] [@container(min-width:1140px)]:[grid-template-columns:minmax(0,1fr)_360px] [@container(min-width:1140px)]:[grid-template-rows:auto_1fr_auto] [@container(min-width:1560px)]:[grid-template-columns:minmax(0,1fr)_420px]"
                 >
                   <div className="min-w-0 [grid-area:hero]">
                     <HomeWelcomeHero language={language} />
                   </div>
-                  <div className="min-w-0 [grid-area:whats]">
+                  <aside
+                    aria-label={t.w60.title}
+                    data-home-right-rail=""
+                    className="flex min-w-0 flex-col gap-4 self-start [grid-area:rail] [@container(min-width:1140px)]:pt-6"
+                  >
+                    <WorldIn60Seconds items={newestFirst} language={language} />
+                  </aside>
+                  <div className="min-w-0 self-start [grid-area:whats]">
                     <WhatsHappeningNow
                       lead={feed.featured}
                       secondary={feed.inFocus}
@@ -139,14 +170,9 @@ export default async function HomePage(): Promise<JSX.Element> {
                       language={language}
                     />
                   </div>
-                  <aside
-                    aria-label={t.w60.title}
-                    data-home-right-rail=""
-                    className="flex min-w-0 flex-col gap-4 [grid-area:rail] [@container(min-width:1180px)]:pt-6"
-                  >
-                    <WorldIn60Seconds items={newestFirst} language={language} />
+                  <div data-home-suggested-row="" className="min-w-0 [grid-area:sugg]">
                     <SuggestedInvestigations title={t.suggested.title} note={t.suggested.note} questions={dict.hero.exampleQuestions} />
-                  </aside>
+                  </div>
                 </div>
 
                 <div className="mt-10 flex flex-col gap-10 pb-12 md:mt-12 md:gap-12">

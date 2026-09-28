@@ -39,7 +39,6 @@ export const homeRevaPl: HomeRevaDictionary = {
     askLauncherAria: 'Wróć do pola pytania na górze strony głównej',
   },
   hero: {
-    eyebrow: 'Globalna analiza ze źródłami',
     titleA: 'Zrozum,',
     titleB: 'co się zmienia.',
     sub: 'Wydarzenia na świecie. Szerszy kontekst. Dowody, które możesz sprawdzić.',
@@ -52,8 +51,6 @@ export const homeRevaPl: HomeRevaDictionary = {
     askGlobalNews: 'Zapytaj GlobalNewsAI',
     openMap: 'Otwórz mapę',
     globeLabel: 'Otwórz mapę świata',
-    welcomeNamed: 'Witaj ponownie, {name}',
-    welcome: 'Witaj ponownie',
     newSince: '{count} nowych od poprzedniej wizyty · Moja analiza',
   },
   w60: {

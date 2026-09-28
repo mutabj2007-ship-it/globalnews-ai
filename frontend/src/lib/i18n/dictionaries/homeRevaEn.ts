@@ -41,7 +41,6 @@ export const homeRevaEn = {
     askLauncherAria: 'Return to the Ask box at the top of Home',
   },
   hero: {
-    eyebrow: 'Global intelligence, sourced',
     titleA: 'Understand',
     titleB: 'what’s changing.',
     sub: 'Global events. Deeper context. Evidence you can verify.',
@@ -54,8 +53,6 @@ export const homeRevaEn = {
     askGlobalNews: 'Ask GlobalNewsAI',
     openMap: 'Open Map',
     globeLabel: 'Open World Map',
-    welcomeNamed: 'Welcome back, {name}',
-    welcome: 'Welcome back',
     newSince: '{count} new since your previous visit · My Intelligence',
   },
   w60: {
