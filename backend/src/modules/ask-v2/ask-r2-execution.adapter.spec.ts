@@ -1,6 +1,10 @@
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { AskExecutionRefused, validatePlan, type AskRequest } from './ask-compute.contract';
-import { AskR2ExecutionAdapter, estimateUnits } from './ask-r2-execution.adapter';
+import {
+  AskR2ExecutionAdapter,
+  estimateUnits,
+  estimateBackgroundUnits,
+} from './ask-r2-execution.adapter';
 import { askRequestContext } from './ask-request-context';
 import {
   ASK_MODEL_MAX_ATTEMPTS,
@@ -15,6 +19,7 @@ import {
 
 type Calls = {
   analysis: unknown[][];
+  background: unknown[][];
   reserve: unknown[];
   settle: unknown[][];
   permit: string[];
@@ -28,8 +33,19 @@ function harness(opts: {
   analysis?: (policy: {
     usageSink?: (u: { promptTokens: number; completionTokens: number }) => void;
   }) => Promise<Partial<AnalysisApiResponse>>;
+  /** ASK GENERAL BACKGROUND EXECUTION R1 — the background provider's response/behaviour. */
+  background?: (input: {
+    usageSink?: (u: { promptTokens: number; completionTokens: number }) => void;
+  }) => Promise<{ text: string | null }>;
 }) {
-  const calls: Calls = { analysis: [], reserve: [], settle: [], permit: [], record: [] };
+  const calls: Calls = {
+    analysis: [],
+    background: [],
+    reserve: [],
+    settle: [],
+    permit: [],
+    record: [],
+  };
   const analysisService = {
     analyzeNews: jest.fn(async (...args: unknown[]) => {
       calls.analysis.push(args);
@@ -50,6 +66,24 @@ function harness(opts: {
     }),
   };
   const provider = { id: 'openai', displayName: 'OpenAI', isMock: false, analyzeNews: jest.fn() };
+  const backgroundProvider = {
+    id: 'openai',
+    displayName: 'OpenAI',
+    isMock: false,
+    answerBackground: jest.fn(async (input: unknown) => {
+      calls.background.push([input]);
+      const { usageSink } = input as {
+        usageSink?: (u: { promptTokens: number; completionTokens: number }) => void;
+      };
+      return (
+        opts.background ??
+        (async (p: { usageSink?: typeof usageSink }) => {
+          p.usageSink?.({ promptTokens: 500, completionTokens: 200 });
+          return { text: 'General background answer.' };
+        })
+      )({ usageSink });
+    }),
+  };
   const meter = {
     config: { outputWeight: 4 },
     reserve: jest.fn(async (input: unknown) => {
@@ -83,6 +117,7 @@ function harness(opts: {
   const adapter = new AskR2ExecutionAdapter(
     analysisService as never,
     provider as never,
+    backgroundProvider as never,
     meter as never,
     breaker as never,
     switches as never,
@@ -116,7 +151,14 @@ describe('prepare — pure: frozen C only, no provider, no model', () => {
     expect(() => validatePlan(plan, req('What is happening in Kenya?'))).not.toThrow();
     expect(plan.contract).toMatch(/^ask-r2-adapter\/1:CURRENT_REPORTING:EXECUTABLE$/);
     expect(plan.countryCount).toBe(1);
-    expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+    expect(calls).toEqual({
+      analysis: [],
+      background: [],
+      reserve: [],
+      settle: [],
+      permit: [],
+      record: [],
+    });
   });
 
   it('a Polish question is routed through the same frozen authority', async () => {
@@ -145,7 +187,14 @@ describe('execute — a clarification is a successful terminal with ZERO AI', ()
     expect(result.succeeded).toBe(true);
     expect(payload.aiExecuted).toBe(false);
     expect(['CLARIFICATION_REQUIRED', 'CAPABILITY_UNAVAILABLE']).toContain(payload.answer.state);
-    expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+    expect(calls).toEqual({
+      analysis: [],
+      background: [],
+      reserve: [],
+      settle: [],
+      permit: [],
+      record: [],
+    });
   });
 });
 
@@ -247,22 +296,27 @@ describe('execute — the one bounded call, settled on actual units', () => {
     expect(calls.settle).toEqual([['res-1', 0, 'NO_EVIDENCE']]);
   });
 
-  it('GATE H (Main MC-033): a reference question that produced nothing is a TYPED refusal naming REFERENCE — never "no reporting found"', async () => {
-    const { adapter } = harness({
-      analysis: async () => ({
-        analysis: null,
-        analysisError: 'No matching reporting.',
-        articles: [],
-      }),
-    });
-    const plan = await adapter.prepare(req('What is inflation?'));
-    const result = await inRequest(() => adapter.execute(req('What is inflation?'), plan, 'op-1'));
-    expect((JSON.parse(result.payloadJson) as { answer: unknown }).answer).toEqual({
-      state: 'CAPABILITY_UNAVAILABLE',
-      basis: 'REFERENCE_UNAVAILABLE',
-      missingRoles: ['REFERENCE'],
-    });
-  });
+  it(
+    'GATE H (Main MC-033), reconciled under ASK GENERAL BACKGROUND EXECUTION R1: a reference ' +
+      'question the background provider declines is a TYPED refusal naming REFERENCE — never ' +
+      '"no reporting found", and NEVER by way of a Reporting/news-retrieval call',
+    async () => {
+      const { adapter, calls } = harness({ background: async () => ({ text: null }) });
+      const plan = await adapter.prepare(req('What is inflation?'));
+      const result = await inRequest(() =>
+        adapter.execute(req('What is inflation?'), plan, 'op-1'),
+      );
+      expect((JSON.parse(result.payloadJson) as { answer: unknown }).answer).toEqual({
+        state: 'CAPABILITY_UNAVAILABLE',
+        basis: 'REFERENCE_UNAVAILABLE',
+        missingRoles: ['REFERENCE'],
+      });
+      /* THE proven defect this round closes: a background question never invokes Reporting
+         merely to manufacture (or fail to find) a citation. */
+      expect(calls.analysis).toEqual([]);
+      expect(calls.background).toHaveLength(1);
+    },
+  );
 
   it('a provider failure WITH retrieved articles is still MODEL_FAILURE', async () => {
     const { adapter } = harness({
@@ -317,6 +371,135 @@ describe('execute — the one bounded call, settled on actual units', () => {
   });
 });
 
+describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zero Reporting calls', () => {
+  const Q = 'What is inflation?';
+
+  it.each([
+    ['What is inflation?', 'en'],
+    ['Czym jest inflacja?', 'pl'],
+    ['Who was Hitler?', 'en'],
+    ['What is NATO?', 'en'],
+    ['How does an induction motor work?', 'en'],
+    ['What is a derivative?', 'en'],
+    ['How does TCP work?', 'en'],
+    ['Explain the second law of thermodynamics.', 'en'],
+    ['How does a transformer work?', 'en'],
+  ] as const)(
+    '%s (%s) → REFERENCE_BACKGROUND_ONLY plans through the background provider, never Reporting',
+    async (q, lg) => {
+      const { adapter, calls } = harness({});
+      const plan = await adapter.prepare(req(q, lg));
+      expect(plan.contract).toMatch(/:REFERENCE:REFERENCE_BACKGROUND_ONLY$/);
+      const result = await inRequest(() => adapter.execute(req(q, lg), plan, 'op-1'));
+      const payload = JSON.parse(result.payloadJson) as {
+        aiExecuted: boolean;
+        answer: { state: string };
+        analysis: unknown;
+        background: { text: string } | null;
+        modelPriorCitable: boolean;
+      };
+      expect(payload).toMatchObject({
+        aiExecuted: true,
+        answer: { state: 'REFERENCE_BACKGROUND' },
+        analysis: null,
+        modelPriorCitable: false,
+      });
+      expect(payload.background).toEqual({ text: 'General background answer.' });
+      /* THE proven defect this round closes. */
+      expect(calls.analysis).toEqual([]);
+      expect(calls.background).toHaveLength(1);
+    },
+  );
+
+  it('ONE background call, maxModelAttempts = 1, reservation scoped to the server-held account/IP', async () => {
+    const { adapter, calls } = harness({});
+    const plan = await adapter.prepare(req(Q));
+    await inRequest(() => adapter.execute(req(Q), plan, 'op-1'));
+    expect(calls.background).toHaveLength(1);
+    const input = calls.background[0]![0] as { maxModelAttempts?: number; question: string };
+    expect(input.maxModelAttempts).toBe(ASK_MODEL_MAX_ATTEMPTS);
+    expect(input.question).toBe(Q);
+    expect(calls.reserve).toEqual([
+      expect.objectContaining({
+        accountId: 'user-1',
+        ipScope: 'ip:v4:203.0.113.7',
+        provider: 'openai',
+      }),
+    ]);
+    /* actual = prompt + outputWeight × completion = 500 + 4 × 200 */
+    expect(calls.settle).toEqual([['res-1', 1300, 'SUCCESS']]);
+    expect(calls.record).toEqual([['openai', 'SUCCESS', false]]);
+  });
+
+  it('a decline (NO_BACKGROUND_ANSWER) settles as REFUSAL/0 units, never a fabricated answer, never MODEL_FAILURE', async () => {
+    const { adapter, calls } = harness({ background: async () => ({ text: null }) });
+    const plan = await adapter.prepare(req(Q));
+    const result = await inRequest(() => adapter.execute(req(Q), plan, 'op-1'));
+    const payload = JSON.parse(result.payloadJson) as {
+      aiExecuted: boolean;
+      answer: unknown;
+      background: unknown;
+    };
+    expect(payload.aiExecuted).toBe(false);
+    expect(payload.background).toBeNull();
+    expect(payload.answer).toEqual({
+      state: 'CAPABILITY_UNAVAILABLE',
+      basis: 'REFERENCE_UNAVAILABLE',
+      missingRoles: ['REFERENCE'],
+    });
+    expect(calls.settle).toEqual([['res-1', 0, 'NO_EVIDENCE']]);
+    expect(calls.record).toEqual([['openai', 'REFUSAL', false]]);
+  });
+
+  it('a provider failure is MODEL_FAILURE — settled with the estimate kept, recorded, never silently answered', async () => {
+    const { adapter, calls } = harness({
+      background: async () => Promise.reject(new Error('socket hang up')),
+    });
+    const plan = await adapter.prepare(req(Q));
+    expect(await refusal(inRequest(() => adapter.execute(req(Q), plan, 'op-1')))).toBe(
+      'MODEL_FAILURE',
+    );
+    expect(calls.settle).toEqual([['res-1', null, 'FAILURE']]);
+    expect(calls.record).toEqual([['openai', 'FAILURE', false]]);
+  });
+
+  it.each([
+    [{ switches: { ASK_R2_ENABLED: false } }, 'ASK_R2_DISABLED'],
+    [{ switches: { ASK_PUBLIC_COMPUTE_ENABLED: false } }, 'ASK_PUBLIC_COMPUTE_DISABLED'],
+    [{ breakerAllowed: false }, 'CIRCUIT_OPEN'],
+    [{ meterAdmitted: false }, 'BUDGET_REFUSED:account-day'],
+  ] as const)(
+    '%j → %s, the background provider is never called (same fail-closed order as Reporting)',
+    async (opts, code) => {
+      const { adapter, calls } = harness(opts);
+      const plan = await adapter.prepare(req(Q));
+      expect(await refusal(inRequest(() => adapter.execute(req(Q), plan, 'op-1')))).toBe(code);
+      expect(calls.background).toEqual([]);
+    },
+  );
+
+  it('outside a request (no server-held account/IP) the call is refused — never unscoped', async () => {
+    const { adapter, calls } = harness({});
+    const plan = await adapter.prepare(req(Q));
+    expect(await refusal(adapter.execute(req(Q), plan, 'op-1'))).toBe(
+      'ASK_REQUEST_CONTEXT_MISSING',
+    );
+    expect(calls.permit).toEqual([]);
+  });
+
+  it('the unit estimate for a long question fits the default per-request ceiling, and is far smaller than a Reporting call', () => {
+    const ceiling = resolveComputeControlsConfig(() => undefined).unitsPerRequestMax;
+    const reportingMax = estimateUnits(
+      1000,
+      { maxArticles: 8, maxArticleChars: 1200, maxCompletionTokens: 2000 },
+      4,
+    );
+    const backgroundMax = estimateBackgroundUnits(1000, 4);
+    expect(backgroundMax).toBeLessThanOrEqual(ceiling);
+    expect(backgroundMax).toBeLessThan(reportingMax);
+  });
+});
+
 describe('GATE H — Main R1.1 execution rows', () => {
   it('MC-047/MC-050: a computation or an attached file is a typed refusal with ZERO AI and no control touched', async () => {
     for (const q of ['Solve x^3 - 4x + 1 = 0', 'Summarise the PDF I attached']) {
@@ -331,7 +514,14 @@ describe('GATE H — Main R1.1 execution rows', () => {
         aiExecuted: false,
         answer: { state: 'CAPABILITY_UNAVAILABLE' },
       });
-      expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+      expect(calls).toEqual({
+        analysis: [],
+        background: [],
+        reserve: [],
+        settle: [],
+        permit: [],
+        record: [],
+      });
     }
   });
 
@@ -433,7 +623,14 @@ describe('ALPHA ENABLEMENT R1 — MC-055 / MC-070 on the Ask R2 path', () => {
       basis: 'PLAN_IDENTITY_REQUIRED',
     });
     expect(payload.aiExecuted).toBe(false);
-    expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+    expect(calls).toEqual({
+      analysis: [],
+      background: [],
+      reserve: [],
+      settle: [],
+      permit: [],
+      record: [],
+    });
   });
 
   it('MC-055: signed in, it is governed by capability — the personal library is not wired here, 0 AI', async () => {
@@ -468,7 +665,14 @@ describe('ALPHA ENABLEMENT R1 — MC-055 / MC-070 on the Ask R2 path', () => {
         };
         expect(payload.route.personalScope).toBe(scope);
         expect(payload.aiExecuted).toBe(false);
-        expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+        expect(calls).toEqual({
+          analysis: [],
+          background: [],
+          reserve: [],
+          settle: [],
+          permit: [],
+          record: [],
+        });
       }
     },
   );
@@ -506,7 +710,14 @@ describe('ALPHA ENABLEMENT R1 — MC-055 / MC-070 on the Ask R2 path', () => {
       expect(payload.chips.chips?.some((c) => c.kind === 'GEOGRAPHY' && c.value === 'KEN')).toBe(
         true,
       );
-      expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+      expect(calls).toEqual({
+        analysis: [],
+        background: [],
+        reserve: [],
+        settle: [],
+        permit: [],
+        record: [],
+      });
     },
   );
 });

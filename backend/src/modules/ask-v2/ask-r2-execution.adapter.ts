@@ -3,7 +3,11 @@ import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { AnalysisService } from '../analysis/service/analysis.service';
 import { AnalysisConfigService } from '../analysis/config/analysis-config.service';
 import { ANALYSIS_PROVIDER } from '../analysis/providers/provider.tokens';
-import type { AnalysisProvider } from '../analysis/interfaces';
+import {
+  GENERAL_BACKGROUND_PROVIDER,
+  GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS,
+} from '../analysis/providers/general-background.provider';
+import type { AnalysisProvider, GeneralBackgroundProvider } from '../analysis/interfaces';
 import {
   CircuitBreakerService,
   type BreakerOutcome,
@@ -174,6 +178,17 @@ export function estimateUnits(
   return Math.ceil(promptChars / 4) + outputWeight * analysis.maxCompletionTokens;
 }
 
+/**
+ * ASK GENERAL BACKGROUND EXECUTION R1 — estimated units for one background call. No
+ * articles are ever sent (that is the whole point), so this is deliberately far smaller
+ * than `estimateUnits`: the system prompt plus the question, and a small bounded output.
+ */
+export function estimateBackgroundUnits(questionChars: number, outputWeight: number): number {
+  const SYSTEM_PROMPT_CHAR_ESTIMATE = 1600;
+  const promptChars = SYSTEM_PROMPT_CHAR_ESTIMATE + questionChars;
+  return Math.ceil(promptChars / 4) + outputWeight * GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS;
+}
+
 @Injectable()
 export class AskR2ExecutionAdapter implements AskExecutionPort {
   private readonly logger = new Logger(AskR2ExecutionAdapter.name);
@@ -182,6 +197,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
   constructor(
     private readonly analysis: AnalysisService,
     @Inject(ANALYSIS_PROVIDER) private readonly provider: AnalysisProvider,
+    @Inject(GENERAL_BACKGROUND_PROVIDER) private readonly background: GeneralBackgroundProvider,
     private readonly meter: ComputeMeterService,
     private readonly breaker: CircuitBreakerService,
     private readonly switches: OperationalSwitchService,
@@ -261,6 +277,17 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         false,
       );
     }
+    /*
+      ASK GENERAL BACKGROUND EXECUTION R1 — a REFERENCE_BACKGROUND_ONLY plan requires no
+      evidence at all (frozen C: `required.length === 0`), so it is never routed into the
+      news-retrieval analysis path below — that would either burn an irrelevant Reporting
+      search or mislabel a coincidental result as background (the proven defect this round
+      closes). One ZERO-Reporting-call model answer, still behind every existing control.
+    */
+    if (early !== null && early.state === 'REFERENCE_BACKGROUND') {
+      return this.executeBackground(request, plan, route, operationId);
+    }
+
     const unsupplied = requiredRolesOf(route.plan).filter((r) => !EXECUTOR_SUPPLIES.has(r));
     if (unsupplied.length > 0) {
       return this.result(
@@ -380,6 +407,98 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     return this.result(plan, route, operationId, answer, response, response.analysis !== null);
   }
 
+  /**
+   * ASK GENERAL BACKGROUND EXECUTION R1 — the executor for a `REFERENCE_BACKGROUND_ONLY`
+   * plan. Mirrors `execute()`'s steps 3 and 5 (every control, in the same order, each
+   * failing closed; settlement on actual units) exactly, and replaces step 4's news
+   * retrieval + analysis call with ONE call to the dedicated background provider — 0
+   * Reporting/GNews calls, 0 fabricated citations. Never reached unless frozen C has
+   * already decided no evidence class is required (§4.7/§7 of the accepted contract);
+   * every other terminal keeps the existing analysis path untouched.
+   */
+  private async executeBackground(
+    request: Readonly<AskRequest>,
+    plan: Readonly<AskPlan>,
+    route: AskR2Route,
+    operationId: string,
+  ): Promise<ExecutionResult> {
+    /* 3 · controls, in order, each failing closed — identical to the reporting path. */
+    if (!(await this.switches.isEnabled('ASK_R2_ENABLED')))
+      throw new AskExecutionRefused('ASK_R2_DISABLED');
+    if (!(await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED'))) {
+      throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
+    }
+    const who = askRequestContext.getStore();
+    if (who === undefined) throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
+
+    const provider = this.background.id;
+    const permit = await this.breaker.permit(provider);
+    if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
+
+    const reservation = await this.meter.reserve({
+      accountId: who.accountId,
+      ipScope: who.ipScope,
+      provider,
+      estimatedUnits: estimateBackgroundUnits(
+        request.question.length,
+        this.meter.config.outputWeight,
+      ),
+    });
+    if (!reservation.admitted) {
+      await this.breaker.record(provider, 'REFUSAL', permit.trial);
+      throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
+    }
+
+    /* 4 · ONE call to the dedicated background provider. No articles, no retrieval. */
+    let usage: { promptTokens: number; completionTokens: number } | null = null;
+    let outcome: BreakerOutcome = 'FAILURE';
+    let text: string | null = null;
+    /* The provider judged the question unanswerable from background alone — a legitimate
+       governed outcome (frozen C's own freshness/safety boundary), never a provider fault:
+       mirrors the reporting path's `noEvidence` in shape and in meter/breaker treatment. */
+    let declined = false;
+    try {
+      const out = await this.background.answerBackground({
+        question: request.question,
+        responseLanguage: request.language,
+        maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
+        usageSink: (u) => {
+          usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
+        },
+      });
+      text = out.text;
+      declined = text === null;
+      outcome = declined ? 'REFUSAL' : 'SUCCESS';
+    } catch (error) {
+      outcome = /timeout|deadline/i.test((error as Error)?.message ?? '') ? 'TIMEOUT' : 'FAILURE';
+    } finally {
+      /* 5 · settle on actual units (null keeps the estimate — the safe direction). */
+      const used = usage as { promptTokens: number; completionTokens: number } | null;
+      const actual =
+        used !== null
+          ? used.promptTokens + this.meter.config.outputWeight * used.completionTokens
+          : declined
+            ? 0
+            : null;
+      await this.meter.settle(
+        reservation.reservationId,
+        actual,
+        declined ? 'NO_EVIDENCE' : outcome,
+      );
+      await this.breaker.record(provider, outcome, permit.trial);
+    }
+    if (outcome !== 'SUCCESS' && !declined) {
+      throw new AskExecutionRefused(`MODEL_${outcome}`);
+    }
+
+    /* 7 · the §7 answer state — the one derivation, unchanged. A decline (text === null)
+       is `producedAnswer: false`, which `deriveAnswerState` already maps to the truthful
+       CAPABILITY_UNAVAILABLE / missingRoles: ['REFERENCE'] state — never a fabricated
+       background answer, and never a silent pretend-success. */
+    const answer = deriveAnswerState(route.plan, { items: {}, producedAnswer: !declined });
+    return this.result(plan, route, operationId, answer, null, !declined, text);
+  }
+
   private result(
     plan: Readonly<AskPlan>,
     route: AskR2Route,
@@ -387,6 +506,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     answer: AnswerDecision,
     analysis: AnalysisApiResponse | null,
     aiExecuted: boolean,
+    backgroundText: string | null = null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -421,6 +541,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         aiExecuted,
         modelPriorCitable: false,
         analysis,
+        /* ASK GENERAL BACKGROUND EXECUTION R1 — additive. Non-citable, non-sourced model
+           background text (never present alongside a non-null `analysis`). */
+        background: backgroundText === null ? null : { text: backgroundText },
       }),
       evidenceRevision: plan.revision,
       validUntil: plan.validUntil,

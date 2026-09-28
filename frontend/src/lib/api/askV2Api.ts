@@ -68,6 +68,14 @@ export interface AskR2Payload {
   readonly aiExecuted: boolean;
   readonly modelPriorCitable: false;
   readonly analysis: AnalysisApiResponse | null;
+  /**
+   * ASK GENERAL BACKGROUND EXECUTION R1 — plain-text model background for stable,
+   * non-time-sensitive questions (`answer.state === 'REFERENCE_BACKGROUND'`). This is
+   * NOT retrieved evidence, NOT a Reference source, NOT an Official source, and NOT a
+   * citation — `modelPriorCitable` above stays `false` regardless. Mutually exclusive
+   * with `analysis`: exactly one of the two carries body text for a given payload.
+   */
+  readonly background?: { readonly text: string } | null;
 }
 
 export interface AskV2Operation {
