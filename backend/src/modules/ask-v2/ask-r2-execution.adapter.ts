@@ -470,7 +470,14 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       declined = text === null;
       outcome = declined ? 'REFUSAL' : 'SUCCESS';
     } catch (error) {
-      outcome = /timeout|deadline/i.test((error as Error)?.message ?? '') ? 'TIMEOUT' : 'FAILURE';
+      /* A+H QUALIFICATION R1 — classify on the provider's TYPED reason. The provider's own
+         attempt timeout says "timed out", which the message pattern alone never matched,
+         so a real timeout was recorded as FAILURE in the breaker and the meter. */
+      outcome =
+        (error as { failureReason?: unknown })?.failureReason === 'provider-timeout' ||
+        /timeout|timed out|deadline/i.test((error as Error)?.message ?? '')
+          ? 'TIMEOUT'
+          : 'FAILURE';
     } finally {
       /* 5 · settle on actual units (null keeps the estimate — the safe direction). */
       const used = usage as { promptTokens: number; completionTokens: number } | null;

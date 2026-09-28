@@ -6,6 +6,7 @@ import {
   estimateBackgroundUnits,
 } from './ask-r2-execution.adapter';
 import { askRequestContext } from './ask-request-context';
+import { GeneralBackgroundProviderError } from '../analysis/interfaces';
 import {
   ASK_MODEL_MAX_ATTEMPTS,
   resolveComputeControlsConfig,
@@ -462,6 +463,28 @@ describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zer
     expect(calls.settle).toEqual([['res-1', null, 'FAILURE']]);
     expect(calls.record).toEqual([['openai', 'FAILURE', false]]);
   });
+
+  /* A+H QUALIFICATION R1 — the provider's own attempt-timeout error, verbatim. Its message
+     says "timed out"; the outcome must still be TIMEOUT in the refusal, meter and breaker. */
+  it.each([
+    ['attempt timeout', 'General background call timed out.'],
+    ['caller deadline', 'General background call cancelled because the response deadline expired.'],
+  ])(
+    'a provider %s is MODEL_TIMEOUT — fail closed, settled and recorded as TIMEOUT',
+    async (_k, message) => {
+      const { adapter, calls } = harness({
+        background: async () =>
+          Promise.reject(new GeneralBackgroundProviderError(message, 'provider-timeout', false)),
+      });
+      const plan = await adapter.prepare(req(Q));
+      expect(await refusal(inRequest(() => adapter.execute(req(Q), plan, 'op-1')))).toBe(
+        'MODEL_TIMEOUT',
+      );
+      expect(calls.settle).toEqual([['res-1', null, 'TIMEOUT']]);
+      expect(calls.record).toEqual([['openai', 'TIMEOUT', false]]);
+      expect(calls.analysis).toEqual([]);
+    },
+  );
 
   it.each([
     [{ switches: { ASK_R2_ENABLED: false } }, 'ASK_R2_DISABLED'],
