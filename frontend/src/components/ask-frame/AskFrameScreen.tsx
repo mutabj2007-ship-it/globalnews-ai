@@ -17,6 +17,7 @@ import {
 } from '@/lib/ask/useAskR2Conversation';
 import { askR2PayloadOf, askV2Api } from '@/lib/api/askV2Api';
 import { revokeAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
+import { ASK_SIGN_IN_HREF, keepQuestion, readKeptQuestion } from '@/lib/ask/askKeptQuestion';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { LoadingStages } from '@/components/search/LoadingStages';
@@ -84,13 +85,29 @@ export function AskFrameScreen({ locale }: { readonly locale: AskLocale }): JSX.
       : null;
   const showR2 = r2.availability === 'r2' || opened !== null;
   const isPending = pending !== null || r2.pending !== null;
-  const hasQuestion = turns.length > 0 || r2.turns.length > 0 || opened !== null || isPending;
+  const hasQuestion =
+    turns.length > 0 ||
+    r2.turns.length > 0 ||
+    opened !== null ||
+    isPending ||
+    r2.signInRequired !== null;
   /* D25 01 region 4 — the Sources column carries the latest R2 turn's own sources. */
   const withSourcesColumn = showR2 && lastR2?.payload != null;
 
   useEffect(() => {
     setQuestion(new URLSearchParams(urlKey).get('q') ?? '');
   }, [urlKey]);
+  /*
+    SIGNED-OUT FALLBACK REMOVAL R1 — back from sign-in, the kept question returns to the
+    composer as a DRAFT. It is read once and removed; nothing is sent until the reader
+    presses Ask. A `q` or `operation` in the URL wins over it.
+  */
+  useEffect(() => {
+    const url = new URLSearchParams(window.location.search);
+    if (url.has('q') || url.has('operation')) return;
+    const kept = readKeptQuestion();
+    if (kept !== null) setQuestion(kept);
+  }, []);
   /* "Open full analysis": ONE display-only read of the stored operation. No AI, no provider. */
   useEffect(() => {
     if (operationId === null) return;
@@ -158,9 +175,14 @@ export function AskFrameScreen({ locale }: { readonly locale: AskLocale }): JSX.
     if (isPending || !question.trim()) return;
     const draft = question;
     setQuestion('');
-    /* Ask R2 first; the existing Ask is the rollback path when Ask V2 is off or signed out. */
+    /*
+      Ask R2 first; the existing Ask is the rollback path ONLY when Ask V2 is disabled. A
+      signed-out reader is asked to sign in: the question goes back into the composer and
+      is sent nowhere — never down the legacy news-analysis path.
+    */
     const outcome = await r2.submit(draft);
     if (outcome === 'legacy') void submit(draft);
+    else if (outcome === 'signed-out') setQuestion(draft);
   }
   /* Back / Close: the captured return destination, else the previous page, else Home. */
   function leave() {
@@ -260,6 +282,31 @@ export function AskFrameScreen({ locale }: { readonly locale: AskLocale }): JSX.
                   label={t.regions.suggestions}
                   statement={t.states.suggestionsUnavailable}
                 />
+              </section>
+            )}
+            {r2.signInRequired !== null && (
+              /* SIGNED-OUT FALLBACK REMOVAL R1 — a sign-in requirement, never a reporting failure. */
+              <section data-ask="sign-in-required" role="status" className="mb-6">
+                <p className={ASK_EYEBROW}>{r2s.youAsked}</p>
+                <h2 className={styles.question}>{r2.signInRequired}</h2>
+                <div className="flex flex-col items-start gap-3 rounded-[12px] border border-[#2a6d9e] bg-[linear-gradient(#08263f,#051a2e)] p-3.5 md:p-5">
+                  <span className="inline-flex h-[26px] items-center rounded-[6px] border border-[#2a6d9e] bg-[#0a2a47] px-2.5 font-mono text-[11px] font-bold tracking-[0.08em] text-[#bfe3fb]">
+                    {r2s.signInRequired.title}
+                  </span>
+                  <p className="text-[16px] leading-[1.55] text-[#cfe2f2]">
+                    {r2s.signInRequired.body}
+                  </p>
+                  <a
+                    data-ask="sign-in"
+                    href={ASK_SIGN_IN_HREF}
+                    onClick={() =>
+                      keepQuestion(question.trim() ? question : (r2.signInRequired ?? ''))
+                    }
+                    className="inline-flex min-h-[48px] items-center rounded-[10px] border border-[#1b6fa8] bg-[#0a6bd6] px-5 text-[15px] font-bold text-[#e6f5ff]"
+                  >
+                    {r2s.signInRequired.action}
+                  </a>
+                </div>
               </section>
             )}
             {opened !== null && (

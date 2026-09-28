@@ -79,21 +79,19 @@ describe('§22 — opening Ask requests nothing', () => {
 });
 
 describe('§8 — Ask V2 first, existing Ask as the rollback path', () => {
-  it.each(['UNAVAILABLE', 'SIGNED_OUT'] as const)(
-    '%s at the first Send → legacy, and no turn is invented',
-    async (reason) => {
-      api.createThread.mockResolvedValue({ ok: false, reason });
-      const h = mount();
-      let outcome = '';
-      await act(async () => {
-        outcome = await h.current().submit('What is happening in Kenya?');
-      });
-      expect(outcome).toBe('legacy');
-      expect(h.current().availability).toBe('legacy');
-      expect(h.current().turns).toEqual([]);
-      expect(api.submit).not.toHaveBeenCalled();
-    },
-  );
+  it('UNAVAILABLE (Ask V2 disabled) at the first Send → legacy, and no turn is invented', async () => {
+    api.createThread.mockResolvedValue({ ok: false, reason: 'UNAVAILABLE' });
+    const h = mount();
+    let outcome = '';
+    await act(async () => {
+      outcome = await h.current().submit('What is happening in Kenya?');
+    });
+    expect(outcome).toBe('legacy');
+    expect(h.current().availability).toBe('legacy');
+    expect(h.current().turns).toEqual([]);
+    expect(h.current().signInRequired).toBeNull();
+    expect(api.submit).not.toHaveBeenCalled();
+  });
 
   it('once legacy, later Sends do not ask Ask V2 again', async () => {
     api.createThread.mockResolvedValue({ ok: false, reason: 'UNAVAILABLE' });
@@ -101,6 +99,58 @@ describe('§8 — Ask V2 first, existing Ask as the rollback path', () => {
     await act(async () => void (await h.current().submit('first')));
     await act(async () => void (await h.current().submit('second')));
     expect(api.createThread).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SIGNED-OUT FALLBACK REMOVAL R1 — a 401 is a sign-in requirement, never a rollback', () => {
+  it('SIGNED_OUT at the first Send → signed-out; never legacy; the question is kept', async () => {
+    api.createThread.mockResolvedValue({ ok: false, reason: 'SIGNED_OUT', status: 401 });
+    const h = mount();
+    let outcome = '';
+    await act(async () => {
+      outcome = await h.current().submit('Who was Hitler?');
+    });
+    expect(outcome).toBe('signed-out');
+    expect(h.current().availability).not.toBe('legacy');
+    expect(h.current().signInRequired).toBe('Who was Hitler?');
+    expect(h.current().turns).toEqual([]);
+    expect(api.submit).not.toHaveBeenCalled();
+  });
+
+  it('after signing in, the next Send asks Ask V2 again — signed-out never latches', async () => {
+    api.createThread
+      .mockResolvedValueOnce({ ok: false, reason: 'SIGNED_OUT', status: 401 })
+      .mockResolvedValueOnce({ ok: true, value: { id: 't-1', language: 'en', returnPath: null } });
+    api.submit.mockResolvedValue({ ok: true, value: op() });
+    const h = mount();
+    await act(async () => void (await h.current().submit('Who was Hitler?')));
+    let outcome = '';
+    await act(async () => {
+      outcome = await h.current().submit('Who was Hitler?');
+    });
+    expect(outcome).toBe('sent');
+    expect(h.current().signInRequired).toBeNull();
+    expect(api.createThread).toHaveBeenCalledTimes(2);
+  });
+
+  it('a session that ends mid-conversation (turn 401) → signed-out, no failure turn, fresh thread next', async () => {
+    api.createThread.mockResolvedValue({
+      ok: true,
+      value: { id: 't-1', language: 'en', returnPath: null },
+    });
+    api.submit
+      .mockResolvedValueOnce({ ok: true, value: op() })
+      .mockResolvedValueOnce({ ok: false, reason: 'SIGNED_OUT', status: 401 });
+    const h = mount();
+    await act(async () => void (await h.current().submit('first')));
+    let outcome = '';
+    await act(async () => {
+      outcome = await h.current().submit('second');
+    });
+    expect(outcome).toBe('signed-out');
+    expect(h.current().turns).toHaveLength(1);
+    expect(h.current().signInRequired).toBe('second');
+    expect(h.current().availability).not.toBe('legacy');
   });
 });
 

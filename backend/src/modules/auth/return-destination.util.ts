@@ -68,6 +68,12 @@ const ALLOWED_EXACT_DESTINATIONS: ReadonlySet<string> = new Set([
   '/workspace',
   /* MY INTELLIGENCE R1 — the exact route only; no prefix, query or wildcard. */
   '/my-intelligence',
+  /*
+    ASK R2 SIGNED-OUT FALLBACK REMOVAL R1 — a signed-out reader who sends a question on
+    /ask is asked to sign in and comes back to /ask, where the kept question waits in the
+    composer. The exact route only; the question never travels in the URL.
+  */
+  '/ask',
 ]);
 
 /**
