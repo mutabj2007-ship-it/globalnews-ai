@@ -141,6 +141,11 @@ export const myIntelligenceEn = {
     introCompute: 'AI runs only when you confirm an AI action.',
     introDismiss: 'Got it',
     cannotSelect: 'This story cannot be selected because its source is unavailable.',
+    /* INTEREST + SELECTION HOOK R1 — the sand selection hook. Selecting is free: no AI wording here. */
+    hookSelect: 'Select this story for intelligence actions: {title}',
+    hookRemove: 'Remove this story from selected stories: {title}',
+    hookTitle: 'Select for intelligence',
+    hookHint: 'Use the sand + controls on stories to select what you want to analyze.',
     actions: {
       compare: 'Compare',
       summarize: 'Summarize',
@@ -325,4 +330,39 @@ export const myIntelligenceEn = {
         'Other national delivery systems would appear here under their own names once governed data exists. They are not called Imihigo.',
     },
   },
+
+  /*
+    INTEREST + SELECTION HOOK R1 — explicit reader interests. The labels are
+    the governed vocabulary (MY_INTELLIGENCE_INTERESTS); nothing is inferred.
+  */
+  interests: {
+    labels: {
+      politics_governance: 'Politics & governance',
+      security_conflict: 'Security & conflict',
+      economy_markets: 'Economy & markets',
+      diplomacy: 'Diplomacy',
+      humanitarian_society: 'Humanitarian & society',
+      energy_infrastructure: 'Energy & infrastructure',
+      technology: 'Technology',
+      regional_affairs: 'Regional affairs',
+      health_science: 'Health & science',
+      sports: 'Sports',
+      entertainment: 'Entertainment',
+    },
+    tune: 'Tune interests',
+    title: 'Your interests',
+    note: 'For you shows retained reporting from the places you follow that matches the interests you choose here. Nothing is inferred, and choosing runs no AI analysis.',
+    apply: 'Apply',
+    showAll: 'Show all',
+    saving: 'Saving…',
+    failed: 'Couldn’t save your interests. Try again.',
+    close: 'Close',
+    matchCountOne: '1 story matches your current interests.',
+    matchCountOther: '{count} stories match your current interests.',
+    noMatch: 'No retained reporting from the places you follow matches your current interests right now.',
+    invite: 'Tune interests to focus For you on what you care about.',
+    broader: 'Show broader reporting',
+    focused: 'Show only my interests',
+  },
+
 };

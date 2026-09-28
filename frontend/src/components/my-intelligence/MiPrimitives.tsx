@@ -6,6 +6,7 @@ import {
   MI_BANNER_DEGRADED,
   MI_BANNER_ERROR,
   MI_CHIP,
+  MI_SAND_FOCUS,
   MI_SAND_TAG,
   MI_SAVED_OFF,
   MI_SAVED_ON,
@@ -94,7 +95,7 @@ export function BookmarkButton({
 export function CategoryChip({ label }: { label: string }): JSX.Element {
   return (
     <span
-      className={`${MI_CHIP} inline-flex items-center border border-[#1d3a5a] bg-[#07203a] px-[6px] py-[2px] text-[11px] font-semibold uppercase tracking-[0.04em] text-[#93cdf5]`}
+      className={`${MI_CHIP} inline-flex items-center self-start border border-[#1d3a5a] bg-[#07203a] px-[6px] py-[2px] text-[11px] font-semibold uppercase tracking-[0.04em] text-[#93cdf5]`}
     >
       {label}
     </span>
@@ -174,17 +175,39 @@ export function FixtureBanner({ language }: { language: LanguageCode }): JSX.Ele
 }
 
 /** The checkbox shown on every selectable story while selection mode is on. */
-export function SelectCheckbox({
+/**
+ * INTEREST + SELECTION HOOK R1 — THE SAND SELECTION HOOK.
+ *
+ * The Product Owner found the old quiet radio circle too passive for what it
+ * gates (Compare, Summarize, Ask about selected, Explain disagreements, What
+ * changed, Create briefing). This is the same checkbox semantics
+ * (role="checkbox", aria-checked) in the SAND AWARENESS family:
+ *   #2E2618 fill · 2.5px #6A5634 border · #8A7045 on hover / selected ·
+ *   #D9B98A glyph · a restrained warm halo.
+ * It is FREE: no lightning, no AI tag, no price. Unselected shows "+", selected
+ * a check. 44px target. It is positioned by its CALLER (absolute, left-middle)
+ * so it never takes a flex column from the headline.
+ */
+export function SelectionHook({
   checked,
   disabled,
   onChange,
-  label,
+  title,
+  language,
+  className = '',
 }: {
   checked: boolean;
   disabled: boolean;
   onChange: () => void;
-  label: string;
+  title: string;
+  language: LanguageCode;
+  className?: string;
 }): JSX.Element {
+  const t = getDictionary(language).myIntelligence.selection;
+  const label = disabled
+    ? t.cannotSelect
+    : fill(checked ? t.hookRemove : t.hookSelect, { title });
+
   return (
     <button
       type="button"
@@ -192,31 +215,35 @@ export function SelectCheckbox({
       aria-checked={checked}
       aria-disabled={disabled}
       aria-label={label}
+      title={disabled ? t.cannotSelect : t.hookTitle}
       disabled={disabled}
+      data-mi-selection-hook={checked ? 'selected' : 'unselected'}
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
         if (!disabled) onChange();
       }}
-      className={`${MI_TARGET} inline-flex h-[44px] w-[44px] items-center justify-center rounded-full border ${
+      className={`${MI_TARGET} ${MI_SAND_FOCUS} z-10 inline-flex h-[44px] w-[44px] items-center justify-center rounded-full border-[2.5px] transition-[border-color,background-color,box-shadow] duration-150 motion-reduce:transition-none ${
         disabled
-          ? 'border-[#24405e] text-[#54687e]'
+          ? 'cursor-not-allowed border-[#3a3020] bg-[#17130c] text-[#7d725f]'
           : checked
-            ? 'border-[#1b6fa8] bg-[#07304f] text-[#5abff5]'
-            : 'border-[#1d3a5a] text-[#cfe2f2]'
-      }`}
+            ? 'border-[#8A7045] bg-[#3a3020] text-[#f0d9b0] shadow-[0_0_0_4px_rgba(217,185,138,0.16),0_8px_18px_-8px_rgba(0,0,0,0.9)]'
+            : 'border-[#6A5634] bg-[#2E2618] text-[#D9B98A] shadow-[0_0_0_3px_rgba(217,185,138,0.08),0_8px_18px_-8px_rgba(0,0,0,0.9)] hover:border-[#8A7045] hover:shadow-[0_0_0_4px_rgba(217,185,138,0.14),0_8px_18px_-8px_rgba(0,0,0,0.9)]'
+      } ${className}`}
     >
       {disabled ? (
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[18px] w-[18px] text-[#54687e]" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8">
           <circle cx="12" cy="12" r="9" />
           <path d="M6 18 18 6" />
         </svg>
       ) : checked ? (
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[20px] w-[20px]" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="m5 12.5 4.5 4.5L19 7.5" />
         </svg>
       ) : (
-        <span aria-hidden="true" className="h-[18px] w-[18px] rounded-full border border-current" />
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[20px] w-[20px]" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
+          <path d="M12 5.5v13M5.5 12h13" />
+        </svg>
       )}
     </button>
   );

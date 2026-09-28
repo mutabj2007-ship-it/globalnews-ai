@@ -141,21 +141,28 @@ export function detectRepresentedDomains(
   const represented = new Set<AnalyticalDomain>();
 
   for (const article of articles) {
-    const text = `${article.title} ${article.summary ?? ''}`.toLowerCase();
-
-    for (const domain of ANALYTICAL_DOMAINS) {
-      if (represented.has(domain)) continue;
-
-      for (const keyword of DOMAIN_KEYWORDS[domain]) {
-        if (text.includes(keyword)) {
-          represented.add(domain);
-          break;
-        }
-      }
-    }
+    for (const domain of detectArticleDomains(article)) represented.add(domain);
   }
 
   return represented;
+}
+
+/**
+ * INTEREST + SELECTION HOOK R1 — the per-article form of the SAME keyword rule
+ * `detectRepresentedDomains` applies (which is now expressed through it, so
+ * the two cannot diverge). My Intelligence uses it to derive a retained
+ * story's reader interests: one canonical classifier, no second keyword list,
+ * no AI and no provider.
+ */
+export function detectArticleDomains(article: { title: string; summary?: string }): Set<AnalyticalDomain> {
+  const text = `${article.title} ${article.summary ?? ''}`.toLowerCase();
+  const domains = new Set<AnalyticalDomain>();
+
+  for (const domain of ANALYTICAL_DOMAINS) {
+    if (DOMAIN_KEYWORDS[domain].some((keyword) => text.includes(keyword))) domains.add(domain);
+  }
+
+  return domains;
 }
 
 /**

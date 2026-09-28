@@ -1,3 +1,4 @@
+import type { MyIntelligenceInterest } from '@globalnews-ai/shared';
 /**
  * DEVELOPMENT FIXTURES — NOT LIVE DATA, AND NEVER PRESENTED AS LIVE.
  *
@@ -39,6 +40,8 @@ export interface FixtureStory extends ObservableRecord {
   readonly firstSeenAt?: string;
   readonly countryCode: string;
   readonly category: string;
+  /** INTEREST + SELECTION HOOK R1 — the governed interests this retained story matches (server-derived). */
+  readonly interests?: readonly MyIntelligenceInterest[];
   readonly imageUrl?: string;
   readonly savedAt?: string;
   /** Set when the publisher link no longer opens. The item is kept, honestly. */

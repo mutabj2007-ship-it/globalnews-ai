@@ -4,7 +4,7 @@ import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { MI_CARD, MI_UNAVAILABLE } from './miPresentation';
-import { BookmarkButton, CategoryChip, CountryChip, SelectCheckbox, fill } from './MiPrimitives';
+import { BookmarkButton, CategoryChip, CountryChip, SelectionHook, fill } from './MiPrimitives';
 import { hasObservationTime } from './newSince';
 import type { FixtureStory } from './devFixtures';
 import type { SyntheticEvent } from 'react';
@@ -71,6 +71,19 @@ export function StoryImage({
     </span>
   );
 }
+
+/**
+ * INTEREST + SELECTION HOOK R1 — WHERE THE HOOK SITS.
+ *
+ * Absolute at the LEFT-MIDDLE, never a flex column, so it takes no width from
+ * the headline. Rows (What changed, the phone Saved list) put it in the card's
+ * own left padding, straddling the card edge from md; below md the row gives
+ * it a 16px inset. Cards straddle their own left edge; the card grid's gap is
+ * wider than the straddle, so a hook never reaches the neighbouring card.
+ */
+const ROW_HOOK = 'absolute left-[-30px] top-1/2 -translate-y-1/2 md:left-[-44px]';
+const ROW_INSET = 'pl-[16px] md:pl-0';
+const CARD_HOOK = 'absolute left-[-14px] top-1/2 -translate-y-1/2 md:left-[-22px]';
 
 interface CommonProps {
   story: FixtureStory;
@@ -185,15 +198,15 @@ export function NewSinceRow({
   const blocked = story.sourceUnavailable === true;
 
   return (
-    <li className={`flex items-start gap-3 border-b border-[#0a2744] py-3 last:border-b-0`}>
-      {selecting && (
-        <SelectCheckbox
-          checked={isSelected}
-          disabled={blocked}
-          onChange={onToggleSelected}
-          label={blocked ? t.selection.cannotSelect : story.title}
-        />
-      )}
+    <li data-mi-story-row="" className={`relative flex items-start gap-3 border-b border-[#0a2744] py-3 last:border-b-0 ${ROW_INSET}`}>
+      <SelectionHook
+        checked={isSelected}
+        disabled={blocked}
+        onChange={onToggleSelected}
+        title={story.title}
+        language={language}
+        className={ROW_HOOK}
+      />
       <span className="mt-[3px] shrink-0">
         <CountryChip code={story.countryCode} />
       </span>
@@ -224,15 +237,15 @@ export function SavedRow(props: CommonProps): JSX.Element {
   const blocked = story.sourceUnavailable === true;
 
   return (
-    <li className="flex items-start gap-3 border-b border-[#0a2744] py-3 last:border-b-0">
-      {selecting && (
-        <SelectCheckbox
-          checked={isSelected}
-          disabled={blocked}
-          onChange={onToggleSelected}
-          label={blocked ? t.selection.cannotSelect : story.title}
-        />
-      )}
+    <li data-mi-story-row="" className={`relative flex items-start gap-3 border-b border-[#0a2744] py-3 last:border-b-0 ${ROW_INSET}`}>
+      <SelectionHook
+        checked={isSelected}
+        disabled={blocked}
+        onChange={onToggleSelected}
+        title={story.title}
+        language={language}
+        className={ROW_HOOK}
+      />
       <StoryImage
         story={story}
         fallback={t.saved.noImage}
@@ -241,7 +254,7 @@ export function SavedRow(props: CommonProps): JSX.Element {
       />
       <span className="min-w-0 flex-1">
         <span className="mb-1 block">
-          <CategoryChip label={story.category} />
+          <CategoryChip label={getDictionary(language).map.categories[story.category] ?? story.category} />
         </span>
         <StoryTitle
           story={story}
@@ -269,64 +282,82 @@ export function SavedRow(props: CommonProps): JSX.Element {
  * long headline wraps in full, because truncating a saved reference hides the
  * very thing the reader chose to keep.
  */
-export function SavedCard(props: CommonProps & { reason?: string }): JSX.Element {
-  const { story, language, isSaved, onToggleSaved, selecting, isSelected, onToggleSelected, reason } =
-    props;
+export function SavedCard(props: CommonProps & { reason?: string; compact?: boolean }): JSX.Element {
+  const { story, language, isSaved, onToggleSaved, isSelected, onToggleSelected, reason, compact = false } = props;
   const t = getDictionary(language).myIntelligence;
   const blocked = story.sourceUnavailable === true;
 
   /*
-    DENSITY R1 — an intelligence row, not a photo card. The story's own image
-    stays (76px phone, 96px tablet, 104px desktop, cropped with object-cover,
-    never stretched), beside the text instead of above it, so a desktop
-    viewport shows materially more stories. The selection checkbox leads and
-    the bookmark trails, so the two can never overlap.
+    DENSITY R1 — an intelligence row, not a photo card: the story's own image
+    (76px phone, 96px tablet, 104px desktop, object-cover) beside the text.
+
+    INTEREST + SELECTION HOOK R1 — CARD GEOMETRY RECOVERY. The selection
+    control used to be a flex column that appeared only in selection mode, and
+    For you inherited Saved's "headline never clamps" rule, so opening the
+    360px selection rail turned the cards into narrow skyscrapers. Now:
+      · the sand hook is ABSOLUTE at the left-middle and always present — it
+        takes no width, in or out of selection mode;
+      · a `compact` card (For you) clamps its headline (3 lines) and bounds
+        the reason and meta lines to one line each; the Saved destination
+        keeps full titles, as R1.2 ruled for saved references;
+      · a compact card takes a smaller thumbnail and carries its bookmark on
+        the meta line, so a ~320px card still gives the headline ~200px;
+      · the bookmark is never inside the link.
+    Selected: a restrained sand edge and halo on the card, not cyan.
   */
   return (
     <li
       data-mi-story-card=""
-      className={`${MI_CARD} relative flex items-start gap-3 p-3 ${
-        isSelected ? 'border-[#5abff5] bg-[#061c33]' : ''
+      data-mi-card-compact={compact ? 'true' : undefined}
+      className={`${MI_CARD} relative flex items-start gap-3 p-3 pl-[38px] md:pl-[32px] ${
+        isSelected ? 'border-[#6A5634] shadow-[0_0_0_1px_rgba(217,185,138,0.28),0_0_22px_-10px_rgba(217,185,138,0.45)]' : ''
       }`}
     >
-      {selecting && (
-        <span className="shrink-0 self-center">
-          <SelectCheckbox
-            checked={isSelected}
-            disabled={blocked}
-            onChange={onToggleSelected}
-            label={blocked ? t.selection.cannotSelect : story.title}
-          />
-        </span>
-      )}
+      <SelectionHook
+        checked={isSelected}
+        disabled={blocked}
+        onChange={onToggleSelected}
+        title={story.title}
+        language={language}
+        className={CARD_HOOK}
+      />
       <StoryImage
         story={story}
         fallback={t.saved.noImage}
-        className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-[10px] border border-[#0e2d4d] bg-[linear-gradient(140deg,#0b2742,#061a30)] md:h-[96px] md:w-[96px] xl:h-[104px] xl:w-[104px]"
+        className={`flex shrink-0 items-center justify-center rounded-[10px] border border-[#0e2d4d] bg-[linear-gradient(140deg,#0b2742,#061a30)] ${
+          compact ? 'h-[72px] w-[72px] xl:h-[80px] xl:w-[80px]' : 'h-[76px] w-[76px] md:h-[96px] md:w-[96px] xl:h-[104px] xl:w-[104px]'
+        }`}
         fallbackClassName="px-1.5 text-center text-[10px] leading-[1.3] text-[#54687e]"
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <CategoryChip label={story.category} />
+        <CategoryChip label={getDictionary(language).map.categories[story.category] ?? story.category} />
         <StoryTitle
           story={story}
-          className="block text-[14.5px] font-bold leading-[1.28] text-white [overflow-wrap:anywhere] md:text-[15px]"
+          className={`text-[14.5px] font-bold leading-[1.28] text-white [overflow-wrap:anywhere] md:text-[15px] ${compact ? 'line-clamp-3' : 'block'}`}
         />
         {reason !== undefined && (
-          <p className="text-[12px] italic leading-[1.4] text-[#93a7bd]">{reason}</p>
+          <p className={`text-[12px] leading-[1.4] text-[#5abff5] ${compact ? 'truncate' : ''}`} title={reason}>
+            {reason}
+          </p>
         )}
-        <MetaLine
-          story={story}
-          language={language}
-          showObservation={story.savedAt === undefined}
-          savedAge={
-            story.savedAt === undefined
-              ? undefined
-              : fill(t.saved.savedAgo, { age: formatRelativeTime(story.savedAt, language) })
-          }
-        />
+        <div className={compact ? 'flex min-w-0 items-center gap-1' : ''}>
+          <div className={compact ? 'min-w-0 flex-1 truncate [&>p]:truncate' : ''}>
+            <MetaLine
+              story={story}
+              language={language}
+              showObservation={story.savedAt === undefined}
+              savedAge={
+                story.savedAt === undefined
+                  ? undefined
+                  : fill(t.saved.savedAgo, { age: formatRelativeTime(story.savedAt, language) })
+              }
+            />
+          </div>
+          {compact && <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="-mb-[8px] shrink-0" />}
+        </div>
         {blocked && <UnavailableNotice language={language} />}
       </div>
-      <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="shrink-0" />
+      {!compact && <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="shrink-0" />}
     </li>
   );
 }

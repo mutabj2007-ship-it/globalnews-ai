@@ -11,7 +11,7 @@ import { resolveAccountApiBase } from './accountBase';
  *    true).
  * 2. Reading the (deliberately non-httpOnly) CSRF cookie and echoing
  *    it back as the X-CSRF-Token header on any mutating request
- *    (POST/DELETE) — the frontend half of the double-submit CSRF
+ *    (POST/PUT/DELETE) — the frontend half of the double-submit CSRF
  *    protection; the backend half is CsrfGuard.
  *
  * Deliberately not a general-purpose API client — GlobalNews AI's
@@ -34,11 +34,11 @@ function readCsrfCookie(): string | undefined {
 }
 
 export interface AccountFetchOptions {
-  method?: 'GET' | 'POST' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
 }
 
-const MUTATING_METHODS = new Set(['POST', 'DELETE']);
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE']);
 
 export async function accountFetch(path: string, options: AccountFetchOptions = {}): Promise<Response> {
   const method = options.method ?? 'GET';

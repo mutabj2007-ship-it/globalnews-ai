@@ -3,6 +3,7 @@ import { AuthModule } from '../auth/auth.module';
 import { ArticlePersistenceService } from '../news/persistence/article-persistence.service';
 import { MyIntelligenceController } from './my-intelligence.controller';
 import { MyIntelligenceFeedService } from './my-intelligence-feed.service';
+import { MyIntelligenceInterestsService } from './my-intelligence-interests.service';
 import { SavedStoriesController } from './saved-stories.controller';
 import { SavedStoriesService } from './saved-stories.service';
 
@@ -18,6 +19,6 @@ import { SavedStoriesService } from './saved-stories.service';
 @Module({
   imports: [AuthModule],
   controllers: [SavedStoriesController, MyIntelligenceController],
-  providers: [ArticlePersistenceService, SavedStoriesService, MyIntelligenceFeedService],
+  providers: [ArticlePersistenceService, SavedStoriesService, MyIntelligenceFeedService, MyIntelligenceInterestsService],
 })
 export class MyIntelligenceModule {}

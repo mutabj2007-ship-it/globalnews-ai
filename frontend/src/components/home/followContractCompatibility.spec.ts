@@ -150,7 +150,7 @@ describe('the guards, and what the frontend has to do to satisfy them', () => {
     const guard = code(join(BACKEND_SRC, 'modules', 'auth', 'csrf.guard.ts'));
     expect(guard).toContain("request.headers['x-csrf-token']");
     expect(accountFetch).toContain("headers['X-CSRF-Token'] = csrfToken");
-    expect(accountFetch).toContain("const MUTATING_METHODS = new Set(['POST', 'DELETE'])");
+    expect(accountFetch).toContain("const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE'])");
   });
 
   it('the frontend reads the CSRF cookie under the name the backend writes', () => {

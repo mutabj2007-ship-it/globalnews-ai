@@ -121,6 +121,12 @@ export function SelectionContextRail({
         <h2 className="mt-3 text-[20px] font-bold text-white" aria-live="polite">
           {count === 0 ? t.selection.statusNone : storiesSelectedLabel(t.selection, count)}
         </h2>
+        {count === 0 && (
+          /* INTEREST + SELECTION HOOK R1 — with nothing selected, say what to do. */
+          <p data-mi-hook-hint="" className="mt-2 rounded-[10px] border border-[#6A5634] bg-[#2E2618] px-3 py-2.5 text-[13.5px] leading-[1.5] text-[#D9B98A]">
+            {t.selection.hookHint}
+          </p>
+        )}
         {count > 0 && (
           <ul className="mt-3 flex flex-col">
             {stories.map((story) => (

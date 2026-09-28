@@ -368,7 +368,7 @@ describe('CSRF double-submit is preserved, not replaced', () => {
 
   it('GET requests still carry no CSRF header, and mutations still do', () => {
     const source = read('lib', 'api', 'accountFetch.ts');
-    expect(source).toContain("const MUTATING_METHODS = new Set(['POST', 'DELETE'])");
+    expect(source).toContain("const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE'])");
     expect(source).toContain('if (MUTATING_METHODS.has(method))');
   });
 

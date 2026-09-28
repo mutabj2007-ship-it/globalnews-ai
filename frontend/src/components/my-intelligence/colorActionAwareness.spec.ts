@@ -55,6 +55,8 @@ jest.mock('./useMyIntelligenceData', () => {
     saved: stories, savedSource: 'live', forYou: [], forYouSource: 'live', follows: [], followsSource: 'live',
     recent: [], recentSource: 'live', usesFixtures: false, hasError: false, isDegraded: false,
     savedRefs: new Set(stories.map((s) => s.url)), toggleSaved: () => undefined, retry: () => undefined,
+    interests: [], interestsLoaded: true, forYouFiltered: false, forYouMatchCount: 0, forYouBroad: [],
+    saveInterests: async () => true, isSavingInterests: false,
   };
   return { useMyIntelligenceData: () => data };
 });

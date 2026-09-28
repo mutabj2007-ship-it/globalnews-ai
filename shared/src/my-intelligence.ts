@@ -7,7 +7,7 @@
  * frontend. Nothing here performs I/O and nothing here can start compute.
  */
 
-import type { PublishedAtBasis } from './news';
+import type { NewsCategory, PublishedAtBasis } from './news';
 
 /* ── NEW SINCE LAST VISIT — ONE RULE ONLY ─────────────────────────────── */
 
@@ -105,6 +105,14 @@ export interface MyIntelligenceStory {
   readonly firstSeenAt?: string;
   /** isNewSince(firstSeenAt, previousSeenAt), decided once, by the server. */
   readonly newSince: boolean;
+  /**
+   * INTEREST + SELECTION HOOK R1 — the retained article's own governed
+   * NewsCategory (never the placeholder 'Following'), and the reader
+   * interests it deterministically matches (`interestsForStory`), derived
+   * server-side from retained title/summary/category. Zero AI, zero provider.
+   */
+  readonly category: NewsCategory;
+  readonly interests: readonly MyIntelligenceInterest[];
 }
 
 export interface MyIntelligenceCountryFeed {
@@ -178,4 +186,109 @@ export interface AnalysisSelectionOutcome {
   readonly resolved: number;
   /** articleRefs that did not resolve to retained reporting. */
   readonly unresolvedRefs: readonly string[];
+}
+
+/* ── INTEREST + SELECTION HOOK R1 — EXPLICIT READER INTERESTS ─────────────
+ *
+ * Explicit, inspectable, reader-controlled. Never inferred from question
+ * history, never guessed by AI, never free text. Persisted account-side
+ * (UserIntelligenceInterest) so they survive devices.
+ *
+ * NOT A THIRD TAXONOMY. Every interest is defined ONLY in terms of the two
+ * vocabularies the product already governs:
+ *   · NewsCategory — the article's own retained category;
+ *   · AnalyticalDomain — the deterministic keyword classifier in
+ *     backend/src/modules/analysis/query/detect-analytical-domains.util.ts
+ *     (the SAME implementation AnalysisService uses; its ids are quoted here
+ *     as strings because shared cannot import backend, and a backend spec
+ *     asserts they are exactly that util's ANALYTICAL_DOMAINS).
+ */
+export const MY_INTELLIGENCE_INTERESTS = [
+  'politics_governance',
+  'security_conflict',
+  'economy_markets',
+  'diplomacy',
+  'humanitarian_society',
+  'energy_infrastructure',
+  'technology',
+  'regional_affairs',
+  'health_science',
+  'sports',
+  'entertainment',
+] as const;
+
+export type MyIntelligenceInterest = (typeof MY_INTELLIGENCE_INTERESTS)[number];
+
+export function isMyIntelligenceInterest(value: unknown): value is MyIntelligenceInterest {
+  return typeof value === 'string' && (MY_INTELLIGENCE_INTERESTS as readonly string[]).includes(value);
+}
+
+/** The analytical-domain ids of the canonical classifier (see note above). */
+export type InterestAnalyticalDomain =
+  | 'political'
+  | 'economic'
+  | 'security'
+  | 'diplomatic'
+  | 'social'
+  | 'infrastructure'
+  | 'technology'
+  | 'regional';
+
+/**
+ * THE DETERMINISTIC MAPPING. A story matches an interest when its category is
+ * one of the interest's categories OR the classifier detects one of the
+ * interest's domains in its retained title + summary.
+ */
+export const MY_INTELLIGENCE_INTEREST_MAPPING: Readonly<
+  Record<
+    MyIntelligenceInterest,
+    { readonly categories: readonly NewsCategory[]; readonly domains: readonly InterestAnalyticalDomain[] }
+  >
+> = {
+  politics_governance: { categories: ['politics'], domains: ['political'] },
+  security_conflict: { categories: [], domains: ['security'] },
+  economy_markets: { categories: ['business'], domains: ['economic'] },
+  diplomacy: { categories: [], domains: ['diplomatic'] },
+  humanitarian_society: { categories: [], domains: ['social'] },
+  energy_infrastructure: { categories: [], domains: ['infrastructure'] },
+  technology: { categories: ['technology'], domains: ['technology'] },
+  regional_affairs: { categories: [], domains: ['regional'] },
+  health_science: { categories: ['health', 'science'], domains: [] },
+  sports: { categories: ['sports'], domains: [] },
+  entertainment: { categories: ['entertainment'], domains: [] },
+};
+
+/**
+ * CATEGORY-EXCLUSIVE categories. A sports or entertainment story matches ONLY
+ * its own category's interest: keyword domains are not applied to it, so a
+ * football report that mentions a club "president" or stadium "security" is
+ * not Politics or Security. This is what keeps followed-country football out
+ * of a reader's Security / Politics For you.
+ */
+export const CATEGORY_EXCLUSIVE_INTERESTS: Readonly<Partial<Record<NewsCategory, MyIntelligenceInterest>>> = {
+  sports: 'sports',
+  entertainment: 'entertainment',
+};
+
+/** The interests a retained story matches, in the vocabulary's own order. Pure. */
+export function interestsForStory(
+  category: NewsCategory,
+  detectedDomains: ReadonlySet<string> | readonly string[],
+): MyIntelligenceInterest[] {
+  const exclusive = CATEGORY_EXCLUSIVE_INTERESTS[category];
+  if (exclusive !== undefined) return [exclusive];
+  const domains = new Set(detectedDomains);
+  return MY_INTELLIGENCE_INTERESTS.filter((interest) => {
+    const rule = MY_INTELLIGENCE_INTEREST_MAPPING[interest];
+    return rule.categories.includes(category) || rule.domains.some((domain) => domains.has(domain));
+  });
+}
+
+export interface MyIntelligenceInterestsResponse {
+  readonly interests: readonly MyIntelligenceInterest[];
+}
+
+/** One mutation replaces the whole set. An empty list clears it ("Show all"). */
+export interface UpdateMyIntelligenceInterestsRequest {
+  readonly interests: readonly MyIntelligenceInterest[];
 }
