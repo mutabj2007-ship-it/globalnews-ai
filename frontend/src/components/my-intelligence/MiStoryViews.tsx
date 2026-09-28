@@ -282,8 +282,10 @@ export function SavedRow(props: CommonProps): JSX.Element {
  * long headline wraps in full, because truncating a saved reference hides the
  * very thing the reader chose to keep.
  */
-export function SavedCard(props: CommonProps & { reason?: string; compact?: boolean }): JSX.Element {
+export function SavedCard(props: CommonProps & { reason?: string; compact?: boolean; dense?: boolean }): JSX.Element {
   const { story, language, isSaved, onToggleSaved, isSelected, onToggleSelected, reason, compact = false } = props;
+  /* The small-thumbnail geometry. `compact` (For you) also clamps; `dense` alone (the Saved destination) keeps full headlines. */
+  const dense = compact || props.dense === true;
   const t = getDictionary(language).myIntelligence;
   const blocked = story.sourceUnavailable === true;
 
@@ -299,7 +301,9 @@ export function SavedCard(props: CommonProps & { reason?: string; compact?: bool
         takes no width, in or out of selection mode;
       · a `compact` card (For you) clamps its headline (3 lines) and bounds
         the reason and meta lines to one line each; the Saved destination
-        keeps full titles, as R1.2 ruled for saved references;
+        keeps full titles, as R1.2 ruled for saved references — it takes
+        the `dense` geometry (small thumbnail, bookmark on the meta line) and
+        a 360px grid track, so a full headline never becomes a 104px strip;
       · a compact card takes a smaller thumbnail and carries its bookmark on
         the meta line, so a ~320px card still gives the headline ~200px;
       · the bookmark is never inside the link.
@@ -325,7 +329,7 @@ export function SavedCard(props: CommonProps & { reason?: string; compact?: bool
         story={story}
         fallback={t.saved.noImage}
         className={`flex shrink-0 items-center justify-center rounded-[10px] border border-[#0e2d4d] bg-[linear-gradient(140deg,#0b2742,#061a30)] ${
-          compact ? 'h-[72px] w-[72px] xl:h-[80px] xl:w-[80px]' : 'h-[76px] w-[76px] md:h-[96px] md:w-[96px] xl:h-[104px] xl:w-[104px]'
+          dense ? 'h-[72px] w-[72px] xl:h-[80px] xl:w-[80px]' : 'h-[76px] w-[76px] md:h-[96px] md:w-[96px] xl:h-[104px] xl:w-[104px]'
         }`}
         fallbackClassName="px-1.5 text-center text-[10px] leading-[1.3] text-[#54687e]"
       />
@@ -340,8 +344,8 @@ export function SavedCard(props: CommonProps & { reason?: string; compact?: bool
             {reason}
           </p>
         )}
-        <div className={compact ? 'flex min-w-0 items-center gap-1' : ''}>
-          <div className={compact ? 'min-w-0 flex-1 truncate [&>p]:truncate' : ''}>
+        <div className={dense ? 'flex min-w-0 items-center gap-1' : ''}>
+          <div className={dense ? 'min-w-0 flex-1 truncate [&>p]:truncate' : ''}>
             <MetaLine
               story={story}
               language={language}
@@ -353,11 +357,11 @@ export function SavedCard(props: CommonProps & { reason?: string; compact?: bool
               }
             />
           </div>
-          {compact && <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="-mb-[8px] shrink-0" />}
+          {dense && <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="-mb-[8px] shrink-0" />}
         </div>
         {blocked && <UnavailableNotice language={language} />}
       </div>
-      {!compact && <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="shrink-0" />}
+      {!dense && <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="shrink-0" />}
     </li>
   );
 }
