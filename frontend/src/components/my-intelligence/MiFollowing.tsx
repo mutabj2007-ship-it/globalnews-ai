@@ -168,13 +168,24 @@ export function FollowingControl({
   language,
   follows,
   newByCountry,
+  openRequest = 0,
 }: {
   language: LanguageCode;
   follows: readonly string[] | null;
   newByCountry: Readonly<Record<string, number>>;
+  /**
+   * PREMIUM WORKSPACE R1 — the rail / drawer "Following" item opens THIS
+   * popout (INTERACTIONS.md: "opens the existing bounded popout"). Each
+   * increment is one open request; 0 never opens anything.
+   */
+  openRequest?: number;
 }): JSX.Element {
   const t = getDictionary(language).myIntelligence.following;
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (openRequest > 0) setOpen(true);
+  }, [openRequest]);
   const [liveCount, setLiveCount] = useState<number | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);

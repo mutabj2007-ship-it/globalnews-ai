@@ -3,8 +3,8 @@ import { join } from 'node:path';
 
 const ROOT = join(__dirname, '..', '..');
 const dockSource = readFileSync(join(ROOT, 'components', 'ask', 'AskAiDock.tsx'), 'utf-8');
-const clientSource = readFileSync(join(__dirname, 'MyIntelligenceClient.tsx'), 'utf-8');
 const selectionSource = readFileSync(join(__dirname, 'MiSelection.tsx'), 'utf-8');
+const dashboardSource = readFileSync(join(__dirname, 'workspace', 'WorkspaceDashboard.tsx'), 'utf-8');
 
 /*
   RULING 1 — THE FLOATING ASK LAUNCHER YIELDS ON /my-intelligence, AND
@@ -66,7 +66,12 @@ describe('Ruling 1 — the floating Ask launcher is suppressed on /my-intelligen
       Product Owner ruling ("Selection mode · Done"), but its PLACE was not:
       the phone variant still renders in the eyebrow row and hides at md.
     */
-    expect(clientSource).toMatch(/<SelectionModeToggle[\s\S]*?variant="phone"/);
+    /*
+      PREMIUM WORKSPACE R1 · D10 — the control moved, by the design authority,
+      into the "Turn reporting into intelligence" module (and the rail and the
+      context rail). Its phone variant and its sand presentation are unchanged.
+    */
+    expect(dashboardSource).toMatch(/<SelectionModeToggle[\s\S]*?variant="phone"/);
     expect(selectionSource).toContain("variant === 'phone' ? 'md:hidden' : 'hidden md:inline-flex'");
     expect(selectionSource).toContain('mi.select');
     expect(selectionSource).toContain('mi.done');

@@ -38,6 +38,9 @@ import { countNewSince, selectNewSince } from './newSince';
 
 export type SectionSource = 'live' | 'fixture';
 
+/** The most For-you stories the workspace ever holds (SPEC.md: the dashboard shows 6, 3 on phone). */
+export const FOR_YOU_LIMIT = 6;
+
 export interface MyIntelligenceData {
   readonly isLoading: boolean;
   readonly isSignedIn: boolean;
@@ -76,6 +79,8 @@ export interface MyIntelligenceData {
   readonly savedRefs: ReadonlySet<string>;
   readonly toggleSaved: (url: string) => void;
   readonly retry: () => void;
+  /** PREMIUM WORKSPACE R1 — the drawer/rail identity footer's Sign out: the SAME account hook this page already mounts. */
+  readonly signOut: () => Promise<void>;
 }
 
 export interface RecentQuestion {
@@ -128,7 +133,7 @@ function savedStoryToUi(story: SavedStoryView): FixtureStory {
 }
 
 export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData {
-  const { user, isLoading: accountLoading } = useAccount();
+  const { user, isLoading: accountLoading, signOut } = useAccount();
   const feed = useMyIntelligenceFeed();
   const savedState = useSavedStories();
   const history = useQuestionHistory();
@@ -198,7 +203,7 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
     if (emptied) return [];
     if (fixtureAccount) {
       const shown = new Set(newSince.map((story) => normalizeArticleUrl(story.url)));
-      return FIXTURE_FOR_YOU.filter((story) => !shown.has(normalizeArticleUrl(story.url))).slice(0, 3);
+      return FIXTURE_FOR_YOU.filter((story) => !shown.has(normalizeArticleUrl(story.url))).slice(0, FOR_YOU_LIMIT);
     }
 
     const shown = new Set(newSince.map((story) => normalizeArticleUrl(story.url)));
@@ -208,7 +213,8 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
         const ref = normalizeArticleUrl(story.url);
         return !shown.has(ref) && !savedUrls.has(ref);
       })
-      .slice(0, 3);
+      /* PREMIUM WORKSPACE R1 — SPEC.md "For you … Shows 6" (the dashboard bounds phone to 3). */
+      .slice(0, FOR_YOU_LIMIT);
   }, [emptied, fixtureAccount, liveFeedStories, newSince, saved]);
 
   const follows = useMemo<readonly string[] | null>(() => {
@@ -290,5 +296,6 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
     savedRefs,
     toggleSaved,
     retry,
+    signOut,
   };
 }

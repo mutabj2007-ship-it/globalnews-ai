@@ -213,4 +213,116 @@ export const myIntelligenceEn = {
   homeLink: 'Open My Intelligence',
   accountMenuItem: 'My Intelligence',
   accountMenuItemTag: 'New',
+
+  /*
+    PREMIUM WORKSPACE R1 — COPY_EN_PL.md (MY-INTELLIGENCE-PREMIUM-WORKSPACE-R1,
+    package SHA256 4059e9b3…a567ed4). Governed strings above are reused
+    verbatim; everything here is the package's new copy.
+  */
+  workspace: {
+    subcopy: 'Reporting, developments and analysis shaped by what you follow and investigate.',
+    workspaceLabel: 'WORKSPACE',
+    railLabel: 'My Intelligence workspace',
+    openRail: 'Open workspace navigation',
+    collapseRail: 'Collapse workspace navigation',
+    pin: 'Keep rail open',
+    unpin: 'Unpin rail',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    search: 'Search',
+    account: 'Account',
+    groups: {
+      mine: 'MY INTELLIGENCE',
+      collections: 'COLLECTIONS',
+      intelligence: 'INTELLIGENCE',
+      specialists: 'SPECIALISTS',
+      deep: 'DEEP INTELLIGENCE',
+      account: 'ACCOUNT & CONTROL',
+    },
+    items: {
+      today: 'Today for me',
+      forYou: 'For you',
+      newSince: 'New since last visit',
+      saved: 'Saved',
+      following: 'Following',
+      history: 'Question history',
+      selected: 'Selected stories',
+      selectedSub: 'Compare, summarize, brief',
+      analysisWorkspace: 'Analysis Workspace',
+      analysisWorkspaceSub: 'Open a complete analysis from Ask AI',
+      briefings: 'Briefings from selected stories',
+      briefingsSub: 'Select stories, then Create briefing',
+      deepIntelligence: 'Deep Intelligence',
+      deepIntelligenceSub: 'Advanced, higher-compute intelligence',
+      accountItem: 'Account',
+      preferences: 'Preferences',
+      language: 'Language',
+      plan: 'Plan & usage',
+      planStatus: 'Beta access · no paid plan active',
+      settings: 'Settings',
+      signOut: 'Sign out',
+      betaAccess: 'Beta access',
+    },
+    domains: {
+      map: 'World Map',
+      politics: 'Politics',
+      economy: 'Economy',
+      market: 'Market',
+      energy: 'Energy',
+      conflict: 'Conflict & Security',
+      humanitarian: 'Humanitarian',
+    },
+    whatChanged: 'WHAT CHANGED',
+    /* D9 — the dashboard's short explainer; the verbatim one lives in View all. */
+    newShort: 'Reporting we identified about places you follow since {date}. Checked when you opened this page.',
+    viewAll: 'View all',
+    viewAllCount: 'View all ({count})',
+    back: 'Back to Today for me',
+    promiseEyebrow: 'BUILD INTELLIGENCE',
+    promiseTitle: 'Turn reporting into intelligence',
+    promiseBody:
+      'Select multiple stories to compare reporting, identify change, explain disagreements or build a briefing.',
+    explore: 'Explore your intelligence',
+    exploreNote: 'Intelligence domains across GlobalNewsAI.',
+    preview: 'Preview',
+    goDeeper: 'Go deeper',
+    deepEyebrow: 'DEEP INTELLIGENCE',
+    notInBeta: 'Not in Beta',
+    historyShort: 'Past answers are not kept up to date. Nothing runs until you press Send.',
+    selectedRemove: 'Remove {title} from selection',
+    specialists: {
+      group: 'SPECIALISTS',
+      moduleTitle: 'Specialist intelligence',
+      moduleNote: 'Focused workspaces for one kind of analysis. Country is the context.',
+      viewAll: 'View specialists',
+      pageTitle: 'Specialists',
+      pageNote:
+        'Specialists are focused analytical workspaces. They sit beside the broad intelligence domains and open with a country or place as context. Opening one runs no AI analysis.',
+      elections: 'Elections',
+      countryAware: 'Country-aware',
+      country: 'Country',
+      elFamily: 'COUNTRY-AWARE SPECIALIST',
+      elBody:
+        'One Elections workspace for every country with governed election data. The country you choose sets the context.',
+      /*
+        R1 IMPLEMENTATION — the frames draw "Kenya · Prepared". The release
+        binds NO country to the Elections preview and its live route is gated
+        closed (electionLiveRouteMayOpen() === false), so no country is named
+        as prepared. The preview entry says exactly what it is.
+      */
+      openPreview: 'Open Elections preview',
+      previewNote: 'Preview route today: /election-visual-preview · no country bound',
+      noCountries: 'Follow a country to use it as context here.',
+      unsupportedTitle: 'No governed election data for {country}',
+      unsupportedBody:
+        'Elections opens for a country only when governed election data is available. Nothing is estimated or filled in.',
+      imihigo: 'Imihigo',
+      imihigoSub: 'Rwanda · District intelligence',
+      openImihigo: 'Open Imihigo',
+      dpFamily: 'DELIVERY & PERFORMANCE',
+      dpBody: 'Public-delivery and performance systems, each shown under its own national name.',
+      dpFuture:
+        'Other national delivery systems would appear here under their own names once governed data exists. They are not called Imihigo.',
+    },
+  },
 };

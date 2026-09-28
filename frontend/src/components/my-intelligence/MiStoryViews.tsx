@@ -38,7 +38,7 @@ export function hideFailedStoryImage(event: SyntheticEvent<HTMLImageElement>): v
   event.currentTarget.style.display = 'none';
 }
 
-function StoryImage({
+export function StoryImage({
   story,
   fallback,
   className,
@@ -93,7 +93,7 @@ interface CommonProps {
  * A story whose source is unavailable is not a link at all. Rendering a dead
  * anchor would promise the reader something the product knows is false.
  */
-function StoryTitle({
+export function StoryTitle({
   story,
   className,
 }: {
