@@ -3,10 +3,28 @@
   (GNAI_ASK_INTELLIGENCE_WORKSPACE_R2_FINAL_DESIGN_AUTHORITY_D25). No map, no split, no
   resize handle: Ask beside the Map is /map's composition, not this route's.
 */
+/*
+  ASK R2 D25 COMPOSER CLIPPING FIX R1 — THE FRAME'S BOTTOM IS THE VIEWPORT'S BOTTOM BY
+  CONSTRUCTION. The route is one viewport-high column (shared header + frame); the frame
+  takes exactly the height the header leaves. It used to be sized from a one-time JS
+  measurement of its own top, so anything that moved it down after mount
+  without a window resize left it taller than its space and pushed the composer's
+  disclosure line off-screen with no scroll to reach it.
+*/
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+.page > :global(header) {
+  flex-shrink: 0;
+}
 .frame {
   font-family: var(--font-cd-body), system-ui, sans-serif;
-  height: calc(var(--ask-visible-height, 100dvh) - var(--ask-top, 62px));
-  min-height: 360px;
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
