@@ -72,6 +72,15 @@ export interface AskR2Strings {
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
   /**
+   * SIGNED-OUT FALLBACK REMOVAL R1 — Ask V2 answered 401: the reader must sign in. The
+   * question was not sent and nothing ran; it waits in the composer.
+   */
+  readonly signInRequired: {
+    readonly title: string;
+    readonly body: string;
+    readonly action: string;
+  };
+  /**
    * ALPHA ENABLEMENT R1 (MC-055) — the reader's own library, by the scope the server read:
    * `signIn` without identity, `notAvailable` when its executor is not wired. NEUTRAL when
    * the payload names no scope.
@@ -149,6 +158,11 @@ const EN: AskR2Strings = {
   expiredNote: 'This saved answer has expired · shown as it was, not re-checked',
   noPriorSubject:
     "There's no earlier question to continue. What would you like to know about this place?",
+  signInRequired: {
+    title: 'SIGN-IN REQUIRED',
+    body: 'Sign in to ask GlobalNewsAI. Your question is kept below and was not sent — nothing was run.',
+    action: 'Sign in to ask',
+  },
   personal: {
     SAVED_STORIES: {
       signIn: 'Sign in to compare your saved stories.',
@@ -242,6 +256,11 @@ const PL: AskR2Strings = {
   expiredNote: 'Ta zapisana odpowiedź wygasła · pokazana bez ponownego sprawdzenia',
   noPriorSubject:
     'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o tym miejscu?',
+  signInRequired: {
+    title: 'WYMAGANE LOGOWANIE',
+    body: 'Zaloguj się, aby zapytać GlobalNewsAI. Twoje pytanie czeka poniżej i nie zostało wysłane — nic nie uruchomiono.',
+    action: 'Zaloguj się, aby zapytać',
+  },
   personal: {
     SAVED_STORIES: {
       signIn: 'Zaloguj się, aby porównać zapisane artykuły.',
