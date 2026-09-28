@@ -188,6 +188,15 @@ function GlobalAskAiDock({
   mapSurface = false,
 }: AskAiDockProps & { showLauncher?: boolean; mapSurface?: boolean }): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
+  /* ASK R2 INTEGRATION R1 · D25 11 — the bottom navigation is hidden while Ask is active. */
+  useEffect(() => {
+    const body = typeof document === 'undefined' ? undefined : document.body;
+    if (!isOpen || body === undefined) return undefined;
+    body.dataset.askOpen = 'true';
+    return () => {
+      delete body.dataset.askOpen;
+    };
+  }, [isOpen]);
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
   const [history, setHistory] = useState<SettledAskTurn[]>([]);
@@ -500,7 +509,8 @@ function GlobalAskAiDock({
         });
   const mapPanelClass =
     mapLayout === 'compact'
-      ? 'fixed inset-x-0 z-50 flex flex-col overflow-hidden rounded-t-[16px] border border-b-0 border-[#3c2f7a] bg-[#04162b] shadow-[0_-12px_40px_rgba(0,0,0,.45)] [&_button[aria-pressed]]:h-11 [&_button[aria-pressed]]:w-11'
+      ? /* D25 11 — FULL SCREEN on the phone Map (top edge to keyboard/bottom). */
+        'fixed inset-x-0 z-50 flex flex-col overflow-hidden bg-[#04162b] [&_button[aria-pressed]]:h-11 [&_button[aria-pressed]]:w-11'
       : mapLayout === 'rail'
         ? 'fixed z-50 flex flex-col overflow-hidden border-s border-[#3c2f7a] bg-[#04162b] shadow-[-12px_0_32px_rgba(0,0,0,.35)]'
         : 'fixed z-50 flex flex-col overflow-hidden rounded-[14px] border border-[#3c2f7a] bg-[#04162b] shadow-2xl';
@@ -562,16 +572,18 @@ function GlobalAskAiDock({
         <section
           id="ask-ai-panel"
           data-ask="panel"
+          data-ask-surface=""
           data-ask-phase={phase.kind}
           aria-label={t.panelLabel}
           data-ask-geometry={mapLayout === null ? 'dock' : `map-${mapLayout}`}
           style={mapPanelStyle ?? { bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
           className={onMap ? mapPanelClass : [
             'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
-            /* MOBILE — a bottom sheet. Full width, capped height, rounded top. */
-            'inset-x-0 bottom-0 h-[86dvh] max-h-[86dvh] rounded-t-2xl',
-            /* TABLET and up — a bounded floating right-hand dock. */
-            'sm:inset-y-4 sm:end-4 sm:start-auto sm:h-auto sm:w-[min(600px,92vw)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl',
+            /* PHONE and 768 PORTRAIT — FULL SCREEN (D25 11: "PHONE ASK MAY NOT" be partial).
+               Was an 86dvh bottom sheet; D25 names that geometry as not permitted. */
+            'inset-0 h-[100dvh] max-h-[100dvh] rounded-none pb-[env(safe-area-inset-bottom)]',
+            /* 1024 and up — a bounded floating right-hand dock. */
+            'lg:inset-y-4 lg:end-4 lg:start-auto lg:h-auto lg:w-[min(600px,92vw)] lg:max-h-[calc(100dvh-2rem)] lg:rounded-2xl',
             /* DESKTOP — a wider dock, so evidence and answer sit side by side. */
             'lg:w-[min(680px,46vw)]',
           ].join(' ')}

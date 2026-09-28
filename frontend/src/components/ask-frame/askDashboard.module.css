@@ -79,49 +79,116 @@
   border-radius: 6px;
   box-shadow: 0 10px 30px #0007;
 }
-@media (max-width: 860px) {
-  .header {
-    padding: 4px 10px;
+/*
+  ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — D25 11 FULL-SCREEN MOBILE AUTHORITY.
+  "PHONE MAP MAY BE PARTIAL. PHONE ASK MAY NOT." Phones and 768 portrait: the surface
+  starts at the top edge and fills the viewport — header 56 · context strip 44 · full-width
+  conversation · composer resting on the safe area. No Map behind or under it, no sheet,
+  no detent. (The 148/52/74 geometry belongs to the Map country workspace only.)
+*/
+.phoneHeader,
+.phoneStrip {
+  display: none;
+}
+.reader p,
+.reader li {
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 38em;
+}
+@media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {
+  .frame {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    height: var(--ask-visible-height, 100dvh);
+    min-height: 0;
+  }
+  .header,
+  .panelTitle,
+  .resize {
+    display: none;
+  }
+  .phoneHeader {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    height: 56px;
+    padding: 0 10px;
+    border-bottom: 1px solid #22303f;
+    background: #0b131d;
+  }
+  .phoneStrip {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 14px;
+    overflow-x: auto;
+    white-space: nowrap;
+    border-bottom: 1px solid #22303f;
+    background: #08111a;
+    font-size: 13px;
+  }
+  .body {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+  }
+  .map {
+    display: none;
+  }
+  .panel {
+    position: static;
+    flex: 1;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  .reader {
+    padding: 12px 14px;
+  }
+  .reader p,
+  .reader li {
+    max-width: 34em;
+  }
+  .composer {
+    padding: 8px 10px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
+/*
+  1024 LANDSCAPE — D26 APPROVED: a dedicated 460 px Ask pane flush right, full remaining
+  height, beside a Map that keeps meaningful width (D25 12).
+*/
+@media (min-width: 861px) and (max-width: 1279px) and (orientation: landscape) {
+  .header,
+  .resize {
+    display: none;
   }
   .body {
     padding: 0;
-    display: block;
+    gap: 0;
   }
   .map {
-    width: 100%;
-    height: 100%;
-  }
-  .map[data-full='true'] {
-    visibility: hidden;
+    flex: 1;
+    width: auto;
   }
   .panel {
-    position: absolute;
-    inset: auto 0 0;
-    height: var(--ask-sheet-height);
-    min-height: 260px;
-    border-radius: 12px 12px 0 0;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .panel[data-detent='peek'] > div:nth-child(2) {
-    display: none;
-  }
-  .panel[data-detent='peek'] .reader {
-    display: none;
-  }
-  .panel[data-detent='full'] {
-    height: 90%;
+    flex: none;
+    width: 460px;
+    border-width: 0 0 0 1px;
   }
   .panel[data-fullmap='true'] {
-    left: 10px;
-    right: 10px;
-    bottom: 12px;
-    width: auto;
-    height: auto;
-    min-height: 0;
+    position: static;
     transform: none;
-  }
-  .composer {
-    padding: 8px;
+    width: 460px;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 

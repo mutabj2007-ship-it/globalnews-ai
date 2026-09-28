@@ -15,6 +15,7 @@ import { SpecialistClaimRegistry } from '../specialist/specialist-claim.registry
 import { routeAskR2, missingSeams, type AskR2Route } from '../ask-router/ask-r2-route';
 import { answerStateBeforeExecution, deriveAnswerState } from '../ask-router/answer-state';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
+import { planChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
 import {
   AskExecutionRefused,
@@ -106,6 +107,16 @@ function routeSignature(route: AskR2Route): unknown[] {
     p.refusals,
     p.disclosures,
   ];
+}
+
+/** ISO3 → the reader's own words for the place, from the qualified reading. */
+function placeSpansOf(route: AskR2Route): Record<string, string> {
+  if (route.outcome.status === 'NOT_READ') return {};
+  const spans: Record<string, string> = {};
+  for (const g of route.outcome.reading.geography) {
+    if (g.matchedText !== undefined && spans[g.value] === undefined) spans[g.value] = g.matchedText;
+  }
+  return spans;
 }
 
 export function planRevision(request: Readonly<AskRequest>, route: AskR2Route): string {
@@ -226,6 +237,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     let usage: { promptTokens: number; completionTokens: number } | null = null;
     let outcome: BreakerOutcome = 'FAILURE';
     let response: AnalysisApiResponse | null = null;
+    let noEvidence = false;
     try {
       response = await this.analysis.analyzeNews(
         request.question,
@@ -241,28 +253,44 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           },
         },
       );
-      outcome =
-        response.analysis === null && response.analysisError !== undefined ? 'FAILURE' : 'SUCCESS';
+      /* The landed path's no-evidence answer (0 articles, "no AI call was made") is not a
+         provider failure: the breaker is told nothing happened. A null analysis WITH
+         retrieved articles is the provider-failure path. */
+      noEvidence = response.analysis === null && response.articles.length === 0;
+      outcome = noEvidence
+        ? 'REFUSAL'
+        : response.analysis === null && response.analysisError !== undefined
+          ? 'FAILURE'
+          : 'SUCCESS';
     } catch (error) {
       outcome = /timeout|deadline/i.test((error as Error)?.message ?? '') ? 'TIMEOUT' : 'FAILURE';
     } finally {
       /* 5 · settle on actual units (null keeps the estimate — the safe direction). */
       const used = usage as { promptTokens: number; completionTokens: number } | null;
       const actual =
-        used === null
-          ? null
-          : used.promptTokens + this.meter.config.outputWeight * used.completionTokens;
-      await this.meter.settle(reservation.reservationId, actual, outcome);
+        used !== null
+          ? used.promptTokens + this.meter.config.outputWeight * used.completionTokens
+          : noEvidence
+            ? 0
+            : null;
+      await this.meter.settle(
+        reservation.reservationId,
+        actual,
+        noEvidence ? 'NO_EVIDENCE' : outcome,
+      );
       await this.breaker.record(provider, outcome, permit.trial);
     }
-    if (outcome !== 'SUCCESS' || response === null)
+    if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {
       throw new AskExecutionRefused(`MODEL_${outcome}`);
+    }
 
     /* 6 · the §7 answer state — the one derivation. */
     const answer = deriveAnswerState(route.plan, {
       items: { REPORTING: response.articles.length },
+      producedAnswer: response.analysis !== null,
     });
-    return this.result(plan, route, operationId, answer, response, usage !== null);
+    /* AI executed = the analysis path produced a model answer (the usage sink is metering only). */
+    return this.result(plan, route, operationId, answer, response, response.analysis !== null);
   }
 
   private result(
@@ -292,7 +320,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           normalization: route.outcome.status,
           questionLanguage: route.envelope.language.questionLanguage,
         },
+        /* D25 05: chips from the effective server plan only, in the order asked. */
+        chips: planChips(route.envelope, route.plan, placeSpansOf(route)),
         answer,
+        /* When the answer was decided — the freshness line's time when no analysis ran. */
+        checkedAt: new Date().toISOString(),
         aiExecuted,
         modelPriorCitable: false,
         analysis,

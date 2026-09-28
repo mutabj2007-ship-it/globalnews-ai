@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import {
   MAP_ASK_FLOAT_W_PX,
   MAP_ASK_HUD_PX,
+  MAP_ASK_PANE_PX,
   MAP_ASK_RAIL_PX,
   mapAskLayoutFor,
   mapAskMaxHeight,
@@ -60,21 +61,32 @@ describe('ASK ON THE MAP — geometry (lib/ask/mapAskGeometry)', () => {
     }
   });
 
-  it('the phone composer stands on the nav, or on the keyboard when one is open — never both', () => {
-    expect(mapAskPanelStyle('compact', { visualViewportHeight: 844, navInset: 91, keyboardInset: 0 }))
-      .toEqual({ bottom: 91, maxHeight: mapAskMaxHeight(844, 91) });
-    expect(mapAskPanelStyle('compact', { visualViewportHeight: 508, navInset: 91, keyboardInset: 336 }))
-      .toEqual({ bottom: 336, maxHeight: mapAskMaxHeight(508, 0) });
+  /*
+    ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — SUPERSEDED BY D25 11 (PO correction,
+    accepted): "PHONE MAP MAY BE PARTIAL. PHONE ASK MAY NOT." The R2 composer sheet above
+    the nav (74% cap) is one of the geometries D25 names as not permitted. Ask on the phone
+    Map is now full screen; the nav is hidden while Ask is active; the composer rests on
+    the keyboard. The Map is restored on Close because Ask never navigated away from it.
+  */
+  it('phone: FULL SCREEN from the top edge; the composer rests on the keyboard when one is open', () => {
+    expect(
+      mapAskPanelStyle('compact', { visualViewportHeight: 844, navInset: 91, keyboardInset: 0 }),
+    ).toEqual({ top: 0, left: 0, right: 0, bottom: 0, borderRadius: 0 });
+    expect(
+      mapAskPanelStyle('compact', { visualViewportHeight: 508, navInset: 91, keyboardInset: 336 }),
+    ).toEqual({ top: 0, left: 0, right: 0, bottom: 336, borderRadius: 0 });
   });
 
-  it('is never the generic 86dvh sheet on the map', () => {
+  it('is never a sheet on the phone: no height cap, no detent, anchored at the top', () => {
     const style = mapAskPanelStyle('compact', { visualViewportHeight: 0, navInset: 0, keyboardInset: 0 });
-    expect(String(style.maxHeight)).toBe(`calc(74dvh - ${MAP_ASK_HUD_PX}px)`);
+    expect(style.maxHeight).toBeUndefined();
+    expect(style.top).toBe(0);
   });
 
   it('desktop: the rail column, or a 440px panel that stops at the rail edge', () => {
     expect(mapAskPanelStyle('rail', { visualViewportHeight: 900, navInset: 0, keyboardInset: 0 }))
-      .toMatchObject({ right: 0, width: MAP_ASK_RAIL_PX });
+      /* D26 (approved, D25 12): the 1024 landscape Ask pane is 460 px. */
+      .toMatchObject({ top: 44, right: 0, bottom: 0, width: MAP_ASK_PANE_PX });
     const float = mapAskPanelStyle('float', { visualViewportHeight: 900, navInset: 0, keyboardInset: 0 });
     expect(float.width).toBe(MAP_ASK_FLOAT_W_PX);
     expect(Number(float.right)).toBeGreaterThanOrEqual(MAP_ASK_RAIL_PX);
@@ -88,8 +100,11 @@ describe('ASK ON THE MAP — the dock keeps every contract', () => {
     expect(DOCK).toContain('if (pathname === ASK_CANONICAL_ROUTE) return null;');
   });
 
-  it('the generic dock classes are unchanged for every other route', () => {
-    expect(DOCK).toContain("'inset-x-0 bottom-0 h-[86dvh] max-h-[86dvh] rounded-t-2xl'");
+  it('the generic dock is full screen below 1024 (D25 11) and a floating dock from 1024', () => {
+    expect(DOCK).toContain(
+      "'inset-0 h-[100dvh] max-h-[100dvh] rounded-none pb-[env(safe-area-inset-bottom)]'",
+    );
+    expect(DOCK).not.toContain('h-[86dvh]');
     expect(DOCK).toContain("className={onMap ? mapPanelClass : [");
   });
 

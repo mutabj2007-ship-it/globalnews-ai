@@ -119,13 +119,15 @@ describe('the dock is a real scrollable conversation on phones', () => {
     expect(CODE).toContain('maxViewportFraction={0.46}');
   });
 
-  it('the phone sheet uses dynamic viewport height and safe-area padding', () => {
-    expect(CODE).toContain('h-[86dvh]');
+  /* ASK R2 INTEGRATION R1 · D25 11 — the phone surface is full screen, not an 86dvh sheet. */
+  it('the phone surface is full screen with dynamic viewport height and safe-area padding', () => {
+    expect(CODE).toContain('h-[100dvh]');
     expect(CODE).toContain('env(safe-area-inset-bottom)');
   });
 
   it('desktop uses a bounded floating dock with lifted surfaces rather than a full-height dark slab', () => {
-    expect(CODE).toContain('sm:inset-y-4');
+    /* from 1024 (D25: 768 portrait follows the phone rule, so the float starts at lg) */
+    expect(CODE).toContain('lg:inset-y-4');
     expect(CODE).toContain('lg:w-[min(680px,46vw)]');
     expect(CODE).toContain('bg-surface-raised');
     expect(CODE).toContain('data-ask-scroll="conversation"');

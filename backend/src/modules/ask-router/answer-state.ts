@@ -45,6 +45,11 @@ export interface ObtainedEvidence {
   readonly items: Readonly<Partial<Record<AskEvidenceRole, number>>>;
   /** For a current-status plan: the executor's verification result, if it ran one. */
   readonly verification?: VerificationOutcome;
+  /**
+   * False when execution ran but produced no answer at all (the landed analysis path found
+   * no evidence and made no model call). Then there is nothing to present as background.
+   */
+  readonly producedAnswer?: boolean;
 }
 
 export interface AnswerStateDecision {
@@ -95,6 +100,13 @@ export function deriveAnswerState(
   obtained?: ObtainedEvidence,
 ): AnswerStateDecision {
   const early = answerStateBeforeExecution(plan);
+  /* Nothing was produced: a reference plan must not be shown as an empty "background". */
+  if (
+    obtained?.producedAnswer === false &&
+    (early === null || early.state === 'REFERENCE_BACKGROUND')
+  ) {
+    return { state: 'INSUFFICIENT', basis: 'NO_ANSWER_PRODUCED', missingRoles: [] };
+  }
   if (early !== null) return early;
   if (plan.terminalState === 'AWAITING_COMPUTE_CONSENT') {
     /* Nothing ran: consent is a precondition, not an evidence outcome. */

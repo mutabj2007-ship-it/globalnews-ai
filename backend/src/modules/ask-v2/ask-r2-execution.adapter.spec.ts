@@ -226,12 +226,62 @@ describe('execute — the one bounded call, settled on actual units', () => {
     expect(result.evidenceRevision).toBe(plan.revision);
   });
 
+  it('no evidence (0 articles, no model call) is a stored INSUFFICIENT answer, not a failure', async () => {
+    const { adapter, calls } = harness({
+      analysis: async () => ({
+        analysis: null,
+        analysisError: 'No matching reporting.',
+        articles: [],
+      }),
+    });
+    const plan = await adapter.prepare(req(Q));
+    const result = await inRequest(() => adapter.execute(req(Q), plan, 'op-1'));
+    expect(result.succeeded).toBe(true);
+    const payload = JSON.parse(result.payloadJson) as {
+      aiExecuted: boolean;
+      answer: { state: string };
+    };
+    expect(payload).toMatchObject({ aiExecuted: false, answer: { state: 'INSUFFICIENT' } });
+    /* the breaker is not told of a failure; the meter settles 0 actual units */
+    expect(calls.record).toEqual([['openai', 'REFUSAL', false]]);
+    expect(calls.settle).toEqual([['res-1', 0, 'NO_EVIDENCE']]);
+  });
+
+  it('a reference question with no evidence is INSUFFICIENT — never an empty "background"', async () => {
+    const { adapter } = harness({
+      analysis: async () => ({
+        analysis: null,
+        analysisError: 'No matching reporting.',
+        articles: [],
+      }),
+    });
+    const plan = await adapter.prepare(req('What is inflation?'));
+    const result = await inRequest(() => adapter.execute(req('What is inflation?'), plan, 'op-1'));
+    expect((JSON.parse(result.payloadJson) as { answer: { state: string } }).answer.state).toBe(
+      'INSUFFICIENT',
+    );
+  });
+
+  it('a provider failure WITH retrieved articles is still MODEL_FAILURE', async () => {
+    const { adapter } = harness({
+      analysis: async () => ({
+        analysis: null,
+        analysisError: 'provider-unavailable',
+        articles: [{} as never],
+      }),
+    });
+    const plan = await adapter.prepare(req(Q));
+    expect(await refusal(inRequest(() => adapter.execute(req(Q), plan, 'op-1')))).toBe(
+      'MODEL_FAILURE',
+    );
+  });
+
   it('a model failure settles with the estimate kept (null actual), records FAILURE, and refuses', async () => {
     const { adapter, calls } = harness({
       analysis: async () => ({
         analysis: null,
         analysisError: 'provider-unavailable',
-        articles: [],
+        articles: [{} as never],
       }),
     });
     const plan = await adapter.prepare(req(Q));

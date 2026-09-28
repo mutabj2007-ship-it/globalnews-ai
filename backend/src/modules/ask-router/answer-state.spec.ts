@@ -147,6 +147,24 @@ describe('§7 — after execution', () => {
   });
 });
 
+describe('§7 — execution that produced nothing', () => {
+  it('a reference plan that produced no answer is INSUFFICIENT, never an empty background', () => {
+    expect(
+      deriveAnswerState(planFor('What is inflation?'), { items: {}, producedAnswer: false }),
+    ).toEqual({
+      state: 'INSUFFICIENT',
+      basis: 'NO_ANSWER_PRODUCED',
+      missingRoles: [],
+    });
+  });
+
+  it('a clarification plan is unaffected (nothing was meant to run)', () => {
+    expect(
+      deriveAnswerState(planFor('Compare them.'), { items: {}, producedAnswer: false }).state,
+    ).toBe('CLARIFICATION_REQUIRED');
+  });
+});
+
 describe('volatility guard — where a REFERENCE item may be used at all', () => {
   it.each([
     ['What is inflation?', true],

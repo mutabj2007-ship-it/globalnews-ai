@@ -39,7 +39,9 @@ const nextConfig = {
    * a third-party cookie, which Safari and Firefox block by default and which
    * would therefore have left every iPhone user signed out.
    *
-   * SEVEN AUTHENTICATED /api FAMILIES, AND NOT ONE MORE (CTO requirement 1).
+   * SEVEN AUTHENTICATED /api FAMILIES, AND NOT ONE MORE (CTO requirement 1) — EIGHT since
+   * ASK R2 CONSOLIDATED INTEGRATION R1 added /ask-v2, which is behind RequireAuthGuard and
+   * so falls under the rule below; the eighth is argued at its entry, for CTO review.
    * Every route behind RequireAuthGuard is here: auth, users, history, follows,
    * support, admin — plus analysis, argued below.
    *
@@ -131,6 +133,15 @@ const nextConfig = {
       { source: '/api/follows/:path*', destination: `${backendOrigin}/follows/:path*` },
       { source: '/api/support/:path*', destination: `${backendOrigin}/support/:path*` },
       { source: '/api/admin/:path*', destination: `${backendOrigin}/admin/:path*` },
+      /*
+        ASK R2 CONSOLIDATED INTEGRATION R1 · GATE F — THE EIGHTH AUTHENTICATED FAMILY.
+        /ask-v2 is behind RequireAuthGuard + CsrfGuard, so by this file's own rule ("every
+        route behind RequireAuthGuard is here") it belongs to class A and was missing:
+        without it the browser's /api/ask-v2/* reached Next's own 404, which the Ask client
+        correctly reads as "Ask V2 unavailable" — so Ask V2 could never be reached from
+        the product even with ASK_V2_ENABLED on. Counted, not slipped in: seven → eight.
+      */
+      { source: '/api/ask-v2/:path*', destination: `${backendOrigin}/ask-v2/:path*` },
 
       /*
         PUBLIC NEWS — THE EIGHTH FAMILY THAT IS DELIBERATELY NOT AN /api FAMILY.

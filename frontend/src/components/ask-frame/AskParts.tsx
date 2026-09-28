@@ -193,7 +193,7 @@ export function Composer({
       <div className="mt-[7px] flex items-center justify-end gap-[10px]">
         <button
           type="submit"
-          data-ask="composer-submit"
+          data-ask="send"
           disabled={pending || !value.trim() || !onSubmit}
           className="inline-flex min-h-[44px] items-center rounded-[4px] border border-sp-cyan/55 bg-sp-cyan/15 px-[16px] text-[12px] font-semibold text-sp-cyan"
         >

@@ -51,6 +51,8 @@ export function MobileBottomNav({
       aria-label={t.navigationAriaLabel}
       /* A stable marker so surfaces that stack above the nav can measure its REAL height (PL labels wrap). */
       data-gn-bottom-nav=""
+      /* ASK R2 INTEGRATION R1 · D25 11 — hidden while Ask is active (globals.css, body[data-ask-open]). */
+      data-mobile-bottom-nav=""
       className="fixed inset-x-0 bottom-0 z-40 border-t border-cyan-500/15 bg-void/95 backdrop-blur-md lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
