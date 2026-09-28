@@ -163,7 +163,10 @@ describe('P1 · the sand selection hook', () => {
     expect(views).toContain('line-clamp-3');
     const dashboard = read('workspace/WorkspaceDashboard.tsx');
     expect(dashboard).toMatch(/minmax\(min\(100%,3[01]0px\),1fr\)/);
-    expect(read('MiSections.tsx')).toMatch(/minmax\(min\(100%,3[12]0px\),1fr\)/);
+    /* SAVED CARD GEOMETRY (live Alpha finding): the Saved destination takes a 360px track and the dense card. */
+    expect(read('MiSections.tsx')).toMatch(/minmax\(min\(100%,360px\),1fr\)/);
+    expect(read('MiSections.tsx')).toMatch(/<SavedCard\s+key=\{story\.id\}\s+dense/);
+    expect(views).toContain('const dense = compact || props.dense === true;');
   });
 });
 

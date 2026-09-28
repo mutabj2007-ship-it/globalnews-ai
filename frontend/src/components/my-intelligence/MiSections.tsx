@@ -205,10 +205,11 @@ export function SavedSection({
               />
             ))}
           </ul>
-          <ul className="mt-3 hidden gap-x-6 gap-y-3 md:grid md:[grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))]">
+          <ul className="mt-3 hidden gap-x-6 gap-y-3 md:grid md:[grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr))]">
             {stories.map((story) => (
               <SavedCard
                 key={story.id}
+                dense
                 story={story}
                 language={language}
                 isSaved={handlers.savedRefs.has(story.url)}
