@@ -3,11 +3,13 @@
 import { useCallback, useMemo } from 'react';
 import {
   normalizeArticleUrl,
+  type MyIntelligenceInterest,
   type MyIntelligenceStory,
   type SavedStoryView,
 } from '@globalnews-ai/shared';
 import { useAccount } from '@/lib/hooks/useAccount';
 import {
+  useIntelligenceInterests,
   useMyIntelligenceFeed,
   useQuestionHistory,
   useSavedStories,
@@ -22,6 +24,7 @@ import {
   type FixtureStory,
 } from './devFixtures';
 import { countNewSince, selectNewSince } from './newSince';
+import { selectForYou } from './interestForYou';
 
 /**
  * MY INTELLIGENCE LIVE ADAPTER.
@@ -61,6 +64,15 @@ export interface MyIntelligenceData {
 
   readonly forYou: readonly FixtureStory[];
   readonly forYouSource: SectionSource;
+  /* INTEREST + SELECTION HOOK R1 — explicit interests and the For you rule's facts. */
+  readonly interests: readonly MyIntelligenceInterest[];
+  readonly interestsLoaded: boolean;
+  readonly forYouFiltered: boolean;
+  readonly forYouMatchCount: number;
+  /** The broad followed-country list, shown ONLY when the reader explicitly asks for it. */
+  readonly forYouBroad: readonly FixtureStory[];
+  readonly saveInterests: (next: readonly MyIntelligenceInterest[]) => Promise<boolean>;
+  readonly isSavingInterests: boolean;
 
   readonly follows: readonly string[] | null;
   readonly followsSource: SectionSource;
@@ -110,7 +122,9 @@ function feedStoryToUi(story: MyIntelligenceStory): FixtureStory {
     sourceName: story.sourceName,
     publishedAt: story.publishedAt,
     countryCode: firstCountry(story.countryCodes),
-    category: 'Following',
+    /* INTEREST + SELECTION HOOK R1 — the story's real category (older feeds without one keep the old label). */
+    category: story.category ?? 'Following',
+    interests: story.interests ?? [],
     ...(story.firstSeenAt ? { firstSeenAt: story.firstSeenAt } : {}),
     ...(story.imageUrl ? { imageUrl: story.imageUrl } : {}),
   };
@@ -137,6 +151,8 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
   const feed = useMyIntelligenceFeed();
   const savedState = useSavedStories();
   const history = useQuestionHistory();
+  const interestState = useIntelligenceInterests();
+  const chosenInterests = useMemo(() => interestState.data ?? [], [interestState.data]);
 
   const fixtureAccount = MI_FIXTURES_ENABLED && !accountLoading && user === null;
   const isSignedIn = user !== null || fixtureAccount;
@@ -199,23 +215,32 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
     return refs;
   }, [fixtureAccount, saved, savedState.data]);
 
-  const forYou = useMemo(() => {
+  /* The For you candidates: retained followed-country reporting, minus New since and Saved. */
+  const forYouCandidates = useMemo(() => {
     if (emptied) return [];
-    if (fixtureAccount) {
-      const shown = new Set(newSince.map((story) => normalizeArticleUrl(story.url)));
-      return FIXTURE_FOR_YOU.filter((story) => !shown.has(normalizeArticleUrl(story.url))).slice(0, FOR_YOU_LIMIT);
-    }
-
     const shown = new Set(newSince.map((story) => normalizeArticleUrl(story.url)));
+    if (fixtureAccount) {
+      return FIXTURE_FOR_YOU.filter((story) => !shown.has(normalizeArticleUrl(story.url)));
+    }
     const savedUrls = new Set(saved.map((story) => normalizeArticleUrl(story.url)));
-    return liveFeedStories
-      .filter((story) => {
-        const ref = normalizeArticleUrl(story.url);
-        return !shown.has(ref) && !savedUrls.has(ref);
-      })
-      /* PREMIUM WORKSPACE R1 — SPEC.md "For you … Shows 6" (the dashboard bounds phone to 3). */
-      .slice(0, FOR_YOU_LIMIT);
+    return liveFeedStories.filter((story) => {
+      const ref = normalizeArticleUrl(story.url);
+      return !shown.has(ref) && !savedUrls.has(ref);
+    });
   }, [emptied, fixtureAccount, liveFeedStories, newSince, saved]);
+
+  /*
+    INTEREST + SELECTION HOOK R1 — explicit interests filter For you only
+    (selectForYou): no backfill, match-then-recency order, the dashboard max
+    (SPEC.md "For you … Shows 6"; the dashboard bounds phone to 3). New since
+    and Saved are never filtered by interests.
+  */
+  const forYouSelection = useMemo(
+    () => selectForYou(forYouCandidates, chosenInterests, FOR_YOU_LIMIT),
+    [chosenInterests, forYouCandidates],
+  );
+  const forYou = forYouSelection.stories;
+  const forYouBroad = useMemo(() => forYouCandidates.slice(0, FOR_YOU_LIMIT), [forYouCandidates]);
 
   const follows = useMemo<readonly string[] | null>(() => {
     if (emptied) return [];
@@ -282,6 +307,13 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
 
     forYou,
     forYouSource: source,
+    interests: chosenInterests,
+    interestsLoaded: !interestState.isLoading,
+    forYouFiltered: forYouSelection.filtered,
+    forYouMatchCount: forYouSelection.matchCount,
+    forYouBroad,
+    saveInterests: interestState.save,
+    isSavingInterests: interestState.isSaving,
 
     follows,
     followsSource: source,

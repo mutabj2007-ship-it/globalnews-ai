@@ -1,5 +1,8 @@
 import type {
   MyIntelligenceFeedResponse,
+  MyIntelligenceInterest,
+  MyIntelligenceInterestsResponse,
+  UpdateMyIntelligenceInterestsRequest,
   QuestionHistoryEntryView,
   SavedStoryListResponse,
   SavedStoryView,
@@ -41,6 +44,7 @@ export const MY_INTELLIGENCE_PATHS = {
   feed: '/users/me/intelligence/feed',
   savedStories: '/users/me/saved/stories',
   history: '/history',
+  interests: '/users/me/intelligence/interests',
 } as const;
 
 /** Following / For You / New Since — retained reporting only. */
@@ -74,4 +78,19 @@ export async function removeSavedStory(articleRef: string): Promise<void> {
 export async function fetchQuestionHistory(): Promise<QuestionHistoryEntryView[]> {
   const path = MY_INTELLIGENCE_PATHS.history;
   return readJson(path, await accountFetch(path));
+}
+
+/* INTEREST + SELECTION HOOK R1 — the reader's explicit interests. Account data only. */
+export async function fetchIntelligenceInterests(): Promise<MyIntelligenceInterestsResponse> {
+  const path = MY_INTELLIGENCE_PATHS.interests;
+  return readJson(path, await accountFetch(path));
+}
+
+/** ONE mutation: the stored set becomes exactly `interests`. An empty list clears it. */
+export async function updateIntelligenceInterests(
+  interests: readonly MyIntelligenceInterest[],
+): Promise<MyIntelligenceInterestsResponse> {
+  const path = MY_INTELLIGENCE_PATHS.interests;
+  const body: UpdateMyIntelligenceInterestsRequest = { interests };
+  return readJson(path, await accountFetch(path, { method: 'PUT', body }));
 }

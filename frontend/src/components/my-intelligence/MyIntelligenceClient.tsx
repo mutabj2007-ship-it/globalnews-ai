@@ -35,8 +35,10 @@ import { useMyIntelligenceData } from './useMyIntelligenceData';
 import { isNewSince } from './newSince';
 import type { WorkspaceView } from './workspace/miWorkspaceModel';
 import { WorkspaceDrawer, WorkspaceRail } from './workspace/WorkspaceNav';
+import { InterestEditor } from './workspace/InterestEditor';
 import {
   ExploreModule,
+  forYouReason,
   ForYouModule,
   GoDeeperCard,
   HistoryPreview,
@@ -110,6 +112,8 @@ export function MyIntelligenceClient({
   const [railPinned, setRailPinned] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [followingRequest, setFollowingRequest] = useState(0);
+  /* INTEREST + SELECTION HOOK R1 — the Tune interests editor (For you header, and Account & Control → Preferences). */
+  const [interestEditorOpen, setInterestEditorOpen] = useState(false);
   const [selecting, setSelecting] = useState(false);
   /* First-use note: page state only — this surface keeps no browser storage. */
   const [introDone, setIntroDone] = useState(false);
@@ -348,6 +352,7 @@ export function MyIntelligenceClient({
     onSignOut: () => {
       void data.signOut();
     },
+    onPreferences: () => setInterestEditorOpen(true),
   };
 
   if (signedOut) {
@@ -479,7 +484,16 @@ export function MyIntelligenceClient({
                     </div>
                   </div>
                   <div className="order-2 min-w-0">
-                    <ForYouModule stories={data.forYou} handlers={handlers} onViewAll={() => setView('forYou')} />
+                    <ForYouModule
+                      stories={data.forYou}
+                      handlers={handlers}
+                      onViewAll={() => setView('forYou')}
+                      interests={data.interests}
+                      filtered={data.forYouFiltered}
+                      matchCount={data.forYouMatchCount}
+                      broad={data.forYouBroad}
+                      onTune={() => setInterestEditorOpen(true)}
+                    />
                   </div>
                   <div className="order-4 min-w-0">
                     <ExploreModule language={language} />
@@ -513,7 +527,7 @@ export function MyIntelligenceClient({
               {view === 'forYou' && (
                 <div data-mi-view="forYou" className="flex flex-col gap-4">
                   <DestinationBack language={language} onBack={backToToday} />
-                  <ForYouSection stories={data.forYou} handlers={handlers} />
+                  <ForYouSection stories={data.forYou} handlers={handlers} reasonFor={(story) => forYouReason(story, data.interests, language)} />
                 </div>
               )}
 
@@ -547,6 +561,16 @@ export function MyIntelligenceClient({
       </div>
 
       <WorkspaceDrawer {...navProps} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      {interestEditorOpen && (
+        <InterestEditor
+          language={language}
+          current={data.interests}
+          saving={data.isSavingInterests}
+          onApply={data.saveInterests}
+          onClose={() => setInterestEditorOpen(false)}
+        />
+      )}
 
       {/* Desktop: the contextual selection rail, only while selection mode is on. */}
       {selecting && (

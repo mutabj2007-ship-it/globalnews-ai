@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import type {
   MyIntelligenceFeedResponse,
+  MyIntelligenceInterest,
   QuestionHistoryEntryView,
   SavedStoryView,
   SaveStoryRequest,
@@ -18,11 +19,13 @@ import {
   subscribeSavedStories,
 } from './savedStoriesStore';
 import {
+  fetchIntelligenceInterests,
   fetchMyIntelligenceFeed,
   fetchQuestionHistory,
   fetchSavedStories,
   removeSavedStory,
   saveStory,
+  updateIntelligenceInterests,
 } from './myIntelligenceApi';
 
 /**
@@ -143,4 +146,41 @@ export function useQuestionHistory(): QuestionHistoryState {
     openGlobalAsk(entry.query);
   }, []);
   return { ...base, stage };
+}
+
+/* ═══ INTEREST + SELECTION HOOK R1 — EXPLICIT READER INTERESTS ══════════════
+ *
+ * One GET per page (the same account-read gate as the feed: none without the
+ * session hint), and one PUT per Apply. Nothing here calls AI or a provider,
+ * and the interests are only ever what the reader chose.
+ */
+export interface IntelligenceInterestsState extends LoadState<readonly MyIntelligenceInterest[]> {
+  readonly save: (next: readonly MyIntelligenceInterest[]) => Promise<boolean>;
+  readonly isSaving: boolean;
+}
+
+export function useIntelligenceInterests(): IntelligenceInterestsState {
+  const base = useAccountRead(fetchIntelligenceInterests);
+  const [override, setOverride] = useState<readonly MyIntelligenceInterest[] | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const save = useCallback(async (next: readonly MyIntelligenceInterest[]): Promise<boolean> => {
+    setIsSaving(true);
+    try {
+      const response = await updateIntelligenceInterests(next);
+      setOverride(response.interests);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, []);
+
+  return {
+    ...base,
+    data: override ?? base.data?.interests ?? null,
+    save,
+    isSaving,
+  };
 }

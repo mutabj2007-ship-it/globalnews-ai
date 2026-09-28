@@ -166,7 +166,8 @@ describe('DENSITY — the dashboard never renders a full collection', () => {
   it('phone hides rows past the third with CSS on ONE list, never a second list', () => {
     expect(DASHBOARD).toContain("const PHONE_BOUND_3 = 'max-md:[&>li:nth-child(n+4)]:hidden';");
     expect(DASHBOARD).toContain('stories.slice(0, DASHBOARD_ROWS.desktop)');
-    expect(DASHBOARD).toContain('stories.slice(0, FOR_YOU_PREVIEW.desktop)');
+    /* INTEREST R1 — the module bounds whichever list it shows (interest-filtered, or the explicit broader list). */
+    expect(DASHBOARD).toContain('source.slice(0, FOR_YOU_PREVIEW.desktop)');
   });
 });
 

@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { LanguageCode, MyIntelligenceInterest } from '@globalnews-ai/shared';
 import { findCountryByIso3 } from '@globalnews-ai/shared';
 import {
   Activity,
@@ -11,6 +12,7 @@ import {
   FileText,
   History,
   Scale,
+  SlidersHorizontal,
   Sparkles,
   Split,
   Vote,
@@ -24,6 +26,7 @@ import { BookmarkButton, fill } from '../MiPrimitives';
 import { NewSinceRow, SavedCard, StoryImage, StoryTitle } from '../MiStoryViews';
 import { MI_ACTIONS, SelectionModeToggle, type ActionId } from '../MiSelection';
 import type { FixtureStory } from '../devFixtures';
+import { matchedInterests } from '../interestForYou';
 import type { RecentQuestion } from '../useMyIntelligenceData';
 import { DOMAIN_ICONS, NotInBetaTag } from './WorkspaceNav';
 import {
@@ -196,34 +199,99 @@ export function SelectPromiseCard({
 
 /* ═══ FOR YOU ═════════════════════════════════════════════════════════════ */
 
+/**
+ * INTEREST + SELECTION HOOK R1 — WHY THIS STORY IS FOR YOU, from deterministic
+ * facts only: the chosen interests the story matches (server-derived from its
+ * retained category / title / summary) and the followed country it came from.
+ * With no chosen interest matched, the governed country reason stands.
+ */
+export function forYouReason(
+  story: FixtureStory,
+  chosen: readonly MyIntelligenceInterest[],
+  language: LanguageCode,
+): string {
+  const t = getDictionary(language).myIntelligence;
+  const country = findCountryByIso3(story.countryCode);
+  const name = country === undefined ? story.countryCode : getCountryDisplayName(country.iso2, language, country.name);
+  const matched = matchedInterests(story, chosen);
+  if (matched.length === 0) return fill(t.forYou.reason, { country: name });
+  return `${matched.map((interest) => t.interests.labels[interest]).join(' + ')} · ${name}`;
+}
+
 export function ForYouModule({
   stories,
   handlers,
   onViewAll,
+  interests,
+  filtered,
+  matchCount,
+  broad,
+  onTune,
 }: {
   stories: readonly FixtureStory[];
   handlers: StoryHandlers;
   onViewAll: () => void;
+  interests: readonly MyIntelligenceInterest[];
+  filtered: boolean;
+  matchCount: number;
+  broad: readonly FixtureStory[];
+  onTune: () => void;
 }): JSX.Element {
   const { language } = handlers;
   const t = getDictionary(language).myIntelligence;
-  const shown = stories.slice(0, FOR_YOU_PREVIEW.desktop);
+  const ti = t.interests;
+  /* "Show broader reporting" is an EXPLICIT reader action, never automatic broadening. */
+  const [showBroad, setShowBroad] = useState(false);
+  const source = filtered && showBroad ? broad : stories;
+  const shown = source.slice(0, FOR_YOU_PREVIEW.desktop);
 
   return (
-    <section data-mi-module="for-you" aria-labelledby="mi-for-you-title" className="min-w-0">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+    <section data-mi-module="for-you" data-mi-for-you-filtered={filtered ? 'true' : 'false'} aria-labelledby="mi-for-you-title" className="min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
           <h2 id="mi-for-you-title" className="text-[21px] font-bold text-white">{t.forYou.title}</h2>
           <span className="text-[13px] text-[#93a7bd]">{t.forYou.note}</span>
         </div>
-        {stories.length > 0 && (
-          <button type="button" onClick={onViewAll} className={VIEW_ALL}>
-            {getDictionary(language).myIntelligence.workspace.viewAll}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            data-mi-control="tune-interests"
+            onClick={onTune}
+            className={`${MI_FOCUS} ${MI_TARGET} inline-flex items-center gap-2 rounded-full border border-[#1b6fa8] bg-[#07304f] px-4 text-[13px] font-semibold text-[#cfe6ff]`}
+          >
+            <SlidersHorizontal aria-hidden="true" className="h-[15px] w-[15px]" />
+            {ti.tune}
+            {interests.length > 0 && <span className="rounded-full bg-[#0b2c4d] px-1.5 text-[11.5px] text-[#93cdf5]">{interests.length}</span>}
+          </button>
+          {source.length > 0 && (
+            <button type="button" onClick={onViewAll} className={VIEW_ALL}>
+              {t.workspace.viewAll}
+            </button>
+          )}
+        </div>
+      </div>
+      <p data-mi-for-you-state="" className="mt-1 text-[12.5px] leading-[1.5] text-[#93a7bd]">
+        {!filtered
+          ? ti.invite
+          : showBroad
+            ? null
+            : matchCount === 1
+              ? ti.matchCountOne
+              : fill(ti.matchCountOther, { count: matchCount })}
+        {filtered && (
+          <button
+            type="button"
+            data-mi-control="for-you-broader"
+            aria-pressed={showBroad}
+            onClick={() => setShowBroad((was) => !was)}
+            className={`${MI_FOCUS} ml-2 inline-flex min-h-[44px] items-center font-semibold text-[#5abff5]`}
+          >
+            {showBroad ? ti.focused : ti.broader}
           </button>
         )}
-      </div>
+      </p>
       {shown.length === 0 ? (
-        <p className={`${MI_RAIL} mt-3 p-4 text-[13.5px] text-[#7d92aa]`}>{t.forYou.empty}</p>
+        <p className={`${MI_RAIL} mt-2 p-4 text-[13.5px] text-[#7d92aa]`}>{filtered ? ti.noMatch : t.forYou.empty}</p>
       ) : (
         /*
           INTEREST + SELECTION HOOK R1 — width-driven, not breakpoint-driven: a card
@@ -231,25 +299,21 @@ export function ForYouModule({
           the grid from 3 to 2 columns instead of squeezing the cards. The 24px
           column gap is wider than the hook's straddle.
         */
-        <ul className={`mt-3 grid gap-x-6 gap-y-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr))] ${PHONE_BOUND_3}`} data-mi-cards={shown.length}>
-          {shown.map((story) => {
-            const country = findCountryByIso3(story.countryCode);
-            const name = country === undefined ? story.countryCode : getCountryDisplayName(country.iso2, language, country.name);
-            return (
-                <SavedCard
-                  key={story.id}
-                  compact
-                  story={story}
-                  language={language}
-                  reason={fill(t.forYou.reason, { country: name })}
-                  isSaved={handlers.savedRefs.has(story.url)}
-                  onToggleSaved={() => handlers.onToggleSaved(story.url)}
-                  selecting={handlers.selecting}
-                  isSelected={handlers.selectedUrls.has(story.url)}
-                  onToggleSelected={() => handlers.onToggleSelected(story.url)}
-                />
-            );
-          })}
+        <ul className={`mt-2 grid gap-x-6 gap-y-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr))] ${PHONE_BOUND_3}`} data-mi-cards={shown.length}>
+          {shown.map((story) => (
+            <SavedCard
+              key={story.id}
+              compact
+              story={story}
+              language={language}
+              reason={forYouReason(story, showBroad ? [] : interests, language)}
+              isSaved={handlers.savedRefs.has(story.url)}
+              onToggleSaved={() => handlers.onToggleSaved(story.url)}
+              selecting={handlers.selecting}
+              isSelected={handlers.selectedUrls.has(story.url)}
+              onToggleSelected={() => handlers.onToggleSelected(story.url)}
+            />
+          ))}
         </ul>
       )}
     </section>

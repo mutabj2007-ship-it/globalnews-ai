@@ -254,7 +254,7 @@ export function SavedRow(props: CommonProps): JSX.Element {
       />
       <span className="min-w-0 flex-1">
         <span className="mb-1 block">
-          <CategoryChip label={story.category} />
+          <CategoryChip label={getDictionary(language).map.categories[story.category] ?? story.category} />
         </span>
         <StoryTitle
           story={story}
@@ -326,7 +326,7 @@ export function SavedCard(props: CommonProps & { reason?: string; compact?: bool
         fallbackClassName="px-1.5 text-center text-[10px] leading-[1.3] text-[#54687e]"
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <CategoryChip label={story.category} />
+        <CategoryChip label={getDictionary(language).map.categories[story.category] ?? story.category} />
         <StoryTitle
           story={story}
           className={`block text-[14.5px] font-bold leading-[1.28] text-white [overflow-wrap:anywhere] md:text-[15px] ${compact ? 'line-clamp-3' : ''}`}

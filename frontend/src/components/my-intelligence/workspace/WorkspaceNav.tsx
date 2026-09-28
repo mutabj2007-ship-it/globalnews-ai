@@ -75,6 +75,8 @@ export interface WorkspaceNavProps {
   readonly userName: string | null;
   readonly userEmail: string | null;
   readonly onSignOut: () => void;
+  /** INTEREST + SELECTION HOOK R1 — Preferences opens the explicit-interests editor. */
+  readonly onPreferences?: () => void;
   /** Called after any navigation the nav performs, so the drawer / overlay can close. */
   readonly onNavigated?: () => void;
 }
@@ -169,6 +171,7 @@ export function WorkspaceNav({
   userEmail,
   onSignOut,
   onNavigated,
+  onPreferences,
 }: WorkspaceNavProps): JSX.Element {
   const w = getDictionary(language).myIntelligence.workspace;
   const [open, setOpen] = useState<ReadonlySet<RailGroupId>>(initialOpenGroups);
@@ -334,7 +337,22 @@ export function WorkspaceNav({
           {open.has('account') && (
             <div id="mi-nav-account" className="flex flex-col gap-0.5 pb-1">
               <RowLink href={ACCOUNT_SETTINGS_HREF} icon={Users} label={w.items.accountItem} onNavigated={onNavigated} />
-              <RowLink href={ACCOUNT_SETTINGS_HREF} icon={SlidersHorizontal} label={w.items.preferences} onNavigated={onNavigated} />
+              {onPreferences ? (
+                <button
+                  type="button"
+                  data-mi-control="preferences-interests"
+                  onClick={() => {
+                    onPreferences();
+                    onNavigated?.();
+                  }}
+                  className={`${MI_FOCUS} ${ROW}`}
+                >
+                  <SlidersHorizontal aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-[#8fb3d4]" />
+                  <span className="min-w-0 flex-1 truncate">{w.items.preferences}</span>
+                </button>
+              ) : (
+                <RowLink href={ACCOUNT_SETTINGS_HREF} icon={SlidersHorizontal} label={w.items.preferences} onNavigated={onNavigated} />
+              )}
               <div className={`${ROW} cursor-default hover:bg-transparent`}>
                 <Globe aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-[#8fb3d4]" />
                 <span className="min-w-0 flex-1 truncate">{w.items.language}</span>

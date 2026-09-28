@@ -83,6 +83,13 @@ const data: MyIntelligenceData = {
   toggleSaved: () => undefined,
   retry: () => undefined,
   signOut: async () => undefined,
+  interests: [],
+  interestsLoaded: true,
+  forYouFiltered: false,
+  forYouMatchCount: 0,
+  forYouBroad: [],
+  saveInterests: async () => true,
+  isSavingInterests: false,
 };
 jest.mock('./useMyIntelligenceData', () => ({ useMyIntelligenceData: () => data }));
 

@@ -183,7 +183,7 @@ export function SavedSection({
                       : 'border-[#1d3a5a] text-[#9fb4cb]'
                   }`}
                 >
-                  {category}
+                  {getDictionary(language).map.categories[category] ?? category}
                 </button>
               </li>
             ))}
@@ -228,9 +228,12 @@ export function SavedSection({
 export function ForYouSection({
   stories,
   handlers,
+  reasonFor,
 }: {
   stories: readonly FixtureStory[];
   handlers: StoryHandlers;
+  /** INTEREST + SELECTION HOOK R1 — the deterministic "why this is for you" line. */
+  reasonFor?: (story: FixtureStory) => string;
 }): JSX.Element {
   const { language } = handlers;
   const t = getDictionary(language).myIntelligence;
@@ -255,7 +258,7 @@ export function ForYouSection({
                 compact
                 story={story}
                 language={language}
-                reason={fill(t.forYou.reason, { country: name })}
+                reason={reasonFor ? reasonFor(story) : fill(t.forYou.reason, { country: name })}
                 isSaved={handlers.savedRefs.has(story.url)}
                 onToggleSaved={() => handlers.onToggleSaved(story.url)}
                 selecting={handlers.selecting}
