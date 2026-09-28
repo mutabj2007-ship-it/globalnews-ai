@@ -267,6 +267,67 @@ describe('HOME REV A COLOR RECONCILIATION — existing Home colour families, no 
   });
 });
 
+describe('HOME REV A DENSITY CORRECTION R1', () => {
+  const WHATS = readFileSync(join(DIR, '../WhatsHappeningNow.tsx'), 'utf8');
+
+  it('Hero opens on the H1: no "Welcome back" and no "GLOBAL INTELLIGENCE, SOURCED"', () => {
+    const hero = code(read('HomeWelcomeHero.tsx'));
+    expect(hero).not.toMatch(/HeroGreeting|t\.eyebrow/);
+    expect(code(read('HeroReturningState.tsx'))).not.toContain('HeroGreeting');
+    for (const language of ['en', 'pl'] as const) {
+      const heroCopy = getDictionary(language).homeReva.hero as Record<string, unknown>;
+      expect(heroCopy.eyebrow).toBeUndefined();
+      expect(heroCopy.welcomeNamed).toBeUndefined();
+    }
+    /* New Since stays. */
+    expect(read('HomeWelcomeHero.tsx')).toContain('<HeroNewSince language={language} />');
+  });
+
+  it('four story cards: 25% basis at ≥1000 px column, with BOUNDED lower ranges so the cascade cannot pick three', () => {
+    expect(WHATS).toContain('[@container(min-width:1000px)]:basis-[calc(25%-9px)]');
+    expect(WHATS).toContain('[@container(min-width:700px)_and_(max-width:999.98px)]:basis-[calc(33.333%-8px)]');
+    expect(WHATS).toContain('[@container(min-width:520px)_and_(max-width:699.98px)]:basis-[calc(50%-6px)]');
+    /* Prev/Next still drives the one story rail. */
+    expect(WHATS).toContain('<StoryRailMotion');
+  });
+
+  it('band: phone hero → 60 s → stories; tablet keeps Rev A order; wide puts the 380/420 px rail beside the Hero and stories full width', () => {
+    expect(PAGE).toContain("[grid-template-areas:'hero'_'rail'_'whats']");
+    expect(PAGE).toContain("[@container(min-width:700px)_and_(max-width:1179.98px)]:[grid-template-areas:'hero'_'whats'_'rail']");
+    expect(PAGE).toContain("[@container(min-width:1180px)]:[grid-template-areas:'hero_rail'_'whats_whats']");
+    expect(PAGE).toContain('[@container(min-width:1180px)]:[grid-template-columns:minmax(0,1fr)_380px]');
+    expect(PAGE).toContain('[@container(min-width:1560px)]:[grid-template-columns:minmax(0,1fr)_420px]');
+    expect(PAGE.indexOf('<WorldIn60Seconds')).toBeLessThan(PAGE.indexOf('<WhatsHappeningNow'));
+    /* Suggested investigations keeps its Rev A place: inside the right rail, under the 60-second module. */
+    const aside = PAGE.slice(PAGE.indexOf('data-home-right-rail'), PAGE.indexOf('</aside>'));
+    expect(aside).toContain('<WorldIn60Seconds');
+    expect(aside).toContain('<SuggestedInvestigations');
+    expect(PAGE).toContain('[container-name:home-content]');
+  });
+
+  it('secondary thumbnails: 72×54, the story’s own image, only where the content column is ≥1000 px, and no new request', () => {
+    mockSession = { user: null, isLoading: false, follows: null, newSinceCount: null };
+    render(createElement(WorldIn60Seconds, { items: [article(1), article(2), article(3), article(4), article(5)], language: 'en' }));
+    const thumbs = all((n) => n.props['data-home-w60-thumb'] !== undefined);
+    expect(thumbs).toHaveLength(4);
+    for (const thumb of thumbs) {
+      expect(thumb.props.className).toContain('h-[54px] w-[72px]');
+      expect(thumb.props.className).toContain('[@container_home-content_(max-width:999.98px)]:hidden');
+      expect(thumb.props.tabIndex).toBe(-1);
+      expect(thumb.props['aria-hidden']).toBe('true');
+    }
+    const w60 = code(read('WorldIn60Seconds.tsx'));
+    expect(w60).toMatch(/<StoryVisual\s+article=\{item\}/);
+    expect(w60).not.toMatch(/fetch\(|accountFetch|analyzeNews|useEffect/);
+  });
+
+  it('the rail regains presence: full-bleed lead image and the two-line lead summary, in the rail only', () => {
+    const w60 = read('WorldIn60Seconds.tsx');
+    expect(w60).toContain('[@container_home-content_(min-width:1180px)]:-mx-[18px]');
+    expect(w60).toMatch(/data-home-w60-summary=""[^>]*hidden[^>]*\[@container_home-content_\(min-width:1180px\)\]:line-clamp-2/);
+  });
+});
+
 describe('§7 — Your world in 60 seconds: image-led, from Home’s loaded reporting', () => {
   it('lead + 4 rows (phone hides rows 3–4); spec image heights; followed places first when signed in', () => {
     mockSession = { user: { id: 'u', email: 'r@x', displayName: null }, isLoading: false, follows: ['KEN'], newSinceCount: null };
@@ -275,7 +336,8 @@ describe('§7 — Your world in 60 seconds: image-led, from Home’s loaded repo
     expect(lead?.props.href).toBe('https://example.com/2');
     expect(all((n) => n.props['data-home-w60-row'] !== undefined)).toHaveLength(4);
     const visual = all((n) => n.props['data-visual'] !== undefined)[0];
-    for (const h of ['h-[120px]', 'min-[380px]:h-[140px]', 'min-[420px]:h-[156px]', 'lg:h-[150px]', 'gn-xl:h-[176px]', '[@container(min-width:520px)]:h-[190px]']) {
+    /* DENSITY R1 — pre-Rev-A proportions: phone 16/9, tablet two-column 190 px, rail full-bleed 22/10. */
+    for (const h of ['aspect-[16/9]', '[@container(min-width:520px)]:h-[190px]', '[@container_home-content_(min-width:1180px)]:aspect-[22/10]']) {
       expect(visual?.props.className).toContain(h);
     }
     expect(text(renderer.root)).toContain('Latest stories, places you follow first.');
