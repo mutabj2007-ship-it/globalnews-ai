@@ -4,7 +4,7 @@ import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { HeroGlobe } from '@/components/home/HeroGlobe';
 import { HomeComposer } from './HomeComposer';
-import { HeroGreeting, HeroNewSince } from './HeroReturningState';
+import { HeroNewSince } from './HeroReturningState';
 import { HeroAtmosphere } from './HeroAtmosphere';
 
 /**
@@ -21,7 +21,8 @@ import { HeroAtmosphere } from './HeroAtmosphere';
  *   /images/hero-globe-night.png). §6 ASSET HOLD: the older approved hero
  *   visual replaces it only when identified; no markers, density or events.
  *   The whole globe is ONE link to /map named "Open World Map".
- * - Signed in (D3): greeting above the H1 and a truthful New-since chip.
+ * - Signed in (D3): a truthful New-since chip below the routes. (DENSITY R1
+ *   removed the greeting and the eyebrow label to tighten the Hero.)
  *
  * The globe is CROPPED on the x axis (overflow-x: clip on its own wrapper), never
  * allowed to widen the page: VISUAL_SPEC phone "300, cropped right".
@@ -66,11 +67,10 @@ export function HomeWelcomeHero({ language }: { language: LanguageCode }): JSX.E
       </div>
 
       <div className="relative max-w-[640px]">
-        <HeroGreeting language={language} />
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5abff5]">{t.eyebrow}</p>
+        {/* DENSITY R1 (Product Owner): the Hero opens directly on the H1 — no "Welcome back" line and no eyebrow label. */}
         <h1
           id="home-hero-heading"
-          className="mt-3 font-display text-[34px] font-extrabold leading-[1.02] tracking-[-0.03em] text-white min-[380px]:text-[38px] md:text-[60px] gn-xl:text-[72px]"
+          className="font-display text-[34px] font-extrabold leading-[1.02] tracking-[-0.03em] text-white min-[380px]:text-[38px] md:text-[60px] gn-xl:text-[72px]"
         >
           {/* The current Home identity: line one white, line two the existing cyan → teal treatment (BetaHero). */}
           <span className="block">{t.titleA}</span>

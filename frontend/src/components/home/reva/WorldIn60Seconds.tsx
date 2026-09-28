@@ -61,7 +61,8 @@ export function WorldIn60Seconds({ items, language }: { items: readonly NewsArti
 
       <div className="mt-3 flex flex-col gap-3 [@container(min-width:520px)]:grid [@container(min-width:520px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] [@container(min-width:520px)]:gap-5">
         <div className="min-w-0">
-          <div className="relative">
+          {/* In the right rail the lead image runs FULL-BLEED across the module, as the pre-Rev-A rail brief did. */}
+          <div className="relative [@container_home-content_(min-width:1180px)]:-mx-[18px]">
             <a
               href={lead.url}
               target="_blank"
@@ -72,21 +73,27 @@ export function WorldIn60Seconds({ items, language }: { items: readonly NewsArti
               <StoryVisual
                 article={lead}
                 missingLabel={t.noImage}
-                sizes="(min-width: 1024px) 340px, 100vw"
-                className="block h-[120px] w-full overflow-hidden rounded-[10px] min-[380px]:h-[140px] min-[420px]:h-[156px] lg:h-[150px] gn-xl:h-[176px] [@container(min-width:520px)]:h-[190px]"
+                sizes="(min-width: 1024px) 420px, 100vw"
+                className="block aspect-[16/9] w-full overflow-hidden rounded-[10px] [@container(min-width:520px)]:aspect-auto [@container(min-width:520px)]:h-[190px] [@container_home-content_(min-width:1180px)]:aspect-[22/10] [@container_home-content_(min-width:1180px)]:rounded-none"
               />
-              <span className="mt-2.5 block">
+              <span className="mt-2.5 block [@container_home-content_(min-width:1180px)]:px-[18px]">
                 <span className={`${CATEGORY_TEXT_BASE} ${CATEGORY_TEXT[lead.category] ?? CATEGORY_TEXT_FALLBACK}`}>
                   {categoryLabels[lead.category] ?? lead.category}
                 </span>
                 {leadAge === '' ? null : <span className="text-[11px] text-[#8299b4]"> · {leadAge}</span>}
               </span>
-              <span className="mt-1 line-clamp-3 block text-[15px] font-bold leading-[1.3] text-white group-hover:text-[#bfe0ff] md:text-[16px]">
+              <span className="mt-1 line-clamp-3 block text-[15px] font-bold leading-[1.3] text-white group-hover:text-[#bfe0ff] md:text-[16px] [@container_home-content_(min-width:1180px)]:px-[18px] [@container_home-content_(min-width:1180px)]:text-[17px]">
                 {lead.title}
               </span>
-              <span className="mt-1 block text-[12px] text-[#8299b4]">{lead.sourceName}</span>
+              {lead.summary !== undefined && lead.summary !== '' ? (
+                /* The pre-Rev-A rail brief carried two lines of the lead's own summary; restored in the rail only. */
+                <span data-home-w60-summary="" className="mt-1.5 hidden text-[12.5px] leading-[1.45] text-[#93a9c2] [@container_home-content_(min-width:1180px)]:line-clamp-2 [@container_home-content_(min-width:1180px)]:px-[18px]">
+                  {lead.summary}
+                </span>
+              ) : null}
+              <span className="mt-1 block text-[12px] text-[#8299b4] [@container_home-content_(min-width:1180px)]:px-[18px]">{lead.sourceName}</span>
             </a>
-            <span className="absolute right-2 top-2 z-10">
+            <span className="absolute right-2 top-2 z-10 [@container_home-content_(min-width:1180px)]:right-[26px]">
               <StoryBookmark url={lead.url} language={language} />
             </span>
           </div>
@@ -105,6 +112,30 @@ export function WorldIn60Seconds({ items, language }: { items: readonly NewsArti
                   <span aria-hidden="true" className="w-4 shrink-0 text-center font-mono text-[11px] text-[#56708e]">
                     {index + 2}
                   </span>
+                  {/*
+                    DENSITY R1 ADDENDUM — a small real thumbnail ONLY where the content
+                    column is ≥1000 px (1280+ desktop: the rail, or the wide in-flow
+                    list). Phone, 768 portrait and 1024 keep the compact text row, so
+                    no text is shrunk to make room. The image is the story's own
+                    (StoryVisual: real image or the governed "No image" box), from
+                    the Home feed object already loaded — no request is added.
+                  */}
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    data-home-w60-thumb=""
+                    className="block h-[54px] w-[72px] shrink-0 overflow-hidden rounded-[8px] [@container_home-content_(max-width:999.98px)]:hidden"
+                  >
+                    <StoryVisual
+                      article={item}
+                      missingLabel={t.noImage}
+                      sizes="72px"
+                      className="h-full"
+                    />
+                  </a>
                   <a
                     href={item.url}
                     target="_blank"

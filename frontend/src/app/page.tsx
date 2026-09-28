@@ -119,25 +119,34 @@ export default async function HomePage(): Promise<JSX.Element> {
         <div className="lg:flex">
           <HomeProductRail language={language} />
           {/* The content column is the size container every Rev A breakpoint rule measures. */}
-          <div data-home-content="" className="min-w-0 flex-1 [container-type:inline-size]">
+          {/*
+            The content column is the size container every Rev A breakpoint rule
+            measures. DENSITY R1 names it (`home-content`) so modules that are
+            their own containers (the 60-second module) can still ask how wide
+            the whole column is.
+          */}
+          <div data-home-content="" className="min-w-0 flex-1 [container-name:home-content] [container-type:inline-size]">
             <main className={`pb-24 lg:pb-0 ${HOME_PAGE_SURFACE}`}>
               <div className="mx-auto w-full max-w-[1600px] px-4 md:px-10 gn-xl:px-12">
                 <AuthErrorBanner language={language} />
+                {/*
+                  HOME REV A DENSITY CORRECTION R1.
+                  - DOM order is hero → 60-second rail → What's happening, which is
+                    the ruled PHONE order (a quick briefing, then the wider feed).
+                  - Tablet / narrow desktop (700–1179 px content) keep Rev A's order
+                    through grid areas: hero → What's happening → rail.
+                  - Wide (≥1180 px content): the rail (60 s + Suggested
+                    investigations, Rev A placement kept) sits beside the Hero at
+                    380 px (420 px ≥1560 — the pre-Rev-A rail was 368 px), and What's
+                    happening spans the FULL content width beneath both, so four
+                    story cards are visible at 1440.
+                */}
                 <div
                   data-home-band=""
-                  className="grid grid-cols-1 gap-x-8 gap-y-6 [grid-template-areas:'hero'_'whats'_'rail'] [@container(min-width:1180px)]:[grid-template-areas:'hero_rail'_'whats_rail'] [@container(min-width:1180px)]:[grid-template-columns:minmax(0,1fr)_340px] [@container(min-width:1560px)]:[grid-template-columns:minmax(0,1fr)_380px]"
+                  className="grid grid-cols-1 gap-x-8 gap-y-6 [grid-template-areas:'hero'_'rail'_'whats'] [@container(min-width:700px)_and_(max-width:1179.98px)]:[grid-template-areas:'hero'_'whats'_'rail'] [@container(min-width:1180px)]:[grid-template-areas:'hero_rail'_'whats_whats'] [@container(min-width:1180px)]:[grid-template-columns:minmax(0,1fr)_380px] [@container(min-width:1560px)]:[grid-template-columns:minmax(0,1fr)_420px]"
                 >
                   <div className="min-w-0 [grid-area:hero]">
                     <HomeWelcomeHero language={language} />
-                  </div>
-                  <div className="min-w-0 [grid-area:whats]">
-                    <WhatsHappeningNow
-                      lead={feed.featured}
-                      secondary={feed.inFocus}
-                      discovery={feed.discovery}
-                      dataMode={feed.dataMode}
-                      language={language}
-                    />
                   </div>
                   <aside
                     aria-label={t.w60.title}
@@ -147,6 +156,15 @@ export default async function HomePage(): Promise<JSX.Element> {
                     <WorldIn60Seconds items={newestFirst} language={language} />
                     <SuggestedInvestigations title={t.suggested.title} note={t.suggested.note} questions={dict.hero.exampleQuestions} />
                   </aside>
+                  <div className="min-w-0 [grid-area:whats]">
+                    <WhatsHappeningNow
+                      lead={feed.featured}
+                      secondary={feed.inFocus}
+                      discovery={feed.discovery}
+                      dataMode={feed.dataMode}
+                      language={language}
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-10 flex flex-col gap-10 pb-12 md:mt-12 md:gap-12">

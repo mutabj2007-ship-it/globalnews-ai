@@ -445,8 +445,12 @@ export function WhatsHappeningNow({
                     /* HOME REV A — card width follows the COLUMN, not the viewport: with the
                        left product rail and the right 60-second rail the story
                        column is ~740 px at 1440, which shows three cards; four
-                       only once the column itself reaches 1000 px. */
-                    className="flex h-[322px] shrink-0 basis-[87%] snap-start sm:h-[268px] [@container(min-width:520px)]:basis-[calc(50%-6px)] [@container(min-width:700px)]:h-[312px] [@container(min-width:700px)]:basis-[calc(33.333%-8px)] [@container(min-width:1000px)]:h-[320px] [@container(min-width:1000px)]:basis-[calc(25%-9px)]"
+                       only once the column itself reaches 1000 px.
+                       DENSITY R1: the ranges are BOUNDED (max-width) so the
+                       700 px rule can never out-order the 1000 px rule in the
+                       cascade — before this, a 1000 px+ column still showed
+                       three cards. */
+                    className="flex h-[322px] shrink-0 basis-[87%] snap-start sm:h-[268px] [@container(min-width:520px)_and_(max-width:699.98px)]:basis-[calc(50%-6px)] [@container(min-width:700px)_and_(max-width:999.98px)]:h-[312px] [@container(min-width:700px)_and_(max-width:999.98px)]:basis-[calc(33.333%-8px)] [@container(min-width:1000px)]:h-[320px] [@container(min-width:1000px)]:basis-[calc(25%-9px)]"
                   >
                     <RailCard article={article} language={language} />
                   </li>

@@ -11,25 +11,13 @@ import { fill } from './homeRevaModel';
 /**
  * D3 (APPROVED) — THE RETURNING-READER HERO STATE.
  *
- * Signed in only. The greeting sits above the H1 and never replaces it, so the
- * product identity stays. The New-since chip appears ONLY when the existing
+ * Signed in only. The New-since chip appears ONLY when the existing
  * previous-visit boundary exists and the count is > 0 — never "0 new".
+ * (DENSITY R1: the "Welcome back" greeting was removed from the Hero.)
  *
  * The count is the session's one feed read (see HomeSession): retained data,
  * no AI, no provider, made only for a signed-in reader.
  */
-export function HeroGreeting({ language }: { language: LanguageCode }): JSX.Element | null {
-  const { user, isLoading } = useHomeSession();
-  if (isLoading || user === null) return null;
-  const t = getDictionary(language).homeReva.hero;
-  const name = user.displayName?.trim();
-  return (
-    <p data-home-hero-greeting="" className="mb-3 text-[17px] font-semibold text-[#8fd3ff] md:text-[19px]">
-      {name ? fill(t.welcomeNamed, { name }) : t.welcome}
-    </p>
-  );
-}
-
 export function HeroNewSince({ language }: { language: LanguageCode }): JSX.Element | null {
   const { user, isLoading } = useHomeSession();
   if (isLoading || user === null) return null;
