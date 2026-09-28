@@ -2203,6 +2203,15 @@ export const pl: Dictionary = {
     stateAmbiguousCountryBody:
       'Miejsce w tym pytaniu odpowiada więcej niż jednemu krajowi, a ani pytanie, ani doniesienia nie rozstrzygnęły, o który chodzi. Nie wygenerowano odpowiedzi, zamiast wybierać kraj za Ciebie.',
     ambiguousCountryQuestion: 'O który kraj chodzi?',
+    stateNoPriorSubject: 'BRAK WCZEŚNIEJSZEGO PYTANIA DO KONTYNUOWANIA',
+    noPriorSubjectQuestion:
+      'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o: {places}?',
+    stateIdentityRequired: 'ZALOGUJ SIĘ, ABY PYTAĆ O ZAPISANE MATERIAŁY',
+    identityRequiredBody:
+      'To pytanie dotyczy Twoich zapisanych materiałów, więc wymaga zalogowania. Zaloguj się i zapytaj ponownie — niczego nie wyszukano.',
+    statePersonalUnavailable: 'ZAPISANE MATERIAŁY NIE SĄ TU DOSTĘPNE',
+    personalUnavailableBody:
+      'Zapytaj AI nie czyta jeszcze Twoich zapisanych materiałów, więc nie może na ich podstawie odpowiedzieć — niczego nie wyszukano w zamian.',
     compactHeading: 'Uwaga o dowodach',
     compactShowDetails: 'Pokaż, co to oznacza',
     short: {

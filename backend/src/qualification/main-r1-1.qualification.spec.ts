@@ -37,6 +37,7 @@ import { resolveCountriesByDemonym } from '../modules/news/country/country-relev
 import { REFERENCE_PROVIDERS } from '../modules/reference-providers/reference-provider-registry';
 import { OFFICIAL_SOURCES } from '../modules/official-sources/official-source-registry';
 import { harness as landedHarness } from '../modules/analysis/service/map-geography-context.harness-spec';
+import { readContinuationEllipsis } from '../modules/analysis/anchor/continuation-ellipsis.util';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -104,25 +105,15 @@ interface RowResult {
 
 /** Non-PASS verdicts this candidate EXPECTS, each with its reason. Anything else must PASS. */
 const EXPECTED: Readonly<Record<string, { verdict: Verdict; reason: string }>> = {
-  'MC-055': {
-    verdict: 'FAIL',
-    reason:
-      'FS-6 (frozen order): the landed classifier reads "Compare my saved stories" as a comparison with no determinable members (CLARIFICATION_REQUIRED) and frozen C honours that landed verdict before the personal class (its row V1). The reader is asked; nothing runs and no news is substituted — but the row requires IDENTITY_REQUIRED/CAPABILITY_UNAVAILABLE.',
-  },
   'MC-067': {
     verdict: 'EXPLAINED',
     reason:
-      'Ask R2 carries no multi-story selection, so the >8 limit is reachable only where a selection exists; frozen C row B7c replays SELECTION_EXCEEDS_MAX:SELECTION:9:8 in-tree. On /ask the same text is FS-6 (clarified, nothing runs).',
-  },
-  'MC-070': {
-    verdict: 'FAIL',
-    reason:
-      'FS-7: no topic is fabricated (topic and domain axes empty, scope = the typed Kenya only), but nothing SAYS the follow-up could not inherit: frozen C has no disclosure for an uninheritable follow-up, and the Ask R2 request carries no prior question (AskRequest is question/language/intent).',
+      'Ask R2 carries no multi-story selection, so the >8 limit is reachable only where a selection exists; frozen C row B7c replays SELECTION_EXCEEDS_MAX:SELECTION:9:8 in-tree. On /ask the same text is now the personal class (Alpha Enablement R1, MC-055): IDENTITY_REQUIRED signed out, the personal-library requirement signed in.',
   },
   'MC-076': {
-    verdict: 'FAIL',
+    verdict: 'EXPLAINED',
     reason:
-      'FS-8: reporting executes and no specialist is shown as executed, but neither Conflict nor Humanitarian is NAMED: "eastern DRC" carries no domain word, and naming a domain from a place would be the guess contract §2 forbids.',
+      'CTO ruling (Alpha merge gate): ACCEPTED. Reporting executes and no specialist is shown as executed; neither Conflict nor Humanitarian is named because "eastern DRC" carries no domain word, and naming a domain from geography alone would be the guess contract §2 forbids.',
   },
   'G-006': {
     verdict: 'EXPLAINED',
@@ -806,16 +797,34 @@ async function evaluateMainConvergence(): Promise<void> {
     );
   }
   {
-    const r = ask(textOf(row('MC-070')), 'en');
-    const fabricated =
-      r.envelope.topic.readerTerms.length > 0 || r.envelope.domains.domains.length > 0;
-    const says = r.plan.disclosures.length > 0 || r.plan.clarification.length > 0;
-    record(row('MC-070'), pass(!fabricated && says), 'R2 route, first turn', {
-      ...brief(r),
-      topic: r.envelope.topic.readerTerms,
-      fabricated,
-      saysSo: says,
+    /* Alpha Enablement R1: the "says so" decision is the continuation reader, applied by the
+       Ask R2 adapter and the landed path before anything runs (adapter + service specs). */
+    const twins = [
+      [textOf(row('MC-070')), 'en'],
+      ['A Kenia?', 'pl'],
+    ] as const;
+    const observed = twins.map(([q, lg]) => {
+      const r = ask(q, lg);
+      return {
+        q,
+        fabricated:
+          r.envelope.topic.readerTerms.length > 0 || r.envelope.domains.domains.length > 0,
+        typedKenya: r.envelope.geography.candidates.some(
+          (c) => c.source === 'TYPED_GEOGRAPHY' && c.value === 'KEN',
+        ),
+        continuation: readContinuationEllipsis(q)?.candidates ?? null,
+      };
     });
+    record(
+      row('MC-070'),
+      pass(
+        observed.every(
+          (o) => !o.fabricated && o.typedKenya && JSON.stringify(o.continuation) === '["KEN"]',
+        ),
+      ),
+      'R2 route + continuation reader (EN/PL), first turn',
+      observed,
+    );
   }
   {
     const r = ask(textOf(row('MC-071')), 'en');
@@ -838,7 +847,11 @@ async function evaluateMainConvergence(): Promise<void> {
       .map((w) => w.forDomain);
     record(
       row('MC-076'),
-      pass(r.plan.terminalState === 'EXECUTABLE' && noneExecuted && named.length >= 2),
+      r.plan.terminalState === 'EXECUTABLE' && noneExecuted
+        ? named.length >= 2
+          ? 'PASS'
+          : 'EXPLAINED'
+        : 'FAIL',
       'R2 route',
       { ...brief(r), named },
     );

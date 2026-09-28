@@ -57,6 +57,8 @@ export interface AskR2View {
   readonly clarification: {
     readonly byExecutor: boolean;
     readonly candidates: readonly string[];
+    /** ALPHA ENABLEMENT R1 (MC-070) — a whole-sentence question that replaces the choice list. */
+    readonly lead: string | null;
   };
 }
 
@@ -175,7 +177,17 @@ export function askR2View(
     unavailableText,
     clarification: {
       byExecutor,
-      candidates: (payload.answer.candidates ?? []).map((iso3) => placeName(iso3)),
+      candidates:
+        basis === 'NO_PRIOR_SUBJECT'
+          ? []
+          : (payload.answer.candidates ?? []).map((iso3) => placeName(iso3)),
+      lead:
+        basis === 'NO_PRIOR_SUBJECT'
+          ? s.noPriorSubject.replace(
+              '{places}',
+              (payload.answer.candidates ?? []).map((iso3) => placeName(iso3)).join(', '),
+            )
+          : null,
     },
   };
 }

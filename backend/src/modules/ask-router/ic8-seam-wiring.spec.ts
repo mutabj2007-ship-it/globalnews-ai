@@ -141,3 +141,32 @@ describe('IC8-4 / IC8-5 — a missing seam is observable, and disqualifies', () 
     expect(missingSeams(cut(wired))).toContain(seam);
   });
 });
+
+describe('ALPHA ENABLEMENT R1 — MC-055: the one landed verdict the wrapper re-reads is traced', () => {
+  const route = (q: string, identityVerified: boolean) =>
+    routeAskR2(
+      {
+        originalQuestion: q,
+        sourceLanguage: 'en',
+        normalizationLanguage: 'en',
+        displayLanguage: 'en',
+        origin: 'ASK',
+      },
+      { computeConsent: 'GRANTED', identityVerified },
+      { specialistRegistry: specialistRegistryFixture },
+    );
+
+  it('"Compare my saved stories" is the personal class, not a member-less comparison', () => {
+    const out = route('Compare my saved stories', false);
+    expect(out.seam.landedOverride).toBe('PERSONAL_MEMBER_SET');
+    expect(out.plan.questionClass).toBe('PERSONAL_INTELLIGENCE');
+    expect(out.plan.terminalState).toBe('IDENTITY_REQUIRED');
+    expect(missingSeams(out)).toEqual([]);
+  });
+
+  it('a member-less comparison that is NOT personal still clarifies (no override)', () => {
+    const out = route('Compare them.', false);
+    expect(out.seam.landedOverride).toBeNull();
+    expect(out.plan.terminalState).toBe('CLARIFICATION_REQUIRED');
+  });
+});

@@ -18,6 +18,7 @@ import {
   deriveAnswerState,
   requiredRolesOf,
 } from '../ask-router/answer-state';
+import { readContinuationEllipsis } from '../analysis/anchor/continuation-ellipsis.util';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
 import { planChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
@@ -236,6 +237,29 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const early = answerStateBeforeExecution(route.plan);
     if (early !== null && early.state !== 'REFERENCE_BACKGROUND') {
       return this.result(plan, route, operationId, early, null, false);
+    }
+    /*
+      ALPHA ENABLEMENT R1 (MC-070) — "And Kenya?" continues nothing: an Ask R2 request
+      carries no earlier question, so there is no subject to inherit. It is not searched as
+      "Kenya news" (an answer to a question the reader did not ask); the reader is asked
+      what they want to know, with the place they named kept as the candidate. 0 AI, no
+      control touched.
+    */
+    const continuation = readContinuationEllipsis(request.question);
+    if (continuation !== null) {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        {
+          state: 'CLARIFICATION_REQUIRED',
+          basis: 'NO_PRIOR_SUBJECT',
+          missingRoles: [],
+          candidates: [...continuation.candidates],
+        },
+        null,
+        false,
+      );
     }
     const unsupplied = requiredRolesOf(route.plan).filter((r) => !EXECUTOR_SUPPLIES.has(r));
     if (unsupplied.length > 0) {

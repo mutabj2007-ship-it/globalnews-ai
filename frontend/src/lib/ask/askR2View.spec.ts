@@ -254,6 +254,7 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
     expect(v.clarification).toEqual({
       byExecutor: true,
       candidates: ['DR Congo', 'Republic of the Congo'],
+      lead: null,
     });
     expect(v.freshness).toBe(EN.askedBeforeAnswering);
   });
@@ -267,7 +268,46 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
       EN,
       'en',
     );
-    expect(v.clarification).toEqual({ byExecutor: false, candidates: [] });
+    expect(v.clarification).toEqual({ byExecutor: false, candidates: [], lead: null });
     expect(v.freshness).toBe(EN.freshness.nothingRan);
+  });
+});
+
+describe('ALPHA ENABLEMENT R1 — MC-070: a continuation with nothing to continue', () => {
+  const names: Record<string, string> = { KEN: 'Kenya' };
+  const plNames: Record<string, string> = { KEN: 'Kenia' };
+  const noPrior = (lang: 'en' | 'pl') =>
+    askR2View(
+      payload('CLARIFICATION_REQUIRED', {
+        answer: {
+          state: 'CLARIFICATION_REQUIRED',
+          basis: 'NO_PRIOR_SUBJECT',
+          missingRoles: [],
+          candidates: ['KEN'],
+        },
+        analysis: null,
+      }),
+      lang === 'en' ? EN : PL,
+      lang,
+      (iso3) => (lang === 'en' ? names : plNames)[iso3] ?? iso3,
+    );
+
+  it('EN: says there is no earlier question and asks what to know about Kenya — no choice list', () => {
+    const v = noPrior('en');
+    expect(v.clarification.lead).toBe(
+      'There’s no earlier question to continue from — each question here is answered on its own. What would you like to know about Kenya?',
+    );
+    expect(v.clarification.candidates).toEqual([]);
+    expect(v.freshness).toBe(EN.freshness.nothingRan);
+    expect(v.handoffs).toEqual({ openFull: false, runDeeper: false });
+    expect(v.citable).toBe(false);
+  });
+
+  it('PL: the same, in Polish', () => {
+    const v = noPrior('pl');
+    expect(v.clarification.lead).toBe(
+      'Nie ma wcześniejszego pytania do kontynuowania — każde pytanie jest tu rozpatrywane osobno. Co chcesz wiedzieć o: Kenia?',
+    );
+    expect(v.freshness).toBe(PL.freshness.nothingRan);
   });
 });

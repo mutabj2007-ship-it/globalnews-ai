@@ -1,5 +1,50 @@
 import type { AnalysisRetrievalContext, EventAnchorDisclosure, LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { localisedCountryName } from '@/lib/map/geography/displayName';
+
+/**
+ * ASK R2 ALPHA ENABLEMENT R1 — questions the backend ASKED about instead of searching:
+ *   NO_PRIOR_SUBJECT              a first-turn "And Kenya?" (MC-070) — the named place kept
+ *   IDENTITY_REQUIRED             the reader's own saved stories, signed out (MC-055)
+ *   PERSONAL_LIBRARY_UNAVAILABLE  the same, signed in: the library is not reachable here
+ * One wording for the Ask dock, /ask and the /search frame. Undefined for every other state.
+ */
+export function resolveAskedNotSearched(
+  ctx: AnalysisRetrievalContext,
+  language: LanguageCode,
+): { code: string; heading: string; body: string; sentence: string } | undefined {
+  if (ctx.retrievalOutcome !== 'CLARIFICATION_REQUIRED') return undefined;
+  const copy = getDictionary(language).eventAnchor;
+  if (ctx.clarificationReason === 'NO_PRIOR_SUBJECT') {
+    const places = (ctx.clarificationCandidates ?? [])
+      .map((iso3) => localisedCountryName(iso3, language) ?? iso3)
+      .join(', ');
+    const sentence = copy.noPriorSubjectQuestion.replace('{places}', places);
+    return {
+      code: 'NO_PRIOR_SUBJECT',
+      heading: copy.stateNoPriorSubject,
+      body: sentence,
+      sentence,
+    };
+  }
+  if (ctx.clarificationReason === 'IDENTITY_REQUIRED') {
+    return {
+      code: 'IDENTITY_REQUIRED',
+      heading: copy.stateIdentityRequired,
+      body: copy.identityRequiredBody,
+      sentence: copy.identityRequiredBody,
+    };
+  }
+  if (ctx.clarificationReason === 'PERSONAL_LIBRARY_UNAVAILABLE') {
+    return {
+      code: 'PERSONAL_LIBRARY_UNAVAILABLE',
+      heading: copy.statePersonalUnavailable,
+      body: copy.personalUnavailableBody,
+      sentence: copy.personalUnavailableBody,
+    };
+  }
+  return undefined;
+}
 
 /**
  * ASK CONVERSATIONAL EVIDENCE ANCHORING R1 — THE ONE DISPLAY AUTHORITY FOR

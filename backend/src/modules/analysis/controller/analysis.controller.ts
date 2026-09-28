@@ -95,6 +95,9 @@ export class AnalysisController {
       priorQuestion,
       selection,
       geographyContext,
+      undefined,
+      /* ASK R2 ALPHA ENABLEMENT R1 (MC-055): server-resolved identity, never the body. */
+      { verified: userId !== undefined && userId !== null },
     );
   }
 }

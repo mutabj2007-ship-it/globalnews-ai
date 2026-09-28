@@ -107,4 +107,13 @@ export const AMBIGUOUS_COUNTRY_NAMES: Readonly<Record<string, readonly string[]>
 export type AnalysisClarificationReason =
   | 'COMPARISON_MEMBERS_UNDETERMINED'
   | 'TOO_MANY_ENTITIES'
-  | 'AMBIGUOUS_COUNTRY';
+  | 'AMBIGUOUS_COUNTRY'
+  /*
+    ASK R2 ALPHA ENABLEMENT R1 (MC-070) — a first-turn continuation ("And Kenya?") with no
+    earlier question to continue. `clarificationCandidates` carries the place(s) it names.
+  */
+  | 'NO_PRIOR_SUBJECT'
+  /* (MC-055) — a question about the reader's own saved stories / interests, signed out. */
+  | 'IDENTITY_REQUIRED'
+  /* (MC-055) — the same question, signed in: the personal library is not reachable here. */
+  | 'PERSONAL_LIBRARY_UNAVAILABLE';

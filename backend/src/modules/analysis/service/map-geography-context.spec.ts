@@ -332,6 +332,9 @@ describe('the controller: only an explicit POST computes', () => {
       undefined,
       undefined,
       geographyContext,
+      /* ASK R2 ALPHA ENABLEMENT R1 (MC-055): no execution policy; the server-resolved identity. */
+      undefined,
+      { verified: false },
     );
   });
 

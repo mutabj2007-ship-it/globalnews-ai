@@ -184,6 +184,8 @@ import {
   readSubjectInEitherLanguage,
 } from '../../ask-router/normalization/semantic-subject';
 import { polishOfficeGeographyCountryCode } from '../../ask-router/normalization/qualified-reading';
+import { readCapabilityRequests } from '../../ask-router/capability-producers';
+import { readContinuationEllipsis } from '../anchor/continuation-ellipsis.util';
 
 /**
  * PROVIDER-SAFETY EDGE CLOSURE — the retrieval context for a question that has
@@ -545,6 +547,12 @@ export class AnalysisService {
      * so /analysis is unchanged.
      */
     executionPolicy?: AnalysisExecutionPolicy,
+    /**
+     * ASK R2 ALPHA ENABLEMENT R1 (MC-055) — whether the CALLER holds a verified account
+     * identity (server-resolved by the controller, never read from the body). Absent means
+     * not verified. Read only to word a question about the reader's own library.
+     */
+    callerIdentity?: { readonly verified: boolean },
   ): Promise<AnalysisApiResponse> {
     const config = this.analysisConfig.get();
 
@@ -627,7 +635,18 @@ export class AnalysisService {
     const selectionKeySegment = selection
       ? `:selection:${selection.action}:${[...new Set(selection.stories.map((story) => story.articleRef))].sort().join(',')}`
       : '';
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}`;
+    /*
+      ASK R2 ALPHA ENABLEMENT R1 (MC-055) — a question about the reader's OWN library is
+      answered by who is asking (sign in / not reachable), so its cache and in-flight key
+      carry the caller's identity state. Every other question keeps its key unchanged.
+    */
+    const identityKeySegment =
+      selection === undefined &&
+      storyContext === undefined &&
+      readCapabilityRequests(rawQuery, requestedLanguage).source.personalRequested
+        ? `:identity:${callerIdentity?.verified === true ? 'verified' : 'none'}`
+        : '';
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -1245,6 +1264,44 @@ export class AnalysisService {
         const selectionResolution =
           selection !== undefined ? await this.resolveSelectedStories(selection) : undefined;
 
+        /*
+          ASK R2 ALPHA ENABLEMENT R1 — two questions this path must ASK about, not search:
+            MC-055  a question about the reader's OWN saved stories / interests. No news
+                    search answers it; signed out, the honest reply is "sign in"; signed in,
+                    the personal library is not reachable from this path. Nothing of the
+                    library is read here.
+            MC-070  a first-turn continuation ("And Kenya?") — no earlier question exists
+                    to continue; the place the reader named is kept as the candidate.
+          Both use the same producers the Ask R2 route uses (one reading, two paths), make
+          no provider or model call, and never apply to a selection or an anchored story.
+        */
+        const preExecutionClarification: AnalysisRetrievalContext | undefined = (() => {
+          if (selection !== undefined || storyContext !== undefined) return undefined;
+          if (readCapabilityRequests(rawQuery, requestedLanguage).source.personalRequested) {
+            return {
+              ...NON_RETRIEVABLE_QUERY_CONTEXT,
+              retrievalOutcome: 'CLARIFICATION_REQUIRED',
+              clarificationReason:
+                callerIdentity?.verified === true
+                  ? 'PERSONAL_LIBRARY_UNAVAILABLE'
+                  : 'IDENTITY_REQUIRED',
+            };
+          }
+          const continuation =
+            priorQuestion === undefined || priorQuestion.trim().length === 0
+              ? readContinuationEllipsis(rawQuery)
+              : null;
+          if (continuation !== null) {
+            return {
+              ...NON_RETRIEVABLE_QUERY_CONTEXT,
+              retrievalOutcome: 'CLARIFICATION_REQUIRED',
+              clarificationReason: 'NO_PRIOR_SUBJECT',
+              clarificationCandidates: continuation.candidates,
+            };
+          }
+          return undefined;
+        })();
+
         if (selectionResolution !== undefined) {
           articles = selectionResolution.articles;
           const newest = [...articles].sort(
@@ -1263,6 +1320,10 @@ export class AnalysisService {
               : {}),
             selection: selectionResolution.outcome,
           };
+        } else if (preExecutionClarification !== undefined) {
+          /* Asked, not searched: no provider request, no retained read, no model call. */
+          articles = [];
+          retrievalContext = preExecutionClarification;
         } else if (followUpRelation) {
           const providerQuery = makeProviderSafeNewsQuery(followUpRelation.providerQuery);
           const response = providerQuery

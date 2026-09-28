@@ -2874,6 +2874,20 @@ export const en = {
     stateAmbiguousCountryBody:
       'The place in this question names more than one country, and neither the question nor the reporting settled which one you mean. No answer was generated rather than choosing the country for you.',
     ambiguousCountryQuestion: 'Which country do you mean?',
+    /*
+      ASK R2 ALPHA ENABLEMENT R1 — asked, not searched (integration-authored; Product copy
+      review). MC-070: a first-turn "And Kenya?". MC-055: a question about the reader's own
+      saved stories. Fixed copy and country names only, never model text.
+    */
+    stateNoPriorSubject: 'NO EARLIER QUESTION TO CONTINUE',
+    noPriorSubjectQuestion:
+      'There’s no earlier question to continue. What would you like to know about {places}?',
+    stateIdentityRequired: 'SIGN IN TO ASK ABOUT YOUR SAVED STORIES',
+    identityRequiredBody:
+      'This question is about your own saved stories, so it needs you to be signed in. Sign in and ask again — nothing was searched.',
+    statePersonalUnavailable: 'YOUR SAVED STORIES AREN’T AVAILABLE HERE',
+    personalUnavailableBody:
+      'Ask can’t read your saved stories yet, so it can’t answer this from them — nothing was searched in their place.',
     /* INLINE CITATIONS R1 B3 — the compact one-line note on the Ask dock; the full sentences above stay one tap away. */
     compactHeading: 'Evidence note',
     compactShowDetails: 'Show what this means',

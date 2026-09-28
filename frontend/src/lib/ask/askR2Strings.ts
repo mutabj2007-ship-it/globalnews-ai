@@ -69,6 +69,8 @@ export interface AskR2Strings {
   readonly askedBeforeAnswering: string;
   /** GATE H (MD-005) — an opened stored result past its validity. */
   readonly expiredNote: string;
+  /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue. */
+  readonly noPriorSubject: string;
   sourcesLabel(n: number): string;
 }
 
@@ -138,6 +140,8 @@ const EN: AskR2Strings = {
   clarificationFooterNoAi: 'No AI used · nothing was answered',
   askedBeforeAnswering: 'One question before answering · no AI used',
   expiredNote: 'This saved answer has expired · shown as it was, not re-checked',
+  noPriorSubject:
+    'There’s no earlier question to continue from — each question here is answered on its own. What would you like to know about {places}?',
   sourcesLabel: (n) => `${n} ${n === 1 ? 'source' : 'sources'}`,
 };
 
@@ -216,6 +220,8 @@ const PL: AskR2Strings = {
   clarificationFooterNoAi: 'Nie użyto AI · nie udzielono odpowiedzi',
   askedBeforeAnswering: 'Jedno pytanie przed odpowiedzią · nie użyto AI',
   expiredNote: 'Ta zapisana odpowiedź wygasła · pokazana bez ponownego sprawdzenia',
+  noPriorSubject:
+    'Nie ma wcześniejszego pytania do kontynuowania — każde pytanie jest tu rozpatrywane osobno. Co chcesz wiedzieć o: {places}?',
   sourcesLabel: plSources,
 };
 
