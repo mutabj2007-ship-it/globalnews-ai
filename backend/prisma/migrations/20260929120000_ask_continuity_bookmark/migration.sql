@@ -38,7 +38,7 @@ CREATE TABLE "AskBookmark" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "turnId" TEXT NOT NULL,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AskBookmark_pkey" PRIMARY KEY ("id")
 );
