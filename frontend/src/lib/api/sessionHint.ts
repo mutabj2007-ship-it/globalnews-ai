@@ -44,7 +44,27 @@
 export const CSRF_COOKIE_NAME = 'gna_csrf';
 
 /**
- * True when this document can see a `gna_csrf` cookie with a non-empty value.
+ * ASK R2 INTEGRATION R1 · §14 / SQ-11 — wherever the backend issues Secure cookies (production,
+ * an https account origin) the CSRF cookie is `__Host-gna_csrf`; over plain-HTTP development it
+ * is `gna_csrf`. The document reads the `__Host-` name FIRST, so a plain-named cookie planted by
+ * a sibling host can never shadow the real one. (The server independently accepts only the name
+ * for its own environment.) THE ONE READER — accountFetch and analysisApi call this.
+ */
+export const HOST_CSRF_COOKIE_NAME = `__Host-${CSRF_COOKIE_NAME}`;
+
+export function readCsrfCookieValue(cookieString?: string): string | undefined {
+  const source = cookieString ?? (typeof document === 'undefined' ? '' : document.cookie);
+  const entries = source.split('; ');
+  for (const name of [HOST_CSRF_COOKIE_NAME, CSRF_COOKIE_NAME]) {
+    const match = entries.find((entry) => entry.startsWith(`${name}=`));
+    const value = match?.slice(name.length + 1);
+    if (value !== undefined && value.trim().length > 0) return value;
+  }
+  return undefined;
+}
+
+/**
+ * True when this document can see a `gna_csrf` (or `__Host-gna_csrf`) cookie with a non-empty value.
  *
  * An empty value counts as absent: a cookie cleared by setting it to "" is
  * still listed by `document.cookie`, and treating that as a session would
@@ -57,10 +77,5 @@ export const CSRF_COOKIE_NAME = 'gna_csrf';
 export function hasSessionHint(): boolean {
   if (typeof document === 'undefined') return false;
 
-  return document.cookie
-    .split('; ')
-    .some((entry) => {
-      if (!entry.startsWith(`${CSRF_COOKIE_NAME}=`)) return false;
-      return entry.slice(CSRF_COOKIE_NAME.length + 1).trim().length > 0;
-    });
+  return readCsrfCookieValue(document.cookie) !== undefined;
 }

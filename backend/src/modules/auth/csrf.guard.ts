@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import type { Request } from 'express';
-import { CSRF_COOKIE_NAME } from './cookie.util';
+import { resolveAuthCookieNames } from './cookie.util';
 
 /**
  * Milestone #57 — the double-submit CSRF check. Applied ONLY to
@@ -15,7 +15,7 @@ import { CSRF_COOKIE_NAME } from './cookie.util';
 export class CsrfGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
-    const cookieValue = request.cookies?.[CSRF_COOKIE_NAME] as string | undefined;
+    const cookieValue = request.cookies?.[resolveAuthCookieNames().csrf] as string | undefined;
     const headerValue = request.headers['x-csrf-token'];
 
     if (!cookieValue || typeof headerValue !== 'string' || headerValue.length === 0) {

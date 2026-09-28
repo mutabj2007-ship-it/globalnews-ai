@@ -19,9 +19,8 @@ import {
   buildCsrfCookieOptions,
   buildOAuthFlowCookieOptions,
   buildSessionCookieOptions,
-  CSRF_COOKIE_NAME,
-  OAUTH_FLOW_COOKIE_NAME,
-  SESSION_COOKIE_NAME,
+  clearAuthCookies,
+  resolveAuthCookieNames,
 } from './cookie.util';
 import { generateCsrfToken } from './session-token.util';
 import { resolveSafeReturnUrl, validateReturnDestination } from './return-destination.util';
@@ -186,7 +185,7 @@ export class AuthService {
     });
 
     response.cookie(
-      OAUTH_FLOW_COOKIE_NAME,
+      resolveAuthCookieNames().oauthFlow,
       encodeOAuthFlowState(flowState),
       buildOAuthFlowCookieOptions(
         process.env.NODE_ENV,
@@ -205,14 +204,14 @@ export class AuthService {
     response: Response,
   ): Promise<void> {
     const flowState = decodeOAuthFlowState(
-      request.cookies?.[OAUTH_FLOW_COOKIE_NAME] as string | undefined,
+      request.cookies?.[resolveAuthCookieNames().oauthFlow] as string | undefined,
     );
 
     // Milestone #57 — one-time callback semantics: the flow-state
     // cookie is cleared immediately, before any further processing,
     // regardless of outcome — the same encoded value can never be
     // presented again for a second callback attempt.
-    response.clearCookie(OAUTH_FLOW_COOKIE_NAME, { path: '/' });
+    clearAuthCookies(response, ['oauthFlow']);
 
     /*
       ═══ B5-A · C-3 — CANCELLATION: AFTER THE CLEAR, BEFORE THE COMPARISON ═══
@@ -272,12 +271,12 @@ export class AuthService {
       const remainingMs = expiresAt.getTime() - Date.now();
 
       response.cookie(
-        SESSION_COOKIE_NAME,
+        resolveAuthCookieNames().session,
         rawToken,
         buildSessionCookieOptions(process.env.NODE_ENV, remainingMs, this.frontendOrigin()),
       );
       response.cookie(
-        CSRF_COOKIE_NAME,
+        resolveAuthCookieNames().csrf,
         csrfToken,
         buildCsrfCookieOptions(process.env.NODE_ENV, remainingMs, this.frontendOrigin()),
       );
@@ -333,14 +332,13 @@ export class AuthService {
   }
 
   async signOut(request: Request, response: Response): Promise<void> {
-    const rawToken = request.cookies?.[SESSION_COOKIE_NAME] as string | undefined;
+    const rawToken = request.cookies?.[resolveAuthCookieNames().session] as string | undefined;
 
     if (rawToken) {
       await this.sessionService.deleteSession(rawToken);
     }
 
-    response.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
-    response.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
+    clearAuthCookies(response, ['session', 'csrf']);
     response.status(204).send();
   }
 }

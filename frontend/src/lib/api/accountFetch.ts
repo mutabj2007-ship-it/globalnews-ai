@@ -1,4 +1,5 @@
 import { resolveAccountApiBase } from './accountBase';
+import { readCsrfCookieValue } from './sessionHint';
 
 /**
  * Milestone #57 — the smallest shared helper needed for the frontend
@@ -23,14 +24,10 @@ import { resolveAccountApiBase } from './accountBase';
 
 const CSRF_COOKIE_NAME = 'gna_csrf';
 
+/* §14 / SQ-11 — the one CSRF reader (prefers `__Host-gna_csrf`); see sessionHint.ts. */
 function readCsrfCookie(): string | undefined {
-  if (typeof document === 'undefined') return undefined;
-
-  const match = document.cookie
-    .split('; ')
-    .find((entry) => entry.startsWith(`${CSRF_COOKIE_NAME}=`));
-
-  return match?.split('=')[1];
+  /* Read from the document only — never from anything a caller could inject. */
+  return typeof document === 'undefined' ? undefined : readCsrfCookieValue(document.cookie);
 }
 
 export interface AccountFetchOptions {

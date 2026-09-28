@@ -2,7 +2,7 @@ import { Controller, Delete, Get, HttpCode, Post, Res, UseGuards } from '@nestjs
 import type { Response } from 'express';
 import { RequireAuthGuard } from '../auth/require-auth.guard';
 import { CsrfGuard } from '../auth/csrf.guard';
-import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME } from '../auth/cookie.util';
+import { clearAuthCookies } from '../auth/cookie.util';
 import { CurrentUser } from './current-user.decorator';
 import { UsersService, type ReturnStateView, type UserSummary } from './users.service';
 
@@ -76,8 +76,7 @@ export class UsersController {
   async deleteMe(@CurrentUser() user: { id: string }, @Res() response: Response): Promise<void> {
     await this.usersService.deleteAccount(user.id);
 
-    response.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
-    response.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
+    clearAuthCookies(response, ['session', 'csrf']);
     response.status(204).send();
   }
 }

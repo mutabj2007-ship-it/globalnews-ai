@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionService } from './session.service';
-import { SESSION_COOKIE_NAME } from './cookie.util';
+import { resolveAuthCookieNames } from './cookie.util';
 
 /**
  * Milestone #57 — applied ONLY to the specific endpoints that require
@@ -17,7 +17,7 @@ export class RequireAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request & { user?: { id: string } }>();
-    const rawToken = request.cookies?.[SESSION_COOKIE_NAME] as string | undefined;
+    const rawToken = request.cookies?.[resolveAuthCookieNames().session] as string | undefined;
 
     if (!rawToken) {
       throw new UnauthorizedException();

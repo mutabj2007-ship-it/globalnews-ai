@@ -6,7 +6,10 @@ import {
   decodeOAuthFlowState,
   encodeOAuthFlowState,
 } from './oauth-flow-state';
-import { OAUTH_FLOW_COOKIE_NAME, SESSION_COOKIE_NAME, CSRF_COOKIE_NAME } from './cookie.util';
+import { resolveAuthCookieNames } from './cookie.util';
+
+/* §14 / SQ-11 — the names for the environment each test sets (https origin ⇒ __Host-). */
+const names = () => resolveAuthCookieNames();
 import { PublicOAuthCallbackBaseConfigurationError } from '../../security/public-oauth-callback-base.config';
 import type { PrismaService } from '../../database/prisma.service';
 import type { SessionService } from './session.service';
@@ -89,7 +92,7 @@ describe('M-ALPHA-AUTH callback return destination', () => {
 
     service.startGoogleAuth(startResponse as never, returnTo);
 
-    const encodedFlow = startResponse._cookies[OAUTH_FLOW_COOKIE_NAME];
+    const encodedFlow = startResponse._cookies[names().oauthFlow];
     const flowState = decodeOAuthFlowState(encodedFlow);
 
     googleOidc.exchangeGoogleAuthorizationCode.mockResolvedValue({ idToken: 'id-token' });
@@ -112,7 +115,7 @@ describe('M-ALPHA-AUTH callback return destination', () => {
       'auth-code',
       flowState?.state,
       undefined,
-      { cookies: { [OAUTH_FLOW_COOKIE_NAME]: encodedFlow } } as never,
+      { cookies: { [names().oauthFlow]: encodedFlow } } as never,
       callbackResponse as never,
     );
 
@@ -165,7 +168,7 @@ describe('M-ALPHA-AUTH callback return destination', () => {
    */
   it('never stores a rejected destination in the flow state', async () => {
     const { startResponse } = await completeSignIn('//evil.example');
-    const decoded = decodeOAuthFlowState(startResponse._cookies[OAUTH_FLOW_COOKIE_NAME]);
+    const decoded = decodeOAuthFlowState(startResponse._cookies[names().oauthFlow]);
     expect(decoded).not.toBeNull();
     expect(decoded?.returnTo).toBeUndefined();
   });
@@ -210,9 +213,9 @@ describe('M-ALPHA-AUTH callback return destination', () => {
 
   it('still creates exactly one session and sets both cookies on success', async () => {
     const { callbackResponse } = await completeSignIn('/support');
-    expect(callbackResponse._cookies[SESSION_COOKIE_NAME]).toBe('raw-token');
-    expect(callbackResponse._cookies[CSRF_COOKIE_NAME]).toEqual(expect.any(String));
-    expect(callbackResponse._cleared).toContain(OAUTH_FLOW_COOKIE_NAME);
+    expect(callbackResponse._cookies[names().session]).toBe('raw-token');
+    expect(callbackResponse._cookies[names().csrf]).toEqual(expect.any(String));
+    expect(callbackResponse._cleared).toContain(names().oauthFlow);
   });
 });
 
@@ -258,9 +261,9 @@ describe('M-ALPHA-AUTH cookie attributes as actually issued', () => {
 
     service.startGoogleAuth(response, '/support');
 
-    expect(cookieOptions[OAUTH_FLOW_COOKIE_NAME].secure).toBe(true);
-    expect(cookieOptions[OAUTH_FLOW_COOKIE_NAME].sameSite).toBe('lax');
-    expect(cookieOptions[OAUTH_FLOW_COOKIE_NAME].httpOnly).toBe(true);
+    expect(cookieOptions[names().oauthFlow].secure).toBe(true);
+    expect(cookieOptions[names().oauthFlow].sameSite).toBe('lax');
+    expect(cookieOptions[names().oauthFlow].httpOnly).toBe(true);
   });
 });
 
@@ -309,8 +312,7 @@ describe('M-ALPHA-AUTH preserved guarantees', () => {
   it('Sign Out still deletes the session row and clears both cookies', () => {
     const service = read('modules', 'auth', 'auth.service.ts');
     expect(service).toContain('await this.sessionService.deleteSession(rawToken);');
-    expect(service).toContain(`response.clearCookie(SESSION_COOKIE_NAME, { path: '/' });`);
-    expect(service).toContain(`response.clearCookie(CSRF_COOKIE_NAME, { path: '/' });`);
+    expect(service).toContain(`clearAuthCookies(response, ['session', 'csrf']);`);
   });
 
   it('SameSite is still lax everywhere - no third-party-cookie workaround was introduced', () => {
@@ -471,7 +473,7 @@ describe('M-ALPHA-AUTH Option A callback base', () => {
     ).searchParams.get('redirect_uri');
 
     const encodedFlow = startResponse.cookie.mock.calls.find(
-      (call) => call[0] === OAUTH_FLOW_COOKIE_NAME,
+      (call) => call[0] === names().oauthFlow,
     )?.[1] as string;
     const flowState = decodeOAuthFlowState(encodedFlow);
 
@@ -485,7 +487,7 @@ describe('M-ALPHA-AUTH Option A callback base', () => {
       'auth-code',
       flowState?.state,
       undefined,
-      { cookies: { [OAUTH_FLOW_COOKIE_NAME]: encodedFlow } } as never,
+      { cookies: { [names().oauthFlow]: encodedFlow } } as never,
       { cookie: jest.fn(), clearCookie: jest.fn(), redirect: jest.fn() } as never,
     );
 

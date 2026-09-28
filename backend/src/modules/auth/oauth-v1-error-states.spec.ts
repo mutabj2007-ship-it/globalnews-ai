@@ -4,7 +4,10 @@ import { Logger } from '@nestjs/common';
 import { AUTH_ERROR_CODES, AUTH_ERROR_PARAM, isAuthErrorCode } from '@globalnews-ai/shared';
 import { AuthService } from './auth.service';
 import { createOAuthFlowState, encodeOAuthFlowState } from './oauth-flow-state';
-import { OAUTH_FLOW_COOKIE_NAME } from './cookie.util';
+import { resolveAuthCookieNames } from './cookie.util';
+
+/* §14 / SQ-11 — the flow cookie's name for the environment each test sets. */
+const OAUTH_FLOW_COOKIE_NAME_NOW = (): string => resolveAuthCookieNames().oauthFlow;
 import type { PrismaService } from '../../database/prisma.service';
 import type { SessionService } from './session.service';
 
@@ -85,7 +88,7 @@ describe('B5-A · OAuth V1 — cancelled | failed', () => {
       const flowState = createOAuthFlowState('/');
 
       const request = {
-        cookies: { [OAUTH_FLOW_COOKIE_NAME]: encodeOAuthFlowState(flowState) },
+        cookies: { [OAUTH_FLOW_COOKIE_NAME_NOW()]: encodeOAuthFlowState(flowState) },
       } as never;
 
       await service.handleGoogleCallback(
@@ -96,7 +99,7 @@ describe('B5-A · OAuth V1 — cancelled | failed', () => {
         response as never,
       );
 
-      expect(response._cleared).toContain(OAUTH_FLOW_COOKIE_NAME);
+      expect(response._cleared).toContain(OAUTH_FLOW_COOKIE_NAME_NOW());
       expect(response.clearCookie).toHaveBeenCalledTimes(1);
     });
 
@@ -112,7 +115,7 @@ describe('B5-A · OAuth V1 — cancelled | failed', () => {
         response as never,
       );
 
-      expect(response._cleared).toContain(OAUTH_FLOW_COOKIE_NAME);
+      expect(response._cleared).toContain(OAUTH_FLOW_COOKIE_NAME_NOW());
     });
   });
 
@@ -341,7 +344,7 @@ describe('B5-A · OAuth V1 — cancelled | failed', () => {
         so a refactor that reorders the file fails here even if it somehow kept
         the mock happy.
       */
-      const clearAt = source.indexOf('response.clearCookie(OAUTH_FLOW_COOKIE_NAME');
+      const clearAt = source.indexOf("clearAuthCookies(response, ['oauthFlow'])");
       const cancelAt = source.indexOf("typeof providerError === 'string'");
       const stateAt = source.indexOf('if (!flowState || !code || !state');
 
