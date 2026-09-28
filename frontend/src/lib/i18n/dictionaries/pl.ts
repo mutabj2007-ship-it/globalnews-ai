@@ -2203,6 +2203,17 @@ export const pl: Dictionary = {
     stateAmbiguousCountryBody:
       'Miejsce w tym pytaniu odpowiada więcej niż jednemu krajowi, a ani pytanie, ani doniesienia nie rozstrzygnęły, o który chodzi. Nie wygenerowano odpowiedzi, zamiast wybierać kraj za Ciebie.',
     ambiguousCountryQuestion: 'O który kraj chodzi?',
+    stateNoPriorSubject: 'BRAK WCZEŚNIEJSZEGO PYTANIA DO KONTYNUOWANIA',
+    noPriorSubjectQuestion:
+      'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o tym miejscu?',
+    stateIdentityRequired: 'WYMAGANE LOGOWANIE',
+    identityRequiredBody: 'Zaloguj się, aby porównać zapisane artykuły.',
+    identityRequiredInterestsBody: 'Zaloguj się, aby korzystać ze swoich zainteresowań.',
+    identityRequiredNeutralBody: 'Zaloguj się, aby korzystać z zapisanych informacji.',
+    statePersonalUnavailable: 'JESZCZE NIEDOSTĘPNE',
+    personalUnavailableBody: 'Porównywanie zapisanych artykułów nie jest jeszcze dostępne.',
+    personalUnavailableInterestsBody: 'Korzystanie z zainteresowań nie jest jeszcze dostępne.',
+    personalUnavailableNeutralBody: 'Twoje zapisane informacje nie są jeszcze tutaj dostępne.',
     compactHeading: 'Uwaga o dowodach',
     compactShowDetails: 'Pokaż, co to oznacza',
     short: {

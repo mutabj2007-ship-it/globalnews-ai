@@ -129,7 +129,14 @@ export function AskFrameScreen({ locale }: { readonly locale: AskLocale }): JSX.
     return () => media.removeEventListener('change', update);
   }, []);
   useEffect(() => {
-    if (reader.current) reader.current.scrollTop = reader.current.scrollHeight;
+    /*
+      ALPHA ENABLEMENT R1 (D-050/D-052) — the reader follows the CONVERSATION. With nothing
+      asked yet it stays at its top: scrolling an empty workspace to its bottom cut the
+      opening lines off under the pane title (seen at 1024×768 under the 53 px site header).
+    */
+    const empty =
+      turns.length === 0 && r2.turns.length === 0 && pending === null && r2.pending === null;
+    if (reader.current && !empty) reader.current.scrollTop = reader.current.scrollHeight;
   }, [turns, pending, r2.turns, r2.pending]);
   useEffect(() => {
     // The geographic evidence reader already enforces country precision and fail-closed ties.

@@ -412,3 +412,101 @@ describe('GATE H — Main R1.1 execution rows', () => {
     expect(calls.analysis).toEqual([]);
   });
 });
+
+describe('ALPHA ENABLEMENT R1 — MC-055 / MC-070 on the Ask R2 path', () => {
+  const anon = <T>(work: () => Promise<T>) =>
+    askRequestContext.run({ accountId: null, ipScope: 'ip:v4:203.0.113.7' }, work);
+
+  it('MC-055: "Compare my saved stories" without identity is IDENTITY_REQUIRED — no clarification, 0 AI', async () => {
+    const q = 'Compare my saved stories';
+    const { adapter, calls } = harness({});
+    const plan = await anon(() => adapter.prepare(req(q)));
+    const result = await anon(() => adapter.execute(req(q), plan, 'op-1'));
+    const payload = JSON.parse(result.payloadJson) as {
+      aiExecuted: boolean;
+      answer: { state: string; basis: string };
+      route: { terminalState: string };
+    };
+    expect(payload.route.terminalState).toBe('IDENTITY_REQUIRED');
+    expect(payload.answer).toMatchObject({
+      state: 'CAPABILITY_UNAVAILABLE',
+      basis: 'PLAN_IDENTITY_REQUIRED',
+    });
+    expect(payload.aiExecuted).toBe(false);
+    expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+  });
+
+  it('MC-055: signed in, it is governed by capability — the personal library is not wired here, 0 AI', async () => {
+    const q = 'Compare my saved stories';
+    const { adapter, calls } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req(q)));
+    const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+    expect(JSON.parse(result.payloadJson).answer).toEqual({
+      state: 'CAPABILITY_UNAVAILABLE',
+      basis: 'EXECUTOR_NOT_WIRED',
+      missingRoles: ['PERSONAL'],
+    });
+    expect(calls.analysis).toEqual([]);
+    expect(calls.reserve).toEqual([]);
+  });
+
+  it.each([
+    ['Compare my saved stories', 'en', 'SAVED_STORIES'],
+    ['Porównaj moje zapisane materiały', 'pl', 'SAVED_STORIES'],
+    ['What is new in my interests?', 'en', 'INTERESTS'],
+    ['Co nowego w tematach, które śledzę?', 'pl', 'INTERESTS'],
+  ] as const)(
+    'MC-055: %s carries the envelope’s personal scope %s (wording only), 0 AI, no control touched',
+    async (q, lg, scope) => {
+      for (const run of [anon, inRequest]) {
+        const { adapter, calls } = harness({});
+        const plan = await run(() => adapter.prepare(req(q, lg)));
+        const result = await run(() => adapter.execute(req(q, lg), plan, 'op-1'));
+        const payload = JSON.parse(result.payloadJson) as {
+          aiExecuted: boolean;
+          route: { personalScope: string | null };
+        };
+        expect(payload.route.personalScope).toBe(scope);
+        expect(payload.aiExecuted).toBe(false);
+        expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+      }
+    },
+  );
+
+  it('a news question names no personal scope', async () => {
+    const { adapter } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req('What is happening in Kenya?')));
+    const result = await inRequest(() =>
+      adapter.execute(req('What is happening in Kenya?'), plan, 'op-1'),
+    );
+    expect(JSON.parse(result.payloadJson).route.personalScope).toBeNull();
+  });
+
+  it.each([
+    ['And Kenya?', 'en'],
+    ['A Kenia?', 'pl'],
+  ] as const)(
+    'MC-070: %s says there is nothing to continue, keeps Kenya, 0 AI and no control touched',
+    async (q, lg) => {
+      const { adapter, calls } = harness({});
+      const plan = await inRequest(() => adapter.prepare(req(q, lg)));
+      const result = await inRequest(() => adapter.execute(req(q, lg), plan, 'op-1'));
+      const payload = JSON.parse(result.payloadJson) as {
+        aiExecuted: boolean;
+        answer: unknown;
+        chips: { kind: string; chips?: { kind: string; value: string }[] };
+      };
+      expect(payload.answer).toEqual({
+        state: 'CLARIFICATION_REQUIRED',
+        basis: 'NO_PRIOR_SUBJECT',
+        missingRoles: [],
+        candidates: ['KEN'],
+      });
+      expect(payload.aiExecuted).toBe(false);
+      expect(payload.chips.chips?.some((c) => c.kind === 'GEOGRAPHY' && c.value === 'KEN')).toBe(
+        true,
+      );
+      expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+    },
+  );
+});

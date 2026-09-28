@@ -4,7 +4,11 @@ import { comparisonCoverageLines, resolveEvidenceState, safeExternalHref } from 
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { EvidenceFreshnessNotice } from '@/components/search/EvidenceFreshnessNotice';
-import { EventAnchorNotice, resolveAmbiguousCountryQuestion } from '@/components/search/EventAnchorNotice';
+import {
+  EventAnchorNotice,
+  resolveAmbiguousCountryQuestion,
+  resolveAskedNotSearched,
+} from '@/components/search/EventAnchorNotice';
 import {
   ABSENT_BRIEF,
   buildBriefModel,
@@ -159,9 +163,13 @@ export function AskCompactResult({
       resolveEvidenceState(response.retrievalContext, response.articles.length)) === 'degraded-fallback';
   /* ANCHORING R1 — an ambiguous country is asked about, never reported as "no evidence". */
   const ambiguousCountry = resolveAmbiguousCountryQuestion(response.retrievalContext, language);
+  /* ASK R2 ALPHA ENABLEMENT R1 — asked, not searched (MC-055 / MC-070). */
+  const askedNotSearched = resolveAskedNotSearched(response.retrievalContext, language);
   const noAnswerMessage = ambiguousCountry
     ? ambiguousCountry.sentence
-    : retrievalUnavailable
+    : askedNotSearched
+      ? askedNotSearched.sentence
+      : retrievalUnavailable
       ? t.resultNoAnswerProvider
       : t.resultNoAnswerEvidence;
   const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0;
@@ -268,13 +276,34 @@ export function AskCompactResult({
       ) : null}
 
       {!hasAnalysis ? (
-        <div data-ask="no-answer" className="border-s-2 border-border-strong ps-3 pe-1 py-1">
+        <div
+          data-ask="no-answer"
+          data-ask-asked={askedNotSearched?.code}
+          className="border-s-2 border-border-strong ps-3 pe-1 py-1"
+        >
           <p className="text-sm font-medium leading-relaxed text-ink-primary">
             {noAnswerMessage}
           </p>
-          <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">
-            {t.resultNoAnswerSafety}
-          </p>
+          {askedNotSearched && askedNotSearched.places.length > 0 ? (
+            <ul data-ask="asked-places" className="mt-2 flex flex-wrap gap-1.5">
+              {askedNotSearched.places.map((place) => (
+                <li
+                  key={place}
+                  data-ask-place={place}
+                  className="rounded-sm border border-border-strong px-2 py-0.5 text-xs text-ink-primary"
+                >
+                  {place}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {/* "Try again shortly / ask a narrower question" is advice for a question that WAS
+              searched; a question asked instead of searched already says what to do. */}
+          {askedNotSearched ? null : (
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">
+              {t.resultNoAnswerSafety}
+            </p>
+          )}
         </div>
       ) : (
         <>

@@ -97,6 +97,11 @@ export interface SeamTrace {
     /** GATE H (S6) — the capability-request producers ran; the kinds whose marker fired. */
     readonly capability: readonly CapabilityRequestKind[] | null;
   };
+  /**
+   * ALPHA ENABLEMENT R1 (MC-055) — the one landed verdict the wrapper re-reads, and why:
+   * a comparison whose members are the reader's own library is not member-less.
+   */
+  readonly landedOverride?: 'PERSONAL_MEMBER_SET' | null;
 }
 
 export interface AskR2Route {
@@ -345,13 +350,27 @@ export function routeAskR2(
   const namedDomains = (capability.source.explicitSpecialistDomains ?? []).filter(
     (d) => !landed.reading.analyticalDomains.includes(d),
   );
-  const landedReading =
-    namedDomains.length === 0
-      ? landed.reading
-      : {
-          ...landed.reading,
-          analyticalDomains: [...landed.reading.analyticalDomains, ...namedDomains],
-        };
+  /*
+    ASK R2 ALPHA ENABLEMENT R1 (MC-055) — "Compare my saved stories". The landed classifier
+    reads a comparison that names no members and asks which (CLARIFICATION_REQUIRED); frozen
+    C honours that before the personal class (its row V1), so the reader was asked an
+    irrelevant question instead of being told what is actually missing. But the reader DID
+    name the members: their own library. When the personal producer has read that, the
+    landed verdict is carried as COMPARISON_RESEARCH — exactly the reading frozen C's own
+    row B7a gives this question — and frozen C then decides: IDENTITY_REQUIRED without a
+    verified identity, the personal-library requirement with one. Frozen bytes unchanged;
+    recorded on the seam trace.
+  */
+  const personalMemberSet =
+    capability.source.personalRequested === true &&
+    landed.reading.queryIntent === 'CLARIFICATION_REQUIRED';
+  const landedReading = {
+    ...landed.reading,
+    ...(namedDomains.length === 0
+      ? {}
+      : { analyticalDomains: [...landed.reading.analyticalDomains, ...namedDomains] }),
+    ...(personalMemberSet ? { queryIntent: 'COMPARISON_RESEARCH' as const } : {}),
+  };
   const source = composeEnvelopeSource(reading, landedReading, eligibility, ctx, capability.source);
 
   /* Axes derived in the normalization vocabulary; language axis restored to the truth. */
@@ -388,6 +407,7 @@ export function routeAskR2(
           : null,
         capability: [...new Set(capability.trace.map((t) => t.kind))],
       },
+      landedOverride: personalMemberSet ? 'PERSONAL_MEMBER_SET' : null,
     },
   };
 }

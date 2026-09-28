@@ -49,18 +49,67 @@ function varyFields(header: string | undefined): string[] {
 }
 
 describe('authenticated cache headers — scope', () => {
-  it('SCOPE IS DERIVED, NOT GUESSED: the families are exactly the rewrite destinations in next.config.mjs', () => {
+  /*
+    ASK R2 ALPHA ENABLEMENT R1 — E1-IV-1 (test-hardening only; no live routing change).
+    The family pattern was `[a-z]+`, so `/api/ask-v2` (hyphen, digit) was invisible to this
+    drift check. Every authenticated family must now be REPRESENTED: either in the governed
+    middleware set, or in the named set of families that apply the same two directives
+    themselves — and that claim is exercised at runtime below, not trusted.
+  */
+  const FAMILY_SOURCE = /source: '\/api\/([a-z][a-z0-9-]*)\/:path\*'/g;
+  const SELF_GOVERNED_FAMILIES: Readonly<Record<string, string>> = {
+    '/ask-v2': 'AskV2EnabledGuard → applyAskPrivacyHeaders (contract §14), before enable/auth',
+  };
+  const discover = (config: string): string[] =>
+    [...config.matchAll(FAMILY_SOURCE)].map((match) => `/${match[1]}`);
+  const unrepresented = (families: readonly string[]): string[] =>
+    families.filter(
+      (f) => !AUTHENTICATED_API_FAMILIES.includes(f) && !(f in SELF_GOVERNED_FAMILIES),
+    );
+
+  it('SCOPE IS DERIVED, NOT GUESSED: every /api rewrite family is represented, none unaccounted', () => {
     const nextConfig = readFileSync(
       join(__dirname, '..', '..', '..', 'frontend', 'next.config.mjs'),
       'utf8',
     );
+    const rewritten = discover(nextConfig);
 
-    const rewritten = [...nextConfig.matchAll(/source: '\/api\/([a-z]+)\/:path\*'/g)].map(
-      (match) => `/${match[1]}`,
+    expect(rewritten).toContain('/ask-v2');
+    expect(rewritten.length).toBe(
+      AUTHENTICATED_API_FAMILIES.length + Object.keys(SELF_GOVERNED_FAMILIES).length,
     );
+    expect(unrepresented(rewritten)).toEqual([]);
+    /* and the middleware set is exactly the non-self-governed families */
+    expect(rewritten.filter((f) => !(f in SELF_GOVERNED_FAMILIES)).sort()).toEqual(
+      [...AUTHENTICATED_API_FAMILIES].sort(),
+    );
+  });
 
-    expect(rewritten.length).toBe(7);
-    expect([...rewritten].sort()).toEqual([...AUTHENTICATED_API_FAMILIES].sort());
+  it('E1-IV-1 control: a new authenticated family (hyphenated or not) that is not represented FAILS the check', () => {
+    const synthetic = [
+      "{ source: '/api/users/:path*', destination: 'x' }",
+      "{ source: '/api/new-family2/:path*', destination: 'x' }",
+      "{ source: '/api/ask-v2/:path*', destination: 'x' }",
+    ].join('\n');
+    expect(discover(synthetic)).toEqual(['/users', '/new-family2', '/ask-v2']);
+    expect(unrepresented(discover(synthetic))).toEqual(['/new-family2']);
+  });
+
+  it('a self-governed family really carries both directives (runtime, not a declaration)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { applyAskPrivacyHeaders } = require('../modules/ask-v2/ask-v2.controller') as {
+      applyAskPrivacyHeaders: (r: {
+        setHeader(n: string, v: string): void;
+        getHeader?(n: string): unknown;
+      }) => void;
+    };
+    const headers = new Map<string, string>([['Vary', 'Origin']]);
+    applyAskPrivacyHeaders({
+      setHeader: (n, v) => void headers.set(n, v),
+      getHeader: (n) => headers.get(n),
+    });
+    expect(headers.get('Cache-Control')).toBe(AUTHENTICATED_CACHE_CONTROL);
+    expect(varyFields(headers.get('Vary'))).toEqual(expect.arrayContaining(['origin', 'cookie']));
   });
 
   it('matches a family root and everything beneath it', () => {

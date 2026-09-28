@@ -128,6 +128,10 @@ export function AskR2TurnView({
                 ))}
               </ul>
             </>
+          ) : view.clarification.lead !== null ? (
+            <p data-ask="clarification-lead" className="text-[15px] leading-[1.55]">
+              {view.clarification.lead}
+            </p>
           ) : (
             <p className="text-[15px] leading-[1.55]">{s.freshness.nothingRan}</p>
           )}

@@ -185,7 +185,7 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
   it.each([
     ['REFERENCE_UNAVAILABLE', /Reference knowledge is not connected/],
     ['EXECUTOR_NOT_WIRED', /needs a source Ask cannot read yet/],
-    ['PLAN_IDENTITY_REQUIRED', /Sign in to ask about your own saved stories/],
+    ['PLAN_IDENTITY_REQUIRED', /^Sign in to use your saved information\.$/],
     ['PLAN_CAPABILITY_UNAVAILABLE', /needs a capability Ask does not have/],
   ])('%s is named, never "Ask is unavailable" and never "no reporting"', (basis, text) => {
     const v = askR2View(
@@ -254,6 +254,7 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
     expect(v.clarification).toEqual({
       byExecutor: true,
       candidates: ['DR Congo', 'Republic of the Congo'],
+      lead: null,
     });
     expect(v.freshness).toBe(EN.askedBeforeAnswering);
   });
@@ -267,7 +268,109 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
       EN,
       'en',
     );
-    expect(v.clarification).toEqual({ byExecutor: false, candidates: [] });
+    expect(v.clarification).toEqual({ byExecutor: false, candidates: [], lead: null });
     expect(v.freshness).toBe(EN.freshness.nothingRan);
+  });
+});
+
+describe('ALPHA ENABLEMENT R1 — MC-070: a continuation with nothing to continue', () => {
+  const names: Record<string, string> = { KEN: 'Kenya' };
+  const plNames: Record<string, string> = { KEN: 'Kenia' };
+  const noPrior = (lang: 'en' | 'pl') =>
+    askR2View(
+      payload('CLARIFICATION_REQUIRED', {
+        answer: {
+          state: 'CLARIFICATION_REQUIRED',
+          basis: 'NO_PRIOR_SUBJECT',
+          missingRoles: [],
+          candidates: ['KEN'],
+        },
+        analysis: null,
+      }),
+      lang === 'en' ? EN : PL,
+      lang,
+      (iso3) => (lang === 'en' ? names : plNames)[iso3] ?? iso3,
+    );
+
+  it('EN: says there is no earlier question and asks what to know about this place — no choice list', () => {
+    const v = noPrior('en');
+    expect(v.clarification.lead).toBe(
+      "There's no earlier question to continue. What would you like to know about this place?",
+    );
+    expect(v.clarification.candidates).toEqual([]);
+    expect(v.freshness).toBe(EN.freshness.nothingRan);
+    expect(v.handoffs).toEqual({ openFull: false, runDeeper: false });
+    expect(v.citable).toBe(false);
+  });
+
+  it('PL: the same, in Polish', () => {
+    const v = noPrior('pl');
+    expect(v.clarification.lead).toBe(
+      'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o tym miejscu?',
+    );
+    expect(v.freshness).toBe(PL.freshness.nothingRan);
+  });
+});
+
+describe('ALPHA ENABLEMENT R1 — MC-055: the reader’s own library, worded by the server’s scope', () => {
+  type Scope = 'SAVED_STORIES' | 'INTERESTS' | null;
+  const personal = (
+    lang: 'en' | 'pl',
+    basis: string,
+    missingRoles: string[],
+    personalScope: Scope,
+  ) => {
+    const base = payload('CAPABILITY_UNAVAILABLE');
+    return askR2View(
+      payload('CAPABILITY_UNAVAILABLE', {
+        route: { ...base.route, personalScope },
+        answer: { state: 'CAPABILITY_UNAVAILABLE', basis, missingRoles },
+        analysis: null,
+      }),
+      lang === 'en' ? EN : PL,
+      lang,
+    ).unavailableText;
+  };
+
+  it.each([
+    ['en', 'SAVED_STORIES', "Comparing your saved stories isn't available yet."],
+    ['pl', 'SAVED_STORIES', 'Porównywanie zapisanych artykułów nie jest jeszcze dostępne.'],
+    ['en', 'INTERESTS', "Using your interests isn't available yet."],
+    ['pl', 'INTERESTS', 'Korzystanie z zainteresowań nie jest jeszcze dostępne.'],
+    ['en', null, "Your saved information isn't available here yet."],
+    ['pl', null, 'Twoje zapisane informacje nie są jeszcze tutaj dostępne.'],
+  ] as const)('signed in, not wired · %s %s', (lang, scope, text) => {
+    expect(personal(lang, 'EXECUTOR_NOT_WIRED', ['PERSONAL'], scope)).toBe(text);
+  });
+
+  it.each([
+    ['en', 'SAVED_STORIES', 'Sign in to compare your saved stories.'],
+    ['pl', 'SAVED_STORIES', 'Zaloguj się, aby porównać zapisane artykuły.'],
+    ['en', 'INTERESTS', 'Sign in to use your interests.'],
+    ['pl', 'INTERESTS', 'Zaloguj się, aby korzystać ze swoich zainteresowań.'],
+    ['en', null, 'Sign in to use your saved information.'],
+    ['pl', null, 'Zaloguj się, aby korzystać z zapisanych informacji.'],
+  ] as const)('signed out · %s %s', (lang, scope, text) => {
+    expect(personal(lang, 'PLAN_IDENTITY_REQUIRED', [], scope)).toBe(text);
+  });
+
+  it('an interests question never receives the saved-stories words', () => {
+    for (const lang of ['en', 'pl'] as const)
+      for (const [basis, roles] of [
+        ['EXECUTOR_NOT_WIRED', ['PERSONAL']],
+        ['PLAN_IDENTITY_REQUIRED', []],
+      ] as const)
+        expect(personal(lang, basis, [...roles], 'INTERESTS')).not.toMatch(
+          /saved stories|zapisan\p{L}* artykuł/u,
+        );
+  });
+
+  it('never the diagnostic basis; another unwired executor keeps its own sentence', () => {
+    expect(personal('en', 'EXECUTOR_NOT_WIRED', ['PERSONAL'], 'SAVED_STORIES')).not.toMatch(
+      /EXECUTOR_NOT_WIRED/,
+    );
+    expect(personal('en', 'EXECUTOR_NOT_WIRED', ['OFFICIAL'], null)).toBe(
+      EN.unavailableBecause.EXECUTOR_NOT_WIRED,
+    );
   });
 });

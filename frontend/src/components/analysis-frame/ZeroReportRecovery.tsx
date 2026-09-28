@@ -2,7 +2,10 @@
 
 import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { resolveAmbiguousCountryQuestion } from '../search/EventAnchorNotice';
+import {
+  resolveAmbiguousCountryQuestion,
+  resolveAskedNotSearched,
+} from '../search/EventAnchorNotice';
 import type { FrameClarificationReason, FrameEvidenceState } from './analysisFrameState';
 
 /**
@@ -124,20 +127,30 @@ export function ZeroReportRecovery({
    * frame's own existing strings — no new copy, and no provider detail
    * that is not in the response.
    */
-  const heading = ambiguousCountry !== undefined
-    ? dict.eventAnchor.stateAmbiguousCountry
-    : isClarification
-    ? t.stateClarificationRequired
-    : state === 'provider-unavailable'
-      ? t.stateProviderUnavailable
-      : t.stateNoEvidence;
-  const body = ambiguousCountry !== undefined
-    ? dict.eventAnchor.stateAmbiguousCountryBody
-    : isClarification
-    ? t.stateClarificationRequiredBody
-    : state === 'provider-unavailable'
-      ? t.stateProviderUnavailableBody
-      : t.stateNoEvidenceBody;
+  /* ASK R2 ALPHA ENABLEMENT R1 — asked, not searched (MC-055 / MC-070): its own words. */
+  const askedNotSearched = isClarification
+    ? resolveAskedNotSearched(response.retrievalContext, language)
+    : undefined;
+  const heading =
+    ambiguousCountry !== undefined
+      ? dict.eventAnchor.stateAmbiguousCountry
+      : askedNotSearched !== undefined
+        ? askedNotSearched.heading
+        : isClarification
+          ? t.stateClarificationRequired
+          : state === 'provider-unavailable'
+            ? t.stateProviderUnavailable
+            : t.stateNoEvidence;
+  const body =
+    ambiguousCountry !== undefined
+      ? dict.eventAnchor.stateAmbiguousCountryBody
+      : askedNotSearched !== undefined
+        ? askedNotSearched.body
+        : isClarification
+          ? t.stateClarificationRequiredBody
+          : state === 'provider-unavailable'
+            ? t.stateProviderUnavailableBody
+            : t.stateNoEvidenceBody;
 
   /*
    * 44x44 declared in px, so a later type change cannot shrink it.
@@ -189,6 +202,19 @@ export function ZeroReportRecovery({
           {heading}
         </h2>
         <p className="mt-3 font-gn-sans text-[15px] leading-[1.6] text-[#d5e1ee]">{body}</p>
+        {askedNotSearched === undefined || askedNotSearched.places.length === 0 ? null : (
+          <ul data-paf="asked-places" className="mt-3 flex flex-wrap gap-2">
+            {askedNotSearched.places.map((place) => (
+              <li
+                key={place}
+                data-ask-place={place}
+                className="rounded-sm border border-[#2a3a4d] px-2 py-0.5 font-gn-sans text-[13px] text-[#d5e1ee]"
+              >
+                {place}
+              </li>
+            ))}
+          </ul>
+        )}
 
         {clarificationWhy === null ? null : (
           <p
@@ -201,7 +227,7 @@ export function ZeroReportRecovery({
         )}
       </section>
 
-      {isClarification ? (
+      {isClarification && askedNotSearched === undefined ? (
         <section data-paf="clarification-question" className="mt-6">
           <p className="font-gn-sans text-[17px] font-semibold leading-[1.35] text-[#eaf1f8] md:text-[18px]">
             {clarificationAsk}

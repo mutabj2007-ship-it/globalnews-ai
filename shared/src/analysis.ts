@@ -1004,6 +1004,12 @@ export interface AnalysisRetrievalContext {
   clarificationReason?: import('./event-anchor').AnalysisClarificationReason;
   /** ISO-3 candidates the reader must choose between. */
   clarificationCandidates?: readonly string[];
+  /**
+   * ASK R2 ALPHA ENABLEMENT R1 (MC-055) — with IDENTITY_REQUIRED / PERSONAL_LIBRARY_UNAVAILABLE:
+   * which of the reader's own libraries the question is about, as the capability producer
+   * read it. Selects the wording only; absent → the neutral wording.
+   */
+  clarificationPersonalScope?: 'SAVED_STORIES' | 'INTERESTS';
 }
 
 /**
