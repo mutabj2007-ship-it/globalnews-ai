@@ -505,26 +505,46 @@ describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zer
     from a stated-now period, or a present-tense/geographic/domain signal — see
     `deriveEvidenceNeeds` in planner.ts) must put NEWS_REPORTING into `required`, so
     `required.length` is never 0 and the terminal is never REFERENCE_BACKGROUND_ONLY. That
-    is the whole proof: a mixed question can only ever reach `execute()`'s existing,
-    unmodified Reporting path (§4 above `executeBackground` is never invoked), so a current
+    is the whole proof: a mixed question stays on the CURRENT-EVIDENCE path, so a current
     claim structurally cannot be silently answered from model background — there is no
     branch in this adapter that would let it.
+
+    A+H QUALIFICATION R1 (test-only correction) — on that path Frozen C may still END the
+    question before Reporting runs: "…NATO…in Poland today?" is BROADENING_OFFERED (a
+    clarification) and "…inflation rate today?" is CAPABILITY_UNAVAILABLE. Both are governed
+    current-path outcomes with zero model calls. The earlier assertion that Reporting always
+    executes did not hold against the frozen router; the invariant asserted now is the one
+    that matters: never the background provider, never background text, never citable.
   */
   describe('CTO POST-#66 CLOSURE — mixed background + current, never a silent fallback', () => {
     it.each([
-      'What is NATO and what is it doing in Poland today?',
-      'What is inflation and what is the inflation rate today?',
-    ])(
-      '%s → NOT REFERENCE_BACKGROUND_ONLY; execute() reaches Reporting, never the background provider',
-      async (q) => {
-        const { adapter, calls } = harness({});
-        const plan = await adapter.prepare(req(q));
-        expect(plan.contract).not.toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
-        await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
-        expect(calls.background).toEqual([]);
-        expect(calls.analysis).toHaveLength(1);
-      },
-    );
+      ['What is NATO and what is it doing in Poland today?', 'CLARIFICATION_REQUIRED'],
+      ['What is inflation and what is the inflation rate today?', 'CAPABILITY_UNAVAILABLE'],
+    ])('%s → current-evidence path (%s), never the background provider', async (q, state) => {
+      const { adapter, calls } = harness({});
+      const plan = await adapter.prepare(req(q));
+      expect(plan.contract).toMatch(/:CURRENT_REPORTING:/);
+      expect(plan.contract).not.toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+      const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+      const payload = JSON.parse(result.payloadJson);
+      expect(payload.answer.state).toBe(state);
+      expect(payload.background).toBeNull();
+      expect(payload.modelPriorCitable).toBe(false);
+      expect(payload.aiExecuted).toBe(false);
+      expect(calls.background).toEqual([]);
+      expect(calls.analysis).toEqual([]);
+    });
+
+    it('a current question that IS executable reaches Reporting, never the background provider', async () => {
+      const q = 'What is happening in Kenya?';
+      const { adapter, calls } = harness({});
+      const plan = await adapter.prepare(req(q));
+      expect(plan.contract).toMatch(/:CURRENT_REPORTING:EXECUTABLE$/);
+      const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+      expect(JSON.parse(result.payloadJson).background).toBeNull();
+      expect(calls.background).toEqual([]);
+      expect(calls.analysis).toHaveLength(1);
+    });
   });
 
   /*
@@ -549,19 +569,32 @@ describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zer
       expect(calls.background).toHaveLength(1);
       expect(calls.analysis).toHaveLength(0);
 
-      const turn2 = 'Why was NATO created?';
+      /* A+H QUALIFICATION R1 (test-only correction) — "Why was NATO created?" is classified
+         CURRENT_REPORTING by the frozen router (the conservative direction: it goes to
+         evidence, not to the model), so it cannot stand for a stable turn. "What is the
+         history of NATO?" is REFERENCE_BACKGROUND_ONLY under Frozen C. */
+      const turn2 = 'What is the history of NATO?';
       const plan2 = await adapter.prepare(req(turn2));
       expect(plan2.contract).toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
       await inRequest(() => adapter.execute(req(turn2), plan2, 'op-2'));
       expect(calls.background).toHaveLength(2);
       expect(calls.analysis).toHaveLength(0);
 
+      /* Frozen C ends this current follow-up in a governed clarification (BROADENING_OFFERED,
+         zero model calls); the boundary is what matters — it never reaches background. */
       const turn3 = 'What is NATO doing in Poland today?';
       const plan3 = await adapter.prepare(req(turn3));
-      expect(plan3.contract).not.toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
-      await inRequest(() => adapter.execute(req(turn3), plan3, 'op-3'));
-      /* the boundary: turn 3's current claim does not touch the background provider, and
-         turns 1–2's background answers did not touch Reporting. */
+      expect(plan3.contract).toMatch(/:CURRENT_REPORTING:/);
+      const r3 = await inRequest(() => adapter.execute(req(turn3), plan3, 'op-3'));
+      expect(JSON.parse(r3.payloadJson).background).toBeNull();
+      expect(calls.background).toHaveLength(2);
+
+      /* …and an executable current follow-up goes to Reporting, still never to background. */
+      const turn4 = 'What is happening in Kenya?';
+      const plan4 = await adapter.prepare(req(turn4));
+      await inRequest(() => adapter.execute(req(turn4), plan4, 'op-4'));
+      /* the boundary: current turns never touch the background provider, and turns 1–2's
+         background answers never touched Reporting. */
       expect(calls.background).toHaveLength(2);
       expect(calls.analysis).toHaveLength(1);
     });
