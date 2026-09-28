@@ -95,7 +95,7 @@ export function BookmarkButton({
 export function CategoryChip({ label }: { label: string }): JSX.Element {
   return (
     <span
-      className={`${MI_CHIP} inline-flex items-center border border-[#1d3a5a] bg-[#07203a] px-[6px] py-[2px] text-[11px] font-semibold uppercase tracking-[0.04em] text-[#93cdf5]`}
+      className={`${MI_CHIP} inline-flex items-center self-start border border-[#1d3a5a] bg-[#07203a] px-[6px] py-[2px] text-[11px] font-semibold uppercase tracking-[0.04em] text-[#93cdf5]`}
     >
       {label}
     </span>

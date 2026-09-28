@@ -300,7 +300,9 @@ export function SavedCard(props: CommonProps & { reason?: string; compact?: bool
       · a `compact` card (For you) clamps its headline (3 lines) and bounds
         the reason and meta lines to one line each; the Saved destination
         keeps full titles, as R1.2 ruled for saved references;
-      · the bookmark stays a trailing sibling of the link, never inside it.
+      · a compact card takes a smaller thumbnail and carries its bookmark on
+        the meta line, so a ~320px card still gives the headline ~200px;
+      · the bookmark is never inside the link.
     Selected: a restrained sand edge and halo on the card, not cyan.
   */
   return (
@@ -322,35 +324,40 @@ export function SavedCard(props: CommonProps & { reason?: string; compact?: bool
       <StoryImage
         story={story}
         fallback={t.saved.noImage}
-        className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-[10px] border border-[#0e2d4d] bg-[linear-gradient(140deg,#0b2742,#061a30)] md:h-[96px] md:w-[96px] xl:h-[104px] xl:w-[104px]"
+        className={`flex shrink-0 items-center justify-center rounded-[10px] border border-[#0e2d4d] bg-[linear-gradient(140deg,#0b2742,#061a30)] ${
+          compact ? 'h-[72px] w-[72px] xl:h-[80px] xl:w-[80px]' : 'h-[76px] w-[76px] md:h-[96px] md:w-[96px] xl:h-[104px] xl:w-[104px]'
+        }`}
         fallbackClassName="px-1.5 text-center text-[10px] leading-[1.3] text-[#54687e]"
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <CategoryChip label={getDictionary(language).map.categories[story.category] ?? story.category} />
         <StoryTitle
           story={story}
-          className={`block text-[14.5px] font-bold leading-[1.28] text-white [overflow-wrap:anywhere] md:text-[15px] ${compact ? 'line-clamp-3' : ''}`}
+          className={`text-[14.5px] font-bold leading-[1.28] text-white [overflow-wrap:anywhere] md:text-[15px] ${compact ? 'line-clamp-3' : 'block'}`}
         />
         {reason !== undefined && (
           <p className={`text-[12px] leading-[1.4] text-[#5abff5] ${compact ? 'truncate' : ''}`} title={reason}>
             {reason}
           </p>
         )}
-        <div className={compact ? 'truncate [&>p]:truncate' : ''}>
-          <MetaLine
-            story={story}
-            language={language}
-            showObservation={story.savedAt === undefined}
-            savedAge={
-              story.savedAt === undefined
-                ? undefined
-                : fill(t.saved.savedAgo, { age: formatRelativeTime(story.savedAt, language) })
-            }
-          />
+        <div className={compact ? 'flex min-w-0 items-center gap-1' : ''}>
+          <div className={compact ? 'min-w-0 flex-1 truncate [&>p]:truncate' : ''}>
+            <MetaLine
+              story={story}
+              language={language}
+              showObservation={story.savedAt === undefined}
+              savedAge={
+                story.savedAt === undefined
+                  ? undefined
+                  : fill(t.saved.savedAgo, { age: formatRelativeTime(story.savedAt, language) })
+              }
+            />
+          </div>
+          {compact && <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="-mb-[8px] shrink-0" />}
         </div>
         {blocked && <UnavailableNotice language={language} />}
       </div>
-      <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="shrink-0" />
+      {!compact && <BookmarkButton isSaved={isSaved} onToggle={onToggleSaved} language={language} className="shrink-0" />}
     </li>
   );
 }
