@@ -236,3 +236,40 @@ describe('H — result state is honest', () => {
     expect(SAND_CHARGING_ENABLED).toBe(false);
   });
 });
+
+describe('E1 implementation-facing checks (NOT an E1 certification)', () => {
+  it('E1-006: the Ask R2 telemetry line carries no account or IP identity', () => {
+    const start = ADAPTER.indexOf('this.logger.log(');
+    const line = ADAPTER.slice(start, ADAPTER.indexOf(');', start));
+    /* `questionClass` / `questionLanguage` are routing facts; the reader's text is `request.question`. */
+    const leaks = line.match(/accountId|ipScope|who\.|userId|request\.question/g) ?? [];
+    const v = record(
+      'E1-006',
+      leaks.length === 0 ? 'IMPLEMENTED_NOT_CERTIFIED' : 'FAIL',
+      'adapter log line source',
+      { leaks },
+      'Identity now resolves server-side (AskRequestContext); the rule is re-asserted: the one Ask R2 log line names operation, class, terminal, normalization, language, answer state and aiExecuted — never the account, the IP scope or the question text.',
+    );
+    expect(leaks).toEqual([]);
+    expect(v).toBe('IMPLEMENTED_NOT_CERTIFIED');
+  });
+
+  it('E1-009: retrieved article text cannot reach a tool, a fetch, a mutation or an identity — no such capability exists', () => {
+    const provider = readFileSync(
+      join(__dirname, '../modules/analysis/providers/openai-analysis.provider.ts'),
+      'utf8',
+    );
+    const capability =
+      provider.match(/\btools\b|tool_choice|function_call|functions\s*:|parallel_tool_calls/g) ??
+      [];
+    const oneCall = (ADAPTER.match(/this\.analysis\.analyzeNews\(/g) ?? []).length === 1;
+    const v = record(
+      'E1-009',
+      capability.length === 0 && oneCall ? 'IMPLEMENTED_NOT_CERTIFIED' : 'FAIL',
+      'provider + adapter source',
+      { toolCapabilityTokens: capability, singleAnalysisCall: oneCall },
+      'Asserted by ABSENCE: the provider request declares no tools/functions, and the adapter makes one analysis call whose output is stored as a display payload — nothing it returns is executed, fetched or used as an identity.',
+    );
+    expect(v).toBe('IMPLEMENTED_NOT_CERTIFIED');
+  });
+});

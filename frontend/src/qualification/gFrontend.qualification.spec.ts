@@ -91,7 +91,7 @@ const { AskAiDock } =
 const transport = jest.mocked(analyzeNews);
 let renderer: ReactTestRenderer;
 
-type Verdict = 'PASS' | 'FAIL' | 'EXPLAINED';
+type Verdict = 'PASS' | 'FAIL' | 'EXPLAINED' | 'HELD';
 const results: { id: string; verdict: Verdict; path: string; observed: string; note?: string }[] =
   [];
 function record(id: string, ok: boolean | Verdict, path: string, observed: unknown, note?: string) {
@@ -588,6 +588,29 @@ describe('H — handoff rows, frontend half (source and behaviour of the /ask su
       'Authority conflict for the Product Owner: H says Sand renders in NO state while charging is off; the frozen D25 design (contract §17) shows a 24-Sand ESTIMATE on the Run-deeper control and its confirmation, with "Sand charging is not enabled in Alpha, so nothing is deducted". Nothing is charged (SAND_CHARGING_ENABLED=false literal; ledger off).',
     );
     expect(g7).toBe('PASS');
+    mount();
+  });
+});
+
+describe('F-UPLOAD — the upload capability does not exist (F veto, SECURITY HOLD)', () => {
+  it('no Ask surface renders a file input, a drop zone or an attachment control', () => {
+    const files = [
+      'components/ask-frame/AskFrameScreen.tsx',
+      'components/ask-frame/AskParts.tsx',
+      'components/ask-frame/AskR2TurnView.tsx',
+      'components/ask/AskAiDock.tsx',
+    ].map((p) => readFileSync(join(__dirname, '..', p), 'utf8'));
+    const hits = files.flatMap(
+      (s) => s.match(/type=["']file["']|onDrop=|DataTransfer|FileReader|data-ask="attach/g) ?? [],
+    );
+    record(
+      'F-UPLOAD',
+      hits.length === 0 ? 'HELD' : 'FAIL',
+      'source: Ask surfaces',
+      { uploadAffordances: hits },
+      'Upload is NOT AUTHORISED (F: 15 conditions, 4 untradeable). The capability is absent; a question that refers to a file is a typed CAPABILITY_UNAVAILABLE (SECURITY_HOLD_UPLOAD).',
+    );
+    expect(hits).toEqual([]);
     mount();
   });
 });

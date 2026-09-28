@@ -197,6 +197,35 @@ function GlobalAskAiDock({
       delete body.dataset.askOpen;
     };
   }, [isOpen]);
+  /*
+    ASK R2 INTEGRATION R1 · GATE H (G V8-C1) — below `lg` the dock is FULL SCREEN, so the
+    device Back must close it and return to the page beneath (the Map, with its selection
+    still in the URL) instead of leaving that page. While open full screen the dock owns
+    ONE history entry; Next's own state is copied onto it so the App Router still treats
+    both entries as its own. Back pops it (→ closed); closing any other way pops it too.
+  */
+  const overlayEntry = useRef(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.history?.pushState !== 'function') {
+      return undefined;
+    }
+    const fullScreen =
+      typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 1023px)').matches;
+    if (isOpen && fullScreen && !overlayEntry.current) {
+      window.history.pushState({ ...(window.history.state ?? {}) }, '', window.location.href);
+      overlayEntry.current = true;
+    } else if (!isOpen && overlayEntry.current) {
+      overlayEntry.current = false;
+      window.history.back();
+    }
+    const onPop = (): void => {
+      if (!overlayEntry.current) return;
+      overlayEntry.current = false;
+      setIsOpen(false);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [isOpen]);
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
   const [history, setHistory] = useState<SettledAskTurn[]>([]);
