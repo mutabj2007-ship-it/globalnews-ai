@@ -170,6 +170,12 @@ import {
   validateAnalysisResult,
   AnalysisValidationError,
 } from '../validation/validate-analysis-result';
+import { asksAboutCoverage } from '../query/coverage-question.util';
+import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
+import {
+  decideContextEligibility,
+  readSubjectInEitherLanguage,
+} from '../../ask-router/normalization/semantic-subject';
 
 /**
  * PROVIDER-SAFETY EDGE CLOSURE — the retrieval context for a question that has
@@ -229,19 +235,6 @@ interface CacheEntry {
 
 /** Number of articles requested before deduping/bounding. */
 const SEARCH_POOL_SIZE = 20;
-const COVERAGE_QUESTION_PATTERNS = [
-  /\bwhy\s+(?:do\s+we\s+have\s+)?(?:only|just|so\s+few|few|less|fewer)\b/i,
-  /\b(?:only|just)\s+\d+\s+(?:articles?|reports?|stories?|news)\b/i,
-  /\bis\s+(?:that|this)\s+(?:all|the\s+only)\b/i,
-  /\bwhy\s+(?:are|is)\s+there\s+(?:so\s+)?(?:few|less|fewer)\b/i,
-  /\bwhy\s+(?:is|are)\s+(?:the\s+)?(?:coverage|news|reporting)\s+(?:so\s+)?(?:limited|low|thin|small)\b/i,
-  /\bwhich\s+(?:providers?|sources?)\b/i,
-  /\bwhy\s+(?:did|does)\s+(?:globalnews|the\s+system|retrieval)\b/i,
-];
-
-function asksAboutCoverage(query: string): boolean {
-  return COVERAGE_QUESTION_PATTERNS.some((pattern) => pattern.test(query));
-}
 
 function buildCoverageContext(
   query: string,
@@ -1125,7 +1118,16 @@ export class AnalysisService {
           classification.sides.length >= 2 ||
           classification.intent === 'CLARIFICATION_REQUIRED'
             ? undefined
-            : (this.detectLocation(retrievalQuery) ?? this.detectLocationByDemonym(retrievalQuery));
+            : (this.detectLocation(retrievalQuery) ??
+              this.detectLocationByDemonym(retrievalQuery) ??
+              /*
+                ASK R2 INTEGRATION R1 · G SEAM A — office geography. Consulted only
+                where the landed readers found nothing, so every question they
+                resolve takes exactly its old path. "Who is the president of Turkey?"
+                names Türkiye through the office construction; "the cost of turkey at
+                christmas" has no office noun and resolves nothing here.
+              */
+              this.resolveOfficeGeographyLocation(retrievalQuery));
         /*
           ANCHORING R1 — GATE F. The shared resolver maps a bare "Congo" to one
           country. That is a guess, not an interpretation, so it is not used as a
@@ -1151,12 +1153,33 @@ export class AnalysisService {
           classification.countries.length > 0 ||
           typedLocation !== undefined;
 
+        /*
+          ASK R2 INTEGRATION R1 · G FINAL ADDENDUM SEAM — inherited Map context
+          eligibility, immediately before rank 7 is consulted. A stable question
+          with an explicitly named subject ("What is NATO?", "Czym jest NATO?",
+          "Who is Kagame?") and no typed place does not inherit the Map country;
+          a role or a value ("Who is the president?", "Jaka jest stopa inflacji?")
+          still may. G's rule, unchanged; the subject is read language-independently
+          (QQ-10) and the intent is the landed classifier's reading of this turn.
+          Only the Map rank is touched here: storyContext keeps its accepted path.
+        */
+        const mapGeographySuppressed =
+          storyContext === undefined &&
+          mapGeographyLocation !== undefined &&
+          decideContextEligibility(readSubjectInEitherLanguage(normalizedQuery), {
+            typedGeographyPresent: typedLocation !== undefined || declaredRegion !== undefined,
+            resolvedArticleAnchorPresent: false,
+            intentClass: classifyQueryIntent(normalizedQuery).intent,
+          }).suppresses.includes('MAP_GEOGRAPHY_CONTEXT');
+
         const location =
           declaredRegion !== undefined
             ? undefined
             : typedScopeOverridesStory
               ? typedLocation
-              : storyAnchoredLocation;
+              : mapGeographySuppressed
+                ? undefined
+                : storyAnchoredLocation;
 
         /**
          * R4 C1 — THE ANCHOR LOOKUP MOVES AHEAD OF RETRIEVAL.
@@ -2513,7 +2536,8 @@ export class AnalysisService {
         if (storyContext) {
           retrievalContext = { ...retrievalContext, storyContextUsed: !typedScopeOverridesStory };
         }
-        if (mapGeographyLocation) {
+        /* A suppressed Map country was never eligible: geographyContextUsed stays ABSENT (G). */
+        if (mapGeographyLocation && !mapGeographySuppressed) {
           retrievalContext = { ...retrievalContext, geographyContextUsed: !typedScopeOverridesStory };
         }
 
@@ -4155,6 +4179,12 @@ export class AnalysisService {
    * callers fall back to ordinary detectLocation() in that case,
    * exactly like an unresolvable free-text query already does.
    */
+  /** G producer A, handed to the landed resolver: the same LocationContext shape, no new type. */
+  private resolveOfficeGeographyLocation(query: string): LocationContext | undefined {
+    const code = officeGeographyCountryCode(query);
+    return code === null ? undefined : this.resolveStoryContextLocation(code);
+  }
+
   private resolveStoryContextLocation(countryCode: string): LocationContext | undefined {
     const country = resolveCountryByAnyIdentifier(countryCode.trim());
 

@@ -202,6 +202,20 @@ const EXPLANATION_PATTERNS: readonly RegExp[] = [
   /^zdefiniuj\s+(.+)$/iu,
   /^opisz\s+(.+)$/iu,
   /^czy\s+mo[żz]esz\s+(?:mi\s+)?wyja[śs]ni[ćc]\s+(.+)$/iu,
+
+  /*
+   * ASK R2 INTEGRATION R1 (Gate C) — the Polish frames English already had here,
+   * each the mirror of the English pattern named beside it, same bounded
+   * discipline. Measured on L's 49-pair corpus through frozen C: without them
+   * "Jak działa szczepionka?" read CURRENT_EVENT while "How does a vaccine
+   * work?" read EXPLANATION, so the twins routed to different classes.
+   *   "Jak działa X?"            ≡ how does/do X work
+   *   "Jaki/Jaka/Jakie jest X?"  ≡ what is/are (the) X
+   *   "Ile wynosi X?"            ≡ what is X (a quantity)
+   */
+  /^jak\s+dzia[łl]a(?:j[ąa])?\s+(.+)$/iu,
+  /^(?:jaki|jaka|jakie|jacy)\s+(?:jest|s[ąa])\s+(.+)$/iu,
+  /^ile\s+(?:wynosi|wynosz[ąa]|to\s+jest)\s+(.+)$/iu,
 ];
 
 /**
@@ -264,6 +278,14 @@ const ENTITY_BACKGROUND_MARKERS: readonly RegExp[] = [
   /^co\s+mo[żz]esz\s+(?:mi\s+)?powiedzie[ćc]\s+o\s+.+$/iu,
   /^opowiedz\s+(?:mi\s+)?o\s+.+$/iu,
   /^kim\s+(?:jest|by[łl])\s+.+$/iu,
+  /*
+   * ASK R2 INTEGRATION R1 (Gate C) — mirrors of `who is/was` and
+   * `tell me (more) about`: "Kto jest prezydentem?" names a role in the
+   * instrumental ("kim" takes a person, "kto jest" an office), and
+   * "Powiedz mi o tym więcej" is the ordinary Polish "tell me more about it".
+   */
+  /^kto\s+(?:jest|by[łl])\s+.+$/iu,
+  /^powiedz\s+mi\s+(?:wi[ęe]cej\s+)?o\s+.+$/iu,
 ];
 
 /**

@@ -432,9 +432,23 @@ describe('the controller: only an explicit POST computes', () => {
       .filter((file) => !file.endsWith('.spec.ts'))
       .sort();
     expect(files).toEqual([
+      /*
+        ASK R2 CONSOLIDATED INTEGRATION R1 — vendored, byte-identical authorities that
+        NAME the field without accepting it: G's pure producers (the effective-context
+        reader and the eligibility rule document the seam they guard; office geography's
+        header cites it) and frozen C's corpus (a fixture). None is a controller, none is
+        reachable over HTTP; the route assertion below is what this test protects.
+      */
+      'src/modules/analysis/context-producers/effective-context.ts',
+      'src/modules/analysis/context-producers/inherited-context-eligibility.ts',
+      'src/modules/analysis/context-producers/office-geography.producer.ts',
       'src/modules/analysis/controller/analysis.controller.ts',
       'src/modules/analysis/dto/analyze-news.dto.ts',
       'src/modules/analysis/service/analysis.service.ts',
+      'src/modules/ask-router/frozen-c/corpus/corpus.ts',
+    ]);
+    expect(files.filter((file) => file.endsWith('.controller.ts'))).toEqual([
+      'src/modules/analysis/controller/analysis.controller.ts',
     ]);
   });
 });

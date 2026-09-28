@@ -19,6 +19,7 @@ import { useAskGeographyContext } from '@/lib/ask/geographyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openGlobalAsk';
+import { mapGeographyChipShown } from '@/lib/ask/effectiveContext';
 
 /**
  * ═══ ASK AI — PHASE 1 ════════════════════════════════════════════════════
@@ -233,7 +234,21 @@ function GlobalAskAiDock({
    * two are never merged and never silently combined into one claim.
    */
   const geographyContext = useAskGeographyContext();
-  const showGeographyLabel = storyContext === undefined && geographyContext !== undefined;
+  /*
+   * ASK R2 INTEGRATION R1 · G SEAM D — the chip reads WHAT SCOPED THE ANSWER, not
+   * which store is occupied. While drafting, the country on offer is shown; once
+   * answered, only a Map country the server says it USED is named. "What is NATO?"
+   * with Poland selected is answered without Poland, and the chip no longer says
+   * otherwise.
+   */
+  const showGeographyLabel = mapGeographyChipShown(
+    question.trim() || phase.kind !== 'answered' ? 'draft' : 'answered',
+    phase.kind === 'answered' ? phase.response.retrievalContext : {},
+    {
+      storyContextPresent: storyContext !== undefined,
+      geographyContextPresent: geographyContext !== undefined,
+    },
+  );
   const showStoryLabel = storyContext !== undefined && usesStoryContextLabel(
     question.trim() || (phase.kind !== 'idle' ? phase.question : ''),
     question.trim() ? undefined : phase.kind === 'answered'
