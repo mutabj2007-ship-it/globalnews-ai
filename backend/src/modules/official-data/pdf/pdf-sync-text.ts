@@ -64,7 +64,7 @@ import { inflateRawSync, inflateSync } from 'node:zlib';
 import {
   PDF_MAX_COMPRESSION_RATIO,
   PDF_MAX_DECODED_BYTES_PER_STREAM,
-  PDF_MAX_DOCUMENT_DECODED_BYTES,
+  PDF_MAX_DECODED_BYTES_PER_DOCUMENT,
   PDF_MAX_FILTERS_PER_STREAM,
 } from '@globalnews-ai/shared';
 
@@ -121,7 +121,7 @@ export const PDF_READ_LIMITS: PdfReadLimits = Object.freeze({
   maxRuns: 200_000,
   /* Imported from `shared`, never a literal here (F `08` R-7); calibration recorded there. */
   maxDecodedBytes: PDF_MAX_DECODED_BYTES_PER_STREAM,
-  maxDocumentDecodedBytes: PDF_MAX_DOCUMENT_DECODED_BYTES,
+  maxDocumentDecodedBytes: PDF_MAX_DECODED_BYTES_PER_DOCUMENT,
 });
 
 /**

@@ -5,7 +5,7 @@ import { deflateRawSync, deflateSync, inflateSync } from 'node:zlib';
 import {
   PDF_MAX_COMPRESSION_RATIO,
   PDF_MAX_DECODED_BYTES_PER_STREAM,
-  PDF_MAX_DOCUMENT_DECODED_BYTES,
+  PDF_MAX_DECODED_BYTES_PER_DOCUMENT,
   PDF_MAX_FILTERS_PER_STREAM,
   SNAPSHOT_DECODED_BYTE_CAP,
 } from '@globalnews-ai/shared';
@@ -130,7 +130,7 @@ function timed<T>(fn: () => T): { value: T; ms: number } {
 describe('B-2 · R-1/R-7 — the contract members exist and are imported, not re-declared', () => {
   it('PDF_READ_LIMITS carries the decoded ceilings from shared', () => {
     expect(PDF_READ_LIMITS.maxDecodedBytes).toBe(PDF_MAX_DECODED_BYTES_PER_STREAM);
-    expect(PDF_READ_LIMITS.maxDocumentDecodedBytes).toBe(PDF_MAX_DOCUMENT_DECODED_BYTES);
+    expect(PDF_READ_LIMITS.maxDocumentDecodedBytes).toBe(PDF_MAX_DECODED_BYTES_PER_DOCUMENT);
     expect(PDF_MAX_DECODED_BYTES_PER_STREAM).toBe(SNAPSHOT_DECODED_BYTE_CAP);
     expect(PDF_MAX_FILTERS_PER_STREAM).toBe(1);
     expect(PDF_MAX_COMPRESSION_RATIO).toBe(512);

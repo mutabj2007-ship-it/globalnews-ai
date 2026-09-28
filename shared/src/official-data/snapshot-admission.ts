@@ -344,10 +344,14 @@ export const SNAPSHOT_MAX_COMPRESSION_RATIO = 20;
  * - Filter chain: FlateDecode is the only admitted filter, so a chain of two is always a
  *   double-Flate — the compounding path E1 measured (564 B -> 256 MiB). Refused before
  *   the first inflate.
+ *   DEVIATION FROM F `06`, RECORDED: F's knob table proposes 2 ("one filter plus one
+ *   predictor-bearing filter"), but a predictor is `/DecodeParms`, not a second filter, and
+ *   F's own `08` A-3 requires `[/FlateDecode /FlateDecode]` to be refused by THIS bound
+ *   before the first inflate. With 2 that case would pass it. 1 is the value A-3 requires.
  */
 export const PDF_MAX_DECODED_BYTES_PER_STREAM = SNAPSHOT_DECODED_BYTE_CAP;
 export const PDF_MAX_COMPRESSION_RATIO = 512;
-export const PDF_MAX_DOCUMENT_DECODED_BYTES = 32 * 1024 * 1024;
+export const PDF_MAX_DECODED_BYTES_PER_DOCUMENT = 32 * 1024 * 1024;
 export const PDF_MAX_FILTERS_PER_STREAM = 1;
 
 /* ═══════════════════════════════════════════════════════════════════════════
