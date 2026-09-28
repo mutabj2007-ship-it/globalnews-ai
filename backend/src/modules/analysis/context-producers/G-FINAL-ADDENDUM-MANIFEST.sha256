@@ -1,0 +1,14 @@
+8e15601520fca2d3dfe7c49c6043c0833bdb3fd094226796e74d94047c3e1d1a  ./README.md
+2869b9f64286e8d010cbd63bdecd92d97a60f02c0e540ccea97d87d7fd264de8  ./docs/01-ELIGIBILITY-CONTRACT-DELTA.md
+77e813bcd2ca147a6ecb0ff9b519a9fc608a4b13201bdd75dd25b9b92db2bbe2  ./docs/02-TEST-CORPUS-DELTA.md
+d3c30b788bfc5cb3fa3077c3d62066e888ec37927a69ac13518907fafb5e25bb  ./docs/03-MUTATIONS.md
+9e85852830044331c8aedbc271773ecb337d00dc8f111a0d9ee3888a809132dc  ./docs/04-COMPATIBILITY.md
+d90b7ed8bf3ef467e84940dc89b5a2a9f11b717688fc83dec51185541b31579d  ./evidence/landed-intent-measurements.txt
+ab73309eb831de5b6ba90ed6b38aa09cb36e8c3d01a7c13d33622cc60214f48d  ./evidence/landed-intent-probe.ts
+ece900d85b3f2e2609296df83053cf96666b08b58512dcbabf2c51d0b2081ba0  ./evidence/mutation-harness.py
+6502a9453349bbe7f4bf777c7871a89e2fe7313b86588af17acbee7a2eb8eaa0  ./evidence/producer-v1-to-v2.diff
+562b948a4b2b6612f9c6629778d059dd9a10c1364c6c0b977bb52daeaf882e2d  ./evidence/test-run.txt
+72c49a913b9936beb0f974480cc3f0ea29422de2473d7795f221b878bb26f9a7  ./src/addendum.contract.ts
+8cad41ea31fd9786303788e42e5536e57c8029da408fa76412c2306f8cd89b1b  ./src/corpus-addendum.ts
+7e6382dbe4871156455da5b5fd4a70750fa554e80953cc4038817a66d081f899  ./src/inherited-context-eligibility.spec.ts
+e263682c63976b413ef0926fd43bd42864dfecd0364c9406ab743e2588420b79  ./src/inherited-context-eligibility.ts

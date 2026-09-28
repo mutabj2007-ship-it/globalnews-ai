@@ -107,6 +107,8 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     conversationSubject,
     selection,
     signal,
+    maxModelAttempts,
+    usageSink,
   }: AnalysisProviderInput): Promise<unknown> {
     const config = this.analysisConfig.get();
 
@@ -142,7 +144,12 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       conversationSubject,
       selection,
     );
-    const maxAttempts = comparisonCoverage?.length ? 1 : config.retryAttempts + 1;
+    const policyAttempts = comparisonCoverage?.length ? 1 : config.retryAttempts + 1;
+    /* ASK R2 INTEGRATION R1 · GATE E — a caller ceiling can only LOWER the count. */
+    const maxAttempts =
+      maxModelAttempts !== undefined && Number.isInteger(maxModelAttempts) && maxModelAttempts >= 1
+        ? Math.min(policyAttempts, maxModelAttempts)
+        : policyAttempts;
     const startedAt = Date.now();
 
     let lastError: OpenAiAnalysisError | undefined;
@@ -177,6 +184,17 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
             `latencyMs=${latencyMs} promptTokens=${result.usage?.prompt_tokens ?? 'n/a'} ` +
             `completionTokens=${result.usage?.completion_tokens ?? 'n/a'} totalTokens=${result.usage?.total_tokens ?? 'n/a'}`,
         );
+
+        if (
+          usageSink !== undefined &&
+          typeof result.usage?.prompt_tokens === 'number' &&
+          typeof result.usage?.completion_tokens === 'number'
+        ) {
+          usageSink({
+            promptTokens: result.usage.prompt_tokens,
+            completionTokens: result.usage.completion_tokens,
+          });
+        }
 
         return result.content;
       } catch (error) {

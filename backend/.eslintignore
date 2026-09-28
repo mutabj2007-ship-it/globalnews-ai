@@ -1,2 +1,22 @@
 test/**/*.d.ts
 dist/**
+# ASK R2 CONSOLIDATED INTEGRATION R1 — VENDORED AUTHORITIES, BYTE-IDENTICAL.
+# Frozen C router (30b12d9c…a15a) and G's accepted producers are verified byte-for-byte
+# against their packages' manifests by frozen-c.integrity.spec.ts and
+# g-producers.integrity.spec.ts. `npm run lint` runs --fix, which would rewrite them.
+src/modules/ask-router/frozen-c/**
+src/modules/analysis/context-producers/ask-context-producers.contract.ts
+src/modules/analysis/context-producers/effective-context.ts
+src/modules/analysis/context-producers/effective-context.spec.ts
+src/modules/analysis/context-producers/office-geography.producer.ts
+src/modules/analysis/context-producers/reader-topic.producer.ts
+src/modules/analysis/context-producers/stated-period.producer.ts
+src/modules/analysis/context-producers/corpus.ts
+src/modules/analysis/context-producers/producers.spec.ts
+src/modules/analysis/context-producers/addendum.contract.ts
+src/modules/analysis/context-producers/inherited-context-eligibility.ts
+src/modules/analysis/context-producers/inherited-context-eligibility.spec.ts
+src/modules/analysis/context-producers/corpus-addendum.ts
+# L's 50-pair EN/PL corpus (L-…-RESIDUAL-ADDENDUM measurements/corpus.mts), byte-identical;
+# sha256 pinned by ask-r2-route.l-pairs.spec.ts.
+src/modules/ask-router/l-corpus/**

@@ -11,6 +11,7 @@ import {
   POLITICS_POLL_SLOTS, POLITICS_SOURCE_CLASS_SLOTS, POLITICS_SUBJECT_SLOTS,
 } from '@/lib/politics/politicsSubject';
 import { Absent, Field, POL_MICRO, Panel, Region } from './PolParts';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -199,9 +200,9 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
             <Field label={t.labels.evidence}>
               {selected?.sourceReference.sourceUrl ? (
                 <a
-                  href={selected.sourceReference.sourceUrl}
+                  href={safeExternalHref(selected.sourceReference.sourceUrl)}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="text-sp-cyan"
                 >
                   {selected.sourceReference.citation ?? t.labels.openSource}
@@ -292,9 +293,9 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
                   <Field label={t.labels.evidence}>{selected.claim.sourceText}</Field>
                   {selected.sourceReference.sourceUrl && (
                     <a
-                      href={selected.sourceReference.sourceUrl}
+                      href={safeExternalHref(selected.sourceReference.sourceUrl)}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="min-h-[44px] self-start border border-sp-line px-[12px] py-[10px] text-[12px] text-sp-cyan"
                     >
                       {t.labels.openSource} →

@@ -1,6 +1,7 @@
 import {
   validateConflictObservation,
   observationRestsOnAdmittedCapture,
+  safeExternalHref,
   type ConflictObservation,
 } from '@globalnews-ai/shared';
 import type { EvidenceRecord } from '@/lib/map/evidence/evidenceModel';
@@ -113,12 +114,7 @@ export function observationMapRecord(row: ConflictObservation): EvidenceRecord |
     lastObservedAt: row.temporal.eventStartedAt,
   };
 }
+/* ASK R2 INTEGRATION R1 · B-1 — no local scheme check: the one shared boundary decides. */
 export function sourceHref(value?: string): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
-  } catch {
-    return null;
-  }
+  return safeExternalHref(value) ?? null;
 }

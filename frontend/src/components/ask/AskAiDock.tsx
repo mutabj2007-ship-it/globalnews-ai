@@ -19,6 +19,7 @@ import { useAskGeographyContext } from '@/lib/ask/geographyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openGlobalAsk';
+import { mapGeographyChipShown, readEffectiveContext } from '@/lib/ask/effectiveContext';
 
 /**
  * ═══ ASK AI — PHASE 1 ════════════════════════════════════════════════════
@@ -187,6 +188,44 @@ function GlobalAskAiDock({
   mapSurface = false,
 }: AskAiDockProps & { showLauncher?: boolean; mapSurface?: boolean }): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
+  /* ASK R2 INTEGRATION R1 · D25 11 — the bottom navigation is hidden while Ask is active. */
+  useEffect(() => {
+    const body = typeof document === 'undefined' ? undefined : document.body;
+    if (!isOpen || body === undefined) return undefined;
+    body.dataset.askOpen = 'true';
+    return () => {
+      delete body.dataset.askOpen;
+    };
+  }, [isOpen]);
+  /*
+    ASK R2 INTEGRATION R1 · GATE H (G V8-C1) — below `lg` the dock is FULL SCREEN, so the
+    device Back must close it and return to the page beneath (the Map, with its selection
+    still in the URL) instead of leaving that page. While open full screen the dock owns
+    ONE history entry; Next's own state is copied onto it so the App Router still treats
+    both entries as its own. Back pops it (→ closed); closing any other way pops it too.
+  */
+  const overlayEntry = useRef(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.history?.pushState !== 'function') {
+      return undefined;
+    }
+    const fullScreen =
+      typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 1023px)').matches;
+    if (isOpen && fullScreen && !overlayEntry.current) {
+      window.history.pushState({ ...(window.history.state ?? {}) }, '', window.location.href);
+      overlayEntry.current = true;
+    } else if (!isOpen && overlayEntry.current) {
+      overlayEntry.current = false;
+      window.history.back();
+    }
+    const onPop = (): void => {
+      if (!overlayEntry.current) return;
+      overlayEntry.current = false;
+      setIsOpen(false);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [isOpen]);
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
   const [history, setHistory] = useState<SettledAskTurn[]>([]);
@@ -233,12 +272,67 @@ function GlobalAskAiDock({
    * two are never merged and never silently combined into one claim.
    */
   const geographyContext = useAskGeographyContext();
-  const showGeographyLabel = storyContext === undefined && geographyContext !== undefined;
+  /*
+    ASK R2 INTEGRATION R1 · GATE H (G F3-C1 / F3-C3) — the Map country is the thread's
+    context, as the story anchor is on /ask (useAskConversation). When it changes — A→B,
+    and A→B→A — an answer still in flight for the old country is discarded, and the next
+    question starts a new topic (shown), so no prior question crosses a geography change.
+    Earlier settled turns stay visible as history.
+  */
+  const geographyIdentity = geographyContext?.countryCode;
+  const geographySeen = useRef(false);
+  useEffect(() => {
+    if (!geographySeen.current) {
+      geographySeen.current = true;
+      return;
+    }
+    requestSeq.current += 1;
+    setSubjectOrigin(undefined);
+    setTopicReset(true);
+    setPhase((current) => (current.kind === 'loading' ? { kind: 'idle' } : current));
+  }, [geographyIdentity]);
+  /*
+   * ASK R2 INTEGRATION R1 · G SEAM D — the chip reads WHAT SCOPED THE ANSWER, not
+   * which store is occupied. While drafting, the country on offer is shown; once
+   * answered, only a Map country the server says it USED is named. "What is NATO?"
+   * with Poland selected is answered without Poland, and the chip no longer says
+   * otherwise.
+   */
+  const showGeographyLabel = mapGeographyChipShown(
+    question.trim() || phase.kind !== 'answered' ? 'draft' : 'answered',
+    phase.kind === 'answered' ? phase.response.retrievalContext : {},
+    {
+      storyContextPresent: storyContext !== undefined,
+      geographyContextPresent: geographyContext !== undefined,
+    },
+  );
   const showStoryLabel = storyContext !== undefined && usesStoryContextLabel(
     question.trim() || (phase.kind !== 'idle' ? phase.question : ''),
     question.trim() ? undefined : phase.kind === 'answered'
       ? phase.response.retrievalContext.storyContextUsed : undefined,
   );
+  /*
+    ASK R2 INTEGRATION R1 · GATE H (G V5-C2 / V6-C1) — three facts, three renderings. After
+    an answer, a selected Map country the server did not use stays VISIBLE as available and
+    not used — outranked (stamped false) or not applied (never eligible, stamp absent) —
+    and is never credited as the scope. Nothing is cleared: it applies to the next question.
+  */
+  const mapGeographyUnused: 'PRESENT_UNUSED' | 'NOT_ELIGIBLE' | null = (() => {
+    if (question.trim() || phase.kind !== 'answered') return null;
+    if (storyContext !== undefined || geographyContext === undefined) return null;
+    const effect = readEffectiveContext(phase.response.retrievalContext, {
+      storyContextPresent: false,
+      geographyContextPresent: true,
+    }).mapGeography;
+    return effect === 'PRESENT_UNUSED' || effect === 'NOT_ELIGIBLE' ? effect : null;
+  })();
+  const mapGeographyUnusedText =
+    mapGeographyUnused === null
+      ? null
+      : (mapGeographyUnused === 'PRESENT_UNUSED'
+          ? t.geographyOutranked
+          : t.geographyNotApplied
+        ).replace('{place}', geographyContext?.displayName ?? '');
 
   /*
    * R2 FINDING 2 — WHERE THE LAUNCHER SITS IS A SURFACE QUESTION.
@@ -485,7 +579,8 @@ function GlobalAskAiDock({
         });
   const mapPanelClass =
     mapLayout === 'compact'
-      ? 'fixed inset-x-0 z-50 flex flex-col overflow-hidden rounded-t-[16px] border border-b-0 border-[#3c2f7a] bg-[#04162b] shadow-[0_-12px_40px_rgba(0,0,0,.45)] [&_button[aria-pressed]]:h-11 [&_button[aria-pressed]]:w-11'
+      ? /* D25 11 — FULL SCREEN on the phone Map (top edge to keyboard/bottom). */
+        'fixed inset-x-0 z-50 flex flex-col overflow-hidden bg-[#04162b] [&_button[aria-pressed]]:h-11 [&_button[aria-pressed]]:w-11'
       : mapLayout === 'rail'
         ? 'fixed z-50 flex flex-col overflow-hidden border-s border-[#3c2f7a] bg-[#04162b] shadow-[-12px_0_32px_rgba(0,0,0,.35)]'
         : 'fixed z-50 flex flex-col overflow-hidden rounded-[14px] border border-[#3c2f7a] bg-[#04162b] shadow-2xl';
@@ -547,16 +642,18 @@ function GlobalAskAiDock({
         <section
           id="ask-ai-panel"
           data-ask="panel"
+          data-ask-surface=""
           data-ask-phase={phase.kind}
           aria-label={t.panelLabel}
           data-ask-geometry={mapLayout === null ? 'dock' : `map-${mapLayout}`}
           style={mapPanelStyle ?? { bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
           className={onMap ? mapPanelClass : [
             'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
-            /* MOBILE — a bottom sheet. Full width, capped height, rounded top. */
-            'inset-x-0 bottom-0 h-[86dvh] max-h-[86dvh] rounded-t-2xl',
-            /* TABLET and up — a bounded floating right-hand dock. */
-            'sm:inset-y-4 sm:end-4 sm:start-auto sm:h-auto sm:w-[min(600px,92vw)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl',
+            /* PHONE and 768 PORTRAIT — FULL SCREEN (D25 11: "PHONE ASK MAY NOT" be partial).
+               Was an 86dvh bottom sheet; D25 names that geometry as not permitted. */
+            'inset-0 h-[100dvh] max-h-[100dvh] rounded-none pb-[env(safe-area-inset-bottom)]',
+            /* 1024 and up — a bounded floating right-hand dock. */
+            'lg:inset-y-4 lg:end-4 lg:start-auto lg:h-auto lg:w-[min(600px,92vw)] lg:max-h-[calc(100dvh-2rem)] lg:rounded-2xl',
             /* DESKTOP — a wider dock, so evidence and answer sit side by side. */
             'lg:w-[min(680px,46vw)]',
           ].join(' ')}
@@ -690,6 +787,15 @@ function GlobalAskAiDock({
                       {t.geographyBasis}
                     </span>
                   )}
+                  {mapGeographyUnusedText !== null && (
+                    <span
+                      data-ask="context-unused"
+                      data-ask-context-effect={mapGeographyUnused ?? undefined}
+                      className="text-[12px] text-[#8fa6c0]"
+                    >
+                      {mapGeographyUnusedText}
+                    </span>
+                  )}
                 </div>
                 <label className="sr-only" htmlFor="ask-ai-question">
                   {t.inputLabel}
@@ -772,15 +878,24 @@ function GlobalAskAiDock({
                   and telling a reader otherwise would be the merge the ruling
                   forbids.
                 */}
-                {showStoryLabel
-                  ? t.contextChipAnchored
-                  : showGeographyLabel
-                    ? t.askingAboutGeography.replace(
-                        '{place}',
-                        geographyContext?.displayName ?? '',
-                      )
-                    : t.contextChipGeneric}
-              </span>
+                    {showStoryLabel
+                      ? t.contextChipAnchored
+                      : showGeographyLabel
+                        ? t.askingAboutGeography.replace(
+                            '{place}',
+                            geographyContext?.displayName ?? '',
+                          )
+                        : t.contextChipGeneric}
+                  </span>
+                  {mapGeographyUnusedText !== null && (
+                    <span
+                      data-ask="context-unused"
+                      data-ask-context-effect={mapGeographyUnused ?? undefined}
+                      className="text-[11px] text-ink-secondary"
+                    >
+                      {mapGeographyUnusedText}
+                    </span>
+                  )}
 
               <button
                 type="submit"

@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { safeExternalHref } from '@globalnews-ai/shared';
 import { SpecialistHudLine } from '@/components/specialist/SpecialistHudLine';
 import { HUD_LINE_PX } from '@/lib/specialist/hudGrammar';
 import type { ImihigoView } from '@/lib/imihigo/retainedModel';
@@ -70,7 +71,7 @@ export function ImihigoScreen({ view, compact, locale }: {
                 {row.provenance.columnHeader && <p lang={capture.sourceLanguage}>{row.provenance.columnHeader}</p>}
                 <blockquote lang={capture.sourceLanguage}>{row.provenance.quote}</blockquote>
                 {(row.target || row.indicator) && <p>{row.target && `${t.target}: ${row.target.value}`} {row.indicator && `${t.indicator}: ${row.indicator.value}`}</p>}
-                <a className="underline" href={`${capture.sourceUrl}#page=${row.provenance.pdfPage}`} target="_blank" rel="noreferrer">{t.source} · NISR</a>
+                <a className="underline" href={safeExternalHref(`${capture.sourceUrl}#page=${row.provenance.pdfPage}`)} target="_blank" rel="noopener noreferrer">{t.source} · NISR</a>
               </details>
             </SubjectRow>)}
           </ul>

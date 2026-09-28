@@ -1,6 +1,7 @@
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 interface SourceArticleCardProps {
   article: NewsArticle;
@@ -46,7 +47,7 @@ function displaySourceLanguage(code: string): string {
 export function SourceArticleCard({ article, language = 'en' }: SourceArticleCardProps): JSX.Element {
   return (
     <a
-      href={article.url}
+      href={safeExternalHref(article.url)}
       target="_blank"
       rel="noopener noreferrer"
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-signal/60 hover:bg-surface-hover"

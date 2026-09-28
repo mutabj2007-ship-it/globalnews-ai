@@ -13,6 +13,7 @@ import {
 } from '@/lib/election/electionPreview';
 import { electionStrings, type ElectionLocale } from '@/lib/election/electionStrings';
 import { ContestantRow, ELN_MICRO, Panel, Region, ValueSlot } from './ElnParts';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -155,7 +156,7 @@ export function ElectionPreviewScreen({ locale, compact, binding }: {
                   <p>{copy.captured}: {binding.declarations[row.id].capturedAt}</p>
                   <p>{copy.publication}</p>
                   <p>{copy.sourceLanguage}: {binding.declarations[row.id].sourceLanguage}</p>
-                  <a href={binding.declarations[row.id].source.url} target="_blank" rel="noreferrer">{binding.declarations[row.id].citation.locator}</a>
+                  <a href={safeExternalHref(binding.declarations[row.id].source.url)} target="_blank" rel="noopener noreferrer">{binding.declarations[row.id].citation.locator}</a>
                   <p>{binding.declarations[row.id].citation.statement}</p>
                   <p>{copy.limitations}</p>
                 </details>

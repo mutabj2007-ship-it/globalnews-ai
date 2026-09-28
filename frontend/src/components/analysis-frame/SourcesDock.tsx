@@ -41,6 +41,7 @@ import {
 import { assessmentsFor, EMPTY_RELATIONAL_EVIDENCE } from './relationalEvidence';
 import type { RelationalEvidenceModel } from './relationalEvidence';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /* ------------------------------------------------------------------ *
  * THE SOURCE THUMBNAIL
@@ -274,7 +275,7 @@ export const SourcesDock = forwardRef<HTMLDivElement, SourcesDockProps>(function
                   />
 
                   <a
-                    href={entry.article.url}
+                    href={safeExternalHref(entry.article.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 inline-block font-gn-mono text-[12px] md:text-[11px] uppercase tracking-[0.14em] text-[#67e8f9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gn-focus"

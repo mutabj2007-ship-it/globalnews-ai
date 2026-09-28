@@ -9,6 +9,7 @@ import {
 } from '@/lib/market/mktTokens';
 import type { MktLocale, MktStrings } from '@/lib/market/mktStrings';
 import { Identifier, edge, micro } from './MktParts';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 function localizedTitle(notice: MarketRetainedProcurementNotice, locale: MktLocale): string {
   return locale === 'pl'
@@ -54,7 +55,7 @@ export function MarketNoticeCard({
       <header style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
         <span style={{ ...micro, color: MKT_INK.label }}>{t.procurement.notice}</span>
         <a
-          href={notice.sourceUrl}
+          href={safeExternalHref(notice.sourceUrl)}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -127,7 +128,7 @@ export function MarketNoticeCard({
           {t.procurement.retainedAt}: <Identifier>{notice.retainedAt}</Identifier>
         </span>
         <a
-          href={notice.sourceUrl}
+          href={safeExternalHref(notice.sourceUrl)}
           target="_blank"
           rel="noopener noreferrer"
           style={{ ...micro, color: MKT_INK.secondary }}

@@ -157,7 +157,11 @@ const SOURCE_ATTRIBUTED_FRAMES: readonly RegExp[] = [
   // "What do <source> report/say/state/publish about <topic>" — plural mastheads
   /^what\s+do\s+(.+?)\s+(?:report|say|state|publish)\s+(?:about|on|regarding)\s+(.+)$/i,
   // "What has/have <source> reported/said/stated/published about <topic>"
-  /^what\s+(?:has|have)\s+(.+?)\s+(?:reported|said|stated|published)\s+(?:about|on|regarding)\s+(.+)$/i,
+  //
+  // ASK R2 INTEGRATION R1 (Gate C, L pair X1): a PASSIVE ("What has (not) been reported
+  // about the audit?") has no agent, so it names no source. Without the lookahead the
+  // frame read "not been" as a publisher and scoped retrieval to it.
+  /^what\s+(?:has|have)\s+(?!(?:not\s+|never\s+)?been\s)(.+?)\s+(?:reported|said|stated|published)\s+(?:about|on|regarding)\s+(.+)$/i,
 ];
 
 /**

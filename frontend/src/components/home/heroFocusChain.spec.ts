@@ -84,7 +84,7 @@ describe('M66.14B — hover and keyboard focus are the same action', () => {
   });
 
   it('M66.14A keyboard behaviour survives — native anchors, Enter, Space and the cyan ring', () => {
-    expect(panel).toMatch(/<a\s+href=\{item\.url\}/);
+    expect(panel).toMatch(/<a\s+href=\{safeExternalHref\(item\.url\)\}/);
     expect(panel).toMatch(/onKeyDown=\{activateAnchorOnSpace\}/);
     expect(panel).toMatch(/focus-visible:outline-cd-edge-focus/);
     expect(panel).not.toMatch(/role="link"|tabIndex/);

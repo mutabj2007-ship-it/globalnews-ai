@@ -7,6 +7,7 @@ import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -156,7 +157,7 @@ export function SixtySecondBrief({
       {/* UNIVERSAL BOOKMARK R1 — the lead link is unchanged; the bookmark is its sibling. */}
       <div className="relative">
       <a
-        href={lead.url}
+        href={safeExternalHref(lead.url)}
         target="_blank"
         rel="noopener noreferrer"
         /*
@@ -262,7 +263,7 @@ export function SixtySecondBrief({
               <div className="flex items-center gap-1 pe-2">
               <div className="min-w-0 flex-1">
               <a
-                href={item.url}
+                href={safeExternalHref(item.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={

@@ -5,6 +5,7 @@ import { useHeroFocus } from '@/components/home/HeroFocusProvider';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * M66.4 — the story card of the Claude Design news-discovery rail
@@ -231,7 +232,7 @@ export function TrendingCard({ article, language, isLead = false }: TrendingCard
   return (
     <a
       data-rail-card="1"
-      href={article.url}
+      href={safeExternalHref(article.url)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={accessibleName}

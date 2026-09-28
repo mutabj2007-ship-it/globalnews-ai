@@ -1,7 +1,7 @@
 'use client';
 
 import type { JSX } from 'react';
-import { findCountryByIso3, type LanguageCode, type NewsArticle } from '@globalnews-ai/shared';
+import { findCountryByIso3, type LanguageCode, type NewsArticle, safeExternalHref } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { StoryVisual } from '@/components/home/StoryVisual';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
@@ -102,7 +102,7 @@ export function WorldIn60Seconds({
           */}
           <div className="relative [@container_home-content_(max-width:699.98px)]:-mx-4 [@container_home-content_(min-width:1140px)]:-mx-[18px]">
             <a
-              href={lead.url}
+              href={safeExternalHref(lead.url)}
               target="_blank"
               rel="noopener noreferrer"
               data-home-w60-lead=""
@@ -159,7 +159,7 @@ export function WorldIn60Seconds({
                     the Home feed object already loaded — no request is added.
                   */}
                   <a
-                    href={item.url}
+                    href={safeExternalHref(item.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     tabIndex={-1}
@@ -175,7 +175,7 @@ export function WorldIn60Seconds({
                     />
                   </a>
                   <a
-                    href={item.url}
+                    href={safeExternalHref(item.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex min-h-[44px] min-w-0 flex-1 flex-col justify-center gap-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5abff5]"

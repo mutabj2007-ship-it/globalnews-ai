@@ -8,6 +8,7 @@ import { BookmarkButton, CategoryChip, CountryChip, SelectionHook, fill } from '
 import { hasObservationTime } from './newSince';
 import type { FixtureStory } from './devFixtures';
 import type { SyntheticEvent } from 'react';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * COLOR / ACTION-AWARENESS R1 — THE STORY'S OWN IMAGE, OR AN HONEST FALLBACK.
@@ -119,7 +120,7 @@ export function StoryTitle({
 
   return (
     <a
-      href={story.url}
+      href={safeExternalHref(story.url)}
       target="_blank"
       rel="noopener noreferrer"
       className={`${className} hover:text-[#bfe0ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50`}

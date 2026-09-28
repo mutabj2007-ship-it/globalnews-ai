@@ -3,6 +3,7 @@ import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 interface CategoryCardsProps {
   cards: NewsArticle[];
@@ -37,7 +38,7 @@ export function CategoryCards({ cards, language = 'en' }: CategoryCardsProps): J
             {cards.map((card) => (
               <article key={card.id} className="group h-full">
                 <a
-                  href={card.url}
+                  href={safeExternalHref(card.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`${t.readFullStoryPrefix} ${card.title}`}

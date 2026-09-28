@@ -1,6 +1,85 @@
+import { resolveFrontendOrigin } from '../../security/cors-startup-validator';
+
+/**
+ * The BASE names. Over plain-HTTP development these are the names on the wire; wherever the
+ * cookie is Secure the wire name is `__Host-` + base (see `authCookieNames`). Readers and
+ * writers must go through `resolveAuthCookieNames()` rather than these constants.
+ */
 export const SESSION_COOKIE_NAME = 'gna_session';
 export const CSRF_COOKIE_NAME = 'gna_csrf';
 export const OAUTH_FLOW_COOKIE_NAME = 'gna_oauth_flow';
+
+/**
+ * ASK R2 INTEGRATION R1 · §14 / R1.1 SQ-11 — THE `__Host-` POSTURE.
+ *
+ * A `__Host-` cookie can only be set with `Secure`, `Path=/` and NO `Domain`, from a secure
+ * origin — so a sibling subdomain, or a man-in-the-middle on plain HTTP, can never plant or
+ * overwrite it (cookie tossing / session fixation). Every precondition already held here
+ * (`secure`, `path: '/'`, no `domain` anywhere in this module), so the posture is a rename:
+ *
+ *   Secure (production, or an https account origin)  ->  `__Host-gna_session` etc.
+ *   not Secure (http://localhost development)         ->  `gna_session` etc.
+ *
+ * The prefix is applied EXACTLY where Secure is, from the SAME decision, because a browser
+ * silently rejects a `__Host-` cookie set without Secure — prefixing in development would break
+ * every local sign-in. And the server reads ONLY the name for its own environment: accepting the
+ * legacy name as well in production would re-open the tossing path the prefix exists to close.
+ */
+export const HOST_COOKIE_PREFIX = '__Host-';
+
+export interface AuthCookieNames {
+  readonly session: string;
+  readonly csrf: string;
+  readonly oauthFlow: string;
+  readonly secure: boolean;
+}
+
+export function authCookieNames(secure: boolean): AuthCookieNames {
+  const name = (base: string): string => (secure ? `${HOST_COOKIE_PREFIX}${base}` : base);
+  return {
+    session: name(SESSION_COOKIE_NAME),
+    csrf: name(CSRF_COOKIE_NAME),
+    oauthFlow: name(OAUTH_FLOW_COOKIE_NAME),
+    secure,
+  };
+}
+
+/** The names for THIS process, from the same inputs the cookie options' Secure flag uses. */
+export function resolveAuthCookieNames(
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+  frontendOrigin: string | undefined = process.env.FRONTEND_ORIGIN,
+): AuthCookieNames {
+  let accountOrigin: string | undefined;
+  try {
+    accountOrigin = resolveFrontendOrigin(nodeEnv, frontendOrigin);
+  } catch {
+    /* Production without a usable origin throws at startup elsewhere; Secure still holds via NODE_ENV. */
+    accountOrigin = undefined;
+  }
+  return authCookieNames(resolveSecureFlag(nodeEnv, accountOrigin));
+}
+
+/**
+ * Clearing a `__Host-` cookie needs the same `Secure` + `Path=/` it was set with, or the browser
+ * ignores the deletion. One helper so no clear site forgets it.
+ */
+export function clearAuthCookies(
+  response: {
+    clearCookie(
+      name: string,
+      options: { path: string; secure?: boolean; sameSite?: 'lax' },
+    ): unknown;
+  },
+  which: ReadonlyArray<'session' | 'csrf' | 'oauthFlow'>,
+  names: AuthCookieNames = resolveAuthCookieNames(),
+): void {
+  for (const kind of which) {
+    response.clearCookie(
+      names[kind],
+      names.secure ? { path: '/', secure: true, sameSite: 'lax' } : { path: '/' },
+    );
+  }
+}
 
 export interface CookieOptions {
   httpOnly: boolean;

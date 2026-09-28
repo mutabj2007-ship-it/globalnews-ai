@@ -1680,3 +1680,74 @@ model UserIntelligenceInterest {
   @@unique([userId, interest])
   @@index([userId])
 }
+
+/// ════════════════════════════════════════════════════════════════════════════
+/// ASK R2 CONSOLIDATED INTEGRATION R1 · GATE B — PUBLIC ASK OPERATIONAL CONTROLS
+/// ════════════════════════════════════════════════════════════════════════════
+/// Authority: F-ASK-R2-PUBLIC-ASK-OPERATIONAL-CONTROLS-CLOSURE-R1 (01 L-8..L-24, 02 §10,
+/// 03 K-1..KS-14, 06). PostgreSQL is the only shared store this platform has (Redis /
+/// cache-manager = 0), so the meter, the breaker and the switches live here. ADDITIVE:
+/// five new tables, no existing table altered. No foreign key to any user or operation —
+/// a scope string carries the identity, so an account deletion never blocks on the meter.
+
+/// F 01 L-8 — the shared meter. One row per (scope, bucket). Reserved with ONE atomic
+/// `INSERT … ON CONFLICT DO UPDATE SET units = units + EXCLUDED.units RETURNING units`,
+/// so N replicas cannot interleave into an over-admit. Scopes: `global`, `acct:<id>`,
+/// `ip:<prefix>`, `provider:<name>`, `conc:<…>` (concurrency, fixed bucket) and
+/// `brk:<fail|ok>:<provider>` (breaker window counts).
+model ComputeMeter {
+  scope       String
+  bucketStart DateTime @db.Timestamptz(6)
+  units       BigInt   @default(0)
+
+  @@id([scope, bucketStart])
+}
+
+/// F 01 L-9 — reserve before, settle after. `charges` lists the meter rows this
+/// reservation incremented (and by how much); settle writes the actual back, and a reaper
+/// releases a reservation that was never settled after `ASK_RESERVATION_TTL_S`.
+model ComputeReservation {
+  id         String    @id @default(uuid())
+  charges    Json
+  units      BigInt
+  expiresAt  DateTime  @db.Timestamptz(6)
+  settledAt  DateTime? @db.Timestamptz(6)
+  outcome    String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([settledAt, expiresAt])
+}
+
+/// F 02 §10 — one breaker per provider (B-1), shared across replicas (B-2).
+model CircuitBreakerState {
+  provider       String    @id
+  state          String    @default("CLOSED")
+  openUntil      DateTime? @db.Timestamptz(6)
+  cooldownS      Int       @default(30)
+  trialsInFlight Int       @default(0)
+  trialSuccesses Int       @default(0)
+  updatedAt      DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+/// F 03 — operational switches (K-1 `ASK_PUBLIC_COMPUTE_ENABLED`, K-2 `ASK_R2_ENABLED`).
+/// ON only when the deployment variable is the literal 'true' AND this row enables it;
+/// unreadable ⇒ OFF (KS-5). Re-enabling is a named decision by a named person (KS-9).
+model OperationalSwitch {
+  name    String   @id
+  enabled Boolean  @default(false)
+  setBy   String
+  setAt   DateTime @default(now()) @db.Timestamptz(6)
+  reason  String?
+}
+
+/// F 03 KS-9 — every change, with the actor. Append-only.
+model OperationalSwitchAudit {
+  id      String   @id @default(uuid())
+  name    String
+  enabled Boolean
+  setBy   String
+  reason  String?
+  setAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([name, setAt])
+}

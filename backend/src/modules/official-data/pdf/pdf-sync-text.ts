@@ -59,7 +59,14 @@
  * figure that is wrong — so there is no partial return in this file.
  */
 
-import { inflateSync } from 'node:zlib';
+import { inflateRawSync, inflateSync } from 'node:zlib';
+
+import {
+  PDF_MAX_COMPRESSION_RATIO,
+  PDF_MAX_DECODED_BYTES_PER_STREAM,
+  PDF_MAX_DECODED_BYTES_PER_DOCUMENT,
+  PDF_MAX_FILTERS_PER_STREAM,
+} from '@globalnews-ai/shared';
 
 /* ══════════════════════════════════════════════════════════════════════════
  * 1 · THE OUTPUT
@@ -96,6 +103,13 @@ export interface PdfReadLimits {
   readonly maxPages: number;
   readonly maxWallMs: number;
   readonly maxRuns: number;
+  /**
+   * ASK R2 INTEGRATION R1 · B-2 (F `08` R-1). The per-stream decoded ceiling, passed to
+   * zlib as `maxOutputLength` so inflation aborts DURING decompression, not after it.
+   */
+  readonly maxDecodedBytes: number;
+  /** B-2 R-4. The cumulative decoded budget for the whole document, nested XObjects included. */
+  readonly maxDocumentDecodedBytes: number;
 }
 
 export const PDF_READ_LIMITS: PdfReadLimits = Object.freeze({
@@ -105,7 +119,22 @@ export const PDF_READ_LIMITS: PdfReadLimits = Object.freeze({
   maxPages: 64,
   maxWallMs: 20_000,
   maxRuns: 200_000,
+  /* Imported from `shared`, never a literal here (F `08` R-7); calibration recorded there. */
+  maxDecodedBytes: PDF_MAX_DECODED_BYTES_PER_STREAM,
+  maxDocumentDecodedBytes: PDF_MAX_DECODED_BYTES_PER_DOCUMENT,
 });
+
+/**
+ * B-2 FC-2 — the four bound-refusal keys. Distinct from each other and from
+ * `FLATE_INFLATE_FAILED`: a bomb and a corrupt stream must never be the same event.
+ */
+export const PDF_DECODE_BOUND_REFUSALS = Object.freeze([
+  'FLATE_OUTPUT_CAP_EXCEEDED',
+  'DOCUMENT_DECODED_BUDGET_EXCEEDED',
+  'FILTER_CHAIN_TOO_LONG',
+  'PREDICTOR_OUTPUT_CAP_EXCEEDED',
+] as const);
+export type PdfDecodeBoundRefusal = (typeof PDF_DECODE_BOUND_REFUSALS)[number];
 
 /* ══════════════════════════════════════════════════════════════════════════
  * 2 · LEXING — PDF OBJECTS, READ FROM A BYTE BUFFER
@@ -395,7 +424,76 @@ class Lexer {
  * becomes `null`; nothing partial escapes.
  */
 
-class RefusedError extends Error {}
+/** Bound refusals carry what F `08` FC-5 logs: the compressed length and the bound — never bytes. */
+interface RefusalDetail {
+  readonly compressedLength: number;
+  readonly bound: number;
+}
+
+class RefusedError extends Error {
+  constructor(
+    readonly key: string,
+    readonly detail: RefusalDetail | null = null,
+  ) {
+    super(key);
+  }
+}
+
+/**
+ * ASK R2 INTEGRATION R1 · B-2 — ONE DECODED-BYTE BUDGET PER DOCUMENT (F `08` R-4, R-6).
+ *
+ * Created once per `readPdfTextLayer` call and passed down to every decode, including the
+ * streams of nested Form XObjects: depth and bytes are bounded by DIFFERENT controls that
+ * must both hold, and this one is never reset per level or per stream. Its remaining
+ * value is the third term of the bound handed to zlib, so it tightens the argument rather
+ * than being checked after an allocation has already happened.
+ */
+class DecodeBudget {
+  private used = 0;
+
+  constructor(
+    readonly perStream: number,
+    readonly document: number,
+  ) {
+    /*
+      FC-6, ENFORCED WHERE THE BOUND IS BORN. Measured during integration: zlib treats
+      `maxOutputLength: NaN` as "no limit" and inflates silently — an undefined constant
+      (a stale shared build, a hand-built limits object) would disable every bound with no
+      error. So a non-finite or non-positive bound refuses here, before any decode.
+    */
+    if (!isPositiveFinite(perStream) || !isPositiveFinite(document))
+      refuse('DECODED_BOUND_MISSING');
+  }
+
+  get remaining(): number {
+    return this.document - this.used;
+  }
+
+  /** F `08` R-2: min(per-stream cap, ratio x compressed length, remaining document budget). */
+  boundFor(compressedLength: number): number {
+    const bound = Math.min(
+      this.perStream,
+      PDF_MAX_COMPRESSION_RATIO * Math.max(1, compressedLength),
+      this.remaining,
+    );
+    if (!Number.isFinite(bound)) refuse('DECODED_BOUND_MISSING');
+    return bound;
+  }
+
+  charge(bytes: number, compressedLength: number): void {
+    this.used += bytes;
+    if (this.used > this.document) {
+      refuse('DOCUMENT_DECODED_BUDGET_EXCEEDED', { compressedLength, bound: this.document });
+    }
+  }
+}
+
+function isPositiveFinite(n: unknown): n is number {
+  return typeof n === 'number' && Number.isFinite(n) && n > 0;
+}
+
+const isOutputCapError = (e: unknown): boolean =>
+  typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 'ERR_BUFFER_TOO_LARGE';
 
 /*
   A FUNCTION DECLARATION, NOT AN ARROW CONST, AND THAT IS LOAD-BEARING.
@@ -406,11 +504,11 @@ class RefusedError extends Error {}
   below would leave `o` un-narrowed and each use would need a cast. Casts are what this
   file exists to avoid.
 */
-function refuse(why: string): never {
-  throw new RefusedError(why);
+function refuse(why: string, detail: RefusalDetail | null = null): never {
+  throw new RefusedError(why, detail);
 }
 
-function applyPredictor(data: Buffer, params: PdfDict | null): Buffer {
+function applyPredictor(data: Buffer, params: PdfDict | null, budget: DecodeBudget): Buffer {
   if (params === null) return data;
   const predictor = numberOf(params.get('Predictor')) ?? 1;
   if (predictor === 1) return data;
@@ -422,6 +520,24 @@ function applyPredictor(data: Buffer, params: PdfDict | null): Buffer {
   if (bpc !== 8) refuse(`PREDICTOR_BPC_${bpc}_NOT_IMPLEMENTED`);
 
   const rowLen = colors * columns;
+  /*
+    B-2 R-5 — PREDICTOR EXPANSION IS BOUNDED BEFORE ANYTHING IS ALLOCATED.
+
+    `/Colors` and `/Columns` are document-controlled. Unchecked, a few bytes of inflated
+    data with `/Columns 1000000000` allocate a gigabyte for the first row alone. The
+    output size is known from the arithmetic before the loop runs, so the remaining
+    document budget refuses it up front; the output is then charged to that budget.
+  */
+  if (!Number.isInteger(rowLen) || rowLen < 1) refuse('PREDICTOR_ROW_LENGTH_INVALID');
+  const expectedOut = Math.ceil(data.length / (rowLen + 1)) * rowLen;
+  if (rowLen > budget.remaining || expectedOut > budget.remaining) {
+    refuse('PREDICTOR_OUTPUT_CAP_EXCEEDED', {
+      compressedLength: data.length,
+      bound: budget.remaining,
+    });
+  }
+  budget.charge(expectedOut, data.length);
+
   const out: number[] = [];
   let prev = new Uint8Array(rowLen);
   for (let p = 0; p + 1 + rowLen <= data.length + rowLen; p += rowLen + 1) {
@@ -465,11 +581,57 @@ function applyPredictor(data: Buffer, params: PdfDict | null): Buffer {
   return Buffer.from(out);
 }
 
-function decodeStream(s: PdfStream, resolve: (v: PdfValue) => PdfValue): Buffer {
+/**
+ * B-2 R-2 — `maxOutputLength` AT THE PRIMITIVE, ON BOTH CALLS.
+ *
+ * The bound is computed ONCE, before the `try`, and both the zlib-headed call and the
+ * raw-deflate fallback take it: bounding only the first would move the attack two header
+ * bytes rather than close it. `ERR_BUFFER_TOO_LARGE` is mapped to its own key and never
+ * falls through to the raw retry or onto `FLATE_INFLATE_FAILED` (FC-2, FC-4).
+ */
+function boundedInflate(input: Buffer, budget: DecodeBudget): Buffer {
+  const bound = budget.boundFor(input.length);
+  const detail: RefusalDetail = { compressedLength: input.length, bound };
+  const capKey =
+    bound === budget.remaining && budget.remaining < budget.perStream
+      ? 'DOCUMENT_DECODED_BUDGET_EXCEEDED'
+      : 'FLATE_OUTPUT_CAP_EXCEEDED';
+  if (bound <= 0) refuse('DOCUMENT_DECODED_BUDGET_EXCEEDED', detail);
+  let out: Buffer;
+  try {
+    out = inflateSync(input, { maxOutputLength: bound });
+  } catch (e) {
+    if (isOutputCapError(e)) refuse(capKey, detail);
+    /* Some producers emit a raw deflate stream without the zlib header. */
+    try {
+      out = inflateRawSync(input, { maxOutputLength: bound });
+    } catch (e2) {
+      if (isOutputCapError(e2)) refuse(capKey, detail);
+      refuse('FLATE_INFLATE_FAILED');
+    }
+  }
+  budget.charge(out.length, input.length);
+  return out;
+}
+
+function decodeStream(
+  s: PdfStream,
+  resolve: (v: PdfValue) => PdfValue,
+  budget: DecodeBudget,
+): Buffer {
   const filterRaw = resolve(s.dict.get('Filter') ?? null);
   const filters: PdfName[] = filterRaw === null ? [] : Array.isArray(filterRaw) ? (filterRaw as PdfName[]) : [filterRaw as PdfName];
   const parmsRaw = resolve(s.dict.get('DecodeParms') ?? s.dict.get('DP') ?? null);
   const parms: (PdfValue | null)[] = Array.isArray(parmsRaw) ? parmsRaw : [parmsRaw];
+
+  /* B-2 R-3 — the filter chain is bounded BEFORE the first inflate: chained Flate layers
+     compound (E1: 564 B -> 256 MiB), and a per-layer cap alone does not stop chaining. */
+  if (filters.length > PDF_MAX_FILTERS_PER_STREAM) {
+    refuse('FILTER_CHAIN_TOO_LONG', {
+      compressedLength: s.raw.length,
+      bound: PDF_MAX_FILTERS_PER_STREAM,
+    });
+  }
 
   let data = s.raw;
   for (let i = 0; i < filters.length; i += 1) {
@@ -486,18 +648,9 @@ function decodeStream(s: PdfStream, resolve: (v: PdfValue) => PdfValue): Buffer 
       */
       refuse(`FILTER_${f.n}_NOT_ADMITTED`);
     }
-    try {
-      data = inflateSync(data);
-    } catch {
-      /* Some producers emit a raw deflate stream without the zlib header. */
-      try {
-        data = require('node:zlib').inflateRawSync(data) as Buffer;
-      } catch {
-        refuse('FLATE_INFLATE_FAILED');
-      }
-    }
+    data = boundedInflate(data, budget);
     const pm = resolve(parms[i] ?? null);
-    data = applyPredictor(data, isDict(pm) ? pm : null);
+    data = applyPredictor(data, isDict(pm) ? pm : null, budget);
   }
   return data;
 }
@@ -523,7 +676,11 @@ class PdfDocument {
   private readonly objStmCache = new Map<number, Map<number, PdfValue>>();
   trailer: PdfDict = new Map();
 
-  constructor(private readonly buf: Buffer) {}
+  constructor(
+    private readonly buf: Buffer,
+    /* B-2 R-4/R-6: the ONE decoded-byte budget for this document, shared by every stream. */
+    readonly budget: DecodeBudget,
+  ) {}
 
   resolve = (v: PdfValue): PdfValue => {
     let cur = v;
@@ -599,7 +756,7 @@ class PdfDocument {
     const o = lx.readObject((v) => numberOf(this.resolve(v)));
     if (!isStream(o)) refuse('XREF_STREAM_EXPECTED');
     const st = o;
-    const data = decodeStream(st, (v) => v);
+    const data = decodeStream(st, (v) => v, this.budget);
 
     const wRaw = st.dict.get('W');
     if (!Array.isArray(wRaw)) refuse('XREF_STREAM_NO_W');
@@ -662,7 +819,7 @@ class PdfDocument {
       table = new Map();
       const stm = this.getObject(stmNum);
       if (isStream(stm)) {
-        const data = decodeStream(stm, this.resolve);
+        const data = decodeStream(stm, this.resolve, this.budget);
         const n = numberOf(this.resolve(stm.dict.get('N') ?? null)) ?? 0;
         const first = numberOf(this.resolve(stm.dict.get('First') ?? null)) ?? 0;
         const head = new Lexer(data, 0);
@@ -722,11 +879,11 @@ class PdfDocument {
   contentOf(page: PdfDict): Buffer {
     const c = this.dictGet(page, 'Contents');
     const parts: Buffer[] = [];
-    if (isStream(c)) parts.push(decodeStream(c, this.resolve));
+    if (isStream(c)) parts.push(decodeStream(c, this.resolve, this.budget));
     else if (Array.isArray(c)) {
       for (const item of c as PdfValue[]) {
         const s = this.resolve(item);
-        if (isStream(s)) parts.push(decodeStream(s, this.resolve));
+        if (isStream(s)) parts.push(decodeStream(s, this.resolve, this.budget));
       }
     }
     if (parts.length === 0) refuse('PAGE_HAS_NO_CONTENT');
@@ -871,7 +1028,9 @@ function buildWidths(
 function buildFontMap(doc: PdfDocument, font: PdfDict): FontMap {
   const subtype = doc.dictGet(font, 'Subtype');
   const toUni = doc.dictGet(font, 'ToUnicode');
-  const map = isStream(toUni) ? parseToUnicode(decodeStream(toUni, doc.resolve)) : new Map<number, string>();
+  const map = isStream(toUni)
+    ? parseToUnicode(decodeStream(toUni, doc.resolve, doc.budget))
+    : new Map<number, string>();
 
   if (isName(subtype, 'Type0')) {
     const enc = doc.dictGet(font, 'Encoding');
@@ -1157,7 +1316,7 @@ function interpretContent(
         const ownResources = doc.resolve(xo.dict.get('Resources') ?? null);
         interpretContent(
           doc,
-          decodeStream(xo, doc.resolve),
+          decodeStream(xo, doc.resolve, doc.budget),
           isDict(ownResources) ? ownResources : resources,
           pageNo,
           mul(m, ctm),
@@ -1178,6 +1337,43 @@ function interpretContent(
  * ══════════════════════════════════════════════════════════════════════════ */
 
 /**
+ * B-2 AUDIT SEAM — E1's acceptance harness grades a pluggable `decode(raw, filters)`. This
+ * runs the parser's REAL `decodeStream` (same filter-chain bound, same bounded inflate on
+ * both paths, same predictor bound) against ONE document budget, so the harness measures
+ * this module rather than a model of it. A refusal ends that document (FC-3); the next
+ * call starts a new one. Read-only: it admits nothing and is not used by extraction.
+ */
+export function createPdfDecodeAuditor(limits: PdfReadLimits = PDF_READ_LIMITS): {
+  decode: (raw: Buffer, filters: readonly string[]) => Buffer;
+} {
+  let budget = new DecodeBudget(limits.maxDecodedBytes, limits.maxDocumentDecodedBytes);
+  return {
+    decode(raw, filters) {
+      const dict: PdfDict = new Map<string, PdfValue>([['Filter', filters.map((n) => ({ n }))]]);
+      try {
+        return decodeStream({ dict, raw }, (v) => v, budget);
+      } catch (e) {
+        budget = new DecodeBudget(limits.maxDecodedBytes, limits.maxDocumentDecodedBytes);
+        if (e instanceof RefusedError) throw new Error(e.key);
+        throw e;
+      }
+    },
+  };
+}
+
+/** B-2 FC-5 — what a refusal reports: the key and, for a bound, the sizes. Never document bytes. */
+export interface PdfReadRefusal {
+  readonly key: string;
+  readonly compressedLength: number | null;
+  readonly bound: number | null;
+}
+
+export interface PdfReadOutcome {
+  readonly layer: PdfTextLayer | null;
+  readonly refusal: PdfReadRefusal | null;
+}
+
+/**
  * `null` on ANY refusal or error. The caller turns that into
  * `NISR_PDF_NO_TEXT_LAYER`, which is the only outcome the admission evaluator can
  * classify — an exception escaping here would surface as an unhandled producer error
@@ -1187,19 +1383,50 @@ export function readPdfTextLayer(
   bytes: Uint8Array,
   limits: PdfReadLimits = PDF_READ_LIMITS,
 ): PdfTextLayer | null {
+  return readPdfTextLayerOutcome(bytes, limits).layer;
+}
+
+/**
+ * The same reader, reporting WHY a document was refused (B-2 FC-2/FC-5), so a bomb and a
+ * corrupt file are never the same event. Still total: it never throws.
+ */
+export function readPdfTextLayerOutcome(
+  bytes: Uint8Array,
+  limits: PdfReadLimits = PDF_READ_LIMITS,
+): PdfReadOutcome {
+  const refused = (key: string, detail: RefusalDetail | null = null): PdfReadOutcome => ({
+    layer: null,
+    refusal: {
+      key,
+      compressedLength: detail?.compressedLength ?? null,
+      bound: detail?.bound ?? null,
+    },
+  });
   const startedAt = Date.now();
   try {
-    if (bytes.byteLength === 0 || bytes.byteLength > limits.maxBytes) return null;
+    /* B-2 FC-6 — fail closed on a missing bound: limits constructed by hand without the
+       decoded ceilings refuse rather than inflate unbounded. */
+    if (
+      !isPositiveFinite(limits.maxDecodedBytes) ||
+      !isPositiveFinite(limits.maxDocumentDecodedBytes)
+    ) {
+      return refused('DECODED_BOUND_MISSING');
+    }
+    if (bytes.byteLength === 0 || bytes.byteLength > limits.maxBytes) return refused('INPUT_SIZE');
     const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    if (buf.toString('latin1', 0, 5) !== '%PDF-') return null;
+    if (buf.toString('latin1', 0, 5) !== '%PDF-') return refused('NOT_A_PDF');
 
-    const doc = new PdfDocument(buf);
+    /* ONE budget for the whole document (R-4/R-6); a refusal refuses the document (FC-3). */
+    const doc = new PdfDocument(
+      buf,
+      new DecodeBudget(limits.maxDecodedBytes, limits.maxDocumentDecodedBytes),
+    );
     doc.load();
 
     const pages = doc.pages(limits.maxPages);
     const runs: PdfTextRun[] = [];
     for (let i = 0; i < pages.length; i += 1) {
-      if (Date.now() - startedAt > limits.maxWallMs) return null;
+      if (Date.now() - startedAt > limits.maxWallMs) return refused('WALL_CLOCK_EXCEEDED');
       const page = pages[i]!;
       interpretContent(
         doc,
@@ -1216,11 +1443,14 @@ export function readPdfTextLayer(
       /* A PDF with pages and no text runs is a SCANNED document. It is refused, and the
          refusal is the whole of R-PAR-10: the only way to read it would be to rasterise
          and recognise, and neither exists here. */
-      return null;
+      return refused('NO_TEXT_RUNS');
     }
-    return { pageCount: pages.length, runs };
-  } catch {
-    return null;
+    return { layer: { pageCount: pages.length, runs }, refusal: null };
+  } catch (e) {
+    /* FC-4: a stray ERR_BUFFER_TOO_LARGE is still a bound refusal, never FLATE_INFLATE_FAILED. */
+    if (e instanceof RefusedError) return refused(e.key, e.detail);
+    if (isOutputCapError(e)) return refused('FLATE_OUTPUT_CAP_EXCEEDED');
+    return refused('UNEXPECTED_ERROR');
   }
 }
 
@@ -1235,4 +1465,7 @@ export function readPdfTextLayer(
  * content hash of the extraction against this value and fails when one moves without the
  * other, which is the property B-2.2 wanted from an npm version assertion.
  */
-export const PDF_SYNC_TEXT_VERSION = '1.0.0' as const;
+/* 1.1.0 — ASK R2 INTEGRATION R1 · B-2: bounded decompression (maxOutputLength on both inflate
+   paths, filter-chain bound, per-document budget shared into nested XObjects, bounded
+   predictor expansion). Text produced from a legitimate document is unchanged. */
+export const PDF_SYNC_TEXT_VERSION = '1.1.0' as const;

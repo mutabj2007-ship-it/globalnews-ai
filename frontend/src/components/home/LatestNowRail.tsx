@@ -4,6 +4,7 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { LatestNowPreviousButton, LatestNowNextButton } from '@/components/home/LatestNowScrollControls';
 import { LatestNowTicker } from '@/components/home/LatestNowTicker';
 import { CARD_INTERACTION_CLASSES } from '@/components/home/interactionStyles';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 interface LatestNowRailProps {
   /** The full chronological feed (Phase B's `latestUpdates`) — this component derives its own compact slice from it, rather than HomeFeed exposing a separate stored field. */
@@ -79,7 +80,7 @@ export function LatestNowRail({ updates, language = 'en' }: LatestNowRailProps):
           {items.map((item) => (
             <li key={item.id} className="w-[180px] shrink-0 snap-start">
               <a
-                href={item.url}
+                href={safeExternalHref(item.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${t.readFullStoryPrefix} ${item.title}`}

@@ -3,7 +3,7 @@
 import type { JSX } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { findCountryByIso3, type LanguageCode, type NewsArticle } from '@globalnews-ai/shared';
+import { findCountryByIso3, type LanguageCode, type NewsArticle, safeExternalHref } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
@@ -66,7 +66,7 @@ export function HomeForYou({ articles, language }: { articles: readonly NewsArti
               return (
                 <li key={article.id} className="relative flex items-center gap-3 rounded-[10px] border border-[#122a45] bg-[#07182c] p-2 md:block md:p-0">
                   <a
-                    href={article.url}
+                    href={safeExternalHref(article.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5abff5] md:block"

@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { SessionService } from '../../auth/session.service';
-import { SESSION_COOKIE_NAME, CSRF_COOKIE_NAME } from '../../auth/cookie.util';
+import { resolveAuthCookieNames } from '../../auth/cookie.util';
 
 /**
  * PH-1 — BOUNDED ANONYMOUS ANALYSIS.
@@ -189,12 +189,13 @@ export class AnalysisRateLimitGuard implements CanActivate {
     };
 
     const cookies = (request as Request & { cookies?: Record<string, string> }).cookies;
-    const sessionToken = cookies?.[SESSION_COOKIE_NAME];
+    const cookieNames = resolveAuthCookieNames();
+    const sessionToken = cookies?.[cookieNames.session];
     if (!sessionToken) {
       return anonymous;
     }
 
-    const csrfCookie = cookies?.[CSRF_COOKIE_NAME];
+    const csrfCookie = cookies?.[cookieNames.csrf];
     const csrfHeader = request.headers['x-csrf-token'];
     if (
       !csrfCookie ||

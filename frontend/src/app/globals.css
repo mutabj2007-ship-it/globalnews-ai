@@ -281,3 +281,12 @@
   height: 0;
   display: none;
 }
+
+/*
+  ASK R2 CONSOLIDATED INTEGRATION R1 · D25 11 — "Bottom navigation is hidden while Ask is
+  active." The Ask dock marks the document while it is open; the governed MobileBottomNav
+  is otherwise unchanged (Home · World Map · Ask AI · Intelligence on Map screens).
+*/
+body[data-ask-open='true'] [data-mobile-bottom-nav] {
+  display: none;
+}

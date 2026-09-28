@@ -362,7 +362,7 @@ describe('the dock says what it holds, and never implies corroboration', () => {
 
   it('offers the original article, safely', () => {
     expect(dock).toMatch(/rel="noopener noreferrer"/);
-    expect(dock).toMatch(/href=\{record\.url\}/);
+    expect(dock).toMatch(/href=\{safeExternalHref\(record\.url\)\}/);
   });
 });
 

@@ -6,6 +6,7 @@ import type { LiveStatusKey } from '@/lib/liveStatus';
 import { useHeroFocus } from '@/components/home/HeroFocusProvider';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * M66.3 — HeroLiveFeedPanel. GN-CD-070 → GN-CD-076, the Hero's right region,
@@ -476,7 +477,7 @@ export function HeroLiveFeedPanel({
                 are links, so keyboard users reach every story.
               */}
               <a
-                href={item.url}
+                href={safeExternalHref(item.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onMouseEnter={() => setFocusFromArticle(item)}

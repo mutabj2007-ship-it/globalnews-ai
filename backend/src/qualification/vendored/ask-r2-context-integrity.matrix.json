@@ -1,0 +1,1664 @@
+{
+  "suite": "ASK-R2-CONTEXT-INTEGRITY",
+  "version": "1.0.0",
+  "issued": "2026-09-28",
+  "lane": "G",
+  "class": "RELEASE QUALIFICATION MATRIX — no product implementation",
+  "consumer": "Claude Code",
+  "end_state": "READY FOR CTO ASK R2 CONTEXT RELEASE GATE",
+  "baseline": {
+    "measured_tree": "Worktrees/map-ask-geography-r1",
+    "measured_tree_basis": "the tree MAIN-ASK-INTELLIGENCE-ENGINE-R2 measured; 12 ask components, 17 query modules, 4531 service lines",
+    "ask_baseline_declared": false,
+    "ask_baseline_status": "UNMEASURED — git identity is unresolvable from this session; every worktree .git points at a Windows path the Linux mount cannot resolve",
+    "ask_baseline_required_before": "any assertion in this matrix is treated as a release verdict",
+    "note": "Main: 'The Product Owner must state the Ask baseline before any migration phase begins.' This matrix is parameterised on the baseline and MUST be re-run once it is declared."
+  },
+  "determinism": {
+    "model_calls": 0,
+    "provider_calls": 0,
+    "network": "none",
+    "clock": "none — no assertion may read the current time",
+    "randomness": "none",
+    "rule": "every assertion is over a pure function, a fixture-driven service harness, or static markup rendered from a fixture. A case that cannot be made deterministic is marked NOT_SPECIFIABLE rather than made flaky.",
+    "zero_cost_contract": "tap, re-tap, detent, close, Follow, language change and dock-open remain 0 AI / 0 provider / 0 evidence / 0 geography. Any case that would spend is invalid."
+  },
+  "status_vocabulary": {
+    "EXECUTABLE_NOW": "runs today against the measured tree and is expected to pass",
+    "FAILS_TODAY_RELEASE_BLOCKER": "runs today, is expected to FAIL, and the failure is a release blocker. Do not skip it, do not weaken it, do not mark it pending.",
+    "MUST_FAIL_UNTIL": "a pin that inverts — expected to fail until the named blocker closes, and to be deleted with the blocker, never weakened",
+    "PIN_ON_FIRST_RUN": "the expected value could not be executed from the issuing session; the first run records it and it becomes a regression lock. The recorded value must be reported back, not assumed.",
+    "NOT_SPECIFIABLE": "cannot be specified without a ruling. No test is authored. Listed so its absence is visible."
+  },
+  "assertion_discipline": {
+    "absence": "where absence is the fact, assert \"'<field>' in <object> === false\", NOT toBeUndefined() — the latter passes for present-with-value-undefined. Carried from MAIN-ASK-INTELLIGENCE-ENGINE-R2 probe B-P5.",
+    "three_state_stamp": "geographyContextUsed has THREE meanings and a case must assert the right one: absent = the geography was never eligible; false = eligible but outranked; true = it scoped retrieval.",
+    "no_vacuous_pass": "every negative control must be paired with a positive control that fails when the rule is removed. A clean run that measured nothing is not a pass.",
+    "no_rewrite": "no assertion may require the question text to be altered. The question reaches the model verbatim."
+  },
+  "harnesses": [
+    {
+      "id": "pure",
+      "what": "direct import of landed pure functions",
+      "targets": [
+        "classifyQueryIntent",
+        "detectRequestedDomains",
+        "detectDeclaredRegion",
+        "blocksGeographicRouting",
+        "resolveCountryByAnyIdentifier",
+        "resolveCountriesByDemonym",
+        "usesStoryContextLabel",
+        "sameAskContext",
+        "resolveStoryTitle",
+        "fullAnalysisHref",
+        "dashboardContext",
+        "dashboardHref"
+      ],
+      "cost": "zero"
+    },
+    {
+      "id": "service",
+      "what": "the landed harness() in backend/src/modules/analysis/service/map-geography-context.spec.ts — a stubbed provider, countryCalls/searchCalls recorded",
+      "note": "REUSE IT. Do not build a second harness; a second harness is a second definition of the seam under test.",
+      "cost": "zero — provider is a stub"
+    },
+    {
+      "id": "markup",
+      "what": "renderToStaticMarkup over a fixture response, the pattern askTopicContinuity.spec.ts already uses (fixture({}) from analysis-frame/frameFixtures)",
+      "cost": "zero"
+    },
+    {
+      "id": "browser",
+      "what": "real Chromium, production build, gesture-driven. Required ONLY for V8.",
+      "note": "scroll and history acceptance must be driven through the real event pipeline — window.scrollTo() and history.pushState() move a locked document and have produced an invalid PASS in this programme before.",
+      "cost": "zero AI / zero provider — assert both"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "V1",
+      "text": "explicit user scope outranks inherited context",
+      "authority": "MAIN-ASK-INTELLIGENCE-ENGINE-R2 RETRIEVAL_SCOPE_PRECEDENCE ranks 5-7; analysis.service.ts:1149-1159"
+    },
+    {
+      "id": "V2",
+      "text": "topic survives geography",
+      "authority": "MAIN SEND-TO-AGENTS rule 4; detect-analytical-domains.util.ts"
+    },
+    {
+      "id": "V3",
+      "text": "time survives topic",
+      "authority": "MAIN-ASK-INTELLIGENCE-ENGINE-R2 B: AskTimeRequirement.statedPeriod, TEXT at the reader's precision"
+    },
+    {
+      "id": "V4",
+      "text": "entity geography provenance is distinct from typed geography",
+      "authority": "MAIN B: AskEnvelopeProvenance; detectLocationByDemonym vs detectLocation"
+    },
+    {
+      "id": "V5",
+      "text": "UI chips reflect effective server scope",
+      "authority": "G-ASK-R2-CONTEXT-GEOGRAPHY-FOLLOWUP R-CHIP-1"
+    },
+    {
+      "id": "V6",
+      "text": "Map country is not falsely shown when unused",
+      "authority": "G-ASK-R2 R-CHIP-2, R-PREC-1, R-PREC-2"
+    },
+    {
+      "id": "V7",
+      "text": "ambiguity produces clarification rather than silent broadening",
+      "authority": "query-intent.util.ts CLARIFICATION_REQUIRED; analysis.service.ts:1143-1148"
+    },
+    {
+      "id": "V8",
+      "text": "Back from full-screen phone Ask restores Map state",
+      "authority": "H-LIVE-2D-MAP-PROMOTION-1 M2 (selection in the URL); H-MAP-MOBILE-INTERACTION-R1-FREEZE-CORRECTION (PEEK/HALF/FULL)"
+    }
+  ],
+  "corpus": [
+    {
+      "id": "Q1",
+      "text": "Entertainment news in Rwanda this week",
+      "measured": {
+        "intent": "CURRENT_EVENT",
+        "classifier_countries": [],
+        "domains": [],
+        "declaredRegion": null,
+        "country_context_capture": "rwanda this week",
+        "typed_geography_resolves": "RWA"
+      }
+    },
+    {
+      "id": "Q2",
+      "text": "Security developments in Kenya",
+      "measured": {
+        "intent": "CURRENT_EVENT",
+        "classifier_countries": [],
+        "domains": [
+          "security"
+        ],
+        "declaredRegion": null,
+        "country_context_capture": "kenya",
+        "typed_geography_resolves": "KEN"
+      }
+    },
+    {
+      "id": "Q3",
+      "text": "Who is Kagame?",
+      "measured": {
+        "intent": "ENTITY_BACKGROUND",
+        "classifier_countries": [],
+        "domains": [],
+        "declaredRegion": null,
+        "country_context_capture": null,
+        "typed_geography_resolves": null,
+        "demonym_resolves": null
+      }
+    },
+    {
+      "id": "Q4",
+      "text": "Who is the current president of Rwanda?",
+      "measured": {
+        "intent": "ENTITY_BACKGROUND",
+        "classifier_countries": [],
+        "domains": [
+          "political"
+        ],
+        "declaredRegion": null,
+        "country_context_capture": null,
+        "typed_geography_resolves": null,
+        "note": "'of' is NOT in COUNTRY_CONTEXT_PATTERN (in|from|about|across|inside|within). The named country is not detected. THIS IS THE FINDING OF THE ROUND."
+      }
+    },
+    {
+      "id": "Q5",
+      "text": "What happened at the convention centre yesterday?",
+      "measured": {
+        "intent": "CURRENT_EVENT",
+        "classifier_countries": [],
+        "domains": [],
+        "declaredRegion": null,
+        "country_context_capture": null,
+        "typed_geography_resolves": null,
+        "note": "'at' is not a recognised geographic preposition and no country is named. Nothing typed scopes this question — so the map country legitimately applies when one is selected."
+      }
+    }
+  ],
+  "corpus_measurement_method": "executed out-of-tree via ts-node against Worktrees/map-ask-geography-r1 with @globalnews-ai/shared path-mapped; zero AI, zero network, zero provider. Sources and raw output in evidence/. classifier_countries is empty for Q1/Q2 BY DESIGN: resolveNamedCountries only contributes on a 2+ country coordination, because 'One country from a frame is indistinguishable from ordinary prepositional geography, which detectLocation() already owns, so it is left to it.'",
+  "cases": [
+    {
+      "id": "V1-C1",
+      "requirement": "V1",
+      "title": "a country typed with a recognised preposition outranks the map country",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — mirrors the landed assertion at map-geography-context.spec.ts:299",
+      "negative_control": false,
+      "given": {
+        "question": "Security developments in Kenya",
+        "language": "en",
+        "storyContext": null,
+        "selection": null,
+        "geographyContext": {
+          "countryCode": "POL",
+          "displayName": "Poland"
+        },
+        "priorQuestion": null
+      },
+      "expect": [
+        {
+          "path": "countryCalls.iso3",
+          "op": "toEqual",
+          "value": [
+            "KEN"
+          ]
+        },
+        {
+          "path": "retrievalContext.geographyContextUsed",
+          "op": "toBe",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "V1-C2",
+      "requirement": "V1",
+      "title": "a typed country mid-sentence, followed by more words, still outranks the map country",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — COUNTRY_CONTEXT_PATTERN captures 'rwanda this week' and the prefix scan resolves 'rwanda' to RWA",
+      "negative_control": false,
+      "given": {
+        "question": "Entertainment news in Rwanda this week",
+        "language": "en",
+        "storyContext": null,
+        "selection": null,
+        "geographyContext": {
+          "countryCode": "POL",
+          "displayName": "Poland"
+        },
+        "priorQuestion": null
+      },
+      "expect": [
+        {
+          "path": "countryCalls.iso3",
+          "op": "toEqual",
+          "value": [
+            "RWA"
+          ]
+        },
+        {
+          "path": "retrievalContext.geographyContextUsed",
+          "op": "toBe",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "V1-C3",
+      "requirement": "V1",
+      "title": "RELEASE BLOCKER — a country named after 'of' is explicit user scope and is NOT detected",
+      "harness": "service",
+      "status": "FAILS_TODAY_RELEASE_BLOCKER",
+      "basis": "MEASURED — 'of' is absent from COUNTRY_CONTEXT_PATTERN (in|from|about|across|inside|within); classifier_countries is empty because a single country is left to detectLocation(); so nothing typed scopes this question",
+      "negative_control": false,
+      "given": {
+        "question": "Who is the current president of Rwanda?",
+        "language": "en",
+        "storyContext": null,
+        "selection": null,
+        "geographyContext": {
+          "countryCode": "POL",
+          "displayName": "Poland"
+        },
+        "priorQuestion": null
+      },
+      "expect": [
+        {
+          "path": "countryCalls.iso3",
+          "op": "toEqual",
+          "value": [
+            "RWA"
+          ]
+        },
+        {
+          "path": "retrievalContext.geographyContextUsed",
+          "op": "toBe",
+          "value": false
+        }
+      ],
+      "measured_actual_today": {
+        "countryCalls.iso3": [
+          "POL"
+        ],
+        "retrievalContext.geographyContextUsed": true,
+        "consequence": "a reader looking at Poland who asks who the president of Rwanda is gets an answer scoped to Poland, and the chip truthfully says Poland"
+      },
+      "blockers": [
+        "RB-1"
+      ]
+    },
+    {
+      "id": "V1-C4",
+      "requirement": "V1",
+      "title": "a story anchor is the more specific fact: the map geography is never eligible",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — landed assertion at map-geography-context.spec.ts:283",
+      "negative_control": false,
+      "given": {
+        "question": "What changed?",
+        "language": "en",
+        "storyContext": {
+          "title": "Kenya election commission sets date",
+          "countryCode": "KEN"
+        },
+        "selection": null,
+        "geographyContext": {
+          "countryCode": "POL",
+          "displayName": "Poland"
+        },
+        "priorQuestion": null
+      },
+      "expect": [
+        {
+          "path": "countryCalls.iso3",
+          "op": "toEqual",
+          "value": [
+            "KEN"
+          ]
+        },
+        {
+          "path": "retrievalContext.storyContextUsed",
+          "op": "toBe",
+          "value": true
+        },
+        {
+          "path": "retrievalContext",
+          "op": "hasOwnProperty",
+          "key": "geographyContextUsed",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "V1-C5",
+      "requirement": "V1",
+      "title": "a multi-story selection is the whole scope and spends nothing on geography",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — landed assertion at map-geography-context.spec.ts:314",
+      "negative_control": false,
+      "given": {
+        "question": "Summarize these",
+        "language": "en",
+        "storyContext": null,
+        "selection": {
+          "action": "SUMMARIZE",
+          "storyCount": 1
+        },
+        "geographyContext": {
+          "countryCode": "POL",
+          "displayName": "Poland"
+        },
+        "priorQuestion": null
+      },
+      "expect": [
+        {
+          "path": "countryCalls",
+          "op": "toEqual",
+          "value": []
+        },
+        {
+          "path": "searchCalls",
+          "op": "toEqual",
+          "value": []
+        },
+        {
+          "path": "retrievalContext",
+          "op": "hasOwnProperty",
+          "key": "geographyContextUsed",
+          "value": false
+        },
+        {
+          "path": "provider.analyzeNews",
+          "op": "notCalled"
+        }
+      ]
+    },
+    {
+      "id": "V1-C6",
+      "requirement": "V1",
+      "title": "POSITIVE CONTROL — the precedence table is total and ordered exactly as declared",
+      "harness": "pure",
+      "status": "MUST_FAIL_UNTIL",
+      "basis": "CARRIED — MAIN-ASK-INTELLIGENCE-ENGINE-R2 C-2",
+      "negative_control": true,
+      "given": {
+        "import": "RETRIEVAL_SCOPE_PRECEDENCE"
+      },
+      "expect": [
+        {
+          "path": "RETRIEVAL_SCOPE_PRECEDENCE",
+          "op": "toEqual",
+          "value": [
+            "SELECTION",
+            "ARTICLE_ANCHOR",
+            "SOURCE_INTENT",
+            "FOLLOW_UP_RELATION",
+            "DECLARED_REGION",
+            "TYPED_GEOGRAPHY",
+            "MAP_GEOGRAPHY_CONTEXT",
+            "CLASSIFIED_SHAPE"
+          ]
+        },
+        {
+          "note": "and the union has no member absent from the array — totality, not just order"
+        }
+      ],
+      "blockers": [
+        "RB-6"
+      ]
+    },
+    {
+      "id": "V2-C1",
+      "requirement": "V2",
+      "title": "a topic on the landed domain axis survives alongside a typed country",
+      "harness": "pure",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — detectRequestedDomains returns [{domain:'security',firstIndex:0}]",
+      "negative_control": false,
+      "given": {
+        "question": "security developments in kenya"
+      },
+      "expect": [
+        {
+          "path": "detectRequestedDomains().domains",
+          "op": "toContain",
+          "value": "security"
+        },
+        {
+          "path": "typedGeography",
+          "op": "toBe",
+          "value": "KEN"
+        },
+        {
+          "note": "BOTH present in the same derivation — neither empties the other"
+        }
+      ]
+    },
+    {
+      "id": "V2-C2",
+      "requirement": "V2",
+      "title": "RELEASE BLOCKER — 'entertainment' has no home on the topic axis the envelope uses",
+      "harness": "pure",
+      "status": "FAILS_TODAY_RELEASE_BLOCKER",
+      "basis": "MEASURED — detectRequestedDomains('entertainment news in rwanda this week') returns []; ANALYTICAL_DOMAINS has 8 members and none is entertainment",
+      "negative_control": false,
+      "given": {
+        "question": "entertainment news in rwanda this week"
+      },
+      "expect": [
+        {
+          "path": "topic.domains",
+          "op": "toBeNonEmpty"
+        },
+        {
+          "note": "the reader's topic must survive the geography derivation"
+        }
+      ],
+      "measured_actual_today": {
+        "topic.domains": [],
+        "consequence": "the geography survives and the topic does not — exactly the asymmetry this requirement exists to catch"
+      },
+      "blockers": [
+        "RB-2"
+      ]
+    },
+    {
+      "id": "V2-C3",
+      "requirement": "V2",
+      "title": "NEGATIVE CONTROL — the two taxonomies stay separate and the forbidden merge fails",
+      "harness": "pure",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — 'entertainment' is in NEWS_CATEGORIES (shared/src/news.ts:20,30) and not in ANALYTICAL_DOMAINS",
+      "negative_control": true,
+      "given": {
+        "import": [
+          "ANALYTICAL_DOMAINS",
+          "NEWS_CATEGORIES"
+        ]
+      },
+      "expect": [
+        {
+          "path": "ANALYTICAL_DOMAINS",
+          "op": "not.toContain",
+          "value": "entertainment"
+        },
+        {
+          "path": "NEWS_CATEGORIES",
+          "op": "toContain",
+          "value": "entertainment"
+        },
+        {
+          "path": "ANALYTICAL_DOMAINS.length",
+          "op": "toBe",
+          "value": 8
+        },
+        {
+          "note": "this case FAILS if a later round 'fixes' RB-2 by merging the axes, which MAIN SEND-TO-AGENTS rule 4 forbids: 'A third taxonomy is the duplication §14 forbids.' The fix must be a ruling, not a merge."
+        }
+      ]
+    },
+    {
+      "id": "V3-C1",
+      "requirement": "V3",
+      "title": "a stated period survives at the reader's own precision",
+      "harness": "pure",
+      "status": "MUST_FAIL_UNTIL",
+      "basis": "CARRIED — MAIN B: statedPeriod is TEXT, 'Present ONLY when the reader stated it, at the PRECISION THEY STATED. Never widened.'",
+      "negative_control": false,
+      "given": {
+        "question": "Entertainment news in Rwanda this week"
+      },
+      "expect": [
+        {
+          "path": "envelope.time.statedPeriod",
+          "op": "toBe",
+          "value": "this week"
+        },
+        {
+          "path": "envelope.time.provenance",
+          "op": "toBe",
+          "value": "STATED"
+        },
+        {
+          "path": "envelope.time.statedPeriod",
+          "op": "isSubstringOfNormalizedQuery"
+        }
+      ],
+      "blockers": [
+        "RB-3"
+      ]
+    },
+    {
+      "id": "V3-C2",
+      "requirement": "V3",
+      "title": "NEGATIVE CONTROL — precision must not be laundered into a date",
+      "harness": "pure",
+      "status": "MUST_FAIL_UNTIL",
+      "basis": "CARRIED — MAIN probe B-P6, adapted to this corpus",
+      "negative_control": true,
+      "given": {
+        "question": "Entertainment news in Rwanda this week"
+      },
+      "expect": [
+        {
+          "path": "typeof envelope.time.statedPeriod",
+          "op": "toBe",
+          "value": "string"
+        },
+        {
+          "note": "retyping the field to a Date or an ISO range makes this case fail. It is the only assertion that catches it."
+        }
+      ],
+      "blockers": [
+        "RB-3"
+      ]
+    },
+    {
+      "id": "V3-C3",
+      "requirement": "V3",
+      "title": "PIN THAT INVERTS — no requested-window field exists on the wire today",
+      "harness": "pure",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — zero time or recency fields in shared/src, analyze-news.dto.ts or frontend/src/lib/ask",
+      "negative_control": true,
+      "given": {
+        "read": "backend/src/modules/analysis/dto/analyze-news.dto.ts"
+      },
+      "expect": [
+        {
+          "path": "dtoSource",
+          "op": "not.toMatch",
+          "value": "requestedWindow"
+        },
+        {
+          "note": "delete this case the day the window lands. It must not be weakened. NOTE THE CONFLICT: H-A4 proposes requestedWindow ON THE DTO; MAIN rules the envelope is derived server-side and 'AnalyzeNewsDto does not change'. See RB-3."
+        }
+      ],
+      "blockers": [
+        "RB-3"
+      ]
+    },
+    {
+      "id": "V4-C1",
+      "requirement": "V4",
+      "title": "entity geography resolves from a demonym and is provenance-distinct from a typed place",
+      "harness": "pure",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — resolveCountriesByDemonym('rwandan') returns ['RWA']; resolveCountryByAnyIdentifier('rwandan') is not the path used",
+      "negative_control": false,
+      "given": {
+        "tokens": [
+          "rwandan",
+          "kenyan"
+        ]
+      },
+      "expect": [
+        {
+          "path": "resolveCountriesByDemonym('rwandan')",
+          "op": "toEqual",
+          "value": [
+            "RWA"
+          ]
+        },
+        {
+          "path": "resolveCountriesByDemonym('kenyan')",
+          "op": "toEqual",
+          "value": [
+            "KEN"
+          ]
+        },
+        {
+          "note": "the SAME country reached by two different resolvers must not be reported with the same provenance"
+        }
+      ]
+    },
+    {
+      "id": "V4-C2",
+      "requirement": "V4",
+      "title": "RELEASE BLOCKER — a person's name yields no geography, so the map country silently becomes the scope",
+      "harness": "service",
+      "status": "FAILS_TODAY_RELEASE_BLOCKER",
+      "basis": "MEASURED — resolveCountryByAnyIdentifier('kagame') is null, resolveCountriesByDemonym('kagame') is [], COUNTRY_CONTEXT_PATTERN does not match",
+      "negative_control": false,
+      "given": {
+        "question": "Who is Kagame?",
+        "language": "en",
+        "storyContext": null,
+        "selection": null,
+        "geographyContext": {
+          "countryCode": "POL",
+          "displayName": "Poland"
+        },
+        "priorQuestion": null
+      },
+      "expect": [
+        {
+          "path": "retrievalContext.geographyContextUsed",
+          "op": "toBe",
+          "value": false
+        },
+        {
+          "note": "or a typed refusal naming that the entity could not be placed — what must NOT happen is a confident answer scoped to Poland"
+        }
+      ],
+      "measured_actual_today": {
+        "retrievalContext.geographyContextUsed": true,
+        "consequence": "same failure shape as V1-C3, reached through a different gap"
+      },
+      "blockers": [
+        "RB-1",
+        "RB-4"
+      ]
+    },
+    {
+      "id": "V4-C3",
+      "requirement": "V4",
+      "title": "PIN ON FIRST RUN — a plural demonym does not resolve",
+      "harness": "pure",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — resolveCountriesByDemonym('rwandans') returns [] while 'rwandan' returns ['RWA']",
+      "negative_control": true,
+      "given": {
+        "tokens": [
+          "rwandans",
+          "kenyans"
+        ]
+      },
+      "expect": [
+        {
+          "path": "resolveCountriesByDemonym('rwandans')",
+          "op": "toEqual",
+          "value": []
+        },
+        {
+          "note": "RECORDED, NOT ASSERTED AS CORRECT. This pins today's behaviour so a plural-demonym fix is a visible change rather than a silent one. If the Product Owner rules plurals must resolve, this case inverts."
+        }
+      ],
+      "blockers": [
+        "RB-5"
+      ]
+    },
+    {
+      "id": "V4-C4",
+      "requirement": "V4",
+      "title": "the envelope records WHICH input produced the scope",
+      "harness": "pure",
+      "status": "MUST_FAIL_UNTIL",
+      "basis": "CARRIED — MAIN B: AskEnvelopeProvenance, 'Which inputs were present. The audit trail for every precedence decision.'",
+      "negative_control": false,
+      "given": {
+        "questions": [
+          "Security developments in Kenya",
+          "Rwandan security developments"
+        ]
+      },
+      "expect": [
+        {
+          "path": "envelope.provenance.scopeSource",
+          "op": "toBe",
+          "value": "TYPED_GEOGRAPHY",
+          "forCase": 0
+        },
+        {
+          "path": "envelope.provenance.scopeSource",
+          "op": "not.toBe",
+          "value": "TYPED_GEOGRAPHY",
+          "forCase": 1
+        },
+        {
+          "note": "two questions reaching the same country by different routes must not carry the same provenance"
+        }
+      ],
+      "blockers": [
+        "RB-6"
+      ]
+    },
+    {
+      "id": "V5-C1",
+      "requirement": "V5",
+      "title": "RELEASE BLOCKER — the chip is derived from store occupancy, not from what scoped the answer",
+      "harness": "markup",
+      "status": "FAILS_TODAY_RELEASE_BLOCKER",
+      "basis": "MEASURED — AskAiDock.tsx:161 showGeographyLabel = storyContext === undefined && geographyContext !== undefined; geographyContextUsed is never consulted",
+      "negative_control": false,
+      "given": {
+        "fixtureResponse": {
+          "retrievalContext": {
+            "geographyContextUsed": false
+          }
+        },
+        "stores": {
+          "geographyContext": {
+            "countryCode": "POL",
+            "displayName": "Poland"
+          },
+          "storyContext": null
+        }
+      },
+      "expect": [
+        {
+          "path": "markup",
+          "op": "not.toContain",
+          "value": "data-ask-context=\"geography\""
+        },
+        {
+          "note": "the server said the selection was NOT used; the chip must not credit it"
+        }
+      ],
+      "measured_actual_today": {
+        "data-ask-context": "geography",
+        "consequence": "the chip credits a selection the server reports as outranked"
+      },
+      "blockers": [
+        "RB-7"
+      ]
+    },
+    {
+      "id": "V5-C2",
+      "requirement": "V5",
+      "title": "the three stamp states render as three different facts",
+      "harness": "markup",
+      "status": "FAILS_TODAY_RELEASE_BLOCKER",
+      "basis": "MEASURED — the landed spec distinguishes true / false / absent; the dock collapses false and absent into the same generic state",
+      "negative_control": false,
+      "given": {
+        "variants": [
+          {
+            "geographyContextUsed": true,
+            "means": "used"
+          },
+          {
+            "geographyContextUsed": false,
+            "means": "eligible but outranked"
+          },
+          {
+            "omit": "geographyContextUsed",
+            "means": "never eligible"
+          }
+        ]
+      },
+      "expect": [
+        {
+          "path": "renderedState",
+          "op": "allDistinct"
+        },
+        {
+          "path": "variant[2]",
+          "op": "assertAbsenceWith",
+          "value": "'geographyContextUsed' in retrievalContext === false"
+        }
+      ],
+      "blockers": [
+        "RB-7"
+      ]
+    },
+    {
+      "id": "V5-C3",
+      "requirement": "V5",
+      "title": "NEGATIVE CONTROL — a test that only asserts the country appears is not evidence",
+      "harness": "markup",
+      "status": "EXECUTABLE_NOW",
+      "basis": "DERIVED — the defect-passing test, named so a reviewer can refuse it",
+      "negative_control": true,
+      "given": {
+        "prohibitedAssertion": "expect(markup).toContain('Rwanda')"
+      },
+      "expect": [
+        {
+          "note": "THIS CASE IS A REVIEW RULE, NOT A RUNTIME TEST. A submitted suite containing an assertion of the prohibited shape as its evidence for V5 or V6 is REJECTED: it passes whether the chip is derived from the server or from the store, which is the entire defect."
+        }
+      ]
+    },
+    {
+      "id": "V6-C1",
+      "requirement": "V6",
+      "title": "an outranked map country is shown as available and not used, never as the scope",
+      "harness": "markup",
+      "status": "FAILS_TODAY_RELEASE_BLOCKER",
+      "basis": "CARRIED — G-ASK-R2 R-PREC-2",
+      "negative_control": false,
+      "given": {
+        "fixtureResponse": {
+          "retrievalContext": {
+            "geographyContextUsed": false
+          }
+        },
+        "stores": {
+          "geographyContext": {
+            "countryCode": "POL",
+            "displayName": "Poland"
+          }
+        }
+      },
+      "expect": [
+        {
+          "path": "markup",
+          "op": "containsAvailableNotUsedState"
+        },
+        {
+          "path": "markup",
+          "op": "not.toContain",
+          "value": "attributes the scope to the selection"
+        },
+        {
+          "note": "the selection is NOT cleared and NOT hidden — the reader chose it and it applies to the next question"
+        }
+      ],
+      "blockers": [
+        "RB-7"
+      ]
+    },
+    {
+      "id": "V6-C2",
+      "requirement": "V6",
+      "title": "POSITIVE CONTROL — when the map country IS the effective scope, it must be shown",
+      "harness": "service+markup",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — 'at' is not a geographic preposition and no country is named, so nothing typed scopes Q5; the map country legitimately applies",
+      "negative_control": true,
+      "given": {
+        "question": "What happened at the convention centre yesterday?",
+        "language": "en",
+        "storyContext": null,
+        "selection": null,
+        "geographyContext": {
+          "countryCode": "RWA",
+          "displayName": "Rwanda"
+        },
+        "priorQuestion": null
+      },
+      "expect": [
+        {
+          "path": "retrievalContext.geographyContextUsed",
+          "op": "toBe",
+          "value": true
+        },
+        {
+          "path": "countryCalls.iso3",
+          "op": "toEqual",
+          "value": [
+            "RWA"
+          ]
+        },
+        {
+          "path": "markup",
+          "op": "showsSelectedCountryAsScope"
+        },
+        {
+          "note": "WITHOUT THIS CASE, V6 is satisfiable by never showing the map country at all. This is the case that makes V6 a rule instead of a suppression."
+        }
+      ]
+    },
+    {
+      "id": "V6-C3",
+      "requirement": "V6",
+      "title": "with nothing selected and nothing typed, a global claim is honest — and only here",
+      "harness": "service+markup",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — Q5 with no geography context; nothing scopes the answer",
+      "negative_control": false,
+      "given": {
+        "question": "What happened at the convention centre yesterday?",
+        "language": "en",
+        "storyContext": null,
+        "selection": null,
+        "geographyContext": null,
+        "priorQuestion": null
+      },
+      "expect": [
+        {
+          "path": "retrievalContext",
+          "op": "hasOwnProperty",
+          "key": "geographyContextUsed",
+          "value": false
+        },
+        {
+          "path": "markup",
+          "op": "mayShowGlobalScope"
+        },
+        {
+          "note": "a global chip is a POSITIVE CLAIM about scope. It is honest here and nowhere that a scope was derived."
+        }
+      ]
+    },
+    {
+      "id": "V6-C4",
+      "requirement": "V6",
+      "title": "no place below country ever reaches a context channel",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "CARRIED — E1 OB-6 UNMEASURED: 'no context channel may carry a coordinate or place identity beyond countryCode'",
+      "negative_control": true,
+      "given": {
+        "question": "What happened at the convention centre yesterday?",
+        "language": "en",
+        "geographyContext": {
+          "countryCode": "RWA",
+          "displayName": "Rwanda"
+        }
+      },
+      "expect": [
+        {
+          "path": "wireBody",
+          "op": "not.toMatch",
+          "value": "convention"
+        },
+        {
+          "path": "cacheKey",
+          "op": "not.toMatch",
+          "value": "convention"
+        },
+        {
+          "note": "the venue stays in the question, which reaches the model verbatim. It must not become a context field, a cache-key segment or a chip."
+        }
+      ]
+    },
+    {
+      "id": "V7-C1",
+      "requirement": "V7",
+      "title": "a comparison naming no determinable members withholds retrieval",
+      "harness": "pure",
+      "status": "PIN_ON_FIRST_RUN",
+      "basis": "DERIVED FROM SOURCE — query-intent.util.ts: 'The ONLY class that withholds retrieval is CLARIFICATION_REQUIRED, and only for the case the CTO named explicitly: a question that ASKS for a comparison while naming no determinable members.'",
+      "negative_control": false,
+      "given": {
+        "question": "compare them"
+      },
+      "expect": [
+        {
+          "path": "classifyQueryIntent().intent",
+          "op": "toBe",
+          "value": "CLARIFICATION_REQUIRED"
+        },
+        {
+          "note": "the exact phrasing that triggers this was not executed from the issuing session. Record the first run's value and report it."
+        }
+      ]
+    },
+    {
+      "id": "V7-C2",
+      "requirement": "V7",
+      "title": "an anchor inside the candidate set disambiguates, and says so",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — analysis.service.ts:1143-1148 sets countryInterpretation = 'COUNTRY_FROM_SELECTED_CONTEXT'",
+      "negative_control": false,
+      "given": {
+        "question": "What is happening in Congo?",
+        "language": "en",
+        "storyContext": {
+          "title": "Kinshasa budget vote",
+          "countryCode": "COD"
+        },
+        "geographyContext": null
+      },
+      "expect": [
+        {
+          "path": "countryInterpretation",
+          "op": "toBe",
+          "value": "COUNTRY_FROM_SELECTED_CONTEXT"
+        },
+        {
+          "note": "and the reader must be able to see that their earlier act resolved the ambiguity"
+        }
+      ]
+    },
+    {
+      "id": "V7-C3",
+      "requirement": "V7",
+      "title": "NEGATIVE CONTROL — an anchor OUTSIDE the candidate set resolves nothing and nothing is silently chosen",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — the guard requires ambiguousCountry.candidates.includes(storyAnchoredLocation.country.iso3)",
+      "negative_control": true,
+      "given": {
+        "question": "What is happening in Congo?",
+        "language": "en",
+        "storyContext": {
+          "title": "Warsaw budget vote",
+          "countryCode": "POL"
+        },
+        "geographyContext": null
+      },
+      "expect": [
+        {
+          "path": "countryInterpretation",
+          "op": "not.toBe",
+          "value": "COUNTRY_FROM_SELECTED_CONTEXT"
+        },
+        {
+          "path": "countryCalls.iso3",
+          "op": "not.toContain",
+          "value": "POL"
+        },
+        {
+          "note": "a clarification, not a broadened search and not an arbitrary candidate. Remove the candidate-membership clause and this case must fail."
+        }
+      ]
+    },
+    {
+      "id": "V7-C4",
+      "requirement": "V7",
+      "title": "clarification arrives before the spend, or the ordering defect is recorded",
+      "harness": "pure",
+      "status": "MUST_FAIL_UNTIL",
+      "basis": "CARRIED — ASK-R2-CORE-ROUTER-GATE-REPORT C-1 / E1-D2",
+      "negative_control": false,
+      "given": {
+        "read": [
+          "analysisAutoRun.ts",
+          "analysisComputeConsent.ts"
+        ]
+      },
+      "expect": [
+        {
+          "path": "arrivalAtSearchWithQuery",
+          "op": "doesNotExecuteWithoutGrant"
+        },
+        {
+          "note": "MEASURED CONFLICT: this file exists in two forms. grantAnalysisConsent is 6 files in ask-search-r1 / my-intelligence-r1 / map-ask-geography-r1 (stages; zero requests without a grant) and 0 files in alpha-major-convergence-r1 / beta-recovery-r1 (auto-executes). The case PASSES on the former and FAILS on the latter. It therefore also functions as a baseline detector — see RB-8."
+        }
+      ],
+      "blockers": [
+        "RB-8"
+      ]
+    },
+    {
+      "id": "V8-C1",
+      "requirement": "V8",
+      "title": "the selected country survives Back and reload because it rides in the URL",
+      "harness": "browser",
+      "status": "EXECUTABLE_NOW",
+      "basis": "CARRIED — H-LIVE-2D-MAP-PROMOTION-1 M2, measured yes/yes/yes at 1440x900, 834x1112, 375x844",
+      "negative_control": false,
+      "given": {
+        "viewport": "375x844",
+        "steps": [
+          "select Rwanda on /map",
+          "assert URL carries ?country=RWA",
+          "open Ask full-screen",
+          "press Back"
+        ]
+      },
+      "expect": [
+        {
+          "path": "url.searchParams.country",
+          "op": "toBe",
+          "value": "RWA"
+        },
+        {
+          "path": "selectedCountry",
+          "op": "toBe",
+          "value": "RWA"
+        },
+        {
+          "path": "aiRequests",
+          "op": "toBe",
+          "value": 0
+        },
+        {
+          "path": "providerRequests",
+          "op": "toBe",
+          "value": 0
+        },
+        {
+          "note": "Back must be a real gesture/history event. history.pushState() from a script has produced an invalid PASS in this programme before."
+        }
+      ]
+    },
+    {
+      "id": "V8-C2",
+      "requirement": "V8",
+      "title": "PIN ON FIRST RUN — does the sheet detent survive Back, or only the country?",
+      "harness": "browser",
+      "status": "PIN_ON_FIRST_RUN",
+      "basis": "DERIVED — the selection rides in the URL (M2); the PEEK/HALF/FULL detent is component state and no register entry records it as URL-borne",
+      "negative_control": false,
+      "given": {
+        "viewport": "375x844",
+        "steps": [
+          "select Rwanda",
+          "set sheet to HALF",
+          "open Ask full-screen",
+          "press Back"
+        ]
+      },
+      "expect": [
+        {
+          "path": "detent",
+          "op": "RECORD"
+        },
+        {
+          "note": "'restores Map state' is not satisfied by the country alone if the reader's sheet position is lost. Record the actual detent after Back and report it. Do not assume it survives; do not assume it must."
+        }
+      ]
+    },
+    {
+      "id": "V8-C3",
+      "requirement": "V8",
+      "title": "a restored URL parameter is validated, never cast",
+      "harness": "browser",
+      "status": "EXECUTABLE_NOW",
+      "basis": "CARRIED — H-LIVE-2D-MAP-PROMOTION-1: '?category= is validated against NEWS_CATEGORIES, not cast'",
+      "negative_control": true,
+      "given": {
+        "url": "/map?country=RWA&category=not-a-category"
+      },
+      "expect": [
+        {
+          "path": "appliedCategory",
+          "op": "toBeUnset"
+        },
+        {
+          "path": "consoleErrors",
+          "op": "toBe",
+          "value": 0
+        },
+        {
+          "note": "a hand-typed value must not reach the feed as a filter nobody defined. Extend the same rule to ?country=: assert an ungoverned code is refused, matching the backend's 400."
+        }
+      ]
+    },
+    {
+      "id": "V8-C4",
+      "requirement": "V8",
+      "title": "the whole Back path spends nothing",
+      "harness": "browser",
+      "status": "EXECUTABLE_NOW",
+      "basis": "CARRIED — the accepted zero-cost country-click contract",
+      "negative_control": true,
+      "given": {
+        "steps": [
+          "select",
+          "open Ask",
+          "Back",
+          "re-tap",
+          "change detent",
+          "change language"
+        ]
+      },
+      "expect": [
+        {
+          "path": "aiRequests",
+          "op": "toBe",
+          "value": 0
+        },
+        {
+          "path": "providerRequests",
+          "op": "toBe",
+          "value": 0
+        },
+        {
+          "note": "one RETAINED_READ from a language-cookie re-render is permitted and must be distinguished from a country read, as the R1 measurement did."
+        }
+      ]
+    },
+    {
+      "id": "F1-C1",
+      "requirement": "V1",
+      "title": "FLOW Map to Rwanda to Ask — the selection reaches the request as exactly two fields",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — ASK_GEOGRAPHY_KEYS is exactly ['countryCode','displayName']; the store rebuilds on write",
+      "negative_control": true,
+      "given": {
+        "publish": {
+          "countryCode": "RWA",
+          "displayName": "Rwanda",
+          "articleId": "x",
+          "sourceId": "y",
+          "evidenceId": "z",
+          "priorAnswer": "leak"
+        }
+      },
+      "expect": [
+        {
+          "path": "storedKeys",
+          "op": "toEqual",
+          "value": [
+            "countryCode",
+            "displayName"
+          ]
+        },
+        {
+          "path": "wireBody",
+          "op": "not.toMatch",
+          "value": "priorAnswer"
+        },
+        {
+          "note": "an over-supplied publish must be narrowed on write, not trusted"
+        }
+      ]
+    },
+    {
+      "id": "F1-C2",
+      "requirement": "V6",
+      "title": "FLOW Map to Rwanda to Ask — displayName is presentation only and reaches nothing",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — landed assertions at map-geography-context.spec.ts:232-274",
+      "negative_control": true,
+      "given": {
+        "geographyContext": {
+          "countryCode": "RWA",
+          "displayName": "Poland"
+        }
+      },
+      "expect": [
+        {
+          "path": "countryCalls.iso3",
+          "op": "toEqual",
+          "value": [
+            "RWA"
+          ]
+        },
+        {
+          "path": "modelPromptInput",
+          "op": "not.toMatch",
+          "value": "Poland"
+        },
+        {
+          "path": "cacheKey",
+          "op": "not.toMatch",
+          "value": "Poland"
+        },
+        {
+          "note": "a displayName naming another country cannot move retrieval. countryCode is the authority."
+        }
+      ]
+    },
+    {
+      "id": "F2-C1",
+      "requirement": "V1",
+      "title": "FLOW story to Ask — the subject is the story and the question is the question",
+      "harness": "pure",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — resolveStoryTitle is three-state; Rev A Closure 1",
+      "negative_control": false,
+      "given": {
+        "storyTitleParam": "Kenya election commission sets date",
+        "q": "what changed?"
+      },
+      "expect": [
+        {
+          "path": "storyContext.title",
+          "op": "toBe",
+          "value": "Kenya election commission sets date"
+        },
+        {
+          "path": "query",
+          "op": "toBe",
+          "value": "what changed?"
+        },
+        {
+          "note": "inverting these was Rev A's Rev 0 error"
+        }
+      ]
+    },
+    {
+      "id": "F2-C2",
+      "requirement": "V1",
+      "title": "FLOW story to Ask — a malformed subject fails closed and never promotes the question",
+      "harness": "pure",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — H-ASK-AI-REV-A R2 correction 3",
+      "negative_control": true,
+      "given": {
+        "storyTitleParams": [
+          "",
+          "   ",
+          "<400 chars>"
+        ],
+        "q": "what changed?"
+      },
+      "expect": [
+        {
+          "path": "storyContext",
+          "op": "toBeUndefined"
+        },
+        {
+          "path": "chipState",
+          "op": "toBe",
+          "value": "generic"
+        },
+        {
+          "path": "fullAnalysisHref",
+          "op": "toBe",
+          "value": "/search?q=what+changed%3F"
+        },
+        {
+          "note": "the anchor set travels whole or not at all"
+        }
+      ]
+    },
+    {
+      "id": "F3-C1",
+      "requirement": "V1",
+      "title": "FLOW follow-up replacing prior geography — continuity ends when the context changes",
+      "harness": "pure",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — useAskConversation supplies priorQuestion only when language matches and sameAskContext holds",
+      "negative_control": false,
+      "given": {
+        "turn1": {
+          "question": "Security developments in Kenya",
+          "geographyContext": {
+            "countryCode": "KEN",
+            "displayName": "Kenya"
+          }
+        },
+        "turn2": {
+          "question": "why?",
+          "geographyContext": {
+            "countryCode": "RWA",
+            "displayName": "Rwanda"
+          }
+        }
+      },
+      "expect": [
+        {
+          "path": "turn2.priorQuestion",
+          "op": "toBeUndefined"
+        },
+        {
+          "note": "the thread ended. A short follow-up under a new geography must not inherit the old subject."
+        }
+      ]
+    },
+    {
+      "id": "F3-C2",
+      "requirement": "V5",
+      "title": "FLOW follow-up replacing prior geography — replacement is visible",
+      "harness": "markup",
+      "status": "PIN_ON_FIRST_RUN",
+      "basis": "CARRIED — G-ASK-R2 R-REPL-4",
+      "negative_control": false,
+      "given": {
+        "sequence": "turn under KEN, then geography changes to RWA, then 'why?'"
+      },
+      "expect": [
+        {
+          "path": "markup",
+          "op": "RECORD",
+          "note": "does the reader see that the thread ended? If nothing renders, 'why?' silently means something else than it did one turn earlier. Record and report."
+        }
+      ]
+    },
+    {
+      "id": "F3-C3",
+      "requirement": "V1",
+      "title": "FLOW follow-up — an answer whose context changed mid-flight is discarded, not rendered",
+      "harness": "pure",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — generation counter plus committed identity, including A->B->A",
+      "negative_control": true,
+      "given": {
+        "steps": [
+          "submit under KEN",
+          "change to RWA before the response resolves",
+          "resolve the KEN response"
+        ]
+      },
+      "expect": [
+        {
+          "path": "turns",
+          "op": "not.toContainAnswerFrom",
+          "value": "KEN"
+        },
+        {
+          "path": "aToBToA",
+          "op": "doesNotResumeOldThread"
+        },
+        {
+          "note": "A->B->A returns the identity but must not resume the thread"
+        }
+      ]
+    },
+    {
+      "id": "F4-C1",
+      "requirement": "V1",
+      "title": "FLOW conflicting story vs typed geography — the typed place wins over the story country",
+      "harness": "service",
+      "status": "PIN_ON_FIRST_RUN",
+      "basis": "DERIVED — typedScopeOverridesStory is true when typedLocation resolves, and then location = typedLocation, NOT storyAnchoredLocation (analysis.service.ts:1154-1159)",
+      "negative_control": false,
+      "given": {
+        "question": "Security developments in Kenya",
+        "language": "en",
+        "storyContext": {
+          "title": "Warsaw budget vote",
+          "countryCode": "POL"
+        },
+        "geographyContext": null
+      },
+      "expect": [
+        {
+          "path": "countryCalls.iso3",
+          "op": "toEqual",
+          "value": [
+            "KEN"
+          ]
+        },
+        {
+          "path": "retrievalContext.storyContextUsed",
+          "op": "toBe",
+          "value": false
+        },
+        {
+          "note": "the landed spec covers typed-vs-MAP but NOT typed-vs-STORY. This is a gap in existing coverage, not only in this suite. Record the first run."
+        }
+      ]
+    },
+    {
+      "id": "F4-C2",
+      "requirement": "V5",
+      "title": "FLOW conflicting story vs typed geography — the chip must not name the story as the scope",
+      "harness": "markup",
+      "status": "FAILS_TODAY_RELEASE_BLOCKER",
+      "basis": "MEASURED — showStoryLabel is gated on usesStoryContextLabel, whose draft branch is an 8-word ceiling plus a closed follow-up regex",
+      "negative_control": false,
+      "given": {
+        "fixtureResponse": {
+          "retrievalContext": {
+            "storyContextUsed": false
+          }
+        },
+        "stores": {
+          "storyContext": {
+            "title": "Warsaw budget vote",
+            "countryCode": "POL"
+          }
+        }
+      },
+      "expect": [
+        {
+          "path": "markup",
+          "op": "not.toContain",
+          "value": "data-ask-context=\"anchored\""
+        },
+        {
+          "note": "the server said the story was not used"
+        }
+      ],
+      "blockers": [
+        "RB-7"
+      ]
+    },
+    {
+      "id": "F4-C3",
+      "requirement": "V1",
+      "title": "NEGATIVE CONTROL — an ungoverned country code is refused, never silently dropped",
+      "harness": "service",
+      "status": "EXECUTABLE_NOW",
+      "basis": "MEASURED — GeographyContextDto rejects a non-governed code with 400 (map-geography-context.spec.ts:192)",
+      "negative_control": true,
+      "given": {
+        "geographyContext": {
+          "countryCode": "ZZ",
+          "displayName": "Nowhere"
+        },
+        "storyContext": {
+          "title": "t",
+          "countryCode": "KEN"
+        }
+      },
+      "expect": [
+        {
+          "path": "httpStatus",
+          "op": "toBe",
+          "value": 400
+        },
+        {
+          "note": "refused EVEN WHEN a story context would have outranked it. A supplied geography is never silently dropped."
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "id": "RB-1",
+      "title": "'of' is not a recognised geographic preposition, so an explicitly named country is not detected",
+      "severity": "RELEASE BLOCKER",
+      "owner": "Main",
+      "evidence": "COUNTRY_CONTEXT_PATTERN = /\\b(?:in|from|about|across|inside|within)\\s+(.+)$/i at analysis.service.ts:310. Measured: 'who is the current president of rwanda' captures nothing. classifier_countries is empty because resolveNamedCountries only contributes on a 2+ country coordination.",
+      "consequence": "the map country becomes the effective scope for a question that names a different country explicitly, and every downstream chip is truthful about the wrong thing",
+      "cases": [
+        "V1-C3",
+        "V4-C2"
+      ],
+      "note": "a one-token widening of the preposition set is NOT proposed here: 'of' is genitive and would also capture 'president of the board', so widening it is a retrieval-semantics decision, not a typo fix. Reported, not fixed."
+    },
+    {
+      "id": "RB-2",
+      "title": "'entertainment' has no home on the topic axis the envelope uses, and the axis that has it is ruled to be the article-labelling axis",
+      "severity": "RELEASE BLOCKER",
+      "owner": "Main",
+      "evidence": "ANALYTICAL_DOMAINS has 8 members, none entertainment; NEWS_CATEGORIES contains entertainment (shared/src/news.ts:20,30); MAIN SEND-TO-AGENTS rule 4 forbids a third taxonomy and keeps NewsCategory as the article axis",
+      "consequence": "for 'Entertainment news in Rwanda this week' the geography survives and the topic does not",
+      "cases": [
+        "V2-C2",
+        "V2-C3"
+      ],
+      "note": "independently reaches the same conclusion as ASK-R2-CORE-ROUTER-GATE-REPORT C-5, by measuring both unions"
+    },
+    {
+      "id": "RB-3",
+      "title": "a stated time has no home on the wire, and the two proposals for one conflict",
+      "severity": "RELEASE BLOCKER",
+      "owner": "Main",
+      "evidence": "zero time or recency fields in shared/src, analyze-news.dto.ts or frontend/src/lib/ask. H-A4 proposes requestedWindow ON AnalyzeNewsDto. MAIN-ASK-INTELLIGENCE-ENGINE-R2 rules the envelope is derived server-side and 'AnalyzeNewsDto does not change'.",
+      "consequence": "'this week' is dropped, and the two accepted-for-review artefacts disagree about where it should live",
+      "cases": [
+        "V3-C1",
+        "V3-C2",
+        "V3-C3"
+      ],
+      "conflict": "H-A4 vs MAIN architectural ruling 1"
+    },
+    {
+      "id": "RB-4",
+      "title": "no entity-to-geography resolver exists for a proper name",
+      "severity": "HIGH",
+      "owner": "Main",
+      "evidence": "resolveCountryByAnyIdentifier('kagame') null; resolveCountriesByDemonym('kagame') []; COUNTRY_CONTEXT_PATTERN no match",
+      "consequence": "'Who is Kagame?' carries no geography and inherits the map country",
+      "cases": [
+        "V4-C2"
+      ]
+    },
+    {
+      "id": "RB-5",
+      "title": "a plural demonym does not resolve",
+      "severity": "MEDIUM — recorded, not asserted as wrong",
+      "owner": "Main",
+      "evidence": "resolveCountriesByDemonym('rwandans') [] while 'rwandan' ['RWA']",
+      "consequence": "entity geography is singular-only",
+      "cases": [
+        "V4-C3"
+      ]
+    },
+    {
+      "id": "RB-6",
+      "title": "the Question Envelope and its declared precedence are architecture, not code",
+      "severity": "EXPECTED — pins that invert",
+      "owner": "Main / Code",
+      "evidence": "MAIN-ASK-INTELLIGENCE-ENGINE-R2 is 'delivered for Product Owner review. NOT IMPLEMENTED.'",
+      "consequence": "every envelope assertion must fail until it lands",
+      "cases": [
+        "V1-C6",
+        "V3-C1",
+        "V3-C2",
+        "V4-C4"
+      ]
+    },
+    {
+      "id": "RB-7",
+      "title": "the context chip is derived from store occupancy, not from the server's report of what scoped the answer",
+      "severity": "RELEASE BLOCKER",
+      "owner": "H (presentation) — derivation rule specified in G-ASK-R2-CONTEXT-GEOGRAPHY-FOLLOWUP",
+      "evidence": "AskAiDock.tsx:161 vs :162 — the anchored state consults storyContextUsed, the geography state consults nothing",
+      "consequence": "the chip can name a context the answer did not use, and cannot distinguish outranked from not-eligible",
+      "cases": [
+        "V5-C1",
+        "V5-C2",
+        "V6-C1",
+        "F4-C2"
+      ]
+    },
+    {
+      "id": "RB-8",
+      "title": "the compute-consent boundary exists in two forms across worktrees and the Ask baseline is undeclared",
+      "severity": "BLOCKS THE GATE ITSELF",
+      "owner": "Product Owner",
+      "evidence": "MAIN-ASK-INTELLIGENCE-ENGINE-R2: grantAnalysisConsent is 6 files in ask-search-r1 / my-intelligence-r1 / map-ask-geography-r1 and 0 files in alpha-major-convergence-r1 / beta-recovery-r1; git identity unresolvable from the mount",
+      "consequence": "the same case PASSES on one tree and FAILS on another, so no run of this matrix is a release verdict until the baseline is stated",
+      "cases": [
+        "V7-C4"
+      ]
+    }
+  ],
+  "gate": {
+    "pass_condition": "ALL of: (a) the Ask baseline worktree is DECLARED by the Product Owner and the suite re-run against it; (b) every EXECUTABLE_NOW case passes; (c) every FAILS_TODAY_RELEASE_BLOCKER case passes, which requires RB-1, RB-2, RB-3 and RB-7 to be closed; (d) every MUST_FAIL_UNTIL pin has been DELETED together with its blocker, never weakened; (e) every PIN_ON_FIRST_RUN value has been recorded and reported back; (f) every negative control has a paired positive control that fails when its rule is removed.",
+    "current_state": "NOT PASSING. 7 release-blocker cases fail today, 4 blockers are open, and the baseline is undeclared.",
+    "explicitly_not_a_pass": "a run reporting 25/25 EXECUTABLE_NOW green is NOT a gate pass. The 7 failing cases are the gate.",
+    "prohibited_remedies": [
+      "skipping, pending-marking or weakening any FAILS_TODAY_RELEASE_BLOCKER case",
+      "merging ANALYTICAL_DOMAINS with NEWS_CATEGORIES to close RB-2 — forbidden by MAIN SEND-TO-AGENTS rule 4",
+      "widening COUNTRY_CONTEXT_PATTERN with 'of' as a typo fix to close RB-1 — it is genitive and would capture 'president of the board'",
+      "adding a DTO field to close RB-3 before Main and H reconcile their two proposals",
+      "asserting only that a country name appears in the markup as evidence for V5 or V6",
+      "raising the 5/60s rate limit on POST /analysis/news to make any case run"
+    ],
+    "not_specifiable": [
+      {
+        "item": "an uploaded-document context chip",
+        "reason": "contrary to MAIN-ASK-AI-CONTEXT-PRESENTATION-CONTRACT REV A ('evidence/report/cluster identities ruled OUT') and F-ASK-R2-FILE-TOOL-SECURITY-GATE-R1 ('FILE UPLOAD = NOT AUTHORISED FOR IMPLEMENTATION', 15 blocking conditions, 4 untradeable). No case authored.",
+        "owner": "Product Owner -> Main -> E1 / F"
+      },
+      {
+        "item": "a sub-country place chip (the convention centre)",
+        "reason": "E1 OB-6 UNMEASURED: no context channel may carry a place identity beyond countryCode. V6-C4 asserts the prohibition instead.",
+        "owner": "E1"
+      },
+      {
+        "item": "a reference-knowledge answer for Q3 and Q4",
+        "reason": "ASK-R2-CORE-ROUTER-GATE-REPORT R-1: no REFERENCE result class and no unsourced-knowledge policy; 'the deepest unresolved product question in the brief'. MAIN: MODEL_PRIOR is forbidden whenever required is non-empty. This suite therefore tests only that these questions are not silently mis-scoped, NOT that they are answered.",
+        "owner": "Product Owner"
+      }
+    ]
+  }
+}

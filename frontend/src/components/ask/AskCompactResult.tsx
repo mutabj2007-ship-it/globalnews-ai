@@ -1,6 +1,6 @@
 'use client';
 
-import { comparisonCoverageLines, resolveEvidenceState } from '@globalnews-ai/shared';
+import { comparisonCoverageLines, resolveEvidenceState, safeExternalHref } from '@globalnews-ai/shared';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { EvidenceFreshnessNotice } from '@/components/search/EvidenceFreshnessNotice';
@@ -327,9 +327,9 @@ export function AskCompactResult({
                   <li key={source.articleId} data-ask="source" data-source-number={number} className="text-sm">
                     <span className="me-1.5 font-mono text-[11px] text-ink-tertiary">[{number}]</span>
                     <a
-                      href={source.url}
+                      href={safeExternalHref(source.url)}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="text-ink-primary underline decoration-border underline-offset-4 hover:decoration-signal"
                     >
                       {source.title}

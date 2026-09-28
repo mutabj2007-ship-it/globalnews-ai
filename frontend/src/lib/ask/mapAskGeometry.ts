@@ -9,14 +9,21 @@
  *
  * On /map the global dock keeps every behaviour it has (same state, submit,
  * transport and zero-request open/focus/type) and takes the Spatial geometry
- * of the Map R1 authority, "Ask on the Map":
+ * of the Map R1 authority, "Ask on the Map".
  *
- *   compact  < 861     a composer sheet above the bottom nav (or the keyboard),
- *                      sized to its content and capped so the map keeps the
- *                      Map sheet's own ≥26% floor under the 82px HUD
- *   rail     861–1279  the contextual rail column: Ask is intelligence, and
- *                      the rail is where intelligence lives
- *   float    ≥ 1280    a 440px panel beside the 372px rail, bottom-aligned
+ * ── SUPERSEDED FOR PHONES BY D25 (ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G) ──
+ *
+ * D25 `11_FULLSCREEN_MOBILE_AUTHORITY` (PO correction, accepted) rules the opposite of
+ * the R2 composer sheet: "PHONE MAP MAY BE PARTIAL. PHONE ASK MAY NOT." — "Not permitted:
+ * HALF Ask, 74% Ask, Map-under-answer, answer sheet over the Map, composer in a bottom
+ * detent. The 148 / 52% / 74% geometry belongs to the Map country workspace only." The Map
+ * is not lost: Ask opens OVER it without navigating, so closing restores the selected
+ * country, camera, zoom, mode/layers and sheet detent exactly (D25 "Map → Ask → Map").
+ * D26 (approved) sets the 1024 landscape pane to 460 px. So:
+ *
+ *   compact  < 861     FULL SCREEN; the composer rests on the keyboard when one is open
+ *   rail     861–1279  a dedicated 460 px pane: top 44, right 0, full remaining height
+ *   float    ≥ 1280    a 440px panel beside the 372px rail, bottom-aligned (unchanged)
  *
  * Pure: no DOM, no React. The dock measures and passes numbers in.
  */
@@ -30,9 +37,15 @@ export const MAP_ASK_COMPACT_BELOW_PX = 861;
 export const MAP_ASK_FLOAT_FROM_PX = 1280;
 /** Part IV §16.2 — the permanent compact HUD: 52px top bar + 30px Change Strip. */
 export const MAP_ASK_HUD_PX = 82;
-/** The Map sheet's FULL fraction: the largest share that leaves the ≥26% map floor. */
+/**
+ * The Map sheet's FULL fraction. It governs the Map COUNTRY WORKSPACE only; since D25 it is
+ * no longer an Ask geometry (kept exported because the Map sheet still uses the figure).
+ */
 export const MAP_ASK_MAX_FRACTION = 0.74;
+/** The Map's own right rail at ≥1280 (the float panel stops at its edge). */
 export const MAP_ASK_RAIL_PX = 372;
+/** D26 (approved, D25 12) — the 1024 landscape Ask pane. */
+export const MAP_ASK_PANE_PX = 460;
 export const MAP_ASK_TOP_BAR_PX = 44;
 export const MAP_ASK_FLOAT_W_PX = 440;
 export const MAP_ASK_FLOAT_GAP_PX = 24;
@@ -53,13 +66,13 @@ export interface MapAskViewport {
 }
 
 /**
- * The panel's position and cap. On a phone the composer sits on the keyboard
- * when one is open, otherwise on the nav, and never taller than 74% of what is
- * left under the HUD — so at least 26% of that stays map in every Ask state.
+ * The panel's position. On a phone Ask is FULL SCREEN from the top edge; the bottom nav is
+ * hidden while Ask is active (D25 11), so it is not an inset, and with a keyboard open the
+ * composer rests on the keyboard (the header stays, the reader shrinks).
  */
 export function mapAskPanelStyle(layout: MapAskLayout, viewport: MapAskViewport): CSSProperties {
   if (layout === 'rail') {
-    return { top: MAP_ASK_TOP_BAR_PX, right: 0, bottom: 0, width: MAP_ASK_RAIL_PX };
+    return { top: MAP_ASK_TOP_BAR_PX, right: 0, bottom: 0, width: MAP_ASK_PANE_PX };
   }
 
   if (layout === 'float') {
@@ -71,18 +84,22 @@ export function mapAskPanelStyle(layout: MapAskLayout, viewport: MapAskViewport)
     };
   }
 
-  const navInset = viewport.keyboardInset > 0 ? 0 : Math.max(0, viewport.navInset);
-
   return {
-    bottom: viewport.keyboardInset > 0 ? viewport.keyboardInset : navInset,
-    maxHeight:
-      viewport.visualViewportHeight > 0
-        ? mapAskMaxHeight(viewport.visualViewportHeight, navInset)
-        : `calc(${MAP_ASK_MAX_FRACTION * 100}dvh - ${MAP_ASK_HUD_PX}px)`,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: viewport.keyboardInset > 0 ? viewport.keyboardInset : 0,
+    borderRadius: 0,
   };
 }
 
-/** floor(0.74 × (visible viewport − HUD − shown nav)) — rounded DOWN, so the map can only gain. */
+/**
+ * floor(0.74 × (visible viewport − HUD − shown nav)) — the Map COUNTRY SHEET's cap. Not an
+ * Ask geometry since D25; retained for the Map workspace, which still owns the fraction.
+ */
 export function mapAskMaxHeight(visualViewportHeight: number, navInset: number): number {
-  return Math.max(0, Math.floor(MAP_ASK_MAX_FRACTION * (visualViewportHeight - MAP_ASK_HUD_PX - navInset)));
+  return Math.max(
+    0,
+    Math.floor(MAP_ASK_MAX_FRACTION * (visualViewportHeight - MAP_ASK_HUD_PX - navInset)),
+  );
 }

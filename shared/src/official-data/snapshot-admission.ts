@@ -319,6 +319,42 @@ export const SNAPSHOT_DECODED_BYTE_CAP = 8 * 1024 * 1024;
 export const SNAPSHOT_MAX_COMPRESSION_RATIO = 20;
 
 /* ═══════════════════════════════════════════════════════════════════════════
+ * 3.0.1 · ASK R2 INTEGRATION R1 · B-2 — PDF DECOMPRESSION BOUNDS
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * F `08-PDF-B2-REMEDIATION-CONTRACT` R-7: the PDF bounds live HERE, beside the snapshot
+ * caps they start from, and the parser imports them — it never carries a literal.
+ *
+ * CALIBRATION (F §6, C-1…C-3), measured over real documents
+ * (`ASK-R2-INTEGRATION-R1/_authority/b2-calibration.json`):
+ *
+ *   NISR Imihigo 2024-25 (1.65 MB, 106 Flate streams)   ratio p50 4.4 · p90 83 · p99 201 · max 376
+ *                                                        largest stream 557 KB decoded
+ *                                                        all streams 6.9 MB decoded (images included,
+ *                                                        which the reader never decodes)
+ *   IEBC Gazette 11216 (123 KB)                          max ratio 10.7 · largest stream 349 KB
+ *   two text-heavy reports                               max ratio 5.2  · largest stream 21 KB
+ *
+ * - Per-stream ABSOLUTE cap (C-2, the primary bound): the snapshot decoded cap, 8 MiB —
+ *   ~15x the largest real stream. E1 measured 8 MiB refusing a 256 MiB bomb in 13 ms.
+ * - Ratio (secondary): the inherited 20 is NOT kept — it was calibrated for gzipped JSON
+ *   and would refuse the real NISR artifact (p90 83:1). 512 is ~1.4x the measured max.
+ * - Document budget: 32 MiB cumulative across every stream the reader decodes, including
+ *   nested Form XObjects — ~4.6x the real document's total even counting its images.
+ * - Filter chain: FlateDecode is the only admitted filter, so a chain of two is always a
+ *   double-Flate — the compounding path E1 measured (564 B -> 256 MiB). Refused before
+ *   the first inflate.
+ *   DEVIATION FROM F `06`, RECORDED: F's knob table proposes 2 ("one filter plus one
+ *   predictor-bearing filter"), but a predictor is `/DecodeParms`, not a second filter, and
+ *   F's own `08` A-3 requires `[/FlateDecode /FlateDecode]` to be refused by THIS bound
+ *   before the first inflate. With 2 that case would pass it. 1 is the value A-3 requires.
+ */
+export const PDF_MAX_DECODED_BYTES_PER_STREAM = SNAPSHOT_DECODED_BYTE_CAP;
+export const PDF_MAX_COMPRESSION_RATIO = 512;
+export const PDF_MAX_DECODED_BYTES_PER_DOCUMENT = 32 * 1024 * 1024;
+export const PDF_MAX_FILTERS_PER_STREAM = 1;
+
+/* ═══════════════════════════════════════════════════════════════════════════
  * 3.1 · NISR FIRST REAL DATA R1 — THE ALLOWLIST BECOMES A ROW PER TYPE
  * ═══════════════════════════════════════════════════════════════════════════
  *

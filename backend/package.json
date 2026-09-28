@@ -81,7 +81,8 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^@globalnews-ai/shared$": "<rootDir>/../../shared/dist/index.js"
+      "^@globalnews-ai/shared$": "<rootDir>/../../shared/dist/index.js",
+      "^(\\.{1,2}/(?:src|corpus|fixtures)/[a-z-]+(?:\\.fixture)?|\\./(?:ports|envelope|planner|registry|classify|index))\\.js$": "$1"
     }
   }
 }

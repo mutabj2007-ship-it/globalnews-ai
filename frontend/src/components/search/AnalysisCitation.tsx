@@ -1,4 +1,5 @@
 import type { AnalysisSourceRef } from '@globalnews-ai/shared';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 interface AnalysisCitationProps {
   /** Real, backend-resolved article IDs (NewsAnalysisResult.sourceArticleIds) — never an AI-facing evidenceId. */
@@ -41,7 +42,7 @@ export function AnalysisCitation({ sourceArticleIds, sources }: AnalysisCitation
       {chips.map((chip) => (
         <a
           key={chip.articleId}
-          href={chip.url}
+          href={safeExternalHref(chip.url)}
           target="_blank"
           rel="noopener noreferrer"
           title={chip.title}

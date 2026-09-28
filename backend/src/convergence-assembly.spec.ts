@@ -3,10 +3,9 @@ import { Test } from '@nestjs/testing';
 import request = require('supertest');
 import { AppModule } from './app.module';
 import { PrismaService } from './database/prisma.service';
-import {
-  ASK_EXECUTION_PORT,
-  UNWIRED_ASK_EXECUTION_PORT,
-} from './modules/ask-v2/ask-compute.contract';
+import { ASK_EXECUTION_PORT } from './modules/ask-v2/ask-compute.contract';
+import { AskR2ExecutionAdapter } from './modules/ask-v2/ask-r2-execution.adapter';
+import { OperationalSwitchService } from './modules/compute-controls/operational-switch.service';
 
 it('combined AppModule assembles while new public evidence and execution stay on HOLD', async () => {
   const transport = jest
@@ -42,7 +41,16 @@ it('combined AppModule assembles while new public evidence and execution stay on
       .compile();
     app = moduleRef.createNestApplication();
     await app.init();
-    expect(moduleRef.get(ASK_EXECUTION_PORT)).toBe(UNWIRED_ASK_EXECUTION_PORT);
+    /*
+      ASK R2 INTEGRATION R1 · Gate E — the port is now BOUND to the Ask R2 adapter, so HOLD is
+      no longer "the port is unwired". It is what the contract (§8, §23) defines it as: the
+      routes stay 404 without ASK_V2_ENABLED, and no AI can run while either operational
+      switch is off — both default OFF, and an unreadable switch store is OFF (fail closed).
+    */
+    expect(moduleRef.get(ASK_EXECUTION_PORT)).toBeInstanceOf(AskR2ExecutionAdapter);
+    const switches = moduleRef.get(OperationalSwitchService);
+    expect(await switches.isEnabled('ASK_R2_ENABLED')).toBe(false);
+    expect(await switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED')).toBe(false);
     const security = await request(app.getHttpServer())
       .get('/security/observations/PL')
       .expect(200);

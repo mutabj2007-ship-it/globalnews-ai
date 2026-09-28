@@ -22,6 +22,7 @@ import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { DataModeLabel } from '@/components/ui/DataModeLabel';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -483,7 +484,7 @@ function RailCard({ article, language }: { article: NewsArticle; language: Langu
     */
     <div className="relative h-full w-full">
     <a
-      href={article.url}
+      href={safeExternalHref(article.url)}
       target="_blank"
       rel="noopener noreferrer"
       className={`group flex h-full w-full flex-col overflow-hidden ${CARD_SHELL_INTERACTIVE} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50`}

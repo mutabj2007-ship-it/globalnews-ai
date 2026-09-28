@@ -606,6 +606,53 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
       .set('Cookie', cookie())
       .expect(200);
     expect(response.headers['cache-control']).toBe('private, no-store');
+    expect(response.headers['vary']).toMatch(/\bCookie\b/);
+  });
+  test('§14 every Ask V2 outcome is private and varies by Cookie — success, 401, owner-404, disabled-404, conflict', async () => {
+    const privateAndVaried = (res: request.Response): void => {
+      expect(res.headers['cache-control']).toBe('private, no-store');
+      expect(res.headers['vary']).toMatch(/\bCookie\b/);
+    };
+    const server = app.getHttpServer();
+    privateAndVaried(
+      await request(server).get('/ask-v2/threads').set('Cookie', cookie()).expect(200),
+    );
+    privateAndVaried(await request(server).get('/ask-v2/threads').expect(401));
+    privateAndVaried(
+      await request(server).get('/ask-v2/operations/unknown').set('Cookie', cookie()).expect(404),
+    );
+    const otherThread = await service.createThread(otherUserId, {
+      idempotencyKey: 'privacy-other',
+      language: 'en',
+    });
+    const other = await service.quote(otherUserId, otherThread.id, quoteInput());
+    const ownerNotFound = await request(server)
+      .get(`/ask-v2/operations/${other.operationId}`)
+      .set('Cookie', cookie())
+      .expect(404);
+    privateAndVaried(ownerNotFound);
+    /* An operation that exists for someone else is indistinguishable from one that does not. */
+    const missing = await request(server)
+      .get('/ask-v2/operations/unknown')
+      .set('Cookie', cookie())
+      .expect(404);
+    expect(ownerNotFound.body).toEqual(missing.body);
+    /* A refusal: the same idempotency key reused for a different question is a 409. */
+    const key = randomUUID();
+    await service.quote(userId, threadId, quoteInput(key, 'First question'));
+    privateAndVaried(
+      await request(server)
+        .post(`/ask-v2/threads/${threadId}/quote`)
+        .set('Cookie', cookie())
+        .set('x-csrf-token', 'csrf')
+        .send(quoteInput(key, 'A different question'))
+        .expect(409),
+    );
+    delete configValues.ASK_V2_ENABLED;
+    privateAndVaried(
+      await request(server).get('/ask-v2/threads').set('Cookie', cookie()).expect(404),
+    );
+    configValues.ASK_V2_ENABLED = 'true';
   });
   test('HTTP mutations enforce authentication and CSRF before work', async () => {
     const op = await quoted();

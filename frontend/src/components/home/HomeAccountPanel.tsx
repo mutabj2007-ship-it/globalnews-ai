@@ -2,7 +2,7 @@
 
 import type { JSX } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { findCountryByIso3, type LanguageCode, type NewsArticle } from '@globalnews-ai/shared';
+import { findCountryByIso3, type LanguageCode, type NewsArticle, safeExternalHref } from '@globalnews-ai/shared';
 import Link from 'next/link';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
@@ -189,7 +189,7 @@ export function HomeAccountPanel({ articles, language = 'en' }: HomeAccountPanel
                 /* UNIVERSAL BOOKMARK R1 — the card link is unchanged; the bookmark is its sibling. */
                 <li key={article.id} className="relative">
                   <a
-                    href={article.url}
+                    href={safeExternalHref(article.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group flex h-full min-h-[44px] flex-col overflow-hidden rounded-[10px] border border-[#122a45] bg-[#061424] transition-[transform,border-color] duration-200 hover:-translate-y-[2px] hover:border-[#2a5a8c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"

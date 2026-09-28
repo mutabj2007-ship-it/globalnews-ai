@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { mapGeographyChipShown } from './effectiveContext';
 import {
   ASK_GEOGRAPHY_KEYS,
   clearGeographyContext,
@@ -112,10 +113,14 @@ describe('MAP R1 item 7 — the dock shows the scope without calling it a story'
   });
 
   it('story context is the more specific anchor and wins', () => {
+    /* ASK R2 INTEGRATION R1 · G seam D replaced the store-occupancy line with the
+       effective-context read; the precedence it pinned is asserted on that reader. */
     const body = code(dock);
-    expect(body).toContain(
-      'const showGeographyLabel = storyContext === undefined && geographyContext !== undefined;',
-    );
+    expect(body).toContain('const showGeographyLabel = mapGeographyChipShown(');
+    expect(body).toContain('storyContextPresent: storyContext !== undefined,');
+    const stores = { storyContextPresent: true, geographyContextPresent: true };
+    expect(mapGeographyChipShown('draft', {}, stores)).toBe(false);
+    expect(mapGeographyChipShown('answered', { geographyContextUsed: true }, stores)).toBe(false);
   });
 
   it('the chip has three distinct states, not two', () => {

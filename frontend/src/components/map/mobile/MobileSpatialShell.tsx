@@ -562,6 +562,19 @@ export function MobileSpatialShell({
   return (
     <section
       data-gn="mobile-spatial-shell"
+      /*
+        ASK R2 INTEGRATION R1 · D25 11 "Map → Ask → Map" — the documented probe the D25
+        acceptance harness reads (PA-11): the five values Close must restore. Derived from
+        this shell's own state only; nothing here is written back.
+      */
+      data-map-state={JSON.stringify({
+        selectedCountry: selectedIso3,
+        cameraCentre: camera.center,
+        zoom: camera.zoom,
+        mode: Object.values(surfaces).find((s) => s !== undefined) ?? 'MAP',
+        layers: Object.values(surfaces).filter((s) => s !== undefined),
+        sheetDetent: stop,
+      })}
       aria-label={mobile.shellLabel}
       className="relative h-[100dvh] w-full overflow-hidden bg-sp-bg"
     >
