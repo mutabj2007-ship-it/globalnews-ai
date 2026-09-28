@@ -3,6 +3,7 @@ import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
 import { formatRelativeTime, formatUtcClock } from '@/lib/formatRelativeTime';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * R2 — ONE TODAY RECORD.
@@ -94,7 +95,7 @@ export function TodayCard({ record, language }: TodayCardProps): JSX.Element {
 
       <h3 className="mt-[8px] font-gn-display text-gn-card-title text-gn-ink-primary">
         <a
-          href={record.url}
+          href={safeExternalHref(record.url)}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-gn-cell outline-none transition-colors hover:text-gn-ink-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-gn-focus"

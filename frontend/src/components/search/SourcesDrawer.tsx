@@ -6,6 +6,7 @@ import type { SourceSupportEntry } from './analysisDimensions';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { dimensionLabel } from './AnalysisIndex';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * H2C — E-22 sources drawer / bottom sheet.
@@ -143,7 +144,7 @@ export function SourcesDrawer({
 
                     <div className="min-w-0 flex-1">
                       <a
-                        href={article.url}
+                        href={safeExternalHref(article.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-gn-display text-gn-card-title text-gn-ink-card underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gn-focus"

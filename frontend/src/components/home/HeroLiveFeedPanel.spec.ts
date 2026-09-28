@@ -336,7 +336,7 @@ describe('HeroLiveFeedPanel — honest states and keyboard reach', () => {
   });
 
   it('makes every row and the footer a REAL link — GN-CD-074 DEFECT-005 and GN-CD-076 DEFECT-006 report the prototype’s are not keyboard-reachable', () => {
-    expect(source).toMatch(/<a\s+href=\{item\.url\}/);
+    expect(source).toMatch(/<a\s+href=\{safeExternalHref\(item\.url\)\}/);
     expect(source).toMatch(/target="_blank"/);
     expect(source).toMatch(/rel="noopener noreferrer"/);
     expect(source).toMatch(/<a\s+href="\/map"/);
@@ -489,7 +489,7 @@ describe('HeroLiveFeedPanel — M66.14A keyboard contract', () => {
   it('changes no article URL and no navigation provenance — Space presses the SAME link', () => {
     // .click() on the anchor keeps href/target/rel authoritative.
     expect(code).not.toMatch(/window\.open|location\.(href|assign|replace)|router\.(push|replace)/);
-    expect(source).toMatch(/<a\s+href=\{item\.url\}/);
+    expect(source).toMatch(/<a\s+href=\{safeExternalHref\(item\.url\)\}/);
     expect(source).toMatch(/target="_blank"/);
     expect(source).toMatch(/rel="noopener noreferrer"/);
   });

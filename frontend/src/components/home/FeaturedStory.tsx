@@ -4,6 +4,7 @@ import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 interface FeaturedStoryProps {
   story: NewsArticle | null;
@@ -25,7 +26,7 @@ export function FeaturedStory({ story, language = 'en' }: FeaturedStoryProps): J
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-signal/60 hover:shadow-md focus-within:-translate-y-0.5 focus-within:border-signal/60 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       <a
-        href={story.url}
+        href={safeExternalHref(story.url)}
         target="_blank"
         rel="noopener noreferrer"
         className="flex flex-1 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/50 focus-visible:ring-inset"
@@ -69,7 +70,7 @@ export function FeaturedStory({ story, language = 'en' }: FeaturedStoryProps): J
         </div>
 
         <a
-          href={story.url}
+          href={safeExternalHref(story.url)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border-strong px-4 py-2 text-sm font-medium text-ink-primary transition-colors hover:border-signal hover:text-signal-bright"

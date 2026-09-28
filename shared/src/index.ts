@@ -133,6 +133,8 @@ export * from './humanitarian/authority-cadence';
 */
 export * from './security';
 export * from './security/absence';
+/* ASK R2 INTEGRATION R1 · B-1 — the one external URL boundary (every publisher/source href). */
+export * from './security/externalUrl';
 
 /*
   THE GENERIC NON-NUMERIC OBSERVATION CONTRACT — MAIN-POLITICS-PLATFORM-PROMOTION-R3 #1.

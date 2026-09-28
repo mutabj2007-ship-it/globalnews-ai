@@ -4,6 +4,7 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { CARD_INTERACTION_CLASSES } from '@/components/home/interactionStyles';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 interface LatestUpdatesFeedProps {
   updates: NewsArticle[];
@@ -69,7 +70,7 @@ export function LatestUpdatesFeed({
           <div className="flex flex-col gap-4">
             {lead && (
               <a
-                href={lead.url}
+                href={safeExternalHref(lead.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${t.readFullStoryPrefix} ${lead.title}`}
@@ -105,7 +106,7 @@ export function LatestUpdatesFeed({
                 {secondary.map((item) => (
                   <a
                     key={item.id}
-                    href={item.url}
+                    href={safeExternalHref(item.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`${t.readFullStoryPrefix} ${item.title}`}

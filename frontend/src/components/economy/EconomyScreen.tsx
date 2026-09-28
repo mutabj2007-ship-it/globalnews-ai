@@ -50,6 +50,7 @@ import {
 import { CorridorPanel, IntelligenceStatement, MiniMap, SeriesChart, Triad } from './Substrate';
 import { ECON_INK, ECON_LINE, ECON_MONO, ECON_SANS, ECON_SURFACE } from './econTokens';
 import { ObservedIdentityContext } from './ObservedIdentityContext';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * ECON-UI-1 — THE DESKTOP ECONOMY SURFACE.
@@ -615,7 +616,7 @@ export function RetainedSourceDetails({ observation, locale }: { readonly observ
   );
   return (
     <div data-econ="retained-source-details" style={{ padding: '16px 18px' }}>
-      {row(retainedEconomyStrings(locale).source, p.sourceUrl ? <a className="underline" lang={p.sourceLanguage} href={p.sourceUrl} target="_blank" rel="noreferrer" aria-label={retainedEconomyStrings(locale).openSource}>{p.institution}</a> : <span lang={p.sourceLanguage}>{p.institution}</span>)}
+      {row(retainedEconomyStrings(locale).source, p.sourceUrl ? <a className="underline" lang={p.sourceLanguage} href={safeExternalHref(p.sourceUrl)} target="_blank" rel="noopener noreferrer" aria-label={retainedEconomyStrings(locale).openSource}>{p.institution}</a> : <span lang={p.sourceLanguage}>{p.institution}</span>)}
       {row(retainedEconomyStrings(locale).jurisdiction, p.jurisdiction)}
       {row(retainedEconomyStrings(locale).period, p.referencePeriod)}
       {row(retainedEconomyStrings(locale).published, p.publicationDateStated)}

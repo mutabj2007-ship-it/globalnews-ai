@@ -4,6 +4,7 @@ import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * The Evidence Library, as a SEPARATE DESTINATION.
@@ -92,7 +93,7 @@ export function EvidenceLibrary({
                   </p>
                   <p className="mt-1 font-gn-sans text-[13px] leading-[1.4] text-[#d5e1ee]">{article.title}</p>
                   <a
-                    href={article.url}
+                    href={safeExternalHref(article.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 inline-block font-gn-mono text-[12px] md:text-[11px] uppercase tracking-[0.14em] text-[#67e8f9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gn-focus"

@@ -5,6 +5,7 @@ import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatUtcClock } from '@/lib/formatRelativeTime';
 import { DOCK_H_COMPACT } from '@/components/today/todayWorkspaceGeometry';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * R7 `05` — THE SOURCES DOCK. PERMANENT CHROME, NEVER A MODAL.
@@ -217,7 +218,7 @@ export function SourcesDock({
                   {/* The ONE outbound control: the reader must be able to reach
                       the article itself, not a summary of it. */}
                   <a
-                    href={record.url}
+                    href={safeExternalHref(record.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-[9px] inline-flex min-h-[44px] items-center font-gn-mono text-[8.5px] font-bold uppercase tracking-[.10em] text-[#7dc0ff] outline-none transition-colors hover:text-[#a9d5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7dc0ff]"

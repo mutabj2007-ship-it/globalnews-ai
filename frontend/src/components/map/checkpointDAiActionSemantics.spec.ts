@@ -155,7 +155,7 @@ describe('D — the AI action is visible, and the source action is not an AI act
 
   describe('THE SOURCE ACTION IS SEPARATE, AND NEVER EXECUTES AI', () => {
     it('↗ is still a real anchor to the publisher', () => {
-      expect(sourceCardCode).toContain('href={item.url}');
+      expect(sourceCardCode).toContain('href={safeExternalHref(item.url)}');
       expect(sourceCardCode).toContain('target="_blank"');
       expect(sourceCardCode).toContain('rel="noopener noreferrer"');
     });

@@ -7,6 +7,7 @@ import { SafeImage } from '@/components/ui/SafeImage';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 interface CountryArticleCardProps {
   article: NewsArticle;
@@ -46,7 +47,7 @@ export function CountryArticleCard({ article, language = 'en', countryCode }: Co
     <li>
       <div className="group flex items-start gap-3 rounded-xl border border-border bg-void p-3 transition-all duration-200 hover:border-signal/60 hover:bg-surface-hover motion-reduce:transition-none">
         <a
-          href={article.url}
+          href={safeExternalHref(article.url)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex min-w-0 flex-1 items-start gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/50"

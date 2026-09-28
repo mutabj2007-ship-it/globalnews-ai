@@ -7,6 +7,7 @@ import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import type { RetainedItem } from '@/lib/map/selection/selectionIntelligence';
 import type { DisplayPrecision } from '@/lib/map/spatial/precisionModel';
 import { StoryBookmarkSlot } from '@/components/bookmark/bookmarkSlot';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * SPATIAL M2 · DESIGN REVISION 1.2 — `SourceCard`, Part II §2 (S · M2).
@@ -241,7 +242,7 @@ export function SourceCard({
         */}
         <a
           data-gn="source-open"
-          href={item.url}
+          href={safeExternalHref(item.url)}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => onOpenSource?.(item.id)}

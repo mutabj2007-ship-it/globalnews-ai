@@ -220,7 +220,7 @@ describe('TrendingCard — real data and honest fallbacks', () => {
   });
 
   it('is a real link with a real destination and a real focus indicator', () => {
-    expect(source).toMatch(/href=\{article\.url\}/);
+    expect(source).toMatch(/href=\{safeExternalHref\(article\.url\)\}/);
     expect(source).toMatch(/target="_blank"/);
     expect(source).toMatch(/rel="noopener noreferrer"/);
     expect(source).toMatch(/focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-cd-edge-focus/);

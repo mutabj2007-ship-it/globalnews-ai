@@ -31,6 +31,7 @@ import {
 } from './sourcesReportingGeometry';
 import type { StripLayout } from './sourcesReportingGeometry';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /* ==================================================================== *
  * SOURCES & REPORTING — DESIGN-C2 LOCK 1 (proportions) AND LOCK 2
@@ -336,7 +337,7 @@ function SourceCard({ entry, language, highlighted, relational }: SourceCardProp
         */}
         <a
           data-paf="source-open"
-          href={article.url}
+          href={safeExternalHref(article.url)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex min-h-[44px] items-start font-gn-sans text-[15px] font-semibold leading-[1.35] text-[#e2ebf5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gn-focus"

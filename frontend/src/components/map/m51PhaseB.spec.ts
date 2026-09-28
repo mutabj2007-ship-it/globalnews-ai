@@ -49,7 +49,7 @@ describe('B. CountryArticleCard carries selected-story context, not title-only n
   });
 
   it('the existing external "read full story" link is preserved unchanged \u2014 the fix is additive', () => {
-    expect(cardSource).toMatch(/href=\{article\.url\}/);
+    expect(cardSource).toMatch(/href=\{safeExternalHref\(article\.url\)\}/);
     expect(cardSource).toMatch(/target="_blank"/);
   });
 });

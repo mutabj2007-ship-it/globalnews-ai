@@ -12,6 +12,7 @@ import {
 } from '@/lib/politics/politicsSubject';
 import { POLITICS_EVENT_KINDS } from '@/lib/politics/politicsDomain';
 import { Absent, Chip, Field, POL_MICRO, Panel, Region, Well } from './PolParts';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -318,9 +319,9 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
                 <Field label={t.labels.evidence}>
                   {selected?.sourceReference.sourceUrl ? (
                     <a
-                      href={selected.sourceReference.sourceUrl}
+                      href={safeExternalHref(selected.sourceReference.sourceUrl)}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="text-sp-cyan hover:underline"
                     >
                       {selected.sourceReference.citation ?? t.labels.openSource}
@@ -464,9 +465,9 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
                   <Field label={t.labels.evidence}>{selected.claim.sourceText}</Field>
                   {selected.sourceReference.sourceUrl && (
                     <a
-                      href={selected.sourceReference.sourceUrl}
+                      href={safeExternalHref(selected.sourceReference.sourceUrl)}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="min-h-[44px] self-start border border-sp-line px-[12px] py-[10px] text-[12px] text-sp-cyan"
                     >
                       {t.labels.openSource} →

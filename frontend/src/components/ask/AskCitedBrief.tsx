@@ -1,4 +1,4 @@
-import { projectSummaryStatements } from '@globalnews-ai/shared';
+import { projectSummaryStatements, safeExternalHref } from '@globalnews-ai/shared';
 import type { AnalysisSourceRef, LanguageCode, SummaryStatement } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 
@@ -91,9 +91,9 @@ export function AskCitedBrief({
                         key={n}
                         data-ask="citation"
                         data-citation={n}
-                        href={source.url}
+                        href={safeExternalHref(source.url)}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         aria-label={t.citationLabel
                           .replace('{n}', String(n))
                           .replace('{title}', source.title)

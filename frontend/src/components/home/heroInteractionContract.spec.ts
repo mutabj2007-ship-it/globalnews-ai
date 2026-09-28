@@ -147,7 +147,7 @@ describe('M66.14A guarantee D — keyboard equivalence, enforced in advance', ()
   });
 
   it('the feed rows are reachable by keyboard at all — real anchors, native order, no tabIndex juggling', () => {
-    expect(feedPanel).toMatch(/<a\s+href=\{item\.url\}/);
+    expect(feedPanel).toMatch(/<a\s+href=\{safeExternalHref\(item\.url\)\}/);
     expect(feedPanel).not.toMatch(/tabIndex/);
   });
 });

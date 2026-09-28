@@ -1,22 +1,22 @@
 import { resolveApiBaseUrl } from '@/lib/api/apiBase';
 import type { ElectionReadResponse, ElectionRecord } from '@/lib/election/electionRead';
-import type { PoliticsReadResponse } from '@globalnews-ai/shared';
+import { safeExternalHref, type PoliticsReadResponse } from '@globalnews-ai/shared';
 
 export type ReadResult<T> = { status: 'READ'; data: T } | { status: 'UNAVAILABLE' };
 const text = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;
 const nullableText = (v: unknown) => v === null || text(v);
 const count = (v: unknown) => Number.isSafeInteger(v) && (v as number) >= 0;
 const date = (v: unknown) => text(v) && Number.isFinite(Date.parse(v));
+/*
+  ASK R2 INTEGRATION R1 · B-1 — the scheme/credential/encoding decision is the ONE
+  shared boundary's; this reader only adds the stricter official-host rule on top.
+*/
 const sourceUrl = (v: string, official = false) => {
-  const u = new URL(v);
-  return (
-    !u.username &&
-    !u.password &&
-    (official
-      ? u.protocol === 'https:' &&
-        ['www.iebc.or.ke', 'iebc.or.ke', 'forms.iebc.or.ke'].includes(u.hostname)
-      : ['https:', 'http:'].includes(u.protocol))
-  );
+  const safe = safeExternalHref(v);
+  if (safe === undefined) return false;
+  if (!official) return true;
+  const u = new URL(safe);
+  return u.protocol === 'https:' && ['www.iebc.or.ke', 'iebc.or.ke', 'forms.iebc.or.ke'].includes(u.hostname);
 };
 /** Transport validation is additional to backend admission; it never admits source material. */
 function electionRecord(r: ElectionRecord): boolean {

@@ -82,7 +82,7 @@ describe('Story-level (article) context reaches Q&A \u2014 Milestone #51 Phase B
   });
 
   it('the existing external "read full story" link is preserved unchanged \u2014 the new action is additive, not a replacement', () => {
-    expect(cardSource).toMatch(/href=\{article\.url\}/);
+    expect(cardSource).toMatch(/href=\{safeExternalHref\(article\.url\)\}/);
     expect(cardSource).toMatch(/target="_blank"/);
     expect(cardSource).toMatch(/rel="noopener noreferrer"/);
   });

@@ -2,6 +2,7 @@ import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { safeExternalHref } from '@globalnews-ai/shared';
 
 interface InFocusSidebarProps {
   items: NewsArticle[];
@@ -39,7 +40,7 @@ export function InFocusSidebar({ items, language = 'en' }: InFocusSidebarProps):
           {items.map((item) => (
             <li key={item.id} className="py-3.5 first:pt-0 last:pb-0">
               <a
-                href={item.url}
+                href={safeExternalHref(item.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex items-start gap-3 rounded-lg p-1.5 -m-1.5 transition-colors duration-200 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/50 motion-reduce:transition-none"
