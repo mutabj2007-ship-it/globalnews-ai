@@ -49,6 +49,11 @@ export interface AskR2Strings {
     readonly checked: string;
     readonly retainedTo: string;
     readonly zero: string;
+    /**
+     * CURRENT STATUS CORROBORATION R1 — a PARTIAL current-status answer: `{when}` is the
+     * freshest corroborating report's publication time. It says "as of", never "verified now".
+     */
+    readonly corroboratedAsOf: (reports: number) => string;
   };
   readonly clarificationFooter: string;
   readonly sourcesAfterChoice: string;
@@ -150,6 +155,7 @@ const EN: AskR2Strings = {
     checked: 'Checked {when} · {sources}',
     retainedTo: 'Retained reporting to {when} · {sources}',
     zero: 'Checked {when} · 0 matching reports',
+    corroboratedAsOf: (n) => `As of {when} · ${n} independent reports agree`,
   },
   clarificationFooter: 'No sources searched · no compute used',
   sourcesAfterChoice: 'Sources appear after you choose',
@@ -272,6 +278,10 @@ const PL: AskR2Strings = {
     checked: 'Sprawdzono {when} · {sources}',
     retainedTo: 'Doniesienia do {when} · {sources}',
     zero: 'Sprawdzono {when} · 0 pasujących doniesień',
+    corroboratedAsOf: (n) =>
+      n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)
+        ? `Stan na {when} · ${n} niezależne doniesienia są zgodne`
+        : `Stan na {when} · ${n} niezależnych doniesień jest zgodnych`,
   },
   clarificationFooter: 'Nie przeszukano źródeł · nie użyto obliczeń',
   sourcesAfterChoice: 'Źródła pojawią się po Twoim wyborze',

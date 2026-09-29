@@ -204,6 +204,12 @@ export function askR2View(
   else if (badge === 'unavail')
     freshness = basis in s.unavailableBecause ? s.noAnswer : s.unavailable;
   else if (badge === 'insuf') freshness = fill(s.freshness.zero, checkedAt);
+  else if (badge === 'part' && payload.verification?.asOf != null)
+    /* CURRENT STATUS CORROBORATION R1 — as of the freshest corroborating report, never the
+       model's generation time. */
+    freshness = s.freshness
+      .corroboratedAsOf(payload.verification.reports)
+      .replace('{when}', formatUtc(payload.verification.asOf, locale) ?? '—');
   else if (badge === 'cur') freshness = fill(s.freshness.retainedTo, retainedTo);
   else freshness = fill(s.freshness.checked, checkedAt);
 

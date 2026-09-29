@@ -78,6 +78,20 @@ export interface AskR2Payload {
    * with `analysis`: exactly one of the two carries body text for a given payload.
    */
   readonly background?: { readonly text: string } | null;
+  /**
+   * CURRENT STATUS CORROBORATION R1 — present only for a current-status plan: the executor's
+   * frozen verification outcome, decided by DETERMINISTIC corroboration (never a model's
+   * agreement), the number of independent agreeing reports, and the as-of time of the
+   * freshest of them. Absent on older payloads.
+   */
+  readonly verification?: {
+    readonly outcome: string;
+    readonly reason: string;
+    readonly family: string | null;
+    readonly reports: number;
+    readonly asOf: string | null;
+    readonly fact: { readonly family: string; readonly value: string | number } | null;
+  } | null;
 }
 
 export interface AskV2Operation {
