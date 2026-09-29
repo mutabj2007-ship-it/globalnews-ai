@@ -47,6 +47,18 @@ function harness(opts: {
     permit: [],
     record: [],
   };
+  /*
+    R1 observability — DELIBERATELY NOT A MEMBER OF `calls`.
+
+    Several assertions below read `expect(calls).toEqual({ analysis: [], reserve: [], ... })`
+    to prove a deterministic terminal spent NOTHING. Adding an observation key to that
+    object would have forced every one of those assertions to be rewritten, and an
+    assertion rewritten to accommodate a new write is exactly how a "this path spends
+    nothing" guarantee gets quietly widened. The recorder is returned separately, so those
+    assertions still mean what they meant, and the observation is asserted on its own.
+  */
+  const observed: unknown[] = [];
+
   const analysisService = {
     analyzeNews: jest.fn(async (...args: unknown[]) => {
       calls.analysis.push(args);
@@ -124,8 +136,10 @@ function harness(opts: {
     switches as never,
     analysisConfig as never,
     specialists as never,
+    /* Keeps what it was handed. Never a real store. */
+    { record: jest.fn(async (input: unknown) => (observed.push(input), true)) } as never,
   );
-  return { adapter, calls };
+  return { adapter, calls, observed };
 }
 
 const req = (question: string, language: 'en' | 'pl' = 'en'): AskRequest => ({
@@ -844,4 +858,170 @@ describe('ALPHA ENABLEMENT R1 — MC-055 / MC-070 on the Ask R2 path', () => {
       });
     },
   );
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ADMIN ASK INTELLIGENCE OBSERVABILITY R1 — WHAT THE ADAPTER OBSERVES
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * These assertions ride the SAME harness as the behavioural ones above, deliberately: an
+ * observation asserted against a separate stub would prove that a recorder can be called,
+ * not that the path that answers a reader records what it did.
+ */
+describe('R1 — one Ask, one observation, and never a question in it', () => {
+  const observationOf = (observed: unknown[]): Record<string, unknown> =>
+    observed[0] as Record<string, unknown>;
+
+  it('an answered Ask records exactly one observation, carrying the operation id', async () => {
+    const { adapter, observed } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req('What is happening in Kenya?')));
+    await inRequest(() => adapter.execute(req('What is happening in Kenya?'), plan, 'op-1'));
+
+    expect(observed).toHaveLength(1);
+    expect(observationOf(observed).operationId).toBe('op-1');
+    expect(observationOf(observed).routePath).toBe('ASK_R2');
+  });
+
+  it('`prepare` records NOTHING — a quote is not an Ask, and counting it would inflate every figure', async () => {
+    const { adapter, observed } = harness({});
+    await inRequest(() => adapter.prepare(req('What is happening in Kenya?')));
+    expect(observed).toEqual([]);
+  });
+
+  /*
+    CONTENT WORDS ONLY, AND THAT IS NOT A WEAKENING. A scan for 'is' or 'in' fires on
+    `missingRoles` and `reportingItemCount`, which are field names rather than the reader's
+    words — a guard that cannot be satisfied by a correct implementation gets deleted. These
+    three carry the question's meaning: if any of them survived into an observation, the
+    observation would be a record of what somebody typed.
+  */
+  const QUESTION_WORDS = ['happening', 'kenya', 'what'] as const;
+
+  const scanFor = (haystack: unknown): string[] => {
+    const serialised = JSON.stringify(haystack).toLowerCase();
+    return QUESTION_WORDS.filter((word) => serialised.includes(word.toLowerCase()));
+  };
+
+  it('the recorded observation contains no question text, in any field, at any depth', async () => {
+    const question = 'What is happening in Kenya?';
+    const { adapter, observed } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await inRequest(() => adapter.execute(req(question), plan, 'op-1'));
+
+    /* Word by word, so a truncated or re-cased fragment is caught as well as the whole. */
+    expect(scanFor(observationOf(observed))).toEqual([]);
+    expect(JSON.stringify(observationOf(observed))).not.toContain(question);
+  });
+
+  it('POSITIVE CONTROL — the same scan DOES condemn an observation that carried the question', async () => {
+    /*
+      Without this, the assertion above could pass because the instrument was broken: a
+      misspelled key, a scan over the wrong object, or a word list that matches nothing all
+      produce a green absence. So the same scan is run over the same observation with the
+      question put back into it, and it must fire on every word.
+    */
+    const question = 'What is happening in Kenya?';
+    const { adapter, observed } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await inRequest(() => adapter.execute(req(question), plan, 'op-1'));
+
+    const contaminated = { ...observationOf(observed), question };
+    expect(scanFor(contaminated).sort()).toEqual([...QUESTION_WORDS].sort());
+  });
+
+  it('a deterministic clarification records ZERO model and ZERO provider calls', async () => {
+    const { adapter, observed, calls } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req('And Kenya?')));
+    await inRequest(() => adapter.execute(req('And Kenya?'), plan, 'op-1'));
+
+    const observation = observationOf(observed);
+    expect(observation.answerState).toBe('CLARIFICATION_REQUIRED');
+    expect(observation.clarificationRequired).toBe(true);
+    expect(observation.modelInvocationCount).toBe(0);
+    expect(observation.providerCallCount).toBe(0);
+    expect(observation.aiExecuted).toBe(false);
+    expect(observation.providerId).toBeNull();
+    /* And the switches were never consulted, so they are null rather than false: the
+       difference between "not read" and "off" is the whole reason those columns are
+       nullable. */
+    expect(observation.askR2Enabled).toBeNull();
+    expect(observation.askPublicComputeEnabled).toBeNull();
+    expect(calls).toEqual({
+      analysis: [],
+      background: [],
+      reserve: [],
+      settle: [],
+      permit: [],
+      record: [],
+    });
+  });
+
+  it('a switch that is off records the refusal truthfully, and still records only one observation', async () => {
+    const { adapter, observed } = harness({ switches: { ASK_PUBLIC_COMPUTE_ENABLED: false } });
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await expect(inRequest(() => adapter.execute(req(question), plan, 'op-1'))).rejects.toThrow();
+
+    expect(observed).toHaveLength(1);
+    const observation = observationOf(observed);
+    expect(observation.failureCode).toBe('ASK_PUBLIC_COMPUTE_DISABLED');
+    expect(observation.askR2Enabled).toBe(true);
+    expect(observation.askPublicComputeEnabled).toBe(false);
+    expect(observation.modelInvocationCount).toBe(0);
+  });
+
+  it('a budget refusal is recorded as the control that refused it, not as a model failure', async () => {
+    const { adapter, observed } = harness({ meterAdmitted: false });
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await expect(inRequest(() => adapter.execute(req(question), plan, 'op-1'))).rejects.toThrow();
+
+    const observation = observationOf(observed);
+    expect(observation.failureCode).toBe('BUDGET_REFUSED:account-day');
+    expect(observation.modelInvocationCount).toBe(0);
+    expect(observation.providerCallCount).toBe(0);
+  });
+
+  it('an open circuit is recorded as a circuit refusal, with the provider named', async () => {
+    const { adapter, observed } = harness({ breakerAllowed: false });
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await expect(inRequest(() => adapter.execute(req(question), plan, 'op-1'))).rejects.toThrow();
+
+    const observation = observationOf(observed);
+    expect(observation.failureCode).toBe('CIRCUIT_OPEN');
+    expect(observation.providerId).toBe('openai');
+    expect(observation.providerCallCount).toBe(0);
+  });
+
+  it('an answered Ask records the model invocation, the measured tokens and the evidence it got', async () => {
+    const { adapter, observed } = harness({});
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await inRequest(() => adapter.execute(req(question), plan, 'op-1'));
+
+    const observation = observationOf(observed);
+    expect(observation.aiExecuted).toBe(true);
+    expect(observation.modelInvocationCount).toBe(1);
+    expect(observation.providerCallCount).toBe(1);
+    expect(observation.promptTokens).toBe(3000);
+    expect(observation.completionTokens).toBe(800);
+    expect(observation.reportingItemCount).toBe(2);
+    expect(observation.evidenceRolesObtained).toEqual(['REPORTING']);
+    expect(typeof observation.latencyMs).toBe('number');
+  });
+
+  it('geography travels as governed codes and the reader topic as a boolean, never as words', async () => {
+    const { adapter, observed } = harness({});
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await inRequest(() => adapter.execute(req(question), plan, 'op-1'));
+
+    const observation = observationOf(observed);
+    expect(observation.geographyCodes).toEqual(['KEN']);
+    expect(typeof observation.topicPresent).toBe('boolean');
+    expect(typeof observation.statedPeriodPresent).toBe('boolean');
+    expect(observation.requestLanguage).toBe('en');
+  });
 });

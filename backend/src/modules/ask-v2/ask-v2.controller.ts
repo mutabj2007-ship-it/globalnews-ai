@@ -11,6 +11,7 @@ import {
   Post,
   Query,
   UseGuards,
+  UseFilters,
   UseInterceptors,
   UsePipes,
   ValidationPipe,
@@ -22,6 +23,7 @@ import { CurrentUser } from '../users/current-user.decorator';
 import { BookmarkTurnDto, CreateThreadDto, HistoryPageDto, QuoteTurnDto } from './ask-v2.dto';
 import { AskV2Service } from './ask-v2.service';
 import { AskRequestContextInterceptor } from './ask-request-context';
+import { AskAccessObservationFilter } from './ask-access-observation.filter';
 
 /**
  * ASK R2 INTEGRATION R1 · §14 — PRIVACY HEADERS ON EVERY ASK V2 RESPONSE.
@@ -60,6 +62,9 @@ export class AskV2EnabledGuard implements CanActivate {
 }
 @Controller('ask-v2')
 @UseGuards(AskV2EnabledGuard, RequireAuthGuard)
+/* R1 observability: counts the refusals no observation can ever exist for. Changes no
+   status, no body and no header — see ask-access-observation.filter.ts. */
+@UseFilters(AskAccessObservationFilter)
 /* Gate E: server-held account + IP scope for the budget, set after authentication. */
 @UseInterceptors(AskRequestContextInterceptor)
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))

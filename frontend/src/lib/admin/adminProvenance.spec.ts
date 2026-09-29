@@ -73,6 +73,11 @@ describe('F1.b — provenance registry', () => {
       'admin-05.internalNotes',
       'admin-05.tickets',
       'admin-05.userReplies',
+      'admin-06.askAlerts',
+      'admin-06.askEvidence',
+      'admin-06.askHealth',
+      'admin-06.askImprovement',
+      'admin-06.askOperations',
       'admin-06.providerHealth',
       'admin-06.providerMode',
       'admin-07.aiProviderProbe',
@@ -256,5 +261,31 @@ describe('F1.b — provenance registry', () => {
       const source = readFileSync(join(ADMIN_COMPONENTS, 'primitives', name), 'utf-8');
       expect(source).toContain('ProvenanceBadge');
     });
+  });
+
+  /**
+   * ASK PUBLIC BETA OPERATIONS MINIMUM R1 — the five fields it promoted, and the one it
+   * deliberately did not.
+   *
+   * Written out rather than left implicit in the sorted list above, so the REASON each tag
+   * sits where it sits stays in the record and so that a future edit cannot promote the
+   * sixth by quietly adding it to an array.
+   */
+  it('R1 tags only the panels a real endpoint now returns', () => {
+    (
+      [
+        'admin-06.askHealth',
+        'admin-06.askEvidence',
+        'admin-06.askOperations',
+        'admin-06.askImprovement',
+        'admin-06.askAlerts',
+      ] as const
+    ).forEach((key) => {
+      expect({ key, tag: provenanceOf(key) }).toEqual({ key, tag: 'A' });
+    });
+  });
+
+  it('R1 leaves the legacy rollback count at C — nothing emits it, so nothing measures it', () => {
+    expect(provenanceOf('admin-06.askLegacyRollback')).toBe('C');
   });
 });

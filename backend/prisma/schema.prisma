@@ -1781,3 +1781,133 @@ model OperationalSwitchAudit {
 
   @@index([name, setAt])
 }
+
+/// ════════════════════════════════════════════════════════════════════════════
+/// ADMIN ASK INTELLIGENCE OBSERVABILITY R1 — WHAT READERS NEEDED, NOT WHAT THEY TYPED
+/// ════════════════════════════════════════════════════════════════════════════
+///
+/// One row per Ask R2 execution attempt. Every column is a value the router or the
+/// executor ALREADY derived while doing its work: no second classifier runs for
+/// analytics, and nothing here is inferred from text at read time.
+///
+/// THERE IS NO COLUMN A QUESTION COULD OCCUPY, AND THAT IS THE POINT. No question, no
+/// prompt, no reader term, no stated period, no matched place text, no article body, no
+/// provider response and no account reference. `askObservation.privacy.spec.ts` asserts
+/// that absence over THIS BLOCK, so a future edit that adds such a column fails a test
+/// rather than merely disagreeing with a comment. The reader's own words stay in
+/// `AskTurn.question`, which this model does not reference and the Admin surface never
+/// reads.
+///
+/// NO ACCOUNT LINKAGE. `operationId` identifies the OPERATION, and it is unique, so one
+/// explicit Ask can produce at most one observation — a database constraint rather than
+/// the writer's discipline. `ComputeOperation.userId` is never selected by anything that
+/// serves this data, and there is no userId column here to join on by accident.
+///
+/// NO MONETARY FIGURE. No governed price source exists, so there is no cost column and
+/// no code that could compute one.
+///
+/// NO DEVICE CLASS. Deriving one needs a user-agent, which no telemetry in this platform
+/// reads. The field is absent rather than present and permanently null.
+model AskObservation {
+  id          String   @id @default(uuid())
+  /// The Ask operation this observes. UNIQUE — one Ask, at most one observation.
+  operationId String   @unique
+  occurredAt  DateTime @default(now()) @db.Timestamptz(6)
+  /// The observation contract this row was written under, so a later shape is readable.
+  schemaVersion String
+  /// 'ASK_R2' today. The vocabulary also declares the legacy path, which has no emitter.
+  routePath     String
+  adapterVersion String
+
+  questionClass         String
+  queryIntent           String
+  terminalState         String
+  answerState           String
+  /// The §7 derivation's own diagnostic code (`AnswerStateDecision.basis`).
+  answerBasis           String
+  clarificationRequired Boolean @default(false)
+  capabilityUnavailable Boolean @default(false)
+  /// Frozen C refusal / disclosure / clarification CODES. Codes only, never prose.
+  refusalCodes          String[]
+  disclosureCodes       String[]
+  clarificationCodes    String[]
+
+  /// The language the reader ASKED IN, as the router classified it. Not a location.
+  requestLanguage        String
+  questionLanguage       String?
+  languageClassification String
+  normalizationStatus    String
+
+  /// GEOGRAPHY OF THE QUESTION'S SCOPE — never audience location. These are the places
+  /// the question is ABOUT, as governed codes the resolver produced. A value outside the
+  /// governed vocabulary is DROPPED by the writer and counted, so free text cannot arrive
+  /// here even if a future producer emits it.
+  geographyPresent      Boolean  @default(false)
+  geographyCodes        String[]
+  geographySources      String[]
+  geographyPrecision    String
+  geographyCodesDropped Int      @default(0)
+  scopedBy              String
+
+  /// The eight landed analytical domains. A bounded vocabulary, not reader words.
+  domains             String[]
+  domainCount         Int     @default(0)
+  /// PRESENCE ONLY. The reader's topic terms are the reader's words and are not stored.
+  topicPresent        Boolean @default(false)
+  temporalRequirement String
+  /// PRESENCE ONLY. A stated period is text at the reader's own precision; not stored.
+  statedPeriodPresent Boolean @default(false)
+
+  evidenceRolesRequested String[]
+  evidenceRolesObtained  String[]
+  evidenceRolesMissing   String[]
+  /// Admitted reporting items. Null when execution never reached retrieval.
+  reportingItemCount     Int?
+
+  computeClass         String
+  providerId           String?
+  providerCallCount    Int     @default(0)
+  modelInvocationCount Int     @default(0)
+  aiExecuted           Boolean @default(false)
+  /// The circuit breaker's own verdict for this attempt: SUCCESS, FAILURE, TIMEOUT or
+  /// REFUSAL. Null when the breaker was never consulted, which is the zero-compute path —
+  /// and "not consulted" is not "succeeded".
+  breakerOutcome       String?
+  /// NULLABLE ON PURPOSE. Populated only when the provider reported usage. `tokensMeasured`
+  /// travels with them so an absent measurement is never averaged or rendered as zero.
+  promptTokens     Int?
+  completionTokens Int?
+  tokensMeasured   Boolean @default(false)
+  latencyMs        Int?
+
+  failureCode        String?
+  /// 'ANONYMOUS' or 'VERIFIED_ANALYSIS_USER' — the router's identity AXIS, not an account.
+  identityState      String
+
+  /// The two-key operational switches AS READ FOR THIS ASK. Null means the switch was
+  /// never consulted because the answer needed no compute — not that it was off.
+  askR2Enabled            Boolean?
+  askPublicComputeEnabled Boolean?
+
+  @@index([occurredAt])
+  @@index([questionClass, occurredAt])
+  @@index([answerState, occurredAt])
+  @@index([routePath, occurredAt])
+}
+
+/// ADMIN ASK INTELLIGENCE OBSERVABILITY R1 — BOUNDED COUNTERS FOR ATTEMPTS THAT NEVER
+/// BECAME AN EXECUTION.
+///
+/// A signed-out Ask attempt is refused by RequireAuthGuard before any operation exists,
+/// so it has no `AskObservation` and never will. It is still a Product fact worth having.
+/// It is counted rather than rowed BECAUSE it is unauthenticated: one row per attempt on
+/// a route anyone can call is unbounded write amplification, which is exactly the failure
+/// the telemetry module already refuses. Cardinality here is (events × hours) and nothing
+/// a caller supplies enters the key.
+model AskAccessCounter {
+  event       String
+  bucketStart DateTime @db.Timestamptz(6)
+  count       Int      @default(0)
+
+  @@id([event, bucketStart])
+}

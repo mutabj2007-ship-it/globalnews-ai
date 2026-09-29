@@ -136,6 +136,19 @@ export const PROVENANCE = {
   'admin-06.retrievalFreshness': 'A', // latest retained Article timestamp
   'admin-06.rateLimitState': 'A', // passive observed provider throttle state
   'admin-06.aiOperations': 'C',
+  // ── ASK PUBLIC BETA OPERATIONS MINIMUM R1 — Admin -> AI -> Ask Intelligence ──
+  // Each is served by GET /admin/ai/ask-intelligence over a table this release
+  // populates on every Ask execution, which is exactly what A means here.
+  'admin-06.askHealth': 'A', //        GET /admin/ai/ask-intelligence
+  'admin-06.askEvidence': 'A', //      the same read, evidence-role tallies
+  'admin-06.askOperations': 'A', //    switches, breakers and refusal codes
+  'admin-06.askImprovement': 'A', //   aggregate counts, never an example question
+  'admin-06.askAlerts': 'A', //        thresholds derived from landed knobs
+  // C, AND DELIBERATELY SO. The legacy Ask path is DECLARED in the route-path
+  // vocabulary and has no emitter in this release, so there is no source of
+  // truth for a rollback count. The panel says "not instrumented"; a zero here
+  // would read as "no rollback happened", which nobody measured.
+  'admin-06.askLegacyRollback': 'C',
   'admin-06.aiProviders': 'C',
   'admin-06.intelligenceModules': 'C',
 

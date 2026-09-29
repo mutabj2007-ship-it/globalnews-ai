@@ -114,6 +114,28 @@ export const NAV_MANIFEST: readonly AdminNavGroup[] = Object.freeze([
         'ADMIN-06',
         'provider.configure',
       ),
+      /*
+        ASK PUBLIC BETA OPERATIONS MINIMUM R1 — THE SIXTEENTH ENTRY, AND 16 IS NOT AN
+        ARTIFACT NUMBER.
+
+        The approved artifact numbers its sidebar 02..15 and this file keeps those numbers
+        so a reviewer reading the design and a developer reading this file are looking at
+        the same rows. This entry has no artifact row: it is the operations page the CTO
+        activation adds by name. Numbering it after the artifact's last entry keeps every
+        existing number meaning what it meant; renumbering to insert it at 07 would have
+        silently moved fourteen rows a design reviewer has already signed off.
+
+        It sits in INTELLIGENCE, beside the two AI entries, because that is where the
+        activation puts it: Admin -> AI -> Ask Intelligence.
+      */
+      item(
+        '16',
+        'askIntelligence',
+        'Ask intelligence',
+        ADMIN_ROUTES.aiAskIntelligence,
+        'ADMIN-06',
+        'analytics.view',
+      ),
     ]),
   },
   {

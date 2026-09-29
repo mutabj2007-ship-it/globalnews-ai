@@ -9,6 +9,8 @@ import { CircuitBreakerService } from '../compute-controls/circuit-breaker.servi
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { AskV2Service } from './ask-v2.service';
 import { AskR2ExecutionAdapter } from './ask-r2-execution.adapter';
+import { AskObservationService } from '../ask-observability/ask-observation.service';
+import { AskObservationRetentionService } from '../ask-observability/ask-observation-retention.service';
 import { askRequestContext } from './ask-request-context';
 
 /**
@@ -122,6 +124,13 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
         get: () => ({ maxArticles: 8, maxArticleChars: 1200, maxCompletionTokens: 2000 }),
       } as never,
       { registeredDomains: () => ['CONFLICT'] } as never,
+      /* R1 observability: the REAL writer against the REAL database, so this live suite
+         proves the observation is written and what it contains — not that a stub was
+         called. `observationsFor` below reads it back through the same client. */
+      new AskObservationService(
+        db as unknown as PrismaService,
+        new AskObservationRetentionService(db as unknown as PrismaService),
+      ),
     );
     service = new AskV2Service(db as unknown as PrismaService, config, adapter);
   }

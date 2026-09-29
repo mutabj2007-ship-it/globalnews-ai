@@ -5,11 +5,13 @@ import { AuthModule } from '../auth/auth.module';
 import { AnalysisModule } from '../analysis/analysis.module';
 import { ComputeControlsModule } from '../compute-controls/compute-controls.module';
 import { SpecialistModule } from '../specialist/specialist.module';
+import { AskObservabilityModule } from '../ask-observability/ask-observability.module';
 import { ASK_EXECUTION_PORT } from './ask-compute.contract';
 import { AskV2Controller, AskV2EnabledGuard } from './ask-v2.controller';
 import { AskV2Service } from './ask-v2.service';
 import { AskR2ExecutionAdapter } from './ask-r2-execution.adapter';
 import { AskRequestContextInterceptor } from './ask-request-context';
+import { AskAccessObservationFilter } from './ask-access-observation.filter';
 
 /*
   ASK R2 CONSOLIDATED INTEGRATION R1 · GATE E — ASK_EXECUTION_PORT is bound to the Ask R2
@@ -27,12 +29,14 @@ import { AskRequestContextInterceptor } from './ask-request-context';
     AnalysisModule,
     ComputeControlsModule,
     SpecialistModule,
+    AskObservabilityModule,
   ],
   controllers: [AskV2Controller],
   providers: [
     AskV2Service,
     AskV2EnabledGuard,
     AskRequestContextInterceptor,
+    AskAccessObservationFilter,
     AskR2ExecutionAdapter,
     { provide: ASK_EXECUTION_PORT, useExisting: AskR2ExecutionAdapter },
   ],
