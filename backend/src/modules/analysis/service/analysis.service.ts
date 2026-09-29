@@ -1653,15 +1653,20 @@ export class AnalysisService {
            * qualifies. Zero admitted evidence still ends at the existing zero-evidence surface
            * with no model call.
            */
-          const { entities, family, providerQuery } = relationalEvent;
+          const { entities, family, providerQuery, direction } = relationalEvent;
           this.logger.debug(
             `Relational event question: ${entities[0].iso3} ↔ ${entities[1].iso3} (${family.id}); ` +
               `provider query "${providerQuery}".`,
           );
+          /* INTELLIGENCE BINDING R1 (§10) — a stated direction travels as [actor, target]. */
           const mode = {
             type: 'relationalEvent' as const,
-            entities: entities.map((entity) => entity.iso3),
+            entities:
+              direction === null
+                ? entities.map((entity) => entity.iso3)
+                : [direction.actor.iso3, direction.target.iso3],
             familyId: family.id,
+            directed: direction !== null,
           };
           let relationalResponse = await this.newsService.search(
             providerQuery,
@@ -1685,7 +1690,8 @@ export class AnalysisService {
                 RETAINED_MAX_AGE_MINUTES,
               )
             ).filter(
-              (article) => scoreRelationalEventRelevance(article, entities, family).isRelevant,
+              (article) =>
+                scoreRelationalEventRelevance(article, entities, family, direction).isRelevant,
             );
             if (retained.length > 0) {
               relationalResponse = {

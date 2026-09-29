@@ -149,7 +149,13 @@ export type RelevanceMode =
     (relational-event.ts): both entities AND the event family, stated together. Opt-in by
     exactly one caller; every other mode is unchanged.
   */
-  | { type: 'relationalEvent'; entities: readonly string[]; familyId: EventFamilyId };
+  | {
+      type: 'relationalEvent';
+      /** [actor, target] when `directed`; otherwise in the reader's order. */
+      entities: readonly string[];
+      familyId: EventFamilyId;
+      directed?: boolean;
+    };
 
 /**
  * The subset of RelevanceMode that actually triggers filtering —
@@ -2104,7 +2110,14 @@ export class NewsService {
         .filter((country): country is CountryMeta => country !== undefined);
       return entities.length !== relevanceMode.entities.length
         ? { isRelevant: false }
-        : scoreRelationalEventRelevance(article, entities, eventFamily(relevanceMode.familyId));
+        : scoreRelationalEventRelevance(
+            article,
+            entities,
+            eventFamily(relevanceMode.familyId),
+            relevanceMode.directed === true && entities.length === 2
+              ? { actor: entities[0] as CountryMeta, target: entities[1] as CountryMeta }
+              : null,
+          );
     }
 
     if (relevanceMode.type === 'institutional') {

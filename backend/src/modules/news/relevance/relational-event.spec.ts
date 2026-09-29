@@ -327,3 +327,60 @@ describe('G — accepted routing and follow-up behaviour is untouched', () => {
     },
   );
 });
+
+/*
+ * ASK INTELLIGENCE BINDING R1 (§10) — the P1 release guard: when the question states who acts
+ * on whom, a report stating the OPPOSITE direction never supports it.
+ */
+describe('§10 — directional negative control (P1 release guard)', () => {
+  const dir = (q: string) => readRelationalEventQuestion(q)!;
+  const gate = (q: string, a: NewsArticle) => {
+    const shape = dir(q);
+    return scoreRelationalEventRelevance(a, shape.entities, shape.family, shape.direction)
+      .isRelevant;
+  };
+  const RUS_ON_UKR = 'What are the latest Russian missile and drone attacks on Ukraine?';
+  const REVERSED = [
+    art('x1', 'Ukrainian drones hit Russian oil refinery overnight'),
+    art('x2', 'Ukraine strikes Russian air base with long-range drones'),
+    art('x3', 'Russian refinery hit by Ukrainian drones'),
+  ];
+
+  it.each([
+    [RUS_ON_UKR, 'RUS', 'UKR'],
+    ['Did Russia launch missile and drone attacks on Ukraine?', 'RUS', 'UKR'],
+    ['Has Ukraine been hit by Russian drones?', 'RUS', 'UKR'],
+    ['What strikes has Russia carried out against Ukraine?', 'RUS', 'UKR'],
+    ['What are the latest Ukrainian drone attacks on Russia?', 'UKR', 'RUS'],
+  ])('%s → actor %s, target %s', (q, actor, target) => {
+    expect(dir(q).direction).toMatchObject({ actor: { iso3: actor }, target: { iso3: target } });
+  });
+
+  it.each(REVERSED)(
+    'Ukraine → Russia evidence does not support "Russia attacks Ukraine": %#',
+    (a) => {
+      expect(gate(RUS_ON_UKR, a)).toBe(false);
+    },
+  );
+
+  it('the original Russia → Ukraine reporting still qualifies under the guard', () => {
+    for (const a of [R1, R2, R3, R4, R5, R6]) expect(gate(RUS_ON_UKR, a)).toBe(true);
+  });
+
+  it('the reversed question accepts the reversed reporting (the guard is directional, not one-sided)', () => {
+    const q = 'What are the latest Ukrainian drone attacks on Russia?';
+    for (const a of REVERSED) expect(gate(q, a)).toBe(true);
+  });
+
+  it('no stated direction → the landed role-symmetric gate, unchanged', () => {
+    const q = 'Are Russia and Ukraine exchanging drone strikes?';
+    const shape = readRelationalEventQuestion(q);
+    if (shape !== null) {
+      expect(shape.direction).toBeNull();
+      expect(
+        scoreRelationalEventRelevance(REVERSED[0]!, shape.entities, shape.family, shape.direction)
+          .isRelevant,
+      ).toBe(true);
+    }
+  });
+});
