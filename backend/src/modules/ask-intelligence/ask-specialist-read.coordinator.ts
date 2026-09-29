@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { ConflictObservation } from '@globalnews-ai/shared';
+import type { ConflictObservation, ConflictRetainedEvidenceDetail } from '@globalnews-ai/shared';
 import type { AskR2Route } from '../ask-router/ask-r2-route';
 import { ConflictObservationRepository } from '../conflict-observation/conflict-observation.repository';
 import { MarketReadRepository } from '../market-ingest/market-read.repository';
@@ -149,15 +149,23 @@ export class AskSpecialistReadCoordinator {
     }
     const newest = Math.max(...rows.map((r) => Date.parse(r.temporal.eventStartedAt)));
     const recent = now.getTime() - newest <= CONFLICT_RECENT_DAYS * 86_400_000;
+    /* LIVE ACCEPTANCE REPAIR R1 (C) — the source-verbatim place/parties/headline of each record,
+       read from its retained capture in ONE batched read. Supplementary: absent detail leaves
+       the record as it was, never fails the contribution. */
+    const details = await Promise.resolve()
+      .then(() => this.conflict.evidenceDetails(rows.map((r) => r.observationKey)))
+      .catch(() => new Map<string, ConflictRetainedEvidenceDetail>());
     return base(s, {
       status: 'USED',
       temporalBasis: 'RETAINED_EVENT_RECORD',
-      observations: rows.map((row) => conflictObservation(row)),
+      observations: rows.map((row) => conflictObservation(row, details.get(row.observationKey))),
       disclosures: [
         'RETAINED_NOT_CURRENT',
         /* No accepted severity rule exists; records are never ranked into "how serious". */
         'SEVERITY_NOT_ASSESSED',
         ...(recent ? [] : ['NO_RECENT_RETAINED_RECORD']),
+        /* "eastern DRC": the read is country-scoped; each record keeps its own stated place. */
+        ...(s.scope.qualifier ? ['SUBNATIONAL_SCOPE_NOT_APPLIED'] : []),
       ],
     });
   }
@@ -327,11 +335,25 @@ export class AskSpecialistReadCoordinator {
   }
 }
 
-function conflictObservation(row: ConflictObservation): AskContributionObservation {
+/** The publisher's own citation, split on its record separator only — each piece verbatim. */
+export function citedOutletsOf(citation: string | undefined): string[] {
+  return (citation ?? '')
+    .split(';')
+    .map((piece) => piece.trim())
+    .filter((piece) => piece.length > 0)
+    .slice(0, 3);
+}
+
+export function conflictObservation(
+  row: ConflictObservation,
+  detail?: ConflictRetainedEvidenceDetail,
+): AskContributionObservation {
   return {
     reference: row.observationKey,
     kind: row.eventType,
-    label: row.sourceReference.citation ?? null,
+    /* LIVE ACCEPTANCE REPAIR R1 (C) — the label is the source headline when one exists; the raw
+       concatenated citation now travels split, as cited outlets, never as the row's text. */
+    label: detail?.sourceHeadline ?? null,
     value: null,
     unit: null,
     period: row.temporal.eventStartedAt.slice(0, 10),
@@ -342,5 +364,11 @@ function conflictObservation(row: ConflictObservation): AskContributionObservati
       licence: null,
     },
     retainedAt: row.temporal.ingestedAt,
+    detail: {
+      place: detail?.whereDescription ?? null,
+      parties: detail?.sourceParties ?? [],
+      headline: detail?.sourceHeadline ?? null,
+      citedOutlets: citedOutletsOf(row.sourceReference.citation),
+    },
   };
 }

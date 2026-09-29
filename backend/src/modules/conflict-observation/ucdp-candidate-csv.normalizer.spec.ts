@@ -4,6 +4,7 @@ import {
 } from '@globalnews-ai/shared';
 import {
   extractUcdpCandidateEvidenceDetail,
+  extractUcdpCandidateEvidenceDetails,
   MAX_UCDP_CANDIDATE_CSV_BYTES,
   normalizeUcdpCandidateCsv,
   UCDP_CANDIDATE_CSV_HEADERS,
@@ -178,6 +179,44 @@ describe('UCDP Candidate CSV retained normalizer', () => {
         contentAddress: 'b'.repeat(64),
       }),
     ).toBeNull();
+  });
+
+  it('LIVE ACCEPTANCE REPAIR R1 — the batched detail read equals the single read, parses once, and skips unknown ids', () => {
+    const bytes = capture({
+      side_a: 'Government of Example',
+      side_b: 'Example Armed Group',
+      where_description: 'Beni territory, North Kivu',
+      source_headline: 'Source headline',
+      country: 'DR Congo (Zaire)',
+    });
+    const single = extractUcdpCandidateEvidenceDetail(bytes, {
+      observationKey: 'k1',
+      upstreamEventId: '637360',
+      retrievalId: 'candidate-test',
+      contentAddress: 'a'.repeat(64),
+    });
+    const batch = extractUcdpCandidateEvidenceDetails(
+      bytes,
+      { retrievalId: 'candidate-test', contentAddress: 'a'.repeat(64) },
+      [
+        { observationKey: 'k1', upstreamEventId: '637360' },
+        { observationKey: 'missing', upstreamEventId: '999999' },
+      ],
+    );
+    expect([...batch.keys()]).toEqual(['k1']);
+    expect(batch.get('k1')).toEqual(single);
+    expect(batch.get('k1')?.whereDescription).toBe('Beni territory, North Kivu');
+  });
+
+  it('the batched detail read keeps the reviewed-header refusal', () => {
+    const drifted = Buffer.from(capture().toString('utf8').replace(/^id,/, 'event_id,'));
+    expect(() =>
+      extractUcdpCandidateEvidenceDetails(
+        drifted,
+        { retrievalId: 'candidate-test', contentAddress: 'a'.repeat(64) },
+        [{ observationKey: 'k1', upstreamEventId: '637360' }],
+      ),
+    ).toThrow();
   });
 
   it('pins the exact reviewed header and refuses schema drift', () => {

@@ -214,6 +214,26 @@ live('Conflict recovery on disposable PostgreSQL (no providers)', () => {
     // Malformed scopes never reach SQL.
     expect(await repository.currentForCountry("COD' OR 1=1", since)).toEqual([]);
     expect(await repository.currentForCountry('COD', new Date('bad'))).toEqual([]);
+
+    /* LIVE ACCEPTANCE REPAIR R1 (C) — the batched evidence read over the SAME admitted capture:
+       one query + one capture fetch, the same admission checks, verbatim source detail. */
+    const details = await repository.evidenceDetails([
+      cod[0].observationKey,
+      rwa[0].observationKey,
+      'cfl:unknown',
+    ]);
+    expect([...details.keys()].sort()).toEqual(
+      [cod[0].observationKey, rwa[0].observationKey].sort(),
+    );
+    expect(details.get(cod[0].observationKey)).toMatchObject({
+      upstreamEventId: '9102',
+      sourceParties: ['Synthetic group'],
+      sourceCountryName: 'DR Congo (Zaire)',
+    });
+    expect(details.get(cod[0].observationKey)).toEqual(
+      await repository.evidenceDetail(cod[0].observationKey),
+    );
+    expect((await repository.evidenceDetails([])).size).toBe(0);
   });
   it('refuses malformed batch with no partial writes or pins', async () => {
     const before = await prisma.snapshotPin.count();

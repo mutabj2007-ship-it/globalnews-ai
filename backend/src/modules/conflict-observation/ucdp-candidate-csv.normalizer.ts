@@ -325,40 +325,82 @@ export function extractUcdpCandidateEvidenceDetail(
   for (const values of rows.slice(1)) {
     const row = rowObject(header, values);
     if (row.id !== args.upstreamEventId) continue;
-
-    const partyA = requiredText(row.side_a, 'side_a', 4096);
-    const partyB = optionalSource(row.side_b);
-    const count =
-      row.number_of_sources && /^\d+$/.test(row.number_of_sources)
-        ? Number(row.number_of_sources)
-        : undefined;
-
-    return {
-      observationKey: args.observationKey,
-      authority: 'UCDP_GED',
-      upstreamEventId: args.upstreamEventId,
-      sourceParties: [...new Set([partyA, ...(partyB ? [partyB] : [])])],
-      ...(optionalSource(row.where_description)
-        ? { whereDescription: row.where_description }
-        : {}),
-      ...(optionalSource(row.source_headline)
-        ? { sourceHeadline: row.source_headline }
-        : {}),
-      ...(optionalSource(row.source_original)
-        ? { sourceOriginal: row.source_original }
-        : {}),
-      ...(optionalSource(row.conflict_name)
-        ? { conflictName: row.conflict_name }
-        : {}),
-      ...(optionalSource(row.dyad_name) ? { dyadName: row.dyad_name } : {}),
-      ...(count !== undefined ? { numberOfSources: count } : {}),
-      ...(optionalSource(row.country) ? { sourceCountryName: row.country } : {}),
-      snapshotRetrievalId: args.retrievalId,
-      snapshotContentAddress: args.contentAddress,
-    };
+    return evidenceDetailOfRow(row, args);
   }
 
   return null;
+}
+
+function evidenceDetailOfRow(
+  row: Record<string, string>,
+  args: {
+    observationKey: string;
+    upstreamEventId: string;
+    retrievalId: string;
+    contentAddress: string;
+  },
+): ConflictRetainedEvidenceDetail {
+  const partyA = requiredText(row.side_a, 'side_a', 4096);
+  const partyB = optionalSource(row.side_b);
+  const count =
+    row.number_of_sources && /^\d+$/.test(row.number_of_sources)
+      ? Number(row.number_of_sources)
+      : undefined;
+
+  return {
+    observationKey: args.observationKey,
+    authority: 'UCDP_GED',
+    upstreamEventId: args.upstreamEventId,
+    sourceParties: [...new Set([partyA, ...(partyB ? [partyB] : [])])],
+    ...(optionalSource(row.where_description) ? { whereDescription: row.where_description } : {}),
+    ...(optionalSource(row.source_headline) ? { sourceHeadline: row.source_headline } : {}),
+    ...(optionalSource(row.source_original) ? { sourceOriginal: row.source_original } : {}),
+    ...(optionalSource(row.conflict_name) ? { conflictName: row.conflict_name } : {}),
+    ...(optionalSource(row.dyad_name) ? { dyadName: row.dyad_name } : {}),
+    ...(count !== undefined ? { numberOfSources: count } : {}),
+    ...(optionalSource(row.country) ? { sourceCountryName: row.country } : {}),
+    snapshotRetrievalId: args.retrievalId,
+    snapshotContentAddress: args.contentAddress,
+  };
+}
+
+/**
+ * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — the same verbatim detail as
+ * `extractUcdpCandidateEvidenceDetail`, for several events of ONE retained capture, parsing
+ * the capture once. Same schema check, same row mapping; unknown ids are simply absent.
+ */
+export function extractUcdpCandidateEvidenceDetails(
+  bytes: Uint8Array,
+  capture: { retrievalId: string; contentAddress: string },
+  wanted: readonly { observationKey: string; upstreamEventId: string }[],
+): Map<string, ConflictRetainedEvidenceDetail> {
+  requiredText(capture.retrievalId, 'retrievalId', 256);
+  if (!/^[0-9a-f]{64}$/.test(capture.contentAddress)) refuse('CONTENT_ADDRESS_INVALID');
+  const byEventId = new Map(wanted.map((w) => [w.upstreamEventId, w]));
+  const out = new Map<string, ConflictRetainedEvidenceDetail>();
+  if (byEventId.size === 0) return out;
+
+  const rows = parseCsv(bytes);
+  if (rows.length < 2) refuse('UNSUPPORTED_SCHEMA_OR_RECORD_BOUND');
+  const header = rows[0];
+  if (header.length !== HEADERS.length || HEADERS.some((name, index) => header[index] !== name)) {
+    refuse('SCHEMA_NOT_CONFIRMED_BY_CAPTURE');
+  }
+  for (const values of rows.slice(1)) {
+    const row = rowObject(header, values);
+    const hit = byEventId.get(row.id);
+    if (hit === undefined || out.has(hit.observationKey)) continue;
+    out.set(
+      hit.observationKey,
+      evidenceDetailOfRow(row, {
+        observationKey: hit.observationKey,
+        upstreamEventId: hit.upstreamEventId,
+        retrievalId: capture.retrievalId,
+        contentAddress: capture.contentAddress,
+      }),
+    );
+  }
+  return out;
 }
 
 export const UCDP_CANDIDATE_CSV_HEADERS = HEADERS;

@@ -131,6 +131,48 @@ export function placeNamed(text: string): string | null {
   return [place.cityName, place.regionName, place.country?.name].filter(Boolean).join(', ');
 }
 
+/**
+ * LIVE ACCEPTANCE REPAIR R1 — a compass qualifier the reader put on a country ("eastern DRC",
+ * "wschodnia Ukraina"). It is NOT resolved to provinces (no governed mapping exists); it is only
+ * returned so a country-scoped read can disclose that it did not narrow to it.
+ */
+const SUBNATIONAL_QUALIFIERS: readonly string[] = [
+  'north eastern',
+  'north western',
+  'south eastern',
+  'south western',
+  'northeastern',
+  'northwestern',
+  'southeastern',
+  'southwestern',
+  'eastern',
+  'western',
+  'northern',
+  'southern',
+  'central',
+  'wschodni',
+  'wschodnia',
+  'wschodniej',
+  'wschodnim',
+  'zachodni',
+  'zachodnia',
+  'zachodniej',
+  'północny',
+  'północna',
+  'północnej',
+  'południowy',
+  'południowa',
+  'południowej',
+  'środkowy',
+  'środkowa',
+  'środkowej',
+];
+
+export function subnationalQualifier(text: string): string | null {
+  const normalized = normalize(text);
+  return SUBNATIONAL_QUALIFIERS.find((q) => normalized.includes(` ${q} `)) ?? null;
+}
+
 const cycleKey = (value: string): string => value.replace(/\s+/g, '').replace(/[-–—]/g, '/');
 
 /**
@@ -166,6 +208,7 @@ export function selectContributors(route: AskR2Route): AskContributorSelection[]
     countryIso3,
     district: district === null ? null : { id: district.id, name: district.name },
     place,
+    qualifier: district === null && place === null ? subnationalQualifier(question) : null,
   };
 
   const out: AskContributorSelection[] = [];
