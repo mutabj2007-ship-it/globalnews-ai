@@ -192,9 +192,18 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
       const [reservation] = await db.computeReservation.findMany();
       expect(reservation).toMatchObject({ outcome: 'SUCCESS' });
       expect(reservation!.settledAt).not.toBeNull();
-      /* actual = 2500 + 4 × 600 = 4900, written back to the global hour bucket */
-      const global = await db.computeMeter.findMany({ where: { scope: 'global' } });
-      expect(global.map((g) => Number(g.units))).toContain(4900);
+      /* actual = 2500 + 4 × 600 = 4900, written back to BOTH global buckets — each exactly
+         once, in its own row, whatever the time of day (P1 R1: at 00:xx UTC the shared
+         'global' scope used to merge them into one 9800 row). */
+      const global = await db.computeMeter.findMany({
+        where: { scope: { in: ['global:hour', 'global:day'] } },
+        orderBy: { scope: 'asc' },
+      });
+      expect(global.map((g) => [g.scope, Number(g.units)])).toEqual([
+        ['global:day', 4900],
+        ['global:hour', 4900],
+      ]);
+      expect(await db.computeMeter.count({ where: { scope: 'global' } })).toBe(0);
       /* concurrency released on settle */
       const conc = await db.computeMeter.findMany({ where: { scope: { startsWith: 'conc:' } } });
       expect(conc.every((c) => Number(c.units) === 0)).toBe(true);
