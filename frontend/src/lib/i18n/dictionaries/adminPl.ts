@@ -541,6 +541,118 @@ export const adminPl: AdminDictionary = {
         'Audyt jest tylko do odczytu dla każdej roli. Z założenia nie istnieje ścieżka aktualizacji ani usunięcia.',
     },
 
+    askIntelligence: {
+      title: 'Analiza zapytań Ask',
+      purpose:
+        'Widok operacyjny samodzielnej bety Ask: o co pytali czytelnicy, co otrzymali i co ich odrzuciło.',
+      privacyNotice:
+        'Wyłącznie dane zbiorcze. Ta telemetria nie przechowuje ani nie pokazuje treści pytania, zapytania wyszukiwania, konta ani odpowiedzi dostawcy, a w becie publicznej nie ma podglądu surowych pytań.',
+      sampleNote:
+        'Role dowodowe, dziedziny, geografia i kody odmowy są zliczane z najnowszych zapisanych wykonań, a nie z całego okna czasowego.',
+      retentionNote:
+        'Zapisane wykonania są usuwane po przekroczeniu horyzontu przechowywania. Czyszczenie uruchamia się doraźnie po zapisie, w ograniczonych partiach.',
+      alerts: {
+        title: 'Alerty operatora',
+        purpose:
+          'Każdy próg to wartość zmierzona odniesiona do wdrożonego limitu albo pozycja oznaczona jako oczekująca na decyzję Product Ownera.',
+        severity: 'Waga',
+        observed: 'Zmierzono',
+        warnAt: 'Ostrzeżenie od',
+        criticalAt: 'Stan krytyczny od',
+        ceiling: 'Odniesione do',
+        source: 'Źródło progu',
+        samples: 'Liczba próbek',
+        procedure: 'Procedura reakcji',
+        procedureNote:
+          'Co zrobić, gdy pozycja nie jest zielona, opisano raz — we wskazanym niżej podręczniku operatora.',
+        emptyTitle: 'Żadnego alertu nie dało się ocenić',
+        emptyBody:
+          'Nic jeszcze nie zapisano albo bloku alertów nie udało się odczytać. Alert, którego nie da się ocenić, nigdy nie jest raportowany jako poprawny.',
+      },
+      health: {
+        title: 'Kondycja',
+        purpose: 'Czy czytelnicy mogą pytać i czy Ask odpowiada.',
+        attempts: 'Próby zapytania',
+        executions: 'Zarejestrowane wykonania',
+        completions: 'Zakończone odpowiedzi',
+        failures: 'Błędy i odmowy',
+        modelCalls: 'Wywołania modelu',
+        providerCalls: 'Wywołania dostawcy',
+        zeroModel: 'Odpowiedzi bez użycia modelu',
+        reused: 'Zwrócone z zapisanego wyniku',
+        latencyMedian: 'Mediana opóźnienia',
+        latencyP95: 'Opóźnienie p95',
+        latencySamples: 'Próbki opóźnienia',
+        promptTokens: 'Tokeny wejściowe',
+        completionTokens: 'Tokeny wyjściowe',
+        tokenSamples: 'Próbki tokenów',
+        answerStates: 'Stany odpowiedzi',
+        clarification: 'Poproszono o doprecyzowanie',
+        capabilityUnavailable: 'Brak wymaganej zdolności',
+        attemptsNote:
+          'Próba to pytanie wysłane przez czytelnika. Wykonanie to próba, która dotarła do modułu wykonawczego, a zakończenie to wykonanie, które zwróciło odpowiedź. To różne liczby i nigdy się ich nie sumuje.',
+      },
+      evidence: {
+        title: 'Braki zdolności i dowodów',
+        purpose:
+          'Jakich rodzajów dowodów wymagał router, które udało się uzyskać, a które były niedostępne.',
+        role: 'Rola dowodowa',
+        requested: 'Wymagane',
+        obtained: 'Uzyskane',
+        unavailable: 'Niedostępne',
+        reserved: 'Zarezerwowane, w tej wersji nie do spełnienia',
+        supplied: 'Dostarczane przez ten moduł wykonawczy',
+        reportingItems: 'Materiały prasowe na odpowiedź',
+        emptyTitle: 'Nie zapisano zapotrzebowania na dowody',
+        emptyBody: 'Żadne wykonanie w tym oknie nie wymagało roli dowodowej.',
+        note: 'Rola często wymagana i nigdy nieuzyskana to zdolność, której czytelnicy potrzebują, a platforma jej nie ma.',
+      },
+      operations: {
+        title: 'Operacje',
+        purpose: 'Co jest włączone, co odmawia i z jakiego powodu.',
+        switches: 'Przełączniki Ask',
+        switchEffective: 'Stan faktyczny',
+        switchDeployment: 'Wartość wdrożeniowa',
+        switchRow: 'Wpis audytowy',
+        switchUnreadable: 'Nie udało się odczytać stanu',
+        breakers: 'Bezpieczniki dostawców',
+        breakerState: 'Stan',
+        breakerOpenUntil: 'Otwarty do',
+        breakerTrials: 'Próby w toku',
+        budgetRejections: 'Odmowy budżetowe',
+        circuitRejections: 'Odmowy bezpiecznika',
+        switchRejections: 'Odmowy przełącznika',
+        providerErrors: 'Błędy dostawcy',
+        failureCodes: 'Kody błędów',
+        breakerOutcomes: 'Wyniki bezpiecznika',
+        signedOut: 'Próby bez zalogowania',
+        routePaths: 'Ścieżki obsługi',
+        legacyNotInstrumented:
+          'Stara ścieżka Ask jest zadeklarowana, ale w tym wydaniu nic jej nie raportuje, dlatego podajemy brak pomiaru zamiast zera.',
+        emptyTitle: 'W tym oknie nic nie zostało odrzucone',
+        emptyBody: 'Żadne wykonanie w tym oknie nie zwróciło kodu błędu ani odmowy.',
+        switchNote:
+          'Przełącznik jest włączony tylko wtedy, gdy wartość wdrożeniowa to dokładnie słowo true oraz zezwala na to wpis audytowy. Stanu, którego nie udało się odczytać, nie wolno uznać za wyłączony.',
+      },
+      improvement: {
+        title: 'Kolejka usprawnień',
+        purpose:
+          'Zbiorcze zestawienie tego, co naprawić najpierw. Same liczby, nigdy przykładowe pytanie.',
+        unavailableByClass: 'Brak zdolności wg klasy pytania',
+        missingRoles: 'Brakujące role dowodowe',
+        failureReasons: 'Przyczyny błędów',
+        affectedClasses: 'Klasy pytań o słabych wynikach',
+        affectedDomains: 'Dotknięte dziedziny analityczne',
+        affectedCountries: 'Dotknięta geografia objęta nadzorem',
+        refusalCodes: 'Kody odmowy routera',
+        poorOutcomeNote:
+          'Poproszenie czytelnika o doprecyzowanie to wynik poprawny i nie jest tu liczone.',
+        geographyNote:
+          'Geografia oznacza tu temat pytania. Nigdy nie wskazuje miejsca pobytu czytelnika i nic na tej stronie tego nie wnioskuje.',
+        emptyTitle: 'Kolejka jest pusta',
+        emptyBody: 'Żadne wykonanie w tym oknie nie dało słabego wyniku.',
+      },
+    },
     settings: {
       title: 'Ustawienia platformy',
       purpose: 'Konfiguracja, retencja i polityka dostępu.',

@@ -357,3 +357,187 @@ export interface AdminAlphaReviewResponse {
   reporting: AdminAlphaReviewReportingLane[];
   omissions: string[];
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * ASK PUBLIC BETA OPERATIONS MINIMUM R1 — Admin → AI → Ask Intelligence
+ *
+ * The THIRD mirrored contract, duplicated from
+ * `backend/src/modules/admin/ask-intelligence/admin-ask-intelligence.contract.ts` for the
+ * reason the two above it are: this lane changes no file under `shared/**`.
+ * `adminAskIntelligenceContract.spec.ts` reads both files and fails on drift, so the
+ * duplication cannot rot silently.
+ *
+ * THERE IS NO FIELD HERE FOR A QUESTION, A QUERY, AN ACCOUNT OR AN ADDRESS, and that is
+ * the contract rather than the convention: a screen cannot render what the type cannot
+ * carry.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export interface AdminAskCount {
+  key: string;
+  count: number;
+}
+
+export interface AdminAskSample {
+  sampleCount: number;
+  averageMs?: number;
+  minMs?: number;
+  maxMs?: number;
+  medianMs?: number;
+  p95Ms?: number;
+}
+
+export interface AdminAskTokenTotals {
+  sampleCount: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
+export interface AdminAskArraySample {
+  sampleCount: number;
+  limit: number;
+  truncated: boolean;
+}
+
+export interface AdminAskHealth {
+  attemptsLast24h: number;
+  attemptsLast7d: number;
+  executionsLast24h: number;
+  executionsLast7d: number;
+  completionsLast24h: number;
+  failuresLast24h: number;
+  storedResultReusedLast7d: number;
+  modelInvocationsLast24h: number;
+  providerCallsLast24h: number;
+  zeroModelLast24h: number;
+  latency: AdminAskSample;
+  tokens: AdminAskTokenTotals;
+  byAnswerState: AdminAskCount[];
+  declaredAnswerStates: string[];
+  clarificationRequiredLast7d: number;
+  capabilityUnavailableLast7d: number;
+}
+
+export interface AdminAskEvidenceRole {
+  role: string;
+  requested: number;
+  obtained: number;
+  unavailable: number;
+}
+
+export interface AdminAskEvidence {
+  roles: AdminAskEvidenceRole[];
+  declaredRoles: string[];
+  reservedInactiveRoles: string[];
+  executorSuppliedRoles: string[];
+  reportingItems: AdminAskSample;
+}
+
+export interface AdminAskBreakerRow {
+  provider: string;
+  state: string;
+  openUntil: string | null;
+  cooldownS: number;
+  trialsInFlight: number;
+  updatedAt: string;
+}
+
+export interface AdminAskSwitchRow {
+  name: string;
+  deploymentValueIsLiteralTrue: boolean;
+  rowPresent: boolean;
+  rowEnabled: boolean | null;
+  effective: boolean;
+  readable: boolean;
+  setAt: string | null;
+}
+
+export interface AdminAskOperations {
+  switches: AdminAskSwitchRow[];
+  breakers: AdminAskBreakerRow[];
+  budgetRejections: AdminAskCount[];
+  circuitRejections: AdminAskCount[];
+  switchRejections: AdminAskCount[];
+  providerErrors: AdminAskCount[];
+  failureCodes: AdminAskCount[];
+  byBreakerOutcome: AdminAskCount[];
+  signedOutAttempts: AdminAskCount[];
+  declaredAccessEvents: string[];
+  accessBucketHours: number;
+  byRoutePath: AdminAskCount[];
+  declaredRoutePaths: string[];
+  instrumentedRoutePaths: string[];
+  legacyInstrumented: boolean;
+}
+
+export interface AdminAskImprovement {
+  observationsInWindow: number;
+  capabilityUnavailableTotal: number;
+  unavailableByQuestionClass: AdminAskCount[];
+  missingEvidenceRoles: AdminAskCount[];
+  failureReasons: AdminAskCount[];
+  affectedQuestionClasses: AdminAskCount[];
+  affectedDomains: AdminAskCount[];
+  affectedCountries: AdminAskCount[];
+  poorOutcomeStates: string[];
+  refusalCodes: AdminAskCount[];
+  countryLimit: number;
+}
+
+export type AdminAskAlertSeverity = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN';
+
+export interface AdminAskAlert {
+  id: string;
+  severity: AdminAskAlertSeverity;
+  observed: number | null;
+  warnAt: number;
+  criticalAt: number;
+  unit: string;
+  ceiling: number | null;
+  ceilingUnit: string;
+  thresholdSource: string;
+  windowHours: number;
+  sampleCount: number;
+  minimumSampleCount: number;
+}
+
+export interface AdminAskAlerts {
+  alerts: AdminAskAlert[];
+  worstSeverity: AdminAskAlertSeverity;
+  procedureKey: string;
+  procedureDocument: string;
+}
+
+export interface AdminAskWindows {
+  shortHours: number;
+  longHours: number;
+}
+
+export interface AdminAskRetention {
+  declaredDays: number;
+  enforced: boolean;
+  enforcedBy: string;
+}
+
+export interface AdminAskDisclosures {
+  rawQuestionStored: false;
+  questionReviewImplemented: false;
+  monetaryCostAvailable: false;
+  deviceClassAvailable: false;
+  readOnly: true;
+  legacyRoutePathInstrumented: boolean;
+  quotedWithoutExecutionObserved: false;
+}
+
+export interface AdminAskIntelligenceResponse {
+  health: AdminAskHealth | null;
+  evidence: AdminAskEvidence | null;
+  operations: AdminAskOperations | null;
+  improvement: AdminAskImprovement | null;
+  alerts: AdminAskAlerts | null;
+  arraySample: AdminAskArraySample;
+  windows: AdminAskWindows;
+  retention: AdminAskRetention;
+  disclosures: AdminAskDisclosures;
+  generatedAt: string;
+}

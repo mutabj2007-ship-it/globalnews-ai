@@ -623,8 +623,13 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       THIS DOES NOT CLEAR THE CARRIED FAILURE. The Windows path-separator defect
       described further up is untouched, so this spec stays in the carried
       baseline set exactly as before.
+
+      FIFTY-TWO since `ASK GLOBALNEWSAI — PUBLIC BETA OPERATIONS MINIMUM R1`, which adds
+      exactly one route: `/admin/ai/ask-intelligence`, the Ask operations page. Same
+      treatment as every addition above — the count moves with the tree rather than the
+      assertion being relaxed, so a fifty-third route is still a deliberate act.
     */
-    expect(pages).toHaveLength(51);
+    expect(pages).toHaveLength(52);
     expect(pages).toContain('/conflict');
     expect(classify('/conflict').indexability).toBe('noindex');
     expect(pages).toContain('/ask');

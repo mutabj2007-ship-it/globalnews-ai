@@ -15,6 +15,9 @@ import { GlobalReachModule } from '../global-reach/global-reach.module';
 import { EconomyModule } from '../economy/economy.module';
 import { ElectionReadModule } from '../election/election-read.module';
 import { AlphaReviewService } from './alpha-review.service';
+import { ComputeControlsModule } from '../compute-controls/compute-controls.module';
+import { AdminAskIntelligenceController } from './ask-intelligence/admin-ask-intelligence.controller';
+import { AdminAskIntelligenceService } from './ask-intelligence/admin-ask-intelligence.service';
 
 /**
  * F1.a — administrative authorization foundation.
@@ -54,14 +57,31 @@ import { AlphaReviewService } from './alpha-review.service';
  * so the call names it forbids are deliberately not spelled out here.)
  */
 @Module({
-  imports: [ConfigModule, AuthModule, NewsModule, GlobalReachModule, EconomyModule, ElectionReadModule],
-  controllers: [AdminController, AdminReadonlyController, AdminGlobalReachController],
+  imports: [
+    ConfigModule,
+    AuthModule,
+    NewsModule,
+    GlobalReachModule,
+    EconomyModule,
+    ElectionReadModule,
+    /* R1 — the Ask Intelligence reader resolves the two operational switches through the
+       SAME service the Ask executor consults, so the screen cannot disagree with the
+       executor about whether a switch is on. Nothing here turns one. */
+    ComputeControlsModule,
+  ],
+  controllers: [
+    AdminController,
+    AdminReadonlyController,
+    AdminGlobalReachController,
+    AdminAskIntelligenceController,
+  ],
   providers: [
     AdminService,
     AdminSystemService,
     AdminNewsService,
     AdminAnalyticsService,
     AlphaReviewService,
+    AdminAskIntelligenceService,
     AdminGuard,
     AdminPlatformEnabledGuard,
   ],

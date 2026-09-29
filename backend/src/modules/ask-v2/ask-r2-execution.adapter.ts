@@ -24,6 +24,7 @@ import { planChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
 import {
   AskExecutionRefused,
+  classifyCompute,
   hashIdentity,
   type AskExecutionPort,
   type AskPlan,
@@ -31,6 +32,11 @@ import {
   type ExecutionResult,
 } from './ask-compute.contract';
 import { askRequestContext } from './ask-request-context';
+import { AskObservationService } from '../ask-observability/ask-observation.service';
+import {
+  newAskObservationDraft,
+  type AskObservationDraft,
+} from '../ask-observability/ask-observation.contract';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -111,7 +117,7 @@ function routeFor(request: Readonly<AskRequest>, deps: PlannerDeps): AskR2Route 
  * personal library, a file or a computation. A plan that REQUIRES any of those is not run
  * against reporting instead: that would be the silent substitution frozen C forbids.
  */
-const EXECUTOR_SUPPLIES: ReadonlySet<string> = new Set(['REPORTING']);
+export const EXECUTOR_SUPPLIES: ReadonlySet<string> = new Set(['REPORTING']);
 
 interface AnswerDecision {
   readonly state: string;
@@ -187,6 +193,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     private readonly switches: OperationalSwitchService,
     private readonly analysisConfig: AnalysisConfigService,
     specialists: SpecialistClaimRegistry,
+    private readonly observations: AskObservationService,
   ) {
     this.deps = {
       specialistRegistry: landedSpecialistRegistryPort(() => specialists.registeredDomains()),
@@ -223,12 +230,54 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     };
   }
 
+  /**
+   * ADMIN ASK INTELLIGENCE OBSERVABILITY R1 — THE ONE EMIT POINT.
+   *
+   * The execution logic is untouched and lives in `executeInner`; this wrapper only times
+   * it, names the outcome, and records ONE observation however the attempt ended — the
+   * zero-AI terminals that return, and the control refusals that throw. One emit point is
+   * what makes "one explicit Ask produces at most one observation" true by construction
+   * rather than by remembering to call a recorder on every branch; the unique constraint
+   * on `operationId` then makes it true across replicas as well.
+   *
+   * `prepare` is NOT instrumented, deliberately: it runs on every quote, produces no
+   * answer and spends nothing, so counting it would inflate every figure on the screen.
+   *
+   * THE RECORD CANNOT CHANGE WHAT THE READER GETS. It is bounded by its own deadline,
+   * swallows its own failures, and is awaited only after the result or the error is
+   * already decided — so no answer is lost, refused or altered by a measurement.
+   */
   async execute(
     request: Readonly<AskRequest>,
     plan: Readonly<AskPlan>,
     operationId: string,
   ): Promise<ExecutionResult> {
+    const draft = newAskObservationDraft(ASK_R2_ADAPTER_VERSION, request.language);
+    const startedAt = Date.now();
+    try {
+      return await this.executeInner(request, plan, operationId, draft);
+    } catch (error) {
+      /* The same naming the service applies to the operation's failureCode (Gate E). */
+      draft.failureCode =
+        error instanceof AskExecutionRefused && /^[A-Z0-9_:.-]{1,120}$/i.test(error.code)
+          ? error.code
+          : 'EXECUTION_FAILED';
+      throw error;
+    } finally {
+      draft.latencyMs = Date.now() - startedAt;
+      draft.computeClass = classifyCompute(request, plan, false);
+      await this.observations.record({ operationId, ...draft });
+    }
+  }
+
+  private async executeInner(
+    request: Readonly<AskRequest>,
+    plan: Readonly<AskPlan>,
+    operationId: string,
+    draft: AskObservationDraft,
+  ): Promise<ExecutionResult> {
     const route = routeFor(request, this.deps);
+    this.observeRoute(route, draft);
     if (planRevision(request, route) !== plan.revision) {
       throw new AskExecutionRefused('ASK_PLAN_REVISION_MISMATCH');
     }
@@ -236,7 +285,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* 2 · a terminal that needs no model answers with ZERO AI. */
     const early = answerStateBeforeExecution(route.plan);
     if (early !== null && early.state !== 'REFERENCE_BACKGROUND') {
-      return this.result(plan, route, operationId, early, null, false);
+      return this.result(plan, route, operationId, this.observeAnswer(early, draft), null, false);
     }
     /*
       ALPHA ENABLEMENT R1 (MC-070) — "And Kenya?" continues nothing: an Ask R2 request
@@ -251,12 +300,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         plan,
         route,
         operationId,
-        {
-          state: 'CLARIFICATION_REQUIRED',
-          basis: 'NO_PRIOR_SUBJECT',
-          missingRoles: [],
-          candidates: [...continuation.candidates],
-        },
+        this.observeAnswer(
+          {
+            state: 'CLARIFICATION_REQUIRED',
+            basis: 'NO_PRIOR_SUBJECT',
+            missingRoles: [],
+            candidates: [...continuation.candidates],
+          },
+          draft,
+        ),
         null,
         false,
       );
@@ -267,22 +319,31 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         plan,
         route,
         operationId,
-        { state: 'CAPABILITY_UNAVAILABLE', basis: 'EXECUTOR_NOT_WIRED', missingRoles: unsupplied },
+        this.observeAnswer(
+          {
+            state: 'CAPABILITY_UNAVAILABLE',
+            basis: 'EXECUTOR_NOT_WIRED',
+            missingRoles: unsupplied,
+          },
+          draft,
+        ),
         null,
         false,
       );
     }
 
     /* 3 · controls, in order, each failing closed. */
-    if (!(await this.switches.isEnabled('ASK_R2_ENABLED')))
-      throw new AskExecutionRefused('ASK_R2_DISABLED');
-    if (!(await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED'))) {
+    draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
+    if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
+    draft.askPublicComputeEnabled = await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+    if (!draft.askPublicComputeEnabled) {
       throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
     }
     const who = askRequestContext.getStore();
     if (who === undefined) throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
 
     const provider = this.provider.id;
+    draft.providerId = provider;
     const permit = await this.breaker.permit(provider);
     if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
 
@@ -308,6 +369,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     let response: AnalysisApiResponse | null = null;
     let noEvidence = false;
     try {
+      /* One call to the approved path. Counted before it is made, so a call that throws
+         is still a call that happened — the number an operator needs is attempts. */
+      draft.providerCallCount = 1;
       response = await this.analysis.analyzeNews(
         request.question,
         request.language,
@@ -348,6 +412,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         noEvidence ? 'NO_EVIDENCE' : outcome,
       );
       await this.breaker.record(provider, outcome, permit.trial);
+      /* The breaker's OWN verdict, recorded where it is decided. A REFUSAL here is the
+         landed no-evidence answer, which is not a provider failure and must never be
+         counted as one. */
+      draft.breakerOutcome = noEvidence ? 'REFUSAL' : outcome;
     }
     if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {
       throw new AskExecutionRefused(`MODEL_${outcome}`);
@@ -361,12 +429,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         plan,
         route,
         operationId,
-        {
-          state: 'CLARIFICATION_REQUIRED',
-          basis: `LANDED_${landed.clarificationReason ?? 'CLARIFICATION'}`,
-          missingRoles: [],
-          candidates: [...(landed.clarificationCandidates ?? [])],
-        },
+        this.observeAnswer(
+          {
+            state: 'CLARIFICATION_REQUIRED',
+            basis: `LANDED_${landed.clarificationReason ?? 'CLARIFICATION'}`,
+            missingRoles: [],
+            candidates: [...(landed.clarificationCandidates ?? [])],
+          },
+          draft,
+        ),
         response,
         false,
       );
@@ -377,7 +448,78 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       producedAnswer: response.analysis !== null,
     });
     /* AI executed = the analysis path produced a model answer (the usage sink is metering only). */
-    return this.result(plan, route, operationId, answer, response, response.analysis !== null);
+    const aiExecuted = response.analysis !== null;
+    draft.aiExecuted = aiExecuted;
+    draft.modelInvocationCount = aiExecuted ? 1 : 0;
+    draft.reportingItemCount = response.articles.length;
+    draft.evidenceRolesObtained = response.articles.length > 0 ? ['REPORTING'] : [];
+    const measured = usage as { promptTokens: number; completionTokens: number } | null;
+    if (measured !== null) {
+      draft.promptTokens = measured.promptTokens;
+      draft.completionTokens = measured.completionTokens;
+    }
+    return this.result(
+      plan,
+      route,
+      operationId,
+      this.observeAnswer(answer, draft),
+      response,
+      aiExecuted,
+    );
+  }
+
+  /**
+   * The routing axes, copied out of the envelope and the plan — never derived again.
+   *
+   * WHAT IS DELIBERATELY NOT COPIED, AND WHY EACH ONE IS NOT:
+   *   `topic.readerTerms`      the reader's own words. Presence only.
+   *   `time.statedPeriod`      the reader's own phrase. Presence only.
+   *   `placeSpansOf(route)`    the reader's matched place text. Not read here at all.
+   *   `clarification.observed` / `.candidate`   may carry a publisher or a reader value.
+   *                            Only the CODE travels.
+   * A boolean and a code cannot be re-read as a question, which is the whole reason they
+   * are the shapes chosen.
+   */
+  private observeRoute(route: AskR2Route, draft: AskObservationDraft): void {
+    const envelope = route.envelope;
+    const plan = route.plan;
+    draft.questionClass = plan.questionClass;
+    draft.queryIntent = envelope.classifiers.queryIntent;
+    draft.terminalState = plan.terminalState;
+    draft.refusalCodes = [...plan.refusals];
+    draft.disclosureCodes = [...plan.disclosures];
+    draft.clarificationCodes = plan.clarification.map((cause) => cause.code);
+    draft.questionLanguage = envelope.language.questionLanguage;
+    draft.languageClassification = envelope.language.classification;
+    draft.normalizationStatus = route.outcome.status;
+    draft.geographyCodes = envelope.geography.candidates.map((candidate) => candidate.value);
+    draft.geographySources = [
+      ...new Set(envelope.geography.candidates.map((candidate) => candidate.source)),
+    ];
+    draft.geographyPrecision = envelope.geography.producibleCeiling;
+    draft.scopedBy = plan.scopedBy;
+    draft.domains = [...envelope.domains.domains];
+    draft.topicPresent = envelope.topic.readerTerms.length > 0;
+    draft.temporalRequirement = envelope.time.requirement;
+    draft.statedPeriodPresent = envelope.time.statedPeriod !== null;
+    draft.evidenceRolesRequested = requiredRolesOf(plan);
+    draft.identityState = envelope.identity.state;
+  }
+
+  /**
+   * The answer decision, recorded at the moment it is decided, and returned unchanged.
+   *
+   * It returns its argument so every call site reads `this.observeAnswer(decision, draft)`
+   * in the position the decision already occupied: there is no branch where a decision is
+   * produced and the observation is taken from somewhere else.
+   */
+  private observeAnswer<T extends AnswerDecision>(answer: T, draft: AskObservationDraft): T {
+    draft.answerState = answer.state;
+    draft.answerBasis = answer.basis;
+    draft.evidenceRolesMissing = [...answer.missingRoles];
+    draft.clarificationRequired = answer.state === 'CLARIFICATION_REQUIRED';
+    draft.capabilityUnavailable = answer.state === 'CAPABILITY_UNAVAILABLE';
+    return answer;
   }
 
   private result(
