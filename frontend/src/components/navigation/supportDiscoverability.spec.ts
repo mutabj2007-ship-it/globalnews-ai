@@ -27,8 +27,13 @@ describe('RC-1 — Support discoverability', () => {
     expect(accountControlSource).toMatch(/<Link\s+href="\/support"/);
   });
 
-  it('Support sits beside History in the account menu, not in some other surface', () => {
-    const historyAt = accountControlSource.indexOf('href="/history"');
+  it('Support sits beside the Ask history entry in the account menu, not in some other surface', () => {
+    /*
+      ASK RECENT + SAVED CONTINUITY R1 — the Ask-facing history entry is now
+      `/ask/recent`. Support still sits immediately after it and before Sign Out,
+      which is the adjacency this test exists to protect; only the locator moves.
+    */
+    const historyAt = accountControlSource.indexOf('href="/ask/recent"');
     const supportAt = accountControlSource.indexOf('href="/support"');
     expect(historyAt).toBeGreaterThan(-1);
     expect(supportAt).toBeGreaterThan(-1);

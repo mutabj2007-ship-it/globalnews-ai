@@ -309,7 +309,14 @@ describe('R4 header privacy — H/I: the popup is operable and cleans up after i
   it('I — native anchor/button semantics are kept; no partial ARIA menu model', () => {
     expect(code).not.toMatch(/role="menu"/);
     expect(code).not.toMatch(/role="menuitem"/);
-    expect(code).toMatch(/<Link href="\/history"/);
+    /*
+      ASK RECENT + SAVED CONTINUITY R1 — the Ask-facing history entry now targets
+      `/ask/recent`; legacy `/history` still exists and is untouched. The PROPERTY
+      this assertion protects is unchanged and is the reason it exists: the entry is
+      a <Link>, so navigation is the only thing it can do. The destination moves
+      with the product rather than the assertion being relaxed to "some Link".
+    */
+    expect(code).toMatch(/<Link href="\/ask\/recent"/);
     expect(code).toMatch(/<Link href="\/support"/);
     /*
       ACCOUNT DESTRUCTIVE-ACTION SAFETY: three real buttons became two. The
@@ -344,10 +351,15 @@ describe('R4 header privacy — J/K/L: nothing else about the header moved', () 
     expect(navBarSource).toMatch(/h-\[52px\] items-center gap-3/);
   });
 
-  it('K — the ordering is History, Support, Settings, Sign Out — the three kept entries hold their relative order and Sign Out is last', () => {
+  it('K — the ordering is Recent, Support, Settings, Sign Out — the three kept entries hold their relative order and Sign Out is last', () => {
     const code = codeOnly(accountControlSource);
+    /*
+      ASK RECENT + SAVED CONTINUITY R1 — the first entry's DESTINATION changed from
+      `/history` to `/ask/recent`; its POSITION did not. The ordering property is
+      what this test protects, so only the locator moves.
+    */
     const positions = [
-      code.indexOf('href="/history"'),
+      code.indexOf('href="/ask/recent"'),
       code.indexOf('href="/support"'),
       code.indexOf('href="/account/settings"'),
       code.indexOf('{signOutLabel}'),

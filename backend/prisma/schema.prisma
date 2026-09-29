@@ -120,6 +120,7 @@ model User {
   askThreads        AskThread[]
   storedAskResults  StoredResult[]
   computeOperations ComputeOperation[]
+  askBookmarks      AskBookmark[]
 
   identities UserIdentity[]
   sessions   Session[]
@@ -1538,8 +1539,37 @@ model AskTurn {
   operationId String           @unique
   operation   ComputeOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
   createdAt   DateTime         @default(now())
+  bookmarks   AskBookmark[]
 
   @@unique([threadId, sequence])
+}
+
+/// PUBLIC BETA ASK CONTINUITY R1 — a reader's bookmark on one of their own Ask turns.
+///
+/// A RELATIONSHIP, NEVER A COPY. The question lives on `AskTurn.question` and the
+/// answer is reached through that turn's `ComputeOperation` -> `StoredResult`.
+/// Duplicating either here would create a second copy of canonical Ask content
+/// that could drift from it, and would outlive `StoredResult.expiresAt` — a
+/// bookmark must not become a way to keep an expired artifact readable.
+///
+/// OWNERSHIP IS THE ROW'S OWN FACT (`userId`), not an inference from the turn, so
+/// a bookmark can be listed and deleted without first resolving the thread. The
+/// turn's own ownership is still verified on create, through `AskThread.userId`.
+///
+/// CASCADE: deleting the account removes the bookmark; so does deleting the turn.
+/// Neither leaves a row pointing at content that no longer exists.
+model AskBookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  turnId    String
+  turn      AskTurn  @relation(fields: [turnId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  /// One bookmark per reader per turn. The uniqueness is what makes "bookmark"
+  /// idempotent rather than a counter.
+  @@unique([userId, turnId])
+  @@index([userId, createdAt])
 }
 
 model StoredResult {

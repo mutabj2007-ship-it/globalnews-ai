@@ -624,7 +624,14 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       described further up is untouched, so this spec stays in the carried
       baseline set exactly as before.
     */
-    expect(pages).toHaveLength(51);
+    /*
+      ASK RECENT + SAVED CONTINUITY R1 — 51 -> 53. `/ask/recent` and `/saved` are
+      two new signed-in Ask continuity surfaces, both registered in `routes.ts` as
+      noindex and out of the sitemap. The count MOVES WITH THE TREE rather than the
+      assertion being relaxed, which is the convention this assertion already
+      states for itself.
+    */
+    expect(pages).toHaveLength(53);
     expect(pages).toContain('/conflict');
     expect(classify('/conflict').indexability).toBe('noindex');
     expect(pages).toContain('/ask');

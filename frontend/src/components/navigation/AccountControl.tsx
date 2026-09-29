@@ -263,7 +263,21 @@ export function AccountControl({
               {myIntelligenceTag}
             </span>
           </Link>
-          <Link href="/history" className="rounded px-2 py-1.5 text-left hover:bg-surface-hover">
+          {/*
+            ASK RECENT + SAVED CONTINUITY R1 — THE ASK-FACING HISTORY DESTINATION.
+            This entry pointed at legacy `/history`, which lists SEARCHES
+            (`SearchHistoryEntry`) and is not Ask Recent. A reader looking for the
+            Ask conversation they had yesterday was being sent to a different
+            product's record of a different thing.
+
+            `/history` IS NOT DELETED and is not proven unsafe to keep — it simply
+            stops being the primary Ask-history destination. Anything that still
+            needs it can still reach it; nothing here removes it.
+
+            Still a <Link>: navigation is the only thing it can do, which is the
+            safety property this menu was rebuilt around.
+          */}
+          <Link href="/ask/recent" className="rounded px-2 py-1.5 text-left hover:bg-surface-hover">
             {historyLabel}
           </Link>
           <Link href="/support" className="rounded px-2 py-1.5 text-left hover:bg-surface-hover">

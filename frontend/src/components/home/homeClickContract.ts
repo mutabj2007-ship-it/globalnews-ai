@@ -197,10 +197,18 @@ export const HOME_CLICK_CONTRACT: readonly HomeClickRow[] = [
   },
   {
     id: 'hdr.account.menu', label: 'Account menu (History, Support, Settings, Sign out)', breakpoints: ALL, element: 'button',
-    destination: '/history, /support, /account/settings, POST /api/auth/signout', behavior: 'toggle',
-    signedIn: 'menu; History entries re-open staged (R1), never auto-run', signedOut: 'not rendered', back: 'history-push',
+    destination: '/ask/recent, /support, /account/settings, POST /api/auth/signout', behavior: 'toggle',
+    signedIn: 'menu; Recent rows re-open an EXISTING result (0 AI/0 provider/0 Sand), never auto-run',
+    signedOut: 'not rendered', back: 'history-push',
     unavailable: '—', external: false, aiCost: 'none', network: 'sign out = 1 POST',
-    evidence: { file: 'components/navigation/AccountControl.tsx', contains: 'href="/history"' },
+    /*
+      ASK RECENT + SAVED CONTINUITY R1 — the pinned destination MOVES with the
+      product, and the reason is recorded rather than the assertion relaxed.
+      The Ask-facing entry now targets `/ask/recent`; legacy `/history` still
+      exists and is untouched, it is simply no longer this entry's destination.
+      The cost column is unchanged because it was already 'none' and still is.
+    */
+    evidence: { file: 'components/navigation/AccountControl.tsx', contains: 'href="/ask/recent"' },
   },
 
   /* ── HEADER (tablet/desktop) ──────────────────────────────────────────── */
