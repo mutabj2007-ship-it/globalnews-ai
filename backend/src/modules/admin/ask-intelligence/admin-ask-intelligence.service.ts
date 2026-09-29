@@ -20,7 +20,12 @@ import {
   OperationalSwitchService,
 } from '../../compute-controls/operational-switch.service';
 import { resolveComputeControlsConfig } from '../../compute-controls/compute-controls.config';
-import { GLOBAL_SCOPE, dayBucket, hourBucket } from '../../compute-controls/compute-scopes';
+import {
+  dayBucket,
+  GLOBAL_DAY_SCOPE,
+  GLOBAL_HOUR_SCOPE,
+  hourBucket,
+} from '../../compute-controls/compute-scopes';
 import {
   ADMIN_ASK_ALERT_IDS,
   ADMIN_ASK_ARRAY_SAMPLE_LIMIT,
@@ -495,10 +500,11 @@ export class AdminAskIntelligenceService {
       rateBudgetRejections,
     ] = await Promise.all([
       this.prisma.computeMeter.findMany({
-        where: { scope: GLOBAL_SCOPE, bucketStart: hourBucket(now) },
+        /* METER P1 — the hourly control's own key (never the legacy shared 'global'). */
+        where: { scope: GLOBAL_HOUR_SCOPE, bucketStart: hourBucket(now) },
       }),
       this.prisma.computeMeter.findMany({
-        where: { scope: GLOBAL_SCOPE, bucketStart: dayBucket(now) },
+        where: { scope: GLOBAL_DAY_SCOPE, bucketStart: dayBucket(now) },
       }),
       this.prisma.circuitBreakerState.findMany(),
       this.prisma.askObservation.aggregate({
