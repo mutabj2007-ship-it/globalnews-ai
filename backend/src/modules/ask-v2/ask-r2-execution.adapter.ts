@@ -26,6 +26,7 @@ import { readContinuationEllipsis } from '../analysis/anchor/continuation-ellips
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
 import { planChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
+import type { RoutingPlan, VerificationOutcome } from '../ask-router/frozen-c/src/ports';
 import {
   AskExecutionRefused,
   classifyCompute,
@@ -122,6 +123,45 @@ function routeFor(request: Readonly<AskRequest>, deps: PlannerDeps): AskR2Route 
  * against reporting instead: that would be the silent substitution frozen C forbids.
  */
 export const EXECUTOR_SUPPLIES: ReadonlySet<string> = new Set(['REPORTING']);
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ASK CURRENT REPORTING FINAL CLOSURE R1 (M1) — THIS EXECUTOR'S VERIFICATION VERDICT
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Frozen C carries a CURRENT_STATUS verification contract on every current-status plan and,
+ * by design, leaves the outcome to the executor ("a planner cannot know whether two
+ * independent fresh sources will agree — that is an execution-time fact"). deriveAnswerState
+ * (the ONE sufficiency derivation) reads that outcome from `obtained.verification`. This
+ * executor never supplied it, so the decision was an absent argument rather than a verdict.
+ *
+ * It now returns one of frozen C's own outcomes, and only one it can truthfully establish:
+ *
+ *   CURRENTLY_VERIFIED                      never — it requires current OFFICIAL evidence
+ *                                           from a bound official executor, and this
+ *                                           executor supplies REPORTING only (above). News
+ *                                           articles are never relabelled as OFFICIAL.
+ *   CURRENT_REPORTING_PARTIAL_VERIFICATION  never, YET — it requires "at least two
+ *                                           independent fresh reporting sources AGREE". The
+ *                                           Analysis response carries per-article publisher
+ *                                           and publishedAt facts, but every cross-source
+ *                                           "agreement" in it is model-written (the model
+ *                                           writes the point and chooses the cited ids; the
+ *                                           backend only checks the ids exist). There is no
+ *                                           deterministic, per-proposition agreement fact,
+ *                                           and a model's declaration is not backend
+ *                                           verification. This is the MISSING SEAM, reported
+ *                                           rather than invented.
+ *   INSUFFICIENT_EVIDENCE                   otherwise — frozen C's honest end of the ladder,
+ *                                           always admissible.
+ *
+ * A plan with no verification contract gets no verdict (undefined), so every other path
+ * (reporting, background, clarification) is derived exactly as before.
+ */
+export function executorVerificationOutcome(plan: RoutingPlan): VerificationOutcome | undefined {
+  if (plan.verification === null) return undefined;
+  return 'INSUFFICIENT_EVIDENCE';
+}
 
 interface AnswerDecision {
   readonly state: string;
@@ -470,9 +510,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       );
     }
     /* 7 · the §7 answer state — the one derivation. */
+    const verification = executorVerificationOutcome(route.plan);
     const answer = deriveAnswerState(route.plan, {
       items: { REPORTING: response.articles.length },
       producedAnswer: response.analysis !== null,
+      ...(verification === undefined ? {} : { verification }),
     });
     /* AI executed = the analysis path produced a model answer (the usage sink is metering only). */
     const aiExecuted = response.analysis !== null;
