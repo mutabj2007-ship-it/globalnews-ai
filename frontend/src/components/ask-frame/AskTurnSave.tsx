@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { askV2Api, type AskV2Operation } from '@/lib/api/askV2Api';
+import { askR2PayloadOf, askV2Api, type AskV2Operation } from '@/lib/api/askV2Api';
 import { askContinuityStrings } from '@/lib/ask/askContinuityStrings';
 import type { AskR2Locale } from '@/lib/ask/askR2Strings';
 
@@ -15,6 +15,19 @@ import type { AskR2Locale } from '@/lib/ask/askR2Strings';
  * ignored. The state shown is the server's answer, never an optimistic guess. Zero AI, zero
  * provider, zero Sand, no new turn: nothing here reaches the execution path.
  */
+/**
+ * ALPHA VISUAL ACCEPTANCE REPAIR (M4) — only a PRODUCED answer is worth bookmarking. A
+ * clarification or broadening prompt, an insufficient-evidence result and a typed refusal are
+ * stored turns too, but they answer nothing, so they carry no Save / Saved. A turn saved
+ * before this rule can still be removed from Saved.
+ */
+export const ASK_SAVABLE_ANSWER_STATES: ReadonlySet<string> = new Set([
+  'CURRENTLY_VERIFIED',
+  'CURRENT_REPORTING',
+  'PARTIAL',
+  'REFERENCE_BACKGROUND',
+]);
+
 export function AskTurnSave({
   operation,
   locale,
@@ -27,8 +40,13 @@ export function AskTurnSave({
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
   const turnId = operation?.turnId ?? null;
+  const state = askR2PayloadOf(operation)?.answer.state;
   const eligible =
-    turnId !== null && operation?.status === 'COMPLETED' && operation.result !== null;
+    turnId !== null &&
+    operation?.status === 'COMPLETED' &&
+    operation.result !== null &&
+    state !== undefined &&
+    ASK_SAVABLE_ANSWER_STATES.has(state);
   if (!eligible) return null;
 
   async function toggle(): Promise<void> {
