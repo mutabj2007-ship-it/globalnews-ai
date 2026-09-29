@@ -71,20 +71,30 @@ export function deterministicGovernedSelection(
 export type GovernedRecordBasis =
   /** At least one substantive contributor returned its governed record. */
   | 'GOVERNED_RECORD'
-  /** Consulted; no governed record exists for the scope (stated as such, never filled). */
+  /** Every substantive contributor was consulted and holds no record for the scope (Gasabo). */
   | 'GOVERNED_NO_RECORD'
-  /** The read itself failed/timed out: nothing is claimed either way. */
-  | 'GOVERNED_READ_DEGRADED';
+  /**
+   * GOVERNED RETAINED GAP REPAIR R1 — the governed record could not be safely produced or read
+   * (NO_DATA, DEGRADED, REFUSED …). A system-side read/admission gap, never "no record exists".
+   */
+  | 'GOVERNED_RECORD_UNAVAILABLE';
 
+/**
+ * GOVERNED RETAINED GAP REPAIR R1 — the CTO's exact precedence:
+ *   1. any substantive contributor USED with observations      → GOVERNED_RECORD
+ *   2. else every substantive contributor a genuine NO_MATCH     → GOVERNED_NO_RECORD
+ *   3. else (NO_DATA / DEGRADED / REFUSED / anything unreadable)  → GOVERNED_RECORD_UNAVAILABLE
+ * Rule 3 is the default so that no future status can fall through into "no record exists".
+ */
 export function governedRecordBasis(set: AskContributionSet): GovernedRecordBasis {
   const substantive = set.contributions.filter((c) => c.contributorId !== 'GEOGRAPHY');
   if (substantive.some((c) => c.status === 'USED' && c.observations.length > 0)) {
     return 'GOVERNED_RECORD';
   }
-  if (substantive.length > 0 && substantive.every((c) => c.status === 'DEGRADED')) {
-    return 'GOVERNED_READ_DEGRADED';
+  if (substantive.length > 0 && substantive.every((c) => c.status === 'NO_MATCH')) {
+    return 'GOVERNED_NO_RECORD';
   }
-  return 'GOVERNED_NO_RECORD';
+  return 'GOVERNED_RECORD_UNAVAILABLE';
 }
 
 /** Closed EN + PL terms by which a reader asks for the OFFICIAL figure itself. */

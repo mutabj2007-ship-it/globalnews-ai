@@ -166,6 +166,35 @@ export function withoutTerms(question: string, terms: readonly string[]): string
   return out.length > 0 && out !== question.trim() ? out : null;
 }
 
+/** GOVERNED RETAINED GAP REPAIR R1 — the governed place a USED geography contribution resolved. */
+function governedPlaceLabel(payload: AskR2Payload): string | null {
+  const geo = payload.intelligence?.contributions.find(
+    (c) => c.contributorId === 'GEOGRAPHY' && c.status === 'USED',
+  );
+  const first = geo?.observations[0];
+  if (first?.label == null || first.label === '') return null;
+  return first.kind === 'NISR_DISTRICT' ? `${first.label} (NISR)` : first.label;
+}
+
+/**
+ * GOVERNED RETAINED GAP REPAIR R1 — the reader's sentence for a governed record that cannot be
+ * shown, chosen by the contribution's disclosure (never by the internal reason code).
+ */
+function governedGapText(payload: AskR2Payload, s: AskR2Strings): string {
+  const gaps = (payload.intelligence?.contributions ?? []).filter(
+    (c) => c.contributorId !== 'GEOGRAPHY' && c.status !== 'USED' && c.status !== 'NO_MATCH',
+  );
+  for (const c of gaps) {
+    if (c.disclosures.includes('RETAINED_ARTIFACT_NOT_DISPLAYABLE')) {
+      return s.governedGap.notDisplayable[c.contributorId] ?? s.governedGap.notDisplayable.default;
+    }
+    if (c.disclosures.includes('NO_RETAINED_CAPTURE')) {
+      return s.governedGap.noCapture[c.contributorId] ?? s.governedGap.noCapture.default;
+    }
+  }
+  return s.governedGap.unreadable;
+}
+
 export function askR2View(
   payload: AskR2Payload,
   s: AskR2Strings,
@@ -195,7 +224,9 @@ export function askR2View(
     ? personalCopy.notAvailable
     : basis === 'PLAN_IDENTITY_REQUIRED'
       ? personalCopy.signIn
-      : (s.unavailableBecause[basis] ?? s.unavailable);
+      : basis === 'GOVERNED_RECORD_UNAVAILABLE'
+        ? governedGapText(payload, s)
+        : (s.unavailableBecause[basis] ?? s.unavailable);
   const byExecutor = basis.startsWith('LANDED_');
 
   let freshness: string;
@@ -229,14 +260,23 @@ export function askR2View(
           })),
         )
       : [];
+  /* GOVERNED RETAINED GAP REPAIR R1 (G4) — when the router applied no geography but the
+     governed geography contribution resolved a place (Gasabo), that place IS the visible scope.
+     Display only: router semantics are unchanged. */
+  const place = governedPlaceLabel(payload);
+  if (place !== null && !items.some((i) => i.kind === 'GEOGRAPHY')) {
+    items.push({ kind: 'GEOGRAPHY', label: place, kept: false });
+  }
   const note =
-    c.kind === 'NONE'
+    c.kind === 'NONE' && place === null
       ? s.noScope
-      : c.kind === 'PENDING'
-        ? s.scopePending
-        : items.some((i) => i.kept)
-          ? s.keptAsAsked
-          : null;
+      : c.kind === 'NONE'
+        ? null
+        : c.kind === 'PENDING'
+          ? s.scopePending
+          : items.some((i) => i.kept)
+            ? s.keptAsAsked
+            : null;
 
   /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — every clarification asks something. */
   const candidates =
