@@ -178,7 +178,12 @@ live('P1 — global hour/day meter identities never collide (live PostgreSQL)', 
       expect(await units(GLOBAL_DAY_SCOPE, dayBucket(now))).toBe(0);
       expect(await units(providerScope('openai'), hourBucket(now))).toBe(0);
       expect(await units(accountScope(ACCOUNT), dayBucket(now))).toBe(0);
-      expect(await db.computeReservation.count()).toBe(0);
+      /* this spec's reservations only (2033 expiry): another live suite may hold its own */
+      expect(
+        await db.computeReservation.count({
+          where: { expiresAt: { gte: YEAR_START, lt: YEAR_END } },
+        }),
+      ).toBe(0);
     },
   );
 
