@@ -92,6 +92,44 @@ export interface AskR2Payload {
     readonly asOf: string | null;
     readonly fact: { readonly family: string; readonly value: string | number } | null;
   } | null;
+  /**
+   * ASK INTELLIGENCE BINDING R1 — the governed structured contributions considered for this
+   * answer (read-only retained stores; zero AI). Absent on older payloads, null when none
+   * applied.
+   */
+  readonly intelligence?: {
+    readonly considered: readonly string[];
+    readonly contributions: readonly AskContribution[];
+  } | null;
+}
+
+/** ASK INTELLIGENCE BINDING R1 — one governed observation, with its provenance. */
+export interface AskContributionObservation {
+  readonly reference: string;
+  readonly kind: string;
+  readonly label: string | null;
+  readonly value: string | null;
+  readonly unit: string | null;
+  readonly period: string;
+  readonly geography: string;
+  readonly source: {
+    readonly name: string;
+    readonly url: string | null;
+    readonly licence: string | null;
+  };
+  readonly retainedAt: string | null;
+}
+
+export interface AskContribution {
+  readonly contributorId: string;
+  readonly domain: string;
+  readonly status: 'USED' | 'NO_MATCH' | 'NO_DATA' | 'NOT_ASSESSED' | 'DEGRADED' | 'REFUSED';
+  readonly applicability: 'REQUIRED' | 'SUPPLEMENTARY' | 'CONTEXT';
+  readonly observations: readonly AskContributionObservation[];
+  readonly temporalBasis: string;
+  readonly geographyBasis: string | null;
+  readonly disclosures: readonly string[];
+  readonly degradationReason: string | null;
 }
 
 export interface AskV2Operation {

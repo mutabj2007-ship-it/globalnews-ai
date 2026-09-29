@@ -2,6 +2,7 @@
 
 import type { StoryContext } from '@globalnews-ai/shared';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
+import { AskIntelligenceBasis } from './AskIntelligenceBasis';
 import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
 import { askR2View, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
@@ -281,6 +282,13 @@ export function AskR2TurnView({
           )}
         </section>
       )}
+
+      {/* ASK INTELLIGENCE BINDING R1 — the governed structured basis of this one answer. */}
+      <AskIntelligenceBasis
+        payload={payload}
+        locale={locale}
+        reportingSourceCount={view.sourceCount}
+      />
 
       {((view.handoffs.openFull && !displayOnly) ||
         (view.handoffs.runDeeper && onRunDeeper !== undefined)) &&

@@ -1,0 +1,87 @@
+import { safeExternalHref } from '@globalnews-ai/shared';
+import type { AskR2Payload } from '@/lib/api/askV2Api';
+import type { AskR2Locale } from '@/lib/ask/askR2Strings';
+import { askIntelligenceStrings, askIntelligenceView } from '@/lib/ask/askIntelligenceView';
+
+/**
+ * ASK INTELLIGENCE BINDING R1 — the governed structured part of ONE Ask answer, inside the
+ * existing turn: a "Based on" line, compact provenance rows per contributor actually used, a
+ * place-context line and honest notes. Not a dashboard card, no Map, no module links.
+ */
+export function AskIntelligenceBasis({
+  payload,
+  locale,
+  reportingSourceCount,
+}: {
+  readonly payload: AskR2Payload;
+  readonly locale: AskR2Locale;
+  readonly reportingSourceCount: number;
+}): JSX.Element | null {
+  const view = askIntelligenceView(payload, locale, reportingSourceCount);
+  if (view === null) return null;
+  const s = askIntelligenceStrings(locale);
+  return (
+    <section data-ask="intelligence" className="mt-4 flex flex-col gap-3">
+      {view.basedOn !== null && (
+        <p data-ask="based-on" className="font-mono text-[12px] leading-[1.5] text-[#8fa6c0]">
+          {`${s.basedOn}: ${view.basedOn.join(' · ')}`}
+        </p>
+      )}
+      {view.place !== null && (
+        <p data-ask="place-context" className="font-mono text-[12px] text-[#8fa6c0]">
+          {`${s.placeContext}: ${view.place}`}
+        </p>
+      )}
+      {view.sections.map((section) => (
+        <div
+          key={section.contributorId}
+          data-ask="intelligence-section"
+          data-contributor={section.contributorId}
+          className="flex flex-col gap-1.5 rounded-[10px] border border-[#1d4a73] px-3.5 py-3"
+        >
+          <p className="text-[14px] font-semibold text-[#e6eef6]">{section.title}</p>
+          {section.note !== null && (
+            <p className="font-mono text-[11px] text-[#8fa6c0]">{section.note}</p>
+          )}
+          <ul className="flex flex-col gap-1">
+            {section.rows.map((row) => (
+              <li
+                key={row.reference}
+                data-ask="intelligence-row"
+                className="text-[13.5px] leading-[1.45] text-[#cfe2f2]"
+              >
+                <span className="font-mono text-[12px] text-[#8299b4]">{row.period}</span>
+                {' · '}
+                {row.label}
+                {row.value !== null && <strong className="ms-1">{row.value}</strong>}
+                {' · '}
+                {safeExternalHref(row.sourceUrl) !== undefined ? (
+                  <a
+                    href={safeExternalHref(row.sourceUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline decoration-[#1d4a73] underline-offset-4"
+                  >
+                    {row.sourceName}
+                  </a>
+                ) : (
+                  <span>{row.sourceName}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          {section.caveats.map((caveat) => (
+            <p key={caveat} className="font-mono text-[11px] text-[#8fa6c0]">
+              {caveat}
+            </p>
+          ))}
+        </div>
+      ))}
+      {view.notes.map((note) => (
+        <p key={note} data-ask="intelligence-note" className="text-[13px] text-[#8fa6c0]">
+          {note}
+        </p>
+      ))}
+    </section>
+  );
+}

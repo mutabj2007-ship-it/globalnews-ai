@@ -26,6 +26,11 @@ export interface AskContinuityStrings {
   readonly filterLabel: string;
   readonly filterPlaceholder: string;
   readonly noQuestionStored: string;
+  /**
+   * ASK INTELLIGENCE BINDING R1 (§11C) — the operation lifecycle state, localized. An unknown
+   * state is shown as the server sent it rather than guessed.
+   */
+  readonly operationStates: Readonly<Record<string, string>>;
   /** ALPHA VISUAL ACCEPTANCE REPAIR R1 (D) — a multi-turn row's origin, beneath the question Open shows. */
   readonly startedWith: string;
   readonly save: string;
@@ -54,6 +59,15 @@ const EN: AskContinuityStrings = {
   filterLabel: 'Filter',
   filterPlaceholder: 'Filter by question',
   noQuestionStored: 'No question is stored for this conversation.',
+  operationStates: {
+    QUOTED: 'QUOTED',
+    ACCEPTED: 'ACCEPTED',
+    RESERVED: 'RESERVED',
+    RUNNING: 'RUNNING',
+    COMPLETED: 'COMPLETED',
+    RELEASED: 'RELEASED',
+    REFUNDED: 'REFUNDED',
+  },
   startedWith: 'Started with:',
   save: 'Save',
   unsave: 'Remove',
@@ -90,6 +104,15 @@ const PL: AskContinuityStrings = {
   filterLabel: 'Filtruj',
   filterPlaceholder: 'Filtruj według pytania',
   noQuestionStored: 'Dla tej rozmowy nie zapisano pytania.',
+  operationStates: {
+    QUOTED: 'WYCENIONO',
+    ACCEPTED: 'ZAAKCEPTOWANO',
+    RESERVED: 'ZAREZERWOWANO',
+    RUNNING: 'W TOKU',
+    COMPLETED: 'UKOŃCZONO',
+    RELEASED: 'ZWOLNIONO',
+    REFUNDED: 'ZWRÓCONO',
+  },
   startedWith: 'Rozpoczęto od:',
   save: 'Zapisz',
   unsave: 'Usuń',

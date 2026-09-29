@@ -134,7 +134,9 @@ export function SavedClient({ locale }: { readonly locale: AskLocale }): JSX.Ele
                       {row.state === null ? null : (
                         <>
                           <span aria-hidden="true">{'·'}</span>
-                          <span data-saved="state">{row.state}</span>
+                          <span data-saved="state">
+                            {t.operationStates[row.state] ?? row.state}
+                          </span>
                         </>
                       )}
                     </p>

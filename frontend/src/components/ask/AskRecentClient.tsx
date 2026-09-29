@@ -165,7 +165,9 @@ export function AskRecentClient({ locale }: { readonly locale: AskLocale }): JSX
                               {row.latestState === null ? null : (
                                 <>
                                   <span aria-hidden="true">{'·'}</span>
-                                  <span data-ask-recent="state">{row.latestState}</span>
+                                  <span data-ask-recent="state">
+                                    {t.operationStates[row.latestState] ?? row.latestState}
+                                  </span>
                                 </>
                               )}
                             </p>
