@@ -267,6 +267,8 @@ const COUNTRY_ALIASES: Record<string, string> = {
   'great britain': 'GBR',
   'united kingdom': 'GBR',
   'dr congo': 'COD',
+  /* ASK INTELLIGENCE BINDING R1 — the standard abbreviation readers type ("eastern DRC"). */
+  drc: 'COD',
   'congo kinshasa': 'COD',
   'democratic republic of the congo': 'COD',
   /*
