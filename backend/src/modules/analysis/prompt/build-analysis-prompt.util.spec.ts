@@ -995,3 +995,60 @@ describe('PR #40 R2 F2 — full buildAnalysisMessages() timestamp basis', () => 
     expect(live.user).toContain(`\u2014 Outlet obs (${OBS})`);
   });
 });
+
+describe('ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — governed records bind the one prompt', () => {
+  const art = [
+    {
+      id: 'a1',
+      title: 'Clashes reported near Beni',
+      summary: 'Fighting was reported in North Kivu.',
+      url: 'https://example.org/a1',
+      source: { name: 'Example' },
+      publishedAt: '2026-09-29T10:00:00Z',
+    },
+  ] as unknown as NewsArticle[];
+  const governed =
+    'GOVERNED RETAINED RECORDS FOR THIS QUESTION (x)\nRULES FOR THESE RECORDS:\n- rule';
+
+  it('absent (or empty) → the system prompt is byte-identical to the pre-repair prompt', () => {
+    const before = buildAnalysisMessages('q', art, 1200).system;
+    const params = [
+      undefined,
+      'en',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ] as const;
+    expect(buildAnalysisMessages('q', art, 1200, ...params, undefined).system).toBe(before);
+    expect(buildAnalysisMessages('q', art, 1200, ...params, '').system).toBe(before);
+  });
+
+  it('present → appended to the system prompt, after every grounding rule; the user prompt is unchanged', () => {
+    const params = [
+      undefined,
+      'en',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ] as const;
+    const withGoverned = buildAnalysisMessages('q', art, 1200, ...params, governed);
+    const plain = buildAnalysisMessages('q', art, 1200);
+    expect(withGoverned.system).toContain(governed);
+    expect(withGoverned.system.indexOf('Use only the supplied articles.')).toBeLessThan(
+      withGoverned.system.indexOf(governed),
+    );
+    expect(withGoverned.user).toBe(plain.user);
+  });
+});

@@ -103,6 +103,7 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
     maxModelAttempts,
     signal,
     usageSink,
+    governedContext,
   }: GeneralBackgroundInput): Promise<GeneralBackgroundOutput> {
     const config = this.analysisConfig.get();
 
@@ -114,7 +115,15 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
       );
     }
 
-    const system = SYSTEM_PROMPT + buildResponseLanguageInstruction(responseLanguage);
+    const system =
+      SYSTEM_PROMPT +
+      buildResponseLanguageInstruction(responseLanguage) +
+      (governedContext === undefined || governedContext === ''
+        ? ''
+        : `
+
+${governedContext}
+`);
     const policyAttempts = config.retryAttempts + 1;
     const maxAttempts =
       maxModelAttempts !== undefined && Number.isInteger(maxModelAttempts) && maxModelAttempts >= 1

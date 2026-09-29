@@ -32,8 +32,15 @@ const planFor = (
     capabilities === undefined ? deps : ({ ...deps, capabilities } as never),
   ).plan;
 
-describe('§7 — the seven answer states', () => {
-  it('exactly the seven the contract names', () => {
+describe('§7 — the answer states', () => {
+  /*
+    INTENTIONALLY SUPERSEDED — ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1: the seven §7
+    states plus ONE additive state, RETAINED_RECORD (a governed retained record, or its stated
+    absence, answered with zero model calls). The seven keep their order and meaning; the §7
+    derivation (`deriveAnswerState`) never produces RETAINED_RECORD — only the adapter's
+    deterministic governed-record executor does.
+  */
+  it('exactly the seven the contract names, plus the additive RETAINED_RECORD', () => {
     expect([...ASK_ANSWER_STATES]).toEqual([
       'REFERENCE_BACKGROUND',
       'CURRENTLY_VERIFIED',
@@ -42,6 +49,7 @@ describe('§7 — the seven answer states', () => {
       'INSUFFICIENT',
       'CLARIFICATION_REQUIRED',
       'CAPABILITY_UNAVAILABLE',
+      'RETAINED_RECORD',
     ]);
   });
 });

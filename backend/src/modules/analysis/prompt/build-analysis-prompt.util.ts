@@ -679,6 +679,7 @@ export function buildAnalysisMessages(
   eventEvidenceRelations?: readonly EventEvidenceRelation[],
   conversationSubject?: ConversationSubjectAnchor,
   selection?: SelectionPromptContext,
+  governedContext?: string,
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
@@ -689,6 +690,14 @@ export function buildAnalysisMessages(
       buildEventAnchorInstruction(eventAnchor) +
       buildConversationSubjectInstruction(conversationSubject) +
       buildSelectionInstruction(selection) +
+      /* ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — governed retained records and the
+         rules that bind their use; empty on every other call (prompt byte-identical). */
+      (governedContext === undefined || governedContext === ''
+        ? ''
+        : `
+
+${governedContext}
+`) +
       buildRelationalPromptSection(relationalContext) +
       buildResponseLanguageInstruction(responseLanguage) +
       /*

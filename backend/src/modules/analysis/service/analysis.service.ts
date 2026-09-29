@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   normalizeQuery,
@@ -185,6 +186,13 @@ import type { AnalysisProviderInput } from '../interfaces';
 export interface AnalysisExecutionPolicy {
   readonly maxModelAttempts?: number;
   readonly usageSink?: AnalysisProviderInput['usageSink'];
+  /**
+   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — the governed retained records that
+   * must constrain THIS answer (rendered by the Ask coordinator). It changes the answer, so it
+   * is part of the cache and in-flight key: a governed answer is never served to, or from, a
+   * plain one.
+   */
+  readonly governedContext?: string;
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import {
@@ -654,7 +662,11 @@ export class AnalysisService {
       readCapabilityRequests(rawQuery, requestedLanguage).source.personalRequested
         ? `:identity:${callerIdentity?.verified === true ? 'verified' : 'none'}`
         : '';
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}`;
+    const governedKeySegment =
+      executionPolicy?.governedContext === undefined || executionPolicy.governedContext === ''
+        ? ''
+        : `:governed:${createHash('sha256').update(executionPolicy.governedContext).digest('hex').slice(0, 16)}`;
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -3080,6 +3092,10 @@ export class AnalysisService {
             ...(executionPolicy?.usageSink === undefined
               ? {}
               : { usageSink: executionPolicy.usageSink }),
+            ...(executionPolicy?.governedContext === undefined ||
+            executionPolicy.governedContext === ''
+              ? {}
+              : { governedContext: executionPolicy.governedContext }),
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;

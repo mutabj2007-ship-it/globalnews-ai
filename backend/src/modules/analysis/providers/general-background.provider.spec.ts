@@ -151,3 +151,27 @@ describe('provider selection', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe('ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — governed records bind the one background call', () => {
+  it('present → appended to the system prompt of the ONE call; absent → the system prompt is unchanged', async () => {
+    fetchMock.mockResolvedValue(ok('Background.'));
+    const p = new OpenAiGeneralBackgroundProvider(config());
+    await p.answerBackground({
+      question: 'What is NATO?',
+      responseLanguage: 'en',
+      maxModelAttempts: 1,
+    });
+    await p.answerBackground({
+      question: 'What is NATO?',
+      responseLanguage: 'en',
+      maxModelAttempts: 1,
+      governedContext: 'GOVERNED RETAINED RECORDS FOR THIS QUESTION (x)',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const plain = JSON.parse(fetchMock.mock.calls[0][1].body).messages[0].content as string;
+    const governed = JSON.parse(fetchMock.mock.calls[1][1].body).messages[0].content as string;
+    expect(governed.startsWith(plain)).toBe(true);
+    expect(governed).toContain('GOVERNED RETAINED RECORDS FOR THIS QUESTION (x)');
+    expect(plain).not.toContain('GOVERNED RETAINED RECORDS');
+  });
+});

@@ -31,6 +31,11 @@ export interface GeneralBackgroundInput {
   readonly maxModelAttempts?: number;
   readonly signal?: AbortSignal;
   readonly usageSink?: (usage: { promptTokens: number; completionTokens: number }) => void;
+  /**
+   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — governed retained records and the rules
+   * that bind their use, appended to the system prompt. Absent → the prompt is byte-identical.
+   */
+  readonly governedContext?: string;
 }
 
 export interface GeneralBackgroundOutput {

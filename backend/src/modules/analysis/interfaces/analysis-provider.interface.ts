@@ -146,6 +146,13 @@ export interface AnalysisProviderInput {
   selection?: SelectionPromptContext;
 
   /**
+   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — the governed retained records and
+   * their binding disclosures for THIS answer, pre-rendered by the Ask coordinator. Appended to
+   * the system prompt; absent on every other call, which keeps those prompts byte-identical.
+   */
+  governedContext?: string;
+
+  /**
    * Optional caller cancellation. AnalysisService uses this only for the
    * authoritative response deadline: when the reader can no longer receive a
    * result, an in-flight model request must not keep spending tokens merely to
