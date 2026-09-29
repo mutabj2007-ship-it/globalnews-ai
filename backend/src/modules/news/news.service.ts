@@ -32,6 +32,11 @@ import {
   scoreGenericRelevance,
   scoreRelationalRelevance,
 } from './relevance/generic-relevance.util';
+import {
+  governedInstitution,
+  scoreInstitutionalStatusRelevance,
+  type GovernedInstitutionId,
+} from './relevance/governed-institutions';
 import { collapseCrossProviderDuplicates } from './cross-provider-dedup.util';
 import { collapseDuplicateStories } from './identity/article-identity.util';
 import { resolveProviderFailureKind, type ProviderFailureKind } from './providers/gnews.provider';
@@ -125,7 +130,14 @@ interface HomeNewsCacheEntry {
  *   causality. See scoreRelationalRelevance's own doc comment.
  */
 export type RelevanceMode =
-  { type: 'none' } | { type: 'generic' } | { type: 'relational'; x: string; y: string };
+  | { type: 'none' }
+  | { type: 'generic' }
+  | { type: 'relational'; x: string; y: string }
+  /*
+    ASK CURRENT REPORTING FINAL CLOSURE R1 (M2) — an institutional current-status question
+    (governed-institutions.ts). Opt-in by exactly one caller; every other mode is unchanged.
+  */
+  | { type: 'institutional'; institutionId: GovernedInstitutionId; subjectId: 'POLICY_RATE' };
 
 /**
  * The subset of RelevanceMode that actually triggers filtering —
@@ -2072,6 +2084,14 @@ export class NewsService {
   ): { isRelevant: boolean } {
     if (relevanceMode.type === 'generic') {
       return scoreGenericRelevance(article, query);
+    }
+
+    if (relevanceMode.type === 'institutional') {
+      const institution = governedInstitution(relevanceMode.institutionId);
+      const subject = institution.subjects.find((s) => s.id === relevanceMode.subjectId);
+      return subject === undefined
+        ? { isRelevant: false }
+        : scoreInstitutionalStatusRelevance(article, institution, subject);
     }
 
     return scoreRelationalRelevance(article, relevanceMode.x, relevanceMode.y);
