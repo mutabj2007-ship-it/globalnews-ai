@@ -180,6 +180,17 @@ export interface AskObservationInput {
   readonly evidenceRolesObtained: readonly string[];
   readonly evidenceRolesMissing: readonly string[];
   readonly reportingItemCount: number | null;
+  /*
+    INTELLIGENCE BINDING R1 — how Ask used governed contributors. Governed contributor IDS
+    (e.g. CONFLICT, ECONOMY_CPI) and one count — never content, never a question, never an
+    account. Considered = selected for this route; used = returned governed observations;
+    degraded = relevant but NOT_ASSESSED / failed / refused. The count is governed observations
+    used (geography context excluded). Null count = execution never reached the reads.
+  */
+  readonly contributorsConsidered: readonly string[];
+  readonly contributorsUsed: readonly string[];
+  readonly contributorsDegraded: readonly string[];
+  readonly contributorItemCount: number | null;
 
   readonly computeClass: string;
   readonly providerId: string | null;
@@ -243,6 +254,10 @@ export function newAskObservationDraft(
     evidenceRolesObtained: [],
     evidenceRolesMissing: [],
     reportingItemCount: null,
+    contributorsConsidered: [],
+    contributorsUsed: [],
+    contributorsDegraded: [],
+    contributorItemCount: null,
     computeClass: 'UNKNOWN',
     providerId: null,
     providerCallCount: 0,

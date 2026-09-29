@@ -69,7 +69,7 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
 
     it('AskObservation exists with every declared column', async () => {
       const columns = await columnsOf('AskObservation');
-      expect(columns.size).toBe(49);
+      expect(columns.size).toBe(53);
 
       /* The three that carry the privacy contract's shape. */
       expect(columns.get('operationId')?.is_nullable).toBe('NO');
@@ -77,7 +77,13 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
       expect(columns.get('statedPeriodPresent')?.data_type).toBe('boolean');
 
       /* Nullable BY DESIGN: an absent measurement must be storable as absent. */
-      ['promptTokens', 'completionTokens', 'latencyMs', 'reportingItemCount'].forEach((name) => {
+      [
+        'promptTokens',
+        'completionTokens',
+        'latencyMs',
+        'reportingItemCount',
+        'contributorItemCount',
+      ].forEach((name) => {
         expect({ name, nullable: columns.get(name)?.is_nullable }).toEqual({
           name,
           nullable: 'YES',
@@ -93,7 +99,15 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
       });
 
       /* The list-valued columns really are arrays, not delimited strings. */
-      ['refusalCodes', 'domains', 'geographyCodes', 'evidenceRolesRequested'].forEach((name) => {
+      [
+        'refusalCodes',
+        'domains',
+        'geographyCodes',
+        'evidenceRolesRequested',
+        'contributorsConsidered',
+        'contributorsUsed',
+        'contributorsDegraded',
+      ].forEach((name) => {
         expect({ name, type: columns.get(name)?.data_type }).toEqual({ name, type: 'ARRAY' });
       });
     });

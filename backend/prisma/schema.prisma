@@ -1863,6 +1863,12 @@ model AskObservation {
   evidenceRolesMissing   String[]
   /// Admitted reporting items. Null when execution never reached retrieval.
   reportingItemCount     Int?
+  /// INTELLIGENCE BINDING R1 — governed contributor ids considered / used / degraded, and
+  /// the governed observations used. Ids and a count only — never content.
+  contributorsConsidered String[] @default([])
+  contributorsUsed       String[] @default([])
+  contributorsDegraded   String[] @default([])
+  contributorItemCount   Int?
 
   computeClass         String
   providerId           String?

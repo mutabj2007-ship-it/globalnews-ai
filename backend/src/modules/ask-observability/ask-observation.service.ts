@@ -96,6 +96,10 @@ export class AskObservationService {
             evidenceRolesObtained: [...input.evidenceRolesObtained],
             evidenceRolesMissing: [...input.evidenceRolesMissing],
             reportingItemCount: input.reportingItemCount,
+            contributorsConsidered: [...input.contributorsConsidered],
+            contributorsUsed: [...input.contributorsUsed],
+            contributorsDegraded: [...input.contributorsDegraded],
+            contributorItemCount: input.contributorItemCount,
 
             computeClass: input.computeClass,
             providerId: input.providerId,
