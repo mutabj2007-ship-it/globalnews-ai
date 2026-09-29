@@ -317,12 +317,16 @@ export function LanguageSelector({
     whole assembly above page content. The result is what the design asks for;
     the mechanism is one layer down from what §11 describes.
   */
-  const anchoredToSelf = isMobile && anchor === 'self';
-  const popupClass = anchoredToSelf
-    ? 'absolute left-0 top-[calc(100%+8px)] z-[60] box-border w-[176px] rounded-cd-12 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup-m'
-    : isMobile
+  const popupClass = isMobile
     ? 'absolute right-[12px] top-[calc(100%+8px)] z-[60] box-border w-[176px] rounded-cd-12 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup-m'
     : 'absolute right-0 top-[calc(100%+8px)] z-[60] box-border w-[168px] rounded-cd-10 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup';
+  /*
+    ALPHA VISUAL ACCEPTANCE REPAIR R1 — anchor 'self': the SAME mobile popup (same tokens,
+    width, radius, offset, z), positioned from this control's own left edge instead of the
+    header row's right inset. Derived, not duplicated, so the released geometry stays one string.
+  */
+  const anchoredToSelf = isMobile && anchor === 'self';
+  const shownPopupClass = anchoredToSelf ? popupClass.replace('right-[12px]', 'left-0') : popupClass;
 
   /*
     §4 — ROW GEOMETRY. 40px desktop / 44px mobile (the touch floor), 0 11px
@@ -341,10 +345,7 @@ export function LanguageSelector({
       and the popup is not portalled, which is what makes the single contains()
       test above correct.
     */
-    <div
-      ref={wrapperRef}
-      className={isMobile && !anchoredToSelf ? 'flex-none' : 'relative flex-none'}
-    >
+    <div ref={wrapperRef} className={isMobile && !anchoredToSelf ? 'flex-none' : 'relative flex-none'}>
       <button
         ref={triggerRef}
         type="button"
@@ -406,7 +407,7 @@ export function LanguageSelector({
       </button>
 
       {isOpen && (
-        <div id={listboxId} role="listbox" aria-label={actionLabel} className={popupClass}>
+        <div id={listboxId} role="listbox" aria-label={actionLabel} className={shownPopupClass}>
           {ACTIVE_LANGUAGES.map((code) => {
             const isSelected = code === value;
             const isActive = code === activeCode;

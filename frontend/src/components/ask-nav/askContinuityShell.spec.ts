@@ -39,7 +39,8 @@ describe('Recent and Saved use the standalone Ask navigation, never the platform
     expect(body).toContain("from '@/components/ask-nav/AskNavShell'");
     expect(body).toMatch(
       new RegExp(
-        String.raw`<AskNavProvider>\s*<AskNavShell language=\{locale\} />\s*<AskContinuityHeader locale=\{locale\} surface="${surface}" />\s*<${client} locale=\{locale\} />\s*</AskNavProvider>`,
+        /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — the body sits inside AskClearedBoundary (Sign out / New question). */
+        String.raw`<AskNavProvider>\s*<AskNavShell language=\{locale\} />\s*<AskContinuityHeader locale=\{locale\} surface="${surface}" />\s*<AskClearedBoundary>\s*<${client} locale=\{locale\} />\s*</AskClearedBoundary>\s*</AskNavProvider>`,
       ),
     );
   });
@@ -61,7 +62,10 @@ describe('Recent and Saved use the standalone Ask navigation, never the platform
 
 describe('the continuity phone header is narrow and drives the ONE Ask drawer', () => {
   it('takes a surface name, never a React node', () => {
-    expect(header).toContain("export type AskContinuitySurface = 'recent' | 'saved';");
+    /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — Help & feedback and Settings joined; still names only. */
+    expect(header).toContain(
+      "export type AskContinuitySurface = 'recent' | 'saved' | 'help' | 'settings';",
+    );
     expect(header).not.toMatch(/ReactNode|children/);
   });
 
@@ -76,7 +80,9 @@ describe('the continuity phone header is narrow and drives the ONE Ask drawer', 
   });
 
   it('the title is localized from the continuity catalogue and is not a second <h1>', () => {
-    expect(header).toContain("surface === 'recent' ? t.recentTitle : t.savedTitle");
+    expect(code(header)).toMatch(
+      /surface === 'recent'\s*\? t\.recentTitle\s*: surface === 'saved'\s*\? t\.savedTitle\s*: surface === 'help'\s*\? nav\.help\s*: nav\.settings/,
+    );
     expect(code(header)).not.toMatch(/<h1/);
   });
 

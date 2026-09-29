@@ -106,6 +106,7 @@ describe('H — the drawer language list is anchored to its own control', () => 
     expect(code(shell)).toMatch(/variant="mobile"\s*anchor="self"/);
     expect(code(selector)).toContain("anchor = 'header',");
     expect(code(selector)).toContain("const anchoredToSelf = isMobile && anchor === 'self';");
+    expect(code(selector)).toContain("popupClass.replace('right-[12px]', 'left-0')");
     expect(code(selector)).toContain(
       "className={isMobile && !anchoredToSelf ? 'flex-none' : 'relative flex-none'}",
     );
