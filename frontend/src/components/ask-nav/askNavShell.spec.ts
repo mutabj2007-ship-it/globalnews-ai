@@ -299,3 +299,22 @@ describe('ASK SHELL — the keyboard contract, because the drawer covers a live 
     expect(shellCss).toContain('height: 56px');
   });
 });
+
+/*
+  STANDALONE PUBLIC BETA CONVERGENCE R1 — the desktop account control is a DISCLOSURE. An ARIA
+  menu promises arrow-key roving focus, typeahead and Home/End; without them role="menu" is a
+  false promise to a screen-reader user. A button that expands a region is the honest shape.
+*/
+describe('account control — disclosure semantics, not an unimplemented ARIA menu', () => {
+  const code = shell.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+  it('no role="menu", role="menuitem" or aria-haspopup="menu" anywhere in the shell', () => {
+    expect(code).not.toMatch(/role="menu"|role="menuitem"|aria-haspopup="menu"/);
+  });
+  it('the toggle controls the panel it expands (aria-expanded + aria-controls → id)', () => {
+    expect(code).toMatch(/aria-expanded=\{accountOpen\}\s+aria-controls="ask-nav-account-panel"/);
+    expect(code).toMatch(/id="ask-nav-account-panel"/);
+  });
+  it('the drawer keeps its dialog semantics (focus containment is untouched)', () => {
+    expect(code).toMatch(/role="dialog"\s+aria-modal="true"/);
+  });
+});

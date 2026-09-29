@@ -168,14 +168,28 @@ describe('STANDALONE ASK NAVIGATION — no dead controls, proved against the app
     expect(pendingRows.map((row) => row.route).sort()).toEqual([...ASK_NAV_PENDING_ROUTES].sort());
   });
 
-  it('HANDOFF: Claude H routes are still absent, so they are suppressed not rendered', () => {
-    for (const route of ASK_NAV_PENDING_ROUTES) {
-      expect(existsSync(pageFileFor(route))).toBe(false);
+  /*
+    STANDALONE PUBLIC BETA CONVERGENCE R1 — the H handoff is COMPLETE: its two pages exist in
+    the app router and ASK_NAV_LIVE_ROUTES carries them (the one-array switch this model was
+    built around). Nothing is pending, the signed-in menu is full, and signed-out still never
+    shows a signed-in continuity row.
+  */
+  it('HANDOFF COMPLETE: Claude H routes exist and are live; nothing is pending', () => {
+    expect(ASK_NAV_PENDING_ROUTES).toEqual([]);
+    for (const route of ['/ask/recent', '/saved']) {
+      expect(existsSync(pageFileFor(route))).toBe(true);
+      expect(ASK_NAV_LIVE_ROUTES).toContain(route);
     }
-    const shipping = labelsOf([...askMenuFor('signed-in')]);
-    expect(shipping).not.toContain('Recent');
-    expect(shipping).not.toContain('Saved');
-    expect(shipping).toEqual(['New question', 'Help & feedback', 'Settings']);
+    expect(labelsOf([...askMenuFor('signed-in')])).toEqual([
+      'New question',
+      'Recent',
+      'Saved',
+      'Help & feedback',
+      'Settings',
+    ]);
+    const signedOut = labelsOf([...askMenuFor('signed-out')]);
+    expect(signedOut).not.toContain('Recent');
+    expect(signedOut).not.toContain('Saved');
   });
 
   it('the same model yields the full menu the moment H lands, with no code change', () => {
@@ -183,11 +197,10 @@ describe('STANDALONE ASK NAVIGATION — no dead controls, proved against the app
     expect(after).toEqual(['New question', 'Recent', 'Saved', 'Help & feedback', 'Settings']);
   });
 
-  it('marks the pending rows as owned elsewhere, so the suppression is intentional', () => {
-    for (const entry of ASK_MENU_MODEL) {
-      const pending = entry.href !== undefined && ASK_NAV_PENDING_ROUTES.includes(entry.href);
-      expect(entry.ownedElsewhere === 'claude-h').toBe(pending);
-    }
+  it('the rows owned by Claude H are exactly its two routes, and both are now live', () => {
+    const owned = ASK_MENU_MODEL.filter((entry) => entry.ownedElsewhere === 'claude-h');
+    expect(owned.map((entry) => entry.href).sort()).toEqual(['/ask/recent', '/saved']);
+    for (const entry of owned) expect(ASK_NAV_LIVE_ROUTES).toContain(entry.href);
   });
 
   it('every visible route entry carries an href, and every action carries an action', () => {

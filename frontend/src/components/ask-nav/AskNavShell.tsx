@@ -353,10 +353,17 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
             */}
             {!isLoading && user !== null && signOutEntry !== undefined && (
               <div ref={accountRef} className="relative">
+                {/*
+                  STANDALONE PUBLIC BETA CONVERGENCE R1 — a DISCLOSURE, not an ARIA menu.
+                  role="menu"/"menuitem" promises arrow-key roving focus, typeahead and
+                  Home/End that this one-item panel does not implement; a button that
+                  expands a region, with plain buttons inside, is the honest pattern and
+                  is fully usable with Tab, Enter and Space.
+                */}
                 <button
                   type="button"
-                  aria-haspopup="menu"
                   aria-expanded={accountOpen}
+                  aria-controls="ask-nav-account-panel"
                   aria-label={s.accountMenuAriaLabel}
                   onClick={() => setAccountOpen(!accountOpen)}
                   className="flex min-h-11 items-center rounded-[9px] border border-[#1d4a73] px-3 font-cd-body text-[14px] text-[#cfe2f2] hover:border-[rgba(34,211,238,0.55)]"
@@ -365,13 +372,12 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
                 </button>
                 {accountOpen && (
                   <div
-                    role="menu"
+                    id="ask-nav-account-panel"
                     data-ask-nav="account-menu"
                     className="absolute end-0 top-[calc(100%+6px)] z-[60] flex w-[240px] flex-col gap-1 rounded-[10px] border border-[#1d4a73] bg-[rgba(2,15,32,0.98)] p-2"
                   >
                     <button
                       type="button"
-                      role="menuitem"
                       data-ask-nav="utility"
                       data-ask-nav-id={signOutEntry.id}
                       onClick={() => void signOut()}

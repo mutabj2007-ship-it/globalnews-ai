@@ -273,14 +273,21 @@ export const ASK_NAV_EXCLUDED_ROUTES: readonly string[] = [
  * askNavModel.spec.ts. This is the single list that decides whether a declared
  * entry renders, which is what makes "no dead controls" a checkable property.
  */
-export const ASK_NAV_LIVE_ROUTES: readonly string[] = ['/ask', '/support', '/account/settings'];
+export const ASK_NAV_LIVE_ROUTES: readonly string[] = [
+  '/ask',
+  '/support',
+  '/account/settings',
+  /* STANDALONE PUBLIC BETA CONVERGENCE R1 — H's continuity routes are live. Never /history. */
+  '/ask/recent',
+  '/saved',
+];
 
 /**
  * Declared in the IA, not yet live, owned by Claude H. HANDOFF: when either
  * route lands, add it to ASK_NAV_LIVE_ROUTES and remove it from here; the row
  * then appears in the signed-in menu with no other change anywhere.
  */
-export const ASK_NAV_PENDING_ROUTES: readonly string[] = ['/ask/recent', '/saved'];
+export const ASK_NAV_PENDING_ROUTES: readonly string[] = [];
 
 /**
  * The menu a given reader actually sees.
