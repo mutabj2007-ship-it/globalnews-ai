@@ -76,25 +76,39 @@ live('Ask continuity (Recent + Saved) — live PostgreSQL, HTTP authorization, z
     return { threadId: t.id, turnId: row.id, operationId: q.operationId };
   }
   /** Everything compute leaves behind, so "zero compute" is a before/after equality. */
+  /*
+    STANDALONE PUBLIC BETA CONVERGENCE R1 — SCOPED TO THIS TEST'S TWO READERS. The footprint
+    used to count operations, results and ledger rows GLOBALLY, so a live suite creating
+    operations beside it (one shared test database) changed the totals mid-assertion. It now
+    reads only rows owned by A and B, plus their own account meter scopes — a sharper "zero
+    compute" measure than before: any reservation for A or B would move those.
+  */
   async function computeFootprint() {
-    const [ops, results, ledger, meter] = await Promise.all([
-      db.computeOperation.count(),
+    const users = [ids.a, ids.b];
+    const ownOps = await db.computeOperation.findMany({
+      where: { userId: { in: users } },
+      select: { id: true },
+    });
+    const [results, ledger, meter] = await Promise.all([
       db.storedResult.findMany({
+        where: { userId: { in: users } },
         select: { id: true, createdAt: true, expiresAt: true, payload: true },
         orderBy: { id: 'asc' },
       }),
-      db.sandLedgerEntry.count(),
-      db.$queryRawUnsafe<{ n: bigint }[]>(
-        `SELECT count(*)::bigint AS n FROM information_schema.tables WHERE table_name ILIKE 'computemeter%' OR table_name ILIKE 'compute_meter%'`,
-      ),
+      db.sandLedgerEntry.count({ where: { operationId: { in: ownOps.map((o) => o.id) } } }),
+      db.computeMeter.findMany({
+        where: { scope: { in: users.map((u) => `acct:${u}`) } },
+        select: { scope: true, bucketStart: true, units: true },
+        orderBy: [{ scope: 'asc' }, { bucketStart: 'asc' }],
+      }),
     ]);
     return {
       prepare: prepare.mock.calls.length,
       execute: execute.mock.calls.length,
-      ops,
+      ops: ownOps.length,
       results: JSON.stringify(results),
       ledger,
-      meterTables: Number(meter[0]?.n ?? 0),
+      accountMeter: JSON.stringify(meter.map((m) => [m.scope, m.bucketStart, String(m.units)])),
     };
   }
 
