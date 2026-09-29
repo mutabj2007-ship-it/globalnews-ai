@@ -20,7 +20,7 @@ describe('Sources-empty explanations: once per visible layout', () => {
       expect(turn).toContain(`data-ask="${marker}"`);
       expect(wideBlock).toMatch(
         new RegExp(
-          `\.frame\[data-ask-sources-column='true'\]\s+\[data-ask-latest\]\s+:global\(\[data-ask='${marker}'\]\)\s*\{\s*display: none;`,
+          String.raw`\.frame\[data-ask-sources-column='true'\]\s+\[data-ask-latest\]\s+:global\(\[data-ask='${marker}'\]\)\s*\{\s*display: none;`,
         ),
       );
     },
