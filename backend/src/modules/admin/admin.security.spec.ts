@@ -35,6 +35,10 @@ const ADMIN_ROUTES: ReadonlyArray<{ method: 'get'; path: string }> = [
   { method: 'get', path: '/admin/analytics/usage' },
   { method: 'get', path: '/admin/analytics/coverage-geography' },
   { method: 'get', path: '/admin/users' },
+  // ASK PUBLIC BETA OPERATIONS MINIMUM R1 — the Ask operations read. Listed here so it
+  // inherits the same 401/403/404 battery rather than relying on the guard chain being
+  // right by inspection.
+  { method: 'get', path: '/admin/ai/ask-intelligence' },
 ];
 
 const ORDINARY_TOKEN = 'raw-token-ordinary-user';
@@ -123,7 +127,26 @@ async function createApp(adminPlatformEnabled: string | undefined): Promise<INes
       StubPrismaModule,
       AdminModule,
     ],
-  }).compile();
+  })
+    /*
+      THE STUB IS INSTALLED WITH `overrideProvider`, NOT ONLY AS A @Global() MODULE, AND
+      THAT DIFFERENCE IS LOAD-BEARING.
+
+      `PrismaModule` is itself `@Global()`, and AdminModule's import graph pulls it in
+      (EconomyModule imports it; so does ComputeControlsModule). A later global registration
+      replaces an earlier one, so `StubPrismaModule` loses and `SessionService` resolves the
+      REAL PrismaService: with DATABASE_URL unset it throws at construction, and with it set
+      it connects to that database, finds none of this suite's fixture sessions, and answers
+      401 to every case expecting 403 or 200.
+
+      An override is applied to the whole graph and cannot be shadowed that way. This is a
+      TEST-CONSTRUCTION correction: no guard is weakened and no production authorization
+      semantics change — in production the real global PrismaModule is exactly what should
+      win.
+    */
+    .overrideProvider(PrismaService)
+    .useValue(stubPrisma)
+    .compile();
 
   const app = moduleRef.createNestApplication();
   app.use(cookieParser());

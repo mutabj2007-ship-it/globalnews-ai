@@ -564,7 +564,7 @@ export const adminEn = {
       alerts: {
         title: 'Operator alerts',
         purpose:
-          'Every threshold is a measured value compared against a landed ceiling, or is marked as awaiting a Product Owner ruling.',
+          'Every threshold is a measured value compared against a landed ceiling or a Product Owner ruling. A line is never green on a sample too small to judge.',
         severity: 'Severity',
         observed: 'Observed',
         warnAt: 'Warning at',

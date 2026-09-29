@@ -228,7 +228,17 @@ export interface AdminAskImprovement {
   countryLimit: number;
 }
 
-export type AdminAskAlertSeverity = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN';
+/**
+ * `INSUFFICIENT_SAMPLE` IS NOT `UNKNOWN`, AND NEITHER IS `OK`.
+ *
+ * Product Owner ruling (ASK PUBLIC BETA OPERATIONS R1): a rate whose denominator is below
+ * the minimum sample must never be rendered as OK merely because too little has happened.
+ * It is also not `UNKNOWN`: the figure WAS measurable, there is simply not enough of it yet,
+ * which is a normal early-Beta state rather than a possible outage. Two different facts, two
+ * different words, so an operator can tell a quiet hour from a blind one.
+ */
+export type AdminAskAlertSeverity =
+  'OK' | 'WARNING' | 'CRITICAL' | 'INSUFFICIENT_SAMPLE' | 'UNKNOWN';
 
 /**
  * ONE OPERATOR ALERT.
@@ -238,8 +248,9 @@ export type AdminAskAlertSeverity = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN';
  * ceiling, the request-size ceiling, the analysis time budget, the breaker's own minimum
  * sample count — so an operator can see WHY a line is amber rather than being asked to
  * trust it. The two rate thresholds that have no landed anchor are marked
- * `thresholdSource: 'PO_PENDING'`, which is the same discipline `compute-controls.config.ts`
- * applies to a number the Product Owner has not yet ruled on.
+ * `thresholdSource: 'PRODUCT_OWNER_RULED'`, which is how this surface records a number the
+ * Product Owner has DECIDED — as distinct from `compute-controls.config.ts`'s marker for a
+ * knob still awaiting one.
  *
  * `observed` is null when the figure could not be measured, and the severity is then
  * UNKNOWN — never OK. An alert that cannot be evaluated is not an alert that passed.
@@ -265,7 +276,8 @@ export interface AdminAskAlert {
   /** What `ceiling` counts: 'UNITS_PER_HOUR', 'UNITS_PER_DAY', 'CALLS_PER_HOUR' or 'MS'. */
   ceilingUnit: string;
   thresholdSource: string;
-  windowHours: number;
+  /** MINUTES, not hours: the ruled rate windows are 15 minutes and do not divide into one. */
+  windowMinutes: number;
   /** Rows the figure rests on, so a ratio over three attempts is not read as a rate. */
   sampleCount: number;
   minimumSampleCount: number;
@@ -399,18 +411,29 @@ export const ADMIN_ASK_SATURATION_WARN = 0.7;
 export const ADMIN_ASK_SATURATION_CRITICAL = 0.9;
 
 /**
- * Rate thresholds with NO landed anchor, marked as such.
+ * THE TWO RULED RATES — Product Owner ruling, ASK PUBLIC BETA OPERATIONS R1.
  *
- * `compute-controls.config.ts` marks a knob the Product Owner has not ruled on rather than
- * pretending a placeholder is a decision, and these are the same: a refusal rate and a
- * failure rate are Product judgements about what Beta should tolerate. They are
- * conservative — they fire early — because the cost of an operator looking at a healthy
- * Beta is an hour, and the cost of not looking at a broken one is the Beta.
+ * These were shipped marked `PO_PENDING`, which is how this codebase records a number the
+ * Product Owner has not decided. They are now DECIDED, and the placeholders are gone rather
+ * than merely overwritten: `thresholdSource` reads `PRODUCT_OWNER_RULED`.
+ *
+ * INTERNAL PUBLIC BETA OPERATIONAL THRESHOLDS. Not a user-facing SLA, not a commitment to
+ * anybody, and not a pricing rule — there is no monetary figure anywhere in this surface.
+ *
+ * THE TWO DENOMINATORS ARE DIFFERENT, AND THE RULING NAMES THEM DIFFERENTLY.
+ *   BUDGET_REJECTION_RATE  minimum sample "20 Ask attempts"          -> attempts quoted
+ *   FAILURE_RATE           minimum sample "20 executed Ask attempts" -> executions observed
+ * An attempt that stops at a quote can never be budget-rejected, so measuring the refusal
+ * rate against attempts is the stricter reading: it counts the refusals against everyone who
+ * asked, not only against those who got as far as the executor. Implemented as worded.
  */
-export const ADMIN_ASK_REJECTION_RATE_WARN = 0.02;
-export const ADMIN_ASK_REJECTION_RATE_CRITICAL = 0.1;
-export const ADMIN_ASK_FAILURE_RATE_WARN = 0.1;
-export const ADMIN_ASK_FAILURE_RATE_CRITICAL = 0.25;
+export const ADMIN_ASK_RATE_WINDOW_MINUTES = 15;
+export const ADMIN_ASK_RATE_MINIMUM_SAMPLE = 20;
+
+export const ADMIN_ASK_REJECTION_RATE_WARN = 0.05;
+export const ADMIN_ASK_REJECTION_RATE_CRITICAL = 0.15;
+export const ADMIN_ASK_FAILURE_RATE_WARN = 0.05;
+export const ADMIN_ASK_FAILURE_RATE_CRITICAL = 0.1;
 
 /** Fractions of the landed analysis time budget at which latency is worth looking at. */
 export const ADMIN_ASK_LATENCY_WARN_FRACTION = 0.6;
@@ -422,5 +445,6 @@ export const ADMIN_ASK_THRESHOLD_SOURCES = {
   globalUnitsPerDay: 'LANDED_ASK_GLOBAL_UNITS_PER_DAY',
   requestCeiling: 'LANDED_ASK_GLOBAL_UNITS_PER_HOUR_OVER_ASK_UNITS_PER_REQUEST_MAX',
   analysisBudget: 'LANDED_ANALYSIS_TOTAL_BUDGET_MS',
-  ownerPending: 'PO_PENDING',
+  /* Decided by the Product Owner for Public Beta R1. Not derived, and no longer pending. */
+  ownerRuled: 'PRODUCT_OWNER_RULED',
 } as const;

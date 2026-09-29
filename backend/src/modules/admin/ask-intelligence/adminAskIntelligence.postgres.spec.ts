@@ -212,7 +212,87 @@ live('R1 — the Ask Intelligence reader on PostgreSQL', () => {
     const alerts = (await reader.askIntelligence()).alerts;
     expect(alerts?.alerts.map((alert) => alert.id)).toContain('BUDGET_SATURATION_HOUR');
     alerts?.alerts.forEach((alert) => {
-      expect(['OK', 'WARNING', 'CRITICAL', 'UNKNOWN']).toContain(alert.severity);
+      expect(['OK', 'WARNING', 'CRITICAL', 'INSUFFICIENT_SAMPLE', 'UNKNOWN']).toContain(
+        alert.severity,
+      );
     });
+  });
+
+  it('the two ruled rates evaluate over a REAL 15-minute window against real rows', async () => {
+    const alerts = (await reader.askIntelligence()).alerts;
+
+    ['BUDGET_REJECTION_RATE', 'FAILURE_RATE'].forEach((id) => {
+      const alert = alerts?.alerts.find((candidate) => candidate.id === id);
+      expect({ id, window: alert?.windowMinutes }).toEqual({ id, window: 15 });
+      expect({ id, minimum: alert?.minimumSampleCount }).toEqual({ id, minimum: 20 });
+      expect({ id, source: alert?.thresholdSource }).toEqual({
+        id,
+        source: 'PRODUCT_OWNER_RULED',
+      });
+    });
+
+    /*
+      THE RULING, DEMONSTRATED ON REAL ROWS — AS AN INVARIANT, NOT AS A ROW COUNT.
+
+      This database is shared with the other live suite, so pinning an exact sample size
+      would make this test a report on jest's scheduling rather than on the ruling. What must
+      hold for ANY sample size is the decision itself, so that is what is asserted:
+
+        sample <  20  ->  INSUFFICIENT_SAMPLE   (measurable, but too thin to act on)
+        sample >= 20  ->  OK / WARNING / CRITICAL, consistent with the ruled bands
+        no denominator ->  UNKNOWN
+
+      In every branch the verdict is NEVER `OK` on the strength of a small denominator, which
+      is the sentence the Product Owner actually wrote.
+    */
+    const assertRuling = (
+      alert: typeof alerts extends null
+        ? never
+        : NonNullable<typeof alerts>['alerts'][number] | undefined,
+    ): void => {
+      expect(alert).toBeDefined();
+      if (alert === undefined) return;
+      if (alert.observed === null) {
+        expect(alert.severity).toBe('UNKNOWN');
+        return;
+      }
+      if (alert.sampleCount < alert.minimumSampleCount) {
+        expect({ id: alert.id, severity: alert.severity }).toEqual({
+          id: alert.id,
+          severity: 'INSUFFICIENT_SAMPLE',
+        });
+        return;
+      }
+      const expected =
+        alert.observed >= alert.criticalAt
+          ? 'CRITICAL'
+          : alert.observed >= alert.warnAt
+            ? 'WARNING'
+            : 'OK';
+      expect({ id: alert.id, severity: alert.severity }).toEqual({
+        id: alert.id,
+        severity: expected,
+      });
+    };
+
+    const failure = alerts?.alerts.find((a) => a.id === 'FAILURE_RATE');
+    /* Executions really were recorded, so this line is measurable rather than blind. */
+    expect(failure?.observed).not.toBeNull();
+    expect(failure?.sampleCount).toBeGreaterThanOrEqual(3);
+    assertRuling(failure);
+
+    const rejection = alerts?.alerts.find((a) => a.id === 'BUDGET_REJECTION_RATE');
+    assertRuling(rejection);
+
+    /* Whatever the traffic, neither ruled line may be green on a sample below the minimum. */
+    [failure, rejection].forEach((alert) => {
+      if (alert && alert.sampleCount < alert.minimumSampleCount) {
+        expect(alert.severity).not.toBe('OK');
+      }
+    });
+
+    expect(['INSUFFICIENT_SAMPLE', 'UNKNOWN', 'WARNING', 'CRITICAL']).toContain(
+      alerts?.worstSeverity,
+    );
   });
 });

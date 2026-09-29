@@ -554,7 +554,7 @@ export const adminPl: AdminDictionary = {
       alerts: {
         title: 'Alerty operatora',
         purpose:
-          'Każdy próg to wartość zmierzona odniesiona do wdrożonego limitu albo pozycja oznaczona jako oczekująca na decyzję Product Ownera.',
+          'Każdy próg to wartość zmierzona odniesiona do wdrożonego limitu albo do decyzji Product Ownera. Pozycja nigdy nie jest zielona przy próbie zbyt małej, by cokolwiek ocenić.',
         severity: 'Waga',
         observed: 'Zmierzono',
         warnAt: 'Ostrzeżenie od',

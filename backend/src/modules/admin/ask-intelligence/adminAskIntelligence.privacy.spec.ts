@@ -153,7 +153,7 @@ describe('R1 — the contract has no field a question or a person could travel t
     expect(ADMIN_ASK_POOR_OUTCOME_STATES).not.toContain('CLARIFICATION_REQUIRED');
   });
 
-  it('every alert threshold is derived from a landed number, or is marked owner-pending', () => {
+  it('every alert threshold is derived from a landed number, or is a Product Owner ruling', () => {
     const contract = read('admin-ask-intelligence.contract.ts');
     const service = read('admin-ask-intelligence.service.ts');
 
@@ -161,19 +161,31 @@ describe('R1 — the contract has no field a question or a person could travel t
       expect({ id, emitted: service.includes(`'${id}'`) }).toEqual({ id, emitted: true });
     });
 
-    /* Every source name is either a LANDED_ anchor or the explicit owner-pending marker.
+    /* Every source name is either a LANDED_ anchor or the explicit Product Owner ruling.
        An alert whose threshold came from nowhere would have to invent a third kind. */
     Object.values(ADMIN_ASK_THRESHOLD_SOURCES).forEach((source) => {
-      expect(/^(LANDED_|PO_PENDING$)/.test(source)).toBe(true);
+      expect(/^(LANDED_|PRODUCT_OWNER_RULED$)/.test(source)).toBe(true);
     });
-    expect(contract).toContain('PO_PENDING');
+    expect(contract).toContain('PRODUCT_OWNER_RULED');
+
+    /* The placeholder is GONE, not merely overwritten: a pending marker left in the file
+       would let a future alert quietly reuse it. */
+    expect(contract).not.toContain('PO_PENDING');
+    expect(service).not.toContain('PO_PENDING');
   });
 
-  it('an unmeasurable alert is UNKNOWN, never OK — a quiet page is not a healthy one', () => {
+  it('an unmeasurable alert is UNKNOWN and a thin one is INSUFFICIENT_SAMPLE — neither is OK', () => {
     const service = read('admin-ask-intelligence.service.ts');
     const block = service.slice(service.indexOf('const severity: AdminAskAlertSeverity'));
-    expect(block.slice(0, 260)).toContain("'UNKNOWN'");
+    const decision = block.slice(0, 420);
+    expect(decision).toContain("'UNKNOWN'");
+    expect(decision).toContain("'INSUFFICIENT_SAMPLE'");
     expect(service).toContain('observed === null');
+    expect(service).toContain('meta.sampleCount < meta.minimumSampleCount');
+    /* Order is the guarantee: both verdicts are reached BEFORE any threshold comparison,
+       so neither can fall through to OK. */
+    expect(decision.indexOf("'UNKNOWN'")).toBeLessThan(decision.indexOf("'CRITICAL'"));
+    expect(decision.indexOf("'INSUFFICIENT_SAMPLE'")).toBeLessThan(decision.indexOf("'CRITICAL'"));
   });
 
   it('every list-valued tally is bounded, so an admin read cannot become a table scan', () => {

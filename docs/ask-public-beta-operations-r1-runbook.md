@@ -37,10 +37,36 @@ judgements with no landed anchor and say so (`PO_PENDING`) rather than pretendin
 | `FAILURE_RATE`              | executions with a failure code ÷ executions (24h)               | — (`PO_PENDING`)                                        | 0.10   | 0.25     |
 | `LATENCY_P95`               | p95 execution latency (24h)                                     | `ANALYSIS_TOTAL_BUDGET_MS`                              | 0.60 × | 0.90 ×   |
 
-**`UNKNOWN` is not `OK`.** A line is `UNKNOWN` when the figure could not be measured, or when
-the sample is smaller than the breaker's own minimum sample count. An operations page that
-goes quiet when the database is unreachable is worse than no page, so an unevaluated line is
-never green.
+### The two ruled rates — Product Owner ruling, ASK PUBLIC BETA OPERATIONS R1
+
+Both use a **15-minute window** and a **minimum sample of 20**, and both are **internal
+operational thresholds** — not a user-facing SLA, and not a pricing rule. There is no
+monetary figure anywhere on this surface.
+
+The two denominators are deliberately different, because the ruling words them differently:
+
+| Alert                   | Minimum sample, as ruled     | Denominator                                |
+| ----------------------- | ---------------------------- | ------------------------------------------ |
+| `BUDGET_REJECTION_RATE` | 20 **Ask attempts**          | attempts quoted in the last 15 minutes     |
+| `FAILURE_RATE`          | 20 **executed Ask attempts** | executions observed in the last 15 minutes |
+
+An attempt that stops at a quote can never be budget-rejected, so measuring the refusal rate
+against attempts is the stricter reading: it counts refusals against everyone who asked, not
+only against those who reached the executor.
+
+### Three ways a line can fail to be green, and they mean different things
+
+| Verdict                | Meaning                                                           | What to do                                                                     |
+| ---------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `OK`                   | measured, enough of it, inside the thresholds                     | nothing                                                                        |
+| `WARNING` / `CRITICAL` | measured, enough of it, over a threshold                          | §2                                                                             |
+| `INSUFFICIENT_SAMPLE`  | measured, but the denominator is below the ruled minimum          | **wait for traffic — do not act on the number, and do not read it as healthy** |
+| `UNKNOWN`              | could not be measured at all: a read failed, or a ceiling is zero | treat as a possible outage — check the database and the control store first    |
+
+**Neither `INSUFFICIENT_SAMPLE` nor `UNKNOWN` is `OK`,** and the Product Owner's ruling says
+so explicitly: _never render it as OK merely because the denominator is too small._ An
+operations page that goes quiet when the database is unreachable — or when three people have
+used the Beta — is worse than no page.
 
 ---
 
@@ -81,9 +107,11 @@ Ask is consuming its global unit ceiling. At the ceiling the meter refuses new w
 4. If it is genuine load and Beta should not absorb it, do nothing: the ceiling is doing its
    job and readers receive a typed degraded answer.
 
-### 2.3 `BUDGET_REJECTION_RATE` — WARNING then CRITICAL
+### 2.3 `BUDGET_REJECTION_RATE` — WARNING at 5 %, CRITICAL at 15 %
 
-Readers are being refused often enough that the Beta is not really open.
+Readers are being refused often enough that the Beta is not really open. Measured over 15
+minutes against Ask attempts, so this reacts within a quarter of an hour rather than being
+buried under a day of healthy traffic.
 
 1. **Operations → budget rejections** names the exact control on every refusal
    (`global-hour`, `provider-hour`, `account-day`, `new-account-day`, `ip-day`,
@@ -99,7 +127,9 @@ Approaching the volume the hourly ceiling admits. Treat as an early form of §2.
 ceiling, read before the meter reaches it. No separate action; it exists so an operator sees
 saturation coming rather than discovering it in the rejection rate.
 
-### 2.5 `FAILURE_RATE` — WARNING then CRITICAL
+### 2.5 `FAILURE_RATE` — WARNING at 5 %, CRITICAL at 10 %
+
+Measured over 15 minutes against executed attempts.
 
 1. **Operations → failure codes** is the whole answer. The families:
    - `MODEL_*` — provider failure or timeout. Go to §2.1.

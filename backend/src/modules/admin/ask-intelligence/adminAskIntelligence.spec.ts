@@ -15,6 +15,10 @@ import { AdminAskIntelligenceService } from './admin-ask-intelligence.service';
  */
 type Op = 'count' | 'groupBy' | 'findMany' | 'aggregate';
 
+interface CountArgs {
+  where?: { failureCode?: { startsWith?: string; not?: null } | null };
+}
+
 const EMPTY_AGGREGATE = {
   _count: { latencyMs: 0, promptTokens: 0, reportingItemCount: 0 },
   _avg: { latencyMs: null, reportingItemCount: null },
@@ -33,6 +37,15 @@ function harness(
     failModel?: string;
     rows?: Record<string, unknown[]>;
     counts?: Record<string, number>;
+    /**
+     * Numerators for the two ruled rates. The plain `counts` map is per MODEL, which cannot
+     * express "19 observations of which 3 carried a BUDGET_ failure" — so the stub inspects
+     * the `where` clause and answers the numerator when it recognises one. Without this a
+     * rate test can only ever produce 0 or 1, which is precisely the range in which a
+     * threshold ruling is not being tested at all.
+     */
+    rateFailures?: number;
+    rateBudgetRejections?: number;
     switchReadable?: boolean;
     aggregate?: Record<string, unknown>;
   } = {},
@@ -45,11 +58,21 @@ function harness(
         new Proxy(
           {},
           {
-            get: (_inner, op: string) => async () => {
+            get: (_inner, op: string) => async (args?: CountArgs) => {
               seen.push(`${model}.${op}`);
               if (options.failModel === model) throw new Error('read failed');
               if (op === 'aggregate') return { ...EMPTY_AGGREGATE, ...(options.aggregate ?? {}) };
-              if (op === 'count') return options.counts?.[model] ?? 0;
+              if (op === 'count') {
+                /* `failureCode: null` is a real predicate here (the completions count), so
+                   the guard has to survive it rather than assume an object. */
+                const failureCode = args?.where?.failureCode;
+                if (failureCode !== null && typeof failureCode === 'object') {
+                  if (typeof failureCode.startsWith === 'string')
+                    return options.rateBudgetRejections ?? 0;
+                  if ('not' in failureCode) return options.rateFailures ?? 0;
+                }
+                return options.counts?.[model] ?? 0;
+              }
               if (op === 'findMany' || op === 'groupBy') return options.rows?.[model] ?? [];
               throw new Error(`unexpected non-read operation: ${model}.${op}`);
             },
@@ -216,13 +239,139 @@ describe('R1 — the operator alert mechanism', () => {
     expect(latency?.warnAt).toBeLessThan(latency?.criticalAt ?? 0);
   });
 
-  it('the two rate thresholds declare themselves owner-pending rather than derived', async () => {
+  it('the two rate thresholds declare themselves RULED rather than derived or pending', async () => {
     const { service } = harness({});
     const alerts = (await service.askIntelligence(NOW)).alerts;
     ['BUDGET_REJECTION_RATE', 'FAILURE_RATE'].forEach((id) => {
       const alert = alerts?.alerts.find((candidate) => candidate.id === id);
-      expect({ id, source: alert?.thresholdSource }).toEqual({ id, source: 'PO_PENDING' });
+      expect({ id, source: alert?.thresholdSource }).toEqual({
+        id,
+        source: 'PRODUCT_OWNER_RULED',
+      });
     });
+  });
+
+  /**
+   * THE PRODUCT OWNER RULING, ASSERTED AS NUMBERS.
+   *
+   * Written out rather than left implicit, so that a future edit to a threshold has to
+   * change a test that names the ruling it came from.
+   */
+  it('carries the ruled windows, minimum samples and thresholds exactly', async () => {
+    const { service } = harness({});
+    const alerts = (await service.askIntelligence(NOW)).alerts;
+
+    const rejection = alerts?.alerts.find((a) => a.id === 'BUDGET_REJECTION_RATE');
+    expect(rejection?.windowMinutes).toBe(15);
+    expect(rejection?.minimumSampleCount).toBe(20);
+    expect(rejection?.warnAt).toBeCloseTo(0.05, 6);
+    expect(rejection?.criticalAt).toBeCloseTo(0.15, 6);
+
+    const failure = alerts?.alerts.find((a) => a.id === 'FAILURE_RATE');
+    expect(failure?.windowMinutes).toBe(15);
+    expect(failure?.minimumSampleCount).toBe(20);
+    expect(failure?.warnAt).toBeCloseTo(0.05, 6);
+    expect(failure?.criticalAt).toBeCloseTo(0.1, 6);
+  });
+
+  it('BELOW the minimum sample it is INSUFFICIENT_SAMPLE — never OK, and never UNKNOWN', async () => {
+    /* 19 attempts, 0 refusals: a measurable 0% over too small a denominator. The ruling is
+       explicit that this must not read as OK merely because nothing has gone wrong yet. */
+    const { service } = harness({ counts: { computeOperation: 19, askObservation: 19 } });
+    const alerts = (await service.askIntelligence(NOW)).alerts;
+
+    ['BUDGET_REJECTION_RATE', 'FAILURE_RATE'].forEach((id) => {
+      const alert = alerts?.alerts.find((candidate) => candidate.id === id);
+      expect({ id, severity: alert?.severity }).toEqual({ id, severity: 'INSUFFICIENT_SAMPLE' });
+      /* The figure IS present — this is not an unmeasurable line. */
+      expect({ id, measured: alert?.observed !== null }).toEqual({ id, measured: true });
+      expect({ id, samples: alert?.sampleCount }).toEqual({ id, samples: 19 });
+    });
+    /* And the page-level chip cannot be green while one of them is thin. */
+    expect(alerts?.worstSeverity).not.toBe('OK');
+  });
+
+  it('AT the minimum sample the ruling takes effect and a clean rate is OK', async () => {
+    const { service } = harness({ counts: { computeOperation: 20, askObservation: 20 } });
+    const alerts = (await service.askIntelligence(NOW)).alerts;
+    ['BUDGET_REJECTION_RATE', 'FAILURE_RATE'].forEach((id) => {
+      const alert = alerts?.alerts.find((candidate) => candidate.id === id);
+      expect({ id, severity: alert?.severity, observed: alert?.observed }).toEqual({
+        id,
+        severity: 'OK',
+        observed: 0,
+      });
+    });
+  });
+
+  it('the ruled BUDGET_REJECTION_RATE bands, at their exact boundaries', async () => {
+    /* denominator = ATTEMPTS, as the ruling words it: 100 attempts. */
+    const at = async (rejections: number) =>
+      (
+        await harness({
+          counts: { computeOperation: 100, askObservation: 100 },
+          rateBudgetRejections: rejections,
+        }).service.askIntelligence(NOW)
+      ).alerts?.alerts.find((a) => a.id === 'BUDGET_REJECTION_RATE');
+
+    expect((await at(4))?.severity).toBe('OK'); //            4%  — below warn
+    expect((await at(5))?.severity).toBe('WARNING'); //       5%  — warn boundary, inclusive
+    expect((await at(14))?.severity).toBe('WARNING'); //     14%  — below critical
+    expect((await at(15))?.severity).toBe('CRITICAL'); //    15%  — critical boundary
+    expect((await at(40))?.severity).toBe('CRITICAL');
+  });
+
+  it('the ruled FAILURE_RATE bands, at their exact boundaries', async () => {
+    /* denominator = EXECUTED attempts, as the ruling words it: 100 executions. */
+    const at = async (failures: number) =>
+      (
+        await harness({
+          counts: { computeOperation: 100, askObservation: 100 },
+          rateFailures: failures,
+        }).service.askIntelligence(NOW)
+      ).alerts?.alerts.find((a) => a.id === 'FAILURE_RATE');
+
+    expect((await at(4))?.severity).toBe('OK'); //            4%  — below warn
+    expect((await at(5))?.severity).toBe('WARNING'); //       5%  — warn boundary, inclusive
+    expect((await at(9))?.severity).toBe('WARNING'); //       9%  — below critical
+    expect((await at(10))?.severity).toBe('CRITICAL'); //    10%  — critical boundary
+  });
+
+  it('the two rates use DIFFERENT denominators, exactly as the ruling words them', async () => {
+    /*
+      40 attempts, 20 of which executed. 4 budget refusals and 4 failures.
+      rejection rate = 4/40 = 10%  (attempts)        -> WARNING under 5/15
+      failure rate   = 4/20 = 20%  (executions)      -> CRITICAL under 5/10
+      If both read the same denominator, one of these two verdicts would be wrong.
+    */
+    const { service } = harness({
+      counts: { computeOperation: 40, askObservation: 20 },
+      rateBudgetRejections: 4,
+      rateFailures: 4,
+    });
+    const alerts = (await service.askIntelligence(NOW)).alerts;
+
+    const rejection = alerts?.alerts.find((a) => a.id === 'BUDGET_REJECTION_RATE');
+    expect(rejection?.sampleCount).toBe(40);
+    expect(rejection?.observed).toBeCloseTo(0.1, 6);
+    expect(rejection?.severity).toBe('WARNING');
+
+    const failure = alerts?.alerts.find((a) => a.id === 'FAILURE_RATE');
+    expect(failure?.sampleCount).toBe(20);
+    expect(failure?.observed).toBeCloseTo(0.2, 6);
+    expect(failure?.severity).toBe('CRITICAL');
+
+    expect(alerts?.worstSeverity).toBe('CRITICAL');
+  });
+
+  it('an unmeasurable rate is still UNKNOWN, which is a different fact from a thin one', async () => {
+    /* Zero attempts: the denominator does not exist, so there is no figure at all. */
+    const { service } = harness({});
+    const rejection = (await service.askIntelligence(NOW)).alerts?.alerts.find(
+      (a) => a.id === 'BUDGET_REJECTION_RATE',
+    );
+    expect(rejection?.observed).toBeNull();
+    expect(rejection?.severity).toBe('UNKNOWN');
   });
 
   it('it points at the runbook rather than paraphrasing a procedure in two languages', async () => {

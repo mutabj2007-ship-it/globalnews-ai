@@ -33,6 +33,8 @@ import {
   ADMIN_ASK_POOR_OUTCOME_STATES,
   ADMIN_ASK_PROCEDURE_DOCUMENT,
   ADMIN_ASK_PROCEDURE_KEY,
+  ADMIN_ASK_RATE_MINIMUM_SAMPLE,
+  ADMIN_ASK_RATE_WINDOW_MINUTES,
   ADMIN_ASK_REJECTION_RATE_CRITICAL,
   ADMIN_ASK_REJECTION_RATE_WARN,
   ADMIN_ASK_SATURATION_CRITICAL,
@@ -453,55 +455,78 @@ export class AdminAskIntelligenceService {
    *                   which is how many maximally-sized requests that ceiling admits
    *   latency         measured p95 / the landed analysis time budget
    *   breaker         the breaker's own stored state; no threshold is needed to read OPEN
-   *   rates           refusal and failure rates, which are Product judgements, marked as
-   *                   pending a Product Owner ruling rather than presented as derived
+   *   rates           refusal and failure rates, RULED by the Product Owner for Public Beta
+   *                   R1 and marked `PRODUCT_OWNER_RULED` rather than presented as derived
    *
-   * A FIGURE THAT CANNOT BE MEASURED IS `UNKNOWN`, NEVER `OK`. That is the whole reason
-   * severity has four values: an operations page whose alerts go quiet when the database is
-   * unreachable is worse than no operations page.
+   * A FIGURE THAT CANNOT BE MEASURED IS `UNKNOWN`, NEVER `OK`, and a rate whose denominator
+   * is below the ruled minimum is `INSUFFICIENT_SAMPLE`, also never `OK`. That is the whole
+   * reason severity has five values: an operations page whose alerts go quiet when the
+   * database is unreachable — or when three people have used the Beta — is worse than no
+   * operations page.
+   *
+   * THE TWO RULED RATES USE A 15-MINUTE WINDOW OF THEIR OWN, not the 24-hour panel window:
+   * an operator needs to know that Ask started refusing people a quarter of an hour ago, and
+   * a day-long denominator would bury that under yesterday's healthy traffic.
    */
   private async alerts(now: Date, short: Date): Promise<AdminAskAlerts> {
     const knobs = resolveComputeControlsConfig((name) => this.config.get<string>(name));
     const inShort = { occurredAt: { gte: short } };
+    /* The ruled rate window. Minutes, deliberately: 15 does not divide into an hour. */
+    const rateSince = new Date(now.getTime() - ADMIN_ASK_RATE_WINDOW_MINUTES * 60 * 1000);
+    const inRate = { occurredAt: { gte: rateSince } };
 
-    const [hourMeter, dayMeter, breakers, observations, failures, totals, latencyAgg, byFailure] =
-      await Promise.all([
-        this.prisma.computeMeter.findMany({
-          where: { scope: GLOBAL_SCOPE, bucketStart: hourBucket(now) },
-        }),
-        this.prisma.computeMeter.findMany({
-          where: { scope: GLOBAL_SCOPE, bucketStart: dayBucket(now) },
-        }),
-        this.prisma.circuitBreakerState.findMany(),
-        this.prisma.askObservation.count({ where: inShort }),
-        this.prisma.askObservation.count({ where: { ...inShort, failureCode: { not: null } } }),
-        this.prisma.askObservation.aggregate({
-          where: { occurredAt: { gte: hourBucket(now) } },
-          _sum: {
-            modelInvocationCount: true,
-            providerCallCount: true,
-            promptTokens: true,
-            completionTokens: true,
-          },
-          _count: { promptTokens: true },
-        }),
-        this.prisma.askObservation.aggregate({
-          where: { ...inShort, latencyMs: { not: null } },
-          _count: { latencyMs: true },
-        }),
-        this.prisma.askObservation.groupBy({
-          by: ['failureCode'],
-          where: { ...inShort, failureCode: { not: null } },
-          _count: { _all: true },
-        }),
-      ]);
+    /*
+      THE 24-HOUR RATE READS ARE GONE, NOT LEFT UNUSED.
+
+      Both rates used to be computed over the panel's 24-hour window; the Product Owner ruled
+      a 15-minute one. The three reads that fed the old denominators are removed rather than
+      kept "in case" — a query nobody consumes is a cost on every page load and a thing a
+      later edit can quietly start trusting again.
+    */
+    const [
+      hourMeter,
+      dayMeter,
+      breakers,
+      totals,
+      latencyAgg,
+      rateAttempts,
+      rateExecutions,
+      rateFailures,
+      rateBudgetRejections,
+    ] = await Promise.all([
+      this.prisma.computeMeter.findMany({
+        where: { scope: GLOBAL_SCOPE, bucketStart: hourBucket(now) },
+      }),
+      this.prisma.computeMeter.findMany({
+        where: { scope: GLOBAL_SCOPE, bucketStart: dayBucket(now) },
+      }),
+      this.prisma.circuitBreakerState.findMany(),
+      this.prisma.askObservation.aggregate({
+        where: { occurredAt: { gte: hourBucket(now) } },
+        _sum: {
+          modelInvocationCount: true,
+          providerCallCount: true,
+          promptTokens: true,
+          completionTokens: true,
+        },
+        _count: { promptTokens: true },
+      }),
+      this.prisma.askObservation.aggregate({
+        where: { ...inShort, latencyMs: { not: null } },
+        _count: { latencyMs: true },
+      }),
+      /* The ruling names two different denominators, so two different reads. */
+      this.prisma.computeOperation.count({ where: { createdAt: { gte: rateSince } } }),
+      this.prisma.askObservation.count({ where: inRate }),
+      this.prisma.askObservation.count({ where: { ...inRate, failureCode: { not: null } } }),
+      this.prisma.askObservation.count({
+        where: { ...inRate, failureCode: { startsWith: 'BUDGET_' } },
+      }),
+    ]);
 
     const hourUnits = Number(hourMeter[0]?.units ?? 0n);
     const dayUnits = Number(dayMeter[0]?.units ?? 0n);
     const openBreakers = breakers.filter((row) => row.state === 'OPEN').length;
-    const budgetRejections = byFailure
-      .filter((g) => (g.failureCode ?? '').startsWith('BUDGET_'))
-      .reduce((total, g) => total + g._count._all, 0);
     const latencySamples = latencyAgg._count.latencyMs;
     const p95 = (await this.latencyOrderStatistics(short, latencySamples)).p95Ms ?? null;
 
@@ -517,7 +542,7 @@ export class AdminAskIntelligenceService {
     const alerts: AdminAskAlert[] = [
       this.alert('PROVIDER_BREAKER_OPEN', openBreakers, 1, 1, 'COUNT', null, 'COUNT', {
         source: ADMIN_ASK_THRESHOLD_SOURCES.breakerState,
-        windowHours: 0,
+        windowMinutes: 0,
         sampleCount: breakers.length,
         minimumSampleCount: 0,
       }),
@@ -526,7 +551,7 @@ export class AdminAskIntelligenceService {
         hourUnits,
         knobs.globalUnitsPerHour,
         ADMIN_ASK_THRESHOLD_SOURCES.globalUnitsPerHour,
-        1,
+        60,
         'UNITS_PER_HOUR',
       ),
       this.ratioAlert(
@@ -534,22 +559,27 @@ export class AdminAskIntelligenceService {
         dayUnits,
         knobs.globalUnitsPerDay,
         ADMIN_ASK_THRESHOLD_SOURCES.globalUnitsPerDay,
-        24,
+        24 * 60,
         'UNITS_PER_DAY',
       ),
+      /*
+        RULED: 15-minute window, minimum 20 ASK ATTEMPTS, warn >= 5%, critical >= 15%.
+        The denominator is attempts rather than executions because that is what the ruling
+        names — and it is the stricter reading, counting refusals against everyone who asked.
+      */
       this.alert(
         'BUDGET_REJECTION_RATE',
-        observations > 0 ? budgetRejections / observations : null,
+        rateAttempts > 0 ? rateBudgetRejections / rateAttempts : null,
         ADMIN_ASK_REJECTION_RATE_WARN,
         ADMIN_ASK_REJECTION_RATE_CRITICAL,
         'RATIO',
         null,
         'RATIO',
         {
-          source: ADMIN_ASK_THRESHOLD_SOURCES.ownerPending,
-          windowHours: ADMIN_ASK_SHORT_WINDOW_HOURS,
-          sampleCount: observations,
-          minimumSampleCount: knobs.breakerMinSamples,
+          source: ADMIN_ASK_THRESHOLD_SOURCES.ownerRuled,
+          windowMinutes: ADMIN_ASK_RATE_WINDOW_MINUTES,
+          sampleCount: rateAttempts,
+          minimumSampleCount: ADMIN_ASK_RATE_MINIMUM_SAMPLE,
         },
       ),
       this.ratioAlert(
@@ -557,7 +587,7 @@ export class AdminAskIntelligenceService {
         totals._sum.modelInvocationCount ?? 0,
         requestCeiling,
         ADMIN_ASK_THRESHOLD_SOURCES.requestCeiling,
-        1,
+        60,
         'CALLS_PER_HOUR',
       ),
       this.ratioAlert(
@@ -565,7 +595,7 @@ export class AdminAskIntelligenceService {
         totals._sum.providerCallCount ?? 0,
         requestCeiling,
         ADMIN_ASK_THRESHOLD_SOURCES.requestCeiling,
-        1,
+        60,
         'CALLS_PER_HOUR',
       ),
       this.ratioAlert(
@@ -573,25 +603,24 @@ export class AdminAskIntelligenceService {
         measuredUnitsThisHour,
         knobs.globalUnitsPerHour,
         ADMIN_ASK_THRESHOLD_SOURCES.globalUnitsPerHour,
-        1,
+        60,
         'UNITS_PER_HOUR',
         totals._count.promptTokens,
       ),
+      /* RULED: 15-minute window, minimum 20 EXECUTED attempts, warn >= 5%, critical >= 10%. */
       this.alert(
         'FAILURE_RATE',
-        observations > 0 ? failures / observations : null,
+        rateExecutions > 0 ? rateFailures / rateExecutions : null,
         ADMIN_ASK_FAILURE_RATE_WARN,
         ADMIN_ASK_FAILURE_RATE_CRITICAL,
         'RATIO',
         null,
         'RATIO',
         {
-          source: ADMIN_ASK_THRESHOLD_SOURCES.ownerPending,
-          windowHours: ADMIN_ASK_SHORT_WINDOW_HOURS,
-          sampleCount: observations,
-          /* The breaker's own minimum sample count, reused: this platform already has a
-             ruling on how many observations a ratio needs before it means anything. */
-          minimumSampleCount: knobs.breakerMinSamples,
+          source: ADMIN_ASK_THRESHOLD_SOURCES.ownerRuled,
+          windowMinutes: ADMIN_ASK_RATE_WINDOW_MINUTES,
+          sampleCount: rateExecutions,
+          minimumSampleCount: ADMIN_ASK_RATE_MINIMUM_SAMPLE,
         },
       ),
       this.alert(
@@ -604,18 +633,26 @@ export class AdminAskIntelligenceService {
         'MS',
         {
           source: ADMIN_ASK_THRESHOLD_SOURCES.analysisBudget,
-          windowHours: ADMIN_ASK_SHORT_WINDOW_HOURS,
+          windowMinutes: ADMIN_ASK_SHORT_WINDOW_HOURS * 60,
           sampleCount: latencySamples,
+          /* The breaker's own minimum sample count, reused: this platform already has a
+             ruling on how many observations a ratio needs before it means anything. */
           minimumSampleCount: knobs.breakerMinSamples,
         },
       ),
     ];
 
+    /*
+      WORST-FIRST ORDER. `INSUFFICIENT_SAMPLE` ranks below `UNKNOWN` because "not enough
+      traffic yet" is an ordinary Beta condition while "could not measure" may be an outage.
+      Both rank above `OK`, so neither can be hidden by a green summary chip.
+    */
     const rank: Record<AdminAskAlertSeverity, number> = {
       OK: 0,
-      UNKNOWN: 1,
-      WARNING: 2,
-      CRITICAL: 3,
+      INSUFFICIENT_SAMPLE: 1,
+      UNKNOWN: 2,
+      WARNING: 3,
+      CRITICAL: 4,
     };
     const worstSeverity = alerts.reduce<AdminAskAlertSeverity>(
       (worst, alert) => (rank[alert.severity] > rank[worst] ? alert.severity : worst),
@@ -642,7 +679,7 @@ export class AdminAskIntelligenceService {
     measured: number,
     ceiling: number,
     source: string,
-    windowHours: number,
+    windowMinutes: number,
     ceilingUnit: string,
     sampleCount = 1,
   ): AdminAskAlert {
@@ -657,7 +694,7 @@ export class AdminAskIntelligenceService {
       'RATIO',
       ceiling > 0 ? ceiling : null,
       ceilingUnit,
-      { source, windowHours, sampleCount, minimumSampleCount: 0 },
+      { source, windowMinutes, sampleCount, minimumSampleCount: 0 },
     );
   }
 
@@ -671,19 +708,31 @@ export class AdminAskIntelligenceService {
     ceilingUnit: string,
     meta: {
       source: string;
-      windowHours: number;
+      windowMinutes: number;
       sampleCount: number;
       minimumSampleCount: number;
     },
   ): AdminAskAlert {
+    /*
+      ORDER IS THE GUARANTEE, AND THE FIRST TWO BRANCHES ARE DIFFERENT FACTS.
+
+      `UNKNOWN`  the figure could not be measured at all — a read failed, or a ceiling was
+                 zero. Possibly an outage.
+      `INSUFFICIENT_SAMPLE`  the figure WAS measured; there is simply not enough of it yet
+                 to mean anything. A normal early-Beta state.
+      Neither may ever fall through to `OK`, which is the Product Owner's ruling stated as
+      code: "never render it as OK merely because the denominator is too small."
+    */
     const severity: AdminAskAlertSeverity =
-      observed === null || meta.sampleCount < meta.minimumSampleCount
+      observed === null
         ? 'UNKNOWN'
-        : observed >= criticalAt
-          ? 'CRITICAL'
-          : observed >= warnAt
-            ? 'WARNING'
-            : 'OK';
+        : meta.sampleCount < meta.minimumSampleCount
+          ? 'INSUFFICIENT_SAMPLE'
+          : observed >= criticalAt
+            ? 'CRITICAL'
+            : observed >= warnAt
+              ? 'WARNING'
+              : 'OK';
 
     return {
       id,
@@ -695,7 +744,7 @@ export class AdminAskIntelligenceService {
       ceiling,
       ceilingUnit,
       thresholdSource: meta.source,
-      windowHours: meta.windowHours,
+      windowMinutes: meta.windowMinutes,
       sampleCount: meta.sampleCount,
       minimumSampleCount: meta.minimumSampleCount,
     };

@@ -144,4 +144,35 @@ describe('R1 — Ask Intelligence contract parity', () => {
       expect(block).toContain('readOnly: true');
     });
   });
+
+  /**
+   * The severity union is a TYPE ALIAS, which the interface parser above cannot see. It is
+   * compared separately, the same way the landed contract spec compares `AdminProbeStatus` —
+   * and it matters here because a member missing on one side would let a screen fall through
+   * to a default tone for a severity the backend can really emit.
+   */
+  it('the alert severity union is identical on both sides', () => {
+    const unionOf = (path: string): string[] => {
+      const source = readFileSync(path, 'utf-8');
+      const start = source.indexOf('export type AdminAskAlertSeverity');
+      expect(start).toBeGreaterThan(-1);
+      return (source.slice(start, source.indexOf(';', start)).match(/'[A-Z_]+'/g) ?? [])
+        .map((raw) => raw.replace(/'/g, ''))
+        .sort();
+    };
+    const backend = unionOf(BACKEND_CONTRACT);
+    expect(backend).toEqual(['OK', 'WARNING', 'CRITICAL', 'INSUFFICIENT_SAMPLE', 'UNKNOWN'].sort());
+    expect(unionOf(FRONTEND_TYPES)).toEqual(backend);
+  });
+
+  it('the pending-threshold placeholder is retired from the CODE, not merely overwritten', () => {
+    /* Comments are stripped first. A doc comment that names the retired marker in order to
+       record that it WAS retired is the opposite of leaving it in force, and an assertion
+       that punished the explanation would push the explanation out of the file. */
+    const code = readFileSync(BACKEND_CONTRACT, 'utf-8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1');
+    expect(code).not.toContain('PO_PENDING');
+    expect(code).toContain('PRODUCT_OWNER_RULED');
+  });
 });

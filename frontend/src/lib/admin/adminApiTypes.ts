@@ -484,7 +484,12 @@ export interface AdminAskImprovement {
   countryLimit: number;
 }
 
-export type AdminAskAlertSeverity = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN';
+export type AdminAskAlertSeverity =
+  | 'OK'
+  | 'WARNING'
+  | 'CRITICAL'
+  | 'INSUFFICIENT_SAMPLE'
+  | 'UNKNOWN';
 
 export interface AdminAskAlert {
   id: string;
@@ -496,7 +501,7 @@ export interface AdminAskAlert {
   ceiling: number | null;
   ceilingUnit: string;
   thresholdSource: string;
-  windowHours: number;
+  windowMinutes: number;
   sampleCount: number;
   minimumSampleCount: number;
 }

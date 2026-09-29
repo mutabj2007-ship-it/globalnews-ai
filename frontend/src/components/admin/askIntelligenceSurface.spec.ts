@@ -161,12 +161,23 @@ describe('R1 — the screen source cannot smuggle a figure or a sentence', () =>
     expect(source.match(/>\s*\d[\d\s,.]*</g)).toBeNull();
   });
 
-  it('every alert severity has a chip tone, so an unknown severity cannot render as healthy', () => {
-    const map = source.slice(source.indexOf('SEVERITY_TONE'));
-    ['OK', 'WARNING', 'CRITICAL', 'UNKNOWN'].forEach((severity) => {
-      expect(map.slice(0, 200)).toContain(severity);
+  it('every alert severity has a chip tone, and only OK may be the healthy one', () => {
+    const map = source.slice(
+      source.indexOf('SEVERITY_TONE'),
+      source.indexOf('function formatObserved'),
+    );
+    ['OK', 'WARNING', 'CRITICAL', 'INSUFFICIENT_SAMPLE', 'UNKNOWN'].forEach((severity) => {
+      expect({ severity, mapped: map.includes(`${severity}:`) }).toEqual({
+        severity,
+        mapped: true,
+      });
     });
-    expect(map.slice(0, 200)).toContain("UNKNOWN: 'mute'");
+    expect(map).toContain("OK: 'good'");
+    /* The Product Owner's ruling, as a rendering property: a thin sample and an unmeasurable
+       one each get their own non-green tone, and neither may borrow OK's. */
+    expect(map).toContain("INSUFFICIENT_SAMPLE: 'info'");
+    expect(map).toContain("UNKNOWN: 'mute'");
+    expect(map.match(/'good'/g) ?? []).toHaveLength(1);
   });
 
   it('it composes the shared primitives rather than inventing its own empty state', () => {

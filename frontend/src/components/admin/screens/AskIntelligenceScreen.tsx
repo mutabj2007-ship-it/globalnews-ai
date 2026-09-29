@@ -44,10 +44,18 @@ import { ScreenHeading } from './SystemHealthScreen';
  * and the router use; translating them would break the mapping between what an operator
  * reads here and what they grep for in a log.
  */
+/*
+  NO SEVERITY MAPS TO THE HEALTHY TONE EXCEPT `OK`.
+
+  `INSUFFICIENT_SAMPLE` and `UNKNOWN` get distinct non-green tones rather than sharing one:
+  "not enough traffic yet" and "could not measure" are different facts, and an operator
+  reading an amber page at 3am needs to know which of the two they are looking at.
+*/
 const SEVERITY_TONE: Record<AdminAskAlertSeverity, ChipTone> = {
   OK: 'good',
   WARNING: 'warn',
   CRITICAL: 'bad',
+  INSUFFICIENT_SAMPLE: 'info',
   UNKNOWN: 'mute',
 };
 
