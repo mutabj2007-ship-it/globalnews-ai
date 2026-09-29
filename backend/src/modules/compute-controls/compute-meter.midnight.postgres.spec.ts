@@ -47,12 +47,14 @@ const base = {
   ASK_CONCURRENT_PER_IP_PREFIX: '1000',
 };
 const at = (iso: string) => new Date(iso);
+const YEAR_START = new Date('2033-01-01T00:00:00Z');
+const YEAR_END = new Date('2034-01-01T00:00:00Z');
 const TIMES = [
-  ['00:00:00 UTC', '2031-01-01T00:00:00Z', true],
-  ['00:30:00 UTC', '2031-01-01T00:30:00Z', true],
-  ['00:59:59 UTC', '2031-01-01T00:59:59Z', true],
-  ['01:00:00 UTC', '2031-01-01T01:00:00Z', false],
-  ['13:30:00 UTC (midday)', '2031-01-01T13:30:00Z', false],
+  ['00:00:00 UTC', '2033-01-01T00:00:00Z', true],
+  ['00:30:00 UTC', '2033-01-01T00:30:00Z', true],
+  ['00:59:59 UTC', '2033-01-01T00:59:59Z', true],
+  ['01:00:00 UTC', '2033-01-01T01:00:00Z', false],
+  ['13:30:00 UTC (midday)', '2033-01-01T13:30:00Z', false],
 ] as const;
 
 live('P1 — global hour/day meter identities never collide (live PostgreSQL)', () => {
@@ -85,7 +87,20 @@ live('P1 — global hour/day meter identities never collide (live PostgreSQL)', 
   });
   afterAll(async () => db?.$disconnect());
   beforeEach(async () => {
-    await db.$executeRawUnsafe('TRUNCATE "ComputeMeter", "ComputeReservation"');
+    /* Only THIS spec's rows (2033 buckets, its own account/IP concurrency): no TRUNCATE, so a
+       live suite running beside it is never disturbed. Global concurrency is shared and is
+       asserted as a delta. */
+    await db.computeMeter.deleteMany({
+      where: {
+        OR: [
+          { bucketStart: { gte: YEAR_START, lt: YEAR_END } },
+          { scope: { in: [concurrencyScope(accountScope(ACCOUNT)), concurrencyScope(IP)] } },
+        ],
+      },
+    });
+    await db.computeReservation.deleteMany({
+      where: { expiresAt: { gte: YEAR_START, lt: YEAR_END } },
+    });
   });
 
   it.each(TIMES)(
@@ -101,7 +116,10 @@ live('P1 — global hour/day meter identities never collide (live PostgreSQL)', 
       expect(await units(GLOBAL_DAY_SCOPE, dayBucket(now))).toBe(E);
       /* distinct rows even when the bucket instants are identical; no legacy 'global' row */
       const globalRows = await db.computeMeter.findMany({
-        where: { scope: { in: [GLOBAL_HOUR_SCOPE, GLOBAL_DAY_SCOPE, GLOBAL_SCOPE] } },
+        where: {
+          scope: { in: [GLOBAL_HOUR_SCOPE, GLOBAL_DAY_SCOPE, GLOBAL_SCOPE] },
+          bucketStart: { gte: YEAR_START, lt: YEAR_END },
+        },
       });
       expect(globalRows.map((g) => g.scope).sort()).toEqual([GLOBAL_DAY_SCOPE, GLOBAL_HOUR_SCOPE]);
       expect(globalRows.every((g) => Number(g.units) === E)).toBe(true);
@@ -114,12 +132,12 @@ live('P1 — global hour/day meter identities never collide (live PostgreSQL)', 
       ASK_GLOBAL_UNITS_PER_HOUR: String(E),
       ASK_GLOBAL_UNITS_PER_DAY: String(E),
     });
-    expect(await meter.reserve(who(at('2031-01-01T00:30:00Z')))).toMatchObject({ admitted: true });
+    expect(await meter.reserve(who(at('2033-01-01T00:30:00Z')))).toMatchObject({ admitted: true });
   });
 
   it('00:30 UTC — the hourly ceiling refuses on hourly usage alone and compensates BOTH global rows', async () => {
     const meter = meterWith({ ASK_GLOBAL_UNITS_PER_HOUR: String(E * 1.5) });
-    const now = at('2031-01-01T00:30:00Z');
+    const now = at('2033-01-01T00:30:00Z');
     expect((await meter.reserve(who(now))).admitted).toBe(true);
     expect(await meter.reserve(who(now))).toMatchObject({
       admitted: false,
@@ -133,18 +151,18 @@ live('P1 — global hour/day meter identities never collide (live PostgreSQL)', 
   it('00:30 UTC — the DAILY ceiling reads only daily usage, independent of the hour row', async () => {
     const meter = meterWith({ ASK_GLOBAL_UNITS_PER_DAY: String(E * 2) });
     /* earlier today (hour 00) and now (hour 00 still): the day row sums both, hour rows are separate */
-    const now = at('2031-01-01T00:30:00Z');
-    expect((await meter.reserve(who(at('2031-01-01T00:05:00Z')))).admitted).toBe(true);
+    const now = at('2033-01-01T00:30:00Z');
+    expect((await meter.reserve(who(at('2033-01-01T00:05:00Z')))).admitted).toBe(true);
     expect((await meter.reserve(who(now))).admitted).toBe(true);
     expect(await meter.reserve(who(now))).toMatchObject({ admitted: false, control: 'global-day' });
     expect(await units(GLOBAL_DAY_SCOPE, dayBucket(now))).toBe(2 * E);
     expect(await units(GLOBAL_HOUR_SCOPE, hourBucket(now))).toBe(2 * E);
     /* and a later hour of the same day is still bounded by the day row */
-    expect(await meter.reserve(who(at('2031-01-01T13:30:00Z')))).toMatchObject({
+    expect(await meter.reserve(who(at('2033-01-01T13:30:00Z')))).toMatchObject({
       admitted: false,
       control: 'global-day',
     });
-    expect(await units(GLOBAL_HOUR_SCOPE, hourBucket(at('2031-01-01T13:30:00Z')))).toBe(0);
+    expect(await units(GLOBAL_HOUR_SCOPE, hourBucket(at('2033-01-01T13:30:00Z')))).toBe(0);
   });
 
   it.each(TIMES)(
@@ -171,7 +189,8 @@ live('P1 — global hour/day meter identities never collide (live PostgreSQL)', 
       const meter = meterWith();
       const r = await meter.reserve(who(now, { estimatedUnits: 400 }));
       if (!r.admitted) throw new Error('not admitted');
-      expect(await units(concurrencyScope(GLOBAL_SCOPE), new Date(0))).toBe(1);
+      const concGlobal = await units(concurrencyScope(GLOBAL_SCOPE), new Date(0));
+      expect(concGlobal).toBeGreaterThanOrEqual(1);
       expect(await meter.settle(r.reservationId, 150, 'SUCCESS')).toBe(true);
       expect(await units(GLOBAL_HOUR_SCOPE, hourBucket(now))).toBe(150);
       expect(await units(GLOBAL_DAY_SCOPE, dayBucket(now))).toBe(150);
@@ -179,16 +198,36 @@ live('P1 — global hour/day meter identities never collide (live PostgreSQL)', 
       expect(await units(accountScope(ACCOUNT), dayBucket(now))).toBe(150);
       expect(await units(IP, dayBucket(now))).toBe(150);
       /* concurrency accounting is unchanged: same `conc:global` key, released on settle */
-      expect(await units(concurrencyScope(GLOBAL_SCOPE), new Date(0))).toBe(0);
+      /* shared key: this reservation's slot is released (a concurrent suite may hold its own) */
+      expect(await units(concurrencyScope(GLOBAL_SCOPE), new Date(0))).toBeLessThanOrEqual(
+        concGlobal - 1,
+      );
       expect(await units(concurrencyScope(accountScope(ACCOUNT)), new Date(0))).toBe(0);
       expect(await units(concurrencyScope(IP), new Date(0))).toBe(0);
     },
   );
 
   it('provider / account / IP / concurrency keep their exact keys (only the two global rate scopes changed)', async () => {
-    const now = at('2031-01-01T00:30:00Z');
+    const now = at('2033-01-01T00:30:00Z');
     await meterWith().reserve(who(now));
-    const scopes = (await db.computeMeter.findMany({ select: { scope: true, bucketStart: true } }))
+    const scopes = (
+      await db.computeMeter.findMany({
+        where: {
+          OR: [
+            { bucketStart: { gte: YEAR_START, lt: YEAR_END } },
+            { scope: { startsWith: 'conc:' }, bucketStart: new Date(0) },
+          ],
+        },
+        select: { scope: true, bucketStart: true },
+      })
+    )
+      .filter(
+        (m) =>
+          !m.scope.startsWith('conc:') ||
+          ['conc:global', concurrencyScope(accountScope(ACCOUNT)), concurrencyScope(IP)].includes(
+            m.scope,
+          ),
+      )
       .map((m) => `${m.scope}@${m.bucketStart.toISOString()}`)
       .sort();
     expect(scopes).toEqual(
@@ -206,7 +245,7 @@ live('P1 — global hour/day meter identities never collide (live PostgreSQL)', 
   });
 
   it('a reservation recorded BEFORE the repair (scope "global") settles against exactly the charges it recorded', async () => {
-    const bucket = at('2031-01-01T00:00:00Z');
+    const bucket = at('2033-01-01T00:00:00Z');
     await db.computeMeter.create({
       data: { scope: GLOBAL_SCOPE, bucketStart: bucket, units: 200n },
     });
@@ -217,14 +256,17 @@ live('P1 — global hour/day meter identities never collide (live PostgreSQL)', 
           { scope: GLOBAL_SCOPE, bucketStart: bucket.toISOString(), units: E, kind: 'units' },
         ] as unknown as object,
         units: BigInt(E),
-        expiresAt: at('2031-01-01T01:00:00Z'),
+        expiresAt: at('2033-01-01T01:00:00Z'),
       },
     });
     expect(await meterWith().settle(legacy.id, 40, 'SUCCESS')).toBe(true);
     expect(await units(GLOBAL_SCOPE, bucket)).toBe(200 - 2 * (E - 40));
     expect(
       await db.computeMeter.count({
-        where: { scope: { in: [GLOBAL_HOUR_SCOPE, GLOBAL_DAY_SCOPE] } },
+        where: {
+          scope: { in: [GLOBAL_HOUR_SCOPE, GLOBAL_DAY_SCOPE] },
+          bucketStart: { gte: YEAR_START, lt: YEAR_END },
+        },
       }),
     ).toBe(0);
   });
