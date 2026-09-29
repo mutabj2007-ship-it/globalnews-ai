@@ -9,6 +9,15 @@ import { isIP } from 'node:net';
  */
 
 export const GLOBAL_SCOPE = 'global';
+/*
+  COMPUTE METER GLOBAL BUCKET COLLISION R1 (P1) — the two global RATE controls need their own
+  meter identities. A ComputeMeter row is keyed by (scope, bucketStart), and during
+  00:00:00–00:59:59 UTC hourBucket(now) === dayBucket(now); with one shared 'global' scope the
+  hour and day charges landed in the SAME row, so the first hour of every UTC day was counted
+  twice against both ceilings. Global concurrency keeps `conc:global` (its own scope already).
+*/
+export const GLOBAL_HOUR_SCOPE = `${GLOBAL_SCOPE}:hour`;
+export const GLOBAL_DAY_SCOPE = `${GLOBAL_SCOPE}:day`;
 export const accountScope = (accountId: string): string => `acct:${accountId}`;
 export const providerScope = (provider: string): string => `provider:${provider}`;
 export const concurrencyScope = (base: string): string => `conc:${base}`;
