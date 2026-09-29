@@ -679,7 +679,7 @@ export function buildAnalysisMessages(
   eventEvidenceRelations?: readonly EventEvidenceRelation[],
   conversationSubject?: ConversationSubjectAnchor,
   selection?: SelectionPromptContext,
-  governedContext?: string,
+  governed?: { readonly rules: string; readonly data: string },
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
@@ -690,14 +690,10 @@ export function buildAnalysisMessages(
       buildEventAnchorInstruction(eventAnchor) +
       buildConversationSubjectInstruction(conversationSubject) +
       buildSelectionInstruction(selection) +
-      /* ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — governed retained records and the
-         rules that bind their use; empty on every other call (prompt byte-identical). */
-      (governedContext === undefined || governedContext === ''
-        ? ''
-        : `
-
-${governedContext}
-`) +
+      /* ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — ONLY the trusted governed RULES
+         (application-owned policy). Retained source data never enters the system prompt; it
+         rides in the user/evidence message below. Empty on every other call (byte-identical). */
+      (governed === undefined || governed.rules === '' ? '' : `\n\n${governed.rules}\n`) +
       buildRelationalPromptSection(relationalContext) +
       buildResponseLanguageInstruction(responseLanguage) +
       /*
@@ -716,12 +712,16 @@ ${governedContext}
         for the path that did not fail.
       */
       (repairDirective === undefined ? '' : `\n\n${repairDirective}\n`),
-    user: buildAnalysisUserPrompt(
-      query,
-      normalized,
-      evidenceState,
-      eventAnchor ? eventEvidenceRelations : undefined,
-    ),
+    user:
+      buildAnalysisUserPrompt(
+        query,
+        normalized,
+        evidenceState,
+        eventAnchor ? eventEvidenceRelations : undefined,
+      ) +
+      /* PR #70 prompt boundary — the retained records as delimited DATA, at user/evidence
+         privilege, after the supplied articles. Absent → the user prompt is byte-identical. */
+      (governed === undefined || governed.data === '' ? '' : `\n\n${governed.data}\n`),
   };
 }
 

@@ -106,7 +106,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
     eventEvidenceRelations,
     conversationSubject,
     selection,
-    governedContext,
+    governed,
     signal,
     maxModelAttempts,
     usageSink,
@@ -144,7 +144,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       eventEvidenceRelations,
       conversationSubject,
       selection,
-      governedContext,
+      governed,
     );
     const policyAttempts = comparisonCoverage?.length ? 1 : config.retryAttempts + 1;
     /* ASK R2 INTEGRATION R1 · GATE E — a caller ceiling can only LOWER the count. */

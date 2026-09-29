@@ -187,12 +187,12 @@ export interface AnalysisExecutionPolicy {
   readonly maxModelAttempts?: number;
   readonly usageSink?: AnalysisProviderInput['usageSink'];
   /**
-   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — the governed retained records that
-   * must constrain THIS answer (rendered by the Ask coordinator). It changes the answer, so it
-   * is part of the cache and in-flight key: a governed answer is never served to, or from, a
-   * plain one.
+   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — the governed rules (system) and the
+   * delimited retained data (user/evidence) that must constrain THIS answer, rendered by the Ask
+   * coordinator. They change the answer, so both are part of the cache and in-flight key: a
+   * governed answer is never served to, or from, a plain one.
    */
-  readonly governedContext?: string;
+  readonly governed?: AnalysisProviderInput['governed'];
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import {
@@ -663,9 +663,12 @@ export class AnalysisService {
         ? `:identity:${callerIdentity?.verified === true ? 'verified' : 'none'}`
         : '';
     const governedKeySegment =
-      executionPolicy?.governedContext === undefined || executionPolicy.governedContext === ''
+      executionPolicy?.governed === undefined || executionPolicy.governed.rules === ''
         ? ''
-        : `:governed:${createHash('sha256').update(executionPolicy.governedContext).digest('hex').slice(0, 16)}`;
+        : `:governed:${createHash('sha256')
+            .update(`${executionPolicy.governed.rules}\u0000${executionPolicy.governed.data}`)
+            .digest('hex')
+            .slice(0, 16)}`;
     const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}`;
 
     const cached = this.getCached(cacheKey);
@@ -3092,10 +3095,9 @@ export class AnalysisService {
             ...(executionPolicy?.usageSink === undefined
               ? {}
               : { usageSink: executionPolicy.usageSink }),
-            ...(executionPolicy?.governedContext === undefined ||
-            executionPolicy.governedContext === ''
+            ...(executionPolicy?.governed === undefined || executionPolicy.governed.rules === ''
               ? {}
-              : { governedContext: executionPolicy.governedContext }),
+              : { governed: executionPolicy.governed }),
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;

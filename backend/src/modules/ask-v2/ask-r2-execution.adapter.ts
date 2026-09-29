@@ -34,7 +34,7 @@ import {
 import {
   deterministicGovernedSelection,
   explicitOfficialUnavailable,
-  governedPromptSection,
+  governedPrompt,
   governedRecordBasis,
 } from '../ask-intelligence/governed-answer';
 import { selectContributors } from '../ask-intelligence/contributor-selection';
@@ -542,7 +542,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        complete (bounded) BEFORE the one analysis call, so their status, scope, time basis and
        disclosures bind the answer's prose instead of sitting beside it. */
     const contributions = await this.readIntelligence(route);
-    const governedContext = governedPromptSection(contributions);
+    const governed = governedPrompt(contributions);
 
     /* 4 · ONE call to the approved analysis path, one model attempt at most. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
@@ -565,7 +565,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           usageSink: (u) => {
             usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
           },
-          ...(governedContext === '' ? {} : { governedContext }),
+          ...(governed.rules === '' ? {} : { governed }),
         },
       );
       /* The landed path's no-evidence answer (0 articles, "no AI call was made") is not a
@@ -803,7 +803,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        model, zero provider. LIVE ACCEPTANCE REPAIR R1 (B): read first, so the one background
        call is bound by them. */
     const contributions = await this.readIntelligence(route);
-    const governedContext = governedPromptSection(contributions);
+    const governed = governedPrompt(contributions);
 
     /* 4 · ONE call to the dedicated background provider. No articles, no retrieval. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
@@ -823,7 +823,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         usageSink: (u) => {
           usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
         },
-        ...(governedContext === '' ? {} : { governedContext }),
+        ...(governed.rules === '' ? {} : { governed }),
       });
       text = out.text;
       declined = text === null;

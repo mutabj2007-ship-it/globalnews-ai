@@ -53,6 +53,12 @@ export interface AnalysisRelationalContext {
   y: string;
 }
 
+/** PR #70 prompt boundary — trusted rules (system) and delimited retained data (user). */
+export interface GovernedPromptParts {
+  readonly rules: string;
+  readonly data: string;
+}
+
 export interface AnalysisProviderInput {
   query: string;
   comparisonCoverage?: ComparisonCountryCoverage[];
@@ -146,11 +152,14 @@ export interface AnalysisProviderInput {
   selection?: SelectionPromptContext;
 
   /**
-   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — the governed retained records and
-   * their binding disclosures for THIS answer, pre-rendered by the Ask coordinator. Appended to
-   * the system prompt; absent on every other call, which keeps those prompts byte-identical.
+   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 (PR #70 prompt boundary) — present only
+   * when the Ask coordinator considered governed contributors:
+   *   rules  trusted GlobalNewsAI policy → appended to the SYSTEM prompt;
+   *   data   source-derived retained records, JSON inside GOVERNED_RETAINED_DATA delimiters →
+   *          appended to the USER/evidence message, never to the system prompt.
+   * Absent on every other call, which keeps those prompts byte-identical.
    */
-  governedContext?: string;
+  governed?: GovernedPromptParts;
 
   /**
    * Optional caller cancellation. AnalysisService uses this only for the

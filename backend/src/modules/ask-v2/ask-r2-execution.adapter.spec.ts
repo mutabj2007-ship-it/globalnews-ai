@@ -1575,8 +1575,9 @@ describe('INTELLIGENCE BINDING R1 — governed contributors behind the one Ask a
     expect(calls.background).toHaveLength(1);
     expect(calls.analysis).toHaveLength(0);
     expect(reads).toHaveLength(1);
-    const input = calls.background[0][0] as { governedContext?: string };
-    expect(input.governedContext).toMatch(/Humanitarian Intelligence: NOT ASSESSED/);
+    const input = calls.background[0][0] as { governed?: { rules: string; data: string } };
+    expect(input.governed?.rules).toMatch(/Humanitarian Intelligence was not assessed/);
+    expect(input.governed?.data).toContain('"status": "NOT_ASSESSED"');
   });
 
   it('reads never bypass the controls: a disabled Ask reads nothing', async () => {
@@ -1706,16 +1707,17 @@ describe('LIVE ACCEPTANCE REPAIR R1 — G1–G9 end to end', () => {
     const payload = await run('How serious is the situation in eastern DRC?', h);
     expect(h.calls.analysis).toHaveLength(1);
     const policy = h.calls.analysis[0][6] as {
-      governedContext?: string;
+      governed?: { rules: string; data: string };
       maxModelAttempts?: number;
     };
     expect(policy.maxModelAttempts).toBe(1);
-    expect(policy.governedContext).toMatch(
-      /Conflict Intelligence — retained UCDP event records: 1 record/,
-    );
-    expect(policy.governedContext).toMatch(/place: Beni territory, North Kivu/);
-    expect(policy.governedContext).toMatch(/retained scope is country-level/);
-    expect(policy.governedContext).toMatch(/do not rank, grade or characterise severity/);
+    /* PR #70 prompt boundary: trusted rules and retained data travel separately. */
+    expect(policy.governed?.rules).toMatch(/retained scope is country-level/);
+    expect(policy.governed?.rules).toMatch(/do not rank, grade or characterise severity/);
+    expect(policy.governed?.rules).not.toContain('Beni');
+    expect(policy.governed?.data).toContain('"contributor": "CONFLICT"');
+    expect(policy.governed?.data).toContain('"recordCount": 1');
+    expect(policy.governed?.data).toContain('"place": "Beni territory, North Kivu"');
     expect(payload.answer.state).toBe('CURRENT_REPORTING');
     expect(payload.intelligence.contributions[0].observations[0].detail.place).toBe(
       'Beni territory, North Kivu',
@@ -1840,8 +1842,8 @@ describe('LIVE ACCEPTANCE REPAIR R1 — G1–G9 end to end', () => {
     });
     const payload = await run('What is the humanitarian situation in Sudan?', h);
     expect(h.calls.analysis).toHaveLength(1);
-    const policy = h.calls.analysis[0][6] as { governedContext?: string };
-    expect(policy.governedContext).toMatch(
+    const policy = h.calls.analysis[0][6] as { governed?: { rules: string; data: string } };
+    expect(policy.governed?.rules).toMatch(
       /never state or imply that Humanitarian Intelligence supports/,
     );
     expect(payload.answer.state).toBe('CURRENT_REPORTING');
@@ -1862,9 +1864,7 @@ describe('LIVE ACCEPTANCE REPAIR R1 — G1–G9 end to end', () => {
       const payload = await run(q, h);
       expect(payload.answer.state).toBe('CURRENT_REPORTING');
       expect(h.calls.analysis).toHaveLength(1);
-      expect(
-        (h.calls.analysis[0][6] as { governedContext?: string }).governedContext,
-      ).toBeUndefined();
+      expect((h.calls.analysis[0][6] as { governed?: unknown }).governed).toBeUndefined();
     },
   );
 
