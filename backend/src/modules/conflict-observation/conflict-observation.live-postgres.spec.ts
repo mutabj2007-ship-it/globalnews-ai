@@ -8,6 +8,10 @@ import { PrismaService } from '../../database/prisma.service';
 import { ConflictObservationProducer } from './conflict-observation.producer';
 import { ConflictObservationRepository } from './conflict-observation.repository';
 import type { ReviewedUcdpCapture } from './ucdp-ged.normalizer';
+import {
+  UCDP_CANDIDATE_CSV_HEADERS,
+  type ReviewedUcdpCandidateCsvCapture,
+} from './ucdp-candidate-csv.normalizer';
 
 const url = process.env.CONFLICT_TEST_DATABASE_URL;
 const schema = `conflict_test_${randomUUID().replace(/-/g, '')}`;
@@ -19,7 +23,7 @@ live('Conflict recovery on disposable PostgreSQL (no providers)', () => {
   let prisma: PrismaClient;
   let producer: ConflictObservationProducer;
   let repository: ConflictObservationRepository;
-  const profiles: ReviewedUcdpCapture[] = [];
+  const profiles: (ReviewedUcdpCapture | ReviewedUcdpCandidateCsvCapture)[] = [];
   let captureNumber = 0;
   const fixture = (id: number, over = {}) => ({
     id,
@@ -34,8 +38,9 @@ live('Conflict recovery on disposable PostgreSQL (no providers)', () => {
     ...over,
   });
 
-  async function retain(records: unknown[]) {
-    const bytes = Buffer.from(JSON.stringify(records));
+  async function retain(records: unknown[], candidateCsv?: Buffer) {
+    const bytes = new Uint8Array(candidateCsv ?? Buffer.from(JSON.stringify(records)));
+    const mediaType = candidateCsv ? 'text/csv' : 'application/json';
     const hash = createHash('sha256').update(bytes).digest('hex');
     const retrievalId = `test-${++captureNumber}`;
     const retrievedAt = new Date(Date.UTC(2026, 8, 22, 0, captureNumber));
@@ -46,7 +51,7 @@ live('Conflict recovery on disposable PostgreSQL (no providers)', () => {
         contentAddress: hash,
         bytes,
         byteLength: bytes.length,
-        mediaType: 'application/json',
+        mediaType,
       },
     });
     await prisma.snapshotRetrieval.create({
@@ -59,14 +64,14 @@ live('Conflict recovery on disposable PostgreSQL (no providers)', () => {
         requestedAt: retrievedAt,
         retrievedAt,
         httpStatus: 200,
-        mediaType: 'application/json',
+        mediaType,
         byteLength: bytes.length,
         contentAddress: hash,
         completeness: 'COMPLETE',
         contentEncoding: 'identity',
         wireByteLength: bytes.length,
         admissibility: 'ADMITTED',
-        parserId: 'ucdp-ged-json',
+        parserId: candidateCsv ? 'ucdp-candidate-csv' : 'ucdp-ged-json',
         parserVersion: '1',
         parsedAt: retrievedAt,
         rightsGrade: 'E-5',
@@ -75,12 +80,21 @@ live('Conflict recovery on disposable PostgreSQL (no providers)', () => {
         editionAnnotations: {},
       },
     });
-    profiles.push({
-      sha256: hash,
-      datasetVersion: 'synthetic-test',
-      envelope: 'array',
-      schema: 'ucdp-ged-json-v1',
-    });
+    profiles.push(
+      candidateCsv
+        ? {
+            sha256: hash,
+            datasetVersion: 'synthetic-test',
+            sourceUrl: 'https://ucdp.uu.se/downloads/candidateged/synthetic-test.csv',
+            schema: 'ucdp-candidate-csv-v1',
+          }
+        : {
+            sha256: hash,
+            datasetVersion: 'synthetic-test',
+            envelope: 'array',
+            schema: 'ucdp-ged-json-v1',
+          },
+    );
     return retrievalId;
   }
 
@@ -154,6 +168,52 @@ live('Conflict recovery on disposable PostgreSQL (no providers)', () => {
     expect(retained[0].temporal.eventStartedAt).toBe('2025-01-01');
     expect(await prisma.conflictObservation.count({ where: { upstreamEventId: '17' } })).toBe(2);
     expect(await prisma.snapshotPin.count()).toBe(2);
+  });
+  it('Ask binding R1: reads only the current revision of retained records for one country', async () => {
+    const row = (id: string, country: string, date: string) => {
+      const values: Record<string, string> = {
+        ...Object.fromEntries(UCDP_CANDIDATE_CSV_HEADERS.map((key) => [key, ''])),
+        id,
+        type_of_violence: '1',
+        side_a: 'Synthetic group',
+        where_prec: '5',
+        latitude: '-1.5',
+        longitude: '29.0',
+        country,
+        date_prec: '1',
+        date_start: `${date} 00:00:00.000`,
+        date_end: `${date} 00:00:00.000`,
+      };
+      return UCDP_CANDIDATE_CSV_HEADERS.map((key) => values[key]).join(',');
+    };
+    const csv = (rows: string[]) =>
+      Buffer.from([UCDP_CANDIDATE_CSV_HEADERS.join(','), ...rows, ''].join('\r\n'));
+    const first = await retain(
+      [],
+      csv([
+        row('9101', 'DR Congo (Zaire)', '2026-08-10'),
+        row('9102', 'DR Congo (Zaire)', '2025-01-05'),
+        row('9103', 'Rwanda', '2026-08-11'),
+      ]),
+    );
+    expect(await producer.admitRetained(first, 'ask-country-1')).toEqual({
+      inserted: 3,
+      duplicates: 0,
+    });
+    // A source correction moves 9101 out of the window: only its latest revision is read.
+    const corrected = await retain([], csv([row('9101', 'DR Congo (Zaire)', '2024-02-01')]));
+    await producer.admitRetained(corrected, 'ask-country-2');
+
+    const since = new Date('2025-01-01T00:00:00Z');
+    const cod = await repository.currentForCountry('COD', since);
+    expect(cod.map((o) => o.identity.upstreamEventId)).toEqual(['9102']);
+    expect(cod[0].geography.countryIso3).toBe('COD');
+    const rwa = await repository.currentForCountry('RWA', since);
+    expect(rwa.map((o) => o.identity.upstreamEventId)).toEqual(['9103']);
+    expect(await repository.currentForCountry('POL', since)).toEqual([]);
+    // Malformed scopes never reach SQL.
+    expect(await repository.currentForCountry("COD' OR 1=1", since)).toEqual([]);
+    expect(await repository.currentForCountry('COD', new Date('bad'))).toEqual([]);
   });
   it('refuses malformed batch with no partial writes or pins', async () => {
     const before = await prisma.snapshotPin.count();

@@ -1,0 +1,564 @@
+{
+  "schemaVersion": 1,
+  "captureId": "fb858beb954de5912a737f05d27a65ddea4c7ba97c782dca26019f1e6847b0af",
+  "documentId": "nisr-imihigo-2024-2025-final",
+  "revisionOf": null,
+  "revisionLabel": "First retained publication; publisher revision number not stated",
+  "cycle": "2024/2025",
+  "reportPeriod": "2024/2025",
+  "evaluationDate": {
+    "value": "2025-08",
+    "precision": "month",
+    "pdfPage": 11,
+    "quote": "a final evaluation in August 2025"
+  },
+  "publicationDate": null,
+  "sourceLanguage": "en",
+  "languageBasis": "English source document; human verified, not inferred from display locale",
+  "publisher": "National Institute of Statistics of Rwanda (NISR)",
+  "sourceUrl": "https://statistics.gov.rw/sites/default/files/documents/2026-03/Imihigo%202024~2025.pdf",
+  "sourceDocument": "Imihigo Evaluation Report, 2024/2025",
+  "license": "CC BY 4.0 (PDF page 2)",
+  "artifact": "data/imihigo/nisr-imihigo-2024-2025.pdf",
+  "sha256": "fb858beb954de5912a737f05d27a65ddea4c7ba97c782dca26019f1e6847b0af",
+  "capturedAt": "2026-09-22T16:17:47.345677Z",
+  "byteLength": 1652341,
+  "parser": "imihigo-nisr-exact-source/1.0",
+  "decoder": "pypdf/6.10.0",
+  "orderReason": "LEXICAL",
+  "records": [
+    {
+      "entity": "Bugesera",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "72.6",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "11 Bugesera 72.6",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Burera",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "66",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "19 Burera 66",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "City of Kigali and its affiliated districts",
+      "entityClass": "city-of-kigali",
+      "result": {
+        "label": "overall performance score",
+        "value": "59.3",
+        "unit": "%"
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 8,
+        "printedPage": "6",
+        "section": "1.2 Imihigo evaluation key findings and performance",
+        "quote": "the City of Kigali and its affiliated districts achieved an overall performance score of 59.3%",
+        "columnHeader": null
+      }
+    },
+    {
+      "entity": "Gakenke",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "74.2",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "4 Gakenke 74.2",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Gatsibo",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "73.5",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "5 Gatsibo 73.5",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Gicumbi",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "73",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "8 Gicumbi 73",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Gisagara",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "76.6",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "2 Gisagara 76.6",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Huye",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "68.8",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "15 Huye 68.8",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Kamonyi",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "72.5",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "12 Kamonyi 72.5",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Karongi",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "67.4",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "17 Karongi 67.4",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Kayonza",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "65.8",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "20 Kayonza 65.8",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Kirehe",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "72.7",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "10 Kirehe 72.7",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Muhanga",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "73",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "7 Muhanga 73",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Musanze",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "64.1",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "23 Musanze 64.1",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Ngoma",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "77.2",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "1 Ngoma 77.2",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Ngororero",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "65",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "22 Ngororero 65",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Nyabihu",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "54.4",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "27 Nyabihu 54.4",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Nyagatare",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "74.3",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "3 Nyagatare 74.3",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Nyamagabe",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "73.5",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "6 Nyamagabe 73.5",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Nyamasheke",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "71.9",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "13 Nyamasheke 71.9",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Nyanza",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "65.6",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "21 Nyanza 65.6",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Nyaruguru",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "70.5",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "14 Nyaruguru 70.5",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Rubavu",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "62.6",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "24 Rubavu 62.6",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Ruhango",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "68.4",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "16 Ruhango 68.4",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Rulindo",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "59.1",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "26 Rulindo 59.1",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Rusizi",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "66.9",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "18 Rusizi 66.9",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Rutsiro",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "61",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "25 Rutsiro 61",
+        "columnHeader": "Rank District Final Score"
+      }
+    },
+    {
+      "entity": "Rwamagana",
+      "entityClass": "district",
+      "result": {
+        "label": "Final Score",
+        "value": "72.7",
+        "unit": null
+      },
+      "target": null,
+      "indicator": null,
+      "evaluationStatus": null,
+      "provenance": {
+        "pdfPage": 9,
+        "printedPage": "7",
+        "section": "Figure 1: District performance in 2024/2025",
+        "quote": "9 Rwamagana 72.7",
+        "columnHeader": "Rank District Final Score"
+      }
+    }
+  ],
+  "coverage": "27 district final scores and the City of Kigali with its affiliated districts. No individual ministry/board scores or entity-level targets admitted. No earlier cycles admitted."
+}

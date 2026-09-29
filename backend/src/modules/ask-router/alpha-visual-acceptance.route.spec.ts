@@ -1,5 +1,4 @@
 import { routeAskR2, type AskR2Route } from './ask-r2-route';
-import { planChips } from './plan-chips';
 import { specialistRegistryFixture } from './frozen-c/fixtures/specialist-registry.fixture';
 
 /**
@@ -69,54 +68,45 @@ describe('L — stable explanatory follow-ups route to Reference Background (EN 
   });
 });
 
-describe('F — the four Alpha clarification questions are genuine broadening offers', () => {
-  const cases = [
-    {
-      question: 'What are the latest major developments in Poland today?',
-      notApplied: ['today'],
-      draft: 'What are the latest major developments in Poland?',
-    },
-    {
-      question:
-        'What are the latest major political developments in Poland today? Give me the top 3 and cite the sources.',
-      notApplied: ['political', 'today'],
-      draft:
-        'What are the latest major developments in Poland? Give me the top 3 and cite the sources.',
-    },
-    {
-      question: 'What are the latest major developments in Ukraine today?',
-      notApplied: ['today'],
-      draft: 'What are the latest major developments in Ukraine?',
-    },
-    {
-      question:
-        'What are the latest reported Russian missile and drone attacks on Ukraine today? Cite the sources.',
-      notApplied: ['today'],
-      draft:
-        'What are the latest reported Russian missile and drone attacks on Ukraine? Cite the sources.',
-    },
-  ];
-
-  it.each(cases)('$question', ({ question, notApplied, draft }) => {
+/*
+  ASK INTELLIGENCE BINDING R1 (§11B) — SUPERSEDED WITH UPDATED CONTRACT PROOF. These four were
+  frozen-C broadening offers only because "today" (and a duplicated "political" topic) reached
+  the planner as untransportable constraints. The composition layer now hands frozen C neither:
+  "today" is served by current reporting itself (the phrase still reaches the executor as
+  readerStatedPeriod), and "political" is already carried as the analytical DOMAIN. Frozen C is
+  untouched; the same questions now EXECUTE current reporting. Other periods and topics are
+  unchanged (see the controls below).
+*/
+describe('F — the four Alpha "today" questions now execute current reporting (§11B)', () => {
+  it.each([
+    'What are the latest major developments in Poland today?',
+    'What are the latest major political developments in Poland today? Give me the top 3 and cite the sources.',
+    'What are the latest major developments in Ukraine today?',
+    'What are the latest reported Russian missile and drone attacks on Ukraine today? Cite the sources.',
+  ])('%s', (question) => {
     const r = route(question, 'en');
-    expect(r.plan.terminalState).toBe('BROADENING_OFFERED');
-    expect(r.plan.clarification).toEqual([]);
-    /* The display names exactly the reader's words the plan could not apply… */
-    const chips = planChips(r.envelope, r.plan);
-    expect(chips.kind).toBe('SCOPED');
-    const unapplied =
-      chips.kind === 'SCOPED'
-        ? [
-            ...new Set(
-              chips.chips
-                .filter((c) => !c.applied && c.kind !== 'GEOGRAPHY' && c.kind !== 'SELECTION')
-                .map((c) => c.value.toLowerCase()),
-            ),
-          ].sort()
-        : [];
-    expect(unapplied).toEqual([...notApplied].sort());
-    for (const word of notApplied) expect(question.toLowerCase()).toContain(word);
-    /* …and the draft it offers (those words removed) is an executable question. */
-    expect(route(draft, 'en').plan.terminalState).toBe('EXECUTABLE');
+    expect(r.plan.terminalState).toBe('EXECUTABLE');
+    expect(
+      r.plan.evidenceRequests.some((e) => e.evidenceClass === 'NEWS_REPORTING' && e.required),
+    ).toBe(true);
+    expect(r.plan.constraints.some((c) => c.axis === 'TIME')).toBe(false);
+    expect(r.plan.constraints.some((c) => c.axis === 'TOPIC')).toBe(false);
+    expect(r.envelope.time.requirement).toBe('RECENT');
+    expect(r.readerStatedPeriod).toBe('today');
+  });
+
+  it('"political" is carried once — as the domain — and the Politics specialist stays unbound', () => {
+    const r = route('What are the latest major political developments in Poland today?', 'en');
+    expect(r.plan.constraints.filter((c) => c.axis === 'DOMAIN').map((c) => c.value)).toEqual([
+      'political',
+    ]);
+    expect(r.plan.disclosures).toContain('SPECIALIST_INTELLIGENCE_NOT_USED');
+  });
+
+  it.each([
+    ['What happened in Poland in 2024?', '2024'],
+    ['What happened in Kenya this week?', 'this week'],
+  ])('control — any other stated period is still a constraint: %s', (question) => {
+    expect(route(question, 'en').plan.terminalState).toBe('BROADENING_OFFERED');
   });
 });

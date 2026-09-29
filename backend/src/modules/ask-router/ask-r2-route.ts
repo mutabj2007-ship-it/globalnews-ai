@@ -60,6 +60,7 @@ import { readLandedClassifiers, type LandedReadingTrace } from './landed-reading
 import { readCapabilityRequests, type CapabilityRequestKind } from './capability-producers';
 import { detectAmbiguousCountryMention } from '../analysis/anchor/event-anchor.util';
 import { readInstitutionalStatusQuestion } from '../news/relevance/governed-institutions';
+import { retainedCycleCovers } from '../ask-intelligence/contributor-selection';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -106,6 +107,12 @@ export interface SeamTrace {
 }
 
 export interface AskR2Route {
+  /**
+   * INTELLIGENCE BINDING R1 — the reader's own stated period, even when it is not carried as
+   * a routing constraint (see statedPeriodIsConstraint): the executor still honours it, e.g.
+   * current-status corroboration's 1-day window for "today". Null when none was stated.
+   */
+  readonly readerStatedPeriod: string | null;
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -219,6 +226,62 @@ function classificationFor(failure: NormalizationFailure): LanguageClassificatio
  * producers. Every field is either a reading, a producer output, or the request's own
  * server-held context. Nothing is guessed.
  */
+/*
+  ════════════════════════════════════════════════════════════════════════════
+  INTELLIGENCE BINDING R1 — TWO COMPOSITION CORRECTIONS (contract §11B, §6C)
+  ════════════════════════════════════════════════════════════════════════════
+
+  Frozen C drops a stated period and a topic term as UNTRANSPORTABLE constraints (no time or
+  topic channel reaches retrieval) and offers broadening. That is right for a constraint the
+  executor cannot honour, and wrong for one it already honours:
+
+   1  "today" (and its same-day PL forms). Current reporting IS the most recent reporting, and
+      the temporal requirement stays RECENT; the phrase itself still reaches the executor
+      (AskR2Route.readerStatedPeriod) for current-status corroboration's 1-day window. Every
+      other relative or absolute period stays a constraint exactly as before.
+   2  a closed evaluation cycle that a governed retained artifact covers EXACTLY, when the
+      question is about that artifact ("Ngoma's 2024/2025 Imihigo result") — the retained
+      NISR evaluation IS that period; nothing needs to be transported to news retrieval.
+   3  a reader category word that the reading ALSO carries as an analytical domain
+      ("political" → domain political): one constraint, not a duplicate untransportable topic.
+
+  Frozen C's bytes and rules are untouched: this only decides what the composition hands it.
+*/
+const SAME_DAY_PERIODS: ReadonlySet<string> = new Set([
+  'today',
+  'tonight',
+  'this morning',
+  'this evening',
+  'dzisiaj',
+  'dziś',
+  'dzis',
+]);
+/** The reader's category word (or its category) → the analytical domain that already carries it. */
+const CATEGORY_DOMAIN: Readonly<Record<string, string>> = {
+  political: 'political',
+  politics: 'political',
+  economic: 'economic',
+  economy: 'economic',
+  business: 'economic',
+  technology: 'technology',
+  tech: 'technology',
+};
+
+export function statedPeriodIsConstraint(reading: QualifiedReading): boolean {
+  const stated = reading.statedTime;
+  if (stated === undefined) return false;
+  const phrase = stated.statedPeriod.trim().toLowerCase();
+  if (stated.anchor === 'RELATIVE_TO_ASK' && SAME_DAY_PERIODS.has(phrase)) return false;
+  if (retainedCycleCovers(reading.originalQuestion, stated.statedPeriod)) return false;
+  return true;
+}
+
+export function topicCarriedByDomain(reading: QualifiedReading): boolean {
+  const category = reading.readerCategory?.value;
+  const domain = category === undefined ? undefined : CATEGORY_DOMAIN[category];
+  return domain !== undefined && reading.domains.some((d) => d.value === domain);
+}
+
 export function composeEnvelopeSource(
   reading: QualifiedReading,
   landed: ReturnType<typeof readLandedClassifiers>['reading'],
@@ -266,8 +329,12 @@ export function composeEnvelopeSource(
     /* Frozen B3: the topic axis carries the category the reader NAMED — G producer B's
        categoryTerm (its PL mirror for Polish). G's INTERPRETED reader words are not a
        constraint the reader imposed and are not bound here (FS-1). */
-    ...(reading.readerCategory === undefined ? {} : { topicTerms: [reading.readerCategory.value] }),
-    ...(reading.statedTime === undefined ? {} : { statedPeriod: reading.statedTime.statedPeriod }),
+    ...(reading.readerCategory === undefined || topicCarriedByDomain(reading)
+      ? {}
+      : { topicTerms: [reading.readerCategory.value] }),
+    ...(reading.statedTime === undefined || !statedPeriodIsConstraint(reading)
+      ? {}
+      : { statedPeriod: reading.statedTime.statedPeriod }),
     ...(requirement === 'NONE' ? {} : { temporalRequirement: requirement }),
     ...(ctx.articleRefs === undefined ? {} : { articleRefs: ctx.articleRefs }),
     ...(reading.shape.officeConstruction
@@ -321,6 +388,7 @@ export function routeAskR2(
     };
     const routed = frozenRoute(source, deps);
     return {
+      readerStatedPeriod: null,
       outcome,
       source,
       envelope: routed.envelope,
@@ -402,6 +470,7 @@ export function routeAskR2(
   };
 
   return {
+    readerStatedPeriod: reading.statedTime?.statedPeriod ?? null,
     outcome,
     source,
     envelope,

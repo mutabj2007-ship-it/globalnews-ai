@@ -28,6 +28,10 @@ import { planChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
 import type { RoutingPlan, VerificationOutcome } from '../ask-router/frozen-c/src/ports';
 import {
+  AskSpecialistReadCoordinator,
+  type AskContributionSet,
+} from '../ask-intelligence/ask-specialist-read.coordinator';
+import {
   corroborateCurrentStatus,
   corroborationTargetOf,
   type CorroborationResult,
@@ -127,7 +131,25 @@ function routeFor(request: Readonly<AskRequest>, deps: PlannerDeps): AskR2Route 
  * personal library, a file or a computation. A plan that REQUIRES any of those is not run
  * against reporting instead: that would be the silent substitution frozen C forbids.
  */
-export const EXECUTOR_SUPPLIES: ReadonlySet<string> = new Set(['REPORTING']);
+export const EXECUTOR_SUPPLIES: ReadonlySet<string> = new Set([
+  'REPORTING',
+  /*
+    INTELLIGENCE BINDING R1 — SPECIALIST is now a role this executor genuinely supplies: a bound
+    specialist leg (CONFLICT, whose callable read seam is AskSpecialistReadCoordinator) is READ,
+    and its governed observations are counted into the one answer derivation. OFFICIAL is still
+    not supplied (no official reader exists) — news is never relabelled as official evidence.
+  */
+  'SPECIALIST',
+]);
+
+const NO_CONTRIBUTIONS: AskContributionSet = { considered: [], contributions: [] };
+
+/** Governed specialist items obtained — the Conflict leg's observations, nothing else. */
+export function specialistItemsOf(set: AskContributionSet): number {
+  return set.contributions
+    .filter((c) => c.contributorId === 'CONFLICT' && c.status === 'USED')
+    .reduce((n, c) => n + c.observations.length, 0);
+}
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -264,10 +286,43 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     private readonly analysisConfig: AnalysisConfigService,
     specialists: SpecialistClaimRegistry,
     private readonly observations: AskObservationService,
+    private readonly intelligence: AskSpecialistReadCoordinator,
   ) {
     this.deps = {
-      specialistRegistry: landedSpecialistRegistryPort(() => specialists.registeredDomains()),
+      /*
+        INTELLIGENCE BINDING R1 — "bound" is a MEASURED fact handed in by the coordinator that
+        owns the callable read seam, never a default. Registered and bound are still separate:
+        a registered specialist without a seam stays unbound.
+      */
+      specialistRegistry: landedSpecialistRegistryPort(
+        () => specialists.registeredDomains(),
+        intelligence.boundSpecialistDomains(),
+      ),
     };
+  }
+
+  /** The governed reads for this route — local, bounded, isolated; never rejects. */
+  private readIntelligence(route: AskR2Route): Promise<AskContributionSet> {
+    return this.intelligence.read(route).catch((error: unknown) => {
+      this.logger.warn(`ask intelligence read failed: ${(error as Error)?.message ?? 'unknown'}`);
+      return NO_CONTRIBUTIONS;
+    });
+  }
+
+  /** Bounded observability of contributor use: ids and a count only — never content. */
+  private observeContributions(set: AskContributionSet, draft: AskObservationDraft): void {
+    draft.contributorsConsidered = set.considered.map((c) => c.contributorId);
+    draft.contributorsUsed = set.contributions
+      .filter((c) => c.status === 'USED')
+      .map((c) => c.contributorId);
+    draft.contributorsDegraded = set.contributions
+      .filter(
+        (c) => c.status === 'DEGRADED' || c.status === 'NOT_ASSESSED' || c.status === 'REFUSED',
+      )
+      .map((c) => c.contributorId);
+    draft.contributorItemCount = set.contributions
+      .filter((c) => c.status === 'USED' && c.contributorId !== 'GEOGRAPHY')
+      .reduce((n, c) => n + c.observations.length, 0);
   }
 
   async prepare(request: Readonly<AskRequest>): Promise<AskPlan> {
@@ -444,6 +499,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
     }
 
+    /* INTELLIGENCE BINDING R1 — the governed reads run beside the one analysis call: local
+       retained reads, zero model calls, zero provider calls, isolated from its outcome. */
+    const intelligence = this.readIntelligence(route);
+
     /* 4 · ONE call to the approved analysis path, one model attempt at most. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
     let outcome: BreakerOutcome = 'FAILURE';
@@ -537,14 +596,18 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
             target: corroborationTargetOf(route),
             articles: response.articles,
             now: new Date(),
-            statedPeriod: route.envelope.time.statedPeriod,
+            statedPeriod: route.readerStatedPeriod,
             minIndependentReports: route.plan.verification.minIndependentFreshSources,
           });
     const verification = executorVerificationOutcome(route.plan, corroboration);
+    const contributions = await intelligence;
+    const specialistItems = specialistItemsOf(contributions);
+    this.observeContributions(contributions, draft);
     const answer = deriveAnswerState(route.plan, {
       items: {
         REPORTING:
           corroboration === null ? response.articles.length : corroboration.qualifyingReports,
+        SPECIALIST: specialistItems,
       },
       producedAnswer: response.analysis !== null,
       ...(verification === undefined ? {} : { verification }),
@@ -554,7 +617,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     draft.aiExecuted = aiExecuted;
     draft.modelInvocationCount = aiExecuted ? 1 : 0;
     draft.reportingItemCount = response.articles.length;
-    draft.evidenceRolesObtained = response.articles.length > 0 ? ['REPORTING'] : [];
+    draft.evidenceRolesObtained = [
+      ...(response.articles.length > 0 ? ['REPORTING'] : []),
+      ...(specialistItems > 0 ? ['SPECIALIST'] : []),
+    ];
     const measured = usage as { promptTokens: number; completionTokens: number } | null;
     if (measured !== null) {
       draft.promptTokens = measured.promptTokens;
@@ -581,6 +647,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
                 ? null
                 : { family: corroboration.fact.family, value: corroboration.fact.value },
           },
+      contributions,
     );
   }
 
@@ -691,6 +758,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
     }
 
+    /* INTELLIGENCE BINDING R1 — governed reads beside the one background call (after every
+       control has passed): local, zero model, zero provider. */
+    const intelligence = this.readIntelligence(route);
+
     /* 4 · ONE call to the dedicated background provider. No articles, no retrieval. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
     let outcome: BreakerOutcome = 'FAILURE';
@@ -748,6 +819,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        is `producedAnswer: false`, which `deriveAnswerState` already maps to the truthful
        CAPABILITY_UNAVAILABLE / missingRoles: ['REFERENCE'] state — never a fabricated
        background answer, and never a silent pretend-success. */
+    const contributions = await intelligence;
+    this.observeContributions(contributions, draft);
     const answer = deriveAnswerState(route.plan, { items: {}, producedAnswer: !declined });
     /* The model WAS invoked on a decline (it answered with the decline token), so the
        invocation is counted; `aiExecuted` means an answer was produced, as on Reporting. */
@@ -767,6 +840,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       null,
       !declined,
       text,
+      null,
+      contributions,
     );
   }
 
@@ -791,6 +866,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       readonly asOf: string | null;
       readonly fact: { readonly family: string; readonly value: string | number } | null;
     } | null = null,
+    /**
+     * INTELLIGENCE BINDING R1 — the governed contributions considered for this answer, each
+     * with its status, provenance and time basis. Absent (null) when none applied.
+     */
+    intelligence: AskContributionSet = NO_CONTRIBUTIONS,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -829,6 +909,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
            background text (never present alongside a non-null `analysis`). */
         background: backgroundText === null ? null : { text: backgroundText },
         verification,
+        intelligence:
+          intelligence.considered.length === 0
+            ? null
+            : {
+                considered: intelligence.considered.map((c) => c.contributorId),
+                contributions: intelligence.contributions,
+              },
       }),
       evidenceRevision: plan.revision,
       validUntil: plan.validUntil,

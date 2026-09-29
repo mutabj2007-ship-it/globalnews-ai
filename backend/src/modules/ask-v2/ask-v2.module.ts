@@ -6,6 +6,7 @@ import { AnalysisModule } from '../analysis/analysis.module';
 import { ComputeControlsModule } from '../compute-controls/compute-controls.module';
 import { SpecialistModule } from '../specialist/specialist.module';
 import { AskObservabilityModule } from '../ask-observability/ask-observability.module';
+import { AskIntelligenceModule } from '../ask-intelligence/ask-intelligence.module';
 import { ASK_EXECUTION_PORT } from './ask-compute.contract';
 import { AskV2Controller, AskV2EnabledGuard } from './ask-v2.controller';
 import { AskV2Service } from './ask-v2.service';
@@ -30,6 +31,7 @@ import { AskAccessObservationFilter } from './ask-access-observation.filter';
     ComputeControlsModule,
     SpecialistModule,
     AskObservabilityModule,
+    AskIntelligenceModule,
   ],
   controllers: [AskV2Controller],
   providers: [
