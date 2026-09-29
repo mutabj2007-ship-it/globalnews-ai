@@ -323,10 +323,13 @@ export function LanguageSelector({
   /*
     ALPHA VISUAL ACCEPTANCE REPAIR R1 — anchor 'self': the SAME mobile popup (same tokens,
     width, radius, offset, z), positioned from this control's own left edge instead of the
-    header row's right inset. Derived, not duplicated, so the released geometry stays one string.
+    header row's right inset, and fully opaque (the drawer below it is a list of live controls).
+    Derived, not duplicated, so the released geometry stays one string.
   */
   const anchoredToSelf = isMobile && anchor === 'self';
-  const shownPopupClass = anchoredToSelf ? popupClass.replace('right-[12px]', 'left-0') : popupClass;
+  const shownPopupClass = anchoredToSelf
+    ? popupClass.replace('right-[12px]', 'left-0').replace('bg-cd-fill-popup', 'bg-[rgb(6,12,24)]')
+    : popupClass;
 
   /*
     §4 — ROW GEOMETRY. 40px desktop / 44px mobile (the touch floor), 0 11px
