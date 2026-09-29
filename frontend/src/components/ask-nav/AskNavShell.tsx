@@ -10,9 +10,15 @@ import {
   useState,
 } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { accountSignInUrl } from '@/lib/api/accountBase';
+import {
+  askLocation,
+  cleanAskDestination,
+  isAskConversationSurface,
+  isPlainClick,
+} from '@/lib/ask/askCleanNavigation';
 import { useAccount } from '@/lib/hooks/useAccount';
 import { persistLanguageSelection } from '@/lib/i18n/languages';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
@@ -124,6 +130,16 @@ import styles from './askNav.module.css';
 interface AskNavState {
   readonly open: boolean;
   readonly setOpen: (next: boolean) => void;
+  /**
+   * ALPHA VISUAL ACCEPTANCE REPAIR R1 — true from the moment New question or Sign out is
+   * pressed until the clean document navigation replaces the page. Every private Ask body
+   * reads it (AskShellFrame, AskClearedBoundary) and renders nothing of the previous state.
+   */
+  readonly cleared: boolean;
+  /** Hide private Ask content now, then load `url` as a fresh document. */
+  readonly clearAndGo: (url: string) => void;
+  /** Hide private Ask content now (sign-out clears before its request resolves). */
+  readonly clear: () => void;
 }
 
 const AskNavContext = createContext<AskNavState | null>(null);
@@ -135,7 +151,22 @@ const AskNavContext = createContext<AskNavState | null>(null);
  */
 export function AskNavProvider({ children }: { readonly children: React.ReactNode }): JSX.Element {
   const [open, setOpen] = useState(false);
-  const value = useMemo<AskNavState>(() => ({ open, setOpen }), [open]);
+  const [cleared, setCleared] = useState(false);
+  const clear = useCallback(() => {
+    setOpen(false);
+    setCleared(true);
+  }, []);
+  const clearAndGo = useCallback(
+    (url: string) => {
+      clear();
+      askLocation.assign(url);
+    },
+    [clear],
+  );
+  const value = useMemo<AskNavState>(
+    () => ({ open, setOpen, cleared, clearAndGo, clear }),
+    [open, cleared, clearAndGo, clear],
+  );
   return <AskNavContext.Provider value={value}>{children}</AskNavContext.Provider>;
 }
 
@@ -152,6 +183,14 @@ export function useAskNav(): AskNavState {
   return context;
 }
 
+/**
+ * The cleared flag without the loud failure: a private body that is also rendered outside
+ * the standalone shell (platform mode) reads `false` there and behaves exactly as before.
+ */
+export function useAskNavCleared(): boolean {
+  return useContext(AskNavContext)?.cleared ?? false;
+}
+
 /** The label a row renders. Falls back to the model's English wording so a
  *  missing key can never produce an unlabelled control; askNavShell.spec.ts
  *  asserts every labelKey resolves in both locales, so it is never reached. */
@@ -163,8 +202,9 @@ function labelOf(entry: AskMenuEntry, strings: AskNavStrings): string {
 const FOCUSABLE = 'a[href], button:not([disabled]), select, input, [tabindex]:not([tabindex="-1"])';
 
 export function AskNavShell({ language }: { readonly language: AskNavLocale }): JSX.Element {
-  const { open, setOpen } = useAskNav();
+  const { open, setOpen, clearAndGo, clear } = useAskNav();
   const pathname = usePathname();
+  const router = useRouter();
   /* THE ONE SESSION READ. See this file's header. */
   const { user, isLoading, signOut } = useAccount();
   const [accountOpen, setAccountOpen] = useState(false);
@@ -187,9 +227,44 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
          language is a complete no-op, so it cannot cost a reload. */
       if (next === (language as LanguageCode)) return;
       persistLanguageSelection(next);
+      /*
+        ALPHA VISUAL ACCEPTANCE REPAIR R1 — the same two steps as the platform NavBar: persist,
+        then re-render the Server Components that read the cookie, so the shell AND the page
+        switch language at once. Client state (an open conversation) is kept; no AI call.
+      */
+      router.refresh();
     },
-    [language],
+    [language, router],
   );
+
+  /*
+    ALPHA VISUAL ACCEPTANCE REPAIR R1 — SIGN OUT CLEARS PRIVATE ASK CONTENT IMMEDIATELY.
+    Clear first (nothing of the signed-in reader stays visible while the request runs), then
+    end the session, then load the clean Ask opening screen as a new document so no client
+    state of the previous account survives. If the request failed, that fresh load tells the
+    truth about the session instead of a signed-out header over signed-in content.
+  */
+  const signOutClean = useCallback(async (): Promise<void> => {
+    clear();
+    try {
+      await signOut();
+    } catch {
+      /* the fresh load below shows the session as it really is */
+    }
+    askLocation.assign(cleanAskDestination(pathname));
+  }, [clear, signOut, pathname]);
+
+  /*
+    ALPHA VISUAL ACCEPTANCE REPAIR R1 — NEW QUESTION STARTS A NEW QUESTION. On an Ask
+    conversation surface a same-route <Link> does not remount the frame, so it is replaced by
+    one explicit action: clear, then a clean document load. Elsewhere (Recent, Saved, Help,
+    Settings) the ordinary route change already mounts a fresh Ask frame.
+  */
+  const onNewQuestion = (event: React.MouseEvent<HTMLAnchorElement>): void => {
+    if (!isAskConversationSurface(pathname) || !isPlainClick(event)) return;
+    event.preventDefault();
+    clearAndGo(cleanAskDestination(pathname));
+  };
 
   /* Desktop account disclosure — Escape and outside pointerdown, the same two
      dismissals AccountControl uses, so the two menus behave identically. */
@@ -244,6 +319,16 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
     closeRef.current?.focus();
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Escape') {
+        /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — an open language list closes first; the next
+           Escape closes the drawer. */
+        const active = document.activeElement;
+        if (
+          active !== null &&
+          drawerRef.current?.contains(active) === true &&
+          active.getAttribute('aria-expanded') === 'true'
+        ) {
+          return;
+        }
         setOpen(false);
         return;
       }
@@ -278,7 +363,10 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
         data-ask-nav="item"
         data-ask-nav-id={entry.id}
         className={className}
-        onClick={onNavigate}
+        onClick={(event) => {
+          if (entry.id === 'new-question') onNewQuestion(event);
+          onNavigate?.();
+        }}
       >
         {labelOf(entry, s)}
       </Link>
@@ -380,7 +468,7 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
                       type="button"
                       data-ask-nav="utility"
                       data-ask-nav-id={signOutEntry.id}
-                      onClick={() => void signOut()}
+                      onClick={() => void signOutClean()}
                       className="flex min-h-11 items-center rounded-[8px] px-2 text-start font-cd-body text-[14px] text-[#cfe2f2] hover:bg-[rgba(56,189,248,0.10)]"
                     >
                       {labelOf(signOutEntry, s)}
@@ -431,6 +519,7 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
                   label={s.language}
                   actionLabel={s.languageSelectorAction}
                   variant="mobile"
+                  anchor="self"
                 />
               </div>
             )}
@@ -452,7 +541,7 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
                   data-ask-nav-id={signOutEntry.id}
                   onClick={() => {
                     setOpen(false);
-                    void signOut();
+                    void signOutClean();
                   }}
                   className={`${drawerRowClass} text-start`}
                 >

@@ -24,7 +24,7 @@ import styles from './askNav.module.css';
  * The title is a plain label, not a heading: each surface already renders its own
  * <h1> with the same words, and a second one would duplicate the page outline.
  */
-export type AskContinuitySurface = 'recent' | 'saved';
+export type AskContinuitySurface = 'recent' | 'saved' | 'help' | 'settings';
 
 export function AskContinuityHeader({
   locale,
@@ -36,7 +36,15 @@ export function AskContinuityHeader({
   const { open, setOpen } = useAskNav();
   const nav = askNavStringsFor(locale);
   const t = askContinuityStrings(locale);
-  const title = surface === 'recent' ? t.recentTitle : t.savedTitle;
+  /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — Help & feedback and Settings are standalone surfaces too. */
+  const title =
+    surface === 'recent'
+      ? t.recentTitle
+      : surface === 'saved'
+        ? t.savedTitle
+        : surface === 'help'
+          ? nav.help
+          : nav.settings;
 
   return (
     <header data-ask-continuity="phone-header" className={styles.continuityHeader}>

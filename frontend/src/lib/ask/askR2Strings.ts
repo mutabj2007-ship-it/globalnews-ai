@@ -72,6 +72,20 @@ export interface AskR2Strings {
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
   /**
+   * ALPHA VISUAL ACCEPTANCE REPAIR R1 — a clarification is NEVER shown without a question.
+   * `broadening` names the parts of the question Ask cannot apply as a search limit yet
+   * (the plan's not-applied chips); `codes` asks the question each plan clarification code
+   * stands for; `fallback` is the question when nothing more specific is known.
+   */
+  readonly clarify: {
+    readonly broadening: (notApplied: readonly string[], withSuggestion: boolean) => string;
+    readonly suggestion: string;
+    readonly useSuggestion: string;
+    readonly chooseHint: string;
+    readonly codes: Readonly<Record<string, string>>;
+    readonly fallback: string;
+  };
+  /**
    * SIGNED-OUT FALLBACK REMOVAL R1 — Ask V2 answered 401: the reader must sign in. The
    * question was not sent and nothing ran; it waits in the composer.
    */
@@ -158,6 +172,30 @@ const EN: AskR2Strings = {
   expiredNote: 'This saved answer has expired · shown as it was, not re-checked',
   noPriorSubject:
     "There's no earlier question to continue. What would you like to know about this place?",
+  clarify: {
+    broadening: (notApplied, withSuggestion) =>
+      `Ask can't limit a reporting search to ${quoteList(notApplied, 'and')} yet, so nothing was searched. It can search the most recent reporting without that limit — ${
+        withSuggestion
+          ? 'use the suggested question below, or rephrase.'
+          : 'rephrase without it and ask again.'
+      }`,
+    suggestion: 'Suggested question',
+    useSuggestion: 'Use this question',
+    chooseHint: 'Choosing one adds it to your question below — nothing runs until you press Ask.',
+    codes: {
+      LANGUAGE_UNCLASSIFIED:
+        'Which language is your question in? Please ask it in English or Polish.',
+      LANGUAGE_UNSUPPORTED:
+        'Ask answers in English and Polish. Could you ask your question in one of them?',
+      SOURCE_FRAME_UNPARSED:
+        'Which source should the answer come from? Name the outlet or institution — for example “What does Reuters report about …?”',
+      SELECTION_EXCEEDS_MAX: 'Too many stories are selected. Select fewer stories and ask again.',
+      SELECTION_BELOW_MINIMUM:
+        'Not enough stories are selected. Select more stories and ask again.',
+    },
+    fallback:
+      'What exactly should this cover? Add one specific place, topic or period and ask again.',
+  },
   signInRequired: {
     title: 'SIGN-IN REQUIRED',
     body: 'Sign in to ask GlobalNewsAI. Your question is kept below and was not sent — nothing was run.',
@@ -256,6 +294,32 @@ const PL: AskR2Strings = {
   expiredNote: 'Ta zapisana odpowiedź wygasła · pokazana bez ponownego sprawdzenia',
   noPriorSubject:
     'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o tym miejscu?',
+  clarify: {
+    broadening: (notApplied, withSuggestion) =>
+      `Zapytaj GlobalNewsAI nie potrafi jeszcze zawęzić wyszukiwania doniesień do ${quoteList(notApplied, 'i', '„')}, więc niczego nie wyszukano. Może przeszukać najnowsze doniesienia bez tego ograniczenia — ${
+        withSuggestion
+          ? 'użyj proponowanego pytania poniżej albo przeformułuj pytanie.'
+          : 'przeformułuj pytanie bez niego i zapytaj ponownie.'
+      }`,
+    suggestion: 'Proponowane pytanie',
+    useSuggestion: 'Użyj tego pytania',
+    chooseHint:
+      'Wybór doda go do Twojego pytania poniżej — nic nie zostanie uruchomione, dopóki nie naciśniesz Zapytaj.',
+    codes: {
+      LANGUAGE_UNCLASSIFIED:
+        'W jakim języku jest Twoje pytanie? Zadaj je po polsku lub po angielsku.',
+      LANGUAGE_UNSUPPORTED:
+        'Zapytaj odpowiada po polsku i po angielsku. Czy możesz zadać pytanie w jednym z tych języków?',
+      SOURCE_FRAME_UNPARSED:
+        'Z jakiego źródła ma pochodzić odpowiedź? Podaj nazwę redakcji lub instytucji — np. „Co Reuters podaje o …?”',
+      SELECTION_EXCEEDS_MAX:
+        'Zaznaczono zbyt wiele artykułów. Zaznacz mniej artykułów i zapytaj ponownie.',
+      SELECTION_BELOW_MINIMUM:
+        'Zaznaczono za mało artykułów. Zaznacz więcej artykułów i zapytaj ponownie.',
+    },
+    fallback:
+      'Czego dokładnie ma to dotyczyć? Dodaj jedno konkretne miejsce, temat lub okres i zapytaj ponownie.',
+  },
   signInRequired: {
     title: 'WYMAGANE LOGOWANIE',
     body: 'Zaloguj się, aby zapytać GlobalNewsAI. Twoje pytanie czeka poniżej i nie zostało wysłane — nic nie uruchomiono.',
@@ -277,6 +341,13 @@ const PL: AskR2Strings = {
   },
   sourcesLabel: plSources,
 };
+
+/** “a”, “a” and “b”, “a”, “b” and “c” — the reader's own words, quoted (PL opens with „). */
+function quoteList(items: readonly string[], and: string, open = '“'): string {
+  const quoted = items.map((item) => `${open}${item}”`);
+  if (quoted.length <= 1) return quoted[0] ?? '';
+  return `${quoted.slice(0, -1).join(', ')} ${and} ${quoted[quoted.length - 1]}`;
+}
 
 export function askR2Strings(locale: AskR2Locale): AskR2Strings {
   return locale === 'pl' ? PL : EN;

@@ -89,6 +89,43 @@ export function groupRecentThreads(rows: readonly AskV2RecentThread[], now: Date
  * NEITHER FORM CARRIES A COMPUTE GRANT. Reopening is navigation to something that
  * already exists; continuing requires a new explicit Send.
  */
+/**
+ * ALPHA VISUAL ACCEPTANCE REPAIR R1 (D) — WHAT THE ROW PROMISES IS WHAT OPEN SHOWS.
+ *
+ * Open displays the thread's LATEST stored operation, so the row's primary line is that
+ * turn's question. A multi-turn thread keeps its origin as a secondary line ("Started with:
+ * …"). One-turn threads are unchanged. The reader's own words only — nothing is generated.
+ * Older responses without `latestQuestion` fall back to the first question.
+ */
+export interface AskRecentPreview {
+  readonly primary: string | null;
+  readonly primaryTruncated: boolean;
+  readonly startedWith: string | null;
+  readonly startedWithTruncated: boolean;
+}
+
+export function recentRowPreview(row: AskV2RecentThread): AskRecentPreview {
+  const latest = row.latestQuestion ?? null;
+  if (row.turnCount > 1 && latest !== null) {
+    const differs = row.firstQuestion !== null && row.firstQuestion !== latest;
+    return {
+      primary: latest,
+      primaryTruncated: row.latestQuestionTruncated === true,
+      startedWith: differs ? row.firstQuestion : null,
+      startedWithTruncated: differs && row.firstQuestionTruncated,
+    };
+  }
+  return {
+    primary: row.firstQuestion ?? latest,
+    primaryTruncated:
+      row.firstQuestion !== null
+        ? row.firstQuestionTruncated
+        : row.latestQuestionTruncated === true,
+    startedWith: null,
+    startedWithTruncated: false,
+  };
+}
+
 export function askReopenHref(row: {
   readonly id: string;
   readonly latestOperationId: string | null;
@@ -120,7 +157,12 @@ export function filterRecent(
   const needle = term.trim().toLocaleLowerCase();
   if (needle.length === 0) return rows;
 
-  return rows.filter((row) => (row.firstQuestion ?? '').toLocaleLowerCase().includes(needle));
+  /* Both questions a row shows (D) are searchable. */
+  return rows.filter((row) =>
+    [row.firstQuestion, row.latestQuestion ?? null].some((q) =>
+      (q ?? '').toLocaleLowerCase().includes(needle),
+    ),
+  );
 }
 
 /** The same predicate for saved questions. */

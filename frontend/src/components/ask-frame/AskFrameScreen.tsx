@@ -93,6 +93,7 @@ export function AskFrameScreen({
   const { turns, pending, submit } = useAskConversation(locale, context);
   const returnPath = sanitizeReturnPath(params.get('return'));
   const r2 = useAskR2Conversation(r2Locale, returnPath);
+  const { continueThread } = r2;
   const operationId = params.get('operation');
   const [opened, setOpened] = useState<AskR2Turn | null>(null);
   const lastR2 = r2.turns[r2.turns.length - 1] ?? opened ?? undefined;
@@ -139,10 +140,15 @@ export function AskFrameScreen({
     let live = true;
     void askV2Api.operation(operationId).then((read) => {
       if (!live) return;
+      /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (E) — a follow-up continues the reopened thread. */
+      if (read.ok && read.value.threadId && read.value.language) {
+        continueThread(read.value.threadId, read.value.language);
+      }
       setOpened(
         read.ok
           ? {
-              question: '',
+              /* (C) the canonical question this result answered, from its own turn */
+              question: read.value.question ?? '',
               operation: read.value,
               payload: askR2PayloadOf(read.value),
               expired: read.value.result?.expired === true,
@@ -153,7 +159,7 @@ export function AskFrameScreen({
     return () => {
       live = false;
     };
-  }, [operationId]);
+  }, [operationId, continueThread]);
   useEffect(() => {
     const media = matchMedia(FULL_SCREEN_QUERY);
     const update = () => setCompact(media.matches);
@@ -207,6 +213,13 @@ export function AskFrameScreen({
     else if (outcome === 'signed-out') setQuestion(draft);
   }
   /* Back / Close: the captured return destination, else the previous page, else Home. */
+  /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — a clarification's draft goes to the composer; nothing is sent. */
+  function draftQuestion(draft: string) {
+    setQuestion(draft);
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]')?.focus(),
+    );
+  }
   function leave() {
     if (returnPath !== null) {
       window.location.assign(returnPath);
@@ -353,7 +366,13 @@ export function AskFrameScreen({
             )}
             {opened !== null && (
               <div data-ask-latest={r2.turns.length === 0 ? '' : undefined}>
-                <AskR2TurnView turn={opened} locale={r2Locale} context={context} displayOnly />
+                <AskR2TurnView
+                  turn={opened}
+                  locale={r2Locale}
+                  context={context}
+                  displayOnly
+                  onUseQuestion={draftQuestion}
+                />
               </div>
             )}
             {earlierR2.length > 0 && (
@@ -389,6 +408,7 @@ export function AskFrameScreen({
                   locale={r2Locale}
                   context={context}
                   onRunDeeper={(q) => void r2.runDeeper(q)}
+                  onUseQuestion={draftQuestion}
                 />
               </div>
             )}

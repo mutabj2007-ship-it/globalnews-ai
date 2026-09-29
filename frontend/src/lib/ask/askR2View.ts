@@ -57,8 +57,20 @@ export interface AskR2View {
   readonly clarification: {
     readonly byExecutor: boolean;
     readonly candidates: readonly string[];
-    /** ALPHA ENABLEMENT R1 (MC-070) — a whole-sentence question that replaces the choice list. */
+    /**
+     * ALPHA ENABLEMENT R1 (MC-070) — a whole-sentence question that replaces the choice list.
+     * ALPHA VISUAL ACCEPTANCE REPAIR R1 — for a clarification badge it is NEVER null when
+     * there are no candidates: every clarification asks something the reader can act on.
+     */
     readonly lead: string | null;
+    /**
+     * ALPHA VISUAL ACCEPTANCE REPAIR R1 — the reader's question with the parts Ask cannot
+     * apply removed (BROADENING_OFFERED), offered as a draft; null when it cannot be derived
+     * from the reader's own words.
+     */
+    readonly suggestion: string | null;
+    /** Each candidate as a draft of the reader's question scoped to it. */
+    readonly choices: readonly { readonly label: string; readonly question: string }[];
   };
 }
 
@@ -110,11 +122,53 @@ function chipLabel(chip: AskPlanChip, placeName: (iso3: string) => string): stri
   return chip.value;
 }
 
+/**
+ * ALPHA VISUAL ACCEPTANCE REPAIR R1 (G) — one chip per displayed label. A reader word can be
+ * read twice by the plan (e.g. "political" as a TOPIC term AND as an analytical DOMAIN), which
+ * displayed "Political · Poland · Today · Political". Presentation only — the envelope is
+ * untouched. The FIRST occurrence (the reader's own word, in reading order) is kept, and it is
+ * shown as "kept as asked" if ANY reading of it was not applied: a limit is never claimed as
+ * applied while part of it was not.
+ */
+export function dedupeChips(items: readonly AskR2ChipView[]): AskR2ChipView[] {
+  const out: AskR2ChipView[] = [];
+  for (const item of items) {
+    const key = item.label.toLocaleLowerCase();
+    const at = out.findIndex((kept) => kept.label.toLocaleLowerCase() === key);
+    if (at === -1) out.push(item);
+    else if (item.kept && !out[at]!.kept) out[at] = { ...out[at]!, kept: true };
+  }
+  return out;
+}
+
+/**
+ * ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — the reader's question without the words Ask cannot
+ * apply, or null. Only the reader's own words are removed, whole-word and case-insensitive;
+ * if any of them is not literally in the question nothing is suggested (no guessed rewrite).
+ */
+export function withoutTerms(question: string, terms: readonly string[]): string | null {
+  if (terms.length === 0) return null;
+  let out = question;
+  for (const term of terms) {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(String.raw`(^|[^\p{L}\p{N}])${escaped}(?=$|[^\p{L}\p{N}])`, 'iu');
+    if (!re.test(out)) return null;
+    out = out.replace(re, '$1');
+  }
+  out = out
+    .replace(/\s+([?.!,;:])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return out.length > 0 && out !== question.trim() ? out : null;
+}
+
 export function askR2View(
   payload: AskR2Payload,
   s: AskR2Strings,
   locale: AskR2Locale,
   placeName: (iso3: string) => string = (iso3) => iso3,
+  /** The question this turn answered — the source of a suggested draft. */
+  question = '',
 ): AskR2View {
   const badge = BADGE_OF[payload.answer.state] ?? 'unavail';
   const analysis = payload.analysis;
@@ -156,11 +210,13 @@ export function askR2View(
   const c = payload.chips;
   const items =
     c.kind === 'SCOPED'
-      ? c.chips.map((chip) => ({
-          kind: chip.kind,
-          label: chipLabel(chip, placeName),
-          kept: !chip.applied,
-        }))
+      ? dedupeChips(
+          c.chips.map((chip) => ({
+            kind: chip.kind,
+            label: chipLabel(chip, placeName),
+            kept: !chip.applied,
+          })),
+        )
       : [];
   const note =
     c.kind === 'NONE'
@@ -170,6 +226,38 @@ export function askR2View(
         : items.some((i) => i.kept)
           ? s.keptAsAsked
           : null;
+
+  /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — every clarification asks something. */
+  const candidates =
+    basis === 'NO_PRIOR_SUBJECT'
+      ? []
+      : (payload.answer.candidates ?? []).map((iso3) => placeName(iso3));
+  let lead: string | null = null;
+  let suggestion: string | null = null;
+  if (basis === 'NO_PRIOR_SUBJECT') lead = s.noPriorSubject;
+  else if (badge === 'clar' && candidates.length === 0) {
+    if (basis === 'PLAN_BROADENING_OFFERED') {
+      /* The reader's own words the plan could not apply, once each. */
+      const notApplied: string[] = [];
+      for (const chip of c.kind === 'SCOPED' ? c.chips : []) {
+        if (chip.applied || chip.kind === 'GEOGRAPHY' || chip.kind === 'SELECTION') continue;
+        if (!notApplied.some((v) => v.toLocaleLowerCase() === chip.value.toLocaleLowerCase())) {
+          notApplied.push(chip.value);
+        }
+      }
+      suggestion = withoutTerms(question, notApplied);
+      lead = notApplied.length > 0 ? s.clarify.broadening(notApplied, suggestion !== null) : null;
+    } else {
+      const code = (payload.route?.clarification ?? []).find((c0) => c0 in s.clarify.codes);
+      lead = code === undefined ? null : (s.clarify.codes[code] ?? null);
+    }
+    lead ??= s.clarify.fallback;
+  }
+  const trimmed = question.trim().replace(/[?.!]+$/, '');
+  const choices =
+    trimmed.length === 0
+      ? []
+      : candidates.map((label) => ({ label, question: `${trimmed} (${label})?` }));
 
   return {
     badge,
@@ -188,12 +276,11 @@ export function askR2View(
     unavailableText,
     clarification: {
       byExecutor,
-      candidates:
-        basis === 'NO_PRIOR_SUBJECT'
-          ? []
-          : (payload.answer.candidates ?? []).map((iso3) => placeName(iso3)),
+      candidates,
       /* MC-070: the place is kept as the plan's GEOGRAPHY chip, not inflected into the sentence. */
-      lead: basis === 'NO_PRIOR_SUBJECT' ? s.noPriorSubject : null,
+      lead,
+      suggestion,
+      choices,
     },
   };
 }

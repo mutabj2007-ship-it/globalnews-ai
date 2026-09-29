@@ -88,6 +88,15 @@ export interface AskV2Operation {
    */
   readonly turnId?: string | null;
   readonly bookmarked?: boolean;
+  /**
+   * ALPHA VISUAL ACCEPTANCE REPAIR R1 — the owning turn's canonical facts (owner-scoped
+   * server-side): the question a reopened result answered, and the thread + sequence an
+   * explicit follow-up continues. Absent on older responses.
+   */
+  readonly question?: string | null;
+  readonly threadId?: string | null;
+  readonly sequence?: number | null;
+  readonly language?: AskV2Language | null;
   readonly computeClass: string;
   readonly status: string;
   readonly quotedSand: number;
@@ -135,6 +144,9 @@ export interface AskV2RecentThread {
   readonly turnCount: number;
   readonly firstQuestion: string | null;
   readonly firstQuestionTruncated: boolean;
+  /** ALPHA VISUAL ACCEPTANCE REPAIR R1 (D) — the question of the turn Open displays. */
+  readonly latestQuestion?: string | null;
+  readonly latestQuestionTruncated?: boolean;
   readonly latestTurnId: string | null;
   readonly latestOperationId: string | null;
   readonly latestState: string | null;

@@ -196,6 +196,19 @@ export function useAskR2Conversation(language: AskV2Language, returnPath: string
     }
   }, [deepQuote]);
 
+  /**
+   * ALPHA VISUAL ACCEPTANCE REPAIR R1 (E) — a reopened stored result names its own thread
+   * (owner-scoped by the server). Remembering it here makes the reader's NEXT explicit Ask
+   * a follow-up in that conversation instead of a new one-question thread. It is a local
+   * seed only: no request, no mutation, nothing rerun. A conversation already started on
+   * this screen is never replaced, and a thread in another language is not continued —
+   * `ensureThread` then starts a new one, exactly as for a language switch.
+   */
+  const continueThread = useCallback((id: string, threadLanguage: AskV2Language): void => {
+    if (thread.current !== null) return;
+    thread.current = { id, language: threadLanguage };
+  }, []);
+
   /** "Not now": the quote is released; nothing ran. */
   const cancelDeeper = useCallback(async (): Promise<void> => {
     const quote = deepQuote;
@@ -213,6 +226,7 @@ export function useAskR2Conversation(language: AskV2Language, returnPath: string
     runDeeper,
     confirmDeeper,
     cancelDeeper,
+    continueThread,
   };
 }
 

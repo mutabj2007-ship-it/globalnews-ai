@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
 import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
+import { AskClearedBoundary } from '@/components/ask-nav/AskClearedBoundary';
 import { SavedClient } from '@/components/ask/SavedClient';
 import { LANGUAGE_COOKIE_NAME } from '@/lib/i18n/languages';
 
@@ -32,7 +33,9 @@ export default function SavedPage(): JSX.Element {
     <AskNavProvider>
       <AskNavShell language={locale} />
       <AskContinuityHeader locale={locale} surface="saved" />
-      <SavedClient locale={locale} />
+      <AskClearedBoundary>
+        <SavedClient locale={locale} />
+      </AskClearedBoundary>
     </AskNavProvider>
   );
 }
