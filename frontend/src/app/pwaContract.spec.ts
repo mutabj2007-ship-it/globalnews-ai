@@ -498,7 +498,12 @@ describe('PWA-1 §5 — M66.13 localization is preserved exactly', () => {
       one ever appears, an installed app has taken on a third-party network
       dependency it cannot satisfy offline.
     */
-    const FONT_ORIGINS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'use.typekit', 'cdn.jsdelivr'];
+    const FONT_ORIGINS = [
+      'fonts.googleapis.com',
+      'fonts.gstatic.com',
+      'use.typekit',
+      'cdn.jsdelivr',
+    ];
     const swSource = readFileSync(join(publicDir, 'sw.js'), 'utf-8');
     const offlineSource = readFileSync(join(publicDir, 'offline.html'), 'utf-8');
 
@@ -571,7 +576,8 @@ describe('PWA-1 §5 — M66.13 localization is preserved exactly', () => {
     // It is mounted for the reason AskAiDock is: it must exist on every route,
     // exactly once. It issues no request on mount and none on navigation.
     expect(bodyInner).toBe(
-      '<ServiceWorkerRegistrar /> {children} <ReturnDepthTracker /> <AskAiDock language={language} />',
+      /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the dock learns the server-decided root (no new element). */
+      '<ServiceWorkerRegistrar /> {children} <ReturnDepthTracker /> <AskAiDock language={language} standaloneRoot={standaloneAskRoot()} />',
     );
   });
 });

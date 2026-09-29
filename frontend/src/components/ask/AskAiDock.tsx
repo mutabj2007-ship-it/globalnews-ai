@@ -100,12 +100,20 @@ type SettledAskTurn = Extract<AskPhase, { kind: 'answered' | 'failed' }>;
  * the only thing returned is a question the READER typed (the one sent as
  * priorQuestion). No answer text, source or evidence identity crosses here.
  */
-function subjectOriginOf(response: AnalysisApiResponse, sentPrior: string | undefined): string | undefined {
+function subjectOriginOf(
+  response: AnalysisApiResponse,
+  sentPrior: string | undefined,
+): string | undefined {
   return response.retrievalContext.conversationSubject !== undefined ? sentPrior : undefined;
 }
 
 interface AskAiDockProps {
   language?: LanguageCode;
+  /**
+   * STANDALONE PUBLIC BETA CONVERGENCE R1 — `/` is the standalone Ask (server-decided in the
+   * layout). The root owns its composer, exactly as /ask does, so the dock unmounts there.
+   */
+  standaloneRoot?: boolean;
 }
 
 /**
@@ -173,9 +181,10 @@ export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   const pathname = usePathname();
   // The dedicated dashboard owns its composer; unmount the global dock entirely.
   if (pathname === ASK_CANONICAL_ROUTE) return null;
+  if (props.standaloneRoot === true && pathname === '/') return null;
   return (
     <GlobalAskAiDock
-      {...props}
+      language={props.language}
       showLauncher={!LAUNCHER_SUPPRESSED_ROUTES.has(pathname ?? '')}
       mapSurface={pathname === MAP_ROUTE}
     />
@@ -242,7 +251,10 @@ function GlobalAskAiDock({
   const [keyboardInset, setKeyboardInset] = useState(0);
   /* MAP R2 — the Spatial Ask geometry, measured only on /map (see MAP_ROUTE). */
   const [mapLayout, setMapLayout] = useState<MapAskLayout | null>(null);
-  const [mapViewport, setMapViewport] = useState<{ height: number; navInset: number }>({ height: 0, navInset: 0 });
+  const [mapViewport, setMapViewport] = useState<{ height: number; navInset: number }>({
+    height: 0,
+    navInset: 0,
+  });
   /* guards a response arriving after the reader asked something else */
   const requestSeq = useRef(0);
 
@@ -306,11 +318,16 @@ function GlobalAskAiDock({
       geographyContextPresent: geographyContext !== undefined,
     },
   );
-  const showStoryLabel = storyContext !== undefined && usesStoryContextLabel(
-    question.trim() || (phase.kind !== 'idle' ? phase.question : ''),
-    question.trim() ? undefined : phase.kind === 'answered'
-      ? phase.response.retrievalContext.storyContextUsed : undefined,
-  );
+  const showStoryLabel =
+    storyContext !== undefined &&
+    usesStoryContextLabel(
+      question.trim() || (phase.kind !== 'idle' ? phase.question : ''),
+      question.trim()
+        ? undefined
+        : phase.kind === 'answered'
+          ? phase.response.retrievalContext.storyContextUsed
+          : undefined,
+    );
   /*
     ASK R2 INTEGRATION R1 · GATE H (G V5-C2 / V6-C1) — three facts, three renderings. After
     an answer, a selected Map country the server did not use stays VISIBLE as available and
@@ -400,10 +417,7 @@ function GlobalAskAiDock({
     }
     const viewport = window.visualViewport;
     const update = (): void => {
-      const obscured = Math.max(
-        0,
-        window.innerHeight - viewport.height - viewport.offsetTop,
-      );
+      const obscured = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
       setKeyboardInset(obscured > 80 ? obscured : 0);
     };
     update();
@@ -444,7 +458,9 @@ function GlobalAskAiDock({
       setMapViewport({
         height: window.visualViewport?.height ?? window.innerHeight,
         navInset:
-          top !== undefined && top < window.innerHeight ? Math.max(0, Math.round(window.innerHeight - top)) : 0,
+          top !== undefined && top < window.innerHeight
+            ? Math.max(0, Math.round(window.innerHeight - top))
+            : 0,
       });
     };
     const measure = (): void => {
@@ -531,7 +547,8 @@ function GlobalAskAiDock({
           : history.length > 0
             ? history[history.length - 1].question
             : undefined;
-      const priorQuestion = topicReset || lastQuestion === undefined ? undefined : (subjectOrigin ?? lastQuestion);
+      const priorQuestion =
+        topicReset || lastQuestion === undefined ? undefined : (subjectOrigin ?? lastQuestion);
       setTopicReset(false);
 
       /*
@@ -561,7 +578,17 @@ function GlobalAskAiDock({
           });
         });
     },
-    [question, language, dictionary, storyContext, geographyContext, phase, history, topicReset, subjectOrigin],
+    [
+      question,
+      language,
+      dictionary,
+      storyContext,
+      geographyContext,
+      phase,
+      history,
+      topicReset,
+      subjectOrigin,
+    ],
   );
 
   /*
@@ -601,13 +628,13 @@ function GlobalAskAiDock({
           chip (and the bottom nav's Ask AI); a second floating launcher would
           sit on the map the reader is using. */}
       {showLauncher && (
-      <button
-        type="button"
-        data-ask="launcher"
-        aria-expanded={isOpen}
-        aria-controls="ask-ai-panel"
-        onClick={() => setIsOpen((open) => !open)}
-        /*
+        <button
+          type="button"
+          data-ask="launcher"
+          aria-expanded={isOpen}
+          aria-controls="ask-ai-panel"
+          onClick={() => setIsOpen((open) => !open)}
+          /*
           ALPHA-MOBILE-SPATIAL-1C — THE LAUNCHER MUST NOT SIT ON ANYTHING
           THE READER NEEDS.
 
@@ -624,18 +651,22 @@ function GlobalAskAiDock({
           command bar, the mode badge and the reader's own question
           heading — which is where R1 put the launcher, and was wrong.
         */
-        style={{
-          ...(anchor === 'top' ? { top: COMPACT_TOP_PX, bottom: 'auto' } : { bottom: bottomOffset }),
-          visibility: coveredByDialog && !isOpen ? 'hidden' : undefined,
-          /* MAP R2 — see the note above the gate: not displayed on the phone Map. */
-          ...(mapLayout === 'compact' ? { display: 'none' } : {}),
-        }}
-        data-ask-anchor={anchor}
-        className="fixed end-4 bottom-4 z-40 inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink-primary shadow-lg transition-colors spatial:bottom-4 spatial:top-auto hover:border-signal focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
-      >
-        <span aria-hidden="true" className="font-mono text-[11px] text-signal">◆</span>
-        {t.launcher}
-      </button>
+          style={{
+            ...(anchor === 'top'
+              ? { top: COMPACT_TOP_PX, bottom: 'auto' }
+              : { bottom: bottomOffset }),
+            visibility: coveredByDialog && !isOpen ? 'hidden' : undefined,
+            /* MAP R2 — see the note above the gate: not displayed on the phone Map. */
+            ...(mapLayout === 'compact' ? { display: 'none' } : {}),
+          }}
+          data-ask-anchor={anchor}
+          className="fixed end-4 bottom-4 z-40 inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink-primary shadow-lg transition-colors spatial:bottom-4 spatial:top-auto hover:border-signal focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
+        >
+          <span aria-hidden="true" className="font-mono text-[11px] text-signal">
+            ◆
+          </span>
+          {t.launcher}
+        </button>
       )}
 
       {!isOpen ? null : (
@@ -647,16 +678,20 @@ function GlobalAskAiDock({
           aria-label={t.panelLabel}
           data-ask-geometry={mapLayout === null ? 'dock' : `map-${mapLayout}`}
           style={mapPanelStyle ?? { bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
-          className={onMap ? mapPanelClass : [
-            'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
-            /* PHONE and 768 PORTRAIT — FULL SCREEN (D25 11: "PHONE ASK MAY NOT" be partial).
+          className={
+            onMap
+              ? mapPanelClass
+              : [
+                  'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
+                  /* PHONE and 768 PORTRAIT — FULL SCREEN (D25 11: "PHONE ASK MAY NOT" be partial).
                Was an 86dvh bottom sheet; D25 names that geometry as not permitted. */
-            'inset-0 h-[100dvh] max-h-[100dvh] rounded-none pb-[env(safe-area-inset-bottom)]',
-            /* 1024 and up — a bounded floating right-hand dock. */
-            'lg:inset-y-4 lg:end-4 lg:start-auto lg:h-auto lg:w-[min(600px,92vw)] lg:max-h-[calc(100dvh-2rem)] lg:rounded-2xl',
-            /* DESKTOP — a wider dock, so evidence and answer sit side by side. */
-            'lg:w-[min(680px,46vw)]',
-          ].join(' ')}
+                  'inset-0 h-[100dvh] max-h-[100dvh] rounded-none pb-[env(safe-area-inset-bottom)]',
+                  /* 1024 and up — a bounded floating right-hand dock. */
+                  'lg:inset-y-4 lg:end-4 lg:start-auto lg:h-auto lg:w-[min(600px,92vw)] lg:max-h-[calc(100dvh-2rem)] lg:rounded-2xl',
+                  /* DESKTOP — a wider dock, so evidence and answer sit side by side. */
+                  'lg:w-[min(680px,46vw)]',
+                ].join(' ')
+          }
         >
           <header
             className={
@@ -665,15 +700,37 @@ function GlobalAskAiDock({
                 : 'flex items-center justify-between gap-3 border-b border-border bg-surface-raised/95 px-4 py-3 backdrop-blur'
             }
           >
-            <h2 className={onMap ? 'flex items-center gap-2 text-[15px] font-semibold text-[#ece8ff]' : 'font-display text-base font-medium text-ink-primary'}>
-              {onMap ? <span aria-hidden="true" className="font-mono text-[11px] text-[#a78bfa]">◆</span> : null}
-              <a data-ask="dashboard-entry" href={dashboardHref(question || (phase.kind !== 'idle' ? phase.question : ''), storyContext)}>{t.title} ↗</a>
+            <h2
+              className={
+                onMap
+                  ? 'flex items-center gap-2 text-[15px] font-semibold text-[#ece8ff]'
+                  : 'font-display text-base font-medium text-ink-primary'
+              }
+            >
+              {onMap ? (
+                <span aria-hidden="true" className="font-mono text-[11px] text-[#a78bfa]">
+                  ◆
+                </span>
+              ) : null}
+              <a
+                data-ask="dashboard-entry"
+                href={dashboardHref(
+                  question || (phase.kind !== 'idle' ? phase.question : ''),
+                  storyContext,
+                )}
+              >
+                {t.title} ↗
+              </a>
             </h2>
             <button
               type="button"
               data-ask="close"
               onClick={() => setIsOpen(false)}
-              className={onMap ? 'min-h-[44px] min-w-[44px] rounded-xl px-2 text-sm text-[#b8b2e6] hover:text-white' : 'min-h-[44px] rounded-xl px-3 text-sm text-ink-secondary hover:text-ink-primary'}
+              className={
+                onMap
+                  ? 'min-h-[44px] min-w-[44px] rounded-xl px-2 text-sm text-[#b8b2e6] hover:text-white'
+                  : 'min-h-[44px] rounded-xl px-3 text-sm text-ink-secondary hover:text-ink-primary'
+              }
             >
               {t.close}
             </button>
@@ -690,8 +747,15 @@ function GlobalAskAiDock({
             data-ask-scroll="conversation"
           >
             {history.map((turn, index) => (
-              <div key={`${index}-${turn.question}`} data-ask="history-turn" className="mb-6 flex flex-col gap-3 sm:gap-4">
-                <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm">
+              <div
+                key={`${index}-${turn.question}`}
+                data-ask="history-turn"
+                className="mb-6 flex flex-col gap-3 sm:gap-4"
+              >
+                <div
+                  data-ask="user-message"
+                  className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm"
+                >
                   {turn.question}
                 </div>
                 {turn.kind === 'answered' ? (
@@ -702,7 +766,10 @@ function GlobalAskAiDock({
                     context={turn.context}
                   />
                 ) : (
-                  <div role="alert" className="rounded-2xl border border-border bg-void p-4 text-sm text-ink-secondary">
+                  <div
+                    role="alert"
+                    className="rounded-2xl border border-border bg-void p-4 text-sm text-ink-secondary"
+                  >
                     {turn.message}
                   </div>
                 )}
@@ -711,7 +778,10 @@ function GlobalAskAiDock({
 
             {phase.kind === 'loading' || phase.kind === 'answered' || phase.kind === 'failed' ? (
               <div data-ask="current-turn" className="flex flex-col gap-3">
-                <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm">
+                <div
+                  data-ask="user-message"
+                  className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm"
+                >
                   {phase.question}
                 </div>
               </div>
@@ -731,7 +801,11 @@ function GlobalAskAiDock({
             ) : null}
 
             {phase.kind === 'failed' ? (
-              <div data-ask="error" role="alert" className="rounded-2xl border border-border bg-void p-6 text-center">
+              <div
+                data-ask="error"
+                role="alert"
+                className="rounded-2xl border border-border bg-void p-6 text-center"
+              >
                 <p className="text-sm text-ink-secondary">{phase.message}</p>
               </div>
             ) : null}
@@ -765,8 +839,15 @@ function GlobalAskAiDock({
               textarea id and the SAME context read — only the order and the
               skin differ. 16px type so a phone does not zoom on focus.
             */
-            <div data-ask="composer" className="shrink-0 border-t border-[#3c2f7a]/60 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-              <form onSubmit={submit} data-ask="form" className="flex flex-col gap-[10px] px-[14px] py-[12px]">
+            <div
+              data-ask="composer"
+              className="shrink-0 border-t border-[#3c2f7a]/60 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+            >
+              <form
+                onSubmit={submit}
+                data-ask="form"
+                className="flex flex-col gap-[10px] px-[14px] py-[12px]"
+              >
                 <div className="flex flex-wrap items-center gap-x-[10px] gap-y-[4px]">
                   <span
                     data-ask="context-affordance"
@@ -779,7 +860,10 @@ function GlobalAskAiDock({
                     {showStoryLabel
                       ? t.contextChipAnchored
                       : showGeographyLabel
-                        ? t.askingAboutGeography.replace('{place}', geographyContext?.displayName ?? '')
+                        ? t.askingAboutGeography.replace(
+                            '{place}',
+                            geographyContext?.displayName ?? '',
+                          )
                         : t.contextChipGeneric}
                   </span>
                   {showGeographyLabel && (
@@ -814,8 +898,13 @@ function GlobalAskAiDock({
                   className="w-full rounded-[10px] border border-[#3c2f7a] bg-[#12263f] px-[12px] py-[10px] text-[16px] leading-[1.45] text-[#eef2f8] placeholder:text-[#8fa6c0] focus:border-[#a78bfa] focus:outline-none"
                 />
                 <div className="flex items-center justify-between gap-[10px]">
-                  <p data-ask="compute-notice" className="min-w-0 text-[12px] leading-[1.4] text-[#e5d2b0]">
-                    <span aria-hidden="true" className="me-1 text-[#d9b98a]">ϟ</span>
+                  <p
+                    data-ask="compute-notice"
+                    className="min-w-0 text-[12px] leading-[1.4] text-[#e5d2b0]"
+                  >
+                    <span aria-hidden="true" className="me-1 text-[#d9b98a]">
+                      ϟ
+                    </span>
                     {t.mapComputeNotice}
                   </p>
                   <button
@@ -830,26 +919,29 @@ function GlobalAskAiDock({
               </form>
             </div>
           ) : (
-          <div data-ask="composer" className="shrink-0 border-t border-border bg-surface-raised/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
-          <form onSubmit={submit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
-            <label className="sr-only" htmlFor="ask-ai-question">
-              {t.inputLabel}
-            </label>
-            <AdaptiveTextarea
-              id="ask-ai-question"
-              ref={inputRef}
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              placeholder={t.inputPlaceholder}
-              maxLength={1000}
-              minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}
-              maxHeight={420}
-              maxViewportFraction={0.46}
-              keepVisible={false}
-              className="w-full rounded-2xl border border-border-strong bg-surface px-4 py-3 text-sm leading-6 text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
-            />
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              {/*
+            <div
+              data-ask="composer"
+              className="shrink-0 border-t border-border bg-surface-raised/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur"
+            >
+              <form onSubmit={submit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
+                <label className="sr-only" htmlFor="ask-ai-question">
+                  {t.inputLabel}
+                </label>
+                <AdaptiveTextarea
+                  id="ask-ai-question"
+                  ref={inputRef}
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  placeholder={t.inputPlaceholder}
+                  maxLength={1000}
+                  minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}
+                  maxHeight={420}
+                  maxViewportFraction={0.46}
+                  keepVisible={false}
+                  className="w-full rounded-2xl border border-border-strong bg-surface px-4 py-3 text-sm leading-6 text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
+                />
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  {/*
                 THE CONTEXTUAL AFFORDANCE — NOW A TRUTHFUL STATEMENT OF
                 WHAT WILL BE SENT.
 
@@ -863,15 +955,15 @@ function GlobalAskAiDock({
                 WHICH story is anchored rather than being told that one
                 is.
               */}
-              <span
-                data-ask="context-affordance"
-                data-ask-context={
-                  showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic'
-                }
-                title={showStoryLabel ? storyContext?.title : undefined}
-                className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border-strong bg-surface px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-secondary"
-              >
-                {/*
+                  <span
+                    data-ask="context-affordance"
+                    data-ask-context={
+                      showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic'
+                    }
+                    title={showStoryLabel ? storyContext?.title : undefined}
+                    className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border-strong bg-surface px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-secondary"
+                  >
+                    {/*
                   Three states, not two. "Asking about Algeria" names the SCOPE
                   and deliberately does not use the story wording: a country is
                   where the question is being asked, not what it is anchored to,
@@ -897,17 +989,17 @@ function GlobalAskAiDock({
                     </span>
                   )}
 
-              <button
-                type="submit"
-                data-ask="submit"
-                disabled={question.trim().length === 0 || phase.kind === 'loading'}
-                className="min-h-[44px] rounded-2xl bg-signal px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(61,111,255,0.22)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50"
-              >
-                {t.submit}
-              </button>
+                  <button
+                    type="submit"
+                    data-ask="submit"
+                    disabled={question.trim().length === 0 || phase.kind === 'loading'}
+                    className="min-h-[44px] rounded-2xl bg-signal px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(61,111,255,0.22)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50"
+                  >
+                    {t.submit}
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
-          </div>
           )}
         </section>
       )}

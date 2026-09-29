@@ -23,6 +23,9 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { SiteStructuredData } from '@/components/seo/SiteStructuredData';
 import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
+import { AskStandaloneRoot } from '@/components/ask-nav/AskStandaloneRoot';
+import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
+import { ASK_SOCIAL_PREVIEW } from '@/lib/seo/socialPreview';
 
 /**
  * HOME WELCOME & DISCOVERY R1 REV A — THE HOME COMPOSITION.
@@ -80,6 +83,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
   const t = getDictionary(language);
 
+  /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the root is Ask GlobalNewsAI (see standaloneRoot). */
+  if (standaloneAskRoot()) {
+    return buildPageMetadata({
+      path: '/',
+      title: t.askRootMetaTitle,
+      description: t.askRootMetaDescription,
+      language,
+      image: ASK_SOCIAL_PREVIEW,
+    });
+  }
+
   return buildPageMetadata({
     path: '/',
     title: t.homeMetaTitle,
@@ -91,6 +105,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function HomePage(): Promise<JSX.Element> {
   const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  /* STANDALONE PUBLIC BETA CONVERGENCE R1 — `/` is the standalone Ask entry surface; the
+     Home composition below is served only when GNA_PUBLIC_ROOT=platform. No Home feed is
+     fetched for the Ask root. Ask serves EN/PL, like /ask. */
+  if (standaloneAskRoot()) {
+    return <AskStandaloneRoot locale={languageCookie === 'pl' ? 'pl' : 'en'} />;
+  }
   const dict = getDictionary(language);
   const t = dict.homeReva;
   const feed = await getHomeFeed(language);
@@ -113,7 +133,12 @@ export default async function HomePage(): Promise<JSX.Element> {
     are populated whenever the response has at least two distinct stories.
   */
   const seenIds = new Set<string>();
-  const homeArticles = [...(feed.featured === null ? [] : [feed.featured]), ...feed.inFocus, ...feed.discovery, ...feed.latestUpdates].filter((article) => {
+  const homeArticles = [
+    ...(feed.featured === null ? [] : [feed.featured]),
+    ...feed.inFocus,
+    ...feed.discovery,
+    ...feed.latestUpdates,
+  ].filter((article) => {
     if (seenIds.has(article.id)) return false;
     seenIds.add(article.id);
     return true;
@@ -139,7 +164,10 @@ export default async function HomePage(): Promise<JSX.Element> {
             their own containers (the 60-second module) can still ask how wide
             the whole column is.
           */}
-          <div data-home-content="" className="min-w-0 flex-1 [container-name:home-content] [container-type:inline-size]">
+          <div
+            data-home-content=""
+            className="min-w-0 flex-1 [container-name:home-content] [container-type:inline-size]"
+          >
             <main className={`pb-24 lg:pb-0 ${HOME_PAGE_SURFACE}`}>
               <div className="mx-auto w-full max-w-[1600px] px-4 md:px-10 gn-xl:px-12">
                 <AuthErrorBanner language={language} />
@@ -173,7 +201,11 @@ export default async function HomePage(): Promise<JSX.Element> {
                     data-home-right-rail=""
                     className="flex min-w-0 flex-col gap-4 self-start [grid-area:rail] [@container(min-width:1140px)]:pt-6"
                   >
-                    <WorldIn60Seconds items={worldIn60} language={language} showEmptyState={whats.featured !== null} />
+                    <WorldIn60Seconds
+                      items={worldIn60}
+                      language={language}
+                      showEmptyState={whats.featured !== null}
+                    />
                   </aside>
                   <div className="min-w-0 self-start [grid-area:whats]">
                     <WhatsHappeningNow
@@ -185,7 +217,11 @@ export default async function HomePage(): Promise<JSX.Element> {
                     />
                   </div>
                   <div data-home-suggested-row="" className="min-w-0 [grid-area:sugg]">
-                    <SuggestedInvestigations title={t.suggested.title} note={t.suggested.note} questions={dict.hero.exampleQuestions} />
+                    <SuggestedInvestigations
+                      title={t.suggested.title}
+                      note={t.suggested.note}
+                      questions={dict.hero.exampleQuestions}
+                    />
                   </div>
                 </div>
 

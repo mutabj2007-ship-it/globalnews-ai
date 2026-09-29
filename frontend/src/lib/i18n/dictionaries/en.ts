@@ -72,8 +72,13 @@ export const en = {
   homeMetaTitle: 'GlobalNews AI — Understand what\u2019s changing.',
   homeMetaDescription:
     'GlobalNews AI turns the day\u2019s news into clear, sourced, multi-perspective answers you can actually understand.',
+  /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the root Ask entry surface. */
+  askRootMetaTitle: 'Ask GlobalNewsAI',
+  askRootMetaDescription:
+    'Ask a question about world events and get an answer that names its sources, says how current it is, and says what has not been checked.',
   searchWorkspaceHeading: 'Ask GlobalNews AI',
-  searchWorkspaceIntro: 'Ask a question about world events and get an evidence-grounded answer built from real sources.',
+  searchWorkspaceIntro:
+    'Ask a question about world events and get an evidence-grounded answer built from real sources.',
   searchWorkspacePlaceholder: 'What would you like to understand?',
   searchWorkspaceSubmitLabel: 'Analyze',
   /* ASK/SEARCH R1 — the staged question on /search. Arrival never analyzes. */
@@ -86,7 +91,8 @@ export const en = {
   // preserved on the error object; users never see the raw number.
   analysisErrorTimeout: 'The analysis is taking longer than expected. Please try again.',
   analysisErrorNetwork: 'We could not reach GlobalNews AI. Check your connection and try again.',
-  analysisErrorInvalidQuery: 'That question is too short to analyze. Please add a little more detail.',
+  analysisErrorInvalidQuery:
+    'That question is too short to analyze. Please add a little more detail.',
   /*
      PH-1 — TWO LIMITS GUARD THIS ROUTE, AND THE FRONTEND CANNOT TELL THEM APART.
      analysis.controller.ts carries @Throttle({ limit: 5, ttl: 60000 }) — a ONE-MINUTE
@@ -98,9 +104,11 @@ export const en = {
   */
   analysisErrorRateLimited:
     'You have made several analysis requests in a short time. Depending on which limit you reached, the wait is about a minute or up to about 15. Signing in raises the longer limit.',
-  analysisErrorServer: 'GlobalNews AI could not complete this analysis right now. Please try again shortly.',
+  analysisErrorServer:
+    'GlobalNews AI could not complete this analysis right now. Please try again shortly.',
   noEvidenceMessage: 'No related articles were found for this question.',
-  aiUnavailableMessage: 'AI analysis is temporarily unavailable, but the underlying articles are shown below.',
+  aiUnavailableMessage:
+    'AI analysis is temporarily unavailable, but the underlying articles are shown below.',
   originalSourcesHeading: 'Original sources',
   evidenceLanguageLabel: 'Evidence language',
   askAi: {
@@ -129,7 +137,8 @@ export const en = {
     submit: 'Ask',
     idle: 'Ask a question and the answer will be assembled from retrieved reporting, with its sources shown.',
     contextPending: 'Ask about this view \u2014 coming soon',
-    contextPendingHint: 'Asking about the page you are on is not available yet. Questions here are answered from retrieved reporting only.',
+    contextPendingHint:
+      'Asking about the page you are on is not available yet. Questions here are answered from retrieved reporting only.',
     /*
      * ASK AI REV A §6 — the compact result's own words.
      *
@@ -154,13 +163,16 @@ export const en = {
     newTopicStarted: 'Your next question starts a new topic',
     productApplicabilityNotEstablished:
       'Exact applicability to GlobalNewsAI cannot be established from this reporting: none of these sources describes GlobalNewsAI itself.',
-    focusNotInEvidence: 'None of the retrieved reports addresses {focus} directly; this answer rests on reporting about the subject itself.',
+    focusNotInEvidence:
+      'None of the retrieved reports addresses {focus} directly; this answer rests on reporting about the subject itself.',
     resultSourcesNone: 'No sources were retrieved for this question.',
     resultSourcesTruncated: 'Showing {shown} of {total}. Open the full analysis for the rest.',
-    resultBriefAbsent: 'This analysis carried no executive brief. That is an absence, not an assessment \u2014 nothing was measured and withheld.',
+    resultBriefAbsent:
+      'This analysis carried no executive brief. That is an absence, not an assessment \u2014 nothing was measured and withheld.',
     resultNoAnswer: 'No answer was produced for this question. The state above says why.',
     /* LANE E — two different facts, worded so a reader can tell them apart. */
-    resultNoAnswerProvider: 'Live reporting is temporarily unavailable. Please try again in a moment.',
+    resultNoAnswerProvider:
+      'Live reporting is temporarily unavailable. Please try again in a moment.',
     resultNoAnswerEvidence:
       'No relevant reporting found for this question. Try naming the place, organisation or event.',
     resultNoAnswerSafety:
@@ -287,11 +299,11 @@ export const en = {
       trustDetails: 'Evidence details',
       retrievalLabel: 'Retrieval',
       articleForms: ['article', 'articles', 'articles'] as [string, string, string],
-      clusterForms: [
-        'reporting cluster',
-        'reporting clusters',
-        'reporting clusters',
-      ] as [string, string, string],
+      clusterForms: ['reporting cluster', 'reporting clusters', 'reporting clusters'] as [
+        string,
+        string,
+        string,
+      ],
       /* Below 1280px the cell renders abbreviations; both still name what they count. */
       articlesShort: 'ART',
       clustersShort: 'CLU',
@@ -311,7 +323,8 @@ export const en = {
          distinctSourceArticleCount forbids both readings.
       */
       evidenceUsedLabel: 'Evidence used',
-      evidenceUsedAria: 'Evidence used: {n} distinct articles are cited across the grounded analysis',
+      evidenceUsedAria:
+        'Evidence used: {n} distinct articles are cited across the grounded analysis',
       noEvidenceUsed: 'Not established',
     },
     /* H2C — E-09 hero and E-10 answer grid. */
@@ -629,8 +642,10 @@ export const en = {
     liveDataUnavailable: 'Live data unavailable',
     storedReporting: 'Stored reporting',
     demoReporting: 'Demo reporting',
-    liveUnavailableStoredUsed: 'Live reporting was unavailable, so this analysis uses stored reporting.',
-    liveNoResultsStoredUsed: 'The live provider returned no usable results, so stored reporting was used.',
+    liveUnavailableStoredUsed:
+      'Live reporting was unavailable, so this analysis uses stored reporting.',
+    liveNoResultsStoredUsed:
+      'The live provider returned no usable results, so stored reporting was used.',
     liveUnreachableNoStored:
       'The live news provider could not be reached, and no stored reporting was available for this question.',
     liveNothingNoStored:
@@ -638,7 +653,8 @@ export const en = {
     newestStoredArticle: 'Newest stored article:',
     /* PR #40 R2 F3 — the freshness time is described by its basis. */
     newestStoredArticlePublished: 'Newest stored article, published:',
-    newestStoredArticleObserved: 'Newest stored article, seen by a news aggregator (not its publication time):',
+    newestStoredArticleObserved:
+      'Newest stored article, seen by a news aggregator (not its publication time):',
     newestStoredArticleUnverified: 'Newest stored article (time basis unverified):',
     interpretedAs: 'Interpreted',
     interpretedAsMiddle: 'as',
@@ -793,8 +809,7 @@ export const en = {
       anonymousCompact: 'Sign in to follow countries and see what you missed.',
       anonymous:
         'Following a country needs an account. Sign in and Watch will show what GlobalNews AI first observes there.',
-      empty:
-        'Follow a country and Watch will show what GlobalNews AI first observes there.',
+      empty: 'Follow a country and Watch will show what GlobalNews AI first observes there.',
     },
     /* R7 `05` — the sources dock. A Today record IS one retrieved article, so
        the dock says RETRIEVED ARTICLES and never SOURCES: the count is not a
@@ -804,8 +819,7 @@ export const en = {
       expand: 'Show the retrieved articles',
       collapse: 'Hide the retrieved articles',
       openOriginal: 'OPEN ORIGINAL',
-      retrievalNote:
-        'One retrieved article. A retrieval count is not corroboration.',
+      retrievalNote: 'One retrieved article. A retrieval count is not corroboration.',
       noneSelected: 'Open a record to see the article it was retrieved from.',
     },
     /* R7 `07` — the Workspace CTA, and the tab model below the S breakpoint. */
@@ -842,13 +856,16 @@ export const en = {
     /* The 3-second answer. Design 08 §1: first in the DOM, text, counts only. */
     summaryAcross: 'across',
     summaryUnresolvedSuffix: 'with no country resolved',
-    recordForms: ['article first observed today', 'articles first observed today', 'articles first observed today'] as [string, string, string],
+    recordForms: [
+      'article first observed today',
+      'articles first observed today',
+      'articles first observed today',
+    ] as [string, string, string],
     countryForms: ['country', 'countries', 'countries'] as [string, string, string],
     /* Retrieval-qualified counter labels (CTO decision D4). */
     counterRecordsLabel: 'Articles GlobalNews AI first saw today, in this retrieval',
     counterCountriesLabel: 'Countries represented in this retrieval',
-    biasNote:
-      'These counts reflect what GlobalNews AI retrieved, not everything that happened.',
+    biasNote: 'These counts reflect what GlobalNews AI retrieved, not everything that happened.',
     /* R-34 contract footer. Every field name is localized; values are real. */
     contractMetricLabel: 'Metric',
     contractMetricValue: 'articles first observed',
@@ -900,7 +917,11 @@ export const en = {
     watchSignIn: 'Sign in',
     watchNoFollows:
       'Follow a country and Watch will show what GlobalNews AI first observes there. The follow control sits beside every country in the list below.',
-    watchFollowedForms: ['country followed', 'countries followed', 'countries followed'] as [string, string, string],
+    watchFollowedForms: ['country followed', 'countries followed', 'countries followed'] as [
+      string,
+      string,
+      string,
+    ],
     watchCapacityOf: 'of a maximum of',
     /* THE APPROVED ZERO WORDING, EXACTLY. Never \u2018nothing happened\u2019. */
     watchZeroRecords: 'Nothing retrieved for this country today.',
@@ -970,7 +991,12 @@ export const en = {
        inside the Engine and wrong in a four-entry legend under a 150px map.
        THE LABEL NAMES THE CATEGORY; the registry still owns the entry, its
        colour and whether it resolves anywhere. */
-    legendLabels: { energy: 'Energy', conflict: 'Conflict', humanitarian: 'Humanitarian', economy: 'Economy' } as Record<string, string>,
+    legendLabels: {
+      energy: 'Energy',
+      conflict: 'Conflict',
+      humanitarian: 'Humanitarian',
+      economy: 'Economy',
+    } as Record<string, string>,
     legendTitle: 'Intelligence layers',
     legendNote: 'Each opens its module. The map itself shows country coverage only.',
   },
@@ -1054,11 +1080,13 @@ export const en = {
       },
       {
         title: 'Live updates',
-        description: 'Stories evolve as new reporting comes in, and your summary updates with them.',
+        description:
+          'Stories evolve as new reporting comes in, and your summary updates with them.',
       },
       {
         title: 'Educational context',
-        description: 'Unfamiliar with a topic? GlobalNews AI fills in the background you need, not just the headline.',
+        description:
+          'Unfamiliar with a topic? GlobalNews AI fills in the background you need, not just the headline.',
       },
     ],
   },
@@ -1233,7 +1261,8 @@ export const en = {
       'Select a country to see its current headlines, sourced live where a provider is configured. Search by name, or click directly on the map.',
     mapA11yNote:
       'An interactive world map is shown below on larger screens. You do not need to use it \u2014 the country search field above lets you find and select any supported country by typing its name, with full keyboard support.',
-    noSelectionPrompt: 'Search for a country above, or select one on the map, to see its current coverage.',
+    noSelectionPrompt:
+      'Search for a country above, or select one on the map, to see its current coverage.',
     mobileFallback:
       'The interactive map is available on larger screens. Use the search field above to select a country here.',
     loading: 'Loading world map\u2026',
@@ -1287,8 +1316,10 @@ export const en = {
       lives. The two badges above — LOADED / READY — are state labels, not
       action promises, and are left exactly as §7.1 leaves them.
     */
-    tooltipRefreshAction: 'Click to select this country. Retrieving its intelligence is a separate action in the panel.',
-    tooltipLoadAction: 'Click to select this country. Nothing is retrieved until you ask for it in the panel.',
+    tooltipRefreshAction:
+      'Click to select this country. Retrieving its intelligence is a separate action in the panel.',
+    tooltipLoadAction:
+      'Click to select this country. Nothing is retrieved until you ask for it in the panel.',
     badge: {
       livePrefix: 'LIVE \u00b7 POWERED BY ',
       delayedPrefix: 'DELAYED FEED \u00b7 POWERED BY ',
@@ -1542,16 +1573,29 @@ export const en = {
         are NOT duplicated here and cannot drift from the registry.
       */
       continents: {
-        africa: 'Africa', europe: 'Europe', asia: 'Asia',
-        northAmerica: 'North America', southAmerica: 'South America', oceania: 'Oceania',
+        africa: 'Africa',
+        europe: 'Europe',
+        asia: 'Asia',
+        northAmerica: 'North America',
+        southAmerica: 'South America',
+        oceania: 'Oceania',
       },
       waters: {
-        atlantic: 'Atlantic Ocean', pacific: 'Pacific Ocean', indian: 'Indian Ocean',
-        arctic: 'Arctic Ocean', southernOcean: 'Southern Ocean',
-        mediterranean: 'Mediterranean Sea', baltic: 'Baltic Sea', redSea: 'Red Sea',
-        blackSea: 'Black Sea', caribbean: 'Caribbean Sea', northSea: 'North Sea',
-        gulfOfGuinea: 'Gulf of Guinea', arabianSea: 'Arabian Sea',
-        bayOfBengal: 'Bay of Bengal', southChinaSea: 'South China Sea',
+        atlantic: 'Atlantic Ocean',
+        pacific: 'Pacific Ocean',
+        indian: 'Indian Ocean',
+        arctic: 'Arctic Ocean',
+        southernOcean: 'Southern Ocean',
+        mediterranean: 'Mediterranean Sea',
+        baltic: 'Baltic Sea',
+        redSea: 'Red Sea',
+        blackSea: 'Black Sea',
+        caribbean: 'Caribbean Sea',
+        northSea: 'North Sea',
+        gulfOfGuinea: 'Gulf of Guinea',
+        arabianSea: 'Arabian Sea',
+        bayOfBengal: 'Bay of Bengal',
+        southChinaSea: 'South China Sea',
       },
       territories: { greenland: 'Greenland' },
       readout: {
@@ -1559,8 +1603,12 @@ export const en = {
         centre: 'CTR',
         mode: 'MODE',
         modes: {
-          WORLD: 'WORLD', EVIDENCE: 'EVIDENCE', SITUATIONS: 'SITUATIONS',
-          WATCH: 'WATCH', CHANGE: 'CHANGE', SOURCES: 'SOURCES',
+          WORLD: 'WORLD',
+          EVIDENCE: 'EVIDENCE',
+          SITUATIONS: 'SITUATIONS',
+          WATCH: 'WATCH',
+          CHANGE: 'CHANGE',
+          SOURCES: 'SOURCES',
         },
         periods: { NOW: 'NOW', '24H': '24H', '7D': '7D', '30D': '30D' },
       },
@@ -1652,7 +1700,8 @@ export const en = {
         scope: 'Evidence',
         watching: 'Following',
         stateHeading: 'Evidence state',
-        ceilingNote: 'This is the level the evidence asserts. Anything finer on the map is reference geography.',
+        ceilingNote:
+          'This is the level the evidence asserts. Anything finer on the map is reference geography.',
         reports: 'Reports',
         sources: 'Sources',
         newSince: 'New since last visit',
@@ -1843,15 +1892,19 @@ export const en = {
         sheetLabel: 'Place intelligence',
         handleLabel: 'Resize the intelligence sheet',
         stops: { PEEK: 'Peek', HALF: 'Half', FULL: 'Full' },
-        noSelection: 'Search for a place above, or tap a country on the map, to see what is retained there.',
+        noSelection:
+          'Search for a place above, or tap a country on the map, to see what is retained there.',
         clearSelection: 'Clear selection',
-        searchAlternative: 'You can also find a country by typing its name in the search field above; the map is not the only way to reach one.',
+        searchAlternative:
+          'You can also find a country by typing its name in the search field above; the map is not the only way to reach one.',
         /* MAP / SPATIAL VISUAL CONVERGENCE R2 — Map R1 copy table. Opening Ask spends nothing. */
         askAbout: 'Ask about {country}',
         /* The sheet's one-line reporting state: "0 reports · — sources · 0 new". */
         newShort: 'new',
-        stagingNote: 'Ask and Open analysis stage this country as context. Nothing runs until you press Send or Run.',
-        a11yNote: 'An interactive world map fills this screen. Drag to pan, pinch to zoom, and tap a country to select it. You do not need to use it \u2014 the search field finds and selects any supported country by name, with full keyboard support.',
+        stagingNote:
+          'Ask and Open analysis stage this country as context. Nothing runs until you press Send or Run.',
+        a11yNote:
+          'An interactive world map fills this screen. Drag to pan, pinch to zoom, and tap a country to select it. You do not need to use it \u2014 the search field finds and selects any supported country by name, with full keyboard support.',
       },
       /*
         PART IV — MONETIZATION LAYERING. THE COPY IS PART OF THE CONTRACT.
@@ -2065,8 +2118,7 @@ export const en = {
           OPERATIONAL: 'In common use \u00b7 membership is disputed',
           GOVERNED:
             'Product coverage region \u00b7 membership declared by GlobalNews AI for this deployment',
-          ADMINISTRATIVE:
-            'Administrative subdivision \u00b7 defined by the ISO 3166-2 standard',
+          ADMINISTRATIVE: 'Administrative subdivision \u00b7 defined by the ISO 3166-2 standard',
           UNDEFINED: 'No definition is encoded for this region',
         },
         definitionHeading: 'Definition',
@@ -2156,7 +2208,12 @@ export const en = {
           showAll: 'Show all indicators',
           noneObserved: 'No indicators have been observed for this subject.',
           staleSuffix: 'not updated',
-          directions: { RISING: 'Rising', FALLING: 'Falling', FLAT: 'Unchanged', UNKNOWN: 'Unknown' },
+          directions: {
+            RISING: 'Rising',
+            FALLING: 'Falling',
+            FLAT: 'Unchanged',
+            UNKNOWN: 'Unknown',
+          },
           indicators: {
             INCIDENT_FREQUENCY: 'Incident frequency',
             GEOGRAPHIC_SPREAD: 'Geographic spread',
@@ -2188,7 +2245,8 @@ export const en = {
             EVIDENCE_BACKED: 'Evidence-backed',
           },
           sources: 'sources',
-          incomplete: 'One of these readings does not state its basis or counting rule, so the two cannot be compared on equal terms.',
+          incomplete:
+            'One of these readings does not state its basis or counting rule, so the two cannot be compared on equal terms.',
         },
       },
       context: {
@@ -2398,7 +2456,14 @@ export const en = {
        prototype's strip says World, Economy, Energy, Security, Humanitarian,
        Markets. This names the card; the registry still decides where it
        goes and whether it goes anywhere at all. */
-    topicLabels: { 'world-intelligence': 'World', economy: 'Economy', energy: 'Energy', security: 'Security', humanitarian: 'Humanitarian', market: 'Markets' } as Record<string, string>,
+    topicLabels: {
+      'world-intelligence': 'World',
+      economy: 'Economy',
+      energy: 'Energy',
+      security: 'Security',
+      humanitarian: 'Humanitarian',
+      market: 'Markets',
+    } as Record<string, string>,
     /* beta.topicBlurbs — PREMIUM VISUAL PASS S6 ("shorter copy on the topic
        cards"). The registry's own module descriptions are written for the
        Engine's full-width panels; on a measured 136px card they clamp to
@@ -2406,8 +2471,20 @@ export const en = {
        These are the prototype's own one-breath lines, and they say nothing the
        module descriptions do not already say -- they claim no capability, no
        data and no route. The registry still decides where each card goes. */
-    topicBlurbs: { 'world-intelligence': 'Top global stories and trends', economy: 'Growth, policy and development', energy: 'Oil, gas, power and transition', security: 'Safety, threats and stability', humanitarian: 'People, needs and response', market: 'Commodities, companies and capital' } as Record<string, string>,
-    navLabels: { economy: 'Economy', energy: 'Energy', security: 'Security', humanitarian: 'Humanitarian' } as Record<string, string>,
+    topicBlurbs: {
+      'world-intelligence': 'Top global stories and trends',
+      economy: 'Growth, policy and development',
+      energy: 'Oil, gas, power and transition',
+      security: 'Safety, threats and stability',
+      humanitarian: 'People, needs and response',
+      market: 'Commodities, companies and capital',
+    } as Record<string, string>,
+    navLabels: {
+      economy: 'Economy',
+      energy: 'Energy',
+      security: 'Security',
+      humanitarian: 'Humanitarian',
+    } as Record<string, string>,
     navMore: 'More',
     navUnavailable: 'Not yet',
     premiumCta: 'Plans coming soon',
@@ -2468,7 +2545,8 @@ export const en = {
   intelligenceModules: {
     eyebrow: 'Intelligence engine',
     heading: 'How GlobalNews AI understands the world',
-    description: 'Each module is a real capability the engine applies when you ask a question or explore coverage.',
+    description:
+      'Each module is a real capability the engine applies when you ask a question or explore coverage.',
     stateLabels: {
       active: 'Active',
       preview: 'Preview',
@@ -2540,7 +2618,8 @@ export const en = {
       security: {
         title: 'Security Intelligence',
         shortTitle: 'Security Intel',
-        description: 'Early-stage: security conditions and exposure, with what has not been assessed stated plainly.',
+        description:
+          'Early-stage: security conditions and exposure, with what has not been assessed stated plainly.',
       },
       worldIntelligence: {
         title: 'World Intelligence',
@@ -2561,7 +2640,8 @@ export const en = {
           dashboard is invented. One line to revert if the Product Owner reads
           this as outside R2's scope.
         */
-        description: 'Planned: a world-level view of what is changing, as its own intelligence surface.',
+        description:
+          'Planned: a world-level view of what is changing, as its own intelligence surface.',
       },
       countryIntelligence: {
         title: 'Country Intelligence',
@@ -2585,17 +2665,20 @@ export const en = {
       politics: {
         title: 'Politics Intelligence',
         shortTitle: 'Politics Intel',
-        description: 'Early-stage: governments, institutions and political events, presented without taking a side.',
+        description:
+          'Early-stage: governments, institutions and political events, presented without taking a side.',
       },
       economy: {
         title: 'Economy Intelligence',
         shortTitle: 'Economy Intel',
-        description: 'Early-stage: economic and business coverage, without dedicated market data yet.',
+        description:
+          'Early-stage: economic and business coverage, without dedicated market data yet.',
       },
       conflict: {
         title: 'Conflict Intelligence',
         shortTitle: 'Conflict Intel',
-        description: 'Early-stage: conflict-relevant coverage, without dedicated risk monitoring yet.',
+        description:
+          'Early-stage: conflict-relevant coverage, without dedicated risk monitoring yet.',
       },
       market: {
         title: 'Market Intelligence',
@@ -2618,7 +2701,8 @@ export const en = {
       humanitarian: {
         title: 'Humanitarian Intelligence',
         shortTitle: 'Humanitarian',
-        description: 'Early-stage: humanitarian needs, access and response, where the evidence supports it.',
+        description:
+          'Early-stage: humanitarian needs, access and response, where the evidence supports it.',
       },
       /*
         ENGINE-CONVERGENCE-R1 §4 — this slot now carries Energy Intelligence.
@@ -2652,7 +2736,8 @@ export const en = {
           sentence stops saying 'not yet available' about a surface that now
           opens. What is still absent is the DATA, which is what it now says.
         */
-        description: 'Early-stage: energy supply, infrastructure and flow, ahead of its dedicated data.',
+        description:
+          'Early-stage: energy supply, infrastructure and flow, ahead of its dedicated data.',
       },
     },
   },
@@ -2776,7 +2861,8 @@ export const en = {
     dataHeading: 'Map and geography data',
     dataIntro:
       'The map draws on published geographic datasets. The notice below is the attribution published with that data and is shown wherever the data appears, including on the map itself.',
-    dataAttribution: 'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT).',
+    dataAttribution:
+      'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT).',
     dataSources: [
       {
         name: 'GeoNames',
@@ -2865,7 +2951,10 @@ export const en = {
       'Some reporting from the same place is shown only as separate context: it is not established to be caused by or connected to the event.',
     contextClaimsWithheld:
       'Statements about effects that were supported only by that separate context were withheld.',
-    countryNames: { COD: 'DR Congo / Congo-Kinshasa', COG: 'Republic of the Congo / Congo-Brazzaville' },
+    countryNames: {
+      COD: 'DR Congo / Congo-Kinshasa',
+      COG: 'Republic of the Congo / Congo-Brazzaville',
+    },
     countryNamesFull: {
       COD: 'Democratic Republic of the Congo (Congo-Kinshasa)',
       COG: 'Republic of the Congo (Congo-Brazzaville)',
@@ -2935,9 +3024,11 @@ export const en = {
     stateNoEvidence: 'NO REPORTING MATCHED THIS QUESTION',
     /* ASK/SEARCH R1 CLOSURE — only reached when retrieval ANSWERED; a provider
        failure resolves to the provider-unavailable state instead. */
-    stateNoEvidenceBody: 'News sources were searched and answered, but none of their reporting was relevant to this question, so no AI analysis was attempted.',
+    stateNoEvidenceBody:
+      'News sources were searched and answered, but none of their reporting was relevant to this question, so no AI analysis was attempted.',
     stateProviderUnavailable: 'REPORTING COULD NOT BE RETRIEVED',
-    stateProviderUnavailableBody: 'No news provider could be reached and no stored reporting was available, so there was nothing to analyse.',
+    stateProviderUnavailableBody:
+      'No news provider could be reached and no stored reporting was available, so there was nothing to analyse.',
     stateAnalysisFailed: 'ANALYSIS UNAVAILABLE \u00b7 REPORTING SURVIVES',
     /*
       MAIN-C2 STAGE 2, REPRODUCED VERBATIM. Main authored these three strings;
@@ -2988,7 +3079,8 @@ export const en = {
     mapCountryLevel: 'COUNTRY-LEVEL',
     mapUnresolvedEvidence: 'No country resolved from the retained reporting',
     mapUnresolvedArticles: 'UNRESOLVED REPORTS',
-    mapTargetNotSupported: 'The question named this place. The retained reporting does not support it.',
+    mapTargetNotSupported:
+      'The question named this place. The retained reporting does not support it.',
     mapNothingToDraw: 'NO GEOGRAPHY TO DRAW',
     mapReportsSuffix: 'REPORTS',
     mapBasisRetrievalFilter: 'COUNTRY-FILTERED POOL',
@@ -3013,10 +3105,12 @@ export const en = {
     },
     /* The two confidences, kept apart. */
     relationalExcerptVerified: 'Excerpt verified as text from this source.',
-    relationalDirectionUnverified: 'The direction is the model\u2019s classification and is not independently verified.',
+    relationalDirectionUnverified:
+      'The direction is the model\u2019s classification and is not independently verified.',
     relationalUncitedNote: 'Retained even though no claim cites it.',
     relationalUnmatchedHeading: 'RELATIONAL EVIDENCE WITHOUT A RETRIEVED SOURCE',
-    relationalUnmatchedNote: 'These assessments name an article that is not among the retrieved sources. They are shown rather than discarded; no source has been invented for them.',
+    relationalUnmatchedNote:
+      'These assessments name an article that is not among the retrieved sources. They are shown rather than discarded; no source has been invented for them.',
     relationalUnmatchedArticleId: 'ARTICLE ID',
     skipToLocationContext: 'Skip to location context',
     briefRegion: 'Analysis thesis',
@@ -3082,8 +3176,10 @@ export const en = {
     /** {place} is substituted with the RESOLVED place, never the query. */
     locationImageAlt: 'Representative location imagery of {place}. Not imagery of this story.',
     notACoordinate: 'NOT A COORDINATE',
-    mapAltCity: 'Map showing {place} at city level. Marker indicates the resolved city, not a coordinate.',
-    mapAltCountry: 'Map showing {place} at country level. Marker indicates the resolved country, not a coordinate.',
+    mapAltCity:
+      'Map showing {place} at city level. Marker indicates the resolved city, not a coordinate.',
+    mapAltCountry:
+      'Map showing {place} at country level. Marker indicates the resolved country, not a coordinate.',
     mapAltUnresolved: 'Map with no marker. The evidence did not resolve a location.',
     completeRecord: 'COMPLETE ANALYSIS RECORD',
     completeRecordSub: 'FORENSIC / AUDIT PATH \u00b7 NOT THE READING PATH',
@@ -3101,7 +3197,8 @@ export const en = {
       'The analysis frame presents an analysis that has already been requested. It does not start one from here.',
     askAQuestion: 'ASK A QUESTION',
     requestFailedTitle: 'ANALYSIS REQUEST FAILED',
-    requestFailedNote: 'No reporting was retrieved for this question, so there is nothing to inspect below.',
+    requestFailedNote:
+      'No reporting was retrieved for this question, so there is nothing to inspect below.',
     queryTarget: 'QUERY TARGET',
     evidenceGeography: 'EVIDENCE GEOGRAPHY',
     targetNotEstablished: 'Named in the question. Not established by the evidence.',

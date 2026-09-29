@@ -49,18 +49,9 @@ export const PUBLIC_ROUTES: readonly RouteEntry[] = [
     userDependent: false,
     ruling: 'authorization',
     rationale:
-      '§A names "Home / public Today discovery". Server-rendered, no authentication gate, and the ' +
-      'surface the whole public product is entered through.',
-  },
-  {
-    path: '/map',
-    indexability: 'index',
-    sitemap: true,
-    userDependent: false,
-    ruling: 'authorization',
-    rationale:
-      '§A names "public geographic/news discovery pages where already implemented". /map is a released ' +
-      'public destination reached from the NavBar, with a stable URL and server-rendered metadata.',
+      'STANDALONE PUBLIC BETA CONVERGENCE R1 — the ONE indexable Ask canonical: `/` is the ' +
+      'standalone Ask GlobalNewsAI entry surface (/ask stays noindex, so the two never compete). ' +
+      'Server-rendered, no authentication gate, the surface the released product is entered through.',
   },
   {
     path: '/source-policy',
@@ -68,7 +59,8 @@ export const PUBLIC_ROUTES: readonly RouteEntry[] = [
     sitemap: true,
     userDependent: false,
     ruling: 'authorization',
-    rationale: '§A names "public legal/source-policy pages". Static content, linked from the Footer.',
+    rationale:
+      '§A names "public legal/source-policy pages". Static content, linked from the Footer.',
   },
   {
     path: '/privacy',
@@ -89,6 +81,17 @@ export const PUBLIC_ROUTES: readonly RouteEntry[] = [
 ];
 
 export const PRIVATE_ROUTES: readonly RouteEntry[] = [
+  {
+    path: '/map',
+    indexability: 'noindex',
+    sitemap: false,
+    userDependent: false,
+    ruling: 'authorization',
+    rationale:
+      'STANDALONE PUBLIC BETA CONVERGENCE R1 — the released product is Ask GlobalNewsAI, so the ' +
+      'wider Beta Map is not advertised as a standalone discovery page: noindex and out of the ' +
+      'sitemap. The route itself is intact and still reachable.',
+  },
   {
     path: '/search',
     indexability: 'noindex',
@@ -115,7 +118,7 @@ export const PRIVATE_ROUTES: readonly RouteEntry[] = [
     userDependent: true,
     ruling: 'authorization',
     rationale:
-      "\u00a7B: user-specific personal workspace. Saved stories, followed places and question history " +
+      '\u00a7B: user-specific personal workspace. Saved stories, followed places and question history ' +
       'belong to one account and are meaningless to any other reader.',
   },
   {
@@ -124,7 +127,8 @@ export const PRIVATE_ROUTES: readonly RouteEntry[] = [
     sitemap: false,
     userDependent: true,
     ruling: 'authorization',
-    rationale: '§B: "History where user-specific". Reads the account session and renders that user\'s own queries.',
+    rationale:
+      '§B: "History where user-specific". Reads the account session and renders that user\'s own queries.',
   },
   {
     /*
@@ -150,7 +154,7 @@ export const PRIVATE_ROUTES: readonly RouteEntry[] = [
     userDependent: true,
     ruling: 'authorization',
     rationale:
-      "\u00a7B: user-specific. The questions one account saved. The bookmark is a relation to that " +
+      '\u00a7B: user-specific. The questions one account saved. The bookmark is a relation to that ' +
       "reader's own Ask turns and exists only inside their session.",
   },
   {
@@ -258,14 +262,17 @@ export const DISALLOWED_PREFIXES: readonly string[] = ['/api'];
  * than in a document that can drift from it.
  */
 export const DISALLOW_RATIONALE: Readonly<Record<string, string>> = {
-  '/api': 'JSON endpoints, not HTML documents. No meta robots tag exists there to be observed, so blocking hides no directive; excluded purely as crawl management.',
+  '/api':
+    'JSON endpoints, not HTML documents. No meta robots tag exists there to be observed, so blocking hides no directive; excluded purely as crawl management.',
 };
 
 export function classify(path: string): RouteEntry {
   const exact = ALL_ROUTES.find((entry) => entry.path === path);
   if (exact !== undefined) return exact;
 
-  const prefixed = ALL_ROUTES.find((entry) => entry.path !== '/' && path.startsWith(`${entry.path}/`));
+  const prefixed = ALL_ROUTES.find(
+    (entry) => entry.path !== '/' && path.startsWith(`${entry.path}/`),
+  );
   if (prefixed !== undefined) return { ...prefixed, path };
 
   /*
@@ -289,5 +296,7 @@ export function sitemapRoutes(): readonly RouteEntry[] {
     page is a contradiction a crawler is entitled to complain about, and
     asserting the conjunction here means the table cannot express one.
   */
-  return PUBLIC_ROUTES.filter((entry) => entry.sitemap && entry.indexability === 'index' && !entry.userDependent);
+  return PUBLIC_ROUTES.filter(
+    (entry) => entry.sitemap && entry.indexability === 'index' && !entry.userDependent,
+  );
 }

@@ -42,7 +42,8 @@ export const pl: Dictionary = {
   // M65 — /search bez pytania to pełnoprawna przestrzeń badawcza, a nie
   // ślepy zaułek z komunikatem błędu. Poniżej jej własne teksty.
   searchMetaTitle: 'Przestrzeń badawcza — GlobalNews AI',
-  searchMetaDescription: 'Zadaj pytanie i otrzymaj analizę wiadomości opartą na rzeczywistych źródłach.',
+  searchMetaDescription:
+    'Zadaj pytanie i otrzymaj analizę wiadomości opartą na rzeczywistych źródłach.',
   /**
    * M66.13 — ta sama rola co w en.ts.
    */
@@ -50,8 +51,13 @@ export const pl: Dictionary = {
   homeMetaTitle: 'GlobalNews AI \u2014 Zrozum, co si\u0119 zmienia.',
   homeMetaDescription:
     'GlobalNews AI zamienia codzienne wiadomo\u015bci w jasne, oparte na \u017ar\u00f3d\u0142ach i wielu perspektywach odpowiedzi, kt\u00f3re naprawd\u0119 rozumiesz.',
+  /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the root Ask entry surface. */
+  askRootMetaTitle: 'Zapytaj GlobalNewsAI',
+  askRootMetaDescription:
+    'Zadaj pytanie o wydarzenia na świecie i otrzymaj odpowiedź, która wskazuje źródła, mówi, jak jest aktualna, i czego nie sprawdzono.',
   searchWorkspaceHeading: 'Zapytaj GlobalNews AI',
-  searchWorkspaceIntro: 'Zadaj pytanie o wydarzenia na świecie i otrzymaj odpowiedź opartą na dowodach z rzeczywistych źródeł.',
+  searchWorkspaceIntro:
+    'Zadaj pytanie o wydarzenia na świecie i otrzymaj odpowiedź opartą na dowodach z rzeczywistych źródeł.',
   searchWorkspacePlaceholder: 'Co chcesz zrozumieć?',
   searchWorkspaceSubmitLabel: 'Analizuj',
   analysisStagedNote:
@@ -62,13 +68,17 @@ export const pl: Dictionary = {
   // M65 — zlokalizowane komunikaty o błędach analizy. Rzeczywisty status
   // HTTP pozostaje na obiekcie błędu; użytkownik nigdy nie widzi liczby.
   analysisErrorTimeout: 'Analiza trwa dłużej niż zwykle. Spróbuj ponownie.',
-  analysisErrorNetwork: 'Nie udało się połączyć z GlobalNews AI. Sprawdź połączenie i spróbuj ponownie.',
-  analysisErrorInvalidQuery: 'To pytanie jest zbyt krótkie do analizy. Dodaj trochę więcej szczegółów.',
+  analysisErrorNetwork:
+    'Nie udało się połączyć z GlobalNews AI. Sprawdź połączenie i spróbuj ponownie.',
+  analysisErrorInvalidQuery:
+    'To pytanie jest zbyt krótkie do analizy. Dodaj trochę więcej szczegółów.',
   analysisErrorRateLimited:
     'Wysłano kilka zapytań analitycznych w krótkim czasie. W zależności od tego, który limit został osiągnięty, oczekiwanie potrwa około minuty lub do około 15 minut. Zalogowanie się podnosi ten dłuższy limit.',
-  analysisErrorServer: 'GlobalNews AI nie może teraz ukończyć tej analizy. Spróbuj wkrótce ponownie.',
+  analysisErrorServer:
+    'GlobalNews AI nie może teraz ukończyć tej analizy. Spróbuj wkrótce ponownie.',
   noEvidenceMessage: 'Nie znaleziono powiązanych artykułów dla tego pytania.',
-  aiUnavailableMessage: 'Analiza AI jest tymczasowo niedostępna, ale powiązane artykuły są pokazane poniżej.',
+  aiUnavailableMessage:
+    'Analiza AI jest tymczasowo niedostępna, ale powiązane artykuły są pokazane poniżej.',
   originalSourcesHeading: 'Oryginalne źródła',
   evidenceLanguageLabel: 'Język źródła',
   askAi: {
@@ -77,7 +87,8 @@ export const pl: Dictionary = {
     geographyBasis: 'Geografia kraju · bez dołączonych dowodów',
     geographyOutranked: 'Wybrany kraj: {place} · nie użyto — pytanie wskazuje inne miejsce',
     geographyNotApplied: 'Wybrany kraj: {place} · nie dotyczy tego pytania',
-    mapComputeNotice: 'Uruchamia analizę AI. Nic nie zostanie wysłane, dopóki nie naciśniesz Wyślij.',
+    mapComputeNotice:
+      'Uruchamia analizę AI. Nic nie zostanie wysłane, dopóki nie naciśniesz Wyślij.',
     title: 'Zapytaj GlobalNews AI',
     panelLabel: 'Zapytaj GlobalNews AI',
     close: 'Zamknij',
@@ -86,7 +97,8 @@ export const pl: Dictionary = {
     submit: 'Zapytaj',
     idle: 'Zadaj pytanie, a odpowied\u017a zostanie zbudowana z pozyskanych materia\u0142\u00f3w, wraz ze wskazaniem \u017ar\u00f3de\u0142.',
     contextPending: 'Zapytaj o ten widok \u2014 wkr\u00f3tce',
-    contextPendingHint: 'Pytanie o bie\u017c\u0105c\u0105 stron\u0119 nie jest jeszcze dost\u0119pne. Pytania s\u0105 tu odpowiadane wy\u0142\u0105cznie na podstawie pozyskanych materia\u0142\u00f3w.',
+    contextPendingHint:
+      'Pytanie o bie\u017c\u0105c\u0105 stron\u0119 nie jest jeszcze dost\u0119pne. Pytania s\u0105 tu odpowiadane wy\u0142\u0105cznie na podstawie pozyskanych materia\u0142\u00f3w.',
     contextChipAnchored: 'Pytanie o t\u0119 histori\u0119',
     contextChipGeneric: 'Pytanie o wydarzenia na \u015bwiecie',
     resultSourcesHeading: '\u0179r\u00f3d\u0142a',
@@ -98,11 +110,15 @@ export const pl: Dictionary = {
     newTopicStarted: 'Nast\u0119pne pytanie rozpocznie nowy temat',
     productApplicabilityNotEstablished:
       'Na podstawie tych doniesie\u0144 nie da si\u0119 ustali\u0107, jak dok\u0142adnie dotyczy to GlobalNewsAI: \u017cadne z tych \u017ar\u00f3de\u0142 nie opisuje samego GlobalNewsAI.',
-    focusNotInEvidence: '\u017badne z pozyskanych doniesie\u0144 nie odnosi si\u0119 bezpo\u015brednio do: {focus}; odpowied\u017a opiera si\u0119 na doniesieniach o samym temacie.',
+    focusNotInEvidence:
+      '\u017badne z pozyskanych doniesie\u0144 nie odnosi si\u0119 bezpo\u015brednio do: {focus}; odpowied\u017a opiera si\u0119 na doniesieniach o samym temacie.',
     resultSourcesNone: 'Dla tego pytania nie pozyskano \u017cadnych \u017ar\u00f3de\u0142.',
-    resultSourcesTruncated: 'Pokazano {shown} z {total}. Otw\u00f3rz pe\u0142n\u0105 analiz\u0119, aby zobaczy\u0107 reszt\u0119.',
-    resultBriefAbsent: 'Ta analiza nie zawiera\u0142a streszczenia. To brak, a nie ocena \u2014 niczego nie zmierzono ani nie wstrzymano.',
-    resultNoAnswer: 'Dla tego pytania nie powsta\u0142a odpowied\u017a. Stan powy\u017cej wyja\u015bnia dlaczego.',
+    resultSourcesTruncated:
+      'Pokazano {shown} z {total}. Otw\u00f3rz pe\u0142n\u0105 analiz\u0119, aby zobaczy\u0107 reszt\u0119.',
+    resultBriefAbsent:
+      'Ta analiza nie zawiera\u0142a streszczenia. To brak, a nie ocena \u2014 niczego nie zmierzono ani nie wstrzymano.',
+    resultNoAnswer:
+      'Dla tego pytania nie powsta\u0142a odpowied\u017a. Stan powy\u017cej wyja\u015bnia dlaczego.',
     resultNoAnswerProvider:
       'Bie\u017c\u0105ce doniesienia s\u0105 chwilowo niedost\u0119pne. Spr\u00f3buj ponownie za chwil\u0119.',
     resultNoAnswerEvidence:
@@ -110,7 +126,8 @@ export const pl: Dictionary = {
     resultNoAnswerSafety:
       'GlobalNews AI nie wygenerowa\u0142 odpowiedzi bez materia\u0142u dowodowego. Spr\u00f3buj ponownie za chwil\u0119 albo zadaj w\u0119\u017csze pytanie o miejsce, wydarzenie lub okres.',
     runFullAnalysis: 'Uruchom pe\u0142n\u0105 analiz\u0119',
-    runFullAnalysisNote: 'Rozpoczyna now\u0105 analiz\u0119 opart\u0105 na \u017ar\u00f3d\u0142ach.',
+    runFullAnalysisNote:
+      'Rozpoczyna now\u0105 analiz\u0119 opart\u0105 na \u017ar\u00f3d\u0142ach.',
     telemetryReports: 'pozyskanych doniesie\u0144',
     telemetryClusters: 'grup doniesie\u0144',
   },
@@ -175,13 +192,17 @@ export const pl: Dictionary = {
     itemForms: ['pozycja', 'pozycje', 'pozycji'] as [string, string, string],
     noItemsInDimension: 'Brak pozycji w tym wymiarze dla tej analizy',
     /* J-2 — dwie r\u00f3\u017cne przyczyny pustego wymiaru. Zobacz en.ts. */
-    noGroundedItemsInDimension: 'Brak ugruntowanych pozycji potwierdzonych przez bie\u017c\u0105ce materia\u0142y',
-    nothingReportedInDimension: 'Bie\u017c\u0105ce materia\u0142y nic nie podaj\u0105 dla tego wymiaru',
-    regionNotInThisBuild: 'Widok szczeg\u00f3\u0142owy tego wymiaru nie jest dost\u0119pny w tej wersji',
+    noGroundedItemsInDimension:
+      'Brak ugruntowanych pozycji potwierdzonych przez bie\u017c\u0105ce materia\u0142y',
+    nothingReportedInDimension:
+      'Bie\u017c\u0105ce materia\u0142y nic nie podaj\u0105 dla tego wymiaru',
+    regionNotInThisBuild:
+      'Widok szczeg\u00f3\u0142owy tego wymiaru nie jest dost\u0119pny w tej wersji',
     fullAnalysisBelow:
       'Pe\u0142na analiza \u2014 wszystkie twierdzenia, cytowania i \u017ar\u00f3d\u0142a \u2014 znajduje si\u0119 poni\u017cej.',
     captions: {
-      brief: 'Synteza AI dla tego pytania oraz sze\u015b\u0107 odpowiedzi orientacyjnych poni\u017cej.',
+      brief:
+        'Synteza AI dla tego pytania oraz sze\u015b\u0107 odpowiedzi orientacyjnych poni\u017cej.',
       dimension: 'Jeden wymiar analizy naraz. Wyb\u00f3r innego zast\u0119puje ten widok.',
     },
     dimensions: {
@@ -207,16 +228,12 @@ export const pl: Dictionary = {
       },
       trustDetails: 'Szczegóły dowodów',
       retrievalLabel: 'Pozyskiwanie',
-      articleForms: ['artykuł', 'artykuły', 'artykułów'] as [
+      articleForms: ['artykuł', 'artykuły', 'artykułów'] as [string, string, string],
+      clusterForms: ['klaster doniesień', 'klastry doniesień', 'klastrów doniesień'] as [
         string,
         string,
         string,
       ],
-      clusterForms: [
-        'klaster doniesień',
-        'klastry doniesień',
-        'klastrów doniesień',
-      ] as [string, string, string],
       articlesShort: 'ART',
       clustersShort: 'KLA',
       across: 'w',
@@ -226,7 +243,8 @@ export const pl: Dictionary = {
       noSources: 'Brak źródeł',
       openSourcesPanel: 'Otwórz panel źródeł',
       evidenceUsedLabel: 'Wykorzystane dowody',
-      evidenceUsedAria: 'Wykorzystane dowody: {n} odrębnych artykułów jest cytowanych w ugruntowanej analizie',
+      evidenceUsedAria:
+        'Wykorzystane dowody: {n} odrębnych artykułów jest cytowanych w ugruntowanej analizie',
       noEvidenceUsed: 'Nieustalone',
     },
     /* H2C — E-09 i E-10. */
@@ -271,11 +289,7 @@ export const pl: Dictionary = {
       findingPrefix: 'ustalenie',
       findingOf: 'z',
       citedByPrefix: 'Cytowane przez',
-      sourceForms: ['źródło', 'źródła', 'źródeł'] as [
-        string,
-        string,
-        string,
-      ],
+      sourceForms: ['źródło', 'źródła', 'źródeł'] as [string, string, string],
       uncited: 'Bez cytowania',
       evidenceBasisLabel: 'Podstawa dowodowa z cytowanego źródła',
       showEvidenceBasis: 'Podstawa dowodowa',
@@ -445,11 +459,11 @@ export const pl: Dictionary = {
     */
     feedPanelFocusLive: 'Na \u017cywo',
     feedPanelFocusOf: 'z',
-    feedPanelFocusStoryForms: ['bie\u017c\u0105ca historia', 'bie\u017c\u0105ce historie', 'bie\u017c\u0105cych historii'] as [
-      string,
-      string,
-      string,
-    ],
+    feedPanelFocusStoryForms: [
+      'bie\u017c\u0105ca historia',
+      'bie\u017c\u0105ce historie',
+      'bie\u017c\u0105cych historii',
+    ] as [string, string, string],
     feedPanelFocusNone: '\u017badna z bie\u017c\u0105cych historii nie dotyczy kraju:',
   },
   analysisModeBadge: {
@@ -482,7 +496,8 @@ export const pl: Dictionary = {
       'Wyszukiwanie na żywo nie znalazło niczego użytecznego, a dla tego pytania nie były dostępne żadne relacje z pamięci.',
     newestStoredArticle: 'Najnowszy zapisany artykuł:',
     newestStoredArticlePublished: 'Najnowszy zapisany artykuł, opublikowany:',
-    newestStoredArticleObserved: 'Najnowszy zapisany artykuł, zauważony przez agregator wiadomości (nie jest to czas publikacji):',
+    newestStoredArticleObserved:
+      'Najnowszy zapisany artykuł, zauważony przez agregator wiadomości (nie jest to czas publikacji):',
     newestStoredArticleUnverified: 'Najnowszy zapisany artykuł (podstawa czasu niezweryfikowana):',
     interpretedAs: 'Zinterpretowano',
     interpretedAsMiddle: 'jako',
@@ -552,7 +567,8 @@ export const pl: Dictionary = {
       worldMapCompact: 'MAPA \u015aWIATA',
       noneResolved: 'Nie ustalono kraju w tym pobraniu',
       unresolvedLabel: 'Nie ustalono kraju',
-      unresolvedNote: 'Brak oznacza, \u017ce nie wiemy \u2014 nigdy, \u017ce historia jest znik\u0105d.',
+      unresolvedNote:
+        'Brak oznacza, \u017ce nie wiemy \u2014 nigdy, \u017ce historia jest znik\u0105d.',
     },
     header: {
       regionLabel: 'DZISIAJ',
@@ -576,7 +592,8 @@ export const pl: Dictionary = {
       analyseStory: 'Przeanalizuj tę historię',
       resolvedToCountry: 'Kraj ustalony na podstawie treści artykułu',
       whereUnresolved: 'Nie ustalono kraju',
-      unresolvedNotPlaced: 'Brak oznacza, \u017ce nie wiemy \u2014 nigdy, \u017ce historia jest znik\u0105d.',
+      unresolvedNotPlaced:
+        'Brak oznacza, \u017ce nie wiemy \u2014 nigdy, \u017ce historia jest znik\u0105d.',
       empty:
         'To pobranie nie zawiera żadnego artykułu, który GlobalNews AI zobaczył dziś po raz pierwszy. To stwierdzenie o naszym pobraniu, a nie o świecie.',
       filteredEmpty: 'Dla tego kraju nic dziś nie pobrano.',
@@ -603,8 +620,7 @@ export const pl: Dictionary = {
       expand: 'Pokaż pobrane artykuły',
       collapse: 'Ukryj pobrane artykuły',
       openOriginal: 'OTWÓRZ ORYGINAŁ',
-      retrievalNote:
-        'Jeden pobrany artykuł. Liczba pobrań to nie potwierdzenie przez inne źródła.',
+      retrievalNote: 'Jeden pobrany artykuł. Liczba pobrań to nie potwierdzenie przez inne źródła.',
       noneSelected: 'Otwórz rekord, aby zobaczyć artykuł, z którego go pobrano.',
     },
     cta: {
@@ -638,9 +654,14 @@ export const pl: Dictionary = {
     heading: 'Dzisiejsza analiza',
     summaryAcross: 'w',
     summaryUnresolvedSuffix: 'bez ustalonego kraju',
-    recordForms: ['artyku\u0142 zaobserwowany dzi\u015b po raz pierwszy', 'artyku\u0142y zaobserwowane dzi\u015b po raz pierwszy', 'artyku\u0142\u00f3w zaobserwowanych dzi\u015b po raz pierwszy'] as [string, string, string],
+    recordForms: [
+      'artyku\u0142 zaobserwowany dzi\u015b po raz pierwszy',
+      'artyku\u0142y zaobserwowane dzi\u015b po raz pierwszy',
+      'artyku\u0142\u00f3w zaobserwowanych dzi\u015b po raz pierwszy',
+    ] as [string, string, string],
     countryForms: ['kraju', 'krajach', 'krajach'] as [string, string, string],
-    counterRecordsLabel: 'Artyku\u0142y, kt\u00f3re GlobalNews AI zobaczy\u0142 dzi\u015b po raz pierwszy, w tym pobraniu',
+    counterRecordsLabel:
+      'Artyku\u0142y, kt\u00f3re GlobalNews AI zobaczy\u0142 dzi\u015b po raz pierwszy, w tym pobraniu',
     counterCountriesLabel: 'Kraje reprezentowane w tym pobraniu',
     biasNote:
       'Te liczby odzwierciedlaj\u0105 to, co pobra\u0142 GlobalNews AI, a nie wszystko, co si\u0119 wydarzy\u0142o.',
@@ -662,10 +683,12 @@ export const pl: Dictionary = {
     geoSectionLabel: 'Zestawienie kraj\u00f3w',
     geoValuesToggleAria: 'Poka\u017c warto\u015bci stoj\u0105ce za t\u0105 list\u0105',
     geoHeading: 'Kraje w tym pobraniu',
-    geoQuestion: 'Z jakich kraj\u00f3w pochodz\u0105 artyku\u0142y zobaczone dzi\u015b po raz pierwszy?',
+    geoQuestion:
+      'Z jakich kraj\u00f3w pochodz\u0105 artyku\u0142y zobaczone dzi\u015b po raz pierwszy?',
     filterAll: 'Wszystkie kraje',
     unresolvedLabel: 'Nie ustalono kraju',
-    unresolvedNote: 'Brak oznacza, \u017ce nie wiemy \u2014 nigdy, \u017ce historia jest znik\u0105d.',
+    unresolvedNote:
+      'Brak oznacza, \u017ce nie wiemy \u2014 nigdy, \u017ce historia jest znik\u0105d.',
     openWorldMap: 'Otw\u00f3rz map\u0119 \u015bwiata',
     showValues: 'Poka\u017c warto\u015bci',
     hideValues: 'Ukryj warto\u015bci',
@@ -679,14 +702,19 @@ export const pl: Dictionary = {
     analyseAriaPrefix: 'Przeanalizuj t\u0119 histori\u0119:',
     readStoryPrefix: 'Przeczytaj pe\u0142n\u0105 histori\u0119:',
     watchHeading: 'Obserwacja',
-    watchQuestion: 'Co GlobalNews AI zaobserwowa\u0142 dzi\u015b po raz pierwszy w krajach, kt\u00f3re \u015bledzisz?',
+    watchQuestion:
+      'Co GlobalNews AI zaobserwowa\u0142 dzi\u015b po raz pierwszy w krajach, kt\u00f3re \u015bledzisz?',
     watchReading: 'Wczytywanie \u015bledzonych kraj\u00f3w\u2026',
     watchAnonymous:
       '\u015aledzenie kraju wymaga konta. Zaloguj si\u0119, a Obserwacja poka\u017ce, co GlobalNews AI zaobserwuje tam po raz pierwszy.',
     watchSignIn: 'Zaloguj si\u0119',
     watchNoFollows:
       'Zacznij \u015bledzi\u0107 kraj, a Obserwacja poka\u017ce, co GlobalNews AI zaobserwuje tam po raz pierwszy. Przycisk \u015bledzenia znajduje si\u0119 obok ka\u017cdego kraju na li\u015bcie poni\u017cej.',
-    watchFollowedForms: ['\u015bledzony kraj', '\u015bledzone kraje', '\u015bledzonych kraj\u00f3w'] as [string, string, string],
+    watchFollowedForms: [
+      '\u015bledzony kraj',
+      '\u015bledzone kraje',
+      '\u015bledzonych kraj\u00f3w',
+    ] as [string, string, string],
     watchCapacityOf: 'z maksymalnie',
     watchZeroRecords: 'Dla tego kraju nic dzi\u015b nie pobrano.',
     watchAtLimit:
@@ -730,7 +758,12 @@ export const pl: Dictionary = {
     /* C3. New strings, written for this repository — FOR REVIEW (see the C1 note). */
     selectionScopeNote:
       'Wybór zmienia wyłącznie zakres geograficzny. Otwórz pełną mapę, aby przejrzeć zachowane dowody lub wprost poprosić o analizę kraju.',
-    legendLabels: { energy: 'Energia', conflict: 'Konflikt', humanitarian: 'Pomoc humanitarna', economy: 'Gospodarka' } as Record<string, string>,
+    legendLabels: {
+      energy: 'Energia',
+      conflict: 'Konflikt',
+      humanitarian: 'Pomoc humanitarna',
+      economy: 'Gospodarka',
+    } as Record<string, string>,
     legendTitle: 'Warstwy analityczne',
     legendNote: 'Każda otwiera swój moduł. Sama mapa pokazuje wyłącznie relacje według krajów.',
   },
@@ -814,7 +847,8 @@ export const pl: Dictionary = {
       },
       {
         title: 'Aktualizacje na żywo',
-        description: 'Historie rozwijają się wraz z napływem nowych doniesień, a Twoje podsumowanie aktualizuje się razem z nimi.',
+        description:
+          'Historie rozwijają się wraz z napływem nowych doniesień, a Twoje podsumowanie aktualizuje się razem z nimi.',
       },
       {
         title: 'Kontekst edukacyjny',
@@ -935,14 +969,16 @@ export const pl: Dictionary = {
   },
   map: {
     metaTitle: 'Mapa świata \u2014 GlobalNews AI',
-    metaDescription: 'Odkrywaj bieżące doniesienia informacyjne według kraju na interaktywnej mapie świata.',
+    metaDescription:
+      'Odkrywaj bieżące doniesienia informacyjne według kraju na interaktywnej mapie świata.',
     exploreLabel: 'Odkryj',
     headline: 'Mapa wiadomości ze świata',
     intro:
       'Wybierz kraj, aby zobaczyć jego bieżące nagłówki, pozyskiwane na żywo tam, gdzie skonfigurowano dostawcę. Wyszukaj po nazwie lub kliknij bezpośrednio na mapie.',
     mapA11yNote:
       'Poniżej, na większych ekranach, wyświetlana jest interaktywna mapa świata. Nie musisz jej używać \u2014 pole wyszukiwania kraju powyżej pozwala znaleźć i wybrać dowolny obsługiwany kraj, wpisując jego nazwę, z pełną obsługą klawiatury.',
-    noSelectionPrompt: 'Wyszukaj kraj powyżej lub wybierz go na mapie, aby zobaczyć jego bieżące relacje.',
+    noSelectionPrompt:
+      'Wyszukaj kraj powyżej lub wybierz go na mapie, aby zobaczyć jego bieżące relacje.',
     mobileFallback:
       'Interaktywna mapa jest dostępna na większych ekranach. Użyj pola wyszukiwania powyżej, aby wybrać tutaj kraj.',
     loading: 'Wczytywanie mapy świata\u2026',
@@ -976,8 +1012,10 @@ export const pl: Dictionary = {
     /* MAIN-COUNTRY-READER-RETRIEVAL-CONTRACT-R1 §7.1 — patrz en.ts. Klikniecie
        WYBIERA kraj; od czasu naprawy limitu nie pobiera niczego w zadnym wariancie.
        Poprawione sa OBA zdania akcji, nie tylko nazwane przez Main. Do przegladu przez L. */
-    tooltipRefreshAction: 'Kliknij, aby wybrać ten kraj. Pobranie analizy to osobne działanie w panelu.',
-    tooltipLoadAction: 'Kliknij, aby wybrać ten kraj. Nic nie zostanie pobrane, dopóki nie poprosisz o to w panelu.',
+    tooltipRefreshAction:
+      'Kliknij, aby wybrać ten kraj. Pobranie analizy to osobne działanie w panelu.',
+    tooltipLoadAction:
+      'Kliknij, aby wybrać ten kraj. Nic nie zostanie pobrane, dopóki nie poprosisz o to w panelu.',
     badge: {
       livePrefix: 'NA ŻYWO \u00b7 OBSŁUGIWANE PRZEZ ',
       delayedPrefix: 'OPÓŹNIONY KANAŁ \u00b7 OBSŁUGIWANY PRZEZ ',
@@ -1000,7 +1038,8 @@ export const pl: Dictionary = {
     panel: {
       coverageQuality: 'Jakość materiałów',
       coverageStrength: 'Poziom zasięgu',
-      coverageQualityBasis: 'Na podstawie liczby artykułów, różnorodności wydawców i aktualności relacji.',
+      coverageQualityBasis:
+        'Na podstawie liczby artykułów, różnorodności wydawców i aktualności relacji.',
       publishers: 'Wydawcy',
       latest: 'Najnowszy',
       coverageSnapshot: 'Migawka zasięgu',
@@ -1176,16 +1215,29 @@ export const pl: Dictionary = {
         },
       },
       continents: {
-        africa: 'Afryka', europe: 'Europa', asia: 'Azja',
-        northAmerica: 'Ameryka P\u00f3\u0142nocna', southAmerica: 'Ameryka Po\u0142udniowa', oceania: 'Oceania',
+        africa: 'Afryka',
+        europe: 'Europa',
+        asia: 'Azja',
+        northAmerica: 'Ameryka P\u00f3\u0142nocna',
+        southAmerica: 'Ameryka Po\u0142udniowa',
+        oceania: 'Oceania',
       },
       waters: {
-        atlantic: 'Ocean Atlantycki', pacific: 'Ocean Spokojny', indian: 'Ocean Indyjski',
-        arctic: 'Ocean Arktyczny', southernOcean: 'Ocean Po\u0142udniowy',
-        mediterranean: 'Morze \u015ar\u00f3dziemne', baltic: 'Morze Ba\u0142tyckie', redSea: 'Morze Czerwone',
-        blackSea: 'Morze Czarne', caribbean: 'Morze Karaibskie', northSea: 'Morze P\u00f3\u0142nocne',
-        gulfOfGuinea: 'Zatoka Gwinejska', arabianSea: 'Morze Arabskie',
-        bayOfBengal: 'Zatoka Bengalska', southChinaSea: 'Morze Po\u0142udniowochi\u0144skie',
+        atlantic: 'Ocean Atlantycki',
+        pacific: 'Ocean Spokojny',
+        indian: 'Ocean Indyjski',
+        arctic: 'Ocean Arktyczny',
+        southernOcean: 'Ocean Po\u0142udniowy',
+        mediterranean: 'Morze \u015ar\u00f3dziemne',
+        baltic: 'Morze Ba\u0142tyckie',
+        redSea: 'Morze Czerwone',
+        blackSea: 'Morze Czarne',
+        caribbean: 'Morze Karaibskie',
+        northSea: 'Morze P\u00f3\u0142nocne',
+        gulfOfGuinea: 'Zatoka Gwinejska',
+        arabianSea: 'Morze Arabskie',
+        bayOfBengal: 'Zatoka Bengalska',
+        southChinaSea: 'Morze Po\u0142udniowochi\u0144skie',
       },
       territories: { greenland: 'Grenlandia' },
       readout: {
@@ -1194,8 +1246,12 @@ export const pl: Dictionary = {
         centre: 'CTR',
         mode: 'TRYB',
         modes: {
-          WORLD: '\u015aWIAT', EVIDENCE: 'DOWODY', SITUATIONS: 'SYTUACJE',
-          WATCH: 'OBSERW.', CHANGE: 'ZMIANY', SOURCES: '\u0179R\u00d3D\u0141A',
+          WORLD: '\u015aWIAT',
+          EVIDENCE: 'DOWODY',
+          SITUATIONS: 'SYTUACJE',
+          WATCH: 'OBSERW.',
+          CHANGE: 'ZMIANY',
+          SOURCES: '\u0179R\u00d3D\u0141A',
         },
         periods: { NOW: 'TERAZ', '24H': '24H', '7D': '7D', '30D': '30D' },
       },
@@ -1266,7 +1322,8 @@ export const pl: Dictionary = {
         interpreted: 'lokalizacja zinterpretowana, niepotwierdzona',
         contested: '\u017ar\u00f3d\u0142a podaj\u0105 sprzeczne miejsca',
         referencePrefix: 'Pu\u0142ap geografii odniesienia:',
-        governingRule: 'Przybli\u017cenie pokazuje wi\u0119cej \u015bwiata. Nigdy nie pokazuje wi\u0119cej dowod\u00f3w.',
+        governingRule:
+          'Przybli\u017cenie pokazuje wi\u0119cej \u015bwiata. Nigdy nie pokazuje wi\u0119cej dowod\u00f3w.',
         coarserThanEvidence: 'rysowane zgrubniej ni\u017c zapis',
       },
       callout: {
@@ -1281,7 +1338,8 @@ export const pl: Dictionary = {
         scope: 'Dowody',
         watching: 'Obserwowane',
         stateHeading: 'Stan dowod\u00f3w',
-        ceilingNote: 'To poziom, kt\u00f3ry potwierdzaj\u0105 dowody. Wszystko dok\u0142adniejsze na mapie to geografia odniesienia.',
+        ceilingNote:
+          'To poziom, kt\u00f3ry potwierdzaj\u0105 dowody. Wszystko dok\u0142adniejsze na mapie to geografia odniesienia.',
         reports: 'Doniesienia',
         sources: '\u0179r\u00f3d\u0142a',
         newSince: 'Nowe od ostatniej wizyty',
@@ -1418,25 +1476,30 @@ export const pl: Dictionary = {
       },
       mobile: {
         shellLabel: 'Mapa \u015bwiata i informacje o miejscu',
-        mapLabel: 'Mapa \u015bwiata. Przeci\u0105gnij, aby przesun\u0105\u0107, zbli\u017c palce, aby powi\u0119kszy\u0107, dotknij kraju, aby go wybra\u0107.',
-        mapHint: 'Przeci\u0105gnij, aby przesun\u0105\u0107 map\u0119. Zbli\u017c palce, aby powi\u0119kszy\u0107. Dotknij kraju, aby go wybra\u0107.',
+        mapLabel:
+          'Mapa \u015bwiata. Przeci\u0105gnij, aby przesun\u0105\u0107, zbli\u017c palce, aby powi\u0119kszy\u0107, dotknij kraju, aby go wybra\u0107.',
+        mapHint:
+          'Przeci\u0105gnij, aby przesun\u0105\u0107 map\u0119. Zbli\u017c palce, aby powi\u0119kszy\u0107. Dotknij kraju, aby go wybra\u0107.',
         sheetLabel: 'Informacje o miejscu',
         handleLabel: 'Zmie\u0144 rozmiar panelu informacji',
         stops: { PEEK: 'Podgl\u0105d', HALF: 'Po\u0142owa', FULL: 'Pe\u0142ny' },
-        noSelection: 'Wyszukaj miejsce powy\u017cej lub dotknij kraju na mapie, aby zobaczy\u0107, co jest tam zachowane.',
+        noSelection:
+          'Wyszukaj miejsce powy\u017cej lub dotknij kraju na mapie, aby zobaczy\u0107, co jest tam zachowane.',
         clearSelection: 'Wyczy\u015b\u0107 wyb\u00f3r',
         askAbout: 'Zapytaj o kraj: {country}',
         newShort: 'nowe',
-        stagingNote: '\u201eZapytaj\u201d i \u201eOtw\u00f3rz analiz\u0119\u201d dodaj\u0105 ten kraj jako kontekst. Nic nie dzia\u0142a, dop\u00f3ki nie naci\u015bniesz Wy\u015blij lub Uruchom.',
-        searchAlternative: 'Kraj mo\u017cesz te\u017c znale\u017a\u0107, wpisuj\u0105c jego nazw\u0119 w polu wyszukiwania powy\u017cej; mapa nie jest jedyn\u0105 drog\u0105.',
-        a11yNote: 'Interaktywna mapa \u015bwiata wype\u0142nia ten ekran. Przeci\u0105gnij, aby przesun\u0105\u0107, zbli\u017c palce, aby powi\u0119kszy\u0107, dotknij kraju, aby go wybra\u0107. Nie musisz jej u\u017cywa\u0107 \u2014 pole wyszukiwania znajdzie i wybierze ka\u017cdy obs\u0142ugiwany kraj po nazwie, z pe\u0142n\u0105 obs\u0142ug\u0105 klawiatury.',
+        stagingNote:
+          '\u201eZapytaj\u201d i \u201eOtw\u00f3rz analiz\u0119\u201d dodaj\u0105 ten kraj jako kontekst. Nic nie dzia\u0142a, dop\u00f3ki nie naci\u015bniesz Wy\u015blij lub Uruchom.',
+        searchAlternative:
+          'Kraj mo\u017cesz te\u017c znale\u017a\u0107, wpisuj\u0105c jego nazw\u0119 w polu wyszukiwania powy\u017cej; mapa nie jest jedyn\u0105 drog\u0105.',
+        a11yNote:
+          'Interaktywna mapa \u015bwiata wype\u0142nia ten ekran. Przeci\u0105gnij, aby przesun\u0105\u0107, zbli\u017c palce, aby powi\u0119kszy\u0107, dotknij kraju, aby go wybra\u0107. Nie musisz jej u\u017cywa\u0107 \u2014 pole wyszukiwania znajdzie i wybierze ka\u017cdy obs\u0142ugiwany kraj po nazwie, z pe\u0142n\u0105 obs\u0142ug\u0105 klawiatury.',
       },
       monetization: {
         watch: {
           glyph: 'Obserwuj ten temat',
           watch: 'Obserwuj',
-          description:
-            'Stale oceniaj ten temat i informuj, gdy ocena istotnie si\u0119 zmieni.',
+          description: 'Stale oceniaj ten temat i informuj, gdy ocena istotnie si\u0119 zmieni.',
         },
         composer: {
           title: 'Kreator obserwacji',
@@ -1473,7 +1536,8 @@ export const pl: Dictionary = {
           degradedNote:
             'Ta obserwacja nigdy nie zosta\u0142a uruchomiona, wi\u0119c nie ma jeszcze zapisu. Obserwacja, kt\u00f3ra nie potrafi poda\u0107 czasu ostatniego sprawdzenia, jest pokazywana jako niekompletna, a nie jako pewna.',
           instMark: 'INST',
-          capabilityNote: 'Limity planu nie s\u0105 skonfigurowane, wi\u0119c \u017cadne nie s\u0105 pokazywane',
+          capabilityNote:
+            'Limity planu nie s\u0105 skonfigurowane, wi\u0119c \u017cadne nie s\u0105 pokazywane',
           notPersisted:
             'Nic z tego, co tu z\u0142o\u017cysz, nie jest jeszcze zapisywane. Monitorowanie nie dzia\u0142a, wi\u0119c jest to podgl\u0105d zlecenia, a nie zlecenie zapisane.',
           chainLimitNote: 'D\u0142u\u017csze \u0142a\u0144cuchy wymagaj\u0105 wy\u017cszego planu',
@@ -1496,7 +1560,8 @@ export const pl: Dictionary = {
           signIn: 'Zaloguj si\u0119',
           followInstead: 'Zamiast tego obserwuj w kanale \u2014 bezp\u0142atnie',
           dismiss: 'Wr\u00f3\u0107 do sytuacji',
-          capabilityNote: 'Nie skonfigurowano planu ani ceny, wi\u0119c \u017caden nie jest pokazywany',
+          capabilityNote:
+            'Nie skonfigurowano planu ani ceny, wi\u0119c \u017caden nie jest pokazywany',
         },
         changeStrip: {
           label: 'Zmiany w widoku',
@@ -1580,7 +1645,8 @@ export const pl: Dictionary = {
           costLine: 'Koszt to',
           costUnitOne: 'akcja',
           costUnitMany: 'akcje',
-          allowanceUnset: 'Nie skonfigurowano miesi\u0119cznego limitu, wi\u0119c \u017caden nie jest pokazywany.',
+          allowanceUnset:
+            'Nie skonfigurowano miesi\u0119cznego limitu, wi\u0119c \u017caden nie jest pokazywany.',
           allowanceMeter: 'Wykorzystano {used} z {total} w tym miesi\u0105cu \u00b7 reset {resets}',
           unavailable:
             'Analiza pog\u0142\u0119biona nie jest w\u0142\u0105czona dla tego konta, wi\u0119c nie mo\u017cna jej uruchomi\u0107. Nic nie zosta\u0142o wykorzystane.',
@@ -1614,7 +1680,8 @@ export const pl: Dictionary = {
       region: {
         heading: 'Region',
         types: {
-          INSTITUTIONAL: 'Instytucjonalny \u00b7 opublikowany organ okre\u015bla cz\u0142onk\u00f3w',
+          INSTITUTIONAL:
+            'Instytucjonalny \u00b7 opublikowany organ okre\u015bla cz\u0142onk\u00f3w',
           STATISTICAL: 'Statystyczny \u00b7 opublikowany standard okre\u015bla cz\u0142onk\u00f3w',
           OPERATIONAL: 'W powszechnym u\u017cyciu \u00b7 cz\u0142onkostwo jest sporne',
           GOVERNED:
@@ -1702,7 +1769,12 @@ export const pl: Dictionary = {
           showAll: 'Poka\u017c wszystkie wska\u017aniki',
           noneObserved: 'Dla tego podmiotu nie zaobserwowano \u017cadnych wska\u017anik\u00f3w.',
           staleSuffix: 'bez aktualizacji',
-          directions: { RISING: 'Ro\u015bnie', FALLING: 'Maleje', FLAT: 'Bez zmian', UNKNOWN: 'Nieznany' },
+          directions: {
+            RISING: 'Ro\u015bnie',
+            FALLING: 'Maleje',
+            FLAT: 'Bez zmian',
+            UNKNOWN: 'Nieznany',
+          },
           indicators: {
             INCIDENT_FREQUENCY: 'Cz\u0119stotliwo\u015b\u0107 incydent\u00f3w',
             GEOGRAPHIC_SPREAD: 'Zasi\u0119g geograficzny',
@@ -1715,7 +1787,8 @@ export const pl: Dictionary = {
           notes: {
             DISPLACEMENT_REPORTS: 'Liczba zg\u0142osze\u0144, nie szacunek liczby ludno\u015bci.',
             CEASEFIRE_VIOLATIONS: 'Pokazywane tylko tam, gdzie istnieje stan zawieszenia broni.',
-            EVIDENCE_VOLUME: 'Mo\u017ce wskazywa\u0107 na zmian\u0119 dost\u0119pu, a nie na eskalacj\u0119.',
+            EVIDENCE_VOLUME:
+              'Mo\u017ce wskazywa\u0107 na zmian\u0119 dost\u0119pu, a nie na eskalacj\u0119.',
           },
         },
         readings: {
@@ -1733,7 +1806,8 @@ export const pl: Dictionary = {
             EVIDENCE_BACKED: 'Poparte dowodami',
           },
           sources: '\u017ar\u00f3de\u0142',
-          incomplete: 'Jeden z tych odczyt\u00f3w nie podaje swojej podstawy ani regu\u0142y liczenia, wi\u0119c nie da si\u0119 ich por\u00f3wna\u0107 na r\u00f3wnych zasadach.',
+          incomplete:
+            'Jeden z tych odczyt\u00f3w nie podaje swojej podstawy ani regu\u0142y liczenia, wi\u0119c nie da si\u0119 ich por\u00f3wna\u0107 na r\u00f3wnych zasadach.',
         },
       },
       context: {
@@ -1841,7 +1915,8 @@ export const pl: Dictionary = {
     nowHeading: 'Co dzieje się teraz',
     updatedStamp: 'Aktualizacja {time}',
     noAiNote: 'Wybranie kategorii lub otwarcie artykułu nigdy nie uruchamia analizy AI.',
-    firstVisit: 'Jesteś tu pierwszy raz? Zaloguj się, aby obserwować kraje i tematy oraz dopasować swój przegląd.',
+    firstVisit:
+      'Jesteś tu pierwszy raz? Zaloguj się, aby obserwować kraje i tematy oraz dopasować swój przegląd.',
     signInToFollow: 'Zaloguj się, aby obserwować',
     pulseTitle: 'Puls świata',
     pulseNote: 'Podgląd poglądowy. Otwórz mapę, aby zobaczyć doniesienia i źródła według krajów.',
@@ -1849,7 +1924,8 @@ export const pl: Dictionary = {
     /* The Ask rail's supporting line, as ruled. `suggestedNote` stays: it is
        the no-AI-on-browse guarantee and it is not interchangeable with this. */
     askRailSubtitle: 'Uzyskaj jasne odpowiedzi poparte źródłami.',
-    suggestedNote: 'Dotknięcie sugestii wypełnia pole. Nic nie jest uruchamiane, dopóki nie naciśniesz Wyślij.',
+    suggestedNote:
+      'Dotknięcie sugestii wypełnia pole. Nic nie jest uruchamiane, dopóki nie naciśniesz Wyślij.',
 
     /*
       C1. NEW STRINGS, NOT FROM THE DESIGN CATALOGUE. Every other Polish
@@ -1872,9 +1948,28 @@ export const pl: Dictionary = {
     viewAllTopicsPending: '· strona wkrótce',
     connectedPerspective: 'Szersza, powiązana perspektywa.',
     nowStandfirst: 'Wybrane wydarzenia ze świata',
-    topicLabels: { 'world-intelligence': 'Świat', economy: 'Gospodarka', energy: 'Energia', security: 'Bezpieczeństwo', humanitarian: 'Pomoc humanitarna', market: 'Rynki' } as Record<string, string>,
-    topicBlurbs: { 'world-intelligence': 'Najważniejsze wydarzenia i trendy', economy: 'Wzrost, polityka i rozwój', energy: 'Ropa, gaz, energia i transformacja', security: 'Bezpieczeństwo, zagrożenia i stabilność', humanitarian: 'Ludzie, potrzeby i reagowanie', market: 'Surowce, spółki i kapitał' } as Record<string, string>,
-    navLabels: { economy: 'Gospodarka', energy: 'Energia', security: 'Bezpieczeństwo', humanitarian: 'Pomoc humanitarna' } as Record<string, string>,
+    topicLabels: {
+      'world-intelligence': 'Świat',
+      economy: 'Gospodarka',
+      energy: 'Energia',
+      security: 'Bezpieczeństwo',
+      humanitarian: 'Pomoc humanitarna',
+      market: 'Rynki',
+    } as Record<string, string>,
+    topicBlurbs: {
+      'world-intelligence': 'Najważniejsze wydarzenia i trendy',
+      economy: 'Wzrost, polityka i rozwój',
+      energy: 'Ropa, gaz, energia i transformacja',
+      security: 'Bezpieczeństwo, zagrożenia i stabilność',
+      humanitarian: 'Ludzie, potrzeby i reagowanie',
+      market: 'Surowce, spółki i kapitał',
+    } as Record<string, string>,
+    navLabels: {
+      economy: 'Gospodarka',
+      energy: 'Energia',
+      security: 'Bezpieczeństwo',
+      humanitarian: 'Pomoc humanitarna',
+    } as Record<string, string>,
     navMore: 'Więcej',
     navUnavailable: 'Wkrótce',
     premiumCta: 'Plany wkrótce',
@@ -1903,7 +1998,8 @@ export const pl: Dictionary = {
   intelligenceModules: {
     eyebrow: 'Silnik analityczny',
     heading: 'Jak GlobalNews AI rozumie świat',
-    description: 'Każdy moduł to realna funkcja silnika, uruchamiana, gdy zadajesz pytanie lub przeglądasz relacje.',
+    description:
+      'Każdy moduł to realna funkcja silnika, uruchamiana, gdy zadajesz pytanie lub przeglądasz relacje.',
     stateLabels: {
       active: 'Aktywny',
       preview: 'Zapowiedź',
@@ -1959,7 +2055,8 @@ export const pl: Dictionary = {
       security: {
         title: 'Analiza bezpieczeństwa',
         shortTitle: 'Bezpieczeństwo',
-        description: 'Wczesny etap: warunki bezpieczeństwa i narażenie, z wyraźnym wskazaniem tego, czego nie oceniono.',
+        description:
+          'Wczesny etap: warunki bezpieczeństwa i narażenie, z wyraźnym wskazaniem tego, czego nie oceniono.',
       },
       worldIntelligence: {
         title: 'Analiza świata',
@@ -1971,22 +2068,26 @@ export const pl: Dictionary = {
       countryIntelligence: {
         title: 'Analiza krajów',
         shortTitle: 'Analiza krajów',
-        description: 'Przeglądaj zasięg, kategorie i aktualność relacji dla dowolnego kraju na mapie.',
+        description:
+          'Przeglądaj zasięg, kategorie i aktualność relacji dla dowolnego kraju na mapie.',
       },
       politics: {
         title: 'Analiza polityczna',
         shortTitle: 'Polityka',
-        description: 'Wczesny etap: rządy, instytucje i wydarzenia polityczne, przedstawiane bez opowiadania się po żadnej stronie.',
+        description:
+          'Wczesny etap: rządy, instytucje i wydarzenia polityczne, przedstawiane bez opowiadania się po żadnej stronie.',
       },
       economy: {
         title: 'Analiza gospodarcza',
         shortTitle: 'Analiza gospodarcza',
-        description: 'Wczesny etap: relacje gospodarcze i biznesowe, bez dedykowanych danych rynkowych.',
+        description:
+          'Wczesny etap: relacje gospodarcze i biznesowe, bez dedykowanych danych rynkowych.',
       },
       conflict: {
         title: 'Analiza konfliktów',
         shortTitle: 'Analiza konfliktów',
-        description: 'Wczesny etap: relacje związane z konfliktami, bez dedykowanego monitorowania ryzyka.',
+        description:
+          'Wczesny etap: relacje związane z konfliktami, bez dedykowanego monitorowania ryzyka.',
       },
       market: {
         title: 'Analiza rynkowa',
@@ -1997,13 +2098,15 @@ export const pl: Dictionary = {
       humanitarian: {
         title: 'Analiza humanitarna',
         shortTitle: 'Pomoc humanitarna',
-        description: 'Wczesny etap: potrzeby humanitarne, dostęp i reakcja — tam, gdzie pozwalają na to dowody.',
+        description:
+          'Wczesny etap: potrzeby humanitarne, dostęp i reakcja — tam, gdzie pozwalają na to dowody.',
       },
       energy: {
         title: 'Analiza energetyczna',
         shortTitle: 'Energetyka',
         /* Patrz en.ts: ceny należą do Analizy rynkowej, nie energetycznej. Do przeglądu przez L. */
-        description: 'Wczesny etap: dostawy energii, infrastruktura i przesył, przed dedykowanymi danymi.',
+        description:
+          'Wczesny etap: dostawy energii, infrastruktura i przesył, przed dedykowanymi danymi.',
       },
     },
   },
@@ -2115,7 +2218,8 @@ export const pl: Dictionary = {
     dataHeading: 'Dane mapy i geografii',
     dataIntro:
       'Mapa korzysta z opublikowanych zbior\u00f3w danych geograficznych. Poni\u017csza nota jest atrybucj\u0105 opublikowan\u0105 wraz z tymi danymi i jest pokazywana wsz\u0119dzie tam, gdzie dane te wyst\u0119puj\u0105, tak\u017ce na samej mapie.',
-    dataAttribution: 'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT).',
+    dataAttribution:
+      'Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT).',
     dataSources: [
       {
         name: 'GeoNames',
@@ -2246,9 +2350,11 @@ export const pl: Dictionary = {
     stateNoQuestion: 'NIE ZADANO JESZCZE PYTANIA',
     stateNoQuestionBody: 'Zadaj pytanie, aby otworzy\u0107 analiz\u0119 w tej ramce.',
     stateNoEvidence: '\u017bADNE DONIESIENIA NIE PASOWA\u0141Y DO TEGO PYTANIA',
-    stateNoEvidenceBody: '\u0179r\u00f3d\u0142a wiadomo\u015bci zosta\u0142y przeszukane i odpowiedzia\u0142y, ale \u017cadne z ich doniesie\u0144 nie dotyczy\u0142o tego pytania, wi\u0119c nie podj\u0119to pr\u00f3by analizy AI.',
+    stateNoEvidenceBody:
+      '\u0179r\u00f3d\u0142a wiadomo\u015bci zosta\u0142y przeszukane i odpowiedzia\u0142y, ale \u017cadne z ich doniesie\u0144 nie dotyczy\u0142o tego pytania, wi\u0119c nie podj\u0119to pr\u00f3by analizy AI.',
     stateProviderUnavailable: 'NIE UDA\u0141O SI\u0118 POZYSKA\u0106 DONIESIE\u0143',
-    stateProviderUnavailableBody: 'Nie uda\u0142o si\u0119 po\u0142\u0105czy\u0107 z \u017cadnym dostawc\u0105 wiadomo\u015bci ani odczyta\u0107 zapisanych doniesie\u0144, wi\u0119c nie by\u0142o czego analizowa\u0107.',
+    stateProviderUnavailableBody:
+      'Nie uda\u0142o si\u0119 po\u0142\u0105czy\u0107 z \u017cadnym dostawc\u0105 wiadomo\u015bci ani odczyta\u0107 zapisanych doniesie\u0144, wi\u0119c nie by\u0142o czego analizowa\u0107.',
     stateAnalysisFailed: 'ANALIZA NIEDOST\u0118PNA \u00b7 DONIESIENIA ZACHOWANE',
     /* MAIN-C2 STAGE 2 \u2014 patrz komentarz w en.ts. Skopiowane bez zmian. */
     stateAiProviderUnavailable: 'DOSTAWCA AI NIEDOST\u0118PNY \u00b7 DONIESIENIA ZACHOWANE',
@@ -2265,8 +2371,10 @@ export const pl: Dictionary = {
     clarificationTooManyEntities:
       'To pytanie nazywa wi\u0119cej podmiot\u00f3w, ni\u017c obejmuje jedno pobranie. Odpowied\u017a dla cz\u0119\u015bci z nich sugerowa\u0142aby, \u017ce przyjrzeli\u015bmy si\u0119 wszystkim.',
     clarificationAskComparisonMembers: 'Kt\u00f3re podmioty maj\u0105 zosta\u0107 por\u00f3wnane?',
-    clarificationAskTooManyEntities: 'Kt\u00f3re dwa lub trzy podmioty s\u0105 tu najwa\u017cniejsze?',
-    clarificationAskGeneral: 'Do kt\u00f3rej cz\u0119\u015bci tego pytania zaw\u0119zi\u0107 wyszukiwanie?',
+    clarificationAskTooManyEntities:
+      'Kt\u00f3re dwa lub trzy podmioty s\u0105 tu najwa\u017cniejsze?',
+    clarificationAskGeneral:
+      'Do kt\u00f3rej cz\u0119\u015bci tego pytania zaw\u0119zi\u0107 wyszukiwanie?',
     clarificationRetryNote:
       'Ponowne uruchomienie tego samego pytania doprowadzi w to samo miejsce \u2014 to edycja posuwa spraw\u0119 naprz\u00f3d.',
     mapRegion: 'Mapa dowod\u00f3w',
@@ -2277,7 +2385,8 @@ export const pl: Dictionary = {
     mapCountryLevel: 'POZIOM KRAJU',
     mapUnresolvedEvidence: 'Z zachowanych doniesie\u0144 nie wynika \u017caden kraj',
     mapUnresolvedArticles: 'DONIESIENIA NIEROZSTRZYGNI\u0118TE',
-    mapTargetNotSupported: 'Pytanie wskaza\u0142o to miejsce. Zachowane doniesienia go nie potwierdzaj\u0105.',
+    mapTargetNotSupported:
+      'Pytanie wskaza\u0142o to miejsce. Zachowane doniesienia go nie potwierdzaj\u0105.',
     mapNothingToDraw: 'BRAK GEOGRAFII DO POKAZANIA',
     mapReportsSuffix: 'DONIESIENIA',
     mapBasisRetrievalFilter: 'POOL FILTROWANY KRAJEM',
@@ -2290,15 +2399,18 @@ export const pl: Dictionary = {
       'requested-direction': 'POTWIERDZA WSKAZANY KIERUNEK',
       bidirectional: 'POTWIERDZA OBA KIERUNKI',
       'reverse-direction': 'ODWROTNY \u00b7 DOW\u00d3D NA KIERUNEK PRZECIWNY',
-      'association-only': 'TYLKO WSP\u00d3\u0141WYST\u0118POWANIE \u00b7 NIE PRZYCZYNOWO\u015a\u0106',
+      'association-only':
+        'TYLKO WSP\u00d3\u0141WYST\u0118POWANIE \u00b7 NIE PRZYCZYNOWO\u015a\u0106',
       unclear: 'NIEJASNE \u00b7 ZALE\u017bNO\u015a\u0106 NIEUSTALONA',
       'non-substantive': 'NIEISTOTNE MERYTORYCZNIE',
     },
     relationalExcerptVerified: 'Cytat zweryfikowany jako tekst z tego \u017ar\u00f3d\u0142a.',
-    relationalDirectionUnverified: 'Kierunek to klasyfikacja modelu i nie zosta\u0142 niezale\u017cnie zweryfikowany.',
+    relationalDirectionUnverified:
+      'Kierunek to klasyfikacja modelu i nie zosta\u0142 niezale\u017cnie zweryfikowany.',
     relationalUncitedNote: 'Zachowane, cho\u0107 \u017caden wniosek go nie cytuje.',
     relationalUnmatchedHeading: 'DOWODY RELACYJNE BEZ POZYSKANEGO \u0179R\u00d3D\u0141A',
-    relationalUnmatchedNote: 'Te oceny wskazuj\u0105 artyku\u0142, kt\u00f3rego nie ma w\u015br\u00f3d pozyskanych \u017ar\u00f3de\u0142. S\u0105 pokazane, a nie odrzucone; nie utworzono dla nich \u017cadnego \u017ar\u00f3d\u0142a.',
+    relationalUnmatchedNote:
+      'Te oceny wskazuj\u0105 artyku\u0142, kt\u00f3rego nie ma w\u015br\u00f3d pozyskanych \u017ar\u00f3de\u0142. S\u0105 pokazane, a nie odrzucone; nie utworzono dla nich \u017cadnego \u017ar\u00f3d\u0142a.',
     relationalUnmatchedArticleId: 'ID ARTYKU\u0141U',
     skipToLocationContext: 'Przejd\u017a do kontekstu geograficznego',
     briefRegion: 'Teza analizy',
@@ -2338,7 +2450,8 @@ export const pl: Dictionary = {
     geoExpandedRegion: 'Powi\u0119kszona geografia dowod\u00f3w',
     geoNoSubnational: 'POZIOM KRAJU JEST SUFITEM · BRAK DANYCH PONI\u017bEJ POZIOMU KRAJU',
     geoSchematic: 'SCHEMAT \u00b7 NIE W SKALI',
-    analysisUnavailableRetrievalSucceeded: 'ANALIZA NIEDOST\u0118PNA \u00b7 POZYSKIWANIE POWIOD\u0141O SI\u0118',
+    analysisUnavailableRetrievalSucceeded:
+      'ANALIZA NIEDOST\u0118PNA \u00b7 POZYSKIWANIE POWIOD\u0141O SI\u0118',
     analysisUnavailableExplanation:
       'Nie uda\u0142o si\u0119 przygotowa\u0107 analizy. Pobrane doniesienia poni\u017cej pozostaj\u0105 nienaruszone i w pe\u0142ni dost\u0119pne do wgl\u0105du.',
     retry: 'PON\u00d3W',
@@ -2349,18 +2462,23 @@ export const pl: Dictionary = {
     uncited: 'BEZ CYTOWANIA',
     noItemsInDimension: 'BRAK POZYCJI W TYM WYMIARZE DLA TEJ ANALIZY',
     locationContextChip: 'KONTEKST LOKALIZACJI',
-    representativeImagery: 'Pogl\u0105dowa ilustracja lokalizacji \u2014 nie jest to zdj\u0119cie z tej historii.',
+    representativeImagery:
+      'Pogl\u0105dowa ilustracja lokalizacji \u2014 nie jest to zdj\u0119cie z tej historii.',
     noVerifiedLocationImage: 'BRAK ZWERYFIKOWANEJ ILUSTRACJI LOKALIZACJI',
-    locationImageAlt: 'Pogl\u0105dowa ilustracja lokalizacji: {place}. Nie jest to zdj\u0119cie z tej historii.',
+    locationImageAlt:
+      'Pogl\u0105dowa ilustracja lokalizacji: {place}. Nie jest to zdj\u0119cie z tej historii.',
     notACoordinate: 'TO NIE S\u0104 WSP\u00d3\u0141RZ\u0118DNE',
-    mapAltCity: 'Mapa pokazuj\u0105ca {place} na poziomie miasta. Znacznik wskazuje rozstrzygni\u0119te miasto, a nie wsp\u00f3\u0142rz\u0119dne.',
-    mapAltCountry: 'Mapa pokazuj\u0105ca {place} na poziomie kraju. Znacznik wskazuje rozstrzygni\u0119ty kraj, a nie wsp\u00f3\u0142rz\u0119dne.',
+    mapAltCity:
+      'Mapa pokazuj\u0105ca {place} na poziomie miasta. Znacznik wskazuje rozstrzygni\u0119te miasto, a nie wsp\u00f3\u0142rz\u0119dne.',
+    mapAltCountry:
+      'Mapa pokazuj\u0105ca {place} na poziomie kraju. Znacznik wskazuje rozstrzygni\u0119ty kraj, a nie wsp\u00f3\u0142rz\u0119dne.',
     mapAltUnresolved: 'Mapa bez znacznika. Dowody nie rozstrzygn\u0119\u0142y lokalizacji.',
     completeRecord: 'PE\u0141NY ZAPIS ANALIZY',
     completeRecordSub: '\u015aCIE\u017bKA AUDYTU \u00b7 NIE \u015aCIE\u017bKA CZYTANIA',
     completeRecordAction: 'ZOBACZ PE\u0141NY ZAPIS ANALIZY',
     completeRecordCount: '{n} POZYCJI',
-    completeRecordExists: 'Pe\u0142ny zapis analizy jest dost\u0119pny dla tego pytania \u00b7 {n} pozycji',
+    completeRecordExists:
+      'Pe\u0142ny zapis analizy jest dost\u0119pny dla tego pytania \u00b7 {n} pozycji',
     evidenceLibrary: 'BIBLIOTEKA DOWOD\u00d3W',
     openEvidenceLibrary: 'Otw\u00f3rz bibliotek\u0119 dowod\u00f3w',
     citationMarker: '\u0179r\u00f3d\u0142o {n}, {outlet}. Poka\u017c w doku \u017ar\u00f3de\u0142.',
@@ -2371,7 +2489,8 @@ export const pl: Dictionary = {
       'Ramka analityczna prezentuje analiz\u0119, o kt\u00f3r\u0105 ju\u017c poproszono. Nie rozpoczyna jej st\u0105d.',
     askAQuestion: 'ZADAJ PYTANIE',
     requestFailedTitle: '\u017b\u0104DANIE ANALIZY NIE POWIOD\u0141O SI\u0118',
-    requestFailedNote: 'Nie pobrano \u017cadnych doniesie\u0144 dla tego pytania, wi\u0119c nie ma czego przegl\u0105da\u0107 poni\u017cej.',
+    requestFailedNote:
+      'Nie pobrano \u017cadnych doniesie\u0144 dla tego pytania, wi\u0119c nie ma czego przegl\u0105da\u0107 poni\u017cej.',
     queryTarget: 'CEL ZAPYTANIA',
     evidenceGeography: 'GEOGRAFIA DOWOD\u00d3W',
     targetNotEstablished: 'Wskazane w pytaniu. Niepotwierdzone przez dowody.',
@@ -2381,7 +2500,8 @@ export const pl: Dictionary = {
     intro: 'Zarz\u0105dzaj kontem, na kt\u00f3re jeste\u015b zalogowany.',
     signInPrompt: 'Zaloguj si\u0119, aby zarz\u0105dza\u0107 swoim kontem.',
     dangerZoneHeading: 'Strefa nieodwracalnych dzia\u0142a\u0144',
-    dangerZoneNote: 'Te dzia\u0142ania s\u0105 trwa\u0142e. Niczego poni\u017cej nie da si\u0119 cofn\u0105\u0107.',
+    dangerZoneNote:
+      'Te dzia\u0142ania s\u0105 trwa\u0142e. Niczego poni\u017cej nie da si\u0119 cofn\u0105\u0107.',
     confirmationLabel: 'Wpisz adres e-mail swojego konta, aby potwierdzi\u0107',
     confirmationHint:
       'Usuni\u0119cie pozostaje nieaktywne, dop\u00f3ki wpisany tekst nie b\u0119dzie dok\u0142adnie taki sam jak adres powy\u017cej.',
@@ -2389,15 +2509,18 @@ export const pl: Dictionary = {
     deletePermanently: 'Trwale usu\u0144 konto',
     deletingLabel: 'Usuwanie\u2026',
     deletedHeading: 'Konto usuni\u0119te',
-    deletedNote: 'Twoje konto i jego dane zosta\u0142y usuni\u0119te. Jeste\u015b teraz wylogowany.',
-    deleteFailed: 'Nie uda\u0142o si\u0119 usun\u0105\u0107 konta. Nic nie zosta\u0142o usuni\u0119te. Spr\u00f3buj ponownie.',
+    deletedNote:
+      'Twoje konto i jego dane zosta\u0142y usuni\u0119te. Jeste\u015b teraz wylogowany.',
+    deleteFailed:
+      'Nie uda\u0142o si\u0119 usun\u0105\u0107 konta. Nic nie zosta\u0142o usuni\u0119te. Spr\u00f3buj ponownie.',
   },
   /**
    * B5-A · OAUTH V1 — polskie odpowiedniki. Truth conditions are E1's; the
    * wording awaits locale ratification (recorded as OAUTH-V1-PL-COPY-RATIFY-1).
    */
   authError: {
-    cancelled: 'Logowanie zosta\u0142o anulowane. Mo\u017cesz zalogowa\u0107 si\u0119 w dowolnej chwili.',
+    cancelled:
+      'Logowanie zosta\u0142o anulowane. Mo\u017cesz zalogowa\u0107 si\u0119 w dowolnej chwili.',
     failed: 'Logowanie nie zosta\u0142o uko\u0144czone. Spr\u00f3buj ponownie.',
     dismissLabel: 'Zamknij',
   },

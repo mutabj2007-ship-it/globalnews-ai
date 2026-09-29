@@ -31,15 +31,26 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
      * request paths in executable code; a module path is not one. The
      * imports are asserted on their own terms above and in §7.6/§7.7.
      */
-    const executable = CODE.split('\n').filter((line) => !/^\s*import\s/.test(line)).join('\n');
+    const executable = CODE.split('\n')
+      .filter((line) => !/^\s*import\s/.test(line))
+      .join('\n');
     expect(executable).not.toMatch(/fetch\(|XMLHttpRequest|axios|new Request|\/analysis\/|\/ask\b/);
   });
 
   it('it contains no provider, model, prompt, retrieval or ranking of its own', () => {
-    for (const forbidden of ['openai', 'OpenAI', 'gpt', 'prompt', 'embedding', 'rerank',
-                             'temperature', 'systemMessage']) {
-      expect(`${forbidden}: ${CODE.toLowerCase().includes(forbidden.toLowerCase())}`)
-        .toBe(`${forbidden}: false`);
+    for (const forbidden of [
+      'openai',
+      'OpenAI',
+      'gpt',
+      'prompt',
+      'embedding',
+      'rerank',
+      'temperature',
+      'systemMessage',
+    ]) {
+      expect(`${forbidden}: ${CODE.toLowerCase().includes(forbidden.toLowerCase())}`).toBe(
+        `${forbidden}: false`,
+      );
     }
   });
 
@@ -54,7 +65,9 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     expect(CODE).toMatch(/const asked = question\.trim\(\);/);
     /* MAP MOBILE R1 CONVERGENCE — the call gained the optional geography scope as
        its sixth argument; the question is still passed verbatim, first. */
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion, undefined, sentGeography\)/);
+    expect(CODE).toMatch(
+      /analyzeNews\(asked, language, sent, priorQuestion, undefined, sentGeography\)/,
+    );
     expect(CODE).not.toMatch(/asked \+|`\$\{asked\}[^`]/);
   });
 
@@ -88,8 +101,15 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
    */
   it('does NOT mount the analysis frame, and authors no evidence rendering of its own', () => {
     expect(CODE).not.toMatch(/AnalysisFrameSurface/);
-    for (const own of ['SourceArticleCard', 'SourcesDrawer', 'TrustBadge', 'SourceDiversitySummary',
-                       'EvidenceSufficiencyNote', 'RetrievalContextStatus', 'AnalysisResultView']) {
+    for (const own of [
+      'SourceArticleCard',
+      'SourcesDrawer',
+      'TrustBadge',
+      'SourceDiversitySummary',
+      'EvidenceSufficiencyNote',
+      'RetrievalContextStatus',
+      'AnalysisResultView',
+    ]) {
       expect(`${own}: ${CODE.includes(own)}`).toBe(`${own}: false`);
     }
   });
@@ -109,11 +129,15 @@ describe('the dock is a real scrollable conversation on phones', () => {
     expect(CODE).toMatch(/data-ask-scroll="conversation"/);
     expect(CODE).toMatch(/overflow-y-auto/);
     expect(CODE).toMatch(/data-ask="composer"/);
-    expect(CODE.indexOf('data-ask="composer"')).toBeGreaterThan(CODE.indexOf('data-ask-scroll="conversation"'));
+    expect(CODE.indexOf('data-ask="composer"')).toBeGreaterThan(
+      CODE.indexOf('data-ask-scroll="conversation"'),
+    );
   });
 
   it('submitting clears the composer so the second question is immediately typeable', () => {
-    expect(CODE).toMatch(/setPhase\(\{ kind: 'loading', question: asked \}\);\s*setQuestion\(''\);/);
+    expect(CODE).toMatch(
+      /setPhase\(\{ kind: 'loading', question: asked \}\);\s*setQuestion\(''\);/,
+    );
     expect(CODE).toContain('<AdaptiveTextarea');
     expect(CODE).toContain("minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}");
     expect(CODE).toContain('maxViewportFraction={0.46}');
@@ -152,10 +176,14 @@ describe('relational answers lead with the backend-authoritative conclusion', ()
     expect(compact).toContain('resultNoAnswerProvider');
     expect(compact).toContain('resultNoAnswerEvidence');
     expect(compact).toContain('resultNoAnswerSafety');
-    expect(compact).toContain('const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0');
+    expect(compact).toContain(
+      'const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0',
+    );
     expect(compact).toContain('{canOpenFullAnalysis ? (');
     expect(compact).toContain('border-s-2 border-border-strong');
-    expect(compact).not.toContain('data-ask="compact-result" className="flex flex-col gap-4 rounded-2xl');
+    expect(compact).not.toContain(
+      'data-ask="compact-result" className="flex flex-col gap-4 rounded-2xl',
+    );
   });
 });
 
@@ -177,7 +205,9 @@ describe('opening the panel is not a question', () => {
 
   it('an empty question cannot be submitted', () => {
     expect(CODE).toMatch(/if \(asked\.length === 0\) return;/);
-    expect(CODE).toMatch(/disabled=\{question\.trim\(\)\.length === 0 \|\| phase\.kind === 'loading'\}/);
+    expect(CODE).toMatch(
+      /disabled=\{question\.trim\(\)\.length === 0 \|\| phase\.kind === 'loading'\}/,
+    );
   });
 });
 
@@ -193,13 +223,20 @@ describe('opening the panel is not a question', () => {
  */
 describe('ASK RULE A — only bounded context crosses the boundary', () => {
   it('§7.1/§7.2 — a third argument is passed, and its keys are a subset of {title, articleId, countryCode}', () => {
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion, undefined, sentGeography\)/);
+    expect(CODE).toMatch(
+      /analyzeNews\(asked, language, sent, priorQuestion, undefined, sentGeography\)/,
+    );
     /* MAP MOBILE R1 CONVERGENCE — the geography is sent ONLY when no story context is: never both. */
-    expect(CODE).toMatch(/const sentGeography = sent === undefined \? geographyContext : undefined;/);
+    expect(CODE).toMatch(
+      /const sentGeography = sent === undefined \? geographyContext : undefined;/,
+    );
     /* the narrowing lives in ONE place, so no call site can widen it */
     expect(CODE).toMatch(/const sent = transportableContext\(storyContext\);/);
 
-    const store = readFileSync(join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'), 'utf8');
+    const store = readFileSync(
+      join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'),
+      'utf8',
+    );
     const fn = store.slice(store.indexOf('export function transportableContext'));
     const body = fn.slice(0, fn.indexOf('\n}'));
     expect(body).toMatch(/title: context\.title/);
@@ -212,9 +249,19 @@ describe('ASK RULE A — only bounded context crosses the boundary', () => {
   it('§7.3 — no evidence/report/cluster identity and no response field is used as an INPUT', () => {
     const submitStart = CODE.indexOf('const submit = useCallback');
     const submit = CODE.slice(submitStart, CODE.indexOf('\n  return (', submitStart));
-    for (const forbidden of ['evidenceId', 'reportId', 'clusterId', 'sourceEntities', 'keyFacts',
-                             'agreements', 'differences', 'sourceDiversity', 'retrievalContext',
-                             'phase.response', 'analysis.sources']) {
+    for (const forbidden of [
+      'evidenceId',
+      'reportId',
+      'clusterId',
+      'sourceEntities',
+      'keyFacts',
+      'agreements',
+      'differences',
+      'sourceDiversity',
+      'retrievalContext',
+      'phase.response',
+      'analysis.sources',
+    ]) {
       expect(`${forbidden}: ${submit.includes(forbidden)}`).toBe(`${forbidden}: false`);
     }
   });
@@ -228,7 +275,10 @@ describe('ASK RULE A — only bounded context crosses the boundary', () => {
   });
 
   it('§7.4 — `title` comes from the published context, never from the input box', () => {
-    const store = readFileSync(join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'), 'utf8');
+    const store = readFileSync(
+      join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'),
+      'utf8',
+    );
     expect(store).toMatch(/title: context\.title/);
     /* the dock never assigns a title at all, so it cannot assign the question */
     expect(CODE).not.toMatch(/title:\s*(asked|question)/);
@@ -245,7 +295,10 @@ describe('ASK RULE A — only bounded context crosses the boundary', () => {
      */
     const api = readFileSync(join(__dirname, '..', '..', 'lib', 'api', 'analysisApi.ts'), 'utf8');
     expect(api).toMatch(/storyContext/);
-    const store = readFileSync(join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'), 'utf8');
+    const store = readFileSync(
+      join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'),
+      'utf8',
+    );
     expect(store).toMatch(/if \(context === undefined\) return undefined;/);
   });
 
@@ -279,7 +332,7 @@ describe('the accepted evidence-state vocabulary is the one the product has', ()
       createElement(AnalysisFrameSurface as never, { response, initialViewport: VP } as never),
     );
   const withProv = (over: Record<string, unknown>): AnalysisApiResponse =>
-    ({ ...fixture(), ...over } as AnalysisApiResponse);
+    ({ ...fixture(), ...over }) as AnalysisApiResponse;
 
   /*
     These are the SAME states, from the SAME resolver, that `/search` renders —
@@ -312,7 +365,13 @@ describe('the accepted evidence-state vocabulary is the one the product has', ()
         analysis: null,
         articles: [],
         retrievalContext: { dataMode: 'live', providers: ['gnews'], articlesRetrieved: 0 },
-        provenance: { provider: 'openai', executionMode: 'production', analysisMode: 'live-ai', status: 'not-attempted', cached: false },
+        provenance: {
+          provider: 'openai',
+          executionMode: 'production',
+          analysisMode: 'live-ai',
+          status: 'not-attempted',
+          cached: false,
+        },
       }),
     );
     expect(html).toMatch(/data-evidence-state="no-evidence"/);
@@ -334,7 +393,13 @@ describe('the accepted evidence-state vocabulary is the one the product has', ()
       withProv({
         analysis: null,
         analysisError: 'rate limited',
-        provenance: { provider: 'openai', executionMode: 'production', analysisMode: 'live-ai', status: 'failed', cached: false },
+        provenance: {
+          provider: 'openai',
+          executionMode: 'production',
+          analysisMode: 'live-ai',
+          status: 'failed',
+          cached: false,
+        },
       }),
     );
     expect(html).toMatch(/data-evidence-state="analysis-failed"/);
@@ -344,7 +409,10 @@ describe('the accepted evidence-state vocabulary is the one the product has', ()
 describe('the released navigation geometry is untouched', () => {
   it('the dock is mounted from the root layout, not injected into the NavBar', () => {
     const layout = readFileSync(join(__dirname, '..', '..', 'app', 'layout.tsx'), 'utf8');
-    expect(layout).toMatch(/<AskAiDock language=\{language\} \/>/);
+    /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the mount also carries the server-decided root. */
+    expect(layout).toMatch(
+      /<AskAiDock language=\{language\} standaloneRoot=\{standaloneAskRoot\(\)\} \/>/,
+    );
     const nav = readFileSync(join(__dirname, '..', 'navigation', 'NavBar.tsx'), 'utf8');
     expect(nav).not.toMatch(/AskAiDock|askAi/);
   });
@@ -355,19 +423,29 @@ describe('the released navigation geometry is untouched', () => {
       const src = readFileSync(join(dir, f), 'utf8');
       const group = src.slice(src.indexOf('askAi: {'));
       const head = group.slice(0, 4000);
-      for (const key of ['contextPendingHint:', 'contextChipAnchored:', 'contextChipGeneric:',
-                         'resultSourcesHeading:', 'resultSourcesNone:', 'resultSourcesTruncated:',
-                         'resultBriefAbsent:', 'resultNoAnswer:', 'resultNoAnswerProvider:',
-                         'resultNoAnswerEvidence:', 'resultNoAnswerSafety:',
-                         /* CTO ruling 2 — Open full analysis became Run full analysis. */
-                         'runFullAnalysis:', 'runFullAnalysisNote:']) {
-        expect(`${f} ${key} ${group.startsWith('askAi: {') && head.includes(key)}`)
-          .toBe(`${f} ${key} true`);
+      for (const key of [
+        'contextPendingHint:',
+        'contextChipAnchored:',
+        'contextChipGeneric:',
+        'resultSourcesHeading:',
+        'resultSourcesNone:',
+        'resultSourcesTruncated:',
+        'resultBriefAbsent:',
+        'resultNoAnswer:',
+        'resultNoAnswerProvider:',
+        'resultNoAnswerEvidence:',
+        'resultNoAnswerSafety:',
+        /* CTO ruling 2 — Open full analysis became Run full analysis. */
+        'runFullAnalysis:',
+        'runFullAnalysisNote:',
+      ]) {
+        expect(`${f} ${key} ${group.startsWith('askAi: {') && head.includes(key)}`).toBe(
+          `${f} ${key} true`,
+        );
       }
     }
   });
 });
-
 
 describe('ELASTIC COMPOSER R2 — long pasted questions stay readable', () => {
   const adaptive = readFileSync(join(__dirname, '../ui/AdaptiveTextarea.tsx'), 'utf8');
@@ -398,13 +476,12 @@ describe('ELASTIC COMPOSER R2 — long pasted questions stay readable', () => {
     expect(search).toContain('maxHeight={SEARCH_COMPOSER_GEOMETRY.maxHeight}');
     /* ASK R2 CLAUDE DESIGN RECONCILIATION R1 — /ask follows D25 04: ~6 lines, 220 desktop / 140 phone. */
     expect(askParts).toContain('maxHeight={maxHeight}');
-    expect(
-      readFileSync(join(__dirname, '../ask-frame/AskFrameScreen.tsx'), 'utf8'),
-    ).toContain('maxHeight={compact ? 140 : 220}');
+    expect(readFileSync(join(__dirname, '../ask-frame/AskFrameScreen.tsx'), 'utf8')).toContain(
+      'maxHeight={compact ? 140 : 220}',
+    );
     expect(CODE).toContain('maxHeight={420}');
   });
 });
-
 
 describe('HERO COMPOSER OVERLAY R3 — elasticity must not reflow Home', () => {
   const hero = readFileSync(join(__dirname, '../home/HeroAskField.tsx'), 'utf8');
@@ -430,7 +507,6 @@ describe('HERO COMPOSER OVERLAY R3 — elasticity must not reflow Home', () => {
     expect(focusBlock).toContain('requestAnimationFrame(resize)');
   });
 });
-
 
 describe('HOME ASK DOCK LAUNCH R1 — Home opens Ask in place with zero spend', () => {
   const dock = readFileSync(join(__dirname, 'AskAiDock.tsx'), 'utf8');
@@ -470,10 +546,11 @@ describe('HOME ASK DOCK LAUNCH R1 — Home opens Ask in place with zero spend', 
     const openHandlerEnd = dock.indexOf('}, []);', openHandlerStart);
     const openHandler = dock.slice(openHandlerStart, openHandlerEnd);
     expect(openHandler).not.toContain('analyzeNews(');
-    expect(dock).toContain('analyzeNews(asked, language, sent, priorQuestion, undefined, sentGeography)');
+    expect(dock).toContain(
+      'analyzeNews(asked, language, sent, priorQuestion, undefined, sentGeography)',
+    );
   });
 });
-
 
 describe('HOME ASK NO-ROUTE FALLBACK R2 — Hero submit cannot escape to /ask', () => {
   const hero = readFileSync(join(__dirname, '../home/HeroAskField.tsx'), 'utf8');
