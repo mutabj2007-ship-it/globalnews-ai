@@ -61,6 +61,9 @@ export const ASK_ANSWER_STATES = [
   'INSUFFICIENT',
   'CLARIFICATION_REQUIRED',
   'CAPABILITY_UNAVAILABLE',
+  /* ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — a governed retained record (or its
+     stated absence) answered with zero model calls. Never current, never verified. */
+  'RETAINED_RECORD',
 ] as const;
 export type AskAnswerState = (typeof ASK_ANSWER_STATES)[number];
 

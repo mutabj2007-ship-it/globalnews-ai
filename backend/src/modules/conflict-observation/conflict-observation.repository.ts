@@ -5,7 +5,10 @@ import type {
   ConflictObservation,
   ConflictRetainedEvidenceDetail,
 } from '@globalnews-ai/shared';
-import { extractUcdpCandidateEvidenceDetail } from './ucdp-candidate-csv.normalizer';
+import {
+  extractUcdpCandidateEvidenceDetail,
+  extractUcdpCandidateEvidenceDetails,
+} from './ucdp-candidate-csv.normalizer';
 import { decodeRetainedConflictRow } from './conflict-observation.validation';
 
 /**
@@ -140,5 +143,90 @@ export class ConflictObservationRepository {
     `;
 
     return rows.map(decodeRetainedConflictRow);
+  }
+
+  /**
+   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — `evidenceDetail` for several
+   * observations at once: ONE row query, ONE fetch per admitted capture (normally one) and ONE
+   * parse of it, with exactly the same admission checks. Supplementary, like `evidenceDetail`:
+   * an unreadable capture yields no detail, never an error.
+   */
+  async evidenceDetails(
+    observationKeys: readonly string[],
+  ): Promise<Map<string, ConflictRetainedEvidenceDetail>> {
+    const out = new Map<string, ConflictRetainedEvidenceDetail>();
+    const keys = [...new Set(observationKeys)].slice(0, 50);
+    if (keys.length === 0) return out;
+    const rows = await this.prisma.conflictObservation.findMany({
+      where: { observationKey: { in: keys } },
+      orderBy: { revisionOrdinal: 'desc' },
+      select: {
+        observationKey: true,
+        authority: true,
+        upstreamEventId: true,
+        snapshotRetrievalId: true,
+        snapshotAdmissibility: true,
+      },
+    });
+    const current = new Map<string, (typeof rows)[number]>();
+    for (const row of rows)
+      if (!current.has(row.observationKey)) current.set(row.observationKey, row);
+    const byCapture = new Map<string, { observationKey: string; upstreamEventId: string }[]>();
+    for (const row of current.values()) {
+      if (
+        row.authority !== 'UCDP_GED' ||
+        !row.snapshotRetrievalId ||
+        row.snapshotAdmissibility !== 'ADMITTED'
+      ) {
+        continue;
+      }
+      const list = byCapture.get(row.snapshotRetrievalId) ?? [];
+      list.push({ observationKey: row.observationKey, upstreamEventId: row.upstreamEventId });
+      byCapture.set(row.snapshotRetrievalId, list);
+    }
+    for (const [retrievalId, wanted] of byCapture) {
+      const capture = await this.prisma.snapshotRetrieval.findUnique({
+        where: { retrievalId },
+        select: {
+          retrievalId: true,
+          providerId: true,
+          admissibility: true,
+          completeness: true,
+          refusalKey: true,
+          parserId: true,
+          parserVersion: true,
+          mediaType: true,
+          contentAddress: true,
+          payload: { select: { storageState: true, bytes: true, contentAddress: true } },
+        },
+      });
+      if (
+        !capture ||
+        capture.providerId !== 'UCDP_GED' ||
+        capture.admissibility !== 'ADMITTED' ||
+        capture.completeness !== 'COMPLETE' ||
+        capture.refusalKey !== null ||
+        capture.parserId !== 'ucdp-candidate-csv' ||
+        capture.parserVersion !== '1' ||
+        capture.mediaType.split(';')[0].trim().toLowerCase() !== 'text/csv' ||
+        !capture.contentAddress ||
+        capture.payload?.storageState !== 'RETAINED' ||
+        !capture.payload.bytes ||
+        capture.payload.contentAddress !== capture.contentAddress
+      ) {
+        continue;
+      }
+      try {
+        const details = extractUcdpCandidateEvidenceDetails(
+          capture.payload.bytes,
+          { retrievalId: capture.retrievalId, contentAddress: capture.contentAddress },
+          wanted,
+        );
+        for (const [key, detail] of details) out.set(key, detail);
+      } catch {
+        /* Supplementary detail: a malformed capture leaves the observations readable. */
+      }
+    }
+    return out;
   }
 }

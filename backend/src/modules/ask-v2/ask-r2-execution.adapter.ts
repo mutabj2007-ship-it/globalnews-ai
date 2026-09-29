@@ -32,6 +32,13 @@ import {
   type AskContributionSet,
 } from '../ask-intelligence/ask-specialist-read.coordinator';
 import {
+  deterministicGovernedSelection,
+  explicitOfficialUnavailable,
+  governedPrompt,
+  governedRecordBasis,
+} from '../ask-intelligence/governed-answer';
+import { selectContributors } from '../ask-intelligence/contributor-selection';
+import {
   corroborateCurrentStatus,
   corroborationTargetOf,
   type CorroborationResult,
@@ -439,6 +446,37 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       );
     }
     /*
+      ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 (A) — two governed answers that need
+      no model, decided on the plan and the reader's own request before anything is spent:
+        · an explicit request for the OFFICIAL figure of a status the plan already marks
+          OFFICIAL_VERIFICATION_UNAVAILABLE is answered with that truth (zero AI) — reporting is
+          never offered where the reader asked for the official source;
+        · a question whose whole answer IS a governed retained record (a named district's
+          Imihigo result, Rwanda's CPI, the procurement snapshot for a background-only plan)
+          is answered from that record, zero model and zero provider calls.
+    */
+    if (explicitOfficialUnavailable(route)) {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer(
+          {
+            state: 'CAPABILITY_UNAVAILABLE',
+            basis: 'OFFICIAL_SOURCE_UNAVAILABLE',
+            missingRoles: ['OFFICIAL'],
+          },
+          draft,
+        ),
+        null,
+        false,
+      );
+    }
+    if (deterministicGovernedSelection(route, selectContributors(route)) !== null) {
+      return this.executeGovernedRecord(plan, route, operationId, draft);
+    }
+
+    /*
       ASK GENERAL BACKGROUND EXECUTION R1 — a REFERENCE_BACKGROUND_ONLY plan requires no
       evidence at all (frozen C: `required.length === 0`), so it is never routed into the
       news-retrieval analysis path below — that would either burn an irrelevant Reporting
@@ -499,9 +537,12 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
     }
 
-    /* INTELLIGENCE BINDING R1 — the governed reads run beside the one analysis call: local
-       retained reads, zero model calls, zero provider calls, isolated from its outcome. */
-    const intelligence = this.readIntelligence(route);
+    /* INTELLIGENCE BINDING R1 — the governed reads: local retained reads, zero model calls, zero
+       provider calls, isolated from the answer's outcome. LIVE ACCEPTANCE REPAIR R1 (B): they
+       complete (bounded) BEFORE the one analysis call, so their status, scope, time basis and
+       disclosures bind the answer's prose instead of sitting beside it. */
+    const contributions = await this.readIntelligence(route);
+    const governed = governedPrompt(contributions);
 
     /* 4 · ONE call to the approved analysis path, one model attempt at most. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
@@ -524,6 +565,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           usageSink: (u) => {
             usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
           },
+          ...(governed.rules === '' ? {} : { governed }),
         },
       );
       /* The landed path's no-evidence answer (0 articles, "no AI call was made") is not a
@@ -600,7 +642,6 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
             minIndependentReports: route.plan.verification.minIndependentFreshSources,
           });
     const verification = executorVerificationOutcome(route.plan, corroboration);
-    const contributions = await intelligence;
     const specialistItems = specialistItemsOf(contributions);
     this.observeContributions(contributions, draft);
     const answer = deriveAnswerState(route.plan, {
@@ -758,9 +799,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
     }
 
-    /* INTELLIGENCE BINDING R1 — governed reads beside the one background call (after every
-       control has passed): local, zero model, zero provider. */
-    const intelligence = this.readIntelligence(route);
+    /* INTELLIGENCE BINDING R1 — governed reads (after every control has passed): local, zero
+       model, zero provider. LIVE ACCEPTANCE REPAIR R1 (B): read first, so the one background
+       call is bound by them. */
+    const contributions = await this.readIntelligence(route);
+    const governed = governedPrompt(contributions);
 
     /* 4 · ONE call to the dedicated background provider. No articles, no retrieval. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
@@ -780,6 +823,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         usageSink: (u) => {
           usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
         },
+        ...(governed.rules === '' ? {} : { governed }),
       });
       text = out.text;
       declined = text === null;
@@ -819,7 +863,6 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        is `producedAnswer: false`, which `deriveAnswerState` already maps to the truthful
        CAPABILITY_UNAVAILABLE / missingRoles: ['REFERENCE'] state — never a fabricated
        background answer, and never a silent pretend-success. */
-    const contributions = await intelligence;
     this.observeContributions(contributions, draft);
     const answer = deriveAnswerState(route.plan, { items: {}, producedAnswer: !declined });
     /* The model WAS invoked on a decline (it answered with the decline token), so the
@@ -840,6 +883,55 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       null,
       !declined,
       text,
+      null,
+      contributions,
+    );
+  }
+
+  /**
+   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 (A) — the retained-record answer.
+   *
+   * The Ask switches and the server-held request context still gate it exactly as they gate
+   * every other execution. The breaker and the compute meter are not consulted because nothing
+   * they govern happens: no provider call, no model call, no units. The answer is the governed
+   * record (or its truthful absence), handed back in the same one payload and recorded as the
+   * same one observation.
+   */
+  private async executeGovernedRecord(
+    plan: Readonly<AskPlan>,
+    route: AskR2Route,
+    operationId: string,
+    draft: AskObservationDraft,
+  ): Promise<ExecutionResult> {
+    draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
+    if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
+    draft.askPublicComputeEnabled = await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+    if (!draft.askPublicComputeEnabled) {
+      throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
+    }
+    if (askRequestContext.getStore() === undefined) {
+      throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
+    }
+    draft.providerCallCount = 0;
+    draft.reportingItemCount = 0;
+    const contributions = await this.readIntelligence(route);
+    this.observeContributions(contributions, draft);
+    const basis = governedRecordBasis(contributions);
+    const answer: AnswerDecision =
+      basis === 'GOVERNED_READ_DEGRADED'
+        ? { state: 'CAPABILITY_UNAVAILABLE', basis, missingRoles: [] }
+        : { state: 'RETAINED_RECORD', basis, missingRoles: [] };
+    draft.aiExecuted = false;
+    draft.modelInvocationCount = 0;
+    draft.evidenceRolesObtained = [];
+    return this.result(
+      plan,
+      route,
+      operationId,
+      this.observeAnswer(answer, draft),
+      null,
+      false,
+      null,
       null,
       contributions,
     );

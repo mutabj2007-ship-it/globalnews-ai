@@ -31,6 +31,15 @@ export interface GeneralBackgroundInput {
   readonly maxModelAttempts?: number;
   readonly signal?: AbortSignal;
   readonly usageSink?: (usage: { promptTokens: number; completionTokens: number }) => void;
+  /**
+   * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 (PR #70 prompt boundary) — present only
+   * when the Ask coordinator considered governed contributors:
+   *   rules  trusted GlobalNewsAI policy → appended to the SYSTEM prompt;
+   *   data   source-derived retained records, JSON inside GOVERNED_RETAINED_DATA delimiters →
+   *          appended to the USER/evidence message, never to the system prompt.
+   * Absent on every other call, which keeps those prompts byte-identical.
+   */
+  readonly governed?: { readonly rules: string; readonly data: string };
 }
 
 export interface GeneralBackgroundOutput {

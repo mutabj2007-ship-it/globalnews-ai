@@ -1533,28 +1533,51 @@ describe('INTELLIGENCE BINDING R1 — governed contributors behind the one Ask a
     expect(missing.answer).toMatchObject({ state: 'PARTIAL', missingRoles: ['SPECIALIST'] });
   });
 
-  it('the background path carries contributions too, with its ONE background call and no Reporting call', async () => {
-    const procurement = (): AskContributionSet => ({
+  /*
+    LIVE ACCEPTANCE REPAIR R1 — SUPERSEDED WITH UPDATED CONTRACT PROOF. Live G2 proved that the
+    background model, run beside a single TED snapshot, claimed procurement "changes" and
+    "reforms" the governed record cannot show. A background-only procurement question is now
+    answered from the retained snapshot itself (zero model) — see the G2 proof below. The
+    background path still carries contributions and the governed rules for any other question.
+  */
+  it('the background path carries contributions and the governed rules into its ONE background call', async () => {
+    const humanitarian = (): AskContributionSet => ({
       considered: [
         {
-          contributorId: 'MARKET_PROCUREMENT',
-          domain: 'economic',
+          contributorId: 'HUMANITARIAN',
+          domain: 'humanitarian',
           applicability: 'SUPPLEMENTARY',
-          scope: { countryIso3: 'POL', district: null, place: null },
+          scope: { countryIso3: null, district: null, place: null },
         },
       ],
-      contributions: [],
+      contributions: [
+        {
+          contributorId: 'HUMANITARIAN',
+          domain: 'humanitarian',
+          status: 'NOT_ASSESSED',
+          applicability: 'SUPPLEMENTARY',
+          observations: [],
+          temporalBasis: 'NONE',
+          geographyBasis: null,
+          disclosures: ['HUMANITARIAN_NOT_ASSESSED'],
+          degradationReason: 'NO_GOVERNED_OBSERVATION_READER',
+        },
+      ],
     });
-    const { adapter, calls, reads } = harness({ intelligence: procurement });
-    const q = 'What are the important procurement changes in Poland?';
+    const { adapter, calls, reads } = harness({ intelligence: humanitarian });
+    const q = 'What is NATO?';
     const plan = await adapter.prepare(req(q));
     const payload = JSON.parse(
       (await inRequest(() => adapter.execute(req(q), plan, 'op-bg'))).payloadJson,
     );
-    expect(payload.intelligence.considered).toEqual(['MARKET_PROCUREMENT']);
+    expect(payload.answer.state).toBe('REFERENCE_BACKGROUND');
+    expect(payload.intelligence.considered).toEqual(['HUMANITARIAN']);
     expect(calls.background).toHaveLength(1);
     expect(calls.analysis).toHaveLength(0);
     expect(reads).toHaveLength(1);
+    const input = calls.background[0][0] as { governed?: { rules: string; data: string } };
+    expect(input.governed?.rules).toMatch(/Humanitarian Intelligence was not assessed/);
+    expect(input.governed?.data).toContain('"status": "NOT_ASSESSED"');
   });
 
   it('reads never bypass the controls: a disabled Ask reads nothing', async () => {
@@ -1598,5 +1621,373 @@ describe('INTELLIGENCE BINDING R1 — governed contributors behind the one Ask a
       ).payloadJson,
     );
     expect(second.intelligence).toBeNull();
+  });
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ASK INTELLIGENCE BINDING — LIVE ACCEPTANCE REPAIR R1: the live G1–G9 questions, verbatim,
+ * through the REAL router and the REAL bridge, with every spend recorded.
+ * ════════════════════════════════════════════════════════════════════════════
+ */
+describe('LIVE ACCEPTANCE REPAIR R1 — G1–G9 end to end', () => {
+  type Contribution = AskContributionSet['contributions'][number];
+  const c = (over: Partial<Contribution> & Pick<Contribution, 'contributorId'>): Contribution => ({
+    domain: 'x',
+    status: 'USED',
+    applicability: 'SUPPLEMENTARY',
+    observations: [],
+    temporalBasis: 'NONE',
+    geographyBasis: null,
+    disclosures: [],
+    degradationReason: null,
+    ...over,
+  });
+  const o = (over: Record<string, unknown> = {}) => ({
+    reference: 'r',
+    kind: 'K',
+    label: null,
+    value: null,
+    unit: null,
+    period: '2026-08-31',
+    geography: 'COD',
+    source: { name: 'S', url: null, licence: null },
+    retainedAt: null,
+    ...over,
+  });
+  const setOf =
+    (...contributions: Contribution[]) =>
+    (): AskContributionSet => ({
+      considered: contributions.map((x) => ({
+        contributorId: x.contributorId,
+        domain: x.domain,
+        applicability: x.applicability,
+        scope: { countryIso3: null, district: null, place: null },
+      })),
+      contributions,
+    });
+  async function run(q: string, h: ReturnType<typeof harness>) {
+    const plan = await h.adapter.prepare(req(q));
+    return JSON.parse((await inRequest(() => h.adapter.execute(req(q), plan, 'op-g'))).payloadJson);
+  }
+  const noSpend = (h: ReturnType<typeof harness>) => {
+    expect(h.calls.analysis).toEqual([]);
+    expect(h.calls.background).toEqual([]);
+    expect(h.calls.reserve).toEqual([]);
+    expect(h.calls.permit).toEqual([]);
+    expect(h.calls.settle).toEqual([]);
+  };
+  const obsOf = (h: ReturnType<typeof harness>) => h.observed[0] as Record<string, unknown>;
+
+  const conflictUsed = c({
+    contributorId: 'CONFLICT',
+    domain: 'security',
+    temporalBasis: 'RETAINED_EVENT_RECORD',
+    geographyBasis: 'COD',
+    observations: [
+      o({
+        detail: {
+          place: 'Beni territory, North Kivu',
+          parties: ['ADF', 'Civilians'],
+          headline: null,
+          citedOutlets: ['Radio Okapi,2026-08-31'],
+        },
+      }),
+    ],
+    disclosures: [
+      'RETAINED_NOT_CURRENT',
+      'SEVERITY_NOT_ASSESSED',
+      'NO_RECENT_RETAINED_RECORD',
+      'SUBNATIONAL_SCOPE_NOT_APPLIED',
+    ],
+  });
+
+  it('G1 eastern DRC: Conflict is read BEFORE the ONE analysis call and binds it; one model call', async () => {
+    const h = harness({ intelligence: setOf(conflictUsed) });
+    const payload = await run('How serious is the situation in eastern DRC?', h);
+    expect(h.calls.analysis).toHaveLength(1);
+    const policy = h.calls.analysis[0][6] as {
+      governed?: { rules: string; data: string };
+      maxModelAttempts?: number;
+    };
+    expect(policy.maxModelAttempts).toBe(1);
+    /* PR #70 prompt boundary: trusted rules and retained data travel separately. */
+    expect(policy.governed?.rules).toMatch(/retained scope is country-level/);
+    expect(policy.governed?.rules).toMatch(/do not rank, grade or characterise severity/);
+    expect(policy.governed?.rules).not.toContain('Beni');
+    expect(policy.governed?.data).toContain('"contributor": "CONFLICT"');
+    expect(policy.governed?.data).toContain('"recordCount": 1');
+    expect(policy.governed?.data).toContain('"place": "Beni territory, North Kivu"');
+    expect(payload.answer.state).toBe('CURRENT_REPORTING');
+    expect(payload.intelligence.contributions[0].observations[0].detail.place).toBe(
+      'Beni territory, North Kivu',
+    );
+    expect(obsOf(h)).toMatchObject({
+      modelInvocationCount: 1,
+      providerCallCount: 1,
+      contributorsUsed: ['CONFLICT'],
+    });
+  });
+
+  it('G2 Poland procurement: ONE retained TED snapshot is the answer — zero model, zero provider, never a "change" series', async () => {
+    const h = harness({
+      intelligence: setOf(
+        c({
+          contributorId: 'MARKET_PROCUREMENT',
+          domain: 'economic',
+          temporalBasis: 'RETAINED_PUBLICATION',
+          geographyBasis: 'POL',
+          observations: [o({ kind: 'cn-standard', period: '2026-09-24', geography: 'POL' })],
+          disclosures: ['RETAINED_NOT_CURRENT', 'SNAPSHOT_NOT_CHANGE_SERIES'],
+        }),
+      ),
+    });
+    const payload = await run('What are the important procurement changes in Poland?', h);
+    expect(payload.answer).toMatchObject({ state: 'RETAINED_RECORD', basis: 'GOVERNED_RECORD' });
+    expect(payload.aiExecuted).toBe(false);
+    expect(payload.background).toBeNull();
+    expect(payload.analysis).toBeNull();
+    expect(payload.intelligence.contributions[0].disclosures).toContain(
+      'SNAPSHOT_NOT_CHANGE_SERIES',
+    );
+    noSpend(h);
+    expect(obsOf(h)).toMatchObject({
+      modelInvocationCount: 0,
+      providerCallCount: 0,
+      answerState: 'RETAINED_RECORD',
+    });
+  });
+
+  const imihigo = (
+    status: Contribution['status'],
+    observations: ReturnType<typeof o>[],
+    disclosures: string[] = [],
+  ) =>
+    setOf(
+      c({
+        contributorId: 'GEOGRAPHY',
+        domain: 'geography',
+        applicability: 'CONTEXT',
+        observations: [o({ kind: 'NISR_DISTRICT' })],
+      }),
+      c({
+        contributorId: 'IMIHIGO',
+        domain: 'governance',
+        status,
+        temporalBasis: 'RETAINED_EVALUATION_CYCLE',
+        observations,
+        disclosures,
+      }),
+    );
+
+  it('G3 Ngoma: the exact retained 77.2 % (2024/2025) with zero model — even when the compute budget is exhausted', async () => {
+    const h = harness({
+      meterAdmitted: false,
+      intelligence: imihigo(
+        'USED',
+        [
+          o({
+            kind: 'IMIHIGO_DISTRICT_FINAL_SCORE',
+            label: 'Ngoma',
+            value: '77.2',
+            unit: '%',
+            period: '2024/2025',
+            geography: 'nisr:district:56',
+          }),
+        ],
+        ['RETAINED_NOT_CURRENT', 'CLOSED_EVALUATION_CYCLE'],
+      ),
+    });
+    const payload = await run("What was Ngoma's 2024/2025 Imihigo result?", h);
+    expect(payload.answer).toMatchObject({ state: 'RETAINED_RECORD', basis: 'GOVERNED_RECORD' });
+    const record = payload.intelligence.contributions.find(
+      (x: Contribution) => x.contributorId === 'IMIHIGO',
+    );
+    expect(record.observations[0]).toMatchObject({ value: '77.2', unit: '%', period: '2024/2025' });
+    noSpend(h);
+    expect(obsOf(h)).toMatchObject({ failureCode: null, modelInvocationCount: 0 });
+  });
+
+  it('G4 Gasabo: no individual score is retained — stated as absent, the Kigali aggregate never appears', async () => {
+    const h = harness({
+      intelligence: imihigo('NO_MATCH', [], ['AGGREGATE_NOT_ASSIGNED_TO_DISTRICT']),
+    });
+    const payload = await run("What was Gasabo's 2024/2025 Imihigo result?", h);
+    expect(payload.answer).toMatchObject({ state: 'RETAINED_RECORD', basis: 'GOVERNED_NO_RECORD' });
+    const record = payload.intelligence.contributions.find(
+      (x: Contribution) => x.contributorId === 'IMIHIGO',
+    );
+    expect(record.observations).toEqual([]);
+    expect(record.disclosures).toEqual(['AGGREGATE_NOT_ASSIGNED_TO_DISTRICT']);
+    noSpend(h);
+  });
+
+  it('G5 Sudan: current reporting runs ONCE; Humanitarian NOT_ASSESSED binds the prompt and is never evidence', async () => {
+    const h = harness({
+      intelligence: setOf(
+        c({
+          contributorId: 'CONFLICT',
+          domain: 'security',
+          status: 'NO_MATCH',
+          temporalBasis: 'RETAINED_EVENT_RECORD',
+        }),
+        c({
+          contributorId: 'HUMANITARIAN',
+          domain: 'humanitarian',
+          status: 'NOT_ASSESSED',
+          disclosures: ['HUMANITARIAN_NOT_ASSESSED'],
+          degradationReason: 'NO_GOVERNED_OBSERVATION_READER',
+        }),
+      ),
+    });
+    const payload = await run('What is the humanitarian situation in Sudan?', h);
+    expect(h.calls.analysis).toHaveLength(1);
+    const policy = h.calls.analysis[0][6] as { governed?: { rules: string; data: string } };
+    expect(policy.governed?.rules).toMatch(
+      /never state or imply that Humanitarian Intelligence supports/,
+    );
+    expect(payload.answer.state).toBe('CURRENT_REPORTING');
+    expect(obsOf(h)).toMatchObject({
+      contributorsUsed: [],
+      contributorsDegraded: ['HUMANITARIAN'],
+      modelInvocationCount: 1,
+    });
+  });
+
+  it.each([
+    ['G6', 'Russian missile and drone attacks on Ukraine'],
+    ['G7', 'What happened in Polish politics today?'],
+  ])(
+    '%s reaches current reporting with ONE analysis call and no governed prompt section',
+    async (_id, q) => {
+      const h = harness({});
+      const payload = await run(q, h);
+      expect(payload.answer.state).toBe('CURRENT_REPORTING');
+      expect(h.calls.analysis).toHaveLength(1);
+      expect((h.calls.analysis[0][6] as { governed?: unknown }).governed).toBeUndefined();
+    },
+  );
+
+  it('G8 NBP official: official source unavailable — zero AI, zero reads, reporting never offered as official', async () => {
+    const h = harness({ intelligence: setOf(conflictUsed) });
+    const payload = await run("What is NBP's official reference rate?", h);
+    expect(payload.answer).toEqual({
+      state: 'CAPABILITY_UNAVAILABLE',
+      basis: 'OFFICIAL_SOURCE_UNAVAILABLE',
+      missingRoles: ['OFFICIAL'],
+    });
+    expect(payload.aiExecuted).toBe(false);
+    expect(h.reads).toEqual([]);
+    noSpend(h);
+    expect(JSON.stringify(payload)).not.toContain('OFFICIAL_CURRENT_EVIDENCE');
+  });
+
+  it('G8 control: without the word "official" the current-status path is unchanged (never CURRENTLY_VERIFIED)', async () => {
+    const h = harness({});
+    const payload = await run("What is NBP's reference rate?", h);
+    expect(h.calls.analysis).toHaveLength(1);
+    expect(payload.answer.state).not.toBe('CURRENTLY_VERIFIED');
+  });
+
+  it('G9 Rwanda CPI: the retained NISR headline observation with its period, zero model — budget-independent', async () => {
+    const h = harness({
+      meterAdmitted: false,
+      intelligence: setOf(
+        c({
+          contributorId: 'ECONOMY_CPI',
+          domain: 'economic',
+          temporalBasis: 'RETAINED_STATISTICAL_RELEASE',
+          observations: [
+            o({
+              kind: 'HEADLINE_CPI_YOY',
+              value: '15.9',
+              unit: 'PERCENT',
+              period: '2026-08',
+              geography: 'All Rwanda',
+            }),
+          ],
+          disclosures: ['RETAINED_NOT_CURRENT'],
+        }),
+      ),
+    });
+    const payload = await run("What is Rwanda's latest inflation (CPI)?", h);
+    expect(payload.answer).toMatchObject({ state: 'RETAINED_RECORD', basis: 'GOVERNED_RECORD' });
+    expect(payload.intelligence.contributions[0].disclosures).toEqual(['RETAINED_NOT_CURRENT']);
+    noSpend(h);
+  });
+
+  it('the deterministic path still obeys the Ask switches and the request context — nothing is read when Ask is off', async () => {
+    const q = "What was Ngoma's 2024/2025 Imihigo result?";
+    const h = harness({
+      switches: { ASK_R2_ENABLED: false },
+      intelligence: imihigo('USED', [o()]),
+    });
+    const plan = await h.adapter.prepare(req(q));
+    expect(await refusal(inRequest(() => h.adapter.execute(req(q), plan, 'op-off')))).toBe(
+      'ASK_R2_DISABLED',
+    );
+    expect(h.reads).toEqual([]);
+    const h2 = harness({
+      switches: { ASK_PUBLIC_COMPUTE_ENABLED: false },
+      intelligence: imihigo('USED', [o()]),
+    });
+    const plan2 = await h2.adapter.prepare(req(q));
+    expect(await refusal(inRequest(() => h2.adapter.execute(req(q), plan2, 'op-off2')))).toBe(
+      'ASK_PUBLIC_COMPUTE_DISABLED',
+    );
+    const h3 = harness({ intelligence: imihigo('USED', [o()]) });
+    const plan3 = await h3.adapter.prepare(req(q));
+    expect(await refusal(h3.adapter.execute(req(q), plan3, 'op-noctx'))).toBe(
+      'ASK_REQUEST_CONTEXT_MISSING',
+    );
+    expect(h3.reads).toEqual([]);
+  });
+
+  it('a failed governed read is never presented as a record: CAPABILITY_UNAVAILABLE / GOVERNED_READ_DEGRADED', async () => {
+    const h = harness({
+      intelligence: setOf(
+        c({
+          contributorId: 'ECONOMY_CPI',
+          domain: 'economic',
+          status: 'DEGRADED',
+          degradationReason: 'TIMEOUT',
+        }),
+      ),
+    });
+    const payload = await run("What is Rwanda's latest inflation (CPI)?", h);
+    expect(payload.answer).toMatchObject({
+      state: 'CAPABILITY_UNAVAILABLE',
+      basis: 'GOVERNED_READ_DEGRADED',
+    });
+    noSpend(h);
+  });
+
+  it('a reporting question with an exhausted budget is still refused truthfully (the control is not bypassed)', async () => {
+    const h = harness({ meterAdmitted: false, intelligence: setOf(conflictUsed) });
+    const q = 'How serious is the situation in eastern DRC?';
+    const plan = await h.adapter.prepare(req(q));
+    expect(await refusal(inRequest(() => h.adapter.execute(req(q), plan, 'op-b')))).toBe(
+      'BUDGET_REFUSED:account-day',
+    );
+    expect(h.calls.analysis).toEqual([]);
+  });
+
+  it('no multiplication: at most ONE model/provider call per answer, and zero per contributor', async () => {
+    for (const q of [
+      'How serious is the situation in eastern DRC?',
+      'What is the humanitarian situation in Sudan?',
+      'Russian missile and drone attacks on Ukraine',
+      'What happened in Polish politics today?',
+    ]) {
+      const h = harness({
+        intelligence: setOf(
+          conflictUsed,
+          c({ contributorId: 'HUMANITARIAN', status: 'NOT_ASSESSED' }),
+        ),
+      });
+      await run(q, h);
+      expect(h.calls.analysis.length + h.calls.background.length).toBe(1);
+      expect(h.reads.length).toBeLessThanOrEqual(1);
+    }
   });
 });

@@ -31,6 +31,18 @@ export interface AskIntelligenceStrings {
   readonly severityNotAssessed: string;
   readonly snapshotNotSeries: string;
   readonly source: string;
+  /** LIVE ACCEPTANCE REPAIR R1 — "eastern DRC": the read was country-level. */
+  readonly subnationalScope: string;
+  /** Governed event-type codes, as words. */
+  readonly eventKind: Readonly<Record<string, string>>;
+  readonly parties: string;
+  readonly cited: string;
+  /** Deterministic lead lines of a retained-record answer (zero AI). */
+  readonly lead: {
+    readonly imihigo: (entity: string, value: string, cycle: string) => string;
+    readonly cpi: (label: string, value: string, period: string) => string;
+    readonly procurement: (count: number, geography: string, day: string) => string;
+  };
 }
 
 const EN: AskIntelligenceStrings = {
@@ -66,6 +78,27 @@ const EN: AskIntelligenceStrings = {
   severityNotAssessed: 'Severity is not assessed from these records.',
   snapshotNotSeries: 'One retained publication day, not a series of changes.',
   source: 'Source',
+  subnationalScope:
+    'Read at country level: the area you named is not resolved to provinces, so each record shows its own stated place.',
+  eventKind: {
+    ARMED_CLASH: 'Armed clash',
+    EXPLOSION_REMOTE_VIOLENCE: 'Explosion / remote violence',
+    VIOLENCE_AGAINST_CIVILIANS: 'Violence against civilians',
+    SIEGE_OR_ENCIRCLEMENT: 'Siege or encirclement',
+    AERIAL_OR_NAVAL_ACTION: 'Aerial or naval action',
+    CEASEFIRE_VIOLATION: 'Ceasefire violation',
+    EVENT_TYPE_NOT_CLASSIFIED: 'Conflict event (type not classified)',
+  },
+  parties: 'Parties',
+  cited: 'Cited',
+  lead: {
+    imihigo: (entity, value, cycle) =>
+      `${entity}: ${value} — Imihigo ${cycle}, the retained NISR final evaluation of a closed cycle.`,
+    cpi: (label, value, period) =>
+      `${label}: ${value} for ${period} — a retained NISR release, not re-checked now.`,
+    procurement: (count, geography, day) =>
+      `${count} retained TED procurement notice${count === 1 ? '' : 's'} from buyers in ${geography}, published on ${day}. This is one retained publication day, so it cannot show procurement changes or trends.`,
+  },
 };
 
 const PL: AskIntelligenceStrings = {
@@ -100,6 +133,27 @@ const PL: AskIntelligenceStrings = {
   severityNotAssessed: 'Na podstawie tych rekordów nie oceniono powagi sytuacji.',
   snapshotNotSeries: 'Jeden zachowany dzień publikacji, a nie seria zmian.',
   source: 'Źródło',
+  subnationalScope:
+    'Odczyt na poziomie kraju: wskazany obszar nie jest przypisywany do prowincji, więc każdy rekord podaje własne miejsce.',
+  eventKind: {
+    ARMED_CLASH: 'Starcie zbrojne',
+    EXPLOSION_REMOTE_VIOLENCE: 'Wybuch / przemoc zdalna',
+    VIOLENCE_AGAINST_CIVILIANS: 'Przemoc wobec cywilów',
+    SIEGE_OR_ENCIRCLEMENT: 'Oblężenie lub okrążenie',
+    AERIAL_OR_NAVAL_ACTION: 'Działania powietrzne lub morskie',
+    CEASEFIRE_VIOLATION: 'Naruszenie rozejmu',
+    EVENT_TYPE_NOT_CLASSIFIED: 'Zdarzenie konfliktowe (typ niesklasyfikowany)',
+  },
+  parties: 'Strony',
+  cited: 'Cytowane',
+  lead: {
+    imihigo: (entity, value, cycle) =>
+      `${entity}: ${value} — Imihigo ${cycle}, zachowana końcowa ocena NISR zamkniętego cyklu.`,
+    cpi: (label, value, period) =>
+      `${label}: ${value} za ${period} — zachowana publikacja NISR, nie sprawdzana ponownie teraz.`,
+    procurement: (count, geography, day) =>
+      `Zachowane ogłoszenia TED o zamówieniach od zamawiających z ${geography}: ${count}, opublikowane ${day}. To jeden zachowany dzień publikacji, więc nie pokazuje zmian ani trendów w zamówieniach.`,
+  },
 };
 
 export function askIntelligenceStrings(locale: AskR2Locale): AskIntelligenceStrings {
@@ -113,6 +167,10 @@ export interface AskIntelligenceRow {
   readonly value: string | null;
   readonly sourceName: string;
   readonly sourceUrl: string | null;
+  /** LIVE ACCEPTANCE REPAIR R1 (C) — source-verbatim structure, when the record has it. */
+  readonly place: string | null;
+  readonly parties: string | null;
+  readonly cited: string | null;
 }
 
 export interface AskIntelligenceSection {
@@ -129,6 +187,11 @@ export interface AskIntelligenceView {
   readonly place: string | null;
   readonly sections: readonly AskIntelligenceSection[];
   readonly notes: readonly string[];
+  /**
+   * LIVE ACCEPTANCE REPAIR R1 (A) — the deterministic lead of a retained-record answer: the
+   * governed values restated verbatim, or the stated absence. Empty when nothing was USED.
+   */
+  readonly lead: readonly string[];
 }
 
 const MAX_ROWS = 5;
@@ -159,14 +222,23 @@ export function askIntelligenceView(
       ...(c.disclosures.includes('NO_RECENT_RETAINED_RECORD') ? [s.noRecentRecord] : []),
       ...(c.disclosures.includes('SEVERITY_NOT_ASSESSED') ? [s.severityNotAssessed] : []),
       ...(c.disclosures.includes('SNAPSHOT_NOT_CHANGE_SERIES') ? [s.snapshotNotSeries] : []),
+      ...(c.disclosures.includes('SUBNATIONAL_SCOPE_NOT_APPLIED') ? [s.subnationalScope] : []),
     ],
     rows: c.observations.slice(0, MAX_ROWS).map((o) => ({
       reference: o.reference,
       period: o.period,
-      label: o.label ?? o.kind,
+      /* A Conflict record reads as what happened (its event type), then its own headline. */
+      label:
+        c.contributorId === 'CONFLICT'
+          ? [s.eventKind[o.kind] ?? o.kind, o.detail?.headline ?? null].filter(Boolean).join(' — ')
+          : (o.label ?? s.eventKind[o.kind] ?? o.kind),
       value: o.value === null ? null : o.unit === null ? o.value : `${o.value} ${o.unit}`,
       sourceName: o.source.name,
       sourceUrl: o.source.url,
+      place: o.detail?.place ?? null,
+      parties: o.detail && o.detail.parties.length > 0 ? o.detail.parties.join(' vs ') : null,
+      cited:
+        o.detail && o.detail.citedOutlets.length > 0 ? o.detail.citedOutlets.join(' · ') : null,
     })),
   }));
   const notes: string[] = [];
@@ -193,5 +265,41 @@ export function askIntelligenceView(
     place: placeLine,
     sections,
     notes,
+    lead: used.flatMap((c) => retainedLead(c, s)),
   };
+}
+
+const unitText = (unit: string | null): string =>
+  unit === null ? '' : unit === 'PERCENT' || unit === '%' ? '%' : ` ${unit}`;
+
+/** The governed record restated — verbatim values, never paraphrased or computed. */
+function retainedLead(c: AskContribution, s: AskIntelligenceStrings): string[] {
+  const first = c.observations[0];
+  if (first === undefined) return [];
+  switch (c.contributorId) {
+    case 'IMIHIGO':
+      return first.value === null
+        ? []
+        : [
+            s.lead.imihigo(
+              first.label ?? first.geography,
+              `${first.value}${unitText(first.unit)}`,
+              first.period,
+            ),
+          ];
+    case 'ECONOMY_CPI':
+      return first.value === null
+        ? []
+        : [
+            s.lead.cpi(
+              first.label ?? first.geography,
+              `${first.value}${unitText(first.unit)}`,
+              first.period,
+            ),
+          ];
+    case 'MARKET_PROCUREMENT':
+      return [s.lead.procurement(c.observations.length, first.geography, first.period)];
+    default:
+      return [];
+  }
 }

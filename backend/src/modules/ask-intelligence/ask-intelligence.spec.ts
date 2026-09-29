@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ConflictObservation } from '@globalnews-ai/shared';
+import type { ConflictObservation, ConflictRetainedEvidenceDetail } from '@globalnews-ai/shared';
 import { routeAskR2, type AskR2Route } from '../ask-router/ask-r2-route';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
 import {
@@ -52,6 +52,8 @@ const conflictRow = (key: string, day: string, iso3 = 'COD'): ConflictObservatio
 function coordinator(
   opts: {
     conflict?: ConflictObservation[] | 'throw' | 'hang';
+    /** LIVE ACCEPTANCE REPAIR R1 — source-verbatim detail per observation key. */
+    details?: Record<string, ConflictRetainedEvidenceDetail> | 'throw';
     notices?: Array<{ buyerCountryIso3: string; noticeId: string }>;
     cpi?: 'OBSERVATION' | 'GAP';
   } = {},
@@ -63,6 +65,12 @@ function coordinator(
       if (opts.conflict === 'throw') throw new Error('db down');
       if (opts.conflict === 'hang') return new Promise<never>(() => undefined);
       return opts.conflict ?? [];
+    }),
+    evidenceDetails: jest.fn(async (keys: readonly string[]) => {
+      if (opts.details === 'throw') throw new Error('capture unreadable');
+      const out = new Map<string, ConflictRetainedEvidenceDetail>();
+      for (const k of keys) if (opts.details?.[k]) out.set(k, opts.details[k]);
+      return out;
     }),
   };
   const market = {
@@ -144,7 +152,13 @@ describe('1/2 — Conflict: natural selection, security served THROUGH Conflict'
     const conflict = byId(set, 'CONFLICT')!;
     expect(conflict.status).toBe('USED');
     expect(conflict.observations).toHaveLength(2);
-    expect(conflict.disclosures).toEqual(['RETAINED_NOT_CURRENT', 'SEVERITY_NOT_ASSESSED']);
+    /* LIVE ACCEPTANCE REPAIR R1 — SUPERSEDED WITH UPDATED PROOF: "eastern" is disclosed as a
+       scope the country-level read did not narrow to (it was silently dropped before). */
+    expect(conflict.disclosures).toEqual([
+      'RETAINED_NOT_CURRENT',
+      'SEVERITY_NOT_ASSESSED',
+      'SUBNATIONAL_SCOPE_NOT_APPLIED',
+    ]);
     /* scoped to the resolved country and a bounded window */
     expect(calls.conflict[0]?.[0]).toBe('COD');
     expect((calls.conflict[0]?.[1] as Date).toISOString()).toBe(

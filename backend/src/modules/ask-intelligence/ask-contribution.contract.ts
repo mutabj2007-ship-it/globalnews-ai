@@ -75,6 +75,21 @@ export interface AskContributionObservation {
   };
   /** When GlobalNewsAI retained the record (capture/ingest time), if known. */
   readonly retainedAt: string | null;
+  /**
+   * LIVE ACCEPTANCE REPAIR R1 (C) — structured, source-verbatim display fields, so a record is
+   * shown as date · place · what · source instead of a raw citation string. Absent when the
+   * record carries none; never generated, never geocoded.
+   */
+  readonly detail?: {
+    /** The source-published location description (e.g. a UCDP `where_description`). */
+    readonly place: string | null;
+    /** The source-published parties (e.g. UCDP side A / side B), verbatim. */
+    readonly parties: readonly string[];
+    /** A source-published headline, verbatim, when one exists. */
+    readonly headline: string | null;
+    /** The outlets the source cites (the publisher's own citation, split — never rewritten). */
+    readonly citedOutlets: readonly string[];
+  };
 }
 
 export interface AskContribution {
@@ -103,5 +118,10 @@ export interface AskContributorSelection {
     readonly countryIso3: string | null;
     readonly district: { readonly id: string; readonly name: string } | null;
     readonly place: string | null;
+    /**
+     * LIVE ACCEPTANCE REPAIR R1 — a sub-national qualifier the reader stated ("eastern") that no
+     * governed geography resolved. Carried only so the answer can DISCLOSE the scope it read at.
+     */
+    readonly qualifier?: string | null;
   };
 }

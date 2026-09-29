@@ -103,6 +103,7 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
     maxModelAttempts,
     signal,
     usageSink,
+    governed,
   }: GeneralBackgroundInput): Promise<GeneralBackgroundOutput> {
     const config = this.analysisConfig.get();
 
@@ -114,7 +115,15 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
       );
     }
 
-    const system = SYSTEM_PROMPT + buildResponseLanguageInstruction(responseLanguage);
+    const system =
+      SYSTEM_PROMPT +
+      buildResponseLanguageInstruction(responseLanguage) +
+      /* PR #70 prompt boundary — only the trusted governed RULES reach the system prompt. */
+      (governed === undefined || governed.rules === '' ? '' : `\n\n${governed.rules}\n`);
+    /* …and the retained records travel as delimited DATA in the user message, after the
+       question. Absent → the user message is exactly the question, as before. */
+    const user =
+      governed === undefined || governed.data === '' ? question : `${question}\n\n${governed.data}`;
     const policyAttempts = config.retryAttempts + 1;
     const maxAttempts =
       maxModelAttempts !== undefined && Number.isInteger(maxModelAttempts) && maxModelAttempts >= 1
@@ -132,7 +141,7 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
         );
       }
       try {
-        const { content, usage } = await this.attemptOnce(system, question, config, signal);
+        const { content, usage } = await this.attemptOnce(system, user, config, signal);
         if (
           usageSink !== undefined &&
           typeof usage?.prompt_tokens === 'number' &&

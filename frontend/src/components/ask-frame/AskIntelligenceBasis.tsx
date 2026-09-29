@@ -12,10 +12,13 @@ export function AskIntelligenceBasis({
   payload,
   locale,
   reportingSourceCount,
+  hideNotes = false,
 }: {
   readonly payload: AskR2Payload;
   readonly locale: AskR2Locale;
   readonly reportingSourceCount: number;
+  /** LIVE ACCEPTANCE REPAIR R1 — the notes already ARE the answer (a stated absence). */
+  readonly hideNotes?: boolean;
 }): JSX.Element | null {
   const view = askIntelligenceView(payload, locale, reportingSourceCount);
   if (view === null) return null;
@@ -51,6 +54,14 @@ export function AskIntelligenceBasis({
                 className="text-[13.5px] leading-[1.45] text-[#cfe2f2]"
               >
                 <span className="font-mono text-[12px] text-[#8299b4]">{row.period}</span>
+                {row.place !== null && (
+                  <>
+                    {' · '}
+                    <span data-ask="intelligence-place" className="font-semibold">
+                      {row.place}
+                    </span>
+                  </>
+                )}
                 {' · '}
                 {row.label}
                 {row.value !== null && <strong className="ms-1">{row.value}</strong>}
@@ -67,6 +78,13 @@ export function AskIntelligenceBasis({
                 ) : (
                   <span>{row.sourceName}</span>
                 )}
+                {(row.parties !== null || row.cited !== null) && (
+                  <span className="block font-mono text-[11px] text-[#8299b4]">
+                    {row.parties !== null && `${s.parties}: ${row.parties}`}
+                    {row.parties !== null && row.cited !== null && ' · '}
+                    {row.cited !== null && `${s.cited}: ${row.cited}`}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -77,7 +95,7 @@ export function AskIntelligenceBasis({
           ))}
         </div>
       ))}
-      {view.notes.map((note) => (
+      {(hideNotes ? [] : view.notes).map((note) => (
         <p key={note} data-ask="intelligence-note" className="text-[13px] text-[#8fa6c0]">
           {note}
         </p>

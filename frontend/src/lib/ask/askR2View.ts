@@ -19,7 +19,7 @@ import type { AskR2Locale, AskR2Strings } from './askR2Strings';
  *   chips                     from `payload.chips` only (D25 05) — never UI or Map state
  */
 
-export type AskR2Badge = 'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail';
+export type AskR2Badge = 'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec';
 
 export interface AskR2ChipView {
   readonly kind: AskPlanChip['kind'];
@@ -38,7 +38,8 @@ export interface AskR2View {
     | 'clarification'
     | 'partial'
     | 'insufficient'
-    | 'unavailable';
+    | 'unavailable'
+    | 'retained';
   readonly freshness: string;
   readonly citable: boolean;
   readonly sourceCount: number;
@@ -82,6 +83,8 @@ const BADGE_OF: Readonly<Record<AskAnswerState, AskR2Badge>> = {
   INSUFFICIENT: 'insuf',
   CLARIFICATION_REQUIRED: 'clar',
   CAPABILITY_UNAVAILABLE: 'unavail',
+  /* LIVE ACCEPTANCE REPAIR R1 — a governed retained record, zero AI; no hand-offs. */
+  RETAINED_RECORD: 'rec',
 };
 
 const TONE_OF: Readonly<Record<AskR2Badge, AskR2View['tone']>> = {
@@ -92,6 +95,7 @@ const TONE_OF: Readonly<Record<AskR2Badge, AskR2View['tone']>> = {
   part: 'partial',
   insuf: 'insufficient',
   unavail: 'unavailable',
+  rec: 'retained',
 };
 
 /** D25 02: handoffs exist for states 2, 3, 5 (and 7, 8 — not produced by this candidate). */
@@ -204,6 +208,7 @@ export function askR2View(
   else if (badge === 'unavail')
     freshness = basis in s.unavailableBecause ? s.noAnswer : s.unavailable;
   else if (badge === 'insuf') freshness = fill(s.freshness.zero, checkedAt);
+  else if (badge === 'rec') freshness = s.freshness.retainedRecord;
   else if (badge === 'part' && payload.verification?.asOf != null)
     /* CURRENT STATUS CORROBORATION R1 — as of the freshest corroborating report, never the
        model's generation time. */
