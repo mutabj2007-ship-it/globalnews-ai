@@ -59,6 +59,7 @@ import { decideContextEligibility } from './normalization/semantic-subject';
 import { readLandedClassifiers, type LandedReadingTrace } from './landed-readings';
 import { readCapabilityRequests, type CapabilityRequestKind } from './capability-producers';
 import { detectAmbiguousCountryMention } from '../analysis/anchor/event-anchor.util';
+import { readInstitutionalStatusQuestion } from '../news/relevance/governed-institutions';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -227,6 +228,8 @@ export function composeEnvelopeSource(
 ): EnvelopeSource {
   const typed = typedGeographyOf(reading);
   const entity = typed === undefined ? entityGeographyOf(reading) : undefined;
+  /* CURRENT STATUS CORROBORATION R1 — the M2 governed shape (institution AND status subject). */
+  const institutional = readInstitutionalStatusQuestion(reading.originalQuestion);
   /* GATE H (Main MC-069) — the reader typed a place that names several countries. An
      inherited Map country may settle it only when it IS one of them; otherwise it would
      silently answer for a place the reader did not name. */
@@ -273,7 +276,19 @@ export function composeEnvelopeSource(
           currentStatusTerms:
             reading.shape.officeTerm === undefined ? [] : [reading.shape.officeTerm],
         }
-      : {}),
+      : institutional !== null
+        ? {
+            /*
+              CURRENT STATUS CORROBORATION R1 — a governed institution's current policy
+              rate ("What is the current policy interest rate of the NBP?") is a status
+              whose truth depends on the time of asking, exactly like an office. It now
+              carries frozen C's CURRENT_STATUS contract, so the executor's deterministic
+              corroboration decides PARTIAL vs INSUFFICIENT for it.
+            */
+            currentStatusRequested: true,
+            currentStatusTerms: [institutional.subject.id],
+          }
+        : {}),
     ...capability,
     reading: landed,
   };

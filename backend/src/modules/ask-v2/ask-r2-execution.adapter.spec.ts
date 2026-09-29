@@ -1262,12 +1262,19 @@ describe('M1 — current-status verification: the executor supplies a frozen ver
     const reporting = route('What is happening in Kenya?');
     expect(reporting.verification).toBeNull();
     expect(executorVerificationOutcome(reporting)).toBeUndefined();
-    /* the NBP rate question is ordinary current reporting too — M2 did not re-route it */
+    /*
+      CURRENT STATUS CORROBORATION R1 — the governed NBP policy-rate question is now a
+      current-status question on purpose (its answer depends on the time of asking), so it
+      carries the contract and is decided by deterministic corroboration.
+    */
     const nbp = route(
       'What is the current policy interest rate of the National Bank of Poland, and when was it last changed?',
     );
-    expect(nbp.questionClass).toBe('CURRENT_REPORTING');
-    expect(nbp.verification).toBeNull();
+    expect(nbp.questionClass).toBe('CURRENT_STATUS_VERIFICATION');
+    expect(nbp.verification?.admissibleOutcomes).toEqual([
+      'CURRENT_REPORTING_PARTIAL_VERIFICATION',
+      'INSUFFICIENT_EVIDENCE',
+    ]);
   });
 
   it('ordinary current reporting is derived exactly as before', async () => {
@@ -1279,5 +1286,148 @@ describe('M1 — current-status verification: the executor supplies a frozen ver
       state: 'CURRENT_REPORTING',
       basis: 'REQUIRED_EVIDENCE_OBTAINED',
     });
+  });
+});
+
+/*
+ * CURRENT STATUS CORROBORATION R1 — end to end through the real adapter: the deterministic
+ * seam decides PARTIAL vs INSUFFICIENT, the derivation receives the number of independent
+ * agreeing reports (never raw articles.length), and a PARTIAL answer carries the as-of time of
+ * the freshest corroborating report.
+ */
+describe('CURRENT STATUS CORROBORATION R1 — PARTIAL only on a deterministic corroborated fact', () => {
+  const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+  const art = (id: string, domain: string, title: string, hours: number) =>
+    ({
+      id,
+      title,
+      summary: '',
+      url: `https://${domain}/n/${id}`,
+      sourceId: 'gnews',
+      sourceName: domain,
+      category: 'world',
+      sourcesCount: 1,
+      publishedAt: ago(hours),
+      publishedAtBasis: 'publisher',
+    }) as never;
+  const withArticles = (articles: unknown[]) =>
+    harness({
+      analysis: async (p) => {
+        p.usageSink?.({ promptTokens: 3000, completionTokens: 800 });
+        return {
+          analysis: {} as never,
+          articles,
+          retrievalContext: {} as never,
+        } as unknown as AnalysisApiResponse;
+      },
+    });
+  const execute = async (q: string, articles: unknown[], lang: 'en' | 'pl' = 'en') => {
+    const { adapter } = withArticles(articles);
+    const plan = await adapter.prepare(req(q, lang));
+    const result = await inRequest(() => adapter.execute(req(q, lang), plan, 'op-c'));
+    return JSON.parse(result.payloadJson) as {
+      answer: { state: string; basis: string };
+      verification: {
+        outcome: string;
+        reason: string;
+        family: string | null;
+        reports: number;
+        asOf: string | null;
+        fact: { family: string; value: string | number } | null;
+      } | null;
+    };
+  };
+  const NBP_Q =
+    'What is the current policy interest rate of the National Bank of Poland, and when was it last changed?';
+  const OFFICE_Q = 'Who is the current president of Poland?';
+
+  it('office holder: two fresh independent reports, same person → PARTIAL, as of the freshest', async () => {
+    const p = await execute(OFFICE_Q, [
+      art('a', 'reuters.com', 'Polish President Karol Nawrocki vetoes budget bill', 9),
+      art('b', 'notesfrompoland.com', "Poland's President Karol Nawrocki signs defence law", 2),
+    ]);
+    expect(p.answer).toMatchObject({ state: 'PARTIAL', basis: 'REPORTING_PARTIAL_VERIFICATION' });
+    expect(p.verification).toMatchObject({
+      outcome: 'CURRENT_REPORTING_PARTIAL_VERIFICATION',
+      reason: 'CORROBORATED',
+      family: 'OFFICE_HOLDER',
+      reports: 2,
+      fact: { family: 'OFFICE_HOLDER', value: 'Karol Nawrocki' },
+    });
+    const asOf = Date.parse(p.verification!.asOf!);
+    expect(Math.abs(asOf - (Date.now() - 2 * 3_600_000))).toBeLessThan(60_000);
+  });
+
+  it('policy rate (PL question): EN + PL reports agree on 575 bps → PARTIAL', async () => {
+    const p = await execute(
+      'Jaka jest obecna stopa referencyjna NBP?',
+      [
+        art('a', 'reuters.com', "Poland's central bank holds interest rates at 5.75%", 20),
+        art('b', 'money.pl', 'Stopa referencyjna NBP wynosi 5,75 proc.', 5),
+      ],
+      'pl',
+    );
+    expect(p.answer.state).toBe('PARTIAL');
+    expect(p.verification).toMatchObject({
+      family: 'POLICY_RATE',
+      reports: 2,
+      fact: { value: 575 },
+    });
+  });
+
+  it('many articles but no corroborated fact → INSUFFICIENT; the count passed is 0, not 5', async () => {
+    const p = await execute(NBP_Q, [
+      art('a', 'reuters.com', "Poland's central bank holds interest rates at 5.75%", 20),
+      art('b', 'money.pl', 'RPP obniżyła stopy procentowe do 5,50 proc.', 5),
+      art('c', 'bbc.co.uk', 'Polish economy grows', 5),
+      art('d', 'ft.com', 'Zloty weakens', 5),
+      art('e', 'wp.pl', 'Pogoda w Warszawie', 5),
+    ]);
+    expect(p.answer).toMatchObject({ state: 'INSUFFICIENT', basis: 'VERIFICATION_NOT_MET' });
+    expect(p.verification).toMatchObject({
+      outcome: 'INSUFFICIENT_EVIDENCE',
+      reason: 'CONFLICTING_FACTS',
+      reports: 0,
+      asOf: null,
+      fact: null,
+    });
+  });
+
+  it('one corroborating report is not two → INSUFFICIENT', async () => {
+    const p = await execute(OFFICE_Q, [
+      art('a', 'reuters.com', 'Polish President Karol Nawrocki vetoes budget bill', 9),
+      art('b', 'reuters.com', "Poland's President Karol Nawrocki signs law", 2),
+    ]);
+    expect(p.answer.state).toBe('INSUFFICIENT');
+    expect(p.verification).toMatchObject({
+      reason: 'INSUFFICIENT_INDEPENDENT_REPORTS',
+      reports: 1,
+    });
+  });
+
+  it('an unsupported current-status category stays honestly INSUFFICIENT', async () => {
+    const p = await execute('Who is the current minister of finance of Poland?', [
+      art('a', 'reuters.com', 'Polish finance minister Andrzej Domański presents budget', 9),
+      art('b', 'notesfrompoland.com', 'Finance minister Andrzej Domański on taxes', 2),
+    ]);
+    expect(p.answer.state).toBe('INSUFFICIENT');
+    expect(p.verification).toMatchObject({ reason: 'UNSUPPORTED_FACT_FAMILY' });
+  });
+
+  it('never CURRENTLY_VERIFIED, and never OFFICIAL — whatever reporting says', async () => {
+    const p = await execute(OFFICE_Q, [
+      art('a', 'reuters.com', 'Polish President Karol Nawrocki vetoes budget bill', 9),
+      art('b', 'notesfrompoland.com', "Poland's President Karol Nawrocki signs defence law", 2),
+    ]);
+    expect(p.answer.state).not.toBe('CURRENTLY_VERIFIED');
+    expect(JSON.stringify(p)).not.toContain('OFFICIAL_CURRENT_EVIDENCE');
+  });
+
+  it('plans without a contract carry no verification block and are unchanged', async () => {
+    const p = await execute('What is happening in Kenya?', [
+      art('a', 'reuters.com', 'Kenya news', 9),
+    ]);
+    expect(p.answer.state).toBe('CURRENT_REPORTING');
+    expect(p.verification).toBeNull();
   });
 });

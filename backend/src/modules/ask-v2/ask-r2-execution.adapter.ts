@@ -28,6 +28,11 @@ import { planChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
 import type { RoutingPlan, VerificationOutcome } from '../ask-router/frozen-c/src/ports';
 import {
+  corroborateCurrentStatus,
+  corroborationTargetOf,
+  type CorroborationResult,
+} from './current-status-corroboration';
+import {
   AskExecutionRefused,
   classifyCompute,
   hashIdentity,
@@ -141,25 +146,34 @@ export const EXECUTOR_SUPPLIES: ReadonlySet<string> = new Set(['REPORTING']);
  *                                           from a bound official executor, and this
  *                                           executor supplies REPORTING only (above). News
  *                                           articles are never relabelled as OFFICIAL.
- *   CURRENT_REPORTING_PARTIAL_VERIFICATION  never, YET — it requires "at least two
- *                                           independent fresh reporting sources AGREE". The
- *                                           Analysis response carries per-article publisher
- *                                           and publishedAt facts, but every cross-source
- *                                           "agreement" in it is model-written (the model
- *                                           writes the point and chooses the cited ids; the
- *                                           backend only checks the ids exist). There is no
- *                                           deterministic, per-proposition agreement fact,
- *                                           and a model's declaration is not backend
- *                                           verification. This is the MISSING SEAM, reported
- *                                           rather than invented.
+ *   CURRENT_REPORTING_PARTIAL_VERIFICATION  ONLY when the deterministic corroboration seam
+ *                                           (current-status-corroboration.ts, CURRENT STATUS
+ *                                           CORROBORATION R1) established the fact: at least
+ *                                           two independent, fresh, trustworthy-timestamped
+ *                                           reports extracting the SAME canonical fact — and
+ *                                           only where the plan admits the outcome. A model
+ *                                           saying sources agree is never this fact (CTO
+ *                                           ruling); generated agreements, key facts, summary
+ *                                           statements and model-selected citations are not
+ *                                           read here at all.
  *   INSUFFICIENT_EVIDENCE                   otherwise — frozen C's honest end of the ladder,
  *                                           always admissible.
  *
  * A plan with no verification contract gets no verdict (undefined), so every other path
  * (reporting, background, clarification) is derived exactly as before.
  */
-export function executorVerificationOutcome(plan: RoutingPlan): VerificationOutcome | undefined {
+export function executorVerificationOutcome(
+  plan: RoutingPlan,
+  corroboration: CorroborationResult | null = null,
+): VerificationOutcome | undefined {
   if (plan.verification === null) return undefined;
+  if (
+    corroboration?.corroborated === true &&
+    corroboration.qualifyingReports >= plan.verification.minIndependentFreshSources &&
+    plan.verification.admissibleOutcomes.includes('CURRENT_REPORTING_PARTIAL_VERIFICATION')
+  ) {
+    return 'CURRENT_REPORTING_PARTIAL_VERIFICATION';
+  }
   return 'INSUFFICIENT_EVIDENCE';
 }
 
@@ -510,9 +524,28 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       );
     }
     /* 7 · the §7 answer state — the one derivation. */
-    const verification = executorVerificationOutcome(route.plan);
+    /*
+      CURRENT STATUS CORROBORATION R1 — a current-status plan is decided on the deterministic
+      corroboration of the admitted reporting, and the count the derivation compares against
+      frozen C's minimum is the number of independent fresh AGREEING reports — never the raw
+      number of articles. Every other plan is derived exactly as before.
+    */
+    const corroboration =
+      route.plan.verification === null
+        ? null
+        : corroborateCurrentStatus({
+            target: corroborationTargetOf(route),
+            articles: response.articles,
+            now: new Date(),
+            statedPeriod: route.envelope.time.statedPeriod,
+            minIndependentReports: route.plan.verification.minIndependentFreshSources,
+          });
+    const verification = executorVerificationOutcome(route.plan, corroboration);
     const answer = deriveAnswerState(route.plan, {
-      items: { REPORTING: response.articles.length },
+      items: {
+        REPORTING:
+          corroboration === null ? response.articles.length : corroboration.qualifyingReports,
+      },
       producedAnswer: response.analysis !== null,
       ...(verification === undefined ? {} : { verification }),
     });
@@ -534,6 +567,20 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       this.observeAnswer(answer, draft),
       response,
       aiExecuted,
+      null,
+      corroboration === null || verification === undefined
+        ? null
+        : {
+            outcome: verification,
+            reason: corroboration.reason,
+            family: corroboration.family,
+            reports: corroboration.qualifyingReports,
+            asOf: corroboration.asOf,
+            fact:
+              corroboration.fact === null || !corroboration.corroborated
+                ? null
+                : { family: corroboration.fact.family, value: corroboration.fact.value },
+          },
     );
   }
 
@@ -731,6 +778,19 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     analysis: AnalysisApiResponse | null,
     aiExecuted: boolean,
     backgroundText: string | null = null,
+    /**
+     * CURRENT STATUS CORROBORATION R1 — present only for a current-status plan: the frozen
+     * outcome the executor returned, the deterministic reason, the number of independent
+     * agreeing reports and the as-of time of the freshest of them (never model time).
+     */
+    verification: {
+      readonly outcome: VerificationOutcome;
+      readonly reason: string;
+      readonly family: string | null;
+      readonly reports: number;
+      readonly asOf: string | null;
+      readonly fact: { readonly family: string; readonly value: string | number } | null;
+    } | null = null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -768,6 +828,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         /* ASK GENERAL BACKGROUND EXECUTION R1 — additive. Non-citable, non-sourced model
            background text (never present alongside a non-null `analysis`). */
         background: backgroundText === null ? null : { text: backgroundText },
+        verification,
       }),
       evidenceRevision: plan.revision,
       validUntil: plan.validUntil,
