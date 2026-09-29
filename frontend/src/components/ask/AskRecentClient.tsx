@@ -7,6 +7,7 @@ import {
   ASK_RECENT_GROUPS,
   askReopenHref,
   filterRecent,
+  recentRowPreview,
   groupRecentThreads,
   type AskRecentGroup,
 } from '@/lib/ask/askRecentGrouping';
@@ -123,65 +124,81 @@ export function AskRecentClient({ locale }: { readonly locale: AskLocale }): JSX
                       {t.groups[group]}
                     </h2>
                     <ul className="mt-2 flex flex-col gap-2">
-                      {grouped[group].map((row) => (
-                        <li
-                          key={row.id}
-                          data-ask-recent-row={row.id}
-                          className="rounded-xl border border-line bg-surface p-3"
-                        >
-                          <p className="text-[14.5px] leading-snug text-ink-primary">
-                            {row.firstQuestion === null
-                              ? t.noQuestionStored
-                              : `${row.firstQuestion}${row.firstQuestionTruncated ? '…' : ''}`}
-                          </p>
-                          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-ink-tertiary">
-                            <span data-ask-recent="turns">
-                              {row.turnCount === 1
-                                ? t.turnCountOne
-                                : t.turnCount.replace('{n}', String(row.turnCount))}
-                            </span>
-                            <span aria-hidden="true">{'·'}</span>
-                            <span data-ask-recent="last-active">
-                              {`${t.lastActive} ${new Date(row.lastActiveAt).toLocaleString(locale)}`}
-                            </span>
-                            <span aria-hidden="true">{'·'}</span>
-                            <span data-ask-recent="language">{row.language.toUpperCase()}</span>
-                            {row.latestState === null ? null : (
-                              <>
-                                <span aria-hidden="true">{'·'}</span>
-                                <span data-ask-recent="state">{row.latestState}</span>
-                              </>
-                            )}
-                          </p>
-                          <div className="mt-2 flex flex-col items-start gap-0.5">
-                            {askReopenHref(row) !== null ? (
-                              <>
-                                <Link
-                                  data-ask-recent="reopen"
-                                  href={askReopenHref(row) as string}
-                                  className="text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4"
-                                >
-                                  {t.reopen}
-                                </Link>
-                                <span
-                                  data-ask-recent="reopen-note"
-                                  className="text-[11.5px] text-ink-tertiary"
-                                >
-                                  {`${t.reopenNote} ${t.continueNote}`}
-                                </span>
-                              </>
-                            ) : (
-                              /* No stored operation: no Reopen, and no rerun — say so. */
-                              <span
-                                data-ask-recent="no-stored-result"
-                                className="text-[12px] text-ink-tertiary"
+                      {grouped[group].map((row) => {
+                        const preview = recentRowPreview(row);
+                        return (
+                          <li
+                            key={row.id}
+                            data-ask-recent-row={row.id}
+                            className="rounded-xl border border-line bg-surface p-3"
+                          >
+                            <p
+                              data-ask-recent="question"
+                              className="text-[14.5px] leading-snug text-ink-primary"
+                            >
+                              {preview.primary === null
+                                ? t.noQuestionStored
+                                : `${preview.primary}${preview.primaryTruncated ? '…' : ''}`}
+                            </p>
+                            {preview.startedWith === null ? null : (
+                              <p
+                                data-ask-recent="started-with"
+                                className="mt-0.5 text-[12px] leading-snug text-ink-tertiary"
                               >
-                                {t.noStoredResult}
-                              </span>
+                                {`${t.startedWith} ${preview.startedWith}${
+                                  preview.startedWithTruncated ? '…' : ''
+                                }`}
+                              </p>
                             )}
-                          </div>
-                        </li>
-                      ))}
+                            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-ink-tertiary">
+                              <span data-ask-recent="turns">
+                                {row.turnCount === 1
+                                  ? t.turnCountOne
+                                  : t.turnCount.replace('{n}', String(row.turnCount))}
+                              </span>
+                              <span aria-hidden="true">{'·'}</span>
+                              <span data-ask-recent="last-active">
+                                {`${t.lastActive} ${new Date(row.lastActiveAt).toLocaleString(locale)}`}
+                              </span>
+                              <span aria-hidden="true">{'·'}</span>
+                              <span data-ask-recent="language">{row.language.toUpperCase()}</span>
+                              {row.latestState === null ? null : (
+                                <>
+                                  <span aria-hidden="true">{'·'}</span>
+                                  <span data-ask-recent="state">{row.latestState}</span>
+                                </>
+                              )}
+                            </p>
+                            <div className="mt-2 flex flex-col items-start gap-0.5">
+                              {askReopenHref(row) !== null ? (
+                                <>
+                                  <Link
+                                    data-ask-recent="reopen"
+                                    href={askReopenHref(row) as string}
+                                    className="text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4"
+                                  >
+                                    {t.reopen}
+                                  </Link>
+                                  <span
+                                    data-ask-recent="reopen-note"
+                                    className="text-[11.5px] text-ink-tertiary"
+                                  >
+                                    {`${t.reopenNote} ${t.continueNote}`}
+                                  </span>
+                                </>
+                              ) : (
+                                /* No stored operation: no Reopen, and no rerun — say so. */
+                                <span
+                                  data-ask-recent="no-stored-result"
+                                  className="text-[12px] text-ink-tertiary"
+                                >
+                                  {t.noStoredResult}
+                                </span>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </section>
                 ),

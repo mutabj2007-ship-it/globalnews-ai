@@ -56,10 +56,17 @@ const SUPPORT_RETURN_DESTINATION = '/support';
 export function SupportScreen({
   t,
   language,
+  chrome = 'platform',
 }: {
   t: SupportDictionary;
   /** Resolved once, on the server, and passed straight through. */
   language: 'en' | 'pl';
+  /**
+   * ALPHA VISUAL ACCEPTANCE REPAIR R1 — who owns the page chrome. 'platform' (the default)
+   * renders the platform NavBar and Footer exactly as before; 'standalone' renders the
+   * Support body only, inside the standalone Ask shell that app/support/page.tsx provides.
+   */
+  chrome?: 'platform' | 'standalone';
 }): JSX.Element {
   const { user, isLoading: isAccountLoading } = useAccount();
   const [openReference, setOpenReference] = useState<string | null>(null);
@@ -96,7 +103,7 @@ export function SupportScreen({
 
   return (
     <div className="flex min-h-screen flex-col bg-void">
-      <NavBar />
+      {chrome === 'platform' && <NavBar />}
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
         {openReference !== null && user ? (
           <SupportThread t={t} reference={openReference} onBack={() => setOpenReference(null)} />
@@ -303,7 +310,7 @@ export function SupportScreen({
           </section>
         )}
       </main>
-      <Footer />
+      {chrome === 'platform' && <Footer />}
     </div>
   );
 }

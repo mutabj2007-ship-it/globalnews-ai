@@ -192,6 +192,7 @@ export class AskV2Service {
           threadId: true,
           id: true,
           sequence: true,
+          question: true,
           operation: { select: { id: true, status: true, computeClass: true } },
         },
       });
@@ -212,6 +213,14 @@ export class AskV2Service {
           firstQuestion: question === undefined ? null : clampPreview(question),
           firstQuestionTruncated: question === undefined ? false : question.length > PREVIEW_MAX,
           latestTurnId: latest?.id ?? null,
+          /*
+            ALPHA VISUAL ACCEPTANCE REPAIR R1 — Open displays the LATEST turn's result, so the
+            row must be able to say which question that is. The reader's own words, clamped the
+            same way as the first question; never generated.
+          */
+          latestQuestion: latest === undefined ? null : clampPreview(latest.question),
+          latestQuestionTruncated:
+            latest === undefined ? false : latest.question.length > PREVIEW_MAX,
           latestOperationId: latest?.operation?.id ?? null,
           latestState: latest?.operation?.status ?? null,
           latestComputeClass: latest?.operation?.computeClass ?? null,
@@ -351,10 +360,15 @@ export class AskV2Service {
         operation answered (AskTurn.operationId is unique) and whether THIS reader has saved it.
         Owner-scoped twice: the operation is already the caller's (`owned`), and the turn is
         read through its thread's owner. Two reads, no write, no compute.
+
+        ALPHA VISUAL ACCEPTANCE REPAIR R1 — the same owner-scoped turn read also returns the
+        canonical facts a reopened result needs: the question it answered (YOU ASKED), and the
+        thread + sequence an explicit follow-up continues. Read from AskTurn, never copied
+        into StoredResult; an operation that is not the caller's never reaches this line.
       */
       const turn = await tx.askTurn.findFirst({
         where: { operationId: id, thread: { userId } },
-        select: { id: true },
+        select: { id: true, question: true, threadId: true, sequence: true, language: true },
       });
       const bookmarked =
         turn === null
@@ -364,6 +378,10 @@ export class AskV2Service {
         operationId: id,
         turnId: turn?.id ?? null,
         bookmarked,
+        question: turn?.question ?? null,
+        threadId: turn?.threadId ?? null,
+        sequence: turn?.sequence ?? null,
+        language: turn?.language ?? null,
         computeClass: operation.computeClass,
         status: operation.status,
         quotedSand: operation.quotedSand,

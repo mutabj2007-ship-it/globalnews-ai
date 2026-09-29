@@ -33,10 +33,16 @@ function codeOnly(source: string): string {
 
 const accountControlSource = codeOnly(readFileSync(join(NAV, 'AccountControl.tsx'), 'utf-8'));
 const navBarSource = codeOnly(readFileSync(join(NAV, 'NavBar.tsx'), 'utf-8'));
-const settingsPageSource = readFileSync(
+/*
+  ALPHA VISUAL ACCEPTANCE REPAIR R1 — the settings route was split into a server wrapper
+  (chrome + language) and its client body. The Danger Zone moved with the body, unchanged;
+  the route itself renders only that body.
+*/
+const settingsRouteSource = readFileSync(
   join(HERE, '..', '..', 'app', 'account', 'settings', 'page.tsx'),
   'utf-8',
 );
+const settingsPageSource = readFileSync(join(HERE, 'AccountSettingsBody.tsx'), 'utf-8');
 
 const dictionary = getDictionary('en');
 const EMAIL = 'someone@example.com';
@@ -129,6 +135,14 @@ describe('deletion is reachable only through the dedicated settings surface', ()
     // clears the session and unmounts the danger zone in the same render.
     expect(settingsPageSource).toContain('onDeleted={() => setDeleted(true)}');
     expect(settingsPageSource).toContain('t.deletedHeading');
+    /* the route renders that body in both presentations, and no second danger zone */
+    expect(settingsRouteSource).toContain(
+      '<AccountSettingsBody language="en" chrome="platform" />',
+    );
+    expect(settingsRouteSource).toContain(
+      '<AccountSettingsBody language={locale} chrome="standalone" />',
+    );
+    expect(settingsRouteSource).not.toContain('DeleteAccountDangerZone');
   });
 
   it('the destructive warning is the ONE reviewed string, not a second copy written for this page', () => {
@@ -179,7 +193,7 @@ describe('the confirmation comparison itself', () => {
   const source = readFileSync(join(HERE, 'DeleteAccountDangerZone.tsx'), 'utf-8');
 
   it('compares the typed value to the caller’s OWN address, exactly', () => {
-    expect(codeOnly(source)).toContain("const matches = typed.trim() === email");
+    expect(codeOnly(source)).toContain('const matches = typed.trim() === email');
   });
 
   it('is not a prefix, case-insensitive or emptiness-tolerant comparison — the classic ways such a gate is accidentally defeated', () => {

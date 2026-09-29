@@ -216,6 +216,22 @@ const EXPLANATION_PATTERNS: readonly RegExp[] = [
   /^jak\s+dzia[łl]a(?:j[ąa])?\s+(.+)$/iu,
   /^(?:jaki|jaka|jakie|jacy)\s+(?:jest|s[ąa])\s+(.+)$/iu,
   /^ile\s+(?:wynosi|wynosz[ąa]|to\s+jest)\s+(.+)$/iu,
+
+  /*
+   * ALPHA VISUAL ACCEPTANCE REPAIR R1 (L) — an integration-defect correction, not a new router
+   * round. "Co to jest NATO?" read EXPLANATION (REFERENCE) while its follow-up "Dlaczego
+   * artykuł 5 NATO jest ważny?" fell to the CURRENT_EVENT default and was answered as an
+   * empty news search (INSUFFICIENT). Asking WHY a stable thing matters is a request for
+   * background, in both languages. Mirrored EN/PL, whole-sentence anchored, and still behind
+   * the CURRENT_EVENT_MARKERS gate: "… important today?", "… latest …", "current status" and
+   * "recent developments" stay current. "Why was NATO created?" is deliberately NOT covered.
+   *   "Why is/are X important/significant/relevant?"   ≡ "Dlaczego X jest/są ważny/istotny?"
+   *   "Why does X matter?"                             ≡ "Dlaczego X ma znaczenie?"
+   */
+  /^why\s+(?:is|are)\s+(.+?)\s+(?:so\s+)?(?:important|significant|relevant)$/i,
+  /^why\s+(?:does|do)\s+(.+?)\s+matter$/i,
+  /^(?:dlaczego|czemu)\s+(.+?)\s+(?:jest|s[ąa])\s+(?:tak\s+)?(?:wa[żz]n[aeyi]|istotn[aeyi])$/iu,
+  /^(?:dlaczego|czemu)\s+(.+?)\s+ma(?:j[ąa])?\s+(?:tak\s+)?(?:du[żz]e\s+)?znaczenie$/iu,
 ];
 
 /**

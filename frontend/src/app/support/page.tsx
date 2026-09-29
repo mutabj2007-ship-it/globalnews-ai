@@ -5,6 +5,10 @@ import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { SupportScreen } from '@/components/support/SupportScreen';
+import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
+import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
+import { AskClearedBoundary } from '@/components/ask-nav/AskClearedBoundary';
+import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
 
 /**
  * S4 — the server boundary for the authenticated user Support surface.
@@ -68,5 +72,22 @@ export default function SupportPage(): JSX.Element {
   */
   const language = currentLanguage() === 'pl' ? 'pl' : 'en';
 
+  /*
+    ALPHA VISUAL ACCEPTANCE REPAIR R1 — in the standalone Public Beta, Help & feedback stays
+    INSIDE Ask: the standalone Ask navigation only (no platform header, Footer or dock). The
+    Support surface itself — data, backend, copy, noindex — is the same one. The wider
+    platform presentation remains behind GNA_PUBLIC_ROOT=platform.
+  */
+  if (standaloneAskRoot()) {
+    return (
+      <AskNavProvider>
+        <AskNavShell language={language} />
+        <AskContinuityHeader locale={language} surface="help" />
+        <AskClearedBoundary>
+          <SupportScreen t={resolveSupportDictionary()} language={language} chrome="standalone" />
+        </AskClearedBoundary>
+      </AskNavProvider>
+    );
+  }
   return <SupportScreen t={resolveSupportDictionary()} language={language} />;
 }

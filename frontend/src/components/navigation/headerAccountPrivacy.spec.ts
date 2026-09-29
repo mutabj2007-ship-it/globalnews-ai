@@ -161,9 +161,13 @@ describe('R4 header privacy — C/D: the email is reachable ONLY by deliberate i
       per-caller GET /users/me, because the deletion gate requires them to type
       it back exactly. The header's closed trigger still discloses nothing, and
       the list is still CLOSED: any third file fails this test.
+
+      ALPHA VISUAL ACCEPTANCE REPAIR R1 — the settings page was split into a server wrapper
+      (chrome + language) and its client body. The address render MOVED with the body; it did
+      not multiply. Still exactly two files.
     */
     expect(offenders.sort()).toEqual([
-      'app/account/settings/page.tsx',
+      'components/account/AccountSettingsBody.tsx',
       'components/navigation/AccountControl.tsx',
     ]);
   });

@@ -19,8 +19,14 @@ import { useAskNav } from './AskNavShell';
  * fix from PR #66 hold. A wrapping <div> here would silently break it.
  */
 export function AskShellFrame({ locale }: { readonly locale: AskNavLocale }): JSX.Element {
-  const { open, setOpen } = useAskNav();
+  const { open, setOpen, cleared } = useAskNav();
   const strings = askNavStringsFor(locale);
+  /*
+    ALPHA VISUAL ACCEPTANCE REPAIR R1 — New question / Sign out: the conversation is gone
+    from the screen at once, before the clean document load replaces the page. Same shape as
+    the route's Suspense fallback, so the page column is unchanged.
+  */
+  if (cleared) return <main data-ask="cleared" className="min-h-0 flex-1 bg-void" />;
   return (
     <AskFrameScreen
       locale={locale}

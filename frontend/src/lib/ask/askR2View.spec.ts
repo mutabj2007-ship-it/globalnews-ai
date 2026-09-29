@@ -251,10 +251,13 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
       'en',
       (iso3) => names[iso3] ?? iso3,
     );
+    /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — no question given here, so no draft choices. */
     expect(v.clarification).toEqual({
       byExecutor: true,
       candidates: ['DR Congo', 'Republic of the Congo'],
       lead: null,
+      suggestion: null,
+      choices: [],
     });
     expect(v.freshness).toBe(EN.askedBeforeAnswering);
   });
@@ -268,7 +271,17 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
       EN,
       'en',
     );
-    expect(v.clarification).toEqual({ byExecutor: false, candidates: [], lead: null });
+    /*
+      ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — the freshness line keeps D25's "nothing has run",
+      but the body is never only that: with no known code the reader is asked the fallback.
+    */
+    expect(v.clarification).toEqual({
+      byExecutor: false,
+      candidates: [],
+      lead: EN.clarify.fallback,
+      suggestion: null,
+      choices: [],
+    });
     expect(v.freshness).toBe(EN.freshness.nothingRan);
   });
 });

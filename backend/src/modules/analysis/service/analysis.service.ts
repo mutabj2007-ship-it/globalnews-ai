@@ -57,6 +57,10 @@ import {
   orderByFocus,
 } from '../anchor/conversation-subject.util';
 import { NewsService, readProviderFailures } from '../../news/news.service';
+import {
+  readInstitutionalStatusQuestion,
+  scoreInstitutionalStatusRelevance,
+} from '../../news/relevance/governed-institutions';
 import { CountryNewsService } from '../../news/country/country-news.service';
 import type { AnalysisProvider } from '../interfaces';
 import type { EvidenceFreshnessFact } from '../interfaces/analysis-provider.interface';
@@ -1880,6 +1884,8 @@ export class AnalysisService {
           const relationalQuery = sourceIntent
             ? undefined
             : deriveRelationalSearchQueries(retrievalQuery);
+          /* ASK CURRENT REPORTING FINAL CLOSURE R1 (M2) — see governed-institutions.ts. */
+          const institutionalStatus = readInstitutionalStatusQuestion(retrievalQuery);
 
           if (sourceAttributed) {
             /*
@@ -2094,6 +2100,72 @@ export class AnalysisService {
 
             articles = perSide.articles;
             retrievalContext = perSide.retrievalContext;
+          } else if (institutionalStatus !== null) {
+            /*
+             * ASK CURRENT REPORTING FINAL CLOSURE R1 (M2) — AN INSTITUTIONAL CURRENT-STATUS
+             * QUESTION ("What is the current policy interest rate of the National Bank of
+             * Poland…?", "Jaka jest stopa referencyjna NBP?").
+             *
+             * Reached only when the reader's own question names a governed institution AND one
+             * of its governed status subjects, and nothing above (a typed country, a source
+             * frame, a relational or multi-side shape) already claimed it — so every other
+             * question takes exactly its old path. ONE provider search, anchor first
+             * ("Poland interest rate"), through the SAME tier ladder; relevance by governed
+             * institution + subject forms instead of the whole prose sentence. No threshold is
+             * lowered: zero admitted articles is still zero, and ends at the existing
+             * zero-evidence surface with no model call.
+             */
+            const { institution, subject, providerQuery } = institutionalStatus;
+            this.logger.debug(
+              `Institutional status question (${institution.id}/${subject.id}); provider query "${providerQuery}".`,
+            );
+            let institutionalResponse = await this.newsService.search(
+              providerQuery,
+              SEARCH_POOL_SIZE,
+              { type: 'institutional', institutionId: institution.id, subjectId: subject.id },
+            );
+            let institutionalOutcome: RetrievalOutcome | undefined;
+            const institutionalFailures = readProviderFailures(institutionalResponse);
+            if (institutionalResponse.articles.length === 0 && institutionalFailures.length > 0) {
+              /* The generic branch's own rule: a refused provider is never retried; bounded
+                 LOCAL retained reporting is consulted through the SAME governed gate. */
+              institutionalOutcome = retrievalOutcome(
+                0,
+                new Set(institutionalFailures.map((failure) => failure.kind)),
+              );
+              const retainedTerms = [
+                institution.anchor,
+                ...institution.acronyms,
+                ...providerQuery.split(/\s+/),
+              ]
+                .map((term) => term.toLowerCase())
+                .filter((term, i, all) => term.length >= 3 && all.indexOf(term) === i);
+              const retained = (
+                await this.newsService.findRetainedByQuery(
+                  providerQuery,
+                  retainedTerms,
+                  SEARCH_POOL_SIZE,
+                  RETAINED_MAX_AGE_MINUTES,
+                )
+              ).filter(
+                (article) =>
+                  scoreInstitutionalStatusRelevance(article, institution, subject).isRelevant,
+              );
+              if (retained.length > 0) {
+                institutionalResponse = {
+                  ...institutionalResponse,
+                  articles: retained,
+                  dataMode: 'cached',
+                  fallbackReason: 'provider-error',
+                };
+                institutionalOutcome = 'RETAINED_ONLY';
+              }
+            }
+            articles = institutionalResponse.articles;
+            retrievalContext = this.toRetrievalContext(institutionalResponse);
+            if (institutionalOutcome !== undefined) {
+              retrievalContext = { ...retrievalContext, outcome: institutionalOutcome };
+            }
           } else if (requestedLanguage === 'pl') {
             // Milestone #47 — staged Polish retrieval architecture.
             // Reached only when detectLocation() AND

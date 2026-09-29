@@ -63,6 +63,7 @@ export function AskR2TurnView({
   context,
   onRunDeeper,
   displayOnly = false,
+  onUseQuestion,
 }: {
   readonly turn: AskR2Turn;
   readonly locale: AskR2Locale;
@@ -70,6 +71,11 @@ export function AskR2TurnView({
   readonly onRunDeeper?: (question: string) => void;
   /** The Open-full-analysis target itself: no link back to the page it is on. */
   readonly displayOnly?: boolean;
+  /**
+   * ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — a clarification's suggested question or choice is
+   * placed in the composer as a DRAFT. Nothing is sent until the reader presses Ask.
+   */
+  readonly onUseQuestion?: (question: string) => void;
 }): JSX.Element {
   const s = askR2Strings(locale);
   const payload = turn.payload ?? null;
@@ -90,7 +96,13 @@ export function AskR2TurnView({
     );
   }
 
-  const view = askR2View(payload, s, locale, (iso3) => localisedCountryName(iso3, locale) ?? iso3);
+  const view = askR2View(
+    payload,
+    s,
+    locale,
+    (iso3) => localisedCountryName(iso3, locale) ?? iso3,
+    turn.question,
+  );
   const operationId = turn.operation?.operationId;
 
   return (
@@ -145,22 +157,59 @@ export function AskR2TurnView({
             <>
               <p className="text-[19px] font-bold leading-[1.2] md:text-[22px]">{s.whichOne}</p>
               <ul data-ask="clarification-candidates" className="flex flex-col gap-2">
-                {view.clarification.candidates.map((name) => (
-                  <li
-                    key={name}
-                    className="flex min-h-[48px] items-center rounded-[10px] border border-[#1d4a73] bg-[#06223d] px-3.5 text-[15px] font-semibold"
-                  >
-                    {name}
-                  </li>
-                ))}
+                {view.clarification.candidates.map((name, i) => {
+                  const choice = view.clarification.choices[i];
+                  const itemClass =
+                    'flex min-h-[48px] w-full items-center rounded-[10px] border border-[#1d4a73] bg-[#06223d] px-3.5 text-start text-[15px] font-semibold';
+                  return (
+                    <li key={name}>
+                      {onUseQuestion !== undefined && choice !== undefined ? (
+                        <button
+                          type="button"
+                          data-ask="clarification-choice"
+                          onClick={() => onUseQuestion(choice.question)}
+                          className={`${itemClass} hover:border-[rgba(34,211,238,0.55)]`}
+                        >
+                          {name}
+                        </button>
+                      ) : (
+                        <span className={itemClass}>{name}</span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
+              {onUseQuestion !== undefined && view.clarification.choices.length > 0 && (
+                <p className="text-[13px] text-[#8fa6c0]">{s.clarify.chooseHint}</p>
+              )}
             </>
-          ) : view.clarification.lead !== null ? (
-            <p data-ask="clarification-lead" className="text-[16px] leading-[1.55]">
-              {view.clarification.lead}
-            </p>
           ) : (
-            <p className="text-[16px] leading-[1.55]">{s.freshness.nothingRan}</p>
+            /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — never a clarification without a question. */
+            <>
+              <p data-ask="clarification-lead" className="text-[16px] leading-[1.55]">
+                {view.clarification.lead ?? s.clarify.fallback}
+              </p>
+              {view.clarification.suggestion !== null && (
+                <div data-ask="clarification-suggestion" className="flex flex-col gap-2">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#8fa6c0]">
+                    {s.clarify.suggestion}
+                  </p>
+                  <p className="text-[15px] font-semibold leading-[1.45]">
+                    {view.clarification.suggestion}
+                  </p>
+                  {onUseQuestion !== undefined && (
+                    <button
+                      type="button"
+                      data-ask="clarification-use"
+                      onClick={() => onUseQuestion(view.clarification.suggestion ?? '')}
+                      className="inline-flex min-h-11 w-fit items-center rounded-[9px] border border-[#1d4a73] bg-[#06223d] px-3.5 text-[14px] font-semibold hover:border-[rgba(34,211,238,0.55)]"
+                    >
+                      {s.clarify.useSuggestion}
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
           )}
           <p className="font-mono text-[12px] text-[#6f89a8]">
             {view.clarification.byExecutor ? s.clarificationFooterNoAi : s.clarificationFooter}

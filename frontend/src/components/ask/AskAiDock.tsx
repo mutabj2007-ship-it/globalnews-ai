@@ -174,6 +174,11 @@ const LAUNCHER_SUPPRESSED_ROUTES: ReadonlySet<string> = new Set(['/my-intelligen
  */
 const MAP_ROUTE = '/map';
 
+const ASK_STANDALONE_UTILITY_ROUTES: ReadonlySet<string> = new Set([
+  '/support',
+  '/account/settings',
+]);
+
 const ASK_CONTINUITY_ROUTES: ReadonlySet<string> = new Set([
   `${ASK_CANONICAL_ROUTE}/recent`,
   '/saved',
@@ -187,6 +192,14 @@ export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   /* STANDALONE CONTINUITY SHELL CLOSURE — Recent and Saved are standalone Ask surfaces
      whose "New question" already opens Ask, so the platform dock unmounts, as on /ask. */
   if (pathname !== null && ASK_CONTINUITY_ROUTES.has(pathname)) return null;
+  /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — standalone Help & feedback and Settings stay inside Ask. */
+  if (
+    props.standaloneRoot === true &&
+    pathname !== null &&
+    ASK_STANDALONE_UTILITY_ROUTES.has(pathname)
+  ) {
+    return null;
+  }
   return (
     <GlobalAskAiDock
       language={props.language}

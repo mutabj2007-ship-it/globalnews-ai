@@ -4,7 +4,11 @@ import {
   AskR2ExecutionAdapter,
   estimateUnits,
   estimateBackgroundUnits,
+  executorVerificationOutcome,
 } from './ask-r2-execution.adapter';
+import { routeAskR2 } from '../ask-router/ask-r2-route';
+import { deriveAnswerState } from '../ask-router/answer-state';
+import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
 import { askRequestContext } from './ask-request-context';
 import { GeneralBackgroundProviderError } from '../analysis/interfaces';
 import {
@@ -1154,5 +1158,276 @@ describe('A × F — General Background: one truthful observation per outcome, n
       evidenceRolesObtained: ['REPORTING'],
     });
     expect(calls.background).toEqual([]);
+  });
+});
+
+/*
+ * ASK CURRENT REPORTING FINAL CLOSURE R1 (M1) — the current-status verification seam.
+ *
+ * The defect: a current-status plan carries frozen C's verification contract, the ONE
+ * sufficiency derivation reads the executor's verdict from `obtained.verification`, and this
+ * executor never supplied one. The executor now returns a frozen outcome it can truthfully
+ * establish. PARTIAL is not reachable from the executor yet: the Analysis response carries no
+ * deterministic agreement fact (the missing seam, reported, not invented) — so these tests
+ * prove the seam's CONTRACT at the derivation, and the executor's honest verdict end to end.
+ */
+describe('M1 — current-status verification: the executor supplies a frozen verdict', () => {
+  const CURRENT_STATUS = 'Who is the current president of Poland?';
+  const route = (q: string) =>
+    routeAskR2(
+      {
+        originalQuestion: q,
+        sourceLanguage: 'en',
+        normalizationLanguage: 'en',
+        displayLanguage: 'en',
+        origin: 'ASK',
+      },
+      { computeConsent: 'GRANTED', requestInstant: '2026-09-29T10:00:00Z' },
+      { specialistRegistry: landedSpecialistRegistryPort(() => ['CONFLICT']) },
+    ).plan;
+
+  it('the fixture is a genuine current-status plan: contract present, OFFICIAL not bound', () => {
+    const plan = route(CURRENT_STATUS);
+    /* its class label is SPECIALIST_DOMAIN ("president" also reads as political); what makes it
+       current-status is the contract frozen C attached */
+    expect(plan.verification).not.toBeNull();
+    expect(plan.verification?.mode).toBe('CURRENT_STATUS');
+    expect(plan.verification?.minIndependentFreshSources).toBe(2);
+    expect(plan.verification?.admissibleOutcomes).not.toContain('CURRENTLY_VERIFIED');
+  });
+
+  it('the executor verdict is a frozen outcome — INSUFFICIENT_EVIDENCE — never undefined', () => {
+    expect(executorVerificationOutcome(route(CURRENT_STATUS))).toBe('INSUFFICIENT_EVIDENCE');
+  });
+
+  it('end to end: retrieval success (articles + a model answer) is still not verification', async () => {
+    const { adapter } = harness({
+      analysis: async (p) => {
+        p.usageSink?.({ promptTokens: 3000, completionTokens: 800 });
+        return {
+          analysis: {} as never,
+          articles: [{} as never, {} as never, {} as never, {} as never],
+          retrievalContext: {} as never,
+        } as unknown as AnalysisApiResponse;
+      },
+    });
+    const plan = await adapter.prepare(req(CURRENT_STATUS));
+    const result = await inRequest(() => adapter.execute(req(CURRENT_STATUS), plan, 'op-cs'));
+    const payload = JSON.parse(result.payloadJson) as {
+      answer: { state: string; basis: string };
+    };
+    expect(payload.answer).toMatchObject({ state: 'INSUFFICIENT', basis: 'VERIFICATION_NOT_MET' });
+    expect(payload.answer.state).not.toBe('CURRENTLY_VERIFIED');
+  });
+
+  it('the seam contract: a valid partial verdict with ≥2 reporting items → PARTIAL', () => {
+    const plan = route(CURRENT_STATUS);
+    expect(
+      deriveAnswerState(plan, {
+        items: { REPORTING: 2 },
+        producedAnswer: true,
+        verification: 'CURRENT_REPORTING_PARTIAL_VERIFICATION',
+      }),
+    ).toMatchObject({ state: 'PARTIAL', basis: 'REPORTING_PARTIAL_VERIFICATION' });
+  });
+
+  it('verification unmet → INSUFFICIENT (one source; or the honest INSUFFICIENT_EVIDENCE verdict)', () => {
+    const plan = route(CURRENT_STATUS);
+    for (const obtained of [
+      { items: { REPORTING: 1 }, verification: 'CURRENT_REPORTING_PARTIAL_VERIFICATION' as const },
+      { items: { REPORTING: 5 }, verification: 'INSUFFICIENT_EVIDENCE' as const },
+      { items: { REPORTING: 5 } },
+    ]) {
+      expect(deriveAnswerState(plan, { producedAnswer: true, ...obtained })).toMatchObject({
+        state: 'INSUFFICIENT',
+        basis: 'VERIFICATION_NOT_MET',
+      });
+    }
+  });
+
+  it('OFFICIAL absent can never become CURRENTLY_VERIFIED — not even with a claimed verdict', () => {
+    const plan = route(CURRENT_STATUS);
+    for (const items of [{ REPORTING: 9 }, { REPORTING: 9, OFFICIAL: 1 }]) {
+      expect(
+        deriveAnswerState(plan, { items, producedAnswer: true, verification: 'CURRENTLY_VERIFIED' })
+          .state,
+      ).not.toBe('CURRENTLY_VERIFIED');
+    }
+  });
+
+  it('stable background and ordinary current reporting carry no contract and get no verdict', () => {
+    const background = route('What is an induction motor?');
+    expect(background.verification).toBeNull();
+    expect(executorVerificationOutcome(background)).toBeUndefined();
+    const reporting = route('What is happening in Kenya?');
+    expect(reporting.verification).toBeNull();
+    expect(executorVerificationOutcome(reporting)).toBeUndefined();
+    /*
+      CURRENT STATUS CORROBORATION R1 — the governed NBP policy-rate question is now a
+      current-status question on purpose (its answer depends on the time of asking), so it
+      carries the contract and is decided by deterministic corroboration.
+    */
+    const nbp = route(
+      'What is the current policy interest rate of the National Bank of Poland, and when was it last changed?',
+    );
+    expect(nbp.questionClass).toBe('CURRENT_STATUS_VERIFICATION');
+    expect(nbp.verification?.admissibleOutcomes).toEqual([
+      'CURRENT_REPORTING_PARTIAL_VERIFICATION',
+      'INSUFFICIENT_EVIDENCE',
+    ]);
+  });
+
+  it('ordinary current reporting is derived exactly as before', async () => {
+    const { adapter } = harness({});
+    const q = 'What is happening in Kenya?';
+    const plan = await adapter.prepare(req(q));
+    const result = await inRequest(() => adapter.execute(req(q), plan, 'op-k'));
+    expect(JSON.parse(result.payloadJson).answer).toMatchObject({
+      state: 'CURRENT_REPORTING',
+      basis: 'REQUIRED_EVIDENCE_OBTAINED',
+    });
+  });
+});
+
+/*
+ * CURRENT STATUS CORROBORATION R1 — end to end through the real adapter: the deterministic
+ * seam decides PARTIAL vs INSUFFICIENT, the derivation receives the number of independent
+ * agreeing reports (never raw articles.length), and a PARTIAL answer carries the as-of time of
+ * the freshest corroborating report.
+ */
+describe('CURRENT STATUS CORROBORATION R1 — PARTIAL only on a deterministic corroborated fact', () => {
+  const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+  const art = (id: string, domain: string, title: string, hours: number) =>
+    ({
+      id,
+      title,
+      summary: '',
+      url: `https://${domain}/n/${id}`,
+      sourceId: 'gnews',
+      sourceName: domain,
+      category: 'world',
+      sourcesCount: 1,
+      publishedAt: ago(hours),
+      publishedAtBasis: 'publisher',
+    }) as never;
+  const withArticles = (articles: unknown[]) =>
+    harness({
+      analysis: async (p) => {
+        p.usageSink?.({ promptTokens: 3000, completionTokens: 800 });
+        return {
+          analysis: {} as never,
+          articles,
+          retrievalContext: {} as never,
+        } as unknown as AnalysisApiResponse;
+      },
+    });
+  const execute = async (q: string, articles: unknown[], lang: 'en' | 'pl' = 'en') => {
+    const { adapter } = withArticles(articles);
+    const plan = await adapter.prepare(req(q, lang));
+    const result = await inRequest(() => adapter.execute(req(q, lang), plan, 'op-c'));
+    return JSON.parse(result.payloadJson) as {
+      answer: { state: string; basis: string };
+      verification: {
+        outcome: string;
+        reason: string;
+        family: string | null;
+        reports: number;
+        asOf: string | null;
+        fact: { family: string; value: string | number } | null;
+      } | null;
+    };
+  };
+  const NBP_Q =
+    'What is the current policy interest rate of the National Bank of Poland, and when was it last changed?';
+  const OFFICE_Q = 'Who is the current president of Poland?';
+
+  it('office holder: two fresh independent reports, same person → PARTIAL, as of the freshest', async () => {
+    const p = await execute(OFFICE_Q, [
+      art('a', 'reuters.com', 'Polish President Karol Nawrocki vetoes budget bill', 9),
+      art('b', 'notesfrompoland.com', "Poland's President Karol Nawrocki signs defence law", 2),
+    ]);
+    expect(p.answer).toMatchObject({ state: 'PARTIAL', basis: 'REPORTING_PARTIAL_VERIFICATION' });
+    expect(p.verification).toMatchObject({
+      outcome: 'CURRENT_REPORTING_PARTIAL_VERIFICATION',
+      reason: 'CORROBORATED',
+      family: 'OFFICE_HOLDER',
+      reports: 2,
+      fact: { family: 'OFFICE_HOLDER', value: 'Karol Nawrocki' },
+    });
+    const asOf = Date.parse(p.verification!.asOf!);
+    expect(Math.abs(asOf - (Date.now() - 2 * 3_600_000))).toBeLessThan(60_000);
+  });
+
+  it('policy rate (PL question): EN + PL reports agree on 575 bps → PARTIAL', async () => {
+    const p = await execute(
+      'Jaka jest obecna stopa referencyjna NBP?',
+      [
+        art('a', 'reuters.com', "Poland's central bank holds interest rates at 5.75%", 20),
+        art('b', 'money.pl', 'Stopa referencyjna NBP wynosi 5,75 proc.', 5),
+      ],
+      'pl',
+    );
+    expect(p.answer.state).toBe('PARTIAL');
+    expect(p.verification).toMatchObject({
+      family: 'POLICY_RATE',
+      reports: 2,
+      fact: { value: 575 },
+    });
+  });
+
+  it('many articles but no corroborated fact → INSUFFICIENT; the count passed is 0, not 5', async () => {
+    const p = await execute(NBP_Q, [
+      art('a', 'reuters.com', "Poland's central bank holds interest rates at 5.75%", 20),
+      art('b', 'money.pl', 'RPP obniżyła stopy procentowe do 5,50 proc.', 5),
+      art('c', 'bbc.co.uk', 'Polish economy grows', 5),
+      art('d', 'ft.com', 'Zloty weakens', 5),
+      art('e', 'wp.pl', 'Pogoda w Warszawie', 5),
+    ]);
+    expect(p.answer).toMatchObject({ state: 'INSUFFICIENT', basis: 'VERIFICATION_NOT_MET' });
+    expect(p.verification).toMatchObject({
+      outcome: 'INSUFFICIENT_EVIDENCE',
+      reason: 'CONFLICTING_FACTS',
+      reports: 0,
+      asOf: null,
+      fact: null,
+    });
+  });
+
+  it('one corroborating report is not two → INSUFFICIENT', async () => {
+    const p = await execute(OFFICE_Q, [
+      art('a', 'reuters.com', 'Polish President Karol Nawrocki vetoes budget bill', 9),
+      art('b', 'reuters.com', "Poland's President Karol Nawrocki signs law", 2),
+    ]);
+    expect(p.answer.state).toBe('INSUFFICIENT');
+    expect(p.verification).toMatchObject({
+      reason: 'INSUFFICIENT_INDEPENDENT_REPORTS',
+      reports: 1,
+    });
+  });
+
+  it('an unsupported current-status category stays honestly INSUFFICIENT', async () => {
+    const p = await execute('Who is the current minister of finance of Poland?', [
+      art('a', 'reuters.com', 'Polish finance minister Andrzej Domański presents budget', 9),
+      art('b', 'notesfrompoland.com', 'Finance minister Andrzej Domański on taxes', 2),
+    ]);
+    expect(p.answer.state).toBe('INSUFFICIENT');
+    expect(p.verification).toMatchObject({ reason: 'UNSUPPORTED_FACT_FAMILY' });
+  });
+
+  it('never CURRENTLY_VERIFIED, and never OFFICIAL — whatever reporting says', async () => {
+    const p = await execute(OFFICE_Q, [
+      art('a', 'reuters.com', 'Polish President Karol Nawrocki vetoes budget bill', 9),
+      art('b', 'notesfrompoland.com', "Poland's President Karol Nawrocki signs defence law", 2),
+    ]);
+    expect(p.answer.state).not.toBe('CURRENTLY_VERIFIED');
+    expect(JSON.stringify(p)).not.toContain('OFFICIAL_CURRENT_EVIDENCE');
+  });
+
+  it('plans without a contract carry no verification block and are unchanged', async () => {
+    const p = await execute('What is happening in Kenya?', [
+      art('a', 'reuters.com', 'Kenya news', 9),
+    ]);
+    expect(p.answer.state).toBe('CURRENT_REPORTING');
+    expect(p.verification).toBeNull();
   });
 });

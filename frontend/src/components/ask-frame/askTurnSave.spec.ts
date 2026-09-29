@@ -50,7 +50,14 @@ const op = (over: Partial<AskV2Operation> = {}): AskV2Operation =>
     bookmarked: false,
     result: {
       id: 'sr-1',
-      payload: {},
+      payload: {
+        schema: 'ask-r2-result/1',
+        answer: {
+          state: 'CURRENT_REPORTING',
+          basis: 'REQUIRED_EVIDENCE_OBTAINED',
+          missingRoles: [],
+        },
+      },
       evidenceRevision: 'r',
       expiresAt: '2031-01-01T00:00:00Z',
       expired: false,
@@ -125,11 +132,44 @@ describe('Save / Saved — one request per press, nothing else', () => {
     expect(calls.some((c) => NON_BOOKMARK.test(c.path))).toBe(false);
   });
 
-  it.each([
+  it.each<[string, AskV2Operation | undefined]>([
     ['no turnId (not the reader’s stored turn)', op({ turnId: null })],
     ['not completed', op({ status: 'QUOTED' })],
     ['no stored result', op({ result: null })],
     ['no operation at all', undefined],
+    /* ALPHA VISUAL ACCEPTANCE REPAIR (M4) — no produced answer, nothing to bookmark. */
+    ...(['CLARIFICATION_REQUIRED', 'INSUFFICIENT', 'CAPABILITY_UNAVAILABLE'] as const).map(
+      (state) =>
+        [
+          `no produced answer: ${state}`,
+          op({
+            result: {
+              id: 'sr-1',
+              payload: {
+                schema: 'ask-r2-result/1',
+                answer: { state, basis: 'x', missingRoles: [] },
+              },
+              evidenceRevision: 'r',
+              expiresAt: '2031-01-01T00:00:00Z',
+              expired: false,
+              displayOnly: true,
+            },
+          }),
+        ] as [string, AskV2Operation],
+    ),
+    [
+      'an unreadable payload',
+      op({
+        result: {
+          id: 'sr-1',
+          payload: {},
+          evidenceRevision: 'r',
+          expiresAt: '2031-01-01T00:00:00Z',
+          expired: false,
+          displayOnly: true,
+        },
+      }),
+    ],
   ])('renders NOTHING when ineligible: %s', async (_label, operation) => {
     const r = await mount(operation);
     expect(r.toJSON()).toBeNull();

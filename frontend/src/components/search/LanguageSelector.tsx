@@ -6,6 +6,14 @@ import type { LanguageCode } from '@globalnews-ai/shared';
 import { ACTIVE_LANGUAGES, LANGUAGE_NATIVE_LABELS } from '@/lib/i18n/languages';
 
 export type LanguageSelectorVariant = 'desktop' | 'mobile';
+/**
+ * ALPHA VISUAL ACCEPTANCE REPAIR R1 — where the MOBILE popup is anchored. 'header' (the
+ * default) is the released platform behaviour: the popup is positioned against NavBar's
+ * `relative` mobile header row. 'self' anchors it to this control's own wrapper, for a host
+ * with no such row — the standalone Ask drawer, where the header anchor resolved to the
+ * fixed drawer itself and put the EN/PL list below the viewport.
+ */
+export type LanguageSelectorAnchor = 'header' | 'self';
 
 interface LanguageSelectorProps {
   value: LanguageCode;
@@ -22,6 +30,8 @@ interface LanguageSelectorProps {
    * the state machine, the ARIA model, the commit path — is shared.
    */
   variant?: LanguageSelectorVariant;
+  /** ALPHA VISUAL ACCEPTANCE REPAIR R1 — see LanguageSelectorAnchor. Default 'header'. */
+  anchor?: LanguageSelectorAnchor;
 }
 
 /**
@@ -71,6 +81,7 @@ export function LanguageSelector({
   label,
   actionLabel,
   variant = 'desktop',
+  anchor = 'header',
 }: LanguageSelectorProps): JSX.Element {
   const isMobile = variant === 'mobile';
 
@@ -309,6 +320,16 @@ export function LanguageSelector({
   const popupClass = isMobile
     ? 'absolute right-[12px] top-[calc(100%+8px)] z-[60] box-border w-[176px] rounded-cd-12 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup-m'
     : 'absolute right-0 top-[calc(100%+8px)] z-[60] box-border w-[168px] rounded-cd-10 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup';
+  /*
+    ALPHA VISUAL ACCEPTANCE REPAIR R1 — anchor 'self': the SAME mobile popup (same tokens,
+    width, radius, offset, z), positioned from this control's own left edge instead of the
+    header row's right inset, and fully opaque (the drawer below it is a list of live controls).
+    Derived, not duplicated, so the released geometry stays one string.
+  */
+  const anchoredToSelf = isMobile && anchor === 'self';
+  const shownPopupClass = anchoredToSelf
+    ? popupClass.replace('right-[12px]', 'left-0').replace('bg-cd-fill-popup', 'bg-[rgb(6,12,24)]')
+    : popupClass;
 
   /*
     §4 — ROW GEOMETRY. 40px desktop / 44px mobile (the touch floor), 0 11px
@@ -327,7 +348,7 @@ export function LanguageSelector({
       and the popup is not portalled, which is what makes the single contains()
       test above correct.
     */
-    <div ref={wrapperRef} className={isMobile ? 'flex-none' : 'relative flex-none'}>
+    <div ref={wrapperRef} className={isMobile && !anchoredToSelf ? 'flex-none' : 'relative flex-none'}>
       <button
         ref={triggerRef}
         type="button"
@@ -389,7 +410,7 @@ export function LanguageSelector({
       </button>
 
       {isOpen && (
-        <div id={listboxId} role="listbox" aria-label={actionLabel} className={popupClass}>
+        <div id={listboxId} role="listbox" aria-label={actionLabel} className={shownPopupClass}>
           {ACTIVE_LANGUAGES.map((code) => {
             const isSelected = code === value;
             const isActive = code === activeCode;
