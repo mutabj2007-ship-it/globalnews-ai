@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ProviderExecutionRegistry } from './telemetry/provider-execution.registry';
 import { logWithRequestId } from '../../observability/log-with-request-id';
+import { resolveCountryByAnyIdentifier, type CountryMeta } from '@globalnews-ai/shared';
 import type {
   LanguageCode,
   NewsArticle,
@@ -37,6 +38,11 @@ import {
   scoreInstitutionalStatusRelevance,
   type GovernedInstitutionId,
 } from './relevance/governed-institutions';
+import {
+  eventFamily,
+  scoreRelationalEventRelevance,
+  type EventFamilyId,
+} from './relevance/relational-event';
 import { collapseCrossProviderDuplicates } from './cross-provider-dedup.util';
 import { collapseDuplicateStories } from './identity/article-identity.util';
 import { resolveProviderFailureKind, type ProviderFailureKind } from './providers/gnews.provider';
@@ -137,7 +143,13 @@ export type RelevanceMode =
     ASK CURRENT REPORTING FINAL CLOSURE R1 (M2) — an institutional current-status question
     (governed-institutions.ts). Opt-in by exactly one caller; every other mode is unchanged.
   */
-  | { type: 'institutional'; institutionId: GovernedInstitutionId; subjectId: 'POLICY_RATE' };
+  | { type: 'institutional'; institutionId: GovernedInstitutionId; subjectId: 'POLICY_RATE' }
+  /*
+    P1 MULTI-ENTITY / TOPIC RELEVANCE CLOSURE R1 — Entity A → event → Entity B
+    (relational-event.ts): both entities AND the event family, stated together. Opt-in by
+    exactly one caller; every other mode is unchanged.
+  */
+  | { type: 'relationalEvent'; entities: readonly string[]; familyId: EventFamilyId };
 
 /**
  * The subset of RelevanceMode that actually triggers filtering —
@@ -2084,6 +2096,15 @@ export class NewsService {
   ): { isRelevant: boolean } {
     if (relevanceMode.type === 'generic') {
       return scoreGenericRelevance(article, query);
+    }
+
+    if (relevanceMode.type === 'relationalEvent') {
+      const entities = relevanceMode.entities
+        .map((iso3) => resolveCountryByAnyIdentifier(iso3))
+        .filter((country): country is CountryMeta => country !== undefined);
+      return entities.length !== relevanceMode.entities.length
+        ? { isRelevant: false }
+        : scoreRelationalEventRelevance(article, entities, eventFamily(relevanceMode.familyId));
     }
 
     if (relevanceMode.type === 'institutional') {

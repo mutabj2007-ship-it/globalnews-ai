@@ -61,6 +61,10 @@ import {
   readInstitutionalStatusQuestion,
   scoreInstitutionalStatusRelevance,
 } from '../../news/relevance/governed-institutions';
+import {
+  readRelationalEventQuestion,
+  scoreRelationalEventRelevance,
+} from '../../news/relevance/relational-event';
 import { CountryNewsService } from '../../news/country/country-news.service';
 import type { AnalysisProvider } from '../interfaces';
 import type { EvidenceFreshnessFact } from '../interfaces/analysis-provider.interface';
@@ -1224,6 +1228,20 @@ export class AnalysisService {
               : mapGeographySuppressed
                 ? undefined
                 : storyAnchoredLocation;
+        /*
+          P1 MULTI-ENTITY / TOPIC RELEVANCE CLOSURE R1 — the reader's own relational event, if
+          they typed one. Not consulted where an earlier, more specific authority already owns
+          the question (a source frame, a declared region, a coordination/comparison the
+          classifier split into sides, a clarification), so every such question keeps its path.
+        */
+        const relationalEvent =
+          sourceIntent === undefined &&
+          sourceAttributed === undefined &&
+          declaredRegion === undefined &&
+          classification.sides.length < 2 &&
+          classification.intent !== 'CLARIFICATION_REQUIRED'
+            ? readRelationalEventQuestion(retrievalQuery, requestedLanguage)
+            : null;
 
         /**
          * R4 C1 — THE ANCHOR LOOKUP MOVES AHEAD OF RETRIEVAL.
@@ -1621,6 +1639,68 @@ export class AnalysisService {
               articles = [];
               retrievalContext = clarification;
             }
+          }
+        } else if (relationalEvent !== null) {
+          /*
+           * P1 MULTI-ENTITY / TOPIC RELEVANCE CLOSURE R1 — Entity A → event → Entity B.
+           *
+           * The reader named TWO countries and ONE event ("Russian missile and drone attacks
+           * on Ukraine", "Did Russia launch … attacks on Ukraine?"). Before this branch the
+           * classifier kept only the demonym's country, the country branch ran with no topic,
+           * and one of the two entities — and the event itself — was silently discarded.
+           * Here both entities and the event are kept: ONE provider search carrying all three,
+           * gated by relationship-aware relevance (relational-event.ts). One entity alone never
+           * qualifies. Zero admitted evidence still ends at the existing zero-evidence surface
+           * with no model call.
+           */
+          const { entities, family, providerQuery } = relationalEvent;
+          this.logger.debug(
+            `Relational event question: ${entities[0].iso3} ↔ ${entities[1].iso3} (${family.id}); ` +
+              `provider query "${providerQuery}".`,
+          );
+          const mode = {
+            type: 'relationalEvent' as const,
+            entities: entities.map((entity) => entity.iso3),
+            familyId: family.id,
+          };
+          let relationalResponse = await this.newsService.search(
+            providerQuery,
+            SEARCH_POOL_SIZE,
+            mode,
+          );
+          let relationalOutcome: RetrievalOutcome | undefined;
+          const relationalFailures = readProviderFailures(relationalResponse);
+          if (relationalResponse.articles.length === 0 && relationalFailures.length > 0) {
+            /* The generic branch's own rule: a refused provider is never retried; bounded
+               LOCAL retained reporting is consulted through the SAME relationship gate. */
+            relationalOutcome = retrievalOutcome(
+              0,
+              new Set(relationalFailures.map((failure) => failure.kind)),
+            );
+            const retained = (
+              await this.newsService.findRetainedByQuery(
+                providerQuery,
+                [...entities.map((entity) => entity.name.toLowerCase()), family.query],
+                SEARCH_POOL_SIZE,
+                RETAINED_MAX_AGE_MINUTES,
+              )
+            ).filter(
+              (article) => scoreRelationalEventRelevance(article, entities, family).isRelevant,
+            );
+            if (retained.length > 0) {
+              relationalResponse = {
+                ...relationalResponse,
+                articles: retained,
+                dataMode: 'cached',
+                fallbackReason: 'provider-error',
+              };
+              relationalOutcome = 'RETAINED_ONLY';
+            }
+          }
+          articles = relationalResponse.articles;
+          retrievalContext = this.toRetrievalContext(relationalResponse);
+          if (relationalOutcome !== undefined) {
+            retrievalContext = { ...retrievalContext, outcome: relationalOutcome };
           }
         } else if (location && sourceIntent === undefined) {
           const { country, city, geoMatch } = location;
