@@ -11,9 +11,11 @@ import { accountFetch } from './accountFetch';
  * provider-free. There is no second result store and no client-side result cache here.
  *
  * AVAILABILITY IS A FACT THE SERVER STATES. `ASK_V2_ENABLED` is default OFF and the routes
- * then answer 404; a signed-out reader gets 401. Both are NAMED outcomes (`UNAVAILABLE`,
- * `SIGNED_OUT`), so the caller falls back to the existing Ask — the contract's rollback path —
- * rather than guessing. Every mutation goes through `accountFetch` (session cookie + CSRF).
+ * then answer 404; a signed-out reader gets 401. Both are NAMED outcomes, so the caller acts
+ * on what the server said rather than guessing: `UNAVAILABLE` (Ask V2 disabled) takes the
+ * existing Ask — the contract's rollback path — while `SIGNED_OUT` is a sign-in requirement
+ * and NEVER falls back to it (PR #66). Every mutation goes through `accountFetch` (session
+ * cookie + CSRF).
  */
 
 export type AskV2Language = 'en' | 'pl';
@@ -68,6 +70,14 @@ export interface AskR2Payload {
   readonly aiExecuted: boolean;
   readonly modelPriorCitable: false;
   readonly analysis: AnalysisApiResponse | null;
+  /**
+   * ASK GENERAL BACKGROUND EXECUTION R1 — plain-text model background for stable,
+   * non-time-sensitive questions (`answer.state === 'REFERENCE_BACKGROUND'`). This is
+   * NOT retrieved evidence, NOT a Reference source, NOT an Official source, and NOT a
+   * citation — `modelPriorCitable` above stays `false` regardless. Mutually exclusive
+   * with `analysis`: exactly one of the two carries body text for a given payload.
+   */
+  readonly background?: { readonly text: string } | null;
 }
 
 export interface AskV2Operation {

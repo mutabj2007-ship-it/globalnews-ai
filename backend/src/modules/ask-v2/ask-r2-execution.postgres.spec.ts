@@ -109,6 +109,12 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
     const adapter = new AskR2ExecutionAdapter(
       { analyzeNews } as never,
       { id: 'openai', displayName: 'OpenAI', isMock: false } as never,
+      {
+        id: 'mock',
+        displayName: 'Mock General Background',
+        isMock: true,
+        answerBackground: async () => ({ text: null }),
+      } as never,
       meter,
       breaker,
       switches,

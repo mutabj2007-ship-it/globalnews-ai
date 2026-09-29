@@ -205,6 +205,22 @@ export function AskR2TurnView({
               showFullAnalysisLink={false}
             />
           )}
+          {/*
+           * ASK GENERAL BACKGROUND EXECUTION R1 — plain-text model background (Gate E's
+           * REFERENCE_BACKGROUND_ONLY execution). Mutually exclusive with `analysis` above.
+           * Reuses the already-accepted `ref` badge/disclosure chrome as-is (D25 authority:
+           * badges.ref, referenceNoteTitle/Body, freshness.reference) — no new copy, no new
+           * UI surface. Plain prose, never routed through AskCompactResult (which is
+           * evidence-citation/sources-specific and would misrepresent this as sourced).
+           */}
+          {payload.analysis === null && payload.background != null && (
+            <p
+              data-ask="background-text"
+              className="whitespace-pre-wrap text-[16px] leading-[1.55]"
+            >
+              {payload.background.text}
+            </p>
+          )}
           {view.badge === 'ref' && view.sourceCount === 0 && (
             <p data-ask="no-citable" className="font-mono text-[12px] text-[#8fa6c0]">
               {s.noCitable}
