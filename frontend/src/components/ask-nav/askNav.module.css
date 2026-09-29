@@ -1,0 +1,83 @@
+/*
+  STANDALONE ASK NAVIGATION — the one piece of this shell that CANNOT be a
+  Tailwind utility.
+
+  `.shell` must disappear at exactly the width where /ask becomes full screen.
+  That is not a Tailwind breakpoint: askDashboard.module.css turns `.frame` into
+  `position: fixed; inset: 0; z-index: 60` under the compound query below, which
+  means the desktop bar would be PAINTED OVER rather than removed — still in the
+  document, still focusable behind an opaque overlay, which is a keyboard trap.
+  So the bar is removed under the identical query instead.
+
+  THE QUERY BELOW IS COPIED BYTE-FOR-BYTE FROM askDashboard.module.css AND MUST
+  STAY THAT WAY. CSS modules cannot share a media query and extracting it would
+  mean editing the frozen D25 stylesheet, so the duplication is deliberate and
+  askNavShell.spec.ts asserts the two files contain the same query text — if one
+  moves without the other, that test fails rather than a phone shipping two
+  headers or none.
+
+  There is no `.phoneTrigger` rule here on purpose: the trigger renders inside
+  D25's own `.phoneHeader`, which is already `display: none` above this query, so
+  the trigger inherits the correct visibility without a second declaration.
+*/
+.shell {
+  display: flex;
+}
+
+@media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {
+  .shell {
+    display: none;
+  }
+}
+
+/*
+  The phone drawer. z-index 80 clears every layer it must sit above: the Ask
+  frame's full-screen 60, the platform header's 50 and its mobile overlay's 70,
+  and the language popup's 60. It is a SIBLING of `.shell`, never a child —
+  `.shell` is display:none on precisely the widths where the drawer is reachable.
+*/
+.drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 0 18px 24px;
+  /*
+    FULLY OPAQUE, NOT 0.98. The first draft used rgba(2,15,32,0.98) and runtime
+    pixel sampling showed exactly what that asks for: a glyph of the live Ask
+    surface behind the menu raised the pixel from rgb(2,15,32) to rgb(7,20,36) —
+    2% of white, which is 5/255 per channel. Invisible in practice and harmless,
+    but this overlay sits on top of a working conversation and there is no design
+    reason for ANY of it to show through, so the alpha is gone. It also makes the
+    capture check in the runtime harness exact rather than tolerance-based.
+  */
+  background: #020f20;
+  font-family: var(--font-cd-body), system-ui, sans-serif;
+  color: #e6eef6;
+}
+
+.drawerHead {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  /* 56px — the same header band height D25 gives the phone Ask surface, so the
+     drawer's close control lands exactly where the trigger that opened it was. */
+  height: 56px;
+  margin: 0 -18px;
+  padding: 0 10px 0 18px;
+  border-bottom: 1px solid #0a2744;
+}
+
+.drawerGroup {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(10, 39, 68, 0.7);
+}
+
+.drawerGroup:last-of-type {
+  border-bottom: 0;
+}

@@ -18,6 +18,7 @@ import {
 import { askR2PayloadOf, askV2Api } from '@/lib/api/askV2Api';
 import { revokeAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { ASK_SIGN_IN_HREF, keepQuestion, readKeptQuestion } from '@/lib/ask/askKeptQuestion';
+import type { AskShellMenuControl } from '@/lib/ask/askShellMenu';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { LoadingStages } from '@/components/search/LoadingStages';
@@ -52,7 +53,28 @@ import styles from './askDashboard.module.css';
  */
 const FULL_SCREEN_QUERY = '(max-width: 860px), (orientation: portrait) and (max-width: 1100px)';
 
-export function AskFrameScreen({ locale }: { readonly locale: AskLocale }): JSX.Element {
+/**
+ * STANDALONE ASK SHELL — `shellMenu` IS DATA, NOT A SLOT.
+ *
+ * It carries a state flag, two localized labels and a callback; this component
+ * renders the control itself, so the composition of the frozen D25 header stays
+ * decided here. See lib/ask/askShellMenu.ts for why the earlier generic
+ * `navSlot?: React.ReactNode` was refused.
+ *
+ * IT REPLACES THE LEFT CONTROL, IT DOES NOT ADD ONE — and only when there is no
+ * governed return destination, where "Close" would dismiss a standalone
+ * application to nowhere. With a real `return` destination the ruled Back/Close
+ * behaviour is untouched and no navigation is invented. Header height 56,
+ * centred title and the right-hand state readout are unchanged in both cases,
+ * and omitting the prop renders this header exactly as it renders today.
+ */
+export function AskFrameScreen({
+  locale,
+  shellMenu,
+}: {
+  readonly locale: AskLocale;
+  readonly shellMenu?: AskShellMenuControl;
+}): JSX.Element {
   const params = useSearchParams();
   const urlKey = params.toString();
   const incoming = useMemo(() => dashboardContext(new URLSearchParams(urlKey)), [urlKey]);
@@ -210,15 +232,35 @@ export function AskFrameScreen({ locale }: { readonly locale: AskLocale }): JSX.
     >
       {/* PHONE / 768 PORTRAIT — header 56 (D25 11). Hidden by CSS on wider layouts. */}
       <header data-ask="header" className={styles.phoneHeader}>
-        <button
-          type="button"
-          data-ask={returnsToMap ? 'back' : 'close'}
-          aria-label={returnsToMap ? r2s.returnMap : r2s.close}
-          onClick={leave}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center text-[20px] text-[#cfe2f2]"
-        >
-          {returnsToMap ? '←' : '×'}
-        </button>
+        {/*
+          THE LEFT SLOT. One control, 44x44, in the position D25 draws it. Which
+          control it is depends on whether this reader has somewhere governed to
+          go back to — never on styling, and never on both being present.
+        */}
+        {returnPath === null && shellMenu !== undefined ? (
+          <button
+            type="button"
+            data-ask="shell-menu"
+            aria-label={shellMenu.open ? shellMenu.closeLabel : shellMenu.openLabel}
+            aria-expanded={shellMenu.open}
+            onClick={shellMenu.onToggle}
+            className="inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-[4px] text-[#cfe2f2]"
+          >
+            <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
+            <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
+            <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-ask={returnsToMap ? 'back' : 'close'}
+            aria-label={returnsToMap ? r2s.returnMap : r2s.close}
+            onClick={leave}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center text-[20px] text-[#cfe2f2]"
+          >
+            {returnsToMap ? '←' : '×'}
+          </button>
+        )}
         <h1 className="flex-1 truncate text-center text-[16px] font-bold">{r2s.askTitle}</h1>
         <span
           data-ask="header-state"
