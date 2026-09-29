@@ -24,9 +24,31 @@
   display: flex;
 }
 
+/*
+  STANDALONE CONTINUITY SHELL CLOSURE — the phone header of /ask/recent and /saved
+  (AskContinuityHeader). The exact inverse of `.shell`, under the same query, so each
+  width shows exactly one standalone header. Sticky rather than fixed: those surfaces
+  are ordinary scrolling lists, and the header stays in the flow above them.
+*/
+.continuityHeader {
+  display: none;
+}
+
 @media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {
   .shell {
     display: none;
+  }
+  .continuityHeader {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 56px;
+    padding: 0 8px;
+    border-bottom: 1px solid #0a2744;
+    background: rgba(2, 15, 32, 0.96);
   }
 }
 

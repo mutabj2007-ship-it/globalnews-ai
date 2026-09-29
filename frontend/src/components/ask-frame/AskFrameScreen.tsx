@@ -402,6 +402,7 @@ export function AskFrameScreen({
                     question={turn.question}
                     language={turn.language}
                     context={turn.context}
+                    storyBookmarks={false}
                   />
                 ) : (
                   <p role="alert">{turn.error}</p>

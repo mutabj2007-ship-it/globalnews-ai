@@ -206,6 +206,7 @@ export function AskR2TurnView({
               language={locale}
               context={context}
               showFullAnalysisLink={false}
+              storyBookmarks={false}
             />
           )}
           {/*
