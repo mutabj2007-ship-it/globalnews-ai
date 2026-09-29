@@ -28,7 +28,10 @@ export type AskAnswerState =
   | 'PARTIAL'
   | 'INSUFFICIENT'
   | 'CLARIFICATION_REQUIRED'
-  | 'CAPABILITY_UNAVAILABLE';
+  | 'CAPABILITY_UNAVAILABLE'
+  /* ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — a governed retained record (or its
+     stated absence), answered with zero AI. Never current, never verified. */
+  | 'RETAINED_RECORD';
 
 export interface AskPlanChip {
   readonly kind: 'GEOGRAPHY' | 'TOPIC' | 'DOMAIN' | 'TIME' | 'SELECTION' | 'SOURCE';
@@ -118,6 +121,13 @@ export interface AskContributionObservation {
     readonly licence: string | null;
   };
   readonly retainedAt: string | null;
+  /** LIVE ACCEPTANCE REPAIR R1 — source-verbatim display fields (Conflict records). */
+  readonly detail?: {
+    readonly place: string | null;
+    readonly parties: readonly string[];
+    readonly headline: string | null;
+    readonly citedOutlets: readonly string[];
+  };
 }
 
 export interface AskContribution {

@@ -3,6 +3,7 @@
 import type { StoryContext } from '@globalnews-ai/shared';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { AskIntelligenceBasis } from './AskIntelligenceBasis';
+import { askIntelligenceView } from '@/lib/ask/askIntelligenceView';
 import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
 import { askR2View, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
@@ -34,6 +35,7 @@ const TONE_CLASS: Readonly<Record<AskR2View['tone'], string>> = {
   partial: 'border border-[#6b5a20] bg-[#2a2410] text-[#f3d36b]',
   insufficient: 'border border-[#6b3236] bg-[#2d1618] text-[#f2a5a5]',
   unavailable: 'border border-[#3a4a5e] bg-[#12161c] text-[#c5ccd6]',
+  retained: 'border border-[#2f5d4a] bg-[#0f2a22] text-[#a8e0c6]',
 };
 
 /* D25 answer surfaces: Reference is dashed and muted, never styled like current evidence. */
@@ -48,6 +50,7 @@ const CARD_CLASS: Readonly<Record<AskR2View['tone'], string>> = {
     'border border-[#0e2d4d] bg-[linear-gradient(#082038,#041a30_46%,#02152b)] text-[#e6eef6]',
   insufficient: 'border border-[#4a2a2e] bg-[#0b1522] text-[#cfe2f2]',
   unavailable: 'border border-[#3a4a5e] bg-[#12161c] text-[#c5ccd6]',
+  retained: 'border border-[#1f4a3a] bg-[#0a1c17] text-[#e6eef6]',
 };
 
 const EYEBROW =
@@ -91,7 +94,8 @@ export function AskR2TurnView({
           data-ask="unavailable"
           className={`rounded-[12px] p-3.5 text-[15px] leading-[1.55] md:p-5 ${CARD_CLASS.unavailable}`}
         >
-          {s.unavailable}
+          {/* LIVE ACCEPTANCE REPAIR R1 — a spent daily budget is named as such (live G3–G9). */}
+          {turn.failure?.startsWith('BUDGET_') ? s.budgetRefused : s.unavailable}
         </p>
       </article>
     );
@@ -105,6 +109,9 @@ export function AskR2TurnView({
     turn.question,
   );
   const operationId = turn.operation?.operationId;
+  /* LIVE ACCEPTANCE REPAIR R1 (A) — a retained-record answer is its governed record, restated. */
+  const retained =
+    view.badge === 'rec' ? askIntelligenceView(payload, locale, view.sourceCount) : null;
 
   return (
     <article data-ask-turn data-ask="turn" data-ask-state={view.badge} className={TURN}>
@@ -220,6 +227,22 @@ export function AskR2TurnView({
             {s.sourcesAfterChoice}
           </p>
         </section>
+      ) : view.badge === 'rec' ? (
+        <section
+          data-ask="answer"
+          data-ask-basis={payload.answer.basis}
+          className={`flex flex-col gap-2.5 ${CARD} ${CARD_CLASS.retained}`}
+        >
+          <p className={EYEBROW}>{s.answer}</p>
+          {(retained?.lead.length ? retained.lead : (retained?.notes ?? [])).map((line) => (
+            <p key={line} data-ask="retained-lead" className="text-[16px] leading-[1.55]">
+              {line}
+            </p>
+          ))}
+          <p data-ask="retained-no-ai" className="font-mono text-[12px] text-[#8fa6c0]">
+            {s.retainedAnswer}
+          </p>
+        </section>
       ) : view.badge === 'unavail' ? (
         <p
           role="alert"
@@ -288,6 +311,7 @@ export function AskR2TurnView({
         payload={payload}
         locale={locale}
         reportingSourceCount={view.sourceCount}
+        hideNotes={view.badge === 'rec' && (retained?.lead.length ?? 0) === 0}
       />
 
       {((view.handoffs.openFull && !displayOnly) ||

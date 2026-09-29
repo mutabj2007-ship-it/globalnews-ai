@@ -26,6 +26,8 @@ export const ASK_SAVABLE_ANSWER_STATES: ReadonlySet<string> = new Set([
   'CURRENT_REPORTING',
   'PARTIAL',
   'REFERENCE_BACKGROUND',
+  /* LIVE ACCEPTANCE REPAIR R1 — a governed retained record is a produced answer. */
+  'RETAINED_RECORD',
 ]);
 
 export function AskTurnSave({

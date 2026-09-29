@@ -32,12 +32,14 @@ export interface AskR2Strings {
   readonly notNow: string;
   readonly runConfirm: string;
   readonly badges: Readonly<
-    Record<'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail', string>
+    Record<'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec', string>
   >;
   readonly referenceNoteTitle: string;
   readonly referenceNoteBody: string;
   readonly freshness: {
     readonly reference: string;
+    /** LIVE ACCEPTANCE REPAIR R1 — a retained-record answer: not current, no AI. */
+    readonly retainedRecord: string;
     /**
      * A reference answer that DID draw on retrieved sources — D25's mixed case (mapref,
      * "Background: reference · current role: checked …"), adapted by the integration: the
@@ -59,6 +61,10 @@ export interface AskR2Strings {
   readonly sourcesAfterChoice: string;
   readonly insufficientTitle: string;
   readonly unavailable: string;
+  /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
+  readonly budgetRefused: string;
+  /** LIVE ACCEPTANCE REPAIR R1 — the lead line of a retained-record answer. */
+  readonly retainedAnswer: string;
   readonly noCitable: string;
   /**
    * GATE H — INTEGRATION-AUTHORED, flagged for Product copy review. A typed refusal says
@@ -144,12 +150,14 @@ const EN: AskR2Strings = {
     part: 'PARTIAL EVIDENCE',
     insuf: 'INSUFFICIENT EVIDENCE',
     unavail: 'CAPABILITY UNAVAILABLE',
+    rec: 'RETAINED RECORD',
   },
   referenceNoteTitle: 'Model background · no citations',
   referenceNoteBody:
     'No external reference source is attached to this answer. Treat it as orientation, not as verified current fact.',
   freshness: {
     reference: 'Stable general knowledge · not checked against current sources',
+    retainedRecord: 'Retained record · not current · no AI used',
     referenceWithSources: 'Background: reference · checked {when} · {sources}',
     nothingRan: 'One question before searching · nothing has run',
     checked: 'Checked {when} · {sources}',
@@ -161,6 +169,9 @@ const EN: AskR2Strings = {
   sourcesAfterChoice: 'Sources appear after you choose',
   insufficientTitle: 'Not enough matching reporting',
   unavailable: 'Ask is unavailable right now. Nothing was run.',
+  budgetRefused:
+    'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
+  retainedAnswer: 'Answered from a retained governed record — no AI was used.',
   noCitable: 'No citable sources',
   unavailableBecause: {
     REFERENCE_UNAVAILABLE:
@@ -170,6 +181,10 @@ const EN: AskR2Strings = {
     PLAN_IDENTITY_REQUIRED: 'Sign in to use your saved information.',
     PLAN_CAPABILITY_UNAVAILABLE:
       'This kind of question needs a capability Ask does not have — such as calculations, files, code, official releases or specialist assessments. Nothing was run.',
+    OFFICIAL_SOURCE_UNAVAILABLE:
+      'You asked for the official figure. Ask has no approved reader for this official source, so it cannot give the official value, and news reporting is not presented as official. Nothing was run.',
+    GOVERNED_READ_DEGRADED:
+      'The retained record for this question could not be read just now. Nothing is claimed either way, and nothing was run in its place.',
   },
   noAnswer: 'No answer given · nothing presented as fact',
   whichOne: 'Which one do you mean?',
@@ -267,12 +282,14 @@ const PL: AskR2Strings = {
     part: 'CZĘŚCIOWE DOWODY',
     insuf: 'ZBYT MAŁO DOWODÓW',
     unavail: 'FUNKCJA NIEDOSTĘPNA',
+    rec: 'ZACHOWANY ZAPIS',
   },
   referenceNoteTitle: 'Wiedza modelu · bez przypisów',
   referenceNoteBody:
     'Do tej odpowiedzi nie dołączono zewnętrznego źródła referencyjnego. Traktuj ją jako orientację, a nie zweryfikowany bieżący fakt.',
   freshness: {
     reference: 'Stała wiedza ogólna · niesprawdzana w bieżących źródłach',
+    retainedRecord: 'Zachowany zapis · nieaktualny · bez użycia AI',
     referenceWithSources: 'Tło: wiedza ogólna · sprawdzono {when} · {sources}',
     nothingRan: 'Jedno pytanie przed wyszukiwaniem · nic nie uruchomiono',
     checked: 'Sprawdzono {when} · {sources}',
@@ -287,6 +304,9 @@ const PL: AskR2Strings = {
   sourcesAfterChoice: 'Źródła pojawią się po Twoim wyborze',
   insufficientTitle: 'Za mało pasujących doniesień',
   unavailable: 'Zapytaj AI jest teraz niedostępne. Nic nie zostało uruchomione.',
+  budgetRefused:
+    'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
+  retainedAnswer: 'Odpowiedź z zachowanego, zweryfikowanego zapisu — bez użycia AI.',
   noCitable: 'Brak źródeł do przytoczenia',
   unavailableBecause: {
     REFERENCE_UNAVAILABLE:
@@ -296,6 +316,10 @@ const PL: AskR2Strings = {
     PLAN_IDENTITY_REQUIRED: 'Zaloguj się, aby korzystać z zapisanych informacji.',
     PLAN_CAPABILITY_UNAVAILABLE:
       'Ten rodzaj pytania wymaga funkcji, której Zapytaj AI nie ma — np. obliczeń, plików, kodu, oficjalnych publikacji lub ocen specjalistów. Nic nie uruchomiono.',
+    OFFICIAL_SOURCE_UNAVAILABLE:
+      'Pytasz o oficjalną wartość. Zapytaj AI nie ma zatwierdzonego czytnika tego oficjalnego źródła, więc nie poda oficjalnej wartości, a doniesienia medialne nie są przedstawiane jako oficjalne. Nic nie uruchomiono.',
+    GOVERNED_READ_DEGRADED:
+      'Nie udało się teraz odczytać zachowanego zapisu dla tego pytania. Niczego nie stwierdzono i nic nie uruchomiono w zamian.',
   },
   noAnswer: 'Brak odpowiedzi · nic nie przedstawiono jako faktu',
   whichOne: 'Które z nich masz na myśli?',
