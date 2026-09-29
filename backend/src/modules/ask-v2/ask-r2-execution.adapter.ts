@@ -337,7 +337,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       closes). One ZERO-Reporting-call model answer, still behind every existing control.
     */
     if (early !== null && early.state === 'REFERENCE_BACKGROUND') {
-      return this.executeBackground(request, plan, route, operationId);
+      return this.executeBackground(request, plan, route, operationId, draft);
     }
 
     const unsupplied = requiredRolesOf(route.plan).filter((r) => !EXECUTOR_SUPPLIES.has(r));
@@ -557,23 +557,34 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
    * Reporting/GNews calls, 0 fabricated citations. Never reached unless frozen C has
    * already decided no evidence class is required (§4.7/§7 of the accepted contract);
    * every other terminal keeps the existing analysis path untouched.
+   *
+   * STANDALONE PUBLIC BETA CONVERGENCE R1 (A × F) — it writes the SAME observation fields,
+   * at the same moments, as the Reporting path: switch reads, provider, the one call, the
+   * breaker's verdict, AI/model counts, tokens and the answer decision. `execute()` still
+   * records the single observation. Model background is never evidence, so
+   * `evidenceRolesObtained` stays [] and `reportingItemCount` is 0 (not null: Reporting was
+   * decided against, not unreached). No background text reaches the draft.
    */
   private async executeBackground(
     request: Readonly<AskRequest>,
     plan: Readonly<AskPlan>,
     route: AskR2Route,
     operationId: string,
+    draft: AskObservationDraft,
   ): Promise<ExecutionResult> {
     /* 3 · controls, in order, each failing closed — identical to the reporting path. */
-    if (!(await this.switches.isEnabled('ASK_R2_ENABLED')))
-      throw new AskExecutionRefused('ASK_R2_DISABLED');
-    if (!(await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED'))) {
+    draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
+    if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
+    draft.askPublicComputeEnabled = await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+    if (!draft.askPublicComputeEnabled) {
       throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
     }
     const who = askRequestContext.getStore();
     if (who === undefined) throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
 
     const provider = this.background.id;
+    draft.providerId = provider;
+    draft.reportingItemCount = 0;
     const permit = await this.breaker.permit(provider);
     if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
 
@@ -600,6 +611,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        mirrors the reporting path's `noEvidence` in shape and in meter/breaker treatment. */
     let declined = false;
     try {
+      /* Counted before it is made, as on the Reporting path: attempts are what an operator needs. */
+      draft.providerCallCount = 1;
       const out = await this.background.answerBackground({
         question: request.question,
         responseLanguage: request.language,
@@ -635,6 +648,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         declined ? 'NO_EVIDENCE' : outcome,
       );
       await this.breaker.record(provider, outcome, permit.trial);
+      /* The breaker's own verdict, where it is decided (a decline is REFUSAL, not a fault). */
+      draft.breakerOutcome = outcome;
     }
     if (outcome !== 'SUCCESS' && !declined) {
       throw new AskExecutionRefused(`MODEL_${outcome}`);
@@ -645,7 +660,25 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        CAPABILITY_UNAVAILABLE / missingRoles: ['REFERENCE'] state — never a fabricated
        background answer, and never a silent pretend-success. */
     const answer = deriveAnswerState(route.plan, { items: {}, producedAnswer: !declined });
-    return this.result(plan, route, operationId, answer, null, !declined, text);
+    /* The model WAS invoked on a decline (it answered with the decline token), so the
+       invocation is counted; `aiExecuted` means an answer was produced, as on Reporting. */
+    draft.aiExecuted = !declined;
+    draft.modelInvocationCount = 1;
+    draft.evidenceRolesObtained = [];
+    const measured = usage as { promptTokens: number; completionTokens: number } | null;
+    if (measured !== null) {
+      draft.promptTokens = measured.promptTokens;
+      draft.completionTokens = measured.completionTokens;
+    }
+    return this.result(
+      plan,
+      route,
+      operationId,
+      this.observeAnswer(answer, draft),
+      null,
+      !declined,
+      text,
+    );
   }
 
   private result(

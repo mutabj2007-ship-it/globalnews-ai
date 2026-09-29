@@ -1025,3 +1025,134 @@ describe('R1 — one Ask, one observation, and never a question in it', () => {
     expect(observation.requestLanguage).toBe('en');
   });
 });
+
+/*
+  STANDALONE PUBLIC BETA CONVERGENCE R1 — A × F. The General Background executor (A) runs
+  inside F's single emit point: every background outcome records EXACTLY ONE observation,
+  written with the same fields as the Reporting path, and neither the question nor the
+  model's background text reaches it.
+*/
+describe('A × F — General Background: one truthful observation per outcome, never the question', () => {
+  const Q_BG = 'What is inflation?';
+  const BG_TEXT = 'General background answer.';
+  const run = async (opts: Parameters<typeof harness>[0]) => {
+    const { adapter, calls, observed } = harness(opts);
+    const plan = await adapter.prepare(req(Q_BG));
+    expect(plan.contract).toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+    let refusedWith: string | null = null;
+    try {
+      await inRequest(() => adapter.execute(req(Q_BG), plan, 'op-bg'));
+    } catch (error) {
+      refusedWith = (error as AskExecutionRefused).code;
+    }
+    expect(observed).toHaveLength(1);
+    const o = observed[0] as Record<string, unknown>;
+    /* never the reader's words, never the model's background text */
+    const serialised = JSON.stringify(o).toLowerCase();
+    expect(serialised).not.toContain('inflation');
+    expect(serialised).not.toContain(BG_TEXT.toLowerCase());
+    /* zero Reporting on every background outcome */
+    expect(calls.analysis).toEqual([]);
+    return { o, refusedWith };
+  };
+  const common = {
+    operationId: 'op-bg',
+    routePath: 'ASK_R2',
+    terminalState: 'REFERENCE_BACKGROUND_ONLY',
+    askR2Enabled: true,
+    askPublicComputeEnabled: true,
+    providerId: 'openai',
+    providerCallCount: 1,
+    reportingItemCount: 0,
+    evidenceRolesObtained: [],
+  };
+
+  it('success → REFERENCE_BACKGROUND, one model invocation, aiExecuted, breaker SUCCESS', async () => {
+    const { o, refusedWith } = await run({});
+    expect(refusedWith).toBeNull();
+    expect(o).toMatchObject({
+      ...common,
+      answerState: 'REFERENCE_BACKGROUND',
+      aiExecuted: true,
+      modelInvocationCount: 1,
+      breakerOutcome: 'SUCCESS',
+      failureCode: null,
+    });
+  });
+
+  it('decline → CAPABILITY_UNAVAILABLE (REFERENCE missing), model invoked once, no answer, breaker REFUSAL', async () => {
+    const { o, refusedWith } = await run({ background: async () => ({ text: null }) });
+    expect(refusedWith).toBeNull();
+    expect(o).toMatchObject({
+      ...common,
+      answerState: 'CAPABILITY_UNAVAILABLE',
+      capabilityUnavailable: true,
+      evidenceRolesMissing: ['REFERENCE'],
+      aiExecuted: false,
+      modelInvocationCount: 1,
+      breakerOutcome: 'REFUSAL',
+      failureCode: null,
+    });
+  });
+
+  it('timeout → MODEL_TIMEOUT refusal, recorded once with breaker TIMEOUT, no answer state', async () => {
+    const { o, refusedWith } = await run({
+      background: async () =>
+        Promise.reject(
+          new GeneralBackgroundProviderError(
+            'General background call timed out.',
+            'provider-timeout',
+            false,
+          ),
+        ),
+    });
+    expect(refusedWith).toBe('MODEL_TIMEOUT');
+    expect(o).toMatchObject({
+      ...common,
+      answerState: 'UNROUTED',
+      aiExecuted: false,
+      breakerOutcome: 'TIMEOUT',
+      failureCode: 'MODEL_TIMEOUT',
+    });
+  });
+
+  it('failure → MODEL_FAILURE refusal, recorded once with breaker FAILURE, no answer state', async () => {
+    const { o, refusedWith } = await run({
+      background: async () => Promise.reject(new Error('socket hang up')),
+    });
+    expect(refusedWith).toBe('MODEL_FAILURE');
+    expect(o).toMatchObject({
+      ...common,
+      answerState: 'UNROUTED',
+      aiExecuted: false,
+      breakerOutcome: 'FAILURE',
+      failureCode: 'MODEL_FAILURE',
+    });
+  });
+
+  it('a control refusal before the provider (compute OFF) is still ONE observation with no provider call', async () => {
+    const { o, refusedWith } = await run({ switches: { ASK_PUBLIC_COMPUTE_ENABLED: false } });
+    expect(refusedWith).toBe('ASK_PUBLIC_COMPUTE_DISABLED');
+    expect(o).toMatchObject({
+      askR2Enabled: true,
+      askPublicComputeEnabled: false,
+      providerCallCount: 0,
+      failureCode: 'ASK_PUBLIC_COMPUTE_DISABLED',
+    });
+  });
+
+  it('the Reporting path still records its own single observation, unchanged by the background branch', async () => {
+    const { adapter, observed, calls } = harness({});
+    const q = 'What is happening in Kenya?';
+    const plan = await adapter.prepare(req(q));
+    await inRequest(() => adapter.execute(req(q), plan, 'op-rep'));
+    expect(observed).toHaveLength(1);
+    expect(observed[0]).toMatchObject({
+      operationId: 'op-rep',
+      answerState: 'CURRENT_REPORTING',
+      providerCallCount: 1,
+      evidenceRolesObtained: ['REPORTING'],
+    });
+    expect(calls.background).toEqual([]);
+  });
+});
