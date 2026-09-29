@@ -342,6 +342,22 @@ live('Ask continuity (Recent + Saved) — live PostgreSQL, HTTP authorization, z
     });
   });
 
+  describe('Save control relation — the operation read names the reader’s own turn', () => {
+    it('getOperation returns turnId and a truthful bookmarked flag, owner-scoped, with zero compute', async () => {
+      const before = await computeFootprint();
+      const r1 = await http().get(`/ask-v2/operations/${op.a}`).set('Cookie', as('a')).expect(200);
+      expect(r1.body).toMatchObject({ operationId: op.a, turnId: turn.a, bookmarked: false });
+      await service.addBookmark(ids.a, turn.a);
+      const r2 = await http().get(`/ask-v2/operations/${op.a}`).set('Cookie', as('a')).expect(200);
+      expect(r2.body).toMatchObject({ turnId: turn.a, bookmarked: true });
+      /* B saving nothing of A's, and B cannot read A's operation (so never A's turnId). */
+      await http().get(`/ask-v2/operations/${op.a}`).set('Cookie', as('b')).expect(404);
+      const rb = await http().get(`/ask-v2/operations/${op.b}`).set('Cookie', as('b')).expect(200);
+      expect(rb.body).toMatchObject({ turnId: turn.b, bookmarked: false });
+      expect(await computeFootprint()).toEqual(before);
+    });
+  });
+
   describe('zero compute — every continuity read/write', () => {
     it('Recent list, Saved list, reopen, bookmark, unbookmark: 0 plan · 0 execution · 0 new operations · 0 ledger · stored results untouched', async () => {
       await service.addBookmark(ids.a, turn.a);

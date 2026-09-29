@@ -6,6 +6,7 @@ import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
 import { askR2View, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
+import { AskTurnSave } from './AskTurnSave';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -131,6 +132,8 @@ export function AskR2TurnView({
             {s.expiredNote}
           </span>
         )}
+        {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
+        <AskTurnSave operation={turn.operation} locale={locale} />
       </div>
 
       {view.badge === 'clar' ? (

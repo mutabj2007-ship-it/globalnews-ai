@@ -82,6 +82,12 @@ export interface AskR2Payload {
 
 export interface AskV2Operation {
   readonly operationId: string;
+  /**
+   * STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's own turn for this operation, and
+   * whether THEY saved it. Owner-scoped server-side; absent on older responses.
+   */
+  readonly turnId?: string | null;
+  readonly bookmarked?: boolean;
   readonly computeClass: string;
   readonly status: string;
   readonly quotedSand: number;

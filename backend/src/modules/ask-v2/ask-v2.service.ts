@@ -346,8 +346,24 @@ export class AskV2Service {
         where: { operationId: id },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       });
+      /*
+        STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save control needs the turn this
+        operation answered (AskTurn.operationId is unique) and whether THIS reader has saved it.
+        Owner-scoped twice: the operation is already the caller's (`owned`), and the turn is
+        read through its thread's owner. Two reads, no write, no compute.
+      */
+      const turn = await tx.askTurn.findFirst({
+        where: { operationId: id, thread: { userId } },
+        select: { id: true },
+      });
+      const bookmarked =
+        turn === null
+          ? false
+          : (await tx.askBookmark.count({ where: { userId, turnId: turn.id } })) > 0;
       return {
         operationId: id,
+        turnId: turn?.id ?? null,
+        bookmarked,
         computeClass: operation.computeClass,
         status: operation.status,
         quotedSand: operation.quotedSand,
