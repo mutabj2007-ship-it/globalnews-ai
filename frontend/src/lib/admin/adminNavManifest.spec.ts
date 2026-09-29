@@ -27,14 +27,21 @@ describe('F1.b — capability-driven navigation', () => {
     ]);
   });
 
-  it('carries fourteen items — the artifact sidebar minus its Information architecture entry, which is the shell', () => {
-    expect(ALL_NAV_ITEMS).toHaveLength(14);
+  /*
+    FOURTEEN ARTIFACT ITEMS, IN THE ARTIFACT'S OWN ORDER, PLUS ONE THAT IS NOT FROM THE
+    ARTIFACT. `16` appears between `06` and `07` because it sits in the INTELLIGENCE group
+    where the activation puts it; it is numbered after the artifact's last row rather than
+    renumbering fourteen rows a design reviewer has already signed off.
+  */
+  it('carries fifteen items — the artifact sidebar, plus the Ask operations page', () => {
+    expect(ALL_NAV_ITEMS).toHaveLength(15);
     expect(ALL_NAV_ITEMS.map((navItem) => navItem.num)).toEqual([
       '02',
       '03',
       '04',
       '05',
       '06',
+      '16',
       '07',
       '08',
       '09',
@@ -45,6 +52,16 @@ describe('F1.b — capability-driven navigation', () => {
       '14',
       '15',
     ]);
+  });
+
+  it('every artifact number 02..15 is still present, and exactly one entry is not from the artifact', () => {
+    const nums = ALL_NAV_ITEMS.map((navItem) => navItem.num);
+    ['02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15'].forEach(
+      (num) => {
+        expect({ num, present: nums.includes(num) }).toEqual({ num, present: true });
+      },
+    );
+    expect(nums.filter((num) => Number(num) > 15)).toEqual(['16']);
   });
 
   it('every item declares a real capability, a screen code and a state', () => {
@@ -91,7 +108,14 @@ describe('F1.b — capability-driven navigation', () => {
 
     it('a full grant shows every item', () => {
       const groups = visibleNavGroups([...ADMIN_CAPABILITY_NAMES]);
-      expect(groups.flatMap((group) => group.items)).toHaveLength(14);
+      expect(groups.flatMap((group) => group.items)).toHaveLength(15);
+    });
+
+    it('the Ask operations page is visible to every role that holds analytics.view', () => {
+      const ids = visibleNavGroups(['analytics.view']).flatMap((group) =>
+        group.items.map((navItem) => navItem.id),
+      );
+      expect(ids).toContain('askIntelligence');
     });
 
     it('an unknown capability string grants nothing', () => {

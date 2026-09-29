@@ -106,6 +106,11 @@ function subjectOriginOf(response: AnalysisApiResponse, sentPrior: string | unde
 
 interface AskAiDockProps {
   language?: LanguageCode;
+  /**
+   * STANDALONE PUBLIC BETA CONVERGENCE R1 — `/` is the standalone Ask (server-decided in the
+   * layout). The root owns its composer, exactly as /ask does, so the dock unmounts there.
+   */
+  standaloneRoot?: boolean;
 }
 
 /**
@@ -169,13 +174,22 @@ const LAUNCHER_SUPPRESSED_ROUTES: ReadonlySet<string> = new Set(['/my-intelligen
  */
 const MAP_ROUTE = '/map';
 
+const ASK_CONTINUITY_ROUTES: ReadonlySet<string> = new Set([
+  `${ASK_CANONICAL_ROUTE}/recent`,
+  '/saved',
+]);
+
 export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   const pathname = usePathname();
   // The dedicated dashboard owns its composer; unmount the global dock entirely.
   if (pathname === ASK_CANONICAL_ROUTE) return null;
+  if (props.standaloneRoot === true && pathname === '/') return null;
+  /* STANDALONE CONTINUITY SHELL CLOSURE — Recent and Saved are standalone Ask surfaces
+     whose "New question" already opens Ask, so the platform dock unmounts, as on /ask. */
+  if (pathname !== null && ASK_CONTINUITY_ROUTES.has(pathname)) return null;
   return (
     <GlobalAskAiDock
-      {...props}
+      language={props.language}
       showLauncher={!LAUNCHER_SUPPRESSED_ROUTES.has(pathname ?? '')}
       mapSurface={pathname === MAP_ROUTE}
     />

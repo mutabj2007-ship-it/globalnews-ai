@@ -344,7 +344,8 @@ describe('the accepted evidence-state vocabulary is the one the product has', ()
 describe('the released navigation geometry is untouched', () => {
   it('the dock is mounted from the root layout, not injected into the NavBar', () => {
     const layout = readFileSync(join(__dirname, '..', '..', 'app', 'layout.tsx'), 'utf8');
-    expect(layout).toMatch(/<AskAiDock language=\{language\} \/>/);
+    /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the mount also carries the server-decided root. */
+    expect(layout).toMatch(/<AskAiDock language=\{language\} standaloneRoot=\{standaloneAskRoot\(\)\} \/>/);
     const nav = readFileSync(join(__dirname, '..', 'navigation', 'NavBar.tsx'), 'utf8');
     expect(nav).not.toMatch(/AskAiDock|askAi/);
   });

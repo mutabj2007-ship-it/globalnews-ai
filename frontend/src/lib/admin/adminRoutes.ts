@@ -19,6 +19,11 @@ export const ADMIN_ROUTES = {
 
   ai: '/admin/ai',
   aiProviders: '/admin/ai/providers',
+  /* ASK PUBLIC BETA OPERATIONS MINIMUM R1 — the twenty-first route, and the first added
+     beyond the approved Claude Design route map. It is authorized by the CTO activation
+     that names it ("Admin -> AI -> Ask Intelligence"), and it is numbered after the
+     artifact's last entry rather than renumbering the artifact's own rows. */
+  aiAskIntelligence: '/admin/ai/ask-intelligence',
 
   users: '/admin/users',
   usersSubscriptions: '/admin/users/subscriptions',
@@ -63,6 +68,10 @@ export const ADMIN_API = {
   analyticsCoverageGeography: '/admin/analytics/coverage-geography',
   alphaReview: '/admin/alpha-review',
   users: '/admin/users',
+
+  /* R1 — a GET returning aggregates. Still nothing that changes state, so the read-only
+     meaning of this object is unchanged. */
+  askIntelligence: '/admin/ai/ask-intelligence',
 } as const;
 
 /**

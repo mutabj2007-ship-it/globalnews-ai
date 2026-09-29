@@ -3,7 +3,11 @@ import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { AnalysisService } from '../analysis/service/analysis.service';
 import { AnalysisConfigService } from '../analysis/config/analysis-config.service';
 import { ANALYSIS_PROVIDER } from '../analysis/providers/provider.tokens';
-import type { AnalysisProvider } from '../analysis/interfaces';
+import {
+  GENERAL_BACKGROUND_PROVIDER,
+  GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS,
+} from '../analysis/providers/general-background.provider';
+import type { AnalysisProvider, GeneralBackgroundProvider } from '../analysis/interfaces';
 import {
   CircuitBreakerService,
   type BreakerOutcome,
@@ -24,6 +28,7 @@ import { planChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
 import {
   AskExecutionRefused,
+  classifyCompute,
   hashIdentity,
   type AskExecutionPort,
   type AskPlan,
@@ -31,6 +36,11 @@ import {
   type ExecutionResult,
 } from './ask-compute.contract';
 import { askRequestContext } from './ask-request-context';
+import { AskObservationService } from '../ask-observability/ask-observation.service';
+import {
+  newAskObservationDraft,
+  type AskObservationDraft,
+} from '../ask-observability/ask-observation.contract';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -111,7 +121,7 @@ function routeFor(request: Readonly<AskRequest>, deps: PlannerDeps): AskR2Route 
  * personal library, a file or a computation. A plan that REQUIRES any of those is not run
  * against reporting instead: that would be the silent substitution frozen C forbids.
  */
-const EXECUTOR_SUPPLIES: ReadonlySet<string> = new Set(['REPORTING']);
+export const EXECUTOR_SUPPLIES: ReadonlySet<string> = new Set(['REPORTING']);
 
 interface AnswerDecision {
   readonly state: string;
@@ -174,6 +184,17 @@ export function estimateUnits(
   return Math.ceil(promptChars / 4) + outputWeight * analysis.maxCompletionTokens;
 }
 
+/**
+ * ASK GENERAL BACKGROUND EXECUTION R1 — estimated units for one background call. No
+ * articles are ever sent (that is the whole point), so this is deliberately far smaller
+ * than `estimateUnits`: the system prompt plus the question, and a small bounded output.
+ */
+export function estimateBackgroundUnits(questionChars: number, outputWeight: number): number {
+  const SYSTEM_PROMPT_CHAR_ESTIMATE = 1600;
+  const promptChars = SYSTEM_PROMPT_CHAR_ESTIMATE + questionChars;
+  return Math.ceil(promptChars / 4) + outputWeight * GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS;
+}
+
 @Injectable()
 export class AskR2ExecutionAdapter implements AskExecutionPort {
   private readonly logger = new Logger(AskR2ExecutionAdapter.name);
@@ -182,11 +203,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
   constructor(
     private readonly analysis: AnalysisService,
     @Inject(ANALYSIS_PROVIDER) private readonly provider: AnalysisProvider,
+    @Inject(GENERAL_BACKGROUND_PROVIDER) private readonly background: GeneralBackgroundProvider,
     private readonly meter: ComputeMeterService,
     private readonly breaker: CircuitBreakerService,
     private readonly switches: OperationalSwitchService,
     private readonly analysisConfig: AnalysisConfigService,
     specialists: SpecialistClaimRegistry,
+    private readonly observations: AskObservationService,
   ) {
     this.deps = {
       specialistRegistry: landedSpecialistRegistryPort(() => specialists.registeredDomains()),
@@ -223,12 +246,54 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     };
   }
 
+  /**
+   * ADMIN ASK INTELLIGENCE OBSERVABILITY R1 — THE ONE EMIT POINT.
+   *
+   * The execution logic is untouched and lives in `executeInner`; this wrapper only times
+   * it, names the outcome, and records ONE observation however the attempt ended — the
+   * zero-AI terminals that return, and the control refusals that throw. One emit point is
+   * what makes "one explicit Ask produces at most one observation" true by construction
+   * rather than by remembering to call a recorder on every branch; the unique constraint
+   * on `operationId` then makes it true across replicas as well.
+   *
+   * `prepare` is NOT instrumented, deliberately: it runs on every quote, produces no
+   * answer and spends nothing, so counting it would inflate every figure on the screen.
+   *
+   * THE RECORD CANNOT CHANGE WHAT THE READER GETS. It is bounded by its own deadline,
+   * swallows its own failures, and is awaited only after the result or the error is
+   * already decided — so no answer is lost, refused or altered by a measurement.
+   */
   async execute(
     request: Readonly<AskRequest>,
     plan: Readonly<AskPlan>,
     operationId: string,
   ): Promise<ExecutionResult> {
+    const draft = newAskObservationDraft(ASK_R2_ADAPTER_VERSION, request.language);
+    const startedAt = Date.now();
+    try {
+      return await this.executeInner(request, plan, operationId, draft);
+    } catch (error) {
+      /* The same naming the service applies to the operation's failureCode (Gate E). */
+      draft.failureCode =
+        error instanceof AskExecutionRefused && /^[A-Z0-9_:.-]{1,120}$/i.test(error.code)
+          ? error.code
+          : 'EXECUTION_FAILED';
+      throw error;
+    } finally {
+      draft.latencyMs = Date.now() - startedAt;
+      draft.computeClass = classifyCompute(request, plan, false);
+      await this.observations.record({ operationId, ...draft });
+    }
+  }
+
+  private async executeInner(
+    request: Readonly<AskRequest>,
+    plan: Readonly<AskPlan>,
+    operationId: string,
+    draft: AskObservationDraft,
+  ): Promise<ExecutionResult> {
     const route = routeFor(request, this.deps);
+    this.observeRoute(route, draft);
     if (planRevision(request, route) !== plan.revision) {
       throw new AskExecutionRefused('ASK_PLAN_REVISION_MISMATCH');
     }
@@ -236,7 +301,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* 2 · a terminal that needs no model answers with ZERO AI. */
     const early = answerStateBeforeExecution(route.plan);
     if (early !== null && early.state !== 'REFERENCE_BACKGROUND') {
-      return this.result(plan, route, operationId, early, null, false);
+      return this.result(plan, route, operationId, this.observeAnswer(early, draft), null, false);
     }
     /*
       ALPHA ENABLEMENT R1 (MC-070) — "And Kenya?" continues nothing: an Ask R2 request
@@ -251,38 +316,61 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         plan,
         route,
         operationId,
-        {
-          state: 'CLARIFICATION_REQUIRED',
-          basis: 'NO_PRIOR_SUBJECT',
-          missingRoles: [],
-          candidates: [...continuation.candidates],
-        },
+        this.observeAnswer(
+          {
+            state: 'CLARIFICATION_REQUIRED',
+            basis: 'NO_PRIOR_SUBJECT',
+            missingRoles: [],
+            candidates: [...continuation.candidates],
+          },
+          draft,
+        ),
         null,
         false,
       );
     }
+    /*
+      ASK GENERAL BACKGROUND EXECUTION R1 — a REFERENCE_BACKGROUND_ONLY plan requires no
+      evidence at all (frozen C: `required.length === 0`), so it is never routed into the
+      news-retrieval analysis path below — that would either burn an irrelevant Reporting
+      search or mislabel a coincidental result as background (the proven defect this round
+      closes). One ZERO-Reporting-call model answer, still behind every existing control.
+    */
+    if (early !== null && early.state === 'REFERENCE_BACKGROUND') {
+      return this.executeBackground(request, plan, route, operationId, draft);
+    }
+
     const unsupplied = requiredRolesOf(route.plan).filter((r) => !EXECUTOR_SUPPLIES.has(r));
     if (unsupplied.length > 0) {
       return this.result(
         plan,
         route,
         operationId,
-        { state: 'CAPABILITY_UNAVAILABLE', basis: 'EXECUTOR_NOT_WIRED', missingRoles: unsupplied },
+        this.observeAnswer(
+          {
+            state: 'CAPABILITY_UNAVAILABLE',
+            basis: 'EXECUTOR_NOT_WIRED',
+            missingRoles: unsupplied,
+          },
+          draft,
+        ),
         null,
         false,
       );
     }
 
     /* 3 · controls, in order, each failing closed. */
-    if (!(await this.switches.isEnabled('ASK_R2_ENABLED')))
-      throw new AskExecutionRefused('ASK_R2_DISABLED');
-    if (!(await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED'))) {
+    draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
+    if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
+    draft.askPublicComputeEnabled = await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+    if (!draft.askPublicComputeEnabled) {
       throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
     }
     const who = askRequestContext.getStore();
     if (who === undefined) throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
 
     const provider = this.provider.id;
+    draft.providerId = provider;
     const permit = await this.breaker.permit(provider);
     if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
 
@@ -308,6 +396,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     let response: AnalysisApiResponse | null = null;
     let noEvidence = false;
     try {
+      /* One call to the approved path. Counted before it is made, so a call that throws
+         is still a call that happened — the number an operator needs is attempts. */
+      draft.providerCallCount = 1;
       response = await this.analysis.analyzeNews(
         request.question,
         request.language,
@@ -348,6 +439,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         noEvidence ? 'NO_EVIDENCE' : outcome,
       );
       await this.breaker.record(provider, outcome, permit.trial);
+      /* The breaker's OWN verdict, recorded where it is decided. A REFUSAL here is the
+         landed no-evidence answer, which is not a provider failure and must never be
+         counted as one. */
+      draft.breakerOutcome = noEvidence ? 'REFUSAL' : outcome;
     }
     if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {
       throw new AskExecutionRefused(`MODEL_${outcome}`);
@@ -361,12 +456,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         plan,
         route,
         operationId,
-        {
-          state: 'CLARIFICATION_REQUIRED',
-          basis: `LANDED_${landed.clarificationReason ?? 'CLARIFICATION'}`,
-          missingRoles: [],
-          candidates: [...(landed.clarificationCandidates ?? [])],
-        },
+        this.observeAnswer(
+          {
+            state: 'CLARIFICATION_REQUIRED',
+            basis: `LANDED_${landed.clarificationReason ?? 'CLARIFICATION'}`,
+            missingRoles: [],
+            candidates: [...(landed.clarificationCandidates ?? [])],
+          },
+          draft,
+        ),
         response,
         false,
       );
@@ -377,7 +475,210 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       producedAnswer: response.analysis !== null,
     });
     /* AI executed = the analysis path produced a model answer (the usage sink is metering only). */
-    return this.result(plan, route, operationId, answer, response, response.analysis !== null);
+    const aiExecuted = response.analysis !== null;
+    draft.aiExecuted = aiExecuted;
+    draft.modelInvocationCount = aiExecuted ? 1 : 0;
+    draft.reportingItemCount = response.articles.length;
+    draft.evidenceRolesObtained = response.articles.length > 0 ? ['REPORTING'] : [];
+    const measured = usage as { promptTokens: number; completionTokens: number } | null;
+    if (measured !== null) {
+      draft.promptTokens = measured.promptTokens;
+      draft.completionTokens = measured.completionTokens;
+    }
+    return this.result(
+      plan,
+      route,
+      operationId,
+      this.observeAnswer(answer, draft),
+      response,
+      aiExecuted,
+    );
+  }
+
+  /**
+   * The routing axes, copied out of the envelope and the plan — never derived again.
+   *
+   * WHAT IS DELIBERATELY NOT COPIED, AND WHY EACH ONE IS NOT:
+   *   `topic.readerTerms`      the reader's own words. Presence only.
+   *   `time.statedPeriod`      the reader's own phrase. Presence only.
+   *   `placeSpansOf(route)`    the reader's matched place text. Not read here at all.
+   *   `clarification.observed` / `.candidate`   may carry a publisher or a reader value.
+   *                            Only the CODE travels.
+   * A boolean and a code cannot be re-read as a question, which is the whole reason they
+   * are the shapes chosen.
+   */
+  private observeRoute(route: AskR2Route, draft: AskObservationDraft): void {
+    const envelope = route.envelope;
+    const plan = route.plan;
+    draft.questionClass = plan.questionClass;
+    draft.queryIntent = envelope.classifiers.queryIntent;
+    draft.terminalState = plan.terminalState;
+    draft.refusalCodes = [...plan.refusals];
+    draft.disclosureCodes = [...plan.disclosures];
+    draft.clarificationCodes = plan.clarification.map((cause) => cause.code);
+    draft.questionLanguage = envelope.language.questionLanguage;
+    draft.languageClassification = envelope.language.classification;
+    draft.normalizationStatus = route.outcome.status;
+    draft.geographyCodes = envelope.geography.candidates.map((candidate) => candidate.value);
+    draft.geographySources = [
+      ...new Set(envelope.geography.candidates.map((candidate) => candidate.source)),
+    ];
+    draft.geographyPrecision = envelope.geography.producibleCeiling;
+    draft.scopedBy = plan.scopedBy;
+    draft.domains = [...envelope.domains.domains];
+    draft.topicPresent = envelope.topic.readerTerms.length > 0;
+    draft.temporalRequirement = envelope.time.requirement;
+    draft.statedPeriodPresent = envelope.time.statedPeriod !== null;
+    draft.evidenceRolesRequested = requiredRolesOf(plan);
+    draft.identityState = envelope.identity.state;
+  }
+
+  /**
+   * The answer decision, recorded at the moment it is decided, and returned unchanged.
+   *
+   * It returns its argument so every call site reads `this.observeAnswer(decision, draft)`
+   * in the position the decision already occupied: there is no branch where a decision is
+   * produced and the observation is taken from somewhere else.
+   */
+  private observeAnswer<T extends AnswerDecision>(answer: T, draft: AskObservationDraft): T {
+    draft.answerState = answer.state;
+    draft.answerBasis = answer.basis;
+    draft.evidenceRolesMissing = [...answer.missingRoles];
+    draft.clarificationRequired = answer.state === 'CLARIFICATION_REQUIRED';
+    draft.capabilityUnavailable = answer.state === 'CAPABILITY_UNAVAILABLE';
+    return answer;
+  }
+
+  /**
+   * ASK GENERAL BACKGROUND EXECUTION R1 — the executor for a `REFERENCE_BACKGROUND_ONLY`
+   * plan. Mirrors `execute()`'s steps 3 and 5 (every control, in the same order, each
+   * failing closed; settlement on actual units) exactly, and replaces step 4's news
+   * retrieval + analysis call with ONE call to the dedicated background provider — 0
+   * Reporting/GNews calls, 0 fabricated citations. Never reached unless frozen C has
+   * already decided no evidence class is required (§4.7/§7 of the accepted contract);
+   * every other terminal keeps the existing analysis path untouched.
+   *
+   * STANDALONE PUBLIC BETA CONVERGENCE R1 (A × F) — it writes the SAME observation fields,
+   * at the same moments, as the Reporting path: switch reads, provider, the one call, the
+   * breaker's verdict, AI/model counts, tokens and the answer decision. `execute()` still
+   * records the single observation. Model background is never evidence, so
+   * `evidenceRolesObtained` stays [] and `reportingItemCount` is 0 (not null: Reporting was
+   * decided against, not unreached). No background text reaches the draft.
+   */
+  private async executeBackground(
+    request: Readonly<AskRequest>,
+    plan: Readonly<AskPlan>,
+    route: AskR2Route,
+    operationId: string,
+    draft: AskObservationDraft,
+  ): Promise<ExecutionResult> {
+    /* 3 · controls, in order, each failing closed — identical to the reporting path. */
+    draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
+    if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
+    draft.askPublicComputeEnabled = await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+    if (!draft.askPublicComputeEnabled) {
+      throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
+    }
+    const who = askRequestContext.getStore();
+    if (who === undefined) throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
+
+    const provider = this.background.id;
+    draft.providerId = provider;
+    draft.reportingItemCount = 0;
+    const permit = await this.breaker.permit(provider);
+    if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
+
+    const reservation = await this.meter.reserve({
+      accountId: who.accountId,
+      ipScope: who.ipScope,
+      provider,
+      estimatedUnits: estimateBackgroundUnits(
+        request.question.length,
+        this.meter.config.outputWeight,
+      ),
+    });
+    if (!reservation.admitted) {
+      await this.breaker.record(provider, 'REFUSAL', permit.trial);
+      throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
+    }
+
+    /* 4 · ONE call to the dedicated background provider. No articles, no retrieval. */
+    let usage: { promptTokens: number; completionTokens: number } | null = null;
+    let outcome: BreakerOutcome = 'FAILURE';
+    let text: string | null = null;
+    /* The provider judged the question unanswerable from background alone — a legitimate
+       governed outcome (frozen C's own freshness/safety boundary), never a provider fault:
+       mirrors the reporting path's `noEvidence` in shape and in meter/breaker treatment. */
+    let declined = false;
+    try {
+      /* Counted before it is made, as on the Reporting path: attempts are what an operator needs. */
+      draft.providerCallCount = 1;
+      const out = await this.background.answerBackground({
+        question: request.question,
+        responseLanguage: request.language,
+        maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
+        usageSink: (u) => {
+          usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
+        },
+      });
+      text = out.text;
+      declined = text === null;
+      outcome = declined ? 'REFUSAL' : 'SUCCESS';
+    } catch (error) {
+      /* A+H QUALIFICATION R1 — classify on the provider's TYPED reason. The provider's own
+         attempt timeout says "timed out", which the message pattern alone never matched,
+         so a real timeout was recorded as FAILURE in the breaker and the meter. */
+      outcome =
+        (error as { failureReason?: unknown })?.failureReason === 'provider-timeout' ||
+        /timeout|timed out|deadline/i.test((error as Error)?.message ?? '')
+          ? 'TIMEOUT'
+          : 'FAILURE';
+    } finally {
+      /* 5 · settle on actual units (null keeps the estimate — the safe direction). */
+      const used = usage as { promptTokens: number; completionTokens: number } | null;
+      const actual =
+        used !== null
+          ? used.promptTokens + this.meter.config.outputWeight * used.completionTokens
+          : declined
+            ? 0
+            : null;
+      await this.meter.settle(
+        reservation.reservationId,
+        actual,
+        declined ? 'NO_EVIDENCE' : outcome,
+      );
+      await this.breaker.record(provider, outcome, permit.trial);
+      /* The breaker's own verdict, where it is decided (a decline is REFUSAL, not a fault). */
+      draft.breakerOutcome = outcome;
+    }
+    if (outcome !== 'SUCCESS' && !declined) {
+      throw new AskExecutionRefused(`MODEL_${outcome}`);
+    }
+
+    /* 7 · the §7 answer state — the one derivation, unchanged. A decline (text === null)
+       is `producedAnswer: false`, which `deriveAnswerState` already maps to the truthful
+       CAPABILITY_UNAVAILABLE / missingRoles: ['REFERENCE'] state — never a fabricated
+       background answer, and never a silent pretend-success. */
+    const answer = deriveAnswerState(route.plan, { items: {}, producedAnswer: !declined });
+    /* The model WAS invoked on a decline (it answered with the decline token), so the
+       invocation is counted; `aiExecuted` means an answer was produced, as on Reporting. */
+    draft.aiExecuted = !declined;
+    draft.modelInvocationCount = 1;
+    draft.evidenceRolesObtained = [];
+    const measured = usage as { promptTokens: number; completionTokens: number } | null;
+    if (measured !== null) {
+      draft.promptTokens = measured.promptTokens;
+      draft.completionTokens = measured.completionTokens;
+    }
+    return this.result(
+      plan,
+      route,
+      operationId,
+      this.observeAnswer(answer, draft),
+      null,
+      !declined,
+      text,
+    );
   }
 
   private result(
@@ -387,6 +688,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     answer: AnswerDecision,
     analysis: AnalysisApiResponse | null,
     aiExecuted: boolean,
+    backgroundText: string | null = null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -421,6 +723,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         aiExecuted,
         modelPriorCitable: false,
         analysis,
+        /* ASK GENERAL BACKGROUND EXECUTION R1 — additive. Non-citable, non-sourced model
+           background text (never present alongside a non-null `analysis`). */
+        background: backgroundText === null ? null : { text: backgroundText },
       }),
       evidenceRevision: plan.revision,
       validUntil: plan.validUntil,

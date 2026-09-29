@@ -1,7 +1,12 @@
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { AskExecutionRefused, validatePlan, type AskRequest } from './ask-compute.contract';
-import { AskR2ExecutionAdapter, estimateUnits } from './ask-r2-execution.adapter';
+import {
+  AskR2ExecutionAdapter,
+  estimateUnits,
+  estimateBackgroundUnits,
+} from './ask-r2-execution.adapter';
 import { askRequestContext } from './ask-request-context';
+import { GeneralBackgroundProviderError } from '../analysis/interfaces';
 import {
   ASK_MODEL_MAX_ATTEMPTS,
   resolveComputeControlsConfig,
@@ -15,6 +20,7 @@ import {
 
 type Calls = {
   analysis: unknown[][];
+  background: unknown[][];
   reserve: unknown[];
   settle: unknown[][];
   permit: string[];
@@ -28,8 +34,31 @@ function harness(opts: {
   analysis?: (policy: {
     usageSink?: (u: { promptTokens: number; completionTokens: number }) => void;
   }) => Promise<Partial<AnalysisApiResponse>>;
+  /** ASK GENERAL BACKGROUND EXECUTION R1 — the background provider's response/behaviour. */
+  background?: (input: {
+    usageSink?: (u: { promptTokens: number; completionTokens: number }) => void;
+  }) => Promise<{ text: string | null }>;
 }) {
-  const calls: Calls = { analysis: [], reserve: [], settle: [], permit: [], record: [] };
+  const calls: Calls = {
+    analysis: [],
+    background: [],
+    reserve: [],
+    settle: [],
+    permit: [],
+    record: [],
+  };
+  /*
+    R1 observability — DELIBERATELY NOT A MEMBER OF `calls`.
+
+    Several assertions below read `expect(calls).toEqual({ analysis: [], reserve: [], ... })`
+    to prove a deterministic terminal spent NOTHING. Adding an observation key to that
+    object would have forced every one of those assertions to be rewritten, and an
+    assertion rewritten to accommodate a new write is exactly how a "this path spends
+    nothing" guarantee gets quietly widened. The recorder is returned separately, so those
+    assertions still mean what they meant, and the observation is asserted on its own.
+  */
+  const observed: unknown[] = [];
+
   const analysisService = {
     analyzeNews: jest.fn(async (...args: unknown[]) => {
       calls.analysis.push(args);
@@ -50,6 +79,24 @@ function harness(opts: {
     }),
   };
   const provider = { id: 'openai', displayName: 'OpenAI', isMock: false, analyzeNews: jest.fn() };
+  const backgroundProvider = {
+    id: 'openai',
+    displayName: 'OpenAI',
+    isMock: false,
+    answerBackground: jest.fn(async (input: unknown) => {
+      calls.background.push([input]);
+      const { usageSink } = input as {
+        usageSink?: (u: { promptTokens: number; completionTokens: number }) => void;
+      };
+      return (
+        opts.background ??
+        (async (p: { usageSink?: typeof usageSink }) => {
+          p.usageSink?.({ promptTokens: 500, completionTokens: 200 });
+          return { text: 'General background answer.' };
+        })
+      )({ usageSink });
+    }),
+  };
   const meter = {
     config: { outputWeight: 4 },
     reserve: jest.fn(async (input: unknown) => {
@@ -83,13 +130,16 @@ function harness(opts: {
   const adapter = new AskR2ExecutionAdapter(
     analysisService as never,
     provider as never,
+    backgroundProvider as never,
     meter as never,
     breaker as never,
     switches as never,
     analysisConfig as never,
     specialists as never,
+    /* Keeps what it was handed. Never a real store. */
+    { record: jest.fn(async (input: unknown) => (observed.push(input), true)) } as never,
   );
-  return { adapter, calls };
+  return { adapter, calls, observed };
 }
 
 const req = (question: string, language: 'en' | 'pl' = 'en'): AskRequest => ({
@@ -116,7 +166,14 @@ describe('prepare — pure: frozen C only, no provider, no model', () => {
     expect(() => validatePlan(plan, req('What is happening in Kenya?'))).not.toThrow();
     expect(plan.contract).toMatch(/^ask-r2-adapter\/1:CURRENT_REPORTING:EXECUTABLE$/);
     expect(plan.countryCount).toBe(1);
-    expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+    expect(calls).toEqual({
+      analysis: [],
+      background: [],
+      reserve: [],
+      settle: [],
+      permit: [],
+      record: [],
+    });
   });
 
   it('a Polish question is routed through the same frozen authority', async () => {
@@ -145,7 +202,14 @@ describe('execute — a clarification is a successful terminal with ZERO AI', ()
     expect(result.succeeded).toBe(true);
     expect(payload.aiExecuted).toBe(false);
     expect(['CLARIFICATION_REQUIRED', 'CAPABILITY_UNAVAILABLE']).toContain(payload.answer.state);
-    expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+    expect(calls).toEqual({
+      analysis: [],
+      background: [],
+      reserve: [],
+      settle: [],
+      permit: [],
+      record: [],
+    });
   });
 });
 
@@ -247,22 +311,27 @@ describe('execute — the one bounded call, settled on actual units', () => {
     expect(calls.settle).toEqual([['res-1', 0, 'NO_EVIDENCE']]);
   });
 
-  it('GATE H (Main MC-033): a reference question that produced nothing is a TYPED refusal naming REFERENCE — never "no reporting found"', async () => {
-    const { adapter } = harness({
-      analysis: async () => ({
-        analysis: null,
-        analysisError: 'No matching reporting.',
-        articles: [],
-      }),
-    });
-    const plan = await adapter.prepare(req('What is inflation?'));
-    const result = await inRequest(() => adapter.execute(req('What is inflation?'), plan, 'op-1'));
-    expect((JSON.parse(result.payloadJson) as { answer: unknown }).answer).toEqual({
-      state: 'CAPABILITY_UNAVAILABLE',
-      basis: 'REFERENCE_UNAVAILABLE',
-      missingRoles: ['REFERENCE'],
-    });
-  });
+  it(
+    'GATE H (Main MC-033), reconciled under ASK GENERAL BACKGROUND EXECUTION R1: a reference ' +
+      'question the background provider declines is a TYPED refusal naming REFERENCE — never ' +
+      '"no reporting found", and NEVER by way of a Reporting/news-retrieval call',
+    async () => {
+      const { adapter, calls } = harness({ background: async () => ({ text: null }) });
+      const plan = await adapter.prepare(req('What is inflation?'));
+      const result = await inRequest(() =>
+        adapter.execute(req('What is inflation?'), plan, 'op-1'),
+      );
+      expect((JSON.parse(result.payloadJson) as { answer: unknown }).answer).toEqual({
+        state: 'CAPABILITY_UNAVAILABLE',
+        basis: 'REFERENCE_UNAVAILABLE',
+        missingRoles: ['REFERENCE'],
+      });
+      /* THE proven defect this round closes: a background question never invokes Reporting
+         merely to manufacture (or fail to find) a citation. */
+      expect(calls.analysis).toEqual([]);
+      expect(calls.background).toHaveLength(1);
+    },
+  );
 
   it('a provider failure WITH retrieved articles is still MODEL_FAILURE', async () => {
     const { adapter } = harness({
@@ -317,6 +386,258 @@ describe('execute — the one bounded call, settled on actual units', () => {
   });
 });
 
+describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zero Reporting calls', () => {
+  const Q = 'What is inflation?';
+
+  it.each([
+    ['What is inflation?', 'en'],
+    ['Czym jest inflacja?', 'pl'],
+    ['Who was Hitler?', 'en'],
+    ['What is NATO?', 'en'],
+    ['How does an induction motor work?', 'en'],
+    ['What is a derivative?', 'en'],
+    ['How does TCP work?', 'en'],
+    ['Explain the second law of thermodynamics.', 'en'],
+    ['How does a transformer work?', 'en'],
+  ] as const)(
+    '%s (%s) → REFERENCE_BACKGROUND_ONLY plans through the background provider, never Reporting',
+    async (q, lg) => {
+      const { adapter, calls } = harness({});
+      const plan = await adapter.prepare(req(q, lg));
+      expect(plan.contract).toMatch(/:REFERENCE:REFERENCE_BACKGROUND_ONLY$/);
+      const result = await inRequest(() => adapter.execute(req(q, lg), plan, 'op-1'));
+      const payload = JSON.parse(result.payloadJson) as {
+        aiExecuted: boolean;
+        answer: { state: string };
+        analysis: unknown;
+        background: { text: string } | null;
+        modelPriorCitable: boolean;
+      };
+      expect(payload).toMatchObject({
+        aiExecuted: true,
+        answer: { state: 'REFERENCE_BACKGROUND' },
+        analysis: null,
+        modelPriorCitable: false,
+      });
+      expect(payload.background).toEqual({ text: 'General background answer.' });
+      /* THE proven defect this round closes. */
+      expect(calls.analysis).toEqual([]);
+      expect(calls.background).toHaveLength(1);
+    },
+  );
+
+  it('ONE background call, maxModelAttempts = 1, reservation scoped to the server-held account/IP', async () => {
+    const { adapter, calls } = harness({});
+    const plan = await adapter.prepare(req(Q));
+    await inRequest(() => adapter.execute(req(Q), plan, 'op-1'));
+    expect(calls.background).toHaveLength(1);
+    const input = calls.background[0]![0] as { maxModelAttempts?: number; question: string };
+    expect(input.maxModelAttempts).toBe(ASK_MODEL_MAX_ATTEMPTS);
+    expect(input.question).toBe(Q);
+    expect(calls.reserve).toEqual([
+      expect.objectContaining({
+        accountId: 'user-1',
+        ipScope: 'ip:v4:203.0.113.7',
+        provider: 'openai',
+      }),
+    ]);
+    /* actual = prompt + outputWeight × completion = 500 + 4 × 200 */
+    expect(calls.settle).toEqual([['res-1', 1300, 'SUCCESS']]);
+    expect(calls.record).toEqual([['openai', 'SUCCESS', false]]);
+  });
+
+  it('a decline (NO_BACKGROUND_ANSWER) settles as REFUSAL/0 units, never a fabricated answer, never MODEL_FAILURE', async () => {
+    const { adapter, calls } = harness({ background: async () => ({ text: null }) });
+    const plan = await adapter.prepare(req(Q));
+    const result = await inRequest(() => adapter.execute(req(Q), plan, 'op-1'));
+    const payload = JSON.parse(result.payloadJson) as {
+      aiExecuted: boolean;
+      answer: unknown;
+      background: unknown;
+    };
+    expect(payload.aiExecuted).toBe(false);
+    expect(payload.background).toBeNull();
+    expect(payload.answer).toEqual({
+      state: 'CAPABILITY_UNAVAILABLE',
+      basis: 'REFERENCE_UNAVAILABLE',
+      missingRoles: ['REFERENCE'],
+    });
+    expect(calls.settle).toEqual([['res-1', 0, 'NO_EVIDENCE']]);
+    expect(calls.record).toEqual([['openai', 'REFUSAL', false]]);
+  });
+
+  it('a provider failure is MODEL_FAILURE — settled with the estimate kept, recorded, never silently answered', async () => {
+    const { adapter, calls } = harness({
+      background: async () => Promise.reject(new Error('socket hang up')),
+    });
+    const plan = await adapter.prepare(req(Q));
+    expect(await refusal(inRequest(() => adapter.execute(req(Q), plan, 'op-1')))).toBe(
+      'MODEL_FAILURE',
+    );
+    expect(calls.settle).toEqual([['res-1', null, 'FAILURE']]);
+    expect(calls.record).toEqual([['openai', 'FAILURE', false]]);
+  });
+
+  /* A+H QUALIFICATION R1 — the provider's own attempt-timeout error, verbatim. Its message
+     says "timed out"; the outcome must still be TIMEOUT in the refusal, meter and breaker. */
+  it.each([
+    ['attempt timeout', 'General background call timed out.'],
+    ['caller deadline', 'General background call cancelled because the response deadline expired.'],
+  ])(
+    'a provider %s is MODEL_TIMEOUT — fail closed, settled and recorded as TIMEOUT',
+    async (_k, message) => {
+      const { adapter, calls } = harness({
+        background: async () =>
+          Promise.reject(new GeneralBackgroundProviderError(message, 'provider-timeout', false)),
+      });
+      const plan = await adapter.prepare(req(Q));
+      expect(await refusal(inRequest(() => adapter.execute(req(Q), plan, 'op-1')))).toBe(
+        'MODEL_TIMEOUT',
+      );
+      expect(calls.settle).toEqual([['res-1', null, 'TIMEOUT']]);
+      expect(calls.record).toEqual([['openai', 'TIMEOUT', false]]);
+      expect(calls.analysis).toEqual([]);
+    },
+  );
+
+  it.each([
+    [{ switches: { ASK_R2_ENABLED: false } }, 'ASK_R2_DISABLED'],
+    [{ switches: { ASK_PUBLIC_COMPUTE_ENABLED: false } }, 'ASK_PUBLIC_COMPUTE_DISABLED'],
+    [{ breakerAllowed: false }, 'CIRCUIT_OPEN'],
+    [{ meterAdmitted: false }, 'BUDGET_REFUSED:account-day'],
+  ] as const)(
+    '%j → %s, the background provider is never called (same fail-closed order as Reporting)',
+    async (opts, code) => {
+      const { adapter, calls } = harness(opts);
+      const plan = await adapter.prepare(req(Q));
+      expect(await refusal(inRequest(() => adapter.execute(req(Q), plan, 'op-1')))).toBe(code);
+      expect(calls.background).toEqual([]);
+    },
+  );
+
+  it('outside a request (no server-held account/IP) the call is refused — never unscoped', async () => {
+    const { adapter, calls } = harness({});
+    const plan = await adapter.prepare(req(Q));
+    expect(await refusal(adapter.execute(req(Q), plan, 'op-1'))).toBe(
+      'ASK_REQUEST_CONTEXT_MISSING',
+    );
+    expect(calls.permit).toEqual([]);
+  });
+
+  it('the unit estimate for a long question fits the default per-request ceiling, and is far smaller than a Reporting call', () => {
+    const ceiling = resolveComputeControlsConfig(() => undefined).unitsPerRequestMax;
+    const reportingMax = estimateUnits(
+      1000,
+      { maxArticles: 8, maxArticleChars: 1200, maxCompletionTokens: 2000 },
+      4,
+    );
+    const backgroundMax = estimateBackgroundUnits(1000, 4);
+    expect(backgroundMax).toBeLessThanOrEqual(ceiling);
+    expect(backgroundMax).toBeLessThan(reportingMax);
+  });
+
+  /*
+    CTO POST-#66 CLOSURE — qualification family 1/2: MIXED background + current. A question
+    with a stable part AND a present-day part (frozen C: `e.time.requirement === 'RECENT'`
+    from a stated-now period, or a present-tense/geographic/domain signal — see
+    `deriveEvidenceNeeds` in planner.ts) must put NEWS_REPORTING into `required`, so
+    `required.length` is never 0 and the terminal is never REFERENCE_BACKGROUND_ONLY. That
+    is the whole proof: a mixed question stays on the CURRENT-EVIDENCE path, so a current
+    claim structurally cannot be silently answered from model background — there is no
+    branch in this adapter that would let it.
+
+    A+H QUALIFICATION R1 (test-only correction) — on that path Frozen C may still END the
+    question before Reporting runs: "…NATO…in Poland today?" is BROADENING_OFFERED (a
+    clarification) and "…inflation rate today?" is CAPABILITY_UNAVAILABLE. Both are governed
+    current-path outcomes with zero model calls. The earlier assertion that Reporting always
+    executes did not hold against the frozen router; the invariant asserted now is the one
+    that matters: never the background provider, never background text, never citable.
+  */
+  describe('CTO POST-#66 CLOSURE — mixed background + current, never a silent fallback', () => {
+    it.each([
+      ['What is NATO and what is it doing in Poland today?', 'CLARIFICATION_REQUIRED'],
+      ['What is inflation and what is the inflation rate today?', 'CAPABILITY_UNAVAILABLE'],
+    ])('%s → current-evidence path (%s), never the background provider', async (q, state) => {
+      const { adapter, calls } = harness({});
+      const plan = await adapter.prepare(req(q));
+      expect(plan.contract).toMatch(/:CURRENT_REPORTING:/);
+      expect(plan.contract).not.toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+      const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+      const payload = JSON.parse(result.payloadJson);
+      expect(payload.answer.state).toBe(state);
+      expect(payload.background).toBeNull();
+      expect(payload.modelPriorCitable).toBe(false);
+      expect(payload.aiExecuted).toBe(false);
+      expect(calls.background).toEqual([]);
+      expect(calls.analysis).toEqual([]);
+    });
+
+    it('a current question that IS executable reaches Reporting, never the background provider', async () => {
+      const q = 'What is happening in Kenya?';
+      const { adapter, calls } = harness({});
+      const plan = await adapter.prepare(req(q));
+      expect(plan.contract).toMatch(/:CURRENT_REPORTING:EXECUTABLE$/);
+      const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+      expect(JSON.parse(result.payloadJson).background).toBeNull();
+      expect(calls.background).toEqual([]);
+      expect(calls.analysis).toHaveLength(1);
+    });
+  });
+
+  /*
+    CTO POST-#66 CLOSURE — qualification family 2/2: BACKGROUND + FOLLOW-UP. A single
+    adapter instance carries no per-turn state (`execute` reads only its arguments — the
+    request, the plan Frozen C already computed, and the operation id), so this proves the
+    provenance boundary holds ACROSS a conversation, not just within one call: three
+    resolved turns (the upstream continuation/pronoun resolution that turns "Why was it
+    created?" into a self-contained question is a different, already-tested layer — this
+    adapter only ever sees the resolved text) run through the SAME harness, and the
+    background/Reporting call counts must move independently, per turn, with no leakage
+    from the prior turn's classification.
+  */
+  describe('CTO POST-#66 CLOSURE — background + follow-up, provenance boundary across turns', () => {
+    it('stable → stable → current: each turn is classified and executed on its own, no state carried over', async () => {
+      const { adapter, calls } = harness({});
+
+      const turn1 = 'What is NATO?';
+      const plan1 = await adapter.prepare(req(turn1));
+      expect(plan1.contract).toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+      await inRequest(() => adapter.execute(req(turn1), plan1, 'op-1'));
+      expect(calls.background).toHaveLength(1);
+      expect(calls.analysis).toHaveLength(0);
+
+      /* A+H QUALIFICATION R1 (test-only correction) — "Why was NATO created?" is classified
+         CURRENT_REPORTING by the frozen router (the conservative direction: it goes to
+         evidence, not to the model), so it cannot stand for a stable turn. "What is the
+         history of NATO?" is REFERENCE_BACKGROUND_ONLY under Frozen C. */
+      const turn2 = 'What is the history of NATO?';
+      const plan2 = await adapter.prepare(req(turn2));
+      expect(plan2.contract).toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+      await inRequest(() => adapter.execute(req(turn2), plan2, 'op-2'));
+      expect(calls.background).toHaveLength(2);
+      expect(calls.analysis).toHaveLength(0);
+
+      /* Frozen C ends this current follow-up in a governed clarification (BROADENING_OFFERED,
+         zero model calls); the boundary is what matters — it never reaches background. */
+      const turn3 = 'What is NATO doing in Poland today?';
+      const plan3 = await adapter.prepare(req(turn3));
+      expect(plan3.contract).toMatch(/:CURRENT_REPORTING:/);
+      const r3 = await inRequest(() => adapter.execute(req(turn3), plan3, 'op-3'));
+      expect(JSON.parse(r3.payloadJson).background).toBeNull();
+      expect(calls.background).toHaveLength(2);
+
+      /* …and an executable current follow-up goes to Reporting, still never to background. */
+      const turn4 = 'What is happening in Kenya?';
+      const plan4 = await adapter.prepare(req(turn4));
+      await inRequest(() => adapter.execute(req(turn4), plan4, 'op-4'));
+      /* the boundary: current turns never touch the background provider, and turns 1–2's
+         background answers never touched Reporting. */
+      expect(calls.background).toHaveLength(2);
+      expect(calls.analysis).toHaveLength(1);
+    });
+  });
+});
+
 describe('GATE H — Main R1.1 execution rows', () => {
   it('MC-047/MC-050: a computation or an attached file is a typed refusal with ZERO AI and no control touched', async () => {
     for (const q of ['Solve x^3 - 4x + 1 = 0', 'Summarise the PDF I attached']) {
@@ -331,7 +652,14 @@ describe('GATE H — Main R1.1 execution rows', () => {
         aiExecuted: false,
         answer: { state: 'CAPABILITY_UNAVAILABLE' },
       });
-      expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+      expect(calls).toEqual({
+        analysis: [],
+        background: [],
+        reserve: [],
+        settle: [],
+        permit: [],
+        record: [],
+      });
     }
   });
 
@@ -433,7 +761,14 @@ describe('ALPHA ENABLEMENT R1 — MC-055 / MC-070 on the Ask R2 path', () => {
       basis: 'PLAN_IDENTITY_REQUIRED',
     });
     expect(payload.aiExecuted).toBe(false);
-    expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+    expect(calls).toEqual({
+      analysis: [],
+      background: [],
+      reserve: [],
+      settle: [],
+      permit: [],
+      record: [],
+    });
   });
 
   it('MC-055: signed in, it is governed by capability — the personal library is not wired here, 0 AI', async () => {
@@ -468,7 +803,14 @@ describe('ALPHA ENABLEMENT R1 — MC-055 / MC-070 on the Ask R2 path', () => {
         };
         expect(payload.route.personalScope).toBe(scope);
         expect(payload.aiExecuted).toBe(false);
-        expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+        expect(calls).toEqual({
+          analysis: [],
+          background: [],
+          reserve: [],
+          settle: [],
+          permit: [],
+          record: [],
+        });
       }
     },
   );
@@ -506,7 +848,311 @@ describe('ALPHA ENABLEMENT R1 — MC-055 / MC-070 on the Ask R2 path', () => {
       expect(payload.chips.chips?.some((c) => c.kind === 'GEOGRAPHY' && c.value === 'KEN')).toBe(
         true,
       );
-      expect(calls).toEqual({ analysis: [], reserve: [], settle: [], permit: [], record: [] });
+      expect(calls).toEqual({
+        analysis: [],
+        background: [],
+        reserve: [],
+        settle: [],
+        permit: [],
+        record: [],
+      });
     },
   );
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ADMIN ASK INTELLIGENCE OBSERVABILITY R1 — WHAT THE ADAPTER OBSERVES
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * These assertions ride the SAME harness as the behavioural ones above, deliberately: an
+ * observation asserted against a separate stub would prove that a recorder can be called,
+ * not that the path that answers a reader records what it did.
+ */
+describe('R1 — one Ask, one observation, and never a question in it', () => {
+  const observationOf = (observed: unknown[]): Record<string, unknown> =>
+    observed[0] as Record<string, unknown>;
+
+  it('an answered Ask records exactly one observation, carrying the operation id', async () => {
+    const { adapter, observed } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req('What is happening in Kenya?')));
+    await inRequest(() => adapter.execute(req('What is happening in Kenya?'), plan, 'op-1'));
+
+    expect(observed).toHaveLength(1);
+    expect(observationOf(observed).operationId).toBe('op-1');
+    expect(observationOf(observed).routePath).toBe('ASK_R2');
+  });
+
+  it('`prepare` records NOTHING — a quote is not an Ask, and counting it would inflate every figure', async () => {
+    const { adapter, observed } = harness({});
+    await inRequest(() => adapter.prepare(req('What is happening in Kenya?')));
+    expect(observed).toEqual([]);
+  });
+
+  /*
+    CONTENT WORDS ONLY, AND THAT IS NOT A WEAKENING. A scan for 'is' or 'in' fires on
+    `missingRoles` and `reportingItemCount`, which are field names rather than the reader's
+    words — a guard that cannot be satisfied by a correct implementation gets deleted. These
+    three carry the question's meaning: if any of them survived into an observation, the
+    observation would be a record of what somebody typed.
+  */
+  const QUESTION_WORDS = ['happening', 'kenya', 'what'] as const;
+
+  const scanFor = (haystack: unknown): string[] => {
+    const serialised = JSON.stringify(haystack).toLowerCase();
+    return QUESTION_WORDS.filter((word) => serialised.includes(word.toLowerCase()));
+  };
+
+  it('the recorded observation contains no question text, in any field, at any depth', async () => {
+    const question = 'What is happening in Kenya?';
+    const { adapter, observed } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await inRequest(() => adapter.execute(req(question), plan, 'op-1'));
+
+    /* Word by word, so a truncated or re-cased fragment is caught as well as the whole. */
+    expect(scanFor(observationOf(observed))).toEqual([]);
+    expect(JSON.stringify(observationOf(observed))).not.toContain(question);
+  });
+
+  it('POSITIVE CONTROL — the same scan DOES condemn an observation that carried the question', async () => {
+    /*
+      Without this, the assertion above could pass because the instrument was broken: a
+      misspelled key, a scan over the wrong object, or a word list that matches nothing all
+      produce a green absence. So the same scan is run over the same observation with the
+      question put back into it, and it must fire on every word.
+    */
+    const question = 'What is happening in Kenya?';
+    const { adapter, observed } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await inRequest(() => adapter.execute(req(question), plan, 'op-1'));
+
+    const contaminated = { ...observationOf(observed), question };
+    expect(scanFor(contaminated).sort()).toEqual([...QUESTION_WORDS].sort());
+  });
+
+  it('a deterministic clarification records ZERO model and ZERO provider calls', async () => {
+    const { adapter, observed, calls } = harness({});
+    const plan = await inRequest(() => adapter.prepare(req('And Kenya?')));
+    await inRequest(() => adapter.execute(req('And Kenya?'), plan, 'op-1'));
+
+    const observation = observationOf(observed);
+    expect(observation.answerState).toBe('CLARIFICATION_REQUIRED');
+    expect(observation.clarificationRequired).toBe(true);
+    expect(observation.modelInvocationCount).toBe(0);
+    expect(observation.providerCallCount).toBe(0);
+    expect(observation.aiExecuted).toBe(false);
+    expect(observation.providerId).toBeNull();
+    /* And the switches were never consulted, so they are null rather than false: the
+       difference between "not read" and "off" is the whole reason those columns are
+       nullable. */
+    expect(observation.askR2Enabled).toBeNull();
+    expect(observation.askPublicComputeEnabled).toBeNull();
+    expect(calls).toEqual({
+      analysis: [],
+      background: [],
+      reserve: [],
+      settle: [],
+      permit: [],
+      record: [],
+    });
+  });
+
+  it('a switch that is off records the refusal truthfully, and still records only one observation', async () => {
+    const { adapter, observed } = harness({ switches: { ASK_PUBLIC_COMPUTE_ENABLED: false } });
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await expect(inRequest(() => adapter.execute(req(question), plan, 'op-1'))).rejects.toThrow();
+
+    expect(observed).toHaveLength(1);
+    const observation = observationOf(observed);
+    expect(observation.failureCode).toBe('ASK_PUBLIC_COMPUTE_DISABLED');
+    expect(observation.askR2Enabled).toBe(true);
+    expect(observation.askPublicComputeEnabled).toBe(false);
+    expect(observation.modelInvocationCount).toBe(0);
+  });
+
+  it('a budget refusal is recorded as the control that refused it, not as a model failure', async () => {
+    const { adapter, observed } = harness({ meterAdmitted: false });
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await expect(inRequest(() => adapter.execute(req(question), plan, 'op-1'))).rejects.toThrow();
+
+    const observation = observationOf(observed);
+    expect(observation.failureCode).toBe('BUDGET_REFUSED:account-day');
+    expect(observation.modelInvocationCount).toBe(0);
+    expect(observation.providerCallCount).toBe(0);
+  });
+
+  it('an open circuit is recorded as a circuit refusal, with the provider named', async () => {
+    const { adapter, observed } = harness({ breakerAllowed: false });
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await expect(inRequest(() => adapter.execute(req(question), plan, 'op-1'))).rejects.toThrow();
+
+    const observation = observationOf(observed);
+    expect(observation.failureCode).toBe('CIRCUIT_OPEN');
+    expect(observation.providerId).toBe('openai');
+    expect(observation.providerCallCount).toBe(0);
+  });
+
+  it('an answered Ask records the model invocation, the measured tokens and the evidence it got', async () => {
+    const { adapter, observed } = harness({});
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await inRequest(() => adapter.execute(req(question), plan, 'op-1'));
+
+    const observation = observationOf(observed);
+    expect(observation.aiExecuted).toBe(true);
+    expect(observation.modelInvocationCount).toBe(1);
+    expect(observation.providerCallCount).toBe(1);
+    expect(observation.promptTokens).toBe(3000);
+    expect(observation.completionTokens).toBe(800);
+    expect(observation.reportingItemCount).toBe(2);
+    expect(observation.evidenceRolesObtained).toEqual(['REPORTING']);
+    expect(typeof observation.latencyMs).toBe('number');
+  });
+
+  it('geography travels as governed codes and the reader topic as a boolean, never as words', async () => {
+    const { adapter, observed } = harness({});
+    const question = 'What is happening in Kenya?';
+    const plan = await inRequest(() => adapter.prepare(req(question)));
+    await inRequest(() => adapter.execute(req(question), plan, 'op-1'));
+
+    const observation = observationOf(observed);
+    expect(observation.geographyCodes).toEqual(['KEN']);
+    expect(typeof observation.topicPresent).toBe('boolean');
+    expect(typeof observation.statedPeriodPresent).toBe('boolean');
+    expect(observation.requestLanguage).toBe('en');
+  });
+});
+
+/*
+  STANDALONE PUBLIC BETA CONVERGENCE R1 — A × F. The General Background executor (A) runs
+  inside F's single emit point: every background outcome records EXACTLY ONE observation,
+  written with the same fields as the Reporting path, and neither the question nor the
+  model's background text reaches it.
+*/
+describe('A × F — General Background: one truthful observation per outcome, never the question', () => {
+  const Q_BG = 'What is inflation?';
+  const BG_TEXT = 'General background answer.';
+  const run = async (opts: Parameters<typeof harness>[0]) => {
+    const { adapter, calls, observed } = harness(opts);
+    const plan = await adapter.prepare(req(Q_BG));
+    expect(plan.contract).toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+    let refusedWith: string | null = null;
+    try {
+      await inRequest(() => adapter.execute(req(Q_BG), plan, 'op-bg'));
+    } catch (error) {
+      refusedWith = (error as AskExecutionRefused).code;
+    }
+    expect(observed).toHaveLength(1);
+    const o = observed[0] as Record<string, unknown>;
+    /* never the reader's words, never the model's background text */
+    const serialised = JSON.stringify(o).toLowerCase();
+    expect(serialised).not.toContain('inflation');
+    expect(serialised).not.toContain(BG_TEXT.toLowerCase());
+    /* zero Reporting on every background outcome */
+    expect(calls.analysis).toEqual([]);
+    return { o, refusedWith };
+  };
+  const common = {
+    operationId: 'op-bg',
+    routePath: 'ASK_R2',
+    terminalState: 'REFERENCE_BACKGROUND_ONLY',
+    askR2Enabled: true,
+    askPublicComputeEnabled: true,
+    providerId: 'openai',
+    providerCallCount: 1,
+    reportingItemCount: 0,
+    evidenceRolesObtained: [],
+  };
+
+  it('success → REFERENCE_BACKGROUND, one model invocation, aiExecuted, breaker SUCCESS', async () => {
+    const { o, refusedWith } = await run({});
+    expect(refusedWith).toBeNull();
+    expect(o).toMatchObject({
+      ...common,
+      answerState: 'REFERENCE_BACKGROUND',
+      aiExecuted: true,
+      modelInvocationCount: 1,
+      breakerOutcome: 'SUCCESS',
+      failureCode: null,
+    });
+  });
+
+  it('decline → CAPABILITY_UNAVAILABLE (REFERENCE missing), model invoked once, no answer, breaker REFUSAL', async () => {
+    const { o, refusedWith } = await run({ background: async () => ({ text: null }) });
+    expect(refusedWith).toBeNull();
+    expect(o).toMatchObject({
+      ...common,
+      answerState: 'CAPABILITY_UNAVAILABLE',
+      capabilityUnavailable: true,
+      evidenceRolesMissing: ['REFERENCE'],
+      aiExecuted: false,
+      modelInvocationCount: 1,
+      breakerOutcome: 'REFUSAL',
+      failureCode: null,
+    });
+  });
+
+  it('timeout → MODEL_TIMEOUT refusal, recorded once with breaker TIMEOUT, no answer state', async () => {
+    const { o, refusedWith } = await run({
+      background: async () =>
+        Promise.reject(
+          new GeneralBackgroundProviderError(
+            'General background call timed out.',
+            'provider-timeout',
+            false,
+          ),
+        ),
+    });
+    expect(refusedWith).toBe('MODEL_TIMEOUT');
+    expect(o).toMatchObject({
+      ...common,
+      answerState: 'UNROUTED',
+      aiExecuted: false,
+      breakerOutcome: 'TIMEOUT',
+      failureCode: 'MODEL_TIMEOUT',
+    });
+  });
+
+  it('failure → MODEL_FAILURE refusal, recorded once with breaker FAILURE, no answer state', async () => {
+    const { o, refusedWith } = await run({
+      background: async () => Promise.reject(new Error('socket hang up')),
+    });
+    expect(refusedWith).toBe('MODEL_FAILURE');
+    expect(o).toMatchObject({
+      ...common,
+      answerState: 'UNROUTED',
+      aiExecuted: false,
+      breakerOutcome: 'FAILURE',
+      failureCode: 'MODEL_FAILURE',
+    });
+  });
+
+  it('a control refusal before the provider (compute OFF) is still ONE observation with no provider call', async () => {
+    const { o, refusedWith } = await run({ switches: { ASK_PUBLIC_COMPUTE_ENABLED: false } });
+    expect(refusedWith).toBe('ASK_PUBLIC_COMPUTE_DISABLED');
+    expect(o).toMatchObject({
+      askR2Enabled: true,
+      askPublicComputeEnabled: false,
+      providerCallCount: 0,
+      failureCode: 'ASK_PUBLIC_COMPUTE_DISABLED',
+    });
+  });
+
+  it('the Reporting path still records its own single observation, unchanged by the background branch', async () => {
+    const { adapter, observed, calls } = harness({});
+    const q = 'What is happening in Kenya?';
+    const plan = await adapter.prepare(req(q));
+    await inRequest(() => adapter.execute(req(q), plan, 'op-rep'));
+    expect(observed).toHaveLength(1);
+    expect(observed[0]).toMatchObject({
+      operationId: 'op-rep',
+      answerState: 'CURRENT_REPORTING',
+      providerCallCount: 1,
+      evidenceRolesObtained: ['REPORTING'],
+    });
+    expect(calls.background).toEqual([]);
+  });
 });

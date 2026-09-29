@@ -623,8 +623,24 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       THIS DOES NOT CLEAR THE CARRIED FAILURE. The Windows path-separator defect
       described further up is untouched, so this spec stays in the carried
       baseline set exactly as before.
+
+      FIFTY-TWO since `ASK GLOBALNEWSAI — PUBLIC BETA OPERATIONS MINIMUM R1`, which adds
+      exactly one route: `/admin/ai/ask-intelligence`, the Ask operations page. Same
+      treatment as every addition above — the count moves with the tree rather than the
+      assertion being relaxed, so a fifty-third route is still a deliberate act.
     */
-    expect(pages).toHaveLength(51);
+    /*
+      ASK RECENT + SAVED CONTINUITY R1 — 51 -> 53. `/ask/recent` and `/saved` are
+      two new signed-in Ask continuity surfaces, both registered in `routes.ts` as
+      noindex and out of the sitemap. The count MOVES WITH THE TREE rather than the
+      assertion being relaxed, which is the convention this assertion already
+      states for itself.
+    */
+    /*
+      STANDALONE PUBLIC BETA CONVERGENCE R1 — both additions together: canonical 51, + the
+      Ask operations page (F, 52) + `/ask/recent` and `/saved` (H, 53) = 54.
+    */
+    expect(pages).toHaveLength(54);
     expect(pages).toContain('/conflict');
     expect(classify('/conflict').indexability).toBe('noindex');
     expect(pages).toContain('/ask');

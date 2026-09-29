@@ -88,6 +88,14 @@
     :global([data-ask='sources-after-choice']) {
     display: none;
   }
+  /*
+    STANDALONE PUBLIC BETA CONVERGENCE R1 — the same rule for a Reference Background answer's
+    "No citable sources": the column's empty state says it, the card's line steps aside. The
+    card keeps its provenance note (model background · no citations).
+  */
+  .frame[data-ask-sources-column='true'] [data-ask-latest] :global([data-ask='no-citable']) {
+    display: none;
+  }
   .frame[data-ask-sources-column='true'] [data-ask-latest] :global([data-ask='sources']) {
     display: none;
   }

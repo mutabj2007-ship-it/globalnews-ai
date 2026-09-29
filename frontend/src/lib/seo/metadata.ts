@@ -44,6 +44,18 @@ export interface PageMetadataInput {
    * product does not make (see README §F/§G).
    */
   readonly ogType?: 'website';
+  /**
+   * STANDALONE PUBLIC BETA CONVERGENCE R1 — an optional, VALID representative image (§K:
+   * "only when valid"). Only a surface that owns a real one passes it: today, the root Ask
+   * entry surface and its deterministic 1200×630 social preview. It is emitted only with an
+   * absolute URL on the resolved origin, and upgrades the Twitter card to the large one.
+   */
+  readonly image?: {
+    readonly path: string;
+    readonly width: number;
+    readonly height: number;
+    readonly alt: string;
+  };
 }
 
 export function buildPageMetadata(input: PageMetadataInput): Metadata {
@@ -121,6 +133,28 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
     title: input.title,
     description: input.description,
   };
+
+  /*
+    The one valid image: absolute on the resolved origin, or not at all (a relative or
+    guessed host is not a valid card image).
+  */
+  const imageUrl =
+    input.image !== undefined && origin !== null ? absoluteUrl(input.image.path, origin) : null;
+  if (input.image !== undefined && imageUrl !== null) {
+    metadata.openGraph.images = [
+      {
+        url: imageUrl,
+        width: input.image.width,
+        height: input.image.height,
+        alt: input.image.alt,
+      },
+    ];
+    metadata.twitter = {
+      ...metadata.twitter,
+      card: 'summary_large_image',
+      images: [{ url: imageUrl, alt: input.image.alt }],
+    };
+  }
 
   return metadata;
 }

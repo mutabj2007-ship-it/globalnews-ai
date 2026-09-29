@@ -2,6 +2,7 @@ import {
   Body,
   CanActivate,
   Controller,
+  Delete,
   ExecutionContext,
   Get,
   Injectable,
@@ -10,6 +11,7 @@ import {
   Post,
   Query,
   UseGuards,
+  UseFilters,
   UseInterceptors,
   UsePipes,
   ValidationPipe,
@@ -18,9 +20,10 @@ import { ConfigService } from '@nestjs/config';
 import { RequireAuthGuard } from '../auth/require-auth.guard';
 import { CsrfGuard } from '../auth/csrf.guard';
 import { CurrentUser } from '../users/current-user.decorator';
-import { CreateThreadDto, HistoryPageDto, QuoteTurnDto } from './ask-v2.dto';
+import { BookmarkTurnDto, CreateThreadDto, HistoryPageDto, QuoteTurnDto } from './ask-v2.dto';
 import { AskV2Service } from './ask-v2.service';
 import { AskRequestContextInterceptor } from './ask-request-context';
+import { AskAccessObservationFilter } from './ask-access-observation.filter';
 
 /**
  * ASK R2 INTEGRATION R1 · §14 — PRIVACY HEADERS ON EVERY ASK V2 RESPONSE.
@@ -59,6 +62,9 @@ export class AskV2EnabledGuard implements CanActivate {
 }
 @Controller('ask-v2')
 @UseGuards(AskV2EnabledGuard, RequireAuthGuard)
+/* R1 observability: counts the refusals no observation can ever exist for. Changes no
+   status, no body and no header — see ask-access-observation.filter.ts. */
+@UseFilters(AskAccessObservationFilter)
 /* Gate E: server-held account + IP scope for the budget, set after authentication. */
 @UseInterceptors(AskRequestContextInterceptor)
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
@@ -76,6 +82,36 @@ export class AskV2Controller {
   }
   @Get('operations/:id') operation(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     return this.ask.getOperation(user.id, id);
+  }
+
+  /*
+    ══════════════════════════════════════════════════════════════════════════
+    PUBLIC BETA ASK CONTINUITY R1 — SAVED (QUESTIONS)
+    ══════════════════════════════════════════════════════════════════════════
+
+    These sit on THIS controller deliberately. A bookmark points at an `AskTurn`,
+    so the reads and writes belong to the lane that owns Ask threads and turns —
+    a separate controller would be a second identity for the same content, and
+    would need its own ownership rules to keep in step with these.
+
+    They inherit the class-level guards: `AskV2EnabledGuard` (so the whole surface
+    is a 404 unless Ask V2 is enabled, with the privacy headers already applied),
+    `RequireAuthGuard` (signed out is refused, never served an empty list), and the
+    whitelisting ValidationPipe. `CsrfGuard` is added to the two mutations only —
+    the GET stays safe and idempotent, exactly as that guard's own contract says.
+  */
+  @Get('bookmarks') bookmarks(@CurrentUser() user: { id: string }) {
+    return this.ask.listBookmarks(user.id);
+  }
+  @Post('bookmarks')
+  @UseGuards(CsrfGuard)
+  bookmark(@CurrentUser() user: { id: string }, @Body() dto: BookmarkTurnDto) {
+    return this.ask.addBookmark(user.id, dto.turnId);
+  }
+  @Delete('bookmarks/:turnId')
+  @UseGuards(CsrfGuard)
+  unbookmark(@CurrentUser() user: { id: string }, @Param('turnId') turnId: string) {
+    return this.ask.removeBookmark(user.id, turnId);
   }
   @Post('threads')
   @UseGuards(CsrfGuard)

@@ -6,6 +6,7 @@ import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
 import { askR2View, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
+import { AskTurnSave } from './AskTurnSave';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -131,6 +132,8 @@ export function AskR2TurnView({
             {s.expiredNote}
           </span>
         )}
+        {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
+        <AskTurnSave operation={turn.operation} locale={locale} />
       </div>
 
       {view.badge === 'clar' ? (
@@ -203,7 +206,24 @@ export function AskR2TurnView({
               language={locale}
               context={context}
               showFullAnalysisLink={false}
+              storyBookmarks={false}
             />
+          )}
+          {/*
+           * ASK GENERAL BACKGROUND EXECUTION R1 — plain-text model background (Gate E's
+           * REFERENCE_BACKGROUND_ONLY execution). Mutually exclusive with `analysis` above.
+           * Reuses the already-accepted `ref` badge/disclosure chrome as-is (D25 authority:
+           * badges.ref, referenceNoteTitle/Body, freshness.reference) — no new copy, no new
+           * UI surface. Plain prose, never routed through AskCompactResult (which is
+           * evidence-citation/sources-specific and would misrepresent this as sourced).
+           */}
+          {payload.analysis === null && payload.background != null && (
+            <p
+              data-ask="background-text"
+              className="whitespace-pre-wrap text-[16px] leading-[1.55]"
+            >
+              {payload.background.text}
+            </p>
           )}
           {view.badge === 'ref' && view.sourceCount === 0 && (
             <p data-ask="no-citable" className="font-mono text-[12px] text-[#8fa6c0]">

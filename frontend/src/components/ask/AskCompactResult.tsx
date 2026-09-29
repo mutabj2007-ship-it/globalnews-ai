@@ -88,6 +88,13 @@ interface AskCompactResultProps {
    * caller turns the link off. Every other caller keeps the default.
    */
   readonly showFullAnalysisLink?: boolean;
+  /**
+   * STANDALONE CONTINUITY SHELL CLOSURE — per-source Saved STORY bookmarks. The platform
+   * dock keeps them (the default). The standalone Ask frame turns them off: a
+   * StoryBookmark reads the wider My Intelligence Saved Stories store
+   * (GET /users/me/saved/stories), which is outside standalone Ask's Saved Questions.
+   */
+  readonly storyBookmarks?: boolean;
 }
 
 export function AskCompactResult({
@@ -98,6 +105,7 @@ export function AskCompactResult({
   onStartNewTopic,
   newTopicStarted = false,
   showFullAnalysisLink = true,
+  storyBookmarks = true,
 }: AskCompactResultProps): JSX.Element {
   const dictionary = getDictionary(language);
   const t = dictionary.askAi;
@@ -367,9 +375,11 @@ export function AskCompactResult({
                       {source.publisher}
                     </span>
                     {/* UNIVERSAL BOOKMARK R1 — a sibling of the source link; compact to fit the dock. */}
-                    <span className="ms-2 inline-flex align-middle">
-                      <StoryBookmark url={source.url} language={language} size="compact" />
-                    </span>
+                    {storyBookmarks && (
+                      <span className="ms-2 inline-flex align-middle">
+                        <StoryBookmark url={source.url} language={language} size="compact" />
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>

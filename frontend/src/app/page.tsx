@@ -23,6 +23,9 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { SiteStructuredData } from '@/components/seo/SiteStructuredData';
 import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
+import { AskStandaloneRoot } from '@/components/ask-nav/AskStandaloneRoot';
+import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
+import { ASK_SOCIAL_PREVIEW } from '@/lib/seo/socialPreview';
 
 /**
  * HOME WELCOME & DISCOVERY R1 REV A — THE HOME COMPOSITION.
@@ -80,6 +83,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
   const t = getDictionary(language);
 
+  /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the root is Ask GlobalNewsAI (see standaloneRoot). */
+  if (standaloneAskRoot()) {
+    return buildPageMetadata({
+      path: '/',
+      title: t.askRootMetaTitle,
+      description: t.askRootMetaDescription,
+      language,
+      image: ASK_SOCIAL_PREVIEW,
+    });
+  }
+
   return buildPageMetadata({
     path: '/',
     title: t.homeMetaTitle,
@@ -91,6 +105,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function HomePage(): Promise<JSX.Element> {
   const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  /* STANDALONE PUBLIC BETA CONVERGENCE R1 — `/` is the standalone Ask entry surface; the
+     Home composition below is served only when GNA_PUBLIC_ROOT=platform. No Home feed is
+     fetched for the Ask root. Ask serves EN/PL, like /ask. */
+  if (standaloneAskRoot()) {
+    return <AskStandaloneRoot locale={languageCookie === 'pl' ? 'pl' : 'en'} />;
+  }
   const dict = getDictionary(language);
   const t = dict.homeReva;
   const feed = await getHomeFeed(language);

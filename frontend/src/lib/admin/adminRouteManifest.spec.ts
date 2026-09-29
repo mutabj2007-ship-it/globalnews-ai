@@ -38,9 +38,15 @@ function collectSourceFiles(dir: string): string[] {
 }
 
 describe('F1.b — the twenty-route Admin manifest', () => {
-  it('declares exactly twenty routes, all distinct', () => {
-    expect(ALL_ADMIN_ROUTES).toHaveLength(20);
-    expect(new Set(ALL_ADMIN_ROUTES).size).toBe(20);
+  /*
+    TWENTY-ONE, AND THE TWENTY-FIRST IS NAMED RATHER THAN ABSORBED.
+    The approved design map has twenty. `ASK GLOBALNEWSAI — PUBLIC BETA OPERATIONS MINIMUM
+    R1` adds one, by name, and the count is asserted here so that adding a twenty-second
+    stays a deliberate, reviewable act rather than an edit nobody notices.
+  */
+  it('declares exactly twenty-one routes, all distinct', () => {
+    expect(ALL_ADMIN_ROUTES).toHaveLength(21);
+    expect(new Set(ALL_ADMIN_ROUTES).size).toBe(21);
   });
 
   it('reproduces the approved route map verbatim', () => {
@@ -50,6 +56,7 @@ describe('F1.b — the twenty-route Admin manifest', () => {
       '/admin/news/sources',
       '/admin/ai',
       '/admin/ai/providers',
+      '/admin/ai/ask-intelligence',
       '/admin/users',
       '/admin/users/subscriptions',
       '/admin/analytics',
@@ -114,6 +121,7 @@ describe('F1.b — the twenty-route Admin manifest', () => {
       'alphaReview',
       'analyticsCoverageGeography',
       'analyticsUsage',
+      'askIntelligence',
       'me',
       'newsProviders',
       'systemHealth',

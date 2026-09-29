@@ -5,7 +5,7 @@ import { PrismaClient } from '../../generated/prisma/client';
 import type { PrismaService } from '../../database/prisma.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { ComputeMeterService } from './compute-meter.service';
-import { clientIpScope } from './compute-scopes';
+import { clientIpScope, GLOBAL_HOUR_SCOPE } from './compute-scopes';
 import { OperationalSwitchService } from './operational-switch.service';
 
 /**
@@ -158,7 +158,7 @@ live('Gate B operational controls — live PostgreSQL', () => {
     const results = await Promise.all(attempts);
     expect(results.filter((r) => r.admitted)).toHaveLength(20); // 20 × 100 = 2000
     const hour = await a.computeMeter.findFirst({
-      where: { scope: 'global', bucketStart: new Date(Date.UTC(2031, 0, 2, 12)) },
+      where: { scope: GLOBAL_HOUR_SCOPE, bucketStart: new Date(Date.UTC(2031, 0, 2, 12)) },
     });
     expect(hour?.units).toBe(2000n); // compensation left exactly the admitted total
   });
@@ -195,7 +195,7 @@ live('Gate B operational controls — live PostgreSQL', () => {
     if (!r.admitted) throw new Error('not admitted');
     await meter.settle(r.reservationId, 150, 'SUCCEEDED');
     const hour = await a.computeMeter.findFirst({
-      where: { scope: 'global', bucketStart: new Date(Date.UTC(2031, 0, 4, 12)) },
+      where: { scope: GLOBAL_HOUR_SCOPE, bucketStart: new Date(Date.UTC(2031, 0, 4, 12)) },
     });
     expect(hour?.units).toBe(150n);
   });

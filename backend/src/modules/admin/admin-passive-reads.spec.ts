@@ -2,6 +2,7 @@ import { AdminReadonlyController } from './admin-readonly.controller';
 import { AdminSystemService } from './system/admin-system.service';
 import { AdminAnalyticsService } from './analytics/admin-analytics.service';
 import { AdminNewsService } from './news/admin-news.service';
+import { AlphaReviewService } from './alpha-review.service';
 import { PrismaService } from '../../database/prisma.service';
 import { NewsService } from '../news/news.service';
 import { ConfigService } from '@nestjs/config';
@@ -24,6 +25,7 @@ it('repeated R2 system-health route reads never enter provider acquisition or he
     system,
     {} as AdminNewsService,
     {} as AdminAnalyticsService,
+    {} as AlphaReviewService,
   );
   for (let i = 0; i < 3; i++) {
     const result = await controller.systemHealth();
@@ -69,6 +71,7 @@ it('usage, coverage and bounded users read through database methods only on refr
     {} as AdminSystemService,
     {} as AdminNewsService,
     service,
+    {} as AlphaReviewService,
   );
   const transport = jest
     .spyOn(globalThis, 'fetch')

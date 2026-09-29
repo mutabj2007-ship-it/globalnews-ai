@@ -50,6 +50,10 @@ export const pl: Dictionary = {
   homeMetaTitle: 'GlobalNews AI \u2014 Zrozum, co si\u0119 zmienia.',
   homeMetaDescription:
     'GlobalNews AI zamienia codzienne wiadomo\u015bci w jasne, oparte na \u017ar\u00f3d\u0142ach i wielu perspektywach odpowiedzi, kt\u00f3re naprawd\u0119 rozumiesz.',
+  /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the root Ask entry surface. */
+  askRootMetaTitle: 'Zapytaj GlobalNewsAI',
+  askRootMetaDescription:
+    'Zadaj pytanie o wydarzenia na świecie i otrzymaj odpowiedź, która wskazuje źródła, mówi, jak jest aktualna, i czego nie sprawdzono.',
   searchWorkspaceHeading: 'Zapytaj GlobalNews AI',
   searchWorkspaceIntro: 'Zadaj pytanie o wydarzenia na świecie i otrzymaj odpowiedź opartą na dowodach z rzeczywistych źródeł.',
   searchWorkspacePlaceholder: 'Co chcesz zrozumieć?',

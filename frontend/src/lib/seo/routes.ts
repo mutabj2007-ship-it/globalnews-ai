@@ -49,18 +49,9 @@ export const PUBLIC_ROUTES: readonly RouteEntry[] = [
     userDependent: false,
     ruling: 'authorization',
     rationale:
-      '§A names "Home / public Today discovery". Server-rendered, no authentication gate, and the ' +
-      'surface the whole public product is entered through.',
-  },
-  {
-    path: '/map',
-    indexability: 'index',
-    sitemap: true,
-    userDependent: false,
-    ruling: 'authorization',
-    rationale:
-      '§A names "public geographic/news discovery pages where already implemented". /map is a released ' +
-      'public destination reached from the NavBar, with a stable URL and server-rendered metadata.',
+      'STANDALONE PUBLIC BETA CONVERGENCE R1 — the ONE indexable Ask canonical: `/` is the ' +
+      'standalone Ask GlobalNewsAI entry surface (/ask stays noindex, so the two never compete). ' +
+      'Server-rendered, no authentication gate, the surface the released product is entered through.',
   },
   {
     path: '/source-policy',
@@ -89,6 +80,17 @@ export const PUBLIC_ROUTES: readonly RouteEntry[] = [
 ];
 
 export const PRIVATE_ROUTES: readonly RouteEntry[] = [
+  {
+    path: '/map',
+    indexability: 'noindex',
+    sitemap: false,
+    userDependent: false,
+    ruling: 'authorization',
+    rationale:
+      'STANDALONE PUBLIC BETA CONVERGENCE R1 — the released product is Ask GlobalNewsAI, so the ' +
+      'wider Beta Map is not advertised as a standalone discovery page: noindex and out of the ' +
+      'sitemap. The route itself is intact and still reachable.',
+  },
   {
     path: '/search',
     indexability: 'noindex',
@@ -125,6 +127,33 @@ export const PRIVATE_ROUTES: readonly RouteEntry[] = [
     userDependent: true,
     ruling: 'authorization',
     rationale: '§B: "History where user-specific". Reads the account session and renders that user\'s own queries.',
+  },
+  {
+    /*
+      ASK RECENT + SAVED CONTINUITY R1 — the two standalone Ask continuity
+      surfaces, registered for the same reason /history and /my-intelligence are:
+      each reads the account session and renders one reader's own Ask material.
+      Registered in the registry rather than special-cased in the route, so the
+      registry stays the one place that decides indexability.
+    */
+    path: '/ask/recent',
+    indexability: 'noindex',
+    sitemap: false,
+    userDependent: true,
+    ruling: 'authorization',
+    rationale:
+      "\u00a7B: user-specific. One reader's own Ask conversations, their first questions and when they " +
+      'were last active. Meaningless to any other reader and not a stable public document.',
+  },
+  {
+    path: '/saved',
+    indexability: 'noindex',
+    sitemap: false,
+    userDependent: true,
+    ruling: 'authorization',
+    rationale:
+      "\u00a7B: user-specific. The questions one account saved. The bookmark is a relation to that " +
+      "reader's own Ask turns and exists only inside their session.",
   },
   {
     path: '/account/settings',

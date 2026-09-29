@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { Intent, Language } from './ask-compute.contract';
 
@@ -15,4 +15,18 @@ export class QuoteTurnDto {
 }
 export class HistoryPageDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(2147483647) after = 0;
+}
+
+/**
+ * PUBLIC BETA ASK CONTINUITY R1 — the body of a bookmark write.
+ *
+ * A turn id and nothing else. The question and the answer are NOT accepted from a
+ * client: they already exist on `AskTurn` and its operation, and accepting copies
+ * would let a caller store text the product never produced.
+ *
+ * `@IsUUID` because `AskTurn.id` is `@default(uuid())` — a malformed id is a 400
+ * from the pipe rather than a database round trip.
+ */
+export class BookmarkTurnDto {
+  @IsUUID() turnId!: string;
 }

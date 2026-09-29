@@ -11,6 +11,8 @@ import {
   CONCURRENCY_BUCKET,
   concurrencyScope,
   dayBucket,
+  GLOBAL_DAY_SCOPE,
+  GLOBAL_HOUR_SCOPE,
   GLOBAL_SCOPE,
   hourBucket,
   providerScope,
@@ -133,7 +135,8 @@ export class ComputeMeterService {
       {
         control: 'global-hour',
         kind: 'DEGRADED',
-        scope: GLOBAL_SCOPE,
+        /* P1 R1 — distinct from global-day: at 00:xx UTC the two buckets are equal. */
+        scope: GLOBAL_HOUR_SCOPE,
         bucket: hour,
         units: estimate,
         ceiling: cfg.globalUnitsPerHour,
@@ -142,7 +145,7 @@ export class ComputeMeterService {
       {
         control: 'global-day',
         kind: 'DEGRADED',
-        scope: GLOBAL_SCOPE,
+        scope: GLOBAL_DAY_SCOPE,
         bucket: day,
         units: estimate,
         ceiling: cfg.globalUnitsPerDay,

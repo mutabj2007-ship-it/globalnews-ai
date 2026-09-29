@@ -117,7 +117,11 @@ describe('M — entry controls preserve explicit execution under CTO R1 routing'
 describe('M — the Alpha-only dock, and what it is gated on', () => {
   describe('RENDERING LOCATION AND VISIBILITY', () => {
     it('it is mounted in the root layout, so it is present on every route', () => {
-      expect(layout).toContain('<AskAiDock language={language} />');
+      /* STANDALONE PUBLIC BETA CONVERGENCE R1 — still one mount in the root layout; it unmounts
+         itself on /ask and on the standalone-Ask root, which own their composer. */
+      expect(layout).toContain(
+        '<AskAiDock language={language} standaloneRoot={standaloneAskRoot()} />',
+      );
     });
 
     it('with NO condition around the mount', () => {

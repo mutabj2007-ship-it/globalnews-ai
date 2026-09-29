@@ -7,6 +7,7 @@ import { NewsModule } from '../news/news.module';
 import { ALL_NEWS_PROVIDERS } from '../news/providers/provider.tokens';
 import type { NewsProvider } from '../news/interfaces';
 import { AdminReadonlyController } from './admin-readonly.controller';
+import { AlphaReviewService } from './alpha-review.service';
 import { AdminSystemService } from './system/admin-system.service';
 import { AdminNewsService } from './news/admin-news.service';
 import { AdminAnalyticsService } from './analytics/admin-analytics.service';
@@ -68,7 +69,12 @@ it('real Nest HTTP Admin refreshes with real news providers perform zero acquisi
   const moduleRef = await Test.createTestingModule({
     imports: [ConfigModule, RetainedDatabaseModule, NewsModule],
     controllers: [AdminReadonlyController],
-    providers: [AdminSystemService, AdminNewsService, AdminAnalyticsService],
+    providers: [
+      AdminSystemService,
+      AdminNewsService,
+      AdminAnalyticsService,
+      { provide: AlphaReviewService, useValue: {} },
+    ],
   })
     .overrideProvider(ConfigService)
     .useValue(config)

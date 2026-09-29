@@ -13,6 +13,7 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildRootMetadataBase } from '@/lib/seo/metadata';
 import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
 import { AskAiDock } from '@/components/ask/AskAiDock';
+import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
 import { ReturnDepthTracker } from '@/components/navigation/ReturnDepthTracker';
 import './globals.css';
 
@@ -289,7 +290,7 @@ export default function RootLayout({
           request on mount and none on navigation.
         */}
         <ReturnDepthTracker />
-        <AskAiDock language={language} />
+        <AskAiDock language={language} standaloneRoot={standaloneAskRoot()} />
       </body>
     </html>
   );

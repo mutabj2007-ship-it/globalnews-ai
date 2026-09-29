@@ -2,7 +2,6 @@
 
 import type { JSX } from 'react';
 import { safeExternalHref } from '@globalnews-ai/shared';
-import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
 import { formatUtc } from '@/lib/ask/askR2View';
 import type { AskR2Turn } from '@/lib/ask/useAskR2Conversation';
@@ -75,9 +74,6 @@ export function AskSourcesColumn({
                     .join(' · ')}
                 </span>
               </div>
-              <span className="shrink-0">
-                <StoryBookmark url={source.url} language={locale} size="compact" />
-              </span>
             </li>
           ))}
         </ol>

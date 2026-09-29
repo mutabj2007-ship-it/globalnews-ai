@@ -33,6 +33,18 @@ import { CreateThreadDto, QuoteTurnDto } from './ask-v2.dto';
 type Tx = Prisma.TransactionClient;
 const TERMINAL = ['COMPLETED', 'RELEASED', 'REFUNDED'];
 
+/* PUBLIC BETA ASK CONTINUITY R1 — Recent/Saved bounds and the preview clamp. */
+const RECENT_THREAD_LIMIT = 50;
+const SAVED_BOOKMARK_LIMIT = 100;
+/** `nextSequence` starts at 1, so the first turn is this sequence exactly. */
+const FIRST_TURN_SEQUENCE = 1;
+/** One fixed clamp for every caller, so no surface has to choose where to cut. */
+const PREVIEW_MAX = 160;
+
+function clampPreview(question: string): string {
+  return question.length > PREVIEW_MAX ? question.slice(0, PREVIEW_MAX) : question;
+}
+
 @Injectable()
 export class AskV2Service {
   constructor(
@@ -115,14 +127,196 @@ export class AskV2Service {
       });
     });
   }
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * PUBLIC BETA ASK CONTINUITY R1 — RECENT
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * Three reads, no writes, no provider, no model. `Recent` is a projection of
+   * rows this lane already owns; it is NOT a second conversation-history system
+   * and it is not `SearchHistoryEntry`, which records searches rather than Ask
+   * threads.
+   *
+   * THE PREVIEW IS THE READER'S OWN FIRST QUESTION, and it is deterministic
+   * because `sequence` is: `nextSequence` starts at 1 and `@@unique([threadId,
+   * sequence])` makes "the first turn" a single row rather than an ordering
+   * accident. NO TITLE IS GENERATED. A generated title would be a model call on
+   * a surface whose whole contract is that opening it spends nothing, and it
+   * would put words the reader never wrote next to words they did.
+   *
+   * The clamp is server-side and fixed so every caller sees the same preview and
+   * the surface never has to guess where to cut; `firstQuestionTruncated` says
+   * whether anything was removed, so the reader is never told a shortened
+   * question is the whole one.
+   *
+   * `latestState` is the newest turn's operation status, reported ONLY as the
+   * lifecycle fact the operation row already carries. It is never derived from
+   * the payload and never implies the artifact is still readable — `storedResult`
+   * expiry is resolved on reopen, by `getOperation`, which is the one place that
+   * can tell the truth about it.
+   */
   async listThreads(userId: string) {
     this.user(userId);
-    return this.prisma.askThread.findMany({
-      where: { userId },
-      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
-      take: 50,
-      select: { id: true, language: true, returnPath: true, createdAt: true, updatedAt: true },
+
+    return this.atomic(async (tx) => {
+      const threads = await tx.askThread.findMany({
+        where: { userId },
+        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        take: RECENT_THREAD_LIMIT,
+        select: {
+          id: true,
+          language: true,
+          returnPath: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: { select: { turns: true } },
+        },
+      });
+
+      if (threads.length === 0) return [];
+      const ids = threads.map((thread) => thread.id);
+
+      /* The first turn of each thread. `sequence: 1` is exact, not "the oldest we found". */
+      const firstTurns = await tx.askTurn.findMany({
+        where: { threadId: { in: ids }, sequence: FIRST_TURN_SEQUENCE },
+        select: { threadId: true, question: true },
+      });
+      const firstByThread = new Map(firstTurns.map((turn) => [turn.threadId, turn.question]));
+
+      /* The newest turn of each thread, with the lifecycle fact of its operation. */
+      const latestTurns = await tx.askTurn.findMany({
+        where: { threadId: { in: ids } },
+        orderBy: [{ threadId: 'asc' }, { sequence: 'desc' }],
+        distinct: ['threadId'],
+        select: {
+          threadId: true,
+          id: true,
+          sequence: true,
+          operation: { select: { id: true, status: true, computeClass: true } },
+        },
+      });
+      const latestByThread = new Map(latestTurns.map((turn) => [turn.threadId, turn]));
+
+      return threads.map((thread) => {
+        const question = firstByThread.get(thread.id);
+        const latest = latestByThread.get(thread.id);
+
+        return {
+          id: thread.id,
+          language: thread.language,
+          returnPath: thread.returnPath,
+          createdAt: thread.createdAt,
+          /* "Last active" is the thread's own updatedAt — a stored fact, not a guess. */
+          lastActiveAt: thread.updatedAt,
+          turnCount: thread._count.turns,
+          firstQuestion: question === undefined ? null : clampPreview(question),
+          firstQuestionTruncated: question === undefined ? false : question.length > PREVIEW_MAX,
+          latestTurnId: latest?.id ?? null,
+          latestOperationId: latest?.operation?.id ?? null,
+          latestState: latest?.operation?.status ?? null,
+          latestComputeClass: latest?.operation?.computeClass ?? null,
+        };
+      });
     });
+  }
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * PUBLIC BETA ASK CONTINUITY R1 — SAVED (QUESTIONS)
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * A bookmark is a RELATIONSHIP to canonical Ask content, so this read joins to
+   * the turn rather than storing anything of its own beyond the link. Nothing is
+   * copied at write time, which is why a bookmarked answer can never drift from
+   * the answer, and why a bookmark cannot keep an expired artifact readable.
+   *
+   * Ownership is the bookmark row's own `userId`, so the listing needs no thread
+   * resolution and cannot return another reader's row.
+   */
+  async listBookmarks(userId: string) {
+    this.user(userId);
+
+    const rows = await this.prisma.askBookmark.findMany({
+      where: { userId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      take: SAVED_BOOKMARK_LIMIT,
+      select: {
+        id: true,
+        turnId: true,
+        createdAt: true,
+        turn: {
+          select: {
+            question: true,
+            language: true,
+            sequence: true,
+            threadId: true,
+            operation: { select: { id: true, status: true, computeClass: true } },
+          },
+        },
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      turnId: row.turnId,
+      savedAt: row.createdAt,
+      threadId: row.turn.threadId,
+      sequence: row.turn.sequence,
+      language: row.turn.language,
+      question: clampPreview(row.turn.question),
+      questionTruncated: row.turn.question.length > PREVIEW_MAX,
+      operationId: row.turn.operation?.id ?? null,
+      state: row.turn.operation?.status ?? null,
+      computeClass: row.turn.operation?.computeClass ?? null,
+    }));
+  }
+
+  /**
+   * Bookmark one of the reader's OWN turns.
+   *
+   * The turn is resolved through its thread's owner (`thread: { userId }`), so a
+   * turn belonging to someone else and a turn that does not exist take the SAME
+   * bare `NotFoundException` — one reader cannot learn that another's turn
+   * exists by trying to bookmark it.
+   *
+   * The write is an upsert on `(userId, turnId)`, so bookmarking twice is the
+   * same as bookmarking once. A bookmark is a state, not a counter.
+   */
+  async addBookmark(userId: string, turnId: string) {
+    this.user(userId);
+
+    return this.atomic(async (tx) => {
+      const turn = await tx.askTurn.findFirst({
+        where: { id: turnId, thread: { userId } },
+        select: { id: true },
+      });
+      if (!turn) throw new NotFoundException();
+
+      const row = await tx.askBookmark.upsert({
+        where: { userId_turnId: { userId, turnId } },
+        create: { userId, turnId },
+        update: {},
+        select: { id: true, turnId: true, createdAt: true },
+      });
+
+      return { id: row.id, turnId: row.turnId, savedAt: row.createdAt, bookmarked: true };
+    });
+  }
+
+  /**
+   * Remove a bookmark, scoped to the caller.
+   *
+   * `deleteMany` with `userId` in the predicate means another reader's row is
+   * simply not matched, so the answer carries no information about it. Removing
+   * a bookmark that is not there is not an error — unbookmark is idempotent for
+   * the same reason bookmark is.
+   */
+  async removeBookmark(userId: string, turnId: string) {
+    this.user(userId);
+
+    const outcome = await this.prisma.askBookmark.deleteMany({ where: { userId, turnId } });
+
+    return { turnId, bookmarked: false, removed: outcome.count > 0 };
   }
   async getThread(userId: string, id: string, after = 0) {
     return this.atomic(async (tx) => {
@@ -152,8 +346,24 @@ export class AskV2Service {
         where: { operationId: id },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       });
+      /*
+        STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save control needs the turn this
+        operation answered (AskTurn.operationId is unique) and whether THIS reader has saved it.
+        Owner-scoped twice: the operation is already the caller's (`owned`), and the turn is
+        read through its thread's owner. Two reads, no write, no compute.
+      */
+      const turn = await tx.askTurn.findFirst({
+        where: { operationId: id, thread: { userId } },
+        select: { id: true },
+      });
+      const bookmarked =
+        turn === null
+          ? false
+          : (await tx.askBookmark.count({ where: { userId, turnId: turn.id } })) > 0;
       return {
         operationId: id,
+        turnId: turn?.id ?? null,
+        bookmarked,
         computeClass: operation.computeClass,
         status: operation.status,
         quotedSand: operation.quotedSand,

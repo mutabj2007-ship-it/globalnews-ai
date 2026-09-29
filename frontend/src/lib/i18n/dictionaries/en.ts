@@ -72,6 +72,10 @@ export const en = {
   homeMetaTitle: 'GlobalNews AI — Understand what\u2019s changing.',
   homeMetaDescription:
     'GlobalNews AI turns the day\u2019s news into clear, sourced, multi-perspective answers you can actually understand.',
+  /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the root Ask entry surface. */
+  askRootMetaTitle: 'Ask GlobalNewsAI',
+  askRootMetaDescription:
+    'Ask a question about world events and get an answer that names its sources, says how current it is, and says what has not been checked.',
   searchWorkspaceHeading: 'Ask GlobalNews AI',
   searchWorkspaceIntro: 'Ask a question about world events and get an evidence-grounded answer built from real sources.',
   searchWorkspacePlaceholder: 'What would you like to understand?',
