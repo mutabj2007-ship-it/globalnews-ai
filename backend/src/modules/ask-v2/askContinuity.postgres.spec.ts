@@ -372,6 +372,110 @@ live('Ask continuity (Recent + Saved) — live PostgreSQL, HTTP authorization, z
     });
   });
 
+  /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — C, D and E. */
+  describe('reopen shows the question it answered, owner-scoped (C)', () => {
+    it('getOperation returns the owning turn’s question, thread, sequence and language', async () => {
+      const r = await http().get(`/ask-v2/operations/${op.a}`).set('Cookie', as('a')).expect(200);
+      expect(r.body).toMatchObject({
+        turnId: turn.a,
+        question: 'What changed in Rwanda this week?',
+        threadId: thread.a,
+        sequence: 1,
+        language: 'en',
+      });
+    });
+
+    it('IDOR: B reading A’s operation gets a 404 that carries none of A’s question or thread', async () => {
+      const r = await http().get(`/ask-v2/operations/${op.a}`).set('Cookie', as('b')).expect(404);
+      const body = JSON.stringify(r.body);
+      expect(body).not.toContain('Rwanda');
+      expect(body).not.toContain(thread.a);
+      expect(body).not.toContain(turn.a);
+      const unknown = await http()
+        .get(`/ask-v2/operations/${randomUUID()}`)
+        .set('Cookie', as('b'))
+        .expect(404);
+      expect(r.body).toEqual(unknown.body);
+    });
+
+    it('the question is read from AskTurn, never copied into StoredResult', async () => {
+      const stored = await db.storedResult.findMany({ where: { userId: ids.a } });
+      expect(stored.length).toBeGreaterThan(0);
+      for (const row of stored) expect(JSON.stringify(row)).not.toContain('What changed in Rwanda');
+    });
+  });
+
+  describe('Recent names the question Open will display (D)', () => {
+    it('a multi-turn thread reports its first AND its latest question, and Open’s operation is the latest turn’s', async () => {
+      await service.quote(ids.a, thread.a, {
+        idempotencyKey: randomUUID(),
+        question: 'Why does that matter for the region?',
+        language: 'en',
+        intent: 'ask',
+      });
+      const r = await http().get('/ask-v2/threads').set('Cookie', as('a')).expect(200);
+      const row = r.body.find((t: { id: string }) => t.id === thread.a);
+      expect(row).toMatchObject({
+        turnCount: 2,
+        firstQuestion: 'What changed in Rwanda this week?',
+        latestQuestion: 'Why does that matter for the region?',
+        latestQuestionTruncated: false,
+      });
+      const opened = await http()
+        .get(`/ask-v2/operations/${row.latestOperationId}`)
+        .set('Cookie', as('a'))
+        .expect(200);
+      expect(opened.body.question).toBe(row.latestQuestion);
+      expect(opened.body.sequence).toBe(2);
+    });
+  });
+
+  describe('an explicit follow-up from a reopened result continues its thread (E)', () => {
+    it('stored operation → reopen → explicit follow-up → same thread id, next sequence; reopen alone writes nothing', async () => {
+      const before = await computeFootprint();
+      const reopened = await http()
+        .get(`/ask-v2/operations/${op.a}`)
+        .set('Cookie', as('a'))
+        .expect(200);
+      /* reopening is a read: nothing planned, executed, metered, stored or sequenced */
+      expect(await computeFootprint()).toEqual(before);
+      expect((await db.askThread.findUniqueOrThrow({ where: { id: thread.a } })).nextSequence).toBe(
+        2,
+      );
+
+      const follow = await http()
+        .post(`/ask-v2/threads/${reopened.body.threadId}/turns`)
+        .set('Cookie', as('a'))
+        .set('x-csrf-token', 'csrf')
+        .send({
+          idempotencyKey: randomUUID(),
+          question: 'What happened next?',
+          language: 'en',
+          intent: 'ask',
+        })
+        .expect(201);
+      const next = await http()
+        .get(`/ask-v2/operations/${follow.body.operationId}`)
+        .set('Cookie', as('a'))
+        .expect(200);
+      expect(next.body).toMatchObject({ threadId: thread.a, sequence: 2 });
+      expect(await db.askThread.count({ where: { userId: ids.a } })).toBe(1);
+      /* the stored result was not rerun: exactly one execution, for the follow-up */
+      expect(execute.mock.calls.length - before.execute).toBe(1);
+      expect(execute.mock.calls.at(-1)?.[0].question).toBe('What happened next?');
+    });
+
+    it('B cannot append to A’s thread using a threadId it learned elsewhere', async () => {
+      await http()
+        .post(`/ask-v2/threads/${thread.a}/turns`)
+        .set('Cookie', as('b'))
+        .set('x-csrf-token', 'csrf')
+        .send({ idempotencyKey: randomUUID(), question: 'x?', language: 'en', intent: 'ask' })
+        .expect(404);
+      expect(await db.askTurn.count({ where: { threadId: thread.a } })).toBe(1);
+    });
+  });
+
   describe('zero compute — every continuity read/write', () => {
     it('Recent list, Saved list, reopen, bookmark, unbookmark: 0 plan · 0 execution · 0 new operations · 0 ledger · stored results untouched', async () => {
       await service.addBookmark(ids.a, turn.a);
