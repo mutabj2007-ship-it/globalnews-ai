@@ -131,6 +131,11 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
         db as unknown as PrismaService,
         new AskObservationRetentionService(db as unknown as PrismaService),
       ),
+      /* ASK INTELLIGENCE BINDING R1 — CONFLICT bound; no governed contribution in this suite. */
+      {
+        boundSpecialistDomains: () => ['CONFLICT'],
+        read: async () => ({ considered: [], contributions: [] }),
+      } as never,
     );
     service = new AskV2Service(db as unknown as PrismaService, config, adapter);
   }

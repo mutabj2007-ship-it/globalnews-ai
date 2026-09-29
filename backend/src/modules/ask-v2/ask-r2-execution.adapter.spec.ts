@@ -6,7 +6,8 @@ import {
   estimateBackgroundUnits,
   executorVerificationOutcome,
 } from './ask-r2-execution.adapter';
-import { routeAskR2 } from '../ask-router/ask-r2-route';
+import { routeAskR2, type AskR2Route } from '../ask-router/ask-r2-route';
+import type { AskContributionSet } from '../ask-intelligence/ask-specialist-read.coordinator';
 import { deriveAnswerState } from '../ask-router/answer-state';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
 import { askRequestContext } from './ask-request-context';
@@ -42,6 +43,8 @@ function harness(opts: {
   background?: (input: {
     usageSink?: (u: { promptTokens: number; completionTokens: number }) => void;
   }) => Promise<{ text: string | null }>;
+  /** ASK INTELLIGENCE BINDING R1 — the governed contribution set the coordinator returns. */
+  intelligence?: (route: AskR2Route) => AskContributionSet;
 }) {
   const calls: Calls = {
     analysis: [],
@@ -62,6 +65,7 @@ function harness(opts: {
     assertions still mean what they meant, and the observation is asserted on its own.
   */
   const observed: unknown[] = [];
+  const reads: AskR2Route[] = [];
 
   const analysisService = {
     analyzeNews: jest.fn(async (...args: unknown[]) => {
@@ -142,8 +146,17 @@ function harness(opts: {
     specialists as never,
     /* Keeps what it was handed. Never a real store. */
     { record: jest.fn(async (input: unknown) => (observed.push(input), true)) } as never,
+    /* ASK INTELLIGENCE BINDING R1 — a recorded coordinator: CONFLICT bound (its measured
+       seam), reads recorded separately from `calls` so zero-spend assertions stay exact. */
+    {
+      boundSpecialistDomains: () => ['CONFLICT'],
+      read: jest.fn(async (route: AskR2Route) => {
+        reads.push(route);
+        return opts.intelligence?.(route) ?? { considered: [], contributions: [] };
+      }),
+    } as never,
   );
-  return { adapter, calls, observed };
+  return { adapter, calls, observed, reads };
 }
 
 const req = (question: string, language: 'en' | 'pl' = 'en'): AskRequest => ({
@@ -558,22 +571,28 @@ describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zer
     that matters: never the background provider, never background text, never citable.
   */
   describe('CTO POST-#66 CLOSURE — mixed background + current, never a silent fallback', () => {
+    /*
+      ASK INTELLIGENCE BINDING R1 (§11B) — SUPERSEDED WITH UPDATED CONTRACT PROOF. "today" is no
+      longer an untransportable constraint (current reporting IS the most recent reporting), so
+      both questions now EXECUTE current reporting instead of ending in broadening/capability.
+      The invariant this block exists for is unchanged and still asserted: the current-evidence
+      path, never the background provider, never background text, never citable model memory.
+    */
     it.each([
-      ['What is NATO and what is it doing in Poland today?', 'CLARIFICATION_REQUIRED'],
-      ['What is inflation and what is the inflation rate today?', 'CAPABILITY_UNAVAILABLE'],
-    ])('%s → current-evidence path (%s), never the background provider', async (q, state) => {
+      'What is NATO and what is it doing in Poland today?',
+      'What is inflation and what is the inflation rate today?',
+    ])('%s → current reporting, never the background provider', async (q) => {
       const { adapter, calls } = harness({});
       const plan = await adapter.prepare(req(q));
-      expect(plan.contract).toMatch(/:CURRENT_REPORTING:/);
+      expect(plan.contract).toMatch(/:CURRENT_REPORTING:EXECUTABLE$/);
       expect(plan.contract).not.toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
       const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
       const payload = JSON.parse(result.payloadJson);
-      expect(payload.answer.state).toBe(state);
+      expect(payload.answer.state).toBe('CURRENT_REPORTING');
       expect(payload.background).toBeNull();
       expect(payload.modelPriorCitable).toBe(false);
-      expect(payload.aiExecuted).toBe(false);
       expect(calls.background).toEqual([]);
-      expect(calls.analysis).toEqual([]);
+      expect(calls.analysis).toHaveLength(1);
     });
 
     it('a current question that IS executable reaches Reporting, never the background provider', async () => {
@@ -621,14 +640,15 @@ describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zer
       expect(calls.background).toHaveLength(2);
       expect(calls.analysis).toHaveLength(0);
 
-      /* Frozen C ends this current follow-up in a governed clarification (BROADENING_OFFERED,
-         zero model calls); the boundary is what matters — it never reaches background. */
+      /* ASK INTELLIGENCE BINDING R1 (§11B) — "today" now reaches current reporting (it used to
+         end in BROADENING_OFFERED). The boundary is what matters — it never reaches background. */
       const turn3 = 'What is NATO doing in Poland today?';
       const plan3 = await adapter.prepare(req(turn3));
       expect(plan3.contract).toMatch(/:CURRENT_REPORTING:/);
       const r3 = await inRequest(() => adapter.execute(req(turn3), plan3, 'op-3'));
       expect(JSON.parse(r3.payloadJson).background).toBeNull();
       expect(calls.background).toHaveLength(2);
+      expect(calls.analysis).toHaveLength(1);
 
       /* …and an executable current follow-up goes to Reporting, still never to background. */
       const turn4 = 'What is happening in Kenya?';
@@ -637,7 +657,7 @@ describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zer
       /* the boundary: current turns never touch the background provider, and turns 1–2's
          background answers never touched Reporting. */
       expect(calls.background).toHaveLength(2);
-      expect(calls.analysis).toHaveLength(1);
+      expect(calls.analysis).toHaveLength(2);
     });
   });
 });
@@ -1429,5 +1449,154 @@ describe('CURRENT STATUS CORROBORATION R1 — PARTIAL only on a deterministic co
     ]);
     expect(p.answer.state).toBe('CURRENT_REPORTING');
     expect(p.verification).toBeNull();
+  });
+});
+
+/*
+ * ASK GLOBALNEWSAI INTELLIGENCE BINDING R1 — the governed contributions in the ONE answer path.
+ */
+describe('INTELLIGENCE BINDING R1 — governed contributors behind the one Ask answer', () => {
+  const conflictUsed = (route: AskR2Route): AskContributionSet => ({
+    considered: [
+      {
+        contributorId: 'CONFLICT',
+        domain: 'security',
+        applicability: route.plan.specialistLegs.some((l) => l.requiredness === 'REQUIRED')
+          ? 'REQUIRED'
+          : 'SUPPLEMENTARY',
+        scope: { countryIso3: 'COD', district: null, place: null },
+      },
+    ],
+    contributions: [
+      {
+        contributorId: 'CONFLICT',
+        domain: 'security',
+        status: 'USED',
+        applicability: 'SUPPLEMENTARY',
+        observations: [
+          {
+            reference: 'ucdp:1',
+            kind: 'ARMED_CLASH',
+            label: null,
+            value: null,
+            unit: null,
+            period: '2026-09-27',
+            geography: 'COD',
+            source: { name: 'UCDP', url: null, licence: null },
+            retainedAt: null,
+          },
+        ],
+        temporalBasis: 'RETAINED_EVENT_RECORD',
+        geographyBasis: 'COD',
+        disclosures: ['RETAINED_NOT_CURRENT'],
+        degradationReason: null,
+      },
+    ],
+  });
+  const conflictNone = (): AskContributionSet => ({ considered: [], contributions: [] });
+
+  it('security question: Conflict observations join the ONE answer; still exactly one analysis call', async () => {
+    const { adapter, calls, observed } = harness({ intelligence: conflictUsed });
+    const q = 'What is the security situation in DR Congo?';
+    const plan = await adapter.prepare(req(q));
+    const result = await inRequest(() => adapter.execute(req(q), plan, 'op-sec'));
+    const payload = JSON.parse(result.payloadJson);
+    expect(payload.answer.state).toBe('CURRENT_REPORTING');
+    expect(payload.intelligence.considered).toEqual(['CONFLICT']);
+    expect(payload.intelligence.contributions[0].status).toBe('USED');
+    expect(calls.analysis).toHaveLength(1);
+    expect(calls.background).toHaveLength(0);
+    expect(observed[0]).toMatchObject({
+      evidenceRolesObtained: ['REPORTING', 'SPECIALIST'],
+      contributorsConsidered: ['CONFLICT'],
+      contributorsUsed: ['CONFLICT'],
+      contributorItemCount: 1,
+      modelInvocationCount: 1,
+    });
+  });
+
+  it('an explicitly REQUIRED conflict assessment now EXECUTES (it was CAPABILITY_UNAVAILABLE while unbound)', async () => {
+    const q = 'Give me the conflict assessment for DR Congo';
+    const withData = harness({ intelligence: conflictUsed });
+    const plan = await withData.adapter.prepare(req(q));
+    expect(plan.contract).toMatch(/:EXECUTABLE$/);
+    const ok = JSON.parse(
+      (await inRequest(() => withData.adapter.execute(req(q), plan, 'op-r1'))).payloadJson,
+    );
+    expect(ok.answer.state).toBe('CURRENT_REPORTING');
+    /* no governed Conflict record → the required specialist role is honestly MISSING */
+    const without = harness({ intelligence: conflictNone });
+    const plan2 = await without.adapter.prepare(req(q));
+    const missing = JSON.parse(
+      (await inRequest(() => without.adapter.execute(req(q), plan2, 'op-r2'))).payloadJson,
+    );
+    expect(missing.answer).toMatchObject({ state: 'PARTIAL', missingRoles: ['SPECIALIST'] });
+  });
+
+  it('the background path carries contributions too, with its ONE background call and no Reporting call', async () => {
+    const procurement = (): AskContributionSet => ({
+      considered: [
+        {
+          contributorId: 'MARKET_PROCUREMENT',
+          domain: 'economic',
+          applicability: 'SUPPLEMENTARY',
+          scope: { countryIso3: 'POL', district: null, place: null },
+        },
+      ],
+      contributions: [],
+    });
+    const { adapter, calls, reads } = harness({ intelligence: procurement });
+    const q = 'What are the important procurement changes in Poland?';
+    const plan = await adapter.prepare(req(q));
+    const payload = JSON.parse(
+      (await inRequest(() => adapter.execute(req(q), plan, 'op-bg'))).payloadJson,
+    );
+    expect(payload.intelligence.considered).toEqual(['MARKET_PROCUREMENT']);
+    expect(calls.background).toHaveLength(1);
+    expect(calls.analysis).toHaveLength(0);
+    expect(reads).toHaveLength(1);
+  });
+
+  it('reads never bypass the controls: a disabled Ask reads nothing', async () => {
+    const { adapter, reads } = harness({
+      intelligence: conflictUsed,
+      switches: { ASK_PUBLIC_COMPUTE_ENABLED: false },
+    });
+    const q = 'What is the security situation in DR Congo?';
+    const plan = await adapter.prepare(req(q));
+    await expect(inRequest(() => adapter.execute(req(q), plan, 'op-off'))).rejects.toThrow();
+    expect(reads).toEqual([]);
+  });
+
+  it('an explicit NBP official request never uses reporting as official evidence', async () => {
+    const { adapter, calls, reads } = harness({ intelligence: conflictUsed });
+    const q = 'According to the NBP, what is the reference rate?';
+    const plan = await adapter.prepare(req(q));
+    const payload = JSON.parse(
+      (await inRequest(() => adapter.execute(req(q), plan, 'op-nbp'))).payloadJson,
+    );
+    expect(payload.answer.state).toBe('CAPABILITY_UNAVAILABLE');
+    expect(payload.aiExecuted).toBe(false);
+    expect(calls.analysis).toEqual([]);
+    expect(reads).toEqual([]);
+    expect(JSON.stringify(payload)).not.toContain('OFFICIAL_CURRENT_EVIDENCE');
+  });
+
+  it('no leak between turns: a later question without applicable contributors carries none', async () => {
+    let n = 0;
+    const { adapter } = harness({
+      intelligence: (route) => (n++ === 0 ? conflictUsed(route) : conflictNone()),
+    });
+    const q1 = 'What is the security situation in DR Congo?';
+    const q2 = 'What is happening in Kenya?';
+    await inRequest(async () => adapter.execute(req(q1), await adapter.prepare(req(q1)), 'op-a'));
+    const second = JSON.parse(
+      (
+        await inRequest(async () =>
+          adapter.execute(req(q2), await adapter.prepare(req(q2)), 'op-b'),
+        )
+      ).payloadJson,
+    );
+    expect(second.intelligence).toBeNull();
   });
 });
