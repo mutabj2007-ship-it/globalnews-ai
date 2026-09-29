@@ -239,10 +239,7 @@ export const askV2Api = {
   },
   /** Idempotent, and scoped to the caller, so it reveals nothing about others. */
   unbookmark(turnId: string) {
-    return call<AskV2BookmarkWrite>(
-      `/ask-v2/bookmarks/${encodeURIComponent(turnId)}`,
-      'DELETE',
-    );
+    return call<AskV2BookmarkWrite>(`/ask-v2/bookmarks/${encodeURIComponent(turnId)}`, 'DELETE');
   },
   /** Display-only read of an existing result: 0 AI · 0 provider · no compute (§15). */
   operation(id: string) {
