@@ -154,19 +154,31 @@ export function AskRecentClient({ locale }: { readonly locale: AskLocale }): JSX
                             )}
                           </p>
                           <div className="mt-2 flex flex-col items-start gap-0.5">
-                            <Link
-                              data-ask-recent="reopen"
-                              href={askReopenHref(row)}
-                              className="text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4"
-                            >
-                              {t.reopen}
-                            </Link>
-                            <span
-                              data-ask-recent="reopen-note"
-                              className="text-[11.5px] text-ink-tertiary"
-                            >
-                              {`${t.reopenNote} ${t.continueNote}`}
-                            </span>
+                            {askReopenHref(row) !== null ? (
+                              <>
+                                <Link
+                                  data-ask-recent="reopen"
+                                  href={askReopenHref(row) as string}
+                                  className="text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4"
+                                >
+                                  {t.reopen}
+                                </Link>
+                                <span
+                                  data-ask-recent="reopen-note"
+                                  className="text-[11.5px] text-ink-tertiary"
+                                >
+                                  {`${t.reopenNote} ${t.continueNote}`}
+                                </span>
+                              </>
+                            ) : (
+                              /* No stored operation: no Reopen, and no rerun — say so. */
+                              <span
+                                data-ask-recent="no-stored-result"
+                                className="text-[12px] text-ink-tertiary"
+                              >
+                                {t.noStoredResult}
+                              </span>
+                            )}
                           </div>
                         </li>
                       ))}

@@ -79,10 +79,12 @@ export function groupRecentThreads(rows: readonly AskV2RecentThread[], now: Date
  * The reopen address.
  *
  * Contract §15: the canonical result identity is the Ask V2 OPERATION, reopened at
- * `/ask?operation=<id>` — not `/analysis/results/:id` and not `/search?op=`. When a
- * thread has no operation yet (a thread created but never submitted) the thread
- * itself is the address, and reopening it shows the conversation with no result,
- * which is the truth about it.
+ * `/ask?operation=<id>` — not `/analysis/results/:id` and not `/search?op=`.
+ *
+ * STANDALONE PUBLIC BETA CONVERGENCE R1 — NO STORED OPERATION, NO REOPEN. A thread with no
+ * operation (created, never submitted) has nothing stored to show, and /ask does not read a
+ * `thread` parameter: the old `/ask?thread=<id>` link opened an empty Ask while looking like
+ * a reopen. It is `null` now, and the row states that no result is stored. Nothing reruns.
  *
  * NEITHER FORM CARRIES A COMPUTE GRANT. Reopening is navigation to something that
  * already exists; continuing requires a new explicit Send.
@@ -90,9 +92,9 @@ export function groupRecentThreads(rows: readonly AskV2RecentThread[], now: Date
 export function askReopenHref(row: {
   readonly id: string;
   readonly latestOperationId: string | null;
-}): string {
+}): string | null {
   return row.latestOperationId === null
-    ? `/ask?thread=${encodeURIComponent(row.id)}`
+    ? null
     : `/ask?operation=${encodeURIComponent(row.latestOperationId)}`;
 }
 
@@ -100,10 +102,8 @@ export function askReopenHref(row: {
 export function askBookmarkReopenHref(row: {
   readonly threadId: string;
   readonly operationId: string | null;
-}): string {
-  return row.operationId === null
-    ? `/ask?thread=${encodeURIComponent(row.threadId)}`
-    : `/ask?operation=${encodeURIComponent(row.operationId)}`;
+}): string | null {
+  return row.operationId === null ? null : `/ask?operation=${encodeURIComponent(row.operationId)}`;
 }
 
 /**

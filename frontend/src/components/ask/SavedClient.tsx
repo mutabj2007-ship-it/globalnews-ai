@@ -139,13 +139,23 @@ export function SavedClient({ locale }: { readonly locale: AskLocale }): JSX.Ele
                       )}
                     </p>
                     <div className="mt-2 flex items-center gap-3">
-                      <Link
-                        data-saved="reopen"
-                        href={askBookmarkReopenHref(row)}
-                        className="text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4"
-                      >
-                        {t.reopen}
-                      </Link>
+                      {askBookmarkReopenHref(row) !== null ? (
+                        <Link
+                          data-saved="reopen"
+                          href={askBookmarkReopenHref(row) as string}
+                          className="text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4"
+                        >
+                          {t.reopen}
+                        </Link>
+                      ) : (
+                        /* No stored operation: no Reopen, and no rerun — say so. */
+                        <span
+                          data-saved="no-stored-result"
+                          className="text-[12px] text-ink-tertiary"
+                        >
+                          {t.noStoredResult}
+                        </span>
+                      )}
                       <button
                         type="button"
                         data-saved="unsave"

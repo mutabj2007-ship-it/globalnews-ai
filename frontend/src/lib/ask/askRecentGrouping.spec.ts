@@ -126,17 +126,16 @@ describe('reopen addresses follow contract §15', () => {
     );
   });
 
-  it('a thread with no operation reopens at /ask?thread=', () => {
-    expect(askReopenHref(thread({ id: 't9', latestOperationId: null }))).toBe('/ask?thread=t9');
+  it('a thread with no stored operation has NO reopen address — never an empty /ask?thread=', () => {
+    expect(askReopenHref(thread({ id: 't9', latestOperationId: null }))).toBeNull();
   });
 
   it('a saved question reopens at its own operation', () => {
     expect(askBookmarkReopenHref(bookmark({ operationId: 'op-4', threadId: 't4' }))).toBe(
       '/ask?operation=op-4',
     );
-    expect(askBookmarkReopenHref(bookmark({ operationId: null, threadId: 't4' }))).toBe(
-      '/ask?thread=t4',
-    );
+    /* No stored operation: nothing to reopen, and no dead /ask?thread= link. */
+    expect(askBookmarkReopenHref(bookmark({ operationId: null, threadId: 't4' }))).toBeNull();
   });
 
   it('ids are encoded, so a crafted id cannot add a parameter', () => {
@@ -144,8 +143,8 @@ describe('reopen addresses follow contract §15', () => {
   });
 
   it('no reopen address is /search?op= or /analysis/results/ — those were replaced', () => {
-    const href = askReopenHref(thread());
-    expect(href.startsWith('/ask?')).toBe(true);
+    const href = askReopenHref(thread({ latestOperationId: 'op-1' })) ?? '';
+    expect(href.startsWith('/ask?operation=')).toBe(true);
     expect(href).not.toContain('/search');
     expect(href).not.toContain('/analysis/results');
   });

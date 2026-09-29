@@ -20,6 +20,8 @@ export interface AskContinuityStrings {
   readonly lastActive: string;
   readonly reopen: string;
   readonly reopenNote: string;
+  /** STANDALONE PUBLIC BETA CONVERGENCE R1 — a row with no stored operation: nothing to open. */
+  readonly noStoredResult: string;
   readonly continueNote: string;
   readonly filterLabel: string;
   readonly filterPlaceholder: string;
@@ -45,6 +47,7 @@ const EN: AskContinuityStrings = {
   lastActive: 'Last active',
   reopen: 'Open',
   reopenNote: 'Already produced. Nothing runs.',
+  noStoredResult: 'No stored result to open.',
   continueNote: 'To continue, send a new question.',
   filterLabel: 'Filter',
   filterPlaceholder: 'Filter by question',
@@ -79,6 +82,7 @@ const PL: AskContinuityStrings = {
   lastActive: 'Ostatnia aktywność',
   reopen: 'Otwórz',
   reopenNote: 'Już powstało. Nic nie zostanie uruchomione.',
+  noStoredResult: 'Brak zapisanego wyniku do otwarcia.',
   continueNote: 'Aby kontynuować, wyślij nowe pytanie.',
   filterLabel: 'Filtruj',
   filterPlaceholder: 'Filtruj według pytania',
