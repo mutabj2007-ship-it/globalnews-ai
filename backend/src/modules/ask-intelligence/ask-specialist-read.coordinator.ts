@@ -173,7 +173,11 @@ export class AskSpecialistReadCoordinator {
   private async readProcurement(s: AskContributorSelection): Promise<AskContribution> {
     const notices = await this.market.procurement(20);
     if (notices.length === 0) {
-      return base(s, { status: 'NO_DATA', temporalBasis: 'RETAINED_PUBLICATION' });
+      return base(s, {
+        status: 'NO_DATA',
+        temporalBasis: 'RETAINED_PUBLICATION',
+        disclosures: ['NO_RETAINED_CAPTURE'],
+      });
     }
     const inScope = notices.filter((n) => n.buyerCountryIso3 === s.scope.countryIso3);
     if (inScope.length === 0) {
@@ -204,10 +208,25 @@ export class AskSpecialistReadCoordinator {
       return base(s, { status: 'NO_MATCH', temporalBasis: 'RETAINED_STATISTICAL_RELEASE' });
     }
     const view = await this.economy.readNisrHeadlineCpi();
-    if (view.slot.kind !== 'OBSERVATION' || view.provenance === undefined) {
+    /* GOVERNED RETAINED GAP REPAIR R1 — only a figure the governed reader itself marks
+       DISPLAYABLE is ever used. Everything else is NO_DATA with a disclosure that says WHICH gap:
+         NO_RETAINED_CAPTURE               nothing admitted is held;
+         RETAINED_ARTIFACT_NOT_DISPLAYABLE an admitted release is held but cannot be read under
+                                           its governed extraction rules (e.g. extractor identity).
+       The internal reason stays in degradationReason; it is never reader copy. */
+    if (
+      view.slot.kind !== 'OBSERVATION' ||
+      view.provenance === undefined ||
+      view.retainedState !== 'DISPLAYABLE'
+    ) {
       return base(s, {
         status: 'NO_DATA',
         temporalBasis: 'RETAINED_STATISTICAL_RELEASE',
+        disclosures: [
+          view.retainedState === 'NO_CAPTURE'
+            ? 'NO_RETAINED_CAPTURE'
+            : 'RETAINED_ARTIFACT_NOT_DISPLAYABLE',
+        ],
         degradationReason: view.slot.kind === 'GAP' ? view.slot.reason : 'NOT_DISPLAYABLE',
       });
     }
@@ -243,6 +262,7 @@ export class AskSpecialistReadCoordinator {
       return base(s, {
         status: 'REFUSED',
         temporalBasis: 'RETAINED_EVALUATION_CYCLE',
+        disclosures: ['RETAINED_ARTIFACT_NOT_DISPLAYABLE'],
         degradationReason: 'ADMISSION_IDENTITY',
       });
     }

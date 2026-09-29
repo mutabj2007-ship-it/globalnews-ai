@@ -65,6 +65,24 @@ export interface AskR2Strings {
   readonly budgetRefused: string;
   /** LIVE ACCEPTANCE REPAIR R1 — the lead line of a retained-record answer. */
   readonly retainedAnswer: string;
+  /**
+   * GOVERNED RETAINED GAP REPAIR R1 — a retained-record card never renders blank: the line shown
+   * when a record answer has no lead and no note, per basis.
+   */
+  readonly retainedFallback: {
+    readonly GOVERNED_NO_RECORD: string;
+    readonly GOVERNED_RECORD: string;
+  };
+  /**
+   * GOVERNED RETAINED GAP REPAIR R1 — CAPABILITY_UNAVAILABLE / GOVERNED_RECORD_UNAVAILABLE copy,
+   * chosen by the contribution's DISCLOSURE so an unreadable held artifact is never confused
+   * with a missing capture, and neither with a true absence.
+   */
+  readonly governedGap: {
+    readonly notDisplayable: Readonly<Record<string, string>>;
+    readonly noCapture: Readonly<Record<string, string>>;
+    readonly unreadable: string;
+  };
   readonly noCitable: string;
   /**
    * GATE H — INTEGRATION-AUTHORED, flagged for Product copy review. A typed refusal says
@@ -172,6 +190,30 @@ const EN: AskR2Strings = {
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
   retainedAnswer: 'Answered from a retained governed record — no AI was used.',
+  retainedFallback: {
+    GOVERNED_NO_RECORD: 'No individual retained record exists for this question’s scope.',
+    GOVERNED_RECORD: 'The retained record is shown below with its source.',
+  },
+  governedGap: {
+    notDisplayable: {
+      ECONOMY_CPI:
+        'A retained NISR CPI release is held, but it cannot currently be read under its governed extraction rules, so no value is shown. Nothing was run in its place.',
+      IMIHIGO:
+        'The retained NISR Imihigo evaluation is held, but it cannot currently be read under its governed admission rules, so no result is shown. Nothing was run in its place.',
+      default:
+        'A retained governed record is held, but it cannot currently be read under its governed rules, so no value is shown. Nothing was run in its place.',
+    },
+    noCapture: {
+      ECONOMY_CPI:
+        'No retained NISR CPI release is held, so no value is shown. Nothing was run in its place.',
+      MARKET_PROCUREMENT:
+        'No retained TED procurement snapshot is held, so no notices are shown. Nothing was run in its place.',
+      default:
+        'No retained governed record is held for this question, so nothing is shown. Nothing was run in its place.',
+    },
+    unreadable:
+      'The retained record for this question could not be read just now. Nothing is claimed either way, and nothing was run in its place.',
+  },
   noCitable: 'No citable sources',
   unavailableBecause: {
     REFERENCE_UNAVAILABLE:
@@ -183,8 +225,8 @@ const EN: AskR2Strings = {
       'This kind of question needs a capability Ask does not have — such as calculations, files, code, official releases or specialist assessments. Nothing was run.',
     OFFICIAL_SOURCE_UNAVAILABLE:
       'You asked for the official figure. Ask has no approved reader for this official source, so it cannot give the official value, and news reporting is not presented as official. Nothing was run.',
-    GOVERNED_READ_DEGRADED:
-      'The retained record for this question could not be read just now. Nothing is claimed either way, and nothing was run in its place.',
+    GOVERNED_RECORD_UNAVAILABLE:
+      'The retained record for this question cannot be shown right now. Nothing was run in its place.',
   },
   noAnswer: 'No answer given · nothing presented as fact',
   whichOne: 'Which one do you mean?',
@@ -307,6 +349,30 @@ const PL: AskR2Strings = {
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
   retainedAnswer: 'Odpowiedź z zachowanego, zweryfikowanego zapisu — bez użycia AI.',
+  retainedFallback: {
+    GOVERNED_NO_RECORD: 'Dla zakresu tego pytania nie istnieje osobny zachowany zapis.',
+    GOVERNED_RECORD: 'Zachowany zapis wraz ze źródłem pokazano poniżej.',
+  },
+  governedGap: {
+    notDisplayable: {
+      ECONOMY_CPI:
+        'Przechowywana jest zachowana publikacja CPI NISR, ale obecnie nie można jej odczytać zgodnie z zasadami zweryfikowanej ekstrakcji, więc nie pokazano wartości. Nic nie uruchomiono w zamian.',
+      IMIHIGO:
+        'Przechowywana jest zachowana ocena Imihigo NISR, ale obecnie nie można jej odczytać zgodnie z zasadami dopuszczenia, więc nie pokazano wyniku. Nic nie uruchomiono w zamian.',
+      default:
+        'Przechowywany jest zachowany zweryfikowany zapis, ale obecnie nie można go odczytać zgodnie z jego zasadami, więc nie pokazano wartości. Nic nie uruchomiono w zamian.',
+    },
+    noCapture: {
+      ECONOMY_CPI:
+        'Nie przechowujemy zachowanej publikacji CPI NISR, więc nie pokazano wartości. Nic nie uruchomiono w zamian.',
+      MARKET_PROCUREMENT:
+        'Nie przechowujemy zachowanej migawki zamówień TED, więc nie pokazano ogłoszeń. Nic nie uruchomiono w zamian.',
+      default:
+        'Dla tego pytania nie przechowujemy zachowanego zweryfikowanego zapisu, więc nic nie pokazano. Nic nie uruchomiono w zamian.',
+    },
+    unreadable:
+      'Nie udało się teraz odczytać zachowanego zapisu dla tego pytania. Niczego nie stwierdzono i nic nie uruchomiono w zamian.',
+  },
   noCitable: 'Brak źródeł do przytoczenia',
   unavailableBecause: {
     REFERENCE_UNAVAILABLE:
@@ -318,8 +384,8 @@ const PL: AskR2Strings = {
       'Ten rodzaj pytania wymaga funkcji, której Zapytaj AI nie ma — np. obliczeń, plików, kodu, oficjalnych publikacji lub ocen specjalistów. Nic nie uruchomiono.',
     OFFICIAL_SOURCE_UNAVAILABLE:
       'Pytasz o oficjalną wartość. Zapytaj AI nie ma zatwierdzonego czytnika tego oficjalnego źródła, więc nie poda oficjalnej wartości, a doniesienia medialne nie są przedstawiane jako oficjalne. Nic nie uruchomiono.',
-    GOVERNED_READ_DEGRADED:
-      'Nie udało się teraz odczytać zachowanego zapisu dla tego pytania. Niczego nie stwierdzono i nic nie uruchomiono w zamian.',
+    GOVERNED_RECORD_UNAVAILABLE:
+      'Zachowanego zapisu dla tego pytania nie można teraz pokazać. Nic nie uruchomiono w zamian.',
   },
   noAnswer: 'Brak odpowiedzi · nic nie przedstawiono jako faktu',
   whichOne: 'Które z nich masz na myśli?',

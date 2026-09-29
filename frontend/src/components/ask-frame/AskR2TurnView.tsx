@@ -234,7 +234,18 @@ export function AskR2TurnView({
           className={`flex flex-col gap-2.5 ${CARD} ${CARD_CLASS.retained}`}
         >
           <p className={EYEBROW}>{s.answer}</p>
-          {(retained?.lead.length ? retained.lead : (retained?.notes ?? [])).map((line) => (
+          {/* GOVERNED RETAINED GAP REPAIR R1 — lead, else notes, else the basis' own line:
+              a retained-record card can never render blank. */}
+          {(retained?.lead.length
+            ? retained.lead
+            : retained?.notes.length
+              ? retained.notes
+              : [
+                  payload.answer.basis === 'GOVERNED_NO_RECORD'
+                    ? s.retainedFallback.GOVERNED_NO_RECORD
+                    : s.retainedFallback.GOVERNED_RECORD,
+                ]
+          ).map((line) => (
             <p key={line} data-ask="retained-lead" className="text-[16px] leading-[1.55]">
               {line}
             </p>

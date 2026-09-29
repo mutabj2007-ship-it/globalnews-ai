@@ -135,7 +135,7 @@ const obs = (period: string) => ({
 });
 
 describe('A — the retained-record decision', () => {
-  it('a record → GOVERNED_RECORD; a stated absence (Gasabo) → GOVERNED_NO_RECORD; a failed read → GOVERNED_READ_DEGRADED', () => {
+  it('a record → GOVERNED_RECORD; a stated absence (Gasabo) → GOVERNED_NO_RECORD; a failed read → GOVERNED_RECORD_UNAVAILABLE', () => {
     expect(
       governedRecordBasis(
         set([contribution({ contributorId: 'IMIHIGO', observations: [obs('2024/2025')] })]),
@@ -161,10 +161,33 @@ describe('A — the retained-record decision', () => {
       governedRecordBasis(
         set([contribution({ contributorId: 'ECONOMY_CPI', status: 'DEGRADED' })]),
       ),
-    ).toBe('GOVERNED_READ_DEGRADED');
+    ).toBe('GOVERNED_RECORD_UNAVAILABLE');
   });
 
-  it('geography context alone is never a record', () => {
+  it('GAP REPAIR R1 — the exact precedence: USED > all-NO_MATCH > any read/admission gap', () => {
+    const used = contribution({ contributorId: 'IMIHIGO', observations: [obs('2024/2025')] });
+    const noMatch = contribution({ contributorId: 'IMIHIGO', status: 'NO_MATCH' });
+    const noData = contribution({
+      contributorId: 'ECONOMY_CPI',
+      status: 'NO_DATA',
+      disclosures: ['RETAINED_ARTIFACT_NOT_DISPLAYABLE'],
+    });
+    const refused = contribution({ contributorId: 'IMIHIGO', status: 'REFUSED' });
+    /* 1 · a record wins over any gap */
+    expect(governedRecordBasis(set([used, noData]))).toBe('GOVERNED_RECORD');
+    /* 2 · only a genuine all-NO_MATCH is "no record exists" */
+    expect(governedRecordBasis(set([noMatch]))).toBe('GOVERNED_NO_RECORD');
+    /* 3 · the live G9 state, and every other system-side gap, is UNAVAILABLE — never "no record" */
+    expect(governedRecordBasis(set([noData]))).toBe('GOVERNED_RECORD_UNAVAILABLE');
+    expect(governedRecordBasis(set([refused]))).toBe('GOVERNED_RECORD_UNAVAILABLE');
+    expect(governedRecordBasis(set([noMatch, noData]))).toBe('GOVERNED_RECORD_UNAVAILABLE');
+    /* USED with zero observations is not a record either */
+    expect(
+      governedRecordBasis(set([contribution({ contributorId: 'ECONOMY_CPI', observations: [] })])),
+    ).toBe('GOVERNED_RECORD_UNAVAILABLE');
+  });
+
+  it('geography context alone is never a record (nor a stated absence)', () => {
     expect(
       governedRecordBasis(
         set([
@@ -175,7 +198,7 @@ describe('A — the retained-record decision', () => {
           }),
         ]),
       ),
-    ).toBe('GOVERNED_NO_RECORD');
+    ).toBe('GOVERNED_RECORD_UNAVAILABLE');
   });
 });
 

@@ -93,7 +93,7 @@ const EN: AskIntelligenceStrings = {
   cited: 'Cited',
   lead: {
     imihigo: (entity, value, cycle) =>
-      `${entity}: ${value} — Imihigo ${cycle}, the retained NISR final evaluation of a closed cycle.`,
+      `${entity}: final score ${value} — Imihigo ${cycle}, the retained NISR final evaluation of a closed cycle.`,
     cpi: (label, value, period) =>
       `${label}: ${value} for ${period} — a retained NISR release, not re-checked now.`,
     procurement: (count, geography, day) =>
@@ -148,7 +148,7 @@ const PL: AskIntelligenceStrings = {
   cited: 'Cytowane',
   lead: {
     imihigo: (entity, value, cycle) =>
-      `${entity}: ${value} — Imihigo ${cycle}, zachowana końcowa ocena NISR zamkniętego cyklu.`,
+      `${entity}: wynik końcowy ${value} — Imihigo ${cycle}, zachowana końcowa ocena NISR zamkniętego cyklu.`,
     cpi: (label, value, period) =>
       `${label}: ${value} za ${period} — zachowana publikacja NISR, nie sprawdzana ponownie teraz.`,
     procurement: (count, geography, day) =>

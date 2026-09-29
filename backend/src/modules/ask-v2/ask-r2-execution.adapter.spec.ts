@@ -1943,7 +1943,7 @@ describe('LIVE ACCEPTANCE REPAIR R1 — G1–G9 end to end', () => {
     expect(h3.reads).toEqual([]);
   });
 
-  it('a failed governed read is never presented as a record: CAPABILITY_UNAVAILABLE / GOVERNED_READ_DEGRADED', async () => {
+  it('a failed governed read is never presented as a record: CAPABILITY_UNAVAILABLE / GOVERNED_RECORD_UNAVAILABLE', async () => {
     const h = harness({
       intelligence: setOf(
         c({
@@ -1957,10 +1957,47 @@ describe('LIVE ACCEPTANCE REPAIR R1 — G1–G9 end to end', () => {
     const payload = await run("What is Rwanda's latest inflation (CPI)?", h);
     expect(payload.answer).toMatchObject({
       state: 'CAPABILITY_UNAVAILABLE',
-      basis: 'GOVERNED_READ_DEGRADED',
+      basis: 'GOVERNED_RECORD_UNAVAILABLE',
     });
     noSpend(h);
   });
+
+  it.each([
+    ['held but not displayable (live Alpha G9)', 'RETAINED_ARTIFACT_NOT_DISPLAYABLE'],
+    ['no retained capture', 'NO_RETAINED_CAPTURE'],
+  ])(
+    'GAP REPAIR R1 — G9 CPI %s → CAPABILITY_UNAVAILABLE / GOVERNED_RECORD_UNAVAILABLE, zero spend, never a blank RETAINED_RECORD',
+    async (_label, disclosure) => {
+      const h = harness({
+        meterAdmitted: false,
+        intelligence: setOf(
+          c({
+            contributorId: 'ECONOMY_CPI',
+            domain: 'economic',
+            status: 'NO_DATA',
+            temporalBasis: 'RETAINED_STATISTICAL_RELEASE',
+            disclosures: [disclosure],
+            degradationReason: 'NO_PRODUCER',
+          }),
+        ),
+      });
+      const payload = await run("What is Rwanda's latest inflation (CPI)?", h);
+      expect(payload.answer).toEqual({
+        state: 'CAPABILITY_UNAVAILABLE',
+        basis: 'GOVERNED_RECORD_UNAVAILABLE',
+        missingRoles: [],
+      });
+      expect(payload.aiExecuted).toBe(false);
+      expect(payload.intelligence.contributions[0].disclosures).toEqual([disclosure]);
+      noSpend(h);
+      expect(obsOf(h)).toMatchObject({
+        answerState: 'CAPABILITY_UNAVAILABLE',
+        answerBasis: 'GOVERNED_RECORD_UNAVAILABLE',
+        modelInvocationCount: 0,
+        providerCallCount: 0,
+      });
+    },
+  );
 
   it('a reporting question with an exhausted budget is still refused truthfully (the control is not bypassed)', async () => {
     const h = harness({ meterAdmitted: false, intelligence: setOf(conflictUsed) });

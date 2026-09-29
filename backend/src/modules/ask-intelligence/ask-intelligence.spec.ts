@@ -55,7 +55,10 @@ function coordinator(
     /** LIVE ACCEPTANCE REPAIR R1 — source-verbatim detail per observation key. */
     details?: Record<string, ConflictRetainedEvidenceDetail> | 'throw';
     notices?: Array<{ buyerCountryIso3: string; noticeId: string }>;
-    cpi?: 'OBSERVATION' | 'GAP';
+    /** GAP = nothing captured; HELD_NOT_DISPLAYABLE = the live Alpha state (capture held,
+        refused by the governed reader); OBSERVATION_NOT_PUBLISHABLE = a figure the reader
+        decoded but did not mark DISPLAYABLE. */
+    cpi?: 'OBSERVATION' | 'GAP' | 'HELD_NOT_DISPLAYABLE' | 'OBSERVATION_NOT_PUBLISHABLE';
   } = {},
 ) {
   const calls = { conflict: [] as unknown[][], market: 0, economy: 0 };
@@ -101,6 +104,40 @@ function coordinator(
   const economy = {
     readNisrHeadlineCpi: jest.fn(async () => {
       calls.economy += 1;
+      if (opts.cpi === 'HELD_NOT_DISPLAYABLE') {
+        return {
+          slot: {
+            kind: 'GAP',
+            seriesId: 'rw-nisr:cpi:all-rwanda',
+            periodId: 'UNKNOWN',
+            reason: 'NO_PRODUCER',
+          },
+          publishable: false,
+          retainedState: 'NOT_DISPLAYABLE',
+        };
+      }
+      if (opts.cpi === 'OBSERVATION_NOT_PUBLISHABLE') {
+        return {
+          slot: {
+            kind: 'OBSERVATION',
+            observation: {
+              seriesId: 'rw-nisr:cpi:all-rwanda',
+              periodId: '2026-08',
+              value: 1,
+              unit: 'PERCENT',
+            },
+          },
+          publishable: false,
+          retainedState: 'NOT_DISPLAYABLE',
+          provenance: {
+            institution: 'National Institute of Statistics of Rwanda',
+            jurisdiction: 'RW',
+            licence: 'CC BY 4.0',
+            retrievedAt: '2026-09-12T00:00:00.000Z',
+            referencePeriod: '2026-08',
+          },
+        };
+      }
       return opts.cpi === 'OBSERVATION'
         ? {
             slot: {
@@ -259,6 +296,38 @@ describe('3/4 — Market: Poland procurement, and no arbitrary rows for unrelate
       period: '2026-08',
     });
     expect(cpi.disclosures).toEqual(['RETAINED_NOT_CURRENT']);
+  });
+
+  it('GAP REPAIR R1 — the live Alpha state (release held, refused by the governed reader) is NO_DATA / RETAINED_ARTIFACT_NOT_DISPLAYABLE', async () => {
+    const { c } = coordinator({ cpi: 'HELD_NOT_DISPLAYABLE' });
+    const cpi = byId(
+      await c.read(route("What is Rwanda's latest inflation (CPI)?"), NOW),
+      'ECONOMY_CPI',
+    )!;
+    expect(cpi.status).toBe('NO_DATA');
+    expect(cpi.observations).toEqual([]);
+    expect(cpi.disclosures).toEqual(['RETAINED_ARTIFACT_NOT_DISPLAYABLE']);
+  });
+
+  it('GAP REPAIR R1 — nothing captured is a DIFFERENT disclosure: NO_RETAINED_CAPTURE', async () => {
+    const { c } = coordinator({ cpi: 'GAP' });
+    const cpi = byId(
+      await c.read(route("What is Rwanda's latest inflation (CPI)?"), NOW),
+      'ECONOMY_CPI',
+    )!;
+    expect(cpi.status).toBe('NO_DATA');
+    expect(cpi.disclosures).toEqual(['NO_RETAINED_CAPTURE']);
+  });
+
+  it('GAP REPAIR R1 — a decoded figure the reader did not mark DISPLAYABLE is never used', async () => {
+    const { c } = coordinator({ cpi: 'OBSERVATION_NOT_PUBLISHABLE' });
+    const cpi = byId(
+      await c.read(route("What is Rwanda's latest inflation (CPI)?"), NOW),
+      'ECONOMY_CPI',
+    )!;
+    expect(cpi.status).toBe('NO_DATA');
+    expect(cpi.observations).toEqual([]);
+    expect(cpi.disclosures).toEqual(['RETAINED_ARTIFACT_NOT_DISPLAYABLE']);
   });
 
   it('CPI for a country with no governed series is NO_MATCH (never Rwanda’s figure)', async () => {

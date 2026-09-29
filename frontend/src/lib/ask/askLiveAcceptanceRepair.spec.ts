@@ -75,7 +75,8 @@ const ngoma = contribution({
       kind: 'IMIHIGO_DISTRICT_FINAL_SCORE',
       label: 'Ngoma',
       value: '77.2',
-      unit: '%',
+      /* GAP REPAIR R1 — the retained corpus states NO unit for district final scores. */
+      unit: null,
       period: '2024/2025',
       geography: 'nisr:district:56',
     }),
@@ -129,11 +130,12 @@ describe('A — a retained-record answer (G2, G3, G4, G9): zero AI, stated truth
     expect(ASK_SAVABLE_ANSWER_STATES.has('RETAINED_RECORD')).toBe(true);
   });
 
-  it('G3 Ngoma: the lead restates the governed record verbatim — 77.2%, 2024/2025, closed cycle', () => {
+  it('G3 Ngoma: the lead restates the governed record verbatim — final score 77.2 (no invented %), 2024/2025, closed cycle', () => {
     const r = render(payload('RETAINED_RECORD', 'GOVERNED_RECORD', [ngoma]));
     const lead = byData(r, 'retained-lead').map((n) => JSON.stringify(n.props.children));
     expect(lead).toHaveLength(1);
-    expect(lead[0]).toContain('Ngoma: 77.2% — Imihigo 2024/2025');
+    expect(lead[0]).toContain('Ngoma: final score 77.2 — Imihigo 2024/2025');
+    expect(lead[0]).not.toContain('%');
     expect(lead[0]).toContain('closed cycle');
     expect(byData(r, 'retained-no-ai')).toHaveLength(1);
     expect(byData(r, 'handoffs')).toHaveLength(0);
@@ -265,5 +267,138 @@ describe('C — retained Conflict records as concise structured observations (G1
       parties: null,
       cited: null,
     });
+  });
+});
+
+describe('GOVERNED RETAINED GAP REPAIR R1 — G9, the never-blank card, and the G4 scope', () => {
+  const cpiGap = (disclosures: string[], status: AskContribution['status'] = 'NO_DATA') =>
+    contribution({
+      contributorId: 'ECONOMY_CPI',
+      domain: 'economic',
+      status,
+      observations: [],
+      temporalBasis: 'RETAINED_STATISTICAL_RELEASE',
+      disclosures,
+      degradationReason: 'NO_PRODUCER',
+    });
+
+  it('G9 live state: an unreadable held CPI release says exactly that — never "no record", never the internal reason', () => {
+    const r = render(
+      payload('CAPABILITY_UNAVAILABLE', 'GOVERNED_RECORD_UNAVAILABLE', [
+        cpiGap(['RETAINED_ARTIFACT_NOT_DISPLAYABLE']),
+      ]),
+    );
+    const [card] = byData(r, 'unavailable');
+    expect(card.props.children).toBe(
+      'A retained NISR CPI release is held, but it cannot currently be read under its governed extraction rules, so no value is shown. Nothing was run in its place.',
+    );
+    const text = textOf(r);
+    expect(text).not.toMatch(/NO_PRODUCER|extractor|1\.1\.0|no retained record/i);
+    expect(byData(r, 'retained-lead')).toHaveLength(0);
+  });
+
+  it('G9 no capture: a DISTINCT truthful disclosure', () => {
+    const r = render(
+      payload('CAPABILITY_UNAVAILABLE', 'GOVERNED_RECORD_UNAVAILABLE', [
+        cpiGap(['NO_RETAINED_CAPTURE']),
+      ]),
+    );
+    const [card] = byData(r, 'unavailable');
+    expect(card.props.children).toBe(
+      'No retained NISR CPI release is held, so no value is shown. Nothing was run in its place.',
+    );
+  });
+
+  it('a failed read without a disclosure is "could not be read just now" — not an absence', () => {
+    const r = render(
+      payload('CAPABILITY_UNAVAILABLE', 'GOVERNED_RECORD_UNAVAILABLE', [cpiGap([], 'DEGRADED')]),
+    );
+    expect(byData(r, 'unavailable')[0].props.children).toMatch(/could not be read just now/);
+    expect(askR2Strings('pl').governedGap.notDisplayable.ECONOMY_CPI).toMatch(/CPI NISR/);
+  });
+
+  it('G9 with a valid governed observation shows its exact value, unit, period and NISR provenance', () => {
+    const view = askIntelligenceView(
+      payload('RETAINED_RECORD', 'GOVERNED_RECORD', [
+        contribution({
+          contributorId: 'ECONOMY_CPI',
+          domain: 'economic',
+          temporalBasis: 'RETAINED_STATISTICAL_RELEASE',
+          observations: [
+            obs({
+              reference: 'rw-nisr:cpi:all-rwanda',
+              kind: 'HEADLINE_CPI_YOY',
+              label: 'Rwanda headline CPI, year on year',
+              value: '4.2',
+              unit: 'PERCENT',
+              period: '2026-08',
+              source: {
+                name: 'National Institute of Statistics of Rwanda',
+                url: 'https://statistics.gov.rw/x.pdf',
+                licence: 'CC BY 4.0',
+              },
+            }),
+          ],
+          disclosures: ['RETAINED_NOT_CURRENT'],
+        }),
+      ]),
+      'en',
+      0,
+    )!;
+    expect(view.lead).toEqual([
+      'Rwanda headline CPI, year on year: 4.2% for 2026-08 — a retained NISR release, not re-checked now.',
+    ]);
+    expect(view.sections[0].rows[0]).toMatchObject({
+      value: '4.2 PERCENT',
+      period: '2026-08',
+      sourceName: 'National Institute of Statistics of Rwanda',
+    });
+  });
+
+  it.each([
+    ['GOVERNED_RECORD', 'The retained record is shown below with its source.'],
+    ['GOVERNED_NO_RECORD', 'No individual retained record exists for this question’s scope.'],
+  ])(
+    'a %s card with no lead and no note falls back to its own basis line — never blank',
+    (basis, line) => {
+      const r = render(
+        payload('RETAINED_RECORD', basis, [
+          contribution({
+            contributorId: 'IMIHIGO',
+            domain: 'governance',
+            observations: [obs({ value: null })],
+          }),
+        ]),
+      );
+      const lines = byData(r, 'retained-lead').map((n) => n.props.children);
+      expect(lines).toEqual([line]);
+    },
+  );
+
+  it('G4: with no router geography chip, the governed place is the visible scope — never "no scope applied"', () => {
+    const p = {
+      ...payload('RETAINED_RECORD', 'GOVERNED_NO_RECORD', [
+        contribution({
+          contributorId: 'GEOGRAPHY',
+          domain: 'geography',
+          applicability: 'CONTEXT',
+          temporalBasis: 'REFERENCE_GEOGRAPHY',
+          observations: [obs({ kind: 'NISR_DISTRICT', label: 'Gasabo' })],
+        }),
+        gasabo,
+      ]),
+      chips: { kind: 'NONE' },
+    } as unknown as AskR2Payload;
+    const v = askR2View(p, askR2Strings('en'), 'en', (x) => x);
+    expect(v.chips.items).toEqual([{ kind: 'GEOGRAPHY', label: 'Gasabo (NISR)', kept: false }]);
+    expect(v.chips.note).toBeNull();
+    /* a question with no governed place keeps the landed "no scope" note */
+    const plain = askR2View(
+      { ...p, intelligence: null } as AskR2Payload,
+      askR2Strings('en'),
+      'en',
+      (x) => x,
+    );
+    expect(plain.chips.note).toBe('General question · no scope applied');
   });
 });

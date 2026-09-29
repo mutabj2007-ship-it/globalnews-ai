@@ -918,7 +918,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     this.observeContributions(contributions, draft);
     const basis = governedRecordBasis(contributions);
     const answer: AnswerDecision =
-      basis === 'GOVERNED_READ_DEGRADED'
+      basis === 'GOVERNED_RECORD_UNAVAILABLE'
         ? { state: 'CAPABILITY_UNAVAILABLE', basis, missingRoles: [] }
         : { state: 'RETAINED_RECORD', basis, missingRoles: [] };
     draft.aiExecuted = false;
