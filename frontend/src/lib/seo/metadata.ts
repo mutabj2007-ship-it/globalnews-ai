@@ -80,7 +80,8 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
     still surface from elsewhere. That is why 'Disallow: /' is not a stronger
     form of this and is ruled out; robots.ts deliberately keeps 'Allow: /'.
   */
-  const indexable = entry.indexability === 'index' && !entry.userDependent && !isAlphaEnvironment();
+  const indexable =
+    entry.indexability === 'index' && !entry.userDependent && !isAlphaEnvironment();
 
   const robots: Metadata['robots'] = indexable
     ? { index: true, follow: true }
