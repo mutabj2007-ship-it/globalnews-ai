@@ -20,7 +20,15 @@ import { clientIpScope } from '../compute-controls/compute-scopes';
  */
 export interface AskRequestContext {
   readonly accountId: string | null;
+  /** ASK GUEST TRIAL R3 — the server-issued guest session (RequireGuestGuard), or null. */
+  readonly guestSessionId?: string | null;
   readonly ipScope: string;
+  /**
+   * ASK R3 CONTINUITY — the reader's OWN previous question in the SAME thread, read by
+   * AskV2Service from an owner-verified thread. Never a caller-supplied value, never another
+   * owner's text, never a prior AI answer. Absent on a thread's first turn.
+   */
+  readonly priorQuestion?: string | null;
 }
 
 export const askRequestContext = new AsyncLocalStorage<AskRequestContext>();
@@ -28,9 +36,14 @@ export const askRequestContext = new AsyncLocalStorage<AskRequestContext>();
 @Injectable()
 export class AskRequestContextInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const request = context.switchToHttp().getRequest<{ user?: { id?: string }; ip?: string }>();
+    const request = context.switchToHttp().getRequest<{
+      user?: { id?: string };
+      guest?: { id?: string };
+      ip?: string;
+    }>();
     const store: AskRequestContext = {
       accountId: typeof request?.user?.id === 'string' ? request.user.id : null,
+      guestSessionId: typeof request?.guest?.id === 'string' ? request.guest.id : null,
       ipScope: clientIpScope(request?.ip),
     };
     return new Observable((subscriber) =>

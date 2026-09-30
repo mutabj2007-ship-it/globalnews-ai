@@ -56,3 +56,15 @@ describe('derivePolishRetrievalQuery (Milestone #47)', () => {
     expect(derivePolishRetrievalQuery(input)).toBe(derivePolishRetrievalQuery(input));
   });
 });
+
+describe('ASK FIRST-ANSWER RETRIEVAL R3 — the Polish change frame', () => {
+  it.each([
+    ['Co się zmieniło w gospodarce Polski?', 'gospodarce Polski'],
+    ['Co sie zmienilo w gospodarce Polski?', 'gospodarce Polski'],
+    ['Co się zmienia w NATO?', 'NATO'],
+    ['Co nowego w Kenii?', 'Kenii'],
+    ['Co się zmieniło w gospodarce Polski w tym tygodniu?', 'gospodarce Polski w tym tygodniu'],
+  ])('%s -> %s', (question, subject) => {
+    expect(derivePolishRetrievalQuery(question)).toBe(subject);
+  });
+});

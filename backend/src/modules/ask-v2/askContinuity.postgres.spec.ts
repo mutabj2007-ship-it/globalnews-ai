@@ -1,3 +1,4 @@
+import { accountPrincipal } from './guest/ask-principal';
 import { Test } from '@nestjs/testing';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { INestApplication } from '@nestjs/common';
@@ -60,17 +61,20 @@ live('Ask continuity (Recent + Saved) — live PostgreSQL, HTTP authorization, z
   const as = (who: 'a' | 'b') => [`${SESSION_COOKIE_NAME}=${who}`, `${CSRF_COOKIE_NAME}=csrf`];
 
   async function completedTurn(userId: string, question: string) {
-    const t = await service.createThread(userId, { idempotencyKey: randomUUID(), language: 'en' });
-    const q = await service.quote(userId, t.id, {
+    const t = await service.createThread(accountPrincipal(userId), {
+      idempotencyKey: randomUUID(),
+      language: 'en',
+    });
+    const q = await service.quote(accountPrincipal(userId), t.id, {
       idempotencyKey: randomUUID(),
       question,
       language: 'en',
       intent: 'ask',
     });
     if (q.status !== 'COMPLETED') {
-      await service.accept(userId, q.operationId);
-      await service.reserve(userId, q.operationId);
-      await service.execute(userId, q.operationId);
+      await service.accept(accountPrincipal(userId), q.operationId);
+      await service.reserve(accountPrincipal(userId), q.operationId);
+      await service.execute(accountPrincipal(userId), q.operationId);
     }
     const row = await db.askTurn.findFirstOrThrow({ where: { threadId: t.id } });
     return { threadId: t.id, turnId: row.id, operationId: q.operationId };
@@ -407,7 +411,7 @@ live('Ask continuity (Recent + Saved) — live PostgreSQL, HTTP authorization, z
 
   describe('Recent names the question Open will display (D)', () => {
     it('a multi-turn thread reports its first AND its latest question, and Open’s operation is the latest turn’s', async () => {
-      await service.quote(ids.a, thread.a, {
+      await service.quote(accountPrincipal(ids.a), thread.a, {
         idempotencyKey: randomUUID(),
         question: 'Why does that matter for the region?',
         language: 'en',

@@ -1,38 +1,46 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   askR2PayloadOf,
   askV2Api,
   newIdempotencyKey,
+  type AskGuestStatus,
   type AskR2Payload,
   type AskV2Language,
   type AskV2Operation,
+  type AskV2Outcome,
+  type AskV2ThreadHistory,
 } from '@/lib/api/askV2Api';
+import { guestNoticeOf, guestSignInHref, isGuestMode, type GuestNotice } from './askGuestTrial';
+import { ASK_SIGN_IN_HREF, keepQuestion } from './askKeptQuestion';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE F — THE ASK R2 CONVERSATION
  * ════════════════════════════════════════════════════════════════════════════
  *
- * ZERO-REQUEST OPEN (§22). Nothing is requested on mount, focus or typing: whether Ask V2
- * is available is learned at the first explicit Send, from the server's own answer. A 404
- * (ASK_V2_ENABLED off — the default) makes the hook report `legacy`, and the screen sends
- * that question down the existing Ask path — the contract's rollback path.
+ * ZERO-COMPUTE OPEN (§22). Nothing that can spend is requested on mount, focus or typing:
+ * whether Ask V2 is available is learned at the first explicit Send, from the server's own
+ * answer. A 404 (ASK_V2_ENABLED off — the default) makes the hook report `legacy`, and the
+ * screen sends that question down the existing Ask path — the contract's rollback path.
+ *
+ * ASK GUEST TRIAL R3 — ONE READ ON OPEN: `GET /ask-v2/guest/status` (0 AI · 0 provider · no
+ * session minted) tells the composer whether a first-visit guest may ask and how many guest
+ * questions remain, and restores a guest conversation after a reload or a cancelled sign-in,
+ * or the continued conversation after a completed one. It never starts research.
  *
  * SIGNED OUT IS NOT A ROLLBACK (SIGNED-OUT FALLBACK REMOVAL R1). A 401 means Ask V2 is ON
- * and the reader must sign in. It resolves `signed-out`, never `legacy`: the question is
- * not sent anywhere else — no /analysis/news, no provider, no model — and `signInRequired`
- * holds it so the screen can keep it for the reader. Live Alpha had routed a signed-out
- * reader's question into the legacy news pipeline, which answered a general question with
- * a live-reporting failure.
+ * and the reader must sign in — unless the guest trial is available, in which case the
+ * question goes to the guest surface. It never goes to /analysis/news, a provider or a model
+ * outside Ask V2.
  *
  * ONE OPERATION PER SEND. Each Send carries a fresh idempotency key; a retried request with
  * the same key is the same operation server-side, so a double click cannot run twice.
  *
  * DEEP WORK STOPS AT A QUOTE. `runDeeper` submits `deep-analysis`; the server answers with a
  * quote (`requiresAcceptance`) and NOTHING runs until `confirmDeeper` accepts, reserves and
- * executes it. `cancelDeeper` releases the quote.
+ * executes it. `cancelDeeper` releases the quote. Guests are asked to sign in instead.
  *
  * RETURN PATH IS CAPTURED AT DEPARTURE (§16): the caller supplies it when Ask opens, it is
  * stored on the thread, and nothing here derives it from the answer.
@@ -46,6 +54,8 @@ export interface AskR2Turn {
   readonly failure?: string;
   /** GATE H (MD-005) — a stored result read after its validity: shown as it was, and said so. */
   readonly expired?: boolean;
+  /** ASK GUEST TRIAL R3 — a guest answer that did NOT use a guest question (server-decided). */
+  readonly uncounted?: boolean;
 }
 
 export type AskR2Availability = 'unknown' | 'r2' | 'legacy';
@@ -55,21 +65,115 @@ export interface AskR2DeepQuote {
   readonly operation: AskV2Operation;
 }
 
+export type AskR2SubmitOutcome = 'legacy' | 'signed-out' | 'sent' | 'busy' | 'failed' | 'kept';
+
 /** The same shape the server accepts (`safeReturnPath`): strict local path, or null. */
 export function sanitizeReturnPath(path: string | null | undefined): string | null {
   if (typeof path !== 'string' || path.length === 0 || path.length > 500) return null;
   return /^\/(?!\/)[a-zA-Z0-9/_?=&.\-]*$/.test(path) ? path : null;
 }
 
-export function useAskR2Conversation(language: AskV2Language, returnPath: string | null) {
+const RESTORE_TURN_LIMIT = 10;
+
+/** Read a thread's turns back as display-only turns: reads only, nothing runs again. */
+async function restoreTurns(
+  history: AskV2ThreadHistory,
+  read: (operationId: string) => Promise<AskV2Outcome<AskV2Operation>>,
+): Promise<AskR2Turn[]> {
+  const turns = history.turns.slice(-RESTORE_TURN_LIMIT);
+  const ops = await Promise.all(turns.map((t) => read(t.operationId)));
+  return turns.map((t, i) => {
+    const op = ops[i];
+    return op.ok
+      ? {
+          question: t.question,
+          operation: op.value,
+          payload: askR2PayloadOf(op.value),
+          ...(op.value.failureCode ? { failure: op.value.failureCode } : {}),
+          ...(op.value.result?.expired === true ? { expired: true } : {}),
+        }
+      : { question: t.question, failure: op.reason };
+  });
+}
+
+export interface AskR2ConversationOptions {
+  /**
+   * ASK GUEST TRIAL R3 — the /ask screen opts in. Without it this hook is exactly the landed
+   * hook: no request on open, and a 401 is a sign-in requirement with no guest fallback.
+   */
+  readonly guestTrial?: boolean;
+}
+
+export function useAskR2Conversation(
+  language: AskV2Language,
+  returnPath: string | null,
+  options: AskR2ConversationOptions = {},
+) {
+  const guestTrial = options.guestTrial === true;
   const [turns, setTurns] = useState<AskR2Turn[]>([]);
   const [pending, setPending] = useState<string | null>(null);
   const [availability, setAvailability] = useState<AskR2Availability>('unknown');
   const [deepQuote, setDeepQuote] = useState<AskR2DeepQuote | null>(null);
   /** The question a 401 stopped: kept for the reader, sent nowhere. */
   const [signInRequired, setSignInRequired] = useState<string | null>(null);
+  /* ASK GUEST TRIAL R3 */
+  const [guest, setGuest] = useState<AskGuestStatus | null>(null);
+  const [guestNotice, setGuestNotice] = useState<GuestNotice | null>(null);
   const thread = useRef<{ id: string; language: AskV2Language } | null>(null);
+  const guestThread = useRef<{ id: string; language: AskV2Language } | null>(null);
   const inFlight = useRef(false);
+
+  /** Whether the status has been read at all (a failed read is still a read). */
+  const guestRead = useRef(false);
+  const refreshGuest = useCallback(async (): Promise<AskGuestStatus | null> => {
+    guestRead.current = true;
+    const read = await askV2Api.guestStatus();
+    const status = read.ok ? read.value : null;
+    setGuest(status);
+    return status;
+  }, []);
+
+  /*
+    ASK GUEST TRIAL R3 — the one read on open, and the restore it allows. Signed in, with a
+    conversation just continued through a guest claim: that conversation, read back through
+    the ACCOUNT routes. A guest with a live session: its latest conversation. Reads only.
+  */
+  useEffect(() => {
+    if (!guestTrial) return;
+    let live = true;
+    void (async () => {
+      const status = await refreshGuest();
+      if (!live || status === null) return;
+      if (status.signedIn) {
+        const cont = await askV2Api.continuation();
+        if (!live || !cont.ok || cont.value.threadId === null) return;
+        const history = await askV2Api.thread(cont.value.threadId);
+        if (!live || !history.ok) return;
+        const restored = await restoreTurns(history.value, (id) => askV2Api.operation(id));
+        if (!live) return;
+        thread.current = { id: history.value.id, language: history.value.language };
+        setAvailability('r2');
+        setTurns((t) => (t.length === 0 ? restored : t));
+        setGuestNotice('RESUMED');
+        return;
+      }
+      if (isGuestMode(status) && status.session) {
+        const list = await askV2Api.guestThreads();
+        if (!live || !list.ok || list.value.length === 0) return;
+        const latest = list.value[0];
+        const history = await askV2Api.guestThread(latest.id);
+        if (!live || !history.ok) return;
+        const restored = await restoreTurns(history.value, (id) => askV2Api.guestOperation(id));
+        if (!live) return;
+        guestThread.current = { id: history.value.id, language: history.value.language };
+        setAvailability('r2');
+        setTurns((t) => (t.length === 0 ? restored : t));
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [guestTrial, refreshGuest]);
 
   const ensureThread = useCallback(async (): Promise<string | 'legacy' | 'signed-out' | null> => {
     if (thread.current?.language === language) return thread.current.id;
@@ -88,13 +192,79 @@ export function useAskR2Conversation(language: AskV2Language, returnPath: string
     return created.value.id;
   }, [language, returnPath]);
 
+  /** ASK GUEST TRIAL R3 — one guest Send, entirely server-decided. */
+  const submitAsGuest = useCallback(
+    async (q: string, retried = false): Promise<AskR2SubmitOutcome> => {
+      let threadId = guestThread.current?.language === language ? guestThread.current.id : null;
+      if (threadId === null) {
+        const created = await askV2Api.guestCreateThread(language, sanitizeReturnPath(returnPath));
+        if (!created.ok) {
+          if (created.reason === 'UNAVAILABLE') {
+            setAvailability('legacy');
+            return 'legacy';
+          }
+          const notice = guestNoticeOf(created.code);
+          if (notice === 'UNAVAILABLE' || created.code === 'SIGNED_IN_USE_ACCOUNT') {
+            await refreshGuest();
+            setSignInRequired(q);
+            return 'signed-out';
+          }
+          setGuestNotice(notice ?? 'LIMITED');
+          return 'kept';
+        }
+        threadId = created.value.id;
+        guestThread.current = { id: threadId, language };
+        setAvailability('r2');
+      }
+      const before = guest?.committed ?? 0;
+      const sent = await askV2Api.guestSubmit(threadId, q, language, newIdempotencyKey());
+      if (!sent.ok) {
+        if (sent.reason === 'SIGNED_OUT' && !retried) {
+          /* The guest session ended (absolute expiry, cleared cookie): the server decides anew. */
+          guestThread.current = null;
+          await refreshGuest();
+          return submitAsGuest(q, true);
+        }
+        const notice = guestNoticeOf(sent.code);
+        if (notice === 'UNAVAILABLE') {
+          await refreshGuest();
+          setSignInRequired(q);
+          return 'signed-out';
+        }
+        if (notice !== null) {
+          setGuestNotice(notice);
+          await refreshGuest();
+          return 'kept';
+        }
+        setTurns((t) => [...t, { question: q, failure: sent.reason }]);
+        return 'failed';
+      }
+      const op = sent.value;
+      const after = await refreshGuest();
+      const uncounted = op.status === 'COMPLETED' && (after?.committed ?? before) === before;
+      setTurns((t) => [
+        ...t,
+        {
+          question: q,
+          operation: op,
+          payload: askR2PayloadOf(op),
+          ...(op.failureCode ? { failure: op.failureCode } : {}),
+          ...(uncounted || op.status === 'RELEASED' ? { uncounted: true } : {}),
+        },
+      ]);
+      return 'sent';
+    },
+    [guest, language, refreshGuest, returnPath],
+  );
+
   /**
    * Send one question. Resolves `legacy` when the caller must use the existing Ask path
    * (Ask V2 disabled), `signed-out` when the reader must sign in first (nothing is sent
-   * anywhere), `sent` when an R2 turn was added, `busy` when a question is in flight.
+   * anywhere), `sent` when an R2 turn was added, `busy` when a question is in flight, and
+   * `kept` when a guest refusal left the question in the composer (nothing ran).
    */
   const submit = useCallback(
-    async (question: string): Promise<'legacy' | 'signed-out' | 'sent' | 'busy' | 'failed'> => {
+    async (question: string): Promise<AskR2SubmitOutcome> => {
       const q = question.trim();
       if (q.length === 0) return 'failed';
       if (inFlight.current) return 'busy';
@@ -102,10 +272,17 @@ export function useAskR2Conversation(language: AskV2Language, returnPath: string
       inFlight.current = true;
       setPending(q);
       setSignInRequired(null);
+      setGuestNotice(null);
       try {
+        if (guestTrial && isGuestMode(guest)) return await submitAsGuest(q);
         const id = await ensureThread();
         if (id === 'legacy') return 'legacy';
         if (id === 'signed-out') {
+          if (guestTrial) {
+            /* The status read may not have arrived yet: ask it once before asking to sign in. */
+            const status = guestRead.current ? guest : await refreshGuest();
+            if (isGuestMode(status)) return await submitAsGuest(q);
+          }
           setSignInRequired(q);
           return 'signed-out';
         }
@@ -140,12 +317,37 @@ export function useAskR2Conversation(language: AskV2Language, returnPath: string
         setPending(null);
       }
     },
-    [availability, ensureThread, language],
+    [availability, ensureThread, guest, guestTrial, language, refreshGuest, submitAsGuest],
   );
+
+  /**
+   * ASK GUEST TRIAL R3 — sign in to CONTINUE this guest conversation. The guest's own thread
+   * is claimed server-side, the unsent draft is kept for the composer, then the browser goes
+   * to Google. Nothing is sent automatically on return.
+   */
+  const continueWithSignIn = useCallback(async (draft: string): Promise<boolean> => {
+    keepQuestion(draft);
+    const current = guestThread.current;
+    if (current === null) {
+      window.location.assign(ASK_SIGN_IN_HREF);
+      return true;
+    }
+    const claimed = await askV2Api.guestClaim(current.id);
+    if (!claimed.ok) {
+      setGuestNotice(guestNoticeOf(claimed.code) ?? 'LIMITED');
+      return false;
+    }
+    window.location.assign(guestSignInHref());
+    return true;
+  }, []);
 
   /** Ask for a deeper run: the server quotes it; nothing runs until `confirmDeeper`. */
   const runDeeper = useCallback(
     async (question: string): Promise<boolean> => {
+      if (isGuestMode(guest)) {
+        setGuestNotice('DEEPER');
+        return false;
+      }
       if (inFlight.current || thread.current === null) return false;
       inFlight.current = true;
       try {
@@ -163,7 +365,7 @@ export function useAskR2Conversation(language: AskV2Language, returnPath: string
         inFlight.current = false;
       }
     },
-    [language],
+    [guest, language],
   );
 
   /** The explicit acceptance: accept → reserve → execute. The only path to deep compute. */
@@ -227,6 +429,12 @@ export function useAskR2Conversation(language: AskV2Language, returnPath: string
     confirmDeeper,
     cancelDeeper,
     continueThread,
+    /* ASK GUEST TRIAL R3 */
+    guest,
+    guestMode: isGuestMode(guest),
+    guestNotice,
+    setGuestNotice,
+    continueWithSignIn,
   };
 }
 

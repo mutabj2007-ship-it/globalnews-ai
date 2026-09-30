@@ -33,13 +33,22 @@ function readCsrfCookie(): string | undefined {
 export interface AccountFetchOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
+  /**
+   * ASK GUEST TRIAL R3 — additional request headers (e.g. the non-simple
+   * `X-Requested-With` a first guest submission carries). They can never replace
+   * the CSRF or content-type headers this function sets itself.
+   */
+  headers?: Readonly<Record<string, string>>;
 }
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE']);
 
-export async function accountFetch(path: string, options: AccountFetchOptions = {}): Promise<Response> {
+export async function accountFetch(
+  path: string,
+  options: AccountFetchOptions = {},
+): Promise<Response> {
   const method = options.method ?? 'GET';
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...(options.headers ?? {}) };
 
   if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json';

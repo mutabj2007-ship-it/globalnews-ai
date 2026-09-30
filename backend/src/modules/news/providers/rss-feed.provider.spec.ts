@@ -869,3 +869,44 @@ describe('REGRESSIONS THE CONTRIBUTION HARNESS CAUGHT ON ITS FIRST ACTIVATED RUN
     expect(attempted.some((url) => url.includes('wiadomosci.wp.pl'))).toBe(true);
   });
 });
+
+/* ------------------------------------------------------------------ */
+
+describe('ASK FIRST-ANSWER RETRIEVAL R3 — the own-country diagnostic carries no reader text', () => {
+  it('logs the publisher and a redacted reference, never the query', async () => {
+    const { Logger } = await import('@nestjs/common');
+    const emitted: string[] = [];
+    const spies = (['log', 'warn', 'debug', 'error'] as const).map((level) =>
+      jest.spyOn(Logger.prototype, level).mockImplementation((m: unknown) => {
+        emitted.push(String(m));
+      }),
+    );
+    const fetchSpy = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue({ ok: true, status: 200, text: async () => GUS } as never);
+    try {
+      const provider = new RssFeedProvider({
+        get: (key: string) =>
+          key === 'RSS_FEEDS_ENABLED'
+            ? 'true'
+            : key === 'RSS_FEED_SOURCES'
+              ? 'feed:gus-pl'
+              : undefined,
+      } as unknown as ConfigService);
+      const question = 'what has changed in poland s economy give the dates and cite the sources';
+      const articles = await provider.search(question);
+
+      expect(articles.length).toBeGreaterThan(0);
+      const ownCountry = emitted.find((line) => /own country/.test(line));
+      expect(ownCountry).toBeDefined();
+      expect(ownCountry).toMatch(/len=\d+ ref=[0-9a-f]{8}/);
+      for (const line of emitted) {
+        expect(line).not.toContain('cite the sources');
+        expect(line).not.toContain('economy');
+      }
+    } finally {
+      fetchSpy.mockRestore();
+      for (const s of spies) s.mockRestore();
+    }
+  });
+});

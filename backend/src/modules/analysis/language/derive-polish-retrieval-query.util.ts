@@ -30,6 +30,14 @@ const POLISH_SUBJECT_PATTERNS: RegExp[] = [
     suggestion used exactly this form and derived the whole sentence.
   */
   /^co\s+si[eę]\s+(?:teraz\s+|obecnie\s+)?dzieje\s+(?:teraz\s+|obecnie\s+)?(?:w|we|na)\s+(.+)$/iu,
+  /*
+    ASK FIRST-ANSWER RETRIEVAL R3 — the Polish change frame: "Co się zmieniło w X?",
+    "Co się zmienia w X?", "Co nowego w X?". The captured span is inflected (locative
+    "gospodarce Polski"); it is kept as written, exactly like the frames above — no
+    morphology is added here.
+  */
+  /^co\s+si[eę]\s+(?:zmieni[łl]o|zmienia)\s+(?:w|we|na)\s+(.+)$/iu,
+  /^co\s+nowego\s+(?:w|we|na|u)\s+(.+)$/iu,
   // "Najnowsze informacje o X"
   /^najnowsze\s+informacje\s+o\s+(.+)$/iu,
   // "Jakie są najważniejsze wiadomości z/o/w X?"

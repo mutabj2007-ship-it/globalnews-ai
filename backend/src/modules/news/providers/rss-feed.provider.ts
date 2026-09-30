@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type { NewsArticle, NewsCategory, ProviderHealthStatus } from '@globalnews-ai/shared';
 import { findCountryByIso2 } from '@globalnews-ai/shared';
 import { logWithRequestId } from '../../../observability/log-with-request-id';
+import { describeFreeText } from '../../../observability/free-text-log';
 import type { NewsProvider, NewsProviderCapability, NewsSearchOptions } from '../interfaces';
 import { attachSyndicatedBody } from './syndicated-body';
 import { classifyCategory } from '../classification/classify-category.util';
@@ -248,7 +249,7 @@ export class RssFeedProvider implements NewsProvider {
         logWithRequestId(
           this.logger,
           'debug',
-          `${source.displayName}: "${needle}" is this publisher's own country; ` +
+          `${source.displayName}: the query (${describeFreeText(needle)}) names this publisher's own country; ` +
             `offering ${articles.length} recent record(s) for downstream relevance scoring.`,
         );
         collected.push(...articles);

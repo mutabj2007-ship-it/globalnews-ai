@@ -1,3 +1,4 @@
+import { accountPrincipal } from './guest/ask-principal';
 import { randomUUID } from 'node:crypto';
 import { PrismaPg } from '@prisma/adapter-pg';
 import type { ConfigService } from '@nestjs/config';
@@ -52,7 +53,12 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
     language: 'en' | 'pl' = 'en',
   ) =>
     within(() =>
-      service.submit(userId, threadId, { idempotencyKey: key, question, language, intent }),
+      service.submit(accountPrincipal(userId), threadId, {
+        idempotencyKey: key,
+        question,
+        language,
+        intent,
+      }),
     );
   const payloadOf = async (storedResultId: string | null) =>
     storedResultId === null
@@ -99,8 +105,12 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
     build();
     userId = randomUUID();
     await db.user.create({ data: { id: userId, email: `ask-r2-${userId}@example.invalid` } });
-    threadId = (await service.createThread(userId, { idempotencyKey: 'thread', language: 'en' }))
-      .id;
+    threadId = (
+      await service.createThread(accountPrincipal(userId), {
+        idempotencyKey: 'thread',
+        language: 'en',
+      })
+    ).id;
   });
 
   /** Controls read their knobs at construction, as in production: build after setting values. */
@@ -233,7 +243,7 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
       const key = randomUUID();
       const first = await submit('What is happening in Kenya?', key);
       const again = await submit('What is happening in Kenya?', key);
-      await within(() => service.execute(userId, first.operationId));
+      await within(() => service.execute(accountPrincipal(userId), first.operationId));
       expect(again.operationId).toBe(first.operationId);
       expect(analyzeNews).toHaveBeenCalledTimes(1);
     });
@@ -241,7 +251,7 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
     it('opening an existing result is display-only: 0 AI', async () => {
       const op = await submit('What is happening in Kenya?');
       analyzeNews.mockClear();
-      const read = await service.getOperation(userId, op.operationId);
+      const read = await service.getOperation(accountPrincipal(userId), op.operationId);
       expect(read.result?.displayOnly).toBe(true);
       expect(analyzeNews).not.toHaveBeenCalled();
     });
@@ -258,9 +268,11 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
       expect(quoted.status).toBe('QUOTED');
       expect(quoted.requiresAcceptance).toBe(true);
       expect(analyzeNews).not.toHaveBeenCalled();
-      await service.accept(userId, quoted.operationId);
-      await service.reserve(userId, quoted.operationId);
-      const done = await within(() => service.execute(userId, quoted.operationId));
+      await service.accept(accountPrincipal(userId), quoted.operationId);
+      await service.reserve(accountPrincipal(userId), quoted.operationId);
+      const done = await within(() =>
+        service.execute(accountPrincipal(userId), quoted.operationId),
+      );
       expect(done.status).toBe('COMPLETED');
       expect(analyzeNews).toHaveBeenCalledTimes(1);
     });
