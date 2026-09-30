@@ -35,6 +35,10 @@ import {
 } from './relevance/generic-relevance.util';
 import { scoreCountryEconomyRelevance } from './relevance/country-economy-relevance.util';
 import {
+  scoreCompoundPlanRelevance,
+  type CompoundRetrievalPlanAdmission,
+} from './relevance/compound-plan-relevance.util';
+import {
   governedInstitution,
   scoreInstitutionalStatusRelevance,
   type GovernedInstitutionId,
@@ -151,6 +155,12 @@ export type RelevanceMode =
     (governed-institutions.ts). Opt-in by exactly one caller; every other mode is unchanged.
   */
   | { type: 'institutional'; institutionId: GovernedInstitutionId; subjectId: 'POLICY_RATE' }
+  /*
+    ASK PUBLIC BETA RETRIEVAL REPAIR R1 — one search of a bounded compound retrieval plan
+    (compound-plan-relevance.util.ts): country + governed sub-national scope + an asked facet.
+    Opt-in by exactly one caller; every other mode is unchanged.
+  */
+  | { type: 'compoundPlan'; plan: CompoundRetrievalPlanAdmission }
   /*
     P1 MULTI-ENTITY / TOPIC RELEVANCE CLOSURE R1 — Entity A → event → Entity B
     (relational-event.ts): both entities AND the event family, stated together. Opt-in by
@@ -2143,6 +2153,10 @@ export class NewsService {
       return subject === undefined
         ? { isRelevant: false }
         : scoreInstitutionalStatusRelevance(article, institution, subject);
+    }
+
+    if (relevanceMode.type === 'compoundPlan') {
+      return scoreCompoundPlanRelevance(article, relevanceMode.plan);
     }
 
     return scoreRelationalRelevance(article, relevanceMode.x, relevanceMode.y);

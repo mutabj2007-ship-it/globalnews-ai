@@ -156,20 +156,55 @@ export function dedupeChips(items: readonly AskR2ChipView[]): AskR2ChipView[] {
  * apply, or null. Only the reader's own words are removed, whole-word and case-insensitive;
  * if any of them is not literally in the question nothing is suggested (no guessed rewrite).
  */
-export function withoutTerms(question: string, terms: readonly string[]): string | null {
+export function withoutTerms(
+  question: string,
+  terms: readonly string[],
+  timeTerms: readonly string[] = [],
+): string | null {
   if (terms.length === 0) return null;
+  const isTime = (term: string): boolean =>
+    timeTerms.some((t) => t.toLocaleLowerCase() === term.toLocaleLowerCase());
   let out = question;
+  let removedAtStart = false;
   for (const term of terms) {
     const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(String.raw`(^|[^\p{L}\p{N}])${escaped}(?=$|[^\p{L}\p{N}])`, 'iu');
-    if (!re.test(out)) return null;
+    /* ASK PUBLIC BETA RETRIEVAL REPAIR R1 (BETA-ASK-001) — a stated period goes with the words
+       that govern it ("over the last 7 days", "in the past 24 hours", "during this week"), so
+       removing it can never leave "…Congo over the?". */
+    const governor = isTime(term) ? TIME_GOVERNOR : '';
+    const re = new RegExp(
+      String.raw`(^|[^\p{L}\p{N}])${governor}${escaped}(?=$|[^\p{L}\p{N}])`,
+      'iu',
+    );
+    const match = out.match(re);
+    if (match === null) return null;
+    if ((match.index ?? 0) === 0) removedAtStart = true;
     out = out.replace(re, '$1');
   }
   out = out
     .replace(/\s+([?.!,;:])/g, '$1')
+    .replace(/[,;:]+(?=[?.!])/g, '')
+    .replace(/([?.!,;:])\1+/g, '$1')
     .replace(/\s{2,}/g, ' ')
     .trim();
+  if (removedAtStart) {
+    out = out.replace(/^[\s,;:]+/, '');
+    out = out.charAt(0).toLocaleUpperCase() + out.slice(1);
+  }
+  /* A suggestion that reads broken is worse than none: no new dangling word may appear. */
+  if (danglingCount(out) > danglingCount(question)) return null;
   return out.length > 0 && out !== question.trim() ? out : null;
+}
+
+/** The words that may govern a stated period, removed with it. */
+const TIME_GOVERNOR = String.raw`(?:(?:over|in|during|within|for|across|throughout|from|since|of)\s+)?(?:the\s+)?`;
+
+/** A function word left hanging before punctuation or the end, or an empty clause (", ,"). */
+const DANGLING =
+  /(?:\b(?:the|a|an|of|over|in|during|within|for|across|throughout|from|since|to|and|or|by|with|at|next|last|past|previous|coming|recent)\s*(?:[?.!,;:]|$))|(?:[,;:]\s*[,;:?.!])|(?:^[\s,;:?.!])/giu;
+
+function danglingCount(text: string): number {
+  return (text.trim().match(DANGLING) ?? []).length;
 }
 
 /** GOVERNED RETAINED GAP REPAIR R1 — the governed place a USED geography contribution resolved. */
@@ -306,13 +341,15 @@ export function askR2View(
     if (basis === 'PLAN_BROADENING_OFFERED') {
       /* The reader's own words the plan could not apply, once each. */
       const notApplied: string[] = [];
+      const timeTerms: string[] = [];
       for (const chip of c.kind === 'SCOPED' ? c.chips : []) {
         if (chip.applied || chip.kind === 'GEOGRAPHY' || chip.kind === 'SELECTION') continue;
+        if (chip.kind === 'TIME') timeTerms.push(chip.value);
         if (!notApplied.some((v) => v.toLocaleLowerCase() === chip.value.toLocaleLowerCase())) {
           notApplied.push(chip.value);
         }
       }
-      suggestion = withoutTerms(question, notApplied);
+      suggestion = withoutTerms(question, notApplied, timeTerms);
       lead = notApplied.length > 0 ? s.clarify.broadening(notApplied, suggestion !== null) : null;
     } else {
       const code = (payload.route?.clarification ?? []).find((c0) => c0 in s.clarify.codes);

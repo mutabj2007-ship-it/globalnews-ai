@@ -64,7 +64,12 @@ import {
   isSubjectFollowUp,
   orderByFocus,
 } from '../anchor/conversation-subject.util';
-import { NewsService, readProviderFailures } from '../../news/news.service';
+import { NewsService, attachProviderFailures, readProviderFailures } from '../../news/news.service';
+import { scoreCompoundPlanRelevance } from '../../news/relevance/compound-plan-relevance.util';
+import {
+  deriveCompoundRetrievalPlan,
+  type CompoundRetrievalPlan,
+} from '../query/compound-retrieval-plan.util';
 import {
   readInstitutionalStatusQuestion,
   scoreInstitutionalStatusRelevance,
@@ -2602,6 +2607,16 @@ export class AnalysisService {
             const genericMode = countryEconomy
               ? ({ type: 'generic', countryEconomy: { iso3: countryEconomy.iso3 } } as const)
               : ({ type: 'generic' } as const);
+            /*
+              ASK PUBLIC BETA RETRIEVAL REPAIR R1 — a long compound question about one country
+              (+ an optional compass scope) and a security / humanitarian facet is retrieved by a
+              bounded plan instead of as one all-words phrase (compound-retrieval-plan.util.ts).
+              Every other question returns undefined here and keeps exactly its path.
+            */
+            const compoundPlan =
+              countryEconomy === undefined
+                ? deriveCompoundRetrievalPlan(retrievalQuery, requestedLanguage)
+                : undefined;
 
             /**
              * PROVIDER-SAFETY EDGE CLOSURE — the honest non-retrievable state.
@@ -2626,16 +2641,18 @@ export class AnalysisService {
               articles = [];
               retrievalContext = NON_RETRIEVABLE_QUERY_CONTEXT;
             } else {
-              let searchResponse = await this.newsService.search(
-                primarySent,
-                SEARCH_POOL_SIZE,
-                // Milestone #36: opt-in relevance gate — only this call site
-                // (AnalysisService's ordinary generic-search branch) enables
-                // it. CountryNewsService and the public /news/search endpoint
-                // call NewsService.search() without this mode, so their
-                // behavior is completely unchanged (see news.service.ts).
-                genericMode,
-              );
+              let searchResponse = compoundPlan
+                ? await this.retrieveCompoundPlan(compoundPlan)
+                : await this.newsService.search(
+                    primarySent,
+                    SEARCH_POOL_SIZE,
+                    // Milestone #36: opt-in relevance gate — only this call site
+                    // (AnalysisService's ordinary generic-search branch) enables
+                    // it. CountryNewsService and the public /news/search endpoint
+                    // call NewsService.search() without this mode, so their
+                    // behavior is completely unchanged (see news.service.ts).
+                    genericMode,
+                  );
 
               // Milestone #46 — exactly ONE bounded fallback attempt, and
               // ONLY when the primary derived-query search returned zero
@@ -2742,7 +2759,9 @@ export class AnalysisService {
                  * down.
                  */
                 const retainedQuery =
-                  deriveFallbackNewsQuery(genericSearchQuery) ?? genericSearchQuery;
+                  compoundPlan?.queries[0]?.q ??
+                  deriveFallbackNewsQuery(genericSearchQuery) ??
+                  genericSearchQuery;
                 const retainedTerms = retainedQuery
                   .toLowerCase()
                   .replace(/[^\p{L}\p{N}]+/gu, ' ')
@@ -2755,11 +2774,12 @@ export class AnalysisService {
                   SEARCH_POOL_SIZE,
                   RETAINED_MAX_AGE_MINUTES,
                 );
-                const retained = retainedCandidates.filter(
-                  (article) =>
-                    scoreGenericRelevance(article, retainedQuery).isRelevant ||
-                    (countryEconomy !== undefined &&
-                      scoreCountryEconomyRelevance(article, countryEconomy.iso3).isRelevant),
+                const retained = retainedCandidates.filter((article) =>
+                  compoundPlan !== undefined
+                    ? scoreCompoundPlanRelevance(article, compoundPlan).isRelevant
+                    : scoreGenericRelevance(article, retainedQuery).isRelevant ||
+                      (countryEconomy !== undefined &&
+                        scoreCountryEconomyRelevance(article, countryEconomy.iso3).isRelevant),
                 );
 
                 if (retained.length > 0) {
@@ -2778,7 +2798,8 @@ export class AnalysisService {
 
               if (searchResponse.articles.length === 0 && primaryFailures.length > 0) {
                 await rescueAfterRefusal(primaryFailures);
-              } else if (searchResponse.articles.length === 0) {
+              } else if (searchResponse.articles.length === 0 && compoundPlan === undefined) {
+                /* A compound plan already spent its bounded searches; no M46 retry is added. */
                 const fallbackQuery = deriveFallbackNewsQuery(genericSearchQuery);
                 if (fallbackQuery) {
                   const fallbackSent = makeProviderSafeNewsQuery(fallbackQuery);
@@ -3673,6 +3694,74 @@ export class AnalysisService {
     }
 
     return Math.min(config.cacheTtlSeconds, FAILURE_CACHE_TTL_SECONDS);
+  }
+
+  /**
+   * ASK PUBLIC BETA RETRIEVAL REPAIR R1 — runs a bounded compound retrieval plan through the
+   * existing NewsService (providers, provider health, retained-store fallback, persistence all
+   * unchanged), admitting every candidate by the plan's own gate. Searches run in order; a
+   * refused provider (rate limit / auth / bad request) stops the plan so one refusal cannot
+   * spend the next reader's slot. Results are merged round-robin (so the cap cannot drop a
+   * facet or the additional-language search) and URL-deduplicated; syndicated copies are
+   * collapsed downstream by the unchanged clusterDuplicateArticles(). Never a model call.
+   */
+  private async retrieveCompoundPlan(plan: CompoundRetrievalPlan): Promise<NewsResponse> {
+    const mode = {
+      type: 'compoundPlan',
+      plan: { iso3: plan.iso3, scope: plan.scope, facets: plan.facets },
+    } as const;
+    const responses: NewsResponse[] = [];
+    for (const query of plan.queries) {
+      const sent = makeProviderSafeNewsQuery(query.q);
+      if (sent === undefined) continue;
+      const response = await this.newsService.search(sent, SEARCH_POOL_SIZE, mode, {
+        ...(query.lang === undefined ? {} : { lang: query.lang }),
+        allowFallback: query.allowFallback,
+      });
+      responses.push(response);
+      const refused = readProviderFailures(response).some((failure) =>
+        ['rate-limited', 'auth', 'bad-request'].includes(failure.kind),
+      );
+      if (refused) break;
+    }
+
+    const failures = responses.flatMap((response) => readProviderFailures(response));
+    const lists = responses.map((response) => response.articles);
+    const interleaved: NewsArticle[] = [];
+    for (let i = 0; lists.some((list) => i < list.length); i += 1) {
+      for (const list of lists) if (i < list.length) interleaved.push(list[i]);
+    }
+    const articles = deduplicateArticles(interleaved);
+    const withArticles = responses.filter((response) => response.articles.length > 0);
+    const base = withArticles[0] ?? responses[0];
+    this.logger.log(
+      `Compound retrieval plan ${plan.iso3}${plan.scope ? `/${plan.scope.qualifier}` : ''}: ` +
+        `${plan.queries.length} planned, ${responses.length} sent, ${articles.length} admitted ` +
+        `(languages ${[...new Set(articles.map((a) => a.sourceLanguage ?? 'unknown'))].join(',') || 'none'})`,
+    );
+    if (base === undefined) {
+      /* No plan search had a lexical query: nothing was asked, nothing is claimed. */
+      return {
+        articles: [],
+        totalResults: 0,
+        providers: [],
+        dataMode: 'unavailable',
+        fallbackReason: 'no-live-results',
+        generatedAt: new Date().toISOString(),
+      };
+    }
+    const live = withArticles.some((response) => response.dataMode === 'live');
+    return attachProviderFailures(
+      {
+        ...base,
+        articles,
+        totalResults: articles.length,
+        providers: [...new Set(responses.flatMap((response) => response.providers))],
+        dataMode: live ? 'live' : base.dataMode,
+        fallbackReason: live ? undefined : base.fallbackReason,
+      },
+      failures,
+    );
   }
 
   /**

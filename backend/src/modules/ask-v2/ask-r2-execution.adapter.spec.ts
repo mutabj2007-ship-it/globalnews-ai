@@ -12,6 +12,7 @@ import { deriveAnswerState } from '../ask-router/answer-state';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
 import { askRequestContext } from './ask-request-context';
 import { GeneralBackgroundProviderError } from '../analysis/interfaces';
+import { countsAsGuestAnswer } from './guest/guest-allowance';
 import {
   ASK_MODEL_MAX_ATTEMPTS,
   resolveComputeControlsConfig,
@@ -2076,5 +2077,74 @@ describe('ASK CONVERSATIONAL BREADTH R1 — stable conceptual questions reach Ge
     expect(payload.route.questionClass).toBe('CURRENT_REPORTING');
     expect(h.calls.analysis).toHaveLength(1);
     expect(h.calls.background).toHaveLength(0);
+  });
+});
+
+/*
+  ASK PUBLIC BETA RETRIEVAL REPAIR R1 — the live Beta questions through the adapter. The guest
+  contract is unchanged: a clarification and an insufficient-evidence result are never a
+  substantive answer (countsAsGuestAnswer), and neither runs the model.
+*/
+describe('ASK PUBLIC BETA RETRIEVAL REPAIR R1 — fail-closed guards on the live Beta questions', () => {
+  const Q1 =
+    'What has changed in eastern Democratic Republic of the Congo over the last 7 days? Identify any verified security or territorial changes, effects on civilians or displacement, and any important claims that remain disputed. Separate confirmed facts from analytical inference, distinguish event dates from publication dates, and cite independent local/regional, official, and international sources where available.';
+  const Q2 =
+    'What are the most recent verified security or territorial changes in eastern Democratic Republic of the Congo, and what effects on civilians or displacement are currently reported? Separate confirmed facts from analytical inference, identify important claims that remain disputed, distinguish event dates from publication dates, and cite independent local/regional, official, and international sources where available.';
+  async function run(q: string, h: ReturnType<typeof harness>) {
+    const plan = await h.adapter.prepare(req(q));
+    return JSON.parse(
+      (await inRequest(() => h.adapter.execute(req(q), plan, 'op-beta'))).payloadJson,
+    );
+  }
+
+  it('Q1: the unsupported 7-day window is a clarification — no analysis, no model, no guest answer', async () => {
+    const h = harness({});
+    const payload = await run(Q1, h);
+    expect(payload.answer).toMatchObject({
+      state: 'CLARIFICATION_REQUIRED',
+      basis: 'PLAN_BROADENING_OFFERED',
+    });
+    expect(payload.chips.chips).toContainEqual(
+      expect.objectContaining({ kind: 'TIME', value: 'last 7 days', applied: false }),
+    );
+    expect(payload.aiExecuted).toBe(false);
+    expect(h.calls.analysis).toEqual([]);
+    expect(countsAsGuestAnswer(payload)).toBe(false);
+  });
+
+  it('Q2 with zero qualifying reporting: INSUFFICIENT, no model, no guest answer', async () => {
+    const h = harness({
+      analysis: async () => ({
+        analysis: null,
+        articles: [],
+        retrievalContext: { dataMode: 'live', providers: ['gnews'], articlesRetrieved: 0 } as never,
+      }),
+    });
+    const payload = await run(Q2, h);
+    expect(payload.answer.state).toBe('INSUFFICIENT');
+    expect(payload.aiExecuted).toBe(false);
+    expect(countsAsGuestAnswer(payload)).toBe(false);
+  });
+
+  it('Q2 with admitted reporting and no specialist record still answers from reporting', async () => {
+    const h = harness({
+      analysis: async (p) => {
+        p.usageSink?.({ promptTokens: 3000, completionTokens: 800 });
+        return {
+          analysis: {} as never,
+          articles: [{} as never, {} as never],
+          retrievalContext: {
+            dataMode: 'live',
+            providers: ['gnews'],
+            articlesRetrieved: 2,
+          } as never,
+        };
+      },
+    });
+    const payload = await run(Q2, h);
+    expect(payload.answer.state).toBe('CURRENT_REPORTING');
+    expect(payload.route.disclosures).toContain('SPECIALIST_INTELLIGENCE_NOT_USED');
+    expect(h.calls.analysis).toHaveLength(1);
+    expect(countsAsGuestAnswer(payload)).toBe(true);
   });
 });

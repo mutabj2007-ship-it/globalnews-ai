@@ -285,6 +285,16 @@ const COUNTRY_ALIASES: Record<string, string> = {
     that guessed at optional words would start resolving phrases nobody wrote.
   */
   'democratic republic of congo': 'COD',
+  /*
+    ASK PUBLIC BETA RETRIEVAL REPAIR R1 — the forms the country's own French-language press uses.
+    Without them a French report on "l'est de la RDC" or "la République démocratique du Congo"
+    matched only the embedded "Congo" — the Republic of the Congo's name. Listed accented and
+    unaccented because matching lowercases but does not fold diacritics.
+  */
+  rdc: 'COD',
+  'rd congo': 'COD',
+  'république démocratique du congo': 'COD',
+  'republique democratique du congo': 'COD',
   'south korea': 'KOR',
   'north korea': 'PRK',
   uae: 'ARE',
@@ -303,6 +313,9 @@ const COUNTRY_ALIASES: Record<string, string> = {
   bosnia: 'BIH',
   'congo brazzaville': 'COG',
   'republic of the congo': 'COG',
+  /* ASK PUBLIC BETA RETRIEVAL REPAIR R1 — the French form, so French COG reporting names COG. */
+  'république du congo': 'COG',
+  'republique du congo': 'COG',
   vatican: 'VAT',
   'holy see': 'VAT',
 };

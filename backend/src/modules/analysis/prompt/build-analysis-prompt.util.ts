@@ -619,6 +619,27 @@ Produce the structured analysis now.`;
  * Undefined returns the empty string, so a caller that does not measure
  * breadth produces a byte-identical prompt to pre-recovery behaviour.
  */
+/**
+ * ASK PUBLIC BETA RETRIEVAL REPAIR R1 — CLAIMS DISCIPLINE ON A SINGLE-SOURCE BASIS.
+ *
+ * Measured on Production: "What has changed in Poland's economy?" was answered from ONE
+ * retrieved report with a broad national statement. When the clustered evidence set holds a
+ * single independent reporting cluster (syndicated or duplicate copies collapse into one by the
+ * same clusterDuplicateArticles() pass, so two copies never count twice), the model is given
+ * that FACT and must keep its prose to what that one report says. A fact, not a new state:
+ * the answer state, badges and evidence are unchanged.
+ */
+export function buildSingleSourceBasisSection(breadth: AnalysisDevelopmentBreadth): string {
+  if (breadth.clusters !== 1) return '';
+  return (
+    '\n\nSINGLE-SOURCE BASIS: exactly ONE independent reporting cluster qualified for this ' +
+    'question (duplicate or syndicated copies of one report count once). Present every claim ' +
+    'as that one report\'s account — for example, open with "One qualifying report currently ' +
+    'indicates…" — and do NOT state a national, regional or overall conclusion, trend or ' +
+    'consensus from it, and do NOT describe anything as verified or confirmed on its basis.'
+  );
+}
+
 export function buildDevelopmentBreadthSection(breadth?: AnalysisDevelopmentBreadth): string {
   if (breadth === undefined) {
     return '';
@@ -631,7 +652,8 @@ export function buildDevelopmentBreadthSection(breadth?: AnalysisDevelopmentBrea
       'the exact articles supplied below.\n\nTHIS IS A NARROW EVIDENCE SET. One well-written ' +
       'paragraph is a correct and fully accepted answer here. Do NOT pad it into a ' +
       'multi-paragraph shape the evidence does not earn — the number of paragraphs must follow ' +
-      'the evidence, not a target.'
+      'the evidence, not a target.' +
+      buildSingleSourceBasisSection(breadth)
     );
   }
 
