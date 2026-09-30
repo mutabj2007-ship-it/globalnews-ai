@@ -41,6 +41,8 @@ import {
 } from './guest/guest-allowance';
 import { GuestSessionService } from './guest/guest-session.service';
 import { askRequestContext } from './ask-request-context';
+import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
+import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import {
@@ -57,6 +59,20 @@ const RECENT_THREAD_LIMIT = 50;
 const SAVED_BOOKMARK_LIMIT = 100;
 /* ASK GUEST TRIAL R3 — a guest's own threads (resume after reload / cancelled sign-in). */
 const GUEST_THREAD_LIMIT = 10;
+/*
+  ASK R3 CONTINUITY — the question a follow-up continues. Turns newest first; the nearest one
+  that is NOT itself a follow-up (by the landed path's own detectors) is the subject-bearing
+  anchor, so "How does this affect X?" after "Why did that happen?" still continues the
+  subject both refer to. Bounded; with no subject-bearing turn in reach, the most recent
+  question is passed and the landed path decides as before.
+*/
+const ANCHOR_LOOKBACK = 10;
+function anchorQuestionOf(newestFirst: readonly string[]): string | null {
+  if (newestFirst.length === 0) return null;
+  const anchor = newestFirst.find((q) => !isSubjectFollowUp(q) && !isAnaphoricFollowUp(q));
+  return anchor ?? newestFirst[0];
+}
+
 /** `nextSequence` starts at 1, so the first turn is this sequence exactly. */
 const FIRST_TURN_SEQUENCE = 1;
 /** One fixed clamp for every caller, so no surface has to choose where to cut. */
@@ -102,6 +118,17 @@ export class AskV2Service {
 
   private principal(p: AskPrincipal): void {
     if (p.kind === 'account' ? !p.userId : !p.guestSessionId) throw new UnauthorizedException();
+  }
+
+  /**
+   * ASK R3 CONTINUITY — run `work` with the reader's own previous question in this thread in the
+   * request context. Only when a server-held context exists (the controller's interceptor set
+   * it); nothing is manufactured here, so a caller without one fails exactly as before.
+   */
+  private withPrior<T>(priorQuestion: string | null, work: () => Promise<T>): Promise<T> {
+    const store = askRequestContext.getStore();
+    if (store === undefined || priorQuestion === null) return work();
+    return askRequestContext.run({ ...store, priorQuestion }, work);
   }
 
   /** All database mutations retry serializable conflicts. Never run a provider in here. */
@@ -558,8 +585,21 @@ export class AskV2Service {
 
     const guest = p.kind === 'guest' ? await this.guestPreflight(p.guestSessionId) : null;
     try {
+      /* ASK R3 CONTINUITY — the anchor question of THIS owner-verified thread, if any. */
+      const priorQuestion = await this.atomic(async (tx) => {
+        await this.thread(tx, p, threadId);
+        const earlier = await tx.askTurn.findMany({
+          where: { threadId },
+          orderBy: { sequence: 'desc' },
+          take: ANCHOR_LOOKBACK,
+          select: { question: true },
+        });
+        return anchorQuestionOf(earlier.map((t) => t.question));
+      });
       // A local/read-only CTO planner supplies identity and capabilities, never the client.
-      const prepared = await this.execution.prepare(Object.freeze(request));
+      const prepared = await this.withPrior(priorQuestion, () =>
+        this.execution.prepare(Object.freeze(request)),
+      );
       validatePlan(prepared, request);
       const plan: AskPlan = {
         revision: prepared.revision,
@@ -759,6 +799,13 @@ export class AskV2Service {
       }
       const turn = await tx.askTurn.findUnique({ where: { operationId: id } });
       if (!turn) throw new ConflictException('Operation turn missing');
+      /* ASK R3 CONTINUITY — the same anchor rule over the turns before this one. */
+      const earlierTurns = await tx.askTurn.findMany({
+        where: { threadId: turn.threadId, sequence: { lt: turn.sequence } },
+        orderBy: { sequence: 'desc' },
+        take: ANCHOR_LOOKBACK,
+        select: { question: true },
+      });
       // Revalidate pending R1 operations too. Stored reuse above never calls the adapter.
       try {
         validatePlan(
@@ -780,6 +827,7 @@ export class AskV2Service {
       });
       return {
         runToken,
+        priorQuestion: anchorQuestionOf(earlierTurns.map((t) => t.question)),
         plan: operation.plan as unknown as AskPlan,
         request: {
           question: turn.question,
@@ -791,10 +839,8 @@ export class AskV2Service {
     if (claim) {
       let result: ExecutionResult;
       try {
-        result = await this.execution.execute(
-          Object.freeze(claim.request),
-          Object.freeze(claim.plan),
-          id,
+        result = await this.withPrior(claim.priorQuestion, () =>
+          this.execution.execute(Object.freeze(claim.request), Object.freeze(claim.plan), id),
         );
       } catch (error) {
         /* ASK R2 INTEGRATION R1 · Gate E — a control's refusal is named, not generic. */

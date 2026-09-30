@@ -23,6 +23,12 @@ export interface AskRequestContext {
   /** ASK GUEST TRIAL R3 — the server-issued guest session (RequireGuestGuard), or null. */
   readonly guestSessionId?: string | null;
   readonly ipScope: string;
+  /**
+   * ASK R3 CONTINUITY — the reader's OWN previous question in the SAME thread, read by
+   * AskV2Service from an owner-verified thread. Never a caller-supplied value, never another
+   * owner's text, never a prior AI answer. Absent on a thread's first turn.
+   */
+  readonly priorQuestion?: string | null;
 }
 
 export const askRequestContext = new AsyncLocalStorage<AskRequestContext>();

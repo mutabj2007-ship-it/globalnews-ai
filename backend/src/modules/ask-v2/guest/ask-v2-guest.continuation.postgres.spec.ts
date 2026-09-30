@@ -243,9 +243,9 @@ live('ASK R3 closeout — three guest answers, sign-in, one explicit follow-up',
 
     /*
       The explicit same-conversation follow-up, through the ACCOUNT principal: admitted and answered.
-      It is self-contained on purpose: an elliptical "And what about X?" gets the landed Ask R2
-      NO_PRIOR_SUBJECT clarification (turn context does not cross the frozen execution port) —
-      a pre-existing property of the release, recorded in the closeout, not changed here.
+      This test measures ACCOUNTING, so the follow-up is self-contained. Context-dependent
+      follow-ups (the reader's own prior question routes retrieval) are proven in
+      ask-v2-continuity.postgres.spec.ts; an elliptical "And what about X?" still asks.
     */
     const follow = await asAccount(userId, () =>
       service.submit(accountPrincipal(userId), g.threadId, ask('What is happening in Uganda?')),
@@ -370,6 +370,92 @@ live('ASK R3 closeout — three guest answers, sign-in, one explicit follow-up',
       ['RELEASED', 'NO_ANSWER'],
     ]);
     expect((await service.guestAllowance(g.id)).remaining).toBe(3);
+  });
+
+  it('LOGOUT / RETURN · a signed-out return may start a NEW guest session only inside the per-IP bounds; nothing is re-granted to the account or the claimed session', async () => {
+    /* The claimed session: 3 answers, then sign-in. */
+    const first = await newGuest();
+    for (const q of [
+      'What is happening in Kenya?',
+      'What is happening in Rwanda?',
+      'What is happening in Ghana?',
+    ]) {
+      await asGuest(first.id, () =>
+        service.submit(guestPrincipal(first.id), first.threadId, ask(q)),
+      );
+    }
+    const userId = await newAccount();
+    await claims.createClaim(first.id, first.threadId);
+    await claims.transfer(
+      (await claims.pendingClaimFor(first.id)) as string,
+      first.tokenHash,
+      userId,
+    );
+    const atClaim = await snapshot(userId, first.id);
+
+    /* The claimed session is never revived: its allowance cannot be spent again. */
+    expect((await db.guestSession.findUniqueOrThrow({ where: { id: first.id } })).status).toBe(
+      'CLAIMED',
+    );
+    await expect(
+      asGuest(first.id, () =>
+        service.submit(guestPrincipal(first.id), first.threadId, ask('What is happening in Chad?')),
+      ),
+    ).rejects.toBeDefined();
+
+    /* Sign-out and return, repeatedly, from the same network: sessions 2..5 are issued, the 6th is not. */
+    const returns: Awaited<ReturnType<typeof newGuest>>[] = [];
+    for (let i = 0; i < 4; i += 1) returns.push(await newGuest());
+    await expect(guests.issue(IP, { cookie: () => undefined } as never)).rejects.toMatchObject({
+      response: { code: 'GUEST_TEMPORARILY_LIMITED' },
+    });
+
+    /*
+      Nine more attempts from the four new sessions meet THREE layered bounds, all code-enforced:
+      the guest pool per hour (50,000 units: after 8 answers = 39,200 a 12,150 reservation no longer
+      fits, so those attempts are REFUSED before spend and count nothing visible), and the per-IP
+      guest executions per day (12: a pool-refused attempt still used one, which fails closed).
+    */
+    let answered = 0;
+    let limited = 0;
+    let refusedBeforeSpend = 0;
+    for (const g of returns) {
+      for (let i = 0; i < 3; i += 1) {
+        try {
+          const op = await asGuest(g.id, () =>
+            service.submit(
+              guestPrincipal(g.id),
+              g.threadId,
+              ask(`What is happening in Mali ${answered + limited}?`),
+            ),
+          );
+          if (op.status === 'COMPLETED' && op.result !== null) answered += 1;
+          else refusedBeforeSpend += 1;
+        } catch (e) {
+          expect(e).toMatchObject({ response: { code: 'GUEST_TEMPORARILY_LIMITED' } });
+          limited += 1;
+        }
+      }
+    }
+    expect(answered + refusedBeforeSpend + limited).toBe(12);
+    /* Pool per hour: at most 8 answers in the hour across ALL guest sessions (3 + 5). */
+    expect(answered).toBe(5);
+    expect(analyzeNews).toHaveBeenCalledTimes(8);
+    expect(await meterRow('guestpool:hour')).toBeLessThanOrEqual(50000);
+    /* Per-IP executions: exactly the ceiling, never more; everything after it is refused up front. */
+    expect(await meterRow(`guestexec:${IP}`)).toBe(12);
+    expect(limited).toBeGreaterThan(0);
+    /* Nothing refused was counted as a visible answer. */
+    for (const g of returns) {
+      const a = await service.guestAllowance(g.id);
+      expect(a.committed).toBeLessThanOrEqual(3);
+    }
+
+    /* None of it reached the account: its own allowance and the one-time attribution are unchanged. */
+    const later = await snapshot(userId, first.id);
+    expect(later.account).toBe(atClaim.account);
+    expect(later.account).toBe(0);
+    expect(later.accountGuestAttribution).toBe(atClaim.accountGuestAttribution);
   });
 
   it('ALPHA AS READ (IP/day 30,000 code default, no explicit value) cannot hold three answers: guest configuration fails CLOSED', async () => {
