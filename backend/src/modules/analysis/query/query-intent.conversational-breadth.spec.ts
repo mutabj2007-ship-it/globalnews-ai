@@ -97,12 +97,69 @@ describe('controls: the same vocabulary in a current-event shape stays news', ()
     });
   });
 
-  it('a novelty word disqualifies only the NEW conceptual shapes', () => {
-    expect(classifyQueryIntent('What does resurrection mean in Christianity').intent).toBe(
+  it('SUPERSEDED (PR #72 CTO correction): freshness is scoped to ROUTING — never background there, while retrieval keeps the subject', () => {
+    const routing = { freshnessOutranksBackground: true };
+    expect(classifyQueryIntent('What does resurrection mean in Christianity', routing).intent).toBe(
       'EXPLANATION',
     );
-    expect(classifyQueryIntent('What does the new ruling mean for churches').intent).toBe(
+    expect(classifyQueryIntent('What does the new ruling mean for churches', routing).intent).toBe(
       'CURRENT_EVENT',
+    );
+    expect(classifyQueryIntent('Explain the new EU AI regulation', routing).intent).toBe(
+      'CURRENT_EVENT',
+    );
+    /* the retrieval classification inside the one reporting call still extracts the subject */
+    const retrieval = classifyQueryIntent('Explain the new EU AI regulation');
+    expect(retrieval).toMatchObject({ intent: 'EXPLANATION', subject: 'EU AI regulation' });
+  });
+});
+
+describe('PR #72 CTO correction — asserted freshness outranks EVERY background frame, a proper name does not', () => {
+  it.each([
+    ['What does the new law mean?', 'en'],
+    ['Explain the newly announced policy.', 'en'],
+    ['Co oznacza nowa ustawa dla firm?', 'pl'],
+    ['What does the proposed rule mean for landlords?', 'en'],
+    ['What is the announced ceasefire?', 'en'],
+    ['Explain the just passed budget.', 'en'],
+    ['Describe the upcoming reform.', 'en'],
+    ['What does breaking news about the pope mean?', 'en'],
+    ['Who is the new pope?', 'en'],
+    ['Czym jest zapowiedziana reforma?', 'pl'],
+    ['Co to jest nowe rozporządzenie o cłach?', 'pl'],
+    ['What is the new EU AI law?', 'en'],
+    ['Explain the new EU AI regulation in plain English', 'en'],
+  ] as const)('FRESH: %s → never background', (q, lang) => {
+    expect({ q, terminal: route(q, lang).plan.terminalState }).not.toEqual({
+      q,
+      terminal: 'REFERENCE_BACKGROUND_ONLY',
+    });
+  });
+
+  it.each([
+    ['What is the New Testament?', 'en'],
+    ['What is the New Deal?', 'en'],
+    ['What is a new moon?', 'en'],
+    ['What does New Year mean in Christianity?', 'en'],
+    ['Co to jest Nowy Testament?', 'pl'],
+    ['Is it just to lie to protect someone?', 'en'],
+  ] as const)(
+    'STABLE: %s → background (a name or concept containing "new"/"just" is not freshness)',
+    (q, lang) => {
+      expect({ q, terminal: route(q, lang).plan.terminalState }).toEqual({
+        q,
+        terminal: 'REFERENCE_BACKGROUND_ONLY',
+      });
+    },
+  );
+
+  it('the live question stays background; the Ukraine control stays current reporting', () => {
+    expect(
+      route('What do you think life is? How can I link it to death and resurrection?').plan
+        .terminalState,
+    ).toBe('REFERENCE_BACKGROUND_ONLY');
+    expect(route('What do you think is happening in Ukraine today?').plan.questionClass).toBe(
+      'CURRENT_REPORTING',
     );
   });
 });

@@ -71,6 +71,8 @@ export function readLandedClassifiers(
 
   const intent = classifyQueryIntent(text, {
     hasResolvedArticleAnchor: inputs.hasResolvedArticleAnchor === true,
+    /* PR #72 — for ROUTING, asserted freshness outranks every background frame. */
+    freshnessOutranksBackground: true,
   });
 
   const attributed = detectSourceAttributedIntent(text);
