@@ -628,7 +628,9 @@ describe('M-3 — a LOCAL environment does not relax the write: capability and C
 
   it('F · the resolver itself reports LOCAL as confirmed, so these tests exercise what they claim', () => {
     expect(
-      resolveEnvironmentIdentity((key) => (key === DEPLOYMENT_ENVIRONMENT_VAR ? 'LOCAL' : undefined)),
+      resolveEnvironmentIdentity((key) =>
+        key === DEPLOYMENT_ENVIRONMENT_VAR ? 'LOCAL' : undefined,
+      ),
     ).toMatchObject({ confirmed: true, environment: 'LOCAL' });
   });
 });
