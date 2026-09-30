@@ -640,7 +640,9 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
       STANDALONE PUBLIC BETA CONVERGENCE R1 — both additions together: canonical 51, + the
       Ask operations page (F, 52) + `/ask/recent` and `/saved` (H, 53) = 54.
     */
-    expect(pages).toHaveLength(54);
+    /* ADMIN OPERATIONS R1 — fifty-five: /admin/operations. Admin pages are noindex,
+       so no indexability classification changes. */
+    expect(pages).toHaveLength(55);
     expect(pages).toContain('/conflict');
     expect(classify('/conflict').indexability).toBe('noindex');
     expect(pages).toContain('/ask');

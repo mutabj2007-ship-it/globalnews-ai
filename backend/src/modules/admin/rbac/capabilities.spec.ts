@@ -16,7 +16,12 @@ import {
  * The table below is transcribed independently from the approved
  * Claude Design Admin Platform role matrix. It is deliberately NOT
  * derived from ROLE_CAPABILITIES, so an edit to the implementation
- * cannot silently move the goalposts: all 36 cells are asserted.
+ * cannot silently move the goalposts: all 40 cells are asserted.
+ *
+ * ADMIN OPERATIONS R1 adds the tenth row. `operations.control` is the first
+ * capability in this matrix that authorises a WRITE, and it is the one row whose
+ * shape differs from `analytics.view` on purpose: SUPPORT and ANALYST are refused,
+ * so a reader role cannot stop new AI answers for everybody.
  */
 const APPROVED_MATRIX: ReadonlyArray<readonly [Capability, boolean, boolean, boolean, boolean]> = [
   //                                  SUPER  ADMIN  SUPPORT ANALYST
@@ -29,6 +34,7 @@ const APPROVED_MATRIX: ReadonlyArray<readonly [Capability, boolean, boolean, boo
   [CAPABILITIES.AccessManage, true, false, false, false],
   [CAPABILITIES.SupportHandle, true, true, true, false],
   [CAPABILITIES.EvidenceExport, true, true, false, true],
+  [CAPABILITIES.OperationsControl, true, true, false, false],
 ];
 
 const COLUMN: ReadonlyArray<AdminRoleName> = ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'ANALYST'];
@@ -38,12 +44,12 @@ describe('admin capability model', () => {
     expect(ADMIN_ROLES).toEqual(['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'ANALYST']);
   });
 
-  it('defines exactly nine capabilities — one per row of the approved matrix', () => {
+  it('defines exactly ten capabilities — one per row of the approved matrix', () => {
     expect(ALL_CAPABILITIES).toHaveLength(APPROVED_MATRIX.length);
     expect([...ALL_CAPABILITIES].sort()).toEqual(APPROVED_MATRIX.map(([c]) => c).sort());
   });
 
-  describe('all 36 cells of the approved role matrix', () => {
+  describe('all 40 cells of the approved role matrix', () => {
     APPROVED_MATRIX.forEach((row) => {
       const [capability, ...expected] = row;
 
@@ -121,5 +127,41 @@ describe('admin capability model', () => {
       (ROLE_CAPABILITIES.SUPPORT as Capability[]).push(CAPABILITIES.TaxSettings);
     }).toThrow();
     expect(hasCapability('SUPPORT', CAPABILITIES.TaxSettings)).toBe(false);
+  });
+});
+
+/**
+ * ADMIN OPERATIONS R1 — the asymmetry this capability exists to create.
+ *
+ * Every admin READ in the platform is gated on `analytics.view`, which all four
+ * roles hold. If the operations write reused it, an ANALYST could stop new AI
+ * answers for every reader. These assertions fail if a future edit widens the
+ * mapping back toward the read capability.
+ */
+describe('operations.control is not analytics.view', () => {
+  it('every role holds analytics.view', () => {
+    (['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'ANALYST'] as const).forEach((role) => {
+      expect(hasCapability(role, CAPABILITIES.AnalyticsView)).toBe(true);
+    });
+  });
+
+  it('only SUPER_ADMIN and ADMIN hold operations.control', () => {
+    expect(hasCapability('SUPER_ADMIN', CAPABILITIES.OperationsControl)).toBe(true);
+    expect(hasCapability('ADMIN', CAPABILITIES.OperationsControl)).toBe(true);
+    expect(hasCapability('SUPPORT', CAPABILITIES.OperationsControl)).toBe(false);
+    expect(hasCapability('ANALYST', CAPABILITIES.OperationsControl)).toBe(false);
+  });
+
+  it('the two capabilities have genuinely different holder sets', () => {
+    const viewers = ADMIN_ROLES.filter((r) => hasCapability(r, CAPABILITIES.AnalyticsView));
+    const operators = ADMIN_ROLES.filter((r) => hasCapability(r, CAPABILITIES.OperationsControl));
+    expect(viewers).toEqual(['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'ANALYST']);
+    expect(operators).toEqual(['SUPER_ADMIN', 'ADMIN']);
+    expect(operators.length).toBeLessThan(viewers.length);
+  });
+
+  it('a null role holds neither', () => {
+    expect(hasCapability(null, CAPABILITIES.AnalyticsView)).toBe(false);
+    expect(hasCapability(null, CAPABILITIES.OperationsControl)).toBe(false);
   });
 });

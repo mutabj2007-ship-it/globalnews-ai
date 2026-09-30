@@ -23,6 +23,9 @@ export const ADMIN_CAPABILITY_NAMES = [
   'access.manage',
   'support.handle',
   'evidence.export',
+  /* ADMIN OPERATIONS R1 — mirrors the backend. The only capability here that
+     authorises a WRITE, and deliberately not held by SUPPORT or ANALYST. */
+  'operations.control',
 ] as const;
 
 export type AdminCapability = (typeof ADMIN_CAPABILITY_NAMES)[number];

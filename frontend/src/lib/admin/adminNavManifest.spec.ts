@@ -33,8 +33,8 @@ describe('F1.b — capability-driven navigation', () => {
     where the activation puts it; it is numbered after the artifact's last row rather than
     renumbering fourteen rows a design reviewer has already signed off.
   */
-  it('carries fifteen items — the artifact sidebar, plus the Ask operations page', () => {
-    expect(ALL_NAV_ITEMS).toHaveLength(15);
+  it('carries sixteen items — the artifact sidebar, plus Ask intelligence and incident controls', () => {
+    expect(ALL_NAV_ITEMS).toHaveLength(16);
     expect(ALL_NAV_ITEMS.map((navItem) => navItem.num)).toEqual([
       '02',
       '03',
@@ -51,6 +51,7 @@ describe('F1.b — capability-driven navigation', () => {
       '13',
       '14',
       '15',
+      '17',
     ]);
   });
 
@@ -61,13 +62,18 @@ describe('F1.b — capability-driven navigation', () => {
         expect({ num, present: nums.includes(num) }).toEqual({ num, present: true });
       },
     );
-    expect(nums.filter((num) => Number(num) > 15)).toEqual(['16']);
+    /*
+      ADMIN OPERATIONS R1 — a SECOND entry outside the artifact. Both are numbered
+      after the artifact's last row rather than renumbering its rows, and both are
+      named here so a third cannot arrive unnoticed.
+    */
+    expect(nums.filter((num) => Number(num) > 15)).toEqual(['16', '17']);
   });
 
   it('every item declares a real capability, a screen code and a state', () => {
     ALL_NAV_ITEMS.forEach((navItem) => {
       expect(ADMIN_CAPABILITY_NAMES).toContain(navItem.capability);
-      expect(navItem.screen).toMatch(/^(ADMIN-0[1-8]|SETTINGS)$/);
+      expect(navItem.screen).toMatch(/^(ADMIN-0[1-8]|SETTINGS|OPERATIONS)$/);
       expect(['available', 'not_implemented']).toContain(navItem.state);
       expect(navItem.labelKey.length).toBeGreaterThan(0);
     });
@@ -108,7 +114,7 @@ describe('F1.b — capability-driven navigation', () => {
 
     it('a full grant shows every item', () => {
       const groups = visibleNavGroups([...ADMIN_CAPABILITY_NAMES]);
-      expect(groups.flatMap((group) => group.items)).toHaveLength(15);
+      expect(groups.flatMap((group) => group.items)).toHaveLength(16);
     });
 
     it('the Ask operations page is visible to every role that holds analytics.view', () => {

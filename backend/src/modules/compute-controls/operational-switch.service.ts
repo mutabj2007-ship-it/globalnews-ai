@@ -67,7 +67,28 @@ export class OperationalSwitchService implements OnApplicationBootstrap {
     db: SwitchDb = this.prisma,
   ): Promise<SwitchState> {
     const hit = this.cache.get(name);
-    if (hit && now - hit.at < this.meter.config.flagCacheMs) return hit.state;
+    if (hit) {
+      /*
+        M-A — A NEGATIVE AGE IS NOT A SMALL AGE.
+
+        This was `now - hit.at < flagCacheMs`, which treats every negative
+        difference as fresh. `hit.at` is whatever `now` the caller that populated
+        the entry passed, and `now` can legitimately be earlier than it: a caller
+        passing a forward-shifted clock poisons the entry for everyone after it,
+        and `Date.now()` itself steps backwards on an NTP correction or a
+        suspended container. When that happens the old predicate stops consulting
+        the store AT ALL — so an operator switching this kill switch off is never
+        seen, which presents as an incident that will not stop.
+
+        Requiring the age to be a real elapsed duration makes the entry stale
+        instead, the store is read, and the entry is re-stamped at the current
+        `now`, so a poisoned entry costs one extra read rather than freezing
+        forever. `NaN >= 0` is false, so a nonsense clock also falls through to
+        the store rather than pinning the cache.
+      */
+      const age = now - hit.at;
+      if (age >= 0 && age < this.meter.config.flagCacheMs) return hit.state;
+    }
     const literal = this.deploymentLiteralTrue(name);
     let state: SwitchState;
     try {

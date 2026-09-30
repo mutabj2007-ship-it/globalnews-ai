@@ -18,6 +18,8 @@ import { AlphaReviewService } from './alpha-review.service';
 import { ComputeControlsModule } from '../compute-controls/compute-controls.module';
 import { AdminAskIntelligenceController } from './ask-intelligence/admin-ask-intelligence.controller';
 import { AdminAskIntelligenceService } from './ask-intelligence/admin-ask-intelligence.service';
+import { AdminOperationsController } from './operations/admin-operations.controller';
+import { AdminOperationsService } from './operations/admin-operations.service';
 
 /**
  * F1.a — administrative authorization foundation.
@@ -74,6 +76,12 @@ import { AdminAskIntelligenceService } from './ask-intelligence/admin-ask-intell
     AdminReadonlyController,
     AdminGlobalReachController,
     AdminAskIntelligenceController,
+    /*
+      ADMIN OPERATIONS R1 — the first controller on this surface with a write.
+      Registered as its own controller so the analytics controllers keep their
+      no-mutation property and the boundary assertion can name ONE exception.
+    */
+    AdminOperationsController,
   ],
   providers: [
     AdminService,
@@ -82,6 +90,7 @@ import { AdminAskIntelligenceService } from './ask-intelligence/admin-ask-intell
     AdminAnalyticsService,
     AlphaReviewService,
     AdminAskIntelligenceService,
+    AdminOperationsService,
     AdminGuard,
     AdminPlatformEnabledGuard,
   ],

@@ -115,9 +115,10 @@ async function createApp(adminPlatformEnabled: string | undefined): Promise<INes
 
   /*
     THE STUB IS INSTALLED WITH `overrideProvider`, NOT ONLY AS A GLOBAL MODULE, AND THAT
-    DIFFERENCE IS LOAD-BEARING. `AuthModule` imports `PrismaModule` itself, and a
-    module-scoped provider beats a @Global() one — so a suite that supplies the stub only
-    through a global module silently resolves the REAL PrismaService, connects to whatever
+    DIFFERENCE IS LOAD-BEARING. `PrismaModule` is itself @Global() and
+    AdminModule's graph pulls it in (EconomyModule, ComputeControlsModule), so a LATER
+    global registration of the same token replaces an earlier one — a suite that supplies
+    the stub only through a global module silently resolves the REAL PrismaService, connects to whatever
     `DATABASE_URL` points at, finds no session there and answers 401 to every request. An
     override is applied to the whole graph and cannot be shadowed that way.
   */
