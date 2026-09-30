@@ -13,6 +13,7 @@ import { SessionService } from '../../auth/session.service';
 import { SESSION_COOKIE_NAME, CSRF_COOKIE_NAME } from '../../auth/cookie.util';
 import { AskV2Module } from '../../ask-v2/ask-v2.module';
 import { AskV2Service } from '../../ask-v2/ask-v2.service';
+import { accountPrincipal } from '../../ask-v2/guest/ask-principal';
 import {
   ASK_EXECUTION_PORT,
   AskExecutionRefused,
@@ -158,7 +159,7 @@ live('ADMIN OPERATIONS R1 — saved answers stay readable while new AI is paused
     const fixtureDomain = ['example', 'invalid'].join('.');
     await db.user.create({ data: { id: userId, email: `ops-${userId}@${fixtureDomain}` } });
     threadId = (
-      await service.createThread(userId, {
+      await service.createThread(accountPrincipal(userId), {
         idempotencyKey: `thread-${userId}`,
         language: 'en',
         returnPath: '/map?country=RW',
@@ -172,16 +173,16 @@ live('ADMIN OPERATIONS R1 — saved answers stay readable while new AI is paused
 
   /** Produce one completed, stored answer before anything is paused. */
   async function storeOneAnswer(): Promise<void> {
-    const op = await service.quote(userId, threadId, {
+    const op = await service.quote(accountPrincipal(userId), threadId, {
       idempotencyKey: `quote-${randomUUID()}`,
       question: 'What changed?',
       language: 'en',
       intent: 'ask',
     });
-    await service.accept(userId, op.operationId);
-    await service.reserve(userId, op.operationId);
-    await service.execute(userId, op.operationId);
-    const thread = await service.getThread(userId, threadId);
+    await service.accept(accountPrincipal(userId), op.operationId);
+    await service.reserve(accountPrincipal(userId), op.operationId);
+    await service.execute(accountPrincipal(userId), op.operationId);
+    const thread = await service.getThread(accountPrincipal(userId), threadId);
     expect(thread.turns.length).toBeGreaterThan(0);
   }
 
@@ -214,15 +215,15 @@ live('ADMIN OPERATIONS R1 — saved answers stay readable while new AI is paused
   it('and a NEW question is refused with the named control while paused', async () => {
     await operations.setSwitch('ASK_PUBLIC_COMPUTE_ENABLED', false, 'admin-1', 'pause');
 
-    const op = await service.quote(userId, threadId, {
+    const op = await service.quote(accountPrincipal(userId), threadId, {
       idempotencyKey: `quote-${randomUUID()}`,
       question: 'What changed now?',
       language: 'en',
       intent: 'ask',
     });
-    await service.accept(userId, op.operationId);
-    await service.reserve(userId, op.operationId);
-    const result = await service.execute(userId, op.operationId);
+    await service.accept(accountPrincipal(userId), op.operationId);
+    await service.reserve(accountPrincipal(userId), op.operationId);
+    const result = await service.execute(accountPrincipal(userId), op.operationId);
 
     /* The refusal is recorded on the operation, by name. */
     expect(result.failureCode).toBe('ASK_PUBLIC_COMPUTE_DISABLED');
@@ -231,15 +232,15 @@ live('ADMIN OPERATIONS R1 — saved answers stay readable while new AI is paused
   it('the R2 control refuses one step earlier, with its own code', async () => {
     await operations.setSwitch('ASK_R2_ENABLED', false, 'admin-1', 'stop r2 execution');
 
-    const op = await service.quote(userId, threadId, {
+    const op = await service.quote(accountPrincipal(userId), threadId, {
       idempotencyKey: `quote-${randomUUID()}`,
       question: 'What changed now?',
       language: 'en',
       intent: 'ask',
     });
-    await service.accept(userId, op.operationId);
-    await service.reserve(userId, op.operationId);
-    const result = await service.execute(userId, op.operationId);
+    await service.accept(accountPrincipal(userId), op.operationId);
+    await service.reserve(accountPrincipal(userId), op.operationId);
+    const result = await service.execute(accountPrincipal(userId), op.operationId);
     expect(result.failureCode).toBe('ASK_R2_DISABLED');
   });
 
