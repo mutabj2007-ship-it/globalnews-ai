@@ -50,6 +50,11 @@ export interface AskR2Strings {
     readonly retainedTo: string;
     readonly zero: string;
     /**
+     * ASK FIRST-ANSWER RETRIEVAL R3 — a provider REFUSED the search (rate limit, outage): the
+     * zero is a statement about us, never about the world. `{when}` placeholder.
+     */
+    readonly limited: string;
+    /**
      * CURRENT STATUS CORROBORATION R1 — a PARTIAL current-status answer: `{when}` is the
      * freshest corroborating report's publication time. It says "as of", never "verified now".
      */
@@ -58,6 +63,10 @@ export interface AskR2Strings {
   readonly clarificationFooter: string;
   readonly sourcesAfterChoice: string;
   readonly insufficientTitle: string;
+  /** R3 — the title when the empty result came from a refused search, not an answered one. */
+  readonly limitedTitle: string;
+  /** R3 — an answer that stands on the reporting that could be reached while a source was down. */
+  readonly limitedNote: string;
   readonly unavailable: string;
   /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
   readonly budgetRefused: string;
@@ -179,11 +188,16 @@ const EN: AskR2Strings = {
     checked: 'Checked {when} · {sources}',
     retainedTo: 'Retained reporting to {when} · {sources}',
     zero: 'Checked {when} · 0 matching reports',
+    limited:
+      'Checked {when} · a news source was temporarily unavailable, so this was not a complete search',
     corroboratedAsOf: (n) => `As of {when} · ${n} independent reports agree`,
   },
   clarificationFooter: 'No sources searched · no compute used',
   sourcesAfterChoice: 'Sources appear after you choose',
   insufficientTitle: 'Not enough matching reporting',
+  limitedTitle: 'Search was limited',
+  limitedNote:
+    'A news source was temporarily unavailable. This answer uses the reporting that could be reached.',
   unavailable: 'Ask is unavailable right now. Nothing was run.',
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
@@ -333,6 +347,8 @@ const PL: AskR2Strings = {
     checked: 'Sprawdzono {when} · {sources}',
     retainedTo: 'Doniesienia do {when} · {sources}',
     zero: 'Sprawdzono {when} · 0 pasujących doniesień',
+    limited:
+      'Sprawdzono {when} · źródło wiadomości było chwilowo niedostępne, więc wyszukiwanie nie było pełne',
     corroboratedAsOf: (n) =>
       n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)
         ? `Stan na {when} · ${n} niezależne doniesienia są zgodne`
@@ -341,6 +357,9 @@ const PL: AskR2Strings = {
   clarificationFooter: 'Nie przeszukano źródeł · nie użyto obliczeń',
   sourcesAfterChoice: 'Źródła pojawią się po Twoim wyborze',
   insufficientTitle: 'Za mało pasujących doniesień',
+  limitedTitle: 'Wyszukiwanie było ograniczone',
+  limitedNote:
+    'Źródło wiadomości było chwilowo niedostępne. Ta odpowiedź opiera się na doniesieniach, do których udało się dotrzeć.',
   unavailable: 'Zapytaj AI jest teraz niedostępne. Nic nie zostało uruchomione.',
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',

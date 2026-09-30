@@ -387,3 +387,53 @@ describe('ALPHA ENABLEMENT R1 — MC-055: the reader’s own library, worded by 
     );
   });
 });
+
+describe('ASK FIRST-ANSWER RETRIEVAL R3 — a refused search is "limited", never "0 matching reports"', () => {
+  const empty = (outcome?: string, dataMode = 'live') =>
+    payload('INSUFFICIENT', {
+      aiExecuted: false,
+      analysis: {
+        analysis: null,
+        articles: [],
+        retrievalContext: { dataMode, ...(outcome ? { outcome } : {}) },
+      } as never,
+    });
+
+  it.each(['PROVIDER_RATE_LIMITED', 'PROVIDER_UNAVAILABLE'])('%s → limited (EN/PL)', (outcome) => {
+    const en = askR2View(empty(outcome), EN, 'en');
+    expect(en.searchLimited).toBe(true);
+    expect(en.freshness).toMatch(/^Checked .* · a news source was temporarily unavailable/);
+    const pl = askR2View(empty(outcome), PL, 'pl');
+    expect(pl.freshness).toMatch(/^Sprawdzono .* · źródło wiadomości było chwilowo niedostępne/);
+  });
+
+  it('an answered, empty search keeps the honest "0 matching reports"', () => {
+    const v = askR2View(empty('NO_RELEVANT_EVIDENCE'), EN, 'en');
+    expect(v.searchLimited).toBe(false);
+    expect(v.freshness).toMatch(/0 matching reports$/);
+  });
+
+  it('no outcome recorded and a live answer → not limited (no claim without the typed fact)', () => {
+    expect(askR2View(empty(undefined), EN, 'en').searchLimited).toBe(false);
+  });
+
+  it('an answer that stands on reachable reporting while a source failed is flagged, still citable', () => {
+    const v = askR2View(
+      payload('CURRENT_REPORTING', {
+        analysis: {
+          analysis: { generatedAt: '2026-09-28T04:40:00Z' },
+          articles: [{}],
+          retrievalContext: {
+            dataMode: 'cached',
+            fallbackReason: 'provider-error',
+            outcome: 'RETAINED_ONLY',
+          },
+        } as never,
+      }),
+      EN,
+      'en',
+    );
+    expect(v.searchLimited).toBe(true);
+    expect(EN.limitedNote).toMatch(/temporarily unavailable/);
+  });
+});

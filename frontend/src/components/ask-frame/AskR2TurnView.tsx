@@ -327,7 +327,13 @@ export function AskR2TurnView({
           )}
           {view.badge === 'insuf' && (
             <p className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
-              {s.insufficientTitle}
+              {view.searchLimited ? s.limitedTitle : s.insufficientTitle}
+            </p>
+          )}
+          {/* ASK FIRST-ANSWER RETRIEVAL R3 — an answer standing on reachable reporting says so. */}
+          {view.badge !== 'insuf' && view.searchLimited && (
+            <p data-ask="search-limited" className="text-[13px] leading-[1.45] text-[#c9b27a]">
+              {s.limitedNote}
             </p>
           )}
           {payload.analysis !== null && (
