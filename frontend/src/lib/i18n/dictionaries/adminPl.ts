@@ -121,6 +121,28 @@ export const adminPl: AdminDictionary = {
       'Filtry są pokazane dla układu i pozostają nieaktywne, dopóki ten ekran nie ma danych.',
   },
 
+  /*
+    ADMIN COMPACT LISTS R1 — patrz komentarz w adminEn.ts. Te same tokeny {…}.
+  */
+  table: {
+    searchLabel: 'Szukaj w tych rekordach',
+    searchPlaceholder: 'Filtruj rekordy…',
+    clear: 'Wyczyść wyszukiwanie',
+    countAll: 'Rekordów: {total}',
+    countPage: 'Widok {from}–{to} z {total} rekordów',
+    countMatch: 'Pasuje {matching} z {total} rekordów',
+    countMatchPage: 'Widok {from}–{to} z {matching} pasujących rekordów, spośród {total}',
+    noMatch: 'Żaden rekord nie odpowiada temu wyszukiwaniu.',
+    noMatchBody: 'Wyczyść wyszukiwanie, aby ponownie zobaczyć wszystkie rekordy.',
+    loadedOnly:
+      'To wyszukiwanie obejmuje tylko rekordy wczytane tutaj. Serwer zwrócił uszeregowany podzbiór, więc rekord spoza niego nie zostanie znaleziony.',
+    previousPage: 'Poprzednia strona',
+    nextPage: 'Następna strona',
+    pageOf: 'Strona {page} z {pages}',
+    rowDetails: 'Wszystkie pola',
+    rowDetailsHint: 'Każda kolumna, w tym te ukryte na wąskim ekranie.',
+  },
+
   provenance: {
     legendTitle: 'Pochodzenie danych',
     a: 'Istniejące dane zaplecza',
@@ -218,6 +240,8 @@ export const adminPl: AdminDictionary = {
       followedTitle: 'Obserwowane kraje — zadeklarowane zainteresowanie, tylko konta zalogowane',
       followedPurpose:
         'Które kraje wybrały konta zalogowane. To nie jest ani to, czego dotyczy treść, ani to, gdzie ktokolwiek się znajduje — i nigdy nie służy do wnioskowania o żadnym z nich.',
+      followedSearchLabel: 'Szukaj obserwowanych krajów',
+      coverageSearchLabel: 'Szukaj wśród wymienionych tutaj krajów',
       followedCountryColumn: 'Kraj',
       followedAccountsColumn: 'Obserwujące konta',
       followedEmptyTitle: 'Żaden kraj nie jest jeszcze obserwowany',

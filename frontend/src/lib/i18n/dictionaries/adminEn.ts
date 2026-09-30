@@ -121,6 +121,35 @@ export const adminEn = {
     inertFilters: 'Filters are shown for layout and are inert until this screen has data.',
   },
 
+  /*
+    ADMIN COMPACT LISTS R1 — the shared table's own copy.
+    A NEW TOP-LEVEL NAMESPACE, deliberately not nested under `screens`: this copy
+    belongs to the primitive, so every screen that opts in reads the same wording
+    and no screen can drift into its own phrasing for "no match".
+    `{token}` interpolation is the convention this product already uses
+    (`t.turnCount.replace('{n}', …)`). `adminCompactLists.spec.ts` asserts EN and PL
+    declare the SAME tokens, so a translation that drops `{total}` fails the build
+    rather than rendering a sentence with a hole in it.
+  */
+  table: {
+    searchLabel: 'Search these records',
+    searchPlaceholder: 'Filter records…',
+    clear: 'Clear search',
+    countAll: '{total} records',
+    countPage: 'Showing {from}–{to} of {total} records',
+    countMatch: '{matching} of {total} records match',
+    countMatchPage: 'Showing {from}–{to} of {matching} matching records, out of {total}',
+    noMatch: 'No record matches this search.',
+    noMatchBody: 'Clear the search to see all records again.',
+    loadedOnly:
+      'This search covers only the records loaded here. The server returned a ranked subset, so a record outside it will not be found by searching.',
+    previousPage: 'Previous page',
+    nextPage: 'Next page',
+    pageOf: 'Page {page} of {pages}',
+    rowDetails: 'All fields',
+    rowDetailsHint: 'Every column, including those hidden on a narrow screen.',
+  },
+
   provenance: {
     legendTitle: 'Provenance',
     a: 'Existing backend data',
@@ -217,6 +246,8 @@ export const adminEn = {
       followedTitle: 'Followed countries — declared interest, signed-in accounts only',
       followedPurpose:
         'Which countries signed-in accounts chose to follow. This is neither what the coverage is about nor where anyone is, and it is never used to infer either.',
+      followedSearchLabel: 'Search followed countries',
+      coverageSearchLabel: 'Search the countries listed here',
       followedCountryColumn: 'Country',
       followedAccountsColumn: 'Following accounts',
       followedEmptyTitle: 'No country has been followed yet',
