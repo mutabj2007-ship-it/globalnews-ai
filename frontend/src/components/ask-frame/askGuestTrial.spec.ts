@@ -26,6 +26,7 @@ const assign = jest.fn();
 
 const OP = (id: string, state = 'CURRENT_REPORTING', basis = 'REQUIRED_EVIDENCE_OBTAINED') => ({
   operationId: id,
+  turnId: `turn-${id}`,
   status: 'COMPLETED',
   computeClass: 'FRESH_BOUNDED',
   requiresAcceptance: false,
@@ -225,6 +226,8 @@ describe('ASK GUEST TRIAL R3 — first visit', () => {
     expect(calls.some((c) => c.path === '/api/ask-v2/threads')).toBe(false);
     expect(text(r)).toContain(EN.remaining(2));
     expect(byAsk(r, 'guest-not-counted')).toHaveLength(0);
+    /* Saving is an account feature: a guest answer shows no Save control. */
+    expect(byAsk(r, 'save')).toHaveLength(0);
   });
 
   it('an answer that did not count says so, and the counter stays', async () => {
@@ -308,6 +311,8 @@ describe('ASK GUEST TRIAL R3 — first visit', () => {
     const r = await render();
     expect(text(r)).toContain('What changed?');
     expect(text(r)).toContain(EN.resumed);
+    /* Signed in, the continued answer can be saved again. */
+    expect(byAsk(r, 'save')).toHaveLength(1);
     expect(composerValue(r)).toBe('My unsent fourth question');
     expect(posts()).toHaveLength(0);
   });

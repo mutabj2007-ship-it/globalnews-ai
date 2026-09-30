@@ -406,6 +406,7 @@ export function AskFrameScreen({
             {opened !== null && (
               <div data-ask-latest={r2.turns.length === 0 ? '' : undefined}>
                 <AskR2TurnView
+                  canSave={!guestMode}
                   turn={opened}
                   locale={r2Locale}
                   context={context}
@@ -430,6 +431,7 @@ export function AskFrameScreen({
                     </summary>
                     <div className="mt-3">
                       <AskR2TurnView
+                        canSave={!guestMode}
                         turn={turn}
                         locale={r2Locale}
                         context={context}
@@ -443,6 +445,7 @@ export function AskFrameScreen({
             {latestR2 !== undefined && (
               <div data-ask-latest="">
                 <AskR2TurnView
+                  canSave={!guestMode}
                   turn={latestR2}
                   locale={r2Locale}
                   context={context}
