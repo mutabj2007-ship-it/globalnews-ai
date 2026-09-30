@@ -27,8 +27,6 @@ export interface AskR2Strings {
   readonly deepEyebrow: string;
   readonly deepTitle: string;
   readonly deepBody: string;
-  readonly estimate: string;
-  readonly deepNote: string;
   readonly notNow: string;
   readonly runConfirm: string;
   readonly badges: Readonly<
@@ -151,17 +149,15 @@ const EN: AskR2Strings = {
   openFull: 'Open full analysis',
   openFullMeta: '0 AI · 0 provider · no compute',
   runDeep: 'Run deeper analysis',
-  runDeepMeta: 'Asks before running · 24 Sand estimate',
+  runDeepMeta: 'Asks before running',
   newQ: 'New question',
   earlier: 'EARLIER IN THIS CONVERSATION',
   deepEyebrow: 'EXPLICIT COMPUTE',
   deepTitle: 'Run deeper analysis?',
   deepBody:
-    'Deeper analysis reads more sources across a wider window and prepares a structured report. It runs only if you confirm.',
-  estimate: 'Estimate · 24 Sand',
-  deepNote: 'Design fixture. Sand charging is not enabled in Alpha, so nothing is deducted.',
+    'Deeper analysis reads more sources across a wider window and prepares a structured report. It runs only after you confirm.',
   notNow: 'Not now',
-  runConfirm: 'Run · 24 Sand',
+  runConfirm: 'Run deeper analysis',
   badges: {
     ref: 'REFERENCE BACKGROUND',
     ver: 'CURRENTLY VERIFIED',
@@ -307,18 +303,15 @@ const PL: AskR2Strings = {
   openFull: 'Otwórz pełną analizę',
   openFullMeta: '0 AI · 0 dostawców · bez obliczeń',
   runDeep: 'Uruchom pogłębioną analizę',
-  runDeepMeta: 'Pyta przed uruchomieniem · szac. 24 Sand',
+  runDeepMeta: 'Pyta przed uruchomieniem',
   newQ: 'Nowe pytanie',
   earlier: 'WCZEŚNIEJ W TEJ ROZMOWIE',
   deepEyebrow: 'JAWNE OBLICZENIA',
   deepTitle: 'Uruchomić pogłębioną analizę?',
   deepBody:
-    'Pogłębiona analiza czyta więcej źródeł w szerszym okresie i przygotowuje uporządkowany raport. Uruchamia się tylko po Twoim potwierdzeniu.',
-  estimate: 'Szacunek · 24 Sand',
-  deepNote:
-    'Wartość projektowa. Naliczanie Sand jest wyłączone w wersji Alpha, nic nie zostanie pobrane.',
+    'Pogłębiona analiza czyta więcej źródeł w szerszym okresie i przygotowuje uporządkowany raport. Uruchamia się dopiero po Twoim potwierdzeniu.',
   notNow: 'Nie teraz',
-  runConfirm: 'Uruchom · 24 Sand',
+  runConfirm: 'Uruchom pogłębioną analizę',
   badges: {
     ref: 'WIEDZA OGÓLNA',
     ver: 'ZWERYFIKOWANE AKTUALNIE',

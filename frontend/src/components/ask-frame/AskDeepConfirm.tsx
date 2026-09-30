@@ -7,9 +7,9 @@ import { resolveAskStrings } from '@/lib/ask/askStrings';
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — "RUN DEEPER ANALYSIS?" (D25 10).
  *
- * The ONLY Sand control, and it always confirms: the four named steps (governed
- * `computeSteps`), "Estimate · 24 Sand", and the fixture note that charging is off in
- * Alpha. Centred dialog at ≥1024 px; a short bounded bottom sheet below — the one kind of
+ * The explicit-compute control, and it always confirms: the four named steps (governed
+ * `computeSteps`). PUBLIC BETA (CTO B1): no price, estimate, token count or billing promise
+ * is shown. Centred dialog at ≥1024 px; a short bounded bottom sheet below — the one kind of
  * sheet the mobile authority permits. The server already holds a QUOTE; nothing runs
  * until `onConfirm`. Escape and "Not now" release the quote.
  */
@@ -59,8 +59,6 @@ export function AskDeepConfirm({
             <li key={step}>{step}</li>
           ))}
         </ol>
-        <p className="mt-3 text-[13px] font-semibold text-[#D9B98A]">{s.estimate}</p>
-        <p className="mt-1 text-[12px] text-sp-ink-2">{s.deepNote}</p>
         <div className="mt-4 flex justify-end gap-3">
           <button
             type="button"
