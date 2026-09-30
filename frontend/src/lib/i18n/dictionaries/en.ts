@@ -159,11 +159,6 @@ export const en = {
     productApplicabilityNotEstablished:
       'Exact applicability to GlobalNewsAI cannot be established from this reporting: none of these sources describes GlobalNewsAI itself.',
     focusNotInEvidence: 'None of the retrieved reports addresses {focus} directly; this answer rests on reporting about the subject itself.',
-    /* ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — shown only when the reader asked for dates. */
-    sourceDatePublished: 'Published {date}',
-    sourceDateObserved: 'First seen by GlobalNewsAI {date}',
-    sourceDateUnknownBasis: 'Report date {date}',
-    sourceDatesNote: 'Dates show when each report was published or first seen, not when the events happened.',
     resultSourcesNone: 'No sources were retrieved for this question.',
     resultSourcesTruncated: 'Showing {shown} of {total}. Open the full analysis for the rest.',
     resultBriefAbsent: 'This analysis carried no executive brief. That is an absence, not an assessment \u2014 nothing was measured and withheld.',
@@ -179,6 +174,11 @@ export const en = {
     runFullAnalysisNote: 'Starts a new source-backed analysis.',
     telemetryReports: 'retrieved reports',
     telemetryClusters: 'reporting clusters',
+    /* ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — shown only when the reader asked for dates. */
+    sourceDatePublished: 'Published {date}',
+    sourceDateObserved: 'First seen by GlobalNewsAI {date}',
+    sourceDateUnknownBasis: 'Report date {date}',
+    sourceDatesNote: 'Dates show when each report was published or first seen, not when the events happened.',
   },
   loadingStages: [
     'Searching trusted sources\u2026',

@@ -124,9 +124,13 @@ describe('R2 — requested dates: each source’s own date, labelled by what it 
 
   it('shown only when the reader asked for dates, with the "not when events happened" note', () => {
     const base = withContext({ datesRequested: true });
+    /* the basis travels on the cited source itself (analysis.sources), never a parallel list */
     const response = {
       ...base,
-      articles: base.articles.map((a) => ({ ...a, publishedAtBasis: 'publisher' as const })),
+      analysis: base.analysis && {
+        ...base.analysis,
+        sources: base.analysis.sources.map((s) => ({ ...s, publishedAtBasis: 'publisher' as const })),
+      },
     } as AnalysisApiResponse;
     const html = render(response);
     expect(html).toContain('data-ask="source-date"');

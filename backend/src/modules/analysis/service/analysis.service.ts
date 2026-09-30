@@ -2966,7 +2966,10 @@ export class AnalysisService {
             conversationSubject: {
               subject: continuedSubject,
               focus: focus.terms,
-              focusDisplay: focus.phrases,
+              /* R2 — only when the reader's phrasing differs from the term list (display only). */
+              ...(focus.phrases.join('\u0000') === focus.terms.join('\u0000')
+                ? {}
+                : { focusDisplay: focus.phrases }),
               retrievalMeaning: composeRetrievalMeaning(continuedSubject, focus),
               source: 'prior-question',
               disclosures: [

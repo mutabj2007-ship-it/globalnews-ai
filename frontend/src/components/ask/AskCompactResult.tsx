@@ -412,7 +412,7 @@ export function AskCompactResult({
                       ? (() => {
                           const label = sourceDateLabel(
                             source.publishedAt,
-                            response.articles.find((a) => a.id === source.articleId)?.publishedAtBasis,
+                            source.publishedAtBasis,
                             language,
                             t,
                           );

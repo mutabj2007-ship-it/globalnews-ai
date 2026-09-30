@@ -393,6 +393,11 @@ export interface AnalysisSourceRef {
   url: string;
   /** ISO-8601 timestamp. */
   publishedAt: string;
+  /**
+   * ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — the SAME article's `publishedAtBasis`: whether
+   * `publishedAt` is the publisher's own time or when GlobalNewsAI first saw it. Absent = unproven.
+   */
+  publishedAtBasis?: import('./news').PublishedAtBasis;
 }
 
 /**
