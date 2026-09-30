@@ -3,7 +3,7 @@
 import type { StoryContext } from '@globalnews-ai/shared';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { AskIntelligenceBasis } from './AskIntelligenceBasis';
-import { askIntelligenceView } from '@/lib/ask/askIntelligenceView';
+import { askGovernedConversation } from '@/lib/ask/askGovernedConversation';
 import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
 import { askR2View, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
@@ -109,9 +109,13 @@ export function AskR2TurnView({
     turn.question,
   );
   const operationId = turn.operation?.operationId;
-  /* LIVE ACCEPTANCE REPAIR R1 (A) — a retained-record answer is its governed record, restated. */
-  const retained =
-    view.badge === 'rec' ? askIntelligenceView(payload, locale, view.sourceCount) : null;
+  /*
+    GOVERNED ANSWER CONVERSATIONAL UX R1 — conversation first, governance second, evidence third.
+    A zero-AI governed answer (retained record, or a governed record / official source that
+    cannot be shown) leads with a plain-language answer; its governance state becomes restrained
+    status and provenance; the evidence stays below. Null for every other turn (unchanged).
+  */
+  const governed = askGovernedConversation(payload, locale, turn.question);
 
   return (
     <article data-ask-turn data-ask="turn" data-ask-state={view.badge} className={TURN}>
@@ -138,15 +142,31 @@ export function AskR2TurnView({
       </div>
 
       <div data-ask="engine-state" className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <span
-          data-ask-badge={view.badge}
-          className={`inline-flex h-[26px] items-center whitespace-nowrap rounded-[6px] px-2.5 font-mono text-[11px] font-bold tracking-[0.08em] ${TONE_CLASS[view.tone]}`}
-        >
-          {view.badgeText}
-        </span>
-        <span data-ask="freshness" className="font-mono text-[12px] leading-[1.3] text-[#8299b4]">
-          {view.freshness}
-        </span>
+        {governed !== null ? (
+          /* Restrained: the machine state is metadata, never the headline of the answer. */
+          <span
+            data-ask-badge={view.badge}
+            data-ask-badge-restrained="true"
+            className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6f89a8]"
+          >
+            {view.badgeText}
+          </span>
+        ) : (
+          <>
+            <span
+              data-ask-badge={view.badge}
+              className={`inline-flex h-[26px] items-center whitespace-nowrap rounded-[6px] px-2.5 font-mono text-[11px] font-bold tracking-[0.08em] ${TONE_CLASS[view.tone]}`}
+            >
+              {view.badgeText}
+            </span>
+            <span
+              data-ask="freshness"
+              className="font-mono text-[12px] leading-[1.3] text-[#8299b4]"
+            >
+              {view.freshness}
+            </span>
+          </>
+        )}
         {turn.expired === true && (
           <span data-ask="expired" className="font-mono text-[12px] text-[#8299b4]">
             {s.expiredNote}
@@ -227,32 +247,59 @@ export function AskR2TurnView({
             {s.sourcesAfterChoice}
           </p>
         </section>
-      ) : view.badge === 'rec' ? (
+      ) : governed !== null ? (
         <section
           data-ask="answer"
+          data-ask-governed="true"
           data-ask-basis={payload.answer.basis}
-          className={`flex flex-col gap-2.5 ${CARD} ${CARD_CLASS.retained}`}
+          className={`flex flex-col gap-3 ${CARD} ${CARD_CLASS.current}`}
         >
           <p className={EYEBROW}>{s.answer}</p>
-          {/* GOVERNED RETAINED GAP REPAIR R1 — lead, else notes, else the basis' own line:
-              a retained-record card can never render blank. */}
-          {(retained?.lead.length
-            ? retained.lead
-            : retained?.notes.length
-              ? retained.notes
-              : [
-                  payload.answer.basis === 'GOVERNED_NO_RECORD'
-                    ? s.retainedFallback.GOVERNED_NO_RECORD
-                    : s.retainedFallback.GOVERNED_RECORD,
-                ]
-          ).map((line) => (
-            <p key={line} data-ask="retained-lead" className="text-[16px] leading-[1.55]">
+          {/* A governed answer is never blank: the helper always returns at least one paragraph. */}
+          {governed.paragraphs.map((line) => (
+            <p
+              key={line}
+              data-ask="governed-answer"
+              className="text-[16px] leading-[1.6] md:text-[17px]"
+            >
               {line}
             </p>
           ))}
-          <p data-ask="retained-no-ai" className="font-mono text-[12px] text-[#8fa6c0]">
-            {s.retainedAnswer}
+          <p
+            data-ask="governed-provenance"
+            className="font-mono text-[11.5px] leading-[1.4] text-[#8299b4]"
+          >
+            {governed.provenance}
           </p>
+          {governed.followUps.length > 0 && (
+            /* Continuity: a suggestion only becomes a DRAFT in the composer; nothing runs. */
+            <div data-ask="governed-follow-ups" className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#6f89a8]">
+                {s.followUpHint}
+              </span>
+              {governed.followUps.map((q) =>
+                onUseQuestion !== undefined ? (
+                  <button
+                    key={q}
+                    type="button"
+                    data-ask="governed-follow-up"
+                    onClick={() => onUseQuestion(q)}
+                    className="inline-flex min-h-9 items-center rounded-[16px] border border-[#1d4a73] bg-[#06223d] px-3 text-start text-[13.5px] font-semibold text-[#cfe2f2] hover:border-[rgba(34,211,238,0.55)]"
+                  >
+                    {q}
+                  </button>
+                ) : (
+                  <span
+                    key={q}
+                    data-ask="governed-follow-up"
+                    className="text-[13.5px] text-[#cfe2f2]"
+                  >
+                    {q}
+                  </span>
+                ),
+              )}
+            </div>
+          )}
         </section>
       ) : view.badge === 'unavail' ? (
         <p
@@ -322,7 +369,7 @@ export function AskR2TurnView({
         payload={payload}
         locale={locale}
         reportingSourceCount={view.sourceCount}
-        hideNotes={view.badge === 'rec' && (retained?.lead.length ?? 0) === 0}
+        hideNotes={governed !== null}
       />
 
       {((view.handoffs.openFull && !displayOnly) ||

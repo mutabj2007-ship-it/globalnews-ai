@@ -83,6 +83,14 @@ const ngoma = contribution({
   ],
   disclosures: ['RETAINED_NOT_CURRENT', 'CLOSED_EVALUATION_CYCLE'],
 });
+const geography = (name: string) =>
+  contribution({
+    contributorId: 'GEOGRAPHY',
+    domain: 'geography',
+    applicability: 'CONTEXT',
+    temporalBasis: 'REFERENCE_GEOGRAPHY',
+    observations: [obs({ kind: 'NISR_DISTRICT', label: name })],
+  });
 const gasabo = contribution({
   contributorId: 'IMIHIGO',
   domain: 'governance',
@@ -92,13 +100,13 @@ const gasabo = contribution({
   disclosures: ['AGGREGATE_NOT_ASSIGNED_TO_DISTRICT'],
 });
 
-function render(p: AskR2Payload | null, failure?: string): ReactTestRenderer {
+function render(p: AskR2Payload | null, failure?: string, question = 'Q?'): ReactTestRenderer {
   let r!: ReactTestRenderer;
   act(() => {
     r = create(
       createElement(AskR2TurnView, {
         turn: {
-          question: 'Q?',
+          question,
           ...(p === null ? {} : { payload: p }),
           ...(failure ? { failure } : {}),
         } as never,
@@ -112,6 +120,18 @@ function render(p: AskR2Payload | null, failure?: string): ReactTestRenderer {
 const byData = (r: ReactTestRenderer, name: string) =>
   r.root.findAll((n) => typeof n.type === 'string' && n.props['data-ask'] === name);
 const textOf = (r: ReactTestRenderer) => JSON.stringify(r.toJSON());
+/** Only what a reader can read: text nodes, never class names or data attributes. */
+const visibleText = (r: ReactTestRenderer): string => {
+  const out: string[] = [];
+  const walk = (node: unknown): void => {
+    if (typeof node === 'string') out.push(node);
+    else if (Array.isArray(node)) node.forEach(walk);
+    else if (node !== null && typeof node === 'object')
+      walk((node as { children?: unknown }).children);
+  };
+  walk(r.toJSON());
+  return out.join(' ');
+};
 
 describe('A — a retained-record answer (G2, G3, G4, G9): zero AI, stated truthfully', () => {
   it('RETAINED_RECORD is its own badge and tone, says no AI was used, and offers no compute hand-off', () => {
@@ -130,25 +150,34 @@ describe('A — a retained-record answer (G2, G3, G4, G9): zero AI, stated truth
     expect(ASK_SAVABLE_ANSWER_STATES.has('RETAINED_RECORD')).toBe(true);
   });
 
-  it('G3 Ngoma: the lead restates the governed record verbatim — final score 77.2 (no invented %), 2024/2025, closed cycle', () => {
+  /* GOVERNED ANSWER CONVERSATIONAL UX R1 — SUPERSEDED WITH UPDATED PROOF: the same governed
+     facts, now voiced as a conversational answer with restrained provenance. */
+  const said = (r: ReactTestRenderer) =>
+    byData(r, 'governed-answer').map((n) => n.props.children as string);
+
+  it('G3 Ngoma: a conversational answer — final Imihigo score 77.2 (no invented %), 2024/2025, closed cycle — then provenance', () => {
     const r = render(payload('RETAINED_RECORD', 'GOVERNED_RECORD', [ngoma]));
-    const lead = byData(r, 'retained-lead').map((n) => JSON.stringify(n.props.children));
-    expect(lead).toHaveLength(1);
-    expect(lead[0]).toContain('Ngoma: final score 77.2 — Imihigo 2024/2025');
-    expect(lead[0]).not.toContain('%');
-    expect(lead[0]).toContain('closed cycle');
-    expect(byData(r, 'retained-no-ai')).toHaveLength(1);
+    expect(said(r)).toEqual([
+      'Ngoma’s final Imihigo score for the 2024/2025 cycle was 77.2. This comes from the retained NISR final evaluation for that closed cycle, so it describes that evaluation period rather than the district’s current situation.',
+    ]);
+    expect(byData(r, 'governed-provenance')[0].props.children).toBe(
+      'Retained record · NISR · 2024/2025 · No AI used',
+    );
+    expect(textOf(r)).not.toContain('77.2%');
     expect(byData(r, 'handoffs')).toHaveLength(0);
   });
 
-  it('G4 Gasabo: the answer is the stated absence — never a score, never the Kigali aggregate — shown once', () => {
-    const r = render(payload('RETAINED_RECORD', 'GOVERNED_NO_RECORD', [gasabo]));
-    const text = textOf(r);
-    expect(byData(r, 'retained-lead').map((n) => n.props.children)).toEqual([
-      'No individual NISR Imihigo record exists for this district; the City of Kigali aggregate is not assigned to its districts.',
+  it('G4 Gasabo: the stated absence in plain language — never a score, never the Kigali aggregate — said once', () => {
+    const r = render(
+      payload('RETAINED_RECORD', 'GOVERNED_NO_RECORD', [geography('Gasabo'), gasabo]),
+      undefined,
+      "What was Gasabo's 2024/2025 Imihigo result?",
+    );
+    expect(said(r)).toEqual([
+      'I don’t have an individual 2024/2025 Imihigo score for Gasabo in the retained NISR data. The available City of Kigali result is an aggregate, and GlobalNewsAI does not assign that city-level figure to Gasabo.',
     ]);
     expect(byData(r, 'intelligence-note')).toHaveLength(0);
-    expect(text).not.toMatch(/\d+(\.\d+)?\s?%/);
+    expect(visibleText(r)).not.toMatch(/\d+(\.\d+)?\s?%/);
   });
 
   it('G9 Rwanda CPI and G2 Poland procurement: the retained value with its period; one TED day is never a change series', () => {
@@ -200,11 +229,24 @@ describe('A — a retained-record answer (G2, G3, G4, G9): zero AI, stated truth
 });
 
 describe('A — official unavailable (G8) and a spent budget (live G3–G9) are named truthfully', () => {
-  it('G8: OFFICIAL_SOURCE_UNAVAILABLE says the official value cannot be given and reporting is not presented as official', () => {
-    const r = render(payload('CAPABILITY_UNAVAILABLE', 'OFFICIAL_SOURCE_UNAVAILABLE', null));
-    const [card] = byData(r, 'unavailable');
-    expect(card.props.children).toMatch(/You asked for the official figure/);
-    expect(card.props.children).toMatch(/news reporting is not presented as official/);
+  /* GOVERNED ANSWER CONVERSATIONAL UX R1 — SUPERSEDED WITH UPDATED PROOF: the same governed
+     facts, now voiced as a conversational answer with restrained provenance. */
+  const said = (r: ReactTestRenderer) =>
+    byData(r, 'governed-answer').map((n) => n.props.children as string);
+
+  it('G8: official source unavailable is a conversational answer naming the body from the question — never reporting as official', () => {
+    const r = render(
+      payload('CAPABILITY_UNAVAILABLE', 'OFFICIAL_SOURCE_UNAVAILABLE', null),
+      undefined,
+      "What is NBP's official reference rate?",
+    );
+    expect(said(r)).toEqual([
+      'I can’t give you NBP’s official reference rate from an approved NBP source yet. Other reporting may provide context, but GlobalNewsAI will not present that as NBP’s official figure.',
+    ]);
+    expect(byData(r, 'unavailable')).toHaveLength(0);
+    expect(byData(r, 'governed-provenance')[0].props.children).toBe(
+      'Official source · not connected · No AI used',
+    );
   });
 
   it('a BUDGET refusal is never "Ask is unavailable": it says today’s limit is reached and nothing was charged', () => {
@@ -282,39 +324,42 @@ describe('GOVERNED RETAINED GAP REPAIR R1 — G9, the never-blank card, and the 
       degradationReason: 'NO_PRODUCER',
     });
 
-  it('G9 live state: an unreadable held CPI release says exactly that — never "no record", never the internal reason', () => {
+  /* GOVERNED ANSWER CONVERSATIONAL UX R1 — SUPERSEDED WITH UPDATED PROOF: the same governed
+     facts, now voiced as a conversational answer with restrained provenance. */
+  const said = (r: ReactTestRenderer) =>
+    byData(r, 'governed-answer').map((n) => n.props.children as string);
+
+  it('G9 live state: an unreadable held CPI release is said plainly — never "no record", never internal vocabulary', () => {
     const r = render(
       payload('CAPABILITY_UNAVAILABLE', 'GOVERNED_RECORD_UNAVAILABLE', [
         cpiGap(['RETAINED_ARTIFACT_NOT_DISPLAYABLE']),
       ]),
     );
-    const [card] = byData(r, 'unavailable');
-    expect(card.props.children).toBe(
-      'A retained NISR CPI release is held, but it cannot currently be read under its governed extraction rules, so no value is shown. Nothing was run in its place.',
+    expect(said(r)).toEqual([
+      'I can’t safely give you Rwanda’s retained CPI value from this release right now. GlobalNewsAI holds the NISR release, but it cannot currently be read under the governed verification rules, so I won’t show an unverified number.',
+    ]);
+    expect(visibleText(r)).not.toMatch(
+      /NO_PRODUCER|extractor|1\.1\.0|no retained record|GOVERNED_RECORD_UNAVAILABLE/i,
     );
-    const text = textOf(r);
-    expect(text).not.toMatch(/NO_PRODUCER|extractor|1\.1\.0|no retained record/i);
-    expect(byData(r, 'retained-lead')).toHaveLength(0);
+    expect(byData(r, 'unavailable')).toHaveLength(0);
   });
 
-  it('G9 no capture: a DISTINCT truthful disclosure', () => {
+  it('G9 no capture: a DISTINCT truthful sentence', () => {
     const r = render(
       payload('CAPABILITY_UNAVAILABLE', 'GOVERNED_RECORD_UNAVAILABLE', [
         cpiGap(['NO_RETAINED_CAPTURE']),
       ]),
     );
-    const [card] = byData(r, 'unavailable');
-    expect(card.props.children).toBe(
-      'No retained NISR CPI release is held, so no value is shown. Nothing was run in its place.',
-    );
+    expect(said(r)).toEqual([
+      'I can’t give you Rwanda’s CPI figure from a retained NISR release, because GlobalNewsAI doesn’t currently hold one.',
+    ]);
   });
 
-  it('a failed read without a disclosure is "could not be read just now" — not an absence', () => {
+  it('a failed read without a disclosure is "couldn’t read … just now" — not an absence', () => {
     const r = render(
       payload('CAPABILITY_UNAVAILABLE', 'GOVERNED_RECORD_UNAVAILABLE', [cpiGap([], 'DEGRADED')]),
     );
-    expect(byData(r, 'unavailable')[0].props.children).toMatch(/could not be read just now/);
-    expect(askR2Strings('pl').governedGap.notDisplayable.ECONOMY_CPI).toMatch(/CPI NISR/);
+    expect(said(r)[0]).toMatch(/couldn’t read the retained record for this just now/);
   });
 
   it('G9 with a valid governed observation shows its exact value, unit, period and NISR provenance', () => {
@@ -355,11 +400,13 @@ describe('GOVERNED RETAINED GAP REPAIR R1 — G9, the never-blank card, and the 
     });
   });
 
+  /* GOVERNED ANSWER CONVERSATIONAL UX R1 — SUPERSEDED WITH UPDATED PROOF: the same governed
+     facts, now voiced as a conversational answer with restrained provenance. */
   it.each([
-    ['GOVERNED_RECORD', 'The retained record is shown below with its source.'],
-    ['GOVERNED_NO_RECORD', 'No individual retained record exists for this question’s scope.'],
+    ['GOVERNED_RECORD', 'Here is what the retained governed record shows.'],
+    ['GOVERNED_NO_RECORD', 'I don’t have an individual retained record for this.'],
   ])(
-    'a %s card with no lead and no note falls back to its own basis line — never blank',
+    'a %s answer without a voiceable value falls back to its own sentence — never blank',
     (basis, line) => {
       const r = render(
         payload('RETAINED_RECORD', basis, [
@@ -370,8 +417,7 @@ describe('GOVERNED RETAINED GAP REPAIR R1 — G9, the never-blank card, and the 
           }),
         ]),
       );
-      const lines = byData(r, 'retained-lead').map((n) => n.props.children);
-      expect(lines).toEqual([line]);
+      expect(byData(r, 'governed-answer').map((n) => n.props.children)).toEqual([line]);
     },
   );
 

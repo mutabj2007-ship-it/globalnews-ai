@@ -95,6 +95,14 @@ export interface QueryClassification {
 export interface QueryIntentInput {
   /** True when storyContext.articleId resolved to a real article. */
   readonly hasResolvedArticleAnchor?: boolean;
+  /**
+   * PR #72 CTO correction — the Ask ROUTING reading: a question that asserts freshness is never
+   * classified as a background frame (EXPLANATION / ENTITY_BACKGROUND), because for routing that
+   * would send a fresh question to stable model background. The retrieval classification inside
+   * the analysis path leaves it off, so a routed fresh question still gets its explanation
+   * SUBJECT as the search query ("Explain the new EU AI regulation" → "EU AI regulation").
+   */
+  readonly freshnessOutranksBackground?: boolean;
 }
 
 /**
@@ -233,6 +241,88 @@ const EXPLANATION_PATTERNS: readonly RegExp[] = [
   /^(?:dlaczego|czemu)\s+(.+?)\s+(?:jest|s[ąa])\s+(?:tak\s+)?(?:wa[żz]n[aeyi]|istotn[aeyi])$/iu,
   /^(?:dlaczego|czemu)\s+(.+?)\s+ma(?:j[ąa])?\s+(?:tak\s+)?(?:du[żz]e\s+)?znaczenie$/iu,
 ];
+
+/**
+ * ASK CONVERSATIONAL BREADTH R1 — conceptual and reflective shapes, kept in their OWN list so
+ * they can carry one extra guard the older explanation frames never needed: a NOVELTY word
+ * (new, just, announced, proposed …) marks a fresh event, so "What does the new tariff deal mean
+ * for Europe?" is never read as background even without a time word.
+ */
+const CONCEPTUAL_REFLECTION_PATTERNS: readonly RegExp[] = [
+  /*
+   * Conceptual and reflective QUESTION SHAPES (never topic nouns). Live Alpha read "What do you think life is? How can I link it to death and
+   * resurrection?" as CURRENT_EVENT (the default) and answered an empty news search. Each
+   * frame below asks what something is, what it means, or how to think about or connect ideas
+   * — a request for stable background. Mirrored EN/PL, whole-sentence anchored, and still
+   * behind the CURRENT_EVENT_MARKERS gate: "What do you think is happening in Ukraine today?",
+   * "What does the latest fighting in Gaza mean?" and "How is the current war affecting …"
+   * stay current, and a named country is read before any of this.
+   *   "What do you think X is?"                      ≡ "Co myślisz, czym jest X?"
+   *   "What does X mean in/for/to Y?"                ≡ (PL "Co oznacza X …" already above)
+   *   "What do <people> mean by X?"                  ≡ "Co <ludzie> rozumieją przez X?"
+   *   "How can/should I link/connect/relate/understand/think about X?"
+   *                                                  ≡ "Jak mogę/można połączyć/zrozumieć/myśleć o X?"
+   */
+  /^what\s+do(?:es)?\s+you\s+think\s+(.+?)\s+(?:is|are|means?)$/i,
+  /^what\s+does\s+(.+?)\s+mean\s+(?:in|for|to|within)\s+.+$/i,
+  /^what\s+do(?:es)?\s+[\p{L}-]+(?:\s+[\p{L}-]+)?\s+mean\s+by\s+(.+)$/iu,
+  /^how\s+(?:can|could|should|do|would|might)\s+(?:i|we|one|you|someone)\s+(?:link|connect|relate|reconcile|understand|interpret|approach|think\s+about|make\s+sense\s+of|come\s+to\s+terms\s+with)\s+(.+)$/i,
+  /* "Is it ethical/moral/right/wrong to X?"  ≡ "Czy etyczne/moralne/słuszne jest X?" */
+  /^is\s+it\s+(?:ever\s+)?(?:ethical|unethical|moral|immoral|right|wrong|fair|unfair|just|acceptable)\s+to\s+(.+)$/i,
+  /^czy\s+(?:to\s+)?(?:jest\s+)?(?:etyczne|nieetyczne|moralne|niemoralne|s[łl]uszne|w\s+porz[ąa]dku)\s*,?\s*(?:jest\s+)?(?:gdy|kiedy|aby|[żz]eby)?\s*(.+)$/iu,
+  /^co\s+(?:my[śs]lisz|s[ąa]dzisz)\s*,?\s*(?:czym\s+(?:jest|s[ąa])|co\s+to\s+(?:jest|s[ąa]))\s+(.+)$/iu,
+  /^co\s+[\p{L}-]+(?:\s+[\p{L}-]+)?\s+rozumiej?[ąa]?\s+przez\s+(.+)$/iu,
+  /^jak\s+(?:mog[eę]|mo[żz]emy|mo[żz]na|powinienem|powinnam|powinni[śs]my|nale[żz]y)\s+(?:po[łl][ąa]czy[ćc]|powi[ąa]za[ćc]|zrozumie[ćc]|rozumie[ćc]|interpretowa[ćc]|my[śs]le[ćc]\s+o|pogodzi[ćc])\s+(.+)$/iu,
+];
+
+/**
+ * ASK CONVERSATIONAL BREADTH R1 (PR #72 CTO correction) — DOES THE QUESTION ASSERT FRESHNESS?
+ *
+ * Current/fresh information outranks stable background, so this gates EVERY explanation frame
+ * (old and new) and the entity-background frame. It is semantic, not a bare token: "new" alone
+ * is never enough, so "What is the New Testament?" or "What is a new moon?" stay background.
+ * A question asserts freshness when it carries
+ *   (a) an event participle — "(newly|just) announced/passed/signed/…", "announced", "proposed",
+ *       "unveiled", "breaking", "upcoming" (PL "ogłoszony", "zapowiedziany", "proponowany", …); or
+ *   (b) "new / nowy…" qualifying a CHANGEABLE INSTRUMENT, EVENT OR OFFICE — a law, bill, rule,
+ *       policy, deal, tariff, sanction, reform, government, minister, ruling … — the class of
+ *       things that are made, changed or filled, not a topic list; unless it is a capitalised
+ *       proper name ("the New Deal"), which names a fixed thing.
+ */
+const FRESH_EVENT_PARTICIPLES: readonly RegExp[] = [
+  /\b(?:newly|just|recently)\s+(?:announced|passed|adopted|signed|introduced|released|approved|proposed|enacted|unveiled|published|elected|appointed|imposed|agreed)\b/i,
+  /\b(?:announced|proposed|unveiled|upcoming|breaking|forthcoming)\b/i,
+  /(?:^|[\s,])(?:og[łl]oszon\p{L}*|zapowiedzian\p{L}*|proponowan\p{L}*|projektowan\p{L}*|nadchodz[ąa]c\p{L}*|niedawno\s+\p{L}+)(?=[\s,?.!]|$)/iu,
+];
+
+const CHANGEABLE_INSTRUMENT_EN =
+  '(?:laws?|bills?|acts?|rules?|regulations?|polic(?:y|ies)|plans?|deals?|agreements?|treat(?:y|ies)|tariffs?|tax(?:es)?|sanctions?|measures?|reforms?|budgets?|governments?|cabinets?|ministers?|presidents?|prime\\s+ministers?|chancellors?|leaders?|popes?|mayors?|strateg(?:y|ies)|guidelines?|decisions?|rulings?|orders?|decrees?|announcements?|proposals?|programmes?|programs?|initiatives?|frameworks?|directives?|restrictions?|ceasefires?|variants?|outbreaks?)';
+const CHANGEABLE_INSTRUMENT_PL =
+  '(?:ustaw\\p{L}*|praw[aoe]?|przepis\\p{L}*|regulacj\\p{L}*|rozporz[ąa]dze\\p{L}*|polityk\\p{L}*|plan\\p{L}*|umow\\p{L}*|porozumie\\p{L}*|traktat\\p{L}*|c[łl][ao]\\p{L}*|podat\\p{L}*|sankcj\\p{L}*|reform\\p{L}*|bud[żz]et\\p{L}*|rz[ąa]d\\p{L}*|minist\\p{L}*|premier\\p{L}*|prezydent\\p{L}*|papie[żz]\\p{L}*|strategi\\p{L}*|decyzj\\p{L}*|wyrok\\p{L}*|dyrektyw\\p{L}*|program\\p{L}*|ogranicze\\p{L}*|zawieszeni\\p{L}*|wariant\\p{L}*)';
+
+/* "new" (+ up to three words) + a changeable instrument; the capital guard is applied below. */
+const NEW_INSTRUMENT_EN = new RegExp(
+  '\\b(new)\\s+(?:[\\p{L}-]+\\s+){0,3}' + CHANGEABLE_INSTRUMENT_EN + '\\b',
+  'iu',
+);
+const NEW_INSTRUMENT_PL = new RegExp(
+  '(?:^|\\s)(?:now[aeyiąę]\\p{L}*)\\s+(?:\\p{L}+\\s+){0,3}' +
+    CHANGEABLE_INSTRUMENT_PL +
+    '(?=[\\s,?.!]|$)',
+  'iu',
+);
+
+export function assertsFreshness(text: string): boolean {
+  if (matchesAny(text, FRESH_EVENT_PARTICIPLES)) return true;
+  const en = text.match(NEW_INSTRUMENT_EN);
+  if (en !== null && en.index !== undefined) {
+    /* "the New Deal", "a New Year resolution": a capitalised "New" that is not the first word
+       is part of a proper name — a fixed thing, not a fresh one. */
+    const properName = en[1] === 'New' && en.index > 0;
+    if (!properName) return true;
+  }
+  return NEW_INSTRUMENT_PL.test(text);
+}
 
 /**
  * Markers that make a question about the PRESENT, which outranks an explanation
@@ -674,11 +764,29 @@ function firstSentence(text: string): string {
   return (match?.[0] ?? text).trim();
 }
 
+/**
+ * ASK CONVERSATIONAL BREADTH R1 — the opening CLAUSE: a compound question joined by
+ * "and how / and why / and what" ("Czym jest życie i jak połączyć je ze śmiercią?") is read by
+ * its first clause, exactly as a multi-sentence question is read by its first sentence. The
+ * current-event gate still inspects the WHOLE text, so a current second clause keeps it news.
+ */
+function firstClause(text: string): string {
+  const sentence = firstSentence(text);
+  return (
+    sentence
+      .split(/\s*,?\s+(?:and|but|i|a|oraz)\s+(?=(?:how|why|what|jak|dlaczego|czemu|co)\b)/iu)[0]
+      ?.trim() ?? sentence
+  );
+}
+
 /** Extracts the subject span of an explanation question, if the shape is one. */
 function extractExplanationSubject(text: string): string | undefined {
-  const opening = firstSentence(text);
+  const opening = firstClause(text);
+  /* ASK CONVERSATIONAL BREADTH R1 — the conceptual shapes are tried after the landed frames.
+     Freshness is decided once, in classifyQueryIntent, for EVERY frame (see assertsFreshness). */
+  const patterns = [...EXPLANATION_PATTERNS, ...CONCEPTUAL_REFLECTION_PATTERNS];
 
-  for (const pattern of EXPLANATION_PATTERNS) {
+  for (const pattern of patterns) {
     const match = opening.match(pattern);
 
     if (!match) continue;
@@ -816,7 +924,10 @@ export function classifyQueryIntent(
     };
   }
 
-  if (matchesAny(text, ENTITY_BACKGROUND_MARKERS)) {
+  /* PR #72 CTO correction — a question that asserts freshness is never stable background. */
+  const fresh = input.freshnessOutranksBackground === true && assertsFreshness(text);
+
+  if (!fresh && matchesAny(text, ENTITY_BACKGROUND_MARKERS)) {
     return {
       intent: 'ENTITY_BACKGROUND',
       sides: [],
@@ -831,7 +942,7 @@ export function classifyQueryIntent(
    * strike" open like explanations and are plainly news questions; a
    * current-event marker is what keeps them out of this class.
    */
-  if (!matchesAny(text, CURRENT_EVENT_MARKERS)) {
+  if (!fresh && !matchesAny(text, CURRENT_EVENT_MARKERS)) {
     const subject = extractExplanationSubject(text);
 
     if (subject) {

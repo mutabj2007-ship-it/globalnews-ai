@@ -65,6 +65,8 @@ export interface AskR2Strings {
   readonly budgetRefused: string;
   /** LIVE ACCEPTANCE REPAIR R1 — the lead line of a retained-record answer. */
   readonly retainedAnswer: string;
+  /** GOVERNED ANSWER CONVERSATIONAL UX R1 — the label over suggested follow-up drafts. */
+  readonly followUpHint: string;
   /**
    * GOVERNED RETAINED GAP REPAIR R1 — a retained-record card never renders blank: the line shown
    * when a record answer has no lead and no note, per basis.
@@ -190,6 +192,7 @@ const EN: AskR2Strings = {
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
   retainedAnswer: 'Answered from a retained governed record — no AI was used.',
+  followUpHint: 'You could ask next',
   retainedFallback: {
     GOVERNED_NO_RECORD: 'No individual retained record exists for this question’s scope.',
     GOVERNED_RECORD: 'The retained record is shown below with its source.',
@@ -349,6 +352,7 @@ const PL: AskR2Strings = {
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
   retainedAnswer: 'Odpowiedź z zachowanego, zweryfikowanego zapisu — bez użycia AI.',
+  followUpHint: 'Możesz zapytać dalej',
   retainedFallback: {
     GOVERNED_NO_RECORD: 'Dla zakresu tego pytania nie istnieje osobny zachowany zapis.',
     GOVERNED_RECORD: 'Zachowany zapis wraz ze źródłem pokazano poniżej.',
