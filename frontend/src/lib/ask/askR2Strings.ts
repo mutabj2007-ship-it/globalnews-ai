@@ -50,6 +50,11 @@ export interface AskR2Strings {
     readonly retainedTo: string;
     readonly zero: string;
     /**
+     * ASK FIRST-ANSWER RETRIEVAL R3 — a provider REFUSED the search (rate limit, outage): the
+     * zero is a statement about us, never about the world. `{when}` placeholder.
+     */
+    readonly limited: string;
+    /**
      * CURRENT STATUS CORROBORATION R1 — a PARTIAL current-status answer: `{when}` is the
      * freshest corroborating report's publication time. It says "as of", never "verified now".
      */
@@ -58,6 +63,10 @@ export interface AskR2Strings {
   readonly clarificationFooter: string;
   readonly sourcesAfterChoice: string;
   readonly insufficientTitle: string;
+  /** R3 — the title when the empty result came from a refused search, not an answered one. */
+  readonly limitedTitle: string;
+  /** R3 — an answer that stands on the reporting that could be reached while a source was down. */
+  readonly limitedNote: string;
   readonly unavailable: string;
   /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
   readonly budgetRefused: string;
@@ -124,6 +133,30 @@ export interface AskR2Strings {
     readonly action: string;
   };
   /**
+   * ASK GUEST TRIAL R3 — the first-visit guest. Restrained, never promotional: three
+   * questions without signing in, a server-authoritative counter, and sign-in as the
+   * continuation of THIS conversation — never a paywall, never "unlimited".
+   */
+  readonly guest: {
+    readonly intro: string;
+    readonly remaining: (n: number) => string;
+    readonly notCounted: string;
+    readonly exhaustedTitle: string;
+    readonly exhaustedBody: string;
+    readonly continueAction: string;
+    readonly signInOptional: string;
+    readonly inProgress: string;
+    readonly cooldown: string;
+    readonly limited: string;
+    readonly attemptsExhausted: string;
+    readonly unavailable: string;
+    readonly signInForDeeper: string;
+    readonly privacy: string;
+    readonly cancelled: string;
+    readonly failed: string;
+    readonly resumed: string;
+  };
+  /**
    * ALPHA ENABLEMENT R1 (MC-055) — the reader's own library, by the scope the server read:
    * `signIn` without identity, `notAvailable` when its executor is not wired. NEUTRAL when
    * the payload names no scope.
@@ -179,11 +212,16 @@ const EN: AskR2Strings = {
     checked: 'Checked {when} · {sources}',
     retainedTo: 'Retained reporting to {when} · {sources}',
     zero: 'Checked {when} · 0 matching reports',
+    limited:
+      'Checked {when} · a news source was temporarily unavailable, so this was not a complete search',
     corroboratedAsOf: (n) => `As of {when} · ${n} independent reports agree`,
   },
   clarificationFooter: 'No sources searched · no compute used',
   sourcesAfterChoice: 'Sources appear after you choose',
   insufficientTitle: 'Not enough matching reporting',
+  limitedTitle: 'Search was limited',
+  limitedNote:
+    'A news source was temporarily unavailable. This answer uses the reporting that could be reached.',
   unavailable: 'Ask is unavailable right now. Nothing was run.',
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
@@ -263,6 +301,30 @@ const EN: AskR2Strings = {
     body: 'Sign in to ask GlobalNewsAI. Your question is kept below and was not sent — nothing was run.',
     action: 'Sign in to ask',
   },
+  guest: {
+    intro: 'Ask 3 questions — no sign-in required.',
+    remaining: (n) => `${n} guest question${n === 1 ? '' : 's'} remaining`,
+    notCounted: 'This one didn’t use a guest question.',
+    exhaustedTitle: 'GUEST QUESTIONS USED',
+    exhaustedBody:
+      'You’ve used your 3 guest questions. Sign in to continue this conversation and keep your answers.',
+    continueAction: 'Sign in to continue',
+    signInOptional: 'Sign in',
+    inProgress: 'Your previous question is still being answered. Your new question is kept below.',
+    cooldown:
+      'Guest questions are temporarily limited. Try again in a few minutes, or sign in. Your question is kept below.',
+    limited:
+      'The service is busy right now, so nothing was run. Try again shortly. Your question is kept below.',
+    attemptsExhausted:
+      'Guest questions are limited for this browser. Sign in to continue. Your question is kept below.',
+    unavailable: 'Guest questions are unavailable right now. Sign in to ask.',
+    signInForDeeper: 'Deeper analysis is available after you sign in.',
+    privacy:
+      'Guest conversations stay on this browser for up to 7 days. A private window or clearing cookies ends them.',
+    cancelled: 'Sign-in was cancelled. Your conversation is still here.',
+    failed: 'Sign-in did not complete. Your conversation is still here.',
+    resumed: 'Signed in. Your conversation continues here — nothing was run again.',
+  },
   personal: {
     SAVED_STORIES: {
       signIn: 'Sign in to compare your saved stories.',
@@ -333,6 +395,8 @@ const PL: AskR2Strings = {
     checked: 'Sprawdzono {when} · {sources}',
     retainedTo: 'Doniesienia do {when} · {sources}',
     zero: 'Sprawdzono {when} · 0 pasujących doniesień',
+    limited:
+      'Sprawdzono {when} · źródło wiadomości było chwilowo niedostępne, więc wyszukiwanie nie było pełne',
     corroboratedAsOf: (n) =>
       n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)
         ? `Stan na {when} · ${n} niezależne doniesienia są zgodne`
@@ -341,6 +405,9 @@ const PL: AskR2Strings = {
   clarificationFooter: 'Nie przeszukano źródeł · nie użyto obliczeń',
   sourcesAfterChoice: 'Źródła pojawią się po Twoim wyborze',
   insufficientTitle: 'Za mało pasujących doniesień',
+  limitedTitle: 'Wyszukiwanie było ograniczone',
+  limitedNote:
+    'Źródło wiadomości było chwilowo niedostępne. Ta odpowiedź opiera się na doniesieniach, do których udało się dotrzeć.',
   unavailable: 'Zapytaj AI jest teraz niedostępne. Nic nie zostało uruchomione.',
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
@@ -421,6 +488,36 @@ const PL: AskR2Strings = {
     title: 'WYMAGANE LOGOWANIE',
     body: 'Zaloguj się, aby zapytać GlobalNewsAI. Twoje pytanie czeka poniżej i nie zostało wysłane — nic nie uruchomiono.',
     action: 'Zaloguj się, aby zapytać',
+  },
+  guest: {
+    intro: 'Zadaj 3 pytania — bez logowania.',
+    /* Polish plural: 1 pytanie · 2–4 pytania (not 12–14) · 0, 5+ pytań. */
+    remaining: (n) =>
+      n === 1
+        ? 'Pozostało 1 pytanie gościa'
+        : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)
+          ? `Pozostały ${n} pytania gościa`
+          : `Pozostało ${n} pytań gościa`,
+    notCounted: 'To pytanie nie zostało policzone.',
+    exhaustedTitle: 'WYKORZYSTANO PYTANIA GOŚCIA',
+    exhaustedBody:
+      'Wykorzystano 3 pytania gościa. Zaloguj się, aby kontynuować tę rozmowę i zachować odpowiedzi.',
+    continueAction: 'Zaloguj się, aby kontynuować',
+    signInOptional: 'Zaloguj się',
+    inProgress: 'Poprzednie pytanie wciąż jest opracowywane. Nowe pytanie czeka poniżej.',
+    cooldown:
+      'Pytania gościa są chwilowo ograniczone. Spróbuj ponownie za kilka minut lub zaloguj się. Twoje pytanie czeka poniżej.',
+    limited:
+      'Serwis jest teraz obciążony, więc nic nie uruchomiono. Spróbuj ponownie za chwilę. Twoje pytanie czeka poniżej.',
+    attemptsExhausted:
+      'Pytania gościa są ograniczone w tej przeglądarce. Zaloguj się, aby kontynuować. Twoje pytanie czeka poniżej.',
+    unavailable: 'Pytania gościa są teraz niedostępne. Zaloguj się, aby zapytać.',
+    signInForDeeper: 'Pogłębiona analiza jest dostępna po zalogowaniu.',
+    privacy:
+      'Rozmowy gościa są przechowywane w tej przeglądarce do 7 dni. Okno prywatne lub usunięcie plików cookie je kończy.',
+    cancelled: 'Logowanie zostało anulowane. Twoja rozmowa jest nadal tutaj.',
+    failed: 'Logowanie nie zostało ukończone. Twoja rozmowa jest nadal tutaj.',
+    resumed: 'Zalogowano. Rozmowa trwa dalej tutaj — nic nie zostało uruchomione ponownie.',
   },
   personal: {
     SAVED_STORIES: {

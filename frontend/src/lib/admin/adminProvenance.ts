@@ -149,6 +149,15 @@ export const PROVENANCE = {
   // truth for a rollback count. The panel says "not instrumented"; a zero here
   // would read as "no rollback happened", which nobody measured.
   'admin-06.askLegacyRollback': 'C',
+
+  // ── OPERATIONS — incident controls ────────────────────────────────
+  // All A: every field is read from a live server endpoint that exists,
+  // and the write is the platform's first admin mutation. Nothing on this
+  // screen is projected, estimated or sampled.
+  'operations.environment': 'A', //   GET /admin/operations — validated deployment identity
+  'operations.switchState': 'A', //   effective, requested and deployment halves, separately
+  'operations.history': 'A', //       the append-only OperationalSwitchAudit record
+  'operations.notAvailable': 'C', //  monitoring and delivery: no substrate exists to control
   'admin-06.aiProviders': 'C',
   'admin-06.intelligenceModules': 'C',
 
@@ -211,6 +220,8 @@ export const PROVENANCE_SCREEN_PREFIXES = [
   'admin-07',
   'admin-08',
   'settings',
+  /* ADMIN OPERATIONS R1 — a named prefix, matching the OPERATIONS screen code. */
+  'operations',
 ] as const;
 
 /** Referenced so a route rename cannot silently orphan this registry. */

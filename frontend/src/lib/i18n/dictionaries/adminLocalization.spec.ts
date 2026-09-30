@@ -5,6 +5,7 @@ import { adminPl } from './adminPl';
 import { en } from './en';
 import { pl } from './pl';
 import { getDictionary } from './index';
+import { ALL_NAV_ITEMS } from '@/lib/admin/adminNavManifest';
 
 /**
  * F1.b — EN/PL parity for the Admin namespace.
@@ -42,6 +43,15 @@ const IDENTICAL_BY_DESIGN = new Set([
   'screens.systemHealth.statuses.DEGRADED',
   'screens.systemHealth.statuses.FAILING',
   'screens.systemHealth.statuses.UNKNOWN',
+  /*
+    ADMIN OPERATIONS R1 — three identifiers, not prose. 'ALPHA' is the deployment's
+    own name, and the two `system` values are the environment variables an operator
+    quotes verbatim when escalating. Translating any of them would make the screen
+    disagree with the deployment it is describing.
+  */
+  'screens.incidentControls.environment.ALPHA',
+  'screens.incidentControls.controls.pauseNewAiAnswers.system',
+  'screens.incidentControls.controls.stopAskR2Execution.system',
   'screens.systemHealth.statuses.NOT_IMPLEMENTED',
 ]);
 
@@ -110,6 +120,29 @@ describe('F1.b — Admin localisation', () => {
     expect(getDictionary('sw').admin.screens.audit.noStoreTitle).toBe(
       adminEn.screens.audit.noStoreTitle,
     );
+  });
+
+  /*
+    ADMIN OPERATIONS R1 — ALPHA FINISH. The sidebar and the top bar read
+    `t.nav.items[labelKey]` and fall back to the manifest's English label, so a
+    missing key is invisible in English and shows English inside the Polish shell.
+    "Incident controls" shipped that way. `askIntelligence` predates this milestone
+    and is recorded here as a known gap, not repaired, so this change stays narrow;
+    remove it from the list when it gains its labels.
+  */
+  it('every nav item has its own label in both languages, so the Polish shell never shows the English fallback', () => {
+    const KNOWN_GAPS = new Set(['askIntelligence']);
+    const missing = ALL_NAV_ITEMS.map((item) => item.labelKey)
+      .filter((key) => !KNOWN_GAPS.has(key))
+      .filter(
+        (key) =>
+          !(key in adminEn.nav.items) ||
+          !(key in adminPl.nav.items) ||
+          adminPl.nav.items[key as keyof typeof adminPl.nav.items] ===
+            adminEn.nav.items[key as keyof typeof adminEn.nav.items],
+      );
+    expect(missing).toEqual([]);
+    expect(adminPl.nav.items.incidentControls).toBe(adminPl.screens.incidentControls.title);
   });
 
   it('no admin component or page hardcodes user-facing English', () => {

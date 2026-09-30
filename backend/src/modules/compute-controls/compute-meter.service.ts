@@ -14,6 +14,10 @@ import {
   GLOBAL_DAY_SCOPE,
   GLOBAL_HOUR_SCOPE,
   GLOBAL_SCOPE,
+  accountGuestAttributionScope,
+  GUEST_POOL_DAY_SCOPE,
+  GUEST_POOL_HOUR_SCOPE,
+  guestScope,
   hourBucket,
   providerScope,
   withDeadline,
@@ -55,7 +59,21 @@ export interface ReserveInput {
   readonly provider: string;
   /** Estimated units: input + outputWeight × expected output (L-12, L-14). */
   readonly estimatedUnits: number;
+  /**
+   * ASK GUEST TRIAL R3 — present only for a server-issued guest session. Adds the guest
+   * scopes INSIDE the existing controls (never instead of them): the aggregate guest pool
+   * (hour, day), the session lifetime units, and the session concurrency.
+   */
+  readonly guest?: GuestComputeScope;
   readonly now?: Date;
+}
+
+export interface GuestComputeScope {
+  readonly sessionId: string;
+  readonly unitsPerSession: number;
+  readonly poolUnitsPerHour: number;
+  readonly poolUnitsPerDay: number;
+  readonly concurrentPerSession: number;
 }
 
 export type ReserveOutcome =
@@ -161,6 +179,39 @@ export class ComputeMeterService {
         charge: 'units',
       },
     ];
+    if (input.guest !== undefined) {
+      const g = input.guest;
+      steps.push(
+        {
+          control: 'guest-pool-hour',
+          kind: 'DEGRADED',
+          scope: GUEST_POOL_HOUR_SCOPE,
+          bucket: hour,
+          units: estimate,
+          ceiling: g.poolUnitsPerHour,
+          charge: 'units',
+        },
+        {
+          control: 'guest-pool-day',
+          kind: 'DEGRADED',
+          scope: GUEST_POOL_DAY_SCOPE,
+          bucket: day,
+          units: estimate,
+          ceiling: g.poolUnitsPerDay,
+          charge: 'units',
+        },
+        {
+          /* Lifetime of the session: one fixed bucket, like concurrency. */
+          control: 'guest-session-units',
+          kind: 'REFUSED',
+          scope: guestScope(g.sessionId),
+          bucket: CONCURRENCY_BUCKET,
+          units: estimate,
+          ceiling: g.unitsPerSession,
+          charge: 'units',
+        },
+      );
+    }
     if (input.accountId !== null) {
       steps.push({
         control: newAccount ? 'new-account-day' : 'account-day',
@@ -198,6 +249,17 @@ export class ComputeMeterService {
         bucket: CONCURRENCY_BUCKET,
         units: 1,
         ceiling: cfg.concurrentPerAccount,
+        charge: 'concurrency',
+      });
+    }
+    if (input.guest !== undefined) {
+      steps.push({
+        control: 'concurrent-guest',
+        kind: 'REFUSED',
+        scope: concurrencyScope(guestScope(input.guest.sessionId)),
+        bucket: CONCURRENCY_BUCKET,
+        units: 1,
+        ceiling: input.guest.concurrentPerSession,
         charge: 'concurrency',
       });
     }
@@ -251,6 +313,107 @@ export class ComputeMeterService {
       }
       this.logger.warn(`meter unavailable, model spend refused (${(error as Error).message})`);
       return { admitted: false, kind: 'DEGRADED', control: 'meter-unavailable' };
+    }
+  }
+
+  /**
+   * ASK GUEST TRIAL R3 — an atomic EVENT counter on the same meter table (L-8): +1 in
+   * `scope` for `bucket`, admitted only while the total stays within `ceiling`; an
+   * over-ceiling increment is compensated in place. Used for guest-session issuance and guest
+   * executions per trusted IP scope — counts, not model units. Fails CLOSED.
+   */
+  async admitCount(
+    scope: string,
+    bucket: Date,
+    ceiling: number,
+    db: MeterClient = this.prisma,
+  ): Promise<boolean> {
+    try {
+      return await withDeadline(
+        (async () => {
+          const total = await this.increment(db, scope, bucket, 1);
+          if (total > ceiling) {
+            await this.increment(db, scope, bucket, -1);
+            return false;
+          }
+          return true;
+        })(),
+        this.config.storeDeadlineMs,
+        'count',
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  /** Best-effort compensation of an event count taken for work that was then not created. */
+  async adjustCount(
+    scope: string,
+    bucket: Date,
+    delta: number,
+    db: MeterClient = this.prisma,
+  ): Promise<void> {
+    try {
+      await withDeadline(
+        this.increment(db, scope, bucket, delta),
+        this.config.storeDeadlineMs,
+        'count',
+      );
+    } catch {
+      /* the count stands — the conservative direction */
+    }
+  }
+
+  /**
+   * ASK GUEST TRIAL R3 · CONTINUATION BUDGET CLOSEOUT — what an identity change does to usage.
+   *
+   * Guest work was metered ONCE, when it ran: into the guest session scope (lifetime), the
+   * aggregate guest pool, the trusted IP scope, the provider and the global buckets. Those rows
+   * are never touched here — moving usage between identity-specific records must not debit the
+   * shared totals again, and login must not erase them.
+   *
+   * At a completed claim the guest's lifetime units are ATTRIBUTED to the account, once, in a
+   * separate `acctguest:<id>` day record with NO ceiling. It is an audit fact, not an
+   * eligibility control: the account's own `acct:<id>` bucket (new-account 15,000/day by
+   * default) counts only work the account itself runs. Debiting it with the guest's usage made
+   * the advertised "sign in to continue" follow-up predictably impossible for a new account,
+   * and charged the same work a second time against a second identity limit.
+   *
+   * Replay cannot repeat this: it runs only after a claim moved PENDING → CONSUMED exactly once.
+   * Best-effort by design: a failure here never blocks the reader's sign-in.
+   */
+  async recordGuestUsageForAccount(
+    accountId: string,
+    units: number,
+    now: Date = new Date(),
+    db: MeterClient = this.prisma,
+  ): Promise<void> {
+    if (!(units > 0)) return;
+    try {
+      await withDeadline(
+        this.increment(
+          db,
+          accountGuestAttributionScope(accountId),
+          dayBucket(now),
+          Math.ceil(units),
+        ),
+        this.config.storeDeadlineMs,
+        'attribute',
+      );
+    } catch {
+      this.logger.warn('guest-to-account usage attribution could not be written');
+    }
+  }
+
+  /** Units a guest session has consumed over its lifetime (0 when unreadable). */
+  async guestSessionUnits(sessionId: string, db: MeterClient = this.prisma): Promise<number> {
+    try {
+      const rows = await db.$queryRaw<{ units: bigint }[]>`
+        SELECT "units" FROM "ComputeMeter"
+        WHERE "scope" = ${guestScope(sessionId)} AND "bucketStart" = ${CONCURRENCY_BUCKET}`;
+      return rows.length === 0 ? 0 : Number(rows[0]!.units);
+    } catch {
+      return 0;
     }
   }
 

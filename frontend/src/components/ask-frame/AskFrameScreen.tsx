@@ -18,6 +18,7 @@ import {
 import { askR2PayloadOf, askV2Api } from '@/lib/api/askV2Api';
 import { revokeAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { ASK_SIGN_IN_HREF, keepQuestion, readKeptQuestion } from '@/lib/ask/askKeptQuestion';
+import { authReturnNotice, type GuestNotice } from '@/lib/ask/askGuestTrial';
 import type { AskShellMenuControl } from '@/lib/ask/askShellMenu';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
@@ -92,8 +93,26 @@ export function AskFrameScreen({
   const dict = getDictionary(locale);
   const { turns, pending, submit } = useAskConversation(locale, context);
   const returnPath = sanitizeReturnPath(params.get('return'));
-  const r2 = useAskR2Conversation(r2Locale, returnPath);
-  const { continueThread } = r2;
+  const r2 = useAskR2Conversation(r2Locale, returnPath, { guestTrial: true });
+  const { continueThread, setGuestNotice } = r2;
+  /* ASK GUEST TRIAL R3 — the server says a first-visit guest may ask; the client only mirrors it. */
+  const guestMode = r2.guestMode;
+  const guestRemaining = r2.guest?.remaining ?? r2.guest?.allowance ?? 3;
+  const guestExhausted =
+    guestMode && (r2.guest?.state === 'EXHAUSTED' || r2.guestNotice === 'EXHAUSTED');
+  const g = r2s.guest;
+  const noticeText: Partial<Record<GuestNotice, string>> = {
+    IN_PROGRESS: g.inProgress,
+    COOLDOWN: g.cooldown,
+    LIMITED: g.limited,
+    ATTEMPTS_EXHAUSTED: g.attemptsExhausted,
+    UNAVAILABLE: g.unavailable,
+    DEEPER: g.signInForDeeper,
+    CANCELLED: g.cancelled,
+    FAILED: g.failed,
+    RESUMED: g.resumed,
+  };
+  const notice = r2.guestNotice !== null ? (noticeText[r2.guestNotice] ?? null) : null;
   const operationId = params.get('operation');
   const [opened, setOpened] = useState<AskR2Turn | null>(null);
   const lastR2 = r2.turns[r2.turns.length - 1] ?? opened ?? undefined;
@@ -131,6 +150,11 @@ export function AskFrameScreen({
     const kept = readKeptQuestion();
     if (kept !== null) setQuestion(kept);
   }, []);
+  /* ASK GUEST TRIAL R3 — back from a cancelled/failed guest-continuation sign-in: say so. */
+  useEffect(() => {
+    const back = authReturnNotice(window.location.search);
+    if (back !== null) setGuestNotice(back);
+  }, [setGuestNotice]);
   /* "Open full analysis": ONE display-only read of the stored operation. No AI, no provider. */
   useEffect(() => {
     if (operationId === null) return;
@@ -138,24 +162,30 @@ export function AskFrameScreen({
        analysis grant, so no later arrival can spend a grant this navigation did not make. */
     revokeAnalysisConsent();
     let live = true;
-    void askV2Api.operation(operationId).then((read) => {
-      if (!live) return;
-      /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (E) — a follow-up continues the reopened thread. */
-      if (read.ok && read.value.threadId && read.value.language) {
-        continueThread(read.value.threadId, read.value.language);
-      }
-      setOpened(
-        read.ok
-          ? {
-              /* (C) the canonical question this result answered, from its own turn */
-              question: read.value.question ?? '',
-              operation: read.value,
-              payload: askR2PayloadOf(read.value),
-              expired: read.value.result?.expired === true,
-            }
-          : { question: '', failure: read.reason },
-      );
-    });
+    void askV2Api
+      .operation(operationId)
+      /* ASK GUEST TRIAL R3 — a guest reopens its own operation through the guest surface. */
+      .then((read) =>
+        !read.ok && read.reason === 'SIGNED_OUT' ? askV2Api.guestOperation(operationId) : read,
+      )
+      .then((read) => {
+        if (!live) return;
+        /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (E) — a follow-up continues the reopened thread. */
+        if (read.ok && read.value.threadId && read.value.language) {
+          continueThread(read.value.threadId, read.value.language);
+        }
+        setOpened(
+          read.ok
+            ? {
+                /* (C) the canonical question this result answered, from its own turn */
+                question: read.value.question ?? '',
+                operation: read.value,
+                payload: askR2PayloadOf(read.value),
+                expired: read.value.result?.expired === true,
+              }
+            : { question: '', failure: read.reason },
+        );
+      });
     return () => {
       live = false;
     };
@@ -211,6 +241,8 @@ export function AskFrameScreen({
     const outcome = await r2.submit(draft);
     if (outcome === 'legacy') void submit(draft);
     else if (outcome === 'signed-out') setQuestion(draft);
+    /* ASK GUEST TRIAL R3 — a guest refusal (exhausted, cooldown, busy) keeps the draft too; nothing ran. */
+    else if (outcome === 'kept') setQuestion(draft);
   }
   /* Back / Close: the captured return destination, else the previous page, else Home. */
   /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — a clarification's draft goes to the composer; nothing is sent. */
@@ -333,6 +365,13 @@ export function AskFrameScreen({
                 </p>
                 <h1 className={styles.emptyTitle}>{dict.askAi.inputPlaceholder}</h1>
                 <p className={styles.emptyLead}>{t.metaDescription}</p>
+                {guestMode && (
+                  /* ASK GUEST TRIAL R3 — restrained, factual; sign-in stays optional. */
+                  <div data-ask="guest-intro" className="mt-1 flex flex-col gap-1">
+                    <p className="text-[15px] font-semibold text-[#cfe2f2]">{g.intro}</p>
+                    <p className="text-[12.5px] leading-[1.45] text-[#8fa6c0]">{g.privacy}</p>
+                  </div>
+                )}
                 <QuestionsWorthAsking
                   label={t.regions.suggestions}
                   statement={t.states.suggestionsUnavailable}
@@ -367,6 +406,7 @@ export function AskFrameScreen({
             {opened !== null && (
               <div data-ask-latest={r2.turns.length === 0 ? '' : undefined}>
                 <AskR2TurnView
+                  canSave={!guestMode}
                   turn={opened}
                   locale={r2Locale}
                   context={context}
@@ -391,10 +431,11 @@ export function AskFrameScreen({
                     </summary>
                     <div className="mt-3">
                       <AskR2TurnView
+                        canSave={!guestMode}
                         turn={turn}
                         locale={r2Locale}
                         context={context}
-                        onRunDeeper={(q) => void r2.runDeeper(q)}
+                        onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
                       />
                     </div>
                   </details>
@@ -404,13 +445,42 @@ export function AskFrameScreen({
             {latestR2 !== undefined && (
               <div data-ask-latest="">
                 <AskR2TurnView
+                  canSave={!guestMode}
                   turn={latestR2}
                   locale={r2Locale}
                   context={context}
-                  onRunDeeper={(q) => void r2.runDeeper(q)}
+                  onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
                   onUseQuestion={draftQuestion}
                 />
+                {guestMode && latestR2.uncounted === true && (
+                  <p data-ask="guest-not-counted" className="mt-2 text-[13px] text-[#8fa6c0]">
+                    {g.notCounted}
+                  </p>
+                )}
               </div>
+            )}
+            {guestExhausted && (
+              /*
+                ASK GUEST TRIAL R3 — BELOW the full answer, never over it: every answer and
+                citation stays readable. Sign-in continues THIS conversation; the unsent
+                question waits in the composer and is not sent on return.
+              */
+              <section data-ask="guest-continue" role="status" className="mb-6 mt-2">
+                <div className="flex flex-col items-start gap-3 rounded-[12px] border border-[#2a6d9e] bg-[linear-gradient(#08263f,#051a2e)] p-3.5 md:p-5">
+                  <span className="inline-flex h-[26px] items-center rounded-[6px] border border-[#2a6d9e] bg-[#0a2a47] px-2.5 font-mono text-[11px] font-bold tracking-[0.08em] text-[#bfe3fb]">
+                    {g.exhaustedTitle}
+                  </span>
+                  <p className="text-[16px] leading-[1.55] text-[#cfe2f2]">{g.exhaustedBody}</p>
+                  <button
+                    type="button"
+                    data-ask="guest-sign-in"
+                    onClick={() => void r2.continueWithSignIn(question)}
+                    className="inline-flex min-h-[48px] items-center rounded-[10px] border border-[#1b6fa8] bg-[#0a6bd6] px-5 text-[15px] font-bold text-[#e6f5ff]"
+                  >
+                    {g.continueAction}
+                  </button>
+                </div>
+              </section>
             )}
             {turns.map((turn, i) => (
               <article key={i} data-ask-turn data-ask="turn" className={styles.legacyTurn}>
@@ -446,6 +516,32 @@ export function AskFrameScreen({
       </div>
 
       <div data-ask="composer-footer" className={styles.composerBar}>
+        {notice !== null && (
+          <p
+            data-ask="guest-notice"
+            role="status"
+            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
+          >
+            {notice}
+          </p>
+        )}
+        {guestMode && (
+          /* ASK GUEST TRIAL R3 — the server-authoritative counter; sign-in stays voluntary. */
+          <div
+            data-ask="guest-counter"
+            className="mx-auto mb-2 flex max-w-[760px] items-center justify-between gap-3 px-4 md:px-1 text-[12.5px] text-[#8fa6c0]"
+          >
+            <span>{g.remaining(guestRemaining)}</span>
+            <button
+              type="button"
+              data-ask="guest-sign-in-optional"
+              onClick={() => void r2.continueWithSignIn(question)}
+              className="inline-flex min-h-11 items-center px-2 font-semibold text-[#93cdf5] underline-offset-2 hover:underline"
+            >
+              {g.signInOptional}
+            </button>
+          </div>
+        )}
         <div className={styles.composerGrid}>
           <Composer
             value={question}

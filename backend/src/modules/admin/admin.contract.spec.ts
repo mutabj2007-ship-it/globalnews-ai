@@ -125,6 +125,23 @@ describe('F1.a admin module — source contracts', () => {
     const APPROVED_ADMIN_MUTATIONS: ReadonlyArray<[string, string]> = [
       ['admin-support.controller.ts', "@Post('tickets/:reference/messages')"],
       ['admin-support.controller.ts', "@Post('tickets/:reference/status')"],
+      /*
+        ADMIN OPERATIONS R1 — the third approved mutation, and the first that
+        changes platform behaviour rather than a support record.
+
+        THIS LIST IS THE BOUNDARY, AND IT WAS WIDENED BY EXACTLY ONE ROW ON
+        PURPOSE. The assertion below still fails if a write appears anywhere
+        else on the admin surface, so the read-only property is preserved for
+        every analytics route rather than relaxed across the surface. The
+        sibling assertions are untouched and still hold: PUT/PATCH/DELETE
+        remain banned outright, and every POST here must carry both CsrfGuard
+        and an explicit capability.
+
+        The capability on this one is `operations.control`, not
+        `analytics.view` — see rbac/capabilities.spec.ts, which asserts that
+        the two have genuinely different holder sets.
+      */
+      ['admin-operations.controller.ts', "@Post('switches/:name')"],
     ];
 
     it('exposes no PUT, PATCH or DELETE anywhere on the admin surface', () => {
@@ -145,6 +162,49 @@ describe('F1.a admin module — source contracts', () => {
       const approved = APPROVED_ADMIN_MUTATIONS.map(([file, decorator]) => `${file}::${decorator}`);
 
       expect(found.sort()).toEqual([...approved].sort());
+    });
+
+    /*
+      ADMIN OPERATIONS R1 — the boundary is widened, so prove it still bites.
+
+      A list that is edited to admit a new write is only a boundary if it
+      would still reject an unlisted one. The first assertion names the
+      read-only controllers explicitly; the second runs the SAME matcher over
+      a synthetic source carrying an unapproved POST and requires it to be
+      condemned. Without that control, this suite would pass just as happily
+      if the list had been replaced by `expect(true).toBe(true)`.
+    */
+    it('THE ANALYTICS SURFACE IS STILL READ-ONLY — no mutation in any reader controller', () => {
+      const readOnly = [
+        'admin-readonly.controller.ts',
+        'admin-global-reach.controller.ts',
+        'admin-ask-intelligence.controller.ts',
+        'admin.controller.ts',
+      ];
+      const checked: string[] = [];
+      controllers.forEach((file) => {
+        if (!readOnly.includes(basename(file))) return;
+        checked.push(basename(file));
+        expect({ file: basename(file), post: /@Post\(/.test(read(file)) }).toEqual({
+          file: basename(file),
+          post: false,
+        });
+      });
+      /* The sweep must actually have found them, or it proved nothing. */
+      expect(checked.sort()).toEqual([...readOnly].sort());
+    });
+
+    it('POSITIVE CONTROL — the approved-mutation matcher condemns an unlisted write', () => {
+      const rogue = `@Controller('admin/analytics')
+        export class RogueController {
+          @Post('recompute') recompute() { return null; }
+        }`;
+      const found = (rogue.match(/@Post\('[^']*'\)/g) ?? []).map(
+        (decorator) => `rogue.controller.ts::${decorator}`,
+      );
+      const approved = APPROVED_ADMIN_MUTATIONS.map(([file, decorator]) => `${file}::${decorator}`);
+      expect(found).toHaveLength(1);
+      expect(approved).not.toContain(found[0]);
     });
 
     it('every mutating admin route is CSRF-guarded and capability-gated', () => {

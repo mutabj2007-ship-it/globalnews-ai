@@ -27,7 +27,18 @@ import { withDeadline } from './compute-scopes';
  * and flipping it enables nothing while ASK_EXECUTION_PORT is unbound.
  */
 
-export const OPERATIONAL_SWITCHES = ['ASK_PUBLIC_COMPUTE_ENABLED', 'ASK_R2_ENABLED'] as const;
+/*
+  ASK GUEST TRIAL R3 — K-4 ASK_GUEST_TRIAL_ENABLED: the first-visit guest path only. Same two
+  keys, same default (OFF), same audit. It is SUBORDINATE, never a substitute: a guest request
+  still needs ASK_V2_ENABLED, ASK_R2_ENABLED and ASK_PUBLIC_COMPUTE_ENABLED. Turning it OFF
+  stops new guest work and leaves the signed-in path untouched; turning public compute OFF
+  stops guests and accounts alike.
+*/
+export const OPERATIONAL_SWITCHES = [
+  'ASK_PUBLIC_COMPUTE_ENABLED',
+  'ASK_R2_ENABLED',
+  'ASK_GUEST_TRIAL_ENABLED',
+] as const;
 export type OperationalSwitchName = (typeof OPERATIONAL_SWITCHES)[number];
 
 export interface SwitchState {
@@ -67,7 +78,28 @@ export class OperationalSwitchService implements OnApplicationBootstrap {
     db: SwitchDb = this.prisma,
   ): Promise<SwitchState> {
     const hit = this.cache.get(name);
-    if (hit && now - hit.at < this.meter.config.flagCacheMs) return hit.state;
+    if (hit) {
+      /*
+        M-A — A NEGATIVE AGE IS NOT A SMALL AGE.
+
+        This was `now - hit.at < flagCacheMs`, which treats every negative
+        difference as fresh. `hit.at` is whatever `now` the caller that populated
+        the entry passed, and `now` can legitimately be earlier than it: a caller
+        passing a forward-shifted clock poisons the entry for everyone after it,
+        and `Date.now()` itself steps backwards on an NTP correction or a
+        suspended container. When that happens the old predicate stops consulting
+        the store AT ALL — so an operator switching this kill switch off is never
+        seen, which presents as an incident that will not stop.
+
+        Requiring the age to be a real elapsed duration makes the entry stale
+        instead, the store is read, and the entry is re-stamped at the current
+        `now`, so a poisoned entry costs one extra read rather than freezing
+        forever. `NaN >= 0` is false, so a nonsense clock also falls through to
+        the store rather than pinning the cache.
+      */
+      const age = now - hit.at;
+      if (age >= 0 && age < this.meter.config.flagCacheMs) return hit.state;
+    }
     const literal = this.deploymentLiteralTrue(name);
     let state: SwitchState;
     try {

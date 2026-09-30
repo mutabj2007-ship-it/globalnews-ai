@@ -44,9 +44,9 @@ describe('F1.b — the twenty-route Admin manifest', () => {
     R1` adds one, by name, and the count is asserted here so that adding a twenty-second
     stays a deliberate, reviewable act rather than an edit nobody notices.
   */
-  it('declares exactly twenty-one routes, all distinct', () => {
-    expect(ALL_ADMIN_ROUTES).toHaveLength(21);
-    expect(new Set(ALL_ADMIN_ROUTES).size).toBe(21);
+  it('declares exactly twenty-two routes, all distinct', () => {
+    expect(ALL_ADMIN_ROUTES).toHaveLength(22);
+    expect(new Set(ALL_ADMIN_ROUTES).size).toBe(22);
   });
 
   it('reproduces the approved route map verbatim', () => {
@@ -72,6 +72,8 @@ describe('F1.b — the twenty-route Admin manifest', () => {
       '/admin/system/logs',
       '/admin/audit',
       '/admin/settings',
+      /* ADMIN OPERATIONS R1 — the incident surface, appended rather than renumbering. */
+      '/admin/operations',
     ]);
   });
 

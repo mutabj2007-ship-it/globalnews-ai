@@ -21,6 +21,14 @@ jest.mock('next/navigation', () => ({
 
 type Call = { method: string; path: string };
 let calls: Call[] = [];
+/*
+  ASK GUEST TRIAL R3 — /ask now makes ONE read-only GET /ask-v2/guest/status on open (0 AI,
+  0 provider, no session minted) so a first-visit guest can be told whether it may ask. It is
+  excluded from the request lists below, and asserted separately to be a GET and nothing more.
+  Here it answers 503, i.e. the guest trial is NOT available — the landed signed-out behaviour.
+*/
+const GUEST_STATUS = '/api/ask-v2/guest/status';
+const askCalls = (): Call[] => calls.filter((c) => c.path !== GUEST_STATUS);
 let threadsStatus = 401;
 const store = new Map<string, string>();
 
@@ -103,7 +111,10 @@ describe('POST /ask-v2/threads → 401 can never cause POST /analysis/news', () 
     '%s: one Ask V2 request, zero legacy analysis requests',
     async (locale) => {
       await renderAndAsk('Who was Hitler?', locale);
-      expect(calls).toEqual([{ method: 'POST', path: '/api/ask-v2/threads' }]);
+      expect(askCalls()).toEqual([{ method: 'POST', path: '/api/ask-v2/threads' }]);
+      expect(calls.filter((c) => c.path === GUEST_STATUS).every((c) => c.method === 'GET')).toBe(
+        true,
+      );
       expect(calls.some((c) => c.path.includes('/analysis/news'))).toBe(false);
       expect(calls.some((c) => c.path.includes('/turns'))).toBe(false);
     },
@@ -162,7 +173,7 @@ describe('the reader sees a sign-in requirement — never a reporting failure', 
     const again = back.root.find((n) => n.props['data-ask'] === 'composer-input');
     expect(again.props.value).toBe('Who was Hitler?');
     expect(store.has('globalnews-ai:ask-kept-question')).toBe(false);
-    expect(calls).toEqual([]);
+    expect(askCalls()).toEqual([]);
   });
 });
 
@@ -170,7 +181,7 @@ describe('the governed rollback is kept: Ask V2 disabled (404) still uses the ex
   it('404 → the question goes down the existing path, and no sign-in state is shown', async () => {
     threadsStatus = 404;
     const r = await renderAndAsk('What is happening in Kenya?', 'en');
-    expect(calls[0]).toEqual({ method: 'POST', path: '/api/ask-v2/threads' });
+    expect(askCalls()[0]).toEqual({ method: 'POST', path: '/api/ask-v2/threads' });
     expect(calls.some((c) => c.path.endsWith('/analysis/news'))).toBe(true);
     expect(byAsk(r, 'sign-in-required')).toHaveLength(0);
   });

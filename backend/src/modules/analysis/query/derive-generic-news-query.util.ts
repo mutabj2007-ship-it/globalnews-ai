@@ -35,6 +35,18 @@ const SUBJECT_EXTRACTION_PATTERNS: RegExp[] = [
   // article was rejected. Same optional trailing time-phrase group, and the
   // same non-greedy capture, that the Milestone #46 patterns below use.
   /^(?:what'?s|what\s+is)\s+(?:happening|going\s+on|new|the\s+latest)\s+(?:in|with|on|about|for|regarding)\s+(.+?)(?:\s+right\s+now|\s+today|\s+currently)?$/i,
+  /*
+    ASK FIRST-ANSWER RETRIEVAL R3 — THE CHANGE FRAME. "What has changed in Poland's economy?"
+    matched nothing above, so the whole sentence became the provider phrase and the phrase
+    the relevance gate demanded. Same shape as every rule here: closed, subject in group 1,
+    "strictly shorter" safety rule. The subject is kept exactly as written — a possessive
+    place ("Poland's economy") keeps both the place and the topic for the gate, and no time
+    phrase is removed ("… this week" stays in the subject, honestly unmatched).
+  */
+  // "What has/have changed in X" / "What is/are changing in X"
+  /^what\s+(?:has|have|is|are)\s+(?:changed|changing)\s+(?:in|with|for|about|regarding)\s+(.+)$/i,
+  // "What changed in X"
+  /^what\s+changed\s+(?:in|with|for|about|regarding)\s+(.+)$/i,
   // "latest/recent news on/about/regarding X"
   /^(?:latest|recent)\s+news\s+(?:on|about|regarding)\s+(.+)$/i,
   // "latest/recent X news" (non-greedy so it captures the shortest middle phrase)

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { AnalysisService } from '../analysis/service/analysis.service';
 import { AnalysisConfigService } from '../analysis/config/analysis-config.service';
@@ -12,7 +12,11 @@ import {
   CircuitBreakerService,
   type BreakerOutcome,
 } from '../compute-controls/circuit-breaker.service';
-import { ComputeMeterService } from '../compute-controls/compute-meter.service';
+import {
+  ComputeMeterService,
+  type GuestComputeScope,
+} from '../compute-controls/compute-meter.service';
+import { GuestSessionService } from './guest/guest-session.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { ASK_MODEL_MAX_ATTEMPTS } from '../compute-controls/compute-controls.config';
 import { SpecialistClaimRegistry } from '../specialist/specialist-claim.registry';
@@ -127,6 +131,8 @@ function routeFor(request: Readonly<AskRequest>, deps: PlannerDeps): AskR2Route 
       computeConsent: 'GRANTED',
       requestInstant: new Date().toISOString(),
       ...(who === undefined ? {} : { identityVerified: who.accountId !== null }),
+      /* ASK R3 CONTINUITY — frozen C already reads conversationSubject from it. */
+      ...(who?.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
     },
     deps,
   );
@@ -247,13 +253,21 @@ function placeSpansOf(route: AskR2Route): Record<string, string> {
   return spans;
 }
 
-export function planRevision(request: Readonly<AskRequest>, route: AskR2Route): string {
+export function planRevision(
+  request: Readonly<AskRequest>,
+  route: AskR2Route,
+  /* ASK R3 CONTINUITY — the same words after a different prior question are a different
+     request: the revision (and so the stored-result fingerprint) must differ. Omitted when
+     absent, so every first-turn revision is byte-identical to before. */
+  priorQuestion?: string | null,
+): string {
   return hashIdentity([
     ASK_R2_ADAPTER_VERSION,
     request.question,
     request.language,
     request.intent,
     routeSignature(route),
+    ...(priorQuestion ? [`prior:${priorQuestion}`] : []),
   ]);
 }
 
@@ -294,6 +308,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     specialists: SpecialistClaimRegistry,
     private readonly observations: AskObservationService,
     private readonly intelligence: AskSpecialistReadCoordinator,
+    /* ASK GUEST TRIAL R3 — optional so every existing construction is unchanged; a guest
+       request without it is refused (fail closed). */
+    @Optional() private readonly guests?: GuestSessionService,
   ) {
     this.deps = {
       /*
@@ -337,7 +354,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const missing = missingSeams(route);
     if (missing.length > 0)
       throw new AskExecutionRefused(`ASK_R2_SEAM_MISSING:${missing.join(',')}`);
-    const revision = planRevision(request, route);
+    const revision = planRevision(request, route, askRequestContext.getStore()?.priorQuestion);
     const typedPlaces = route.envelope.geography.candidates.filter(
       (c) => c.source !== 'MAP_GEOGRAPHY_CONTEXT',
     );
@@ -410,7 +427,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
   ): Promise<ExecutionResult> {
     const route = routeFor(request, this.deps);
     this.observeRoute(route, draft);
-    if (planRevision(request, route) !== plan.revision) {
+    const priorQuestion = askRequestContext.getStore()?.priorQuestion ?? null;
+    if (planRevision(request, route, priorQuestion) !== plan.revision) {
       throw new AskExecutionRefused('ASK_PLAN_REVISION_MISMATCH');
     }
 
@@ -426,6 +444,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       what they want to know, with the place they named kept as the candidate. 0 AI, no
       control touched.
     */
+    /* ASK R3 CONTINUITY — unchanged on purpose: even WITH a prior question, "And Kenya?" keeps
+       asking. Inheriting the prior subject would need the place AND the topic combined, which
+       the landed readings do not do; answering the bare place would answer a question the
+       reader did not ask. Pronoun follow-ups ("How does this affect…?") DO carry context. */
     const continuation = readContinuationEllipsis(request.question);
     if (continuation !== null) {
       return this.result(
@@ -522,9 +544,28 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
 
     const analysisConfig = this.analysisConfig.get();
+    /* ASK GUEST TRIAL R3 — a guest adds its scopes INSIDE every existing control. Invalid guest
+       settings fail closed for the guest only (checked again here, before any spend). */
+    let guest: GuestComputeScope | undefined;
+    if (who.guestSessionId != null) {
+      if (this.guests === undefined) throw new AskExecutionRefused('GUEST_TRIAL_NOT_CONFIGURED');
+      const trial = this.guests.trialConfig();
+      if (!trial.valid) throw new AskExecutionRefused('GUEST_TRIAL_NOT_CONFIGURED');
+      if (!(await this.switches.isEnabled('ASK_GUEST_TRIAL_ENABLED'))) {
+        throw new AskExecutionRefused('GUEST_TRIAL_UNAVAILABLE');
+      }
+      guest = {
+        sessionId: who.guestSessionId,
+        unitsPerSession: trial.limits.unitsPerSession,
+        poolUnitsPerHour: trial.limits.poolUnitsPerHour,
+        poolUnitsPerDay: trial.limits.poolUnitsPerDay,
+        concurrentPerSession: trial.limits.concurrentPerSession,
+      };
+    }
     const reservation = await this.meter.reserve({
       accountId: who.accountId,
       ipScope: who.ipScope,
+      ...(guest === undefined ? {} : { guest }),
       provider,
       estimatedUnits: estimateUnits(
         request.question.length,
@@ -557,7 +598,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         request.question,
         request.language,
         undefined,
-        undefined,
+        /* ASK R3 CONTINUITY — the landed path routes a follow-up by the PRIOR USER question
+           (never the prior AI answer); the model still receives this turn's own question. */
+        who.priorQuestion ?? undefined,
         undefined,
         undefined,
         {

@@ -12,6 +12,7 @@ import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
 import { mapAskLayoutFor, mapAskPanelStyle, type MapAskLayout } from '@/lib/ask/mapAskGeometry';
 import { dashboardHref } from '@/lib/ask/dashboardContext';
 import { ASK_CANONICAL_ROUTE } from '@/lib/ask/askFrame';
+import { ADMIN_ROUTES } from '@/lib/admin/adminRoutes';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
 import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
@@ -184,10 +185,25 @@ const ASK_CONTINUITY_ROUTES: ReadonlySet<string> = new Set([
   '/saved',
 ]);
 
+/**
+ * ADMIN OPERATIONS R1 — ALPHA FINISH. Admin is an operator console with its own
+ * shell, not a reader surface. Measured on the Incident controls screen: the fixed
+ * launcher sat over the "Last change" line and the confirm panel at 390, and over
+ * the Advanced panel's right edge at 1440. Nothing under /admin opens the dock by
+ * intent, so it unmounts there entirely — the screen used to pause AI answers does
+ * not also carry a reader AI entry point. Every other route is unchanged.
+ */
+export function isAdminRoute(pathname: string | null): boolean {
+  /* The Admin root comes from adminRoutes.ts, the only place an /admin path is written. */
+  const root = ADMIN_ROUTES.overview;
+  return pathname === root || (pathname?.startsWith(`${root}/`) ?? false);
+}
+
 export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   const pathname = usePathname();
   // The dedicated dashboard owns its composer; unmount the global dock entirely.
   if (pathname === ASK_CANONICAL_ROUTE) return null;
+  if (isAdminRoute(pathname)) return null;
   if (props.standaloneRoot === true && pathname === '/') return null;
   /* STANDALONE CONTINUITY SHELL CLOSURE — Recent and Saved are standalone Ask surfaces
      whose "New question" already opens Ask, so the platform dock unmounts, as on /ask. */

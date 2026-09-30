@@ -42,11 +42,14 @@ export class AuthController {
    * return-destination.util.ts and is applied by AuthService.
    */
   @Get('google')
-  startGoogleAuth(
+  async startGoogleAuth(
     @Query('returnTo') returnTo: string | undefined,
+    /* ASK GUEST TRIAL R3 — 'ask-guest' only selects the flow; it carries no identifier. */
+    @Query('intent') intent: string | undefined,
+    @Req() request: Request,
     @Res() response: Response,
-  ): void {
-    this.authService.startGoogleAuth(response, returnTo);
+  ): Promise<void> {
+    await this.authService.startGoogleAuth(response, returnTo, intent, request);
   }
 
   @Get('google/callback')
