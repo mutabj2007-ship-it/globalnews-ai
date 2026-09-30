@@ -570,7 +570,7 @@ describe('H — handoff rows, frontend half (source and behaviour of the /ask su
     mount();
   });
 
-  it('H-G7 / H-T14: Sand appears only with a deep compute action, never charged — D25 vs H recorded', () => {
+  it('H-G7 / H-T14: the deep-compute copy appears only with a deep compute action, never charged, no Sand number (CTO B1)', () => {
     const usedIn = [
       'components/ask-frame/AskR2TurnView.tsx',
       'components/ask-frame/AskDeepConfirm.tsx',
@@ -585,7 +585,7 @@ describe('H — handoff rows, frontend half (source and behaviour of the /ask su
       'EXPLAINED',
       'D25 copy vs H row',
       { chargingEnabled: false },
-      'Authority conflict for the Product Owner: H says Sand renders in NO state while charging is off; the frozen D25 design (contract §17) shows a 24-Sand ESTIMATE on the Run-deeper control and its confirmation, with "Sand charging is not enabled in Alpha, so nothing is deducted". Nothing is charged (SAND_CHARGING_ENABLED=false literal; ledger off).',
+      'RESOLVED by the CTO Public Beta ruling (B1): no Sand number, estimate or billing promise renders on the Run-deeper control or its confirmation — the explicit confirmation step remains. Nothing is charged (SAND_CHARGING_ENABLED=false literal; ledger off).',
     );
     expect(g7).toBe('PASS');
     mount();
