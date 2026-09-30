@@ -87,6 +87,7 @@ import { hasUnsupportedLocalReportingClaim } from '../validation/comparison-cove
 import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
 import {
   assessBriefCompliance,
+  assessSingleSourceDiscipline,
   detectDevelopmentBreadth,
 } from '../validation/brief-compliance.util';
 import { acceptExecutiveBrief, withholdExecutiveBrief } from '../validation/brief-fail-closed.util';
@@ -3375,6 +3376,16 @@ export class AnalysisService {
               compliant: false,
               reason: 'Publisher locality is not established for this comparison.',
             };
+          }
+          /* ASK PUBLIC BETA RETRIEVAL REPAIR R1 — one cluster: the brief must say so (withheld otherwise). */
+          const singleSource = assessSingleSourceDiscipline(
+            analysis.summary,
+            developmentBreadth,
+            requestedLanguage,
+          );
+          if (briefVerdict.compliant && !singleSource.compliant) {
+            this.logger.warn(`Executive brief withheld: ${singleSource.reason ?? ''}`);
+            briefVerdict = { ...briefVerdict, compliant: false, reason: singleSource.reason };
           }
           const repairRequested = false;
 

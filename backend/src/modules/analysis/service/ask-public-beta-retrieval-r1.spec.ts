@@ -23,7 +23,10 @@ import {
   withoutFormatDirectives,
 } from '../query/compound-retrieval-plan.util';
 import { scoreCompoundPlanRelevance } from '../../news/relevance/compound-plan-relevance.util';
-import { detectDevelopmentBreadth } from '../validation/brief-compliance.util';
+import {
+  assessSingleSourceDiscipline,
+  detectDevelopmentBreadth,
+} from '../validation/brief-compliance.util';
 import {
   buildDevelopmentBreadthSection,
   buildSingleSourceBasisSection,
@@ -139,7 +142,7 @@ function stub(
   } as unknown as NewsProvider;
 }
 
-async function services(primary: NewsProvider[], fallback: NewsProvider[] = []) {
+async function services(primary: NewsProvider[], fallback: NewsProvider[] = [], summary?: string) {
   const persistence = {
     persistMany: jest.fn().mockResolvedValue(new Map()),
     findRecent: jest.fn().mockResolvedValue([]),
@@ -168,7 +171,8 @@ async function services(primary: NewsProvider[], fallback: NewsProvider[] = []) 
     isMock: false,
     analyzeNews: async (input: AnalysisProviderInput) => {
       inputs.push(input);
-      return mock.analyzeNews(input);
+      const out = (await mock.analyzeNews(input)) as Record<string, unknown>;
+      return summary === undefined ? out : { ...out, summary };
     },
   };
   const config = {
@@ -349,5 +353,80 @@ describe('6 · syndicated copies do not satisfy independence twice (claims disci
     const breadth = detectDevelopmentBreadth([EN_SECURITY, EN_DISPLACED]);
     expect(breadth.clusters).toBe(2);
     expect(buildSingleSourceBasisSection(breadth)).toBe('');
+  });
+});
+
+describe('6b · the single-source rule binds the RENDERED answer, not only the prompt', () => {
+  const BROAD =
+    'Multiple reports confirm that security across eastern DRC has deteriorated nationwide, with the region now verified to be under rebel control.';
+  const NARROW =
+    'One qualifying report currently indicates that M23 rebels seized another town in North Kivu; this rests on a single report.';
+
+  it('unit: one cluster + multi-source certainty or no one-report attribution → non-compliant', () => {
+    const one = detectDevelopmentBreadth([SYNDICATED_A, SYNDICATED_B]);
+    expect(assessSingleSourceDiscipline(BROAD, one, 'en').compliant).toBe(false);
+    expect(
+      assessSingleSourceDiscipline('Security in eastern DRC has deteriorated.', one, 'en')
+        .compliant,
+    ).toBe(false);
+    expect(assessSingleSourceDiscipline(NARROW, one, 'en').compliant).toBe(true);
+    expect(
+      assessSingleSourceDiscipline('Jeden raport wskazuje, że gospodarka zwolniła.', one, 'pl')
+        .compliant,
+    ).toBe(true);
+    /* Two independent clusters: the rule does not apply. */
+    const two = detectDevelopmentBreadth([EN_SECURITY, EN_DISPLACED]);
+    expect(assessSingleSourceDiscipline(BROAD, two, 'en').compliant).toBe(true);
+  });
+
+  it('Q2 with ONE surviving cluster: a broad multi-source brief is withheld from the reader', async () => {
+    const calls: Call[] = [];
+    const gnews = stub('gnews', () => [SYNDICATED_A, SYNDICATED_B, COG], calls);
+    const { service, inputs } = await services([gnews], [], BROAD);
+
+    const result = await service.analyzeNews(Q2, 'en');
+
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0].developmentBreadth?.clusters).toBe(1);
+    expect(result.analysis?.briefState?.availability).toBe('withheld-non-compliant');
+    expect(result.analysis?.summary).toBe('');
+  });
+
+  it('Q2 with ONE surviving cluster: an explicitly single-source brief is served', async () => {
+    const calls: Call[] = [];
+    const gnews = stub('gnews', () => [SYNDICATED_A, SYNDICATED_B], calls);
+    const { service } = await services([gnews], [], NARROW);
+
+    const result = await service.analyzeNews(Q2, 'en');
+
+    expect(result.analysis?.briefState?.availability).toBe('accepted');
+    expect(result.analysis?.summary).toBe(NARROW);
+  });
+
+  it('Q3 Poland economy with one report: prompt carries the rule and a national conclusion is withheld', async () => {
+    const calls: Call[] = [];
+    const wire = a(
+      'pl-gdp',
+      "Poland's economy grew 3.2% in the second quarter, statistics office says",
+      'Gross domestic product in Poland rose 3.2% year on year in the second quarter of 2026.',
+    );
+    const gnews = stub('gnews', () => [wire], calls);
+    const broad = await services(
+      [gnews],
+      [],
+      "Poland's economy is booming nationwide, as multiple reports confirm.",
+    );
+    const withheld = await broad.service.analyzeNews(Q3, 'en');
+    expect(withheld.articles.map((x) => x.id)).toEqual(['pl-gdp']);
+    expect(broad.inputs[0].developmentBreadth?.clusters).toBe(1);
+    expect(withheld.analysis?.briefState?.availability).toBe('withheld-non-compliant');
+
+    const narrow = await services(
+      [stub('gnews', () => [wire], [])],
+      [],
+      "One qualifying report currently indicates Poland's GDP rose 3.2% year on year in Q2 2026.",
+    );
+    const served = await narrow.service.analyzeNews(Q3, 'en');
+    expect(served.analysis?.briefState?.availability).toBe('accepted');
   });
 });

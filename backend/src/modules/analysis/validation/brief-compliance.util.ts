@@ -203,3 +203,48 @@ Binding constraints on this repair:
 - Every other field of the analysis should carry the same content as before.
 `.trim();
 }
+
+/*
+  ASK PUBLIC BETA RETRIEVAL REPAIR R1 — SINGLE-SOURCE DISCIPLINE, ENFORCED ON THE ANSWER.
+
+  The prompt tells the model when only ONE independent reporting cluster survives. That is a
+  fact given, not a guarantee, so the brief is also checked here — the same fail-closed
+  vocabulary as the structural check: a non-compliant brief is WITHHELD, never rewritten, and
+  no second provider call is made.
+
+  On a one-cluster evidence set the brief must (1) say it rests on one report, and (2) not
+  present multi-source certainty ("multiple reports", "sources agree", "verified",
+  "corroborated", "widely reported"). Attribution vocabulary exists for English and Polish;
+  for any other response language only the certainty check applies, because silence in a
+  language the check cannot read must never read as a violation.
+*/
+const SINGLE_SOURCE_ATTRIBUTION: Readonly<Record<string, RegExp>> = {
+  en: /\b(?:one|a single|single|only one|sole)\s+(?:qualifying\s+|available\s+|retrieved\s+|independent\s+|published\s+)?(?:report|source|article|outlet)\b/i,
+  pl: /(?:\bjed(?:en|no|na|nego|nym|nej)\b|\bjedyn\p{L}*)\s+(?:\p{L}+\s+)?(?:raport\p{L}*|źródł\p{L}*|doniesie\p{L}*|artyku\p{L}*|relacj\p{L}*)/iu,
+};
+const MULTI_SOURCE_CERTAINTY =
+  /\b(?:multiple|several|numerous|many|various)\s+(?:independent\s+)?(?:reports|sources|outlets)\b|\b(?:sources|reports|outlets)\s+(?:agree|concur|confirm)\b|\bwidely\s+reported\b|\bindependently\s+(?:confirmed|verified)\b|\bcorroborat\w*|\bverified\b/i;
+
+export function assessSingleSourceDiscipline(
+  summary: string,
+  breadth: DevelopmentBreadth,
+  responseLanguage: string,
+): { readonly compliant: boolean; readonly reason?: string } {
+  if (breadth.clusters !== 1 || summary.trim() === '') return { compliant: true };
+  if (MULTI_SOURCE_CERTAINTY.test(summary)) {
+    return {
+      compliant: false,
+      reason:
+        'Only one independent reporting cluster qualified, and the brief presents multi-source certainty.',
+    };
+  }
+  const attribution = SINGLE_SOURCE_ATTRIBUTION[responseLanguage];
+  if (attribution !== undefined && !attribution.test(summary)) {
+    return {
+      compliant: false,
+      reason:
+        'Only one independent reporting cluster qualified, and the brief does not say it rests on one report.',
+    };
+  }
+  return { compliant: true };
+}
