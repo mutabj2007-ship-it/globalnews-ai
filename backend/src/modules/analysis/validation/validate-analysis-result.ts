@@ -876,7 +876,9 @@ export function validateAnalysisResult(
     url: article.url,
     publishedAt: article.publishedAt,
     /* R2 — what that timestamp IS, carried only when the provider proved it (never defaulted). */
-    ...(article.publishedAtBasis === undefined ? {} : { publishedAtBasis: article.publishedAtBasis }),
+    ...(article.publishedAtBasis === undefined
+      ? {}
+      : { publishedAtBasis: article.publishedAtBasis }),
   }));
 
   // Milestone #41 — built from the FINAL VALIDATED keyFacts/agreements/
