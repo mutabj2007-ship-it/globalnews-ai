@@ -24,6 +24,8 @@ import { BookmarkTurnDto, CreateThreadDto, HistoryPageDto, QuoteTurnDto } from '
 import { AskV2Service } from './ask-v2.service';
 import { AskRequestContextInterceptor } from './ask-request-context';
 import { AskAccessObservationFilter } from './ask-access-observation.filter';
+import { accountPrincipal } from './guest/ask-principal';
+import { GuestClaimService } from './guest/guest-claim.service';
 
 /**
  * ASK R2 INTEGRATION R1 · §14 — PRIVACY HEADERS ON EVERY ASK V2 RESPONSE.
@@ -69,7 +71,20 @@ export class AskV2EnabledGuard implements CanActivate {
 @UseInterceptors(AskRequestContextInterceptor)
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class AskV2Controller {
-  constructor(private readonly ask: AskV2Service) {}
+  constructor(
+    private readonly ask: AskV2Service,
+    private readonly claims: GuestClaimService,
+  ) {}
+
+  /**
+   * ASK GUEST TRIAL R3 — after a Google sign-in that consumed a guest claim, the conversation
+   * this account just continued (a short window only). Resolved server-side from the consumed
+   * claim, so no thread id ever travels through the OAuth URLs. The thread has already moved
+   * to this account, so it is read through the ordinary account routes.
+   */
+  @Get('continuation') async continuation(@CurrentUser() user: { id: string }) {
+    return { threadId: await this.claims.continuationFor(user.id) };
+  }
   @Get('threads') list(@CurrentUser() user: { id: string }) {
     return this.ask.listThreads(user.id);
   }
@@ -78,10 +93,10 @@ export class AskV2Controller {
     @Param('id') id: string,
     @Query() page: HistoryPageDto,
   ) {
-    return this.ask.getThread(user.id, id, page.after);
+    return this.ask.getThread(accountPrincipal(user.id), id, page.after);
   }
   @Get('operations/:id') operation(@CurrentUser() user: { id: string }, @Param('id') id: string) {
-    return this.ask.getOperation(user.id, id);
+    return this.ask.getOperation(accountPrincipal(user.id), id);
   }
 
   /*
@@ -116,36 +131,36 @@ export class AskV2Controller {
   @Post('threads')
   @UseGuards(CsrfGuard)
   create(@CurrentUser() user: { id: string }, @Body() dto: CreateThreadDto) {
-    return this.ask.createThread(user.id, dto);
+    return this.ask.createThread(accountPrincipal(user.id), dto);
   }
   @Post('threads/:id/turns')
   @UseGuards(CsrfGuard)
   submit(@CurrentUser() user: { id: string }, @Param('id') id: string, @Body() dto: QuoteTurnDto) {
-    return this.ask.submit(user.id, id, dto);
+    return this.ask.submit(accountPrincipal(user.id), id, dto);
   }
   @Post('threads/:id/quote')
   @UseGuards(CsrfGuard)
   quote(@CurrentUser() user: { id: string }, @Param('id') id: string, @Body() dto: QuoteTurnDto) {
-    return this.ask.quote(user.id, id, dto);
+    return this.ask.quote(accountPrincipal(user.id), id, dto);
   }
   @Post('operations/:id/accept')
   @UseGuards(CsrfGuard)
   accept(@CurrentUser() user: { id: string }, @Param('id') id: string) {
-    return this.ask.accept(user.id, id);
+    return this.ask.accept(accountPrincipal(user.id), id);
   }
   @Post('operations/:id/reserve')
   @UseGuards(CsrfGuard)
   reserve(@CurrentUser() user: { id: string }, @Param('id') id: string) {
-    return this.ask.reserve(user.id, id);
+    return this.ask.reserve(accountPrincipal(user.id), id);
   }
   @Post('operations/:id/execute')
   @UseGuards(CsrfGuard)
   execute(@CurrentUser() user: { id: string }, @Param('id') id: string) {
-    return this.ask.execute(user.id, id);
+    return this.ask.execute(accountPrincipal(user.id), id);
   }
   @Post('operations/:id/release')
   @UseGuards(CsrfGuard)
   release(@CurrentUser() user: { id: string }, @Param('id') id: string) {
-    return this.ask.release(user.id, id);
+    return this.ask.release(accountPrincipal(user.id), id);
   }
 }

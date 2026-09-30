@@ -1,3 +1,4 @@
+import { accountPrincipal } from './guest/ask-principal';
 import { Test } from '@nestjs/testing';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { INestApplication } from '@nestjs/common';
@@ -44,12 +45,12 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
   });
   const cookie = () => [`${SESSION_COOKIE_NAME}=valid`, `${CSRF_COOKIE_NAME}=csrf`];
   async function quoted() {
-    return service.quote(userId, threadId, quoteInput());
+    return service.quote(accountPrincipal(userId), threadId, quoteInput());
   }
   async function reserved() {
     const op = await quoted();
-    await service.accept(userId, op.operationId);
-    await service.reserve(userId, op.operationId);
+    await service.accept(accountPrincipal(userId), op.operationId);
+    await service.reserve(accountPrincipal(userId), op.operationId);
     return op;
   }
   const success = (): ExecutionResult => ({
@@ -118,7 +119,7 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
       ],
     });
     threadId = (
-      await service.createThread(userId, {
+      await service.createThread(accountPrincipal(userId), {
         idempotencyKey: 'thread',
         language: 'en',
         returnPath: '/map?country=RW',
@@ -166,27 +167,31 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
         .expect(201);
       expect(execute).toHaveBeenCalledTimes(1);
       expect(await db.computeOperation.count({ where: { userId } })).toBe(1);
-      expect((await service.getThread(userId, threadId)).turns).toHaveLength(1);
+      expect((await service.getThread(accountPrincipal(userId), threadId)).turns).toHaveLength(1);
     },
   );
   test.each(['deep-analysis', 'research-report'] as const)(
     '%s submission stops at confirmation but its stored reuse does not',
     async (intent) => {
       const input = { ...quoteInput(), intent };
-      const op = await service.submit(userId, threadId, input);
+      const op = await service.submit(accountPrincipal(userId), threadId, input);
       expect(op.requiresAcceptance).toBe(true);
       expect(op.status).toBe('QUOTED');
       expect(execute).not.toHaveBeenCalled();
-      await expect(service.execute(userId, op.operationId)).rejects.toThrow('Reserve');
-      await expect(service.reserve(userId, op.operationId)).rejects.toThrow('Accept');
+      await expect(service.execute(accountPrincipal(userId), op.operationId)).rejects.toThrow(
+        'Reserve',
+      );
+      await expect(service.reserve(accountPrincipal(userId), op.operationId)).rejects.toThrow(
+        'Accept',
+      );
       await expect(
         db.computeOperation.update({ where: { id: op.operationId }, data: { status: 'RESERVED' } }),
       ).rejects.toThrow();
-      await service.accept(userId, op.operationId);
-      await service.reserve(userId, op.operationId);
-      const completed = await service.execute(userId, op.operationId);
+      await service.accept(accountPrincipal(userId), op.operationId);
+      await service.reserve(accountPrincipal(userId), op.operationId);
+      const completed = await service.execute(accountPrincipal(userId), op.operationId);
       execute.mockClear();
-      const reused = await service.submit(userId, threadId, {
+      const reused = await service.submit(accountPrincipal(userId), threadId, {
         ...input,
         idempotencyKey: randomUUID(),
       });
@@ -202,10 +207,10 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     const input = quoteInput('ordinary-retry');
     await Promise.all(
       Array.from({ length: 6 }, (_, index) =>
-        (index % 2 ? service : replica).submit(userId, threadId, input),
+        (index % 2 ? service : replica).submit(accountPrincipal(userId), threadId, input),
       ),
     );
-    const final = await service.submit(userId, threadId, input);
+    const final = await service.submit(accountPrincipal(userId), threadId, input);
     expect(final.status).toBe('COMPLETED');
     expect(final.acceptedAt).toBeNull();
     expect(execute).toHaveBeenCalledTimes(1);
@@ -219,8 +224,10 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     const op = await quoted();
     expect(op.requiresAcceptance).toBe(false);
     expect(execute).not.toHaveBeenCalled();
-    expect((await service.accept(userId, op.operationId)).acceptedAt).toBeNull();
-    expect((await service.execute(userId, op.operationId)).status).toBe('COMPLETED');
+    expect((await service.accept(accountPrincipal(userId), op.operationId)).acceptedAt).toBeNull();
+    expect((await service.execute(accountPrincipal(userId), op.operationId)).status).toBe(
+      'COMPLETED',
+    );
   });
   test.each([
     { deepRequested: true },
@@ -230,12 +237,12 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     'contradictory plan %j is rejected before operation, turn, ledger or execution',
     async (flags) => {
       plan = { ...plan, contextual: true, ...flags };
-      await expect(service.submit(userId, threadId, quoteInput())).rejects.toThrow(
-        'ASK_PLAN_INVALID',
-      );
+      await expect(
+        service.submit(accountPrincipal(userId), threadId, quoteInput()),
+      ).rejects.toThrow('ASK_PLAN_INVALID');
       expect(execute).not.toHaveBeenCalled();
       expect(await db.computeOperation.count({ where: { userId } })).toBe(0);
-      expect((await service.getThread(userId, threadId)).turns).toHaveLength(0);
+      expect((await service.getThread(accountPrincipal(userId), threadId)).turns).toHaveLength(0);
     },
   );
   test('pending contradictory R1 plan releases before the adapter can execute', async () => {
@@ -244,13 +251,13 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
       where: { id: op.operationId },
       data: { plan: { ...plan, contextual: true, deepRequested: true } },
     });
-    const result = await service.execute(userId, op.operationId);
+    const result = await service.execute(accountPrincipal(userId), op.operationId);
     expect(result.status).toBe('RELEASED');
     expect(result.failureCode).toBe('ASK_PLAN_INVALID');
     expect(execute).not.toHaveBeenCalled();
   });
   test('single-turn submission preserves HTTP ownership and strict payload boundary', async () => {
-    const other = await service.createThread(otherUserId, {
+    const other = await service.createThread(accountPrincipal(otherUserId), {
       idempotencyKey: 'other-turn',
       language: 'en',
     });
@@ -272,7 +279,7 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
   test('thread create is durable, owner-scoped and idempotent across replicas', async () => {
     const threads = await Promise.all(
       Array.from({ length: 6 }, (_, i) =>
-        (i % 2 ? service : replica).createThread(userId, {
+        (i % 2 ? service : replica).createThread(accountPrincipal(userId), {
           idempotencyKey: 'thread',
           language: 'en',
           returnPath: '/map?country=RW',
@@ -280,41 +287,46 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
       ),
     );
     expect(new Set(threads.map((t) => t.id))).toEqual(new Set([threadId]));
-    expect((await replica.getThread(userId, threadId)).returnPath).toBe('/map?country=RW');
+    expect((await replica.getThread(accountPrincipal(userId), threadId)).returnPath).toBe(
+      '/map?country=RW',
+    );
     await expect(
-      service.createThread(userId, { idempotencyKey: 'thread', language: 'pl' }),
+      service.createThread(accountPrincipal(userId), { idempotencyKey: 'thread', language: 'pl' }),
     ).rejects.toThrow('different request');
-    await expect(service.getThread(otherUserId, threadId)).rejects.toThrow();
+    await expect(service.getThread(accountPrincipal(otherUserId), threadId)).rejects.toThrow();
   });
   test('concurrent unique turns allocate a stable ordered sequence', async () => {
     await Promise.all(
       Array.from({ length: 6 }, (_, i) =>
         (i % 2 ? service : replica).quote(
-          userId,
+          accountPrincipal(userId),
           threadId,
           quoteInput(`key-${i}`, `Question ${i}`),
         ),
       ),
     );
-    const result = await replica.getThread(userId, threadId);
+    const result = await replica.getThread(accountPrincipal(userId), threadId);
     expect(result.turns.map((t) => t.sequence)).toEqual([1, 2, 3, 4, 5, 6]);
-    expect((await service.getThread(userId, threadId, 3)).turns.map((t) => t.sequence)).toEqual([
-      4, 5, 6,
-    ]);
+    expect(
+      (await service.getThread(accountPrincipal(userId), threadId, 3)).turns.map((t) => t.sequence),
+    ).toEqual([4, 5, 6]);
   });
   test('simultaneous duplicate submission creates one operation, one turn and one quote ledger row', async () => {
     const input = quoteInput('one-submission');
     const ops = await Promise.all(
       Array.from({ length: 8 }, (_, i) =>
-        (i % 2 ? service : replica).quote(userId, threadId, input),
+        (i % 2 ? service : replica).quote(accountPrincipal(userId), threadId, input),
       ),
     );
     expect(new Set(ops.map((o) => o.operationId)).size).toBe(1);
     expect(await db.computeOperation.count({ where: { userId } })).toBe(1);
-    expect((await service.getThread(userId, threadId)).turns).toHaveLength(1);
+    expect((await service.getThread(accountPrincipal(userId), threadId)).turns).toHaveLength(1);
     expect(ops[0].ledger.map((l) => l.entryType)).toEqual(['QUOTE']);
     await expect(
-      service.quote(userId, threadId, { ...input, question: 'A different question' }),
+      service.quote(accountPrincipal(userId), threadId, {
+        ...input,
+        question: 'A different question',
+      }),
     ).rejects.toThrow('different request');
   });
   test('deep quote, acceptance and reservation are distinct; no execution before acceptance', async () => {
@@ -322,20 +334,28 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     const op = await quoted();
     expect(op.status).toBe('QUOTED');
     expect(op.acceptedAt).toBeNull();
-    await expect(service.reserve(userId, op.operationId)).rejects.toThrow('Accept');
-    await expect(service.execute(userId, op.operationId)).rejects.toThrow('Reserve');
-    expect((await service.accept(userId, op.operationId)).status).toBe('ACCEPTED');
-    expect((await service.reserve(userId, op.operationId)).status).toBe('RESERVED');
+    await expect(service.reserve(accountPrincipal(userId), op.operationId)).rejects.toThrow(
+      'Accept',
+    );
+    await expect(service.execute(accountPrincipal(userId), op.operationId)).rejects.toThrow(
+      'Reserve',
+    );
+    expect((await service.accept(accountPrincipal(userId), op.operationId)).status).toBe(
+      'ACCEPTED',
+    );
+    expect((await service.reserve(accountPrincipal(userId), op.operationId)).status).toBe(
+      'RESERVED',
+    );
     expect(execute).not.toHaveBeenCalled();
   });
   test('cross-replica reserve/execute/settle retries never double-dispatch or double-charge', async () => {
     plan.countryCount = 3;
     const input = quoteInput('retry');
-    const op = await service.quote(userId, threadId, input);
-    await service.accept(userId, op.operationId);
+    const op = await service.quote(accountPrincipal(userId), threadId, input);
+    await service.accept(accountPrincipal(userId), op.operationId);
     await Promise.all([
-      service.reserve(userId, op.operationId),
-      replica.reserve(userId, op.operationId),
+      service.reserve(accountPrincipal(userId), op.operationId),
+      replica.reserve(accountPrincipal(userId), op.operationId),
     ]);
     execute.mockImplementation(async () => {
       await new Promise((resolve) => setTimeout(resolve, 30));
@@ -343,11 +363,11 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     });
     await Promise.all(
       Array.from({ length: 6 }, (_, i) =>
-        (i % 2 ? service : replica).execute(userId, op.operationId),
+        (i % 2 ? service : replica).execute(accountPrincipal(userId), op.operationId),
       ),
     );
-    await service.settle(userId, op.operationId, 'retried-token', success());
-    const finished = await replica.getOperation(userId, op.operationId);
+    await service.settle(op.operationId, 'retried-token', success());
+    const finished = await replica.getOperation(accountPrincipal(userId), op.operationId);
     expect(finished.status).toBe('COMPLETED');
     expect(execute).toHaveBeenCalledTimes(1);
     expect(finished.ledger.map((l) => l.entryType).sort()).toEqual(['QUOTE', 'RESERVE', 'SETTLE']);
@@ -355,61 +375,73 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     expect(finished.chargingEnabled).toBe(false);
     expect(finished.quotedSand).toBe(24);
     prepare.mockClear();
-    expect((await replica.quote(userId, threadId, input)).operationId).toBe(op.operationId);
+    expect((await replica.quote(accountPrincipal(userId), threadId, input)).operationId).toBe(
+      op.operationId,
+    );
     expect(prepare).not.toHaveBeenCalled();
     expect(await db.computeOperation.count({ where: { userId } })).toBe(1);
   });
   test('stored result reuse survives client reconnection and invokes no execution/provider', async () => {
     const first = await reserved();
-    await service.execute(userId, first.operationId);
+    await service.execute(accountPrincipal(userId), first.operationId);
     await replicaDb.$disconnect();
     await replicaDb.$connect();
     execute.mockClear();
-    const second = await replica.quote(userId, threadId, quoteInput());
+    const second = await replica.quote(accountPrincipal(userId), threadId, quoteInput());
     expect(second.computeClass).toBe('STORED');
     expect(second.quotedSand).toBe(0);
-    await replica.accept(userId, second.operationId);
-    await replica.reserve(userId, second.operationId);
-    const replay = await replica.execute(userId, second.operationId);
+    await replica.accept(accountPrincipal(userId), second.operationId);
+    await replica.reserve(accountPrincipal(userId), second.operationId);
+    const replay = await replica.execute(accountPrincipal(userId), second.operationId);
     expect(replay.result?.id).toBe(
-      (await service.getOperation(userId, first.operationId)).result?.id,
+      (await service.getOperation(accountPrincipal(userId), first.operationId)).result?.id,
     );
     expect(replay.result?.displayOnly).toBe(true);
     expect(execute).not.toHaveBeenCalled();
   });
   test('language, revision and ownership prevent unsafe stored reuse', async () => {
     const first = await reserved();
-    await service.execute(userId, first.operationId);
-    const pl = await service.quote(userId, threadId, { ...quoteInput(), language: 'pl' });
+    await service.execute(accountPrincipal(userId), first.operationId);
+    const pl = await service.quote(accountPrincipal(userId), threadId, {
+      ...quoteInput(),
+      language: 'pl',
+    });
     expect(pl.computeClass).toBe('FRESH_BOUNDED');
     plan.revision = 'new-evidence';
     expect((await quoted()).computeClass).toBe('FRESH_BOUNDED');
     plan.revision = 'authoritative-revision-1';
-    const otherThread = await service.createThread(otherUserId, {
+    const otherThread = await service.createThread(accountPrincipal(otherUserId), {
       idempotencyKey: 't',
       language: 'en',
     });
-    expect((await service.quote(otherUserId, otherThread.id, quoteInput())).computeClass).toBe(
-      'FRESH_BOUNDED',
-    );
-    await expect(service.getOperation(otherUserId, first.operationId)).rejects.toThrow();
+    expect(
+      (await service.quote(accountPrincipal(otherUserId), otherThread.id, quoteInput()))
+        .computeClass,
+    ).toBe('FRESH_BOUNDED');
+    await expect(
+      service.getOperation(accountPrincipal(otherUserId), first.operationId),
+    ).rejects.toThrow();
   });
   test('history and contextual navigation are read-only and cannot pass prior prose to execution', async () => {
     const first = await reserved();
-    await service.execute(userId, first.operationId);
+    await service.execute(accountPrincipal(userId), first.operationId);
     const before = await db.sandLedgerEntry.count();
     prepare.mockClear();
     execute.mockClear();
     await service.listThreads(userId);
-    await service.getThread(userId, threadId);
-    await service.getOperation(userId, first.operationId);
+    await service.getThread(accountPrincipal(userId), threadId);
+    await service.getOperation(accountPrincipal(userId), first.operationId);
     expect(await db.sandLedgerEntry.count()).toBe(before);
     expect(prepare).not.toHaveBeenCalled();
     expect(execute).not.toHaveBeenCalled();
-    const next = await service.quote(userId, threadId, quoteInput('next', 'What about today?'));
-    await service.accept(userId, next.operationId);
-    await service.reserve(userId, next.operationId);
-    await service.execute(userId, next.operationId);
+    const next = await service.quote(
+      accountPrincipal(userId),
+      threadId,
+      quoteInput('next', 'What about today?'),
+    );
+    await service.accept(accountPrincipal(userId), next.operationId);
+    await service.reserve(accountPrincipal(userId), next.operationId);
+    await service.execute(accountPrincipal(userId), next.operationId);
     expect(execute.mock.calls[0][0]).toEqual({
       question: 'What about today?',
       language: 'en',
@@ -420,30 +452,32 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
   });
   test('expired stored quote releases instead of silently executing fresh work', async () => {
     const first = await reserved();
-    await service.execute(userId, first.operationId);
+    await service.execute(accountPrincipal(userId), first.operationId);
     const second = await quoted();
-    await service.accept(userId, second.operationId);
-    await service.reserve(userId, second.operationId);
+    await service.accept(accountPrincipal(userId), second.operationId);
+    await service.reserve(accountPrincipal(userId), second.operationId);
     await db.storedResult.update({
       where: { id: second.storedResultId! },
       data: { expiresAt: new Date(0) },
     });
     execute.mockClear();
-    expect((await service.execute(userId, second.operationId)).failureCode).toBe(
+    expect((await service.execute(accountPrincipal(userId), second.operationId)).failureCode).toBe(
       'STORED_RESULT_EXPIRED',
     );
     expect(execute).not.toHaveBeenCalled();
-    expect((await service.getOperation(userId, first.operationId)).result?.expired).toBe(true);
+    expect(
+      (await service.getOperation(accountPrincipal(userId), first.operationId)).result?.expired,
+    ).toBe(true);
   });
   test('deleted stored result cannot fall through to fresh execution', async () => {
     const first = await reserved();
-    await service.execute(userId, first.operationId);
+    await service.execute(accountPrincipal(userId), first.operationId);
     const second = await quoted();
-    await service.accept(userId, second.operationId);
-    await service.reserve(userId, second.operationId);
+    await service.accept(accountPrincipal(userId), second.operationId);
+    await service.reserve(accountPrincipal(userId), second.operationId);
     await db.storedResult.delete({ where: { id: second.storedResultId! } });
     execute.mockClear();
-    expect((await service.execute(userId, second.operationId)).failureCode).toBe(
+    expect((await service.execute(accountPrincipal(userId), second.operationId)).failureCode).toBe(
       'STORED_RESULT_EXPIRED',
     );
     expect(execute).not.toHaveBeenCalled();
@@ -455,13 +489,17 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
       where: { id: op.operationId },
       data: { quoteExpiresAt: new Date(0) },
     });
-    await expect(service.accept(userId, op.operationId)).rejects.toThrow('expired');
+    await expect(service.accept(accountPrincipal(userId), op.operationId)).rejects.toThrow(
+      'expired',
+    );
     const other = await reserved();
     await db.computeOperation.update({
       where: { id: other.operationId },
       data: { quoteExpiresAt: new Date(0) },
     });
-    expect((await service.execute(userId, other.operationId)).status).toBe('RELEASED');
+    expect((await service.execute(accountPrincipal(userId), other.operationId)).status).toBe(
+      'RELEASED',
+    );
     expect(execute).not.toHaveBeenCalled();
   });
   test.each(['throw', 'failure', 'invalid-json', 'revision-mismatch'])(
@@ -477,13 +515,13 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
           ...(kind === 'revision-mismatch' ? { evidenceRevision: 'other' } : {}),
         };
       });
-      await service.execute(userId, op.operationId);
+      await service.execute(accountPrincipal(userId), op.operationId);
       await Promise.all([
-        service.release(userId, op.operationId),
-        replica.release(userId, op.operationId),
-        service.execute(userId, op.operationId),
+        service.release(accountPrincipal(userId), op.operationId),
+        replica.release(accountPrincipal(userId), op.operationId),
+        service.execute(accountPrincipal(userId), op.operationId),
       ]);
-      const final = await service.getOperation(userId, op.operationId);
+      const final = await service.getOperation(accountPrincipal(userId), op.operationId);
       expect(final.status).toBe('RELEASED');
       expect(final.ledger.filter((l) => l.entryType === 'RELEASE')).toHaveLength(1);
       expect(final.ledger.some((l) => l.entryType === 'SETTLE')).toBe(false);
@@ -503,12 +541,12 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
         finish = r;
       });
     });
-    const running = service.execute(userId, op.operationId);
+    const running = service.execute(accountPrincipal(userId), op.operationId);
     await began;
-    await replica.release(userId, op.operationId);
+    await replica.release(accountPrincipal(userId), op.operationId);
     finish(success());
     await running;
-    const final = await service.getOperation(userId, op.operationId);
+    const final = await service.getOperation(accountPrincipal(userId), op.operationId);
     expect(final.status).toBe('RELEASED');
     expect(final.result).toBeNull();
     expect(await db.storedResult.count({ where: { userId } })).toBe(0);
@@ -519,18 +557,18 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
       where: { id: op.operationId },
       data: { status: 'RUNNING', runToken: 'lost', leaseExpiresAt: new Date(0) },
     });
-    const result = await replica.execute(userId, op.operationId);
+    const result = await replica.execute(accountPrincipal(userId), op.operationId);
     expect(result.failureCode).toBe('EXECUTION_OUTCOME_UNKNOWN');
     expect(execute).not.toHaveBeenCalled();
   });
   test('refund is a separate zero-value terminal event and concurrent retries write it once', async () => {
     const op = await reserved();
-    await service.execute(userId, op.operationId);
+    await service.execute(accountPrincipal(userId), op.operationId);
     await Promise.all([
-      service.refund(userId, op.operationId),
-      replica.refund(userId, op.operationId),
+      service.refund(accountPrincipal(userId), op.operationId),
+      replica.refund(accountPrincipal(userId), op.operationId),
     ]);
-    const result = await service.getOperation(userId, op.operationId);
+    const result = await service.getOperation(accountPrincipal(userId), op.operationId);
     expect(result.status).toBe('REFUNDED');
     expect(result.ledger.filter((l) => l.entryType === 'REFUND')).toHaveLength(1);
     expect(result.ledger.every((l) => l.finalSand === 0)).toBe(true);
@@ -539,7 +577,7 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     delete configValues.SAND_LEDGER_ENABLED;
     const op = await reserved();
     configValues.SAND_LEDGER_ENABLED = 'true';
-    const result = await service.execute(userId, op.operationId);
+    const result = await service.execute(accountPrincipal(userId), op.operationId);
     expect(result.ledger).toEqual([]);
     expect(result.chargingEnabled).toBe(false);
   });
@@ -565,20 +603,24 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
       `CREATE TRIGGER ask_v2_test_reject_settle BEFORE INSERT ON "SandLedgerEntry" FOR EACH ROW EXECUTE FUNCTION ask_v2_test_reject_settle()`,
     );
     try {
-      await expect(service.execute(userId, op.operationId)).rejects.toThrow();
-      expect((await service.getOperation(userId, op.operationId)).status).toBe('RUNNING');
+      await expect(service.execute(accountPrincipal(userId), op.operationId)).rejects.toThrow();
+      expect((await service.getOperation(accountPrincipal(userId), op.operationId)).status).toBe(
+        'RUNNING',
+      );
       expect(await db.storedResult.count({ where: { userId } })).toBe(0);
-      await replica.execute(userId, op.operationId);
+      await replica.execute(accountPrincipal(userId), op.operationId);
       expect(execute).toHaveBeenCalledTimes(1);
     } finally {
       await db.$executeRawUnsafe('DROP TRIGGER ask_v2_test_reject_settle ON "SandLedgerEntry"');
       await db.$executeRawUnsafe('DROP FUNCTION ask_v2_test_reject_settle()');
     }
-    expect((await service.release(userId, op.operationId)).status).toBe('RELEASED');
+    expect((await service.release(accountPrincipal(userId), op.operationId)).status).toBe(
+      'RELEASED',
+    );
   });
   test('account deletion cascades every private Ask record', async () => {
     const op = await reserved();
-    await service.execute(userId, op.operationId);
+    await service.execute(accountPrincipal(userId), op.operationId);
     await db.user.delete({ where: { id: userId } });
     expect(await db.askThread.count({ where: { userId } })).toBe(0);
     expect(await db.computeOperation.count({ where: { userId } })).toBe(0);
@@ -621,11 +663,11 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     privateAndVaried(
       await request(server).get('/ask-v2/operations/unknown').set('Cookie', cookie()).expect(404),
     );
-    const otherThread = await service.createThread(otherUserId, {
+    const otherThread = await service.createThread(accountPrincipal(otherUserId), {
       idempotencyKey: 'privacy-other',
       language: 'en',
     });
-    const other = await service.quote(otherUserId, otherThread.id, quoteInput());
+    const other = await service.quote(accountPrincipal(otherUserId), otherThread.id, quoteInput());
     const ownerNotFound = await request(server)
       .get(`/ask-v2/operations/${other.operationId}`)
       .set('Cookie', cookie())
@@ -639,7 +681,7 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     expect(ownerNotFound.body).toEqual(missing.body);
     /* A refusal: the same idempotency key reused for a different question is a 409. */
     const key = randomUUID();
-    await service.quote(userId, threadId, quoteInput(key, 'First question'));
+    await service.quote(accountPrincipal(userId), threadId, quoteInput(key, 'First question'));
     privateAndVaried(
       await request(server)
         .post(`/ask-v2/threads/${threadId}/quote`)
@@ -670,11 +712,11 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     expect(execute).not.toHaveBeenCalled();
   });
   test('HTTP ownership checks cover every operation mutation and thread route', async () => {
-    const otherThread = await service.createThread(otherUserId, {
+    const otherThread = await service.createThread(accountPrincipal(otherUserId), {
       idempotencyKey: 'other',
       language: 'pl',
     });
-    const op = await service.quote(otherUserId, otherThread.id, quoteInput());
+    const op = await service.quote(accountPrincipal(otherUserId), otherThread.id, quoteInput());
     for (const path of [
       `/ask-v2/threads/${otherThread.id}`,
       `/ask-v2/operations/${op.operationId}`,

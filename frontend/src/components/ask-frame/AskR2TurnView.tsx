@@ -68,6 +68,7 @@ export function AskR2TurnView({
   onRunDeeper,
   displayOnly = false,
   onUseQuestion,
+  canSave = true,
 }: {
   readonly turn: AskR2Turn;
   readonly locale: AskR2Locale;
@@ -80,6 +81,8 @@ export function AskR2TurnView({
    * placed in the composer as a DRAFT. Nothing is sent until the reader presses Ask.
    */
   readonly onUseQuestion?: (question: string) => void;
+  /** ASK GUEST TRIAL R3 — saving is an account feature; a guest turn shows no Save control. */
+  readonly canSave?: boolean;
 }): JSX.Element {
   const s = askR2Strings(locale);
   const payload = turn.payload ?? null;
@@ -173,7 +176,7 @@ export function AskR2TurnView({
           </span>
         )}
         {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
-        <AskTurnSave operation={turn.operation} locale={locale} />
+        {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
       </div>
 
       {view.badge === 'clar' ? (

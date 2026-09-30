@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -29,6 +30,26 @@ import {
   validatePlan,
 } from './ask-compute.contract';
 import { CreateThreadDto, QuoteTurnDto } from './ask-v2.dto';
+import { type AskPrincipal, guestRefusal, ownerOf } from './guest/ask-principal';
+import {
+  assertMayStart,
+  countsAsGuestAnswer,
+  readAllowance,
+  releaseReasonOf,
+  reserveSlot,
+  settleSlot,
+} from './guest/guest-allowance';
+import { GuestSessionService } from './guest/guest-session.service';
+import { askRequestContext } from './ask-request-context';
+import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
+import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
+import { ComputeMeterService } from '../compute-controls/compute-meter.service';
+import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
+import {
+  dayBucket,
+  GUEST_EXECUTIONS_ALL_SCOPE,
+  guestExecutionScope,
+} from '../compute-controls/compute-scopes';
 
 type Tx = Prisma.TransactionClient;
 const TERMINAL = ['COMPLETED', 'RELEASED', 'REFUNDED'];
@@ -36,6 +57,26 @@ const TERMINAL = ['COMPLETED', 'RELEASED', 'REFUNDED'];
 /* PUBLIC BETA ASK CONTINUITY R1 — Recent/Saved bounds and the preview clamp. */
 const RECENT_THREAD_LIMIT = 50;
 const SAVED_BOOKMARK_LIMIT = 100;
+/* ASK GUEST TRIAL R3 — a guest's own threads (resume after reload / cancelled sign-in). */
+const GUEST_THREAD_LIMIT = 10;
+/*
+  ASK R3 CONTINUITY — the question a follow-up continues. Turns newest first; the nearest one
+  that is NOT itself a follow-up (by the landed path's own detectors) is the subject-bearing
+  anchor, so "How does this affect X?" after "Why did that happen?" still continues the
+  subject both refer to. Bounded; with no subject-bearing turn in reach, the most recent
+  question is passed and the landed path decides as before.
+  Only a question that IS a follow-up (the same detectors) receives a prior: a self-contained
+  question, an ellipsis or a reference to the answer's content is planned, fingerprinted and
+  answered exactly as before, so asking the same question again still reuses its stored result.
+*/
+const ANCHOR_LOOKBACK = 10;
+function anchorQuestionOf(question: string, newestFirst: readonly string[]): string | null {
+  if (!isSubjectFollowUp(question) && !isAnaphoricFollowUp(question)) return null;
+  if (newestFirst.length === 0) return null;
+  const anchor = newestFirst.find((q) => !isSubjectFollowUp(q) && !isAnaphoricFollowUp(q));
+  return anchor ?? newestFirst[0];
+}
+
 /** `nextSequence` starts at 1, so the first turn is this sequence exactly. */
 const FIRST_TURN_SEQUENCE = 1;
 /** One fixed clamp for every caller, so no surface has to choose where to cut. */
@@ -45,16 +86,53 @@ function clampPreview(question: string): string {
   return question.length > PREVIEW_MAX ? question.slice(0, PREVIEW_MAX) : question;
 }
 
+/**
+ * ASK GUEST TRIAL R3 — every method takes a SERVER-resolved principal: an account (session
+ * cookie) or a guest session (guest cookie). `ownerOf(principal)` is the one ownership
+ * predicate, so every existing account path keeps exactly its old `where: { userId }` and a
+ * guest can only ever reach rows whose guestSessionId is its own. Recent, Saved and bookmarks
+ * stay account-only and still take a bare userId.
+ */
 @Injectable()
 export class AskV2Service {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     @Inject(ASK_EXECUTION_PORT) private readonly execution: AskExecutionPort,
+    /* ASK GUEST TRIAL R3 — optional: without them the service behaves exactly as before for
+       accounts, and every guest path fails closed (GUEST_TRIAL_NOT_CONFIGURED). */
+    @Optional() private readonly guests?: GuestSessionService,
+    @Optional() private readonly switches?: OperationalSwitchService,
+    @Optional() private readonly meter?: ComputeMeterService,
   ) {}
+
+  private guestDeps(): {
+    guests: GuestSessionService;
+    switches: OperationalSwitchService;
+    meter: ComputeMeterService;
+  } {
+    if (!this.guests || !this.switches || !this.meter)
+      throw guestRefusal('GUEST_TRIAL_NOT_CONFIGURED');
+    return { guests: this.guests, switches: this.switches, meter: this.meter };
+  }
 
   private user(userId: string): void {
     if (!userId) throw new UnauthorizedException();
+  }
+
+  private principal(p: AskPrincipal): void {
+    if (p.kind === 'account' ? !p.userId : !p.guestSessionId) throw new UnauthorizedException();
+  }
+
+  /**
+   * ASK R3 CONTINUITY — run `work` with the reader's own previous question in this thread in the
+   * request context. Only when a server-held context exists (the controller's interceptor set
+   * it); nothing is manufactured here, so a caller without one fails exactly as before.
+   */
+  private withPrior<T>(priorQuestion: string | null, work: () => Promise<T>): Promise<T> {
+    const store = askRequestContext.getStore();
+    if (store === undefined || priorQuestion === null) return work();
+    return askRequestContext.run({ ...store, priorQuestion }, work);
   }
 
   /** All database mutations retry serializable conflicts. Never run a provider in here. */
@@ -70,15 +148,15 @@ export class AskV2Service {
       }
     }
   }
-  private async thread(tx: Tx, userId: string, id: string) {
-    this.user(userId);
-    const row = await tx.askThread.findFirst({ where: { id, userId } });
+  private async thread(tx: Tx, p: AskPrincipal, id: string) {
+    this.principal(p);
+    const row = await tx.askThread.findFirst({ where: { id, ...ownerOf(p) } });
     if (!row) throw new NotFoundException();
     return row;
   }
-  private async owned(tx: Tx, userId: string, id: string) {
-    this.user(userId);
-    const row = await tx.computeOperation.findFirst({ where: { id, userId } });
+  private async owned(tx: Tx, p: AskPrincipal, id: string) {
+    this.principal(p);
+    const row = await tx.computeOperation.findFirst({ where: { id, ...ownerOf(p) } });
     if (!row) throw new NotFoundException();
     return row;
   }
@@ -104,13 +182,13 @@ export class AskV2Service {
       throw new ConflictException('Quote expired; submit a new key');
   }
 
-  async createThread(userId: string, input: CreateThreadDto) {
-    this.user(userId);
+  async createThread(p: AskPrincipal, input: CreateThreadDto) {
+    this.principal(p);
     const returnPath = safeReturnPath(input.returnPath);
     const requestHash = hashIdentity([input.language, returnPath]);
     return this.atomic(async (tx) => {
-      const existing = await tx.askThread.findUnique({
-        where: { userId_clientKey: { userId, clientKey: input.idempotencyKey } },
+      const existing = await tx.askThread.findFirst({
+        where: { ...ownerOf(p), clientKey: input.idempotencyKey },
       });
       if (existing) {
         this.assertSame(existing.requestHash, requestHash);
@@ -118,7 +196,7 @@ export class AskV2Service {
       }
       return tx.askThread.create({
         data: {
-          userId,
+          ...ownerOf(p),
           clientKey: input.idempotencyKey,
           requestHash,
           language: input.language,
@@ -230,6 +308,39 @@ export class AskV2Service {
   }
 
   /**
+   * ASK GUEST TRIAL R3 — the guest's OWN threads only, for resuming after a reload or a
+   * cancelled sign-in. Never an account list and never public: scoped by the server-resolved
+   * guest session. The reader's own first question is the preview; nothing is generated.
+   */
+  async listGuestThreads(guestSessionId: string) {
+    if (!guestSessionId) throw new UnauthorizedException();
+    return this.atomic(async (tx) => {
+      const threads = await tx.askThread.findMany({
+        where: { guestSessionId },
+        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        take: GUEST_THREAD_LIMIT,
+        select: { id: true, language: true, createdAt: true, updatedAt: true },
+      });
+      if (threads.length === 0) return [];
+      const firstTurns = await tx.askTurn.findMany({
+        where: { threadId: { in: threads.map((t) => t.id) }, sequence: FIRST_TURN_SEQUENCE },
+        select: { threadId: true, question: true },
+      });
+      const firstByThread = new Map(firstTurns.map((turn) => [turn.threadId, turn.question]));
+      return threads.map((thread) => {
+        const question = firstByThread.get(thread.id);
+        return {
+          id: thread.id,
+          language: thread.language,
+          createdAt: thread.createdAt,
+          lastActiveAt: thread.updatedAt,
+          firstQuestion: question === undefined ? null : clampPreview(question),
+        };
+      });
+    });
+  }
+
+  /**
    * ════════════════════════════════════════════════════════════════════════
    * PUBLIC BETA ASK CONTINUITY R1 — SAVED (QUESTIONS)
    * ════════════════════════════════════════════════════════════════════════
@@ -327,9 +438,9 @@ export class AskV2Service {
 
     return { turnId, bookmarked: false, removed: outcome.count > 0 };
   }
-  async getThread(userId: string, id: string, after = 0) {
+  async getThread(p: AskPrincipal, id: string, after = 0) {
     return this.atomic(async (tx) => {
-      const thread = await this.thread(tx, userId, id);
+      const thread = await this.thread(tx, p, id);
       const turns = await tx.askTurn.findMany({
         where: { threadId: id, sequence: { gt: after } },
         orderBy: { sequence: 'asc' },
@@ -345,11 +456,12 @@ export class AskV2Service {
       };
     });
   }
-  async getOperation(userId: string, id: string) {
+  async getOperation(p: AskPrincipal, id: string) {
     return this.atomic(async (tx) => {
-      const operation = await this.owned(tx, userId, id);
+      const operation = await this.owned(tx, p, id);
+      const owner = ownerOf(p);
       const result = operation.storedResultId
-        ? await tx.storedResult.findFirst({ where: { id: operation.storedResultId, userId } })
+        ? await tx.storedResult.findFirst({ where: { id: operation.storedResultId, ...owner } })
         : null;
       const ledger = await tx.sandLedgerEntry.findMany({
         where: { operationId: id },
@@ -365,15 +477,18 @@ export class AskV2Service {
         canonical facts a reopened result needs: the question it answered (YOU ASKED), and the
         thread + sequence an explicit follow-up continues. Read from AskTurn, never copied
         into StoredResult; an operation that is not the caller's never reaches this line.
+
+        ASK GUEST TRIAL R3 — a guest cannot save (bookmarks are account-only), so `bookmarked`
+        is simply false for a guest; nothing is read for it.
       */
       const turn = await tx.askTurn.findFirst({
-        where: { operationId: id, thread: { userId } },
+        where: { operationId: id, thread: owner },
         select: { id: true, question: true, threadId: true, sequence: true, language: true },
       });
       const bookmarked =
-        turn === null
+        turn === null || p.kind !== 'account'
           ? false
-          : (await tx.askBookmark.count({ where: { userId, turnId: turn.id } })) > 0;
+          : (await tx.askBookmark.count({ where: { userId: p.userId, turnId: turn.id } })) > 0;
       return {
         operationId: id,
         turnId: turn?.id ?? null,
@@ -409,14 +524,51 @@ export class AskV2Service {
     });
   }
 
-  async quote(userId: string, threadId: string, input: QuoteTurnDto) {
-    this.user(userId);
+  /**
+   * ASK GUEST TRIAL R3 — the checks a NEW guest execution passes BEFORE the planner runs.
+   * Switch and configuration first (fail closed), then the visible allowance, then the
+   * cookie-independent execution bound for this trusted IP scope. Returns the compensation to
+   * run if the operation is not created after all.
+   */
+  private async guestPreflight(guestSessionId: string): Promise<{ undo: () => Promise<void> }> {
+    const { guests, switches, meter } = this.guestDeps();
+    const config = guests.trialConfig();
+    if (!config.valid) throw guestRefusal('GUEST_TRIAL_NOT_CONFIGURED');
+    if (!(await switches.isEnabled('ASK_GUEST_TRIAL_ENABLED'))) {
+      throw guestRefusal('GUEST_TRIAL_UNAVAILABLE');
+    }
+    assertMayStart(await readAllowance(this.prisma, guestSessionId, config.limits));
+    const ipScope = askRequestContext.getStore()?.ipScope;
+    if (ipScope === undefined) throw guestRefusal('GUEST_TEMPORARILY_LIMITED');
+    const bucket = dayBucket(new Date());
+    const scope = guestExecutionScope(ipScope);
+    if (!(await meter.admitCount(scope, bucket, config.limits.executionsPerIpScopePerDay))) {
+      throw guestRefusal('GUEST_TEMPORARILY_LIMITED');
+    }
+    /* All guests together: bounds news-provider calls the model-unit pool cannot see. */
+    if (
+      !(await meter.admitCount(GUEST_EXECUTIONS_ALL_SCOPE, bucket, config.limits.executionsPerDay))
+    ) {
+      await meter.adjustCount(scope, bucket, -1);
+      throw guestRefusal('GUEST_TEMPORARILY_LIMITED');
+    }
+    return {
+      undo: async () => {
+        await meter.adjustCount(scope, bucket, -1);
+        await meter.adjustCount(GUEST_EXECUTIONS_ALL_SCOPE, bucket, -1);
+      },
+    };
+  }
+
+  async quote(p: AskPrincipal, threadId: string, input: QuoteTurnDto) {
+    this.principal(p);
     const request: AskRequest = {
       question: input.question.trim(),
       language: input.language,
       intent: input.intent,
     };
     if (request.question.length < 2) throw new BadRequestException('Question is too short');
+    const owner = ownerOf(p);
     const requestHash = hashIdentity([
       threadId,
       request.question,
@@ -424,93 +576,132 @@ export class AskV2Service {
       request.intent,
     ]);
     const existing = await this.atomic(async (tx) => {
-      await this.thread(tx, userId, threadId);
-      return tx.computeOperation.findUnique({
-        where: { userId_clientKey: { userId, clientKey: input.idempotencyKey } },
+      await this.thread(tx, p, threadId);
+      return tx.computeOperation.findFirst({
+        where: { ...owner, clientKey: input.idempotencyKey },
       });
     });
     if (existing) {
+      /* A retry of the same submission is the SAME operation: no new slot, no new work. */
       this.assertSame(existing.requestHash, requestHash);
-      return this.getOperation(userId, existing.id);
+      return this.getOperation(p, existing.id);
     }
 
-    // A local/read-only CTO planner supplies identity and capabilities, never the client.
-    const prepared = await this.execution.prepare(Object.freeze(request));
-    validatePlan(prepared, request);
-    const plan: AskPlan = {
-      revision: prepared.revision,
-      scope: prepared.scope,
-      contract: prepared.contract,
-      executionKey: prepared.executionKey,
-      validUntil: prepared.validUntil,
-      contextual: prepared.contextual,
-      deepRequested: prepared.deepRequested,
-      reportRequested: prepared.reportRequested,
-      countryCount: prepared.countryCount,
-      domainCount: prepared.domainCount,
-      timeWindowDays: prepared.timeWindowDays,
-    };
-    const key = fingerprint(request, plan);
-    const id = await this.atomic(async (tx) => {
-      await this.thread(tx, userId, threadId);
-      const concurrent = await tx.computeOperation.findUnique({
-        where: { userId_clientKey: { userId, clientKey: input.idempotencyKey } },
+    const guest = p.kind === 'guest' ? await this.guestPreflight(p.guestSessionId) : null;
+    try {
+      /* ASK R3 CONTINUITY — the anchor question of THIS owner-verified thread, if any. */
+      const priorQuestion = await this.atomic(async (tx) => {
+        await this.thread(tx, p, threadId);
+        const earlier = await tx.askTurn.findMany({
+          where: { threadId },
+          orderBy: { sequence: 'desc' },
+          take: ANCHOR_LOOKBACK,
+          select: { question: true },
+        });
+        return anchorQuestionOf(
+          request.question,
+          earlier.map((t) => t.question),
+        );
       });
-      if (concurrent) {
-        this.assertSame(concurrent.requestHash, requestHash);
-        return concurrent.id;
-      }
-      validatePlan(plan, request);
-      const stored = await tx.storedResult.findFirst({
-        where: { userId, fingerprint: key, expiresAt: { gt: new Date() } },
-        orderBy: { createdAt: 'desc' },
+      // A local/read-only CTO planner supplies identity and capabilities, never the client.
+      const prepared = await this.withPrior(priorQuestion, () =>
+        this.execution.prepare(Object.freeze(request)),
+      );
+      validatePlan(prepared, request);
+      const plan: AskPlan = {
+        revision: prepared.revision,
+        scope: prepared.scope,
+        contract: prepared.contract,
+        executionKey: prepared.executionKey,
+        validUntil: prepared.validUntil,
+        contextual: prepared.contextual,
+        deepRequested: prepared.deepRequested,
+        reportRequested: prepared.reportRequested,
+        countryCount: prepared.countryCount,
+        domainCount: prepared.domainCount,
+        timeWindowDays: prepared.timeWindowDays,
+      };
+      const key = fingerprint(request, plan);
+      const id = await this.atomic(async (tx) => {
+        await this.thread(tx, p, threadId);
+        const concurrent = await tx.computeOperation.findFirst({
+          where: { ...owner, clientKey: input.idempotencyKey },
+        });
+        if (concurrent) {
+          this.assertSame(concurrent.requestHash, requestHash);
+          return concurrent.id;
+        }
+        validatePlan(plan, request);
+        const stored = await tx.storedResult.findFirst({
+          where: { ...owner, fingerprint: key, expiresAt: { gt: new Date() } },
+          orderBy: { createdAt: 'desc' },
+        });
+        const computeClass = classifyCompute(request, plan, !!stored);
+        /* Deeper, quoted work is never a guest answer: the reader is asked to sign in. */
+        if (p.kind === 'guest' && requiresExplicitAcceptance(computeClass)) {
+          throw guestRefusal('GUEST_SIGN_IN_REQUIRED');
+        }
+        const operation = await tx.computeOperation.create({
+          data: {
+            ...owner,
+            clientKey: input.idempotencyKey,
+            requestHash,
+            kind: request.intent,
+            computeClass,
+            fingerprint: key,
+            plan: plan as unknown as Prisma.InputJsonObject,
+            quotedSand: SAND_QUOTES[computeClass],
+            ledgerEnabled: this.config.get<string>('SAND_LEDGER_ENABLED') === 'true',
+            quoteExpiresAt: new Date(Math.min(Date.now() + 300000, Date.parse(plan.validUntil))),
+            storedResultId: stored?.id,
+            storedResultReused: !!stored,
+          },
+        });
+        /* ASK GUEST TRIAL R3 — the visible slot, reserved in THIS transaction (all-or-nothing). */
+        if (p.kind === 'guest') {
+          const config = this.guestDeps().guests.trialConfig();
+          if (!config.valid) throw guestRefusal('GUEST_TRIAL_NOT_CONFIGURED');
+          await reserveSlot(
+            tx,
+            p.guestSessionId,
+            operation.id,
+            config.limits,
+            config.limits.concurrentPerSession,
+          );
+        }
+        // Atomic counter allocation plus DB unique(threadId, sequence); no max+1 race.
+        const thread = await tx.askThread.update({
+          where: { id: threadId },
+          data: { nextSequence: { increment: 1 } },
+        });
+        await tx.askTurn.create({
+          data: {
+            threadId,
+            sequence: thread.nextSequence - 1,
+            question: request.question,
+            language: request.language,
+            operationId: operation.id,
+          },
+        });
+        await this.ledger(tx, operation, 'QUOTE');
+        return operation.id;
       });
-      const computeClass = classifyCompute(request, plan, !!stored);
-      const operation = await tx.computeOperation.create({
-        data: {
-          userId,
-          clientKey: input.idempotencyKey,
-          requestHash,
-          kind: request.intent,
-          computeClass,
-          fingerprint: key,
-          plan: plan as unknown as Prisma.InputJsonObject,
-          quotedSand: SAND_QUOTES[computeClass],
-          ledgerEnabled: this.config.get<string>('SAND_LEDGER_ENABLED') === 'true',
-          quoteExpiresAt: new Date(Math.min(Date.now() + 300000, Date.parse(plan.validUntil))),
-          storedResultId: stored?.id,
-          storedResultReused: !!stored,
-        },
-      });
-      // Atomic counter allocation plus DB unique(threadId, sequence); no max+1 race.
-      const thread = await tx.askThread.update({
-        where: { id: threadId },
-        data: { nextSequence: { increment: 1 } },
-      });
-      await tx.askTurn.create({
-        data: {
-          threadId,
-          sequence: thread.nextSequence - 1,
-          question: request.question,
-          language: request.language,
-          operationId: operation.id,
-        },
-      });
-      await this.ledger(tx, operation, 'QUOTE');
-      return operation.id;
-    });
-    return this.getOperation(userId, id);
+      return this.getOperation(p, id);
+    } catch (error) {
+      if (guest !== null) await guest.undo();
+      throw error;
+    }
   }
 
   /** One conversational submission. Only deep/report work stops at a quote. */
-  async submit(userId: string, threadId: string, input: QuoteTurnDto) {
-    const operation = await this.quote(userId, threadId, input);
-    return operation.requiresAcceptance ? operation : this.execute(userId, operation.operationId);
+  async submit(p: AskPrincipal, threadId: string, input: QuoteTurnDto) {
+    const operation = await this.quote(p, threadId, input);
+    return operation.requiresAcceptance ? operation : this.execute(p, operation.operationId);
   }
 
-  async accept(userId: string, id: string) {
+  async accept(p: AskPrincipal, id: string) {
     await this.atomic(async (tx) => {
-      const operation = await this.owned(tx, userId, id);
+      const operation = await this.owned(tx, p, id);
       if (!requiresExplicitAcceptance(operation.computeClass) || operation.acceptedAt) return;
       if (operation.status !== 'QUOTED') throw new ConflictException('Operation is not quoted');
       this.assertFreshQuote(operation);
@@ -519,7 +710,7 @@ export class AskV2Service {
         data: { status: 'ACCEPTED', acceptedAt: new Date() },
       });
     });
-    return this.getOperation(userId, id);
+    return this.getOperation(p, id);
   }
   private async reserveIn(tx: Tx, operation: ComputeOperation): Promise<ComputeOperation> {
     if (['RESERVED', 'RUNNING', 'COMPLETED'].includes(operation.status)) return operation;
@@ -539,17 +730,17 @@ export class AskV2Service {
     await this.ledger(tx, operation, 'RESERVE');
     return reserved;
   }
-  async reserve(userId: string, id: string) {
-    await this.atomic(async (tx) => this.reserveIn(tx, await this.owned(tx, userId, id)));
-    return this.getOperation(userId, id);
+  async reserve(p: AskPrincipal, id: string) {
+    await this.atomic(async (tx) => this.reserveIn(tx, await this.owned(tx, p, id)));
+    return this.getOperation(p, id);
   }
 
   /** Durable claim commits BEFORE the external call. Retries never dispatch it twice.
    * An expired RUNNING claim is released, never re-run: provider outcome is unknown.
    */
-  async execute(userId: string, id: string) {
+  async execute(p: AskPrincipal, id: string) {
     const claim = await this.atomic(async (tx) => {
-      let operation = await this.owned(tx, userId, id);
+      let operation = await this.owned(tx, p, id);
       if (TERMINAL.includes(operation.status)) return null;
       if (operation.status === 'RUNNING') {
         if (operation.leaseExpiresAt && operation.leaseExpiresAt.getTime() <= Date.now()) {
@@ -578,7 +769,7 @@ export class AskV2Service {
       }
       const stored = await tx.storedResult.findFirst({
         where: {
-          userId,
+          ...ownerOf(p),
           ...(operation.storedResultId
             ? { id: operation.storedResultId }
             : { fingerprint: operation.fingerprint }),
@@ -596,6 +787,15 @@ export class AskV2Service {
             completedAt: new Date(),
           },
         });
+        /* ASK GUEST TRIAL R3 — a new explicit turn answered from this guest's OWN stored result
+           is still an answer-producing turn: it counts exactly like the original would. */
+        await settleSlot(
+          tx,
+          id,
+          countsAsGuestAnswer(stored.payload)
+            ? { commit: true }
+            : { commit: false, reason: 'NO_ANSWER' },
+        );
         await this.ledger(tx, operation, 'SETTLE');
         return null;
       }
@@ -606,6 +806,13 @@ export class AskV2Service {
       }
       const turn = await tx.askTurn.findUnique({ where: { operationId: id } });
       if (!turn) throw new ConflictException('Operation turn missing');
+      /* ASK R3 CONTINUITY — the same anchor rule over the turns before this one. */
+      const earlierTurns = await tx.askTurn.findMany({
+        where: { threadId: turn.threadId, sequence: { lt: turn.sequence } },
+        orderBy: { sequence: 'desc' },
+        take: ANCHOR_LOOKBACK,
+        select: { question: true },
+      });
       // Revalidate pending R1 operations too. Stored reuse above never calls the adapter.
       try {
         validatePlan(
@@ -627,6 +834,10 @@ export class AskV2Service {
       });
       return {
         runToken,
+        priorQuestion: anchorQuestionOf(
+          turn.question,
+          earlierTurns.map((t) => t.question),
+        ),
         plan: operation.plan as unknown as AskPlan,
         request: {
           question: turn.question,
@@ -638,10 +849,8 @@ export class AskV2Service {
     if (claim) {
       let result: ExecutionResult;
       try {
-        result = await this.execution.execute(
-          Object.freeze(claim.request),
-          Object.freeze(claim.plan),
-          id,
+        result = await this.withPrior(claim.priorQuestion, () =>
+          this.execution.execute(Object.freeze(claim.request), Object.freeze(claim.plan), id),
         );
       } catch (error) {
         /* ASK R2 INTEGRATION R1 · Gate E — a control's refusal is named, not generic. */
@@ -649,17 +858,24 @@ export class AskV2Service {
           error instanceof AskExecutionRefused && /^[A-Z0-9_:.-]{1,120}$/i.test(error.code)
             ? error.code
             : 'EXECUTION_FAILED';
-        await this.release(userId, id, code);
-        return this.getOperation(userId, id);
+        await this.releaseRun(id, claim.runToken, code);
+        return this.getOperation(p, id);
       }
       // A DB settlement failure leaves RUNNING. Retrying execute must not call the provider again.
-      await this.settle(userId, id, claim.runToken, result);
+      await this.settle(id, claim.runToken, result);
     }
-    return this.getOperation(userId, id);
+    return this.getOperation(p, id);
   }
-  async settle(userId: string, id: string, runToken: string, result: ExecutionResult) {
+
+  /**
+   * Settle the ONE run this token claimed. Keyed by (operation, runToken) — the durable claim
+   * that authorized the external call — so the settlement writes to whoever owns the operation
+   * NOW, and the guest slot moves in the SAME transaction as the stored result.
+   */
+  async settle(id: string, runToken: string, result: ExecutionResult) {
     await this.atomic(async (tx) => {
-      const operation = await this.owned(tx, userId, id);
+      const operation = await tx.computeOperation.findUnique({ where: { id } });
+      if (!operation) throw new NotFoundException();
       if (TERMINAL.includes(operation.status)) return;
       if (operation.status !== 'RUNNING' || operation.runToken !== runToken)
         throw new ConflictException('Execution claim mismatch');
@@ -686,7 +902,9 @@ export class AskV2Service {
       }
       const stored = await tx.storedResult.create({
         data: {
-          userId,
+          ...(operation.guestSessionId !== null
+            ? { guestSessionId: operation.guestSessionId }
+            : { userId: operation.userId as string }),
           fingerprint: operation.fingerprint,
           evidenceRevision: plan.revision,
           payload,
@@ -702,6 +920,12 @@ export class AskV2Service {
           runToken: null,
         },
       });
+      /* ASK GUEST TRIAL R3 — commit exactly once WITH the durable result, or release (D3). */
+      await settleSlot(
+        tx,
+        id,
+        countsAsGuestAnswer(payload) ? { commit: true } : { commit: false, reason: 'NO_ANSWER' },
+      );
       await this.ledger(tx, operation, 'SETTLE');
     });
   }
@@ -710,25 +934,58 @@ export class AskV2Service {
       where: { id: operation.id },
       data: { status: 'RELEASED', failureCode, completedAt: new Date(), runToken: null },
     });
+    /* ASK GUEST TRIAL R3 — every release path releases the visible slot (no-op for accounts). */
+    await settleSlot(tx, operation.id, { commit: false, reason: releaseReasonOf(failureCode) });
     await this.ledger(tx, operation, 'RELEASE');
   }
-  async release(userId: string, id: string, failureCode = 'USER_RELEASED') {
+  /** Release the run this token claimed (the execute failure path), whoever owns it now. */
+  private async releaseRun(id: string, runToken: string, failureCode: string) {
     await this.atomic(async (tx) => {
-      const operation = await this.owned(tx, userId, id);
+      const operation = await tx.computeOperation.findUnique({ where: { id } });
+      if (!operation || TERMINAL.includes(operation.status)) return;
+      if (operation.runToken !== runToken) return;
+      await this.releaseIn(tx, operation, failureCode);
+    });
+  }
+  async release(p: AskPrincipal, id: string, failureCode = 'USER_RELEASED') {
+    await this.atomic(async (tx) => {
+      const operation = await this.owned(tx, p, id);
       if (TERMINAL.includes(operation.status)) return;
       await this.releaseIn(tx, operation, failureCode);
     });
-    return this.getOperation(userId, id);
+    return this.getOperation(p, id);
   }
-  async refund(userId: string, id: string) {
+  async refund(p: AskPrincipal, id: string) {
     await this.atomic(async (tx) => {
-      const operation = await this.owned(tx, userId, id);
+      const operation = await this.owned(tx, p, id);
       if (operation.status === 'REFUNDED') return;
       if (operation.status !== 'COMPLETED')
         throw new ConflictException('Only completed operations can be refunded');
       await tx.computeOperation.update({ where: { id }, data: { status: 'REFUNDED' } });
       await this.ledger(tx, operation, 'REFUND');
     });
-    return this.getOperation(userId, id);
+    return this.getOperation(p, id);
+  }
+
+  /** ASK GUEST TRIAL R3 — whether NEW guest work may start at all (switch AND valid settings). */
+  async guestTrialAvailable(): Promise<boolean> {
+    if (!this.guests || !this.switches) return false;
+    return this.guests.trialConfig().valid && this.switches.isEnabled('ASK_GUEST_TRIAL_ENABLED');
+  }
+
+  /** ASK GUEST TRIAL R3 — the server-authoritative allowance for one guest session. */
+  async guestAllowance(guestSessionId: string) {
+    const { guests, switches } = this.guestDeps();
+    const config = guests.trialConfig();
+    const enabled = config.valid && (await switches.isEnabled('ASK_GUEST_TRIAL_ENABLED'));
+    const limits = config.valid
+      ? config.limits
+      : {
+          attemptsPerSession: Number.MAX_SAFE_INTEGER,
+          cooldownAfterNoAnswer: 2,
+          cooldownSeconds: 0,
+        };
+    const a = await readAllowance(this.prisma, guestSessionId, limits);
+    return { ...a, available: enabled };
   }
 }

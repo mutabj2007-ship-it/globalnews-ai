@@ -27,7 +27,18 @@ import { withDeadline } from './compute-scopes';
  * and flipping it enables nothing while ASK_EXECUTION_PORT is unbound.
  */
 
-export const OPERATIONAL_SWITCHES = ['ASK_PUBLIC_COMPUTE_ENABLED', 'ASK_R2_ENABLED'] as const;
+/*
+  ASK GUEST TRIAL R3 — K-4 ASK_GUEST_TRIAL_ENABLED: the first-visit guest path only. Same two
+  keys, same default (OFF), same audit. It is SUBORDINATE, never a substitute: a guest request
+  still needs ASK_V2_ENABLED, ASK_R2_ENABLED and ASK_PUBLIC_COMPUTE_ENABLED. Turning it OFF
+  stops new guest work and leaves the signed-in path untouched; turning public compute OFF
+  stops guests and accounts alike.
+*/
+export const OPERATIONAL_SWITCHES = [
+  'ASK_PUBLIC_COMPUTE_ENABLED',
+  'ASK_R2_ENABLED',
+  'ASK_GUEST_TRIAL_ENABLED',
+] as const;
 export type OperationalSwitchName = (typeof OPERATIONAL_SWITCHES)[number];
 
 export interface SwitchState {

@@ -173,7 +173,7 @@ model User {
 
   /// MY INTELLIGENCE R1 — Saved Stories, cascading like every other
   /// account-owned relation.
-  savedStories SavedStory[]
+  savedStories          SavedStory[]
   /// INTEREST + SELECTION HOOK R1 — explicit reader interests (governed ids only).
   intelligenceInterests UserIntelligenceInterest[]
 
@@ -1512,20 +1512,26 @@ model WatchObservation {
 // CODEX J: additive authenticated Ask substrate. No anonymous persistence,
 // wallet or balance. Stored model output is display-only, never evidence.
 model AskThread {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientKey    String
-  requestHash  String
-  language     String
-  returnPath   String?
-  nextSequence Int       @default(1)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  turns        AskTurn[]
+  id             String        @id @default(uuid())
+  /// ASK GUEST TRIAL R3 — exactly ONE owner: an account (userId) or a server-issued guest
+  /// session (guestSessionId). Enforced by the CHECK constraint in the migration.
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestSessionId String?
+  guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
+  clientKey      String
+  requestHash    String
+  language       String
+  returnPath     String?
+  nextSequence   Int           @default(1)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  turns          AskTurn[]
 
   @@unique([userId, clientKey])
+  @@unique([guestSessionId, clientKey])
   @@index([userId, updatedAt])
+  @@index([guestSessionId, updatedAt])
 }
 
 model AskTurn {
@@ -1574,8 +1580,11 @@ model AskBookmark {
 
 model StoredResult {
   id               String             @id @default(uuid())
-  userId           String
-  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// ASK GUEST TRIAL R3 — exactly one owner (CHECK in the migration).
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestSessionId   String?
+  guestSession     GuestSession?      @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
   fingerprint      String
   evidenceRevision String
   // Immutable display artifact; NEVER consumed as a retrieval input.
@@ -1585,12 +1594,16 @@ model StoredResult {
   operations       ComputeOperation[]
 
   @@index([userId, fingerprint, expiresAt])
+  @@index([guestSessionId, fingerprint, expiresAt])
 }
 
 model ComputeOperation {
   id                 String            @id @default(uuid())
-  userId             String
-  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// ASK GUEST TRIAL R3 — exactly one owner (CHECK in the migration).
+  userId             String?
+  user               User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestSessionId     String?
+  guestSession       GuestSession?     @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
   clientKey          String
   requestHash        String
   kind               String
@@ -1614,8 +1627,12 @@ model ComputeOperation {
   turn               AskTurn?
   ledger             SandLedgerEntry[]
 
+  guestSlot GuestSlot?
+
   @@unique([userId, clientKey])
+  @@unique([guestSessionId, clientKey])
   @@index([userId, createdAt])
+  @@index([guestSessionId, createdAt])
 }
 
 model SandLedgerEntry {
@@ -1635,19 +1652,20 @@ model SandLedgerEntry {
 /// Reviewed projection over the shared retained byte store. No runtime writer.
 /// Public payload.subjectType must exactly match Part XI; enforced by the SQL check and shared reader validator.
 model EnergyObservation {
-  id String @id
-  observationKey String
-  revision Int
-  snapshotRetrievalId String
-  snapshotRetrieval SnapshotRetrieval @relation(fields: [snapshotRetrievalId], references: [retrievalId], onDelete: Restrict)
-  payload Json
+  id                       String            @id
+  observationKey           String
+  revision                 Int
+  snapshotRetrievalId      String
+  snapshotRetrieval        SnapshotRetrieval @relation(fields: [snapshotRetrievalId], references: [retrievalId], onDelete: Restrict)
+  payload                  Json
   /// JSON Pointer to a publisher record, interpreted by energy-record-v1 only.
-  evidencePointer String
-  parserVersion String
-  admission String @default("REFUSED")
-  publicDisclosureApproved Boolean @default(false)
-  reviewedBy String?
-  reviewRef String?
+  evidencePointer          String
+  parserVersion            String
+  admission                String            @default("REFUSED")
+  publicDisclosureApproved Boolean           @default(false)
+  reviewedBy               String?
+  reviewRef                String?
+
   @@unique([observationKey, revision])
 }
 
@@ -1737,13 +1755,13 @@ model ComputeMeter {
 /// reservation incremented (and by how much); settle writes the actual back, and a reaper
 /// releases a reservation that was never settled after `ASK_RESERVATION_TTL_S`.
 model ComputeReservation {
-  id         String    @id @default(uuid())
-  charges    Json
-  units      BigInt
-  expiresAt  DateTime  @db.Timestamptz(6)
-  settledAt  DateTime? @db.Timestamptz(6)
-  outcome    String?
-  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  id        String    @id @default(uuid())
+  charges   Json
+  units     BigInt
+  expiresAt DateTime  @db.Timestamptz(6)
+  settledAt DateTime? @db.Timestamptz(6)
+  outcome   String?
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([settledAt, expiresAt])
 }
@@ -1809,14 +1827,14 @@ model OperationalSwitchAudit {
 /// NO DEVICE CLASS. Deriving one needs a user-agent, which no telemetry in this platform
 /// reads. The field is absent rather than present and permanently null.
 model AskObservation {
-  id          String   @id @default(uuid())
+  id             String   @id @default(uuid())
   /// The Ask operation this observes. UNIQUE — one Ask, at most one observation.
-  operationId String   @unique
-  occurredAt  DateTime @default(now()) @db.Timestamptz(6)
+  operationId    String   @unique
+  occurredAt     DateTime @default(now()) @db.Timestamptz(6)
   /// The observation contract this row was written under, so a later shape is readable.
-  schemaVersion String
+  schemaVersion  String
   /// 'ASK_R2' today. The vocabulary also declares the legacy path, which has no emitter.
-  routePath     String
+  routePath      String
   adapterVersion String
 
   questionClass         String
@@ -1825,8 +1843,8 @@ model AskObservation {
   answerState           String
   /// The §7 derivation's own diagnostic code (`AnswerStateDecision.basis`).
   answerBasis           String
-  clarificationRequired Boolean @default(false)
-  capabilityUnavailable Boolean @default(false)
+  clarificationRequired Boolean  @default(false)
+  capabilityUnavailable Boolean  @default(false)
   /// Frozen C refusal / disclosure / clarification CODES. Codes only, never prose.
   refusalCodes          String[]
   disclosureCodes       String[]
@@ -1851,12 +1869,12 @@ model AskObservation {
 
   /// The eight landed analytical domains. A bounded vocabulary, not reader words.
   domains             String[]
-  domainCount         Int     @default(0)
+  domainCount         Int      @default(0)
   /// PRESENCE ONLY. The reader's topic terms are the reader's words and are not stored.
-  topicPresent        Boolean @default(false)
+  topicPresent        Boolean  @default(false)
   temporalRequirement String
   /// PRESENCE ONLY. A stated period is text at the reader's own precision; not stored.
-  statedPeriodPresent Boolean @default(false)
+  statedPeriodPresent Boolean  @default(false)
 
   evidenceRolesRequested String[]
   evidenceRolesObtained  String[]
@@ -1881,14 +1899,14 @@ model AskObservation {
   breakerOutcome       String?
   /// NULLABLE ON PURPOSE. Populated only when the provider reported usage. `tokensMeasured`
   /// travels with them so an absent measurement is never averaged or rendered as zero.
-  promptTokens     Int?
-  completionTokens Int?
-  tokensMeasured   Boolean @default(false)
-  latencyMs        Int?
+  promptTokens         Int?
+  completionTokens     Int?
+  tokensMeasured       Boolean @default(false)
+  latencyMs            Int?
 
-  failureCode        String?
+  failureCode   String?
   /// 'ANONYMOUS' or 'VERIFIED_ANALYSIS_USER' — the router's identity AXIS, not an account.
-  identityState      String
+  identityState String
 
   /// The two-key operational switches AS READ FOR THIS ASK. Null means the switch was
   /// never consulted because the answer needed no compute — not that it was off.
@@ -1916,4 +1934,74 @@ model AskAccessCounter {
   count       Int      @default(0)
 
   @@id([event, bucketStart])
+}
+
+/// ════════════════════════════════════════════════════════════════════════════
+/// ASK GUEST TRIAL + FIRST-ANSWER R3 — THE FIRST-VISIT GUEST, A REAL, SEPARATE OWNER
+/// ════════════════════════════════════════════════════════════════════════════
+///
+/// A server-issued guest session: never a User, never shared. The raw token lives only in
+/// the visitor's HttpOnly cookie; this row keeps its SHA-256. `expiresAt` is an ABSOLUTE
+/// lifetime from creation (never extended by activity). No IP address, fingerprint or
+/// account identifier is stored here.
+model GuestSession {
+  id              String    @id @default(uuid())
+  tokenHash       String    @unique
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt       DateTime  @db.Timestamptz(6)
+  lastSeenAt      DateTime  @default(now()) @db.Timestamptz(6)
+  /// ACTIVE · CLAIMED (conversation moved to an account; the token is dead) · REVOKED
+  status          String    @default("ACTIVE")
+  claimedByUserId String?
+  claimedAt       DateTime? @db.Timestamptz(6)
+
+  threads    AskThread[]
+  operations ComputeOperation[]
+  results    StoredResult[]
+  claims     GuestClaim[]
+  slots      GuestSlot[]
+
+  @@index([expiresAt])
+  @@index([status, expiresAt])
+}
+
+/// One visible guest-answer slot per eligible execution — the TRIAL ENTITLEMENT ledger.
+/// Resource usage is metered separately (ComputeMeter). RESERVED before any research work;
+/// COMMITTED exactly once with a durable substantive result; RELEASED on a no-count outcome.
+/// Keyed by the operation, so moving the conversation to an account never loses it.
+model GuestSlot {
+  operationId    String           @id
+  operation      ComputeOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  guestSessionId String
+  guestSession   GuestSession     @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
+  /// RESERVED · COMMITTED · RELEASED
+  state          String           @default("RESERVED")
+  /// For RELEASED: NO_ANSWER (work ran, nothing substantive) · FAILED (work may have run) ·
+  /// REFUSED (a control refused before any spend).
+  releaseReason  String?
+  createdAt      DateTime         @default(now()) @db.Timestamptz(6)
+  settledAt      DateTime?        @db.Timestamptz(6)
+
+  @@index([guestSessionId, state])
+  @@index([state, createdAt])
+}
+
+/// A one-time claim that binds ONE guest conversation to the next Google sign-in from the
+/// same browser. Server-side only; its id travels inside the HMAC-signed OAuth flow cookie,
+/// never in a URL. PENDING → CONSUMED exactly once (or EXPIRED).
+model GuestClaim {
+  id               String       @id @default(uuid())
+  guestSessionId   String
+  guestSession     GuestSession @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
+  threadId         String
+  /// PENDING · CONSUMED · EXPIRED
+  status           String       @default("PENDING")
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+  expiresAt        DateTime     @db.Timestamptz(6)
+  consumedAt       DateTime?    @db.Timestamptz(6)
+  consumedByUserId String?
+
+  @@index([guestSessionId, status])
+  @@index([consumedByUserId, consumedAt])
+  @@index([expiresAt])
 }
