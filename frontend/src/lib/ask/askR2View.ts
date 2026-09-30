@@ -1,5 +1,6 @@
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
 import type { AskR2Locale, AskR2Strings } from './askR2Strings';
+import { resolveEvidenceState } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -41,6 +42,11 @@ export interface AskR2View {
     | 'unavailable'
     | 'retained';
   readonly freshness: string;
+  /**
+   * ASK FIRST-ANSWER RETRIEVAL R3 — a news provider REFUSED this search (rate limit, outage).
+   * From the typed retrieval outcome only; an answered-but-empty search is never "limited".
+   */
+  readonly searchLimited: boolean;
   readonly citable: boolean;
   readonly sourceCount: number;
   readonly handoffs: { readonly openFull: boolean; readonly runDeeper: boolean };
@@ -229,6 +235,10 @@ export function askR2View(
         : (s.unavailableBecause[basis] ?? s.unavailable);
   const byExecutor = basis.startsWith('LANDED_');
 
+  const retrieval = analysis?.retrievalContext;
+  const searchLimited =
+    retrieval != null && resolveEvidenceState(retrieval, sourceCount) === 'degraded-fallback';
+
   let freshness: string;
   /* Model-only background says it was not checked; background drawn from real sources says when. */
   if (badge === 'ref')
@@ -238,7 +248,8 @@ export function askR2View(
     freshness = byExecutor ? s.askedBeforeAnswering : s.freshness.nothingRan;
   else if (badge === 'unavail')
     freshness = basis in s.unavailableBecause ? s.noAnswer : s.unavailable;
-  else if (badge === 'insuf') freshness = fill(s.freshness.zero, checkedAt);
+  else if (badge === 'insuf')
+    freshness = fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
   else if (badge === 'rec') freshness = s.freshness.retainedRecord;
   else if (badge === 'part' && payload.verification?.asOf != null)
     /* CURRENT STATUS CORROBORATION R1 — as of the freshest corroborating report, never the
@@ -315,6 +326,7 @@ export function askR2View(
     badgeText: s.badges[badge],
     tone: TONE_OF[badge],
     freshness,
+    searchLimited,
     /* Model memory is never citable; retrieved sources always are, whatever the badge. */
     citable:
       badge !== 'clar' &&

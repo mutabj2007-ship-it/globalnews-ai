@@ -435,3 +435,21 @@ describe('makeProviderSafeNewsQuery (provider 400 correction)', () => {
     expect(sent.startsWith('Ł')).toBe(true);
   });
 });
+
+describe('ASK FIRST-ANSWER RETRIEVAL R3 — the change frame', () => {
+  it.each([
+    ["What has changed in Poland's economy?", "Poland's economy"],
+    ["What has changed in Kenya's economy", "Kenya's economy"],
+    ['What have changed in EU trade rules?', 'EU trade rules'],
+    ['What is changing in Brazilian inflation?', 'Brazilian inflation'],
+    ['What changed in German energy policy?', 'German energy policy'],
+    ["What has changed in Poland's economy this week?", "Poland's economy this week"],
+  ])('%s -> %s', (question, subject) => {
+    expect(deriveGenericNewsQuery(question)).toBe(subject);
+  });
+
+  it('never matches a question that is not the change frame', () => {
+    expect(deriveGenericNewsQuery('What changed?')).toBe('What changed');
+    expect(deriveGenericNewsQuery('Has anything changed')).toBe('Has anything changed');
+  });
+});

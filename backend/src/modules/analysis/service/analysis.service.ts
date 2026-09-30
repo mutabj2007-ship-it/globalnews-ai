@@ -1,5 +1,12 @@
 import { createHash } from 'node:crypto';
-import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import {
   normalizeQuery,
   resolveServerBudgetMs,
@@ -153,6 +160,8 @@ import {
   makeProviderSafeNewsQuery,
   toProviderSafePunctuation,
 } from '../query/derive-generic-news-query.util';
+import { retrievalSubjectOf } from '../query/response-directives.util';
+import { describeFreeText } from '../../../observability/free-text-log';
 import { deriveRelationalSearchQueries } from '../query/derive-relational-search-queries.util';
 import { blocksGeographicRouting } from '../query/routing-function-words.util';
 import { classifyQueryIntent } from '../query/query-intent.util';
@@ -278,7 +287,6 @@ function buildCoverageContext(
     comprehensiveCoverageEstablished: false,
   };
 }
-
 
 /**
  * Maximum number of words considered after a country-context phrase.
@@ -425,7 +433,8 @@ function resolveNoEvidenceMessage(
   language: LanguageCode,
   evidenceState: AnalysisEvidenceState = 'no-relevant-evidence',
 ): string {
-  const table = evidenceState === 'degraded-fallback' ? PROVIDER_FAILURE_MESSAGE : NO_EVIDENCE_MESSAGE;
+  const table =
+    evidenceState === 'degraded-fallback' ? PROVIDER_FAILURE_MESSAGE : NO_EVIDENCE_MESSAGE;
   return table[language] ?? table.en!;
 }
 
@@ -595,14 +604,18 @@ export class AnalysisService {
       even when a selection or story context will outrank it.
     */
     const governedGeographyCountry =
-      geographyContext !== undefined ? resolveGovernedCountryCode(geographyContext.countryCode) : undefined;
+      geographyContext !== undefined
+        ? resolveGovernedCountryCode(geographyContext.countryCode)
+        : undefined;
     if (geographyContext !== undefined && governedGeographyCountry === undefined) {
       throw new BadRequestException(
         'geographyContext.countryCode must be the ISO alpha-2 or alpha-3 code of a governed country',
       );
     }
     const mapGeographyLocation: LocationContext | undefined =
-      selection === undefined && storyContext === undefined && governedGeographyCountry !== undefined
+      selection === undefined &&
+      storyContext === undefined &&
+      governedGeographyCountry !== undefined
         ? { country: governedGeographyCountry }
         : undefined;
 
@@ -886,7 +899,16 @@ export class AnalysisService {
             ? deriveConversationSubject(priorNormalized)
             : undefined;
         const subjectPriorQuestion = continuedSubject !== undefined ? priorNormalized : undefined;
-        const retrievalQuery = anaphoricPriorQuestion ?? subjectPriorQuestion ?? normalizedQuery;
+        /*
+          ASK FIRST-ANSWER RETRIEVAL R3 — the reader's answer-format instructions ("Give the dates
+          and cite the sources", "Podaj daty i źródła") are not the subject. Routing and every
+          retrieval derivation read the question WITHOUT them; normalizedQuery — the prompt the
+          model receives, the cache key and response.query — is untouched, so the model still
+          honours them. Only recognised trailing instructions are removed (response-directives.util).
+        */
+        const retrievalQuery = retrievalSubjectOf(
+          anaphoricPriorQuestion ?? subjectPriorQuestion ?? normalizedQuery,
+        );
         /* A bare "Congo" is COD or COG — never silently one of them. */
         const ambiguousCountry = detectAmbiguousCountryMention(retrievalQuery);
         let countryInterpretation: EventAnchorDisclosure | undefined;
@@ -1039,7 +1061,7 @@ export class AnalysisService {
 
         if (sourceIntent && !requestedSource) {
           this.logger.debug(
-            `Question names a source ("${sourceIntent.rawSourcePhrase}")` +
+            `Question names a source (${describeFreeText(sourceIntent.rawSourcePhrase)})` +
               (sourceIntent.rejection
                 ? ` that this parser cannot use (${sourceIntent.rejection})`
                 : ' that resolves to no curated publisher') +
@@ -1090,9 +1112,7 @@ export class AnalysisService {
          * `sourceAttributed` is undefined for it and this line is exactly the
          * call it always was.
          */
-        const declaredRegion = sourceIntent
-          ? undefined
-          : detectDeclaredRegion(retrievalQuery);
+        const declaredRegion = sourceIntent ? undefined : detectDeclaredRegion(retrievalQuery);
 
         /*
          * CROSS-REGION IMPACT QUESTIONS MUST KEEP THEIR RELATION.
@@ -1130,8 +1150,7 @@ export class AnalysisService {
           retrievalQuery.split(/\s+/).length <= 8 &&
           classification.countries.length <= 1;
         const followUpLocation = isShortSingleScopeFollowUp
-          ? (this.detectLocation(retrievalQuery) ??
-            this.detectLocationByDemonym(retrievalQuery))
+          ? (this.detectLocation(retrievalQuery) ?? this.detectLocationByDemonym(retrievalQuery))
           : undefined;
         const followUpCountry = isShortSingleScopeFollowUp
           ? (classification.countries[0] ?? followUpLocation?.country)
@@ -1171,8 +1190,7 @@ export class AnalysisService {
          * heuristic is introduced.
          */
         const rawTypedLocation =
-          classification.sides.length >= 2 ||
-          classification.intent === 'CLARIFICATION_REQUIRED'
+          classification.sides.length >= 2 || classification.intent === 'CLARIFICATION_REQUIRED'
             ? undefined
             : (this.detectLocation(retrievalQuery) ??
               this.detectLocationByDemonym(retrievalQuery) ??
@@ -1357,7 +1375,9 @@ export class AnalysisService {
             ...(newest
               ? {
                   newestArticlePublishedAt: newest.publishedAt,
-                  ...(newest.publishedAtBasis ? { newestArticlePublishedAtBasis: newest.publishedAtBasis } : {}),
+                  ...(newest.publishedAtBasis
+                    ? { newestArticlePublishedAtBasis: newest.publishedAtBasis }
+                    : {}),
                 }
               : {}),
             selection: selectionResolution.outcome,
@@ -1671,7 +1691,7 @@ export class AnalysisService {
           const { entities, family, providerQuery, direction } = relationalEvent;
           this.logger.debug(
             `Relational event question: ${entities[0].iso3} ↔ ${entities[1].iso3} (${family.id}); ` +
-              `provider query "${providerQuery}".`,
+              `provider query ${describeFreeText(providerQuery)}.`,
           );
           /* INTELLIGENCE BINDING R1 (§10) — a stated direction travels as [actor, target]. */
           const mode = {
@@ -2030,7 +2050,7 @@ export class AnalysisService {
               retrievalContext = NON_RETRIEVABLE_QUERY_CONTEXT;
             } else {
               this.logger.debug(
-                `Source-attributed question: topic "${topicSent}" constrained to ` +
+                `Source-attributed question: topic ${describeFreeText(topicSent)} constrained to ` +
                   `${sourceAttributed.requestedSource.displayName} ` +
                   `(${sourceAttributed.requestedSource.sourceId}).`,
               );
@@ -2086,7 +2106,7 @@ export class AnalysisService {
              * masthead.
              */
             this.logger.log(
-              `Source-attributed question names "${sourceIntent.rawSourcePhrase}", which is not ` +
+              `Source-attributed question names a source (${describeFreeText(sourceIntent.rawSourcePhrase)}) that is not ` +
                 'a curated publisher this product carries. Returning zero evidence rather than ' +
                 'answering from some other source, or about the place its topic mentions.',
             );
@@ -2218,7 +2238,7 @@ export class AnalysisService {
              */
             const { institution, subject, providerQuery } = institutionalStatus;
             this.logger.debug(
-              `Institutional status question (${institution.id}/${subject.id}); provider query "${providerQuery}".`,
+              `Institutional status question (${institution.id}/${subject.id}); provider query ${describeFreeText(providerQuery)}.`,
             );
             let institutionalResponse = await this.newsService.search(
               providerQuery,
@@ -2459,7 +2479,14 @@ export class AnalysisService {
                   );
 
                   articles = [];
-                  retrievalContext = this.toRetrievalContext(primaryResponse);
+                  /* R3 — the refusal is stated on the response, not only in the log. */
+                  retrievalContext = {
+                    ...this.toRetrievalContext(primaryResponse),
+                    outcome: retrievalOutcome(
+                      0,
+                      new Set(primaryFailures.map((failure) => failure.kind)),
+                    ),
+                  };
                 } else {
                   // CALL 2 (bounded, exactly one): GNews /search, English —
                   // reusing the SAME concise topic already extracted from
@@ -2495,6 +2522,17 @@ export class AnalysisService {
 
                   articles = fallbackResponse.articles;
                   retrievalContext = this.toRetrievalContext(fallbackResponse);
+                  /* R3 — a refused bounded fallback is a limited search, never "no reporting". */
+                  const fallbackFailures = readProviderFailures(fallbackResponse);
+                  if (fallbackResponse.articles.length === 0 && fallbackFailures.length > 0) {
+                    retrievalContext = {
+                      ...retrievalContext,
+                      outcome: retrievalOutcome(
+                        0,
+                        new Set(fallbackFailures.map((failure) => failure.kind)),
+                      ),
+                    };
+                  }
                 }
               }
             }
@@ -2654,16 +2692,25 @@ export class AnalysisService {
                */
               let genericOutcome: RetrievalOutcome | undefined;
 
-              if (searchResponse.articles.length === 0 && primaryFailures.length > 0) {
+              /*
+                ASK FIRST-ANSWER RETRIEVAL R3 — ONE RESCUE FOR EITHER REFUSED ATTEMPT.
+                Measured (operation 0b4985f8): the bounded FALLBACK search was the one GNews
+                refused (rate-limited), and because only the primary attempt's failures were
+                read, the empty result was reported as an ordinary no-match. The outcome is now
+                decided from the failures of every attempt this request made, and the same
+                bounded LOCAL retained rescue runs after either refusal. No provider retry is
+                added, no gate is changed.
+              */
+              const rescueAfterRefusal = async (
+                failures: readonly { providerId: string; kind: string }[],
+              ): Promise<void> => {
                 genericOutcome = retrievalOutcome(
                   0,
-                  new Set(primaryFailures.map((failure) => failure.kind)),
+                  new Set(failures.map((failure) => failure.kind)),
                 );
                 this.logger.warn(
                   'Generic live retrieval was refused/degraded: ' +
-                    primaryFailures
-                      .map((failure) => `${failure.providerId}=${failure.kind}`)
-                      .join(', ') +
+                    failures.map((failure) => `${failure.providerId}=${failure.kind}`).join(', ') +
                     '. Consulting bounded LOCAL retained evidence; no provider retry will be issued.',
                 );
 
@@ -2710,6 +2757,10 @@ export class AnalysisService {
                     `Generic retrieval served ${retained.length} relevance-gated retained article(s) after live provider failure.`,
                   );
                 }
+              };
+
+              if (searchResponse.articles.length === 0 && primaryFailures.length > 0) {
+                await rescueAfterRefusal(primaryFailures);
               } else if (searchResponse.articles.length === 0) {
                 const fallbackQuery = deriveFallbackNewsQuery(genericSearchQuery);
                 if (fallbackQuery) {
@@ -2727,6 +2778,11 @@ export class AnalysisService {
                     searchResponse = await this.newsService.search(fallbackSent, SEARCH_POOL_SIZE, {
                       type: 'generic',
                     });
+                    /* R3 — a refused fallback is a limited search, never "no reporting". */
+                    const fallbackFailures = readProviderFailures(searchResponse);
+                    if (searchResponse.articles.length === 0 && fallbackFailures.length > 0) {
+                      await rescueAfterRefusal([...primaryFailures, ...fallbackFailures]);
+                    }
                   }
                 }
               }
@@ -2798,7 +2854,10 @@ export class AnalysisService {
         }
         /* A suppressed Map country was never eligible: geographyContextUsed stays ABSENT (G). */
         if (mapGeographyLocation && !mapGeographySuppressed) {
-          retrievalContext = { ...retrievalContext, geographyContextUsed: !typedScopeOverridesStory };
+          retrievalContext = {
+            ...retrievalContext,
+            geographyContextUsed: !typedScopeOverridesStory,
+          };
         }
 
         /*
@@ -3410,11 +3469,8 @@ export class AnalysisService {
           already-dispatched news retrieval ...... may still settle
           joiner timeout .......................... never cancels shared work
     */
-    return this.withResponseDeadline(
-      settledInFlightOperation,
-      config.totalBudgetMs,
-      cacheKey,
-      () => responseAbort.abort(),
+    return this.withResponseDeadline(settledInFlightOperation, config.totalBudgetMs, cacheKey, () =>
+      responseAbort.abort(),
     );
   }
 
@@ -3623,7 +3679,9 @@ export class AnalysisService {
         action: selection.action,
         requested: unique.length,
         resolved: articles.length,
-        unresolvedRefs: resolved.filter((entry) => entry.article === null).map((entry) => entry.story.articleRef),
+        unresolvedRefs: resolved
+          .filter((entry) => entry.article === null)
+          .map((entry) => entry.story.articleRef),
       },
     };
   }
@@ -4082,7 +4140,11 @@ export class AnalysisService {
         dataMode,
         providers: [...providers],
         fallbackReason:
-          articles.length > 0 ? undefined : failureKinds.size > 0 ? 'provider-error' : 'no-live-results',
+          articles.length > 0
+            ? undefined
+            : failureKinds.size > 0
+              ? 'provider-error'
+              : 'no-live-results',
         articlesRetrieved: articles.length,
         outcome: retrievalOutcome(articles.length, failureKinds),
       },
