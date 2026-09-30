@@ -36,6 +36,7 @@
  * recorded in the delivery as the seam it would have been (FS-2), not made.
  */
 
+import { reportingWindowFor, type ReportingWindow } from './reporting-window';
 import { buildEnvelope, type EnvelopeSource } from './frozen-c/src/envelope';
 import { plan as frozenPlan, type PlannerDeps } from './frozen-c/src/planner';
 import { route as frozenRoute } from './frozen-c/src/index';
@@ -107,6 +108,11 @@ export interface SeamTrace {
 }
 
 export interface AskR2Route {
+  /**
+   * BETA-ASK-005 — the bounded publication window the executor applies for a supported relative
+   * period ("last 7 days"), anchored on the server request instant. Null otherwise.
+   */
+  readonly reportingWindow: ReportingWindow | null;
   /**
    * INTELLIGENCE BINDING R1 — the reader's own stated period, even when it is not carried as
    * a routing constraint (see statedPeriodIsConstraint): the executor still honours it, e.g.
@@ -267,11 +273,16 @@ const CATEGORY_DOMAIN: Readonly<Record<string, string>> = {
   tech: 'technology',
 };
 
-export function statedPeriodIsConstraint(reading: QualifiedReading): boolean {
+export function statedPeriodIsConstraint(
+  reading: QualifiedReading,
+  requestInstant?: string,
+): boolean {
   const stated = reading.statedTime;
   if (stated === undefined) return false;
   const phrase = stated.statedPeriod.trim().toLowerCase();
   if (stated.anchor === 'RELATIVE_TO_ASK' && SAME_DAY_PERIODS.has(phrase)) return false;
+  /* BETA-ASK-005 — a supported relative window is honoured by the executor (reporting-window.ts). */
+  if (reportingWindowFor(stated.statedPeriod, stated.anchor, requestInstant) !== null) return false;
   if (retainedCycleCovers(reading.originalQuestion, stated.statedPeriod)) return false;
   return true;
 }
@@ -332,7 +343,7 @@ export function composeEnvelopeSource(
     ...(reading.readerCategory === undefined || topicCarriedByDomain(reading)
       ? {}
       : { topicTerms: [reading.readerCategory.value] }),
-    ...(reading.statedTime === undefined || !statedPeriodIsConstraint(reading)
+    ...(reading.statedTime === undefined || !statedPeriodIsConstraint(reading, ctx.requestInstant)
       ? {}
       : { statedPeriod: reading.statedTime.statedPeriod }),
     ...(requirement === 'NONE' ? {} : { temporalRequirement: requirement }),
@@ -388,6 +399,7 @@ export function routeAskR2(
     };
     const routed = frozenRoute(source, deps);
     return {
+      reportingWindow: null,
       readerStatedPeriod: null,
       outcome,
       source,
@@ -470,6 +482,11 @@ export function routeAskR2(
   };
 
   return {
+    reportingWindow: reportingWindowFor(
+      reading.statedTime?.statedPeriod,
+      reading.statedTime?.anchor,
+      ctx.requestInstant,
+    ),
     readerStatedPeriod: reading.statedTime?.statedPeriod ?? null,
     outcome,
     source,

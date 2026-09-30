@@ -2097,20 +2097,79 @@ describe('ASK PUBLIC BETA RETRIEVAL REPAIR R1 — fail-closed guards on the live
     );
   }
 
-  it('Q1: the unsupported 7-day window is a clarification — no analysis, no model, no guest answer', async () => {
-    const h = harness({});
-    const payload = await run(Q1, h);
-    expect(payload.answer).toMatchObject({
-      state: 'CLARIFICATION_REQUIRED',
-      basis: 'PLAN_BROADENING_OFFERED',
+  it('BETA-ASK-005 Q1: "last 7 days" is an executable bounded plan, not BROADENING_OFFERED', async () => {
+    const h = harness({
+      analysis: async (p) => {
+        p.usageSink?.({ promptTokens: 3000, completionTokens: 800 });
+        return {
+          analysis: {} as never,
+          articles: [{} as never, {} as never],
+          retrievalContext: {
+            dataMode: 'live',
+            providers: ['gnews'],
+            articlesRetrieved: 2,
+          } as never,
+        };
+      },
     });
+    const before = Date.now();
+    const payload = await run(Q1, h);
+    const after = Date.now();
+
+    expect(payload.route.terminalState).toBe('EXECUTABLE');
+    expect(payload.route.refusals).not.toContain('BROADENING_OFFERED');
+    expect(payload.answer.state).toBe('CURRENT_REPORTING');
+    /* The window is visible to the reader as an APPLIED time chip. */
     expect(payload.chips.chips).toContainEqual(
-      expect.objectContaining({ kind: 'TIME', value: 'last 7 days', applied: false }),
+      expect.objectContaining({
+        kind: 'TIME',
+        value: 'last 7 days',
+        source: 'REPORTING_WINDOW',
+        applied: true,
+      }),
     );
+    /* The ONE analysis call carries the window, computed from the SERVER request instant. */
+    expect(h.calls.analysis).toHaveLength(1);
+    const policy = h.calls.analysis[0][6] as {
+      reportingWindow?: { statedPeriod: string; from: string; to: string };
+    };
+    expect(policy.reportingWindow?.statedPeriod).toBe('last 7 days');
+    const to = Date.parse(policy.reportingWindow!.to);
+    const from = Date.parse(policy.reportingWindow!.from);
+    expect(to).toBeGreaterThanOrEqual(before - 5);
+    expect(to).toBeLessThanOrEqual(after + 5);
+    expect(to - from).toBe(7 * 24 * 3_600_000);
+    expect(countsAsGuestAnswer(payload)).toBe(true);
+  });
+
+  it('BETA-ASK-005 Q1 with zero reporting inside the window: INSUFFICIENT, no model, no guest answer', async () => {
+    const h = harness({
+      analysis: async () => ({
+        analysis: null,
+        articles: [],
+        retrievalContext: { dataMode: 'live', providers: ['gnews'], articlesRetrieved: 0 } as never,
+      }),
+    });
+    const payload = await run(Q1, h);
+    expect(payload.answer.state).toBe('INSUFFICIENT');
     expect(payload.aiExecuted).toBe(false);
-    expect(h.calls.analysis).toEqual([]);
     expect(countsAsGuestAnswer(payload)).toBe(false);
   });
+
+  it.each([
+    'What has changed in eastern Democratic Republic of the Congo this week? Identify any verified security or territorial changes.',
+    'What has changed in eastern Democratic Republic of the Congo over the last month? Identify any verified security or territorial changes.',
+  ])(
+    'BETA-ASK-005: an unsupported / ambiguous period still clarifies, with no spend — %s',
+    async (q) => {
+      const h = harness({});
+      const payload = await run(q, h);
+      expect(payload.answer.state).toBe('CLARIFICATION_REQUIRED');
+      expect(payload.aiExecuted).toBe(false);
+      expect(h.calls.analysis).toEqual([]);
+      expect(countsAsGuestAnswer(payload)).toBe(false);
+    },
+  );
 
   it('Q2 with zero qualifying reporting: INSUFFICIENT, no model, no guest answer', async () => {
     const h = harness({

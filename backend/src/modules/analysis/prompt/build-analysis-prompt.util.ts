@@ -629,6 +629,36 @@ Produce the structured analysis now.`;
  * that FACT and must keep its prose to what that one report says. A fact, not a new state:
  * the answer state, badges and evidence are unchanged.
  */
+/**
+ * BETA-ASK-005 — A PUBLICATION WINDOW IS NOT AN EVENT WINDOW.
+ *
+ * The evidence was restricted to reports PUBLISHED inside the reader's window (strict, publisher-
+ * stated times only). A report published this week may describe an older event, so the model
+ * may use it as current reporting but may not place the event inside the window unless the
+ * report itself states the event date. Empty when no window applies (byte-identical prompts).
+ */
+export function buildReportingWindowInstruction(window?: {
+  readonly statedPeriod: string;
+  readonly from: string;
+  readonly to: string;
+}): string {
+  if (window === undefined) return '';
+  return (
+    '\n\nREPORTING WINDOW (authoritative): the reader asked about "' +
+    window.statedPeriod +
+    '". Every report below was PUBLISHED between ' +
+    window.from +
+    ' and ' +
+    window.to +
+    ' (UTC), by its publisher-stated publication time. This window bounds PUBLICATION, not ' +
+    'events. Say that the answer covers reporting published in that window. Do NOT state or ' +
+    'imply that an event occurred inside the window unless the report itself gives the event ' +
+    'date; label event dates and publication dates separately, and where a report does not ' +
+    'establish when the event happened, say that its timing is not established. Nothing outside ' +
+    'these reports may be presented as having happened in the window.'
+  );
+}
+
 export function buildSingleSourceBasisSection(breadth: AnalysisDevelopmentBreadth): string {
   if (breadth.clusters !== 1) return '';
   return (
@@ -702,6 +732,7 @@ export function buildAnalysisMessages(
   conversationSubject?: ConversationSubjectAnchor,
   selection?: SelectionPromptContext,
   governed?: { readonly rules: string; readonly data: string },
+  reportingWindow?: { readonly statedPeriod: string; readonly from: string; readonly to: string },
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
@@ -709,6 +740,7 @@ export function buildAnalysisMessages(
       BASE_SYSTEM_PROMPT +
       buildComparisonCoverageInstruction(comparisonCoverage) +
       buildEvidenceStateInstruction(evidenceState, newestEvidence) +
+      buildReportingWindowInstruction(reportingWindow) +
       buildEventAnchorInstruction(eventAnchor) +
       buildConversationSubjectInstruction(conversationSubject) +
       buildSelectionInstruction(selection) +

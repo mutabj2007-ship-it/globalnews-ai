@@ -609,6 +609,16 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
             usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
           },
           ...(governed.rules === '' ? {} : { governed }),
+          /* BETA-ASK-005 — the router's bounded publication window (server request instant). */
+          ...(route.reportingWindow === null
+            ? {}
+            : {
+                reportingWindow: {
+                  statedPeriod: route.reportingWindow.statedPeriod,
+                  from: route.reportingWindow.from,
+                  to: route.reportingWindow.to,
+                },
+              }),
         },
       );
       /* The landed path's no-evidence answer (0 articles, "no AI call was made") is not a
@@ -1033,7 +1043,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               : null,
         },
         /* D25 05: chips from the effective server plan only, in the order asked. */
-        chips: planChips(route.envelope, route.plan, placeSpansOf(route)),
+        chips: planChips(route.envelope, route.plan, placeSpansOf(route), route.reportingWindow),
         answer,
         /* When the answer was decided — the freshness line's time when no analysis ran. */
         checkedAt: new Date().toISOString(),

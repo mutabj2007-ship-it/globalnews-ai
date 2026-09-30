@@ -162,6 +162,12 @@ export interface AnalysisProviderInput {
   governed?: GovernedPromptParts;
 
   /**
+   * BETA-ASK-005 — the bounded PUBLICATION window the evidence was restricted to. Rendered as
+   * a system rule: it bounds publication, never the event. Absent on every other call.
+   */
+  reportingWindow?: { readonly statedPeriod: string; readonly from: string; readonly to: string };
+
+  /**
    * Optional caller cancellation. AnalysisService uses this only for the
    * authoritative response deadline: when the reader can no longer receive a
    * result, an in-flight model request must not keep spending tokens merely to

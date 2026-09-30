@@ -646,7 +646,14 @@ export class NewsService {
     query: string,
     limit?: number,
     relevanceMode: RelevanceMode = NO_RELEVANCE_FILTERING,
-    options?: { lang?: string; requestedSource?: RequestedSource; allowFallback?: boolean },
+    options?: {
+      lang?: string;
+      requestedSource?: RequestedSource;
+      allowFallback?: boolean;
+      /** BETA-ASK-005 — a bounded publication window, handed to providers that support one. */
+      from?: string;
+      to?: string;
+    },
   ): Promise<NewsResponse> {
     const requestedSource = options?.requestedSource;
     /*
@@ -700,6 +707,8 @@ export class NewsService {
       return provider.search(query, {
         limit,
         lang: provider.id === 'gnews' ? gnewsSearchLang : options?.lang,
+        ...(options?.from === undefined ? {} : { from: options.from }),
+        ...(options?.to === undefined ? {} : { to: options.to }),
       });
     };
 

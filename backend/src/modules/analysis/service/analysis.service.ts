@@ -213,6 +213,16 @@ export interface AnalysisExecutionPolicy {
    * governed answer is never served to, or from, a plain one.
    */
   readonly governed?: AnalysisProviderInput['governed'];
+  /**
+   * BETA-ASK-005 — a bounded PUBLICATION window derived by the Ask router from the server
+   * request instant (never the browser clock). Evidence is restricted to reports whose
+   * trustworthy publication time lies inside it. Part of the cache key (hour granularity).
+   */
+  readonly reportingWindow?: {
+    readonly statedPeriod: string;
+    readonly from: string;
+    readonly to: string;
+  };
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import {
@@ -233,6 +243,25 @@ import { readContinuationEllipsis } from '../anchor/continuation-ellipsis.util';
  * `articlesRetrieved` is 0. Deliberately NOT 'provider-error': blaming the
  * provider for a request that was never sent would be a false report.
  */
+/**
+ * BETA-ASK-005 — does a report's TRUSTWORTHY publication time lie inside [from, to]? Only a
+ * publisher-stated time counts: an aggregator's observation time is not a publication time,
+ * and an absent or unparseable time can never satisfy a strict window.
+ */
+export function publishedInsideWindow(
+  article: Pick<NewsArticle, 'publishedAt' | 'publishedAtBasis'>,
+  from: string,
+  to: string,
+): boolean {
+  if (article.publishedAtBasis !== 'publisher') return false;
+  const at = Date.parse(article.publishedAt ?? '');
+  const start = Date.parse(from);
+  const end = Date.parse(to);
+  return (
+    Number.isFinite(at) && Number.isFinite(start) && Number.isFinite(end) && at >= start && at <= end
+  );
+}
+
 const NON_RETRIEVABLE_QUERY_CONTEXT: AnalysisRetrievalContext = {
   dataMode: 'unavailable',
   providers: [],
@@ -686,6 +715,11 @@ export class AnalysisService {
       readCapabilityRequests(rawQuery, requestedLanguage).source.personalRequested
         ? `:identity:${callerIdentity?.verified === true ? 'verified' : 'none'}`
         : '';
+    /* BETA-ASK-005 — a windowed answer is never served to, or from, another window. */
+    const windowKeySegment =
+      executionPolicy?.reportingWindow === undefined
+        ? ''
+        : `:window:${executionPolicy.reportingWindow.from.slice(0, 13)}..${executionPolicy.reportingWindow.to.slice(0, 13)}`;
     const governedKeySegment =
       executionPolicy?.governed === undefined || executionPolicy.governed.rules === ''
         ? ''
@@ -693,7 +727,7 @@ export class AnalysisService {
             .update(`${executionPolicy.governed.rules}\u0000${executionPolicy.governed.data}`)
             .digest('hex')
             .slice(0, 16)}`;
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}`;
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -2644,7 +2678,7 @@ export class AnalysisService {
               retrievalContext = NON_RETRIEVABLE_QUERY_CONTEXT;
             } else {
               let searchResponse = compoundPlan
-                ? await this.retrieveCompoundPlan(compoundPlan)
+                ? await this.retrieveCompoundPlan(compoundPlan, executionPolicy?.reportingWindow)
                 : await this.newsService.search(
                     primarySent,
                     SEARCH_POOL_SIZE,
@@ -2654,6 +2688,13 @@ export class AnalysisService {
                     // call NewsService.search() without this mode, so their
                     // behavior is completely unchanged (see news.service.ts).
                     genericMode,
+                    /* BETA-ASK-005 — the window reaches a provider that filters natively. */
+                    executionPolicy?.reportingWindow === undefined
+                      ? undefined
+                      : {
+                          from: executionPolicy.reportingWindow.from,
+                          to: executionPolicy.reportingWindow.to,
+                        },
                   );
 
               // Milestone #46 — exactly ONE bounded fallback attempt, and
@@ -2848,6 +2889,34 @@ export class AnalysisService {
               }
             }
           }
+        }
+
+        /*
+          BETA-ASK-005 — THE BOUNDED PUBLICATION WINDOW, ENFORCED ONCE FOR EVERY BRANCH.
+          A provider that filters natively (GNews from/to) has already narrowed its answer; this
+          is the deterministic guarantee for every other source (country feed, publisher feeds,
+          GDELT, retained store). STRICT: only a publisher-stated publication time inside
+          [from, to] qualifies. An aggregator-observed or unknown time cannot satisfy the window,
+          and no date is ever inferred. Zero survivors flow into the unchanged zero-evidence path
+          (no model call).
+        */
+        const reportingWindow = executionPolicy?.reportingWindow;
+        if (reportingWindow !== undefined) {
+          const inWindow = articles.filter((article) =>
+            publishedInsideWindow(article, reportingWindow.from, reportingWindow.to),
+          );
+          retrievalContext = {
+            ...retrievalContext,
+            articlesRetrieved: inWindow.length,
+            reportingWindow: {
+              statedPeriod: reportingWindow.statedPeriod,
+              from: reportingWindow.from,
+              to: reportingWindow.to,
+              basis: 'PUBLICATION_TIME',
+              excludedOutsideWindow: articles.length - inWindow.length,
+            },
+          };
+          articles = inWindow;
         }
 
         /**
@@ -3217,6 +3286,9 @@ export class AnalysisService {
             ...(executionPolicy?.governed === undefined || executionPolicy.governed.rules === ''
               ? {}
               : { governed: executionPolicy.governed }),
+            ...(executionPolicy?.reportingWindow === undefined
+              ? {}
+              : { reportingWindow: executionPolicy.reportingWindow }),
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;
@@ -3717,7 +3789,10 @@ export class AnalysisService {
    * facet or the additional-language search) and URL-deduplicated; syndicated copies are
    * collapsed downstream by the unchanged clusterDuplicateArticles(). Never a model call.
    */
-  private async retrieveCompoundPlan(plan: CompoundRetrievalPlan): Promise<NewsResponse> {
+  private async retrieveCompoundPlan(
+    plan: CompoundRetrievalPlan,
+    window?: { readonly from: string; readonly to: string },
+  ): Promise<NewsResponse> {
     const mode = {
       type: 'compoundPlan',
       plan: { iso3: plan.iso3, scope: plan.scope, facets: plan.facets },
@@ -3732,6 +3807,7 @@ export class AnalysisService {
       }
       const response = await this.newsService.search(sent, SEARCH_POOL_SIZE, mode, {
         ...(query.lang === undefined ? {} : { lang: query.lang }),
+        ...(window === undefined ? {} : { from: window.from, to: window.to }),
         allowFallback: query.allowFallback,
       });
       responses.push(response);

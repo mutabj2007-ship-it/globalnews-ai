@@ -50,6 +50,8 @@ export interface AskR2Strings {
     /** `{when}` · `{n}` placeholders; plural handled by `sourcesLabel`. */
     readonly checked: string;
     readonly retainedTo: string;
+    /** BETA-ASK-005 — the bounded publication window the evidence was restricted to. */
+    readonly publishedWindow: string;
     readonly zero: string;
     /**
      * ASK FIRST-ANSWER RETRIEVAL R3 — a provider REFUSED the search (rate limit, outage): the
@@ -214,6 +216,7 @@ const EN: AskR2Strings = {
     nothingRan: 'One question before searching · nothing has run',
     checked: 'Checked {when} · {sources}',
     retainedTo: 'Retained reporting to {when} · {sources}',
+    publishedWindow: 'Reporting published {from} – {to}',
     zero: 'Checked {when} · 0 matching reports',
     limited:
       'Checked {when} · a news source was temporarily unavailable, so this was not a complete search',
@@ -398,6 +401,7 @@ const PL: AskR2Strings = {
     nothingRan: 'Jedno pytanie przed wyszukiwaniem · nic nie uruchomiono',
     checked: 'Sprawdzono {when} · {sources}',
     retainedTo: 'Doniesienia do {when} · {sources}',
+    publishedWindow: 'Doniesienia opublikowane {from} – {to}',
     zero: 'Sprawdzono {when} · 0 pasujących doniesień',
     limited:
       'Sprawdzono {when} · źródło wiadomości było chwilowo niedostępne, więc wyszukiwanie nie było pełne',

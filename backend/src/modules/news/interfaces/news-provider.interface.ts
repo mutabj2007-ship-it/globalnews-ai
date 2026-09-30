@@ -20,6 +20,14 @@ export interface NewsSearchOptions {
   lang?: string;
 
   /**
+   * BETA-ASK-005 — a bounded PUBLICATION window (ISO-8601). A provider that supports date
+   * parameters natively uses them; one that does not ignores them, and the caller's strict
+   * post-filter (analysis) is what enforces the window either way. Absent = no window.
+   */
+  from?: string;
+  to?: string;
+
+  /**
    * Milestone #47 — free-text keyword query, used ONLY by
    * topHeadlines(). search() already takes its query as its own
    * positional parameter; this exists so topHeadlines() can also

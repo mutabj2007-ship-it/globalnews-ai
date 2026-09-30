@@ -852,6 +852,21 @@ export interface AnalysisRetrievalContext {
   /** Whether the underlying articles were live, cached, or mock. */
   dataMode: NewsDataMode;
 
+  /**
+   * BETA-ASK-005 — the bounded PUBLICATION window this evidence was restricted to ("last 7
+   * days"), anchored on the server request instant. It bounds when a report was published,
+   * never when the event it describes happened. `excludedOutsideWindow` counts retrieved
+   * reports dropped because their trustworthy publication time was outside the window or
+   * could not be established. Absent when the question stated no supported window.
+   */
+  reportingWindow?: {
+    statedPeriod: string;
+    from: string;
+    to: string;
+    basis: 'PUBLICATION_TIME';
+    excludedOutsideWindow: number;
+  };
+
   /** IDs of providers that contributed articles (empty for cached/unavailable retrieval). */
   providers: string[];
 

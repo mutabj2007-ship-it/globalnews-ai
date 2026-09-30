@@ -2,7 +2,8 @@ import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { ANALYSIS_TOTAL_BUDGET_MS } from '@globalnews-ai/shared';
 import type { NewsArticle } from '@globalnews-ai/shared';
-import { AnalysisService } from './analysis.service';
+import { AnalysisService, publishedInsideWindow } from './analysis.service';
+import { reportingWindowFor, supportedWindowHours } from '../../ask-router/reporting-window';
 import type { AnalysisProvider, AnalysisProviderInput } from '../interfaces';
 import { AnalysisConfigService } from '../config/analysis-config.service';
 import { MockAnalysisProvider } from '../providers/mock-analysis.provider';
@@ -30,6 +31,7 @@ import {
 } from '../validation/brief-compliance.util';
 import {
   buildDevelopmentBreadthSection,
+  buildReportingWindowInstruction,
   buildSingleSourceBasisSection,
 } from '../prompt/build-analysis-prompt.util';
 
@@ -619,5 +621,179 @@ describe('BETA-ASK-004 · the governed local lane is not starved by an early pro
     }
     expect(at).toHaveLength(4);
     for (let i = 1; i < at.length; i += 1) expect(at[i] - at[i - 1]).toBeGreaterThanOrEqual(35);
+  });
+});
+
+/*
+  BETA-ASK-005 — BOUNDED TIME-WINDOW RETRIEVAL. "over the last 7 days" is a PUBLICATION window
+  anchored on the server request instant, enforced strictly on trustworthy publication times.
+*/
+describe('BETA-ASK-005 · the window itself', () => {
+  const INSTANT = '2026-10-01T12:00:00.000Z';
+
+  it('last/past N days|hours are supported; ambiguous periods are not', () => {
+    expect(supportedWindowHours('last 7 days')).toBe(168);
+    expect(supportedWindowHours('past 7 days')).toBe(168);
+    expect(supportedWindowHours('over the last seven days')).toBe(168);
+    expect(supportedWindowHours('past 24 hours')).toBe(24);
+    expect(supportedWindowHours('this week')).toBeNull();
+    expect(supportedWindowHours('last week')).toBeNull();
+    expect(supportedWindowHours('last month')).toBeNull();
+    expect(supportedWindowHours('recently')).toBeNull();
+    expect(supportedWindowHours('last 400 days')).toBeNull();
+  });
+
+  it('the server request instant defines the exact window', () => {
+    expect(reportingWindowFor('last 7 days', 'RELATIVE_TO_ASK', INSTANT)).toEqual({
+      statedPeriod: 'last 7 days',
+      hours: 168,
+      from: '2026-09-24T12:00:00.000Z',
+      to: INSTANT,
+      basis: 'PUBLICATION_TIME',
+    });
+    /* No request instant, or an absolute period → no window. */
+    expect(reportingWindowFor('last 7 days', 'RELATIVE_TO_ASK', undefined)).toBeNull();
+    expect(reportingWindowFor('last 7 days', 'ABSOLUTE', INSTANT)).toBeNull();
+  });
+
+  it('inside is eligible, outside is not, and an untrustworthy time never satisfies it', () => {
+    const from = '2026-09-24T12:00:00.000Z';
+    const to = INSTANT;
+    const at = (publishedAt: string, basis: NewsArticle['publishedAtBasis']) => ({
+      publishedAt,
+      publishedAtBasis: basis,
+    });
+    expect(publishedInsideWindow(at('2026-09-30T08:00:00Z', 'publisher'), from, to)).toBe(true);
+    expect(publishedInsideWindow(at('2026-09-20T08:00:00Z', 'publisher'), from, to)).toBe(false);
+    expect(publishedInsideWindow(at('2026-10-02T08:00:00Z', 'publisher'), from, to)).toBe(false);
+    /* aggregator-observed (GDELT) and unknown times cannot satisfy a strict window */
+    expect(publishedInsideWindow(at('2026-09-30T08:00:00Z', 'observed'), from, to)).toBe(false);
+    expect(publishedInsideWindow(at('2026-09-30T08:00:00Z', undefined), from, to)).toBe(false);
+    expect(publishedInsideWindow(at('', 'publisher'), from, to)).toBe(false);
+  });
+
+  it('the prompt states the window bounds publication, not events', () => {
+    const rule = buildReportingWindowInstruction({
+      statedPeriod: 'last 7 days',
+      from: 'F',
+      to: 'T',
+    });
+    expect(rule).toContain('REPORTING WINDOW');
+    expect(rule).toContain('bounds PUBLICATION, not events');
+    expect(rule).toMatch(/Do NOT state or imply that an event occurred inside the window/);
+    expect(rule).toMatch(/timing is not established/);
+    expect(buildReportingWindowInstruction(undefined)).toBe('');
+  });
+});
+
+describe('BETA-ASK-005 · Q1 end to end on the real services (composes with R1 + BETA-ASK-004)', () => {
+  const Q1 =
+    'What has changed in eastern Democratic Republic of the Congo over the last 7 days? Identify any verified security or territorial changes, effects on civilians or displacement, and any important claims that remain disputed. Separate confirmed facts from analytical inference, distinguish event dates from publication dates, and cite independent local/regional, official, and international sources where available.';
+  const now = Date.now();
+  const window = {
+    statedPeriod: 'last 7 days',
+    from: new Date(now - 7 * 86_400_000).toISOString(),
+    to: new Date(now + 60_000).toISOString(),
+  };
+  const policy = { reportingWindow: window };
+  const OLD = a(
+    'old',
+    'M23 rebels seize town in North Kivu',
+    'Fighting in eastern Democratic Republic of Congo displaced thousands.',
+    { publishedAt: new Date(now - 20 * 86_400_000).toISOString() },
+  );
+  const OBSERVED = a(
+    'gdelt-seen',
+    'Clashes in Ituri displace families',
+    'Fighting in eastern Congo displaced civilians, aid groups said.',
+    { publishedAtBasis: 'observed' },
+  );
+  const OLD_EVENT_NEW_REPORT = a(
+    'anniversary',
+    'A year after Goma fell to M23 rebels, displaced families remain in camps',
+    'Reporting this week on the 2025 capture of Goma in eastern Democratic Republic of Congo.',
+  );
+
+  it('native window reaches GNews; only in-window, trustworthy, relevant reports survive', async () => {
+    const calls: Array<{ q: string; lang?: string; from?: string; to?: string }> = [];
+    const gnews = {
+      ...stub('gnews', () => [], []),
+      async search(q: string, options?: { lang?: string; from?: string; to?: string }) {
+        calls.push({ q, ...options });
+        return options?.lang === 'fr'
+          ? [FR_LOCAL]
+          : [EN_SECURITY, OLD, OBSERVED, COG, OLD_EVENT_NEW_REPORT, SYNDICATED_A, SYNDICATED_B];
+      },
+    } as unknown as NewsProvider;
+    const { service, inputs } = await services([gnews]);
+
+    const result = await service.analyzeNews(
+      Q1,
+      'en',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      policy,
+    );
+
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) {
+      expect(call.from).toBe(window.from);
+      expect(call.to).toBe(window.to);
+    }
+    const ids = result.articles.map((x) => x.id);
+    expect(ids).not.toContain('old');
+    expect(ids).not.toContain('gdelt-seen');
+    expect(ids).not.toContain('cog');
+    expect(ids).toEqual(expect.arrayContaining(['fr-loc', 'anniversary']));
+    expect(result.retrievalContext?.reportingWindow).toMatchObject({
+      statedPeriod: 'last 7 days',
+      from: window.from,
+      to: window.to,
+      basis: 'PUBLICATION_TIME',
+    });
+    /* OLD may collapse into EN_SECURITY as a duplicate first; the observed-time report is always excluded. */
+    expect(result.retrievalContext?.reportingWindow?.excludedOutsideWindow).toBeGreaterThanOrEqual(
+      1,
+    );
+    /* The model is told the window; the report about a 2025 event keeps its own publication
+       date and is never re-dated into the window. */
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0].reportingWindow).toEqual(window);
+    const anniversary = result.articles.find((x) => x.id === 'anniversary')!;
+    expect(anniversary.publishedAt).toBe(OLD_EVENT_NEW_REPORT.publishedAt);
+  });
+
+  it('a window with zero qualifying reports means no model call', async () => {
+    const gnews = stub('gnews', () => [OLD, OBSERVED, COG], []);
+    const { service, inputs } = await services([gnews]);
+    const result = await service.analyzeNews(
+      Q1,
+      'en',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      policy,
+    );
+    expect(result.articles).toEqual([]);
+    expect(result.analysis).toBeNull();
+    expect(inputs).toHaveLength(0);
+  });
+
+  it('without a window, behaviour is unchanged (no from/to sent, no window disclosed)', async () => {
+    const calls: Array<{ from?: string }> = [];
+    const gnews = {
+      ...stub('gnews', () => [], []),
+      async search(_q: string, options?: { from?: string }) {
+        calls.push({ ...options });
+        return [EN_SECURITY];
+      },
+    } as unknown as NewsProvider;
+    const { service } = await services([gnews]);
+    const result = await service.analyzeNews(Q2, 'en');
+    expect(calls.every((c) => c.from === undefined)).toBe(true);
+    expect(result.retrievalContext?.reportingWindow).toBeUndefined();
   });
 });

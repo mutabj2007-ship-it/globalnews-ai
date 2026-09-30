@@ -260,6 +260,9 @@ export class GNewsProvider implements NewsProvider {
       q: this.clampQueryLength(query),
       lang: options?.lang ?? 'en',
       max: String(this.clampLimit(options?.limit)),
+      /* BETA-ASK-005 — GNews /search filters by publication time natively (ISO-8601). */
+      from: options?.from,
+      to: options?.to,
     });
     const payload = await this.request(url);
     return this.normalize(payload);

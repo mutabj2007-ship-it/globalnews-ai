@@ -437,3 +437,46 @@ describe('ASK FIRST-ANSWER RETRIEVAL R3 — a refused search is "limited", never
     expect(EN.limitedNote).toMatch(/temporarily unavailable/);
   });
 });
+
+describe('BETA-ASK-005 — the bounded publication window is visible', () => {
+  const windowed = (state: AskAnswerState) =>
+    payload(state, {
+      chips: {
+        kind: 'SCOPED',
+        chips: [{ kind: 'TIME', value: 'last 7 days', source: 'REPORTING_WINDOW', applied: true }],
+      },
+      analysis: {
+        analysis: { generatedAt: '2026-10-01T12:00:00Z' },
+        articles: [{}, {}],
+        retrievalContext: {
+          newestArticlePublishedAt: '2026-09-30T08:00:00Z',
+          reportingWindow: {
+            statedPeriod: 'last 7 days',
+            from: '2026-09-24T12:00:00.000Z',
+            to: '2026-10-01T12:00:00.000Z',
+            basis: 'PUBLICATION_TIME',
+            excludedOutsideWindow: 3,
+          },
+        },
+      } as never,
+    });
+
+  it('the answer states the exact window, and the chip is applied (not "kept as asked")', () => {
+    const v = askR2View(windowed('CURRENT_REPORTING'), EN, 'en');
+    expect(v.freshness).toContain(
+      'Reporting published 24 Sep 2026, 12:00 UTC – 1 Oct 2026, 12:00 UTC',
+    );
+    expect(JSON.stringify(v)).toContain('Last 7 days');
+    expect(v.clarification.lead).toBeNull();
+  });
+
+  it('an insufficient windowed answer still names the window it searched', () => {
+    const v = askR2View(windowed('INSUFFICIENT'), EN, 'en');
+    expect(v.freshness).toContain('Reporting published 24 Sep 2026');
+  });
+
+  it('Polish wording', () => {
+    const v = askR2View(windowed('CURRENT_REPORTING'), PL, 'pl');
+    expect(v.freshness).toContain('Doniesienia opublikowane 24 wrz 2026, 12:00 UTC');
+  });
+});

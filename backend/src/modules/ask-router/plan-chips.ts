@@ -55,6 +55,8 @@ export function planChips(
   envelope: AskQuestionEnvelope,
   plan: RoutingPlan,
   placeSpans: Readonly<Record<string, string>> = {},
+  /** BETA-ASK-005 — a bounded publication window the executor applies: an APPLIED time chip. */
+  reportingWindow: { readonly statedPeriod: string } | null = null,
 ): PlanChips {
   if (plan.terminalState === 'CLARIFICATION_REQUIRED') return { kind: 'PENDING' };
 
@@ -124,6 +126,18 @@ export function planChips(
         at: positionOf(k.value),
       });
     }
+  }
+
+  if (reportingWindow !== null) {
+    chips.push({
+      chip: {
+        kind: 'TIME',
+        value: reportingWindow.statedPeriod,
+        source: 'REPORTING_WINDOW',
+        applied: true,
+      },
+      at: positionOf(reportingWindow.statedPeriod),
+    });
   }
 
   if (chips.length === 0) return { kind: 'NONE' };

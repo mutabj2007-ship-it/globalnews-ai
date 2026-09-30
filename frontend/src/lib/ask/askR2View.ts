@@ -294,6 +294,13 @@ export function askR2View(
       .replace('{when}', formatUtc(payload.verification.asOf, locale) ?? '—');
   else if (badge === 'cur') freshness = fill(s.freshness.retainedTo, retainedTo);
   else freshness = fill(s.freshness.checked, checkedAt);
+  /* BETA-ASK-005 — a bounded window is stated wherever retrieval ran under it. */
+  const window = retrieval?.reportingWindow;
+  if (window != null && badge !== 'clar' && badge !== 'unavail') {
+    freshness = `${freshness} · ${s.freshness.publishedWindow
+      .replace('{from}', formatUtc(window.from, locale) ?? '—')
+      .replace('{to}', formatUtc(window.to, locale) ?? '—')}`;
+  }
 
   const c = payload.chips;
   const items =
