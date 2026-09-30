@@ -21,6 +21,8 @@ export const GLOBAL_DAY_SCOPE = `${GLOBAL_SCOPE}:day`;
 export const accountScope = (accountId: string): string => `acct:${accountId}`;
 /* ASK GUEST TRIAL R3 — a server-issued guest session, and the aggregate guest pool. */
 export const guestScope = (sessionId: string): string => `guest:${sessionId}`;
+/** Guest usage attributed to an account at a claim: an audit record with NO ceiling. */
+export const accountGuestAttributionScope = (accountId: string): string => `acctguest:${accountId}`;
 export const GUEST_POOL_HOUR_SCOPE = 'guestpool:hour';
 export const GUEST_POOL_DAY_SCOPE = 'guestpool:day';
 /** Guest-session issuance and guest executions, per trusted IP scope, per UTC day. */

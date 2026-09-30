@@ -146,9 +146,14 @@ export class GuestClaimService {
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
     if (outcome.transferred && movedFrom !== null) {
-      /* Usage survives the identity change: the guest's spent units now also weigh on the account. */
+      /*
+        Usage survives the identity change without being charged twice: the guest's metered
+        rows (session, pool, IP, provider, global) stay exactly as they are, and the account gets
+        a separate attribution record. Its own eligibility bucket is not debited (see
+        ComputeMeterService.recordGuestUsageForAccount).
+      */
       const units = await this.meter.guestSessionUnits(movedFrom);
-      await this.meter.carryUnitsToAccount(userId, units, now);
+      await this.meter.recordGuestUsageForAccount(userId, units, now);
     } else if (!outcome.transferred) {
       this.logger.log(`guest claim not transferred (${outcome.reason ?? 'unknown'})`);
     }

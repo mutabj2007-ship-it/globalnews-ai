@@ -14,6 +14,7 @@ import {
   GLOBAL_DAY_SCOPE,
   GLOBAL_HOUR_SCOPE,
   GLOBAL_SCOPE,
+  accountGuestAttributionScope,
   GUEST_POOL_DAY_SCOPE,
   GUEST_POOL_HOUR_SCOPE,
   guestScope,
@@ -364,11 +365,24 @@ export class ComputeMeterService {
   }
 
   /**
-   * ASK GUEST TRIAL R3 — at a completed sign-in transfer, the guest session units already
-   * spent today are added ONCE to the account day bucket, so an identity change never resets
-   * accounting. Best-effort by design: a failure here never blocks the reader's sign-in.
+   * ASK GUEST TRIAL R3 · CONTINUATION BUDGET CLOSEOUT — what an identity change does to usage.
+   *
+   * Guest work was metered ONCE, when it ran: into the guest session scope (lifetime), the
+   * aggregate guest pool, the trusted IP scope, the provider and the global buckets. Those rows
+   * are never touched here — moving usage between identity-specific records must not debit the
+   * shared totals again, and login must not erase them.
+   *
+   * At a completed claim the guest's lifetime units are ATTRIBUTED to the account, once, in a
+   * separate `acctguest:<id>` day record with NO ceiling. It is an audit fact, not an
+   * eligibility control: the account's own `acct:<id>` bucket (new-account 15,000/day by
+   * default) counts only work the account itself runs. Debiting it with the guest's usage made
+   * the advertised "sign in to continue" follow-up predictably impossible for a new account,
+   * and charged the same work a second time against a second identity limit.
+   *
+   * Replay cannot repeat this: it runs only after a claim moved PENDING → CONSUMED exactly once.
+   * Best-effort by design: a failure here never blocks the reader's sign-in.
    */
-  async carryUnitsToAccount(
+  async recordGuestUsageForAccount(
     accountId: string,
     units: number,
     now: Date = new Date(),
@@ -377,12 +391,17 @@ export class ComputeMeterService {
     if (!(units > 0)) return;
     try {
       await withDeadline(
-        this.increment(db, accountScope(accountId), dayBucket(now), Math.ceil(units)),
+        this.increment(
+          db,
+          accountGuestAttributionScope(accountId),
+          dayBucket(now),
+          Math.ceil(units),
+        ),
         this.config.storeDeadlineMs,
-        'carry',
+        'attribute',
       );
     } catch {
-      this.logger.warn('guest-to-account unit carry-over could not be written');
+      this.logger.warn('guest-to-account usage attribution could not be written');
     }
   }
 
