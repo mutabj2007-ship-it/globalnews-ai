@@ -398,6 +398,20 @@ live(
       expect(opA.fingerprint).not.toBe(opB.fingerprint);
     });
 
+    it('SELF-CONTAINED questions get no prior: asking the same question again in a thread with context still reuses its stored result (0 AI)', async () => {
+      const g = await newGuest();
+      await asGuest(g.id, () =>
+        service.submit(guestPrincipal(g.id), g.threadId, q("What has changed in Kenya's economy?")),
+      );
+      await asGuest(g.id, () => service.submit(guestPrincipal(g.id), g.threadId, q(FOLLOW_UP)));
+      const calls = modelInputs.length;
+      const again = await asGuest(g.id, () =>
+        service.submit(guestPrincipal(g.id), g.threadId, q("What has changed in Kenya's economy?")),
+      );
+      expect(again.storedResultReused).toBe(true);
+      expect(modelInputs.length).toBe(calls);
+    });
+
     it('ELLIPSIS stays honest: "And what about Uganda?" after a subject still asks (no silent place-only answer)', async () => {
       const g = await newGuest();
       await asGuest(g.id, () =>

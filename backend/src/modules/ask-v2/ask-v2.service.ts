@@ -65,9 +65,13 @@ const GUEST_THREAD_LIMIT = 10;
   anchor, so "How does this affect X?" after "Why did that happen?" still continues the
   subject both refer to. Bounded; with no subject-bearing turn in reach, the most recent
   question is passed and the landed path decides as before.
+  Only a question that IS a follow-up (the same detectors) receives a prior: a self-contained
+  question, an ellipsis or a reference to the answer's content is planned, fingerprinted and
+  answered exactly as before, so asking the same question again still reuses its stored result.
 */
 const ANCHOR_LOOKBACK = 10;
-function anchorQuestionOf(newestFirst: readonly string[]): string | null {
+function anchorQuestionOf(question: string, newestFirst: readonly string[]): string | null {
+  if (!isSubjectFollowUp(question) && !isAnaphoricFollowUp(question)) return null;
   if (newestFirst.length === 0) return null;
   const anchor = newestFirst.find((q) => !isSubjectFollowUp(q) && !isAnaphoricFollowUp(q));
   return anchor ?? newestFirst[0];
@@ -594,7 +598,10 @@ export class AskV2Service {
           take: ANCHOR_LOOKBACK,
           select: { question: true },
         });
-        return anchorQuestionOf(earlier.map((t) => t.question));
+        return anchorQuestionOf(
+          request.question,
+          earlier.map((t) => t.question),
+        );
       });
       // A local/read-only CTO planner supplies identity and capabilities, never the client.
       const prepared = await this.withPrior(priorQuestion, () =>
@@ -827,7 +834,10 @@ export class AskV2Service {
       });
       return {
         runToken,
-        priorQuestion: anchorQuestionOf(earlierTurns.map((t) => t.question)),
+        priorQuestion: anchorQuestionOf(
+          turn.question,
+          earlierTurns.map((t) => t.question),
+        ),
         plan: operation.plan as unknown as AskPlan,
         request: {
           question: turn.question,
