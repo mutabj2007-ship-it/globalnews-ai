@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { AUTH_ERROR_PARAM } from '@globalnews-ai/shared';
 import type { Request, Response } from 'express';
 import { PrismaService } from '../../database/prisma.service';
@@ -30,6 +30,8 @@ import {
   PUBLIC_OAUTH_CALLBACK_BASE_ENV,
   resolvePublicOAuthCallbackBase,
 } from '../../security/public-oauth-callback-base.config';
+import { GuestSessionService } from '../ask-v2/guest/guest-session.service';
+import { GuestClaimService } from '../ask-v2/guest/guest-claim.service';
 
 const OAUTH_FLOW_COOKIE_TTL_MS = 5 * 60 * 1000;
 const GOOGLE_PROVIDER = 'google';
@@ -48,7 +50,69 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sessionService: SessionService,
+    /* ASK GUEST TRIAL R3 — optional: an AuthService built without them behaves exactly as before. */
+    @Optional() private readonly guestSessions?: GuestSessionService,
+    @Optional() private readonly guestClaims?: GuestClaimService,
   ) {}
+
+  /**
+   * ASK GUEST TRIAL R3 — the ONLY sign-in flow whose cancellation returns to Ask (CTO D7):
+   * a flow whose server-bound, HMAC-signed state carries a guest claim AND the Ask return.
+   * Every other entry point (Home, Account, Admin, a plain /ask sign-in) keeps its landed
+   * behaviour exactly.
+   */
+  private isGuestContinuation(
+    flowState: { guestClaimId?: string; returnTo?: string } | null,
+  ): boolean {
+    return (
+      flowState !== null &&
+      typeof flowState.guestClaimId === 'string' &&
+      validateReturnDestination(flowState.returnTo) === '/ask'
+    );
+  }
+
+  private askReturn(error: 'cancelled' | 'failed'): string {
+    return `${resolveSafeReturnUrl(this.frontendOrigin(), '/ask')}?${AUTH_ERROR_PARAM}=${error}`;
+  }
+
+  /** Never throws: a transfer that cannot complete leaves the guest conversation where it was. */
+  private transferGuestConversation(
+    claimId: string,
+    userId: string,
+    request: Request,
+    response: Response,
+  ): Promise<void> {
+    if (this.guestClaims === undefined || this.guestSessions === undefined)
+      return Promise.resolve();
+    const sessions = this.guestSessions;
+    const raw = sessions.rawTokenFrom(request);
+    return this.guestClaims
+      .transfer(claimId, raw === undefined ? null : GuestSessionService.hashToken(raw), userId)
+      .then((outcome) => {
+        if (outcome.transferred) sessions.clearCookie(response);
+      })
+      .catch(() => {
+        logWithRequestId(this.logger, 'warn', 'Guest conversation transfer did not complete.');
+      });
+  }
+
+  /** The claim a guest-continuation start may carry: this browser's guest, its newest PENDING claim. */
+  private async guestClaimFor(request: Request | undefined): Promise<string | undefined> {
+    if (
+      request === undefined ||
+      this.guestSessions === undefined ||
+      this.guestClaims === undefined
+    ) {
+      return undefined;
+    }
+    try {
+      const guest = await this.guestSessions.resolve(request);
+      if (guest === null) return undefined;
+      return (await this.guestClaims.pendingClaimFor(guest.id)) ?? undefined;
+    } catch {
+      return undefined;
+    }
+  }
 
   private get clientId(): string {
     return process.env.OAUTH_CLIENT_ID ?? '';
@@ -151,7 +215,12 @@ export class AuthService {
    * value is never stored, never logged and never reflected. What travels
    * onward is either a known relative application path or nothing at all.
    */
-  startGoogleAuth(response: Response, returnTo?: string): void {
+  startGoogleAuth(
+    response: Response,
+    returnTo?: string,
+    intent?: string,
+    request?: Request,
+  ): void | Promise<void> {
     // Milestone #57 security correction — previously, an unset
     // OAUTH_CLIENT_ID/OAUTH_CLIENT_SECRET/OAUTH_FLOW_SECRET produced a
     // redirect to Google with a blank client_id= rather than a clear
@@ -173,7 +242,26 @@ export class AuthService {
       rejection, no echo of what was sent.
     */
     const validatedReturnTo = validateReturnDestination(returnTo);
-    const flowState = createOAuthFlowState(validatedReturnTo ?? undefined);
+    /*
+      ASK GUEST TRIAL R3 — the guest-continuation flow binds its claim HERE, server-side, and
+      only when this same browser still presents the guest cookie that owns a PENDING claim.
+      The URL carries no claim, no thread and no question; any other intent value is ignored.
+    */
+    if (intent === 'ask-guest' && validatedReturnTo === '/ask') {
+      return this.guestClaimFor(request).then((guestClaimId) =>
+        this.redirectToGoogle(response, validatedReturnTo, guestClaimId),
+      );
+    }
+    /* Every other sign-in: exactly the landed, synchronous path. */
+    this.redirectToGoogle(response, validatedReturnTo ?? undefined, undefined);
+  }
+
+  private redirectToGoogle(
+    response: Response,
+    validatedReturnTo: string | undefined,
+    guestClaimId: string | undefined,
+  ): void {
+    const flowState = createOAuthFlowState(validatedReturnTo, guestClaimId);
     const codeChallenge = deriveCodeChallenge(flowState.codeVerifier);
 
     const authUrl = buildGoogleAuthUrl({
@@ -240,7 +328,13 @@ export class AuthService {
     */
     if (typeof providerError === 'string' && providerError.length > 0) {
       logWithRequestId(this.logger, 'log', 'OAuth sign-in was cancelled at the provider.');
-      response.redirect(`${this.frontendOrigin()}/?${AUTH_ERROR_PARAM}=cancelled`);
+      /* ASK GUEST TRIAL R3 (D7) — only a valid guest-continuation flow goes back to Ask. The
+         claim is not consumed; the guest conversation and its draft are untouched. */
+      response.redirect(
+        this.isGuestContinuation(flowState)
+          ? this.askReturn('cancelled')
+          : `${this.frontendOrigin()}/?${AUTH_ERROR_PARAM}=cancelled`,
+      );
       return;
     }
 
@@ -282,6 +376,21 @@ export class AuthService {
       );
 
       /*
+        ASK GUEST TRIAL R3 — the one-time transfer, AFTER the account is proven and its session
+        renewed. Requires control of BOTH identities: the claim in this signed flow state AND the
+        guest cookie presented on this very callback. It never blocks the sign-in: any failure
+        leaves the guest conversation where it was.
+      */
+      if (this.isGuestContinuation(flowState)) {
+        await this.transferGuestConversation(
+          flowState.guestClaimId as string,
+          user.id,
+          request,
+          response,
+        );
+      }
+
+      /*
         EXIT GATE — CTO requirements 7 and 10.
 
         The destination is revalidated and re-resolved here even though it was
@@ -309,7 +418,11 @@ export class AuthService {
         created" was refused for that reason: it would name a stage this handler
         cannot distinguish.
       */
-      response.redirect(`${this.frontendOrigin()}/?${AUTH_ERROR_PARAM}=failed`);
+      response.redirect(
+        this.isGuestContinuation(flowState)
+          ? this.askReturn('failed')
+          : `${this.frontendOrigin()}/?${AUTH_ERROR_PARAM}=failed`,
+      );
     }
   }
 

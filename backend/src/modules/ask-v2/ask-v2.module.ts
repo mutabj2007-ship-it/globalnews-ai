@@ -13,6 +13,10 @@ import { AskV2Service } from './ask-v2.service';
 import { AskR2ExecutionAdapter } from './ask-r2-execution.adapter';
 import { AskRequestContextInterceptor } from './ask-request-context';
 import { AskAccessObservationFilter } from './ask-access-observation.filter';
+import { GuestCoreModule } from './guest/guest-core.module';
+import { AskV2GuestController } from './guest/ask-v2-guest.controller';
+import { GuestFirstWriteGuard, GuestWriteGuard, RequireGuestGuard } from './guest/guest.guards';
+import { GuestMaintenanceService } from './guest/guest-maintenance.service';
 
 /*
   ASK R2 CONSOLIDATED INTEGRATION R1 · GATE E — ASK_EXECUTION_PORT is bound to the Ask R2
@@ -32,14 +36,19 @@ import { AskAccessObservationFilter } from './ask-access-observation.filter';
     SpecialistModule,
     AskObservabilityModule,
     AskIntelligenceModule,
+    GuestCoreModule,
   ],
-  controllers: [AskV2Controller],
+  controllers: [AskV2Controller, AskV2GuestController],
   providers: [
     AskV2Service,
     AskV2EnabledGuard,
     AskRequestContextInterceptor,
     AskAccessObservationFilter,
     AskR2ExecutionAdapter,
+    RequireGuestGuard,
+    GuestWriteGuard,
+    GuestFirstWriteGuard,
+    GuestMaintenanceService,
     { provide: ASK_EXECUTION_PORT, useExisting: AskR2ExecutionAdapter },
   ],
   exports: [AskV2Service],

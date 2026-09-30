@@ -133,6 +133,30 @@ export interface AskR2Strings {
     readonly action: string;
   };
   /**
+   * ASK GUEST TRIAL R3 — the first-visit guest. Restrained, never promotional: three
+   * questions without signing in, a server-authoritative counter, and sign-in as the
+   * continuation of THIS conversation — never a paywall, never "unlimited".
+   */
+  readonly guest: {
+    readonly intro: string;
+    readonly remaining: (n: number) => string;
+    readonly notCounted: string;
+    readonly exhaustedTitle: string;
+    readonly exhaustedBody: string;
+    readonly continueAction: string;
+    readonly signInOptional: string;
+    readonly inProgress: string;
+    readonly cooldown: string;
+    readonly limited: string;
+    readonly attemptsExhausted: string;
+    readonly unavailable: string;
+    readonly signInForDeeper: string;
+    readonly privacy: string;
+    readonly cancelled: string;
+    readonly failed: string;
+    readonly resumed: string;
+  };
+  /**
    * ALPHA ENABLEMENT R1 (MC-055) — the reader's own library, by the scope the server read:
    * `signIn` without identity, `notAvailable` when its executor is not wired. NEUTRAL when
    * the payload names no scope.
@@ -276,6 +300,30 @@ const EN: AskR2Strings = {
     title: 'SIGN-IN REQUIRED',
     body: 'Sign in to ask GlobalNewsAI. Your question is kept below and was not sent — nothing was run.',
     action: 'Sign in to ask',
+  },
+  guest: {
+    intro: 'Ask 3 questions — no sign-in required.',
+    remaining: (n) => `${n} guest question${n === 1 ? '' : 's'} remaining`,
+    notCounted: 'This one didn’t use a guest question.',
+    exhaustedTitle: 'GUEST QUESTIONS USED',
+    exhaustedBody:
+      'You’ve used your 3 guest questions. Sign in to continue this conversation and keep your answers.',
+    continueAction: 'Sign in to continue',
+    signInOptional: 'Sign in',
+    inProgress: 'Your previous question is still being answered. Your new question is kept below.',
+    cooldown:
+      'Guest questions are temporarily limited. Try again in a few minutes, or sign in. Your question is kept below.',
+    limited:
+      'The service is busy right now, so nothing was run. Try again shortly. Your question is kept below.',
+    attemptsExhausted:
+      'Guest questions are limited for this browser. Sign in to continue. Your question is kept below.',
+    unavailable: 'Guest questions are unavailable right now. Sign in to ask.',
+    signInForDeeper: 'Deeper analysis is available after you sign in.',
+    privacy:
+      'Guest conversations stay on this browser for up to 7 days. A private window or clearing cookies ends them.',
+    cancelled: 'Sign-in was cancelled. Your conversation is still here.',
+    failed: 'Sign-in did not complete. Your conversation is still here.',
+    resumed: 'Signed in. Your conversation continues here — nothing was run again.',
   },
   personal: {
     SAVED_STORIES: {
@@ -440,6 +488,36 @@ const PL: AskR2Strings = {
     title: 'WYMAGANE LOGOWANIE',
     body: 'Zaloguj się, aby zapytać GlobalNewsAI. Twoje pytanie czeka poniżej i nie zostało wysłane — nic nie uruchomiono.',
     action: 'Zaloguj się, aby zapytać',
+  },
+  guest: {
+    intro: 'Zadaj 3 pytania — bez logowania.',
+    /* Polish plural: 1 pytanie · 2–4 pytania (not 12–14) · 0, 5+ pytań. */
+    remaining: (n) =>
+      n === 1
+        ? 'Pozostało 1 pytanie gościa'
+        : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)
+          ? `Pozostały ${n} pytania gościa`
+          : `Pozostało ${n} pytań gościa`,
+    notCounted: 'To pytanie nie zostało policzone.',
+    exhaustedTitle: 'WYKORZYSTANO PYTANIA GOŚCIA',
+    exhaustedBody:
+      'Wykorzystano 3 pytania gościa. Zaloguj się, aby kontynuować tę rozmowę i zachować odpowiedzi.',
+    continueAction: 'Zaloguj się, aby kontynuować',
+    signInOptional: 'Zaloguj się',
+    inProgress: 'Poprzednie pytanie wciąż jest opracowywane. Nowe pytanie czeka poniżej.',
+    cooldown:
+      'Pytania gościa są chwilowo ograniczone. Spróbuj ponownie za kilka minut lub zaloguj się. Twoje pytanie czeka poniżej.',
+    limited:
+      'Serwis jest teraz obciążony, więc nic nie uruchomiono. Spróbuj ponownie za chwilę. Twoje pytanie czeka poniżej.',
+    attemptsExhausted:
+      'Pytania gościa są ograniczone w tej przeglądarce. Zaloguj się, aby kontynuować. Twoje pytanie czeka poniżej.',
+    unavailable: 'Pytania gościa są teraz niedostępne. Zaloguj się, aby zapytać.',
+    signInForDeeper: 'Pogłębiona analiza jest dostępna po zalogowaniu.',
+    privacy:
+      'Rozmowy gościa są przechowywane w tej przeglądarce do 7 dni. Okno prywatne lub usunięcie plików cookie je kończy.',
+    cancelled: 'Logowanie zostało anulowane. Twoja rozmowa jest nadal tutaj.',
+    failed: 'Logowanie nie zostało ukończone. Twoja rozmowa jest nadal tutaj.',
+    resumed: 'Zalogowano. Rozmowa trwa dalej tutaj — nic nie zostało uruchomione ponownie.',
   },
   personal: {
     SAVED_STORIES: {

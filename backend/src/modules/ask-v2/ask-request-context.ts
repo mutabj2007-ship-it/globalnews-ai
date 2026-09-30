@@ -20,6 +20,8 @@ import { clientIpScope } from '../compute-controls/compute-scopes';
  */
 export interface AskRequestContext {
   readonly accountId: string | null;
+  /** ASK GUEST TRIAL R3 — the server-issued guest session (RequireGuestGuard), or null. */
+  readonly guestSessionId?: string | null;
   readonly ipScope: string;
 }
 
@@ -28,9 +30,14 @@ export const askRequestContext = new AsyncLocalStorage<AskRequestContext>();
 @Injectable()
 export class AskRequestContextInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const request = context.switchToHttp().getRequest<{ user?: { id?: string }; ip?: string }>();
+    const request = context.switchToHttp().getRequest<{
+      user?: { id?: string };
+      guest?: { id?: string };
+      ip?: string;
+    }>();
     const store: AskRequestContext = {
       accountId: typeof request?.user?.id === 'string' ? request.user.id : null,
+      guestSessionId: typeof request?.guest?.id === 'string' ? request.guest.id : null,
       ipScope: clientIpScope(request?.ip),
     };
     return new Observable((subscriber) =>

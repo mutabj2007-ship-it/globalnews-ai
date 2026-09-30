@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
 import { RequireAuthGuard } from './require-auth.guard';
 import { CsrfGuard } from './csrf.guard';
+import { GuestCoreModule } from '../ask-v2/guest/guest-core.module';
 
 /**
  * Milestone #57 — SessionService/RequireAuthGuard are exported so
@@ -11,6 +12,8 @@ import { CsrfGuard } from './csrf.guard';
  * session-validation logic.
  */
 @Module({
+  /* ASK GUEST TRIAL R3 — the guest identity + one-time claim, for the sign-in transfer. */
+  imports: [GuestCoreModule],
   controllers: [AuthController],
   providers: [AuthService, SessionService, RequireAuthGuard, CsrfGuard],
   exports: [SessionService, RequireAuthGuard, CsrfGuard],

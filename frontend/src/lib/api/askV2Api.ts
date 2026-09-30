@@ -241,7 +241,49 @@ export type AskV2Outcome<T> =
       readonly ok: false;
       readonly reason: 'UNAVAILABLE' | 'SIGNED_OUT' | 'REFUSED' | 'NETWORK';
       readonly status?: number;
+      /** ASK GUEST TRIAL R3 — the server's typed refusal code, when it gave one. */
+      readonly code?: string;
+      readonly retryAfterS?: number;
     };
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ASK GUEST TRIAL R3 — the first-visit guest surface (`/ask-v2/guest/*`).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/** What the composer shows. Server-authoritative; the client only mirrors it. */
+export interface AskGuestStatus {
+  readonly signedIn: boolean;
+  readonly available: boolean;
+  readonly session?: { readonly expiresAt: string } | null;
+  readonly allowance?: number;
+  readonly remaining?: number;
+  readonly committed?: number;
+  readonly reserved?: number;
+  readonly state?: 'OPEN' | 'EXHAUSTED' | 'COOLDOWN' | 'ATTEMPTS_EXHAUSTED';
+  readonly cooldownUntil?: string | null;
+}
+
+export interface AskGuestThreadSummary {
+  readonly id: string;
+  readonly language: AskV2Language;
+  readonly createdAt: string;
+  readonly lastActiveAt: string;
+  readonly firstQuestion: string | null;
+}
+
+export interface AskV2ThreadHistory {
+  readonly id: string;
+  readonly language: AskV2Language;
+  readonly turns: readonly {
+    readonly id: string;
+    readonly sequence: number;
+    readonly question: string;
+    readonly operationId: string;
+  }[];
+}
+
+/** The non-simple header the FIRST guest submission carries (no guest session exists yet). */
+const GUEST_FIRST_WRITE = { 'X-Requested-With': 'globalnews-ask' } as const;
 
 /**
  * PUBLIC BETA ASK CONTINUITY R1 — the reads whose 404 means "Ask V2 is off".
@@ -255,25 +297,55 @@ export type AskV2Outcome<T> =
  * allow-list of collection paths rather than a rule about the status code.
  */
 const UNAVAILABLE_ON_404: readonly string[] = ['/ask-v2/threads', '/ask-v2/bookmarks'];
+/* ASK GUEST TRIAL R3 — the guest COLLECTION routes: a 404 there is the disabled surface too. */
+const GUEST_UNAVAILABLE_ON_404: readonly string[] = [
+  '/ask-v2/guest/status',
+  '/ask-v2/guest/threads',
+];
 
 async function call<T>(
   path: string,
   method: 'GET' | 'POST' | 'DELETE',
   body?: unknown,
+  headers?: Readonly<Record<string, string>>,
 ): Promise<AskV2Outcome<T>> {
   let response: Response;
   try {
-    response = await accountFetch(path, body === undefined ? { method } : { method, body });
+    response = await accountFetch(
+      path,
+      body === undefined ? { method, headers } : { method, body, headers },
+    );
   } catch {
     return { ok: false, reason: 'NETWORK' };
   }
   if (response.status === 404 && UNAVAILABLE_ON_404.includes(path))
     return { ok: false, reason: 'UNAVAILABLE', status: 404 };
+  if (response.status === 404 && GUEST_UNAVAILABLE_ON_404.includes(path))
+    return { ok: false, reason: 'UNAVAILABLE', status: 404 };
   if (response.status === 404 && method === 'POST' && path.startsWith('/ask-v2/threads')) {
     return { ok: false, reason: 'UNAVAILABLE', status: 404 };
   }
   if (response.status === 401) return { ok: false, reason: 'SIGNED_OUT', status: 401 };
-  if (!response.ok) return { ok: false, reason: 'REFUSED', status: response.status };
+  if (!response.ok) {
+    /* ASK GUEST TRIAL R3 — a typed refusal (`code`) is kept; anything else stays generic. */
+    let code: string | undefined;
+    let retryAfterS: number | undefined;
+    try {
+      const refusal = (await response.json()) as { code?: unknown; retryAfterS?: unknown };
+      if (typeof refusal?.code === 'string' && /^[A-Z_]{3,60}$/.test(refusal.code))
+        code = refusal.code;
+      if (typeof refusal?.retryAfterS === 'number') retryAfterS = refusal.retryAfterS;
+    } catch {
+      /* no body */
+    }
+    return {
+      ok: false,
+      reason: 'REFUSED',
+      status: response.status,
+      ...(code === undefined ? {} : { code }),
+      ...(retryAfterS === undefined ? {} : { retryAfterS }),
+    };
+  }
   try {
     return { ok: true, value: (await response.json()) as T };
   } catch {
@@ -346,6 +418,58 @@ export const askV2Api = {
   },
   release(id: string) {
     return call<AskV2Operation>(`/ask-v2/operations/${encodeURIComponent(id)}/release`, 'POST');
+  },
+  /** The account's own thread history (turns + operation ids). A read. */
+  thread(id: string) {
+    return call<AskV2ThreadHistory>(`/ask-v2/threads/${encodeURIComponent(id)}`, 'GET');
+  },
+  /** ASK GUEST TRIAL R3 — after sign-in: the conversation this account just continued. */
+  continuation() {
+    return call<{ readonly threadId: string | null }>('/ask-v2/continuation', 'GET');
+  },
+
+  /* ── ASK GUEST TRIAL R3 — the guest surface ─────────────────────────── */
+  guestStatus() {
+    return call<AskGuestStatus>('/ask-v2/guest/status', 'GET');
+  },
+  guestCreateThread(language: AskV2Language, returnPath: string | null, key = newIdempotencyKey()) {
+    return call<AskV2Thread>(
+      '/ask-v2/guest/threads',
+      'POST',
+      { idempotencyKey: key, language, ...(returnPath === null ? {} : { returnPath }) },
+      GUEST_FIRST_WRITE,
+    );
+  },
+  guestSubmit(
+    threadId: string,
+    question: string,
+    language: AskV2Language,
+    key = newIdempotencyKey(),
+  ) {
+    return call<AskV2Operation>(
+      `/ask-v2/guest/threads/${encodeURIComponent(threadId)}/turns`,
+      'POST',
+      { idempotencyKey: key, question, language, intent: 'ask' },
+      GUEST_FIRST_WRITE,
+    );
+  },
+  guestThreads() {
+    return call<readonly AskGuestThreadSummary[]>('/ask-v2/guest/threads', 'GET');
+  },
+  guestThread(id: string) {
+    return call<AskV2ThreadHistory>(`/ask-v2/guest/threads/${encodeURIComponent(id)}`, 'GET');
+  },
+  guestOperation(id: string) {
+    return call<AskV2Operation>(`/ask-v2/guest/operations/${encodeURIComponent(id)}`, 'GET');
+  },
+  /** Bind THIS guest's own thread to its next sign-in. Nothing identifying is returned. */
+  guestClaim(threadId: string) {
+    return call<{ readonly claimed: boolean }>(
+      '/ask-v2/guest/claim',
+      'POST',
+      { threadId },
+      GUEST_FIRST_WRITE,
+    );
   },
 };
 

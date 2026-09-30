@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { AnalysisService } from '../analysis/service/analysis.service';
 import { AnalysisConfigService } from '../analysis/config/analysis-config.service';
@@ -12,7 +12,11 @@ import {
   CircuitBreakerService,
   type BreakerOutcome,
 } from '../compute-controls/circuit-breaker.service';
-import { ComputeMeterService } from '../compute-controls/compute-meter.service';
+import {
+  ComputeMeterService,
+  type GuestComputeScope,
+} from '../compute-controls/compute-meter.service';
+import { GuestSessionService } from './guest/guest-session.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { ASK_MODEL_MAX_ATTEMPTS } from '../compute-controls/compute-controls.config';
 import { SpecialistClaimRegistry } from '../specialist/specialist-claim.registry';
@@ -294,6 +298,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     specialists: SpecialistClaimRegistry,
     private readonly observations: AskObservationService,
     private readonly intelligence: AskSpecialistReadCoordinator,
+    /* ASK GUEST TRIAL R3 — optional so every existing construction is unchanged; a guest
+       request without it is refused (fail closed). */
+    @Optional() private readonly guests?: GuestSessionService,
   ) {
     this.deps = {
       /*
@@ -522,9 +529,28 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
 
     const analysisConfig = this.analysisConfig.get();
+    /* ASK GUEST TRIAL R3 — a guest adds its scopes INSIDE every existing control. Invalid guest
+       settings fail closed for the guest only (checked again here, before any spend). */
+    let guest: GuestComputeScope | undefined;
+    if (who.guestSessionId != null) {
+      if (this.guests === undefined) throw new AskExecutionRefused('GUEST_TRIAL_NOT_CONFIGURED');
+      const trial = this.guests.trialConfig();
+      if (!trial.valid) throw new AskExecutionRefused('GUEST_TRIAL_NOT_CONFIGURED');
+      if (!(await this.switches.isEnabled('ASK_GUEST_TRIAL_ENABLED'))) {
+        throw new AskExecutionRefused('GUEST_TRIAL_UNAVAILABLE');
+      }
+      guest = {
+        sessionId: who.guestSessionId,
+        unitsPerSession: trial.limits.unitsPerSession,
+        poolUnitsPerHour: trial.limits.poolUnitsPerHour,
+        poolUnitsPerDay: trial.limits.poolUnitsPerDay,
+        concurrentPerSession: trial.limits.concurrentPerSession,
+      };
+    }
     const reservation = await this.meter.reserve({
       accountId: who.accountId,
       ipScope: who.ipScope,
+      ...(guest === undefined ? {} : { guest }),
       provider,
       estimatedUnits: estimateUnits(
         request.question.length,

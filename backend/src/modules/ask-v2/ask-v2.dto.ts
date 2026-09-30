@@ -30,3 +30,8 @@ export class HistoryPageDto {
 export class BookmarkTurnDto {
   @IsUUID() turnId!: string;
 }
+
+/* ASK GUEST TRIAL R3 — the guest names ITS OWN thread to continue after sign-in. */
+export class ClaimGuestThreadDto {
+  @IsUUID() threadId!: string;
+}

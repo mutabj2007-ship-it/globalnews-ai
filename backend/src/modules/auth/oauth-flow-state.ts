@@ -39,10 +39,18 @@ export interface OAuthFlowState {
    * gate does not take its presence here as permission.
    */
   returnTo?: string;
+  /**
+   * ASK GUEST TRIAL R3 — the one-time guest claim this sign-in may consume. Written only by
+   * startGoogleAuth, only for the Ask guest-continuation flow, only after the SAME browser
+   * presented that guest's cookie. Travels solely inside this HMAC-signed, httpOnly, one-time
+   * cookie — never in a URL.
+   */
+  guestClaimId?: string;
 }
 
 /** Milestone #57 — the flow-state cookie lives only long enough for a real user to complete the Google consent screen. */
 const FLOW_STATE_TTL_MS = 5 * 60 * 1000;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Milestone #57 security correction — the dedicated secret used to
@@ -78,7 +86,7 @@ export function deriveCodeChallenge(codeVerifier: string): string {
  * authorization-code-injection defense, and ID-token replay
  * protection respectively) and must never be derived from one another.
  */
-export function createOAuthFlowState(returnTo?: string): OAuthFlowState {
+export function createOAuthFlowState(returnTo?: string, guestClaimId?: string): OAuthFlowState {
   const flowState: OAuthFlowState = {
     state: randomBytes(32).toString('base64url'),
     codeVerifier: randomBytes(32).toString('base64url'),
@@ -95,6 +103,10 @@ export function createOAuthFlowState(returnTo?: string): OAuthFlowState {
   */
   if (returnTo !== undefined) {
     flowState.returnTo = returnTo;
+  }
+  /* Omitted, like returnTo, when absent: an ordinary sign-in's payload is byte-identical. */
+  if (guestClaimId !== undefined) {
+    flowState.guestClaimId = guestClaimId;
   }
 
   return flowState;
@@ -211,6 +223,9 @@ export function decodeOAuthFlowState(encoded: string | undefined): OAuthFlowStat
 
     if (typeof parsed.returnTo === 'string') {
       decoded.returnTo = parsed.returnTo;
+    }
+    if (typeof parsed.guestClaimId === 'string' && UUID.test(parsed.guestClaimId)) {
+      decoded.guestClaimId = parsed.guestClaimId;
     }
 
     return decoded;

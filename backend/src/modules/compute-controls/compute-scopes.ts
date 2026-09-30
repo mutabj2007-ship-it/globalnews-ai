@@ -19,6 +19,13 @@ export const GLOBAL_SCOPE = 'global';
 export const GLOBAL_HOUR_SCOPE = `${GLOBAL_SCOPE}:hour`;
 export const GLOBAL_DAY_SCOPE = `${GLOBAL_SCOPE}:day`;
 export const accountScope = (accountId: string): string => `acct:${accountId}`;
+/* ASK GUEST TRIAL R3 — a server-issued guest session, and the aggregate guest pool. */
+export const guestScope = (sessionId: string): string => `guest:${sessionId}`;
+export const GUEST_POOL_HOUR_SCOPE = 'guestpool:hour';
+export const GUEST_POOL_DAY_SCOPE = 'guestpool:day';
+/** Guest-session issuance and guest executions, per trusted IP scope, per UTC day. */
+export const guestIssuanceScope = (ipScope: string): string => `guestiss:${ipScope}`;
+export const guestExecutionScope = (ipScope: string): string => `guestexec:${ipScope}`;
 export const providerScope = (provider: string): string => `provider:${provider}`;
 export const concurrencyScope = (base: string): string => `conc:${base}`;
 export const breakerScope = (kind: 'fail' | 'ok', provider: string): string =>
