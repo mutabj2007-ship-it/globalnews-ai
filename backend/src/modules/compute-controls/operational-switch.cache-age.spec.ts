@@ -32,7 +32,13 @@ function store(initial: boolean | 'THROW') {
       findUnique: async () => {
         reads += 1;
         if (state.value === 'THROW') throw new Error('store unreadable');
-        return { name: NAME, enabled: state.value, setBy: 'po', setAt: new Date(T), reason: 'test' };
+        return {
+          name: NAME,
+          enabled: state.value,
+          setBy: 'po',
+          setAt: new Date(T),
+          reason: 'test',
+        };
       },
     },
   };
