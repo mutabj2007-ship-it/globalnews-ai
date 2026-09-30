@@ -31,12 +31,31 @@ import { DEPLOYMENT_ENVIRONMENT_VAR } from './deployment-environment';
  * measurement constructed without saying so. 5002 ms was the worst case plus
  * two milliseconds of read, not a 2 ms overrun of a 5 s limit.
  *
- * SO THE DEFENSIBLE BOUND IS DERIVED, NOT ASSERTED:
+ * ── ALPHA FINISH: WHAT IS ASSERTED, AND WHAT IS ONLY MEASURED ─────────────────
  *
- *     enforcementDelay  <=  flagCacheMs + storeReadMax + observerGranularity
+ * The previous revision asserted the end-to-end delay against
+ * `flagCacheMs + storeReadMax + 5 ms`. That total contains two terms the service
+ * does not control — how late the observer's timer wakes (≈15.6 ms granularity
+ * on Windows, so `setTimeout(5)` sleeps ~15 ms), and the gap between the cache
+ * stamp and the moment the test sampled `changedAt` — so it failed by ≤10 ms on
+ * a Windows host while the mechanism was exactly right.
  *
- * This file measures each term separately and checks the bound it derives,
- * so the number cannot drift into a magic constant again.
+ * The cache stamps `hit.at = now` at the START of the reading call. The test
+ * brackets that call: `warmStart <= C <= warmEnd`. That makes the two properties
+ * that matter exact, with no tolerance at all:
+ *
+ *   NOT EARLY   the fresh value is never observed before C + flagCacheMs:
+ *                 observedAt - warmStart >= flagCacheMs
+ *   NOT LATE    no read that STARTS at or after C + flagCacheMs returns the
+ *               stale value (checked against warmEnd + flagCacheMs >= C + ttl):
+ *                 staleAfterExpiry === 0
+ *   DEADLINE    the refreshing read itself completes within the landed store
+ *               deadline: observedAt - lastReadStart <= storeDeadlineMs
+ *
+ * Both cache bounds are STRICTER than the earlier `>= ttl - 5` / `<= ttl + read + 5`.
+ * The end-to-end delay and the observer's real wake-up gaps are REPORTED, not
+ * asserted: they measure the host, not the service. Screen copy stays "a reading
+ * can be a few seconds old", never a number.
  *
  * WHAT PROPAGATION IS NOT. A request already past the control is unaffected —
  * the switch gates admission, not work in flight. That is a different
@@ -54,6 +73,20 @@ const OBSERVER_POLL_MS = 5;
 
 function config(values: Record<string, string | undefined>): ConfigService {
   return { get: (key: string) => values[key] } as unknown as ConfigService;
+}
+
+interface Trial {
+  /** From the change being written to the reader enforcing it — REPORTED. */
+  delay: number;
+  /** From the start of the warm read (<= the cache stamp) to enforcement. */
+  sinceWarmStart: number;
+  /** Polls that started at or after warmEnd + ttl and still returned the stale value. */
+  staleAfterExpiry: number;
+  /** Duration of the read that returned the fresh value. */
+  refreshReadMs: number;
+  /** The observer's largest real gap between consecutive read starts — REPORTED. */
+  maxPollGapMs: number;
+  storeDeadlineMs: number;
 }
 
 live('ADMIN OPERATIONS R1 — propagation delay, measured', () => {
@@ -84,6 +117,7 @@ live('ADMIN OPERATIONS R1 — propagation delay, measured', () => {
     const meter = new ComputeMeterService(db as unknown as PrismaService, cfg);
     const switches = new OperationalSwitchService(db as unknown as PrismaService, cfg, meter);
     return {
+      meter,
       switches,
       operations: new AdminOperationsService(db as unknown as PrismaService, switches, cfg),
     };
@@ -102,28 +136,59 @@ live('ADMIN OPERATIONS R1 — propagation delay, measured', () => {
   }
 
   /**
-   * Warm the reader, wait `offsetMs` into its cache window, change the value,
-   * then poll until the reader enforces it. Returns the observed delay.
+   * Warm the reader (bracketing the call that stamps its cache entry), wait
+   * `offsetMs` into its window, change the value, then poll until the reader
+   * enforces it, timing every poll.
    */
-  async function trial(flagCacheMs: number, offsetMs: number): Promise<number> {
+  async function trial(flagCacheMs: number, offsetMs: number): Promise<Trial> {
     const writer = instance(a, flagCacheMs);
     const reader = instance(b, flagCacheMs);
     await writer.operations.setSwitch('ASK_PUBLIC_COMPUTE_ENABLED', true, 'w', 'warm');
+
+    const warmStart = Date.now();
     expect(await reader.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED')).toBe(true);
+    const warmEnd = Date.now();
+    const expiryAtLatest = warmEnd + flagCacheMs; // >= C + flagCacheMs
 
     if (offsetMs > 0) await new Promise((r) => setTimeout(r, offsetMs));
 
     const changedAt = Date.now();
     await writer.operations.setSwitch('ASK_PUBLIC_COMPUTE_ENABLED', false, 'w', 'change');
 
+    let staleAfterExpiry = 0;
+    let maxPollGapMs = 0;
+    let previousStart: number | null = null;
     const deadline = changedAt + flagCacheMs + 30_000;
     while (Date.now() < deadline) {
-      if ((await reader.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED')) === false) {
-        return Date.now() - changedAt;
+      const readStart = Date.now();
+      if (previousStart !== null) maxPollGapMs = Math.max(maxPollGapMs, readStart - previousStart);
+      previousStart = readStart;
+      const enabled = await reader.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+      const observedAt = Date.now();
+      if (enabled === false) {
+        return {
+          delay: observedAt - changedAt,
+          sinceWarmStart: observedAt - warmStart,
+          staleAfterExpiry,
+          refreshReadMs: observedAt - readStart,
+          maxPollGapMs,
+          storeDeadlineMs: reader.meter.config.storeDeadlineMs,
+        };
       }
+      if (readStart >= expiryAtLatest) staleAfterExpiry += 1;
       await new Promise((r) => setTimeout(r, OBSERVER_POLL_MS));
     }
     throw new Error('the change never propagated');
+  }
+
+  /** The exact, host-independent properties of one trial. */
+  function assertExact(t: Trial, flagCacheMs: number): void {
+    expect({ notEarly: t.sinceWarmStart >= flagCacheMs, t }).toEqual({ notEarly: true, t });
+    expect({ staleAfterExpiry: t.staleAfterExpiry, t }).toEqual({ staleAfterExpiry: 0, t });
+    expect({ withinDeadline: t.refreshReadMs <= t.storeDeadlineMs, t }).toEqual({
+      withinDeadline: true,
+      t,
+    });
   }
 
   const stats = (xs: number[]) => {
@@ -138,51 +203,43 @@ live('ADMIN OPERATIONS R1 — propagation delay, measured', () => {
     expect(r.max).toBeLessThan(2000); // the landed store deadline
   });
 
-  it('WORST CASE — a change landing just after a refresh waits out the whole window', async () => {
+  it('WORST CASE — a change landing just after a refresh waits out the whole window, and not a read longer', async () => {
     const flagCacheMs = 1000;
-    const reads = stats(await storeReadMs(20));
-    const delays: number[] = [];
-    for (let i = 0; i < 5; i += 1) delays.push(await trial(flagCacheMs, 0));
-    const d = stats(delays);
-    const bound = flagCacheMs + reads.max + OBSERVER_POLL_MS;
+    const trials: Trial[] = [];
+    for (let i = 0; i < 5; i += 1) trials.push(await trial(flagCacheMs, 0));
+    const d = stats(trials.map((t) => t.delay));
+    const gaps = stats(trials.map((t) => t.maxPollGapMs));
+    const refresh = stats(trials.map((t) => t.refreshReadMs));
     console.log(
       `[propagation] worst case flagCacheMs=${flagCacheMs} delay min=${d.min} median=${d.median} max=${d.max} ` +
-        `derivedBound=${bound} (= flagCacheMs + storeReadMax ${reads.max} + poll ${OBSERVER_POLL_MS})`,
+        `(REPORTED) · refresh read max=${refresh.max} · observer wake gap max=${gaps.max} (requested ${OBSERVER_POLL_MS})`,
     );
-    /* The delay must reach the window — this is the worst case, so it should be close to it — */
-    expect(d.min).toBeGreaterThanOrEqual(flagCacheMs - OBSERVER_POLL_MS);
-    /* — and must not exceed the bound the mechanism implies. */
-    expect(d.max).toBeLessThanOrEqual(bound);
+    trials.forEach((t) => assertExact(t, flagCacheMs));
   });
 
   it('TYPICAL CASE — a change landing mid-window waits only the remainder', async () => {
     const flagCacheMs = 1000;
-    const reads = stats(await storeReadMs(20));
-    const delays: number[] = [];
-    for (const offset of [200, 400, 600, 800]) delays.push(await trial(flagCacheMs, offset));
-    const d = stats(delays);
+    const trials: Trial[] = [];
+    for (const offset of [200, 400, 600, 800]) trials.push(await trial(flagCacheMs, offset));
+    const d = stats(trials.map((t) => t.delay));
     console.log(
       `[propagation] mid-window offsets 200/400/600/800 delay min=${d.min} median=${d.median} max=${d.max}`,
     );
-    /* Each waits out only what is left of its own window, so all are below the worst case. */
-    expect(d.max).toBeLessThanOrEqual(flagCacheMs + reads.max + OBSERVER_POLL_MS);
+    trials.forEach((t) => assertExact(t, flagCacheMs));
+    /* Each waits out only what is left of its own window. */
     expect(d.min).toBeLessThan(flagCacheMs);
   });
 
   it('THE BOUND SCALES WITH THE CONFIGURED TTL, which is what makes it a mechanism and not a constant', async () => {
-    const reads = stats(await storeReadMs(20));
-    const records: Array<{ ttl: number; delay: number; bound: number }> = [];
-    for (const ttl of [250, 500, 2000]) {
-      const delay = await trial(ttl, 0);
-      records.push({ ttl, delay, bound: ttl + reads.max + OBSERVER_POLL_MS });
-    }
-    records.forEach((r) =>
-      console.log(`[propagation] ttl=${r.ttl} worstCaseDelay=${r.delay} derivedBound=${r.bound}`),
+    const records: Array<{ ttl: number; t: Trial }> = [];
+    for (const ttl of [250, 500, 2000]) records.push({ ttl, t: await trial(ttl, 0) });
+    records.forEach(({ ttl, t }) =>
+      console.log(
+        `[propagation] ttl=${ttl} worstCaseDelay=${t.delay} sinceCacheStampAtMost=${t.sinceWarmStart} ` +
+          `overhead=${t.sinceWarmStart - ttl} refreshRead=${t.refreshReadMs} wakeGapMax=${t.maxPollGapMs}`,
+      ),
     );
-    records.forEach((r) => {
-      expect(r.delay).toBeLessThanOrEqual(r.bound);
-      expect(r.delay).toBeGreaterThanOrEqual(r.ttl - OBSERVER_POLL_MS);
-    });
+    records.forEach(({ ttl, t }) => assertExact(t, ttl));
   });
 
   it('THE WRITING INSTANCE IS NOT SUBJECT TO THE DELAY — set() clears its own entry', async () => {
