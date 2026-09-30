@@ -26,6 +26,8 @@ export const GUEST_POOL_DAY_SCOPE = 'guestpool:day';
 /** Guest-session issuance and guest executions, per trusted IP scope, per UTC day. */
 export const guestIssuanceScope = (ipScope: string): string => `guestiss:${ipScope}`;
 export const guestExecutionScope = (ipScope: string): string => `guestexec:${ipScope}`;
+/** All guest executions together, per UTC day. */
+export const GUEST_EXECUTIONS_ALL_SCOPE = 'guestexec:all';
 export const providerScope = (provider: string): string => `provider:${provider}`;
 export const concurrencyScope = (base: string): string => `conc:${base}`;
 export const breakerScope = (kind: 'fail' | 'ok', provider: string): string =>

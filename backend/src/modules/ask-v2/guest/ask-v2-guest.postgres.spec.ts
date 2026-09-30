@@ -49,6 +49,7 @@ const TEST_LIMITS: Record<string, string> = {
   ASK_GUEST_POOL_UNITS_PER_DAY: '500000',
   ASK_GUEST_SESSIONS_PER_IP_DAY: '1000',
   ASK_GUEST_EXECUTIONS_PER_IP_DAY: '1000',
+  ASK_GUEST_EXECUTIONS_PER_DAY: '1000',
   ASK_GUEST_CONCURRENT_PER_SESSION: '1',
   ASK_GUEST_COOLDOWN_AFTER_NO_ANSWER: '3',
   ASK_GUEST_COOLDOWN_S: '600',
@@ -667,6 +668,27 @@ live('ASK GUEST TRIAL R3 — three-answer guest mode on PostgreSQL', () => {
     expect(await db.askThread.findUnique({ where: { id: g.threadId } })).toBeNull();
   });
 
+  it('the GLOBAL guest executions ceiling refuses truthfully (busy), before the planner, keeping every slot', async () => {
+    configValues.ASK_GUEST_EXECUTIONS_PER_DAY = '4';
+    const a = await newGuest();
+    const b = await newGuest();
+    answers = [
+      ['INSUFFICIENT', 'NO_ANSWER_PRODUCED'],
+      ['INSUFFICIENT', 'NO_ANSWER_PRODUCED'],
+    ];
+    await ask(a, 'a1?');
+    await ask(a, 'a2?');
+    await ask(b, 'b1?');
+    await ask(b, 'b2?');
+    prepare.mockClear();
+    const fifth = await ask(b, 'b3?');
+    expect(fifth.status).toBe(429);
+    expect(fifth.body.code).toBe('GUEST_TEMPORARILY_LIMITED');
+    expect(prepare).not.toHaveBeenCalled();
+    /* Busy is never "you used your questions": b still has its answers left. */
+    expect((await status(b)).remaining).toBeGreaterThan(0);
+  });
+
   it('shared network: every guest session has its OWN three answers (never three per IP)', async () => {
     const a = await newGuest();
     const b = await newGuest();
@@ -793,6 +815,8 @@ live('ASK GUEST TRIAL R3 — three-answer guest mode on PostgreSQL', () => {
       provider: 'openai',
       guest,
     };
+    /* Other live suites share this test DB and may leave global concurrency held; start clean. */
+    await db.$executeRawUnsafe(`DELETE FROM "ComputeMeter" WHERE "scope" = 'conc:global'`);
     const first = await meter.reserve({ ...base, estimatedUnits: 15000 });
     expect(first.admitted).toBe(true);
     /* Session concurrency 1: a second parallel reservation is refused. */

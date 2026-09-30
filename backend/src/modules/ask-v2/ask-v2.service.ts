@@ -43,7 +43,11 @@ import { GuestSessionService } from './guest/guest-session.service';
 import { askRequestContext } from './ask-request-context';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
-import { dayBucket, guestExecutionScope } from '../compute-controls/compute-scopes';
+import {
+  dayBucket,
+  GUEST_EXECUTIONS_ALL_SCOPE,
+  guestExecutionScope,
+} from '../compute-controls/compute-scopes';
 
 type Tx = Prisma.TransactionClient;
 const TERMINAL = ['COMPLETED', 'RELEASED', 'REFUNDED'];
@@ -510,7 +514,19 @@ export class AskV2Service {
     if (!(await meter.admitCount(scope, bucket, config.limits.executionsPerIpScopePerDay))) {
       throw guestRefusal('GUEST_TEMPORARILY_LIMITED');
     }
-    return { undo: () => meter.adjustCount(scope, bucket, -1) };
+    /* All guests together: bounds news-provider calls the model-unit pool cannot see. */
+    if (
+      !(await meter.admitCount(GUEST_EXECUTIONS_ALL_SCOPE, bucket, config.limits.executionsPerDay))
+    ) {
+      await meter.adjustCount(scope, bucket, -1);
+      throw guestRefusal('GUEST_TEMPORARILY_LIMITED');
+    }
+    return {
+      undo: async () => {
+        await meter.adjustCount(scope, bucket, -1);
+        await meter.adjustCount(GUEST_EXECUTIONS_ALL_SCOPE, bucket, -1);
+      },
+    };
   }
 
   async quote(p: AskPrincipal, threadId: string, input: QuoteTurnDto) {

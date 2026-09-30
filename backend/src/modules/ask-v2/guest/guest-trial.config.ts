@@ -34,6 +34,11 @@ export interface GuestTrialLimits {
   readonly sessionsPerIpScopePerDay: number;
   /** Guest executions per trusted IP scope per UTC day (independent of cookies). */
   readonly executionsPerIpScopePerDay: number;
+  /**
+   * Guest executions per UTC day, ALL guests together. A no-answer result spends 0 model units
+   * yet still calls news providers, so the model-unit pool alone cannot bound provider calls.
+   */
+  readonly executionsPerDay: number;
   /** Concurrent model reservations per guest session. */
   readonly concurrentPerSession: number;
   /** Consecutive no-answer/failed results that open a cooldown, and its length. */
@@ -69,6 +74,7 @@ const SPENDING_KNOBS = {
   ASK_GUEST_POOL_UNITS_PER_DAY: 'poolUnitsPerDay',
   ASK_GUEST_SESSIONS_PER_IP_DAY: 'sessionsPerIpScopePerDay',
   ASK_GUEST_EXECUTIONS_PER_IP_DAY: 'executionsPerIpScopePerDay',
+  ASK_GUEST_EXECUTIONS_PER_DAY: 'executionsPerDay',
   ASK_GUEST_CONCURRENT_PER_SESSION: 'concurrentPerSession',
   ASK_GUEST_COOLDOWN_AFTER_NO_ANSWER: 'cooldownAfterNoAnswer',
   ASK_GUEST_COOLDOWN_S: 'cooldownSeconds',
@@ -144,6 +150,7 @@ export function resolveGuestTrialConfig(
   need(l.poolUnitsPerHour >= perRequest, 'guest pool/hour < one full request');
   need(l.poolUnitsPerDay >= l.poolUnitsPerHour, 'guest pool/day < guest pool/hour');
   need(l.executionsPerIpScopePerDay >= GUEST_ANSWER_ALLOWANCE, 'executions per IP scope/day < 3');
+  need(l.executionsPerDay >= GUEST_ANSWER_ALLOWANCE, 'guest executions/day < 3');
   need(
     l.concurrentPerSession >= 1 && l.concurrentPerSession <= 2,
     'concurrent per session ∉ [1,2]',
