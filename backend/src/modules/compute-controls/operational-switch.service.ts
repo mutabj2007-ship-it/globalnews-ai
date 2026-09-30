@@ -67,7 +67,14 @@ export class OperationalSwitchService implements OnApplicationBootstrap {
     db: SwitchDb = this.prisma,
   ): Promise<SwitchState> {
     const hit = this.cache.get(name);
-    if (hit && now - hit.at < this.meter.config.flagCacheMs) return hit.state;
+    if (hit) {
+      /* M-A — an age is only fresh when it is non-negative AND below the TTL. A negative age
+         (a `now` behind the stamp) must fall through to the store, or a future-dated entry
+         would never be re-read. `>= 0`, not `> 0`: age zero is a legitimate hit. NaN fails
+         both comparisons, so a nonsense clock reads the store instead of pinning the cache. */
+      const age = now - hit.at;
+      if (age >= 0 && age < this.meter.config.flagCacheMs) return hit.state;
+    }
     const literal = this.deploymentLiteralTrue(name);
     let state: SwitchState;
     try {
