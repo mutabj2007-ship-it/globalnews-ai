@@ -110,7 +110,8 @@ describe('F1.b — the /admin/me client boundary', () => {
   it('every admin page is a thin Server Component that renders one screen', () => {
     const pages = files(APP_ADMIN).filter((file) => file.endsWith('page.tsx'));
     /* TWENTY-ONE — the twenty design pages plus the Ask operations page R1 adds. */
-    expect(pages).toHaveLength(21);
+    /* ADMIN OPERATIONS R1 — twenty-two: the incident controls page. */
+    expect(pages).toHaveLength(22);
 
     pages.forEach((file) => {
       const source = readFileSync(file, 'utf-8');

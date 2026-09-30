@@ -49,6 +49,16 @@ export const CAPABILITIES = {
   AccessManage: 'access.manage',
   SupportHandle: 'support.handle',
   EvidenceExport: 'evidence.export',
+  /*
+    ADMIN OPERATIONS R1 — the first capability in this model that authorises a WRITE.
+
+    Every other capability here gates a read. This one gates changing an operational
+    switch, which stops new AI answers for every reader at once. It is therefore
+    deliberately NOT given to the roles that hold `analytics.view`: all four hold that,
+    so reusing it would let an ANALYST pause Ask. The mapping below is the proposal;
+    the Product Owner decides it, and it is one line to change.
+  */
+  OperationsControl: 'operations.control',
 } as const;
 
 export type Capability = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];
@@ -83,6 +93,7 @@ export const ROLE_CAPABILITIES: Readonly<Record<AdminRoleName, readonly Capabili
       CAPABILITIES.AccessManage,
       CAPABILITIES.SupportHandle,
       CAPABILITIES.EvidenceExport,
+      CAPABILITIES.OperationsControl,
     ]),
     ADMIN: Object.freeze([
       CAPABILITIES.AnalyticsView,
@@ -91,6 +102,7 @@ export const ROLE_CAPABILITIES: Readonly<Record<AdminRoleName, readonly Capabili
       CAPABILITIES.KsefSubmit,
       CAPABILITIES.SupportHandle,
       CAPABILITIES.EvidenceExport,
+      CAPABILITIES.OperationsControl,
     ]),
     SUPPORT: Object.freeze([CAPABILITIES.AnalyticsView, CAPABILITIES.SupportHandle]),
     ANALYST: Object.freeze([CAPABILITIES.AnalyticsView, CAPABILITIES.EvidenceExport]),

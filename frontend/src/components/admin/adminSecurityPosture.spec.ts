@@ -147,7 +147,16 @@ describe('F1.b — security posture', () => {
     });
   });
 
-  it('the ONLY files that issue an admin request are the two sanctioned hooks', () => {
+  /*
+    ADMIN OPERATIONS R1 — a FOURTH sanctioned hook, named here on purpose.
+
+    The list is the boundary: it fails if any other admin file learns to issue a
+    request, which is the property this assertion protects. `useAdminOperations.ts`
+    is added because the incident write needs a result shape the generic mutation
+    hook does not return — the server's re-read of the stored switch — and it uses
+    the same `accountFetch`, so CSRF and credential handling are unchanged.
+  */
+  it('the ONLY files that issue an admin request are the four sanctioned hooks', () => {
     const issuers = adminFiles.filter((file) =>
       /accountFetch\s*\(/.test(
         readFileSync(file, 'utf-8')
@@ -159,6 +168,7 @@ describe('F1.b — security posture', () => {
     expect(issuers.map((file) => file.split(/[\\/]/).pop()).sort()).toEqual([
       'useAdminMe.ts',
       'useAdminMutation.ts',
+      'useAdminOperations.ts',
       'useAdminResource.ts',
     ]);
   });

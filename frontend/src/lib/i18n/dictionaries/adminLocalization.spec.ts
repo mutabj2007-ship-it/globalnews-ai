@@ -42,6 +42,15 @@ const IDENTICAL_BY_DESIGN = new Set([
   'screens.systemHealth.statuses.DEGRADED',
   'screens.systemHealth.statuses.FAILING',
   'screens.systemHealth.statuses.UNKNOWN',
+  /*
+    ADMIN OPERATIONS R1 — three identifiers, not prose. 'ALPHA' is the deployment's
+    own name, and the two `system` values are the environment variables an operator
+    quotes verbatim when escalating. Translating any of them would make the screen
+    disagree with the deployment it is describing.
+  */
+  'screens.incidentControls.environment.ALPHA',
+  'screens.incidentControls.controls.pauseNewAiAnswers.system',
+  'screens.incidentControls.controls.stopAskR2Execution.system',
   'screens.systemHealth.statuses.NOT_IMPLEMENTED',
 ]);
 

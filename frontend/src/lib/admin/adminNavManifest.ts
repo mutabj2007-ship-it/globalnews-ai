@@ -204,6 +204,23 @@ export const NAV_MANIFEST: readonly AdminNavGroup[] = Object.freeze([
       ),
       item('14', 'audit', 'Audit logs', ADMIN_ROUTES.audit, 'ADMIN-08', 'analytics.view'),
       item('15', 'settings', 'Settings', ADMIN_ROUTES.settings, 'SETTINGS', 'analytics.view'),
+      /*
+        ADMIN OPERATIONS R1 — visible on `analytics.view`, OPERABLE on
+        `operations.control`. The nav capability is the one that decides whether the
+        screen appears, and an administrator who can see the switches but not change
+        them still gets an honest screen rather than a hidden one: the server sends
+        `mayOperate: false` and the controls render as read-only. Gating the nav entry
+        on the write capability instead would hide the incident state from the roles
+        most likely to be first to notice something wrong.
+      */
+      item(
+        '17',
+        'incidentControls',
+        'Incident controls',
+        ADMIN_ROUTES.operations,
+        'OPERATIONS',
+        'analytics.view',
+      ),
     ]),
   },
 ]);

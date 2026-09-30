@@ -551,6 +551,122 @@ export const adminEn = {
         'Audit is read-only for every role. There is no update or delete path by design.',
     },
 
+    incidentControls: {
+      title: 'Incident controls',
+      purpose:
+        'Incident controls for the Ask platform. Changes here take effect on the server, for every reader, without a deploy.',
+      environment: {
+        label: 'Environment',
+        LOCAL: 'LOCAL',
+        ALPHA: 'ALPHA',
+        PRODUCTION: 'PRODUCTION',
+        unconfirmed: 'UNCONFIRMED',
+        unconfirmedNotSet:
+          'This deployment does not declare which environment it is. Controls are disabled until it does — a screen that cannot say where it is pointing must not change anything there.',
+        unconfirmedNotRecognised:
+          'This deployment declares an environment name this build does not recognise. Controls are disabled until it is corrected.',
+        nodeEnvNote:
+          'NODE_ENV is shown for context only. It reads the same in Alpha and in Production, so it is never used as the label.',
+      },
+      health: {
+        answering: 'Ask is answering.',
+        paused: 'New AI answers are paused.',
+        r2Stopped: 'Ask R2 execution is stopped.',
+        bothStopped: 'Ask is not answering. Both controls are off.',
+        unknown:
+          'The switch store could not be read. Treated as stopped, which is the safe reading.',
+        savedReadable: 'Saved answers remain readable in every state above.',
+      },
+      state: {
+        heading: 'Current state',
+        effective: 'Effective',
+        requested: 'Requested',
+        deployment: 'Deployment',
+        on: 'ON',
+        off: 'OFF',
+        notSet: 'not set',
+        readable: 'store readable',
+        unreadable: 'cannot confirm',
+        checkedAt: 'Checked',
+        staleNote: 'A reading can be a few seconds old on any one instance.',
+        lastChange: 'Last change',
+        noChange: 'No recorded change.',
+        by: 'by',
+      },
+      blocked: {
+        ENVIRONMENT_UNCONFIRMED: 'Disabled — the environment is not confirmed.',
+        STORE_UNREADABLE: 'Disabled — the switch store cannot be read.',
+        DEPLOYMENT_VALUE_NOT_TRUE:
+          'This switch is already off at the deployment level. An operator action cannot turn it on; that needs a deploy.',
+      },
+      advanced: {
+        heading: 'Advanced controls',
+        show: 'Show advanced controls',
+        hide: 'Hide advanced controls',
+        note: 'One control, for the narrow case below. Most incidents are handled by the control above.',
+      },
+      readOnly:
+        'You can see these controls but not change them. Changing one needs the operations.control permission.',
+      controls: {
+        pauseNewAiAnswers: {
+          name: 'Pause new AI answers',
+          system: 'ASK_PUBLIC_COMPUTE_ENABLED',
+          pause: 'Pause new AI answers',
+          resume: 'Resume new AI answers',
+          consequence:
+            'Stops all new AI computation on the public Ask path. Saved answers stay readable. Questions that need no AI — a clarification, an unsupported capability — still answer. A request already running will finish; this does not cancel it.',
+          reverse: 'To reverse this, use the same control. It will read “Resume new AI answers”.',
+        },
+        stopAskR2Execution: {
+          name: 'Stop Ask R2 execution',
+          whenToUse:
+            'Reach for this only when the R2 executor itself is the problem and you want the record to say so. For a provider incident, a cost problem or anything about model spend, use Pause new AI answers instead. At this release both controls are read in the same place, one line apart, so what a reader experiences is the same either way — the difference is which thing you are declaring stopped.',
+          system: 'ASK_R2_ENABLED',
+          pause: 'Stop Ask R2 execution',
+          resume: 'Allow Ask R2 execution',
+          consequence:
+            'Stops the Ask R2 executor one step before the compute control is consulted. A question ends unanswered with a recorded reason. The Ask surface stays reachable and saved answers remain readable. A request already running will finish.',
+          reverse: 'To reverse this, use the same control. It will read “Allow Ask R2 execution”.',
+          note: 'Its visible effect is the same as pausing new AI answers. Prefer that control unless you specifically need to stop the R2 executor.',
+        },
+      },
+      confirm: {
+        heading: 'Confirm this change',
+        reasonLabel: 'Reason (required, recorded with your name)',
+        reasonPlaceholder: 'What is happening, in a few words',
+        reasonTooShort: 'Please give a reason of at least three characters.',
+        submit: 'Apply',
+        cancel: 'Cancel',
+        pending: 'Applying…',
+      },
+      result: {
+        saved: 'Setting saved.',
+        failed: 'Not saved. The server refused the change, and nothing was altered.',
+        notConfirmed:
+          'The server accepted the request but did not read the new value back. Treat the state above as authoritative and check again.',
+        propagation:
+          'Changes can take a few seconds to affect new requests. Requests already running are not affected.',
+        notUniversal:
+          'This is the stored setting, confirmed by the server. It is not a report that every running instance has already applied it.',
+      },
+      history: {
+        heading: 'Change history',
+        empty: 'No changes have been recorded.',
+        unavailable: 'The change history could not be read.',
+        when: 'When',
+        control: 'Control',
+        change: 'Change',
+        who: 'Who',
+        reason: 'Reason',
+      },
+      notHere: {
+        heading: 'Not available in this release',
+        monitoring:
+          'Stop background monitoring · Pause phone alerts — no monitoring runs and no delivery path exists yet.',
+        providers:
+          'Disable one provider · Temporary traffic limits — the breaker opens automatically and has no manual path; limits are set by deployment and need a restart.',
+      },
+    },
     askIntelligence: {
       title: 'Ask intelligence',
       purpose:

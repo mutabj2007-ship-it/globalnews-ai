@@ -541,6 +541,124 @@ export const adminPl: AdminDictionary = {
         'Audyt jest tylko do odczytu dla każdej roli. Z założenia nie istnieje ścieżka aktualizacji ani usunięcia.',
     },
 
+    incidentControls: {
+      title: 'Sterowanie incydentami',
+      purpose:
+        'Sterowanie incydentami dla platformy Ask. Zmiany działają po stronie serwera, dla wszystkich czytelników, bez wdrożenia.',
+      environment: {
+        label: 'Środowisko',
+        LOCAL: 'LOKALNE',
+        ALPHA: 'ALPHA',
+        PRODUCTION: 'PRODUKCJA',
+        unconfirmed: 'NIEPOTWIERDZONE',
+        unconfirmedNotSet:
+          'To wdrożenie nie deklaruje, którym jest środowiskiem. Sterowanie pozostaje wyłączone — ekran, który nie potrafi powiedzieć, gdzie wskazuje, nie może niczego tam zmieniać.',
+        unconfirmedNotRecognised:
+          'To wdrożenie deklaruje nazwę środowiska, której ta wersja nie rozpoznaje. Sterowanie pozostaje wyłączone do czasu poprawy.',
+        nodeEnvNote:
+          'NODE_ENV pokazujemy wyłącznie kontekstowo. Ma tę samą wartość w Alpha i na produkcji, więc nigdy nie służy jako etykieta.',
+      },
+      health: {
+        answering: 'Ask odpowiada.',
+        paused: 'Nowe odpowiedzi AI są wstrzymane.',
+        r2Stopped: 'Wykonywanie Ask R2 jest zatrzymane.',
+        bothStopped: 'Ask nie odpowiada. Oba sterowania są wyłączone.',
+        unknown:
+          'Nie udało się odczytać magazynu przełączników. Traktujemy to jako zatrzymanie — to bezpieczniejszy odczyt.',
+        savedReadable: 'Zapisane odpowiedzi pozostają czytelne w każdym z powyższych stanów.',
+      },
+      state: {
+        heading: 'Stan bieżący',
+        effective: 'Faktyczny',
+        requested: 'Żądany',
+        deployment: 'Wdrożenie',
+        on: 'WŁ.',
+        off: 'WYŁ.',
+        notSet: 'nie ustawiono',
+        readable: 'magazyn czytelny',
+        unreadable: 'nie można potwierdzić',
+        checkedAt: 'Sprawdzono',
+        staleNote: 'Odczyt na pojedynczej instancji może mieć kilka sekund.',
+        lastChange: 'Ostatnia zmiana',
+        noChange: 'Brak zapisanej zmiany.',
+        by: '—',
+      },
+      blocked: {
+        ENVIRONMENT_UNCONFIRMED: 'Wyłączone — środowisko nie jest potwierdzone.',
+        STORE_UNREADABLE: 'Wyłączone — nie można odczytać magazynu przełączników.',
+        DEPLOYMENT_VALUE_NOT_TRUE:
+          'Ten przełącznik jest już wyłączony na poziomie wdrożenia. Działanie operatora go nie włączy; wymaga to wdrożenia.',
+      },
+      advanced: {
+        heading: 'Sterowanie zaawansowane',
+        show: 'Pokaż sterowanie zaawansowane',
+        hide: 'Ukryj sterowanie zaawansowane',
+        note: 'Jedno sterowanie, do wąskiego przypadku poniżej. Większość incydentów obsługuje sterowanie powyżej.',
+      },
+      readOnly:
+        'Widzisz te sterowania, ale nie możesz ich zmieniać. Zmiana wymaga uprawnienia operations.control.',
+      controls: {
+        pauseNewAiAnswers: {
+          name: 'Wstrzymaj nowe odpowiedzi AI',
+          system: 'ASK_PUBLIC_COMPUTE_ENABLED',
+          pause: 'Wstrzymaj nowe odpowiedzi AI',
+          resume: 'Wznów nowe odpowiedzi AI',
+          consequence:
+            'Zatrzymuje wszystkie nowe obliczenia AI na publicznej ścieżce Ask. Zapisane odpowiedzi pozostają czytelne. Pytania, które nie wymagają AI — doprecyzowanie, niedostępna zdolność — nadal otrzymują odpowiedź. Żądanie już uruchomione dokończy się; to go nie anuluje.',
+          reverse:
+            'Aby cofnąć, użyj tego samego sterowania. Pojawi się napis „Wznów nowe odpowiedzi AI”.',
+        },
+        stopAskR2Execution: {
+          name: 'Zatrzymaj wykonywanie Ask R2',
+          whenToUse:
+            'Sięgaj po to tylko wtedy, gdy problemem jest sam wykonawca R2 i chcesz, aby zapis to odnotował. Przy awarii dostawcy, problemie kosztowym lub czymkolwiek dotyczącym wydatków na model użyj zamiast tego „Wstrzymaj nowe odpowiedzi AI”. W tym wydaniu oba sterowania są odczytywane w tym samym miejscu, o jedną linię od siebie, więc czytelnik doświadcza tego samego — różnica polega na tym, co deklarujesz jako zatrzymane.',
+          system: 'ASK_R2_ENABLED',
+          pause: 'Zatrzymaj wykonywanie Ask R2',
+          resume: 'Zezwól na wykonywanie Ask R2',
+          consequence:
+            'Zatrzymuje wykonawcę Ask R2 o krok przed sprawdzeniem sterowania obliczeniami. Pytanie kończy się bez odpowiedzi, z zapisaną przyczyną. Powierzchnia Ask pozostaje dostępna, a zapisane odpowiedzi czytelne. Żądanie już uruchomione dokończy się.',
+          reverse:
+            'Aby cofnąć, użyj tego samego sterowania. Pojawi się napis „Zezwól na wykonywanie Ask R2”.',
+          note: 'Widoczny skutek jest taki sam jak wstrzymanie nowych odpowiedzi AI. Wybierz tamto sterowanie, chyba że chcesz zatrzymać właśnie wykonawcę R2.',
+        },
+      },
+      confirm: {
+        heading: 'Potwierdź zmianę',
+        reasonLabel: 'Powód (wymagany, zapisywany z Twoim imieniem)',
+        reasonPlaceholder: 'Co się dzieje, w kilku słowach',
+        reasonTooShort: 'Podaj powód o długości co najmniej trzech znaków.',
+        submit: 'Zastosuj',
+        cancel: 'Anuluj',
+        pending: 'Stosowanie…',
+      },
+      result: {
+        saved: 'Ustawienie zapisane.',
+        failed: 'Nie zapisano. Serwer odrzucił zmianę i nic nie zostało zmienione.',
+        notConfirmed:
+          'Serwer przyjął żądanie, ale nie odczytał nowej wartości z powrotem. Traktuj powyższy stan jako wiążący i sprawdź ponownie.',
+        propagation:
+          'Zmiana może zacząć obowiązywać nowe żądania dopiero po kilku sekundach. Żądania już uruchomione nie są objęte zmianą.',
+        notUniversal:
+          'To zapisane ustawienie, potwierdzone przez serwer. Nie jest to informacja, że każda działająca instancja już je zastosowała.',
+      },
+      history: {
+        heading: 'Historia zmian',
+        empty: 'Nie zapisano żadnych zmian.',
+        unavailable: 'Nie udało się odczytać historii zmian.',
+        when: 'Kiedy',
+        control: 'Sterowanie',
+        change: 'Zmiana',
+        who: 'Kto',
+        reason: 'Powód',
+      },
+      notHere: {
+        heading: 'Niedostępne w tym wydaniu',
+        monitoring:
+          'Zatrzymanie monitorowania w tle · Wstrzymanie powiadomień na telefon — monitorowanie nie działa i nie istnieje ścieżka dostarczania.',
+        providers:
+          'Wyłączenie pojedynczego dostawcy · Tymczasowe limity ruchu — bezpiecznik otwiera się automatycznie i nie ma ścieżki ręcznej; limity ustawia wdrożenie i wymagają restartu.',
+      },
+    },
     askIntelligence: {
       title: 'Analiza zapytań Ask',
       purpose:

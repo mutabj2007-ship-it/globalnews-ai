@@ -54,7 +54,9 @@ describe('F1.b — frontend/backend capability parity', () => {
       raw.replace(/'/g, ''),
     );
 
-    expect(backendNames.length).toBe(9);
+    /* ADMIN OPERATIONS R1 — ten: `operations.control` is the first capability that
+       authorises a write, and it is mirrored on both sides. */
+    expect(backendNames.length).toBe(10);
     expect([...ADMIN_CAPABILITY_NAMES].sort()).toEqual([...backendNames].sort());
   });
 

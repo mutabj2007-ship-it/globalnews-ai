@@ -86,6 +86,16 @@ describe('F1.b — provenance registry', () => {
       'admin-07.databaseProbe',
       'admin-07.newsProviderProbe',
       'admin-08.correlationId',
+      /*
+        ADMIN OPERATIONS R1 — three new A entries. Every field on the incident
+        screen is read from a live endpoint that exists, and the switch write is
+        the platform's first admin mutation. `operations.notAvailable` stays C:
+        monitoring and delivery have no substrate to control, so nothing measures
+        them.
+      */
+      'operations.environment',
+      'operations.history',
+      'operations.switchState',
       'settings.localisation',
     ]);
   });
@@ -287,5 +297,21 @@ describe('F1.b — provenance registry', () => {
 
   it('R1 leaves the legacy rollback count at C — nothing emits it, so nothing measures it', () => {
     expect(provenanceOf('admin-06.askLegacyRollback')).toBe('C');
+  });
+});
+
+/**
+ * ADMIN OPERATIONS R1 — the tags this milestone adds, asserted individually so
+ * the reason for each stays in the record rather than only in a sorted list.
+ */
+describe('ADMIN OPERATIONS R1 — incident control provenance', () => {
+  it('the three fields a live endpoint returns are A', () => {
+    expect(provenanceOf('operations.environment')).toBe('A');
+    expect(provenanceOf('operations.switchState')).toBe('A');
+    expect(provenanceOf('operations.history')).toBe('A');
+  });
+
+  it('monitoring and delivery stay C — there is no substrate to control, so nothing measures them', () => {
+    expect(provenanceOf('operations.notAvailable')).toBe('C');
   });
 });
