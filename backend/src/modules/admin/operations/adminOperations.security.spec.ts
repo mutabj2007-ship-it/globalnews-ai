@@ -498,6 +498,111 @@ describe('R1 — an unconfirmed environment refuses the write, server-side', () 
   });
 });
 
+/*
+  M-3 (Main, carried forward by F to the Admin candidate) — a LOCAL write still requires
+  `operations.control` and CSRF. `LOCAL` is a confirmed environment like ALPHA and
+  PRODUCTION: it answers "which deployment is this?", and nothing more. It must never read
+  as "a developer machine, so relax the gate". The capability suite above runs under ALPHA
+  only, so without this block a LOCAL shortcut could land unobserved.
+
+  Discriminating by construction: the POSITIVE CONTROL shows ADMIN with CSRF succeeding
+  under LOCAL. So every refusal below is the capability or CSRF guard firing — not LOCAL
+  being treated as unconfirmed, which would refuse everyone and prove nothing.
+*/
+describe('M-3 — a LOCAL environment does not relax the write: capability and CSRF still apply', () => {
+  const originalPlatform = process.env[ADMIN_PLATFORM_ENABLED_ENV];
+  const originalEnvironment = process.env[DEPLOYMENT_ENVIRONMENT_VAR];
+  let app: INestApplication;
+
+  beforeEach(async () => {
+    switchRows = new Map([
+      [
+        'ASK_PUBLIC_COMPUTE_ENABLED',
+        {
+          name: 'ASK_PUBLIC_COMPUTE_ENABLED',
+          enabled: true,
+          setBy: 'seed',
+          reason: 'seed',
+          setAt: new Date(),
+        },
+      ],
+    ]);
+    auditRows = [];
+    app = await createApp('true', 'LOCAL');
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  afterAll(() => {
+    if (originalPlatform === undefined) delete process.env[ADMIN_PLATFORM_ENABLED_ENV];
+    else process.env[ADMIN_PLATFORM_ENABLED_ENV] = originalPlatform;
+    if (originalEnvironment === undefined) delete process.env[DEPLOYMENT_ENVIRONMENT_VAR];
+    else process.env[DEPLOYMENT_ENVIRONMENT_VAR] = originalEnvironment;
+  });
+
+  const unchanged = () => {
+    expect(switchRows.get('ASK_PUBLIC_COMPUTE_ENABLED')?.enabled).toBe(true);
+    expect(auditRows).toHaveLength(0);
+  };
+
+  it('LOCAL is reported as a confirmed environment, so the gate below is not the environment gate', async () => {
+    const read = await request(app.getHttpServer())
+      .get(STATE)
+      .set('Cookie', auth(ADMIN))
+      .expect(200);
+    expect(read.body.environment).toMatchObject({ confirmed: true, environment: 'LOCAL' });
+    expect(read.body.mayOperate).toBe(true);
+  });
+
+  it.each([
+    ['an unauthenticated caller', null, 401],
+    ['an ordinary signed-in reader', ORDINARY, 403],
+    ['ANALYST', ANALYST, 403],
+    ['SUPPORT', SUPPORT, 403],
+    ['an expired SUPER_ADMIN session', EXPIRED, 401],
+  ])('under LOCAL, %s is refused the write and nothing changes', async (_label, token, status) => {
+    const call = request(app.getHttpServer()).post(SET).set('X-CSRF-Token', CSRF);
+    if (token !== null) call.set('Cookie', auth(token as string));
+    await call
+      .send({ enabled: false, reason: 'local write without the capability' })
+      .expect(status);
+    unchanged();
+  });
+
+  it('under LOCAL, ADMIN without the CSRF header is refused and nothing changes', async () => {
+    await request(app.getHttpServer())
+      .post(SET)
+      .set('Cookie', auth(ADMIN))
+      .send({ enabled: false, reason: 'local write without csrf' })
+      .expect(403);
+    unchanged();
+  });
+
+  it('under LOCAL, ADMIN with a mismatched CSRF token is refused and nothing changes', async () => {
+    await request(app.getHttpServer())
+      .post(SET)
+      .set('Cookie', auth(ADMIN))
+      .set('X-CSRF-Token', 'not-the-cookie')
+      .send({ enabled: false, reason: 'local write with mismatched csrf' })
+      .expect(403);
+    unchanged();
+  });
+
+  it('POSITIVE CONTROL — under LOCAL, ADMIN with the capability and CSRF may write, recorded as the server-derived actor', async () => {
+    await request(app.getHttpServer())
+      .post(SET)
+      .set('Cookie', auth(ADMIN))
+      .set('X-CSRF-Token', CSRF)
+      .send({ enabled: false, reason: 'local write with capability and csrf' })
+      .expect(201);
+    expect(switchRows.get('ASK_PUBLIC_COMPUTE_ENABLED')?.enabled).toBe(false);
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0].setBy).toBe('u-admin');
+  });
+});
+
 describe('R1 — the admin platform kill switch still hides the route entirely', () => {
   const originalPlatform = process.env[ADMIN_PLATFORM_ENABLED_ENV];
   const originalEnvironment = process.env[DEPLOYMENT_ENVIRONMENT_VAR];
