@@ -391,57 +391,29 @@ function HistoryPanel({ history }: { history: AdminOperationsChange[] }): JSX.El
     { id: 'reason', header: screen.history.reason, render: (row) => row.reason ?? '—' },
   ];
 
-  const table = (
-    <AdminDataTable
-      caption={screen.history.heading}
-      columns={columns}
-      rows={history}
-      state={history.length === 0 ? 'zero' : 'real'}
-      emptyTitle={screen.history.heading}
-      emptyBody={screen.history.empty}
-      rowKey={(row, index) => `${row.name}-${row.setAt}-${index}`}
-    />
-  );
-
   /*
     M-B — below 900px the five columns do not fit, and the table scrolled sideways
     with CHANGE, WHO and REASON out of view: the history was unattributable on the
-    device an incident is most likely handled from. Below `adm-rail` every change is
-    stacked instead, carrying all five fields with their labels. At `adm-rail` and
-    above the table is unchanged. Screen-local on purpose: the shared primitive's
-    compact-list work (search, pagination, stacking for all tables) is F's separate
-    candidate, and this list can be removed when that lands.
+    device an incident is most likely handled from. The shared table's
+    `stackedOnNarrow` (Compact Lists) now renders each change below `adm-rail` as a
+    row whose summary carries every non-secondary column — and none of these five is
+    secondary, so WHEN, CONTROL, CHANGE, WHO and REASON all stay visible without
+    opening it — with every field labelled inside. This replaces the screen-local
+    stacked list that stood in until the shared rendering landed. Keep all five
+    columns non-secondary: marking one secondary would hide it from the phone summary.
   */
-  if (history.length === 0) {
-    return (
-      <AdminPanel title={screen.history.heading} field="operations.history">
-        {table}
-      </AdminPanel>
-    );
-  }
-
   return (
     <AdminPanel title={screen.history.heading} field="operations.history">
-      <div className="hidden adm-rail:block">{table}</div>
-      <ol className="flex flex-col adm-rail:hidden" aria-label={screen.history.heading}>
-        {history.map((row, index) => (
-          <li
-            key={`${row.name}-${row.setAt}-${index}`}
-            className="border-b border-adm-edge-mute py-3 last:border-b-0"
-          >
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
-              {columns.map((column) => (
-                <div key={column.id} className="contents">
-                  <dt className="text-[10px] uppercase tracking-[0.12em] text-adm-ink-4">
-                    {column.header}
-                  </dt>
-                  <dd className="min-w-0 break-words text-adm-ink-2">{column.render(row)}</dd>
-                </div>
-              ))}
-            </dl>
-          </li>
-        ))}
-      </ol>
+      <AdminDataTable
+        caption={screen.history.heading}
+        columns={columns}
+        rows={history}
+        state={history.length === 0 ? 'zero' : 'real'}
+        emptyTitle={screen.history.heading}
+        emptyBody={screen.history.empty}
+        rowKey={(row, index) => `${row.name}-${row.setAt}-${index}`}
+        stackedOnNarrow
+      />
     </AdminPanel>
   );
 }

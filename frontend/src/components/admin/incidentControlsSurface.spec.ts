@@ -219,25 +219,29 @@ describe('ADMIN OPERATIONS R1 — keyboard access', () => {
 });
 
 describe('ADMIN OPERATIONS R1 — M-B, the change history on a phone', () => {
-  const history = SOURCE.slice(SOURCE.indexOf('function HistoryPanel'));
+  const history = SOURCE.slice(
+    SOURCE.indexOf('function HistoryPanel'),
+    SOURCE.indexOf('function healthLine'),
+  );
 
-  it('below adm-rail every change is stacked, and the table is kept at adm-rail and above', () => {
-    expect(history).toContain('<div className="hidden adm-rail:block">{table}</div>');
-    expect(history).toContain('<ol className="flex flex-col adm-rail:hidden"');
+  it('the history uses the shared stacked rendering below adm-rail — one implementation, not two', () => {
+    expect(history).toContain('stackedOnNarrow');
+    /* The screen-local stopgap list is gone, so the rows are never rendered twice. */
+    expect(history).not.toContain('<ol');
+    expect(history).not.toContain('adm-rail:hidden');
   });
 
-  it('the stacked entry renders EVERY column — change, who and reason are not dropped', () => {
-    /* The list maps the same `columns` the table renders, so no field can be left out of one. */
-    expect(history).toContain('{columns.map((column) => (');
-    expect(history).toContain('<dt');
-    expect(history).toContain('{column.header}');
-    expect(history).toContain('{column.render(row)}');
+  it('all five fields are columns, and NONE is secondary — so each stays in the phone summary', () => {
     ['when', 'control', 'change', 'who', 'reason'].forEach((key) => {
-      expect(history).toContain(`screen.history.${key}`);
+      expect(history).toContain(`header: screen.history.${key}`);
     });
+    /* A secondary column is dropped from the stacked summary; WHO or REASON there is M-B again. */
+    const code = history.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(code).not.toMatch(/secondary\s*:/);
   });
 
-  it('an empty history still renders the primitive’s own empty state, at every width', () => {
-    expect(history).toContain('if (history.length === 0) {');
+  it('an empty history still renders the primitive’s own empty state', () => {
+    expect(history).toContain("state={history.length === 0 ? 'zero' : 'real'}");
+    expect(history).toContain('emptyBody={screen.history.empty}');
   });
 });
