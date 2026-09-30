@@ -12,6 +12,7 @@ import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
 import { mapAskLayoutFor, mapAskPanelStyle, type MapAskLayout } from '@/lib/ask/mapAskGeometry';
 import { dashboardHref } from '@/lib/ask/dashboardContext';
 import { ASK_CANONICAL_ROUTE } from '@/lib/ask/askFrame';
+import { ADMIN_ROUTES } from '@/lib/admin/adminRoutes';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
 import { usesStoryContextLabel } from '@/lib/ask/turnContext';
 import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
@@ -193,7 +194,9 @@ const ASK_CONTINUITY_ROUTES: ReadonlySet<string> = new Set([
  * not also carry a reader AI entry point. Every other route is unchanged.
  */
 export function isAdminRoute(pathname: string | null): boolean {
-  return pathname === '/admin' || (pathname?.startsWith('/admin/') ?? false);
+  /* The Admin root comes from adminRoutes.ts, the only place an /admin path is written. */
+  const root = ADMIN_ROUTES.overview;
+  return pathname === root || (pathname?.startsWith(`${root}/`) ?? false);
 }
 
 export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
