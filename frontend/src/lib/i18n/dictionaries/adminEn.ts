@@ -78,6 +78,7 @@ export const adminEn = {
       systemHealth: 'System health & logs',
       audit: 'Audit logs',
       settings: 'Settings',
+      incidentControls: 'Incident controls',
     },
   },
 

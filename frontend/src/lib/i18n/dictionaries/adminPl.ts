@@ -77,6 +77,7 @@ export const adminPl: AdminDictionary = {
       systemHealth: 'Kondycja systemu i logi',
       audit: 'Dziennik audytu',
       settings: 'Ustawienia',
+      incidentControls: 'Sterowanie incydentami',
     },
   },
 
