@@ -8,7 +8,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { resolveAuthCookieNames } from '../../auth/cookie.util';
 import { hashSessionToken } from '../../auth/session-token.util';
 import { ADMIN_PLATFORM_ENABLED_ENV } from '../admin-platform.config';
-import { DEPLOYMENT_ENVIRONMENT_VAR } from './deployment-environment';
+import { DEPLOYMENT_ENVIRONMENT_VAR, resolveEnvironmentIdentity } from './deployment-environment';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -600,6 +600,36 @@ describe('M-3 — a LOCAL environment does not relax the write: capability and C
     expect(switchRows.get('ASK_PUBLIC_COMPUTE_ENABLED')?.enabled).toBe(false);
     expect(auditRows).toHaveLength(1);
     expect(auditRows[0].setBy).toBe('u-admin');
+  });
+
+  /*
+    F's R2 handoff (M-3-HANDOFF-TO-CLAUDE-CODE.md), consumed: the same checks with the
+    highest-privilege principal, and the environment resolved at the source — so a pass
+    cannot come from LOCAL being rejected as unrecognised.
+  */
+  it('F · under LOCAL, SUPER_ADMIN — who holds the capability — is still refused without the CSRF header', async () => {
+    await request(app.getHttpServer())
+      .post(SET)
+      .set('Cookie', auth(SUPER))
+      .send({ enabled: false, reason: 'm-3 check' })
+      .expect(403);
+    unchanged();
+  });
+
+  it('F · POSITIVE CONTROL — under LOCAL, SUPER_ADMIN with the capability and CSRF may write', async () => {
+    await request(app.getHttpServer())
+      .post(SET)
+      .set('Cookie', auth(SUPER))
+      .set('X-CSRF-Token', CSRF)
+      .send({ enabled: false, reason: 'm-3 positive control' })
+      .expect(201);
+    expect(auditRows).toHaveLength(1);
+  });
+
+  it('F · the resolver itself reports LOCAL as confirmed, so these tests exercise what they claim', () => {
+    expect(
+      resolveEnvironmentIdentity((key) => (key === DEPLOYMENT_ENVIRONMENT_VAR ? 'LOCAL' : undefined)),
+    ).toMatchObject({ confirmed: true, environment: 'LOCAL' });
   });
 });
 
