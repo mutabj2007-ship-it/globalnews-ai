@@ -517,7 +517,7 @@ export function AskFrameScreen({
           <p
             data-ask="guest-notice"
             role="status"
-            className="mx-auto mb-2 max-w-[760px] px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
+            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
           >
             {notice}
           </p>
@@ -526,7 +526,7 @@ export function AskFrameScreen({
           /* ASK GUEST TRIAL R3 — the server-authoritative counter; sign-in stays voluntary. */
           <div
             data-ask="guest-counter"
-            className="mx-auto mb-2 flex max-w-[760px] items-center justify-between gap-3 px-1 text-[12.5px] text-[#8fa6c0]"
+            className="mx-auto mb-2 flex max-w-[760px] items-center justify-between gap-3 px-4 md:px-1 text-[12.5px] text-[#8fa6c0]"
           >
             <span>{g.remaining(guestRemaining)}</span>
             <button
