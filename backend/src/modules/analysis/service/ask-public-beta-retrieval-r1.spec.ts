@@ -17,6 +17,7 @@ import {
 import { ArticlePersistenceService } from '../../news/persistence/article-persistence.service';
 import { GNewsProviderError } from '../../news/providers/gnews.provider';
 import {
+  COMPOUND_PLAN_PACING,
   MAX_ADDITIONAL_LANGUAGE_SEARCHES,
   MAX_READER_LANGUAGE_SEARCHES,
   deriveCompoundRetrievalPlan,
@@ -111,6 +112,11 @@ const SYNDICATED_B = a(
   'M23 rebels seize Masisi town in North Kivu, residents say',
   'Rebels seized Masisi in eastern Democratic Republic of Congo on Monday, residents said.',
 );
+
+/* Plan pacing is exercised by its own test; everything else runs without real waiting. */
+beforeAll(() => {
+  COMPOUND_PLAN_PACING.spacingMs = 0;
+});
 
 type Call = { providerId: string; q: string; lang?: string };
 
@@ -221,9 +227,9 @@ describe('1–3 · the compound question becomes a bounded plan that keeps the e
     expect(other.length).toBeLessThanOrEqual(MAX_ADDITIONAL_LANGUAGE_SEARCHES);
     expect(plan!.queries.map((q) => q.q)).toEqual([
       'eastern Congo',
+      'Congo',
       'eastern Congo fighting',
       'eastern Congo displaced',
-      'Congo',
     ]);
     /* Only the first search may reach the slow fallback tier. */
     expect(plan!.queries.map((q) => q.allowFallback)).toEqual([true, false, false, false]);
@@ -243,7 +249,8 @@ describe('1–3 · the compound question becomes a bounded plan that keeps the e
 
   it('English evidence language + the governed pack language (French for COD)', () => {
     expect(plan!.evidenceLanguages).toEqual(['en', 'fr']);
-    expect(plan!.queries.at(-1)).toMatchObject({ q: 'Congo', lang: 'fr' });
+    /* BETA-ASK-004: the governed local-language lane runs SECOND, not last. */
+    expect(plan!.queries[1]).toMatchObject({ q: 'Congo', lang: 'fr' });
   });
 
   it('short questions, non-English questions and country-economy questions keep their path', () => {
@@ -295,9 +302,9 @@ describe('Q2 on the real AnalysisService + NewsService', () => {
 
     expect(calls).toEqual([
       { providerId: 'gnews', q: 'eastern Congo' },
+      { providerId: 'gnews', q: 'Congo', lang: 'fr' },
       { providerId: 'gnews', q: 'eastern Congo fighting' },
       { providerId: 'gnews', q: 'eastern Congo displaced' },
-      { providerId: 'gnews', q: 'Congo', lang: 'fr' },
     ]);
     const ids = result.articles.map((article) => article.id).sort();
     expect(ids).toEqual(['en-hum', 'en-sec', 'fr-loc']);
@@ -428,5 +435,189 @@ describe('6b · the single-source rule binds the RENDERED answer, not only the p
     );
     const served = await narrow.service.analyzeNews(Q3, 'en');
     expect(served.analysis?.briefState?.availability).toBe('accepted');
+  });
+});
+
+/*
+  BETA-ASK-004 — RELEVANCE COHERENCE. Production smoke on f39cd7a admitted the Lake Kivu vessel
+  capsize as evidence for "security or territorial changes … effects on civilians or
+  displacement": the bare word "dead" satisfied the humanitarian leg.
+*/
+describe('BETA-ASK-004 · the humanitarian leg needs a conflict nexus or explicit displacement', () => {
+  const plan = deriveCompoundRetrievalPlan(Q2, 'en')!;
+  const admit = (article: NewsArticle) => scoreCompoundPlanRelevance(article, plan).isRelevant;
+
+  /* [PRODUCTION-OBSERVED title] The exact negative control. */
+  const LAKE_KIVU_CAPSIZE = a(
+    'kivu-boat',
+    "12 dead, dozens missing after vessel capsizes in eastern Congo's Lake Kivu",
+    'A boat carrying passengers and goods capsized on Lake Kivu near Goma, local officials said.',
+  );
+
+  it('rejects the exact Lake Kivu vessel-capsize shape (in scope, but not conflict)', () => {
+    expect(admit(LAKE_KIVU_CAPSIZE)).toBe(false);
+    /* Geography is not what rejected it — the scope and country still hold. */
+    const verdict = scoreCompoundPlanRelevance(LAKE_KIVU_CAPSIZE, plan);
+    expect(verdict.scope).toBe(true);
+    expect(verdict.country).toBe(true);
+    expect(verdict.facets).toEqual([]);
+  });
+
+  it.each([
+    [
+      'road accident',
+      'Truck crash kills 20 on road near Bukavu',
+      'The accident happened in eastern Congo on Sunday; 20 dead.',
+    ],
+    [
+      'aviation accident',
+      'Cargo plane crash near Goma leaves 5 dead',
+      'The plane crashed on landing in eastern Congo.',
+    ],
+    [
+      'disease deaths',
+      'Cholera outbreak kills 40 in North Kivu',
+      'Health officials in eastern Congo reported 40 deaths from the disease.',
+    ],
+    [
+      'mpox',
+      'Mpox deaths rise in South Kivu',
+      'Victims of the mpox epidemic in eastern Congo rose to 30.',
+    ],
+    [
+      'natural disaster',
+      'Floods and landslide leave 60 dead near Uvira',
+      'Torrential rain in eastern Congo caused flooding; many victims.',
+    ],
+    [
+      'ordinary crime',
+      'Robbery at Goma market leaves one dead',
+      'Police in eastern Congo said the robbery victim died.',
+    ],
+    ['mortality alone', '12 dead in Beni', 'Twelve people died in eastern Congo, officials said.'],
+    [
+      'French boat capsize',
+      'Naufrage sur le lac Kivu : 12 morts',
+      "Une embarcation a chaviré dans l'est de la RDC près de Goma.",
+    ],
+  ])('rejects %s', (_label, title, summary) => {
+    expect(admit(a(`neg-${_label}`, title, summary))).toBe(false);
+  });
+
+  it.each([
+    [
+      'civilian killings in fighting',
+      'Rebels kill 20 civilians in attack near Beni',
+      'The attack in eastern Congo was blamed on an armed group.',
+    ],
+    [
+      'conflict displacement',
+      'Thousands displaced as fighting reaches Sake',
+      'Families fled clashes in eastern Congo, aid groups said.',
+    ],
+    [
+      'refugee movement',
+      'Congolese refugees cross into Uganda from Ituri',
+      'The UN refugee agency said arrivals from eastern Congo rose.',
+    ],
+    [
+      'humanitarian access',
+      'Humanitarian access cut in North Kivu',
+      'Aid convoys to camps around Goma in eastern Congo were suspended.',
+    ],
+    [
+      'shelling casualties',
+      'Shelling near Goma kills 5 and wounds dozens',
+      'Bombs hit a camp in eastern Congo, the army said.',
+    ],
+    [
+      'territorial change',
+      'M23 seizes Walikale in North Kivu',
+      'The rebels captured the town in eastern Democratic Republic of Congo.',
+    ],
+  ])('keeps %s', (_label, title, summary) => {
+    expect(admit(a(`pos-${_label}`, title, summary))).toBe(true);
+  });
+
+  it('eastern scope and Congo-Brazzaville rejection are unchanged', () => {
+    expect(admit(COG)).toBe(false);
+    expect(admit(COG_EASTERN)).toBe(false);
+    expect(admit(KINSHASA_POLITICS)).toBe(false);
+    expect(admit(FR_LOCAL)).toBe(true);
+  });
+
+  it('Q2 end to end: capsize dropped, conflict evidence kept, syndicated copies collapse', async () => {
+    const calls: Call[] = [];
+    const gnews = stub(
+      'gnews',
+      (lang) =>
+        lang === 'fr'
+          ? [FR_LOCAL]
+          : [LAKE_KIVU_CAPSIZE, EN_SECURITY, SYNDICATED_A, SYNDICATED_B, EN_DISPLACED],
+      calls,
+    );
+    const { service, inputs } = await services([gnews]);
+
+    const result = await service.analyzeNews(Q2, 'en');
+
+    const ids = result.articles.map((x) => x.id);
+    expect(ids).not.toContain('kivu-boat');
+    expect(ids).toEqual(expect.arrayContaining(['en-hum', 'fr-loc']));
+    expect(inputs).toHaveLength(1);
+    /* SYNDICATED_A/B are one story: they never count as two independent clusters. */
+    const syndicated = ids.filter((id) => id === 'syn-a' || id === 'syn-b');
+    expect(syndicated.length).toBeLessThanOrEqual(1);
+  });
+
+  it('only the capsize in the pool → zero qualifying evidence → no model call', async () => {
+    const { service, inputs } = await services([stub('gnews', () => [LAKE_KIVU_CAPSIZE], [])]);
+    const result = await service.analyzeNews(Q2, 'en');
+    expect(result.articles).toEqual([]);
+    expect(result.analysis).toBeNull();
+    expect(inputs).toHaveLength(0);
+  });
+});
+
+describe('BETA-ASK-004 · the governed local lane is not starved by an early provider limit', () => {
+  it('a rate limit on the THIRD search still leaves the French lane executed and admitted', async () => {
+    const calls: Call[] = [];
+    let n = 0;
+    const gnews = {
+      ...stub('gnews', () => [], calls),
+      async search(q: string, options?: { lang?: string }) {
+        calls.push({ providerId: 'gnews', q, ...(options?.lang ? { lang: options.lang } : {}) });
+        n += 1;
+        if (n >= 3) throw new GNewsProviderError('GNews rate limit reached.', 429, 'rate-limited');
+        return options?.lang === 'fr' ? [FR_LOCAL] : [EN_SECURITY];
+      },
+    } as unknown as NewsProvider;
+    const { service } = await services([gnews]);
+
+    const result = await service.analyzeNews(Q2, 'en');
+
+    expect(calls.map((c) => c.lang ?? 'en')).toEqual(['en', 'fr', 'en']);
+    expect(result.articles.map((x) => x.id).sort()).toEqual(['en-sec', 'fr-loc']);
+    const fr = result.articles.find((x) => x.id === 'fr-loc')!;
+    expect(fr.sourceLanguage).toBe('fr');
+  });
+
+  it('plan searches are paced; the number of searches is unchanged', async () => {
+    const at: number[] = [];
+    const gnews = {
+      ...stub('gnews', () => [], []),
+      async search() {
+        at.push(Date.now());
+        return [];
+      },
+    } as unknown as NewsProvider;
+    const { service } = await services([gnews]);
+    COMPOUND_PLAN_PACING.spacingMs = 40;
+    try {
+      await service.analyzeNews(Q2, 'en');
+    } finally {
+      COMPOUND_PLAN_PACING.spacingMs = 0;
+    }
+    expect(at).toHaveLength(4);
+    for (let i = 1; i < at.length; i += 1) expect(at[i] - at[i - 1]).toBeGreaterThanOrEqual(35);
   });
 });

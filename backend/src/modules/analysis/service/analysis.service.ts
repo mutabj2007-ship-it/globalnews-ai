@@ -67,6 +67,7 @@ import {
 import { NewsService, attachProviderFailures, readProviderFailures } from '../../news/news.service';
 import { scoreCompoundPlanRelevance } from '../../news/relevance/compound-plan-relevance.util';
 import {
+  COMPOUND_PLAN_PACING,
   deriveCompoundRetrievalPlan,
   type CompoundRetrievalPlan,
 } from '../query/compound-retrieval-plan.util';
@@ -3725,6 +3726,10 @@ export class AnalysisService {
     for (const query of plan.queries) {
       const sent = makeProviderSafeNewsQuery(query.q);
       if (sent === undefined) continue;
+      /* BETA-ASK-004 — paced, so one plan never bursts past the provider's per-second limit. */
+      if (responses.length > 0 && COMPOUND_PLAN_PACING.spacingMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, COMPOUND_PLAN_PACING.spacingMs));
+      }
       const response = await this.newsService.search(sent, SEARCH_POOL_SIZE, mode, {
         ...(query.lang === undefined ? {} : { lang: query.lang }),
         allowFallback: query.allowFallback,

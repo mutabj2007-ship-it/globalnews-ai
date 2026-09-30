@@ -69,84 +69,162 @@ export interface CompoundRetrievalPlanAdmission {
   readonly facets: readonly CompoundFacet[];
 }
 
-/** Word-prefix stems (≥ 5 letters, folded) and exact short words, per facet, EN + FR. */
-const FACET_VOCABULARY: Readonly<
-  Record<CompoundFacet, { readonly stems: readonly string[]; readonly words: readonly string[] }>
-> = {
-  SECURITY: {
-    stems: [
-      'fight',
-      'clash',
-      'attack',
-      'armed',
-      'rebel',
-      'militia',
-      'military',
-      'milice',
-      'militaire',
-      'soldier',
-      'soldat',
-      'troops',
-      'violen',
-      'conflict',
-      'conflit',
-      'offensive',
-      'ceasefire',
-      'cessez',
-      'seize',
-      'seizing',
-      'captur',
-      'frontline',
-      'insurg',
-      'gunmen',
-      'shelling',
-      'bombard',
-      'territor',
-      'combat',
-      'affrontement',
-      'attaque',
-      'guerre',
-      'empare',
-      'security',
-      'securit',
-    ],
-    words: ['army', 'war', 'armee', 'arme', 'fardc', 'killed', 'killing', 'raid'],
-  },
-  HUMANITARIAN: {
-    stems: [
-      'civilian',
-      'civils',
-      'displace',
-      'deplace',
-      'refugee',
-      'refugie',
-      'humanitar',
-      'evacuat',
-      'casualt',
-      'victim',
-      'famine',
-      'hunger',
-      'fleeing',
-      'shelter',
-    ],
-    words: [
-      'aid',
-      'fled',
-      'flee',
-      'flees',
-      'camp',
-      'camps',
-      'dead',
-      'deaths',
-      'morts',
-      'fui',
-      'fuir',
-      'fuite',
-      'killed',
-      'civil',
-    ],
-  },
+/**
+ * Word-prefix stems (folded) and exact short words, EN + FR.
+ *
+ * BETA-ASK-004 — RELEVANCE COHERENCE. Production admitted "12 dead, dozens missing after vessel
+ * capsizes in eastern Congo's Lake Kivu" for a security + displacement question, because a bare
+ * mortality word ("dead") satisfied the humanitarian facet. The vocabulary is therefore split by
+ * what each word can PROVE:
+ *
+ *   CONFLICT            a security / armed-conflict nexus. Alone it satisfies SECURITY.
+ *   RESPONSE            displacement, refugees, humanitarian response. Alone it satisfies
+ *                       HUMANITARIAN — it is explicitly the humanitarian leg of the question.
+ *   MORTALITY           dead / killed / victims / casualties / civilians. NEVER alone: it
+ *                       satisfies HUMANITARIAN only together with a CONFLICT term ("civilians
+ *                       killed in an attack"), because death has many non-conflict causes.
+ *   NON_CONFLICT_HARM   boat / road / air accidents, disease, natural disasters, ordinary crime.
+ *                       An article carrying one of these and NO conflict term is not evidence for
+ *                       either facet, whatever else it says.
+ */
+interface Vocabulary {
+  readonly stems: readonly string[];
+  readonly words: readonly string[];
+}
+
+const CONFLICT: Vocabulary = {
+  stems: [
+    'fight',
+    'clash',
+    'attack',
+    'armed',
+    'rebel',
+    'militia',
+    'military',
+    'milice',
+    'militaire',
+    'soldier',
+    'soldat',
+    'troops',
+    'violen',
+    'conflict',
+    'conflit',
+    'offensive',
+    'ceasefire',
+    'cessez',
+    'seize',
+    'seizing',
+    'captur',
+    'frontline',
+    'insurg',
+    'gunmen',
+    'gunfire',
+    'shelling',
+    'bombard',
+    'massacre',
+    'ambush',
+    'territor',
+    'combat',
+    'affrontement',
+    'attaque',
+    'guerre',
+    'empare',
+    'security',
+    'securit',
+  ],
+  words: ['army', 'war', 'armee', 'arme', 'fardc', 'raid', 'raids', 'drone'],
 };
+
+const RESPONSE: Vocabulary = {
+  stems: [
+    'displace',
+    'deplace',
+    'refugee',
+    'refugie',
+    'humanitar',
+    'evacuat',
+    'fleeing',
+    'shelter',
+    'famine',
+  ],
+  words: ['aid', 'fled', 'flee', 'flees', 'camp', 'camps', 'fui', 'fuir', 'fuite', 'exode'],
+};
+
+const MORTALITY: Vocabulary = {
+  stems: ['civilian', 'civils', 'casualt', 'victim', 'wounded', 'injur', 'blesse'],
+  words: [
+    'dead',
+    'death',
+    'deaths',
+    'killed',
+    'killing',
+    'killings',
+    'morts',
+    'mort',
+    'tues',
+    'tue',
+    'civil',
+  ],
+};
+
+const NON_CONFLICT_HARM: Vocabulary = {
+  stems: [
+    'capsiz',
+    'shipwreck',
+    'drown',
+    'naufrag',
+    'noyade',
+    'chavir',
+    'derail',
+    'collision',
+    'accident',
+    'landslide',
+    'glissement',
+    'earthquake',
+    'seisme',
+    'eruption',
+    'volcan',
+    'flood',
+    'inondation',
+    'lightning',
+    'foudre',
+    'epidemi',
+    'outbreak',
+    'ebola',
+    'cholera',
+    'measles',
+    'rougeole',
+    'malaria',
+    'paludisme',
+    'disease',
+    'maladie',
+    'robbery',
+    'burglar',
+    'braquage',
+  ],
+  words: [
+    'boat',
+    'boats',
+    'vessel',
+    'ferry',
+    'canoe',
+    'pirogue',
+    'bateau',
+    'embarcation',
+    'barge',
+    'mpox',
+    'storm',
+    'theft',
+    'crash',
+  ],
+};
+
+function matches(tokens: readonly string[], vocabulary: Vocabulary): boolean {
+  return tokens.some(
+    (token) =>
+      vocabulary.words.includes(token) || vocabulary.stems.some((stem) => token.startsWith(stem)),
+  );
+}
 
 /** Lowercase, strip diacritics, and keep letters/numbers only — the matching fold. */
 export function foldForPlan(value: string): string {
@@ -164,12 +242,13 @@ function containsPhrase(folded: string, phrase: string): boolean {
 }
 
 export function articleSpeaksToFacet(foldedText: string, facet: CompoundFacet): boolean {
-  const vocabulary = FACET_VOCABULARY[facet];
   const tokens = foldedText.split(' ');
-  return tokens.some(
-    (token) =>
-      vocabulary.words.includes(token) || vocabulary.stems.some((stem) => token.startsWith(stem)),
-  );
+  const conflict = matches(tokens, CONFLICT);
+  /* An accident, an epidemic, a flood or a robbery with no conflict nexus answers neither leg. */
+  if (!conflict && matches(tokens, NON_CONFLICT_HARM)) return false;
+  if (facet === 'SECURITY') return conflict;
+  /* HUMANITARIAN: explicit displacement / response, or conflict-linked harm to people. */
+  return matches(tokens, RESPONSE) || (conflict && matches(tokens, MORTALITY));
 }
 
 export function namesQualifiedCountry(foldedText: string, scope: CompoundRetrievalScope): boolean {

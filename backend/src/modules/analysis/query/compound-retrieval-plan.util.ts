@@ -72,6 +72,14 @@ export interface CompoundRetrievalPlan extends CompoundRetrievalPlanAdmission {
 export const MIN_COMPOUND_WORDS = 12;
 export const MAX_READER_LANGUAGE_SEARCHES = 3;
 export const MAX_ADDITIONAL_LANGUAGE_SEARCHES = 1;
+/**
+ * BETA-ASK-004 — spacing between two plan searches. GNews's published per-second ceilings are
+ * 1 req/s (free) and above for paid plans; Production answered the first search and refused the
+ * second, sent milliseconds later. Pacing at just over one second keeps the SAME number of
+ * searches inside any plan's per-second limit (worst case +3.3 s inside the 28 s budget).
+ * Mutable only so tests can run without real waiting.
+ */
+export const COMPOUND_PLAN_PACING = { spacingMs: 1100 };
 /** A town must be at least this populous to stand for a sub-national scope. */
 const MIN_SCOPE_TOWN_POPULATION = 50_000;
 
@@ -324,18 +332,26 @@ export function deriveCompoundRetrievalPlan(
   const usableScope = scope !== null && scope.places.length > 0 ? scope : null;
 
   const base = [usableScope?.qualifier, countrySearchWords(country)].filter(Boolean).join(' ');
-  const queries: CompoundPlanQuery[] = [{ q: base, facet: null, allowFallback: true }];
-  for (const facet of facets) {
-    if (queries.length >= MAX_READER_LANGUAGE_SEARCHES) break;
-    queries.push({ q: `${base} ${FACET_QUERY_TERM[facet]}`, facet, allowFallback: false });
-  }
-
   const additional = governedEvidenceLanguages(country.iso3)
     .filter((lang) => lang !== requestedLanguage)
     .filter((lang) => resolveSearchEndpointLanguage(lang) === lang)
     .slice(0, MAX_ADDITIONAL_LANGUAGE_SEARCHES);
+
+  /*
+    BETA-ASK-004 — ORDER. Production sent 2 of 4 planned searches before GNews rate-limited,
+    and the governed local-language search was always last, so it never ran. The order is now
+    reader-language scope search → governed local-language search → facet searches: the local
+    lane gets the second slot, every bound is unchanged, and a refusal still stops the plan.
+  */
+  const queries: CompoundPlanQuery[] = [{ q: base, facet: null, allowFallback: true }];
   for (const lang of additional) {
     queries.push({ q: countrySearchWords(country), lang, facet: null, allowFallback: false });
+  }
+  let readerSearches = 1;
+  for (const facet of facets) {
+    if (readerSearches >= MAX_READER_LANGUAGE_SEARCHES) break;
+    queries.push({ q: `${base} ${FACET_QUERY_TERM[facet]}`, facet, allowFallback: false });
+    readerSearches += 1;
   }
 
   return {
