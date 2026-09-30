@@ -218,7 +218,7 @@ describe('deterministic conversational copy (EN / PL)', () => {
       'What is the official unemployment figure?',
     )!;
     expect(unnamed.paragraphs[0]).toBe(
-      'I can’t give you the official figure from an approved official source yet. Other reporting may provide context, but GlobalNewsAI will not present it as the official figure.',
+      'I can’t give you the official figure from an approved official source yet. Other reporting may provide context, but GlobalNewsAI will not present that as the official figure.',
     );
     const pl = askGovernedConversation(
       payload('CAPABILITY_UNAVAILABLE', 'OFFICIAL_SOURCE_UNAVAILABLE', null),

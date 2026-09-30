@@ -235,6 +235,45 @@ const EXPLANATION_PATTERNS: readonly RegExp[] = [
 ];
 
 /**
+ * ASK CONVERSATIONAL BREADTH R1 — conceptual and reflective shapes, kept in their OWN list so
+ * they can carry one extra guard the older explanation frames never needed: a NOVELTY word
+ * (new, just, announced, proposed …) marks a fresh event, so "What does the new tariff deal mean
+ * for Europe?" is never read as background even without a time word.
+ */
+const CONCEPTUAL_REFLECTION_PATTERNS: readonly RegExp[] = [
+  /*
+   * Conceptual and reflective QUESTION SHAPES (never topic nouns). Live Alpha read "What do you think life is? How can I link it to death and
+   * resurrection?" as CURRENT_EVENT (the default) and answered an empty news search. Each
+   * frame below asks what something is, what it means, or how to think about or connect ideas
+   * — a request for stable background. Mirrored EN/PL, whole-sentence anchored, and still
+   * behind the CURRENT_EVENT_MARKERS gate: "What do you think is happening in Ukraine today?",
+   * "What does the latest fighting in Gaza mean?" and "How is the current war affecting …"
+   * stay current, and a named country is read before any of this.
+   *   "What do you think X is?"                      ≡ "Co myślisz, czym jest X?"
+   *   "What does X mean in/for/to Y?"                ≡ (PL "Co oznacza X …" already above)
+   *   "What do <people> mean by X?"                  ≡ "Co <ludzie> rozumieją przez X?"
+   *   "How can/should I link/connect/relate/understand/think about X?"
+   *                                                  ≡ "Jak mogę/można połączyć/zrozumieć/myśleć o X?"
+   */
+  /^what\s+do(?:es)?\s+you\s+think\s+(.+?)\s+(?:is|are|means?)$/i,
+  /^what\s+does\s+(.+?)\s+mean\s+(?:in|for|to|within)\s+.+$/i,
+  /^what\s+do(?:es)?\s+[\p{L}-]+(?:\s+[\p{L}-]+)?\s+mean\s+by\s+(.+)$/iu,
+  /^how\s+(?:can|could|should|do|would|might)\s+(?:i|we|one|you|someone)\s+(?:link|connect|relate|reconcile|understand|interpret|approach|think\s+about|make\s+sense\s+of|come\s+to\s+terms\s+with)\s+(.+)$/i,
+  /* "Is it ethical/moral/right/wrong to X?"  ≡ "Czy etyczne/moralne/słuszne jest X?" */
+  /^is\s+it\s+(?:ever\s+)?(?:ethical|unethical|moral|immoral|right|wrong|fair|unfair|just|acceptable)\s+to\s+(.+)$/i,
+  /^czy\s+(?:to\s+)?(?:jest\s+)?(?:etyczne|nieetyczne|moralne|niemoralne|s[łl]uszne|w\s+porz[ąa]dku)\s*,?\s*(?:jest\s+)?(?:gdy|kiedy|aby|[żz]eby)?\s*(.+)$/iu,
+  /^co\s+(?:my[śs]lisz|s[ąa]dzisz)\s*,?\s*(?:czym\s+(?:jest|s[ąa])|co\s+to\s+(?:jest|s[ąa]))\s+(.+)$/iu,
+  /^co\s+[\p{L}-]+(?:\s+[\p{L}-]+)?\s+rozumiej?[ąa]?\s+przez\s+(.+)$/iu,
+  /^jak\s+(?:mog[eę]|mo[żz]emy|mo[żz]na|powinienem|powinnam|powinni[śs]my|nale[żz]y)\s+(?:po[łl][ąa]czy[ćc]|powi[ąa]za[ćc]|zrozumie[ćc]|rozumie[ćc]|interpretowa[ćc]|my[śs]le[ćc]\s+o|pogodzi[ćc])\s+(.+)$/iu,
+];
+
+/** A novelty word marks a fresh event; it disqualifies the conceptual shapes above. */
+const NOVELTY_MARKERS: readonly RegExp[] = [
+  /\b(?:new|newly|just|announced|announcement|upcoming|proposed|planned|breaking)\b/i,
+  /(?:^|\s)(?:nowy|nowa|nowe|nowego|nowej|og[łl]oszon\p{L}*|zapowiedzian\p{L}*|planowan\p{L}*|proponowan\p{L}*)(?=\s|$)/iu,
+];
+
+/**
  * Markers that make a question about the PRESENT, which outranks an explanation
  * reading. "What is happening in Spain" opens like an explanation pattern and is
  * plainly a news question; this is what keeps those apart.
@@ -674,11 +713,31 @@ function firstSentence(text: string): string {
   return (match?.[0] ?? text).trim();
 }
 
+/**
+ * ASK CONVERSATIONAL BREADTH R1 — the opening CLAUSE: a compound question joined by
+ * "and how / and why / and what" ("Czym jest życie i jak połączyć je ze śmiercią?") is read by
+ * its first clause, exactly as a multi-sentence question is read by its first sentence. The
+ * current-event gate still inspects the WHOLE text, so a current second clause keeps it news.
+ */
+function firstClause(text: string): string {
+  const sentence = firstSentence(text);
+  return (
+    sentence
+      .split(/\s*,?\s+(?:and|but|i|a|oraz)\s+(?=(?:how|why|what|jak|dlaczego|czemu|co)\b)/iu)[0]
+      ?.trim() ?? sentence
+  );
+}
+
 /** Extracts the subject span of an explanation question, if the shape is one. */
 function extractExplanationSubject(text: string): string | undefined {
-  const opening = firstSentence(text);
+  const opening = firstClause(text);
+  /* ASK CONVERSATIONAL BREADTH R1 — the conceptual shapes are tried after the landed frames,
+     and never when the question carries a novelty word (a fresh event, not a concept). */
+  const patterns = matchesAny(text, NOVELTY_MARKERS)
+    ? EXPLANATION_PATTERNS
+    : [...EXPLANATION_PATTERNS, ...CONCEPTUAL_REFLECTION_PATTERNS];
 
-  for (const pattern of EXPLANATION_PATTERNS) {
+  for (const pattern of patterns) {
     const match = opening.match(pattern);
 
     if (!match) continue;

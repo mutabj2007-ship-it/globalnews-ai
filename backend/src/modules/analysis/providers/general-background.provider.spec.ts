@@ -194,3 +194,25 @@ describe('ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — governed record
     expect(govBody.messages.map((m: { role: string }) => m.role)).toEqual(['system', 'user']);
   });
 });
+
+describe('ASK CONVERSATIONAL BREADTH R1 — the background voice', () => {
+  it('asks for a conversational answer that never claims personal belief and separates doctrine, philosophy and fact', async () => {
+    fetchMock.mockResolvedValueOnce(ok('One way to think about it is…'));
+    await new OpenAiGeneralBackgroundProvider(config()).answerBackground({
+      question: 'What do you think life is?',
+      responseLanguage: 'en',
+      maxModelAttempts: 1,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const system = JSON.parse(fetchMock.mock.calls[0][1].body).messages[0].content as string;
+    expect(system).toMatch(/do not claim personal beliefs, feelings or faith/);
+    expect(system).toMatch(/One way to think about it is/);
+    expect(system).toMatch(
+      /distinguish religious teaching \(name the tradition\), philosophical argument/,
+    );
+    expect(system).toMatch(/never present one worldview as settled fact/);
+    /* the freshness boundary and the no-source rule are unchanged */
+    expect(system).toMatch(/Never invent, name, or imply a source/);
+    expect(system).toMatch(/current, live, or time-sensitive information/);
+  });
+});

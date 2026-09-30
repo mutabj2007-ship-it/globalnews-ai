@@ -2028,3 +2028,53 @@ describe('LIVE ACCEPTANCE REPAIR R1 — G1–G9 end to end', () => {
     }
   });
 });
+
+/**
+ * ASK CONVERSATIONAL BREADTH R1 — the live question reaches the existing General Background
+ * executor: ONE background model call, ZERO news/reporting (analysis) calls. Currentness still
+ * routes to reporting.
+ */
+describe('ASK CONVERSATIONAL BREADTH R1 — stable conceptual questions reach General Background', () => {
+  async function run(q: string, h: ReturnType<typeof harness>) {
+    const plan = await h.adapter.prepare(req(q));
+    return JSON.parse(
+      (await inRequest(() => h.adapter.execute(req(q), plan, 'op-breadth'))).payloadJson,
+    );
+  }
+
+  it('the live Alpha question → REFERENCE_BACKGROUND, 1 background call, 0 reporting calls', async () => {
+    const h = harness({});
+    const payload = await run(
+      'What do you think life is? How can I link it to death and resurrection?',
+      h,
+    );
+    expect(payload.route.terminalState).toBe('REFERENCE_BACKGROUND_ONLY');
+    expect(payload.answer.state).toBe('REFERENCE_BACKGROUND');
+    expect(h.calls.background).toHaveLength(1);
+    expect(h.calls.analysis).toHaveLength(0);
+    expect(h.observed[0]).toMatchObject({
+      modelInvocationCount: 1,
+      providerCallCount: 1,
+      reportingItemCount: 0,
+    });
+  });
+
+  it.each([
+    'How should I think about death?',
+    'What does resurrection mean in Christianity?',
+    'Is it ethical to lie to protect someone?',
+  ])('%s → one background call, no reporting', async (q) => {
+    const h = harness({});
+    await run(q, h);
+    expect(h.calls.background).toHaveLength(1);
+    expect(h.calls.analysis).toHaveLength(0);
+  });
+
+  it('"What do you think is happening in Ukraine today?" → current reporting, never background', async () => {
+    const h = harness({});
+    const payload = await run('What do you think is happening in Ukraine today?', h);
+    expect(payload.route.questionClass).toBe('CURRENT_REPORTING');
+    expect(h.calls.analysis).toHaveLength(1);
+    expect(h.calls.background).toHaveLength(0);
+  });
+});

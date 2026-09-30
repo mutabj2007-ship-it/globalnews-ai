@@ -174,7 +174,7 @@ describe('A — a retained-record answer (G2, G3, G4, G9): zero AI, stated truth
       "What was Gasabo's 2024/2025 Imihigo result?",
     );
     expect(said(r)).toEqual([
-      'I don’t have an individual 2024/2025 Imihigo score for Gasabo in the retained NISR data. The available result is an aggregate for the City of Kigali, and GlobalNewsAI does not assign that city-level figure to Gasabo as though it were a district result.',
+      'I don’t have an individual 2024/2025 Imihigo score for Gasabo in the retained NISR data. The available City of Kigali result is an aggregate, and GlobalNewsAI does not assign that city-level figure to Gasabo.',
     ]);
     expect(byData(r, 'intelligence-note')).toHaveLength(0);
     expect(visibleText(r)).not.toMatch(/\d+(\.\d+)?\s?%/);
@@ -241,7 +241,7 @@ describe('A — official unavailable (G8) and a spent budget (live G3–G9) are 
       "What is NBP's official reference rate?",
     );
     expect(said(r)).toEqual([
-      'I can’t give you NBP’s official reference rate from an approved NBP source yet. Other reporting may provide context, but GlobalNewsAI will not present it as NBP’s official figure.',
+      'I can’t give you NBP’s official reference rate from an approved NBP source yet. Other reporting may provide context, but GlobalNewsAI will not present that as NBP’s official figure.',
     ]);
     expect(byData(r, 'unavailable')).toHaveLength(0);
     expect(byData(r, 'governed-provenance')[0].props.children).toBe(
@@ -336,7 +336,7 @@ describe('GOVERNED RETAINED GAP REPAIR R1 — G9, the never-blank card, and the 
       ]),
     );
     expect(said(r)).toEqual([
-      'I can’t safely give you Rwanda’s retained CPI figure from this source right now. GlobalNewsAI does hold the NISR release, but the stored record cannot currently be read under the verification rules used for it, so no value is shown.',
+      'I can’t safely give you Rwanda’s retained CPI value from this release right now. GlobalNewsAI holds the NISR release, but it cannot currently be read under the governed verification rules, so I won’t show an unverified number.',
     ]);
     expect(visibleText(r)).not.toMatch(
       /NO_PRODUCER|extractor|1\.1\.0|no retained record|GOVERNED_RECORD_UNAVAILABLE/i,

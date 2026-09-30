@@ -111,7 +111,7 @@ const EN: Copy = {
   imihigoAbsent: (district, cycle, aggregate) =>
     `I don’t have an individual ${cycle === null ? '' : `${cycle} `}Imihigo score for ${district} in the retained NISR data.` +
     (aggregate
-      ? ` The available result is an aggregate for the City of Kigali, and GlobalNewsAI does not assign that city-level figure to ${district} as though it were a district result.`
+      ? ` The available City of Kigali result is an aggregate, and GlobalNewsAI does not assign that city-level figure to ${district}.`
       : ''),
   imihigoAbsentProvenance: 'Retained NISR data · no individual record · No AI used',
   imihigoAbsentFollowUp: (district) => `Why is there no ${district} score?`,
@@ -120,7 +120,7 @@ const EN: Copy = {
   cpiProvenance: (period) => `Retained record · NISR · ${period} · No AI used`,
   cpiFollowUp: 'What does this inflation figure mean?',
   cpiNotDisplayable:
-    'I can’t safely give you Rwanda’s retained CPI figure from this source right now. GlobalNewsAI does hold the NISR release, but the stored record cannot currently be read under the verification rules used for it, so no value is shown.',
+    'I can’t safely give you Rwanda’s retained CPI value from this release right now. GlobalNewsAI holds the NISR release, but it cannot currently be read under the governed verification rules, so I won’t show an unverified number.',
   cpiNoCapture:
     'I can’t give you Rwanda’s CPI figure from a retained NISR release, because GlobalNewsAI doesn’t currently hold one.',
   cpiUnavailableProvenance: 'NISR CPI · not shown · No AI used',
@@ -138,8 +138,8 @@ const EN: Copy = {
   recordUnavailableProvenance: 'Retained record · not shown · No AI used',
   official: (body, rate) =>
     body === null
-      ? 'I can’t give you the official figure from an approved official source yet. Other reporting may provide context, but GlobalNewsAI will not present it as the official figure.'
-      : `I can’t give you ${body}’s official ${rate ? 'reference rate' : 'figure'} from an approved ${body} source yet. Other reporting may provide context, but GlobalNewsAI will not present it as ${body}’s official figure.`,
+      ? 'I can’t give you the official figure from an approved official source yet. Other reporting may provide context, but GlobalNewsAI will not present that as the official figure.'
+      : `I can’t give you ${body}’s official ${rate ? 'reference rate' : 'figure'} from an approved ${body} source yet. Other reporting may provide context, but GlobalNewsAI will not present that as ${body}’s official figure.`,
   officialProvenance: 'Official source · not connected · No AI used',
   officialFollowUp: (body) =>
     body === null
@@ -158,7 +158,7 @@ const PL: Copy = {
   imihigoAbsent: (district, cycle, aggregate) =>
     `Nie mam osobnego wyniku Imihigo${cycle === null ? '' : ` za ${cycle}`} dla ${district} w zachowanych danych NISR.` +
     (aggregate
-      ? ` Dostępny jest wynik zbiorczy dla Miasta Kigali, a GlobalNewsAI nie przypisuje tej wartości miejskiej dystryktowi ${district}, jakby był to wynik dystryktu.`
+      ? ` Dostępny wynik dla Miasta Kigali jest zbiorczy, a GlobalNewsAI nie przypisuje tej wartości miejskiej dystryktowi ${district}.`
       : ''),
   imihigoAbsentProvenance: 'Zachowane dane NISR · brak osobnego zapisu · Bez AI',
   imihigoAbsentFollowUp: (district) => `Dlaczego nie ma wyniku dla ${district}?`,
@@ -167,7 +167,7 @@ const PL: Copy = {
   cpiProvenance: (period) => `Zachowany zapis · NISR · ${period} · Bez AI`,
   cpiFollowUp: 'Co oznacza ta wartość inflacji?',
   cpiNotDisplayable:
-    'Nie mogę teraz bezpiecznie podać zachowanej wartości CPI dla Rwandy z tego źródła. GlobalNewsAI przechowuje publikację NISR, ale zapisanego rekordu nie można obecnie odczytać zgodnie z zasadami weryfikacji, które go obejmują, więc nie pokazuję wartości.',
+    'Nie mogę teraz bezpiecznie podać zachowanej wartości CPI dla Rwandy z tej publikacji. GlobalNewsAI przechowuje publikację NISR, ale obecnie nie można jej odczytać zgodnie z obowiązującymi zasadami weryfikacji, więc nie pokażę niezweryfikowanej liczby.',
   cpiNoCapture:
     'Nie mogę podać wartości CPI dla Rwandy z zachowanej publikacji NISR, bo GlobalNewsAI obecnie jej nie przechowuje.',
   cpiUnavailableProvenance: 'CPI NISR · nie pokazano · Bez AI',
