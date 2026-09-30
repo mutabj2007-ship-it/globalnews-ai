@@ -28,7 +28,7 @@ import { GuestClaimService } from './guest-claim.service';
  *
  * Settings: the PROPOSED ALPHA values from the Alpha release request — the Alpha outer controls
  * as read (code defaults where absent), plus the one explicit Alpha delta the journey needs
- * (ASK_IP_UNITS_PER_DAY=360000, Production's value) and the proposed guest values.
+ * (ASK_IP_UNITS_PER_DAY=100000) and the proposed guest values — EXACTLY the Alpha release request.
  */
 const url = process.env.ASK_V2_TEST_DATABASE_URL;
 if (url && !/^postgresql:\/\/askv2test@127\.0\.0\.1:\d+\/ask_v2_test$/.test(url)) {
@@ -46,15 +46,15 @@ const PROPOSED_ALPHA: Record<string, string> = {
   ASK_FLAG_CACHE_MS: '0',
   ASK_BREAKER_CACHE_MS: '0',
   /* Alpha outer controls: absent → code defaults, except the one proposed explicit delta. */
-  ASK_IP_UNITS_PER_DAY: '360000',
+  ASK_IP_UNITS_PER_DAY: '100000',
   /* Proposed Alpha guest values (Alpha release request §4). */
   ASK_GUEST_ATTEMPTS_PER_SESSION: '8',
   ASK_GUEST_UNITS_PER_SESSION: '48000',
   ASK_GUEST_POOL_UNITS_PER_HOUR: '50000',
   ASK_GUEST_POOL_UNITS_PER_DAY: '150000',
-  ASK_GUEST_EXECUTIONS_PER_DAY: '60',
-  ASK_GUEST_EXECUTIONS_PER_IP_DAY: '30',
-  ASK_GUEST_SESSIONS_PER_IP_DAY: '10',
+  ASK_GUEST_EXECUTIONS_PER_DAY: '20',
+  ASK_GUEST_EXECUTIONS_PER_IP_DAY: '12',
+  ASK_GUEST_SESSIONS_PER_IP_DAY: '5',
   ASK_GUEST_CONCURRENT_PER_SESSION: '1',
   ASK_GUEST_COOLDOWN_AFTER_NO_ANSWER: '3',
   ASK_GUEST_COOLDOWN_S: '600',
