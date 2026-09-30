@@ -217,3 +217,27 @@ describe('ADMIN OPERATIONS R1 — keyboard access', () => {
     expect(SOURCE).toContain('id={`reason-${row.name}`}');
   });
 });
+
+describe('ADMIN OPERATIONS R1 — M-B, the change history on a phone', () => {
+  const history = SOURCE.slice(SOURCE.indexOf('function HistoryPanel'));
+
+  it('below adm-rail every change is stacked, and the table is kept at adm-rail and above', () => {
+    expect(history).toContain('<div className="hidden adm-rail:block">{table}</div>');
+    expect(history).toContain('<ol className="flex flex-col adm-rail:hidden"');
+  });
+
+  it('the stacked entry renders EVERY column — change, who and reason are not dropped', () => {
+    /* The list maps the same `columns` the table renders, so no field can be left out of one. */
+    expect(history).toContain('{columns.map((column) => (');
+    expect(history).toContain('<dt');
+    expect(history).toContain('{column.header}');
+    expect(history).toContain('{column.render(row)}');
+    ['when', 'control', 'change', 'who', 'reason'].forEach((key) => {
+      expect(history).toContain(`screen.history.${key}`);
+    });
+  });
+
+  it('an empty history still renders the primitive’s own empty state, at every width', () => {
+    expect(history).toContain('if (history.length === 0) {');
+  });
+});
