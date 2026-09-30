@@ -989,6 +989,12 @@ export interface AnalysisRetrievalContext {
    */
   conversationSubject?: import('./conversation-subject').ConversationSubjectAnchor;
   /**
+   * ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — the reader explicitly asked for dates in a recognised
+   * answer-format instruction ("Give the dates …"). Presentation only: each cited source may then
+   * show its own date, labelled by what it is (publication / first seen). Never an event date.
+   */
+  datesRequested?: true;
+  /**
    * MY INTELLIGENCE R1 — present only on a multi-story selection analysis:
    * which action ran and how many of the selected stories resolved to
    * retained reporting.

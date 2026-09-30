@@ -33,6 +33,7 @@ import {
   scoreGenericRelevance,
   scoreRelationalRelevance,
 } from './relevance/generic-relevance.util';
+import { scoreCountryEconomyRelevance } from './relevance/country-economy-relevance.util';
 import {
   governedInstitution,
   scoreInstitutionalStatusRelevance,
@@ -137,7 +138,13 @@ interface HomeNewsCacheEntry {
  */
 export type RelevanceMode =
   | { type: 'none' }
-  | { type: 'generic' }
+  /*
+    ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — `countryEconomy` is set by exactly one caller
+    (AnalysisService's generic branch) and only for a subject that is exactly a resolved country +
+    a broad economy term. It ADDS one bounded admission path after the unchanged generic gate
+    fails (country-economy-relevance.util.ts); absent, 'generic' is byte-for-byte unchanged.
+  */
+  | { type: 'generic'; countryEconomy?: { iso3: string } }
   | { type: 'relational'; x: string; y: string }
   /*
     ASK CURRENT REPORTING FINAL CLOSURE R1 (M2) — an institutional current-status question
@@ -1010,8 +1017,13 @@ export class NewsService {
         : useTermParity
           ? cachedArticles.filter(
               (article) =>
-                matchesRetainedQuery(article, retainedTerms).isMatch &&
-                retainedCountryVerdict(article, retainedQueryCountry).decision === 'admit',
+                (matchesRetainedQuery(article, retainedTerms).isMatch &&
+                  retainedCountryVerdict(article, retainedQueryCountry).decision === 'admit') ||
+                /* R2 — the same bounded country + economy path the live gate uses. */
+                (relevanceMode.type === 'generic' &&
+                  relevanceMode.countryEconomy !== undefined &&
+                  scoreCountryEconomyRelevance(article, relevanceMode.countryEconomy.iso3)
+                    .isRelevant),
             )
           : cachedArticles.filter(
               (article) => this.scoreByMode(article, query, relevanceMode).isRelevant,
@@ -2101,7 +2113,12 @@ export class NewsService {
     relevanceMode: ActiveRelevanceMode,
   ): { isRelevant: boolean } {
     if (relevanceMode.type === 'generic') {
-      return scoreGenericRelevance(article, query);
+      const generic = scoreGenericRelevance(article, query);
+      if (generic.isRelevant || relevanceMode.countryEconomy === undefined) return generic;
+      return {
+        isRelevant: scoreCountryEconomyRelevance(article, relevanceMode.countryEconomy.iso3)
+          .isRelevant,
+      };
     }
 
     if (relevanceMode.type === 'relationalEvent') {

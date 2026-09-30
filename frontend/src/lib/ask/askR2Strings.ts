@@ -14,6 +14,8 @@ export interface AskR2Strings {
   readonly youAsked: string;
   readonly scope: string;
   readonly noScope: string;
+  /** ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — a follow-up that continued the prior subject. */
+  readonly inheritedScope: string;
   readonly scopePending: string;
   readonly keptAsAsked: string;
   readonly answer: string;
@@ -175,6 +177,7 @@ const EN: AskR2Strings = {
   youAsked: 'YOU ASKED',
   scope: 'SCOPE',
   noScope: 'General question · no scope applied',
+  inheritedScope: 'Follow-up · continues {subject}',
   scopePending: 'Scope waits for your choice',
   keptAsAsked: 'Kept as asked',
   answer: 'ANSWER',
@@ -358,6 +361,7 @@ const PL: AskR2Strings = {
   youAsked: 'TWOJE PYTANIE',
   scope: 'ZAKRES',
   noScope: 'Pytanie ogólne · bez zakresu',
+  inheritedScope: 'Pytanie uzupełniające · kontynuacja: {subject}',
   scopePending: 'Zakres zależy od Twojego wyboru',
   keptAsAsked: 'Zachowano zgodnie z pytaniem',
   answer: 'ODPOWIEDŹ',

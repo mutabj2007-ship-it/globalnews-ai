@@ -1,5 +1,6 @@
 import type { ConversationSubjectDisclosure } from '@globalnews-ai/shared';
 import { classifyQueryIntent } from '../query/query-intent.util';
+import { retrievalSubjectOf } from '../query/response-directives.util';
 import {
   deriveFallbackNewsQuery,
   deriveGenericNewsQuery,
@@ -112,7 +113,13 @@ export function isSubjectFollowUp(question: string): boolean {
  * referring follow-up, or it is an event — the event anchor's case).
  */
 export function deriveConversationSubject(priorQuestion: string): string | undefined {
-  const base = stripTrailingPunctuation(priorQuestion);
+  /*
+    ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — the prior question's answer-format instructions
+    ("Give the dates and cite the sources") are not its subject, exactly as for the current turn
+    (response-directives.util). Measured on Alpha operation 8237863d: the continued subject was
+    "Kenya's economy? Give the dates and cite the sources".
+  */
+  const base = stripTrailingPunctuation(retrievalSubjectOf(priorQuestion));
   if (base.length === 0 || isSubjectFollowUp(base)) return undefined;
   if (isEventTopic(deriveEventTopic(base))) return undefined;
 
@@ -210,14 +217,24 @@ export interface FollowUpFocus {
   readonly terms: readonly string[];
   /** True when the follow-up asks about effect/impact/significance. */
   readonly asksImpact: boolean;
+  /**
+   * ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — DISPLAY ONLY. The same kept words, grouped as the
+   * reader wrote them: adjacent words stay one phrase ("ordinary households"), so the label
+   * never reads "ordinary and households". Retrieval, ordering and disclosures use `terms`.
+   */
+  readonly phrases: readonly string[];
 }
 
 export function deriveFollowUpFocus(followUp: string, inheritedSubject: string): FollowUpFocus {
   const subjectStems = new Set(tokenize(inheritedSubject).map(stemOf));
   const terms: string[] = [];
+  const phrases: string[][] = [];
+  let lastKept = -2;
   let asksImpact = false;
 
-  for (const word of tokenize(followUp)) {
+  const tokens = tokenize(followUp);
+  for (let index = 0; index < tokens.length; index++) {
+    const word = tokens[index];
     const lower = word.toLowerCase();
     if (ASPECT_WORDS.test(lower)) asksImpact = true;
     if (
@@ -232,9 +249,12 @@ export function deriveFollowUpFocus(followUp: string, inheritedSubject: string):
       continue;
     }
     if (!terms.some((term) => stemOf(term) === stemOf(word))) terms.push(word);
+    if (index === lastKept + 1 && phrases.length > 0) phrases[phrases.length - 1].push(word);
+    else phrases.push([word]);
+    lastKept = index;
   }
 
-  return { terms, asksImpact };
+  return { terms, asksImpact, phrases: phrases.map((phrase) => phrase.join(' ')) };
 }
 
 /** The stated retrieval meaning: inherited subject + focus (+ "impact" when asked). */

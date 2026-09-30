@@ -159,3 +159,18 @@ export function splitResponseDirectives(question: string): ResponseDirectiveSpli
 export function retrievalSubjectOf(question: string): string {
   return splitResponseDirectives(question).subject;
 }
+
+/*
+  ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — the reader explicitly asked for DATES. Read only from the
+  recognised trailing instructions above ("Give the dates and cite the sources", "Podaj daty"),
+  never from topic words elsewhere. It selects presentation only (show each source's labelled
+  publication/reporting date); it never creates or infers an event date.
+*/
+const DATE_REQUEST =
+  /(?:^|[^\p{L}])(?:dates?|timestamps?|times\s+and\s+dates|publication\s+dates?|daty(?:\s+publikacji)?|datami|dat[ęey]?)(?=$|[^\p{L}])/iu;
+
+export function requestsDates(question: string): boolean {
+  return splitResponseDirectives(question).directives.some((directive) =>
+    DATE_REQUEST.test(directive),
+  );
+}
