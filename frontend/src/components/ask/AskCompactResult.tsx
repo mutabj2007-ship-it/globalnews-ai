@@ -16,6 +16,7 @@ import {
   splitSynthesisParagraphs,
 } from '@/components/analysis-frame/briefModel';
 import { fullAnalysisHref } from '@/lib/ask/storyContextStore';
+import { formatUtc } from '@/lib/ask/askR2View';
 import { grantAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AskCitedBrief, citedSourceNumbers } from './AskCitedBrief';
@@ -62,6 +63,39 @@ export const COMPACT_SOURCE_LIMIT = 4;
  */
 function formatFocus(focus: readonly string[], language: LanguageCode): string {
   return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(focus);
+}
+
+/** R2 — the reader's own phrases ("ordinary households") when the payload carries them. */
+function focusForDisplay(subject: {
+  readonly focus?: readonly string[];
+  readonly focusDisplay?: readonly string[];
+}): readonly string[] {
+  return subject.focusDisplay && subject.focusDisplay.length > 0
+    ? subject.focusDisplay
+    : (subject.focus ?? []);
+}
+
+/**
+ * ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — a cited source's own date, labelled by what it IS:
+ * the publisher's timestamp, or when GlobalNewsAI first saw it. Unknown basis gets a neutral
+ * label. Never an event date, never invented: no date, no label.
+ */
+export function sourceDateLabel(
+  publishedAt: string | undefined,
+  basis: 'publisher' | 'observed' | undefined,
+  language: LanguageCode,
+  t: { sourceDatePublished: string; sourceDateObserved: string; sourceDateUnknownBasis: string },
+): string | null {
+  /* The same UTC wording the Ask answer already uses ("8 Sep 2026, 11:04 UTC"). */
+  const date = formatUtc(publishedAt, language === 'pl' ? 'pl' : 'en');
+  if (date === null) return null;
+  const template =
+    basis === 'publisher'
+      ? t.sourceDatePublished
+      : basis === 'observed'
+        ? t.sourceDateObserved
+        : t.sourceDateUnknownBasis;
+  return template.replace('{date}', date);
 }
 
 interface AskCompactResultProps {
@@ -236,7 +270,7 @@ export function AskCompactResult({
               {t.continuingSubject.replace('{subject}', response.retrievalContext.conversationSubject.subject)}
               {/* D.1 — the current turn's focus, in the reader's own words. */}
               {(response.retrievalContext.conversationSubject.focus ?? []).length > 0
-                ? ` · ${formatFocus(response.retrievalContext.conversationSubject.focus ?? [], language)}`
+                ? ` · ${formatFocus(focusForDisplay(response.retrievalContext.conversationSubject), language)}`
                 : null}
             </span>
             {onStartNewTopic ? (
@@ -263,7 +297,7 @@ export function AskCompactResult({
             <p data-ask="focus-not-in-evidence" role="note" className="text-xs leading-relaxed text-ink-secondary">
               {t.focusNotInEvidence.replace(
                 '{focus}',
-                formatFocus(response.retrievalContext.conversationSubject.focus ?? [], language),
+                formatFocus(focusForDisplay(response.retrievalContext.conversationSubject), language),
               )}
             </p>
           ) : null}
@@ -374,6 +408,21 @@ export function AskCompactResult({
                     <span className="ms-2 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
                       {source.publisher}
                     </span>
+                    {response.retrievalContext.datesRequested
+                      ? (() => {
+                          const label = sourceDateLabel(
+                            source.publishedAt,
+                            source.publishedAtBasis,
+                            language,
+                            t,
+                          );
+                          return label === null ? null : (
+                            <span data-ask="source-date" className="ms-2 text-xs text-ink-secondary">
+                              {label}
+                            </span>
+                          );
+                        })()
+                      : null}
                     {/* UNIVERSAL BOOKMARK R1 — a sibling of the source link; compact to fit the dock. */}
                     {storyBookmarks && (
                       <span className="ms-2 inline-flex align-middle">
@@ -384,6 +433,11 @@ export function AskCompactResult({
                 ))}
               </ul>
             )}
+            {response.retrievalContext.datesRequested && shown.length > 0 ? (
+              <p data-ask="source-dates-note" className="text-xs text-ink-tertiary">
+                {t.sourceDatesNote}
+              </p>
+            ) : null}
             {!truncated ? null : (
               /* §6.4 — say SO, and say HOW MANY. */
               <p data-ask="sources-truncated" className="text-xs text-ink-tertiary">

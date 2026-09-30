@@ -44,6 +44,11 @@ export interface ConversationSubjectAnchor {
    */
   readonly focus: readonly string[];
   /**
+   * ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — DISPLAY ONLY: the focus as the reader wrote it, adjacent
+   * words kept together ("ordinary households"). Absent on older payloads; show `focus` then.
+   */
+  readonly focusDisplay?: readonly string[];
+  /**
    * D.1 — the retrieval meaning, stated: inherited subject + current focus
    * ("inflation high Poland consumers"). The reader's own question is kept
    * unchanged for the model and the page; this is what evidence is chosen for.

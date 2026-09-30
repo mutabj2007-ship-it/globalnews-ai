@@ -278,9 +278,14 @@ export function askR2View(
   if (place !== null && !items.some((i) => i.kind === 'GEOGRAPHY')) {
     items.push({ kind: 'GEOGRAPHY', label: place, kept: false });
   }
+  /* ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — a follow-up that continued the prior subject is not a
+     "general question": the inherited subject IS its scope (display only; routing unchanged). */
+  const inherited = analysis?.retrievalContext?.conversationSubject?.subject;
   const note =
     c.kind === 'NONE' && place === null
-      ? s.noScope
+      ? inherited
+        ? s.inheritedScope.replace('{subject}', inherited)
+        : s.noScope
       : c.kind === 'NONE'
         ? null
         : c.kind === 'PENDING'

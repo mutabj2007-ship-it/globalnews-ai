@@ -174,6 +174,11 @@ export const en = {
     runFullAnalysisNote: 'Starts a new source-backed analysis.',
     telemetryReports: 'retrieved reports',
     telemetryClusters: 'reporting clusters',
+    /* ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — shown only when the reader asked for dates. */
+    sourceDatePublished: 'Published {date}',
+    sourceDateObserved: 'First seen by GlobalNewsAI {date}',
+    sourceDateUnknownBasis: 'Report date {date}',
+    sourceDatesNote: 'Dates show when each report was published or first seen, not when the events happened.',
   },
   loadingStages: [
     'Searching trusted sources\u2026',

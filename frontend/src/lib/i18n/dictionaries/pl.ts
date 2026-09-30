@@ -117,6 +117,10 @@ export const pl: Dictionary = {
     runFullAnalysisNote: 'Rozpoczyna now\u0105 analiz\u0119 opart\u0105 na \u017ar\u00f3d\u0142ach.',
     telemetryReports: 'pozyskanych doniesie\u0144',
     telemetryClusters: 'grup doniesie\u0144',
+    sourceDatePublished: 'Opublikowano {date}',
+    sourceDateObserved: 'Pierwszy raz odnotowane przez GlobalNewsAI {date}',
+    sourceDateUnknownBasis: 'Data doniesienia {date}',
+    sourceDatesNote: 'Daty pokazują, kiedy doniesienie opublikowano lub odnotowano, a nie kiedy zaszły wydarzenia.',
   },
   loadingStages: [
     'Przeszukiwanie zaufanych źródeł\u2026',

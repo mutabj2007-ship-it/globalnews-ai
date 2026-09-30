@@ -393,6 +393,11 @@ export interface AnalysisSourceRef {
   url: string;
   /** ISO-8601 timestamp. */
   publishedAt: string;
+  /**
+   * ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — the SAME article's `publishedAtBasis`: whether
+   * `publishedAt` is the publisher's own time or when GlobalNewsAI first saw it. Absent = unproven.
+   */
+  publishedAtBasis?: import('./news').PublishedAtBasis;
 }
 
 /**
@@ -988,6 +993,12 @@ export interface AnalysisRetrievalContext {
    * alongside an event anchor for the same continuation. See conversation-subject.ts.
    */
   conversationSubject?: import('./conversation-subject').ConversationSubjectAnchor;
+  /**
+   * ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — the reader explicitly asked for dates in a recognised
+   * answer-format instruction ("Give the dates …"). Presentation only: each cited source may then
+   * show its own date, labelled by what it is (publication / first seen). Never an event date.
+   */
+  datesRequested?: true;
   /**
    * MY INTELLIGENCE R1 — present only on a multi-story selection analysis:
    * which action ran and how many of the selected stories resolved to

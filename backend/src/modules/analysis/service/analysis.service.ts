@@ -160,7 +160,11 @@ import {
   makeProviderSafeNewsQuery,
   toProviderSafePunctuation,
 } from '../query/derive-generic-news-query.util';
-import { retrievalSubjectOf } from '../query/response-directives.util';
+import { requestsDates, retrievalSubjectOf } from '../query/response-directives.util';
+import {
+  resolveCountryEconomyQuery,
+  scoreCountryEconomyRelevance,
+} from '../../news/relevance/country-economy-relevance.util';
 import { describeFreeText } from '../../../observability/free-text-log';
 import { deriveRelationalSearchQueries } from '../query/derive-relational-search-queries.util';
 import { blocksGeographicRouting } from '../query/routing-function-words.util';
@@ -2588,6 +2592,16 @@ export class AnalysisService {
             // the M46 fallback derivation) is left completely untouched —
             // only what's actually SENT to the provider changes.
             const primarySent = makeProviderSafeNewsQuery(genericSearchQuery);
+            /*
+              ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — a subject that is exactly a resolved country + a
+              broad economy term ("Poland's economy") opts into ONE bounded second admission path
+              (country-economy-relevance.util.ts). Both a country and an economic-topic component
+              are still required; every other subject sends the unchanged generic mode.
+            */
+            const countryEconomy = resolveCountryEconomyQuery(genericSearchQuery);
+            const genericMode = countryEconomy
+              ? ({ type: 'generic', countryEconomy: { iso3: countryEconomy.iso3 } } as const)
+              : ({ type: 'generic' } as const);
 
             /**
              * PROVIDER-SAFETY EDGE CLOSURE — the honest non-retrievable state.
@@ -2620,7 +2634,7 @@ export class AnalysisService {
                 // it. CountryNewsService and the public /news/search endpoint
                 // call NewsService.search() without this mode, so their
                 // behavior is completely unchanged (see news.service.ts).
-                { type: 'generic' },
+                genericMode,
               );
 
               // Milestone #46 — exactly ONE bounded fallback attempt, and
@@ -2742,7 +2756,10 @@ export class AnalysisService {
                   RETAINED_MAX_AGE_MINUTES,
                 );
                 const retained = retainedCandidates.filter(
-                  (article) => scoreGenericRelevance(article, retainedQuery).isRelevant,
+                  (article) =>
+                    scoreGenericRelevance(article, retainedQuery).isRelevant ||
+                    (countryEconomy !== undefined &&
+                      scoreCountryEconomyRelevance(article, countryEconomy.iso3).isRelevant),
                 );
 
                 if (retained.length > 0) {
@@ -2775,9 +2792,11 @@ export class AnalysisService {
                       'Primary generic retrieval returned zero relevant articles — ' +
                         'attempting one bounded fallback search.',
                     );
-                    searchResponse = await this.newsService.search(fallbackSent, SEARCH_POOL_SIZE, {
-                      type: 'generic',
-                    });
+                    searchResponse = await this.newsService.search(
+                      fallbackSent,
+                      SEARCH_POOL_SIZE,
+                      genericMode,
+                    );
                     /* R3 — a refused fallback is a limited search, never "no reporting". */
                     const fallbackFailures = readProviderFailures(searchResponse);
                     if (searchResponse.articles.length === 0 && fallbackFailures.length > 0) {
@@ -2791,6 +2810,18 @@ export class AnalysisService {
               retrievalContext = this.toRetrievalContext(searchResponse);
               if (genericOutcome !== undefined) {
                 retrievalContext = { ...retrievalContext, outcome: genericOutcome };
+              } else if (
+                articles.length > 0 &&
+                readProviderFailures(searchResponse).length > 0 &&
+                retrievalContext.fallbackReason === undefined
+              ) {
+                /*
+                  R2 — AN INCOMPLETE SEARCH STAYS DISCLOSED. Evidence was admitted (e.g. from the
+                  publisher feeds) while another attempted provider failed (e.g. a GDELT timeout).
+                  The answer uses what could be reached and says the search was limited — the
+                  existing 'provider-error' disclosure, never a silent "live" label.
+                */
+                retrievalContext = { ...retrievalContext, fallbackReason: 'provider-error' };
               }
             }
           }
@@ -2935,6 +2966,10 @@ export class AnalysisService {
             conversationSubject: {
               subject: continuedSubject,
               focus: focus.terms,
+              /* R2 — only when the reader's phrasing differs from the term list (display only). */
+              ...(focus.phrases.join('\u0000') === focus.terms.join('\u0000')
+                ? {}
+                : { focusDisplay: focus.phrases }),
               retrievalMeaning: composeRetrievalMeaning(continuedSubject, focus),
               source: 'prior-question',
               disclosures: [
@@ -2953,6 +2988,8 @@ export class AnalysisService {
         retrievalContext = {
           ...retrievalContext,
           evidenceState: resolveEvidenceState(retrievalContext, articles.length),
+          /* R2 — presentation only: the reader asked for dates in THIS turn's own instructions. */
+          ...(requestsDates(normalizedQuery) ? { datesRequested: true as const } : {}),
         };
 
         if (articles.length === 0) {
