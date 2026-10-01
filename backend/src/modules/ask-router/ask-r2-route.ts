@@ -76,6 +76,12 @@ export interface AskRouteContext {
   readonly storyAnchorCountry?: string;
   readonly hasResolvedArticleAnchor?: boolean;
   readonly articleRefs?: readonly string[];
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2E — the question IS the server-resolved anchored story's own
+   * headline (surface-supplied text). Places read from it are the story's, not typed by the
+   * reader: they are carried with provenance SUPPLIED_BY_SURFACE and never become typed scope.
+   */
+  readonly questionIsStoryHeadline?: boolean;
   readonly declaredRegion?: string;
   readonly identityVerified?: boolean;
   readonly computeConsent?: 'ABSENT' | 'GRANTED';
@@ -326,7 +332,7 @@ export function composeEnvelopeSource(
   ctx: AskRouteContext,
   capability: ReturnType<typeof readCapabilityRequests>['source'] = {},
 ): EnvelopeSource {
-  const typed = typedGeographyOf(reading);
+  const typed = ctx.questionIsStoryHeadline === true ? undefined : typedGeographyOf(reading);
   const entity = typed === undefined ? entityGeographyOf(reading) : undefined;
   /* CURRENT STATUS CORROBORATION R1 — the M2 governed shape (institution AND status subject). */
   const institutional = readInstitutionalStatusQuestion(reading.originalQuestion);
@@ -452,13 +458,23 @@ export function routeAskR2(
     };
   }
 
-  const reading = outcome.reading;
+  /* R2E — a story headline used as the question: its places are SURFACE-supplied, not typed. */
+  const reading =
+    ctx.questionIsStoryHeadline === true
+      ? {
+          ...outcome.reading,
+          geography: outcome.reading.geography.map((g) => ({
+            ...g,
+            provenance: 'SUPPLIED_BY_SURFACE' as const,
+          })),
+        }
+      : outcome.reading;
   const landed = readLandedClassifiers(reading.originalQuestion, reading.domains, {
     ...(ctx.priorQuestion === undefined ? {} : { priorQuestion: ctx.priorQuestion }),
     hasResolvedArticleAnchor: ctx.hasResolvedArticleAnchor === true,
   });
 
-  const typed = typedGeographyOf(reading);
+  const typed = ctx.questionIsStoryHeadline === true ? undefined : typedGeographyOf(reading);
   const eligibility = decideContextEligibility(reading.subject, {
     typedGeographyPresent: typed !== undefined || ctx.declaredRegion !== undefined,
     resolvedArticleAnchorPresent: ctx.hasResolvedArticleAnchor === true,

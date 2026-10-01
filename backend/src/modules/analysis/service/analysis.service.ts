@@ -1,3 +1,4 @@
+import { isSameHeadline } from '../../news/identity/headline-identity.util';
 import { createHash } from 'node:crypto';
 import {
   BadRequestException,
@@ -1339,17 +1340,33 @@ export class AnalysisService {
         ) {
           countryInterpretation = 'COUNTRY_FROM_SELECTED_CONTEXT';
         }
+        /*
+          UNIFIED INTELLIGENCE BINDING R2E — THE ANCHORED-STORY CORRECTION. When the question IS
+          the anchored story's own headline (product-generated text, e.g. the Map's "Ask about
+          this"), the places and demonyms inside it are the STORY's, written by its publisher —
+          not a scope the reader typed. Confirmed against the STORED anchor row (server fact),
+          and only looked up early when the question already equals the supplied title, so every
+          other question keeps its exact path: a place the reader genuinely typed still outranks
+          the story.
+        */
+        const headlineAnchor =
+          storyContext?.articleId !== undefined && isSameHeadline(rawQuery, storyContext.title)
+            ? await this.newsService.findArticleById(storyContext.articleId)
+            : null;
+        const questionIsAnchorHeadline =
+          headlineAnchor !== null && isSameHeadline(rawQuery, headlineAnchor.title);
         const typedScopeOverridesStory =
-          declaredRegion !== undefined ||
-          classification.countries.length > 0 ||
-          typedLocation !== undefined ||
-          /*
+          !questionIsAnchorHeadline &&
+          (declaredRegion !== undefined ||
+            classification.countries.length > 0 ||
+            typedLocation !== undefined ||
+            /*
             ASK R2 INTEGRATION R1 · GATE H (G V7-C3) — the reader NAMED a place, an
             ambiguous one, that the story or Map country is not a candidate for. The
             selected context must not silently answer for "Congo"; the ambiguous-country
             branch below asks, or lets the event evidence decide.
           */
-          (ambiguousCountry !== undefined && countryInterpretation === undefined);
+            (ambiguousCountry !== undefined && countryInterpretation === undefined));
 
         /*
           ASK R2 INTEGRATION R1 · G FINAL ADDENDUM SEAM — inherited Map context
@@ -1427,8 +1444,9 @@ export class AnalysisService {
          * When articleId is absent or does not resolve, `anchorArticle` is
          * null and every branch below takes the pre-R4 path unchanged.
          */
-        const anchorArticle =
-          !typedScopeOverridesStory && storyContext?.articleId
+        const anchorArticle = questionIsAnchorHeadline
+          ? headlineAnchor
+          : !typedScopeOverridesStory && storyContext?.articleId
             ? await this.newsService.findArticleById(storyContext.articleId)
             : null;
 

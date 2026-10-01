@@ -68,6 +68,7 @@ import {
 } from './ask-compute.contract';
 import { askRequestContext, type AskRequestContext } from './ask-request-context';
 import { contextIdentityToken, type ResolvedAskContext } from './context/resolved-ask-context';
+import { isSameHeadline } from '../news/identity/headline-identity.util';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
 import {
   newAskObservationDraft,
@@ -156,7 +157,7 @@ function routeFor(request: Readonly<AskRequest>, baseDeps: PlannerDeps): AskR2Ro
       ...(who?.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
       /* UNIFIED INTELLIGENCE BINDING R2B — THIS turn's server-resolved context, through the
          landed seams only (frozen C and its eligibility rules are untouched). */
-      ...routeContextOf(request.context),
+      ...routeContextOf(request.context, request.question),
     },
     deps,
   );
@@ -177,9 +178,15 @@ function routeFor(request: Readonly<AskRequest>, baseDeps: PlannerDeps): AskR2Ro
  */
 export function routeContextOf(
   context: ResolvedAskContext | undefined,
+  /** R2E — this turn's question, to recognise the anchored story's own headline. */
+  question?: string,
 ): Pick<
   AskRouteContext,
-  'hasResolvedArticleAnchor' | 'storyAnchorCountry' | 'mapContextCountry' | 'articleRefs'
+  | 'hasResolvedArticleAnchor'
+  | 'storyAnchorCountry'
+  | 'mapContextCountry'
+  | 'articleRefs'
+  | 'questionIsStoryHeadline'
 > {
   if (context === undefined) return {};
   /* R2D — a SELECTION is frozen C's own multi-story transport (the SELECTION rank). */
@@ -190,6 +197,10 @@ export function routeContextOf(
     return {
       hasResolvedArticleAnchor: true,
       ...(context.countryIso3 === undefined ? {} : { storyAnchorCountry: context.countryIso3 }),
+      /* R2E — the server-resolved title (never client text) decides it. */
+      ...(isSameHeadline(question, context.storyContext.title)
+        ? { questionIsStoryHeadline: true }
+        : {}),
     };
   }
   return { mapContextCountry: context.countryIso3 };

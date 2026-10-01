@@ -205,7 +205,10 @@ describe('D — the AI action is visible, and the source action is not an AI act
 
       expect(handler).toContain("router.push(`/search?${params.toString()}`)");
       expect(handler).toContain("articleId: article.id");
-      expect(handler).toContain("params.set('countryCode', selectedCountry.iso2)");
+      /* UNIFIED INTELLIGENCE BINDING R2E — the story's OWN server-resolved country is authoritative;
+         the Map's selected country is never sent in its place. */
+      expect(handler).not.toContain("selectedCountry");
+      expect(handler).not.toContain("countryCode");
       expect(handler).not.toContain('fetch');
       expect(handler).not.toContain('analyzeNews');
     });

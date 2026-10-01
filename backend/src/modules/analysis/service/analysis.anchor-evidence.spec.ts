@@ -558,3 +558,46 @@ describe('R4 REGRESSION 14 — a punctuation-only retrieval input never becomes 
     expect(response.retrievalContext.articlesRetrieved).toBe(0);
   });
 });
+
+/*
+  UNIFIED INTELLIGENCE BINDING R2E — THE ANCHORED-STORY CORRECTION. The R4 regressions above
+  (and geo-precision N14) were baseline failures: the question IS the story's headline, and the
+  demonym/place inside it ("Australian", "Penang") read as typed scope and suppressed the anchor.
+  The headline is product-supplied text; confirmed against the STORED anchor, it no longer
+  outranks the story. These cases pin that the correction is narrow.
+*/
+describe('R2E — only the anchor’s own headline is exempted; genuinely typed scope keeps precedence', () => {
+  it('an EDITED question (the reader added a place) keeps the existing path: typed scope, no anchor', async () => {
+    const { service, findArticleById } = buildService({ searchResults: UNRELATED_AUSTRALIAN_POOL });
+    const res = await service.analyzeNews(
+      `${ANCHOR_TITLE} — and what about Kenya?`,
+      'en',
+      STORY_CONTEXT,
+    );
+    /* not the headline → no early lookup, and the typed place outranks the story as before */
+    expect(findArticleById).not.toHaveBeenCalled();
+    expect(res.retrievalContext.storyContextUsed).not.toBe(true);
+  });
+
+  it('a client title that matches the question is not enough: the STORED anchor title must match', async () => {
+    const { service, findArticleById } = buildService({
+      searchResults: UNRELATED_AUSTRALIAN_POOL,
+      anchor: { ...ANCHOR, title: 'A different stored headline' },
+    });
+    const res = await service.analyzeNews(ANCHOR_TITLE, 'en', STORY_CONTEXT);
+    /* one confirmation read; the stored row disagrees, so typed scope still applies */
+    expect(findArticleById).toHaveBeenCalledTimes(1);
+    expect(res.retrievalContext.storyContextUsed).not.toBe(true);
+  });
+
+  it('the headline (any case / punctuation) anchors the story, with ONE anchor lookup', async () => {
+    const { service, findArticleById } = buildService({ searchResults: UNRELATED_AUSTRALIAN_POOL });
+    const res = await service.analyzeNews(
+      `  ${ANCHOR_TITLE.toUpperCase()}!! `,
+      'en',
+      STORY_CONTEXT,
+    );
+    expect(findArticleById).toHaveBeenCalledTimes(1);
+    expect(res.articles[0]?.id).toBe(ANCHOR_ID);
+  });
+});
