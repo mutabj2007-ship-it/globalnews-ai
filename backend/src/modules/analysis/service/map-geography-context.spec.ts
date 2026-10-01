@@ -360,6 +360,15 @@ describe('the controller: only an explicit POST computes', () => {
       'src/modules/analysis/dto/analyze-news.dto.ts',
       'src/modules/analysis/service/analysis.service.ts',
       'src/modules/ask-router/frozen-c/corpus/corpus.ts',
+      /*
+        UNIFIED INTELLIGENCE BINDING R2B — the canonical Ask V2 engine BUILDS a GeographyContext
+        server-side (ISO3 + registry name) from a resolved `{kind:'GEOGRAPHY', countryCode}`
+        reference and hands it to AnalysisService. No client ever sends this object to Ask V2 and
+        no new controller accepts it: the controller assertion below still holds unchanged.
+      */
+      'src/modules/ask-v2/ask-r2-execution.adapter.ts',
+      'src/modules/ask-v2/context/ask-context.resolver.ts',
+      'src/modules/ask-v2/context/resolved-ask-context.ts',
     ]);
     expect(files.filter((file) => file.endsWith('.controller.ts'))).toEqual([
       'src/modules/analysis/controller/analysis.controller.ts',

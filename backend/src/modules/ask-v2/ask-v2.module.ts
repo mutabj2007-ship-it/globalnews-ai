@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from '../../database/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { AnalysisModule } from '../analysis/analysis.module';
+import { NewsModule } from '../news/news.module';
 import { ComputeControlsModule } from '../compute-controls/compute-controls.module';
 import { SpecialistModule } from '../specialist/specialist.module';
 import { AskObservabilityModule } from '../ask-observability/ask-observability.module';
@@ -17,6 +18,7 @@ import { GuestCoreModule } from './guest/guest-core.module';
 import { AskV2GuestController } from './guest/ask-v2-guest.controller';
 import { GuestFirstWriteGuard, GuestWriteGuard, RequireGuestGuard } from './guest/guest.guards';
 import { GuestMaintenanceService } from './guest/guest-maintenance.service';
+import { AskContextResolver } from './context/ask-context.resolver';
 
 /*
   ASK R2 CONSOLIDATED INTEGRATION R1 · GATE E — ASK_EXECUTION_PORT is bound to the Ask R2
@@ -32,6 +34,8 @@ import { GuestMaintenanceService } from './guest/guest-maintenance.service';
     PrismaModule,
     AuthModule,
     AnalysisModule,
+    /* R2B — the retained-article read (NewsService.findRetainedArticleByUrl) for STORY context. */
+    NewsModule,
     ComputeControlsModule,
     SpecialistModule,
     AskObservabilityModule,
@@ -49,6 +53,7 @@ import { GuestMaintenanceService } from './guest/guest-maintenance.service';
     GuestWriteGuard,
     GuestFirstWriteGuard,
     GuestMaintenanceService,
+    AskContextResolver,
     { provide: ASK_EXECUTION_PORT, useExisting: AskR2ExecutionAdapter },
   ],
   exports: [AskV2Service],

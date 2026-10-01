@@ -21,7 +21,12 @@ import { GuestSessionService } from './guest/guest-session.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { ASK_MODEL_MAX_ATTEMPTS } from '../compute-controls/compute-controls.config';
 import { SpecialistClaimRegistry } from '../specialist/specialist-claim.registry';
-import { routeAskR2, missingSeams, type AskR2Route } from '../ask-router/ask-r2-route';
+import {
+  routeAskR2,
+  missingSeams,
+  type AskR2Route,
+  type AskRouteContext,
+} from '../ask-router/ask-r2-route';
 import {
   answerStateBeforeExecution,
   deriveAnswerState,
@@ -58,6 +63,7 @@ import {
   type ExecutionResult,
 } from './ask-compute.contract';
 import { askRequestContext, type AskRequestContext } from './ask-request-context';
+import { contextIdentityToken, type ResolvedAskContext } from './context/resolved-ask-context';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
 import {
   newAskObservationDraft,
@@ -144,9 +150,38 @@ function routeFor(request: Readonly<AskRequest>, baseDeps: PlannerDeps): AskR2Ro
       ...(who === undefined ? {} : { identityVerified: who.accountId !== null }),
       /* ASK R3 CONTINUITY — frozen C already reads conversationSubject from it. */
       ...(who?.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
+      /* UNIFIED INTELLIGENCE BINDING R2B — THIS turn's server-resolved context, through the
+         landed seams only (frozen C and its eligibility rules are untouched). */
+      ...routeContextOf(request.context),
     },
     deps,
   );
+}
+
+/**
+ * UNIFIED INTELLIGENCE BINDING R2B — resolved context → the landed AskRouteContext seams.
+ *
+ *   STORY      hasResolvedArticleAnchor = true, and storyAnchorCountry = the stored article's
+ *              own governed country when it has one (STORY_ANCHOR → precedence ARTICLE_ANCHOR).
+ *   GEOGRAPHY  mapContextCountry = ISO3 (MAP_GEOGRAPHY_CONTEXT, the weakest rung).
+ *
+ * `articleRefs` is deliberately NOT set for a single story. In frozen C a non-empty
+ * `selection.articleRefs` is the multi-story SELECTION rank, which sits ABOVE typed geography in
+ * DECLARED_PRECEDENCE (and carries a SELECTION constraint): a single anchored story would then
+ * outrank a place the reader typed, reversing the landed rule that typed scope outranks an
+ * inherited story. Selection is R2D's contract; ARTICLE_ANCHOR is the single-story rung.
+ */
+export function routeContextOf(
+  context: ResolvedAskContext | undefined,
+): Pick<AskRouteContext, 'hasResolvedArticleAnchor' | 'storyAnchorCountry' | 'mapContextCountry'> {
+  if (context === undefined) return {};
+  if (context.kind === 'STORY') {
+    return {
+      hasResolvedArticleAnchor: true,
+      ...(context.countryIso3 === undefined ? {} : { storyAnchorCountry: context.countryIso3 }),
+    };
+  }
+  return { mapContextCountry: context.countryIso3 };
 }
 
 /**
@@ -279,6 +314,9 @@ export function planRevision(
     request.intent,
     routeSignature(route),
     ...(priorQuestion ? [`prior:${priorQuestion}`] : []),
+    /* UNIFIED INTELLIGENCE BINDING R2B — the canonical context identity, pinned EXPLICITLY (not
+       left to whatever the route happens to reflect). Omitted when absent: byte-identical. */
+    ...(request.context === undefined ? [] : [contextIdentityToken(request.context)]),
   ]);
 }
 
@@ -626,12 +664,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       response = await this.analysis.analyzeNews(
         request.question,
         request.language,
-        undefined,
+        /* R2B — the SERVER-RESOLVED story (built from the retained row), never client text. */
+        request.context?.kind === 'STORY' ? request.context.storyContext : undefined,
         /* ASK R3 CONTINUITY — the landed path routes a follow-up by the PRIOR USER question
            (never the prior AI answer); the model still receives this turn's own question. */
         who.priorQuestion ?? undefined,
+        /* selection — R2D. */
         undefined,
-        undefined,
+        /* R2B — the SERVER-RESOLVED geography (ISO3 + registry name), never client text. */
+        request.context?.kind === 'GEOGRAPHY' ? request.context.geographyContext : undefined,
         {
           maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
           usageSink: (u) => {

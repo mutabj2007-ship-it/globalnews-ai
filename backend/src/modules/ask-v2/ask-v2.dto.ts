@@ -1,6 +1,18 @@
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import type { Intent, Language } from './ask-compute.contract';
+import { AskTurnContextDto } from './context/ask-turn-context.dto';
 
 export class CreateThreadDto {
   @IsString() @Length(1, 128) idempotencyKey!: string;
@@ -12,6 +24,15 @@ export class QuoteTurnDto {
   @IsString() @Length(2, 1000) question!: string;
   @IsIn(['en', 'pl']) language!: Language;
   @IsIn(['ask', 'deep-analysis', 'research-report']) intent!: Intent;
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2B — ONE optional context reference (STORY or GEOGRAPHY).
+   * References only; resolved server-side before any compute. Absent = exactly today's turn.
+   */
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => AskTurnContextDto)
+  context?: AskTurnContextDto;
 }
 export class HistoryPageDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(2147483647) after = 0;

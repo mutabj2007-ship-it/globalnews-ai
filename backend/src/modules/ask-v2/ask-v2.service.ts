@@ -19,6 +19,7 @@ import {
   AskPlan,
   AskRequest,
   classifyCompute,
+  type PersistedAskPlan,
   ExecutionResult,
   fingerprint,
   hashIdentity,
@@ -30,6 +31,8 @@ import {
   validatePlan,
 } from './ask-compute.contract';
 import { CreateThreadDto, QuoteTurnDto } from './ask-v2.dto';
+import { AskContextRefused, AskContextResolver } from './context/ask-context.resolver';
+import { contextIdentity, type ResolvedAskContext } from './context/resolved-ask-context';
 import { type AskPrincipal, guestRefusal, ownerOf } from './guest/ask-principal';
 import {
   assertMayStart,
@@ -105,7 +108,23 @@ export class AskV2Service {
     @Optional() private readonly guests?: GuestSessionService,
     @Optional() private readonly switches?: OperationalSwitchService,
     @Optional() private readonly meter?: ComputeMeterService,
+    /* UNIFIED INTELLIGENCE BINDING R2B — optional so every existing construction is unchanged;
+       a context-bearing turn without it fails closed (ASK_CONTEXT_UNAVAILABLE). */
+    @Optional() private readonly contexts?: AskContextResolver,
   ) {}
+
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2B — resolve THIS turn's context reference into server facts.
+   * A bounded local read (or none); runs before every guest, operation, slot, meter and planner
+   * step, so an unresolvable context produces zero compute and is never a generic Ask.
+   */
+  private async resolveContext(
+    raw: QuoteTurnDto['context'],
+  ): Promise<ResolvedAskContext | undefined> {
+    if (raw === undefined) return undefined;
+    if (this.contexts === undefined) throw new AskContextRefused('ASK_CONTEXT_UNAVAILABLE');
+    return this.contexts.resolve(raw);
+  }
 
   private guestDeps(): {
     guests: GuestSessionService;
@@ -563,18 +582,25 @@ export class AskV2Service {
 
   async quote(p: AskPrincipal, threadId: string, input: QuoteTurnDto) {
     this.principal(p);
+    const question = input.question.trim();
+    if (question.length < 2) throw new BadRequestException('Question is too short');
+    /* R2B — resolved FIRST: before guest preflight, slot, operation, meter and planner. */
+    const context = await this.resolveContext(input.context);
     const request: AskRequest = {
-      question: input.question.trim(),
+      question,
       language: input.language,
       intent: input.intent,
+      ...(context === undefined ? {} : { context }),
     };
-    if (request.question.length < 2) throw new BadRequestException('Question is too short');
     const owner = ownerOf(p);
+    /* R2B — a context-bearing turn appends its SERVER-RESOLVED identity; a context-free turn
+       keeps exactly the old tuple, so its idempotency behaviour is unchanged. */
     const requestHash = hashIdentity([
       threadId,
       request.question,
       request.language,
       request.intent,
+      ...(context === undefined ? [] : [contextIdentity(context)]),
     ]);
     const existing = await this.atomic(async (tx) => {
       await this.thread(tx, p, threadId);
@@ -609,7 +635,7 @@ export class AskV2Service {
         this.execution.prepare(Object.freeze(request)),
       );
       validatePlan(prepared, request);
-      const plan: AskPlan = {
+      const plan: PersistedAskPlan = {
         revision: prepared.revision,
         scope: prepared.scope,
         contract: prepared.contract,
@@ -621,6 +647,8 @@ export class AskV2Service {
         countryCount: prepared.countryCount,
         domainCount: prepared.domainCount,
         timeWindowDays: prepared.timeWindowDays,
+        /* R2B — the service's OWN resolution, persisted with the plan (never the port's copy). */
+        ...(context === undefined ? {} : { context }),
       };
       const key = fingerprint(request, plan);
       const id = await this.atomic(async (tx) => {
@@ -820,16 +848,18 @@ export class AskV2Service {
         take: ANCHOR_LOOKBACK,
         select: { question: true },
       });
+      /* R2B — the request is rebuilt from durable server state only: the turn's question and
+         the plan's persisted, server-resolved context. No client input is re-read here. */
+      const persisted = operation.plan as unknown as PersistedAskPlan;
+      const request = {
+        question: turn.question,
+        language: turn.language,
+        intent: operation.kind,
+        ...(persisted?.context === undefined ? {} : { context: persisted.context }),
+      } as AskRequest;
       // Revalidate pending R1 operations too. Stored reuse above never calls the adapter.
       try {
-        validatePlan(
-          operation.plan as unknown as AskPlan,
-          {
-            question: turn.question,
-            language: turn.language,
-            intent: operation.kind,
-          } as AskRequest,
-        );
+        validatePlan(persisted, request);
       } catch {
         await this.releaseIn(tx, operation, 'ASK_PLAN_INVALID');
         return null;
@@ -845,12 +875,8 @@ export class AskV2Service {
           turn.question,
           earlierTurns.map((t) => t.question),
         ),
-        plan: operation.plan as unknown as AskPlan,
-        request: {
-          question: turn.question,
-          language: turn.language,
-          intent: operation.kind,
-        } as AskRequest,
+        plan: persisted,
+        request,
       };
     });
     if (claim) {

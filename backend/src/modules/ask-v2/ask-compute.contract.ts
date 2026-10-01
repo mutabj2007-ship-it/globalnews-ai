@@ -1,5 +1,11 @@
 import { createHash } from 'node:crypto';
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  contextIdentity,
+  isResolvedAskContext,
+  sameContextIdentity,
+  type ResolvedAskContext,
+} from './context/resolved-ask-context';
 
 export const SAND_CHARGING_ENABLED = false as const;
 export const ASK_EXECUTION_PORT = Symbol('ASK_EXECUTION_PORT');
@@ -11,6 +17,11 @@ export interface AskRequest {
   question: string;
   language: Language;
   intent: Intent;
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2B — the SERVER-RESOLVED context of THIS turn (never client
+   * text). Absent for a context-free turn, whose identity is byte-identical to before.
+   */
+  context?: ResolvedAskContext;
 }
 
 /** Produced by a CTO-owned, local/read-only planner. No provider call in prepare.
@@ -31,6 +42,13 @@ export interface AskPlan {
   domainCount: number;
   timeWindowDays: number;
 }
+/**
+ * UNIFIED INTELLIGENCE BINDING R2B — the plan AS PERSISTED in ComputeOperation.plan (Json): the
+ * port's plan plus, for a context-bearing turn, the resolved context, so execute restores it
+ * without re-reading client input. Set by AskV2Service from its own resolution, never from the
+ * port; omitted when absent (a context-free plan is exactly an AskPlan).
+ */
+export type PersistedAskPlan = AskPlan & { context?: ResolvedAskContext };
 export interface ExecutionResult {
   succeeded: boolean;
   // JSON display artifact, validated by the adapter under the current response contract.
@@ -122,9 +140,12 @@ export function fingerprint(request: AskRequest, plan: AskPlan): string {
     plan.countryCount,
     plan.domainCount,
     plan.timeWindowDays,
+    /* R2B — the resolved context identity, appended ONLY when present: a context-free
+       fingerprint is byte-identical to before, so existing stored results stay reachable. */
+    ...(request.context === undefined ? [] : [['context', ...contextIdentity(request.context)]]),
   ]);
 }
-export function validatePlan(plan: AskPlan, request?: Readonly<AskRequest>): void {
+export function validatePlan(plan: PersistedAskPlan, request?: Readonly<AskRequest>): void {
   if (
     !plan ||
     ![plan.revision, plan.scope, plan.contract, plan.executionKey].every(
@@ -142,7 +163,12 @@ export function validatePlan(plan: AskPlan, request?: Readonly<AskRequest>): voi
     ![plan.countryCount, plan.domainCount, plan.timeWindowDays].every(
       (v) => Number.isInteger(v) && v >= 0,
     ) ||
-    !(Date.parse(plan.validUntil) > Date.now())
+    !(Date.parse(plan.validUntil) > Date.now()) ||
+    /* R2B — a persisted context must be exactly a valid server-resolved context, and it must be
+       the context of the request it is validated against. Unknown/corrupt → fail closed. */
+    (plan.context !== undefined &&
+      (!isResolvedAskContext(plan.context) ||
+        (request !== undefined && !sameContextIdentity(plan.context, request.context))))
   ) {
     throw new ServiceUnavailableException('ASK_PLAN_INVALID');
   }
