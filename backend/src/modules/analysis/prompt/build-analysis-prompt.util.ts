@@ -659,6 +659,25 @@ export function buildReportingWindowInstruction(window?: {
   );
 }
 
+/**
+ * BETA-ASK-004 R1B — NO LINKAGE BY CO-OCCURRENCE. Production joined an Ebola report and a
+ * displacement report into "the Ebola situation may exacerbate the difficulties faced by
+ * displaced populations" — a link neither report stated. Two developments appearing in the same
+ * evidence set are not evidence that one affects the other. Empty unless a multi-facet plan
+ * gathered the evidence (byte-identical prompts otherwise).
+ */
+export function buildEvidenceLinkageInstruction(guard?: boolean): string {
+  if (guard !== true) return '';
+  return (
+    '\n\nEVIDENCE LINKAGE (authoritative): the reports below were gathered for different parts of ' +
+    'the question. State a cause, effect, worsening or other link between two developments ONLY ' +
+    'when a single report itself states that link, and cite that report. Do NOT infer, suggest or ' +
+    'speculate ("may exacerbate", "could worsen", "is likely compounding") that one reported ' +
+    'development affects another merely because both appear in this evidence set; where no report ' +
+    'links them, present them separately and, if relevant, say that no link is established.'
+  );
+}
+
 export function buildSingleSourceBasisSection(breadth: AnalysisDevelopmentBreadth): string {
   if (breadth.clusters !== 1) return '';
   return (
@@ -733,6 +752,7 @@ export function buildAnalysisMessages(
   selection?: SelectionPromptContext,
   governed?: { readonly rules: string; readonly data: string },
   reportingWindow?: { readonly statedPeriod: string; readonly from: string; readonly to: string },
+  evidenceLinkageGuard?: boolean,
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
@@ -741,6 +761,7 @@ export function buildAnalysisMessages(
       buildComparisonCoverageInstruction(comparisonCoverage) +
       buildEvidenceStateInstruction(evidenceState, newestEvidence) +
       buildReportingWindowInstruction(reportingWindow) +
+      buildEvidenceLinkageInstruction(evidenceLinkageGuard) +
       buildEventAnchorInstruction(eventAnchor) +
       buildConversationSubjectInstruction(conversationSubject) +
       buildSelectionInstruction(selection) +

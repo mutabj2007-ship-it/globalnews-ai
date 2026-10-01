@@ -3473,6 +3473,10 @@ export class AnalysisService {
             ...(executionPolicy?.reportingWindow === undefined
               ? {}
               : { reportingWindow: executionPolicy.reportingWindow }),
+            /* BETA-ASK-004 R1B — multi-facet evidence is never linked by co-occurrence. */
+            ...(activeCompoundPlan !== undefined || eventFrame !== undefined
+              ? { evidenceLinkageGuard: true }
+              : {}),
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;

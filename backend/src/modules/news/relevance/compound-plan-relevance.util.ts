@@ -146,6 +146,8 @@ const RESPONSE: Vocabulary = {
     'fleeing',
     'shelter',
     'famine',
+    /* R1B — people returning after displacement are the displacement story too. */
+    'returnee',
   ],
   words: ['aid', 'fled', 'flee', 'flees', 'camp', 'camps', 'fui', 'fuir', 'fuite', 'exode'],
 };
@@ -219,6 +221,80 @@ const NON_CONFLICT_HARM: Vocabulary = {
   ],
 };
 
+/*
+  BETA-ASK-004 R1B — NON-CONFLICT HARM NEEDS A MATERIAL ARMED-CONFLICT NEXUS.
+
+  Production admitted "Efforts Show Promise in Fighting Congo's Ebola Outbreak" (summary: "…
+  security issues …") for the eastern-DRC security + displacement plan: the idiom "fighting
+  Ebola" matched the conflict stem "fight" and "security issues" matched "security", which was
+  enough to lift the disease exclusion. Two corrections, both deterministic:
+
+  1  NON-ARMED IDIOMS are removed before any conflict word is read — fighting / fight against /
+     battling / combating / war on a disease, outbreak, hunger, fire or flood (EN + FR "lutte
+     contre"), "security issues / challenges / concerns / risks", and health / food security.
+     They never establish armed conflict, for any article.
+  2  An article carrying NON_CONFLICT_HARM vocabulary (disease, disaster, accident, ordinary crime)
+     must ALSO carry STRONG armed-conflict evidence — armed groups, clashes, troops, shelling, an
+     offensive, a ceasefire, or "fighting" that is not one of the idioms above. "Security",
+     "violence", "conflict" or "war" alone stay ordinary conflict vocabulary for non-harm
+     articles, and are not enough to lift the harm exclusion.
+*/
+const NON_ARMED_IDIOMS: readonly RegExp[] = [
+  /* The words between the verb and the disease may qualify it ("fighting Congo's Ebola outbreak")
+     but never place it ("fighting IN the Ebola-hit region" is armed fighting). */
+  /\b(?:fight|fights|fighting|fought|battle|battles|battling|combat|combats|combating|combatting|war\s+on|tackle|tackling)\s+(?:against\s+|on\s+)?(?:the\s+)?(?:(?!(?:in|near|around|across|amid|as|while|and|despite|after|during|with|by|from|over|between)\b)[a-z]+\s+){0,3}?(?:ebola|cholera|disease|diseases|outbreak|outbreaks|epidemic|epidemics|pandemic|virus|viruses|malaria|mpox|measles|covid|polio|tuberculosis|hiv|aids|hunger|poverty|corruption|fire|fires|wildfire|wildfires|blaze|flood|floods|inflation|malnutrition|infection|infections)\b/g,
+  /\blutte\s+contre\s+(?:la\s+|le\s+|les\s+|l\s+)?(?:[a-z]+\s+){0,3}?(?:ebola|cholera|maladie|maladies|epidemie|epidemies|pandemie|virus|paludisme|rougeole|mpox|faim|pauvrete|corruption|incendie|incendies)\b/g,
+  /\b(?:security|securite)\s+(?:issue|issues|challenge|challenges|concern|concerns|risk|risks|problem|problems|constraint|constraints|considerations?)\b/g,
+  /\b(?:health|food|energy|water|job|social|cyber|data|financial)\s+security\b/g,
+  /\bsecurite\s+(?:alimentaire|sanitaire|sociale|energetique)\b/g,
+  /\bheart\s+attacks?\b/g,
+];
+
+/** Strip the non-armed idioms (folded text in, folded text out). */
+export function withoutNonArmedIdioms(foldedText: string): string {
+  let out = ` ${foldedText} `;
+  for (const idiom of NON_ARMED_IDIOMS) out = out.replace(idiom, ' ');
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+/** Armed-conflict evidence strong enough to lift a NON_CONFLICT_HARM exclusion. */
+const STRONG_CONFLICT: Vocabulary = {
+  stems: [
+    'fight',
+    'clash',
+    'armed',
+    'rebel',
+    'militia',
+    'military',
+    'milice',
+    'militaire',
+    'soldier',
+    'soldat',
+    'troops',
+    'insurg',
+    'gunmen',
+    'gunfire',
+    'shelling',
+    'bombard',
+    'massacre',
+    'ambush',
+    'frontline',
+    'offensive',
+    'ceasefire',
+    'cessez',
+    'affrontement',
+    'attack',
+    'attaque',
+    'combat',
+    'guerre',
+    'empare',
+    'seize',
+    'seizing',
+    'captur',
+  ],
+  words: ['army', 'armee', 'arme', 'fardc', 'raid', 'raids', 'drone'],
+};
+
 function matches(tokens: readonly string[], vocabulary: Vocabulary): boolean {
   return tokens.some(
     (token) =>
@@ -242,10 +318,14 @@ function containsPhrase(folded: string, phrase: string): boolean {
 }
 
 export function articleSpeaksToFacet(foldedText: string, facet: CompoundFacet): boolean {
-  const tokens = foldedText.split(' ');
+  /* R1B — idioms ("fighting Ebola", "security issues") are not armed conflict, anywhere. */
+  const tokens = withoutNonArmedIdioms(foldedText).split(' ');
   const conflict = matches(tokens, CONFLICT);
-  /* An accident, an epidemic, a flood or a robbery with no conflict nexus answers neither leg. */
-  if (!conflict && matches(tokens, NON_CONFLICT_HARM)) return false;
+  /* An accident, an epidemic, a flood or a robbery answers neither leg unless the text carries
+     STRONG armed-conflict evidence — a generic conflict word is not a material nexus. */
+  if (matches(foldedText.split(' '), NON_CONFLICT_HARM) && !matches(tokens, STRONG_CONFLICT)) {
+    return false;
+  }
   if (facet === 'SECURITY') return conflict;
   /* HUMANITARIAN: explicit displacement / response, or conflict-linked harm to people. */
   return matches(tokens, RESPONSE) || (conflict && matches(tokens, MORTALITY));

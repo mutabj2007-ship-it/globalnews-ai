@@ -33,6 +33,7 @@ import {
   buildDevelopmentBreadthSection,
   buildReportingWindowInstruction,
   buildSingleSourceBasisSection,
+  buildEvidenceLinkageInstruction,
 } from '../prompt/build-analysis-prompt.util';
 
 /**
@@ -794,5 +795,145 @@ describe('BETA-ASK-005 · Q1 end to end on the real services (composes with R1 +
     const result = await service.analyzeNews(Q2, 'en');
     expect(calls.every((c) => c.from === undefined)).toBe(true);
     expect(result.retrievalContext?.reportingWindow).toBeUndefined();
+  });
+});
+
+/*
+  ════════════════════════════════════════════════════════════════════════════
+  BETA-ASK-004 R1B — NON-CONFLICT HARM NEEDS A MATERIAL ARMED-CONFLICT NEXUS.
+  Production (2026-10-01, fca740b) admitted "Efforts Show Promise in Fighting Congo's Ebola
+  Outbreak" for the eastern-DRC security + displacement question: "Fighting" matched the conflict
+  stem and "security issues" matched "security". The answer then linked Ebola to displacement.
+  ════════════════════════════════════════════════════════════════════════════
+*/
+describe('BETA-ASK-004 R1B · idioms are not armed conflict', () => {
+  const plan = deriveCompoundRetrievalPlan(Q2, 'en')!;
+  const admit = (article: NewsArticle) => scoreCompoundPlanRelevance(article, plan).isRelevant;
+
+  /* [PRODUCTION-OBSERVED titles; summaries reconstructed in the shape the live items carried] */
+  const LIVE_EBOLA = a(
+    'live-ebola',
+    "Efforts Show Promise in Fighting Congo's Ebola Outbreak",
+    'Health workers in eastern Congo report progress against the Ebola outbreak in North Kivu, although security issues continue to hamper vaccination teams.',
+  );
+  const LIVE_M23_MINES = a(
+    'live-m23',
+    'M23 abuses in Congo mines amount to war crimes, Amnesty International says',
+    "Amnesty International said M23 rebels abused civilians at mining sites in eastern Democratic Republic of Congo's North Kivu province.",
+  );
+  const LIVE_UN_ENVOY = a(
+    'live-un',
+    'UN envoy visits displaced communities in eastern DR Congo',
+    'The UN special envoy met displaced families in North Kivu and called for humanitarian access.',
+  );
+
+  it('the exact production false positive is REJECTED', () => {
+    expect(admit(LIVE_EBOLA)).toBe(false);
+  });
+
+  it.each([
+    [
+      'Fighting cholera in North Kivu',
+      'Health teams in eastern Congo are fighting cholera in camps around Goma.',
+    ],
+    [
+      'Fight against Ebola continues amid security challenges',
+      'In North Kivu, eastern Congo, the fight against Ebola faces security challenges.',
+    ],
+    [
+      'Combating measles in Ituri',
+      'Vaccinators combating measles in eastern Congo report security concerns.',
+    ],
+    [
+      'Lutte contre Ebola au Nord-Kivu',
+      "La lutte contre la maladie à virus Ebola se poursuit dans l'est de la RDC malgré des défis de sécurité.",
+    ],
+    [
+      "12 dead, dozens missing after vessel capsizes in eastern Congo's Lake Kivu",
+      'A boat capsized on Lake Kivu near Goma.',
+    ],
+    [
+      'Truck crash kills 20 on road near Bukavu',
+      'The accident happened in eastern Congo on Sunday.',
+    ],
+    ['Cargo plane crash near Goma leaves 5 dead', 'The plane crashed on landing in eastern Congo.'],
+    [
+      'Cholera outbreak kills 40 in North Kivu',
+      'Health officials in eastern Congo reported 40 deaths from the disease.',
+    ],
+    ['Mpox deaths rise in South Kivu', 'Victims of the mpox epidemic in eastern Congo rose to 30.'],
+    [
+      'Floods and landslide leave 60 dead near Uvira',
+      'Torrential rain in eastern Congo caused flooding.',
+    ],
+    [
+      'Robbery at Goma market leaves one dead',
+      'Police in eastern Congo said the robbery victim died.',
+    ],
+  ])('REJECTS "%s"', (title, summary) => {
+    expect(admit(a(`neg-${title}`, title, summary))).toBe(false);
+  });
+
+  it.each([
+    [
+      'M23 fighting displaces families in North Kivu amid Ebola outbreak',
+      'Clashes in eastern Congo forced families to flee while Ebola spreads.',
+    ],
+    [
+      'Armed clashes disrupt Ebola response and force civilians to flee',
+      'In North Kivu, eastern Congo, fighting halted vaccination and displaced civilians.',
+    ],
+    [
+      'UN envoy visits returnees in M23-controlled Kimoka',
+      'The envoy met conflict-affected communities and returnees in North Kivu, eastern Congo.',
+    ],
+    [
+      'Shelling forces Ebola treatment centre in Beni to evacuate',
+      'Shelling near Beni in eastern Congo forced patients and staff to flee.',
+    ],
+    [
+      'Fighting in the Ebola-hit region displaces thousands',
+      'Fighting in North Kivu, eastern Congo, displaced thousands of civilians.',
+    ],
+    [
+      'Nord-Kivu : des affrontements perturbent la riposte à Ebola',
+      "Des combats dans l'est de la RDC ont forcé des civils à fuir près de Butembo.",
+    ],
+  ])('ADMITS "%s" (explicit armed-conflict nexus)', (title, summary) => {
+    expect(admit(a(`pos-${title}`, title, summary))).toBe(true);
+  });
+
+  it('existing conflict / displacement admission is unchanged', () => {
+    expect(admit(LIVE_M23_MINES)).toBe(true);
+    expect(admit(LIVE_UN_ENVOY)).toBe(true);
+    expect(admit(EN_SECURITY)).toBe(true);
+    expect(admit(EN_DISPLACED)).toBe(true);
+    expect(admit(FR_LOCAL)).toBe(true);
+    expect(admit(COG)).toBe(false);
+    expect(admit(COG_EASTERN)).toBe(false);
+  });
+
+  it('the exact Production question end to end: Ebola dropped, conflict evidence kept, linkage guard on', async () => {
+    const gnews = stub('gnews', () => [LIVE_M23_MINES, LIVE_EBOLA, LIVE_UN_ENVOY], []);
+    const { service, inputs } = await services([gnews]);
+    const result = await service.analyzeNews(Q2, 'en');
+    const ids = result.articles.map((x) => x.id);
+    expect(ids).not.toContain('live-ebola');
+    expect(ids).toEqual(expect.arrayContaining(['live-m23', 'live-un']));
+    expect(inputs).toHaveLength(1);
+    /* The model is told not to join separately admitted reports into an unstated link. */
+    expect(inputs[0]!.evidenceLinkageGuard).toBe(true);
+    const rule = buildEvidenceLinkageInstruction(true);
+    expect(rule).toContain('EVIDENCE LINKAGE');
+    expect(rule).toMatch(/ONLY when a single report itself states that link/);
+    expect(rule).toMatch(/may exacerbate/);
+    expect(buildEvidenceLinkageInstruction(undefined)).toBe('');
+  });
+
+  it('an ordinary (non-plan) question gets no linkage rule (prompts unchanged)', async () => {
+    const gnews = stub('gnews', () => [EN_SECURITY], []);
+    const { service, inputs } = await services([gnews]);
+    await service.analyzeNews('M23', 'en');
+    expect(inputs[0]?.evidenceLinkageGuard).toBeUndefined();
   });
 });

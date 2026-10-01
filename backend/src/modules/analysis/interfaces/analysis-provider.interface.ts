@@ -168,6 +168,12 @@ export interface AnalysisProviderInput {
   reportingWindow?: { readonly statedPeriod: string; readonly from: string; readonly to: string };
 
   /**
+   * BETA-ASK-004 R1B — the evidence was gathered by a multi-facet plan (compound / event), so
+   * separately admitted reports must not be joined into a causal link none of them states.
+   */
+  evidenceLinkageGuard?: boolean;
+
+  /**
    * Optional caller cancellation. AnalysisService uses this only for the
    * authoritative response deadline: when the reader can no longer receive a
    * result, an in-flight model request must not keep spending tokens merely to
