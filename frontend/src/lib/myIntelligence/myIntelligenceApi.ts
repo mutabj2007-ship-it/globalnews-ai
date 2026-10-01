@@ -22,7 +22,8 @@ import { accountFetch } from '@/lib/api/accountFetch';
  * NONE OF THESE CAN START COMPUTE. They read and write account data only:
  * the feed is retained reporting, saving is metadata, history is the reader's
  * own questions. The only AI boundary in My Intelligence is an explicit Run,
- * which goes through analyzeNews() (see runSelectionAction).
+ * which goes through the canonical Ask V2 engine as a SELECTION turn
+ * (see runSelectionAction; R2D) — never POST /analysis/news.
  */
 
 export class MyIntelligenceApiError extends Error {
