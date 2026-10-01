@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { clientIpScope } from '../compute-controls/compute-scopes';
+import type { AskContextExecutionInputs } from './ask-context';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE E — WHO IS ASKING, FOR THE BUDGET.
@@ -29,6 +30,11 @@ export interface AskRequestContext {
    * owner's text, never a prior AI answer. Absent on a thread's first turn.
    */
   readonly priorQuestion?: string | null;
+  /**
+   * HOME R1 STAGE A — the server-RESOLVED context for THIS operation (ask-context.ts), set by
+   * AskV2Service from the operation's own persisted plan. Never a caller-supplied value.
+   */
+  readonly askContext?: AskContextExecutionInputs;
 }
 
 export const askRequestContext = new AsyncLocalStorage<AskRequestContext>();

@@ -17,6 +17,7 @@ import {
   AskExecutionPort,
   AskExecutionRefused,
   AskPlan,
+  type AskPlanWithContext,
   AskRequest,
   classifyCompute,
   ExecutionResult,
@@ -41,6 +42,13 @@ import {
 } from './guest/guest-allowance';
 import { GuestSessionService } from './guest/guest-session.service';
 import { askRequestContext } from './ask-request-context';
+import {
+  AskContextResolver,
+  contextIdentity,
+  readPlanContext,
+  type AskContextExecutionInputs,
+  type ResolvedAskContext,
+} from './ask-context';
 import { isReusableStoredPayload } from './stored-result-reuse';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
@@ -105,7 +113,13 @@ export class AskV2Service {
     @Optional() private readonly guests?: GuestSessionService,
     @Optional() private readonly switches?: OperationalSwitchService,
     @Optional() private readonly meter?: ComputeMeterService,
+    /* HOME R1 STAGE A — optional: without it a supplied context bag resolves as excluded. */
+    @Optional() private readonly contexts?: AskContextResolver,
   ) {}
+
+  private contextResolver(): AskContextResolver {
+    return this.contexts ?? new AskContextResolver();
+  }
 
   private guestDeps(): {
     guests: GuestSessionService;
@@ -130,10 +144,22 @@ export class AskV2Service {
    * request context. Only when a server-held context exists (the controller's interceptor set
    * it); nothing is manufactured here, so a caller without one fails exactly as before.
    */
-  private withPrior<T>(priorQuestion: string | null, work: () => Promise<T>): Promise<T> {
+  private withPrior<T>(
+    priorQuestion: string | null,
+    work: () => Promise<T>,
+    /* HOME R1 STAGE A — the server-resolved context of THIS operation, when it has one. */
+    askContext?: AskContextExecutionInputs,
+  ): Promise<T> {
     const store = askRequestContext.getStore();
-    if (store === undefined || priorQuestion === null) return work();
-    return askRequestContext.run({ ...store, priorQuestion }, work);
+    if (store === undefined || (priorQuestion === null && askContext === undefined)) return work();
+    return askRequestContext.run(
+      {
+        ...store,
+        ...(priorQuestion === null ? {} : { priorQuestion }),
+        ...(askContext === undefined ? {} : { askContext }),
+      },
+      work,
+    );
   }
 
   /** All database mutations retry serializable conflicts. Never run a provider in here. */
@@ -490,7 +516,19 @@ export class AskV2Service {
         turn === null || p.kind !== 'account'
           ? false
           : (await tx.askBookmark.count({ where: { userId: p.userId, turnId: turn.id } })) > 0;
+      /* HOME R1 STAGE A — what the server made of the context references (Inspect). Present
+         only for an operation that was sent some, so every other response is unchanged. */
+      const planContext = readPlanContext(operation.plan);
       return {
+        ...(planContext === null
+          ? {}
+          : {
+              context: {
+                entry: planContext.entry,
+                scope: planContext.scope,
+                refs: planContext.refs,
+              },
+            }),
         operationId: id,
         turnId: turn?.id ?? null,
         bookmarked,
@@ -570,11 +608,14 @@ export class AskV2Service {
     };
     if (request.question.length < 2) throw new BadRequestException('Question is too short');
     const owner = ownerOf(p);
+    /* HOME R1 STAGE A — a context bag is part of the request's identity; absent ⇒ unchanged. */
+    const suppliedContext = contextIdentity(input.context ?? null);
     const requestHash = hashIdentity([
       threadId,
       request.question,
       request.language,
       request.intent,
+      ...(suppliedContext === null ? [] : [suppliedContext]),
     ]);
     const existing = await this.atomic(async (tx) => {
       await this.thread(tx, p, threadId);
@@ -604,12 +645,21 @@ export class AskV2Service {
           earlier.map((t) => t.question),
         );
       });
+      /* HOME R1 STAGE A — verify the governed references (retained reads only, no compute). */
+      const resolvedContext: ResolvedAskContext | null =
+        input.context === undefined ? null : await this.contextResolver().resolve(input.context);
+      const contextInputs =
+        resolvedContext === null
+          ? undefined
+          : await this.contextResolver().executionInputs(resolvedContext);
       // A local/read-only CTO planner supplies identity and capabilities, never the client.
-      const prepared = await this.withPrior(priorQuestion, () =>
-        this.execution.prepare(Object.freeze(request)),
+      const prepared = await this.withPrior(
+        priorQuestion,
+        () => this.execution.prepare(Object.freeze(request)),
+        contextInputs,
       );
       validatePlan(prepared, request);
-      const plan: AskPlan = {
+      const plan: AskPlanWithContext = {
         revision: prepared.revision,
         scope: prepared.scope,
         contract: prepared.contract,
@@ -621,6 +671,7 @@ export class AskV2Service {
         countryCount: prepared.countryCount,
         domainCount: prepared.domainCount,
         timeWindowDays: prepared.timeWindowDays,
+        ...(resolvedContext === null ? {} : { context: resolvedContext }),
       };
       const key = fingerprint(request, plan);
       const id = await this.atomic(async (tx) => {
@@ -856,8 +907,14 @@ export class AskV2Service {
     if (claim) {
       let result: ExecutionResult;
       try {
-        result = await this.withPrior(claim.priorQuestion, () =>
-          this.execution.execute(Object.freeze(claim.request), Object.freeze(claim.plan), id),
+        /* HOME R1 STAGE A — the operation's OWN persisted context, re-read from retained records. */
+        const planContext = readPlanContext(claim.plan);
+        const contextInputs =
+          planContext === null ? undefined : await this.contextResolver().executionInputs(planContext);
+        result = await this.withPrior(
+          claim.priorQuestion,
+          () => this.execution.execute(Object.freeze(claim.request), Object.freeze(claim.plan), id),
+          contextInputs,
         );
       } catch (error) {
         /* ASK R2 INTEGRATION R1 · Gate E — a control's refusal is named, not generic. */

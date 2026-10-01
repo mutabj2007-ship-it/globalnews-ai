@@ -76,6 +76,8 @@ export interface AskRouteContext {
   readonly storyAnchorCountry?: string;
   readonly hasResolvedArticleAnchor?: boolean;
   readonly articleRefs?: readonly string[];
+  /** HOME R1 STAGE A — the governed multi-story action of a server-resolved selection. */
+  readonly selectionAction?: 'COMPARE' | 'SUMMARIZE' | 'ASK_SELECTED' | 'EXPLAIN_DISAGREEMENTS' | 'WHAT_CHANGED' | 'CREATE_BRIEFING';
   readonly declaredRegion?: string;
   readonly identityVerified?: boolean;
   readonly computeConsent?: 'ABSENT' | 'GRANTED';
@@ -374,6 +376,7 @@ export function composeEnvelopeSource(
       : { statedPeriod: reading.statedTime.statedPeriod }),
     ...(requirement === 'NONE' ? {} : { temporalRequirement: requirement }),
     ...(ctx.articleRefs === undefined ? {} : { articleRefs: ctx.articleRefs }),
+    ...(ctx.selectionAction === undefined ? {} : { selectionAction: ctx.selectionAction }),
     ...(reading.shape.officeConstruction
       ? {
           currentStatusRequested: true,

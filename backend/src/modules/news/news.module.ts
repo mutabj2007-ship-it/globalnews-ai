@@ -31,6 +31,7 @@ import { CountryNewsService } from './country/country-news.service';
 import { ArticlePersistenceService } from './persistence/article-persistence.service';
 import { NewsStartupValidator } from './startup/news-startup-validator';
 import type { NewsProvider } from './interfaces';
+import { CompareReadEnabledGuard, StoryCompareController } from './compare/story-compare.controller';
 
 /**
  * E1 — the single place that declares which REAL news providers this
@@ -173,10 +174,13 @@ function buildProviderSelectionInput(
  * news.module.spec.ts compile NewsModule standalone and assert the
  * registration contract directly.
  */
+
 @Module({
   imports: [ConfigModule],
-  controllers: [NewsController, CountryNewsController],
+  /* HOME R1 STAGE A — the zero-AI Compare read model (404 unless COMPARE_READ_ENABLED). */
+  controllers: [NewsController, CountryNewsController, StoryCompareController],
   providers: [
+    CompareReadEnabledGuard,
     /*
       MAP-GNEWS-QUOTA-REGRESSION-1 — one instance per process, shared by
       NewsService and CountryNewsService so cache decisions and provider

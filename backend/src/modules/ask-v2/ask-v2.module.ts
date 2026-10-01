@@ -17,6 +17,8 @@ import { GuestCoreModule } from './guest/guest-core.module';
 import { AskV2GuestController } from './guest/ask-v2-guest.controller';
 import { GuestFirstWriteGuard, GuestWriteGuard, RequireGuestGuard } from './guest/guest.guards';
 import { GuestMaintenanceService } from './guest/guest-maintenance.service';
+import { NewsModule } from '../news/news.module';
+import { AskContextResolver } from './ask-context';
 
 /*
   ASK R2 CONSOLIDATED INTEGRATION R1 · GATE E — ASK_EXECUTION_PORT is bound to the Ask R2
@@ -37,6 +39,8 @@ import { GuestMaintenanceService } from './guest/guest-maintenance.service';
     AskObservabilityModule,
     AskIntelligenceModule,
     GuestCoreModule,
+    /* HOME R1 STAGE A — retained-article reads for the server-resolved context references. */
+    NewsModule,
   ],
   controllers: [AskV2Controller, AskV2GuestController],
   providers: [
@@ -49,6 +53,7 @@ import { GuestMaintenanceService } from './guest/guest-maintenance.service';
     GuestWriteGuard,
     GuestFirstWriteGuard,
     GuestMaintenanceService,
+    AskContextResolver,
     { provide: ASK_EXECUTION_PORT, useExisting: AskR2ExecutionAdapter },
   ],
   exports: [AskV2Service],

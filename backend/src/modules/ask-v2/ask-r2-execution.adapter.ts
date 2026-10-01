@@ -58,6 +58,7 @@ import {
   type ExecutionResult,
 } from './ask-compute.contract';
 import { askRequestContext } from './ask-request-context';
+import type { AskContextExecutionInputs } from './ask-context';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
 import {
   newAskObservationDraft,
@@ -144,6 +145,8 @@ function routeFor(request: Readonly<AskRequest>, baseDeps: PlannerDeps): AskR2Ro
       ...(who === undefined ? {} : { identityVerified: who.accountId !== null }),
       /* ASK R3 CONTINUITY — frozen C already reads conversationSubject from it. */
       ...(who?.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
+      /* HOME R1 STAGE A — server-resolved context (ISO3 codes, verified refs); never prose. */
+      ...(who?.askContext?.route ?? {}),
     },
     deps,
   );
@@ -271,6 +274,7 @@ export function planRevision(
      request: the revision (and so the stored-result fingerprint) must differ. Omitted when
      absent, so every first-turn revision is byte-identical to before. */
   priorQuestion?: string | null,
+  askContextPart?: string,
 ): string {
   return hashIdentity([
     ASK_R2_ADAPTER_VERSION,
@@ -279,7 +283,33 @@ export function planRevision(
     request.intent,
     routeSignature(route),
     ...(priorQuestion ? [`prior:${priorQuestion}`] : []),
+    /* HOME R1 STAGE A — the same words with a different resolved context are a different
+       request. Omitted when absent, so every context-free revision is byte-identical. */
+    ...(askContextPart === undefined ? [] : [askContextPart]),
   ]);
+}
+
+/** HOME R1 STAGE A — the resolved context's identity for the plan revision (refs, codes). */
+export function askContextRevisionPart(
+  inputs: AskContextExecutionInputs | undefined,
+): string | undefined {
+  if (inputs === undefined) return undefined;
+  const r = inputs.route;
+  if (
+    r.storyAnchorCountry === undefined &&
+    r.hasResolvedArticleAnchor === undefined &&
+    r.mapContextCountry === undefined &&
+    r.articleRefs === undefined &&
+    inputs.storyContext === undefined
+  )
+    return 'context:none';
+  return `context:${hashIdentity([
+    inputs.storyContext?.articleId ?? null,
+    r.storyAnchorCountry ?? null,
+    r.mapContextCountry ?? null,
+    r.articleRefs ?? [],
+    r.selectionAction ?? null,
+  ])}`;
 }
 
 /** Estimated units for one analysis call (F 01 L-12: input + outputWeight × output). */
@@ -365,7 +395,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const missing = missingSeams(route);
     if (missing.length > 0)
       throw new AskExecutionRefused(`ASK_R2_SEAM_MISSING:${missing.join(',')}`);
-    const revision = planRevision(request, route, askRequestContext.getStore()?.priorQuestion);
+    const store = askRequestContext.getStore();
+    const revision = planRevision(
+      request,
+      route,
+      store?.priorQuestion,
+      askContextRevisionPart(store?.askContext),
+    );
     const typedPlaces = route.envelope.geography.candidates.filter(
       (c) => c.source !== 'MAP_GEOGRAPHY_CONTEXT',
     );
@@ -439,7 +475,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const route = routeFor(request, this.deps);
     this.observeRoute(route, draft);
     const priorQuestion = askRequestContext.getStore()?.priorQuestion ?? null;
-    if (planRevision(request, route, priorQuestion) !== plan.revision) {
+    const contextPart = askContextRevisionPart(askRequestContext.getStore()?.askContext);
+    if (planRevision(request, route, priorQuestion, contextPart) !== plan.revision) {
       throw new AskExecutionRefused('ASK_PLAN_REVISION_MISMATCH');
     }
 
@@ -614,12 +651,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       response = await this.analysis.analyzeNews(
         request.question,
         request.language,
-        undefined,
+        /* HOME R1 STAGE A — a server-resolved story anchor (retained title, never client text). */
+        who.askContext?.storyContext,
         /* ASK R3 CONTINUITY — the landed path routes a follow-up by the PRIOR USER question
            (never the prior AI answer); the model still receives this turn's own question. */
         who.priorQuestion ?? undefined,
-        undefined,
-        undefined,
+        /* HOME R1 STAGE A — a server-verified selection; the analysis path re-verifies it. */
+        who.askContext?.selection,
+        /* HOME R1 STAGE A — a governed map country, only when no story/selection outranks it. */
+        who.askContext?.geographyContext,
         {
           maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
           usageSink: (u) => {

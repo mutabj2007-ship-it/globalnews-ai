@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import type { ResolvedAskContext } from './ask-context';
 
 export const SAND_CHARGING_ENABLED = false as const;
 export const ASK_EXECUTION_PORT = Symbol('ASK_EXECUTION_PORT');
@@ -31,6 +32,13 @@ export interface AskPlan {
   domainCount: number;
   timeWindowDays: number;
 }
+/**
+ * HOME R1 STAGE A — a plan that may carry the server-RESOLVED context references (governed
+ * identifiers and their statuses only; see ask-context.ts). A separate type so `AskPlan`
+ * itself is unchanged; `context` is absent on every request that sent none, so every
+ * existing plan, revision and fingerprint is byte-identical.
+ */
+export type AskPlanWithContext = AskPlan & { context?: ResolvedAskContext };
 export interface ExecutionResult {
   succeeded: boolean;
   // JSON display artifact, validated by the adapter under the current response contract.
@@ -106,7 +114,7 @@ export function classifyCompute(request: AskRequest, plan: AskPlan, stored: bool
 export function hashIdentity(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
-export function fingerprint(request: AskRequest, plan: AskPlan): string {
+export function fingerprint(request: AskRequest, plan: AskPlanWithContext): string {
   return hashIdentity([
     'ask-v2-r1',
     request.question,
@@ -122,6 +130,20 @@ export function fingerprint(request: AskRequest, plan: AskPlan): string {
     plan.countryCount,
     plan.domainCount,
     plan.timeWindowDays,
+    /* HOME R1 STAGE A — a different context is a different request; absent ⇒ unchanged. */
+    ...(plan.context === undefined ? [] : [contextFingerprintPart(plan.context)]),
+  ]);
+}
+
+/** The context's identity for the fingerprint: scope, action and verified identities only. */
+function contextFingerprintPart(context: ResolvedAskContext): string {
+  return hashIdentity([
+    'ask-context/1',
+    context.entry,
+    context.scope,
+    context.action,
+    context.stories.map((s) => s.articleRef),
+    context.iso3,
   ]);
 }
 export function validatePlan(plan: AskPlan, request?: Readonly<AskRequest>): void {
