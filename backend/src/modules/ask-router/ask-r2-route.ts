@@ -537,6 +537,11 @@ export function routeAskR2(
       eligibility.decision === 'ELIGIBLE' &&
       (ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined)
     ) &&
+    /* FINAL STAGE 2 CONVERGENCE R1 — a context-dependent follow-up ("How does this affect
+       ordinary households?" after "What has changed in Kenya's economy?") is about the PRIOR
+       subject, not a free-standing concept: its stable shape never detaches it from that
+       subject. The service supplies `priorQuestion` only for subject / anaphoric follow-ups. */
+    ctx.priorQuestion === undefined &&
     capability.source.personalRequested !== true;
   const {
     temporalRequirement: _time,

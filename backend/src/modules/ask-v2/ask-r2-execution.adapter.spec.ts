@@ -2396,4 +2396,37 @@ describe('ASK TECHNICAL / SCIENTIFIC REASONING R1 — the PO corpus, routed and 
     expect(payload.answer.state).not.toBe('REFERENCE_BACKGROUND');
     expect(h.calls.background).toEqual([]);
   });
+
+  /* FINAL STAGE 2 CONVERGENCE R1 — found by the live continuity suite: a context-dependent
+     follow-up with a stable shape was detached from its subject and sent to General Background.
+     With a prior subject it follows that subject; on its own, a stable concept is unchanged. */
+  it('a stable-shaped FOLLOW-UP stays with its prior subject; the same shape standalone is reference', async () => {
+    const FOLLOW = 'How does this affect ordinary households?';
+    const withPrior = <T>(work: () => Promise<T>): Promise<T> =>
+      askRequestContext.run(
+        {
+          accountId: 'user-1',
+          ipScope: 'ip:v4:203.0.113.7',
+          priorQuestion: "What has changed in Kenya's economy?",
+        },
+        work,
+      );
+    const h = harness({});
+    const plan = await withPrior(() => h.adapter.prepare(req(FOLLOW)));
+    const payload = JSON.parse(
+      (await withPrior(() => h.adapter.execute(req(FOLLOW), plan, 'op-follow'))).payloadJson,
+    );
+    expect(payload.route.terminalState).not.toBe('REFERENCE_BACKGROUND_ONLY');
+    expect(payload.answer.state).not.toBe('REFERENCE_BACKGROUND');
+    expect(h.calls.background).toEqual([]);
+    expect(h.calls.analysis).toHaveLength(1);
+
+    const alone = harness({});
+    const stable = await run(
+      'How does a heat pump produce more heat energy than the electrical energy it consumes?',
+      alone,
+    );
+    expect(stable.answer.state).toBe('REFERENCE_BACKGROUND');
+    expect(alone.calls.analysis).toEqual([]);
+  });
 });
