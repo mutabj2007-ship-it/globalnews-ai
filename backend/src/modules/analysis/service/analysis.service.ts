@@ -108,7 +108,7 @@ import type { EvidenceFreshnessFact } from '../interfaces/analysis-provider.inte
 import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { hasUnsupportedLocalReportingClaim } from '../validation/comparison-coverage.util';
-import { clusterDuplicateArticles } from '../duplicates/cluster-articles.util';
+import { collapseDuplicateStories, isSameStory } from '../../news/identity/article-identity.util';
 import {
   assessBriefCompliance,
   assessSingleSourceDiscipline,
@@ -179,10 +179,8 @@ import {
   resolveCountriesByDemonym,
 } from '../../news/country/country-relevance.util';
 import { admitsToAnalysisCorpus } from '../../news/country/country-development-eligibility.util';
-import {
-  deduplicateArticles,
-  areLikelyDuplicateArticles,
-} from '../../news/country/deduplicate-articles.util';
+/* R1G — kept ONLY for the descriptive candidate-pool count below; never to delete evidence. */
+import { deduplicateArticles } from '../../news/country/deduplicate-articles.util';
 import { buildSourceEntities } from './build-source-entities.util';
 import {
   deriveGenericNewsQuery,
@@ -295,7 +293,7 @@ function withDiscovery(
   social: { articles: NewsArticle[]; lanes: readonly DiscoveryLaneStatus[] },
 ): { response: NewsResponse; trace: PlannedSearchTrace } {
   if (social.lanes.length === 0) return news;
-  const articles = deduplicateArticles([...news.response.articles, ...social.articles]);
+  const articles = collapseDuplicateStories([...news.response.articles, ...social.articles]);
   const ok = social.lanes.filter((l) => l.status === 'ok').map((l) => l.lane);
   const attempted = social.lanes.filter((l) => l.status !== 'not-configured').map((l) => l.lane);
   const unavailable = social.lanes
@@ -1686,7 +1684,7 @@ export class AnalysisService {
 
             if (additions.length > 0) {
               const retainedMembers = memberIso3WithEvidence(additions, gaps);
-              articles = deduplicateArticles([...articles, ...additions]);
+              articles = collapseDuplicateStories([...articles, ...additions]);
 
               retrievalContext = {
                 ...retrievalContext,
@@ -2118,31 +2116,27 @@ export class AnalysisService {
                   articlesRetrieved: uniqueMergedCandidatePool.length,
                 };
 
-                // Existing clustering, applied to primary evidence only
-                // — unchanged function, unchanged input for this step.
-                const clusteredPrimary = clusterDuplicateArticles(articles);
+                // R1G — primary evidence collapses only PROVEN same-story
+                // records (conservative identity), never fuzzy title overlap.
+                const clusteredPrimary = collapseDuplicateStories(articles);
 
                 // For each successful supplemental domain (at most 2),
                 // walk its relevant results in their EXISTING provider/
                 // service order and reserve the FIRST one that is not a
-                // likely duplicate of the clustered primary evidence or
-                // of a supplemental representative already reserved for
-                // an earlier domain. No new ranking/scoring — reuses
-                // the existing areLikelyDuplicateArticles() pairwise
-                // check. If every relevant article for a domain
-                // duplicates existing evidence, that domain simply
-                // reserves no slot.
+                // PROVEN duplicate (isSameStory — R1G conservative
+                // identity) of the primary evidence or of a supplemental
+                // representative already reserved for an earlier domain.
+                // No ranking/scoring; a report that merely shares title
+                // words is no longer treated as a duplicate. If every
+                // relevant article for a domain duplicates existing
+                // evidence, that domain simply reserves no slot.
                 const reservedRepresentatives: NewsArticle[] = [];
 
                 for (const domainArticles of relevantSupplementalByDomain.values()) {
                   const representative = domainArticles.find(
                     (candidate) =>
-                      !clusteredPrimary.some((existing) =>
-                        areLikelyDuplicateArticles(existing, candidate),
-                      ) &&
-                      !reservedRepresentatives.some((reserved) =>
-                        areLikelyDuplicateArticles(reserved, candidate),
-                      ),
+                      !clusteredPrimary.some((existing) => isSameStory(existing, candidate)) &&
+                      !reservedRepresentatives.some((reserved) => isSameStory(reserved, candidate)),
                   );
 
                   if (representative) {
@@ -3100,7 +3094,8 @@ export class AnalysisService {
                 : []),
             candidatesSeen: plannedTrace?.candidatesSeen ?? articles.length,
             candidatesAdmitted: articles.length,
-            independentClusters: clusterDuplicateArticles([...articles]).length,
+            /* R1G — the same conservative story identity the final evidence uses. */
+            independentClusters: collapseDuplicateStories([...articles]).length,
           };
           const coverageIncomplete =
             /* R2B — a lane that is merely not configured is shown, not "incomplete coverage". */
@@ -3149,7 +3144,7 @@ export class AnalysisService {
          * `article` table persistMany() already writes/reads — no new
          * persistence layer), that article is guaranteed to be present
          * AND prioritized (moved to the front) in the evidence set
-         * BEFORE clusterDuplicateArticles()/maxArticles trimming below,
+         * BEFORE collapseDuplicateStories()/maxArticles trimming below,
          * so it survives that cap and is weighted first for prompt
          * building exactly like every other article already is —
          * reusing the existing pipeline unchanged, not a competing
@@ -3168,7 +3163,7 @@ export class AnalysisService {
            * R4 — unchanged in behavior. The lookup itself moved above (see the
            * hoist comment); this block still performs the identical prepend at
            * the identical point in the pipeline, before
-           * clusterDuplicateArticles()/maxArticles. It is the single site that
+           * collapseDuplicateStories()/maxArticles. It is the single site that
            * guarantees "the selected anchor is preserved and first" for EVERY
            * branch — the new anchored branch included, which is why that
            * branch deliberately returns supporting articles only and does not
@@ -3351,7 +3346,15 @@ export class AnalysisService {
           return empty;
         }
 
-        const deduped = clusterDuplicateArticles(articles).slice(0, config.maxArticles);
+        /*
+          PUBLIC BETA HARDENING R1G — EVIDENCE DELETION FAILS CLOSED. Only records the identity
+          ladder PROVES are one story (same provider record / normalized URL, or the corroborated
+          exact headline) collapse; then the first maxArticles in the existing order. The former
+          fuzzy title cluster (Jaccard >= 0.6) merged "peace talks resume" with "peace talks
+          collapse" and one country's outbreak with another's — a possible duplicate may now
+          survive as two reports; a distinct or contradictory report is never deleted.
+        */
+        const deduped = collapseDuplicateStories(articles).slice(0, config.maxArticles);
         if (retrievalContext.eventAnchor !== undefined) {
           const sentIds = new Set(deduped.map((article) => article.id));
           const anchor = retrievalContext.eventAnchor;
@@ -3395,7 +3398,7 @@ export class AnalysisService {
 
         /**
          * Milestone #43: computed over `articles` — the ORIGINAL retrieved
-         * pool, BEFORE clusterDuplicateArticles()/the maxArticles cap above
+         * pool, BEFORE collapseDuplicateStories()/the maxArticles cap above
          * — never over `deduped`. This is deliberate: `deduped` has already
          * had duplicates collapsed, so computing diversity from it would
          * make duplicate-concentration invisible by construction. Computed
@@ -4064,7 +4067,7 @@ export class AnalysisService {
    *              running; the first search after a refusal may consult the fallback tier once
    *              (publisher feeds / GDELT), which a single primary's 429 used to cancel.
    *   MERGED     round-robin (no lane is starved by the cap), URL-deduplicated; syndicated
-   *              copies collapse downstream in the unchanged clusterDuplicateArticles().
+   *              copies collapse downstream in collapseDuplicateStories() (R1G conservative identity).
    *   TRACED     which query variants were sent, which lanes answered, which were unavailable
    *              and why, and how many candidates were seen vs admitted.
    */
@@ -4126,7 +4129,7 @@ export class AnalysisService {
     for (let i = 0; lists.some((list) => i < list.length); i += 1) {
       for (const list of lists) if (i < list.length) interleaved.push(list[i]);
     }
-    const articles = deduplicateArticles(interleaved);
+    const articles = collapseDuplicateStories(interleaved);
     const succeeded = [...new Set(responses.flatMap((response) => response.providers))];
     const unavailable = new Map<string, string>();
     for (const failure of failures) {
@@ -4387,7 +4390,10 @@ export class AnalysisService {
       admission([...frame.identifiers, rescueId]),
       window,
     );
-    const articles = deduplicateArticles([...first.response.articles, ...rescue.response.articles]);
+    const articles = collapseDuplicateStories([
+      ...first.response.articles,
+      ...rescue.response.articles,
+    ]);
     const failures = [
       ...readProviderFailures(first.response),
       ...readProviderFailures(rescue.response),
@@ -4752,7 +4758,7 @@ export class AnalysisService {
         result.failed || result.failureKinds.length > 0 || live.length === 0
           ? await this.retrieveRetainedForRegion([side])
           : [];
-      const retained = deduplicateArticles([
+      const retained = collapseDuplicateStories([
         ...(result.dataMode === 'cached' ? result.articles : []),
         ...retainedCandidates,
       ]).filter(
@@ -4803,7 +4809,7 @@ export class AnalysisService {
       });
     }
 
-    const articles = deduplicateArticles(collected);
+    const articles = collapseDuplicateStories(collected);
     return {
       articles,
       retrievalContext: {
@@ -4912,7 +4918,7 @@ export class AnalysisService {
       }
     }
 
-    const articles = deduplicateArticles(collected);
+    const articles = collapseDuplicateStories(collected);
     const dataMode: AnalysisRetrievalContext['dataMode'] = sawLive
       ? 'live'
       : sawCached
@@ -5147,7 +5153,7 @@ export class AnalysisService {
     }
 
     const unreached = members.slice(attempted.length);
-    const articles = deduplicateArticles(collected);
+    const articles = collapseDuplicateStories(collected);
 
     const dataMode: AnalysisRetrievalContext['dataMode'] = sawLive
       ? 'live'
@@ -5199,7 +5205,7 @@ export class AnalysisService {
         .map((country) => country.name),
     ];
 
-    return deduplicateArticles(
+    return collapseDuplicateStories(
       retained.filter((article) =>
         targetLabels.some(
           (target) => scoreRelationalRelevance(article, relation.x, target).isRelevant,
@@ -5234,7 +5240,7 @@ export class AnalysisService {
       }),
     );
 
-    return deduplicateArticles(perMember.flat());
+    return collapseDuplicateStories(perMember.flat());
   }
 
   private toRetrievalContext(

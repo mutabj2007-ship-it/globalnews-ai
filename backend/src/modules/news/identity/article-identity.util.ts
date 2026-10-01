@@ -216,10 +216,10 @@ export function isSameStoryByCorroboratedHeadline(
  * untouched. A duplicate is dropped whole; it never overwrites part of
  * the record that is kept.
  *
- * COST. Rung 3 needs a pair, so the fallback comparison is quadratic in
- * the number of survivors. The strong-identity map absorbs the common
- * case first, and every caller here is bounded to a page of results
- * (the homepage requests twelve), so the pair loop runs over a handful of
+ * COST. The decision is pairwise (`isSameStory`), so the comparison is
+ * quadratic in the number of survivors. Every caller is bounded to a page of
+ * results or a bounded evidence pool (the homepage requests 24, Analysis at
+ * most a few dozen candidates), so the pair loop runs over a handful of
  * records.
  */
 export function collapseDuplicateStories(articles: NewsArticle[]): NewsArticle[] {
@@ -227,27 +227,38 @@ export function collapseDuplicateStories(articles: NewsArticle[]): NewsArticle[]
     return articles;
   }
 
-  const seenStrongIdentities = new Set<string>();
   const kept: NewsArticle[] = [];
 
   for (const article of articles) {
-    const identity = resolveStrongIdentity(article);
-
-    if (identity !== null) {
-      if (seenStrongIdentities.has(identity)) {
-        continue;
-      }
-    }
-
-    if (kept.some((existing) => isSameStoryByCorroboratedHeadline(existing, article))) {
+    if (kept.some((existing) => isSameStory(existing, article))) {
       continue;
-    }
-
-    if (identity !== null) {
-      seenStrongIdentities.add(identity);
     }
     kept.push(article);
   }
 
   return kept;
+}
+
+/**
+ * PUBLIC BETA HARDENING R1G — THE ONE PAIRWISE STORY-IDENTITY DECISION.
+ *
+ * True only when the identity ladder above PROVES two records are one story:
+ * the same non-null strong identity (rung 1 provider-native record id, else
+ * rung 2 normalized URL — exactly `resolveStrongIdentity`), or the
+ * conservative corroborated exact headline (rung 3). Nothing else: no fuzzy
+ * title threshold, no category, no geography, no time proximity on its own.
+ *
+ * It is the same decision `collapseDuplicateStories` has always made (a record
+ * was dropped exactly when a kept record shared its strong identity or
+ * corroborated its headline), exposed so every EVIDENCE-DELETION site can ask
+ * it. Failing closed is the contract: when sameness is not proven, both
+ * records survive — "a duplicate survived" is acceptable, "two different
+ * reports merged" is not (see the worked resume/collapse example above).
+ */
+export function isSameStory(first: NewsArticle, second: NewsArticle): boolean {
+  const firstIdentity = resolveStrongIdentity(first);
+  if (firstIdentity !== null && firstIdentity === resolveStrongIdentity(second)) {
+    return true;
+  }
+  return isSameStoryByCorroboratedHeadline(first, second);
 }

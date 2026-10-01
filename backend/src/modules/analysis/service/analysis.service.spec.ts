@@ -5263,20 +5263,21 @@ describe('Milestone #63 — bounded domain-aware supplemental retrieval', () => 
       expect(capturedArticles).toHaveLength(8);
     });
 
-    it('first supplemental result is a duplicate of primary evidence but the second is unique: the second (non-duplicate) one is selected, not the duplicate', async () => {
+    /*
+      PUBLIC BETA HARDENING R1G — a supplemental report is withheld as a duplicate only when the
+      identity ladder PROVES it is the primary article (here: the same article URL carrying a
+      tracking parameter and a fragment). A report that merely shares title words is NOT a
+      duplicate any more (see the companion test below and the R1G false-merge suite).
+    */
+    it('first supplemental result is a PROVEN duplicate of primary evidence but the second is unique: the second (non-duplicate) one is selected, not the duplicate', async () => {
       const primaryArticles = ninePrimaryArticles();
       const duplicateOfPrimary = makeArticle({
         id: 'dup-of-primary',
-        title: primaryArticles[0].title, // exact duplicate of the first primary article
+        title: primaryArticles[0].title,
         summary: primaryArticles[0].summary,
-        // Deliberately its OWN distinct URL — this is a DIFFERENT
-        // provider's coverage of the SAME real-world story (a
-        // realistic scenario), so the duplicate classification here
-        // must come from the title-Jaccard path (title is verbatim
-        // identical to primaryArticles[0]'s, guaranteeing similarity
-        // 1.0, well over the 0.6 threshold), not from an accidental
-        // shared default URL.
-        url: 'https://example.com/m63-dup-of-primary-alt-source',
+        // The SAME article as primaryArticles[0]: identical URL once the tracking parameter and
+        // fragment are normalized away (identity rung 2).
+        url: `${primaryArticles[0].url}?utm_source=newsletter#top`,
       });
       const uniqueRepresentative = makeArticle({
         id: 'genuinely-unique',
@@ -5320,20 +5321,67 @@ describe('Milestone #63 — bounded domain-aware supplemental retrieval', () => 
       expect(capturedArticles.some((a) => a.id === 'dup-of-primary')).toBe(false);
     });
 
-    it('all supplemental candidates for a domain duplicate primary evidence: no reserved slot for that domain, final evidence is exactly the clustered primary pool', async () => {
+    it('R1G: a supplemental report that only SHARES the primary headline (another outlet, sameness unproven) is not withheld as a duplicate', async () => {
       const primaryArticles = ninePrimaryArticles();
+      const sameHeadlineOtherOutlet = makeArticle({
+        id: 'same-headline-other-outlet',
+        title: primaryArticles[0].title,
+        summary: 'Another outlet carries the headline with its own reporting.',
+        url: 'https://other-outlet.example/rwanda-drc-migration',
+      });
+      const newsService = {
+        search: jest
+          .fn()
+          .mockResolvedValueOnce(
+            makeSearchResponse([sameHeadlineOtherOutlet], { dataMode: 'live' }),
+          )
+          .mockResolvedValueOnce(makeSearchResponse([])),
+      };
+      const countryNewsService = {
+        getCountryNews: jest
+          .fn()
+          .mockResolvedValue(makeCountryResponse('RWA', 'Rwanda', primaryArticles)),
+      };
+      let capturedArticles: NewsArticle[] = [];
+      const provider: AnalysisProvider = {
+        id: 'mock-analysis',
+        displayName: 'Mock',
+        isMock: true,
+        analyzeNews: jest.fn().mockImplementation(async (request: { articles: NewsArticle[] }) => {
+          capturedArticles = request.articles;
+          return validCandidateFor(request.articles);
+        }),
+      };
+      const service = new AnalysisService(
+        newsService as never,
+        countryNewsService as never,
+        provider,
+        makeConfigService({ maxArticles: 8 }),
+      );
+
+      await service.analyzeNews(RWANDA_QUESTION);
+
+      /* the primary report AND the other outlet's report both reach the model */
+      expect(capturedArticles.some((a) => a.id === 'primary-0')).toBe(true);
+      expect(capturedArticles.some((a) => a.id === 'same-headline-other-outlet')).toBe(true);
+      expect(capturedArticles).toHaveLength(8);
+    });
+
+    it('all supplemental candidates for a domain are PROVEN duplicates of primary evidence: no reserved slot for that domain, final evidence is exactly the primary pool', async () => {
+      const primaryArticles = ninePrimaryArticles();
+      /* R1G — proven duplicates: the primary articles' own URLs with tracking parameters. */
       const allDuplicates = [
         makeArticle({
           id: 'dup-1',
           title: primaryArticles[0].title,
           summary: primaryArticles[0].summary,
-          url: 'https://example.com/m63-dup1-alt-source',
+          url: `${primaryArticles[0].url}?utm_source=feed`,
         }),
         makeArticle({
           id: 'dup-2',
           title: primaryArticles[1].title,
           summary: primaryArticles[1].summary,
-          url: 'https://example.com/m63-dup2-alt-source',
+          url: `${primaryArticles[1].url}#comments`,
         }),
       ];
       const newsService = {
@@ -5535,12 +5583,14 @@ describe('Milestone #63 — bounded domain-aware supplemental retrieval', () => 
       expect(totalProviderCalls).toBeLessThanOrEqual(3);
     });
 
-    it('regression: distinct URLs do NOT defeat title-based duplicate detection when titles genuinely satisfy the existing similarity rule — proves the URL fix above did not weaken clusterDuplicateArticles()', async () => {
-      // Two DIFFERENT urls, but titles sharing enough non-stopword
-      // tokens to score >= 0.6 Jaccard under the real, UNCHANGED
-      // TITLE_SIMILARITY_THRESHOLD (verified by hand-calculation:
-      // "rwanda parliament election results announced today" vs
-      // "...confirmed today" share 5 of 7 union tokens = 0.714).
+    /*
+      PUBLIC BETA HARDENING R1G — SUPERSEDED WITH THE OPPOSITE PROOF. This test used to assert that
+      two DIFFERENT articles ("…results announced today" / "…results confirmed today", title
+      Jaccard 0.714) collapse to one. That is the fuzzy evidence deletion the CTO rule forbids
+      (it is the same mechanism that merged "peace talks resume" with "peace talks collapse").
+      Both now reach the model; a PROVEN duplicate (same normalized URL) still collapses.
+    */
+    it('R1G: titles that merely satisfy the old fuzzy similarity rule are two reports — both reach the model; the same article URL still collapses to one', async () => {
       const primaryArticles = [
         makeArticle({
           id: 'title-dup-1',
@@ -5579,12 +5629,25 @@ describe('Milestone #63 — bounded domain-aware supplemental retrieval', () => 
       );
 
       // Deliberately NOT a broad question — this test is about the
-      // clustering/dedup mechanism itself, not M63's domain-detection
-      // gate, so it should still cluster to one representative via the
-      // pre-existing, unmodified title-similarity path.
+      // evidence-deletion mechanism itself, not M63's domain-detection gate.
       await service.analyzeNews("What's happening in Rwanda?");
 
-      expect(capturedArticles).toHaveLength(1);
+      expect(capturedArticles.map((a) => a.id)).toEqual(['title-dup-1', 'title-dup-2']);
+
+      /* a PROVEN duplicate — the same article URL with a tracking parameter — collapses to one */
+      const sameArticle = [
+        primaryArticles[0],
+        {
+          ...primaryArticles[0],
+          id: 'title-dup-1-tracked',
+          url: `${primaryArticles[0].url}?utm_source=x`,
+        },
+      ];
+      countryNewsService.getCountryNews.mockResolvedValue(
+        makeCountryResponse('RWA', 'Rwanda', sameArticle),
+      );
+      await service.analyzeNews('What is happening in Rwanda today?');
+      expect(capturedArticles.map((a) => a.id)).toEqual(['title-dup-1']);
     });
   });
 
