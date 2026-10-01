@@ -3,6 +3,7 @@ import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/sha
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { articleRefFor } from '@/lib/identity/articleRefServer';
 import type { HomeR1Gates } from '@/lib/platform/homeR1Gates';
+import type { ThemePreference } from '@/lib/theme/theme';
 import { HomeSessionProvider } from '@/components/home/reva/HomeSession';
 import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
 import { SiteStructuredData } from '@/components/seo/SiteStructuredData';
@@ -38,12 +39,15 @@ export function HomeR1Page({
   worldIn60,
   whats,
   dataMode,
+  theme,
 }: {
   readonly language: LanguageCode;
   readonly gates: HomeR1Gates;
   readonly worldIn60: readonly NewsArticle[];
   readonly whats: readonly NewsArticle[];
   readonly dataMode: NewsDataMode | null;
+  /** The reader’s Light / Dark / System choice from the first-party cookie (server-read). */
+  readonly theme: ThemePreference;
 }): JSX.Element {
   const dict = getDictionary(language);
   const stories = whats.map((article) => ({ article, articleRef: articleRefFor(article.url) }));
@@ -51,8 +55,8 @@ export function HomeR1Page({
     <>
       <SiteStructuredData />
       <HomeSessionProvider>
-        <HomeR1Canvas>
-          <HomeR1Header language={language} />
+        <HomeR1Canvas theme={theme}>
+          <HomeR1Header language={language} theme={theme} />
           <div className="lg:flex">
             <HomeR1Rail language={language} />
             <div data-home-content="" className="min-w-0 flex-1 [container-name:home-content] [container-type:inline-size]">

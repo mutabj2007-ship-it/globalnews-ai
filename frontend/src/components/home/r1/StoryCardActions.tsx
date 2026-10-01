@@ -44,10 +44,10 @@ export function StoryCardActions({
   const [refused, setRefused] = useState(false);
 
   return (
-    <div role="group" aria-label={t.stories.actionsAria} data-story-actions="" className="flex items-stretch border-t border-[#E3E8EE]">
+    <div role="group" aria-label={t.stories.actionsAria} data-story-actions="" className="flex items-stretch border-t border-[var(--gt-line2)]">
       {/* Discuss / Alert slots: Stage B (STAGE_A_UNAVAILABLE) — nothing is rendered for them. */}
       <span data-story-action="save" className="flex flex-1 items-center justify-center">
-        <StoryBookmark url={url} language={language} className="!border-[#C9D3DE] !bg-white !text-[#245FC7] !ring-offset-white" />
+        <StoryBookmark url={url} language={language} className="!border-[var(--gt-pgLine2)] !bg-[var(--gt-card)] !text-[var(--gt-link)] !ring-offset-[var(--gt-card)]" />
       </span>
       {compare && (
         <button
@@ -58,8 +58,8 @@ export function StoryCardActions({
             const outcome = toggleHeldStory({ articleRef, url, card });
             setRefused(outcome === 'full');
           }}
-          className={`flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#245FC7] ${
-            isHeld ? 'bg-[#EAF1FC] text-[#245FC7]' : 'text-[#526174] hover:text-[#14243B]'
+          className={`flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)] ${
+            isHeld ? 'bg-[var(--gt-actSoft)] text-[var(--gt-link)]' : 'text-[var(--gt-ink2)] hover:text-[var(--gt-ink)]'
           }`}
         >
           {isHeld ? <Check aria-hidden="true" className="h-4 w-4" /> : <SquarePlus aria-hidden="true" className="h-4 w-4" />}

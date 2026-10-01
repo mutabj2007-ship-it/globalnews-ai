@@ -99,6 +99,13 @@ export const homeR1En = {
     deeperNote: 'Deeper analysis is quoted first in Ask GlobalNewsAI and runs only after you accept it.',
     sourceForms: ['source', 'sources', 'sources'] as [string, string, string],
   },
+  theme: {
+    label: 'Theme',
+    light: 'Light',
+    dark: 'Dark',
+    system: 'System',
+    systemNote: 'Follows your device setting',
+  },
   dock: {
     openInAsk: 'Open in Ask',
     guest: 'Guest · existing trial',

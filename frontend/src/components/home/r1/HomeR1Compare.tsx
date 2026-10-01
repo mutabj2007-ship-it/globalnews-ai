@@ -59,39 +59,39 @@ export function HomeR1Compare({
           <section
             aria-label={t.tray.ariaLabel}
             data-home-r1-tray=""
-            className="fixed inset-x-2 bottom-[calc(62px+env(safe-area-inset-bottom))] z-40 rounded-[14px] border border-[#DCE3EA] bg-white p-3 shadow-[0_18px_40px_-18px_rgba(20,36,59,0.55)] lg:inset-x-auto lg:bottom-4 lg:right-4 lg:w-[440px]"
+            className="fixed inset-x-2 bottom-[calc(62px+env(safe-area-inset-bottom))] z-40 rounded-[14px] border border-[var(--gt-line)] bg-[var(--gt-card)] p-3 shadow-[0_18px_40px_-18px_rgba(20,36,59,0.55)] lg:inset-x-auto lg:bottom-4 lg:right-4 lg:w-[440px]"
           >
             <div className="flex items-center justify-between gap-2">
-              <p className="flex items-center gap-2 text-[14px] font-bold text-[#14243B]">
-                <Layers aria-hidden="true" className="h-4 w-4 text-[#245FC7]" />
+              <p className="flex items-center gap-2 text-[14px] font-bold text-[var(--gt-ink)]">
+                <Layers aria-hidden="true" className="h-4 w-4 text-[var(--gt-link)]" />
                 {held.length === 1 ? t.tray.oneSelected : fill(t.tray.nSelected, { n: held.length })}
-                <span className="text-[12px] font-normal text-[#526174]">{t.tray.upTo}</span>
+                <span className="text-[12px] font-normal text-[var(--gt-ink2)]">{t.tray.upTo}</span>
               </p>
-              <button type="button" data-home-r1-tray-clear="" onClick={() => clearHeldStories()} className="min-h-[44px] px-2 text-[13px] font-semibold text-[#245FC7]">
+              <button type="button" data-home-r1-tray-clear="" onClick={() => clearHeldStories()} className="min-h-[44px] px-2 text-[13px] font-semibold text-[var(--gt-link)]">
                 {t.tray.clear}
               </button>
             </div>
-            {held.length === 1 && <p className="text-[12.5px] text-[#526174]">{t.tray.selectOneMore}</p>}
+            {held.length === 1 && <p className="text-[12.5px] text-[var(--gt-ink2)]">{t.tray.selectOneMore}</p>}
             {compareView && (
               <button
                 type="button"
                 data-home-r1-compare-open=""
                 disabled={held.length < 2}
                 onClick={() => setOpen(true)}
-                className="mt-2 inline-flex min-h-[44px] items-center rounded-full bg-[#245FC7] px-5 text-[14px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-2 inline-flex min-h-[44px] items-center rounded-full bg-[var(--gt-act)] px-5 text-[14px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t.tray.compareSelected}
               </button>
             )}
             <ul className="mt-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
               {held.map((story) => (
-                <li key={story.articleRef} className="flex max-w-[200px] shrink-0 items-center gap-2 rounded-[8px] border border-[#DCE3EA] bg-[#F7F9FB] py-1 pl-2 pr-1">
-                  <span className="truncate text-[12.5px] font-semibold text-[#14243B]">{story.card.title}</span>
+                <li key={story.articleRef} className="flex max-w-[200px] shrink-0 items-center gap-2 rounded-[8px] border border-[var(--gt-line)] bg-[var(--gt-sunk)] py-1 pl-2 pr-1">
+                  <span className="truncate text-[12.5px] font-semibold text-[var(--gt-ink)]">{story.card.title}</span>
                   <button
                     type="button"
                     aria-label={`${t.tray.remove}: ${story.card.title}`}
                     onClick={() => releaseHeldStory(story.articleRef)}
-                    className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-full text-[#526174] hover:text-[#14243B]"
+                    className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-full text-[var(--gt-ink2)] hover:text-[var(--gt-ink)]"
                   >
                     <X aria-hidden="true" className="h-4 w-4" />
                   </button>
@@ -213,36 +213,36 @@ function CompareWorkspace({
   const DEEPER: readonly MultiStoryAction[] = ['COMPARE', 'WHAT_CHANGED', 'EXPLAIN_DISAGREEMENTS'];
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="home-r1-compare-title" data-home-r1-compare="" className="fixed inset-0 z-[60] overflow-y-auto bg-[#F3F6F9] lg:bg-[#0B1F3A]/40 lg:p-8">
-      <div className="mx-auto min-h-full max-w-[980px] bg-[#F3F6F9] p-4 lg:min-h-0 lg:rounded-[16px] lg:p-6">
+    <div role="dialog" aria-modal="true" aria-labelledby="home-r1-compare-title" data-home-r1-compare="" className="fixed inset-0 z-[60] overflow-y-auto bg-[var(--gt-bg)] lg:bg-[var(--gt-scrim)] lg:p-8">
+      <div className="mx-auto min-h-full max-w-[980px] bg-[var(--gt-bg)] p-4 lg:min-h-0 lg:rounded-[16px] lg:p-6">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="home-r1-compare-title" className="flex items-center gap-2 font-display text-[22px] font-bold text-[#14243B]">
-            <button ref={closeRef} type="button" onClick={onClose} aria-label={t.close} className="flex h-[44px] w-[44px] items-center justify-center rounded-full text-[#526174] hover:bg-white">
+          <h2 id="home-r1-compare-title" className="flex items-center gap-2 font-display text-[22px] font-bold text-[var(--gt-ink)]">
+            <button ref={closeRef} type="button" onClick={onClose} aria-label={t.close} className="flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--gt-ink2)] hover:bg-[var(--gt-card)]">
               <ArrowLeft aria-hidden="true" className="h-5 w-5" />
             </button>
             {fill(t.title, { n: pluralWithForms(opened.length, language, t.storyForms) })}
           </h2>
         </div>
-        <p className="mt-2 inline-flex items-center gap-2 rounded-[8px] border border-[#DCE3EA] bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#14243B]">
+        <p className="mt-2 inline-flex items-center gap-2 rounded-[8px] border border-[var(--gt-line)] bg-[var(--gt-card)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--gt-ink)]">
           {t.held}
         </p>
 
-        <div className="mt-4 overflow-x-auto rounded-[12px] border border-[#DCE3EA] bg-white">
+        <div className="mt-4 overflow-x-auto rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)]">
           <table className="w-full min-w-[560px] border-collapse text-left text-[13px]">
             <thead>
-              <tr className="bg-[#F7F9FB]">
+              <tr className="bg-[var(--gt-sunk)]">
                 <th scope="col" className="w-[150px] p-3" />
                 {opened.map((story) => {
                   const article = viewOf(story)?.article;
                   return (
                     <th key={story.articleRef} scope="col" className="p-3 align-top">
-                      <span className="line-clamp-3 text-[13.5px] font-bold leading-snug text-[#14243B]">{article?.title ?? story.card.title}</span>
+                      <span className="line-clamp-3 text-[13.5px] font-bold leading-snug text-[var(--gt-ink)]">{article?.title ?? story.card.title}</span>
                       <a
                         href={safeExternalHref(story.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         data-publisher-link="compare"
-                        className="mt-1 inline-flex min-h-[32px] items-center gap-1 text-[12px] font-semibold text-[#245FC7] hover:underline"
+                        className="mt-1 inline-flex min-h-[32px] items-center gap-1 text-[12px] font-semibold text-[var(--gt-link)] hover:underline"
                       >
                         {t.readSource}
                         <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
@@ -255,22 +255,22 @@ function CompareWorkspace({
             <tbody>
               {read.kind === 'loading' && (
                 <tr>
-                  <td colSpan={opened.length + 1} role="status" className="p-4 text-[#526174]">
+                  <td colSpan={opened.length + 1} role="status" className="p-4 text-[var(--gt-ink2)]">
                     {t.loading}
                   </td>
                 </tr>
               )}
               {read.kind === 'failed' && (
                 <tr>
-                  <td colSpan={opened.length + 1} role="alert" className="p-4 text-[#8A5A00]">
+                  <td colSpan={opened.length + 1} role="alert" className="p-4 text-[var(--gt-amberInk)]">
                     {t.failed}
                   </td>
                 </tr>
               )}
               {read.kind === 'ready' &&
                 rows.map((row) => (
-                  <tr key={row.label} className="border-t border-[#E3E8EE]">
-                    <th scope="row" className="p-3 align-top text-[12px] font-semibold text-[#526174]">
+                  <tr key={row.label} className="border-t border-[var(--gt-line2)]">
+                    <th scope="row" className="p-3 align-top text-[12px] font-semibold text-[var(--gt-ink2)]">
                       {row.label}
                     </th>
                     {opened.map((story) => {
@@ -279,7 +279,7 @@ function CompareWorkspace({
                         <td
                           key={story.articleRef}
                           data-compare-cell={value === t.notAvailable || value === t.noBrief ? 'not-available' : 'held'}
-                          className={`p-3 align-top ${value === t.notAvailable || value === t.noBrief ? 'text-[#7A8AA0]' : 'text-[#14243B]'}`}
+                          className={`p-3 align-top ${value === t.notAvailable || value === t.noBrief ? 'text-[var(--gt-ink3)]' : 'text-[var(--gt-ink)]'}`}
                         >
                           {viewOf(story)?.status === 'unavailable' && row.label === t.rows.place ? t.unresolved : value}
                         </td>
@@ -288,11 +288,11 @@ function CompareWorkspace({
                   </tr>
                 ))}
               {read.kind === 'ready' && (
-                <tr className="border-t border-[#E3E8EE]">
-                  <th scope="row" className="p-3 align-top text-[12px] font-semibold text-[#526174]">
+                <tr className="border-t border-[var(--gt-line2)]">
+                  <th scope="row" className="p-3 align-top text-[12px] font-semibold text-[var(--gt-ink2)]">
                     {t.relationLabel}
                   </th>
-                  <td colSpan={opened.length} className="p-3 text-[#7A8AA0]">
+                  <td colSpan={opened.length} className="p-3 text-[var(--gt-ink3)]">
                     {t.relationUnavailable}
                   </td>
                 </tr>
@@ -302,12 +302,12 @@ function CompareWorkspace({
         </div>
 
         {askEmbedded && askContextRefs && (
-          <section aria-labelledby="home-r1-deeper" className="mt-4 rounded-[12px] border border-[#8B7CF6] bg-white p-4">
-            <h3 id="home-r1-deeper" className="flex items-center gap-2 text-[15px] font-bold text-[#14243B]">
-              <Sparkles aria-hidden="true" className="h-4 w-4 text-[#6D5BD0]" />
+          <section aria-labelledby="home-r1-deeper" className="mt-4 rounded-[12px] border border-[var(--gt-violet)] bg-[var(--gt-card)] p-4">
+            <h3 id="home-r1-deeper" className="flex items-center gap-2 text-[15px] font-bold text-[var(--gt-ink)]">
+              <Sparkles aria-hidden="true" className="h-4 w-4 text-[var(--gt-violet)]" />
               {t.deeperTitle}
             </h3>
-            <p className="mt-1 text-[12.5px] text-[#526174]">{t.deeperNote}</p>
+            <p className="mt-1 text-[12.5px] text-[var(--gt-ink2)]">{t.deeperNote}</p>
             <ul className="mt-3 grid gap-2 sm:grid-cols-3">
               {DEEPER.map((action) => (
                 <li key={action}>
@@ -315,7 +315,7 @@ function CompareWorkspace({
                     type="button"
                     data-home-r1-deeper={action}
                     onClick={() => deeper(action)}
-                    className="flex min-h-[44px] w-full items-center rounded-[10px] border border-[#DCE3EA] px-3 text-left text-[13px] font-semibold text-[#14243B] hover:border-[#6D5BD0]"
+                    className="flex min-h-[44px] w-full items-center rounded-[10px] border border-[var(--gt-line)] px-3 text-left text-[13px] font-semibold text-[var(--gt-ink)] hover:border-[var(--gt-violet)]"
                   >
                     {SELECTION_ACTION_QUESTIONS[language === 'pl' ? 'pl' : 'en'][action]}
                   </button>
@@ -326,25 +326,25 @@ function CompareWorkspace({
         )}
 
         {askEmbedded && (
-          <section className="mt-4 flex flex-col gap-3 rounded-[12px] border border-[#DCE3EA] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+          <section className="mt-4 flex flex-col gap-3 rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="flex items-center gap-2 text-[14px] font-bold text-[#14243B]">
-                <MessagesSquare aria-hidden="true" className="h-4 w-4 text-[#245FC7]" />
+              <p className="flex items-center gap-2 text-[14px] font-bold text-[var(--gt-ink)]">
+                <MessagesSquare aria-hidden="true" className="h-4 w-4 text-[var(--gt-link)]" />
                 {t.askThese}
               </p>
-              <p className="mt-1 text-[12.5px] text-[#526174]">{t.askTheseSub}</p>
+              <p className="mt-1 text-[12.5px] text-[var(--gt-ink2)]">{t.askTheseSub}</p>
             </div>
             <button
               type="button"
               data-home-r1-ask-these=""
               onClick={askAboutThese}
-              className="inline-flex min-h-[44px] shrink-0 items-center rounded-full border border-[#245FC7] px-5 text-[14px] font-semibold text-[#245FC7] hover:bg-[#EAF1FC]"
+              className="inline-flex min-h-[44px] shrink-0 items-center rounded-full border border-[var(--gt-act)] px-5 text-[14px] font-semibold text-[var(--gt-link)] hover:bg-[var(--gt-actSoft)]"
             >
               {t.askThese}
             </button>
           </section>
         )}
-        <p className="mt-3 text-[12px] text-[#526174]">{t.freeNote}</p>
+        <p className="mt-3 text-[12px] text-[var(--gt-ink2)]">{t.freeNote}</p>
       </div>
     </div>
   );

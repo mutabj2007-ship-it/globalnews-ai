@@ -93,6 +93,13 @@ export const homeR1Pl: HomeR1Dictionary = {
     deeperNote: 'Pogłębiona analiza jest najpierw wyceniana w Zapytaj GlobalNewsAI i uruchamia się dopiero po Twojej akceptacji.',
     sourceForms: ['źródło', 'źródła', 'źródeł'],
   },
+  theme: {
+    label: 'Motyw',
+    light: 'Jasny',
+    dark: 'Ciemny',
+    system: 'Systemowy',
+    systemNote: 'Zgodnie z ustawieniem urządzenia',
+  },
   dock: {
     openInAsk: 'Otwórz w Zapytaj',
     guest: 'Gość · istniejący okres próbny',

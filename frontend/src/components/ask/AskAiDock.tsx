@@ -25,6 +25,7 @@ import { AskR2TurnView } from '@/components/ask-frame/AskR2TurnView';
 import { AskDeepConfirm } from '@/components/ask-frame/AskDeepConfirm';
 import { EmbeddedAskTitle, EmbeddedConversation } from '@/components/ask/EmbeddedConversation';
 import { usePlatformGates } from '@/components/platform/PlatformGates';
+import { useThemePreference } from '@/lib/theme/themeStore';
 import { sanitizeReturnPath, useAskR2Conversation } from '@/lib/ask/useAskR2Conversation';
 import { GLOBAL_ASK_SUBMIT_EVENT, type GlobalAskSubmitDetail } from '@/lib/ask/submitGlobalAsk';
 import { GLOBAL_ASK_DEEPER_EVENT, type GlobalAskDeeperDetail } from '@/lib/ask/requestDeeperAsk';
@@ -354,6 +355,9 @@ function GlobalAskAiDock({
     guestTrial: embeddedAsk && everOpened,
   });
   const r2s = askR2Strings(r2Locale);
+  /* HOME R1 · DUAL THEME — the reader's Light / Dark / System choice, applied to the embedded
+     panel's own theme scope (presentation only; the components are the Standalone ones). */
+  const themePreference = useThemePreference();
   const tr1 = dictionary.homeR1.dock;
   /* "Ask GlobalNewsAI about these stories" — held stories, identity only, read live at Send. */
   const heldSelection = useAskSelection();
@@ -907,6 +911,7 @@ function GlobalAskAiDock({
           aria-label={t.panelLabel}
           data-ask-geometry={mapLayout === null ? 'dock' : `map-${mapLayout}`}
           data-ask-transport={embeddedAsk ? 'r2' : 'legacy'}
+          data-gna-theme={embeddedAsk && mapLayout === null ? themePreference : undefined}
           style={mapPanelStyle ?? { bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
           className={onMap ? mapPanelClass : [
             'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
@@ -1226,11 +1231,13 @@ function GlobalAskAiDock({
       )}
       {embeddedAsk && r2.deepQuote !== null && (
         /* The explicit acceptance: accept → reserve → execute. Cancel releases the quote. */
-        <AskDeepConfirm
-          locale={r2Locale}
-          onConfirm={() => void r2.confirmDeeper()}
-          onCancel={() => void r2.cancelDeeper()}
-        />
+        <div data-ask-transport="r2" data-gna-theme={mapLayout === null ? themePreference : undefined}>
+          <AskDeepConfirm
+            locale={r2Locale}
+            onConfirm={() => void r2.confirmDeeper()}
+            onCancel={() => void r2.cancelDeeper()}
+          />
+        </div>
       )}
     </>
   );

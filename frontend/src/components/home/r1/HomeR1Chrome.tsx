@@ -30,6 +30,8 @@ import { HomeLanguageControl } from '@/components/home/HomeLanguageControl';
 import { Logo } from '@/components/ui/Logo';
 import { useHomeSession } from '@/components/home/reva/HomeSession';
 import { RESOLVED_DOMAINS, SPECIALIST_LINKS, type ExploreDomainKey } from '@/components/home/reva/homeRevaModel';
+import { ThemeControl, ThemeScope } from '@/components/platform/ThemeControl';
+import type { ThemePreference } from '@/lib/theme/theme';
 
 /**
  * HOME R1 · STAGE A — NAVIGATION (FINAL spec §1, Design R1-N1, R1-N3).
@@ -55,11 +57,17 @@ const DOMAIN_ICONS: Record<ExploreDomainKey, LucideIcon> = {
   markets: CandlestickChart,
 };
 
-export function HomeR1Header({ language }: { readonly language: LanguageCode }): JSX.Element {
+export function HomeR1Header({
+  language,
+  theme,
+}: {
+  readonly language: LanguageCode;
+  readonly theme: ThemePreference;
+}): JSX.Element {
   const dict = getDictionary(language);
   const nav = dict.navBar;
   return (
-    <header data-home-r1-header="" className="sticky top-0 z-50 h-[56px] bg-[#0B1F3A] lg:h-[60px]">
+    <header data-home-r1-header="" className="sticky top-0 z-50 h-[56px] bg-[var(--gt-hdr)] lg:h-[60px]">
       <div className="flex h-full min-w-0 items-center gap-2 px-3 sm:px-4 lg:px-5">
         <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label={nav.homeAriaLabel}>
           <Logo size={24} gapPx={8} />
@@ -69,6 +77,8 @@ export function HomeR1Header({ language }: { readonly language: LanguageCode }):
           </span>
         </Link>
         <div className="min-w-0 flex-1" />
+        {/* Light · Dark · System — desktop and phone alike (44 px, keyboard operable). */}
+        <ThemeControl language={language} initial={theme} />
         <div id="home-r1-language" className="hidden sm:block">
           <HomeLanguageControl language={language} label={nav.languageSelectorLabel} actionLabel={nav.languageSelectorAction} />
         </div>
@@ -80,7 +90,7 @@ export function HomeR1Header({ language }: { readonly language: LanguageCode }):
           myIntelligenceLabel={dict.myIntelligence.accountMenuItem}
           myIntelligenceTag={dict.myIntelligence.accountMenuItemTag}
           signInLabel={nav.signIn}
-          signInClassName="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-full border border-white/40 px-3 text-[14px] font-semibold text-white hover:bg-white/[0.06] sm:px-4"
+          signInClassName="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-full border border-white/40 px-3 text-[14px] font-semibold text-white hover:bg-[var(--gt-card)]/[0.06] sm:px-4"
           accountLabel={nav.account}
           accountMenuAriaLabel={nav.accountMenuAriaLabel}
           signedInAsLabel={nav.signedInAs}
@@ -116,16 +126,16 @@ function RailRow({
         aria-current={current ? 'page' : undefined}
         title={label}
         className={`flex min-h-[40px] items-center gap-3 rounded-[8px] px-2.5 py-1 text-[14px] font-semibold ${
-          current ? 'bg-[#E8EEF6] text-[#14243B]' : 'text-[#33465E] hover:bg-[#EEF2F7] hover:text-[#14243B]'
+          current ? 'bg-[var(--gt-chromeCur)] text-[var(--gt-ink)]' : 'text-[var(--gt-railInk)] hover:bg-[var(--gt-sunk)] hover:text-[var(--gt-ink)]'
         }`}
       >
-        <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-[#526174]" />
+        <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-[var(--gt-ink2)]" />
         <span className="sr-only min-w-0 flex-1 xl:not-sr-only">
           <span className="block truncate">{label}</span>
-          {sub !== undefined && <span className="block truncate text-[11px] font-normal text-[#7A8AA0]">{sub}</span>}
+          {sub !== undefined && <span className="block truncate text-[11px] font-normal text-[var(--gt-ink3)]">{sub}</span>}
         </span>
         {tag !== undefined && (
-          <span className="sr-only rounded-[5px] border border-[#DCE3EA] px-1.5 font-mono text-[9.5px] uppercase tracking-[0.08em] text-[#7A8AA0] xl:not-sr-only">
+          <span className="sr-only rounded-[5px] border border-[var(--gt-line)] px-1.5 font-mono text-[9.5px] uppercase tracking-[0.08em] text-[var(--gt-ink3)] xl:not-sr-only">
             {tag}
           </span>
         )}
@@ -136,7 +146,7 @@ function RailRow({
 
 function Section({ label }: { readonly label: string }): JSX.Element {
   return (
-    <p className="sr-only mb-1 mt-4 px-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A8AA0] xl:not-sr-only">
+    <p className="sr-only mb-1 mt-4 px-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--gt-ink3)] xl:not-sr-only">
       {label}
     </p>
   );
@@ -153,7 +163,7 @@ export function HomeR1Rail({ language }: { readonly language: LanguageCode }): J
   return (
     <aside
       data-home-r1-rail=""
-      className="sticky top-[60px] z-30 hidden h-[calc(100dvh-60px)] w-[64px] shrink-0 border-r border-[#DCE3EA] bg-white lg:block xl:w-[248px]"
+      className="sticky top-[60px] z-30 hidden h-[calc(100dvh-60px)] w-[64px] shrink-0 border-r border-[var(--gt-chromeLine)] bg-[var(--gt-chrome)] lg:block xl:w-[248px]"
     >
       <nav aria-label={t.ariaLabel} className="h-full overflow-y-auto overscroll-contain px-2 py-3 [scrollbar-width:thin]">
         <ul className="flex flex-col gap-0.5">
@@ -200,7 +210,7 @@ export function HomeR1Rail({ language }: { readonly language: LanguageCode }): J
               <span
                 data-home-r1-plan="soon"
                 aria-label={`${t.planUsage} · ${t.soon}`}
-                className="flex min-h-[40px] items-center gap-3 rounded-[8px] px-2.5 text-[14px] font-semibold text-[#7A8AA0]"
+                className="flex min-h-[40px] items-center gap-3 rounded-[8px] px-2.5 text-[14px] font-semibold text-[var(--gt-ink3)]"
               >
                 <Gauge aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
                 <span className="sr-only min-w-0 flex-1 truncate xl:not-sr-only">{t.planUsage}</span>
@@ -227,7 +237,7 @@ export function HomeR1PhoneNav({ language }: { readonly language: LanguageCode }
       aria-label={t.phoneAria}
       data-gn-bottom-nav=""
       data-home-r1-phone-nav=""
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[#DCE3EA] bg-white/95 backdrop-blur-md lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--gt-line)] bg-[var(--gt-chrome)] backdrop-blur-md lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <ul className="flex items-stretch justify-around">
@@ -236,7 +246,7 @@ export function HomeR1PhoneNav({ language }: { readonly language: LanguageCode }
             <a
               href={href}
               aria-current={current ? 'page' : undefined}
-              className={`flex min-h-[58px] flex-col items-center justify-center gap-1 px-1 py-2 ${current ? 'text-[#245FC7]' : 'text-[#526174]'}`}
+              className={`flex min-h-[58px] flex-col items-center justify-center gap-1 px-1 py-2 ${current ? 'text-[var(--gt-navOn)]' : 'text-[var(--gt-chromeIc)]'}`}
             >
               <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.75} />
               <span className="text-center font-mono text-[11.5px] uppercase leading-tight">{label}</span>
@@ -249,10 +259,16 @@ export function HomeR1PhoneNav({ language }: { readonly language: LanguageCode }
 }
 
 /** The light canvas the whole R1 Home sits on. */
-export function HomeR1Canvas({ children }: { readonly children: ReactNode }): JSX.Element {
+export function HomeR1Canvas({
+  children,
+  theme,
+}: {
+  readonly children: ReactNode;
+  readonly theme: ThemePreference;
+}): JSX.Element {
   return (
-    <div data-home-r1="" data-home-theme="light" className="min-h-[100dvh] bg-[#F3F6F9] text-[#14243B]">
+    <ThemeScope initial={theme} data-home-r1="" className="min-h-[100dvh] bg-[var(--gt-bg)] text-[var(--gt-ink)]">
       {children}
-    </div>
+    </ThemeScope>
   );
 }

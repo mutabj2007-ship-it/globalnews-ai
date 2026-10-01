@@ -28,6 +28,7 @@ import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
 import { ASK_SOCIAL_PREVIEW } from '@/lib/seo/socialPreview';
 import { homeR1Gates } from '@/lib/platform/homeR1Gates';
 import { HomeR1Page } from '@/components/home/r1/HomeR1Page';
+import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 
 /**
  * HOME WELCOME & DISCOVERY R1 REV A — THE HOME COMPOSITION.
@@ -158,6 +159,7 @@ export default async function HomePage(): Promise<JSX.Element> {
         worldIn60={worldIn60}
         whats={[...(whats.featured === null ? [] : [whats.featured]), ...whats.inFocus, ...whats.discovery]}
         dataMode={feed.dataMode}
+        theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}
       />
     );
   }

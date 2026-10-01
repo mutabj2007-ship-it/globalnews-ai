@@ -64,17 +64,17 @@ export function HomeR1Hero({
       {/* Decorative only: a soft orb in the action colour, no image, no map. */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -right-24 -top-10 h-[320px] w-[320px] rounded-full bg-[radial-gradient(circle_at_35%_35%,#ffffff_0%,#dbe7f7_38%,#b9cff0_62%,rgba(185,207,240,0)_72%)] opacity-90 sm:-right-10 lg:right-0 lg:top-0 lg:h-[380px] lg:w-[380px]"
+        className="pointer-events-none absolute -right-24 -top-10 h-[320px] w-[320px] rounded-full bg-[radial-gradient(circle_at_35%_35%,var(--gt-actSoft)_0%,var(--gt-pgLine2)_45%,transparent_72%)] opacity-80 sm:-right-10 lg:right-0 lg:top-0 lg:h-[380px] lg:w-[380px]"
       />
       <div className="relative max-w-[640px]">
-        <h1 id="home-r1-title" className="font-display text-[40px] font-bold leading-[1.04] tracking-[-0.025em] text-[#14243B] sm:text-[48px] lg:text-[56px]">
+        <h1 id="home-r1-title" className="font-display text-[40px] font-bold leading-[1.04] tracking-[-0.025em] text-[var(--gt-ink)] sm:text-[48px] lg:text-[56px]">
           {t.titleA}
-          <span className="block text-[#245FC7]">{t.titleB}</span>
+          <span className="block bg-[image:var(--gt-heroGrad)] bg-clip-text text-transparent">{t.titleB}</span>
         </h1>
-        <p className="mt-3 max-w-[420px] text-[16px] leading-[1.5] text-[#526174] lg:text-[17px]">{t.sub}</p>
+        <p className="mt-3 max-w-[420px] text-[16px] leading-[1.5] text-[var(--gt-ink2)] lg:text-[17px]">{t.sub}</p>
 
-        <p className="mt-6 flex items-center gap-2 text-[14px] font-semibold text-[#14243B]">
-          <MessagesSquare aria-hidden="true" className="h-4 w-4 text-[#245FC7]" />
+        <p className="mt-6 flex items-center gap-2 text-[14px] font-semibold text-[var(--gt-ink)]">
+          <MessagesSquare aria-hidden="true" className="h-4 w-4 text-[var(--gt-link)]" />
           {t.askBrand}
         </p>
         <form
@@ -83,9 +83,9 @@ export function HomeR1Hero({
           onSubmit={submit}
           data-home-r1-composer=""
           data-ask-sends={askSends ? 'true' : 'false'}
-          className="mt-2 flex h-[56px] items-center gap-2 rounded-full border border-[#C9D3DE] bg-white pl-4 pr-[5px] shadow-[0_10px_30px_-18px_rgba(20,36,59,0.45)] focus-within:border-[#245FC7] focus-within:shadow-[0_0_0_3px_rgba(36,95,199,0.18)] md:h-[60px]"
+          className="mt-2 flex h-[56px] items-center gap-2 rounded-full border border-[var(--gt-pgLine2)] bg-[var(--gt-card)] pl-4 pr-[5px] shadow-[0_10px_30px_-18px_rgba(20,36,59,0.45)] focus-within:border-[var(--gt-act)] focus-within:shadow-[0_0_0_3px_rgba(36,95,199,0.18)] md:h-[60px]"
         >
-          <MessagesSquare aria-hidden="true" className="h-5 w-5 shrink-0 text-[#7A8AA0]" />
+          <MessagesSquare aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--gt-ink3)]" />
           <input
             ref={inputRef}
             name="q"
@@ -95,18 +95,18 @@ export function HomeR1Hero({
             placeholder={t.placeholder}
             aria-label={t.askBrand}
             aria-describedby="home-r1-composer-note"
-            className="min-w-0 flex-1 bg-transparent text-[16px] text-[#14243B] outline-none placeholder:text-[#7A8AA0]"
+            className="min-w-0 flex-1 bg-transparent text-[16px] text-[var(--gt-ink)] outline-none placeholder:text-[var(--gt-ink3)]"
           />
           <button
             type="submit"
             data-home-r1-ask=""
-            className="inline-flex h-[46px] shrink-0 items-center gap-1.5 rounded-full bg-[#245FC7] px-5 text-[15px] font-bold text-white hover:bg-[#1d52ad] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#245FC7] focus-visible:ring-offset-2"
+            className="inline-flex h-[46px] shrink-0 items-center gap-1.5 rounded-full bg-[var(--gt-act)] px-5 text-[15px] font-bold text-white hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)] focus-visible:ring-offset-2"
           >
             {t.ask}
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </button>
         </form>
-        <p id="home-r1-composer-note" role="status" className="mt-2 px-1 text-[12.5px] leading-snug text-[#526174]">
+        <p id="home-r1-composer-note" role="status" className="mt-2 px-1 text-[12.5px] leading-snug text-[var(--gt-ink2)]">
           {status ?? (askSends ? t.noteSend : t.noteStage)}
         </p>
 
@@ -117,9 +117,9 @@ export function HomeR1Hero({
                 type="button"
                 data-home-r1-suggestion=""
                 onClick={() => stage(question)}
-                className="flex min-h-[44px] max-w-[260px] items-center gap-2 rounded-[10px] border border-[#DCE3EA] bg-white px-3 py-2 text-left text-[13px] font-semibold leading-snug text-[#14243B] hover:border-[#245FC7]"
+                className="flex min-h-[44px] max-w-[260px] items-center gap-2 rounded-[10px] border border-[var(--gt-line)] bg-[var(--gt-card)] px-3 py-2 text-left text-[13px] font-semibold leading-snug text-[var(--gt-ink)] hover:border-[var(--gt-act)]"
               >
-                <ArrowUpRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#245FC7]" />
+                <ArrowUpRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[var(--gt-link)]" />
                 <span>{question}</span>
               </button>
             </li>
@@ -129,9 +129,9 @@ export function HomeR1Hero({
         <a
           href="/map"
           data-home-r1-map-link=""
-          className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#DCE3EA] bg-white px-4 text-[13px] font-semibold text-[#14243B] hover:border-[#245FC7]"
+          className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[var(--gt-line)] bg-[var(--gt-card)] px-4 text-[13px] font-semibold text-[var(--gt-ink)] hover:border-[var(--gt-act)]"
         >
-          <MapIcon aria-hidden="true" className="h-4 w-4 text-[#245FC7]" />
+          <MapIcon aria-hidden="true" className="h-4 w-4 text-[var(--gt-link)]" />
           {t.mapLink}
         </a>
       </div>
