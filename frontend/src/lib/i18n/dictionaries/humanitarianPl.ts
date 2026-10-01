@@ -96,4 +96,47 @@ export const humanitarianPl: HumanitarianLanguageStrings = {
   },
 
   translationIsNotEvidence: 'Tłumaczenie nie niesie większej pewności niż oryginał.',
+
+  vocabulary: {
+    observationKind: {
+      HUMANITARIAN_EVENT: 'Zdarzenie',
+      HUMANITARIAN_REPORT: 'Raport',
+      HUMANITARIAN_IMPACT_ASSERTION: 'Dane o skutkach, według źródła',
+    },
+    hazardType: {
+      EARTHQUAKE: 'Trzęsienie ziemi',
+      TROPICAL_CYCLONE: 'Cyklon tropikalny',
+      FLOOD: 'Powódź',
+      DROUGHT: 'Susza',
+      WILDFIRE: 'Pożar roślinności',
+      VOLCANIC_ACTIVITY: 'Aktywność wulkaniczna',
+      ARMED_CONFLICT_DISPLACEMENT: 'Przesiedlenia w wyniku konfliktu zbrojnego',
+      EPIDEMIC: 'Epidemia',
+    },
+    eventStatus: {
+      ONGOING: 'Trwające',
+      CLOSED: 'Zakończone',
+      NOT_STATED: 'Źródło nie podało statusu',
+    },
+    impactMeasure: {
+      PEOPLE_AFFECTED: 'Osoby dotknięte skutkami',
+      PEOPLE_DISPLACED: 'Osoby przesiedlone',
+      FATALITIES: 'Ofiary śmiertelne',
+      INJURED: 'Ranni',
+      PEOPLE_IN_NEED: 'Osoby potrzebujące pomocy',
+      HOUSES_DAMAGED: 'Domy uszkodzone',
+      HOUSES_DESTROYED: 'Domy zniszczone',
+    },
+    statusMeasure: {
+      SHELTER_STATUS: 'Schronienie',
+      HEALTH_STATUS: 'Zdrowie',
+      FOOD_SECURITY_STATUS: 'Bezpieczeństwo żywnościowe',
+      WATER_STATUS: 'Woda',
+      HUMANITARIAN_ACCESS_STATUS: 'Dostęp humanitarny',
+    },
+    impactBasis: {
+      SOURCE_STATED: 'Podane przez źródło',
+      SOURCE_ESTIMATED: 'Szacunek źródła',
+    },
+  },
 };

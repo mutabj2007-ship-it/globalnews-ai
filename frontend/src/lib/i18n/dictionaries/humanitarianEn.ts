@@ -3,6 +3,12 @@ import type {
   TranslationState,
   TextUnavailableReason,
   SourceLanguageClaim,
+  HumanitarianObservationKind,
+  HumanitarianHazardType,
+  HumanitarianEventStatus,
+  HumanitarianImpactMeasure,
+  HumanitarianStatusMeasure,
+  ImpactAssertionBasis,
 } from '@globalnews-ai/shared';
 
 /**
@@ -57,6 +63,23 @@ export interface HumanitarianLanguageStrings {
 
   /** The one sentence that must never be lost. */
   readonly translationIsNotEvidence: string;
+
+  /**
+   * CONVERGENCE (Claude Code, final semantic authority) — reader labels for Main's canonical
+   * vocabularies (shared/src/humanitarian/observation.ts). Main's contract declares no reader
+   * text and assigns EN/PL labelling to L; each map is typed by Main's own union, so a member
+   * added there without a label here is a compile error in both languages. Source strings
+   * (sourceNativeType, sourceSeverityStated, sourceFormat, status values) are NEVER labelled —
+   * they are shown verbatim, as the source wrote them.
+   */
+  readonly vocabulary: {
+    readonly observationKind: Readonly<Record<HumanitarianObservationKind, string>>;
+    readonly hazardType: Readonly<Record<HumanitarianHazardType, string>>;
+    readonly eventStatus: Readonly<Record<HumanitarianEventStatus, string>>;
+    readonly impactMeasure: Readonly<Record<HumanitarianImpactMeasure, string>>;
+    readonly statusMeasure: Readonly<Record<HumanitarianStatusMeasure, string>>;
+    readonly impactBasis: Readonly<Record<ImpactAssertionBasis, string>>;
+  };
 }
 
 export const humanitarianEn: HumanitarianLanguageStrings = {
@@ -117,4 +140,47 @@ export const humanitarianEn: HumanitarianLanguageStrings = {
   },
 
   translationIsNotEvidence: 'A translation carries no more certainty than the original.',
+
+  vocabulary: {
+    observationKind: {
+      HUMANITARIAN_EVENT: 'Event',
+      HUMANITARIAN_REPORT: 'Report',
+      HUMANITARIAN_IMPACT_ASSERTION: 'Impact figure, as stated by the source',
+    },
+    hazardType: {
+      EARTHQUAKE: 'Earthquake',
+      TROPICAL_CYCLONE: 'Tropical cyclone',
+      FLOOD: 'Flood',
+      DROUGHT: 'Drought',
+      WILDFIRE: 'Wildfire',
+      VOLCANIC_ACTIVITY: 'Volcanic activity',
+      ARMED_CONFLICT_DISPLACEMENT: 'Displacement due to armed conflict',
+      EPIDEMIC: 'Epidemic',
+    },
+    eventStatus: {
+      ONGOING: 'Ongoing',
+      CLOSED: 'Closed',
+      NOT_STATED: 'Status not stated by the source',
+    },
+    impactMeasure: {
+      PEOPLE_AFFECTED: 'People affected',
+      PEOPLE_DISPLACED: 'People displaced',
+      FATALITIES: 'Fatalities',
+      INJURED: 'Injured',
+      PEOPLE_IN_NEED: 'People in need',
+      HOUSES_DAMAGED: 'Houses damaged',
+      HOUSES_DESTROYED: 'Houses destroyed',
+    },
+    statusMeasure: {
+      SHELTER_STATUS: 'Shelter',
+      HEALTH_STATUS: 'Health',
+      FOOD_SECURITY_STATUS: 'Food security',
+      WATER_STATUS: 'Water',
+      HUMANITARIAN_ACCESS_STATUS: 'Humanitarian access',
+    },
+    impactBasis: {
+      SOURCE_STATED: 'Stated by the source',
+      SOURCE_ESTIMATED: 'Estimated by the source',
+    },
+  },
 };

@@ -110,6 +110,9 @@ export * from './humanitarian/geometry-authority';
 export * from './humanitarian/authority-cadence';
 /* HUMANITARIAN LANGUAGE QUALIFICATION R1 (lane L) — consumed by the EN/PL humanitarian dictionaries. */
 export * from './humanitarian/language';
+/* HUMANITARIAN DATA AUTHORITY R1 (Main) — exported now that it has a consumer (the EN/PL
+   vocabulary labels). Types and validators only: nothing here acquires or persists. */
+export * from './humanitarian/observation';
 
 /*
   SECURITY — THE ACCEPTED PART IX CONTRACT, CONVERGED ONTO THIS LINEAGE.
