@@ -324,6 +324,87 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
       };
     const tick = () => new Promise((resolve) => setTimeout(resolve, 15));
 
+    /* FINAL STAGE 2 + STORED-REUSE CONVERGENCE R1 — the three layers in ONE sequence on the
+       real service, adapter and controls: current reporting is observed afresh, its first
+       artifact stays a display-only read, and only time-independent answers (stable reference,
+       deterministic computation) replay. */
+    it('combined sequence: degraded current → fresh retry → display-only reopen → reference reuse → computation reuse', async () => {
+      analyzeNews.mockImplementation(degraded);
+      answerBackground.mockImplementation(async () => ({
+        text: 'TCP is connection-oriented and reliable; UDP is connectionless and best-effort.',
+      }));
+
+      /* 1 — "Any global news can you share?" with the provider degraded → INSUFFICIENT */
+      const key = randomUUID();
+      const first = await submit(LIVE_Q, key);
+      const firstPayload = await stored(first.storedResultId);
+      expect(firstPayload).toMatchObject({ aiExecuted: false, answer: { state: 'INSUFFICIENT' } });
+      expect(analyzeNews).toHaveBeenCalledTimes(1);
+      /* the SAME idempotency key is the SAME operation: no second run */
+      expect((await submit(LIVE_Q, key)).operationId).toBe(first.operationId);
+      expect(analyzeNews).toHaveBeenCalledTimes(1);
+      await tick();
+
+      /* 2 — a new explicit Send (fresh key): new operation, retrieval entered again, new checkedAt */
+      const second = await submit(LIVE_Q);
+      expect(second.operationId).not.toBe(first.operationId);
+      expect(second.storedResultReused).toBe(false);
+      expect(second.computeClass).not.toBe('STORED');
+      expect(analyzeNews).toHaveBeenCalledTimes(2);
+      const secondPayload = await stored(second.storedResultId);
+      expect(second.storedResultId).not.toBe(first.storedResultId);
+      expect(secondPayload.answer.state).toBe('INSUFFICIENT');
+      expect(Date.parse(secondPayload.checkedAt)).toBeGreaterThan(
+        Date.parse(firstPayload.checkedAt),
+      );
+
+      /* 3 — reopening the first operation: original checkedAt, 0 provider, 0 AI, 0 compute */
+      analyzeNews.mockClear();
+      const reservations = await db.computeReservation.count();
+      const operations = await db.computeOperation.count({ where: { userId } });
+      const reopened = await service.getOperation(accountPrincipal(userId), first.operationId);
+      expect(reopened.result?.displayOnly).toBe(true);
+      expect((reopened.result?.payload as { checkedAt: string }).checkedAt).toBe(
+        firstPayload.checkedAt,
+      );
+      expect(analyzeNews).not.toHaveBeenCalled();
+      expect(answerBackground).not.toHaveBeenCalled();
+      expect(await db.computeReservation.count()).toBe(reservations);
+      expect(await db.computeOperation.count({ where: { userId } })).toBe(operations);
+
+      /* 4 — a stable technical question twice: REFERENCE_BACKGROUND, the second is a replay */
+      const TECH_Q = 'What is the difference between TCP and UDP, and when would you use each?';
+      const ref1 = await submit(TECH_Q);
+      expect((await stored(ref1.storedResultId)).answer.state).toBe('REFERENCE_BACKGROUND');
+      const ref2 = await submit(TECH_Q);
+      expect(ref2.operationId).not.toBe(ref1.operationId);
+      expect(ref2.storedResultReused).toBe(true);
+      expect(ref2.storedResultId).toBe(ref1.storedResultId);
+      expect(answerBackground).toHaveBeenCalledTimes(1);
+      expect(analyzeNews).not.toHaveBeenCalled();
+
+      /* 5 — a deterministic calculation twice: COMPUTED_RESULT, the second is a replay */
+      const CALC_Q =
+        'A 400 V three-phase motor draws 32 A at a power factor of 0.84 and efficiency of 91%. Estimate its mechanical output power and show the calculation.';
+      const calc1 = await submit(CALC_Q);
+      const calcPayload = (await payloadOf(calc1.storedResultId)) as unknown as {
+        aiExecuted: boolean;
+        answer: { state: string };
+        computation: { result: { value: number; unit: string } };
+      };
+      expect(calcPayload).toMatchObject({
+        aiExecuted: false,
+        answer: { state: 'COMPUTED_RESULT' },
+        computation: { result: { value: 16.95, unit: 'kW' } },
+      });
+      const calc2 = await submit(CALC_Q);
+      expect(calc2.operationId).not.toBe(calc1.operationId);
+      expect(calc2.storedResultReused).toBe(true);
+      expect(calc2.storedResultId).toBe(calc1.storedResultId);
+      expect(analyzeNews).not.toHaveBeenCalled();
+      expect(answerBackground).toHaveBeenCalledTimes(1);
+    });
+
     it('1–5 · a degraded INSUFFICIENT answer is never replayed; the retry runs again; the first stays display-only', async () => {
       analyzeNews.mockImplementation(degraded);
       /* 1 — first attempt: degraded, INSUFFICIENT, aiExecuted=false */
