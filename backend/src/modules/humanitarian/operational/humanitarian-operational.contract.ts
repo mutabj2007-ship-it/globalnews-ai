@@ -102,8 +102,14 @@ export const STATUS_MUST_NOT_IMPLY: readonly string[] = Object.freeze([
  * 3 · SOURCES — AND WHAT "CONFIGURED" HONESTLY MEANS
  * ══════════════════════════════════════════════════════════════════════════ */
 
-export const HUMANITARIAN_SOURCE_IDS = ['GDACS', 'RELIEFWEB', 'COPERNICUS_EMS'] as const;
-export type HumanitarianSourceId = (typeof HUMANITARIAN_SOURCE_IDS)[number];
+/*
+  ONE SOURCE REGISTRY (Humanitarian convergence, CTO ruling). The source list and its activation
+  verdicts belong to E1's source ruling; this surface re-exports them and never declares its own,
+  so the Admin view cannot drift from the admission authority.
+*/
+import type { SourceActivationVerdict } from '../source-activation.ruling';
+export { HUMANITARIAN_SOURCE_IDS, type HumanitarianSourceId } from '../source-activation.ruling';
+import type { HumanitarianSourceId } from '../source-activation.ruling';
 
 /**
  * Four distinguishable implementation states. The brief asks for "configured /
@@ -145,6 +151,10 @@ export interface HumanitarianSourceStatus {
   readonly sourceId: HumanitarianSourceId;
   readonly implementation: SourceImplementationState;
   readonly activation: SourceActivationState;
+  /** E1's verdict for this source, verbatim from HUMANITARIAN_SOURCE_RULINGS (read, never restated). */
+  readonly e1Verdict: SourceActivationVerdict;
+  /** When E1 ruled. */
+  readonly e1RuledAt: string;
   /** Why this source is in that state, in one operator-readable sentence. */
   readonly basis: string;
 

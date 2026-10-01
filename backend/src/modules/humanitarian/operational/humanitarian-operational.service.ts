@@ -5,6 +5,13 @@ import {
   HUMANITARIAN_PRODUCER_ACTIVATION,
 } from '../producers/copernicus-ems.producer';
 import {
+  HUMANITARIAN_SOURCE_IDS,
+  HUMANITARIAN_SOURCE_RULINGS,
+  verdictPermitsRuntimeAcquisition,
+  type HumanitarianSourceId,
+  type SourceActivationVerdict,
+} from '../source-activation.ruling';
+import {
   COVERAGE_GRANULARITY,
   HUMANITARIAN_ALERT_IDS,
   WITHHOLD_REPORTING,
@@ -92,11 +99,33 @@ export class HumanitarianOperationalService {
     return { status: 'PARTIAL', basis: `Admission is instrumented; ${admitted.value} admitted.` };
   }
 
+  /** E1's ruling for one source: the verdict, verbatim, and the activation it permits. */
+  private e1(sourceId: HumanitarianSourceId) {
+    const ruling = HUMANITARIAN_SOURCE_RULINGS[sourceId];
+    return {
+      activation: deriveSourceActivation(ruling.verdict),
+      e1Verdict: ruling.verdict,
+      e1RuledAt: ruling.ruledAt,
+    };
+  }
+
+  /** One row per source in E1's registry (exhaustive: a new E1 source is a compile error). */
+  private row(sourceId: HumanitarianSourceId): HumanitarianSourceStatus {
+    switch (sourceId) {
+      case 'GDACS':
+        return this.gdacs();
+      case 'RELIEFWEB':
+        return this.reliefweb();
+      case 'COPERNICUS_EMS':
+        return this.copernicus();
+    }
+  }
+
   private gdacs(): HumanitarianSourceStatus {
     return {
       sourceId: 'GDACS',
       implementation: 'NOT_IMPLEMENTED',
-      activation: 'NOT_CLEARED',
+      ...this.e1('GDACS'),
       basis: NO_SOURCE_CODE,
       lastSuccessfulAcquisition: unmeasured(NO_ACQUISITION),
       lastAttemptedAcquisition: unmeasured(NO_ACQUISITION),
@@ -122,6 +151,7 @@ export class HumanitarianOperationalService {
     return {
       ...this.gdacs(),
       sourceId: 'RELIEFWEB',
+      ...this.e1('RELIEFWEB'),
       basis:
         NO_SOURCE_CODE +
         ' Its only occurrence in the repository is a frontend guard that forbids naming it.',
@@ -134,8 +164,10 @@ export class HumanitarianOperationalService {
       implementation; execution is not. Both constants are read rather than
       restated, so this row cannot drift from the activation authority.
     */
+    /* Both authorities must permit: E1's source verdict AND the producer's own activation. */
+    const e1 = this.e1('COPERNICUS_EMS');
     const activation =
-      HUMANITARIAN_PRODUCER_ACTIVATION === 'NOT_CLEARED'
+      e1.activation === 'NOT_CLEARED' || HUMANITARIAN_PRODUCER_ACTIVATION === 'NOT_CLEARED'
         ? ('NOT_CLEARED' as const)
         : COPERNICUS_PRODUCER_ENABLED
           ? ('RUNNING' as const)
@@ -144,6 +176,7 @@ export class HumanitarianOperationalService {
     return {
       sourceId: 'COPERNICUS_EMS',
       implementation: 'TRANSFORM_ONLY_NO_ACQUISITION',
+      ...e1,
       activation,
       basis:
         `A transform producer exists for ${COPERNICUS_SOURCE_ID}; it takes an already-obtained payload. ` +
@@ -226,7 +259,7 @@ export class HumanitarianOperationalService {
 
   /** The whole surface. Pure: same output for the same build, bar the timestamp. */
   status(now: Date = new Date()): HumanitarianOperationalStatus {
-    const sources = [this.gdacs(), this.reliefweb(), this.copernicus()];
+    const sources = HUMANITARIAN_SOURCE_IDS.map((sourceId) => this.row(sourceId));
     /*
       Module status is derived from ADMISSION, which no source instruments — so
       the aggregate is unmeasured and the status is NOT_ASSESSED. Deriving it
@@ -254,4 +287,15 @@ export class HumanitarianOperationalService {
       generatedAt: now.toISOString(),
     };
   }
+}
+
+/**
+ * Activation as E1 permits it. Only E1's runtime verdict can lift a source out of NOT_CLEARED, and
+ * even then this surface reports CLEARED_NOT_RUNNING: nothing here runs or starts acquisition, and
+ * no Admin control exists that could (no activation bypass).
+ */
+export function deriveSourceActivation(
+  verdict: SourceActivationVerdict,
+): 'NOT_CLEARED' | 'CLEARED_NOT_RUNNING' {
+  return verdictPermitsRuntimeAcquisition(verdict) ? 'CLEARED_NOT_RUNNING' : 'NOT_CLEARED';
 }
