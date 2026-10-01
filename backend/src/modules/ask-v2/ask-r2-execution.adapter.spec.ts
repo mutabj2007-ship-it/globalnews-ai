@@ -2233,3 +2233,167 @@ describe('ASK PUBLIC BETA RETRIEVAL REPAIR R1 — fail-closed guards on the live
     expect(countsAsGuestAnswer(payload)).toBe(true);
   });
 });
+
+/*
+  ════════════════════════════════════════════════════════════════════════════
+  ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the Product Owner's 15 live questions,
+  as permanent route-and-execution fixtures, plus the negative controls.
+  Production before this tranche: 1/15 substantive (9 → news / "Search was limited",
+  5 → "Add one specific place, topic or period").
+  ════════════════════════════════════════════════════════════════════════════
+*/
+const PO_STABLE: ReadonlyArray<[string, string]> = [
+  [
+    'induction motor inrush',
+    'Why does a three-phase induction motor draw a high inrush current when it starts, and how do a soft starter and a variable-frequency drive reduce it differently?',
+  ],
+  [
+    'cavitation / NPSH',
+    'Explain why cavitation occurs in a centrifugal pump. What is NPSH, and why must the available NPSH exceed the required NPSH?',
+  ],
+  [
+    'reinforced concrete',
+    'Why can a reinforced-concrete beam carry much more bending load than a plain concrete beam of the same size?',
+  ],
+  [
+    'yield / UTS / fracture',
+    'What is the difference between yield strength, ultimate tensile strength and fracture strength on a stress-strain curve?',
+  ],
+  [
+    'stainless corrosion',
+    'Why does stainless steel resist corrosion, and under what conditions can it still corrode?',
+  ],
+  [
+    'AC / DC / HVDC',
+    'Explain the difference between AC and DC transmission, and why HVDC is used for very long distances or undersea cables.',
+  ],
+  [
+    'lithium-ion battery',
+    'What physically happens inside a lithium-ion battery when it charges and discharges?',
+  ],
+  [
+    'heat pump COP',
+    'How does a heat pump produce more heat energy than the electrical energy it consumes? Explain the coefficient of performance.',
+  ],
+  [
+    'Darcy–Weisbach',
+    "Why does increasing a pipe's diameter reduce pressure loss so strongly? Explain using the Darcy-Weisbach equation.",
+  ],
+  ['TCP / UDP', 'What is the difference between TCP and UDP, and when would you use each?'],
+  ['database ACID', 'Explain what a database transaction is and why ACID properties matter.'],
+  [
+    'encryption',
+    'What is the difference between symmetric and asymmetric encryption, and how are they used together in TLS?',
+  ],
+  [
+    'GPS satellites',
+    'Why does a GPS receiver need signals from at least four satellites to determine its position?',
+  ],
+  ['weather / climate', 'What is the difference between weather and climate?'],
+];
+const MOTOR_Q =
+  'A 400 V three-phase motor draws 32 A at a power factor of 0.84 and efficiency of 91%. Estimate its mechanical output power and show the calculation.';
+
+describe('ASK TECHNICAL / SCIENTIFIC REASONING R1 — the PO corpus, routed and executed', () => {
+  async function run(q: string, h: ReturnType<typeof harness>) {
+    const plan = await h.adapter.prepare(req(q));
+    return JSON.parse(
+      (await inRequest(() => h.adapter.execute(req(q), plan, 'op-tech'))).payloadJson,
+    );
+  }
+
+  it.each(PO_STABLE)(
+    '%s → REFERENCE_BACKGROUND, zero news calls, no clarification, no place or time',
+    async (_label, q) => {
+      const h = harness({});
+      const payload = await run(q, h);
+      expect(payload.route.terminalState).toBe('REFERENCE_BACKGROUND_ONLY');
+      expect(payload.answer.state).toBe('REFERENCE_BACKGROUND');
+      expect(payload.background.text.length).toBeGreaterThan(0);
+      /* the news/analysis path is never touched: a news outage has ZERO effect here */
+      expect(h.calls.analysis).toEqual([]);
+      expect(h.calls.background).toHaveLength(1);
+      expect(payload.route.refusals).not.toContain('CLARIFICATION_REQUIRED');
+      const chips = payload.chips.kind === 'SCOPED' ? payload.chips.chips : [];
+      expect(
+        chips.filter((c: { kind: string }) => c.kind === 'GEOGRAPHY' || c.kind === 'TIME'),
+      ).toEqual([]);
+    },
+  );
+
+  it('the motor calculation → COMPUTED_RESULT, deterministic numbers, zero AI, zero news', async () => {
+    const h = harness({});
+    const payload = await run(MOTOR_Q, h);
+    expect(payload.route.questionClass).toBe('COMPUTATION');
+    expect(payload.answer).toMatchObject({
+      state: 'COMPUTED_RESULT',
+      basis: 'DETERMINISTIC_COMPUTATION',
+    });
+    expect(payload.aiExecuted).toBe(false);
+    expect(h.calls.analysis).toEqual([]);
+    expect(h.calls.background).toEqual([]);
+    expect(h.calls.reserve).toEqual([]);
+    expect(payload.computation.steps.map((s: { value: number }) => s.value)).toEqual([
+      18.62, 16.95,
+    ]);
+    expect(payload.computation.result).toEqual({
+      name: 'mechanical output power',
+      value: 16.95,
+      unit: 'kW',
+    });
+  });
+
+  it.each([
+    ['What is the current price of lithium carbonate?', 'current price'],
+    ['What changed today in lithium-ion battery safety regulation?', 'changed today'],
+    ['What does the latest IEC battery-safety standard require?', 'latest standard'],
+  ])('negative control "%s" stays on the current/retrieval path', async (q) => {
+    const h = harness({});
+    const payload = await run(q, h);
+    expect(payload.route.terminalState).toBe('EXECUTABLE');
+    expect(h.calls.analysis).toHaveLength(1);
+    expect(h.calls.background).toEqual([]);
+  });
+
+  it('negative control: "Explain how lithium-ion batteries work." is stable reference', async () => {
+    const h = harness({});
+    const payload = await run('Explain how lithium-ion batteries work.', h);
+    expect(payload.answer.state).toBe('REFERENCE_BACKGROUND');
+    expect(h.calls.analysis).toEqual([]);
+  });
+
+  it('negative control: "Calculate the energy stored in a 48 V 100 Ah battery." is computation', async () => {
+    const h = harness({});
+    const payload = await run('Calculate the energy stored in a 48 V 100 Ah battery.', h);
+    expect(payload.answer.state).toBe('COMPUTED_RESULT');
+    expect(payload.computation.result).toEqual({
+      name: 'stored energy (nominal)',
+      value: 4.8,
+      unit: 'kWh',
+    });
+    expect(h.calls.analysis).toEqual([]);
+  });
+
+  it('a missing engineering parameter is never invented: the reader is asked for it', async () => {
+    const h = harness({});
+    const payload = await run(
+      'A 400 V three-phase motor draws 32 A. Estimate its mechanical output power.',
+      h,
+    );
+    expect(payload.answer.state).toBe('CLARIFICATION_REQUIRED');
+    expect(payload.answer.basis).toBe('COMPUTATION_INPUTS_MISSING');
+    expect(payload.answer.candidates).toEqual(['power factor', 'efficiency']);
+    expect(h.calls.analysis).toEqual([]);
+  });
+
+  it.each([
+    ['Why is the dollar falling?', 'a changing quantity'],
+    ['Compare TCP adoption trends in 2026 enterprise networks', 'a stated year'],
+    ['What is happening in Kenya?', 'a named place'],
+  ])('freshness still outranks a stable shape: "%s" (%s) keeps the retrieval path', async (q) => {
+    const h = harness({});
+    const payload = await run(q, h);
+    expect(payload.answer.state).not.toBe('REFERENCE_BACKGROUND');
+    expect(h.calls.background).toEqual([]);
+  });
+});

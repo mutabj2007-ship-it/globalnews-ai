@@ -554,3 +554,29 @@ describe('ASK TRUTHFUL RETRIEVAL R2A — what was checked is shown, never a deni
     expect(askR2View(payload('CURRENT_REPORTING'), EN, 'en').verification).toBeNull();
   });
 });
+
+describe('ASK TECHNICAL / SCIENTIFIC REASONING R1 — a deterministic computed answer', () => {
+  it('is its own CALCULATION state: no sources, no AI, never "current" or "verified"', () => {
+    const v = askR2View(
+      payload('COMPUTED_RESULT', { aiExecuted: false, analysis: null }),
+      EN,
+      'en',
+    );
+    expect(v.badge).toBe('calc');
+    expect(v.badgeText).toBe('CALCULATION');
+    expect(v.freshness).toBe(
+      'Calculated deterministically from the values in your question · no sources needed · no AI used',
+    );
+    expect(v.citable).toBe(false);
+    expect(v.handoffs).toEqual({ openFull: false, runDeeper: false });
+  });
+
+  it('Polish wording', () => {
+    const v = askR2View(
+      payload('COMPUTED_RESULT', { aiExecuted: false, analysis: null }),
+      PL,
+      'pl',
+    );
+    expect(v.badgeText).toBe('OBLICZENIE');
+  });
+});

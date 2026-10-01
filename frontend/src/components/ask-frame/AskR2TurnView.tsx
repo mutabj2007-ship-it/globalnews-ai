@@ -179,6 +179,43 @@ export function AskR2TurnView({
         {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
       </div>
 
+      {/* ASK TECHNICAL / SCIENTIFIC REASONING R1 — the server's deterministic computation. */}
+      {payload.computation != null && (
+        <section
+          data-ask="computation"
+          className={`flex flex-col gap-2 ${CARD} ${CARD_CLASS.current}`}
+        >
+          <p className={EYEBROW}>{s.answer}</p>
+          <p data-ask="computation-result" className="text-[18px] font-bold leading-[1.4]">
+            {payload.computation.result.name}: {payload.computation.result.value}{' '}
+            {payload.computation.result.unit}
+          </p>
+          <ul data-ask="computation-inputs" className="flex flex-col gap-0.5">
+            {payload.computation.inputs.map((input) => (
+              <li key={input.name} className="font-mono text-[12px] text-[#8fa6c0]">
+                {input.name} = {input.value}
+                {input.unit === '' ? '' : ` ${input.unit}`} (“{input.quoted}”)
+              </li>
+            ))}
+          </ul>
+          <ol data-ask="computation-steps" className="flex flex-col gap-1">
+            {payload.computation.steps.map((step) => (
+              <li key={step.label} className="text-[15px] leading-[1.5]">
+                {step.label}: <span className="font-mono">{step.expression}</span> ={' '}
+                <strong>
+                  {step.value} {step.unit}
+                </strong>
+              </li>
+            ))}
+          </ol>
+          {payload.computation.conventions.map((convention) => (
+            <p key={convention} className="text-[13px] text-[#8fa6c0]">
+              {convention}
+            </p>
+          ))}
+        </section>
+      )}
+
       {/* ASK TRUTHFUL RETRIEVAL R2A — what was checked; never a denial built on absence. */}
       {view.badge !== 'clar' && view.verification !== null && (
         <section data-ask="verification" className="flex flex-col gap-2">
