@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  Injectable,
-  NotFoundException,
-  Post,
-  type CanActivate,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, NotFoundException, Post } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { Type } from 'class-transformer';
@@ -39,7 +30,9 @@ import { NewsService } from '../news.service';
  * separate-event flag needs canonical story identity (WP3) and is NOT computed here.
  *
  * GATE: `COMPARE_READ_ENABLED` (deployment literal 'true', server-only). Off — the
- * default — the route is a 404, so it does not exist until it is released.
+ * default — the route is a 404, so it does not exist until it is released. Checked in the
+ * handler, not by a guard: the public news module stays structurally session-blind (no
+ * guards, no identity — news-session-blindness.spec.ts).
  */
 
 export class ResolveStoriesDto {
@@ -69,13 +62,9 @@ export interface ResolvedStoryView {
   };
 }
 
-@Injectable()
-export class CompareReadEnabledGuard implements CanActivate {
-  constructor(private readonly config: ConfigService) {}
-  canActivate(): boolean {
-    if (this.config.get<string>('COMPARE_READ_ENABLED') !== 'true') throw new NotFoundException();
-    return true;
-  }
+/** The release gate, as the exact deployment literal (the switches' KS-6 rule). */
+export function compareReadEnabled(config: Pick<ConfigService, 'get'>): boolean {
+  return config.get<string>('COMPARE_READ_ENABLED') === 'true';
 }
 
 /** Pure projection of a retained article onto the Compare view's public fields. */
@@ -120,14 +109,17 @@ export async function resolveStoriesForCompare(
 
 @Controller('news/stories')
 export class StoryCompareController {
-  constructor(private readonly news: NewsService) {}
+  constructor(
+    private readonly news: NewsService,
+    private readonly config: ConfigService,
+  ) {}
 
   /** POST /news/stories/resolve — 0 AI · 0 provider · 0 write. */
   @Throttle({ default: { limit: 60, ttl: 60000 } })
-  @UseGuards(CompareReadEnabledGuard)
   @Post('resolve')
   @HttpCode(200)
   async resolve(@Body() dto: ResolveStoriesDto): Promise<{ stories: ResolvedStoryView[] }> {
+    if (!compareReadEnabled(this.config)) throw new NotFoundException();
     return { stories: await resolveStoriesForCompare(this.news, dto.stories) };
   }
 }

@@ -6,8 +6,9 @@ import { validate } from 'class-validator';
 import type { NewsArticle } from '@globalnews-ai/shared';
 import { computeArticleRef } from '../identity/article-ref.util';
 import {
-  CompareReadEnabledGuard,
   ResolveStoriesDto,
+  StoryCompareController,
+  compareReadEnabled,
   resolveStoriesForCompare,
 } from './story-compare.controller';
 
@@ -36,12 +37,15 @@ const retained: NewsArticle = {
 } as NewsArticle;
 
 describe('POST /news/stories/resolve — Compare read model', () => {
-  it('is a 404 unless COMPARE_READ_ENABLED is the literal "true"', () => {
+  it('is a 404 unless COMPARE_READ_ENABLED is the literal "true" — and reads nothing when off', async () => {
+    const news = { findRetainedArticleByUrl: jest.fn() };
     for (const value of [undefined, '', 'TRUE', '1', ' true']) {
-      const guard = new CompareReadEnabledGuard({ get: () => value } as never);
-      expect(() => guard.canActivate()).toThrow(NotFoundException);
+      expect(compareReadEnabled({ get: () => value } as never)).toBe(false);
+      const controller = new StoryCompareController(news as never, { get: () => value } as never);
+      await expect(controller.resolve({ stories: [{ articleRef: REF_A, url: URL_A }] })).rejects.toBeInstanceOf(NotFoundException);
     }
-    expect(new CompareReadEnabledGuard({ get: () => 'true' } as never).canActivate()).toBe(true);
+    expect(news.findRetainedArticleByUrl).not.toHaveBeenCalled();
+    expect(compareReadEnabled({ get: () => 'true' } as never)).toBe(true);
   });
 
   it('verifies each ref against its URL, reads retained reporting, and reports the rest', async () => {
