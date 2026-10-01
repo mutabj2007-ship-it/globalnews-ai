@@ -57,7 +57,7 @@ import {
   type AskRequest,
   type ExecutionResult,
 } from './ask-compute.contract';
-import { askRequestContext } from './ask-request-context';
+import { askRequestContext, type AskRequestContext } from './ask-request-context';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
 import {
   newAskObservationDraft,
@@ -336,6 +336,35 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     };
   }
 
+  /**
+   * ASK GUEST TRIAL R3 — a guest adds its scopes INSIDE every existing control. Invalid guest
+   * settings fail closed for the guest only (checked again here, before any spend).
+   *
+   * UNIFIED INTELLIGENCE BINDING R2A.1 — the ONE construction of the guest resource scope, used
+   * by every metered execution (Reporting and Background), so a guest's AI work is bounded by
+   * the same pool, session-units and session-concurrency controls whichever path answers it.
+   * Built only from the server-held request context and GuestSessionService's config; an
+   * account request has no guest scope.
+   */
+  private async resolveGuestComputeScope(
+    who: AskRequestContext,
+  ): Promise<GuestComputeScope | undefined> {
+    if (who.guestSessionId == null) return undefined;
+    if (this.guests === undefined) throw new AskExecutionRefused('GUEST_TRIAL_NOT_CONFIGURED');
+    const trial = this.guests.trialConfig();
+    if (!trial.valid) throw new AskExecutionRefused('GUEST_TRIAL_NOT_CONFIGURED');
+    if (!(await this.switches.isEnabled('ASK_GUEST_TRIAL_ENABLED'))) {
+      throw new AskExecutionRefused('GUEST_TRIAL_UNAVAILABLE');
+    }
+    return {
+      sessionId: who.guestSessionId,
+      unitsPerSession: trial.limits.unitsPerSession,
+      poolUnitsPerHour: trial.limits.poolUnitsPerHour,
+      poolUnitsPerDay: trial.limits.poolUnitsPerDay,
+      concurrentPerSession: trial.limits.concurrentPerSession,
+    };
+  }
+
   /** The governed reads for this route — local, bounded, isolated; never rejects. */
   private readIntelligence(route: AskR2Route): Promise<AskContributionSet> {
     return this.intelligence.read(route).catch((error: unknown) => {
@@ -561,24 +590,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
 
     const analysisConfig = this.analysisConfig.get();
-    /* ASK GUEST TRIAL R3 — a guest adds its scopes INSIDE every existing control. Invalid guest
-       settings fail closed for the guest only (checked again here, before any spend). */
-    let guest: GuestComputeScope | undefined;
-    if (who.guestSessionId != null) {
-      if (this.guests === undefined) throw new AskExecutionRefused('GUEST_TRIAL_NOT_CONFIGURED');
-      const trial = this.guests.trialConfig();
-      if (!trial.valid) throw new AskExecutionRefused('GUEST_TRIAL_NOT_CONFIGURED');
-      if (!(await this.switches.isEnabled('ASK_GUEST_TRIAL_ENABLED'))) {
-        throw new AskExecutionRefused('GUEST_TRIAL_UNAVAILABLE');
-      }
-      guest = {
-        sessionId: who.guestSessionId,
-        unitsPerSession: trial.limits.unitsPerSession,
-        poolUnitsPerHour: trial.limits.poolUnitsPerHour,
-        poolUnitsPerDay: trial.limits.poolUnitsPerDay,
-        concurrentPerSession: trial.limits.concurrentPerSession,
-      };
-    }
+    const guest = await this.resolveGuestComputeScope(who);
     const reservation = await this.meter.reserve({
       accountId: who.accountId,
       ipScope: who.ipScope,
@@ -858,9 +870,14 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const permit = await this.breaker.permit(provider);
     if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
 
+    /* R2A.1 — the same guest scope as Reporting, in the same place (after the breaker permit,
+       before the reservation): a guest's background answer is bounded by its pool, session
+       units and session concurrency too. */
+    const guest = await this.resolveGuestComputeScope(who);
     const reservation = await this.meter.reserve({
       accountId: who.accountId,
       ipScope: who.ipScope,
+      ...(guest === undefined ? {} : { guest }),
       provider,
       estimatedUnits: estimateBackgroundUnits(
         request.question.length,
