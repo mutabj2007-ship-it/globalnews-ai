@@ -34,6 +34,11 @@ import {
   scoreRelationalRelevance,
 } from './relevance/generic-relevance.util';
 import { scoreCountryEconomyRelevance } from './relevance/country-economy-relevance.util';
+import { publishedInsideWindow } from './relevance/publication-window.util';
+import {
+  scoreEventFrameRelevance,
+  type EventFrameAdmission,
+} from './relevance/event-frame-relevance.util';
 import {
   scoreCompoundPlanRelevance,
   type CompoundRetrievalPlanAdmission,
@@ -161,6 +166,11 @@ export type RelevanceMode =
     Opt-in by exactly one caller; every other mode is unchanged.
   */
   | { type: 'compoundPlan'; plan: CompoundRetrievalPlanAdmission }
+  /*
+    ASK TRUTHFUL RETRIEVAL R2A — one search of an EVENT frame (event-frame-relevance.util.ts):
+    event vocabulary + identifier / route endpoints + time. Opt-in by exactly one caller.
+  */
+  | { type: 'eventFrame'; frame: EventFrameAdmission }
   /*
     P1 MULTI-ENTITY / TOPIC RELEVANCE CLOSURE R1 — Entity A → event → Entity B
     (relational-event.ts): both entities AND the event family, stated together. Opt-in by
@@ -350,6 +360,47 @@ export function attachProviderFailures(
  * and "the provider succeeded" identically, which is what makes this safe to
  * add without touching a single existing test.
  */
+const CANDIDATES_SEEN = Symbol('globalnews.candidatesSeen');
+const WINDOW_EXCLUDED = Symbol('globalnews.windowExcluded');
+
+/**
+ * BETA-ASK-005 — the ids of provider candidates a search() dropped for falling outside the
+ * requested publication window (same side channel; no JSON, no shared contract).
+ */
+export function readWindowExcluded(response: NewsResponse): readonly string[] {
+  const carried = (response as unknown as Record<symbol, unknown>)[WINDOW_EXCLUDED];
+  return Array.isArray(carried) ? (carried as string[]) : [];
+}
+
+/**
+ * ASK TRUTHFUL RETRIEVAL R2A — how many provider candidates a search() saw BEFORE its relevance
+ * gate, on the same non-enumerable side channel as the failures (no JSON, no shared contract).
+ */
+function withCandidatesSeen(
+  count: number,
+  response: NewsResponse,
+  windowExcluded: ReadonlySet<string> = new Set(),
+): NewsResponse {
+  Object.defineProperty(response, CANDIDATES_SEEN, {
+    value: count,
+    enumerable: false,
+    configurable: true,
+  });
+  if (windowExcluded.size > 0) {
+    Object.defineProperty(response, WINDOW_EXCLUDED, {
+      value: [...windowExcluded],
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  return response;
+}
+
+export function readCandidatesSeen(response: NewsResponse): number {
+  const carried = (response as unknown as Record<symbol, unknown>)[CANDIDATES_SEEN];
+  return typeof carried === 'number' ? carried : response.articles.length;
+}
+
 export function readProviderFailures(response: NewsResponse): ProviderFailure[] {
   const carried = (response as unknown as Record<symbol, unknown>)[PROVIDER_FAILURES];
   return Array.isArray(carried) ? (carried as ProviderFailure[]) : [];
@@ -653,6 +704,12 @@ export class NewsService {
       /** BETA-ASK-005 — a bounded publication window, handed to providers that support one. */
       from?: string;
       to?: string;
+      /**
+       * ASK TRUTHFUL RETRIEVAL R2A — providers this caller already saw refuse (rate limit /
+       * auth) during the SAME Ask. They are not asked again, so one provider's 429 cannot be
+       * hammered; every other lane still runs. Absent = every eligible provider.
+       */
+      excludeProviderIds?: readonly string[];
     },
   ): Promise<NewsResponse> {
     const requestedSource = options?.requestedSource;
@@ -761,11 +818,19 @@ export class NewsService {
         ? { admits: admitsForPeerTail, graceMs: PEER_TAIL_GRACE_MS }
         : undefined;
 
+    const excluded = new Set(options?.excludeProviderIds ?? []);
+    const windowFrom = options?.from;
+    const windowTo = options?.to;
+    const inWindow =
+      windowFrom !== undefined && windowTo !== undefined
+        ? (article: NewsArticle) => publishedInsideWindow(article, windowFrom, windowTo)
+        : undefined;
     const providerCall = await this.callAllProviders(
       searchOperation,
       'search',
       peerTailPolicy,
       allowFallback,
+      excluded,
     );
 
     /*
@@ -776,6 +841,8 @@ export class NewsService {
      * no path on which a failure is silently lost.
      */
     let failures = providerCall.failures;
+    let candidatesSeen = 0;
+    const windowExcluded = new Set<string>();
 
     // G-ALPHA-1 — the accumulated provider evidence for THIS request. Mutable
     // only because the bounded rescue below may add exactly one provider set's
@@ -820,12 +887,28 @@ export class NewsService {
        * about who answered), and does nothing at all when no `requestedSource`
        * was supplied — which is every ordinary request in the product.
        */
-      const candidates = requestedSource
+      const attributed = requestedSource
         ? results.map(({ providerId, articles }) => ({
             providerId,
             articles: filterToRequestedSource(articles, requestedSource),
           }))
         : results;
+      /*
+        BETA-ASK-005 / CTO ADDENDUM — strict publication-window eligibility is decided PER
+        PROVIDER CANDIDATE, before the cross-provider duplicate collapse below. The collapse keeps
+        one winner per story; an out-of-window copy must never be the winner that removes an
+        in-window copy of the same story. Narrowing only — nothing is admitted here.
+      */
+      const candidates = inWindow
+        ? attributed.map(({ providerId, articles }) => ({
+            providerId,
+            articles: articles.filter((article) => {
+              const keep = inWindow(article);
+              if (!keep) windowExcluded.add(article.id);
+              return keep;
+            }),
+          }))
+        : attributed;
 
       const raw = this.buildResponse(
         candidates,
@@ -836,6 +919,9 @@ export class NewsService {
           sortByRecency: true,
         },
       );
+
+      /* ASK TRUTHFUL RETRIEVAL R2A — candidates seen before admission, for the retrieval trace. */
+      candidatesSeen = Math.max(candidatesSeen, raw.articles.length);
 
       const gated =
         relevanceMode.type === 'none'
@@ -898,7 +984,9 @@ export class NewsService {
      *      primaries are not re-asked.
      */
     if (response.articles.length === 0 && !providerCall.fallbackConsulted && allowFallback) {
-      const fallbacks = this.eligibleProvidersForTier('search', 'fallback');
+      const fallbacks = this.eligibleProvidersForTier('search', 'fallback').filter(
+        (provider) => !excluded.has(provider.id),
+      );
 
       if (fallbacks.length > 0) {
         logWithRequestId(
@@ -937,14 +1025,26 @@ export class NewsService {
         // return value stopped being discarded. See attachFirstSeen().
         const firstSeenByUrl = await this.articlePersistence.persistMany(response.articles);
 
-        return attachProviderFailures(this.attachFirstSeen(response, firstSeenByUrl), failures);
+        return withCandidatesSeen(
+          candidatesSeen,
+          attachProviderFailures(this.attachFirstSeen(response, firstSeenByUrl), failures),
+          windowExcluded,
+        );
       }
 
-      return attachProviderFailures(response, failures);
+      return withCandidatesSeen(
+        candidatesSeen,
+        attachProviderFailures(response, failures),
+        windowExcluded,
+      );
     }
 
     if (!this.hasRealProviderConfigured()) {
-      return attachProviderFailures(response, failures);
+      return withCandidatesSeen(
+        candidatesSeen,
+        attachProviderFailures(response, failures),
+        windowExcluded,
+      );
     }
 
     /*
@@ -991,7 +1091,7 @@ export class NewsService {
       retainedTerms !== undefined &&
       retainedTerms.distinctive.length + retainedTerms.supporting.length >= 2;
 
-    const cachedArticles = await this.articlePersistence.findRecent({
+    let cachedArticles = await this.articlePersistence.findRecent({
       query,
       limit,
       maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
@@ -1030,6 +1130,15 @@ export class NewsService {
       ? resolveRetainedQueryCountry(query)
       : undefined;
 
+    /* BETA-ASK-005 / CTO ADDENDUM — the retained store obeys the same window, before admission. */
+    if (inWindow) {
+      cachedArticles = cachedArticles.filter((article) => {
+        const keep = inWindow(article);
+        if (!keep) windowExcluded.add(article.id);
+        return keep;
+      });
+    }
+
     const relevantCachedArticles =
       relevanceMode.type === 'none'
         ? cachedArticles
@@ -1064,21 +1173,29 @@ export class NewsService {
       : relevantCachedArticles;
 
     if (attributedCachedArticles.length === 0) {
-      return attachProviderFailures(response, failures);
+      return withCandidatesSeen(
+        candidatesSeen,
+        attachProviderFailures(response, failures),
+        windowExcluded,
+      );
     }
 
-    return attachProviderFailures(
-      this.buildCachedResponse(
-        attributedCachedArticles,
-        limit,
-        {
-          query,
-        },
-        // G-ALPHA-1 — the ACCUMULATED ids, so a rescue attempt that also
-        // failed is reflected in the public fallback reason.
-        this.resolveFallbackReason(failedProviderIds),
+    return withCandidatesSeen(
+      candidatesSeen,
+      attachProviderFailures(
+        this.buildCachedResponse(
+          attributedCachedArticles,
+          limit,
+          {
+            query,
+          },
+          // G-ALPHA-1 — the ACCUMULATED ids, so a rescue attempt that also
+          // failed is reflected in the public fallback reason.
+          this.resolveFallbackReason(failedProviderIds),
+        ),
+        failures,
       ),
-      failures,
+      windowExcluded,
     );
   }
 
@@ -1641,9 +1758,15 @@ export class NewsService {
      * in search() after the provider phase.
      */
     allowFallback = true,
+    /** ASK TRUTHFUL RETRIEVAL R2A — providers not to ask again in this request (see search()). */
+    excluded: ReadonlySet<string> = new Set(),
   ): Promise<ProviderCallResult> {
-    const primaries = this.eligibleProvidersForTier(capability, 'primary');
-    const fallbacks = this.eligibleProvidersForTier(capability, 'fallback');
+    const primaries = this.eligibleProvidersForTier(capability, 'primary').filter(
+      (provider) => !excluded.has(provider.id),
+    );
+    const fallbacks = this.eligibleProvidersForTier(capability, 'fallback').filter(
+      (provider) => !excluded.has(provider.id),
+    );
 
     /*
      * R1 — THE PRIMARY FAN-OUT IS NOT IN SCOPE AND IS NOT PASSED A POLICY.
@@ -2166,6 +2289,10 @@ export class NewsService {
 
     if (relevanceMode.type === 'compoundPlan') {
       return scoreCompoundPlanRelevance(article, relevanceMode.plan);
+    }
+
+    if (relevanceMode.type === 'eventFrame') {
+      return scoreEventFrameRelevance(article, relevanceMode.frame);
     }
 
     return scoreRelationalRelevance(article, relevanceMode.x, relevanceMode.y);

@@ -480,3 +480,77 @@ describe('BETA-ASK-005 — the bounded publication window is visible', () => {
     expect(v.freshness).toContain('Doniesienia opublikowane 24 wrz 2026, 12:00 UTC');
   });
 });
+
+describe('ASK TRUTHFUL RETRIEVAL R2A — what was checked is shown, never a denial on absence', () => {
+  const withRetrieval = (state: AskAnswerState, retrievalContext: Record<string, unknown>) =>
+    payload(state, {
+      analysis: {
+        analysis: null,
+        articles: [],
+        retrievalContext: { dataMode: 'live', providers: ['gnews'], ...retrievalContext },
+      } as never,
+    });
+
+  it('coverage incomplete: the exact sentences, and the failed lane named', () => {
+    const v = askR2View(
+      withRetrieval('INSUFFICIENT', {
+        verificationNotice: 'COVERAGE_INCOMPLETE',
+        retrievalTrace: {
+          queryVariants: ['Dubai Israel flight'],
+          timeWindow: null,
+          languages: ['reader'],
+          lanesAttempted: ['gnews', 'rss-feeds'],
+          lanesSucceeded: ['rss-feeds'],
+          lanesUnavailable: [{ lane: 'gnews', reason: 'rate-limited' }],
+          candidatesSeen: 0,
+          candidatesAdmitted: 0,
+          independentClusters: 0,
+        },
+        claimAssessments: [
+          {
+            id: 'occurrence',
+            type: 'OCCURRENCE',
+            text: 'An aviation incident occurred',
+            state: 'COVERAGE_INCOMPLETE',
+            supportingArticleIds: [],
+            independentFamilies: 0,
+            officialFamily: false,
+            contradictingArticleIds: [],
+          },
+        ],
+      }),
+      EN,
+      'en',
+    );
+    expect(v.verification?.notice).toBe(
+      'I could not verify this claim from the sources successfully checked. Verification was incomplete because some source lanes were unavailable.',
+    );
+    expect(v.verification?.lanes).toEqual([
+      { label: 'Publisher feeds', ok: true, status: 'checked' },
+      { label: 'GNews', ok: false, status: 'unavailable (rate-limited)' },
+    ]);
+    expect(v.verification?.claims).toEqual([
+      {
+        text: 'An aviation incident occurred',
+        state: 'COVERAGE_INCOMPLETE',
+        label: 'Not verified — coverage incomplete',
+      },
+    ]);
+  });
+
+  it('complete coverage that found nothing is still "could not verify", never "did not happen"', () => {
+    const v = askR2View(
+      withRetrieval('INSUFFICIENT', { verificationNotice: 'NOT_VERIFIED' }),
+      EN,
+      'en',
+    );
+    expect(v.verification?.notice).toBe(
+      'I could not verify this claim from the sources successfully checked.',
+    );
+    expect(JSON.stringify(v)).not.toMatch(/no evidence of|did not (happen|occur)/i);
+  });
+
+  it('an ordinary answer without server verification facts shows no panel', () => {
+    expect(askR2View(payload('CURRENT_REPORTING'), EN, 'en').verification).toBeNull();
+  });
+});

@@ -2171,6 +2171,32 @@ describe('ASK PUBLIC BETA RETRIEVAL REPAIR R1 — fail-closed guards on the live
     },
   );
 
+  it('R2A Flydubai: the exact PO aviation question executes (one analysis call), never a clarification', async () => {
+    const h = harness({
+      analysis: async () => ({
+        analysis: null,
+        articles: [],
+        retrievalContext: {
+          dataMode: 'live',
+          providers: ['gnews'],
+          articlesRetrieved: 0,
+          verificationNotice: 'NOT_VERIFIED',
+        } as never,
+      }),
+    });
+    const q =
+      'tell me in details what happened today in the Air from Dubai to Israel in a passenger plane. How did it happen?, Indicate if there were some casualties in that incidence';
+    const payload = await run(q, h);
+    expect(payload.route.terminalState).toBe('EXECUTABLE');
+    expect(h.calls.analysis).toHaveLength(1);
+    /* Zero qualifying evidence: INSUFFICIENT, no model, no guest answer — and the payload carries
+       the server's NOT_VERIFIED notice for the reader. */
+    expect(payload.answer.state).toBe('INSUFFICIENT');
+    expect(payload.aiExecuted).toBe(false);
+    expect(payload.analysis.retrievalContext.verificationNotice).toBe('NOT_VERIFIED');
+    expect(countsAsGuestAnswer(payload)).toBe(false);
+  });
+
   it('Q2 with zero qualifying reporting: INSUFFICIENT, no model, no guest answer', async () => {
     const h = harness({
       analysis: async () => ({

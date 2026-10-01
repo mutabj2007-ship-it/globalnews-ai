@@ -67,6 +67,17 @@ export interface AskR2Strings {
   readonly clarificationFooter: string;
   readonly sourcesAfterChoice: string;
   readonly insufficientTitle: string;
+  /** ASK TRUTHFUL RETRIEVAL R2A — what was checked, and what the system may (not) conclude. */
+  readonly verification: {
+    readonly notVerified: string;
+    readonly coverageIncomplete: string;
+    readonly sourcesChecked: string;
+    readonly available: string;
+    readonly unavailable: string;
+    readonly claims: string;
+    readonly lanes: Readonly<Record<string, string>>;
+    readonly states: Readonly<Record<string, string>>;
+  };
   /** R3 — the title when the empty result came from a refused search, not an answered one. */
   readonly limitedTitle: string;
   /** R3 — an answer that stands on the reporting that could be reached while a source was down. */
@@ -225,6 +236,28 @@ const EN: AskR2Strings = {
   clarificationFooter: 'No sources searched · no compute used',
   sourcesAfterChoice: 'Sources appear after you choose',
   insufficientTitle: 'Not enough matching reporting',
+  verification: {
+    notVerified: 'I could not verify this claim from the sources successfully checked.',
+    coverageIncomplete: 'Verification was incomplete because some source lanes were unavailable.',
+    sourcesChecked: 'Sources checked',
+    available: 'checked',
+    unavailable: 'unavailable',
+    claims: 'Claim status',
+    lanes: {
+      gnews: 'GNews',
+      'gdelt-doc': 'GDELT',
+      'rss-feeds': 'Publisher feeds',
+      'news-providers': 'News providers',
+    },
+    states: {
+      CONFIRMED: 'Confirmed',
+      CORROBORATED_REPORTING: 'Corroborated reporting',
+      REPORTED: 'Reported (one source)',
+      DISPUTED: 'Disputed',
+      NOT_VERIFIED: 'Not verified',
+      COVERAGE_INCOMPLETE: 'Not verified — coverage incomplete',
+    },
+  },
   limitedTitle: 'Search was limited',
   limitedNote:
     'A news source was temporarily unavailable. This answer uses the reporting that could be reached.',
@@ -413,6 +446,28 @@ const PL: AskR2Strings = {
   clarificationFooter: 'Nie przeszukano źródeł · nie użyto obliczeń',
   sourcesAfterChoice: 'Źródła pojawią się po Twoim wyborze',
   insufficientTitle: 'Za mało pasujących doniesień',
+  verification: {
+    notVerified: 'Nie udało się zweryfikować tej informacji w pomyślnie sprawdzonych źródłach.',
+    coverageIncomplete: 'Weryfikacja była niepełna, ponieważ część źródeł była niedostępna.',
+    sourcesChecked: 'Sprawdzone źródła',
+    available: 'sprawdzono',
+    unavailable: 'niedostępne',
+    claims: 'Status informacji',
+    lanes: {
+      gnews: 'GNews',
+      'gdelt-doc': 'GDELT',
+      'rss-feeds': 'Kanały wydawców',
+      'news-providers': 'Dostawcy wiadomości',
+    },
+    states: {
+      CONFIRMED: 'Potwierdzone',
+      CORROBORATED_REPORTING: 'Potwierdzone w doniesieniach',
+      REPORTED: 'Zgłoszone (jedno źródło)',
+      DISPUTED: 'Sporne',
+      NOT_VERIFIED: 'Niezweryfikowane',
+      COVERAGE_INCOMPLETE: 'Niezweryfikowane — niepełne pokrycie',
+    },
+  },
   limitedTitle: 'Wyszukiwanie było ograniczone',
   limitedNote:
     'Źródło wiadomości było chwilowo niedostępne. Ta odpowiedź opiera się na doniesieniach, do których udało się dotrzeć.',

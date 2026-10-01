@@ -22,6 +22,7 @@ import {
   type AnalysisProvenance,
   type AnalysisProvenanceStatus,
   type AnalysisRetrievalContext,
+  type AnalysisRetrievalTrace,
   type CountryMeta,
   type CountryNewsResponse,
   type GeoFuzzyMatch,
@@ -64,8 +65,23 @@ import {
   isSubjectFollowUp,
   orderByFocus,
 } from '../anchor/conversation-subject.util';
-import { NewsService, attachProviderFailures, readProviderFailures } from '../../news/news.service';
+import {
+  NewsService,
+  attachProviderFailures,
+  readCandidatesSeen,
+  readProviderFailures,
+  readWindowExcluded,
+  type RelevanceMode,
+} from '../../news/news.service';
+import { flightIdentifiersIn } from '../../news/relevance/event-frame-relevance.util';
+import { publishedInsideWindow } from '../../news/relevance/publication-window.util';
+import { deriveEventFrame, type EventFrame } from '../query/event-frame.util';
 import { scoreCompoundPlanRelevance } from '../../news/relevance/compound-plan-relevance.util';
+import { assessClaims, facetClaims } from '../validation/claim-graph.util';
+import {
+  unauthorisedNegatives,
+  withoutUnauthorisedNegatives,
+} from '../validation/negative-assertion.util';
 import {
   COMPOUND_PLAN_PACING,
   deriveCompoundRetrievalPlan,
@@ -203,6 +219,12 @@ import { asksAboutCoverage } from '../query/coverage-question.util';
 import type { AnalysisProviderInput } from '../interfaces';
 
 /** ASK R2 INTEGRATION R1 · GATE E — see `analyzeNews(…, executionPolicy)`. */
+/** ASK TRUTHFUL RETRIEVAL R2A — the runner's part of the retrieval trace. */
+type PlannedSearchTrace = Omit<AnalysisRetrievalTrace, 'timeWindow' | 'independentClusters'> & {
+  /** BETA-ASK-005 — distinct candidate ids NewsService excluded for falling outside the window. */
+  readonly windowExcludedIds: readonly string[];
+};
+
 export interface AnalysisExecutionPolicy {
   readonly maxModelAttempts?: number;
   readonly usageSink?: AnalysisProviderInput['usageSink'];
@@ -243,24 +265,8 @@ import { readContinuationEllipsis } from '../anchor/continuation-ellipsis.util';
  * `articlesRetrieved` is 0. Deliberately NOT 'provider-error': blaming the
  * provider for a request that was never sent would be a false report.
  */
-/**
- * BETA-ASK-005 — does a report's TRUSTWORTHY publication time lie inside [from, to]? Only a
- * publisher-stated time counts: an aggregator's observation time is not a publication time,
- * and an absent or unparseable time can never satisfy a strict window.
- */
-export function publishedInsideWindow(
-  article: Pick<NewsArticle, 'publishedAt' | 'publishedAtBasis'>,
-  from: string,
-  to: string,
-): boolean {
-  if (article.publishedAtBasis !== 'publisher') return false;
-  const at = Date.parse(article.publishedAt ?? '');
-  const start = Date.parse(from);
-  const end = Date.parse(to);
-  return (
-    Number.isFinite(at) && Number.isFinite(start) && Number.isFinite(end) && at >= start && at <= end
-  );
-}
+/* BETA-ASK-005 — the strict publication-window predicate lives with the news layer. */
+export { publishedInsideWindow };
 
 const NON_RETRIEVABLE_QUERY_CONTEXT: AnalysisRetrievalContext = {
   dataMode: 'unavailable',
@@ -1320,6 +1326,20 @@ export class AnalysisService {
           classification.intent !== 'CLARIFICATION_REQUIRED'
             ? readRelationalEventQuestion(retrievalQuery, requestedLanguage)
             : null;
+        /*
+          ASK TRUTHFUL RETRIEVAL R2A (BETA-ASK-006) — a question about ONE EVENT (an aviation /
+          maritime / rail incident with a route or identifier) is retrieved as that event, never
+          as the country news of one of its places. Same exclusions as the relational event.
+        */
+        const eventFrame: EventFrame | undefined =
+          selection === undefined &&
+          storyContext === undefined &&
+          sourceIntent === undefined &&
+          sourceAttributed === undefined &&
+          declaredRegion === undefined &&
+          classification.intent !== 'CLARIFICATION_REQUIRED'
+            ? deriveEventFrame(retrievalQuery, requestedLanguage)
+            : undefined;
 
         /**
          * R4 C1 — THE ANCHOR LOOKUP MOVES AHEAD OF RETRIEVAL.
@@ -1348,6 +1368,11 @@ export class AnalysisService {
 
         let articles: NewsArticle[];
         let retrievalContext: AnalysisRetrievalContext;
+        /* ASK TRUTHFUL RETRIEVAL R2A — set by a branch that ran planned searches. */
+        let plannedTrace: PlannedSearchTrace | undefined;
+        let activeCompoundPlan: CompoundRetrievalPlan | undefined;
+        /* BETA-ASK-005 — candidates excluded by window BEFORE dedup, so the disclosure is honest. */
+        const upstreamWindowExcluded = new Set<string>();
         // Milestone #40 (authoritative-context correction): set ONLY when
         // the M37 relational branch below matches — undefined for country/
         // city retrieval and for ordinary M35/M36 generic queries. This is
@@ -1720,6 +1745,21 @@ export class AnalysisService {
               retrievalContext = clarification;
             }
           }
+        } else if (eventFrame !== undefined) {
+          const run = await this.retrieveEventFrame(eventFrame, executionPolicy?.reportingWindow);
+          plannedTrace = run.trace;
+          articles = run.response.articles;
+          retrievalContext = this.toRetrievalContext(run.response);
+          const failures = readProviderFailures(run.response);
+          if (articles.length === 0 && failures.length > 0) {
+            /* A refused / failed lane is a limited search, never "no such event". */
+            retrievalContext = {
+              ...retrievalContext,
+              outcome: retrievalOutcome(0, new Set(failures.map((f) => f.kind))),
+            };
+          } else if (failures.length > 0 && retrievalContext.fallbackReason === undefined) {
+            retrievalContext = { ...retrievalContext, fallbackReason: 'provider-error' };
+          }
         } else if (relationalEvent !== null) {
           /*
            * P1 MULTI-ENTITY / TOPIC RELEVANCE CLOSURE R1 — Entity A → event → Entity B.
@@ -1804,12 +1844,24 @@ export class AnalysisService {
               : `Detected country-aware analysis query for ${country.name} (${country.iso3})`,
           );
 
-          const countryResponse = await this.countryNewsService.getCountryNews(
-            country.iso3,
-            undefined,
-            SEARCH_POOL_SIZE,
-            city,
-          );
+          /* BETA-ASK-005 — the window reaches the country feed before its duplicate collapse. */
+          const countryWindow = executionPolicy?.reportingWindow;
+          const countryResponse =
+            countryWindow === undefined
+              ? await this.countryNewsService.getCountryNews(
+                  country.iso3,
+                  undefined,
+                  SEARCH_POOL_SIZE,
+                  city,
+                )
+              : await this.countryNewsService.getCountryNews(
+                  country.iso3,
+                  undefined,
+                  SEARCH_POOL_SIZE,
+                  city,
+                  undefined,
+                  { from: countryWindow.from, to: countryWindow.to },
+                );
 
           articles = countryResponse.articles;
           retrievalContext = this.toRetrievalContext(countryResponse, geoMatch);
@@ -2653,6 +2705,7 @@ export class AnalysisService {
               countryEconomy === undefined
                 ? deriveCompoundRetrievalPlan(retrievalQuery, requestedLanguage)
                 : undefined;
+            activeCompoundPlan = compoundPlan;
 
             /**
              * PROVIDER-SAFETY EDGE CLOSURE — the honest non-retrievable state.
@@ -2677,25 +2730,34 @@ export class AnalysisService {
               articles = [];
               retrievalContext = NON_RETRIEVABLE_QUERY_CONTEXT;
             } else {
-              let searchResponse = compoundPlan
-                ? await this.retrieveCompoundPlan(compoundPlan, executionPolicy?.reportingWindow)
-                : await this.newsService.search(
-                    primarySent,
-                    SEARCH_POOL_SIZE,
-                    // Milestone #36: opt-in relevance gate — only this call site
-                    // (AnalysisService's ordinary generic-search branch) enables
-                    // it. CountryNewsService and the public /news/search endpoint
-                    // call NewsService.search() without this mode, so their
-                    // behavior is completely unchanged (see news.service.ts).
-                    genericMode,
-                    /* BETA-ASK-005 — the window reaches a provider that filters natively. */
-                    executionPolicy?.reportingWindow === undefined
-                      ? undefined
-                      : {
-                          from: executionPolicy.reportingWindow.from,
-                          to: executionPolicy.reportingWindow.to,
-                        },
-                  );
+              /* R1 / BETA-ASK-005 / R2A — a compound plan runs through the planned-search runner;
+                 otherwise the ONE generic search, with the window only when there is one. */
+              let searchResponse: NewsResponse;
+              const window = executionPolicy?.reportingWindow;
+              if (compoundPlan) {
+                const run = await this.retrieveCompoundPlan(compoundPlan, window);
+                searchResponse = run.response;
+                plannedTrace = run.trace;
+              } else if (window === undefined) {
+                searchResponse = await this.newsService.search(
+                  primarySent,
+                  SEARCH_POOL_SIZE,
+                  // Milestone #36: opt-in relevance gate — only this call site
+                  // (AnalysisService's ordinary generic-search branch) enables
+                  // it. CountryNewsService and the public /news/search endpoint
+                  // call NewsService.search() without this mode, so their
+                  // behavior is completely unchanged (see news.service.ts).
+                  genericMode,
+                );
+              } else {
+                searchResponse = await this.newsService.search(
+                  primarySent,
+                  SEARCH_POOL_SIZE,
+                  genericMode,
+                  { from: window.from, to: window.to },
+                );
+                for (const id of readWindowExcluded(searchResponse)) upstreamWindowExcluded.add(id);
+              }
 
               // Milestone #46 — exactly ONE bounded fallback attempt, and
               // ONLY when the primary derived-query search returned zero
@@ -2905,6 +2967,11 @@ export class AnalysisService {
           const inWindow = articles.filter((article) =>
             publishedInsideWindow(article, reportingWindow.from, reportingWindow.to),
           );
+          const excluded = new Set([
+            ...upstreamWindowExcluded,
+            ...(plannedTrace?.windowExcludedIds ?? []),
+            ...articles.filter((a) => !inWindow.includes(a)).map((a) => a.id),
+          ]);
           retrievalContext = {
             ...retrievalContext,
             articlesRetrieved: inWindow.length,
@@ -2913,10 +2980,71 @@ export class AnalysisService {
               from: reportingWindow.from,
               to: reportingWindow.to,
               basis: 'PUBLICATION_TIME',
-              excludedOutsideWindow: articles.length - inWindow.length,
+              excludedOutsideWindow: excluded.size,
             },
           };
           articles = inWindow;
+        }
+
+        /*
+          ASK TRUTHFUL RETRIEVAL R2A — WHAT WAS CHECKED, AND WHAT EACH CLAIM RESTS ON.
+          Only for the planned paths (event frame, compound plan) and windowed questions, so every
+          other response is byte-identical. Decided before any prose.
+        */
+        if (plannedTrace !== undefined || reportingWindow !== undefined) {
+          const trace: AnalysisRetrievalTrace = {
+            queryVariants: plannedTrace?.queryVariants ?? [],
+            timeWindow:
+              reportingWindow === undefined
+                ? null
+                : { from: reportingWindow.from, to: reportingWindow.to, basis: 'REQUEST_INSTANT' },
+            languages: plannedTrace?.languages ?? [requestedLanguage],
+            lanesAttempted: plannedTrace?.lanesAttempted ?? retrievalContext.providers,
+            lanesSucceeded: plannedTrace?.lanesSucceeded ?? retrievalContext.providers,
+            lanesUnavailable:
+              plannedTrace?.lanesUnavailable ??
+              (retrievalContext.fallbackReason === 'provider-error'
+                ? [{ lane: 'news-providers', reason: 'provider-error' }]
+                : []),
+            candidatesSeen: plannedTrace?.candidatesSeen ?? articles.length,
+            candidatesAdmitted: articles.length,
+            independentClusters: clusterDuplicateArticles([...articles]).length,
+          };
+          const coverageIncomplete =
+            trace.lanesUnavailable.length > 0 ||
+            retrievalContext.fallbackReason === 'provider-error' ||
+            (retrievalContext.outcome ?? '').startsWith('PROVIDER_');
+          const claims =
+            eventFrame?.claims ??
+            (activeCompoundPlan ? facetClaims(activeCompoundPlan.facets) : []);
+          const claimAssessments = assessClaims(claims, articles, {
+            ...(eventFrame === undefined
+              ? {}
+              : {
+                  event: {
+                    eventType: eventFrame.eventType,
+                    endpoints: eventFrame.endpoints,
+                    identifiers: eventFrame.identifiers,
+                    notBefore: eventFrame.notBefore,
+                  },
+                }),
+            coverageIncomplete,
+          });
+          const core = claimAssessments[0];
+          retrievalContext = {
+            ...retrievalContext,
+            retrievalTrace: trace,
+            ...(claimAssessments.length === 0 ? {} : { claimAssessments }),
+            ...(articles.length === 0 ||
+            core?.state === 'NOT_VERIFIED' ||
+            core?.state === 'COVERAGE_INCOMPLETE'
+              ? {
+                  verificationNotice: coverageIncomplete
+                    ? ('COVERAGE_INCOMPLETE' as const)
+                    : ('NOT_VERIFIED' as const),
+                }
+              : {}),
+          };
         }
 
         /**
@@ -3460,6 +3588,48 @@ export class AnalysisService {
             this.logger.warn(`Executive brief withheld: ${singleSource.reason ?? ''}`);
             briefVerdict = { ...briefVerdict, compliant: false, reason: singleSource.reason };
           }
+          /*
+            ASK TRUTHFUL RETRIEVAL R2A — THE NEGATIVE-ASSERTION GUARD. Absence of retrieved
+            evidence is not evidence of absence: a sentence denying an event or its harm is
+            displayed ONLY when an admitted report explicitly says so. In the brief or headline
+            the brief is withheld (fail closed, no rewrite); in a list it is removed. The reader
+            is then told the claim could not be verified, and whether coverage was incomplete.
+          */
+          {
+            const coverage = {
+              incomplete:
+                retrievalContext.fallbackReason === 'provider-error' ||
+                (retrievalContext.retrievalTrace?.lanesUnavailable.length ?? 0) > 0 ||
+                (retrievalContext.outcome ?? '').startsWith('PROVIDER_'),
+            };
+            const guard = (text: string | undefined) =>
+              text === undefined ? [] : unauthorisedNegatives(text, deduped, coverage);
+            const briefNegatives = [...guard(analysis.summary), ...guard(analysis.headline)];
+            const listFiltered = withoutUnauthorisedNegatives(analysisResult, deduped, coverage);
+            if (briefNegatives.length > 0 || listFiltered.removed > 0) {
+              this.logger.warn(
+                'Unsupported negative assertion(s) withheld: ' +
+                  `${briefNegatives.length} in the brief, ${listFiltered.removed} in lists.`,
+              );
+              analysisResult = listFiltered.analysis;
+              retrievalContext = {
+                ...retrievalContext,
+                verificationNotice: coverage.incomplete ? 'COVERAGE_INCOMPLETE' : 'NOT_VERIFIED',
+              };
+            }
+            if (briefNegatives.length > 0) {
+              if (analysis.headline !== undefined && guard(analysis.headline).length > 0) {
+                analysisResult = { ...analysisResult, headline: '' };
+              }
+              briefVerdict = {
+                ...briefVerdict,
+                compliant: false,
+                reason:
+                  'The brief asserts that something did not happen without counter-evidence; ' +
+                  'absence of retrieved evidence is not evidence of absence.',
+              };
+            }
+          }
           const repairRequested = false;
 
           /*
@@ -3781,40 +3951,65 @@ export class AnalysisService {
   }
 
   /**
-   * ASK PUBLIC BETA RETRIEVAL REPAIR R1 — runs a bounded compound retrieval plan through the
-   * existing NewsService (providers, provider health, retained-store fallback, persistence all
-   * unchanged), admitting every candidate by the plan's own gate. Searches run in order; a
-   * refused provider (rate limit / auth / bad request) stops the plan so one refusal cannot
-   * spend the next reader's slot. Results are merged round-robin (so the cap cannot drop a
-   * facet or the additional-language search) and URL-deduplicated; syndicated copies are
-   * collapsed downstream by the unchanged clusterDuplicateArticles(). Never a model call.
+   * ASK TRUTHFUL RETRIEVAL R2A — ONE BOUNDED PLANNED-SEARCH RUNNER (compound plans and event
+   * frames). Every search goes through the existing NewsService (providers, health, retained
+   * store, persistence unchanged) and is admitted by the caller's own relevance mode.
+   *
+   *   PACED      searches are spaced (BETA-ASK-004) so one plan stays under per-second limits.
+   *   NO CASCADE a provider that refuses (rate limit / auth / bad request) is EXCLUDED from the
+   *              remaining searches — never asked again in this Ask — but the other lanes keep
+   *              running; the first search after a refusal may consult the fallback tier once
+   *              (publisher feeds / GDELT), which a single primary's 429 used to cancel.
+   *   MERGED     round-robin (no lane is starved by the cap), URL-deduplicated; syndicated
+   *              copies collapse downstream in the unchanged clusterDuplicateArticles().
+   *   TRACED     which query variants were sent, which lanes answered, which were unavailable
+   *              and why, and how many candidates were seen vs admitted.
    */
-  private async retrieveCompoundPlan(
-    plan: CompoundRetrievalPlan,
+  private async runPlannedSearches(
+    label: string,
+    searches: readonly {
+      readonly q: string;
+      readonly lang?: string;
+      readonly allowFallback: boolean;
+    }[],
+    mode: Exclude<RelevanceMode, { type: 'none' }>,
     window?: { readonly from: string; readonly to: string },
-  ): Promise<NewsResponse> {
-    const mode = {
-      type: 'compoundPlan',
-      plan: { iso3: plan.iso3, scope: plan.scope, facets: plan.facets },
-    } as const;
+  ): Promise<{ response: NewsResponse; trace: PlannedSearchTrace }> {
     const responses: NewsResponse[] = [];
-    for (const query of plan.queries) {
-      const sent = makeProviderSafeNewsQuery(query.q);
-      if (sent === undefined) continue;
-      /* BETA-ASK-004 — paced, so one plan never bursts past the provider's per-second limit. */
+    const sent: string[] = [];
+    const languages = new Set<string>();
+    const refused = new Set<string>();
+    let fallbackAfterRefusal = false;
+    let candidatesSeen = 0;
+    const windowExcludedIds = new Set<string>();
+    for (const search of searches) {
+      const q = makeProviderSafeNewsQuery(search.q);
+      if (q === undefined) continue;
       if (responses.length > 0 && COMPOUND_PLAN_PACING.spacingMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, COMPOUND_PLAN_PACING.spacingMs));
       }
-      const response = await this.newsService.search(sent, SEARCH_POOL_SIZE, mode, {
-        ...(query.lang === undefined ? {} : { lang: query.lang }),
+      const allowFallback = search.allowFallback || fallbackAfterRefusal;
+      fallbackAfterRefusal = false;
+      const response = await this.newsService.search(q, SEARCH_POOL_SIZE, mode, {
+        ...(search.lang === undefined ? {} : { lang: search.lang }),
         ...(window === undefined ? {} : { from: window.from, to: window.to }),
-        allowFallback: query.allowFallback,
+        allowFallback,
+        ...(refused.size === 0 ? {} : { excludeProviderIds: [...refused] }),
       });
       responses.push(response);
-      const refused = readProviderFailures(response).some((failure) =>
-        ['rate-limited', 'auth', 'bad-request'].includes(failure.kind),
-      );
-      if (refused) break;
+      sent.push(search.lang === undefined ? q : `${q} [${search.lang}]`);
+      languages.add(search.lang ?? 'reader');
+      candidatesSeen += readCandidatesSeen(response);
+      for (const id of readWindowExcluded(response)) windowExcludedIds.add(id);
+      for (const failure of readProviderFailures(response)) {
+        if (
+          ['rate-limited', 'auth', 'bad-request'].includes(failure.kind) &&
+          !refused.has(failure.providerId)
+        ) {
+          refused.add(failure.providerId);
+          fallbackAfterRefusal = true;
+        }
+      }
     }
 
     const failures = responses.flatMap((response) => readProviderFailures(response));
@@ -3824,36 +4019,150 @@ export class AnalysisService {
       for (const list of lists) if (i < list.length) interleaved.push(list[i]);
     }
     const articles = deduplicateArticles(interleaved);
+    const succeeded = [...new Set(responses.flatMap((response) => response.providers))];
+    const unavailable = new Map<string, string>();
+    for (const failure of failures) {
+      if (!succeeded.includes(failure.providerId))
+        unavailable.set(failure.providerId, failure.kind);
+    }
+    const trace: PlannedSearchTrace = {
+      queryVariants: sent,
+      languages: [...languages],
+      lanesAttempted: [...new Set([...succeeded, ...failures.map((f) => f.providerId)])],
+      lanesSucceeded: succeeded,
+      lanesUnavailable: [...unavailable].map(([lane, reason]) => ({ lane, reason })),
+      candidatesSeen,
+      candidatesAdmitted: articles.length,
+      windowExcludedIds: [...windowExcludedIds],
+    };
+    this.logger.log(
+      `Planned retrieval ${label}: ${searches.length} planned, ${sent.length} sent, ` +
+        `${articles.length} admitted of ${candidatesSeen} seen ` +
+        `(languages ${[...new Set(articles.map((a) => a.sourceLanguage ?? 'unknown'))].join(',') || 'none'}; ` +
+        `unavailable ${trace.lanesUnavailable.map((u) => `${u.lane}=${u.reason}`).join(',') || 'none'})`,
+    );
+
     const withArticles = responses.filter((response) => response.articles.length > 0);
     const base = withArticles[0] ?? responses[0];
-    this.logger.log(
-      `Compound retrieval plan ${plan.iso3}${plan.scope ? `/${plan.scope.qualifier}` : ''}: ` +
-        `${plan.queries.length} planned, ${responses.length} sent, ${articles.length} admitted ` +
-        `(languages ${[...new Set(articles.map((a) => a.sourceLanguage ?? 'unknown'))].join(',') || 'none'})`,
-    );
     if (base === undefined) {
-      /* No plan search had a lexical query: nothing was asked, nothing is claimed. */
+      /* No planned search had a lexical query: nothing was asked, nothing is claimed. */
       return {
-        articles: [],
-        totalResults: 0,
-        providers: [],
-        dataMode: 'unavailable',
-        fallbackReason: 'no-live-results',
-        generatedAt: new Date().toISOString(),
+        response: {
+          articles: [],
+          totalResults: 0,
+          providers: [],
+          dataMode: 'unavailable',
+          fallbackReason: 'no-live-results',
+          generatedAt: new Date().toISOString(),
+        },
+        trace,
       };
     }
     const live = withArticles.some((response) => response.dataMode === 'live');
-    return attachProviderFailures(
-      {
-        ...base,
-        articles,
-        totalResults: articles.length,
-        providers: [...new Set(responses.flatMap((response) => response.providers))],
-        dataMode: live ? 'live' : base.dataMode,
-        fallbackReason: live ? undefined : base.fallbackReason,
-      },
-      failures,
+    return {
+      response: attachProviderFailures(
+        {
+          ...base,
+          articles,
+          totalResults: articles.length,
+          providers: succeeded,
+          dataMode: live ? 'live' : base.dataMode,
+          fallbackReason: live ? undefined : base.fallbackReason,
+        },
+        failures,
+      ),
+      trace,
+    };
+  }
+
+  /** ASK PUBLIC BETA RETRIEVAL REPAIR R1 — the compound plan, through the one runner. */
+  private async retrieveCompoundPlan(
+    plan: CompoundRetrievalPlan,
+    window?: { readonly from: string; readonly to: string },
+  ): Promise<{ response: NewsResponse; trace: PlannedSearchTrace }> {
+    return this.runPlannedSearches(
+      `compound ${plan.iso3}${plan.scope ? `/${plan.scope.qualifier}` : ''}`,
+      plan.queries,
+      { type: 'compoundPlan', plan: { iso3: plan.iso3, scope: plan.scope, facets: plan.facets } },
+      window,
     );
+  }
+
+  /**
+   * ASK TRUTHFUL RETRIEVAL R2A — the event frame: its bounded searches, then AT MOST ONE
+   * identifier-rescue pass when an admitted report states a flight number the reader did not
+   * type (e.g. "flydubai flight FZ1073"). Never recursive.
+   */
+  private async retrieveEventFrame(
+    frame: EventFrame,
+    window?: { readonly from: string; readonly to: string },
+  ): Promise<{ response: NewsResponse; trace: PlannedSearchTrace }> {
+    const admission = (identifiers: readonly string[]) =>
+      ({
+        type: 'eventFrame',
+        frame: {
+          eventType: frame.eventType,
+          endpoints: frame.endpoints,
+          identifiers,
+          notBefore: frame.notBefore,
+        },
+      }) as const;
+    const first = await this.runPlannedSearches(
+      `event ${frame.eventType} ${frame.endpoints.map((e) => e.iso3).join('>')}`,
+      frame.queries.map((q, i) => ({ q, allowFallback: i === 0 })),
+      admission(frame.identifiers),
+      window,
+    );
+    const discovered = [
+      ...new Set(
+        first.response.articles.flatMap((a) =>
+          flightIdentifiersIn(`${a.title ?? ''} ${a.summary ?? ''}`),
+        ),
+      ),
+    ].filter((id) => !frame.identifiers.includes(id));
+    if (frame.eventType !== 'AVIATION' || discovered.length === 0) return first;
+
+    const rescueId = discovered[0] as string;
+    const rescue = await this.runPlannedSearches(
+      `event identifier rescue ${rescueId.toUpperCase()}`,
+      [{ q: `${rescueId.toUpperCase()} flight`, allowFallback: false }],
+      admission([...frame.identifiers, rescueId]),
+      window,
+    );
+    const articles = deduplicateArticles([...first.response.articles, ...rescue.response.articles]);
+    const failures = [
+      ...readProviderFailures(first.response),
+      ...readProviderFailures(rescue.response),
+    ];
+    const trace: PlannedSearchTrace = {
+      queryVariants: [...first.trace.queryVariants, ...rescue.trace.queryVariants],
+      languages: [...new Set([...first.trace.languages, ...rescue.trace.languages])],
+      lanesAttempted: [...new Set([...first.trace.lanesAttempted, ...rescue.trace.lanesAttempted])],
+      lanesSucceeded: [...new Set([...first.trace.lanesSucceeded, ...rescue.trace.lanesSucceeded])],
+      lanesUnavailable: [...first.trace.lanesUnavailable, ...rescue.trace.lanesUnavailable].filter(
+        (u, i, all) =>
+          all.findIndex((v) => v.lane === u.lane) === i &&
+          !first.trace.lanesSucceeded.includes(u.lane) &&
+          !rescue.trace.lanesSucceeded.includes(u.lane),
+      ),
+      candidatesSeen: first.trace.candidatesSeen + rescue.trace.candidatesSeen,
+      candidatesAdmitted: articles.length,
+      windowExcludedIds: [
+        ...new Set([...first.trace.windowExcludedIds, ...rescue.trace.windowExcludedIds]),
+      ],
+    };
+    return {
+      response: attachProviderFailures(
+        {
+          ...first.response,
+          articles,
+          totalResults: articles.length,
+          providers: trace.lanesSucceeded,
+        },
+        failures,
+      ),
+      trace,
+    };
   }
 
   /**

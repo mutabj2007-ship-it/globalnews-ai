@@ -867,6 +867,27 @@ export interface AnalysisRetrievalContext {
     excludedOutsideWindow: number;
   };
 
+  /**
+   * ASK TRUTHFUL RETRIEVAL R2A — what was actually checked: the query variants sent, the lanes
+   * attempted / answered / unavailable (with the reason), and how many candidates were seen,
+   * admitted and how many independent reporting clusters survived. No secret, credential or
+   * raw provider payload. A failed lane is visible here rather than read as an empty world.
+   */
+  retrievalTrace?: AnalysisRetrievalTrace;
+
+  /**
+   * ASK TRUTHFUL RETRIEVAL R2A — per-claim verification states for an event question, decided
+   * deterministically from the admitted evidence BEFORE prose (never by the model).
+   */
+  claimAssessments?: AnalysisClaimAssessment[];
+
+  /**
+   * ASK TRUTHFUL RETRIEVAL R2A — set when the answer may NOT assert that something did not
+   * happen: the question's core claim has no qualifying evidence. COVERAGE_INCOMPLETE when a
+   * source lane failed or was unavailable; NOT_VERIFIED when every attempted lane answered.
+   */
+  verificationNotice?: 'NOT_VERIFIED' | 'COVERAGE_INCOMPLETE';
+
   /** IDs of providers that contributed articles (empty for cached/unavailable retrieval). */
   providers: string[];
 
@@ -1529,4 +1550,41 @@ export function resolveGovernedCountryCode(countryCode: unknown): CountryMeta | 
   if (typeof countryCode !== 'string' || !GEOGRAPHY_COUNTRY_CODE_PATTERN.test(countryCode)) return undefined;
   const code = countryCode.toUpperCase();
   return code.length === 2 ? findCountryByIso2(code) : findCountryByIso3(code);
+}
+
+/** ASK TRUTHFUL RETRIEVAL R2A — see AnalysisRetrievalContext.retrievalTrace. */
+export interface AnalysisRetrievalTrace {
+  queryVariants: string[];
+  timeWindow: { from: string; to: string; basis: 'REQUEST_INSTANT' } | null;
+  languages: string[];
+  lanesAttempted: string[];
+  lanesSucceeded: string[];
+  lanesUnavailable: Array<{ lane: string; reason: string }>;
+  candidatesSeen: number;
+  candidatesAdmitted: number;
+  independentClusters: number;
+}
+
+/** ASK TRUTHFUL RETRIEVAL R2A — deterministic per-claim states (never a model's opinion). */
+export type ClaimVerificationState =
+  | 'CONFIRMED'
+  | 'CORROBORATED_REPORTING'
+  | 'REPORTED'
+  | 'DISPUTED'
+  | 'NOT_VERIFIED'
+  | 'COVERAGE_INCOMPLETE';
+
+export interface AnalysisClaimAssessment {
+  id: string;
+  type: string;
+  text: string;
+  state: ClaimVerificationState;
+  /** Admitted reports that speak to this claim. */
+  supportingArticleIds: string[];
+  /** Independent source families among them (syndication / same publisher / same origin collapsed). */
+  independentFamilies: number;
+  /** Whether one of the families is the official source of the organisation concerned. */
+  officialFamily: boolean;
+  /** Admitted reports that explicitly contradict the claim. */
+  contradictingArticleIds: string[];
 }

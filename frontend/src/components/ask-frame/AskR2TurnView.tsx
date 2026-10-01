@@ -179,6 +179,46 @@ export function AskR2TurnView({
         {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
       </div>
 
+      {/* ASK TRUTHFUL RETRIEVAL R2A — what was checked; never a denial built on absence. */}
+      {view.badge !== 'clar' && view.verification !== null && (
+        <section data-ask="verification" className="flex flex-col gap-2">
+          {view.verification.notice !== null && (
+            <p data-ask="verification-notice" className="text-[15px] leading-[1.5]">
+              {view.verification.notice}
+            </p>
+          )}
+          {view.verification.lanes.length > 0 && (
+            <div data-ask="sources-checked" className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#8fa6c0]">
+                {s.verification.sourcesChecked}
+              </span>
+              {view.verification.lanes.map((lane) => (
+                <span
+                  key={`${lane.label}-${lane.status}`}
+                  data-ask-lane={lane.ok ? 'ok' : 'unavailable'}
+                  className="font-mono text-[12px] text-[#8299b4]"
+                >
+                  {lane.label} {lane.ok ? '✓' : '—'} {lane.ok ? '' : lane.status}
+                </span>
+              ))}
+            </div>
+          )}
+          {view.verification.claims.length > 0 && (
+            <ul data-ask="claim-states" className="flex flex-col gap-1">
+              {view.verification.claims.map((claim) => (
+                <li
+                  key={claim.text}
+                  data-ask-claim-state={claim.state}
+                  className="text-[13px] leading-[1.45] text-[#b7c7da]"
+                >
+                  {claim.text}: <strong>{claim.label}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       {view.badge === 'clar' ? (
         <section
           data-ask="clarification"

@@ -1,6 +1,7 @@
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
 import type { AskR2Locale, AskR2Strings } from './askR2Strings';
 import { resolveEvidenceState } from '@globalnews-ai/shared';
+import type { AnalysisRetrievalContext } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -79,6 +80,24 @@ export interface AskR2View {
     /** Each candidate as a draft of the reader's question scoped to it. */
     readonly choices: readonly { readonly label: string; readonly question: string }[];
   };
+  /**
+   * ASK TRUTHFUL RETRIEVAL R2A — the server's verification facts: may this answer conclude
+   * anything negative (never on absence alone), which source lanes were checked / unavailable,
+   * and each claim's deterministic state. Null when the server sent none.
+   */
+  readonly verification: {
+    readonly notice: string | null;
+    readonly lanes: readonly {
+      readonly label: string;
+      readonly ok: boolean;
+      readonly status: string;
+    }[];
+    readonly claims: readonly {
+      readonly text: string;
+      readonly state: string;
+      readonly label: string;
+    }[];
+  } | null;
 }
 
 const BADGE_OF: Readonly<Record<AskAnswerState, AskR2Badge>> = {
@@ -394,5 +413,45 @@ export function askR2View(
       suggestion,
       choices,
     },
+    verification: verificationOf(retrieval, s),
   };
+}
+
+/** ASK TRUTHFUL RETRIEVAL R2A — the reader's view of what was checked (server facts only). */
+function verificationOf(
+  retrieval: AnalysisRetrievalContext | null | undefined,
+  s: AskR2Strings,
+): AskR2View['verification'] {
+  if (retrieval == null) return null;
+  const trace = retrieval.retrievalTrace;
+  const notice =
+    retrieval.verificationNotice === undefined
+      ? null
+      : retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
+        ? `${s.verification.notVerified} ${s.verification.coverageIncomplete}`
+        : s.verification.notVerified;
+  if (notice === null && trace === undefined && retrieval.claimAssessments === undefined)
+    return null;
+  const label = (lane: string) => s.verification.lanes[lane] ?? lane;
+  const lanes =
+    trace === undefined
+      ? []
+      : [
+          ...trace.lanesSucceeded.map((lane) => ({
+            label: label(lane),
+            ok: true,
+            status: s.verification.available,
+          })),
+          ...trace.lanesUnavailable.map((u) => ({
+            label: label(u.lane),
+            ok: false,
+            status: `${s.verification.unavailable} (${u.reason})`,
+          })),
+        ];
+  const claims = (retrieval.claimAssessments ?? []).map((c) => ({
+    text: c.text,
+    state: c.state,
+    label: s.verification.states[c.state] ?? c.state,
+  }));
+  return { notice, lanes, claims };
 }

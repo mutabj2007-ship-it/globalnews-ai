@@ -753,10 +753,9 @@ describe('BETA-ASK-005 · Q1 end to end on the real services (composes with R1 +
       to: window.to,
       basis: 'PUBLICATION_TIME',
     });
-    /* OLD may collapse into EN_SECURITY as a duplicate first; the observed-time report is always excluded. */
-    expect(result.retrievalContext?.reportingWindow?.excludedOutsideWindow).toBeGreaterThanOrEqual(
-      1,
-    );
+    /* Exact: the 20-day-old report and the aggregator-observed report — excluded per provider
+       candidate BEFORE any duplicate collapse, each counted once however many searches saw it. */
+    expect(result.retrievalContext?.reportingWindow?.excludedOutsideWindow).toBe(2);
     /* The model is told the window; the report about a 2025 event keeps its own publication
        date and is never re-dated into the window. */
     expect(inputs).toHaveLength(1);

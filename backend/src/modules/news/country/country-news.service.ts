@@ -15,6 +15,7 @@ import { NewsService } from '../news.service';
 import { scoreArticleConfidence } from '../analysis/article-confidence.util';
 import { ArticlePersistenceService } from '../persistence/article-persistence.service';
 import { deduplicateArticles } from './deduplicate-articles.util';
+import { publishedInsideWindow } from '../relevance/publication-window.util';
 import {
   articleMentionsCity,
   resolvePrimaryCountry,
@@ -129,6 +130,12 @@ export class CountryNewsService {
     limit?: number,
     city?: string,
     lang?: string,
+    /**
+     * BETA-ASK-005 / CTO ADDENDUM — a strict publication window. Applied to provider candidates
+     * (NewsService) and to stored reporting BEFORE any duplicate collapse, so an out-of-window
+     * copy of a story can never displace its in-window copy. Part of the cache key.
+     */
+    window?: { readonly from: string; readonly to: string },
   ): Promise<CountryNewsResponse> {
     const resolvedLimit = this.clampLimit(limit);
     const country = resolveCountryByAnyIdentifier(countryIdentifier);
@@ -145,7 +152,7 @@ export class CountryNewsService {
     // its key segment, matching the de facto behavior every existing
     // caller already had — this does not change caching behavior for
     // any caller that never passes `lang`.
-    const cacheKey = `${country.iso3}:${category ?? 'all'}:${resolvedLimit}:${city ?? 'all'}:${lang ?? 'en'}`;
+    const cacheKey = `${country.iso3}:${category ?? 'all'}:${resolvedLimit}:${city ?? 'all'}:${lang ?? 'en'}${window === undefined ? '' : `:w${window.from.slice(0, 13)}..${window.to.slice(0, 13)}`}`;
     const cached = this.getCached(cacheKey);
 
     if (cached) {
@@ -181,7 +188,11 @@ export class CountryNewsService {
         this.buildSearchTerm(country, city),
         fetchLimit,
         undefined,
-        lang ? { lang } : undefined,
+        window !== undefined
+          ? { ...(lang ? { lang } : {}), from: window.from, to: window.to }
+          : lang
+            ? { lang }
+            : undefined,
       );
     } catch (error) {
       this.logger.warn(
@@ -218,7 +229,13 @@ export class CountryNewsService {
         return emptyResponse;
       }
 
-      const storedArticles = await this.getStoredArticles(country, category, resolvedLimit, city);
+      const storedArticles = await this.getStoredArticles(
+        country,
+        category,
+        resolvedLimit,
+        city,
+        window,
+      );
 
       if (storedArticles.length > 0) {
         const response: CountryNewsResponse = {
@@ -449,7 +466,13 @@ export class CountryNewsService {
         return emptyResponse;
       }
 
-      const storedArticles = await this.getStoredArticles(country, category, resolvedLimit, city);
+      const storedArticles = await this.getStoredArticles(
+        country,
+        category,
+        resolvedLimit,
+        city,
+        window,
+      );
 
       if (storedArticles.length > 0) {
         const response: CountryNewsResponse = {
@@ -554,14 +577,19 @@ export class CountryNewsService {
     category: NewsCategory | undefined,
     limit: number,
     city: string | undefined,
+    window?: { readonly from: string; readonly to: string },
   ): Promise<NewsArticle[]> {
-    const countryStored = await this.articlePersistence.findRecentByCountry({
-      countryCode: country.iso3,
-      category,
-      limit,
-      maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
-      relevantOnly: true,
-    });
+    const inWindow = (article: NewsArticle) =>
+      window === undefined || publishedInsideWindow(article, window.from, window.to);
+    const countryStored = (
+      await this.articlePersistence.findRecentByCountry({
+        countryCode: country.iso3,
+        category,
+        limit,
+        maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+        relevantOnly: true,
+      })
+    ).filter(inWindow);
 
     if (!city) {
       return countryStored;
@@ -575,7 +603,7 @@ export class CountryNewsService {
     });
 
     const cityStored = cityStoredCandidates.filter(
-      (article) => scoreCountryRelevance(article, country).isRelevant,
+      (article) => inWindow(article) && scoreCountryRelevance(article, country).isRelevant,
     );
 
     return deduplicateArticles([...cityStored, ...countryStored]).slice(0, limit);
