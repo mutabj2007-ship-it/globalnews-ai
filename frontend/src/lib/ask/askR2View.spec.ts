@@ -55,7 +55,9 @@ describe('D25 02 — badge, surface and freshness per state', () => {
       'CURRENT_REPORTING',
       'CURRENT INTELLIGENCE',
       'current',
-      'Retained reporting to 28 Sep 2026, 04:20 UTC · 2 sources',
+      /* PUBLIC BETA HARDENING R1C — no retained basis in this fixture: it was checked, not
+         retained (retained wording is proven in askLiveRetainedProvenance.spec.ts). */
+      'Checked 28 Sep 2026, 04:40 UTC · 2 sources',
     ],
     [
       'CLARIFICATION_REQUIRED',

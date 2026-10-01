@@ -316,7 +316,15 @@ export function askR2View(
     freshness = s.freshness
       .corroboratedAsOf(payload.verification.reports)
       .replace('{when}', formatUtc(payload.verification.asOf, locale) ?? '—');
-  else if (badge === 'cur') freshness = fill(s.freshness.retainedTo, retainedTo);
+  /* PUBLIC BETA HARDENING R1C — "Retained reporting" only when the answer actually rests on
+     retained reporting (served from the store: dataMode 'cached' / outcome RETAINED_ONLY).
+     A live answer — healthy or limited — says when it was checked; a limited one keeps its
+     separate search-limited note. */
+  else if (badge === 'cur')
+    freshness =
+      retrieval?.dataMode === 'cached' || retrieval?.outcome === 'RETAINED_ONLY'
+        ? fill(s.freshness.retainedTo, retainedTo)
+        : fill(s.freshness.checked, checkedAt);
   else freshness = fill(s.freshness.checked, checkedAt);
   /* BETA-ASK-005 — a bounded window is stated wherever retrieval ran under it. */
   const window = retrieval?.reportingWindow;
