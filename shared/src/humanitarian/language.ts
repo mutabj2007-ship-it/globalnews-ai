@@ -11,7 +11,7 @@
      GDACS client is proposed.
    ──────────────────────────────────────────────────────────────────────────── */
 
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { LanguageCode } from '../analysis';
 
 /* ── 1 · THE TWO LANGUAGE AXES, AND WHY THEY ARE DIFFERENT TYPES ────────────
    This is not a new rule. Canonical already states it, twice, and this file
