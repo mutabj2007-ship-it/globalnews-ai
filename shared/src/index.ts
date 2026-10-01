@@ -108,6 +108,8 @@ export * from './official-data/providers/nisr-cpi.decoder';
 export * from './humanitarian/spatial-geometry';
 export * from './humanitarian/geometry-authority';
 export * from './humanitarian/authority-cadence';
+/* HUMANITARIAN LANGUAGE QUALIFICATION R1 (lane L) — consumed by the EN/PL humanitarian dictionaries. */
+export * from './humanitarian/language';
 
 /*
   SECURITY — THE ACCEPTED PART IX CONTRACT, CONVERGED ONTO THIS LINEAGE.

@@ -1,0 +1,119 @@
+{
+  "fixtureSet": "HUMANITARIAN LANGUAGE QUALIFICATION R1 · the seven mandated cases, as data",
+  "note": "Shared and importable. The spec RECOMPUTES every expectation through translationStateOf / qualifyText and never trusts a value in this file.",
+  "sourceShapes": {
+    "reliefweb": "metadata carries a `language` array; a record may declare several. Where it designates an original, that is `designatedOriginal`; where it does not, this product does NOT pick one.",
+    "gdacs": "metadata carries a language where available; where it is absent the field is absent, never defaulted.",
+    "neverInferred": "No case derives a language from a country, a region or a publisher's nationality. canonical already forbids it: NewsArticle.sourceLanguage is 'never fabricated or inferred'."
+  },
+  "cases": [
+    {
+      "id": "T1", "mandated": "English source -> EN",
+      "observed": { "declared": ["en"], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "en", "platformTranslationPresent": false, "sourceTextPresent": true,
+      "expect": { "translationState": "ORIGINAL", "text": "AVAILABLE", "claim": "SINGLE", "discloseSourceLanguage": false },
+      "why": "Source language equals display language, so there is no translation and no translation label."
+    },
+    {
+      "id": "T2", "mandated": "English source -> PL answer",
+      "observed": { "declared": ["en"], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "pl", "platformTranslationPresent": false, "sourceTextPresent": true,
+      "expect": { "translationState": "UNTRANSLATED", "text": "AVAILABLE", "claim": "SINGLE", "discloseSourceLanguage": true },
+      "why": "The answer may be Polish; the source was not. UNTRANSLATED is a displayable state and the citation must disclose the source language."
+    },
+    {
+      "id": "T2b", "mandated": "English source -> PL answer, platform translated",
+      "observed": { "declared": ["en"], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "pl", "platformTranslationPresent": true, "sourceTextPresent": true,
+      "expect": { "translationState": "PLATFORM_TRANSLATED", "text": "AVAILABLE", "claim": "SINGLE", "discloseSourceLanguage": true },
+      "why": "Labelled as a machine translation, and the source language is still disclosed. The original wording stays reachable."
+    },
+    {
+      "id": "T3", "mandated": "Polish source",
+      "observed": { "declared": ["pl"], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "pl", "platformTranslationPresent": false, "sourceTextPresent": true,
+      "expect": { "translationState": "ORIGINAL", "text": "AVAILABLE", "claim": "SINGLE", "discloseSourceLanguage": false },
+      "why": "A Polish source read in Polish is an original. The product must not label its own reader's language as a translation."
+    },
+    {
+      "id": "T3b", "mandated": "Polish source -> EN answer",
+      "observed": { "declared": ["pl"], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "en", "platformTranslationPresent": true, "sourceTextPresent": true,
+      "expect": { "translationState": "PLATFORM_TRANSLATED", "text": "AVAILABLE", "claim": "SINGLE", "discloseSourceLanguage": true },
+      "why": "The mirror of T2b. Asymmetry here would mean the rule is English-centred."
+    },
+    {
+      "id": "T4", "mandated": "unknown language",
+      "observed": { "declared": [], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "en", "platformTranslationPresent": false, "sourceTextPresent": true,
+      "expect": { "translationState": "UNKNOWN", "text": "UNAVAILABLE", "textReason": "SOURCE_LANGUAGE_NOT_OBSERVED", "claim": "NOT_OBSERVED", "discloseSourceLanguage": true },
+      "why": "No declared language, so no claim is sayable. Metadata is retained; the body is withheld rather than guessed."
+    },
+    {
+      "id": "T4b", "mandated": "unknown language, and a translation exists anyway",
+      "observed": { "declared": [], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "pl", "platformTranslationPresent": true, "sourceTextPresent": true,
+      "expect": { "translationState": "UNKNOWN", "text": "UNAVAILABLE", "textReason": "SOURCE_LANGUAGE_NOT_OBSERVED", "claim": "NOT_OBSERVED", "discloseSourceLanguage": true },
+      "why": "THE CONTROL THAT MATTERS. A translation of unknown origin must NOT be labelled PLATFORM_TRANSLATED — that would assert a source language by implication. UNKNOWN outranks every other branch."
+    },
+    {
+      "id": "T5", "mandated": "multilingual ReliefWeb record, no designated original",
+      "observed": { "declared": ["en", "fr", "ar"], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "en", "platformTranslationPresent": false, "sourceTextPresent": true,
+      "expect": { "translationState": "UNTRANSLATED", "text": "UNAVAILABLE", "textReason": "SOURCE_LANGUAGE_AMBIGUOUS", "claim": "MULTIPLE_UNDESIGNATED", "discloseSourceLanguage": true },
+      "why": "Three declared languages and no designation. 'en' being among them does not make this text English — the product must not pick the one that suits the reader."
+    },
+    {
+      "id": "T5b", "mandated": "multilingual ReliefWeb record WITH a designated original",
+      "observed": { "declared": ["fr", "en"], "designatedOriginal": "fr", "sourceSuppliedTranslations": ["en"] },
+      "displayLanguage": "en", "platformTranslationPresent": false, "sourceTextPresent": true,
+      "expect": { "translationState": "SOURCE_TRANSLATION", "text": "AVAILABLE", "claim": "DESIGNATED", "discloseSourceLanguage": true },
+      "why": "The source designated French as the original and published the English itself. SOURCE_TRANSLATION, and the source language is still disclosed because it differs from the answer."
+    },
+    {
+      "id": "T6", "mandated": "source translation vs platform translation — the same record, both routes",
+      "observed": { "declared": ["fr"], "designatedOriginal": "fr", "sourceSuppliedTranslations": ["pl"] },
+      "displayLanguage": "pl", "platformTranslationPresent": true, "sourceTextPresent": true,
+      "expect": { "translationState": "SOURCE_TRANSLATION", "text": "AVAILABLE", "claim": "DESIGNATED", "discloseSourceLanguage": true },
+      "why": "Both are present. The SOURCE's own translation wins, and the platform's is not what the reader is told about. Precedence is the contract, not a preference."
+    },
+    {
+      "id": "T6b", "mandated": "platform translation only, source supplied none",
+      "observed": { "declared": ["fr"], "designatedOriginal": "fr", "sourceSuppliedTranslations": ["en"] },
+      "displayLanguage": "pl", "platformTranslationPresent": true, "sourceTextPresent": true,
+      "expect": { "translationState": "PLATFORM_TRANSLATED", "text": "AVAILABLE", "claim": "DESIGNATED", "discloseSourceLanguage": true },
+      "why": "NEGATIVE CONTROL for T6. The source translated into English, not Polish. A Polish reader must not be told the source translated this."
+    },
+    {
+      "id": "T7", "mandated": "citation source identity preserved",
+      "observed": { "declared": ["en"], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "pl", "platformTranslationPresent": true, "sourceTextPresent": true,
+      "citation": {
+        "publisherName": "OCHA",
+        "originalTitle": "Flash Update No. 3: Floods in Eastern Province",
+        "sourceLanguage": "en",
+        "answerLanguage": "pl"
+      },
+      "expect": { "translationState": "PLATFORM_TRANSLATED", "text": "AVAILABLE", "claim": "SINGLE", "discloseSourceLanguage": true },
+      "why": "A Polish answer citing an English OCHA update. The publisher name is not translated, the original title is carried, and the citation must state that the source was published in English."
+    },
+    {
+      "id": "T8", "mandated": "source published no text",
+      "observed": { "declared": ["en"], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "en", "platformTranslationPresent": false, "sourceTextPresent": false,
+      "expect": { "translationState": "ORIGINAL", "text": "UNAVAILABLE", "textReason": "NOT_PUBLISHED_BY_SOURCE", "claim": "SINGLE", "discloseSourceLanguage": false },
+      "why": "Absence at the source is a different state from absence of a qualification, and gets its own reason and its own string."
+    },
+    {
+      "id": "T9", "mandated": "a source language outside the product's own language list",
+      "observed": { "declared": ["prs"], "sourceSuppliedTranslations": [] },
+      "displayLanguage": "en", "platformTranslationPresent": false, "sourceTextPresent": true,
+      "expect": { "translationState": "UNTRANSLATED", "text": "AVAILABLE", "claim": "SINGLE", "discloseSourceLanguage": true },
+      "why": "`prs` is not a LanguageCode member and must not be coerced into one. It is carried verbatim and disclosed verbatim — canonical's own rule about a 'far larger set' than the UI list."
+    }
+  ],
+  "neverInferredControls": [
+    { "id": "NI-1", "statement": "No case supplies a country, and no function in the contract takes one. A country cannot reach a language decision because there is no parameter for it.", "assertedBy": "AS-9" },
+    { "id": "NI-2", "statement": "An empty declared list yields NOT_OBSERVED and UNKNOWN, never a guess from the publisher's nationality.", "assertedBy": "AS-4" }
+  ]
+}
