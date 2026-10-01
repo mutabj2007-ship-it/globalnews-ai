@@ -8,6 +8,7 @@ import { usePublishStoryContext } from '@/lib/ask/storyContextStore';
 import { dashboardContext } from '@/lib/ask/dashboardContext';
 import { askContextRefOf } from '@/lib/ask/askContextRef';
 import { askRecordStrings, dashboardModuleContext } from '@/lib/ask/askModuleRef';
+import { askCompareRef, dashboardCompareContext } from '@/lib/ask/askSelectionRef';
 import { resolveAskStrings, type AskLocale } from '@/lib/ask/askStrings';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
 import { askR2View } from '@/lib/ask/askR2View';
@@ -90,6 +91,14 @@ export function AskFrameScreen({
   const incomingModule = useMemo(() => dashboardModuleContext(new URLSearchParams(urlKey)), [urlKey]);
   const [moduleRemovedFor, setModuleRemovedFor] = useState<string>();
   const moduleContext = moduleRemovedFor === urlKey ? undefined : incomingModule;
+  /*
+    UNIFIED INTELLIGENCE BINDING R2H — Home "Compare stories": 2..8 staged story URLs. The most
+    specific context (a chosen SET), so while its chip is shown it is what this screen sends —
+    as a COMPARE selection whose references are derived only when the reader presses Ask.
+  */
+  const incomingCompare = useMemo(() => dashboardCompareContext(new URLSearchParams(urlKey)), [urlKey]);
+  const [compareRemovedFor, setCompareRemovedFor] = useState<string>();
+  const compareContext = compareRemovedFor === urlKey ? undefined : incomingCompare;
   const [question, setQuestion] = useState(params.get('q') ?? '');
   const [compact, setCompact] = useState(false);
   const reader = useRef<HTMLDivElement>(null);
@@ -151,6 +160,14 @@ export function AskFrameScreen({
   useEffect(() => {
     setQuestion(new URLSearchParams(urlKey).get('q') ?? '');
   }, [urlKey]);
+  /* R2H — a Compare arrival without `q` stages a DRAFT question (declared after the effect
+     above, so it wins); like `q`, it is never submitted on arrival. */
+  useEffect(() => {
+    const url = new URLSearchParams(urlKey);
+    if (url.get('q') === null && dashboardCompareContext(url) !== undefined) {
+      setQuestion(r2Locale === 'pl' ? 'Porównaj te artykuły' : 'Compare these stories');
+    }
+  }, [urlKey, r2Locale]);
   /*
     SIGNED-OUT FALLBACK REMOVAL R1 — back from sign-in, the kept question returns to the
     composer as a DRAFT. It is read once and removed; nothing is sent until the reader
@@ -255,7 +272,11 @@ export function AskFrameScreen({
       the server cannot resolve runs nothing and keeps the draft (never a silent generic Ask).
     */
     setAskUnavailable(false);
-    const outcome = await r2.submit(draft, moduleContext?.ref ?? askContextRefOf(context, undefined));
+    const compareRef = compareContext === undefined ? undefined : await askCompareRef(compareContext);
+    const outcome = await r2.submit(
+      draft,
+      compareRef ?? moduleContext?.ref ?? askContextRefOf(context, undefined),
+    );
     if (outcome === 'context-unavailable') setQuestion(draft);
     else if (outcome === 'legacy') {
       setAskUnavailable(true);
@@ -366,7 +387,25 @@ export function AskFrameScreen({
       <div ref={reader} data-ask="reader" className={styles.reader} aria-live="polite">
         <div className={styles.grid}>
           <div data-ask="thread" className={styles.thread}>
-            {moduleContext && (
+            {compareContext && (
+              <div data-ask="context" data-ask-context-kind="SELECTION" className={styles.contextChip}>
+                <span className="truncate">
+                  {(r2Locale === 'pl' ? 'Porównanie: {n} artykułów' : 'Comparing {n} stories').replace(
+                    '{n}',
+                    String(compareContext.length),
+                  )}
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center"
+                  aria-label={t.controls.removeContext}
+                  onClick={() => setCompareRemovedFor(urlKey)}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {!compareContext && moduleContext && (
               <div data-ask="context" data-ask-context-kind="MODULE" className={styles.contextChip}>
                 <span className="truncate">
                   {moduleContext.label || askRecordStrings(r2Locale).moduleRecord[moduleContext.ref.module]}
@@ -381,7 +420,7 @@ export function AskFrameScreen({
                 </button>
               </div>
             )}
-            {!moduleContext && context && (
+            {!compareContext && !moduleContext && context && (
               <div data-ask="context" className={styles.contextChip}>
                 <span className="truncate">{context.title}</span>
                 <button

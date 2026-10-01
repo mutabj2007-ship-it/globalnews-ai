@@ -94,7 +94,7 @@ describe('wiring — the screen sends what it shows; launchers only where a cont
     const screen = read('components/ask-frame/AskFrameScreen.tsx');
     expect(screen).toContain('dashboardModuleContext(new URLSearchParams(urlKey))');
     expect(screen).toContain(
-      'r2.submit(draft, moduleContext?.ref ?? askContextRefOf(context, undefined))',
+      'compareRef ?? moduleContext?.ref ?? askContextRefOf(context, undefined)',
     );
     expect(screen).toContain('data-ask-context-kind="MODULE"');
   });

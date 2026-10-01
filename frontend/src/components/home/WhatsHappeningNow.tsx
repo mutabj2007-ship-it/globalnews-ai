@@ -3,6 +3,7 @@ import { Info } from 'lucide-react';
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { HomeSaveControl } from '@/components/my-intelligence/HomeSaveControl';
+import { HomeCompare } from '@/components/home/HomeCompare';
 import { StoryRailMotion } from '@/components/home/StoryRailMotion';
 import { StoryVisual } from '@/components/home/StoryVisual';
 import {
@@ -464,6 +465,11 @@ export function WhatsHappeningNow({
               </StoryRailMotion>
             )}
           </div>
+          {/* R2H — Compare: local choice, then ONE Ask V2 SELECTION on the reader's Ask. */}
+          <HomeCompare
+            stories={rail.map((article) => ({ title: article.title, url: article.url }))}
+            language={language}
+          />
         </>
       )}
     </section>
