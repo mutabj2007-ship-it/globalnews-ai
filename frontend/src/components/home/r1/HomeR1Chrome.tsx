@@ -74,7 +74,15 @@ export function HomeR1Header({
     <header data-home-r1-header="" className="sticky top-0 z-50 h-[56px] bg-[var(--gt-hdr)] lg:h-[60px]">
       <div className="flex h-full min-w-0 items-center gap-2 px-3 sm:px-4 lg:px-5">
         <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label={nav.homeAriaLabel}>
-          <Logo size={24} gapPx={8} />
+          {alerts === null ? (
+            <Logo size={24} gapPx={8} />
+          ) : (
+            /* Stage B: with the Alerts entry the phone top bar keeps one line — the mark alone below 480 px. */
+            <>
+              <Logo size={24} gapPx={8} className="hidden min-[480px]:inline-flex" />
+              <Logo size={24} gapPx={8} showWordmark={false} className="min-[480px]:hidden" />
+            </>
+          )}
           {/* The BETA chip from 400 px: at 360 the top bar keeps brand, language and Sign in on one line. */}
           <span className="hidden rounded-[5px] border border-cyan-400/35 bg-cyan-400/10 px-1.5 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-cyan-200 min-[400px]:inline">
             {dict.homeR1.nav.brandBeta}
