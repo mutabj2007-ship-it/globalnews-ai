@@ -21,6 +21,19 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openGlobalAsk';
 import { mapGeographyChipShown, readEffectiveContext } from '@/lib/ask/effectiveContext';
+import { AskR2TurnView } from '@/components/ask-frame/AskR2TurnView';
+import { AskDeepConfirm } from '@/components/ask-frame/AskDeepConfirm';
+import { EmbeddedAskTitle, EmbeddedConversation } from '@/components/ask/EmbeddedConversation';
+import { usePlatformGates } from '@/components/platform/PlatformGates';
+import { sanitizeReturnPath, useAskR2Conversation } from '@/lib/ask/useAskR2Conversation';
+import { GLOBAL_ASK_SUBMIT_EVENT, type GlobalAskSubmitDetail } from '@/lib/ask/submitGlobalAsk';
+import { GLOBAL_ASK_DEEPER_EVENT, type GlobalAskDeeperDetail } from '@/lib/ask/requestDeeperAsk';
+import { clearAskSelection, useAskSelection } from '@/lib/ask/selectionContextStore';
+import { buildDockContextRef, dockContextKind } from '@/lib/ask/askContextRef';
+import { askR2Strings } from '@/lib/ask/askR2Strings';
+import { accountSignInUrl } from '@/lib/api/accountLinks';
+import { signInReturnFor } from '@/components/bookmark/StoryBookmark';
+import { keepQuestion } from '@/lib/ask/askKeptQuestion';
 
 /**
  * ═══ ASK AI — PHASE 1 ════════════════════════════════════════════════════
@@ -112,6 +125,15 @@ interface AskAiDockProps {
    * layout). The root owns its composer, exactly as /ask does, so the dock unmounts there.
    */
   standaloneRoot?: boolean;
+  /**
+   * HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE A — `ask.embedded` (server-read GNA_ASK_EMBEDDED,
+   * default OFF). ON, the dock's ONE transport is the Ask R2/V2 conversation (the same hook the
+   * Standalone /ask uses); OFF, it is the landed `analyzeNews` transport, unchanged — the
+   * rollback (Claude H §2). Open / type / stage stay zero-compute either way.
+   */
+  embeddedAsk?: boolean;
+  /** `ask.contextEnvelope` (GNA_ASK_CONTEXT_REFS) — send governed references; needs embeddedAsk. */
+  contextRefs?: boolean;
 }
 
 /**
@@ -201,6 +223,10 @@ export function isAdminRoute(pathname: string | null): boolean {
 
 export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   const pathname = usePathname();
+  /* HOME R1 · STAGE A — the release gates from the root layout's provider (default: all OFF).
+     Explicit props win, so a caller can pin the transport. */
+  const gates = usePlatformGates();
+  const embeddedAsk = props.embeddedAsk ?? gates.askEmbedded;
   // The dedicated dashboard owns its composer; unmount the global dock entirely.
   if (pathname === ASK_CANONICAL_ROUTE) return null;
   if (isAdminRoute(pathname)) return null;
@@ -221,6 +247,9 @@ export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
       language={props.language}
       showLauncher={!LAUNCHER_SUPPRESSED_ROUTES.has(pathname ?? '')}
       mapSurface={pathname === MAP_ROUTE}
+      embeddedAsk={embeddedAsk}
+      contextRefs={embeddedAsk && (props.contextRefs ?? gates.askContextRefs)}
+      returnPath={pathname}
     />
   );
 }
@@ -229,8 +258,19 @@ function GlobalAskAiDock({
   language = 'en',
   showLauncher = true,
   mapSurface = false,
-}: AskAiDockProps & { showLauncher?: boolean; mapSurface?: boolean }): JSX.Element {
+  embeddedAsk = false,
+  contextRefs = false,
+  returnPath = null,
+}: AskAiDockProps & { showLauncher?: boolean; mapSurface?: boolean; returnPath?: string | null }): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
+  /*
+    HOME R1 · STAGE A — the embedded conversation reads the guest status only once Ask has
+    actually been opened (the dock is mounted on every route; mounting must stay request-free).
+  */
+  const [everOpened, setEverOpened] = useState(false);
+  useEffect(() => {
+    if (isOpen) setEverOpened(true);
+  }, [isOpen]);
   /* ASK R2 INTEGRATION R1 · D25 11 — the bottom navigation is hidden while Ask is active. */
   useEffect(() => {
     const body = typeof document === 'undefined' ? undefined : document.body;
@@ -291,6 +331,36 @@ function GlobalAskAiDock({
 
   const dictionary = getDictionary(language);
   const t = dictionary.askAi;
+
+  /*
+    ════════════════════════════════════════════════════════════════════════
+    HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE A — ONE ASK CONVERGENCE
+    ════════════════════════════════════════════════════════════════════════
+
+    Under `ask.embedded` the dock's transport is the Ask R2/V2 conversation — the SAME hook,
+    the same server, the same guest trial, idempotency, deep quote → accept → reserve →
+    execute and the same answer view (AskR2TurnView) as the Standalone /ask. Nothing here
+    is a second engine, prompt or service. The hook is ALWAYS called (rules of hooks) but is
+    inert until a Send: with the gate OFF it is never asked to do anything, and `guestTrial`
+    stays false until Ask has been opened, so mounting the dock on any route reads nothing.
+
+    The rollback is the gate: OFF, the `analyzeNews` transport below is untouched. ON, the
+    legacy transport is used for a question only when the server says Ask V2 itself is
+    disabled (`legacy`) — exactly the Standalone rule; a signed-out reader is NEVER sent down
+    it.
+  */
+  const r2Locale = language === 'pl' ? 'pl' : 'en';
+  const r2 = useAskR2Conversation(r2Locale, sanitizeReturnPath(returnPath), {
+    guestTrial: embeddedAsk && everOpened,
+  });
+  const r2s = askR2Strings(r2Locale);
+  const tr1 = dictionary.homeR1.dock;
+  /* "Ask GlobalNewsAI about these stories" — held stories, identity only, read live at Send. */
+  const heldSelection = useAskSelection();
+  /* One Send at a time, including the moment the context references are being built. */
+  const sending = useRef(false);
+  /* A Home "Ask = Send" waits one render so the conversation sees the opened dock's guest mode. */
+  const [queuedSend, setQueuedSend] = useState<string | null>(null);
 
   /*
    * §5.2.5 — THE DOCK READS, NEVER WRITES, AND KEEPS NO COPY.
@@ -376,6 +446,28 @@ function GlobalAskAiDock({
           ? t.geographyOutranked
           : t.geographyNotApplied
         ).replace('{place}', geographyContext?.displayName ?? '');
+
+  /*
+    HOME R1 · STAGE A — under `ask.embedded` the chip states what WILL be sent as a governed
+    reference, by the same precedence the builder applies (held stories → story → country).
+    Without `ask.contextEnvelope` nothing is attached, so the chip says so (generic) rather
+    than naming a context the Send would not carry.
+  */
+  const contextKind = embeddedAsk && contextRefs
+    ? dockContextKind({ selection: heldSelection.stories, story: storyContext, geography: geographyContext })
+    : 'none';
+  const embeddedChip: { kind: string; label: string } | null = !embeddedAsk
+    ? null
+    : contextKind === 'selection'
+      ? { kind: 'selection', label: tr1.selectionChip.replace('{n}', String(heldSelection.stories.length)) }
+      : contextKind === 'story'
+        ? { kind: 'anchored', label: t.contextChipAnchored }
+        : contextKind === 'geography'
+          ? {
+              kind: 'geography',
+              label: t.askingAboutGeography.replace('{place}', geographyContext?.displayName ?? ''),
+            }
+          : { kind: 'generic', label: t.contextChipGeneric };
 
   /*
    * R2 FINDING 2 — WHERE THE LAUNCHER SITS IS A SURFACE QUESTION.
@@ -523,11 +615,127 @@ function GlobalAskAiDock({
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen]);
 
+  /*
+    HOME R1 · STAGE A — the legacy transport, for the ONE case the embedded path hands back
+    (`legacy`: the server says Ask V2 itself is disabled). It is the form handler below,
+    called with the question; a latest-value ref, so no effect and no closure goes stale.
+  */
+  const legacyTransport = useRef<
+    ((event: null, question: string, legacyHandBack: boolean) => void) | null
+  >(null);
+
+  /*
+    HOME R1 · STAGE A — THE EMBEDDED TRANSPORT. One explicit Send = one ordinary Ask turn
+    (`r2.submit` refuses a second while one is in flight: `busy`). The context references are
+    governed identifiers only, built at Send from what is published at that moment, and only
+    under `ask.contextEnvelope`. A refusal that sent nothing puts the question back.
+  */
+  const sendEmbedded = useCallback(
+    async (asked: string): Promise<void> => {
+      if (sending.current || r2.pending !== null) return;
+      sending.current = true;
+      setQuestion('');
+      try {
+        const context = contextRefs
+          ? await buildDockContextRef({
+              selection: heldSelection.stories,
+              selectionEntry: heldSelection.entry,
+              selectionAction: heldSelection.action,
+              story: storyContext,
+              geography: geographyContext,
+            })
+          : undefined;
+        const outcome = await r2.submit(asked, context);
+        if (outcome === 'legacy') legacyTransport.current?.(null, asked, true);
+        else if (outcome === 'signed-out' || outcome === 'kept' || outcome === 'busy') setQuestion(asked);
+      } finally {
+        sending.current = false;
+      }
+    },
+    [contextRefs, heldSelection, storyContext, geographyContext, r2],
+  );
+
+  /* "Ask about this" deeper analysis: the server quotes it; nothing runs until Accept. */
+  const runDeeper = useCallback(
+    async (asked: string): Promise<void> => {
+      const context = contextRefs
+        ? await buildDockContextRef({
+            selection: heldSelection.stories,
+            selectionEntry: heldSelection.entry,
+            selectionAction: heldSelection.action,
+            story: storyContext,
+            geography: geographyContext,
+          })
+        : undefined;
+      await r2.runDeeper(asked, context);
+    },
+    [contextRefs, heldSelection, storyContext, geographyContext, r2],
+  );
+
+  /*
+    HOME R1 · STAGE A — "Ask = Send" from the Home composer (submitGlobalAsk). Listened to
+    ONLY under `ask.embedded`; the press of Ask is the explicit Send. The question is queued
+    and sent after the dock has rendered open, so the guest-trial path is live for it. Neither
+    effect can reach the legacy client: the embedded transport is the only thing they call.
+  */
+  useEffect(() => {
+    if (!embeddedAsk) return undefined;
+    const onSubmit: EventListener = (event) => {
+      const asked = (event as CustomEvent<GlobalAskSubmitDetail>).detail?.question;
+      if (typeof asked !== 'string' || asked.trim().length < 2) return;
+      setIsOpen(true);
+      setQueuedSend((current) => current ?? asked.trim());
+    };
+    window.addEventListener(GLOBAL_ASK_SUBMIT_EVENT, onSubmit);
+    return () => window.removeEventListener(GLOBAL_ASK_SUBMIT_EVENT, onSubmit);
+  }, [embeddedAsk]);
+  useEffect(() => {
+    if (queuedSend === null || !everOpened) return;
+    setQueuedSend(null);
+    void sendEmbedded(queuedSend);
+  }, [queuedSend, everOpened, sendEmbedded]);
+
+  /*
+    HOME R1 · STAGE A — a deeper request from My Intelligence (requestDeeperAsk): the dock
+    opens and asks the server for a QUOTE only. Nothing runs until the reader presses Accept
+    in AskDeepConfirm. Queued until the opened dock has read the guest state, so a guest is
+    told deeper work needs an account instead of being quoted.
+  */
+  const [queuedDeeper, setQueuedDeeper] = useState<GlobalAskDeeperDetail | null>(null);
+  useEffect(() => {
+    if (!embeddedAsk) return undefined;
+    const onDeeper: EventListener = (event) => {
+      const detail = (event as CustomEvent<GlobalAskDeeperDetail>).detail;
+      if (detail === undefined || typeof detail.question !== 'string') return;
+      setIsOpen(true);
+      setQueuedDeeper((current) => current ?? detail);
+    };
+    window.addEventListener(GLOBAL_ASK_DEEPER_EVENT, onDeeper);
+    return () => window.removeEventListener(GLOBAL_ASK_DEEPER_EVENT, onDeeper);
+  }, [embeddedAsk]);
+  useEffect(() => {
+    if (queuedDeeper === null || !everOpened || r2.guest === null) return;
+    setQueuedDeeper(null);
+    void r2.runDeeper(queuedDeeper.question, queuedDeeper.context);
+  }, [queuedDeeper, everOpened, r2]);
+
+  /* The typed draft, which the form's Send submits; the embedded path's legacy hand-back
+     passes the question it already took from the composer instead. */
+  const typedDraft = question;
   const submit = useCallback(
-    (event: FormEvent<HTMLFormElement>): void => {
-      event.preventDefault();
+    (
+      event: FormEvent<HTMLFormElement> | null,
+      question: string = typedDraft,
+      legacyHandBack = false,
+    ): void => {
+      event?.preventDefault();
       const asked = question.trim();
       if (asked.length === 0) return;
+      /* HOME R1 · STAGE A — under ask.embedded the Send is the Ask R2 turn (see above). */
+      if (embeddedAsk && !legacyHandBack) {
+        void sendEmbedded(asked);
+        return;
+      }
       /* ASK/SEARCH R1 — one Send is one execution: a second submit while a
          turn is in flight (Enter/requestSubmit bypass the disabled button)
          must not issue a second request. */
@@ -604,8 +812,9 @@ function GlobalAskAiDock({
           });
         });
     },
-    [question, language, dictionary, storyContext, geographyContext, phase, history, topicReset, subjectOrigin],
+    [typedDraft, language, dictionary, storyContext, geographyContext, phase, history, topicReset, subjectOrigin, embeddedAsk, sendEmbedded],
   );
+  legacyTransport.current = submit;
 
   /*
     MAP R2 — the panel geometry per Spatial Ask layout. `null` everywhere but
@@ -689,16 +898,20 @@ function GlobalAskAiDock({
           data-ask-phase={phase.kind}
           aria-label={t.panelLabel}
           data-ask-geometry={mapLayout === null ? 'dock' : `map-${mapLayout}`}
+          data-ask-transport={embeddedAsk ? 'r2' : 'legacy'}
           style={mapPanelStyle ?? { bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
           className={onMap ? mapPanelClass : [
             'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
             /* PHONE and 768 PORTRAIT — FULL SCREEN (D25 11: "PHONE ASK MAY NOT" be partial).
                Was an 86dvh bottom sheet; D25 names that geometry as not permitted. */
             'inset-0 h-[100dvh] max-h-[100dvh] rounded-none pb-[env(safe-area-inset-bottom)]',
-            /* 1024 and up — a bounded floating right-hand dock. */
-            'lg:inset-y-4 lg:end-4 lg:start-auto lg:h-auto lg:w-[min(600px,92vw)] lg:max-h-[calc(100dvh-2rem)] lg:rounded-2xl',
+            /* 1024 and up — a bounded floating right-hand dock. HOME R1 · STAGE A — under
+               ask.embedded, the FINAL Design's 520 px full-height right-hand panel instead. */
+            embeddedAsk
+              ? 'lg:inset-y-0 lg:end-0 lg:start-auto lg:h-[100dvh] lg:max-h-[100dvh] lg:w-[min(520px,100vw)] lg:border-y-0 lg:border-e-0'
+              : 'lg:inset-y-4 lg:end-4 lg:start-auto lg:h-auto lg:w-[min(600px,92vw)] lg:max-h-[calc(100dvh-2rem)] lg:rounded-2xl',
             /* DESKTOP — a wider dock, so evidence and answer sit side by side. */
-            'lg:w-[min(680px,46vw)]',
+            embeddedAsk ? '' : 'lg:w-[min(680px,46vw)]',
           ].join(' ')}
         >
           <header
@@ -710,7 +923,18 @@ function GlobalAskAiDock({
           >
             <h2 className={onMap ? 'flex items-center gap-2 text-[15px] font-semibold text-[#ece8ff]' : 'font-display text-base font-medium text-ink-primary'}>
               {onMap ? <span aria-hidden="true" className="font-mono text-[11px] text-[#a78bfa]">◆</span> : null}
-              <a data-ask="dashboard-entry" href={dashboardHref(question || (phase.kind !== 'idle' ? phase.question : ''), storyContext)}>{t.title} ↗</a>
+              {embeddedAsk ? (
+                /* HOME R1 — "Open in Ask" (navigation, 0 AI) and the guest / account badge. */
+                <EmbeddedAskTitle
+                  r2={r2}
+                  title={t.title}
+                  openInAsk={tr1.openInAsk}
+                  guestLabel={tr1.guest}
+                  accountLabel={tr1.account}
+                />
+              ) : (
+                <a data-ask="dashboard-entry" href={dashboardHref(question || (phase.kind !== 'idle' ? phase.question : ''), storyContext)}>{t.title} ↗</a>
+              )}
             </h2>
             <button
               type="button"
@@ -732,6 +956,23 @@ function GlobalAskAiDock({
             data-ask="body"
             data-ask-scroll="conversation"
           >
+            {embeddedAsk ? (
+              <EmbeddedConversation
+                r2={r2}
+                locale={r2Locale}
+                language={language}
+                onRunDeeper={(asked) => void runDeeper(asked)}
+                signInHref={accountSignInUrl(signInReturnFor(returnPath))}
+                onSignIn={() => keepQuestion(question.trim() ? question : (r2.signInRequired ?? ''))}
+                readingLabel={tr1.reading}
+                signInTitle={tr1.signInTitle}
+                signInBody={tr1.signInBody}
+                signInAction={tr1.signIn}
+                guestStrings={r2s.guest}
+                continueDraft={question}
+                stages={[...dictionary.loadingStages]}
+              />
+            ) : null}
             {history.map((turn, index) => (
               <div key={`${index}-${turn.question}`} data-ask="history-turn" className="mb-6 flex flex-col gap-3 sm:gap-4">
                 <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm">
@@ -760,11 +1001,16 @@ function GlobalAskAiDock({
               </div>
             ) : null}
 
-            {phase.kind === 'idle' ? (
+            {phase.kind === 'idle' &&
+            !(embeddedAsk && (r2.turns.length > 0 || r2.pending !== null || r2.signInRequired !== null)) ? (
               /* No request has been made and none will be until a question is
                  submitted. This is the honest empty state, not a failure. */
               <p data-ask="idle" className="text-sm text-ink-tertiary">
-                {t.idle}
+                {embeddedAsk && contextKind === 'selection'
+                  ? tr1.emptySelection
+                  : embeddedAsk && contextKind === 'story'
+                    ? tr1.emptyStory
+                    : t.idle}
               </p>
             ) : null}
 
@@ -814,16 +1060,16 @@ function GlobalAskAiDock({
                   <span
                     data-ask="context-affordance"
                     data-ask-context={
-                      showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic'
+                      embeddedChip?.kind ?? (showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic')
                     }
                     title={showStoryLabel ? storyContext?.title : undefined}
                     className="inline-flex min-h-[32px] max-w-full items-center truncate rounded-full border border-[#1b6fa8] bg-[#07304f] px-[12px] text-[13px] font-semibold text-[#93cdf5]"
                   >
-                    {showStoryLabel
+                    {embeddedChip?.label ?? (showStoryLabel
                       ? t.contextChipAnchored
                       : showGeographyLabel
                         ? t.askingAboutGeography.replace('{place}', geographyContext?.displayName ?? '')
-                        : t.contextChipGeneric}
+                        : t.contextChipGeneric)}
                   </span>
                   {showGeographyLabel && (
                     <span data-ask="context-basis" className="text-[12px] text-[#8fa6c0]">
@@ -848,7 +1094,7 @@ function GlobalAskAiDock({
                   ref={inputRef}
                   value={question}
                   onChange={(event) => setQuestion(event.target.value)}
-                  placeholder={t.inputPlaceholder}
+                  placeholder={embeddedAsk ? (r2.turns.length > 0 ? tr1.placeholderFollow : tr1.placeholderNew) : t.inputPlaceholder}
                   maxLength={1000}
                   minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}
                   maxHeight={220}
@@ -859,7 +1105,7 @@ function GlobalAskAiDock({
                 <div className="flex items-center justify-between gap-[10px]">
                   <p data-ask="compute-notice" className="min-w-0 text-[12px] leading-[1.4] text-[#e5d2b0]">
                     <span aria-hidden="true" className="me-1 text-[#d9b98a]">ϟ</span>
-                    {t.mapComputeNotice}
+                    {embeddedAsk ? (r2.guestMode ? tr1.noteGuest : tr1.noteAccount) : t.mapComputeNotice}
                   </p>
                   <button
                     type="submit"
@@ -883,7 +1129,7 @@ function GlobalAskAiDock({
               ref={inputRef}
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
-              placeholder={t.inputPlaceholder}
+              placeholder={embeddedAsk ? (r2.turns.length > 0 ? tr1.placeholderFollow : tr1.placeholderNew) : t.inputPlaceholder}
               maxLength={1000}
               minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}
               maxHeight={420}
@@ -909,7 +1155,7 @@ function GlobalAskAiDock({
               <span
                 data-ask="context-affordance"
                 data-ask-context={
-                  showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic'
+                  embeddedChip?.kind ?? (showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic')
                 }
                 title={showStoryLabel ? storyContext?.title : undefined}
                 className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border-strong bg-surface px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-secondary"
@@ -921,15 +1167,26 @@ function GlobalAskAiDock({
                   and telling a reader otherwise would be the merge the ruling
                   forbids.
                 */}
-                    {showStoryLabel
+                    {embeddedChip?.label ?? (showStoryLabel
                       ? t.contextChipAnchored
                       : showGeographyLabel
                         ? t.askingAboutGeography.replace(
                             '{place}',
                             geographyContext?.displayName ?? '',
                           )
-                        : t.contextChipGeneric}
+                        : t.contextChipGeneric)}
                   </span>
+                  {embeddedAsk && contextKind === 'selection' && (
+                    /* HOME R1 — removing the held stories is local: no request. */
+                    <button
+                      type="button"
+                      data-ask="context-remove"
+                      onClick={() => clearAskSelection()}
+                      className="min-h-[44px] rounded-xl px-2 text-[11px] font-semibold text-ink-secondary underline-offset-2 hover:underline"
+                    >
+                      {tr1.removeSelection}
+                    </button>
+                  )}
                   {mapGeographyUnusedText !== null && (
                     <span
                       data-ask="context-unused"
@@ -946,13 +1203,26 @@ function GlobalAskAiDock({
                 disabled={question.trim().length === 0 || phase.kind === 'loading'}
                 className="min-h-[44px] rounded-2xl bg-signal px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(61,111,255,0.22)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50"
               >
-                {t.submit}
+                {embeddedAsk ? tr1.send : t.submit}
               </button>
             </div>
+            {embeddedAsk && (
+              <p data-ask="compute-notice" className="text-[11px] leading-[1.4] text-ink-secondary">
+                {r2.guestMode ? tr1.noteGuest : tr1.noteAccount}
+              </p>
+            )}
           </form>
           </div>
           )}
         </section>
+      )}
+      {embeddedAsk && r2.deepQuote !== null && (
+        /* The explicit acceptance: accept → reserve → execute. Cancel releases the quote. */
+        <AskDeepConfirm
+          locale={r2Locale}
+          onConfirm={() => void r2.confirmDeeper()}
+          onCancel={() => void r2.cancelDeeper()}
+        />
       )}
     </>
   );

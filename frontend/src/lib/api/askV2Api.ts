@@ -1,5 +1,6 @@
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { accountFetch } from './accountFetch';
+import type { AskContextRefWire } from '@/lib/ask/askContextRef';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -193,6 +194,11 @@ export interface AskV2Operation {
   readonly storedResultId: string | null;
   readonly storedResultReused: boolean;
   readonly failureCode: string | null;
+  /**
+   * HOME R1 STAGE A — what the SERVER made of the context references this turn was sent with
+   * (Inspect). Present only when some were sent; resolution is never client-decided.
+   */
+  readonly context?: AskV2OperationContext;
   readonly result: {
     readonly id: string;
     readonly payload: unknown;
@@ -201,6 +207,21 @@ export interface AskV2Operation {
     readonly expired: boolean;
     readonly displayOnly: true;
   } | null;
+}
+
+/** HOME R1 STAGE A — one server-resolved context reference. `label` is server-sourced. */
+export interface AskV2ContextRef {
+  readonly kind: 'story' | 'country';
+  readonly ref: string;
+  readonly status: 'available' | 'unavailable' | 'excluded';
+  readonly reason?: string;
+  readonly label?: string;
+}
+
+export interface AskV2OperationContext {
+  readonly entry: string;
+  readonly scope: 'story' | 'selection' | 'geography' | 'none';
+  readonly refs: readonly AskV2ContextRef[];
 }
 
 export interface AskV2Thread {
@@ -399,12 +420,15 @@ export const askV2Api = {
     language: AskV2Language,
     intent: AskV2Intent,
     key = newIdempotencyKey(),
+    /* HOME R1 STAGE A — governed references only; absent ⇒ the body is exactly as before. */
+    context?: AskContextRefWire,
   ) {
     return call<AskV2Operation>(`/ask-v2/threads/${encodeURIComponent(threadId)}/turns`, 'POST', {
       idempotencyKey: key,
       question,
       language,
       intent,
+      ...(context === undefined ? {} : { context }),
     });
   },
   /**
@@ -469,11 +493,19 @@ export const askV2Api = {
     question: string,
     language: AskV2Language,
     key = newIdempotencyKey(),
+    /* HOME R1 STAGE A — governed references only; absent ⇒ the body is exactly as before. */
+    context?: AskContextRefWire,
   ) {
     return call<AskV2Operation>(
       `/ask-v2/guest/threads/${encodeURIComponent(threadId)}/turns`,
       'POST',
-      { idempotencyKey: key, question, language, intent: 'ask' },
+      {
+        idempotencyKey: key,
+        question,
+        language,
+        intent: 'ask',
+        ...(context === undefined ? {} : { context }),
+      },
       GUEST_FIRST_WRITE,
     );
   },

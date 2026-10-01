@@ -10,6 +10,8 @@ import {
   SelectionActionError,
   runSelectionAction,
 } from '@/lib/myIntelligence/selection';
+import { routeSelectionToAsk } from '@/lib/myIntelligence/selectionAsk';
+import { usePlatformGates } from '@/components/platform/PlatformGates';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { MI_CARD, MI_EYEBROW, MI_GREETING, MI_PAGE } from './miPresentation';
 import { FixtureBanner, StatusBanner, fill } from './MiPrimitives';
@@ -94,6 +96,9 @@ export function MyIntelligenceClient({
   forceSignedOut?: boolean;
 }): JSX.Element {
   const t = getDictionary(language).myIntelligence;
+  /* HOME R1 · STAGE A — the selection converges on the one Ask engine only with BOTH gates on. */
+  const gates = usePlatformGates();
+  const askConverged = gates.askEmbedded && gates.askContextRefs;
   const data = useMyIntelligenceData({
     forceFirstVisit,
     forceBoundaryFailure,
@@ -241,6 +246,35 @@ export function MyIntelligenceClient({
       const stories = verifiedStories.map((story) => ({ articleRef: story.articleRef, url: story.url }));
       const titlesByRef = Object.fromEntries(verifiedStories.map((story) => [story.articleRef, story.title]));
 
+      /*
+        HOME R1 · STAGE A — ONE ASK ENGINE. Under ask.embedded + ask.contextEnvelope the action
+        goes to Ask R2/V2 (selectionAsk.ts): Ask about selected is one ordinary turn in the
+        conversation; every deeper action is a QUOTE that runs only after Accept. The same
+        local refusals apply first, before anything is published or dispatched. Gates OFF:
+        the landed path below, unchanged.
+      */
+      if (askConverged) {
+        try {
+          routeSelectionToAsk(multiStory, stories, language, typed, titlesByRef);
+          setSheetAction(null);
+          setRunStatus('idle');
+        } catch (error: unknown) {
+          setRunStatus('failed');
+          if (error instanceof SelectionActionError) {
+            setRunError(
+              error.reason === 'question-required'
+                ? t.compute.questionRequired
+                : error.reason === 'too-many'
+                  ? fill(t.selection.maxReached, { count: MAX_SELECTED_STORIES })
+                  : fill(t.compute.tooFewVerified, {
+                      count: MI_ACTIONS.find((entry) => entry.id === action)?.min ?? 1,
+                    }),
+            );
+          }
+        }
+        return;
+      }
+
       inFlight.current = true;
       setRunStatus('running');
       setRunError(undefined);
@@ -278,7 +312,7 @@ export function MyIntelligenceClient({
           inFlight.current = false;
         });
     },
-    [dictionary, language, sheetAction, t.compute.questionRequired, t.compute.tooFewVerified, t.selection.maxReached, verifiedStories],
+    [askConverged, dictionary, language, sheetAction, t.compute.questionRequired, t.compute.tooFewVerified, t.selection.maxReached, verifiedStories],
   );
 
   /*

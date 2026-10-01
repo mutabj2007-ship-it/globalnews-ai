@@ -14,6 +14,7 @@ import { buildRootMetadataBase } from '@/lib/seo/metadata';
 import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
 import { AskAiDock } from '@/components/ask/AskAiDock';
 import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
+import { homeR1Gates, releaseGatesMeta } from '@/lib/platform/homeR1Gates';
 import { ReturnDepthTracker } from '@/components/navigation/ReturnDepthTracker';
 import './globals.css';
 
@@ -190,6 +191,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
   const t = getDictionary(language);
+  const gatesMeta = releaseGatesMeta(homeR1Gates());
 
   return {
     // Brand name, not prose — Logo.tsx already renders this identical wordmark
@@ -214,6 +216,12 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t.homeMetaDescription,
     manifest: '/manifest.webmanifest',
     appleWebApp: { capable: true, title: 'GlobalNews', statusBarStyle: 'black-translucent' },
+    /*
+      HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE A — the server-read release gates for client
+      islands (the dock, My Intelligence): emitted ONLY when a gate is on, so with every gate
+      OFF this object is exactly what shipped. Names of ON gates only; see homeR1Gates.
+    */
+    ...(gatesMeta === null ? {} : { other: gatesMeta }),
   };
 }
 

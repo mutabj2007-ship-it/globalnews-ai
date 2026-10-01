@@ -9,6 +9,7 @@ import { adminEn } from './adminEn';
 import { supportEn } from './supportEn';
 import { myIntelligenceEn } from './myIntelligenceEn';
 import { homeRevaEn } from './homeRevaEn';
+import { homeR1En } from './homeR1En';
 
 export const en = {
   /**
@@ -37,6 +38,8 @@ export const en = {
   myIntelligence: myIntelligenceEn,
   /* HOME WELCOME & DISCOVERY R1 REV A — Home copy. */
   homeReva: homeRevaEn,
+  /* HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE A */
+  homeR1: homeR1En,
 
   languageSelectorLabel: 'Language',
   yourQuestion: 'Your question',

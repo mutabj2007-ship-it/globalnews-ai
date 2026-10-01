@@ -14,6 +14,7 @@ import {
 } from '@/lib/api/askV2Api';
 import { guestNoticeOf, guestSignInHref, isGuestMode, type GuestNotice } from './askGuestTrial';
 import { ASK_SIGN_IN_HREF, keepQuestion } from './askKeptQuestion';
+import type { AskContextRefWire } from './askContextRef';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -194,7 +195,7 @@ export function useAskR2Conversation(
 
   /** ASK GUEST TRIAL R3 — one guest Send, entirely server-decided. */
   const submitAsGuest = useCallback(
-    async (q: string, retried = false): Promise<AskR2SubmitOutcome> => {
+    async (q: string, retried = false, context?: AskContextRefWire): Promise<AskR2SubmitOutcome> => {
       let threadId = guestThread.current?.language === language ? guestThread.current.id : null;
       if (threadId === null) {
         const created = await askV2Api.guestCreateThread(language, sanitizeReturnPath(returnPath));
@@ -217,13 +218,13 @@ export function useAskR2Conversation(
         setAvailability('r2');
       }
       const before = guest?.committed ?? 0;
-      const sent = await askV2Api.guestSubmit(threadId, q, language, newIdempotencyKey());
+      const sent = await askV2Api.guestSubmit(threadId, q, language, newIdempotencyKey(), context);
       if (!sent.ok) {
         if (sent.reason === 'SIGNED_OUT' && !retried) {
           /* The guest session ended (absolute expiry, cleared cookie): the server decides anew. */
           guestThread.current = null;
           await refreshGuest();
-          return submitAsGuest(q, true);
+          return submitAsGuest(q, true, context);
         }
         const notice = guestNoticeOf(sent.code);
         if (notice === 'UNAVAILABLE') {
@@ -264,7 +265,9 @@ export function useAskR2Conversation(
    * `kept` when a guest refusal left the question in the composer (nothing ran).
    */
   const submit = useCallback(
-    async (question: string): Promise<AskR2SubmitOutcome> => {
+    /* HOME R1 STAGE A — `context`: governed references for the embedded entry points only.
+       The Standalone /ask screen never passes it, so its requests are unchanged. */
+    async (question: string, context?: AskContextRefWire): Promise<AskR2SubmitOutcome> => {
       const q = question.trim();
       if (q.length === 0) return 'failed';
       if (inFlight.current) return 'busy';
@@ -274,14 +277,14 @@ export function useAskR2Conversation(
       setSignInRequired(null);
       setGuestNotice(null);
       try {
-        if (guestTrial && isGuestMode(guest)) return await submitAsGuest(q);
+        if (guestTrial && isGuestMode(guest)) return await submitAsGuest(q, false, context);
         const id = await ensureThread();
         if (id === 'legacy') return 'legacy';
         if (id === 'signed-out') {
           if (guestTrial) {
             /* The status read may not have arrived yet: ask it once before asking to sign in. */
             const status = guestRead.current ? guest : await refreshGuest();
-            if (isGuestMode(status)) return await submitAsGuest(q);
+            if (isGuestMode(status)) return await submitAsGuest(q, false, context);
           }
           setSignInRequired(q);
           return 'signed-out';
@@ -290,7 +293,7 @@ export function useAskR2Conversation(
           setTurns((t) => [...t, { question: q, failure: 'THREAD_UNAVAILABLE' }]);
           return 'failed';
         }
-        const sent = await askV2Api.submit(id, q, language, 'ask', newIdempotencyKey());
+        const sent = await askV2Api.submit(id, q, language, 'ask', newIdempotencyKey(), context);
         /* A session that ended mid-conversation is the same requirement, never a rollback. */
         if (!sent.ok && sent.reason === 'SIGNED_OUT') {
           thread.current = null;
@@ -343,20 +346,33 @@ export function useAskR2Conversation(
 
   /** Ask for a deeper run: the server quotes it; nothing runs until `confirmDeeper`. */
   const runDeeper = useCallback(
-    async (question: string): Promise<boolean> => {
+    /* HOME R1 STAGE A — the quote carries the same governed references (server-persisted). */
+    async (question: string, context?: AskContextRefWire): Promise<boolean> => {
       if (isGuestMode(guest)) {
         setGuestNotice('DEEPER');
         return false;
       }
-      if (inFlight.current || thread.current === null) return false;
+      if (inFlight.current) return false;
+      /* HOME R1 STAGE A — an embedded caller (it always sends context references) may ask for
+         a quote before any ordinary turn, so the conversation is opened first. Creating a
+         thread is not compute. Without context (the Standalone /ask) this is unchanged: no
+         thread, no quote. */
+      if (thread.current === null) {
+        if (context === undefined) return false;
+        const opened = await ensureThread();
+        if (opened === 'signed-out') setSignInRequired(question);
+        if (thread.current === null) return false;
+      }
+      const current = thread.current;
       inFlight.current = true;
       try {
         const quoted = await askV2Api.submit(
-          thread.current.id,
+          current.id,
           question,
           language,
           'deep-analysis',
           newIdempotencyKey(),
+          context,
         );
         if (!quoted.ok) return false;
         setDeepQuote({ question, operation: quoted.value });
@@ -365,7 +381,7 @@ export function useAskR2Conversation(
         inFlight.current = false;
       }
     },
-    [guest, language],
+    [ensureThread, guest, language],
   );
 
   /** The explicit acceptance: accept → reserve → execute. The only path to deep compute. */

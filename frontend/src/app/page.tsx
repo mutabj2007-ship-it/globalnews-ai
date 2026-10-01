@@ -26,6 +26,8 @@ import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
 import { AskStandaloneRoot } from '@/components/ask-nav/AskStandaloneRoot';
 import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
 import { ASK_SOCIAL_PREVIEW } from '@/lib/seo/socialPreview';
+import { homeR1Gates } from '@/lib/platform/homeR1Gates';
+import { HomeR1Page } from '@/components/home/r1/HomeR1Page';
 
 /**
  * HOME WELCOME & DISCOVERY R1 REV A — THE HOME COMPOSITION.
@@ -141,6 +143,24 @@ export default async function HomePage(): Promise<JSX.Element> {
   const firstScreen = allocateHomeFirstScreen(feed);
   const worldIn60 = firstScreen.worldIn60;
   const whats = firstScreen.whats;
+
+  /*
+    HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE A — home.lightPrimary (GNA_HOME_R1, server-read,
+    default OFF). ON: the light-primary Home over the SAME feed response and allocation. OFF:
+    the Rev A composition below, unchanged (the rollback).
+  */
+  const r1 = homeR1Gates();
+  if (r1.homeR1) {
+    return (
+      <HomeR1Page
+        language={language}
+        gates={r1}
+        worldIn60={worldIn60}
+        whats={[...(whats.featured === null ? [] : [whats.featured]), ...whats.inFocus, ...whats.discovery]}
+        dataMode={feed.dataMode}
+      />
+    );
+  }
 
   return (
     <>
