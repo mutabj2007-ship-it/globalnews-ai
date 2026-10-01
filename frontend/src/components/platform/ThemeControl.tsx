@@ -89,7 +89,7 @@ export function ThemeControl({
         <fieldset
           id={`${id}-menu`}
           data-theme-menu=""
-          className="absolute right-0 top-[52px] z-[70] w-[220px] rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)] p-2 text-[var(--gt-ink)] shadow-[0_18px_40px_-18px_rgba(0,0,0,0.55)]"
+          className="fixed inset-x-3 top-[60px] z-[70] w-auto sm:absolute sm:inset-x-auto sm:right-0 sm:top-[52px] sm:w-[220px] rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)] p-2 text-[var(--gt-ink)] shadow-[0_18px_40px_-18px_rgba(0,0,0,0.55)]"
         >
           <legend className="px-2 pb-1 pt-1 font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--gt-ink3)]">{t.label}</legend>
           {THEME_PREFERENCES.map((option, index) => {
