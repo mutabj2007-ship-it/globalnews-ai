@@ -42,6 +42,7 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
   let service: AskV2Service;
   let switches: OperationalSwitchService;
   const analyzeNews = jest.fn();
+  const answerBackground = jest.fn();
   const config = { get: (key: string) => values[key] } as unknown as ConfigService;
 
   const within = <T>(work: () => Promise<T>): Promise<T> =>
@@ -90,6 +91,8 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
       'TRUNCATE "ComputeMeter", "ComputeReservation", "CircuitBreakerState", "OperationalSwitch", "OperationalSwitchAudit"',
     );
     values = { ASK_V2_ENABLED: 'true', ASK_FLAG_CACHE_MS: '0', ASK_BREAKER_CACHE_MS: '0' };
+    answerBackground.mockReset();
+    answerBackground.mockImplementation(async () => ({ text: null }));
     analyzeNews.mockReset();
     analyzeNews.mockImplementation(async (...args: unknown[]) => {
       const policy = args[6] as {
@@ -125,7 +128,7 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
         id: 'mock',
         displayName: 'Mock General Background',
         isMock: true,
-        answerBackground: async () => ({ text: null }),
+        answerBackground,
       } as never,
       meter,
       breaker,
@@ -256,11 +259,16 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
       expect(analyzeNews).not.toHaveBeenCalled();
     });
 
-    it('the same question asked again reuses the stored result: 0 additional AI', async () => {
-      await submit('What is happening in Kenya?');
+    /* CURRENT REPORTING STORED-RESULT REUSE R1 — a current question asked again (a NEW Send,
+       new idempotency key) is a new observation under the same controls, never a replay. */
+    it('the same current question asked again is observed afresh: a new operation, one more bounded call', async () => {
+      const first = await submit('What is happening in Kenya?');
       const second = await submit('What is happening in Kenya?');
-      expect(second.storedResultReused).toBe(true);
-      expect(analyzeNews).toHaveBeenCalledTimes(1);
+      expect(second.operationId).not.toBe(first.operationId);
+      expect(second.storedResultReused).toBe(false);
+      expect(second.computeClass).not.toBe('STORED');
+      expect(second.storedResultId).not.toBe(first.storedResultId);
+      expect(analyzeNews).toHaveBeenCalledTimes(2);
     });
 
     it('deep analysis stops at a quote: 0 AI until explicitly accepted', async () => {
@@ -290,6 +298,131 @@ live('Ask R2 execution — live PostgreSQL, real lifecycle and controls', () => 
       const op = await submit('What is happening in Kenya?');
       expect(op.chargingEnabled).toBe(false);
       expect(op.quotedSand).toBe(0);
+    });
+  });
+
+  /*
+    ════════════════════════════════════════════════════════════════════════════
+    CURRENT REPORTING STORED-RESULT REUSE R1 — Production 2026-10-01.
+    "Any global news can you share?" settled INSUFFICIENT while GNews was rate-limited
+    (operation 060f89ff…, aiExecuted=false). The reader sent it again 15 minutes later and
+    got the SAME artifact back in 59 ms — no retrieval, checkedAt still 02:59 UTC — because
+    any unexpired StoredResult with the same fingerprint was replayed.
+    ════════════════════════════════════════════════════════════════════════════
+  */
+  describe('CURRENT REPORTING STORED-RESULT REUSE R1 — a new Send is a new observation', () => {
+    const LIVE_Q = 'Any global news can you share?';
+    beforeEach(allOn);
+    /* The provider is rate-limited: retrieval reaches nothing usable, no model answer. */
+    const degraded = async () =>
+      ({ analysis: null, articles: [], retrievalContext: {} }) as unknown as AnalysisApiResponse;
+    const stored = async (storedResultId: string | null) =>
+      (await payloadOf(storedResultId)) as unknown as {
+        aiExecuted: boolean;
+        checkedAt: string;
+        answer: { state: string };
+      };
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 15));
+
+    it('1–5 · a degraded INSUFFICIENT answer is never replayed; the retry runs again; the first stays display-only', async () => {
+      analyzeNews.mockImplementation(degraded);
+      /* 1 — first attempt: degraded, INSUFFICIENT, aiExecuted=false */
+      const first = await submit(LIVE_Q);
+      expect(first.status).toBe('COMPLETED');
+      const firstPayload = await stored(first.storedResultId);
+      expect(firstPayload).toMatchObject({ aiExecuted: false, answer: { state: 'INSUFFICIENT' } });
+      await tick();
+      /* 2 — the same question, a NEW idempotency key, the provider still refusing */
+      const second = await submit(LIVE_Q);
+      /* 3 — a new operation; 4 — not a stored replay */
+      expect(second.operationId).not.toBe(first.operationId);
+      expect(second.storedResultReused).toBe(false);
+      expect(second.computeClass).not.toBe('STORED');
+      expect(analyzeNews).toHaveBeenCalledTimes(2);
+      /* a FRESH degraded result with a NEW checkedAt — not the old artifact */
+      expect(second.storedResultId).not.toBe(first.storedResultId);
+      const secondPayload = await stored(second.storedResultId);
+      expect(secondPayload).toMatchObject({ aiExecuted: false, answer: { state: 'INSUFFICIENT' } });
+      expect(Date.parse(secondPayload.checkedAt)).toBeGreaterThan(
+        Date.parse(firstPayload.checkedAt),
+      );
+      /* 5 — reopening the first operation: display-only, original checkedAt, 0 provider, 0 AI */
+      analyzeNews.mockClear();
+      const reservations = await db.computeReservation.count();
+      const reopened = await service.getOperation(accountPrincipal(userId), first.operationId);
+      expect(reopened.result?.displayOnly).toBe(true);
+      expect(reopened.result?.id).toBe(first.storedResultId);
+      expect((reopened.result?.payload as { checkedAt: string }).checkedAt).toBe(
+        firstPayload.checkedAt,
+      );
+      expect(reopened.storedResultReused).toBe(false);
+      expect(analyzeNews).not.toHaveBeenCalled();
+      expect(answerBackground).not.toHaveBeenCalled();
+      expect(await db.computeReservation.count()).toBe(reservations);
+    });
+
+    it('recovery: once the provider is back, the retry returns live reporting', async () => {
+      analyzeNews.mockImplementationOnce(degraded);
+      const first = await submit(LIVE_Q);
+      expect((await stored(first.storedResultId)).answer.state).toBe('INSUFFICIENT');
+      const retry = await submit(LIVE_Q);
+      expect(retry.storedResultReused).toBe(false);
+      expect(await stored(retry.storedResultId)).toMatchObject({
+        aiExecuted: true,
+        answer: { state: 'CURRENT_REPORTING' },
+      });
+    });
+
+    it('a refusing control still governs the retry: it is refused by name, never answered from the old artifact', async () => {
+      analyzeNews.mockImplementation(degraded);
+      const first = await submit(LIVE_Q);
+      values.ASK_ACCOUNT_UNITS_PER_DAY = '100';
+      build();
+      const retry = await submit(LIVE_Q);
+      expect(retry.status).toBe('RELEASED');
+      expect(retry.failureCode).toBe('BUDGET_REFUSED:account-day');
+      expect(retry.storedResultReused).toBe(false);
+      expect(retry.storedResultId).toBeNull();
+      expect(retry.result).toBeNull();
+      expect(analyzeNews).toHaveBeenCalledTimes(1);
+      expect((await stored(first.storedResultId)).answer.state).toBe('INSUFFICIENT');
+    });
+
+    it('6 · a stable REFERENCE_BACKGROUND answer asked again is still reused: 0 additional calls', async () => {
+      answerBackground.mockImplementation(async () => ({
+        text: 'TCP is connection-oriented and reliable; UDP is connectionless.',
+      }));
+      const first = await submit('How does TCP work?');
+      expect((await stored(first.storedResultId)).answer.state).toBe('REFERENCE_BACKGROUND');
+      expect(answerBackground).toHaveBeenCalledTimes(1);
+      const again = await submit('How does TCP work?');
+      expect(again.operationId).not.toBe(first.operationId);
+      expect(again.computeClass).toBe('STORED');
+      expect(again.storedResultReused).toBe(true);
+      expect(again.storedResultId).toBe(first.storedResultId);
+      expect(answerBackground).toHaveBeenCalledTimes(1);
+      expect(analyzeNews).not.toHaveBeenCalled();
+    });
+
+    it('a declined background (CAPABILITY_UNAVAILABLE) is not replayed either', async () => {
+      const first = await submit('How does TCP work?');
+      expect((await stored(first.storedResultId)).answer.state).toBe('CAPABILITY_UNAVAILABLE');
+      const again = await submit('How does TCP work?');
+      expect(again.storedResultReused).toBe(false);
+      expect(answerBackground).toHaveBeenCalledTimes(2);
+    });
+
+    it('8 · deep analysis on a current question is quoted afresh: acceptance is still required, never a silent replay', async () => {
+      const quoted = await submit('What is happening in Kenya?', randomUUID(), 'deep-analysis');
+      await service.accept(accountPrincipal(userId), quoted.operationId);
+      await service.reserve(accountPrincipal(userId), quoted.operationId);
+      await within(() => service.execute(accountPrincipal(userId), quoted.operationId));
+      expect(analyzeNews).toHaveBeenCalledTimes(1);
+      const again = await submit('What is happening in Kenya?', randomUUID(), 'deep-analysis');
+      expect(again.status).toBe('QUOTED');
+      expect(again.requiresAcceptance).toBe(true);
+      expect(again.storedResultReused).toBe(false);
+      expect(analyzeNews).toHaveBeenCalledTimes(1);
     });
   });
 });

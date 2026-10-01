@@ -53,9 +53,15 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     await service.reserve(accountPrincipal(userId), op.operationId);
     return op;
   }
-  const success = (): ExecutionResult => ({
+  /* CURRENT REPORTING STORED-RESULT REUSE R1 — the lifecycle fixture is a stable (replayable)
+     answer, so the stored-reuse mechanics below stay exercised; current answers never replay. */
+  const success = (state = 'REFERENCE_BACKGROUND'): ExecutionResult => ({
     succeeded: true,
-    payloadJson: JSON.stringify({ answer: 'Generated prose is display-only', language: 'en' }),
+    payloadJson: JSON.stringify({
+      answer: { state },
+      background: { text: 'Generated prose is display-only' },
+      language: 'en',
+    }),
     evidenceRevision: plan.revision,
     validUntil: plan.validUntil,
   });
@@ -398,6 +404,44 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     );
     expect(replay.result?.displayOnly).toBe(true);
     expect(execute).not.toHaveBeenCalled();
+  });
+  /* CURRENT REPORTING STORED-RESULT REUSE R1 — a new Send replays only a time-independent
+     answer. Everything else (current reporting, degraded INSUFFICIENT, clarification, …) is a
+     new observation: a new operation, not STORED, and the execution port runs again. */
+  test.each([
+    ['REFERENCE_BACKGROUND', true],
+    ['COMPUTED_RESULT', true],
+    ['CURRENT_REPORTING', false],
+    ['CURRENTLY_VERIFIED', false],
+    ['PARTIAL', false],
+    ['INSUFFICIENT', false],
+    ['CLARIFICATION_REQUIRED', false],
+    ['CAPABILITY_UNAVAILABLE', false],
+    ['RETAINED_RECORD', false],
+  ] as const)('a stored %s answer: replayed on a new Send = %s', async (state, replayed) => {
+    execute.mockImplementation(async () => success(state));
+    const first = await service.submit(accountPrincipal(userId), threadId, quoteInput());
+    expect(first.status).toBe('COMPLETED');
+    execute.mockClear();
+    const again = await service.submit(accountPrincipal(userId), threadId, quoteInput());
+    expect(again.operationId).not.toBe(first.operationId);
+    expect(again.status).toBe('COMPLETED');
+    expect(again.storedResultReused).toBe(replayed);
+    expect(again.computeClass === 'STORED').toBe(replayed);
+    expect(execute).toHaveBeenCalledTimes(replayed ? 0 : 1);
+    expect(again.result?.id === first.result?.id).toBe(replayed);
+  });
+  test('a non-replayable result settled between quote and execute is not picked up by execute', async () => {
+    execute.mockImplementation(async () => success('INSUFFICIENT'));
+    const pending = await quoted();
+    expect(pending.storedResultId).toBeNull();
+    await service.submit(accountPrincipal(userId), threadId, quoteInput());
+    execute.mockClear();
+    await service.accept(accountPrincipal(userId), pending.operationId);
+    await service.reserve(accountPrincipal(userId), pending.operationId);
+    const done = await service.execute(accountPrincipal(userId), pending.operationId);
+    expect(done.storedResultReused).toBe(false);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
   test('language, revision and ownership prevent unsafe stored reuse', async () => {
     const first = await reserved();

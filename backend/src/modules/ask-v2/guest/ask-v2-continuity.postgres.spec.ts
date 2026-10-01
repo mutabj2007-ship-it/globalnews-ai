@@ -398,18 +398,59 @@ live(
       expect(opA.fingerprint).not.toBe(opB.fingerprint);
     });
 
-    it('SELF-CONTAINED questions get no prior: asking the same question again in a thread with context still reuses its stored result (0 AI)', async () => {
+    /* CURRENT REPORTING STORED-RESULT REUSE R1 — a current question asked again is a new
+       observation (no stored replay); it must still carry no prior from the thread's context. */
+    it('SELF-CONTAINED questions get no prior: asking the same current question again in a thread with context is observed afresh, with the original query', async () => {
       const g = await newGuest();
       await asGuest(g.id, () =>
         service.submit(guestPrincipal(g.id), g.threadId, q("What has changed in Kenya's economy?")),
       );
+      const first = modelInputs[modelInputs.length - 1]!;
       await asGuest(g.id, () => service.submit(guestPrincipal(g.id), g.threadId, q(FOLLOW_UP)));
       const calls = modelInputs.length;
       const again = await asGuest(g.id, () =>
         service.submit(guestPrincipal(g.id), g.threadId, q("What has changed in Kenya's economy?")),
       );
-      expect(again.storedResultReused).toBe(true);
-      expect(modelInputs.length).toBe(calls);
+      expect(again.storedResultReused).toBe(false);
+      expect(modelInputs.length).toBe(calls + 1);
+      expect(modelInputs[calls]!.query).toBe(first.query);
+    });
+
+    /* CURRENT REPORTING STORED-RESULT REUSE R1 · 9 — a degraded no-answer never becomes a
+       guest answer by being retried; only a real answer commits the visible allowance. */
+    it('guest allowance: a degraded attempt and its degraded retry commit nothing; the recovered retry commits exactly one', async () => {
+      const liveSearch = news.search.getMockImplementation()!;
+      const degraded = async (): Promise<NewsResponse> => ({
+        articles: [],
+        totalResults: 0,
+        providers: ['fixture'],
+        dataMode: 'live',
+        generatedAt: new Date().toISOString(),
+      });
+      const g = await newGuest();
+      const Q = "What has changed in Kenya's economy?";
+      try {
+        news.search.mockImplementation(degraded);
+        const first = await asGuest(g.id, () =>
+          service.submit(guestPrincipal(g.id), g.threadId, q(Q)),
+        );
+        expect(answerOf(first)).toBe('INSUFFICIENT');
+        const retry = await asGuest(g.id, () =>
+          service.submit(guestPrincipal(g.id), g.threadId, q(Q)),
+        );
+        expect(retry.operationId).not.toBe(first.operationId);
+        expect(retry.storedResultReused).toBe(false);
+        expect(answerOf(retry)).toBe('INSUFFICIENT');
+        expect((await service.guestAllowance(g.id)).committed).toBe(0);
+      } finally {
+        news.search.mockImplementation(liveSearch);
+      }
+      const recovered = await asGuest(g.id, () =>
+        service.submit(guestPrincipal(g.id), g.threadId, q(Q)),
+      );
+      expect(recovered.storedResultReused).toBe(false);
+      expect(answerOf(recovered)).toBe('CURRENT_REPORTING');
+      expect((await service.guestAllowance(g.id)).committed).toBe(1);
     });
 
     it('ELLIPSIS stays honest: "And what about Uganda?" after a subject still asks (no silent place-only answer)', async () => {

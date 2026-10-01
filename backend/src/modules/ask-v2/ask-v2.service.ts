@@ -41,6 +41,7 @@ import {
 } from './guest/guest-allowance';
 import { GuestSessionService } from './guest/guest-session.service';
 import { askRequestContext } from './ask-request-context';
+import { isReusableStoredPayload } from './stored-result-reuse';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
@@ -632,10 +633,13 @@ export class AskV2Service {
           return concurrent.id;
         }
         validatePlan(plan, request);
-        const stored = await tx.storedResult.findFirst({
+        const newest = await tx.storedResult.findFirst({
           where: { ...owner, fingerprint: key, expiresAt: { gt: new Date() } },
           orderBy: { createdAt: 'desc' },
         });
+        /* CURRENT REPORTING STORED-RESULT REUSE R1 — a new Send replays only a time-independent
+           answer; current reporting (and any degraded "try again" answer) is observed afresh. */
+        const stored = newest && isReusableStoredPayload(newest.payload) ? newest : null;
         const computeClass = classifyCompute(request, plan, !!stored);
         /* Deeper, quoted work is never a guest answer: the reader is asked to sign in. */
         if (p.kind === 'guest' && requiresExplicitAcceptance(computeClass)) {
@@ -767,7 +771,7 @@ export class AskV2Service {
         await this.releaseIn(tx, operation, 'QUOTE_EXPIRED');
         return null;
       }
-      const stored = await tx.storedResult.findFirst({
+      const candidate = await tx.storedResult.findFirst({
         where: {
           ...ownerOf(p),
           ...(operation.storedResultId
@@ -777,6 +781,9 @@ export class AskV2Service {
         },
         orderBy: { createdAt: 'desc' },
       });
+      /* CURRENT REPORTING STORED-RESULT REUSE R1 — the same rule as the quote: a result settled
+         meanwhile under this fingerprint is replayed only if it is time-independent. */
+      const stored = candidate && isReusableStoredPayload(candidate.payload) ? candidate : null;
       if (stored) {
         await tx.computeOperation.update({
           where: { id },
