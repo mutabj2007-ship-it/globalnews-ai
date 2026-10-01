@@ -25,6 +25,7 @@ import {
   withoutFormatDirectives,
 } from '../query/compound-retrieval-plan.util';
 import { scoreCompoundPlanRelevance } from '../../news/relevance/compound-plan-relevance.util';
+import { independentFamilies } from '../validation/claim-graph.util';
 import {
   assessSingleSourceDiscipline,
   detectDevelopmentBreadth,
@@ -549,7 +550,14 @@ describe('BETA-ASK-004 · the humanitarian leg needs a conflict nexus or explici
     expect(admit(FR_LOCAL)).toBe(true);
   });
 
-  it('Q2 end to end: capsize dropped, conflict evidence kept, syndicated copies collapse', async () => {
+  /*
+    PUBLIC BETA HARDENING R1G — two OUTLETS carrying one syndicated headline verbatim (different
+    URLs, different hosts, no shared image) cannot be PROVEN to be one record, so evidence
+    deletion fails closed and both reach the model. The original intent still holds: they never
+    count as two INDEPENDENT reports — the claim graph's independence authority
+    (independentFamilies) still groups them as one family.
+  */
+  it('Q2 end to end: capsize dropped, conflict evidence kept, syndicated copies are one independent family', async () => {
     const calls: Call[] = [];
     const gnews = stub(
       'gnews',
@@ -567,9 +575,11 @@ describe('BETA-ASK-004 · the humanitarian leg needs a conflict nexus or explici
     expect(ids).not.toContain('kivu-boat');
     expect(ids).toEqual(expect.arrayContaining(['en-hum', 'fr-loc']));
     expect(inputs).toHaveLength(1);
-    /* SYNDICATED_A/B are one story: they never count as two independent clusters. */
-    const syndicated = ids.filter((id) => id === 'syn-a' || id === 'syn-b');
-    expect(syndicated.length).toBeLessThanOrEqual(1);
+    /* R1G — unproven sameness: both outlets' copies reach the model (nothing deleted)… */
+    const syndicated = result.articles.filter((x) => x.id === 'syn-a' || x.id === 'syn-b');
+    expect(syndicated.map((x) => x.id).sort()).toEqual(['syn-a', 'syn-b']);
+    /* …but they are ONE independent family: never two confirmations of one claim. */
+    expect(independentFamilies(syndicated)).toHaveLength(1);
   });
 
   it('only the capsize in the pool → zero qualifying evidence → no model call', async () => {

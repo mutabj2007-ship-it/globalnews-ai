@@ -762,8 +762,17 @@ describe('MUTATION GUARD — deleting a deduplication condition must fail a test
   it.each([
     ['provider-native rung', 'provider:${providerId}:${providerRecordId}'],
     ['normalized-url rung', 'url:${normalizeArticleUrl(url)}'],
-    ['strong-identity short circuit', 'seenStrongIdentities.has(identity)'],
-    ['corroborated-headline rung', 'isSameStoryByCorroboratedHeadline(existing, article)'],
+    /* PUBLIC BETA HARDENING R1G — the ladder's pairwise decision lives in ONE place
+       (`isSameStory`), which collapseDuplicateStories and every evidence-deletion site ask. */
+    [
+      'strong-identity rung (non-null, equal)',
+      'firstIdentity !== null && firstIdentity === resolveStrongIdentity(second)',
+    ],
+    ['corroborated-headline rung', 'return isSameStoryByCorroboratedHeadline(first, second);'],
+    [
+      'collapse delegates to the one pairwise decision',
+      'kept.some((existing) => isSameStory(existing, article))',
+    ],
     ['exact-headline requirement', 'firstHeadline !== normalizeHeadline(second.title'],
     ['corroboration requirement', 'if (!sameHost && !sameImage)'],
     ['bounded publication window', 'STORY_IDENTITY_MAX_PUBLICATION_GAP_MS'],
