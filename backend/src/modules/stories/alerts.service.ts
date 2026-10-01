@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../database/prisma.service';
 import { isArticleRef } from '../news/identity/article-ref.util';
 import { authorLabelOf } from './discussion.service';
+import { isLiveStatus, logicalAlert } from './alert-logic';
 import { StoryIdentityService } from './story-identity.service';
 
 /**
@@ -53,13 +54,27 @@ export class AlertsService {
     private readonly identity: StoryIdentityService,
   ) {}
 
-  /** The reader's alert on any story in this canonical alias set (there is at most one live one). */
-  private async findForStory(userId: string, aliasIds: readonly string[]) {
-    const rows = await this.prisma.storyAlert.findMany({ where: { userId, storyId: { in: [...aliasIds] } }, orderBy: [{ removedAt: { sort: 'asc', nulls: 'first' } }, { createdAt: 'asc' }] });
-    return rows[0] ?? null;
+  /** All of the reader's rows across a canonical alias set (live and removed). */
+  private async rowsForStory(userId: string, aliasIds: readonly string[]) {
+    return this.prisma.storyAlert.findMany({ where: { userId, storyId: { in: [...aliasIds] } } });
   }
 
-  /** Explicit creation. Idempotent: a repeat returns the same alert; a removed one is restored. */
+  /** The reader's LOGICAL alert on a canonical alias set (alert-logic.ts rank), or null. */
+  private async findForStory(userId: string, aliasIds: readonly string[]) {
+    return logicalAlert(await this.rowsForStory(userId, aliasIds));
+  }
+
+  /** The alias set of the canonical story a row currently belongs to. */
+  private async aliasSetOfRow(storyId: string): Promise<readonly string[]> {
+    const story = await this.identity.describe(storyId);
+    return story?.aliasIds ?? [storyId];
+  }
+
+  /**
+   * Explicit creation. Idempotent: a repeat returns the same logical alert; when only removed
+   * rows exist, the best one is restored (never a second live row). The new row records the
+   * article it was created FROM (originArticleRef) for split continuity.
+   */
   async create(userId: string, input: { articleRef: string; url: string }): Promise<AlertView> {
     const { story } = await this.identity.ensureStoryForArticle(input);
     const existing = await this.findForStory(userId, story.aliasIds);
@@ -70,7 +85,9 @@ export class AlertsService {
       return this.view(userId, existing.id);
     }
     try {
-      const row = await this.prisma.storyAlert.create({ data: { userId, storyId: story.storyId, createdBriefVersion: story.briefVersion } });
+      const row = await this.prisma.storyAlert.create({
+        data: { userId, storyId: story.storyId, originArticleRef: input.articleRef, createdBriefVersion: story.briefVersion },
+      });
       return this.view(userId, row.id);
     } catch (error) {
       if ((error as { code?: string })?.code !== 'P2002') throw error;
@@ -111,15 +128,21 @@ export class AlertsService {
     };
   }
 
+  /** One entry per LOGICAL live alert (one per canonical story), newest first. */
   async list(userId: string): Promise<AlertView[]> {
     const rows = await this.prisma.storyAlert.findMany({
       where: { userId, status: { not: 'REMOVED' } },
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       take: ALERT_LIST_LIMIT,
-      select: { id: true },
     });
+    const byCanonical = new Map<string, (typeof rows)[number][]>();
+    for (const r of rows) {
+      const canonical = (await this.identity.canonicalOf(r.storyId))?.id ?? r.storyId;
+      byCanonical.set(canonical, [...(byCanonical.get(canonical) ?? []), r]);
+    }
+    const chosen = [...byCanonical.values()].map((list) => logicalAlert(list)!).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? -1 : 1));
     const out: AlertView[] = [];
-    for (const r of rows) out.push(await this.view(userId, r.id));
+    for (const r of chosen) out.push(await this.view(userId, r.id));
     return out;
   }
 
@@ -130,7 +153,7 @@ export class AlertsService {
     const out: Record<string, { alertId: string; status: string }> = {};
     for (const [ref, storyId] of canonical) {
       const alert = await this.findForStory(userId, await this.identity.aliasSet(storyId));
-      if (alert && alert.status !== 'REMOVED') out[ref] = { alertId: alert.id, status: alert.status };
+      if (alert && isLiveStatus(alert.status)) out[ref] = { alertId: alert.id, status: alert.status };
     }
     return out;
   }
@@ -156,9 +179,16 @@ export class AlertsService {
       case 'remove':
         if (row.status !== 'REMOVED') await this.prisma.storyAlert.update({ where: { id: row.id }, data: { status: 'REMOVED', removedAt: now } });
         return { id: row.id, status: 'REMOVED' };
-      case 'restore':
-        if (row.status === 'REMOVED') await this.prisma.storyAlert.update({ where: { id: row.id }, data: { status: 'ACTIVE', removedAt: null } });
+      case 'restore': {
+        if (row.status !== 'REMOVED') break;
+        // Never a second live row: if another alias row is already live, that one IS the
+        // reader's logical alert and is returned unchanged.
+        const live = (await this.rowsForStory(userId, await this.aliasSetOfRow(row.storyId))).filter((r) => r.id !== row.id && isLiveStatus(r.status));
+        const winner = logicalAlert(live);
+        if (winner !== null) return this.view(userId, winner.id);
+        await this.prisma.storyAlert.update({ where: { id: row.id }, data: { status: 'ACTIVE', removedAt: null } });
         break;
+      }
       default:
         throw new BadRequestException('ALERT_OP');
     }

@@ -2150,6 +2150,9 @@ model StoryAlert {
   /// The canonical subject the reader chose (resolved through aliases on read).
   storyId             String
   story               Story     @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  /// The article the reader created the alert FROM — immutable governed identity
+  /// (sha256(normalizeArticleUrl(url))). An editor split moves the alert with this article.
+  originArticleRef    String
   /// 'ACTIVE' | 'PAUSED' | 'REMOVED' (CHECK below). REMOVED keeps the row (undo).
   status              String    @default("ACTIVE")
   muted               Boolean   @default(false)

@@ -7,6 +7,9 @@ import { StoryIdentityService } from './story-identity.service';
 import { DiscussionService } from './discussion.service';
 import { AlertsService } from './alerts.service';
 import { readStoryRelations } from './story-relation.read';
+import { StoryAlertObserver } from './story-observation.module';
+import { ArticlePersistenceService } from '../news/persistence/article-persistence.service';
+import type { NewsArticle } from '@globalnews-ai/shared';
 
 /**
  * STAGE B — canonical identity, Discussion and in-app Alerts against the dedicated LOOPBACK
@@ -126,7 +129,11 @@ live('Stage B — live PostgreSQL', () => {
       await expect(identity.ensureStoryForArticle({ articleRef: computeArticleRef(ghost), url: ghost })).rejects.toThrow('NOT_RETAINED');
     });
 
-    it('backfill is conservative, idempotent and agrees with live placement', async () => {
+    it('backfill is conservative, idempotent and agrees with live placement (bootstrap: before any alert)', async () => {
+      /* BOOTSTRAP RULE: backfill runs only before reader alerts exist. This dedicated loopback test
+         database carries alerts from earlier runs, so they are cleared first (test data only). */
+      await db.storyAlertEvent.deleteMany({});
+      await db.storyAlert.deleteMany({});
       const host = `bf-${stamp}.example`;
       const p = await article({ host, title: title('Backfill pair'), path: `bf-${stamp}-1` });
       const q = await article({ host, title: title('Backfill pair'), minutes: 5, path: `bf-${stamp}-2` });
@@ -144,6 +151,13 @@ live('Stage B — live PostgreSQL', () => {
       expect(sr!.storyId).not.toBe(sp!.storyId);
       const again = await identity.backfill({ limit: 500, cursor: `sb-${stamp}-` });
       expect(again.created + again.joined).toBe(0);
+    });
+
+    it('BOOTSTRAP RULE: backfill is refused once any reader alert exists (no historical "new evidence")', async () => {
+      const reader = await user('Early alerter');
+      const a = await article({ host: 'boot.example', title: title('Bootstrap') });
+      await alerts.create(reader, a);
+      await expect(identity.backfill({ limit: 10 })).rejects.toThrow('BACKFILL_AFTER_ALERTS');
     });
   });
 
@@ -408,6 +422,198 @@ live('Stage B — live PostgreSQL', () => {
       expect(await db.storyComment.findUnique({ where: { id: reply.id } })).toMatchObject({ parentId: null, body: 'Still here' });
       expect(await db.storyModerationAction.count({ where: { actorId: leaving } })).toBe(1);
       expect(await db.story.findUnique({ where: { id: story.storyId } })).not.toBeNull();
+    });
+  });
+  // ── 5. Correction R1 — automatic observation from normal Article persistence ──
+
+  describe('retained-article observation (normal News persistence → in-app Alert)', () => {
+    const persisted = (input: { host: string; title: string; minutes?: number; image?: string; path?: string }): NewsArticle => {
+      seq++;
+      const url = `https://${input.host}/${input.path ?? `obs-${stamp}-${seq}`}`;
+      return {
+        id: `obs-${stamp}-${seq}`,
+        title: input.title,
+        summary: 'Provider summary',
+        url,
+        imageUrl: input.image,
+        sourceId: input.host,
+        sourceName: input.host,
+        sourcesCount: 1,
+        category: 'world',
+        publishedAt: at(input.minutes ?? 0).toISOString(),
+        publishedAtBasis: 'publisher',
+      } as NewsArticle;
+    };
+    const eventsOf = (alertId: string) => db.storyAlertEvent.findMany({ where: { alertId }, orderBy: { briefVersion: 'asc' } });
+    let persistence: ArticlePersistenceService;
+    let fetchSpy: jest.SpyInstance;
+
+    beforeAll(() => {
+      persistence = new ArticlePersistenceService(db as unknown as PrismaService, new StoryAlertObserver(identity));
+    });
+    beforeEach(() => {
+      fetchSpy = jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network forbidden in this test'));
+    });
+    afterEach(() => fetchSpy.mockRestore());
+
+    it('create Alert → a matching source from another host arrives through persistMany → ONE development; replay adds none; zero network', async () => {
+      const reader = await user('Observer');
+      const image = `https://img.example/${stamp}/obs-port.jpg`;
+      const a = await article({ host: 'obs-a.example', title: title('Port reopens after strike'), image });
+      const alert = await alerts.create(reader, a);
+      expect(await eventsOf(alert.id)).toHaveLength(0);
+
+      const incoming = persisted({ host: 'obs-b.example', title: title('Port reopens after strike'), minutes: 40, image });
+      const firstSeen = await persistence.persistMany([incoming]);
+      expect(firstSeen.size).toBe(1);
+      const events = await eventsOf(alert.id);
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({ kind: 'NEW_EVIDENCE', briefVersion: 2, readAt: null });
+      expect((await identity.resolveByArticleRef(computeArticleRef(incoming.url)))!.storyId).toBe(alert.storyId);
+      expect((await alerts.list(reader))[0]).toMatchObject({ change: 'CHANGED', unread: 1 });
+
+      // The same article observed again (re-fetch): idempotent.
+      await persistence.persistMany([incoming]);
+      await persistence.persistMany([incoming, incoming]);
+      expect(await eventsOf(alert.id)).toHaveLength(1);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('a same-host copy joins without a material version increase (no event)', async () => {
+      const reader = await user('Same host');
+      const a = await article({ host: 'sh.example', title: title('Grid operator issues warning') });
+      const alert = await alerts.create(reader, a);
+      await persistence.persistMany([persisted({ host: 'sh.example', title: title('Grid operator issues warning'), minutes: 15 })]);
+      expect(await eventsOf(alert.id)).toHaveLength(0);
+      expect((await identity.resolveByArticleRef(a.articleRef))!.briefVersion).toBe(1);
+    });
+
+    it('a similar-but-different report never joins and raises nothing; observation never creates a story', async () => {
+      const reader = await user('Similar');
+      const image = `https://img.example/${stamp}/talks.jpg`;
+      const a = await article({ host: 'sim-a.example', title: title('Peace talks resume in Geneva'), image });
+      const alert = await alerts.create(reader, a);
+      const different = persisted({ host: 'sim-b.example', title: title('Peace talks collapse in Geneva'), minutes: 10, image });
+      const stories = await db.story.count();
+      await persistence.persistMany([different]);
+      expect(await eventsOf(alert.id)).toHaveLength(0);
+      expect(await identity.resolveByArticleRef(computeArticleRef(different.url))).toBeNull();
+      expect(await db.story.count()).toBe(stories);
+    });
+
+    it('a PAUSED (not ACTIVE) alert is not observed into; no alerts → no work', async () => {
+      const reader = await user('Paused');
+      const image = `https://img.example/${stamp}/paused.jpg`;
+      const a = await article({ host: 'pa.example', title: title('Bridge closes for repairs'), image });
+      const alert = await alerts.create(reader, a);
+      await alerts.apply(reader, alert.id, 'pause');
+      const incoming = persisted({ host: 'pb.example', title: title('Bridge closes for repairs'), minutes: 5, image });
+      await persistence.persistMany([incoming]);
+      expect(await identity.resolveByArticleRef(computeArticleRef(incoming.url))).toBeNull();
+      expect(await eventsOf(alert.id)).toHaveLength(0);
+    });
+
+    it('an observer failure never fails News persistence', async () => {
+      const broken = new ArticlePersistenceService(db as unknown as PrismaService, { observeRetained: async () => { throw new Error('observer down'); } });
+      const out = await broken.persistMany([persisted({ host: 'fail.example', title: title('Unrelated item') })]);
+      expect(out.size).toBe(1);
+    });
+  });
+
+  // ── 6. Correction R1 — split continuity ──────────────────────────────────
+
+  describe('split continuity: conversations and alerts follow their originating article', () => {
+    it('a moved article keeps its conversation (with replies) and its alert; the other side gets no duplicate; no event; SavedStory unchanged', async () => {
+      const [u1, u2, u3, u4, u5] = await Promise.all(['Thread author', 'Replier', 'Other side', 'Alert from moved', 'Alert from kept'].map((n) => user(n)));
+      const image = `https://img.example/${stamp}/split.jpg`;
+      const kept = await article({ host: 'sp-a.example', title: title('Factory fire in the north'), image });
+      const moved = await article({ host: 'sp-b.example', title: title('Factory fire in the north'), image, minutes: 30 });
+      const sk = await identity.ensureStoryForArticle(kept);
+      const sm = await identity.ensureStoryForArticle(moved);
+      expect(sm.story.storyId).toBe(sk.story.storyId);
+
+      const root = await discussion.post(u1, { ...moved, body: 'Opened from the moved article', idempotencyKey: `sp-${stamp}-1` });
+      const reply = await discussion.post(u2, { ...kept, body: 'A reply to it', parentId: root.id, idempotencyKey: `sp-${stamp}-2` });
+      const other = await discussion.post(u3, { ...kept, body: 'Opened from the kept article', idempotencyKey: `sp-${stamp}-3` });
+      const fromMoved = await alerts.create(u4, moved);
+      const fromKept = await alerts.create(u5, kept);
+      const saved = await db.savedStory.create({
+        data: { userId: u1, articleRef: moved.articleRef, canonicalUrl: moved.url, sourceUrl: moved.url, title: 'x', sourceName: 'sp-b.example', sourceDomain: 'sp-b.example', publishedAt: T0, publishedAtBasis: 'publisher', countryCodes: [] },
+      });
+      const savedBefore = JSON.stringify(saved);
+      const eventsBefore = await db.storyAlertEvent.count({ where: { alertId: { in: [fromMoved.id, fromKept.id] } } });
+      const versionBefore = (await identity.resolveByArticleRef(kept.articleRef))!.briefVersion;
+
+      const split = await identity.split({ storyId: sk.story.storyId, articleRefs: [moved.articleRef], actorId: 'editor', reason: 'Two different fires' });
+      expect(split).toMatchObject({ movedThreads: 1, movedAlerts: 1 });
+      expect(split.created.briefVersion).toBe(versionBefore);
+
+      const movedThread = await discussion.thread(moved.articleRef, null);
+      expect(movedThread.comments.map((c) => c.id).sort()).toEqual([root.id, reply.id].sort());
+      const keptThread = await discussion.thread(kept.articleRef, null);
+      expect(keptThread.comments.map((c) => c.id)).toEqual([other.id]);
+      expect(await db.storyComment.count({ where: { body: { in: ['Opened from the moved article', 'A reply to it'] } } })).toBe(2);
+
+      expect((await db.storyAlert.findUnique({ where: { id: fromMoved.id } }))!.storyId).toBe(split.created.storyId);
+      expect((await db.storyAlert.findUnique({ where: { id: fromKept.id } }))!.storyId).toBe(sk.story.storyId);
+      expect((await alerts.byArticle(u4, [moved.articleRef]))[moved.articleRef].alertId).toBe(fromMoved.id);
+      expect(await alerts.byArticle(u4, [kept.articleRef])).toEqual({});
+      expect(await db.storyAlertEvent.count({ where: { alertId: { in: [fromMoved.id, fromKept.id] } } })).toBe(eventsBefore);
+      expect(JSON.stringify(await db.savedStory.findUnique({ where: { id: saved.id } }))).toBe(savedBefore);
+    });
+  });
+
+  // ── 7. Correction R1 — logical alert dedup across the alias set ─────────
+
+  describe('logical alert convergence', () => {
+    async function twoStories(label: string) {
+      const a = await article({ host: `lg-a-${label}.example`, title: title(`Logical ${label} A`) });
+      const b = await article({ host: `lg-b-${label}.example`, title: title(`Logical ${label} B`) });
+      return { a, b };
+    }
+
+    it('a REMOVED survivor row never cancels a live alert on the merged side', async () => {
+      const reader = await user('Removed survivor');
+      const { a, b } = await twoStories('rm');
+      const onA = await alerts.create(reader, a);
+      await alerts.apply(reader, onA.id, 'remove');
+      const onB = await alerts.create(reader, b);
+      await identity.merge({ survivorId: onA.storyId, mergedId: onB.storyId, actorId: 'op', reason: 'Same' });
+      expect((await db.storyAlert.findUnique({ where: { id: onB.id } }))!.status).toBe('ACTIVE');
+      const live = await alerts.list(reader);
+      expect(live.map((x) => x.id)).toEqual([onB.id]);
+      expect((await alerts.byArticle(reader, [a.articleRef]))[a.articleRef].alertId).toBe(onB.id);
+      expect(await db.storyAlertEvent.count({ where: { alertId: onB.id } })).toBe(1);
+      expect(await db.storyAlertEvent.count({ where: { alertId: onA.id } })).toBe(0);
+    });
+
+    it('ACTIVE is not lost to a PAUSED alias row; exactly one live row remains; one event per reader', async () => {
+      const reader = await user('Active vs paused');
+      const { a, b } = await twoStories('ap');
+      const onA = await alerts.create(reader, a);
+      await alerts.apply(reader, onA.id, 'pause');
+      const onB = await alerts.create(reader, b);
+      await identity.merge({ survivorId: onA.storyId, mergedId: onB.storyId, actorId: 'op', reason: 'Same' });
+      const rows = await db.storyAlert.findMany({ where: { userId: reader } });
+      expect(rows.filter((r) => r.status !== 'REMOVED').map((r) => [r.id, r.status])).toEqual([[onB.id, 'ACTIVE']]);
+      expect((await db.storyAlert.findUnique({ where: { id: onA.id } }))!.status).toBe('REMOVED');
+      expect(await db.storyAlertEvent.count({ where: { alert: { userId: reader } } })).toBe(1);
+    });
+
+    it('restore never reactivates a second live alias alert; create stays idempotent', async () => {
+      const reader = await user('Restore');
+      const { a, b } = await twoStories('rs');
+      const onA = await alerts.create(reader, a);
+      const onB = await alerts.create(reader, b);
+      await identity.merge({ survivorId: onA.storyId, mergedId: onB.storyId, actorId: 'op', reason: 'Same' });
+      // onA is the oldest ACTIVE → logical; onB was converged to REMOVED.
+      expect((await db.storyAlert.findUnique({ where: { id: onB.id } }))!.status).toBe('REMOVED');
+      const restored = await alerts.apply(reader, onB.id, 'restore');
+      expect((restored as { id: string }).id).toBe(onA.id);
+      expect(await db.storyAlert.count({ where: { userId: reader, status: { not: 'REMOVED' } } })).toBe(1);
+      const again = await alerts.create(reader, b);
+      expect(again.id).toBe(onA.id);
+      expect(await alerts.list(reader)).toHaveLength(1);
     });
   });
 });

@@ -1,5 +1,7 @@
 -- STAGE B · M3 — IN-APP ALERTS (depends on M1). Not Follow, not the dormant Watch. No delivery
 -- channel, address, token or subscription column exists. Dedup = UNIQUE (alertId, briefVersion).
+-- Every alert records its originating article (originArticleRef, immutable) so an editor split
+-- moves the alert with that article; logical dedup = one live alert per reader per canonical story.
 -- BACKWARD: DROP TABLE "StoryAlertEvent", "StoryAlert", "UserInboxCursor" (reader alerts are lost;
 -- prefer the alerts.inApp gate for rollback).
 
@@ -8,6 +10,7 @@ CREATE TABLE "StoryAlert" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "storyId" TEXT NOT NULL,
+    "originArticleRef" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'ACTIVE',
     "muted" BOOLEAN NOT NULL DEFAULT false,
     "createdBriefVersion" INTEGER NOT NULL,
@@ -73,3 +76,5 @@ ALTER TABLE "StoryAlert" ADD CONSTRAINT "chk_story_alert_status" CHECK ("status"
 ALTER TABLE "StoryAlert" ADD CONSTRAINT "chk_story_alert_removed_at" CHECK (("status" = 'REMOVED') = ("removedAt" IS NOT NULL));
 
 ALTER TABLE "StoryAlertEvent" ADD CONSTRAINT "chk_story_alert_event_kind" CHECK ("kind" IN ('NEW_EVIDENCE','STORY_MERGED'));
+
+ALTER TABLE "StoryAlert" ADD CONSTRAINT "chk_story_alert_origin_ref_hex" CHECK ("originArticleRef" ~ '^[0-9a-f]{64}$');

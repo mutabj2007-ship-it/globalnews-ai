@@ -165,3 +165,33 @@ describe('Compare identity enrichment fails to absence', () => {
     expect(await readIdentityFor(broken as never, [{ articleRef: 'a'.repeat(64), status: 'available' }])).toBeNull();
   });
 });
+
+describe('Correction R1 — the retained-article observation seam (structural)', () => {
+  const persistence = strip(readFileSync(join(SRC, 'modules', 'news', 'persistence', 'article-persistence.service.ts'), 'utf8'));
+  const port = strip(readFileSync(join(SRC, 'modules', 'news', 'persistence', 'retained-article-observer.port.ts'), 'utf8'));
+  const observer = strip(readFileSync(join(__dirname, 'story-observation.module.ts'), 'utf8'));
+
+  it('news persistence depends only on the port, never on the stories module', () => {
+    expect(persistence).toMatch(/from '\.\/retained-article-observer\.port'/);
+    expect(persistence).not.toMatch(/stories\//);
+    expect(port.match(/^import .*$/gm)).toEqual(["import type { NewsArticle } from '@globalnews-ai/shared';"]);
+  });
+
+  it('the observer is optional, runs after commit, and is isolated by its own catch', () => {
+    expect(persistence).toMatch(/@Optional\(\) @Inject\(RETAINED_ARTICLE_OBSERVER\)/);
+    expect(persistence).toMatch(/await this\.observeCommitted\(articles\);\s*return firstSeenByUrl;/);
+    expect(persistence).toMatch(/private async observeCommitted[\s\S]*?try \{[\s\S]*?observeRetained\(articles\)[\s\S]*?\} catch/);
+  });
+
+  it('the observer is database-only: no provider, model, network, scheduler, Watch or Follow', () => {
+    expect(observer).not.toMatch(/fetch\(|HttpService|axios|providers\/|analysis|ask-v2|openai|@nestjs\/schedule|Cron|setInterval|watch\/|follows\.(controller|module)/);
+    expect(observer).toMatch(/observeRetainedForAlerts/);
+  });
+
+  it('observation never creates a story and is bounded', () => {
+    const identity = strip(readFileSync(join(__dirname, 'story-identity.service.ts'), 'utf8'));
+    expect(identity).toMatch(/if \(mode === 'observe'\) return 'NO_PROVEN_ALERTED_STORY' as const;/);
+    expect(identity).toMatch(/\.slice\(0, MAX_OBSERVE_BATCH\)/);
+    expect(identity).toMatch(/storyAlert\.count\(\{ where: \{ status: 'ACTIVE' \} \}\)\) === 0\) return out;/);
+  });
+});

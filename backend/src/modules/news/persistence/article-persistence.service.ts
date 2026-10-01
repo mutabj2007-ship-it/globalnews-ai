@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { logWithRequestId } from '../../../observability/log-with-request-id';
 import { readPublishedAtBasis, writePublishedAtBasis } from './published-at-basis.util';
 import { normalizeArticleUrl, type NewsArticle, type NewsCategory } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
+import { RETAINED_ARTICLE_OBSERVER, type RetainedArticleObserver } from './retained-article-observer.port';
 
 interface FindRecentArticlesOptions {
   limit?: number;
@@ -74,7 +75,11 @@ const NO_OBSERVATIONS: FirstSeenByUrl = new Map<string, string>();
 export class ArticlePersistenceService {
   private readonly logger = new Logger(ArticlePersistenceService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    /* Stage B — optional DB-only observation seam (see retained-article-observer.port.ts). */
+    @Optional() @Inject(RETAINED_ARTICLE_OBSERVER) private readonly observer?: RetainedArticleObserver,
+  ) {}
 
   /**
    * R0.5 — persists the batch and RETURNS what the database observed.
@@ -219,6 +224,8 @@ export class ArticlePersistenceService {
         }
       }
 
+      await this.observeCommitted(articles);
+
       return firstSeenByUrl;
     } catch (error) {
       logWithRequestId(
@@ -232,6 +239,25 @@ export class ArticlePersistenceService {
       // reader. The empty map is what makes `firstSeenAt` ABSENT rather than
       // guessed.
       return NO_OBSERVATIONS;
+    }
+  }
+
+  /**
+   * STAGE B — hand the COMMITTED batch to the retained-article observer, if one is bound.
+   * Isolated: any failure is logged and swallowed here, so observation can never fail, delay
+   * past its own bound, or alter the result of news persistence.
+   */
+  private async observeCommitted(articles: NewsArticle[]): Promise<void> {
+    if (this.observer === undefined) return;
+    try {
+      await this.observer.observeRetained(articles);
+    } catch (error) {
+      logWithRequestId(
+        this.logger,
+        'warn',
+        'Retained-article observation failed; news persistence is unaffected',
+        error instanceof Error ? error : undefined,
+      );
     }
   }
 
