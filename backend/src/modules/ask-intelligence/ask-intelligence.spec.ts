@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ConflictObservation, ConflictRetainedEvidenceDetail } from '@globalnews-ai/shared';
+import {
+  procurementPortalReferenceKey,
+  type ConflictObservation,
+  type ConflictRetainedEvidenceDetail,
+} from '@globalnews-ai/shared';
 import { routeAskR2, type AskR2Route } from '../ask-router/ask-r2-route';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
 import {
@@ -68,6 +72,13 @@ function coordinator(
       if (opts.conflict === 'throw') throw new Error('db down');
       if (opts.conflict === 'hang') return new Promise<never>(() => undefined);
       return opts.conflict ?? [];
+    }),
+    /* R2F — the pinned-record read (one row by its stable key). */
+    currentByKey: jest.fn(async (key: string) => {
+      calls.conflict.push(['byKey', key]);
+      if (opts.conflict === 'throw') throw new Error('db down');
+      if (opts.conflict === 'hang') return new Promise<never>(() => undefined);
+      return (opts.conflict ?? []).find((r) => r.observationKey === key) ?? null;
     }),
     evidenceDetails: jest.fn(async (keys: readonly string[]) => {
       if (opts.details === 'throw') throw new Error('capture unreadable');
@@ -509,5 +520,123 @@ describe('§15 — source / quota / security proofs by dependency inspection', (
   it('Politics/Elections specialists are not executed: no contributor exists for them', () => {
     const selection = code(src('ask-intelligence', 'contributor-selection.ts'));
     expect(selection).not.toMatch(/POLITIC|ELECTION/);
+  });
+});
+describe('UNIFIED INTELLIGENCE BINDING R2F — a dashboard record pinned by the reader', () => {
+  it('CONFLICT: resolves by key to its governed country; unknown key → null', async () => {
+    const { c } = coordinator({ conflict: [conflictRow('e1', '2026-09-27')] });
+    expect(await c.resolvePinned('CONFLICT', 'e1')).toEqual({
+      module: 'CONFLICT',
+      observationKey: 'e1',
+      countryIso3: 'COD',
+      district: null,
+    });
+    expect(await c.resolvePinned('CONFLICT', 'nope')).toBeNull();
+  });
+
+  it('CONFLICT: reads exactly that record as ONE governed contribution, disclosed as pinned', async () => {
+    const { c, calls } = coordinator({ conflict: [conflictRow('e1', '2026-09-27')] });
+    const out = (await c.readPinned(
+      { module: 'CONFLICT', observationKey: 'e1', countryIso3: 'COD', district: null },
+      NOW,
+    )) as unknown as Record<string, unknown> & { observations: unknown[]; disclosures: string[] };
+    expect(out).toMatchObject({
+      contributorId: 'CONFLICT',
+      status: 'USED',
+      temporalBasis: 'RETAINED_EVENT_RECORD',
+    });
+    expect(out.observations).toHaveLength(1);
+    expect(out.disclosures).toEqual([
+      'RETAINED_NOT_CURRENT',
+      'SEVERITY_NOT_ASSESSED',
+      'PINNED_BY_READER',
+    ]);
+    /* no country scan, no other module read */
+    expect(calls.conflict).toEqual([['byKey', 'e1']]);
+    expect(calls.market).toBe(0);
+    expect(calls.economy).toBe(0);
+  });
+
+  it('CONFLICT: an old pinned record is disclosed as not recent; a vanished one is NO_MATCH', async () => {
+    const { c } = coordinator({ conflict: [conflictRow('old', '2026-01-01')] });
+    const old = (await c.readPinned(
+      { module: 'CONFLICT', observationKey: 'old', countryIso3: 'COD', district: null },
+      NOW,
+    )) as unknown as { disclosures: string[] };
+    expect(old.disclosures).toContain('NO_RECENT_RETAINED_RECORD');
+    const gone = await c.readPinned(
+      { module: 'CONFLICT', observationKey: 'gone', countryIso3: 'COD', district: null },
+      NOW,
+    );
+    expect(gone.status).toBe('NO_MATCH');
+  });
+
+  it('a failing or hanging pinned read degrades, never throws', async () => {
+    const rec = {
+      module: 'CONFLICT' as const,
+      observationKey: 'e1',
+      countryIso3: 'COD',
+      district: null,
+    };
+    expect((await coordinator({ conflict: 'throw' }).c.readPinned(rec, NOW)).status).toBe(
+      'DEGRADED',
+    );
+    jest.useFakeTimers();
+    try {
+      const pending = coordinator({ conflict: 'hang' }).c.readPinned(rec, NOW);
+      await jest.advanceTimersByTimeAsync(READ_TIMEOUT_MS + 1);
+      expect((await pending).status).toBe('DEGRADED');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('MARKET: a procurement notice by its portal key; the notice country is its buyer country', async () => {
+    const { c } = coordinator({ notices: [{ buyerCountryIso3: 'POL', noticeId: '123-2026' }] });
+    const key = procurementPortalReferenceKey({ portalId: 'TED', noticeId: '123-2026' } as never);
+    expect(await c.resolvePinned('MARKET', key)).toEqual({
+      module: 'MARKET',
+      observationKey: key,
+      countryIso3: 'POL',
+      district: null,
+    });
+    const out = (await c.readPinned(
+      { module: 'MARKET', observationKey: key, countryIso3: 'POL', district: null },
+      NOW,
+    )) as unknown as { status: string; observations: unknown[]; disclosures: string[] };
+    expect(out.status).toBe('USED');
+    expect(out.observations).toHaveLength(1);
+    expect(out.disclosures).toContain('PINNED_BY_READER');
+    expect(await c.resolvePinned('MARKET', 'TED:missing')).toBeNull();
+  });
+
+  it('ECONOMY: only the DISPLAYABLE headline CPI series is pinnable; a held capture is not', async () => {
+    const shown = coordinator({ cpi: 'OBSERVATION' }).c;
+    expect(await shown.resolvePinned('ECONOMY', 'rw-nisr-cpi')).toEqual({
+      module: 'ECONOMY',
+      observationKey: 'rw-nisr-cpi',
+      countryIso3: 'RWA',
+      district: null,
+    });
+    expect(await shown.resolvePinned('ECONOMY', 'rw-nisr:cpi:all-rwanda')).toBeNull();
+    expect(
+      await coordinator({ cpi: 'HELD_NOT_DISPLAYABLE' }).c.resolvePinned('ECONOMY', 'rw-nisr-cpi'),
+    ).toBeNull();
+  });
+
+  it('IMIHIGO: a retained district record by capture-scoped key (Rwanda, with its NISR district)', async () => {
+    const view = readRetainedImihigo();
+    const { c } = coordinator();
+    if (view.state !== 'ADMITTED') {
+      expect(await c.resolvePinned('IMIHIGO', 'x:Gasabo')).toBeNull();
+      return;
+    }
+    const district = view.records.find((r) => r.entityClass === 'district');
+    expect(district).toBeDefined();
+    const key = `${view.captureSha256.slice(0, 12)}:${district!.entity}`;
+    const rec = await c.resolvePinned('IMIHIGO', key);
+    expect(rec).toMatchObject({ module: 'IMIHIGO', observationKey: key, countryIso3: 'RWA' });
+    expect(rec?.district?.name.toLowerCase()).toBe(district!.entity.toLowerCase());
+    expect(await c.resolvePinned('IMIHIGO', `000000000000:${district!.entity}`)).toBeNull();
   });
 });

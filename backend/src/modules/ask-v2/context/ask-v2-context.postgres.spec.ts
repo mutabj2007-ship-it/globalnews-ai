@@ -51,6 +51,22 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
   const answerBackground = jest.fn();
   const findRetainedArticleByUrl = jest.fn();
   const findArticleById = jest.fn();
+  /* R2F — the module read seam: known keys resolve to a governed Rwanda record. */
+  const resolvePinned = jest.fn(async (module: string, key: string) =>
+    key.startsWith('cfl:known')
+      ? { module: module as 'CONFLICT', observationKey: key, countryIso3: 'RWA', district: null }
+      : null,
+  );
+  const readPinned = jest.fn(async (record: { observationKey: string }) => ({
+    contributorId: 'CONFLICT',
+    domain: 'security',
+    applicability: 'SUPPLEMENTARY',
+    scope: { countryIso3: 'RWA', district: null, place: null },
+    status: 'USED',
+    temporalBasis: 'RETAINED_EVENT_RECORD',
+    observations: [{ key: record.observationKey }],
+    disclosures: ['PINNED_BY_READER'],
+  }));
   const config = { get: (key: string) => values[key] } as unknown as ConfigService;
   let userId: string;
   let threadId: string;
@@ -128,6 +144,8 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
       ).usageSink?.({ promptTokens: 2000, completionTokens: 400 });
       return { analysis: {}, articles: [{ id: 'x' }, { id: 'y' }], retrievalContext: {} };
     });
+    readPinned.mockClear();
+    resolvePinned.mockClear();
     answerBackground.mockReset();
     answerBackground.mockImplementation(
       async (input: {
@@ -163,6 +181,9 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
       {
         boundSpecialistDomains: () => ['CONFLICT'],
         read: async () => ({ considered: [], contributions: [] }),
+        /* R2F — the pinned dashboard record (stubbed; the real read is covered by the
+           conflict live spec and the coordinator matrix). */
+        readPinned,
       } as never,
       guests,
     );
@@ -173,7 +194,7 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
       guests,
       switches,
       meter,
-      new AskContextResolver({ findRetainedArticleByUrl, findArticleById }),
+      new AskContextResolver({ findRetainedArticleByUrl, findArticleById }, { resolvePinned }),
     );
     for (const name of [
       'ASK_R2_ENABLED',
@@ -606,5 +627,62 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
     const follow = await send('Why did this happen?');
     expect(await planOf(follow.operationId)).not.toHaveProperty('context');
     expect(analyzeNews.mock.calls[1][4]).toBeUndefined();
+  });
+
+  /* ── R2F · a dashboard record (MODULE) ───────────────────────────────── */
+  const MOD = (observationKey: string, module = 'CONFLICT') => ({
+    kind: 'MODULE',
+    module,
+    observationKey,
+  });
+
+  it('R2F · two records: different identity, the plan persists the record, execute reads THAT record', async () => {
+    const one = await send(
+      'What does this mean?',
+      MOD('cfl:known-1'),
+      randomUUID(),
+      'ask',
+      await newThread(),
+    );
+    const two = await send(
+      'What does this mean?',
+      MOD('cfl:known-2'),
+      randomUUID(),
+      'ask',
+      await newThread(),
+    );
+    const [o1, o2] = [await op(one.operationId), await op(two.operationId)];
+    expect(o1.requestHash).not.toBe(o2.requestHash);
+    expect(o1.fingerprint).not.toBe(o2.fingerprint);
+    expect((await planOf(one.operationId)).context).toEqual({
+      kind: 'MODULE',
+      module: 'CONFLICT',
+      observationKey: 'cfl:known-1',
+      countryIso3: 'RWA',
+    });
+    expect(
+      readPinned.mock.calls.map((c) => (c[0] as { observationKey: string }).observationKey),
+    ).toEqual(['cfl:known-1', 'cfl:known-2']);
+  });
+
+  it('R2F · an unbound module or an unknown record is refused before any operation, model or meter', async () => {
+    const before = await counts();
+    expect(await refusal(send('What does this mean?', MOD('k', 'ENERGY')))).toBe(
+      'ASK_CONTEXT_MODULE_NOT_BINDABLE',
+    );
+    expect(await refusal(send('What does this mean?', MOD('cfl:missing')))).toBe(
+      'ASK_CONTEXT_MODULE_NOT_FOUND',
+    );
+    expect(await counts()).toEqual(before);
+    expect(analyzeNews).not.toHaveBeenCalled();
+    expect(answerBackground).not.toHaveBeenCalled();
+    expect(readPinned).not.toHaveBeenCalled();
+  });
+
+  it('R2F · a follow-up without context does not inherit the record', async () => {
+    await send('What does this mean?', MOD('cfl:known-1'));
+    const follow = await send('Why did this happen?');
+    expect(await planOf(follow.operationId)).not.toHaveProperty('context');
+    expect(readPinned).toHaveBeenCalledTimes(1);
   });
 });

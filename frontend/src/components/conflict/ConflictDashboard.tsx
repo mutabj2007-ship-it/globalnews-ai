@@ -32,6 +32,7 @@ import {
 import { conflictStrings } from '@/lib/conflict/strings';
 import { readConflictEvidenceDetail } from '@/lib/conflict/evidenceDetail';
 import type { AttentionQueue } from '@/lib/specialist/attentionQueue';
+import { AskAboutRecordLink } from '@/components/ask/AskAboutRecordLink';
 import './conflict.css';
 
 export const CONFLICT_DETENTS = { peek: 54, half: 0.5, full: 0.9 } as const;
@@ -377,6 +378,17 @@ export function ConflictDashboard({
       <div>
         <dt>{t.acquired}</dt>
         <dd>{row.temporal.ingestedAt}</dd>
+      </div>
+      {/* R2F — Ask about THIS record: its stable key only; the server resolves the record. */}
+      <div>
+        <AskAboutRecordLink
+          module="CONFLICT"
+          observationKey={row.observationKey}
+          label={`${row.identity.authority} · ${row.identity.upstreamEventId} · ${row.temporal.eventStartedAt}`}
+          locale={language}
+          returnPath="/conflict"
+          className="text-sp-cyan underline"
+        />
       </div>
     </dl>
   ) : null;

@@ -9,7 +9,8 @@ import {
 } from '@/lib/market/mktTokens';
 import type { MktLocale, MktStrings } from '@/lib/market/mktStrings';
 import { Identifier, edge, micro } from './MktParts';
-import { safeExternalHref } from '@globalnews-ai/shared';
+import { procurementPortalReferenceKey, safeExternalHref } from '@globalnews-ai/shared';
+import { AskAboutRecordLink } from '@/components/ask/AskAboutRecordLink';
 
 function localizedTitle(notice: MarketRetainedProcurementNotice, locale: MktLocale): string {
   return locale === 'pl'
@@ -135,6 +136,15 @@ export function MarketNoticeCard({
         >
           {t.procurement.openNotice} →
         </a>
+        {/* R2F — Ask about THIS notice: its portal key only; the server resolves the notice. */}
+        <AskAboutRecordLink
+          module="MARKET"
+          observationKey={procurementPortalReferenceKey(notice.portalReference)}
+          label={`TED · ${notice.portalReference.noticeId}`}
+          locale={locale}
+          returnPath="/market"
+          style={{ ...micro, color: MKT_INK.secondary }}
+        />
       </footer>
     </article>
   );

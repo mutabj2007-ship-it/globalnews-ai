@@ -53,7 +53,26 @@ import {
  * `articleRef`/`url`, is rejected by the resolver's exact key-set check (ASK_CONTEXT_KEY_SETS),
  * which runs before any read, operation, slot or meter.
  */
-export const ASK_CONTEXT_KINDS = ['STORY', 'GEOGRAPHY', 'SELECTION'] as const;
+export const ASK_CONTEXT_KINDS = ['STORY', 'GEOGRAPHY', 'SELECTION', 'MODULE'] as const;
+
+/**
+ * R2F — the closed set of dashboard modules a MODULE reference may name. Naming one is not
+ * binding it: the resolver binds only modules with a governed contributor and refuses the rest
+ * with ASK_CONTEXT_MODULE_NOT_BINDABLE (never a silent generic Ask, never a pretend binding).
+ */
+export const ASK_CONTEXT_MODULES = [
+  'CONFLICT',
+  'ECONOMY',
+  'MARKET',
+  'ENERGY',
+  'HUMANITARIAN',
+  'POLITICS',
+  'ELECTIONS',
+  'IMIHIGO',
+] as const;
+export type AskContextModule = (typeof ASK_CONTEXT_MODULES)[number];
+/** R2F — a module record's stable key: printable, bounded (keys may carry ':' '/' and spaces). */
+export const ASK_CONTEXT_OBSERVATION_KEY_PATTERN = /^[^\u0000-\u001f\u007f]{1,300}$/;
 export type AskContextKind = (typeof ASK_CONTEXT_KINDS)[number];
 
 /** Bound on the story URL used as lookup data (the legacy StoryContextDto bound). */
@@ -98,6 +117,16 @@ export class AskTurnContextDto {
   @Matches(GEOGRAPHY_COUNTRY_CODE_PATTERN)
   countryCode?: string;
 
+  /* R2F — MODULE: a dashboard record by its stable key (references only, never its values). */
+  @ValidateIf((o: AskTurnContextDto) => o.kind === 'MODULE' || o.module !== undefined)
+  @IsIn(ASK_CONTEXT_MODULES as unknown as string[])
+  module?: AskContextModule;
+
+  @ValidateIf((o: AskTurnContextDto) => o.kind === 'MODULE' || o.observationKey !== undefined)
+  @IsString()
+  @Matches(ASK_CONTEXT_OBSERVATION_KEY_PATTERN)
+  observationKey?: string;
+
   /* R2D — SELECTION: the action and its bounded story references. */
   @ValidateIf((o: AskTurnContextDto) => o.kind === 'SELECTION' || o.action !== undefined)
   @IsIn(MULTI_STORY_ACTIONS as unknown as string[])
@@ -128,4 +157,6 @@ export const ASK_CONTEXT_KEY_SETS: Readonly<
   GEOGRAPHY: [['kind', 'countryCode']],
   /* R2D */
   SELECTION: [['kind', 'action', 'stories']],
+  /* R2F */
+  MODULE: [['kind', 'module', 'observationKey']],
 };

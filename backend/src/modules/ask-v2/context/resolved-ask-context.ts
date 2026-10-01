@@ -36,6 +36,14 @@ export type ResolvedAskContext =
       readonly geographyContext: GeographyContext;
     }
   | {
+      /** R2F — a dashboard record, resolved by its module's own governed read seam. */
+      readonly kind: 'MODULE';
+      readonly module: 'CONFLICT' | 'IMIHIGO' | 'ECONOMY' | 'MARKET';
+      readonly observationKey: string;
+      readonly countryIso3?: string;
+      readonly district?: { readonly id: string; readonly name: string };
+    }
+  | {
       /** R2D — a My Intelligence selection, every story resolved from retained reporting. */
       readonly kind: 'SELECTION';
       readonly action: MultiStoryAction;
@@ -66,11 +74,17 @@ export const RESOLVED_STORY_BOUNDS = {
  * never be Story Set B.
  */
 export type AskContextIdentity =
-  readonly ['STORY', string] | readonly ['GEOGRAPHY', string] | readonly ['SELECTION', string];
+  | readonly ['STORY', string]
+  | readonly ['GEOGRAPHY', string]
+  | readonly ['SELECTION', string]
+  | readonly ['MODULE', string];
 
 export function contextIdentity(context: ResolvedAskContext): AskContextIdentity {
   if (context.kind === 'STORY') return ['STORY', context.articleRef] as const;
   if (context.kind === 'GEOGRAPHY') return ['GEOGRAPHY', context.countryIso3] as const;
+  if (context.kind === 'MODULE') {
+    return ['MODULE', `${context.module}:${context.observationKey}`] as const;
+  }
   const refs = context.stories.map((story) => story.articleRef).sort();
   return ['SELECTION', `${context.action}:${refs.join(',')}`] as const;
 }
@@ -144,6 +158,20 @@ export function isResolvedAskContext(v: unknown): v is ResolvedAskContext {
     if (!isObject(g) || !hasExactlyKeys(g, ['countryCode', 'displayName'])) return false;
     if (g.countryCode !== v.countryIso3) return false;
     if (g.displayName !== findCountryByIso3(v.countryIso3)?.name) return false;
+    return true;
+  }
+  if (v.kind === 'MODULE') {
+    if (!hasExactlyKeys(v, ['kind', 'module', 'observationKey', 'countryIso3', 'district']))
+      return false;
+    if (!['CONFLICT', 'IMIHIGO', 'ECONOMY', 'MARKET'].includes(v.module as string)) return false;
+    if (!boundedString(v.observationKey, 300) || /[\u0000-\u001f\u007f]/.test(v.observationKey))
+      return false;
+    if (v.countryIso3 !== undefined && !isGovernedIso3(v.countryIso3)) return false;
+    if (v.district !== undefined) {
+      const d = v.district;
+      if (!isObject(d) || !hasExactlyKeys(d, ['id', 'name'])) return false;
+      if (!boundedString(d.id, 64) || !boundedString(d.name, 100)) return false;
+    }
     return true;
   }
   if (v.kind === 'SELECTION') {

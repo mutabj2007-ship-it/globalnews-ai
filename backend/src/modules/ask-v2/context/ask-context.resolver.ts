@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Optional } from '@nestjs/common';
+import {
+  AskSpecialistReadCoordinator,
+  PINNABLE_MODULES,
+  type PinnableModule,
+  type PinnedModuleRecord,
+} from '../../ask-intelligence/ask-specialist-read.coordinator';
 import {
   ARTICLE_REF_PATTERN,
   GEOGRAPHY_COUNTRY_CODE_PATTERN,
@@ -15,6 +21,8 @@ import { computeArticleRef } from '../../news/identity/article-ref.util';
 import {
   ASK_CONTEXT_ARTICLE_ID_PATTERN,
   ASK_CONTEXT_KEY_SETS,
+  ASK_CONTEXT_MODULES,
+  ASK_CONTEXT_OBSERVATION_KEY_PATTERN,
   ASK_CONTEXT_URL_MAX,
 } from './ask-turn-context.dto';
 import {
@@ -40,7 +48,11 @@ export type AskContextRefusalCode =
   /** Not an ISO alpha-2/alpha-3 code of a governed country. */
   | 'ASK_CONTEXT_GEOGRAPHY_UNKNOWN'
   /** The resolver is not bound (a construction without it); context fails closed. */
-  | 'ASK_CONTEXT_UNAVAILABLE';
+  | 'ASK_CONTEXT_UNAVAILABLE'
+  /** R2F — a dashboard module with no governed contributor yet (no pretend binding). */
+  | 'ASK_CONTEXT_MODULE_NOT_BINDABLE'
+  /** R2F — no record under that key in the module's own governed read. */
+  | 'ASK_CONTEXT_MODULE_NOT_FOUND';
 
 const STATUS: Readonly<Record<AskContextRefusalCode, HttpStatus>> = {
   ASK_CONTEXT_INVALID: HttpStatus.BAD_REQUEST,
@@ -49,7 +61,14 @@ const STATUS: Readonly<Record<AskContextRefusalCode, HttpStatus>> = {
   ASK_CONTEXT_STORY_OUT_OF_BOUNDS: HttpStatus.UNPROCESSABLE_ENTITY,
   ASK_CONTEXT_GEOGRAPHY_UNKNOWN: HttpStatus.UNPROCESSABLE_ENTITY,
   ASK_CONTEXT_UNAVAILABLE: HttpStatus.SERVICE_UNAVAILABLE,
+  ASK_CONTEXT_MODULE_NOT_BINDABLE: HttpStatus.UNPROCESSABLE_ENTITY,
+  ASK_CONTEXT_MODULE_NOT_FOUND: HttpStatus.UNPROCESSABLE_ENTITY,
 };
+
+/** R2F — the coordinator's pinned-record resolution (module read seams; local reads only). */
+export interface ModuleRecordResolver {
+  resolvePinned(module: PinnableModule, key: string): Promise<PinnedModuleRecord | null>;
+}
 
 export class AskContextRefused extends HttpException {
   constructor(readonly code: AskContextRefusalCode) {
@@ -77,12 +96,21 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
  */
 @Injectable()
 export class AskContextResolver {
-  constructor(@Inject(NewsService) private readonly stories: RetainedStoryReader) {}
+  constructor(
+    @Inject(NewsService) private readonly stories: RetainedStoryReader,
+    /* R2F — optional so every existing construction is unchanged; MODULE fails closed without it. */
+    @Optional()
+    @Inject(AskSpecialistReadCoordinator)
+    private readonly modules?: ModuleRecordResolver,
+  ) {}
 
   async resolve(raw: unknown): Promise<ResolvedAskContext> {
     if (
       !isObject(raw) ||
-      (raw.kind !== 'STORY' && raw.kind !== 'GEOGRAPHY' && raw.kind !== 'SELECTION')
+      (raw.kind !== 'STORY' &&
+        raw.kind !== 'GEOGRAPHY' &&
+        raw.kind !== 'SELECTION' &&
+        raw.kind !== 'MODULE')
     ) {
       throw new AskContextRefused('ASK_CONTEXT_INVALID');
     }
@@ -93,6 +121,7 @@ export class AskContextResolver {
     if (exact === undefined) throw new AskContextRefused('ASK_CONTEXT_INVALID');
     if (raw.kind === 'GEOGRAPHY') return this.resolveGeography(raw.countryCode);
     if (raw.kind === 'SELECTION') return this.resolveSelection(raw.action, raw.stories);
+    if (raw.kind === 'MODULE') return this.resolveModule(raw.module, raw.observationKey);
     return keys.includes('articleId')
       ? this.resolveStoryById(raw.articleId)
       : this.resolveStory(raw.articleRef, raw.url);
@@ -240,6 +269,40 @@ export class AskContextResolver {
       resolved.push({ articleRef: story.articleRef, articleId, url: article.url });
     }
     return { kind: 'SELECTION', action: action as MultiStoryAction, stories: resolved };
+  }
+
+  /**
+   * R2F — a dashboard record by its stable key. Only modules with a governed contributor are
+   * bindable; every other module is refused by name (never a pretend binding). The record must
+   * exist in the module's own governed read (local / retained; no provider, no model).
+   */
+  private async resolveModule(module: unknown, key: unknown): Promise<ResolvedAskContext> {
+    if (
+      typeof module !== 'string' ||
+      !(ASK_CONTEXT_MODULES as readonly string[]).includes(module) ||
+      typeof key !== 'string' ||
+      !ASK_CONTEXT_OBSERVATION_KEY_PATTERN.test(key)
+    ) {
+      throw new AskContextRefused('ASK_CONTEXT_INVALID');
+    }
+    if (!(PINNABLE_MODULES as readonly string[]).includes(module)) {
+      throw new AskContextRefused('ASK_CONTEXT_MODULE_NOT_BINDABLE');
+    }
+    if (this.modules === undefined) throw new AskContextRefused('ASK_CONTEXT_UNAVAILABLE');
+    let record: PinnedModuleRecord | null;
+    try {
+      record = await this.modules.resolvePinned(module as PinnableModule, key);
+    } catch {
+      record = null;
+    }
+    if (record === null) throw new AskContextRefused('ASK_CONTEXT_MODULE_NOT_FOUND');
+    return {
+      kind: 'MODULE',
+      module: record.module,
+      observationKey: record.observationKey,
+      ...(record.countryIso3 === null ? {} : { countryIso3: record.countryIso3 }),
+      ...(record.district === null ? {} : { district: record.district }),
+    };
   }
 
   private resolveGeography(countryCode: unknown): ResolvedAskContext {

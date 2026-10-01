@@ -36,6 +36,12 @@ export type AskV2ContextRef =
       readonly kind: 'SELECTION';
       readonly action: MultiStoryAction;
       readonly stories: readonly { readonly articleRef: string; readonly url: string }[];
+    }
+  /* R2F — a dashboard record by its module and stable key (references only, never values). */
+  | {
+      readonly kind: 'MODULE';
+      readonly module: 'CONFLICT' | 'IMIHIGO' | 'ECONOMY' | 'MARKET';
+      readonly observationKey: string;
     };
 
 /** A server refusal of the context itself (unresolvable / unknown) — never a generic Ask. */

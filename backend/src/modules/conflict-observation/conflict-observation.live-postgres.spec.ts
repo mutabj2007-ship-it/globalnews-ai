@@ -234,6 +234,23 @@ live('Conflict recovery on disposable PostgreSQL (no providers)', () => {
       await repository.evidenceDetail(cod[0].observationKey),
     );
     expect((await repository.evidenceDetails([])).size).toBe(0);
+
+    /* UNIFIED INTELLIGENCE BINDING R2F — one record by its stable key (a dashboard pin): the
+       CURRENT revision only, parameterised, malformed keys never reach SQL. */
+    const corrected9101 = await prisma.conflictObservation.findFirst({
+      where: { upstreamEventId: '9101' },
+    });
+    const pinned = await repository.currentByKey(corrected9101!.observationKey);
+    expect(pinned?.identity.upstreamEventId).toBe('9101');
+    expect(pinned?.revision.revisionOrdinal).toBe(1);
+    expect(pinned?.temporal.eventStartedAt.startsWith('2024-02-01')).toBe(true);
+    expect((await repository.currentByKey(cod[0].observationKey))?.identity.upstreamEventId).toBe(
+      '9102',
+    );
+    expect(await repository.currentByKey('cfl:unknown')).toBeNull();
+    expect(await repository.currentByKey("x' OR 1=1 --")).toBeNull();
+    expect(await repository.currentByKey('')).toBeNull();
+    expect(await repository.currentByKey('k'.repeat(301))).toBeNull();
   });
   it('refuses malformed batch with no partial writes or pins', async () => {
     const before = await prisma.snapshotPin.count();

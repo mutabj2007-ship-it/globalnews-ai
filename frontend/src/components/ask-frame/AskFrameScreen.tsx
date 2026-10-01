@@ -7,6 +7,7 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { usePublishStoryContext } from '@/lib/ask/storyContextStore';
 import { dashboardContext } from '@/lib/ask/dashboardContext';
 import { askContextRefOf } from '@/lib/ask/askContextRef';
+import { askRecordStrings, dashboardModuleContext } from '@/lib/ask/askModuleRef';
 import { resolveAskStrings, type AskLocale } from '@/lib/ask/askStrings';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
 import { askR2View } from '@/lib/ask/askR2View';
@@ -81,6 +82,14 @@ export function AskFrameScreen({
   const [contextOverride, setContextOverride] = useState<{ key: string; context?: StoryContext }>();
   const context = contextOverride?.key === urlKey ? contextOverride.context : incoming;
   usePublishStoryContext(context);
+  /*
+    UNIFIED INTELLIGENCE BINDING R2F — a dashboard record ("Ask about this record"). It is the
+    more specific anchor, so while it is present it is what this screen shows AND sends; removing
+    its chip returns the screen to the story/country context (or none). Arrival runs nothing.
+  */
+  const incomingModule = useMemo(() => dashboardModuleContext(new URLSearchParams(urlKey)), [urlKey]);
+  const [moduleRemovedFor, setModuleRemovedFor] = useState<string>();
+  const moduleContext = moduleRemovedFor === urlKey ? undefined : incomingModule;
   const [question, setQuestion] = useState(params.get('q') ?? '');
   const [compact, setCompact] = useState(false);
   const reader = useRef<HTMLDivElement>(null);
@@ -246,7 +255,7 @@ export function AskFrameScreen({
       the server cannot resolve runs nothing and keeps the draft (never a silent generic Ask).
     */
     setAskUnavailable(false);
-    const outcome = await r2.submit(draft, askContextRefOf(context, undefined));
+    const outcome = await r2.submit(draft, moduleContext?.ref ?? askContextRefOf(context, undefined));
     if (outcome === 'context-unavailable') setQuestion(draft);
     else if (outcome === 'legacy') {
       setAskUnavailable(true);
@@ -357,7 +366,22 @@ export function AskFrameScreen({
       <div ref={reader} data-ask="reader" className={styles.reader} aria-live="polite">
         <div className={styles.grid}>
           <div data-ask="thread" className={styles.thread}>
-            {context && (
+            {moduleContext && (
+              <div data-ask="context" data-ask-context-kind="MODULE" className={styles.contextChip}>
+                <span className="truncate">
+                  {moduleContext.label || askRecordStrings(r2Locale).moduleRecord[moduleContext.ref.module]}
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center"
+                  aria-label={t.controls.removeContext}
+                  onClick={() => setModuleRemovedFor(urlKey)}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {!moduleContext && context && (
               <div data-ask="context" className={styles.contextChip}>
                 <span className="truncate">{context.title}</span>
                 <button

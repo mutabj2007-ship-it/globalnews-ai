@@ -51,6 +51,7 @@ import { CorridorPanel, IntelligenceStatement, MiniMap, SeriesChart, Triad } fro
 import { ECON_INK, ECON_LINE, ECON_MONO, ECON_SANS, ECON_SURFACE } from './econTokens';
 import { ObservedIdentityContext } from './ObservedIdentityContext';
 import { safeExternalHref } from '@globalnews-ai/shared';
+import { AskAboutRecordLink } from '@/components/ask/AskAboutRecordLink';
 
 /**
  * ECON-UI-1 — THE DESKTOP ECONOMY SURFACE.
@@ -311,6 +312,17 @@ export function EconomyScreen({
                   <IntelligenceStatement text={subject.assessment.statement} sizePx={hudOpen ? 22 : 24} />
                 ) : (
                   <QuietStatement locale={locale} sizePx={hudOpen ? 22 : 24} />
+                )}
+                {/* R2F — Ask about THIS retained record (only when one is displayed). */}
+                {showFigures && retainedObservation && (
+                  <AskAboutRecordLink
+                    module="ECONOMY"
+                    observationKey="rw-nisr-cpi"
+                    label={`${retainedObservation.seriesLabel} · ${retainedObservation.periodId}`}
+                    locale={locale}
+                    returnPath="/economy-visual-preview"
+                    style={{ ...microLabel, color: ECON_INK.secondary }}
+                  />
                 )}
                 {showFigures ? (
                   primary?.triad && (

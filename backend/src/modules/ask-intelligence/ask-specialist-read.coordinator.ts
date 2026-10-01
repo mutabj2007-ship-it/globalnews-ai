@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { ConflictObservation, ConflictRetainedEvidenceDetail } from '@globalnews-ai/shared';
+import {
+  procurementPortalReferenceKey,
+  type ConflictObservation,
+  type ConflictRetainedEvidenceDetail,
+  type MarketRetainedProcurementNotice,
+} from '@globalnews-ai/shared';
 import type { AskR2Route } from '../ask-router/ask-r2-route';
 import { ConflictObservationRepository } from '../conflict-observation/conflict-observation.repository';
 import { MarketReadRepository } from '../market-ingest/market-read.repository';
@@ -37,6 +42,56 @@ export const CONFLICT_RECENT_DAYS = 7;
 export const CONFLICT_MAX_OBSERVATIONS = 10;
 
 const KIGALI_PROVINCE_ID = '1';
+
+/** UNIFIED INTELLIGENCE BINDING R2F — the dashboard modules with a governed contributor. */
+export const PINNABLE_MODULES = ['CONFLICT', 'IMIHIGO', 'ECONOMY', 'MARKET'] as const;
+export type PinnableModule = (typeof PINNABLE_MODULES)[number];
+
+/** A dashboard record the reader pinned, as RESOLVED by its module's own read seam. */
+export interface PinnedModuleRecord {
+  readonly module: PinnableModule;
+  readonly observationKey: string;
+  readonly countryIso3: string | null;
+  readonly district: { readonly id: string; readonly name: string } | null;
+}
+
+const PINNED_CONTRIBUTOR: Readonly<
+  Record<PinnableModule, AskContributorSelection['contributorId']>
+> = {
+  CONFLICT: 'CONFLICT',
+  IMIHIGO: 'IMIHIGO',
+  ECONOMY: 'ECONOMY_CPI',
+  MARKET: 'MARKET_PROCUREMENT',
+};
+const PINNED_DOMAIN: Readonly<Record<PinnableModule, string>> = {
+  CONFLICT: 'security',
+  IMIHIGO: 'governance',
+  ECONOMY: 'economic',
+  MARKET: 'economic',
+};
+/**
+ * The one retained Economy record a dashboard can pin: Rwanda headline CPI, named by the stable
+ * id of its governed read (GET /economy/observations/rw-nisr-cpi) — the id the dashboard holds.
+ * Pinnable only while that read is DISPLAYABLE.
+ */
+export const ECONOMY_PINNED_KEY = 'rw-nisr-cpi';
+/** Bound on the retained procurement notices scanned for one pinned notice. */
+const PINNED_PROCUREMENT_SCAN = 100;
+
+/** One retained procurement notice as a governed observation (shared by both reads). */
+function procurementObservation(n: MarketRetainedProcurementNotice): AskContributionObservation {
+  return {
+    reference: `TED:${n.portalReference.noticeId}`,
+    kind: n.noticeType,
+    label: n.title.en ?? n.title.pl ?? null,
+    value: n.totalValue === null ? null : String(n.totalValue),
+    unit: n.currency,
+    period: n.publicationDate,
+    geography: n.buyerCountryIso3,
+    source: { name: 'TED — Tenders Electronic Daily', url: n.sourceUrl, licence: null },
+    retainedAt: n.retainedAt,
+  };
+}
 
 export interface AskContributionSet {
   readonly considered: readonly AskContributorSelection[];
@@ -117,6 +172,146 @@ export class AskSpecialistReadCoordinator {
     return { considered, contributions };
   }
 
+  /*
+   * ════════════════════════════════════════════════════════════════════════════════════════
+   * UNIFIED INTELLIGENCE BINDING R2F — A DASHBOARD OBSERVATION PINNED BY THE READER
+   * ════════════════════════════════════════════════════════════════════════════════════════
+   *
+   * A dashboard "Ask about this" names ONE governed record by its stable key. This coordinator
+   * owns the module read seams, so it resolves that key (local / retained reads only — no
+   * provider, no model, no network) and, at execution, contributes exactly that record through
+   * the SAME governed channel the text-keyed contributors use. No second retrieval, no second
+   * prompt engine. A module without a governed contributor is not pinnable (NOT_BINDABLE_YET).
+   */
+  async resolvePinned(module: PinnableModule, key: string): Promise<PinnedModuleRecord | null> {
+    switch (module) {
+      case 'CONFLICT': {
+        const row = await this.conflict.currentByKey(key);
+        if (row === null) return null;
+        const iso3 = row.geography.countryIso3;
+        return {
+          module,
+          observationKey: row.observationKey,
+          countryIso3: typeof iso3 === 'string' && /^[A-Z]{3}$/.test(iso3) ? iso3 : null,
+          district: null,
+        };
+      }
+      case 'IMIHIGO': {
+        const view = readRetainedImihigo();
+        if (view.state !== 'ADMITTED') return null;
+        const record = view.records.find(
+          (r) =>
+            r.entityClass === 'district' &&
+            `${view.captureSha256.slice(0, 12)}:${r.entity}` === key,
+        );
+        if (record === undefined) return null;
+        const district = nisrDistricts().find(
+          (d) => d.name.canonicalName.toLowerCase() === record.entity.toLowerCase(),
+        );
+        return {
+          module,
+          observationKey: key,
+          countryIso3: 'RWA',
+          district:
+            district === undefined
+              ? null
+              : { id: district.externalId, name: district.name.canonicalName },
+        };
+      }
+      case 'ECONOMY': {
+        const view = await this.economy.readNisrHeadlineCpi();
+        if (
+          key !== ECONOMY_PINNED_KEY ||
+          view.slot.kind !== 'OBSERVATION' ||
+          view.retainedState !== 'DISPLAYABLE'
+        ) {
+          return null;
+        }
+        return { module, observationKey: key, countryIso3: 'RWA', district: null };
+      }
+      case 'MARKET': {
+        const notice = (await this.market.procurement(PINNED_PROCUREMENT_SCAN)).find(
+          (n) => procurementPortalReferenceKey(n.portalReference) === key,
+        );
+        if (notice === undefined) return null;
+        return {
+          module,
+          observationKey: key,
+          countryIso3: /^[A-Z]{3}$/.test(notice.buyerCountryIso3) ? notice.buyerCountryIso3 : null,
+          district: null,
+        };
+      }
+    }
+  }
+
+  /** The pinned record as ONE governed contribution (bounded; degrades, never throws). */
+  async readPinned(record: PinnedModuleRecord, now: Date = new Date()): Promise<AskContribution> {
+    const s: AskContributorSelection = {
+      contributorId: PINNED_CONTRIBUTOR[record.module],
+      domain: PINNED_DOMAIN[record.module],
+      applicability: 'SUPPLEMENTARY',
+      scope: { countryIso3: record.countryIso3, district: record.district, place: null },
+    };
+    try {
+      return await withTimeout(this.readPinnedOne(record, s, now), READ_TIMEOUT_MS);
+    } catch (error) {
+      const reason =
+        (error as Error)?.message === 'CONTRIBUTOR_TIMEOUT' ? 'TIMEOUT' : 'READ_FAILED';
+      this.logger.warn(`pinned ${record.module} degraded: ${reason}`);
+      return base(s, { status: 'DEGRADED', temporalBasis: 'NONE', degradationReason: reason });
+    }
+  }
+
+  private async readPinnedOne(
+    record: PinnedModuleRecord,
+    s: AskContributorSelection,
+    now: Date,
+  ): Promise<AskContribution> {
+    switch (record.module) {
+      case 'CONFLICT': {
+        const row = await this.conflict.currentByKey(record.observationKey);
+        if (row === null) {
+          return base(s, { status: 'NO_MATCH', temporalBasis: 'RETAINED_EVENT_RECORD' });
+        }
+        const details = await Promise.resolve()
+          .then(() => this.conflict.evidenceDetails([row.observationKey]))
+          .catch(() => new Map<string, ConflictRetainedEvidenceDetail>());
+        const recent =
+          now.getTime() - Date.parse(row.temporal.eventStartedAt) <=
+          CONFLICT_RECENT_DAYS * 86_400_000;
+        return base(s, {
+          status: 'USED',
+          temporalBasis: 'RETAINED_EVENT_RECORD',
+          observations: [conflictObservation(row, details.get(row.observationKey))],
+          disclosures: [
+            'RETAINED_NOT_CURRENT',
+            'SEVERITY_NOT_ASSESSED',
+            'PINNED_BY_READER',
+            ...(recent ? [] : ['NO_RECENT_RETAINED_RECORD']),
+          ],
+        });
+      }
+      case 'IMIHIGO':
+        return this.readImihigo(s);
+      case 'ECONOMY':
+        return this.readCpi(s);
+      case 'MARKET': {
+        const notice = (await this.market.procurement(PINNED_PROCUREMENT_SCAN)).find(
+          (n) => procurementPortalReferenceKey(n.portalReference) === record.observationKey,
+        );
+        if (notice === undefined) {
+          return base(s, { status: 'NO_MATCH', temporalBasis: 'RETAINED_PUBLICATION' });
+        }
+        return base(s, {
+          status: 'USED',
+          temporalBasis: 'RETAINED_PUBLICATION',
+          observations: [procurementObservation(notice)],
+          disclosures: ['RETAINED_NOT_CURRENT', 'SNAPSHOT_NOT_CHANGE_SERIES', 'PINNED_BY_READER'],
+        });
+      }
+    }
+  }
+
   private async readOne(s: AskContributorSelection, now: Date): Promise<AskContribution> {
     switch (s.contributorId) {
       case 'CONFLICT':
@@ -186,17 +381,7 @@ export class AskSpecialistReadCoordinator {
     return base(s, {
       status: 'USED',
       temporalBasis: 'RETAINED_PUBLICATION',
-      observations: inScope.map((n): AskContributionObservation => ({
-        reference: `TED:${n.portalReference.noticeId}`,
-        kind: n.noticeType,
-        label: n.title.en ?? n.title.pl ?? null,
-        value: n.totalValue === null ? null : String(n.totalValue),
-        unit: n.currency,
-        period: n.publicationDate,
-        geography: n.buyerCountryIso3,
-        source: { name: 'TED — Tenders Electronic Daily', url: n.sourceUrl, licence: null },
-        retainedAt: n.retainedAt,
-      })),
+      observations: inScope.map(procurementObservation),
       /* One retained publication-day snapshot: notices, never a series of "changes". */
       disclosures: ['RETAINED_NOT_CURRENT', 'SNAPSHOT_NOT_CHANGE_SERIES'],
     });

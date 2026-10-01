@@ -189,6 +189,11 @@ export function routeContextOf(
   | 'questionIsStoryHeadline'
 > {
   if (context === undefined) return {};
+  /* R2F — a dashboard record's country is INHERITED context (the weakest rank): a place the
+     reader types still outranks it, exactly as with a Map country. */
+  if (context.kind === 'MODULE') {
+    return context.countryIso3 === undefined ? {} : { mapContextCountry: context.countryIso3 };
+  }
   /* R2D — a SELECTION is frozen C's own multi-story transport (the SELECTION rank). */
   if (context.kind === 'SELECTION') {
     return { articleRefs: context.stories.map((story) => story.articleRef) };
@@ -470,11 +475,43 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
   }
 
   /** The governed reads for this route — local, bounded, isolated; never rejects. */
-  private readIntelligence(route: AskR2Route): Promise<AskContributionSet> {
-    return this.intelligence.read(route).catch((error: unknown) => {
+  private async readIntelligence(
+    route: AskR2Route,
+    context?: ResolvedAskContext,
+  ): Promise<AskContributionSet> {
+    const set = await this.intelligence.read(route).catch((error: unknown) => {
       this.logger.warn(`ask intelligence read failed: ${(error as Error)?.message ?? 'unknown'}`);
       return NO_CONTRIBUTIONS;
     });
+    if (context?.kind !== 'MODULE') return set;
+    /* UNIFIED INTELLIGENCE BINDING R2F — the record the reader pinned on a dashboard, through the
+       SAME governed channel: it replaces a text-keyed contribution from the same contributor
+       (the reader named the exact record), never adds a second channel. */
+    const pinned = await this.intelligence.readPinned({
+      module: context.module,
+      observationKey: context.observationKey,
+      countryIso3: context.countryIso3 ?? null,
+      district: context.district ?? null,
+    });
+    return {
+      considered: [
+        ...set.considered.filter((c) => c.contributorId !== pinned.contributorId),
+        {
+          contributorId: pinned.contributorId,
+          domain: pinned.domain,
+          applicability: pinned.applicability,
+          scope: {
+            countryIso3: context.countryIso3 ?? null,
+            district: context.district ?? null,
+            place: null,
+          },
+        },
+      ],
+      contributions: [
+        ...set.contributions.filter((c) => c.contributorId !== pinned.contributorId),
+        pinned,
+      ],
+    };
   }
 
   /** Bounded observability of contributor use: ids and a count only — never content. */
@@ -651,7 +688,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       );
     }
     if (deterministicGovernedSelection(route, selectContributors(route)) !== null) {
-      return this.executeGovernedRecord(plan, route, operationId, draft);
+      return this.executeGovernedRecord(plan, route, operationId, draft, request.context);
     }
 
     /*
@@ -727,7 +764,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        provider calls, isolated from the answer's outcome. LIVE ACCEPTANCE REPAIR R1 (B): they
        complete (bounded) BEFORE the one analysis call, so their status, scope, time basis and
        disclosures bind the answer's prose instead of sitting beside it. */
-    const contributions = await this.readIntelligence(route);
+    const contributions = await this.readIntelligence(route, request.context);
     const governed = governedPrompt(contributions);
 
     /* 4 · ONE call to the approved analysis path, one model attempt at most. */
@@ -1153,7 +1190,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* INTELLIGENCE BINDING R1 — governed reads (after every control has passed): local, zero
        model, zero provider. LIVE ACCEPTANCE REPAIR R1 (B): read first, so the one background
        call is bound by them. */
-    const contributions = await this.readIntelligence(route);
+    const contributions = await this.readIntelligence(route, request.context);
     const governed = governedPrompt(contributions);
 
     /* 4 · ONE call to the dedicated background provider. No articles, no retrieval. */
@@ -1253,6 +1290,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     route: AskR2Route,
     operationId: string,
     draft: AskObservationDraft,
+    /* R2F — a pinned dashboard record is read here too (never silently dropped). */
+    context?: ResolvedAskContext,
   ): Promise<ExecutionResult> {
     draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
     if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
@@ -1265,7 +1304,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     }
     draft.providerCallCount = 0;
     draft.reportingItemCount = 0;
-    const contributions = await this.readIntelligence(route);
+    const contributions = await this.readIntelligence(route, context);
     this.observeContributions(contributions, draft);
     const basis = governedRecordBasis(contributions);
     const answer: AnswerDecision =

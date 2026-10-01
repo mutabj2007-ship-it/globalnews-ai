@@ -146,6 +146,29 @@ export class ConflictObservationRepository {
   }
 
   /**
+   * UNIFIED INTELLIGENCE BINDING R2F — the CURRENT revision of ONE retained event, by its key
+   * (the key the Conflict dashboard already carries as `?observation=`). The SAME current-
+   * revision rule and the SAME decoding as `latest()`. Read-only, database only; null when the
+   * key is absent or malformed — never a network read, never a producer.
+   */
+  async currentByKey(observationKey: string): Promise<ConflictObservation | null> {
+    if (
+      typeof observationKey !== 'string' ||
+      observationKey.length === 0 ||
+      observationKey.length > 300
+    ) {
+      return null;
+    }
+    const rows = await this.prisma.$queryRaw<RetainedRow[]>`
+      SELECT * FROM "ConflictObservation"
+      WHERE "observationKey" = ${observationKey}
+      ORDER BY "revisionOrdinal" DESC
+      LIMIT 1
+    `;
+    return rows.length === 0 ? null : decodeRetainedConflictRow(rows[0]);
+  }
+
+  /**
    * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — `evidenceDetail` for several
    * observations at once: ONE row query, ONE fetch per admitted capture (normally one) and ONE
    * parse of it, with exactly the same admission checks. Supplementary, like `evidenceDetail`:

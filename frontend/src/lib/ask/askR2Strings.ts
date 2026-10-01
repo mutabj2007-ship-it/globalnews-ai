@@ -392,7 +392,7 @@ const EN: AskR2Strings = {
   },
   unified: {
     contextUnavailable:
-      "The story or place this question was about couldn't be found, so nothing was run. Your question is kept below.",
+      "The story, place or record this question was about couldn't be found, so nothing was run. Your question is kept below.",
     askUnavailable: 'Ask is unavailable right now, so nothing was run. Your question is kept below.',
     newTopic: 'New topic',
     newTopicStarted: 'New topic — earlier questions are not carried into it.',
@@ -628,7 +628,7 @@ const PL: AskR2Strings = {
   },
   unified: {
     contextUnavailable:
-      'Nie udało się odnaleźć artykułu ani miejsca, którego dotyczy pytanie, więc nic nie uruchomiono. Twoje pytanie czeka poniżej.',
+      'Nie udało się odnaleźć artykułu, miejsca ani rekordu, którego dotyczy pytanie, więc nic nie uruchomiono. Twoje pytanie czeka poniżej.',
     askUnavailable: 'Zapytaj jest teraz niedostępne, więc nic nie uruchomiono. Twoje pytanie czeka poniżej.',
     newTopic: 'Nowy temat',
     newTopicStarted: 'Nowy temat — wcześniejsze pytania nie są w nim kontynuowane.',
