@@ -35,6 +35,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { SupportModule } from './modules/support/support.module';
 import { FollowsModule } from './modules/follows/follows.module';
 import { MyIntelligenceModule } from './modules/my-intelligence/my-intelligence.module';
+import { StoriesModule } from './modules/stories/stories.module';
 import { TelemetryModule } from './modules/telemetry/telemetry.module';
 import { SituationModule } from './modules/situation/situation.module';
 import { ConflictClaimModule } from './modules/conflict-claim/conflict-claim.module';
@@ -151,6 +152,7 @@ import {
     // guest capability stays exactly as unauthenticated as before.
     FollowsModule,
     MyIntelligenceModule,
+    StoriesModule,
     // R3/T7 — the telemetry foundation. Registers one public write
     // endpoint and the analysis interceptor below. Adds NO third-party
     // dependency: no analytics SDK, no beacon, no advertising tracker.

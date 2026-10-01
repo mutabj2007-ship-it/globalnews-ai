@@ -176,6 +176,11 @@ model User {
   savedStories          SavedStory[]
   /// INTEREST + SELECTION HOOK R1 — explicit reader interests (governed ids only).
   intelligenceInterests UserIntelligenceInterest[]
+  /// HOME R1 STAGE B — Discussion and in-app Alerts (all cascade with the account).
+  storyComments         StoryComment[]
+  storyCommentReports   StoryCommentReport[]
+  storyAlerts           StoryAlert[]
+  inboxCursor           UserInboxCursor?
 
   /// R3/T7 — account-scoped telemetry. SET NULL, NOT Cascade (CTO
   /// decision): deleting an account severs the link to the person while
@@ -2004,4 +2009,181 @@ model GuestClaim {
   @@index([guestSessionId, status])
   @@index([consumedByUserId, consumedAt])
   @@index([expiresAt])
+}
+
+/// ════════════════════════════════════════════════════════════════════════════
+/// HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE B — CANONICAL STORY IDENTITY
+/// ════════════════════════════════════════════════════════════════════════════
+///
+/// `articleRef = sha256(normalizeArticleUrl(url))` stays the immutable ARTICLE identity
+/// (SavedStory, selection, Ask context keep it unchanged). A Story is a CLUSTER of articles
+/// with an opaque, server-issued id — never derived from a URL. Membership is one row per
+/// article (an article belongs to exactly one current story). Backfill is conservative: it
+/// joins two articles only when the 6ba220f identity ladder (`isSameStory`) PROVES sameness;
+/// everything else stays a singleton. A merge keeps the survivor and turns the other story
+/// into an ALIAS (status MERGED, mergedIntoId); a split creates a new story. Every identity
+/// change is an audit row. Nothing here rewrites an article or a saved story.
+model Story {
+  id                   String    @id @default(uuid())
+  /// 'ACTIVE' | 'MERGED' (CHECK in the migration). A MERGED story is an alias of mergedIntoId.
+  status               String    @default("ACTIVE")
+  mergedIntoId         String?
+  mergedInto           Story?    @relation("StoryAlias", fields: [mergedIntoId], references: [id], onDelete: Restrict)
+  aliases              Story[]   @relation("StoryAlias")
+  /// Material-evidence version (>= 1). Increments only when a NEW source host joins the
+  /// story or a merge brings new evidence; another article from a host already present
+  /// adds a source without a version. The Alert dedup key is (alert, briefVersion).
+  briefVersion         Int       @default(1)
+  briefUpdatedAt       DateTime? @db.Timestamptz(6)
+  /// Discussion lock (moderation). Reading stays open; writing is refused while locked.
+  discussionLockedAt   DateTime? @db.Timestamptz(6)
+  discussionLockReason String?
+  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @db.Timestamptz(6)
+
+  articles StoryArticle[]
+  comments StoryComment[]
+  alerts   StoryAlert[]
+
+  @@index([mergedIntoId])
+}
+
+/// One article's membership. `articleRef` is the governed identity (unique: one current
+/// story per article); `articleUrl` is the retained URL it was verified against.
+model StoryArticle {
+  id              String   @id @default(uuid())
+  storyId         String
+  story           Story    @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  articleRef      String   @unique
+  articleUrl      String
+  sourceHost      String
+  addedAt         DateTime @default(now()) @db.Timestamptz(6)
+  /// The story this article was moved FROM by a merge/split (continuity), if any.
+  previousStoryId String?
+
+  @@index([storyId])
+}
+
+/// Audit trail of every identity change: CREATE, JOIN, MERGE, SPLIT, VERSION.
+/// `actorId` is a plain id (no User relation): deleting an operator never erases the audit.
+model StoryIdentityEvent {
+  id           String   @id @default(uuid())
+  kind         String
+  storyId      String
+  otherStoryId String?
+  articleRefs  String[]
+  briefVersion Int?
+  actorId      String?
+  reason       String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([storyId, createdAt])
+}
+
+/// ════════════════════════════════════════════════════════════════════════════
+/// STAGE B — DISCUSSION. Never evidence: no Ask, retrieval, prompt or source path reads it.
+/// ════════════════════════════════════════════════════════════════════════════
+model StoryComment {
+  id               String         @id @default(uuid())
+  /// The story the comment was written on. After a merge it is read through the survivor.
+  storyId          String
+  story            Story          @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  /// Author. Account deletion removes the author's comments (privacy); replies by others
+  /// survive with parentId set to NULL.
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId         String?
+  parent           StoryComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies          StoryComment[] @relation("CommentReplies")
+  body             String
+  /// 'VISIBLE' | 'HIDDEN' | 'REMOVED' (moderation) | 'DELETED' (by its author). CHECK below.
+  state            String         @default("VISIBLE")
+  /// The brief version and article the reader was looking at (continuity, never identity).
+  briefVersion     Int
+  originArticleRef String?
+  idempotencyKey   String
+  createdAt        DateTime       @default(now()) @db.Timestamptz(6)
+  editedAt         DateTime?      @db.Timestamptz(6)
+  deletedAt        DateTime?      @db.Timestamptz(6)
+
+  reports StoryCommentReport[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([storyId, createdAt])
+  @@index([parentId])
+}
+
+model StoryCommentReport {
+  id        String       @id @default(uuid())
+  commentId String
+  comment   StoryComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String
+  createdAt DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@unique([commentId, userId])
+}
+
+/// Moderation audit (hide / remove / restore / lock / unlock). Plain actor id: survives
+/// the operator's account; a comment's removal never erases the audit.
+model StoryModerationAction {
+  id        String   @id @default(uuid())
+  action    String
+  storyId   String
+  commentId String?
+  actorId   String
+  reason    String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([storyId, createdAt])
+}
+
+/// ════════════════════════════════════════════════════════════════════════════
+/// STAGE B — ALERTS (in-app only). NOT Follow, NOT the dormant Watch. No delivery
+/// channel, address, token or subscription is stored anywhere here.
+/// ════════════════════════════════════════════════════════════════════════════
+model StoryAlert {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The canonical subject the reader chose (resolved through aliases on read).
+  storyId             String
+  story               Story     @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  /// 'ACTIVE' | 'PAUSED' | 'REMOVED' (CHECK below). REMOVED keeps the row (undo).
+  status              String    @default("ACTIVE")
+  muted               Boolean   @default(false)
+  createdBriefVersion Int
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(6)
+  removedAt           DateTime? @db.Timestamptz(6)
+
+  events StoryAlertEvent[]
+
+  @@unique([userId, storyId])
+  @@index([userId, status])
+  @@index([storyId, status])
+}
+
+/// One meaningful change for one alert. Dedup = (alertId, briefVersion): a repeated
+/// detection of the same version is the same event.
+model StoryAlertEvent {
+  id           String     @id @default(uuid())
+  alertId      String
+  alert        StoryAlert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  storyId      String
+  briefVersion Int
+  kind         String
+  createdAt    DateTime   @default(now()) @db.Timestamptz(6)
+  readAt       DateTime?  @db.Timestamptz(6)
+
+  @@unique([alertId, briefVersion])
+  @@index([alertId, readAt])
+}
+
+/// The Replies tab's read cursor (replies to the reader's own comments). One row per reader.
+model UserInboxCursor {
+  userId        String   @id
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repliesSeenAt DateTime @db.Timestamptz(6)
 }
