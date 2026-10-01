@@ -237,6 +237,9 @@ export * from './security/read-model';
 
 // Public absence-only Humanitarian reader; acquisition stays unprovisioned.
 export * from './humanitarian/retained-read';
+/* HUMANITARIAN ANALYSIS WORKSPACE R1 — the dimension and claim semantics over ADMITTED
+   retained evidence. A pure projection: no fetch, no acquisition, no model, no prompt. */
+export * from './humanitarian/analysis-workspace';
 
 export * from './global-reach';
 export * from './global-reach-regions';

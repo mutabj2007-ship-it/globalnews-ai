@@ -12,7 +12,11 @@
  * the spatial slot is simply not mounted at PEEK, which a stylesheet edit cannot
  * undo, rather than hidden with CSS, which one could.
  */
-import { humanitarianReadAbsence, type HumanitarianRetainedRead } from '@globalnews-ai/shared';
+import {
+  humanitarianReadAbsence,
+  type HumanitarianAnalysisWorkspace,
+  type HumanitarianRetainedRead,
+} from '@globalnews-ai/shared';
 import { humanitarianReadLabel, humanitarianReadExplanation } from '@/lib/humanitarian/humanitarianReadLabel';
 import { useReducer, type JSX } from 'react';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
@@ -30,7 +34,7 @@ import { Absence, AreaLabel, Chip, SectionTitle, microLabel, panelEdge } from '.
 
 const FRAMES: readonly HumFrameState[] = ['ENTRY', 'SELECTED', 'GAP', 'QUIET'];
 
-export function HumanitarianCompactScreen({ locale, retainedRead = humanitarianReadAbsence('NOT_ASSESSED') }: { locale: HumLocale; retainedRead?: HumanitarianRetainedRead }): JSX.Element {
+export function HumanitarianCompactScreen({ locale, retainedRead = humanitarianReadAbsence('NOT_ASSESSED'), workspace }: { locale: HumLocale; retainedRead?: HumanitarianRetainedRead; workspace: HumanitarianAnalysisWorkspace }): JSX.Element {
   const resolution = resolveHumStrings(locale);
   const t = resolution.strings;
   const [state, dispatch] = useReducer(humViewReducer, undefined, () => initialViewState('ENTRY'));
@@ -236,7 +240,8 @@ export function HumanitarianCompactScreen({ locale, retainedRead = humanitarianR
             display: 'flex', minHeight: 0,
           }}
         >
-          <HumDrawer kind={state.drawer} view={view} t={t} onClose={() => dispatch({ kind: 'CLOSE_DRAWER' })} />
+          <HumDrawer kind={state.drawer} view={view} t={t} locale={locale} workspace={workspace}
+            onClose={() => dispatch({ kind: 'CLOSE_DRAWER' })} />
         </div>
       )}
 

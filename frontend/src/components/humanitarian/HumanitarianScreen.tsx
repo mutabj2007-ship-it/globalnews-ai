@@ -14,7 +14,11 @@
  * observation renders its reason. That is the only way a coverage gap cannot quietly
  * become a calm blank.
  */
-import { humanitarianReadAbsence, type HumanitarianRetainedRead } from '@globalnews-ai/shared';
+import {
+  humanitarianReadAbsence,
+  type HumanitarianAnalysisWorkspace,
+  type HumanitarianRetainedRead,
+} from '@globalnews-ai/shared';
 import { humanitarianReadLabel, humanitarianReadExplanation } from '@/lib/humanitarian/humanitarianReadLabel';
 import { useReducer, type JSX } from 'react';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
@@ -32,7 +36,7 @@ import { Absence, AreaLabel, Chip, Dependency, SectionTitle, Zone, microLabel, p
 
 const FRAMES: readonly HumFrameState[] = ['ENTRY', 'SELECTED', 'GAP', 'QUIET'];
 
-export function HumanitarianScreen({ locale, retainedRead = humanitarianReadAbsence('NOT_ASSESSED') }: { locale: HumLocale; retainedRead?: HumanitarianRetainedRead }): JSX.Element {
+export function HumanitarianScreen({ locale, retainedRead = humanitarianReadAbsence('NOT_ASSESSED'), workspace }: { locale: HumLocale; retainedRead?: HumanitarianRetainedRead; workspace: HumanitarianAnalysisWorkspace }): JSX.Element {
   const resolution = resolveHumStrings(locale);
   const t = resolution.strings;
   const [state, dispatch] = useReducer(humViewReducer, undefined, () => initialViewState('ENTRY'));
@@ -381,7 +385,7 @@ export function HumanitarianScreen({ locale, retainedRead = humanitarianReadAbse
         </div>
       ) : (
         <div data-hum="drawer-region" style={{ position: 'relative', flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
-          <HumDrawer kind={state.drawer} view={view} t={t}
+          <HumDrawer kind={state.drawer} view={view} t={t} locale={locale} workspace={workspace}
             onClose={() => dispatch({ kind: 'CLOSE_DRAWER' })} />
         </div>
       )}

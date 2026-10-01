@@ -1,4 +1,9 @@
-import type { DisplayLocale } from '@globalnews-ai/shared';
+import type {
+  AskHandoffRefusal,
+  DisplayLocale,
+  HumanitarianWorkspaceDimensionId,
+  ObservationAbsenceState,
+} from '@globalnews-ai/shared';
 import { ABSENCE_CHROME, quietClaimFor, type AbsenceReason, type ChangeStateSlot } from './humDegraded';
 
 /**
@@ -84,6 +89,31 @@ export interface HumStrings {
   readonly sensitive: Readonly<Record<'title' | 'protectionOn' | 'noReveal' | 'dependency', string>>;
   readonly watch: Readonly<Record<'title' | 'compositeUnavailable' | 'triggersInactive' | 'notMetered', string>>;
   readonly analysis: Readonly<Record<'title' | 'storedFree' | 'costUnavailable' | 'deepAnalysis' | 'crossDomain' | 'referenceCountOnly', string>>;
+  /**
+   * THE ANALYSIS WORKSPACE · HUMANITARIAN ANALYSIS WORKSPACE R1.
+   *
+   * `absence` HAS NO `ASSESSED_NOTHING_QUALIFIED` KEY, AND THAT IS THE DESIGN. It is
+   * the only absence state a reader could act on as reassurance, the workspace refuses
+   * to carry it, and there is therefore no slot to author it into. A domain cannot say
+   * "checked, nothing qualified" by writing copy.
+   */
+  readonly workspace: {
+    readonly title: string;
+    readonly subtitle: string;
+    readonly dimensions: Readonly<Record<HumanitarianWorkspaceDimensionId, string>>;
+    readonly absence: Readonly<Record<Exclude<ObservationAbsenceState, 'ASSESSED_NOTHING_QUALIFIED'>, string>>;
+    /** Prefix for the record pointers under a carried claim. Identifiers, not prose. */
+    readonly recordsFrom: string;
+    readonly statedBy: string;
+    readonly unknownRoster: string;
+    readonly askAbout: string;
+    readonly askUnavailable: Readonly<Record<AskHandoffRefusal, string>>;
+    /** A publisher kind with no authored label in this locale. Never the token itself. */
+    readonly askUnavailableKind: string;
+    readonly openStored: string;
+    readonly openStoredUnavailable: string;
+    readonly displayOnly: string;
+  };
   readonly timeline: Readonly<Record<'title' | 'historyOfUnderstanding' | 'unavailable', string>>;
   readonly queue: Readonly<Record<'title' | 'cap' | 'notAnIncidentFeed' | 'empty' | 'openFull', string>>;
   readonly common: Readonly<Record<'close' | 'notAssessed' | 'noData' | 'dependencyRecorded' | 'localeFallback' | 'degradedDefault', string>>;
@@ -230,6 +260,42 @@ const en: HumStrings = {
     /* `the reference renderer is unmounted` is implementation state. What a reader
        needs is what they will and will not get: a count, and not the records. */
     referenceCountOnly: 'Count only — the referenced records are not shown here.',
+  },
+  workspace: {
+    title: 'Analysis workspace',
+    subtitle: 'Dimensions over admitted records only. An empty dimension is a result.',
+    dimensions: {
+      WHAT_HAPPENED: 'What the source recorded',
+      WHERE: 'Where',
+      WHEN: 'When',
+      REPORTED_IMPACT: 'Reported humanitarian impact',
+      DISPLACEMENT: 'Displacement',
+      ACCESS_CONSTRAINTS: 'Access constraints',
+      SECTOR_CLAIMS: 'Health, shelter, food and water claims',
+      SOURCE_DISAGREEMENT: 'Source disagreement',
+      SOURCE_TIMELINE: 'Source timeline',
+      WHAT_IS_UNKNOWN: 'What is unknown',
+    },
+    absence: {
+      NOT_ASSESSED: 'Not assessed — nothing has been looked at for this scope.',
+      SOURCE_NOT_CONNECTED: 'No source is connected for this scope.',
+      SOURCE_TEMPORARILY_UNAVAILABLE: 'A connected source did not answer this time.',
+      COVERAGE_GAP: 'Coverage gap — this scope cannot be seen.',
+      EVIDENCE_WITHHELD: 'Not shown here.',
+      NO_QUALIFYING_EVIDENCE: 'Examined — nothing met the evidentiary floor.',
+    },
+    recordsFrom: 'From records',
+    statedBy: 'Stated by the publisher',
+    unknownRoster: 'Derived from the dimensions above that came back empty.',
+    askAbout: 'Ask about this humanitarian situation',
+    askUnavailable: {
+      NO_ADMITTED_RECORD: 'No admitted record — there is no situation to ask about yet.',
+      NO_STATED_SUBJECT: 'The admitted records state no subject to ask about.',
+    },
+    askUnavailableKind: 'This record type is not yet described in this language.',
+    openStored: 'Open full analysis',
+    openStoredUnavailable: 'No stored analysis to open.',
+    displayOnly: 'Opens the stored result. Nothing is run again.',
   },
   timeline: {
     title: 'Timeline', historyOfUnderstanding: 'History of the understanding',
@@ -457,6 +523,42 @@ export const HUM_PL_DRAFT_AWAITING_COMPLETION = {
     deepAnalysis: "Analiza pogłębiona",
     crossDomain: "Odniesienia międzydomenowe",
     referenceCountOnly: "Tylko liczba — renderer odniesień nie jest zamontowany.",
+  },
+  workspace: {
+    title: "Przestrzeń analizy",
+    subtitle: "Wymiary wyłącznie na podstawie przyjętych zapisów. Pusty wymiar jest wynikiem.",
+    dimensions: {
+      WHAT_HAPPENED: "Co zapisało źródło",
+      WHERE: "Gdzie",
+      WHEN: "Kiedy",
+      REPORTED_IMPACT: "Zgłoszone skutki humanitarne",
+      DISPLACEMENT: "Przesiedlenia",
+      ACCESS_CONSTRAINTS: "Ograniczenia dostępu",
+      SECTOR_CLAIMS: "Twierdzenia o zdrowiu, schronieniu, żywności i wodzie",
+      SOURCE_DISAGREEMENT: "Rozbieżność źródeł",
+      SOURCE_TIMELINE: "Oś czasu źródeł",
+      WHAT_IS_UNKNOWN: "Co pozostaje nieznane",
+    },
+    absence: {
+      NOT_ASSESSED: "Nieocenione — w tym zakresie nic nie zostało sprawdzone.",
+      SOURCE_NOT_CONNECTED: "Dla tego zakresu nie podłączono żadnego źródła.",
+      SOURCE_TEMPORARILY_UNAVAILABLE: "Podłączone źródło tym razem nie odpowiedziało.",
+      COVERAGE_GAP: "Luka w pokryciu — tego zakresu nie da się zobaczyć.",
+      EVIDENCE_WITHHELD: "Nie pokazywane w tym miejscu.",
+      NO_QUALIFYING_EVIDENCE: "Zbadane — nic nie spełniło progu dowodowego.",
+    },
+    recordsFrom: "Z zapisów",
+    statedBy: "Podane przez wydawcę",
+    unknownRoster: "Wyprowadzone z powyższych wymiarów, które pozostały puste.",
+    askAbout: "Zapytaj o tę sytuację humanitarną",
+    askUnavailable: {
+      NO_ADMITTED_RECORD: "Brak przyjętych zapisów — nie ma jeszcze sytuacji, o którą można zapytać.",
+      NO_STATED_SUBJECT: "Przyjęte zapisy nie podają tematu, o który można zapytać.",
+    },
+    askUnavailableKind: "Ten typ zapisu nie jest jeszcze opisany w tym języku.",
+    openStored: "Otwórz pełną analizę",
+    openStoredUnavailable: "Brak zapisanej analizy do otwarcia.",
+    displayOnly: "Otwiera zapisany wynik. Nic nie jest uruchamiane ponownie.",
   },
   timeline: {
     title: "Oś czasu",

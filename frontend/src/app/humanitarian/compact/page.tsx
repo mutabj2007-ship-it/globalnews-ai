@@ -1,3 +1,4 @@
+import { projectHumanitarianWorkspace } from '@globalnews-ai/shared';
 import { readHumanitarianObservations } from '@/lib/humanitarian/humanitarianRead';
 import type { JSX } from 'react';
 import type { Metadata } from 'next';
@@ -58,6 +59,17 @@ function humLocale(): HumLocale {
 
 export default async function HumanitarianCompactPage(): Promise<JSX.Element> {
   const retainedRead = await readHumanitarianObservations();
+  /*
+    THE WORKSPACE IS PROJECTED FROM THE REAL READ, NOT FROM A FIXTURE.
+
+    `HumanitarianRetainedRead.observations` is `readonly never[]` by accepted contract —
+    the bounded reader deliberately cannot carry an observation until the retained
+    observation path lands — so this projection is empty today and every dimension comes
+    back with a stated reason. It is wired this way rather than hardcoded to `[]` so that
+    the day the read contract carries records, the workspace carries claims with no edit
+    here and no second source of truth.
+  */
+  const workspace = projectHumanitarianWorkspace(retainedRead.observations, new Date().toISOString());
   return (
     <ScriptRun locale={humLocale()} step="wrapping" as="div">
       {/*
@@ -68,7 +80,7 @@ export default async function HumanitarianCompactPage(): Promise<JSX.Element> {
         shell unusable at any locale was exactly its absence.
       */}
       <NavBar language={humLanguage()} />
-      <HumanitarianCompactScreen locale={humLocale()} retainedRead={retainedRead} />
+      <HumanitarianCompactScreen locale={humLocale()} retainedRead={retainedRead} workspace={workspace} />
       <Footer language={humLanguage()} />
     </ScriptRun>
   );

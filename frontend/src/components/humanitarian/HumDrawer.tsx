@@ -16,19 +16,24 @@ import type { JSX } from 'react';
 import { HUM_INK, HUM_LINE, HUM_MONO, HUM_SURFACE, HUM_TYPE, humTracking } from '@/lib/humanitarian/humTokens';
 import { HUM_HIT_TARGET_PX } from '@/lib/humanitarian/humConfig';
 import type { HumDrawerKind } from '@/lib/humanitarian/humState';
-import type { HumStrings } from '@/lib/humanitarian/humStrings';
+import type { HumLocale, HumStrings } from '@/lib/humanitarian/humStrings';
 import type { HumSituationView } from './HumanitarianModel';
 import { PopulationNeed } from './drawers/PopulationNeed';
 import { DisplacementAccess } from './drawers/DisplacementAccess';
 import { EvidenceReadings } from './drawers/EvidenceReadings';
 import { WatchConfig } from './drawers/WatchConfig';
 import { TimelineHistory } from './drawers/TimelineHistory';
+import type { HumanitarianAnalysisWorkspace } from '@globalnews-ai/shared';
 import { AnalysisHandoff } from './drawers/AnalysisHandoff';
+import { AnalysisWorkspace } from './drawers/AnalysisWorkspace';
 
-export function HumDrawer({ kind, view, t, onClose }: {
+export function HumDrawer({ kind, view, t, locale, workspace, onClose }: {
   kind: HumDrawerKind;
   view: HumSituationView;
   t: HumStrings;
+  locale: HumLocale;
+  /** The projection over ADMITTED records, resolved by the server read. Never built here. */
+  workspace: HumanitarianAnalysisWorkspace;
   onClose: () => void;
 }): JSX.Element {
   return (
@@ -76,7 +81,12 @@ export function HumDrawer({ kind, view, t, onClose }: {
         {kind === 'EVIDENCE' && <EvidenceReadings view={view} t={t} />}
         {kind === 'WATCH' && <WatchConfig view={view} t={t} />}
         {kind === 'TIMELINE' && <TimelineHistory view={view} t={t} />}
-        {kind === 'ANALYSIS' && <AnalysisHandoff view={view} t={t} />}
+        {kind === 'ANALYSIS' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <AnalysisWorkspace workspace={workspace} t={t} locale={locale} />
+            <AnalysisHandoff view={view} t={t} />
+          </div>
+        )}
       </div>
     </section>
   );
