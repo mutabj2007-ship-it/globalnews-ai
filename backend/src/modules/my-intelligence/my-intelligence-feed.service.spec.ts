@@ -159,7 +159,11 @@ describe('retained data only — opening My Intelligence costs no provider call 
 
   it('ArticlePersistenceService — the only data dependency — has no provider dependency', () => {
     const source = readFileSync(join(__dirname, '../news/persistence/article-persistence.service.ts'), 'utf8');
-    expect(source).toMatch(/constructor\(private readonly prisma: PrismaService\)/);
+    /* Home R1 Stage B adds ONE optional, DB-only observation port (retained-article-observer.port.ts);
+       the constructor still takes PrismaService and nothing that can reach a provider. */
+    expect(source).toMatch(
+      /constructor\(\s*private readonly prisma: PrismaService,\s*\/\*[^*]*\*\/\s*@Optional\(\) @Inject\(RETAINED_ARTICLE_OBSERVER\) private readonly observer\?: RetainedArticleObserver,\s*\)/,
+    );
     const imports = (source.match(/^import [\s\S]*?;$/gm) ?? []).join('\n');
     expect(imports).not.toMatch(/provider|news\.service|country-news|analysis/i);
   });

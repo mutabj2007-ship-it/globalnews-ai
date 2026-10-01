@@ -97,8 +97,10 @@ export class AlertsService {
     }
   }
 
-  private async subjectOf(canonicalId: string): Promise<AlertView['subject']> {
+  /** The subject shown for an alert: its ORIGINATING article when still in the story, else the first retained member. */
+  private async subjectOf(canonicalId: string, preferRef?: string | null): Promise<AlertView['subject']> {
     const members = await this.prisma.storyArticle.findMany({ where: { storyId: canonicalId }, orderBy: [{ addedAt: 'asc' }, { articleRef: 'asc' }], take: 20 });
+    if (preferRef) members.sort((a, b) => Number(b.articleRef === preferRef) - Number(a.articleRef === preferRef));
     for (const m of members) {
       const article = await this.prisma.article.findFirst({ where: { url: m.articleUrl }, select: { title: true, url: true, sourceName: true } });
       if (article) return { articleRef: m.articleRef, title: article.title, url: article.url, sourceName: article.sourceName };
@@ -111,7 +113,7 @@ export class AlertsService {
     if (!row || row.status === 'REMOVED') throw new NotFoundException();
     const story = await this.identity.describe(row.storyId);
     if (!story) throw new NotFoundException();
-    const subject = await this.subjectOf(story.storyId);
+    const subject = await this.subjectOf(story.storyId, row.originArticleRef);
     const unread = await this.prisma.storyAlertEvent.count({ where: { alertId: row.id, readAt: null } });
     return {
       id: row.id,
@@ -202,13 +204,14 @@ export class AlertsService {
       where: { alert: { userId, status: { not: 'REMOVED' } } },
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       take: INBOX_LIMIT,
-      include: { alert: { select: { id: true, muted: true, storyId: true } } },
+      include: { alert: { select: { id: true, muted: true, storyId: true, originArticleRef: true } } },
     });
     const subjects = new Map<string, AlertView['subject']>();
     const developments = [];
     for (const e of events) {
       const canonical = (await this.identity.canonicalOf(e.storyId))?.id ?? e.storyId;
-      if (!subjects.has(canonical)) subjects.set(canonical, await this.subjectOf(canonical));
+      const key = `${canonical}:${e.alert.originArticleRef}`;
+      if (!subjects.has(key)) subjects.set(key, await this.subjectOf(canonical, e.alert.originArticleRef));
       developments.push({
         id: e.id,
         alertId: e.alertId,
@@ -217,7 +220,7 @@ export class AlertsService {
         createdAt: e.createdAt.toISOString(),
         read: e.readAt !== null,
         muted: e.alert.muted,
-        subject: subjects.get(canonical) ?? null,
+        subject: subjects.get(key) ?? null,
       });
     }
     const unreadDevelopments = await this.prisma.storyAlertEvent.count({ where: { readAt: null, alert: { userId, status: { not: 'REMOVED' }, muted: false } } });

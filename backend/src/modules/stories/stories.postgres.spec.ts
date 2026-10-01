@@ -532,8 +532,8 @@ live('Stage B — live PostgreSQL', () => {
       const sm = await identity.ensureStoryForArticle(moved);
       expect(sm.story.storyId).toBe(sk.story.storyId);
 
-      const root = await discussion.post(u1, { ...moved, body: 'Opened from the moved article', idempotencyKey: `sp-${stamp}-1` });
-      const reply = await discussion.post(u2, { ...kept, body: 'A reply to it', parentId: root.id, idempotencyKey: `sp-${stamp}-2` });
+      const root = await discussion.post(u1, { ...moved, body: `Opened from the moved article ${stamp}`, idempotencyKey: `sp-${stamp}-1` });
+      const reply = await discussion.post(u2, { ...kept, body: `A reply to it ${stamp}`, parentId: root.id, idempotencyKey: `sp-${stamp}-2` });
       const other = await discussion.post(u3, { ...kept, body: 'Opened from the kept article', idempotencyKey: `sp-${stamp}-3` });
       const fromMoved = await alerts.create(u4, moved);
       const fromKept = await alerts.create(u5, kept);
@@ -552,7 +552,7 @@ live('Stage B — live PostgreSQL', () => {
       expect(movedThread.comments.map((c) => c.id).sort()).toEqual([root.id, reply.id].sort());
       const keptThread = await discussion.thread(kept.articleRef, null);
       expect(keptThread.comments.map((c) => c.id)).toEqual([other.id]);
-      expect(await db.storyComment.count({ where: { body: { in: ['Opened from the moved article', 'A reply to it'] } } })).toBe(2);
+      expect(await db.storyComment.count({ where: { body: { in: [`Opened from the moved article ${stamp}`, `A reply to it ${stamp}`] } } })).toBe(2);
 
       expect((await db.storyAlert.findUnique({ where: { id: fromMoved.id } }))!.storyId).toBe(split.created.storyId);
       expect((await db.storyAlert.findUnique({ where: { id: fromKept.id } }))!.storyId).toBe(sk.story.storyId);
@@ -582,6 +582,8 @@ live('Stage B — live PostgreSQL', () => {
       expect((await db.storyAlert.findUnique({ where: { id: onB.id } }))!.status).toBe('ACTIVE');
       const live = await alerts.list(reader);
       expect(live.map((x) => x.id)).toEqual([onB.id]);
+      // The subject shown is the article the reader alerted FROM, not an arbitrary merged member.
+      expect(live[0].subject?.articleRef).toBe(b.articleRef);
       expect((await alerts.byArticle(reader, [a.articleRef]))[a.articleRef].alertId).toBe(onB.id);
       expect(await db.storyAlertEvent.count({ where: { alertId: onB.id } })).toBe(1);
       expect(await db.storyAlertEvent.count({ where: { alertId: onA.id } })).toBe(0);
