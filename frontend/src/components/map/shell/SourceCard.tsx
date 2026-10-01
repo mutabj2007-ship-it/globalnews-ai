@@ -64,9 +64,8 @@ export interface SourceCardLabels {
    *
    * `askAbout` above remains the ACCESSIBLE name and is unchanged. This exists
    * because the two used to disagree: the label said "Ask GlobalNews AI about
-   * this" while the surface showed a bare magnifier, and /search auto-executes
-   * POST /analysis/news on arrival — so the click spent model compute behind a
-   * glyph that reads as "inspect".
+   * this" while the surface showed a bare magnifier. (R2E: /search now STAGES the
+   * question — 0 compute on arrival — and its explicit Run is one canonical Ask V2 turn.)
    */
   readonly askAiShort: string;
   /**
@@ -285,10 +284,10 @@ export function SourceCard({
             was not. A magnifier conventionally means search, zoom, inspect,
             look closer — all free and all local.
 
-            IT IS NOT FREE. `onAskAbout` pushes /search?q=…, and that route
-            AUTO-EXECUTES POST /analysis/news on arrival (see
-            analysisAutoRun.ts). This click IS the decision to spend model
-            compute, and it was the only one the reader got.
+            IT LEADS TO COMPUTE. `onAskAbout` pushes /search?q=…&articleId=…, where
+            the question arrives STAGED (UNIFIED INTELLIGENCE BINDING R2E — nothing
+            runs on arrival) and the explicit Run executes ONE canonical Ask V2 turn
+            anchored to this story. The label says so before the reader commits.
 
             SO THE NAME IS NOW ON THE SURFACE. The accessible label is unchanged
             — a screen-reader user still hears the full sentence — and sighted

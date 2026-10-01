@@ -6,7 +6,9 @@ import type { StoryContext } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { usePublishStoryContext } from '@/lib/ask/storyContextStore';
 import { dashboardContext } from '@/lib/ask/dashboardContext';
-import { useAskConversation } from '@/lib/ask/useAskConversation';
+import { askContextRefOf } from '@/lib/ask/askContextRef';
+import { askRecordStrings, dashboardModuleContext } from '@/lib/ask/askModuleRef';
+import { askCompareRef, dashboardCompareContext } from '@/lib/ask/askSelectionRef';
 import { resolveAskStrings, type AskLocale } from '@/lib/ask/askStrings';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
 import { askR2View } from '@/lib/ask/askR2View';
@@ -21,7 +23,6 @@ import { ASK_SIGN_IN_HREF, keepQuestion, readKeptQuestion } from '@/lib/ask/askK
 import { authReturnNotice, type GuestNotice } from '@/lib/ask/askGuestTrial';
 import type { AskShellMenuControl } from '@/lib/ask/askShellMenu';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
-import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { AskR2TurnView } from './AskR2TurnView';
 import { AskSourcesColumn } from './AskSourcesColumn';
@@ -82,6 +83,22 @@ export function AskFrameScreen({
   const [contextOverride, setContextOverride] = useState<{ key: string; context?: StoryContext }>();
   const context = contextOverride?.key === urlKey ? contextOverride.context : incoming;
   usePublishStoryContext(context);
+  /*
+    UNIFIED INTELLIGENCE BINDING R2F — a dashboard record ("Ask about this record"). It is the
+    more specific anchor, so while it is present it is what this screen shows AND sends; removing
+    its chip returns the screen to the story/country context (or none). Arrival runs nothing.
+  */
+  const incomingModule = useMemo(() => dashboardModuleContext(new URLSearchParams(urlKey)), [urlKey]);
+  const [moduleRemovedFor, setModuleRemovedFor] = useState<string>();
+  const moduleContext = moduleRemovedFor === urlKey ? undefined : incomingModule;
+  /*
+    UNIFIED INTELLIGENCE BINDING R2H — Home "Compare stories": 2..8 staged story URLs. The most
+    specific context (a chosen SET), so while its chip is shown it is what this screen sends —
+    as a COMPARE selection whose references are derived only when the reader presses Ask.
+  */
+  const incomingCompare = useMemo(() => dashboardCompareContext(new URLSearchParams(urlKey)), [urlKey]);
+  const [compareRemovedFor, setCompareRemovedFor] = useState<string>();
+  const compareContext = compareRemovedFor === urlKey ? undefined : incomingCompare;
   const [question, setQuestion] = useState(params.get('q') ?? '');
   const [compact, setCompact] = useState(false);
   const reader = useRef<HTMLDivElement>(null);
@@ -91,7 +108,12 @@ export function AskFrameScreen({
   const r2Locale: 'en' | 'pl' = locale === 'pl' ? 'pl' : 'en';
   const r2s = askR2Strings(r2Locale);
   const dict = getDictionary(locale);
-  const { turns, pending, submit } = useAskConversation(locale, context);
+  /*
+    UNIFIED INTELLIGENCE BINDING R2C — ONE ENGINE. The legacy news-analysis conversation that
+    used to run here when Ask V2 answered 404 is retired: Ask V2 unavailable is a truthful
+    "unavailable" state with the question kept, never a second engine (POST /analysis/news).
+  */
+  const [askUnavailable, setAskUnavailable] = useState(false);
   const returnPath = sanitizeReturnPath(params.get('return'));
   const r2 = useAskR2Conversation(r2Locale, returnPath, { guestTrial: true });
   const { continueThread, setGuestNotice } = r2;
@@ -126,9 +148,8 @@ export function AskFrameScreen({
         )
       : null;
   const showR2 = r2.availability === 'r2' || opened !== null;
-  const isPending = pending !== null || r2.pending !== null;
+  const isPending = r2.pending !== null;
   const hasQuestion =
-    turns.length > 0 ||
     r2.turns.length > 0 ||
     opened !== null ||
     isPending ||
@@ -139,6 +160,14 @@ export function AskFrameScreen({
   useEffect(() => {
     setQuestion(new URLSearchParams(urlKey).get('q') ?? '');
   }, [urlKey]);
+  /* R2H — a Compare arrival without `q` stages a DRAFT question (declared after the effect
+     above, so it wins); like `q`, it is never submitted on arrival. */
+  useEffect(() => {
+    const url = new URLSearchParams(urlKey);
+    if (url.get('q') === null && dashboardCompareContext(url) !== undefined) {
+      setQuestion(r2Locale === 'pl' ? 'Porównaj te artykuły' : 'Compare these stories');
+    }
+  }, [urlKey, r2Locale]);
   /*
     SIGNED-OUT FALLBACK REMOVAL R1 — back from sign-in, the kept question returns to the
     composer as a DRAFT. It is read once and removed; nothing is sent until the reader
@@ -203,10 +232,9 @@ export function AskFrameScreen({
       asked yet it stays at its top: scrolling an empty workspace to its bottom cut the
       opening lines off under the pane title (seen at 1024×768 under the 53 px site header).
     */
-    const empty =
-      turns.length === 0 && r2.turns.length === 0 && pending === null && r2.pending === null;
+    const empty = r2.turns.length === 0 && r2.pending === null;
     if (reader.current && !empty) reader.current.scrollTop = reader.current.scrollHeight;
-  }, [turns, pending, r2.turns, r2.pending]);
+  }, [r2.turns, r2.pending]);
   useEffect(() => {
     const viewport = window.visualViewport;
     const update = () => {
@@ -238,8 +266,22 @@ export function AskFrameScreen({
       signed-out reader is asked to sign in: the question goes back into the composer and
       is sent nowhere — never down the legacy news-analysis path.
     */
-    const outcome = await r2.submit(draft);
-    if (outcome === 'legacy') void submit(draft);
+    /*
+      UNIFIED INTELLIGENCE BINDING R2C — the context this screen SHOWS is the context it SENDS:
+      the same published story/country, as a bounded reference the server resolves. A context
+      the server cannot resolve runs nothing and keeps the draft (never a silent generic Ask).
+    */
+    setAskUnavailable(false);
+    const compareRef = compareContext === undefined ? undefined : await askCompareRef(compareContext);
+    const outcome = await r2.submit(
+      draft,
+      compareRef ?? moduleContext?.ref ?? askContextRefOf(context, undefined),
+    );
+    if (outcome === 'context-unavailable') setQuestion(draft);
+    else if (outcome === 'legacy') {
+      setAskUnavailable(true);
+      setQuestion(draft);
+    }
     else if (outcome === 'signed-out') setQuestion(draft);
     /* ASK GUEST TRIAL R3 — a guest refusal (exhausted, cooldown, busy) keeps the draft too; nothing ran. */
     else if (outcome === 'kept') setQuestion(draft);
@@ -345,7 +387,40 @@ export function AskFrameScreen({
       <div ref={reader} data-ask="reader" className={styles.reader} aria-live="polite">
         <div className={styles.grid}>
           <div data-ask="thread" className={styles.thread}>
-            {context && (
+            {compareContext && (
+              <div data-ask="context" data-ask-context-kind="SELECTION" className={styles.contextChip}>
+                <span className="truncate">
+                  {(r2Locale === 'pl' ? 'Porównanie: {n} artykułów' : 'Comparing {n} stories').replace(
+                    '{n}',
+                    String(compareContext.length),
+                  )}
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center"
+                  aria-label={t.controls.removeContext}
+                  onClick={() => setCompareRemovedFor(urlKey)}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {!compareContext && moduleContext && (
+              <div data-ask="context" data-ask-context-kind="MODULE" className={styles.contextChip}>
+                <span className="truncate">
+                  {moduleContext.label || askRecordStrings(r2Locale).moduleRecord[moduleContext.ref.module]}
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center"
+                  aria-label={t.controls.removeContext}
+                  onClick={() => setModuleRemovedFor(urlKey)}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {!compareContext && !moduleContext && context && (
               <div data-ask="context" className={styles.contextChip}>
                 <span className="truncate">{context.title}</span>
                 <button
@@ -482,27 +557,10 @@ export function AskFrameScreen({
                 </div>
               </section>
             )}
-            {turns.map((turn, i) => (
-              <article key={i} data-ask-turn data-ask="turn" className={styles.legacyTurn}>
-                <p className={ASK_EYEBROW}>{r2s.youAsked}</p>
-                <h2 className={styles.question}>{turn.question}</h2>
-                {turn.response ? (
-                  <AskCompactResult
-                    response={turn.response}
-                    question={turn.question}
-                    language={turn.language}
-                    context={turn.context}
-                    storyBookmarks={false}
-                  />
-                ) : (
-                  <p role="alert">{turn.error}</p>
-                )}
-              </article>
-            ))}
             {isPending && (
               <section data-ask="pending" className="mb-5">
                 <p className={ASK_EYEBROW}>{r2s.youAsked}</p>
-                <h2 className={styles.question}>{pending ?? r2.pending}</h2>
+                <h2 className={styles.question}>{r2.pending}</h2>
                 <LoadingStages stages={dict.loadingStages} />
               </section>
             )}
@@ -516,6 +574,24 @@ export function AskFrameScreen({
       </div>
 
       <div data-ask="composer-footer" className={styles.composerBar}>
+        {askUnavailable && (
+          <p
+            data-ask="ask-unavailable"
+            role="status"
+            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
+          >
+            {r2s.unified.askUnavailable}
+          </p>
+        )}
+        {r2.contextRefused !== null && (
+          <p
+            data-ask="context-unavailable"
+            role="status"
+            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
+          >
+            {r2s.unified.contextUnavailable}
+          </p>
+        )}
         {notice !== null && (
           <p
             data-ask="guest-notice"

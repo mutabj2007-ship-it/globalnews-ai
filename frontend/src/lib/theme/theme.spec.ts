@@ -110,6 +110,10 @@ describe('no theme flash — the first frame is already the reader’s theme', (
     for (const f of [['components', 'ask-frame', 'AskFrameScreen.tsx'], ['components', 'ask-nav', 'AskStandaloneRoot.tsx']]) {
       expect(read(...f)).not.toMatch(/data-gna-theme|ThemeScope|useThemePreference/);
     }
-    expect(read('components', 'ask', 'AskAiDock.tsx')).toMatch(/data-gna-theme=\{embeddedAsk && mapLayout === null \? themePreference : undefined\}/);
+    /* Convergence: the dock is R2's; it takes the reader's theme only where the platform Home R1 is
+       released (GNA_HOME_R1) and never on the Map. */
+    const dock = read('components', 'ask', 'AskAiDock.tsx');
+    expect(dock).toMatch(/data-gna-theme=\{themed && mapLayout === null \? themePreference : undefined\}/);
+    expect(dock).toMatch(/const themed = usePlatformGates\(\)\.homeR1;/);
   });
 });

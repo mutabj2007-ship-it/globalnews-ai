@@ -111,6 +111,9 @@ describe('H. Existing language behavior remains intact', () => {
   });
 
   it('storyContext never carries a language field of its own \u2014 language is a fully separate, already-correct concern', () => {
-    expect(searchClientSource).toMatch(/analyzeNews\(query, language, storyContext\)/);
+    /* R2C — the canonical turn carries the language as the conversation's own parameter and the
+       story as a reference; the story still carries no language field of its own. */
+    expect(searchClientSource).toMatch(/\.current\(query, askContextRefOf\(storyContext, undefined\)/);
+    expect(searchClientSource).toMatch(/useAskR2Conversation\(r2Locale,/);
   });
 });

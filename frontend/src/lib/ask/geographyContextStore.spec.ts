@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mapGeographyChipShown } from './effectiveContext';
+import { askContextRefOf } from './askContextRef';
 import {
   ASK_GEOGRAPHY_KEYS,
   clearGeographyContext,
@@ -113,14 +114,21 @@ describe('MAP R1 item 7 — the dock shows the scope without calling it a story'
   });
 
   it('story context is the more specific anchor and wins', () => {
-    /* ASK R2 INTEGRATION R1 · G seam D replaced the store-occupancy line with the
-       effective-context read; the precedence it pinned is asserted on that reader. */
+    /* UNIFIED INTELLIGENCE BINDING R2C — the chip and the request now derive from ONE reference
+       (askContextRefOf, story first, never both); the precedence is asserted on that builder.
+       The effective-context reader remains for surfaces that read a legacy response. */
     const body = code(dock);
-    expect(body).toContain('const showGeographyLabel = mapGeographyChipShown(');
-    expect(body).toContain('storyContextPresent: storyContext !== undefined,');
+    expect(body).toContain('const contextRef = askContextRefOf(storyContext, geographyContext);');
+    expect(body).toContain("const showGeographyLabel = contextRef?.kind === 'GEOGRAPHY';");
+    expect(
+      askContextRefOf({ title: 'Story', articleId: 'gnews-1' }, { countryCode: 'POL' }),
+    ).toEqual({ kind: 'STORY', articleId: 'gnews-1' });
+    expect(askContextRefOf(undefined, { countryCode: 'POL' })).toEqual({
+      kind: 'GEOGRAPHY',
+      countryCode: 'POL',
+    });
     const stores = { storyContextPresent: true, geographyContextPresent: true };
     expect(mapGeographyChipShown('draft', {}, stores)).toBe(false);
-    expect(mapGeographyChipShown('answered', { geographyContextUsed: true }, stores)).toBe(false);
   });
 
   it('the chip has three distinct states, not two', () => {
@@ -144,8 +152,11 @@ describe('MAP R1 item 7 — nothing is smuggled through the story transport', ()
   });
 
   it('the dock still transports only the story context it was given', () => {
+    /* R2C — ONE reference per Send: never the country disguised as a story, never both. */
     const body = code(dock);
-    expect(body).toContain('const sent = transportableContext(storyContext);');
-    expect(body).not.toMatch(/transportableContext\(\s*geographyContext/);
+    expect(body).toMatch(/void r2\s*\.submit\(asked, contextRef,/);
+    expect(body).not.toMatch(/transportableContext/);
+    const story = askContextRefOf({ title: 'Story', articleId: 'gnews-1' }, { countryCode: 'POL' });
+    expect(Object.keys(story ?? {}).sort()).toEqual(['articleId', 'kind']);
   });
 });

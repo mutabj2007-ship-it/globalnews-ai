@@ -1568,9 +1568,13 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
 
         if (article === undefined) return;
 
+        /*
+          UNIFIED INTELLIGENCE BINDING R2E — the STORY is the context: its persisted id is the
+          reference, and its country is the one the SERVER resolves from the stored article.
+          The Map's selected country is never sent in its place (they can differ). /search
+          stages the question; its explicit Run is one canonical Ask V2 turn.
+        */
         const params = new URLSearchParams({ q: article.title, articleId: article.id });
-
-        params.set('countryCode', selectedCountry.iso2);
         router.push(`/search?${params.toString()}`);
       },
       ...(topics.length > 0 ? { topics } : {}),

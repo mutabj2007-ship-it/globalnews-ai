@@ -361,15 +361,14 @@ describe('the controller: only an explicit POST computes', () => {
       'src/modules/analysis/service/analysis.service.ts',
       'src/modules/ask-router/frozen-c/corpus/corpus.ts',
       /*
-        ASSERTION MOVED (HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE A — CTO contract §6, Claude H
-        §5): the reviewed AskContextRefDto lets an Ask V2 turn carry a GOVERNED country code
-        (`context.country`), resolved server-side to the landed GeographyContext and handed to
-        the SAME analyzeNews seam (6th argument). These two files name that internal value; no
-        HTTP body field called geographyContext is accepted anywhere but POST /analysis/news,
-        and the Ask V2 bag is behind ASK_CONTEXT_REFS_ENABLED (default off).
+        UNIFIED INTELLIGENCE BINDING R2B — the canonical Ask V2 engine BUILDS a GeographyContext
+        server-side (ISO3 + registry name) from a resolved `{kind:'GEOGRAPHY', countryCode}`
+        reference and hands it to AnalysisService. No client ever sends this object to Ask V2 and
+        no new controller accepts it: the controller assertion below still holds unchanged.
       */
-      'src/modules/ask-v2/ask-context.ts',
       'src/modules/ask-v2/ask-r2-execution.adapter.ts',
+      'src/modules/ask-v2/context/ask-context.resolver.ts',
+      'src/modules/ask-v2/context/resolved-ask-context.ts',
     ]);
     expect(files.filter((file) => file.endsWith('.controller.ts'))).toEqual([
       'src/modules/analysis/controller/analysis.controller.ts',

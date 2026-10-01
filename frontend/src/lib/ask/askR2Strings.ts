@@ -182,6 +182,17 @@ export interface AskR2Strings {
   readonly personal: Readonly<
     Record<'SAVED_STORIES' | 'INTERESTS' | 'NEUTRAL', { signIn: string; notAvailable: string }>
   >;
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2C — the canonical-engine states every Ask surface shares:
+   * the context reference could not be resolved (nothing ran; the question is kept), Ask V2 is
+   * unavailable (nothing is sent anywhere else), and starting a new topic.
+   */
+  readonly unified: {
+    readonly contextUnavailable: string;
+    readonly askUnavailable: string;
+    readonly newTopic: string;
+    readonly newTopicStarted: string;
+  };
   sourcesLabel(n: number): string;
 }
 
@@ -378,6 +389,13 @@ const EN: AskR2Strings = {
     cancelled: 'Sign-in was cancelled. Your conversation is still here.',
     failed: 'Sign-in did not complete. Your conversation is still here.',
     resumed: 'Signed in. Your conversation continues here — nothing was run again.',
+  },
+  unified: {
+    contextUnavailable:
+      "The story, place or record this question was about couldn't be found, so nothing was run. Your question is kept below.",
+    askUnavailable: 'Ask is unavailable right now, so nothing was run. Your question is kept below.',
+    newTopic: 'New topic',
+    newTopicStarted: 'New topic — earlier questions are not carried into it.',
   },
   personal: {
     SAVED_STORIES: {
@@ -607,6 +625,13 @@ const PL: AskR2Strings = {
     cancelled: 'Logowanie zostało anulowane. Twoja rozmowa jest nadal tutaj.',
     failed: 'Logowanie nie zostało ukończone. Twoja rozmowa jest nadal tutaj.',
     resumed: 'Zalogowano. Rozmowa trwa dalej tutaj — nic nie zostało uruchomione ponownie.',
+  },
+  unified: {
+    contextUnavailable:
+      'Nie udało się odnaleźć artykułu, miejsca ani rekordu, którego dotyczy pytanie, więc nic nie uruchomiono. Twoje pytanie czeka poniżej.',
+    askUnavailable: 'Zapytaj jest teraz niedostępne, więc nic nie uruchomiono. Twoje pytanie czeka poniżej.',
+    newTopic: 'Nowy temat',
+    newTopicStarted: 'Nowy temat — wcześniejsze pytania nie są w nim kontynuowane.',
   },
   personal: {
     SAVED_STORIES: {

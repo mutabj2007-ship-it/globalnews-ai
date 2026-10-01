@@ -21,8 +21,6 @@ const GLOBALS = join(SRC, 'app', 'globals.css');
 /** The components the embedded panel renders (the Standalone answer tree + the dock shell). */
 export const EMBEDDED_ASK_SOURCES = [
   'components/ask/AskAiDock.tsx',
-  'components/ask/EmbeddedConversation.tsx',
-  'components/ask/AskContextInspect.tsx',
   'components/ask/AskCompactResult.tsx',
   'components/ask-frame/AskR2TurnView.tsx',
   'components/ask-frame/AskIntelligenceBasis.tsx',

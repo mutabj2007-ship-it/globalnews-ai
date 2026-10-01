@@ -1,6 +1,5 @@
-import type { AnalysisApiResponse } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, MultiStoryAction } from '@globalnews-ai/shared';
 import { accountFetch } from './accountFetch';
-import type { AskContextRefWire } from '@/lib/ask/askContextRef';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -21,6 +20,34 @@ import type { AskContextRefWire } from '@/lib/ask/askContextRef';
 
 export type AskV2Language = 'en' | 'pl';
 export type AskV2Intent = 'ask' | 'deep-analysis' | 'research-report';
+
+/**
+ * UNIFIED INTELLIGENCE BINDING R2B/R2C — the ONE optional context reference an Ask V2 turn may
+ * carry. REFERENCES ONLY: a story by its persisted article id (or its {articleRef, url}), or a
+ * governed country code. The server resolves every fact (title, source, country, display name);
+ * nothing the browser holds about the story is sent as evidence. One kind per turn.
+ */
+export type AskV2ContextRef =
+  | { readonly kind: 'STORY'; readonly articleId: string }
+  | { readonly kind: 'STORY'; readonly articleRef: string; readonly url: string }
+  | { readonly kind: 'GEOGRAPHY'; readonly countryCode: string }
+  /* R2D — a My Intelligence selection: the action and its SelectedStoryRefs (references only). */
+  | {
+      readonly kind: 'SELECTION';
+      readonly action: MultiStoryAction;
+      readonly stories: readonly { readonly articleRef: string; readonly url: string }[];
+    }
+  /* R2F — a dashboard record by its module and stable key (references only, never values). */
+  | {
+      readonly kind: 'MODULE';
+      readonly module: 'CONFLICT' | 'IMIHIGO' | 'ECONOMY' | 'MARKET';
+      readonly observationKey: string;
+    };
+
+/** A server refusal of the context itself (unresolvable / unknown) — never a generic Ask. */
+export function isAskContextRefusal(code: string | undefined): boolean {
+  return typeof code === 'string' && code.startsWith('ASK_CONTEXT_');
+}
 
 export type AskAnswerState =
   | 'REFERENCE_BACKGROUND'
@@ -194,11 +221,6 @@ export interface AskV2Operation {
   readonly storedResultId: string | null;
   readonly storedResultReused: boolean;
   readonly failureCode: string | null;
-  /**
-   * HOME R1 STAGE A — what the SERVER made of the context references this turn was sent with
-   * (Inspect). Present only when some were sent; resolution is never client-decided.
-   */
-  readonly context?: AskV2OperationContext;
   readonly result: {
     readonly id: string;
     readonly payload: unknown;
@@ -207,21 +229,6 @@ export interface AskV2Operation {
     readonly expired: boolean;
     readonly displayOnly: true;
   } | null;
-}
-
-/** HOME R1 STAGE A — one server-resolved context reference. `label` is server-sourced. */
-export interface AskV2ContextRef {
-  readonly kind: 'story' | 'country';
-  readonly ref: string;
-  readonly status: 'available' | 'unavailable' | 'excluded';
-  readonly reason?: string;
-  readonly label?: string;
-}
-
-export interface AskV2OperationContext {
-  readonly entry: string;
-  readonly scope: 'story' | 'selection' | 'geography' | 'none';
-  readonly refs: readonly AskV2ContextRef[];
 }
 
 export interface AskV2Thread {
@@ -420,8 +427,7 @@ export const askV2Api = {
     language: AskV2Language,
     intent: AskV2Intent,
     key = newIdempotencyKey(),
-    /* HOME R1 STAGE A — governed references only; absent ⇒ the body is exactly as before. */
-    context?: AskContextRefWire,
+    context?: AskV2ContextRef,
   ) {
     return call<AskV2Operation>(`/ask-v2/threads/${encodeURIComponent(threadId)}/turns`, 'POST', {
       idempotencyKey: key,
@@ -493,8 +499,7 @@ export const askV2Api = {
     question: string,
     language: AskV2Language,
     key = newIdempotencyKey(),
-    /* HOME R1 STAGE A — governed references only; absent ⇒ the body is exactly as before. */
-    context?: AskContextRefWire,
+    context?: AskV2ContextRef,
   ) {
     return call<AskV2Operation>(
       `/ask-v2/guest/threads/${encodeURIComponent(threadId)}/turns`,

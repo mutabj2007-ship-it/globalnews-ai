@@ -542,9 +542,15 @@ describe('I. No second analysis fetch path', () => {
     });
   });
 
-  it('leaves SearchPageClient as the only caller, with exactly one call site', () => {
-    expect(countOf(SEARCH_CLIENT_CODE, 'analyzeNews(')).toBe(1);
-    expect(SEARCH_CLIENT_CODE).toContain("from '@/lib/api/analysisApi'");
+  /*
+    RETARGETED IN UNIFIED INTELLIGENCE BINDING R2C. Old assertion: exactly one `analyzeNews(`
+    call site. /search no longer has its own engine; the invariant — ONE execution site — is
+    restated on the canonical Ask V2 transport, and the legacy client is asserted ABSENT.
+  */
+  it('has exactly one execution call site — the canonical Ask V2 turn — and no legacy analysis call', () => {
+    expect(countOf(SEARCH_CLIENT_CODE, 'analyzeNews(')).toBe(0);
+    expect(countOf(SEARCH_CLIENT_CODE, '.current(query, askContextRefOf(storyContext, undefined)')).toBe(1);
+    expect(SEARCH_CLIENT_CODE).toContain("from '@/lib/ask/useAskR2Conversation'");
   });
 
   /*

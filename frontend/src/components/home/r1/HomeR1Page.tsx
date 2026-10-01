@@ -69,7 +69,7 @@ export function HomeR1Page({
                     className="grid grid-cols-1 gap-x-8 gap-y-6 [grid-template-areas:'hero'_'w60'_'whats'] [@container(min-width:1140px)]:[grid-template-areas:'hero_w60'_'whats_w60'] [@container(min-width:1140px)]:[grid-template-columns:minmax(0,1fr)_360px]"
                   >
                     <div className="min-w-0 [grid-area:hero]">
-                      <HomeR1Hero language={language} askSends={gates.askEmbedded} suggestions={dict.hero.exampleQuestions} />
+                      <HomeR1Hero language={language} suggestions={dict.hero.exampleQuestions} />
                     </div>
                     <aside aria-label={dict.homeReva.w60.title} className="min-w-0 self-start [grid-area:w60] [@container(min-width:1140px)]:pt-6">
                       <HomeR1World60 items={worldIn60} language={language} />
@@ -109,8 +109,6 @@ export function HomeR1Page({
             <HomeR1Compare
               language={language}
               compareView={gates.compareView}
-              askEmbedded={gates.askEmbedded}
-              askContextRefs={gates.askContextRefs}
             />
           )}
         </HomeR1Canvas>

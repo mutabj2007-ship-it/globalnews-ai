@@ -69,6 +69,7 @@ export function AskR2TurnView({
   displayOnly = false,
   onUseQuestion,
   canSave = true,
+  storyBookmarks = false,
 }: {
   readonly turn: AskR2Turn;
   readonly locale: AskR2Locale;
@@ -83,6 +84,12 @@ export function AskR2TurnView({
   readonly onUseQuestion?: (question: string) => void;
   /** ASK GUEST TRIAL R3 — saving is an account feature; a guest turn shows no Save control. */
   readonly canSave?: boolean;
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2C — the per-source story bookmark of the compact result. Off
+   * on the standalone /ask frame (no Saved-stories read in that journey); the platform dock,
+   * which always offered it, turns it on so the migration loses no visible capability.
+   */
+  readonly storyBookmarks?: boolean;
 }): JSX.Element {
   const s = askR2Strings(locale);
   const payload = turn.payload ?? null;
@@ -426,7 +433,7 @@ export function AskR2TurnView({
               language={locale}
               context={context}
               showFullAnalysisLink={false}
-              storyBookmarks={false}
+              storyBookmarks={storyBookmarks}
             />
           )}
           {/*

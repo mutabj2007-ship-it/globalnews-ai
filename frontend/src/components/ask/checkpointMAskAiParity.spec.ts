@@ -159,9 +159,11 @@ describe('M — the Alpha-only dock, and what it is gated on', () => {
         The load-bearing measurement for this checkpoint: a reader who opens
         the dock and closes it again has cost nothing and asked nothing.
       */
-      const calls = dockCode.match(/analyzeNews\(/g) ?? [];
+      /* R2C — the one execution call is the canonical Ask V2 turn; the legacy client is gone. */
+      const calls = dockCode.match(/\.submit\(asked/g) ?? [];
 
       expect(calls).toHaveLength(1);
+      expect(dockCode).not.toMatch(/analyzeNews\(/);
     });
 
     it('and that call sits inside the form handler, after every effect', () => {
@@ -172,7 +174,7 @@ describe('M — the Alpha-only dock, and what it is gated on', () => {
         useEffect, so no effect body can contain it.
       */
       const handlerIndex = dockCode.indexOf('FormEvent<HTMLFormElement>');
-      const callIndex = dockCode.indexOf('analyzeNews(', handlerIndex);
+      const callIndex = dockCode.indexOf('.submit(asked', handlerIndex);
       const lastEffectIndex = dockCode.lastIndexOf('useEffect(');
 
       expect(handlerIndex).toBeGreaterThan(-1);
@@ -183,14 +185,17 @@ describe('M — the Alpha-only dock, and what it is gated on', () => {
   });
 
   describe('DESTINATION — A PROJECTION, NOT A SECOND PRESENTATION', () => {
+    /* R2C — the canonical turn view (which itself projects the compact result) rather than the frame. */
     it('it renders the compact result rather than mounting the frame', () => {
-      expect(dockCode).toContain('AskCompactResult');
+      expect(dockCode).toContain('AskR2TurnView');
       expect(dockCode).not.toContain('AnalysisFrameSurface');
     });
 
+    /* R2C — "No second AI engine" now means the CANONICAL engine: the same Ask V2 conversation
+       /ask uses (and /search, which no longer has its own client either). */
     it('it uses the SAME analysis client the search route uses', () => {
-      /* No second AI engine: same client, same route, same service. */
-      expect(dockCode).toContain("import { analyzeNews } from '@/lib/api/analysisApi';");
+      expect(dockCode).toContain("from '@/lib/ask/useAskR2Conversation';");
+      expect(dockCode).not.toContain('@/lib/api/analysisApi');
     });
 
     it('and it contains no provider, model, prompt or ranking of its own', () => {
@@ -207,7 +212,9 @@ describe('M — the Alpha-only dock, and what it is gated on', () => {
         analysis. Feeding them back would make results into inputs and require
         a second retrieval architecture.
       */
-      expect(dockCode).toContain('transportableContext');
+      /* R2C — the one bound is now the reference builder (references only, never evidence). */
+      expect(dockCode).toContain('askContextRefOf');
+      expect(dockCode).not.toContain('transportableContext');
     });
 
     it('and it passes the question verbatim, with no rewriting', () => {

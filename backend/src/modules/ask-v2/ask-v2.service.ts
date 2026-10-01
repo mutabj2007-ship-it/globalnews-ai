@@ -17,9 +17,9 @@ import {
   AskExecutionPort,
   AskExecutionRefused,
   AskPlan,
-  type AskPlanWithContext,
   AskRequest,
   classifyCompute,
+  type PersistedAskPlan,
   ExecutionResult,
   fingerprint,
   hashIdentity,
@@ -31,6 +31,8 @@ import {
   validatePlan,
 } from './ask-compute.contract';
 import { CreateThreadDto, QuoteTurnDto } from './ask-v2.dto';
+import { AskContextRefused, AskContextResolver } from './context/ask-context.resolver';
+import { contextIdentity, type ResolvedAskContext } from './context/resolved-ask-context';
 import { type AskPrincipal, guestRefusal, ownerOf } from './guest/ask-principal';
 import {
   assertMayStart,
@@ -42,13 +44,6 @@ import {
 } from './guest/guest-allowance';
 import { GuestSessionService } from './guest/guest-session.service';
 import { askRequestContext } from './ask-request-context';
-import {
-  AskContextResolver,
-  contextIdentity,
-  readPlanContext,
-  type AskContextExecutionInputs,
-  type ResolvedAskContext,
-} from './ask-context';
 import { isReusableStoredPayload } from './stored-result-reuse';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
@@ -113,12 +108,22 @@ export class AskV2Service {
     @Optional() private readonly guests?: GuestSessionService,
     @Optional() private readonly switches?: OperationalSwitchService,
     @Optional() private readonly meter?: ComputeMeterService,
-    /* HOME R1 STAGE A — optional: without it a supplied context bag resolves as excluded. */
+    /* UNIFIED INTELLIGENCE BINDING R2B — optional so every existing construction is unchanged;
+       a context-bearing turn without it fails closed (ASK_CONTEXT_UNAVAILABLE). */
     @Optional() private readonly contexts?: AskContextResolver,
   ) {}
 
-  private contextResolver(): AskContextResolver {
-    return this.contexts ?? new AskContextResolver();
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2B — resolve THIS turn's context reference into server facts.
+   * A bounded local read (or none); runs before every guest, operation, slot, meter and planner
+   * step, so an unresolvable context produces zero compute and is never a generic Ask.
+   */
+  private async resolveContext(
+    raw: QuoteTurnDto['context'],
+  ): Promise<ResolvedAskContext | undefined> {
+    if (raw === undefined) return undefined;
+    if (this.contexts === undefined) throw new AskContextRefused('ASK_CONTEXT_UNAVAILABLE');
+    return this.contexts.resolve(raw);
   }
 
   private guestDeps(): {
@@ -144,22 +149,10 @@ export class AskV2Service {
    * request context. Only when a server-held context exists (the controller's interceptor set
    * it); nothing is manufactured here, so a caller without one fails exactly as before.
    */
-  private withPrior<T>(
-    priorQuestion: string | null,
-    work: () => Promise<T>,
-    /* HOME R1 STAGE A — the server-resolved context of THIS operation, when it has one. */
-    askContext?: AskContextExecutionInputs,
-  ): Promise<T> {
+  private withPrior<T>(priorQuestion: string | null, work: () => Promise<T>): Promise<T> {
     const store = askRequestContext.getStore();
-    if (store === undefined || (priorQuestion === null && askContext === undefined)) return work();
-    return askRequestContext.run(
-      {
-        ...store,
-        ...(priorQuestion === null ? {} : { priorQuestion }),
-        ...(askContext === undefined ? {} : { askContext }),
-      },
-      work,
-    );
+    if (store === undefined || priorQuestion === null) return work();
+    return askRequestContext.run({ ...store, priorQuestion }, work);
   }
 
   /** All database mutations retry serializable conflicts. Never run a provider in here. */
@@ -516,19 +509,7 @@ export class AskV2Service {
         turn === null || p.kind !== 'account'
           ? false
           : (await tx.askBookmark.count({ where: { userId: p.userId, turnId: turn.id } })) > 0;
-      /* HOME R1 STAGE A — what the server made of the context references (Inspect). Present
-         only for an operation that was sent some, so every other response is unchanged. */
-      const planContext = readPlanContext(operation.plan);
       return {
-        ...(planContext === null
-          ? {}
-          : {
-              context: {
-                entry: planContext.entry,
-                scope: planContext.scope,
-                refs: planContext.refs,
-              },
-            }),
         operationId: id,
         turnId: turn?.id ?? null,
         bookmarked,
@@ -601,21 +582,25 @@ export class AskV2Service {
 
   async quote(p: AskPrincipal, threadId: string, input: QuoteTurnDto) {
     this.principal(p);
+    const question = input.question.trim();
+    if (question.length < 2) throw new BadRequestException('Question is too short');
+    /* R2B — resolved FIRST: before guest preflight, slot, operation, meter and planner. */
+    const context = await this.resolveContext(input.context);
     const request: AskRequest = {
-      question: input.question.trim(),
+      question,
       language: input.language,
       intent: input.intent,
+      ...(context === undefined ? {} : { context }),
     };
-    if (request.question.length < 2) throw new BadRequestException('Question is too short');
     const owner = ownerOf(p);
-    /* HOME R1 STAGE A — a context bag is part of the request's identity; absent ⇒ unchanged. */
-    const suppliedContext = contextIdentity(input.context ?? null);
+    /* R2B — a context-bearing turn appends its SERVER-RESOLVED identity; a context-free turn
+       keeps exactly the old tuple, so its idempotency behaviour is unchanged. */
     const requestHash = hashIdentity([
       threadId,
       request.question,
       request.language,
       request.intent,
-      ...(suppliedContext === null ? [] : [suppliedContext]),
+      ...(context === undefined ? [] : [contextIdentity(context)]),
     ]);
     const existing = await this.atomic(async (tx) => {
       await this.thread(tx, p, threadId);
@@ -645,21 +630,12 @@ export class AskV2Service {
           earlier.map((t) => t.question),
         );
       });
-      /* HOME R1 STAGE A — verify the governed references (retained reads only, no compute). */
-      const resolvedContext: ResolvedAskContext | null =
-        input.context === undefined ? null : await this.contextResolver().resolve(input.context);
-      const contextInputs =
-        resolvedContext === null
-          ? undefined
-          : await this.contextResolver().executionInputs(resolvedContext);
       // A local/read-only CTO planner supplies identity and capabilities, never the client.
-      const prepared = await this.withPrior(
-        priorQuestion,
-        () => this.execution.prepare(Object.freeze(request)),
-        contextInputs,
+      const prepared = await this.withPrior(priorQuestion, () =>
+        this.execution.prepare(Object.freeze(request)),
       );
       validatePlan(prepared, request);
-      const plan: AskPlanWithContext = {
+      const plan: PersistedAskPlan = {
         revision: prepared.revision,
         scope: prepared.scope,
         contract: prepared.contract,
@@ -671,7 +647,8 @@ export class AskV2Service {
         countryCount: prepared.countryCount,
         domainCount: prepared.domainCount,
         timeWindowDays: prepared.timeWindowDays,
-        ...(resolvedContext === null ? {} : { context: resolvedContext }),
+        /* R2B — the service's OWN resolution, persisted with the plan (never the port's copy). */
+        ...(context === undefined ? {} : { context }),
       };
       const key = fingerprint(request, plan);
       const id = await this.atomic(async (tx) => {
@@ -871,16 +848,18 @@ export class AskV2Service {
         take: ANCHOR_LOOKBACK,
         select: { question: true },
       });
+      /* R2B — the request is rebuilt from durable server state only: the turn's question and
+         the plan's persisted, server-resolved context. No client input is re-read here. */
+      const persisted = operation.plan as unknown as PersistedAskPlan;
+      const request = {
+        question: turn.question,
+        language: turn.language,
+        intent: operation.kind,
+        ...(persisted?.context === undefined ? {} : { context: persisted.context }),
+      } as AskRequest;
       // Revalidate pending R1 operations too. Stored reuse above never calls the adapter.
       try {
-        validatePlan(
-          operation.plan as unknown as AskPlan,
-          {
-            question: turn.question,
-            language: turn.language,
-            intent: operation.kind,
-          } as AskRequest,
-        );
+        validatePlan(persisted, request);
       } catch {
         await this.releaseIn(tx, operation, 'ASK_PLAN_INVALID');
         return null;
@@ -896,25 +875,15 @@ export class AskV2Service {
           turn.question,
           earlierTurns.map((t) => t.question),
         ),
-        plan: operation.plan as unknown as AskPlan,
-        request: {
-          question: turn.question,
-          language: turn.language,
-          intent: operation.kind,
-        } as AskRequest,
+        plan: persisted,
+        request,
       };
     });
     if (claim) {
       let result: ExecutionResult;
       try {
-        /* HOME R1 STAGE A — the operation's OWN persisted context, re-read from retained records. */
-        const planContext = readPlanContext(claim.plan);
-        const contextInputs =
-          planContext === null ? undefined : await this.contextResolver().executionInputs(planContext);
-        result = await this.withPrior(
-          claim.priorQuestion,
-          () => this.execution.execute(Object.freeze(claim.request), Object.freeze(claim.plan), id),
-          contextInputs,
+        result = await this.withPrior(claim.priorQuestion, () =>
+          this.execution.execute(Object.freeze(claim.request), Object.freeze(claim.plan), id),
         );
       } catch (error) {
         /* ASK R2 INTEGRATION R1 · Gate E — a control's refusal is named, not generic. */

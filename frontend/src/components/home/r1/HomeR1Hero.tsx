@@ -5,29 +5,25 @@ import { useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Map as MapIcon, MessagesSquare } from 'lucide-react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
 import { submitGlobalAsk } from '@/lib/ask/submitGlobalAsk';
 import { fill } from '@/components/home/reva/homeRevaModel';
 
 /**
  * HOME R1 · STAGE A — THE LIGHT-PRIMARY HERO (FINAL spec §1–§3; Design R1-P4, R1-N2).
  *
- * One composer. Its "Ask" button is the explicit Send:
- *   ask.embedded ON   → ONE ordinary Ask turn in the Ask GlobalNewsAI conversation
- *                       (submitGlobalAsk; the dock runs it on the one Ask engine);
- *   ask.embedded OFF  → the landed staging hand-off (openGlobalAsk): nothing runs until
- *                       Send in the dock. The note under the composer says which, truthfully.
+ * One composer. Its "Ask" button is the reader's explicit Send: ONE ordinary turn on the
+ * canonical Ask V2 engine, run by the global dock's own submit (submitGlobalAsk → AskAiDock).
+ * CONVERGENCE (Unified Intelligence Binding R2): there is no transport switch and no legacy
+ * analysis path — the platform has one Ask. Context is whatever the dock already attaches
+ * (R2's askContextRefOf); this composer adds none.
  * Typing and focusing are local. Suggestions only FILL the box (0 AI, 0 request). The hero
  * map is gone (R1-N2): World Map stays persistent navigation, linked once below.
  */
 export function HomeR1Hero({
   language,
-  askSends,
   suggestions,
 }: {
   readonly language: LanguageCode;
-  /** ask.embedded — the Home Ask IS the Send. */
-  readonly askSends: boolean;
   readonly suggestions: readonly string[];
 }): JSX.Element {
   const t = getDictionary(language).homeR1.hero;
@@ -41,14 +37,9 @@ export function HomeR1Hero({
       inputRef.current?.focus();
       return;
     }
-    if (askSends) {
-      if (draft.length < 2) return;
-      submitGlobalAsk(draft);
-      setStatus(fill(t.sent, { question: draft }));
-    } else {
-      openGlobalAsk(draft);
-      setStatus(fill(t.staged, { question: draft }));
-    }
+    if (draft.length < 2) return;
+    submitGlobalAsk(draft);
+    setStatus(fill(t.sent, { question: draft }));
     event.currentTarget.reset();
   };
 
@@ -82,7 +73,7 @@ export function HomeR1Hero({
           aria-label={t.askBrand}
           onSubmit={submit}
           data-home-r1-composer=""
-          data-ask-sends={askSends ? 'true' : 'false'}
+          data-ask-sends="true"
           className="mt-2 flex h-[56px] items-center gap-2 rounded-full border border-[var(--gt-pgLine2)] bg-[var(--gt-card)] pl-4 pr-[5px] shadow-[0_10px_30px_-18px_rgba(20,36,59,0.45)] focus-within:border-[var(--gt-act)] focus-within:shadow-[0_0_0_3px_rgba(36,95,199,0.18)] md:h-[60px]"
         >
           <MessagesSquare aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--gt-ink3)]" />
@@ -107,7 +98,7 @@ export function HomeR1Hero({
           </button>
         </form>
         <p id="home-r1-composer-note" role="status" className="mt-2 px-1 text-[12.5px] leading-snug text-[var(--gt-ink2)]">
-          {status ?? (askSends ? t.noteSend : t.noteStage)}
+          {status ?? t.noteSend}
         </p>
 
         <ul aria-label={t.suggestionsAria} className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">

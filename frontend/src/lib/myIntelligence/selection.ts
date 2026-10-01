@@ -4,12 +4,12 @@ import { useCallback, useState } from 'react';
 import {
   MAX_SELECTED_STORIES,
   MULTI_STORY_MIN_STORIES,
-  type AnalysisApiResponse,
   type LanguageCode,
   type MultiStoryAction,
   type SelectedStoryRef,
 } from '@globalnews-ai/shared';
-import { analyzeNews } from '@/lib/api/analysisApi';
+import type { AskV2ContextRef } from '@/lib/api/askV2Api';
+import type { AskR2SubmitOutcome, AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -19,8 +19,13 @@ import { analyzeNews } from '@/lib/api/analysisApi';
  * Selecting, deselecting, clearing and choosing an action are pure local
  * state: 0 requests. runSelectionAction is the ONLY function here that can
  * start compute, and H's UI calls it only from the explicit final Run /
- * Confirm. It goes through the existing analyzeNews() client and the existing
- * POST /analysis/news — no second pipeline, no Ask V2, no Sand.
+ * Confirm.
+ *
+ * UNIFIED INTELLIGENCE BINDING R2D — it no longer calls POST /analysis/news. The explicit
+ * Confirm is ONE canonical Ask V2 turn (the caller's conversation submit) carrying a SELECTION
+ * reference — the action and the SelectedStoryRefs, nothing else. The server resolves every
+ * story (or refuses the turn), executes the existing selection branch under the canonical
+ * controls, and the result is an Ask answer: thread, Recent, reopenable. No Sand.
  */
 
 export interface StorySelectionState {
@@ -94,30 +99,53 @@ export class SelectionActionError extends Error {
   }
 }
 
+/** R2D — the canonical conversation's submit (useAskR2Conversation().submit). */
+export type SelectionSubmit = (
+  question: string,
+  context: AskV2ContextRef,
+  onTurn: (turn: AskR2Turn) => void,
+) => Promise<AskR2SubmitOutcome>;
+
+/** What one explicit Run produced: the canonical outcome and, when a turn exists, that turn. */
+export interface SelectionRun {
+  readonly outcome: AskR2SubmitOutcome;
+  readonly turn: AskR2Turn | null;
+  readonly question: string;
+}
+
 /**
- * THE EXPLICIT RUN. One call → at most one POST /analysis/news → at most one
- * history entry (server-side). Refuses locally, with no request, when the
- * selection is outside the action's bounds or "Ask about selected" has no
+ * THE EXPLICIT RUN. One call → at most one canonical Ask V2 turn. Refuses locally, with no
+ * request, when the selection is outside the action's bounds or "Ask about selected" has no
  * question.
  */
-export function runSelectionAction(
+export async function runSelectionAction(
   action: MultiStoryAction,
   stories: readonly SelectedStoryRef[],
   language: LanguageCode,
-  question?: string,
-): Promise<AnalysisApiResponse> {
-  if (stories.length > MAX_SELECTED_STORIES) return Promise.reject(new SelectionActionError('too-many'));
-  if (stories.length < MULTI_STORY_MIN_STORIES[action]) return Promise.reject(new SelectionActionError('too-few'));
+  question: string | undefined,
+  submit: SelectionSubmit,
+): Promise<SelectionRun> {
+  if (stories.length > MAX_SELECTED_STORIES) throw new SelectionActionError('too-many');
+  if (stories.length < MULTI_STORY_MIN_STORIES[action]) throw new SelectionActionError('too-few');
 
   const typed = question?.trim() ?? '';
   if (action === 'ASK_SELECTED' && typed.length < 2) {
-    return Promise.reject(new SelectionActionError('question-required'));
+    throw new SelectionActionError('question-required');
   }
   const labels = SELECTION_ACTION_QUESTIONS[language === 'pl' ? 'pl' : 'en'];
   const query = typed.length >= 2 ? typed : labels[action];
 
-  return analyzeNews(query, language, undefined, undefined, {
-    action,
-    stories: stories.map((story) => ({ articleRef: story.articleRef, url: story.url })),
-  });
+  let answered: AskR2Turn | null = null;
+  const outcome = await submit(
+    query,
+    {
+      kind: 'SELECTION',
+      action,
+      stories: stories.map((story) => ({ articleRef: story.articleRef, url: story.url })),
+    },
+    (turn) => {
+      answered = turn;
+    },
+  );
+  return { outcome, turn: answered, question: query };
 }

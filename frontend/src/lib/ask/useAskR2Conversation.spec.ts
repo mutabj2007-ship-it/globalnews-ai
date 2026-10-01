@@ -276,3 +276,74 @@ describe('§15 / §16 — result address and return path', () => {
     expect(sanitizeReturnPath(input)).toBe(out);
   });
 });
+
+describe('UNIFIED INTELLIGENCE BINDING R2C — the context reference rides the ONE canonical turn', () => {
+  it('the reference is sent with the turn, and only the reference', async () => {
+    api.createThread.mockResolvedValue({ ok: true, value: { id: 't-1' } } as never);
+    api.submit.mockResolvedValue({ ok: true, value: op() } as never);
+    const hook = mount();
+    let outcome: string | undefined;
+    await act(async () => {
+      outcome = await hook.current().submit('What does this mean?', {
+        kind: 'STORY',
+        articleId: 'gnews-1',
+      });
+    });
+    expect(outcome).toBe('sent');
+    expect(api.submit).toHaveBeenCalledTimes(1);
+    const [threadId, question, language, intent, , context] = api.submit.mock.calls[0];
+    expect([threadId, question, language, intent]).toEqual(['t-1', 'What does this mean?', 'en', 'ask']);
+    expect(context).toEqual({ kind: 'STORY', articleId: 'gnews-1' });
+  });
+
+  it('an unresolvable context → context-unavailable: nothing added, never re-sent without its context', async () => {
+    api.createThread.mockResolvedValue({ ok: true, value: { id: 't-1' } } as never);
+    api.submit.mockResolvedValue({
+      ok: false,
+      reason: 'REFUSED',
+      status: 422,
+      code: 'ASK_CONTEXT_STORY_NOT_FOUND',
+    } as never);
+    const hook = mount();
+    let outcome: string | undefined;
+    await act(async () => {
+      outcome = await hook.current().submit('What does this mean?', { kind: 'STORY', articleId: 'gone' });
+    });
+    expect(outcome).toBe('context-unavailable');
+    expect(hook.current().contextRefused).toBe('What does this mean?');
+    expect(hook.current().turns).toHaveLength(0);
+    /* exactly the one refused attempt — no silent generic retry */
+    expect(api.submit).toHaveBeenCalledTimes(1);
+  });
+
+  it('startNewTopic is local (0 requests); the next Send opens a NEW thread', async () => {
+    let n = 0;
+    api.createThread.mockImplementation(async () => ({ ok: true, value: { id: `t-${(n += 1)}` } }) as never);
+    api.submit.mockResolvedValue({ ok: true, value: op() } as never);
+    const hook = mount();
+    await act(async () => {
+      await hook.current().submit('First question?');
+    });
+    const before = calls();
+    act(() => hook.current().startNewTopic());
+    expect(calls()).toBe(before);
+    await act(async () => {
+      await hook.current().submit('Second question?');
+    });
+    expect(api.createThread).toHaveBeenCalledTimes(2);
+    expect(api.submit.mock.calls[1][0]).toBe('t-2');
+  });
+
+  it('readOnOpen: false — a guest-trial surface makes 0 requests on mount', () => {
+    let latest: ReturnType<typeof useAskR2Conversation> | undefined;
+    function Probe(): null {
+      latest = useAskR2Conversation('en', null, { guestTrial: true, readOnOpen: false });
+      return null;
+    }
+    act(() => {
+      create(createElement(Probe));
+    });
+    expect(latest).toBeDefined();
+    expect(calls()).toBe(0);
+  });
+});

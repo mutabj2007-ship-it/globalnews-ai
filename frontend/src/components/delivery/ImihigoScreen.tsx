@@ -5,6 +5,7 @@ import { HUD_LINE_PX } from '@/lib/specialist/hudGrammar';
 import type { ImihigoView } from '@/lib/imihigo/retainedModel';
 import type { DeliveryLocale } from '@/lib/delivery/deliveryStrings';
 import { DEL_MICRO, Panel, Region, SubjectRow } from './DelParts';
+import { AskAboutRecordLink } from '@/components/ask/AskAboutRecordLink';
 
 /** Retained binding of H R2's four-region dashboard; shared tokens and neutral rows. */
 export function ImihigoScreen({ view, compact, locale }: {
@@ -73,6 +74,11 @@ export function ImihigoScreen({ view, compact, locale }: {
                 {(row.target || row.indicator) && <p>{row.target && `${t.target}: ${row.target.value}`} {row.indicator && `${t.indicator}: ${row.indicator.value}`}</p>}
                 <a className="underline" href={safeExternalHref(`${capture.sourceUrl}#page=${row.provenance.pdfPage}`)} target="_blank" rel="noopener noreferrer">{t.source} · NISR</a>
               </details>
+              {/* R2F — Ask about THIS district result: capture-scoped key only; the server resolves it. */}
+              {row.entityClass === 'district' && <p className="mt-[6px]">
+                <AskAboutRecordLink module="IMIHIGO" observationKey={`${capture.sha256.slice(0, 12)}:${row.entity}`}
+                  label={`Imihigo · ${row.entity} · ${capture.cycle}`} locale={locale} returnPath="/imihigo" className="underline" />
+              </p>}
             </SubjectRow>)}
           </ul>
         </Panel>)}

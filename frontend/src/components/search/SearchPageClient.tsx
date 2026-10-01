@@ -4,7 +4,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
-import { analyzeNews, AnalysisApiError, type AnalysisApiErrorCode } from '@/lib/api/analysisApi';
+import { AnalysisApiError, type AnalysisApiErrorCode } from '@/lib/api/analysisApi';
+import {
+  sanitizeReturnPath,
+  useAskR2Conversation,
+  type AskR2SubmitOutcome,
+  type AskR2Turn,
+} from '@/lib/ask/useAskR2Conversation';
+import { askContextRefOf } from '@/lib/ask/askContextRef';
+import { askR2Strings } from '@/lib/ask/askR2Strings';
+import { ASK_SIGN_IN_HREF } from '@/lib/ask/askKeptQuestion';
+import { AskR2TurnView } from '@/components/ask-frame/AskR2TurnView';
 import { analysisAutoRunDecision } from '@/lib/analysis/analysisAutoRun';
 import {
   analysisConsentKey,
@@ -206,6 +216,29 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
   const [response, setResponse] = useState<AnalysisApiResponse | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  /*
+    UNIFIED INTELLIGENCE BINDING R2C — /search IS NO LONGER A SECOND AI ENGINE.
+
+    The explicit Run (or the explicit Analyze that granted consent) executes ONE canonical Ask V2
+    turn: the same thread/operation/idempotency, switches, breaker, meter, guest allowance,
+    StoredResult and Recent/Saved as /ask. The page's story/country is sent as a bounded
+    reference the server resolves. Nothing is requested on mount (readOnOpen: false), and a
+    question in the URL stays STAGED exactly as before — the consent machinery is unchanged.
+    The accepted frame below still renders the reporting analysis (the Ask V2 payload carries the
+    same AnalysisApiResponse); any other answer state renders through the canonical turn view.
+  */
+  const r2Locale: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  const r2s = askR2Strings(r2Locale);
+  const r2 = useAskR2Conversation(r2Locale, sanitizeReturnPath('/search'), {
+    guestTrial: true,
+    readOnOpen: false,
+  });
+  /* The latest submit, read from a ref so the protected effect dependency list is unchanged. */
+  const submitR2 = useRef(r2.submit);
+  submitR2.current = r2.submit;
+  const [askedTurn, setAskedTurn] = useState<AskR2Turn | null>(null);
+  const [searchOutcome, setSearchOutcome] = useState<AskR2SubmitOutcome | null>(null);
+
   // M65 — the workspace's own question field, used when this page is
   // opened without a query. Submitting navigates to the SAME
   // /search?q=... URL the Hero and the header already produce, so there
@@ -327,10 +360,18 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
     setIsLoading(true);
     setFetchError(null);
     setResponse(null);
+    setAskedTurn(null);
+    setSearchOutcome(null);
 
-    analyzeNews(query, language, storyContext)
-      .then((result) => {
+    /* THE ONE TRANSPORT SITE — a canonical Ask V2 turn (see the R2C note above). */
+    submitR2.current(query, askContextRefOf(storyContext, undefined), (turn) => {
+        /* the reporting analysis (if any) the canonical turn carries — the frame's input */
+        const result = turn.payload?.analysis ?? null;
+        if (!cancelled) setAskedTurn(turn);
         if (!cancelled) setResponse(result);
+      })
+      .then((outcome) => {
+        if (!cancelled) setSearchOutcome(outcome);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -576,6 +617,32 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
       ) : null}
 
       {hasQuery && isLoading && !awaitingConsent && <LoadingStages stages={[...dictionary.loadingStages]} />}
+
+      {hasQuery && !isLoading && !fetchError && response === null && askedTurn !== null && (
+        /* R2C — an Ask V2 answer that is not a reporting frame (background, computed result,
+           clarification, a control's refusal) renders through the canonical turn view. */
+        <AskR2TurnView turn={askedTurn} locale={r2Locale} context={undefined} canSave={!r2.guestMode} />
+      )}
+
+      {hasQuery && !isLoading && askedTurn === null && searchOutcome !== null && searchOutcome !== 'sent' && (
+        /* R2C — nothing ran (sign-in, guest refusal, unresolvable context, Ask unavailable). */
+        <div data-search="ask-not-run" role="status" className="rounded-2xl border border-border bg-surface p-6 text-sm text-ink-secondary">
+          <p>
+            {searchOutcome === 'context-unavailable'
+              ? r2s.unified.contextUnavailable
+              : searchOutcome === 'signed-out'
+                ? r2s.signInRequired.body
+                : searchOutcome === 'legacy'
+                  ? r2s.unified.askUnavailable
+                  : r2s.guest.limited}
+          </p>
+          {searchOutcome === 'signed-out' ? (
+            <a href={ASK_SIGN_IN_HREF} className="mt-3 inline-flex min-h-[44px] items-center font-semibold text-signal-bright underline">
+              {r2s.signInRequired.action}
+            </a>
+          ) : null}
+        </div>
+      )}
 
       {hasQuery && !isLoading && fetchError && (
         <div className="rounded-2xl border border-border bg-surface p-8 text-center" role="alert">

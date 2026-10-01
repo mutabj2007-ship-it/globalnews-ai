@@ -22,6 +22,7 @@ import {
 } from './miPresentation';
 import { AiTag, fill } from './MiPrimitives';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
+import { openFullAnalysisHref } from '@/lib/ask/useAskR2Conversation';
 
 export type ActionId =
   | 'compare'
@@ -735,6 +736,7 @@ export function SelectionResultSheet({
   question,
   titlesByRef,
   onClose,
+  operationId,
 }: {
   language: LanguageCode;
   action: ActionId;
@@ -742,6 +744,8 @@ export function SelectionResultSheet({
   question: string;
   titlesByRef: Readonly<Record<string, string>>;
   onClose: () => void;
+  /** R2D — the canonical Ask operation this result IS (display-only reopen, never a rerun). */
+  operationId?: string;
 }): JSX.Element {
   const t = getDictionary(language).myIntelligence.compute;
   const selection = response.retrievalContext?.selection;
@@ -802,7 +806,16 @@ export function SelectionResultSheet({
 
         <p className="mt-3 text-[11.5px] leading-[1.45] text-[#7d92aa]">{t.resultFullNote}</p>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex items-center justify-end gap-3">
+          {operationId !== undefined && (
+            <a
+              data-mi-control="open-in-ask"
+              href={openFullAnalysisHref(operationId)}
+              className={`${MI_PILL} ${MI_TARGET} ${MI_FOCUS} inline-flex h-[44px] items-center border border-[#1d3a5a] px-4 text-[13.5px] text-[#5abff5]`}
+            >
+              {t.openInAsk}
+            </a>
+          )}
           <button
             type="button"
             data-mi-control="close-result"

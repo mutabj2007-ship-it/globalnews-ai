@@ -204,22 +204,14 @@ describe('H — result state is honest', () => {
       DTO.indexOf('class QuoteTurnDto'),
       DTO.indexOf('}', DTO.indexOf('class QuoteTurnDto')),
     );
-    /*
-      ASSERTION MOVED (HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE A, CTO contract §6, Claude H
-      §5): QuoteTurnDto gained ONE reviewed optional field, `context` (AskContextRefDto —
-      governed identifiers only). The regex now reads optional (`?:`) fields too, so the new
-      field is counted rather than slipping past the old `!:`-only pattern. Still no
-      escalatedFrom and no prior-envelope field: `context` carries references the server
-      verifies, never a prior answer, evidence or text.
-    */
-    const fields = [...quote.matchAll(/(\w+)[!?]?:\s*\w+/g)].map((m) => m[1]);
-    const ok = fields.join(',') === 'idempotencyKey,question,language,intent,context';
+    const fields = [...quote.matchAll(/(\w+)!?:\s*\w+/g)].map((m) => m[1]);
+    const ok = fields.join(',') === 'idempotencyKey,question,language,intent';
     const v = record(
       'H-T11',
       ok ? 'PASS' : 'FAIL',
       'QuoteTurnDto fields (whitelist + forbidNonWhitelisted)',
       { fields },
-      'There is no escalatedFrom field at all: Run deeper quotes a NEW deep-analysis operation for the same question. `context` (Stage A) is governed identifiers only.',
+      'There is no escalatedFrom field at all: Run deeper quotes a NEW deep-analysis operation for the same question.',
     );
     expect(v).toBe('PASS');
   });

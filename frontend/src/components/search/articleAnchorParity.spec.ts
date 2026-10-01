@@ -203,7 +203,11 @@ describe('article anchor — the component really contains this rule', () => {
     expect(SOURCE).toMatch(/\.\.\.\(countryCodeParam !== null \? \{ countryCode: countryCodeParam \} : \{\}\)/);
   });
 
+  /* R2C — still exactly ONE request path, now the canonical Ask V2 turn (legacy client absent). */
   it('there is still exactly one analysis request path', () => {
-    expect((SOURCE.match(/analyzeNews\(/g) ?? []).length).toBe(1);
+    expect((SOURCE.match(/analyzeNews\(/g) ?? []).length).toBe(0);
+    expect(
+      (SOURCE.match(/\.current\(query, askContextRefOf\(storyContext, undefined\)/g) ?? []).length,
+    ).toBe(1);
   });
 });

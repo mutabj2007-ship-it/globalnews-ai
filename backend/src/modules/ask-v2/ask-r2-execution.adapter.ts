@@ -1,6 +1,10 @@
 import { solveComputation, type ComputationResult } from './computation/deterministic-computation';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import type { AnalysisApiResponse } from '@globalnews-ai/shared';
+import type {
+  AnalysisApiResponse,
+  MultiStoryAction,
+  SelectedStoryRef,
+} from '@globalnews-ai/shared';
 import { AnalysisService } from '../analysis/service/analysis.service';
 import { AnalysisConfigService } from '../analysis/config/analysis-config.service';
 import { ANALYSIS_PROVIDER } from '../analysis/providers/provider.tokens';
@@ -21,7 +25,12 @@ import { GuestSessionService } from './guest/guest-session.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { ASK_MODEL_MAX_ATTEMPTS } from '../compute-controls/compute-controls.config';
 import { SpecialistClaimRegistry } from '../specialist/specialist-claim.registry';
-import { routeAskR2, missingSeams, type AskR2Route } from '../ask-router/ask-r2-route';
+import {
+  routeAskR2,
+  missingSeams,
+  type AskR2Route,
+  type AskRouteContext,
+} from '../ask-router/ask-r2-route';
 import {
   answerStateBeforeExecution,
   deriveAnswerState,
@@ -29,7 +38,7 @@ import {
 } from '../ask-router/answer-state';
 import { readContinuationEllipsis } from '../analysis/anchor/continuation-ellipsis.util';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
-import { planChips } from '../ask-router/plan-chips';
+import { planChips, type PlanChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
 import type { RoutingPlan, VerificationOutcome } from '../ask-router/frozen-c/src/ports';
 import {
@@ -58,7 +67,8 @@ import {
   type ExecutionResult,
 } from './ask-compute.contract';
 import { askRequestContext, type AskRequestContext } from './ask-request-context';
-import type { AskContextExecutionInputs } from './ask-context';
+import { contextIdentityToken, type ResolvedAskContext } from './context/resolved-ask-context';
+import { isSameHeadline } from '../news/identity/headline-identity.util';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
 import {
   newAskObservationDraft,
@@ -145,11 +155,60 @@ function routeFor(request: Readonly<AskRequest>, baseDeps: PlannerDeps): AskR2Ro
       ...(who === undefined ? {} : { identityVerified: who.accountId !== null }),
       /* ASK R3 CONTINUITY — frozen C already reads conversationSubject from it. */
       ...(who?.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
-      /* HOME R1 STAGE A — server-resolved context (ISO3 codes, verified refs); never prose. */
-      ...(who?.askContext?.route ?? {}),
+      /* UNIFIED INTELLIGENCE BINDING R2B — THIS turn's server-resolved context, through the
+         landed seams only (frozen C and its eligibility rules are untouched). */
+      ...routeContextOf(request.context, request.question),
     },
     deps,
   );
+}
+
+/**
+ * UNIFIED INTELLIGENCE BINDING R2B — resolved context → the landed AskRouteContext seams.
+ *
+ *   STORY      hasResolvedArticleAnchor = true, and storyAnchorCountry = the stored article's
+ *              own governed country when it has one (STORY_ANCHOR → precedence ARTICLE_ANCHOR).
+ *   GEOGRAPHY  mapContextCountry = ISO3 (MAP_GEOGRAPHY_CONTEXT, the weakest rung).
+ *
+ * `articleRefs` is deliberately NOT set for a single story. In frozen C a non-empty
+ * `selection.articleRefs` is the multi-story SELECTION rank, which sits ABOVE typed geography in
+ * DECLARED_PRECEDENCE (and carries a SELECTION constraint): a single anchored story would then
+ * outrank a place the reader typed, reversing the landed rule that typed scope outranks an
+ * inherited story. Selection is R2D's contract; ARTICLE_ANCHOR is the single-story rung.
+ */
+export function routeContextOf(
+  context: ResolvedAskContext | undefined,
+  /** R2E — this turn's question, to recognise the anchored story's own headline. */
+  question?: string,
+): Pick<
+  AskRouteContext,
+  | 'hasResolvedArticleAnchor'
+  | 'storyAnchorCountry'
+  | 'mapContextCountry'
+  | 'articleRefs'
+  | 'questionIsStoryHeadline'
+> {
+  if (context === undefined) return {};
+  /* R2F — a dashboard record's country is INHERITED context (the weakest rank): a place the
+     reader types still outranks it, exactly as with a Map country. */
+  if (context.kind === 'MODULE') {
+    return context.countryIso3 === undefined ? {} : { mapContextCountry: context.countryIso3 };
+  }
+  /* R2D — a SELECTION is frozen C's own multi-story transport (the SELECTION rank). */
+  if (context.kind === 'SELECTION') {
+    return { articleRefs: context.stories.map((story) => story.articleRef) };
+  }
+  if (context.kind === 'STORY') {
+    return {
+      hasResolvedArticleAnchor: true,
+      ...(context.countryIso3 === undefined ? {} : { storyAnchorCountry: context.countryIso3 }),
+      /* R2E — the server-resolved title (never client text) decides it. */
+      ...(isSameHeadline(question, context.storyContext.title)
+        ? { questionIsStoryHeadline: true }
+        : {}),
+    };
+  }
+  return { mapContextCountry: context.countryIso3 };
 }
 
 /**
@@ -257,6 +316,39 @@ function routeSignature(route: AskR2Route): unknown[] {
   ];
 }
 
+/**
+ * UNIFIED INTELLIGENCE BINDING R2C — an INHERITED context chip (the Map country, the story
+ * anchor's country) states "applied" only when the reporting analysis actually used that context
+ * (AnalysisService stamps `geographyContextUsed` / `storyContextUsed`). A background, computed,
+ * governed-record or early-terminal answer ran no retrieval at all, so an inherited place it
+ * carried was available but NOT applied — and is shown so, never credited as the scope.
+ * DOWNGRADE ONLY: a chip never gains "applied" here, and typed / declared / entity geography
+ * is untouched. A context-free answer has no inherited chip, so its chips are byte-identical.
+ */
+export function truthfulInheritedChips(
+  chips: PlanChips,
+  analysis: AnalysisApiResponse | null,
+): PlanChips {
+  if (chips.kind !== 'SCOPED') return chips;
+  const used = analysis?.retrievalContext;
+  const inherited = (source: string): boolean | null =>
+    source === 'MAP_GEOGRAPHY_CONTEXT'
+      ? used?.geographyContextUsed === true
+      : source === 'STORY_ANCHOR'
+        ? used?.storyContextUsed === true
+        : null;
+  if (!chips.chips.some((c) => c.kind === 'GEOGRAPHY' && inherited(c.source) !== null)) {
+    return chips;
+  }
+  return {
+    kind: 'SCOPED',
+    chips: chips.chips.map((c) => {
+      const usedIt = c.kind === 'GEOGRAPHY' ? inherited(c.source) : null;
+      return usedIt === false && c.applied ? { ...c, applied: false } : c;
+    }),
+  };
+}
+
 /** ISO3 → the reader's own words for the place, from the qualified reading. */
 function placeSpansOf(route: AskR2Route): Record<string, string> {
   if (route.outcome.status === 'NOT_READ') return {};
@@ -274,7 +366,6 @@ export function planRevision(
      request: the revision (and so the stored-result fingerprint) must differ. Omitted when
      absent, so every first-turn revision is byte-identical to before. */
   priorQuestion?: string | null,
-  askContextPart?: string,
 ): string {
   return hashIdentity([
     ASK_R2_ADAPTER_VERSION,
@@ -283,33 +374,10 @@ export function planRevision(
     request.intent,
     routeSignature(route),
     ...(priorQuestion ? [`prior:${priorQuestion}`] : []),
-    /* HOME R1 STAGE A — the same words with a different resolved context are a different
-       request. Omitted when absent, so every context-free revision is byte-identical. */
-    ...(askContextPart === undefined ? [] : [askContextPart]),
+    /* UNIFIED INTELLIGENCE BINDING R2B — the canonical context identity, pinned EXPLICITLY (not
+       left to whatever the route happens to reflect). Omitted when absent: byte-identical. */
+    ...(request.context === undefined ? [] : [contextIdentityToken(request.context)]),
   ]);
-}
-
-/** HOME R1 STAGE A — the resolved context's identity for the plan revision (refs, codes). */
-export function askContextRevisionPart(
-  inputs: AskContextExecutionInputs | undefined,
-): string | undefined {
-  if (inputs === undefined) return undefined;
-  const r = inputs.route;
-  if (
-    r.storyAnchorCountry === undefined &&
-    r.hasResolvedArticleAnchor === undefined &&
-    r.mapContextCountry === undefined &&
-    r.articleRefs === undefined &&
-    inputs.storyContext === undefined
-  )
-    return 'context:none';
-  return `context:${hashIdentity([
-    inputs.storyContext?.articleId ?? null,
-    r.storyAnchorCountry ?? null,
-    r.mapContextCountry ?? null,
-    r.articleRefs ?? [],
-    r.selectionAction ?? null,
-  ])}`;
 }
 
 /** Estimated units for one analysis call (F 01 L-12: input + outputWeight × output). */
@@ -395,12 +463,55 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     };
   }
 
+  /**
+   * THE ONE CALL SITE of the approved analysis path. Every execution (Reporting, and the R2D
+   * Selection) makes at most ONE call, through here; its output is stored as a display payload
+   * and nothing it returns is executed, fetched or used as an identity.
+   */
+  private analyze(
+    ...args: Parameters<AnalysisService['analyzeNews']>
+  ): ReturnType<AnalysisService['analyzeNews']> {
+    return this.analysis.analyzeNews(...args);
+  }
+
   /** The governed reads for this route — local, bounded, isolated; never rejects. */
-  private readIntelligence(route: AskR2Route): Promise<AskContributionSet> {
-    return this.intelligence.read(route).catch((error: unknown) => {
+  private async readIntelligence(
+    route: AskR2Route,
+    context?: ResolvedAskContext,
+  ): Promise<AskContributionSet> {
+    const set = await this.intelligence.read(route).catch((error: unknown) => {
       this.logger.warn(`ask intelligence read failed: ${(error as Error)?.message ?? 'unknown'}`);
       return NO_CONTRIBUTIONS;
     });
+    if (context?.kind !== 'MODULE') return set;
+    /* UNIFIED INTELLIGENCE BINDING R2F — the record the reader pinned on a dashboard, through the
+       SAME governed channel: it replaces a text-keyed contribution from the same contributor
+       (the reader named the exact record), never adds a second channel. */
+    const pinned = await this.intelligence.readPinned({
+      module: context.module,
+      observationKey: context.observationKey,
+      countryIso3: context.countryIso3 ?? null,
+      district: context.district ?? null,
+    });
+    return {
+      considered: [
+        ...set.considered.filter((c) => c.contributorId !== pinned.contributorId),
+        {
+          contributorId: pinned.contributorId,
+          domain: pinned.domain,
+          applicability: pinned.applicability,
+          scope: {
+            countryIso3: context.countryIso3 ?? null,
+            district: context.district ?? null,
+            place: null,
+          },
+        },
+      ],
+      contributions: [
+        ...set.contributions.filter((c) => c.contributorId !== pinned.contributorId),
+        pinned,
+      ],
+    };
   }
 
   /** Bounded observability of contributor use: ids and a count only — never content. */
@@ -424,13 +535,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const missing = missingSeams(route);
     if (missing.length > 0)
       throw new AskExecutionRefused(`ASK_R2_SEAM_MISSING:${missing.join(',')}`);
-    const store = askRequestContext.getStore();
-    const revision = planRevision(
-      request,
-      route,
-      store?.priorQuestion,
-      askContextRevisionPart(store?.askContext),
-    );
+    const revision = planRevision(request, route, askRequestContext.getStore()?.priorQuestion);
     const typedPlaces = route.envelope.geography.candidates.filter(
       (c) => c.source !== 'MAP_GEOGRAPHY_CONTEXT',
     );
@@ -504,9 +609,20 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const route = routeFor(request, this.deps);
     this.observeRoute(route, draft);
     const priorQuestion = askRequestContext.getStore()?.priorQuestion ?? null;
-    const contextPart = askContextRevisionPart(askRequestContext.getStore()?.askContext);
-    if (planRevision(request, route, priorQuestion, contextPart) !== plan.revision) {
+    if (planRevision(request, route, priorQuestion) !== plan.revision) {
       throw new AskExecutionRefused('ASK_PLAN_REVISION_MISMATCH');
+    }
+
+    /* UNIFIED INTELLIGENCE BINDING R2D — a SELECTION is executed as the selection (see
+       executeSelection), never re-classified from its product-generated action label. */
+    if (request.context?.kind === 'SELECTION') {
+      return this.executeSelection(request, plan, route, operationId, draft, {
+        action: request.context.action,
+        stories: request.context.stories.map((story) => ({
+          articleRef: story.articleRef,
+          url: story.url,
+        })),
+      });
     }
 
     /* 2 · a terminal that needs no model answers with ZERO AI. */
@@ -572,7 +688,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       );
     }
     if (deterministicGovernedSelection(route, selectContributors(route)) !== null) {
-      return this.executeGovernedRecord(plan, route, operationId, draft);
+      return this.executeGovernedRecord(plan, route, operationId, draft, request.context);
     }
 
     /*
@@ -648,7 +764,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        provider calls, isolated from the answer's outcome. LIVE ACCEPTANCE REPAIR R1 (B): they
        complete (bounded) BEFORE the one analysis call, so their status, scope, time basis and
        disclosures bind the answer's prose instead of sitting beside it. */
-    const contributions = await this.readIntelligence(route);
+    const contributions = await this.readIntelligence(route, request.context);
     const governed = governedPrompt(contributions);
 
     /* 4 · ONE call to the approved analysis path, one model attempt at most. */
@@ -660,18 +776,18 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       /* One call to the approved path. Counted before it is made, so a call that throws
          is still a call that happened — the number an operator needs is attempts. */
       draft.providerCallCount = 1;
-      response = await this.analysis.analyzeNews(
+      response = await this.analyze(
         request.question,
         request.language,
-        /* HOME R1 STAGE A — a server-resolved story anchor (retained title, never client text). */
-        who.askContext?.storyContext,
+        /* R2B — the SERVER-RESOLVED story (built from the retained row), never client text. */
+        request.context?.kind === 'STORY' ? request.context.storyContext : undefined,
         /* ASK R3 CONTINUITY — the landed path routes a follow-up by the PRIOR USER question
            (never the prior AI answer); the model still receives this turn's own question. */
         who.priorQuestion ?? undefined,
-        /* HOME R1 STAGE A — a server-verified selection; the analysis path re-verifies it. */
-        who.askContext?.selection,
-        /* HOME R1 STAGE A — a governed map country, only when no story/selection outranks it. */
-        who.askContext?.geographyContext,
+        /* selection — R2D. */
+        undefined,
+        /* R2B — the SERVER-RESOLVED geography (ISO3 + registry name), never client text. */
+        request.context?.kind === 'GEOGRAPHY' ? request.context.geographyContext : undefined,
         {
           maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
           usageSink: (u) => {
@@ -887,6 +1003,148 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
    * `evidenceRolesObtained` stays [] and `reportingItemCount` is 0 (not null: Reporting was
    * decided against, not unreached). No background text reaches the draft.
    */
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2D — the My Intelligence SELECTION, executed by the canonical
+   * engine through AnalysisService's EXISTING selection branch (its evidence is exactly the
+   * server-verified selected stories; no provider retrieval). The action label ("Compare the
+   * selected stories") is product-generated text, not a reader-typed question: it is NOT
+   * re-classified by the general router (which reads "compare …" without named members as a
+   * clarification and "explain …" as background — both would answer something other than the
+   * selection). frozen C is untouched; its plan still pins the identity (revision, fingerprint).
+   *
+   * Every control is the reporting path's, in the same order: switches, server-held request
+   * context, breaker permit, the guest resource scope (R2A.1), the meter reservation, ONE model
+   * attempt, settlement on actual units and the breaker record. Stored reuse stays governed by the
+   * answer state (CURRENT_REPORTING is never replayed).
+   */
+  private async executeSelection(
+    request: Readonly<AskRequest>,
+    plan: Readonly<AskPlan>,
+    route: AskR2Route,
+    operationId: string,
+    draft: AskObservationDraft,
+    selection: { readonly action: MultiStoryAction; readonly stories: readonly SelectedStoryRef[] },
+  ): Promise<ExecutionResult> {
+    draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
+    if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
+    draft.askPublicComputeEnabled = await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+    if (!draft.askPublicComputeEnabled) {
+      throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
+    }
+    const who = askRequestContext.getStore();
+    if (who === undefined) throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
+
+    const provider = this.provider.id;
+    draft.providerId = provider;
+    const permit = await this.breaker.permit(provider);
+    if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
+
+    const guest = await this.resolveGuestComputeScope(who);
+    const reservation = await this.meter.reserve({
+      accountId: who.accountId,
+      ipScope: who.ipScope,
+      ...(guest === undefined ? {} : { guest }),
+      provider,
+      estimatedUnits: estimateUnits(
+        request.question.length,
+        this.analysisConfig.get(),
+        this.meter.config.outputWeight,
+      ),
+    });
+    if (!reservation.admitted) {
+      await this.breaker.record(provider, 'REFUSAL', permit.trial);
+      throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
+    }
+
+    let usage: { promptTokens: number; completionTokens: number } | null = null;
+    let outcome: BreakerOutcome = 'FAILURE';
+    let response: AnalysisApiResponse | null = null;
+    let noEvidence = false;
+    try {
+      draft.providerCallCount = 1;
+      response = await this.analyze(
+        request.question,
+        request.language,
+        undefined,
+        /* A selection replaces the conversation context (the landed selection branch). */
+        undefined,
+        { action: selection.action, stories: [...selection.stories] },
+        undefined,
+        {
+          maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
+          usageSink: (u) => {
+            usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
+          },
+        },
+      );
+      noEvidence = response.analysis === null && response.articles.length === 0;
+      outcome = noEvidence
+        ? 'REFUSAL'
+        : response.analysis === null && response.analysisError !== undefined
+          ? 'FAILURE'
+          : 'SUCCESS';
+    } catch (error) {
+      outcome = /timeout|deadline/i.test((error as Error)?.message ?? '') ? 'TIMEOUT' : 'FAILURE';
+    } finally {
+      const used = usage as { promptTokens: number; completionTokens: number } | null;
+      const actual =
+        used !== null
+          ? used.promptTokens + this.meter.config.outputWeight * used.completionTokens
+          : noEvidence
+            ? 0
+            : null;
+      await this.meter.settle(
+        reservation.reservationId,
+        actual,
+        noEvidence ? 'NO_EVIDENCE' : outcome,
+      );
+      await this.breaker.record(provider, outcome, permit.trial);
+      draft.breakerOutcome = noEvidence ? 'REFUSAL' : outcome;
+    }
+    if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {
+      throw new AskExecutionRefused(`MODEL_${outcome}`);
+    }
+
+    const produced = response.analysis !== null;
+    const answer: AnswerDecision = produced
+      ? { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] }
+      : {
+          state: 'INSUFFICIENT',
+          basis: 'NO_REQUIRED_EVIDENCE_OBTAINED',
+          missingRoles: ['REPORTING'],
+        };
+    draft.aiExecuted = produced;
+    draft.modelInvocationCount = produced ? 1 : 0;
+    draft.reportingItemCount = response.articles.length;
+    draft.evidenceRolesObtained = response.articles.length > 0 ? ['REPORTING'] : [];
+    const usedNow = usage as { promptTokens: number; completionTokens: number } | null;
+    if (usedNow !== null) {
+      draft.promptTokens = usedNow.promptTokens;
+      draft.completionTokens = usedNow.completionTokens;
+    }
+    /* The displayed route is the selection the reader ran — never the general classifier's
+       reading of the action label. Chips still come from the plan's own constraints. */
+    const selectionRoute: AskR2Route = {
+      ...route,
+      plan: {
+        ...route.plan,
+        questionClass: 'CURRENT_REPORTING',
+        terminalState: 'EXECUTABLE',
+        scopedBy: 'SELECTION',
+        refusals: [],
+        clarification: [],
+      },
+    };
+    return this.result(
+      plan,
+      selectionRoute,
+      operationId,
+      this.observeAnswer(answer, draft),
+      response,
+      produced,
+    );
+  }
+
   private async executeBackground(
     request: Readonly<AskRequest>,
     plan: Readonly<AskPlan>,
@@ -932,7 +1190,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* INTELLIGENCE BINDING R1 — governed reads (after every control has passed): local, zero
        model, zero provider. LIVE ACCEPTANCE REPAIR R1 (B): read first, so the one background
        call is bound by them. */
-    const contributions = await this.readIntelligence(route);
+    const contributions = await this.readIntelligence(route, request.context);
     const governed = governedPrompt(contributions);
 
     /* 4 · ONE call to the dedicated background provider. No articles, no retrieval. */
@@ -1032,6 +1290,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     route: AskR2Route,
     operationId: string,
     draft: AskObservationDraft,
+    /* R2F — a pinned dashboard record is read here too (never silently dropped). */
+    context?: ResolvedAskContext,
   ): Promise<ExecutionResult> {
     draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
     if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
@@ -1044,7 +1304,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     }
     draft.providerCallCount = 0;
     draft.reportingItemCount = 0;
-    const contributions = await this.readIntelligence(route);
+    const contributions = await this.readIntelligence(route, context);
     this.observeContributions(contributions, draft);
     const basis = governedRecordBasis(contributions);
     const answer: AnswerDecision =
@@ -1170,7 +1430,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               : null,
         },
         /* D25 05: chips from the effective server plan only, in the order asked. */
-        chips: planChips(route.envelope, route.plan, placeSpansOf(route), route.reportingWindow),
+        chips: truthfulInheritedChips(
+          planChips(route.envelope, route.plan, placeSpansOf(route), route.reportingWindow),
+          analysis,
+        ),
         answer,
         /* When the answer was decided — the freshness line's time when no analysis ran. */
         checkedAt: new Date().toISOString(),

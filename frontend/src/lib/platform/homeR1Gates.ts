@@ -24,11 +24,12 @@
  *   GNA_COMPARE_TRAY        compare.tray — hold stories (0 AI); requires card actions
  *   GNA_COMPARE_VIEW        compare.view — the zero-AI Compare view; requires the tray, and
  *                           its read model is the backend's COMPARE_READ_ENABLED route
- *   GNA_ASK_EMBEDDED        ask.embedded — the dock's ONE transport becomes Ask R2/V2. OFF
- *                           returns the dock to its legacy transport (the rollback, H §3)
- *   GNA_ASK_CONTEXT_REFS    ask.contextEnvelope — the dock / Compare / My Intelligence send
- *                           governed references; requires GNA_ASK_EMBEDDED. The backend
- *                           applies them only under ASK_CONTEXT_REFS_ENABLED.
+ *
+ * CONVERGENCE (Unified Intelligence Binding R2 is canonical): there is NO Ask transport gate
+ * and NO Ask context gate here. Ask context is part of the released R2 architecture (the
+ * resolver, its plan chips and its refusals), the dock has ONE canonical Ask V2 transport, and
+ * no Home switch can route Ask to a legacy analysis path. Attaching context stays zero compute;
+ * only the reader's explicit Send/Ask runs.
  *
  *
  * STAGE B — the capabilities that now exist (each needs its backend twin, which answers 404
@@ -51,8 +52,6 @@ export interface HomeR1Gates {
   readonly cardActions: boolean;
   readonly compareTray: boolean;
   readonly compareView: boolean;
-  readonly askEmbedded: boolean;
-  readonly askContextRefs: boolean;
   readonly discussionRead: boolean;
   readonly discussionWrite: boolean;
   readonly alertsInApp: boolean;
@@ -69,8 +68,6 @@ export const HOME_R1_GATES_OFF: HomeR1Gates = Object.freeze({
   cardActions: false,
   compareTray: false,
   compareView: false,
-  askEmbedded: false,
-  askContextRefs: false,
   discussionRead: false,
   discussionWrite: false,
   alertsInApp: false,
@@ -87,8 +84,6 @@ const GATE_NAMES: readonly (keyof HomeR1Gates)[] = [
   'cardActions',
   'compareTray',
   'compareView',
-  'askEmbedded',
-  'askContextRefs',
   'discussionRead',
   'discussionWrite',
   'alertsInApp',
@@ -107,15 +102,12 @@ export function parseReleaseGatesMeta(content: string | null): HomeR1Gates {
   const homeR1 = flag('homeR1');
   const cardActions = homeR1 && flag('cardActions');
   const compareTray = cardActions && flag('compareTray');
-  const askEmbedded = flag('askEmbedded');
   const discussionRead = cardActions && flag('discussionRead');
   return {
     homeR1,
     cardActions,
     compareTray,
     compareView: compareTray && flag('compareView'),
-    askEmbedded,
-    askContextRefs: askEmbedded && flag('askContextRefs'),
     discussionRead,
     discussionWrite: discussionRead && flag('discussionWrite'),
     alertsInApp: cardActions && flag('alertsInApp'),
@@ -130,10 +122,8 @@ export function homeR1Gates(
   const cardActions = homeR1 && on('GNA_HOME_CARD_ACTIONS');
   const compareTray = cardActions && on('GNA_COMPARE_TRAY');
   const compareView = compareTray && on('GNA_COMPARE_VIEW');
-  const askEmbedded = on('GNA_ASK_EMBEDDED');
-  const askContextRefs = askEmbedded && on('GNA_ASK_CONTEXT_REFS');
   const discussionRead = cardActions && on('GNA_DISCUSSION_READ');
   const discussionWrite = discussionRead && on('GNA_DISCUSSION_WRITE');
   const alertsInApp = cardActions && on('GNA_ALERTS_IN_APP');
-  return { homeR1, cardActions, compareTray, compareView, askEmbedded, askContextRefs, discussionRead, discussionWrite, alertsInApp };
+  return { homeR1, cardActions, compareTray, compareView, discussionRead, discussionWrite, alertsInApp };
 }

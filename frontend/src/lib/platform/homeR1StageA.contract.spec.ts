@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { MAX_SELECTED_STORIES, normalizeArticleUrl } from '@globalnews-ai/shared';
 import {
@@ -11,7 +11,7 @@ import {
   releaseGatesMeta,
 } from './homeR1Gates';
 import { articleRefFor } from '@/lib/identity/articleRefServer';
-import { articleRefOf, buildDockContextRef, dockContextKind, selectionContextRef } from '@/lib/ask/askContextRef';
+import { articleRefOf, askCompareHref } from '@/lib/ask/askSelectionRef';
 import { clearHeldStories, peekHeldStories, releaseHeldStory, toggleHeldStory } from '@/lib/home/heldStoriesStore';
 import { SIGN_IN_RETURN_DESTINATIONS, signInReturnFor } from '@/components/bookmark/StoryBookmark';
 import { homeR1En } from '@/lib/i18n/dictionaries/homeR1En';
@@ -25,6 +25,14 @@ import { homeR1Pl } from '@/lib/i18n/dictionaries/homeR1Pl';
 
 const SRC = join(__dirname, '..', '..');
 const read = (...parts: string[]): string => readFileSync(join(SRC, ...parts), 'utf8');
+const walkTs = (dir: string, acc: string[] = []): string[] => {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) walkTs(p, acc);
+    else if (/\.(ts|tsx)$/.test(name) && !name.endsWith('.spec.ts')) acc.push(p);
+  }
+  return acc;
+};
 const code = (source: string): string =>
   source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1').replace(/\{\s*\}/g, '{}');
 
@@ -49,33 +57,38 @@ describe('§3 gate mapping — release gates are default OFF, literal, dependent
 
   it("ON is the exact literal 'true' (KS-6): TRUE / 1 / ' true' are OFF", () => {
     for (const value of ['TRUE', '1', ' true', 'yes', 'on']) {
-      expect(homeR1Gates({ GNA_HOME_R1: value, GNA_ASK_EMBEDDED: value })).toEqual(HOME_R1_GATES_OFF);
+      expect(homeR1Gates({ GNA_HOME_R1: value, GNA_HOME_CARD_ACTIONS: value })).toEqual(HOME_R1_GATES_OFF);
     }
   });
 
-  it('dependencies hold: actions need Home R1, tray needs actions, view needs tray, refs need embedded', () => {
+  it('dependencies hold: actions need Home R1, tray needs actions, view needs tray', () => {
     expect(homeR1Gates({ GNA_HOME_CARD_ACTIONS: 'true', GNA_COMPARE_TRAY: 'true', GNA_COMPARE_VIEW: 'true' })).toEqual(
       HOME_R1_GATES_OFF,
     );
-    expect(homeR1Gates({ GNA_ASK_CONTEXT_REFS: 'true' }).askContextRefs).toBe(false);
     expect(
-      homeR1Gates({
-        GNA_HOME_R1: 'true',
-        GNA_HOME_CARD_ACTIONS: 'true',
-        GNA_COMPARE_TRAY: 'true',
-        GNA_COMPARE_VIEW: 'true',
-        GNA_ASK_EMBEDDED: 'true',
-        GNA_ASK_CONTEXT_REFS: 'true',
-      }),
-      /* Stage B added three gates; each stays OFF unless its own variable is set. */
-    ).toEqual({ homeR1: true, cardActions: true, compareTray: true, compareView: true, askEmbedded: true, askContextRefs: true, discussionRead: false, discussionWrite: false, alertsInApp: false });
+      homeR1Gates({ GNA_HOME_R1: 'true', GNA_HOME_CARD_ACTIONS: 'true', GNA_COMPARE_TRAY: 'true', GNA_COMPARE_VIEW: 'true' }),
+    ).toEqual({ homeR1: true, cardActions: true, compareTray: true, compareView: true, discussionRead: false, discussionWrite: false, alertsInApp: false });
+  });
+
+  /* CONVERGENCE — Unified Intelligence Binding R2 is canonical: Ask context and the dock transport
+     have NO Home-specific switch. The retired names must not be read anywhere. */
+  it('no Ask transport gate and no Ask context gate exist (GNA_ASK_EMBEDDED / GNA_ASK_CONTEXT_REFS retired)', () => {
+    const gates = homeR1Gates({ GNA_ASK_EMBEDDED: 'true', GNA_ASK_CONTEXT_REFS: 'true' } as Record<string, string>);
+    expect(Object.keys(gates).sort()).toEqual(
+      ['alertsInApp', 'cardActions', 'compareTray', 'compareView', 'discussionRead', 'discussionWrite', 'homeR1'].sort(),
+    );
+    const sources = ['app', 'components', 'lib'].flatMap((d) => walkTs(join(SRC, d))).map((f) => readFileSync(f, 'utf8'));
+    for (const source of sources) {
+      expect(source.includes('GNA_ASK_' + 'EMBEDDED')).toBe(false);
+      expect(source.includes('GNA_ASK_' + 'CONTEXT_REFS')).toBe(false);
+    }
   });
 
   it('the client meta is absent when every gate is OFF, round-trips, and re-applies dependencies', () => {
     expect(releaseGatesMeta(HOME_R1_GATES_OFF)).toBeNull();
-    const on = homeR1Gates({ GNA_ASK_EMBEDDED: 'true', GNA_ASK_CONTEXT_REFS: 'true' });
+    const on = homeR1Gates({ GNA_HOME_R1: 'true', GNA_HOME_CARD_ACTIONS: 'true', GNA_COMPARE_TRAY: 'true' });
     expect(parseReleaseGatesMeta(releaseGatesMeta(on)!['gna-release-gates'])).toEqual(on);
-    expect(parseReleaseGatesMeta('askContextRefs,compareView')).toEqual(HOME_R1_GATES_OFF);
+    expect(parseReleaseGatesMeta('compareView,discussionWrite')).toEqual(HOME_R1_GATES_OFF);
   });
 
   it('the existing spend switches and the public root are read nowhere new and never defaulted', () => {
@@ -102,32 +115,61 @@ describe('§9 identity — articleRef = sha256(normalizeArticleUrl(url)), server
   });
 });
 
-describe('§6 context references — identifiers only, stated precedence, nothing silently added', () => {
-  const geography = { countryCode: 'RW', displayName: 'Rwanda' };
-  const story = { title: 'Client-side title', url: URL_A, articleId: '1' };
-  const selection = [{ articleRef: articleRefFor(URL_B), url: URL_B, label: 'Display label' }];
+describe('CONVERGENCE — Unified Intelligence Binding R2 is the ONLY Ask context implementation', () => {
+  const r2 = (path: string): string =>
+    execSync(`git show 58f80fd4108d3472e5433c7a50e19295788f2544:frontend/src/${path}`, { cwd: SRC, encoding: 'utf8' });
 
-  it('precedence: held selection → story → country → none', () => {
-    expect(dockContextKind({ selection, story, geography })).toBe('selection');
-    expect(dockContextKind({ selection: [], story, geography })).toBe('story');
-    expect(dockContextKind({ selection: [], story: { title: 'no url' }, geography })).toBe('geography');
-    expect(dockContextKind({ selection: [], story: undefined, geography: undefined })).toBe('none');
+  it('the canonical R2 Ask modules are byte-identical to the R2 authority (58f80)', () => {
+    for (const path of [
+      'lib/ask/askContextRef.ts',
+      'lib/ask/askSelectionRef.ts',
+      'lib/ask/askModuleRef.ts',
+      'lib/api/askV2Api.ts',
+      'lib/ask/useAskR2Conversation.ts',
+      'components/my-intelligence/MyIntelligenceClient.tsx',
+      'lib/myIntelligence/selection.ts',
+      'components/home/HomeCompare.tsx',
+      'components/ask-frame/AskFrameScreen.tsx',
+    ]) {
+      expect({ path, same: read(...path.split('/')) === r2(path) }).toEqual({ path, same: true });
+    }
   });
 
-  it('the wire carries identities only — no title, label, summary or display name', async () => {
-    const fromSelection = await buildDockContextRef({ selection, selectionEntry: 'my-intelligence', selectionAction: 'ASK_SELECTED', story, geography });
-    expect(fromSelection).toEqual({ entry: 'my-intelligence', action: 'ASK_SELECTED', stories: [{ articleRef: articleRefFor(URL_B), url: URL_B }] });
-    const fromStory = await buildDockContextRef({ selection: [], story, geography });
-    expect(fromStory).toEqual({ entry: 'story', stories: [{ articleRef: articleRefFor(URL_A), url: URL_A }] });
-    const fromMap = await buildDockContextRef({ selection: [], story: undefined, geography });
-    expect(fromMap).toEqual({ entry: 'map', country: 'RW' });
-    expect(JSON.stringify([fromSelection, fromStory, fromMap])).not.toMatch(/title|label|displayName|summary|Client-side/);
-    expect(await buildDockContextRef({ selection: [], story: undefined, geography: undefined })).toBeUndefined();
+  it("Stage A's second context protocol is gone: no files, no symbols", () => {
+    for (const path of [
+      ['lib', 'ask', 'requestDeeperAsk.ts'],
+      ['lib', 'myIntelligence', 'selectionAsk.ts'],
+      ['components', 'ask', 'AskContextInspect.tsx'],
+      ['components', 'ask', 'EmbeddedConversation.tsx'],
+    ]) {
+      expect(existsSync(join(SRC, ...path))).toBe(false);
+    }
+    const sources = ['app', 'components', 'lib'].flatMap((d) => walkTs(join(SRC, d))).map((f) => code(readFileSync(f, 'utf8')));
+    for (const source of sources) {
+      expect(source).not.toMatch(/AskContextRefWire|buildDockContextRef|dockContextKind|selectionContextRef|publishAskSelection|requestDeeperAsk|routeSelectionToAsk/);
+    }
   });
 
-  it('selections are bounded at MAX_SELECTED_STORIES', () => {
-    const many = Array.from({ length: 12 }, (_, i) => ({ articleRef: articleRefFor(`${URL_B}/${i}`), url: `${URL_B}/${i}` }));
-    expect(selectionContextRef('COMPARE', many).stories).toHaveLength(MAX_SELECTED_STORIES);
+  it('the dock has ONE transport site (the R2 submit) and no analysis transport', () => {
+    const dock = code(read('components', 'ask', 'AskAiDock.tsx'));
+    expect((dock.match(/\.submit\(asked, contextRef/g) ?? []).length).toBe(1);
+    expect(dock).not.toMatch(/analyzeNews|analysisApi|\/analysis\/news/);
+    expect(dock).toContain('askContextRefOf(storyContext, geographyContext)');
+  });
+
+  it('the Home explicit Send submits the dock\'s OWN form (R2 submit handler byte-identical; no second transport)', () => {
+    const raw = read('components', 'ask', 'AskAiDock.tsx');
+    const dock = code(raw);
+    expect(dock).toMatch(/window\.addEventListener\(GLOBAL_ASK_SUBMIT_EVENT, onHomeSend\)/);
+    expect(dock).toMatch(/formRef\.current\.requestSubmit\(\);/);
+    const handler = (source: string): string =>
+      source.slice(source.indexOf('  const submit = useCallback('), source.indexOf('    [question, isPending, r2, contextRef],'));
+    expect(handler(raw)).toBe(handler(r2('components/ask/AskAiDock.tsx')));
+    expect(handler(raw).length).toBeGreaterThan(200);
+    const hero = code(read('components', 'home', 'r1', 'HomeR1Hero.tsx'));
+    expect(hero).toContain('submitGlobalAsk(draft);');
+    expect(hero).not.toMatch(/askV2Api|analyzeNews|context/);
+    expect(code(read('lib', 'ask', 'submitGlobalAsk.ts'))).not.toMatch(/fetch\(|askV2Api|analyzeNews|accountFetch|context/);
   });
 });
 
@@ -156,7 +198,6 @@ describe('§4/§9 selection — holding is zero-network and the ninth story is r
   it('structurally: the stores, tray and actions touch no network, storage, analysis or Ask transport', () => {
     for (const file of [
       ['lib', 'home', 'heldStoriesStore.ts'],
-      ['lib', 'ask', 'selectionContextStore.ts'],
       ['components', 'home', 'r1', 'StoryCardActions.tsx'],
     ]) {
       const source = code(read(...file));
@@ -191,6 +232,18 @@ describe('§4 Compare — ONE zero-AI read of held reporting by identity', () =>
     expect((compare.match(/resolveStoriesForCompare\(/g) ?? []).length).toBe(1);
   });
 
+  it('Ask about the compared stories is R2H\'s canonical SELECTION launcher (no second Compare workflow)', () => {
+    const compare = code(read('components', 'home', 'r1', 'HomeR1Compare.tsx'));
+    expect(compare).toContain("askCompareHref(opened.map((story) => story.url), '/')");
+    expect(compare).not.toMatch(/HomeCompare|openGlobalAsk|deep-analysis/);
+    expect(askCompareHref([URL_A, URL_B], '/')).toMatch(/^\/ask\?compare=.*&compare=.*&return=%2F$/);
+    // R2H's HomeCompare survives ONLY on the legacy (Rev A / gate-off) Home.
+    expect(read('components', 'home', 'WhatsHappeningNow.tsx')).toMatch(/HomeCompare/);
+    for (const file of walkTs(join(SRC, 'components', 'home', 'r1'))) {
+      expect(readFileSync(file, 'utf8')).not.toMatch(/from '@\/components\/home\/HomeCompare'/);
+    }
+  });
+
   it('nothing is fabricated: claims, gaps and the event relation say Not available', () => {
     expect(homeR1En.compare.noBrief).toMatch(/^Not available/);
     expect(homeR1En.compare.relationUnavailable).toMatch(/^Not available/);
@@ -199,88 +252,21 @@ describe('§4 Compare — ONE zero-AI read of held reporting by identity', () =>
   });
 });
 
-describe('§7 My Intelligence — the same refusals first, then the ONE Ask engine', () => {
-  beforeEach(() => {
-    events.length = 0;
-  });
-  const story = (n: number) => ({ articleRef: articleRefFor(`${URL_B}/${n}`), url: `${URL_B}/${n}` });
-
-  it('refusals happen BEFORE anything is published or dispatched', async () => {
-    const { routeSelectionToAsk } = await import('@/lib/myIntelligence/selectionAsk');
-    expect(() => routeSelectionToAsk('ASK_SELECTED', [story(1)], 'en', ' a ', {})).toThrow('question-required');
-    expect(() => routeSelectionToAsk('COMPARE', [story(1)], 'en', undefined, {})).toThrow('too-few');
-    expect(() =>
-      routeSelectionToAsk('SUMMARIZE', Array.from({ length: 9 }, (_, i) => story(i)), 'en', undefined, {}),
-    ).toThrow('too-many');
-    expect(events).toEqual([]);
-  });
-
-  it('Ask about selected = ONE submit event (one ordinary turn); deeper = ONE quote request event', async () => {
-    const { routeSelectionToAsk } = await import('@/lib/myIntelligence/selectionAsk');
-    expect(routeSelectionToAsk('ASK_SELECTED', [story(1)], 'en', 'What links these?', {})).toBe('asked');
-    expect(events).toEqual(['globalnews:ask-submit']);
-    events.length = 0;
-    let detail: unknown;
-    const listener = (e: Event) => {
-      detail = (e as CustomEvent).detail;
-    };
-    target.addEventListener('globalnews:ask-deeper', listener);
-    expect(routeSelectionToAsk('COMPARE', [story(1), story(2)], 'pl', undefined, {})).toBe('quoted');
-    target.removeEventListener('globalnews:ask-deeper', listener);
-    expect(events).toEqual(['globalnews:ask-deeper']);
-    expect(detail).toEqual({
-      question: 'Porównaj wybrane artykuły',
-      context: { entry: 'my-intelligence', action: 'COMPARE', stories: [story(1), story(2)] },
-    });
-  });
-
-  it('the landed /analysis/news path is preserved for the gate-OFF rollback, not deleted', () => {
-    const client = read('components', 'my-intelligence', 'MyIntelligenceClient.tsx');
-    expect(client).toContain('runSelectionAction(multiStory, stories, language, typed)');
-    expect(client).toMatch(/if \(askConverged\) \{[\s\S]*routeSelectionToAsk\(/);
-    expect(read('lib', 'myIntelligence', 'selection.ts')).toContain('return analyzeNews(query, language, undefined, undefined, {');
+describe('§7 My Intelligence — R2D selection behaviour, unchanged', () => {
+  it('selection actions are ONE canonical Ask V2 turn carrying a SELECTION (R2D), with no Home gate', () => {
+    const client = code(read('components', 'my-intelligence', 'MyIntelligenceClient.tsx'));
+    expect(client).not.toMatch(/usePlatformGates|askConverged|routeSelectionToAsk/);
+    expect(code(read('lib', 'myIntelligence', 'selection.ts'))).toContain('export async function runSelectionAction(');
   });
 });
 
-describe('§5 embedded Ask — one transport site per path, rollback intact, staging untouched', () => {
-  const dock = read('components', 'ask', 'AskAiDock.tsx');
-  const body = code(dock);
-
-  it('the legacy transport is still exactly one analyzeNews call, inside the form handler', () => {
-    expect((body.match(/analyzeNews\(/g) ?? []).length).toBe(1);
-    expect(body.indexOf('analyzeNews(asked')).toBeGreaterThan(body.indexOf('const submit = useCallback'));
-  });
-
-  it('the embedded transport is the Ask R2 conversation hook, and only under ask.embedded', () => {
-    expect(body).toContain('useAskR2Conversation(r2Locale');
-    expect(body).toMatch(/if \(embeddedAsk && !legacyHandBack\) \{\s*void sendEmbedded\(asked\);/);
-    expect(body).toMatch(/guestTrial: embeddedAsk && everOpened/);
-    expect(body).toMatch(/if \(!embeddedAsk\) return undefined;[\s\S]*GLOBAL_ASK_SUBMIT_EVENT/);
-  });
-
-  it('the legacy path is used under ask.embedded ONLY when the server says Ask V2 is off', () => {
-    expect(body).toMatch(/if \(outcome === 'legacy'\) legacyTransport\.current\?\.\(null, asked, true\);/);
-    expect(body).not.toMatch(/outcome === 'signed-out'[^\n]*legacy/);
-  });
-
+describe('§5 embedded Ask — staging untouched, Standalone untouched', () => {
   it('openGlobalAsk (zero-compute staging) is byte-identical to the baseline', () => {
     const baseline = execSync('git show a94c5f24fa00ca1b27c8ff0e292000c0136fb90f:frontend/src/lib/ask/openGlobalAsk.ts', {
       cwd: SRC,
       encoding: 'utf8',
     });
     expect(read('lib', 'ask', 'openGlobalAsk.ts')).toBe(baseline);
-  });
-
-  it('the Home Send event and the deeper event modules cannot reach a network', () => {
-    for (const file of ['submitGlobalAsk.ts', 'requestDeeperAsk.ts']) {
-      expect(code(read('lib', 'ask', file))).not.toMatch(/fetch\(|askV2Api|analyzeNews|accountFetch/);
-    }
-  });
-
-  it('the Standalone /ask screen is not rewritten: it passes no context', () => {
-    const screen = code(read('components', 'ask-frame', 'AskFrameScreen.tsx'));
-    expect(screen).toContain('const outcome = await r2.submit(draft);');
-    expect(screen).toContain('r2.runDeeper(q)');
   });
 });
 
@@ -349,8 +335,8 @@ describe('§11/§12 OAuth stays same-origin and allow-listed; nothing commercial
     expect(signInReturnFor('/story/x/discussion')).toBeUndefined();
   });
 
-  it('the embedded sign-in uses the governed builder with the allow-listed return', () => {
-    expect(read('components', 'ask', 'AskAiDock.tsx')).toContain('signInHref={accountSignInUrl(signInReturnFor(returnPath))}');
+  it('the dock sign-in is R2\'s governed Ask sign-in (no new return destination)', () => {
+    expect(read('components', 'ask', 'AskAiDock.tsx')).toContain('ASK_SIGN_IN_HREF');
   });
 
   it('no price, currency, plan name, allowance number or trial length in the Stage A copy', () => {

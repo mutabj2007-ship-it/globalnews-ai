@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   askR2PayloadOf,
   askV2Api,
+  isAskContextRefusal,
+  type AskV2ContextRef,
   newIdempotencyKey,
   type AskGuestStatus,
   type AskR2Payload,
@@ -14,7 +16,6 @@ import {
 } from '@/lib/api/askV2Api';
 import { guestNoticeOf, guestSignInHref, isGuestMode, type GuestNotice } from './askGuestTrial';
 import { ASK_SIGN_IN_HREF, keepQuestion } from './askKeptQuestion';
-import type { AskContextRefWire } from './askContextRef';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -66,7 +67,20 @@ export interface AskR2DeepQuote {
   readonly operation: AskV2Operation;
 }
 
-export type AskR2SubmitOutcome = 'legacy' | 'signed-out' | 'sent' | 'busy' | 'failed' | 'kept';
+/**
+ * UNIFIED INTELLIGENCE BINDING R2C — `context-unavailable`: the server could not resolve the
+ * context reference sent with the question (an unknown story, an ungoverned country). NOTHING
+ * ran — no operation, no slot, no meter — and the question is NEVER re-sent without its context
+ * (that would silently answer a different, generic question). The caller keeps the draft.
+ */
+export type AskR2SubmitOutcome =
+  | 'legacy'
+  | 'signed-out'
+  | 'sent'
+  | 'busy'
+  | 'failed'
+  | 'kept'
+  | 'context-unavailable';
 
 /** The same shape the server accepts (`safeReturnPath`): strict local path, or null. */
 export function sanitizeReturnPath(path: string | null | undefined): string | null {
@@ -103,6 +117,13 @@ export interface AskR2ConversationOptions {
    * hook: no request on open, and a 401 is a sign-in requirement with no guest fallback.
    */
   readonly guestTrial?: boolean;
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2C — `false` skips the one guest-status read and restore on
+   * mount (default `true`, the /ask screen). Surfaces mounted while the reader is NOT asking —
+   * the global dock on every route, /search — make ZERO requests until an explicit Send; a
+   * signed-out Send still reaches the guest trial (401 → status read → guest surface).
+   */
+  readonly readOnOpen?: boolean;
 }
 
 export function useAskR2Conversation(
@@ -111,6 +132,7 @@ export function useAskR2Conversation(
   options: AskR2ConversationOptions = {},
 ) {
   const guestTrial = options.guestTrial === true;
+  const readOnOpen = options.readOnOpen !== false;
   const [turns, setTurns] = useState<AskR2Turn[]>([]);
   const [pending, setPending] = useState<string | null>(null);
   const [availability, setAvailability] = useState<AskR2Availability>('unknown');
@@ -120,6 +142,8 @@ export function useAskR2Conversation(
   /* ASK GUEST TRIAL R3 */
   const [guest, setGuest] = useState<AskGuestStatus | null>(null);
   const [guestNotice, setGuestNotice] = useState<GuestNotice | null>(null);
+  /** R2C — the question whose context reference the server could not resolve (kept, not sent). */
+  const [contextRefused, setContextRefused] = useState<string | null>(null);
   const thread = useRef<{ id: string; language: AskV2Language } | null>(null);
   const guestThread = useRef<{ id: string; language: AskV2Language } | null>(null);
   const inFlight = useRef(false);
@@ -140,7 +164,7 @@ export function useAskR2Conversation(
     the ACCOUNT routes. A guest with a live session: its latest conversation. Reads only.
   */
   useEffect(() => {
-    if (!guestTrial) return;
+    if (!guestTrial || !readOnOpen) return;
     let live = true;
     void (async () => {
       const status = await refreshGuest();
@@ -174,7 +198,7 @@ export function useAskR2Conversation(
     return () => {
       live = false;
     };
-  }, [guestTrial, refreshGuest]);
+  }, [guestTrial, readOnOpen, refreshGuest]);
 
   const ensureThread = useCallback(async (): Promise<string | 'legacy' | 'signed-out' | null> => {
     if (thread.current?.language === language) return thread.current.id;
@@ -195,7 +219,12 @@ export function useAskR2Conversation(
 
   /** ASK GUEST TRIAL R3 — one guest Send, entirely server-decided. */
   const submitAsGuest = useCallback(
-    async (q: string, retried = false, context?: AskContextRefWire): Promise<AskR2SubmitOutcome> => {
+    async (
+      q: string,
+      context: AskV2ContextRef | undefined,
+      onTurn?: (turn: AskR2Turn) => void,
+      retried = false,
+    ): Promise<AskR2SubmitOutcome> => {
       let threadId = guestThread.current?.language === language ? guestThread.current.id : null;
       if (threadId === null) {
         const created = await askV2Api.guestCreateThread(language, sanitizeReturnPath(returnPath));
@@ -218,13 +247,24 @@ export function useAskR2Conversation(
         setAvailability('r2');
       }
       const before = guest?.committed ?? 0;
-      const sent = await askV2Api.guestSubmit(threadId, q, language, newIdempotencyKey(), context);
+      const sent = await askV2Api.guestSubmit(
+        threadId,
+        q,
+        language,
+        newIdempotencyKey(),
+        context,
+      );
       if (!sent.ok) {
         if (sent.reason === 'SIGNED_OUT' && !retried) {
           /* The guest session ended (absolute expiry, cleared cookie): the server decides anew. */
           guestThread.current = null;
           await refreshGuest();
-          return submitAsGuest(q, true, context);
+          return submitAsGuest(q, context, onTurn, true);
+        }
+        /* R2C — the context could not be resolved: nothing ran, nothing was charged. */
+        if (isAskContextRefusal(sent.code)) {
+          setContextRefused(q);
+          return 'context-unavailable';
         }
         const notice = guestNoticeOf(sent.code);
         if (notice === 'UNAVAILABLE') {
@@ -237,22 +277,23 @@ export function useAskR2Conversation(
           await refreshGuest();
           return 'kept';
         }
-        setTurns((t) => [...t, { question: q, failure: sent.reason }]);
+        const failedTurn: AskR2Turn = { question: q, failure: sent.reason };
+        setTurns((t) => [...t, failedTurn]);
+        onTurn?.(failedTurn);
         return 'failed';
       }
       const op = sent.value;
       const after = await refreshGuest();
       const uncounted = op.status === 'COMPLETED' && (after?.committed ?? before) === before;
-      setTurns((t) => [
-        ...t,
-        {
-          question: q,
-          operation: op,
-          payload: askR2PayloadOf(op),
-          ...(op.failureCode ? { failure: op.failureCode } : {}),
-          ...(uncounted || op.status === 'RELEASED' ? { uncounted: true } : {}),
-        },
-      ]);
+      const turn: AskR2Turn = {
+        question: q,
+        operation: op,
+        payload: askR2PayloadOf(op),
+        ...(op.failureCode ? { failure: op.failureCode } : {}),
+        ...(uncounted || op.status === 'RELEASED' ? { uncounted: true } : {}),
+      };
+      setTurns((t) => [...t, turn]);
+      onTurn?.(turn);
       return 'sent';
     },
     [guest, language, refreshGuest, returnPath],
@@ -265,9 +306,12 @@ export function useAskR2Conversation(
    * `kept` when a guest refusal left the question in the composer (nothing ran).
    */
   const submit = useCallback(
-    /* HOME R1 STAGE A — `context`: governed references for the embedded entry points only.
-       The Standalone /ask screen never passes it, so its requests are unchanged. */
-    async (question: string, context?: AskContextRefWire): Promise<AskR2SubmitOutcome> => {
+    async (
+      question: string,
+      context?: AskV2ContextRef,
+      /** R2C — receives exactly the turn THIS Send produced (a caller's own staleness guard). */
+      onTurn?: (turn: AskR2Turn) => void,
+    ): Promise<AskR2SubmitOutcome> => {
       const q = question.trim();
       if (q.length === 0) return 'failed';
       if (inFlight.current) return 'busy';
@@ -276,21 +320,24 @@ export function useAskR2Conversation(
       setPending(q);
       setSignInRequired(null);
       setGuestNotice(null);
+      setContextRefused(null);
       try {
-        if (guestTrial && isGuestMode(guest)) return await submitAsGuest(q, false, context);
+        if (guestTrial && isGuestMode(guest)) return await submitAsGuest(q, context, onTurn);
         const id = await ensureThread();
         if (id === 'legacy') return 'legacy';
         if (id === 'signed-out') {
           if (guestTrial) {
             /* The status read may not have arrived yet: ask it once before asking to sign in. */
             const status = guestRead.current ? guest : await refreshGuest();
-            if (isGuestMode(status)) return await submitAsGuest(q, false, context);
+            if (isGuestMode(status)) return await submitAsGuest(q, context, onTurn);
           }
           setSignInRequired(q);
           return 'signed-out';
         }
         if (id === null) {
-          setTurns((t) => [...t, { question: q, failure: 'THREAD_UNAVAILABLE' }]);
+          const failedTurn: AskR2Turn = { question: q, failure: 'THREAD_UNAVAILABLE' };
+          setTurns((t) => [...t, failedTurn]);
+          onTurn?.(failedTurn);
           return 'failed';
         }
         const sent = await askV2Api.submit(id, q, language, 'ask', newIdempotencyKey(), context);
@@ -300,20 +347,26 @@ export function useAskR2Conversation(
           setSignInRequired(q);
           return 'signed-out';
         }
+        /* R2C — the context could not be resolved: nothing ran, nothing was charged. */
+        if (!sent.ok && isAskContextRefusal(sent.code)) {
+          setContextRefused(q);
+          return 'context-unavailable';
+        }
         if (!sent.ok) {
-          setTurns((t) => [...t, { question: q, failure: sent.reason }]);
+          const failedTurn: AskR2Turn = { question: q, failure: sent.reason };
+          setTurns((t) => [...t, failedTurn]);
+          onTurn?.(failedTurn);
           return 'failed';
         }
         const op = sent.value;
-        setTurns((t) => [
-          ...t,
-          {
-            question: q,
-            operation: op,
-            payload: askR2PayloadOf(op),
-            ...(op.failureCode ? { failure: op.failureCode } : {}),
-          },
-        ]);
+        const turn: AskR2Turn = {
+          question: q,
+          operation: op,
+          payload: askR2PayloadOf(op),
+          ...(op.failureCode ? { failure: op.failureCode } : {}),
+        };
+        setTurns((t) => [...t, turn]);
+        onTurn?.(turn);
         return 'sent';
       } finally {
         inFlight.current = false;
@@ -346,33 +399,20 @@ export function useAskR2Conversation(
 
   /** Ask for a deeper run: the server quotes it; nothing runs until `confirmDeeper`. */
   const runDeeper = useCallback(
-    /* HOME R1 STAGE A — the quote carries the same governed references (server-persisted). */
-    async (question: string, context?: AskContextRefWire): Promise<boolean> => {
+    async (question: string): Promise<boolean> => {
       if (isGuestMode(guest)) {
         setGuestNotice('DEEPER');
         return false;
       }
-      if (inFlight.current) return false;
-      /* HOME R1 STAGE A — an embedded caller (it always sends context references) may ask for
-         a quote before any ordinary turn, so the conversation is opened first. Creating a
-         thread is not compute. Without context (the Standalone /ask) this is unchanged: no
-         thread, no quote. */
-      if (thread.current === null) {
-        if (context === undefined) return false;
-        const opened = await ensureThread();
-        if (opened === 'signed-out') setSignInRequired(question);
-        if (thread.current === null) return false;
-      }
-      const current = thread.current;
+      if (inFlight.current || thread.current === null) return false;
       inFlight.current = true;
       try {
         const quoted = await askV2Api.submit(
-          current.id,
+          thread.current.id,
           question,
           language,
           'deep-analysis',
           newIdempotencyKey(),
-          context,
         );
         if (!quoted.ok) return false;
         setDeepQuote({ question, operation: quoted.value });
@@ -381,7 +421,7 @@ export function useAskR2Conversation(
         inFlight.current = false;
       }
     },
-    [ensureThread, guest, language],
+    [guest, language],
   );
 
   /** The explicit acceptance: accept → reserve → execute. The only path to deep compute. */
@@ -427,6 +467,16 @@ export function useAskR2Conversation(
     thread.current = { id, language: threadLanguage };
   }, []);
 
+  /**
+   * R2C — "Start a new topic" / the reader's context changed: the NEXT explicit Send opens a new
+   * thread, so no earlier question continues into it. A local reset only — no request, nothing
+   * rerun; turns already on screen stay visible as history.
+   */
+  const startNewTopic = useCallback((): void => {
+    thread.current = null;
+    guestThread.current = null;
+  }, []);
+
   /** "Not now": the quote is released; nothing ran. */
   const cancelDeeper = useCallback(async (): Promise<void> => {
     const quote = deepQuote;
@@ -445,6 +495,9 @@ export function useAskR2Conversation(
     confirmDeeper,
     cancelDeeper,
     continueThread,
+    /* R2C */
+    startNewTopic,
+    contextRefused,
     /* ASK GUEST TRIAL R3 */
     guest,
     guestMode: isGuestMode(guest),

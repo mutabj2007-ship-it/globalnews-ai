@@ -7,7 +7,7 @@
  * A SEPARATE event from `openGlobalAsk` on purpose: that module is the zero-compute staging
  * hand-off and stays untouched (Claude H §2 — leaving it alone is what keeps staging
  * provably free). Only the embedded dock listens to this event, and only while
- * GNA_ASK_EMBEDDED is on; the Home composer only dispatches it under the same gate. The
+ * the R2 dock is mounted (every platform route); the Home composer is its only caller. The
  * reader's press of Ask IS the explicit Send — one press, one turn; a press while a turn is
  * in flight is refused by the dock exactly as a second Send is.
  */

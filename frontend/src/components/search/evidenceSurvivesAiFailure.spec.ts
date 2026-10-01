@@ -133,7 +133,12 @@ describe('Evidence survives AI failure — the analysis surface renders sources 
   it('the surface issues no analysis request of its own — the response is passed in', () => {
     /* The one structural assertion worth keeping: it is about the DATA
        PATH, not the layout, so no presentation change can invalidate it. */
-    expect((searchClientSource.match(/analyzeNews\(/g) ?? []).length).toBe(1);
+    /* R2C — one execution site, the canonical Ask V2 turn; the legacy client is absent. */
+    expect((searchClientSource.match(/analyzeNews\(/g) ?? []).length).toBe(0);
+    expect(
+      (searchClientSource.match(/\.current\(query, askContextRefOf\(storyContext, undefined\)/g) ?? [])
+        .length,
+    ).toBe(1);
     expect(searchClientSource).toMatch(/<AnalysisFrameSurface[\s\S]*?response=\{response\}/);
   });
 });

@@ -1,0 +1,86 @@
+[
+  {
+    "question": "What does this mean?",
+    "language": "en",
+    "intent": "ask",
+    "prior": null,
+    "revision": "91a82f5a861d16976daa39602ec518c1287a5c5e0a317808d62e95f62f9480e1",
+    "scope": "{\"scopedBy\":\"CLASSIFIED_SHAPE\",\"geography\":[],\"domains\":[],\"statedPeriod\":null}",
+    "contract": "ask-r2-adapter/1:REFERENCE:REFERENCE_BACKGROUND_ONLY",
+    "executionKey": "d202d837cb0fbe8e364172eb55e3c688e6afda3e36cb6e59c135cb0f705b31de",
+    "fingerprint": "af1ea9ed67671aac23e72659654a9b71ab5b385a9854f2d58f1225328956e4e0",
+    "requestHash": "a7a96db151b0009b32cf2257bfb39ceb63616a414dbb410ecdfb94fc430b7adc"
+  },
+  {
+    "question": "What is happening in Kenya?",
+    "language": "en",
+    "intent": "ask",
+    "prior": null,
+    "revision": "a2d90511d9b6f070248f5b5e43fe1216f507195c150e56b23d315a981702f682",
+    "scope": "{\"scopedBy\":\"TYPED_GEOGRAPHY\",\"geography\":[\"TYPED_GEOGRAPHY:KEN\"],\"domains\":[],\"statedPeriod\":null}",
+    "contract": "ask-r2-adapter/1:CURRENT_REPORTING:EXECUTABLE",
+    "executionKey": "4692f5d508055405493365e511603c4740dcf53a7cc678f6dbd05da8a5f48d4a",
+    "fingerprint": "e2bae6cf2179ed925b4f6093d6a807b037b57a6dc2c7ae29813240f2613dcca3",
+    "requestHash": "8df8469de2162a92277ed5e3952f51c338799b58f9b6230c6e9f07965e574ba0"
+  },
+  {
+    "question": "What is inflation?",
+    "language": "en",
+    "intent": "ask",
+    "prior": null,
+    "revision": "1446e45e56f161d6cf3fbd5bab7bc71c073c16b8663c8b7043e0b545a4cc31dc",
+    "scope": "{\"scopedBy\":\"CLASSIFIED_SHAPE\",\"geography\":[],\"domains\":[],\"statedPeriod\":null}",
+    "contract": "ask-r2-adapter/1:REFERENCE:REFERENCE_BACKGROUND_ONLY",
+    "executionKey": "d4fa7078f552097751889ce5bd86d7a15f22f61f9fb54926545bbe02825c1be2",
+    "fingerprint": "5cb326a0d99152fe792831614871284e48b23352e8e6daf527493a13ce8da074",
+    "requestHash": "b148bd714d2bfa1e4d6cd49cc6d1ad1b348d76b21613b160916caaab08a82ac5"
+  },
+  {
+    "question": "What is the latest news?",
+    "language": "en",
+    "intent": "ask",
+    "prior": null,
+    "revision": "ef25886b376f39fdf951e17fe0962769ecd8e338a80a9ca55770e81f93b9faee",
+    "scope": "{\"scopedBy\":\"CLASSIFIED_SHAPE\",\"geography\":[],\"domains\":[],\"statedPeriod\":null}",
+    "contract": "ask-r2-adapter/1:CURRENT_REPORTING:EXECUTABLE",
+    "executionKey": "38065dd2a3147388f62bc202c787d4e20d82885fe158c4548fb40466893972bc",
+    "fingerprint": "f4cdc6e6c2505cf7af8b3f43f05948f8fa5fbcfb8fbe36a6ff87d11a36629568",
+    "requestHash": "fcea9d1c6077618fb2154f4206adba8c4ebda504d843a7c38a0107c886d755a6"
+  },
+  {
+    "question": "Co się dzieje w Polsce?",
+    "language": "pl",
+    "intent": "ask",
+    "prior": null,
+    "revision": "28238901e39c419fc4693f5f8884c581747b2d86bc73725bad35ea0962491fc2",
+    "scope": "{\"scopedBy\":\"TYPED_GEOGRAPHY\",\"geography\":[\"TYPED_GEOGRAPHY:POL\"],\"domains\":[],\"statedPeriod\":null}",
+    "contract": "ask-r2-adapter/1:CURRENT_REPORTING:EXECUTABLE",
+    "executionKey": "02db07f9e59621291f170d8b19692801a078fc22e244e5bfe07acfbc6d141d94",
+    "fingerprint": "a5e4e5353c1c3ea282533db5603267d385dd0932b7b4ad2944ba28ac941e2149",
+    "requestHash": "670534fd7eba5415c25b66ca763d989e5920ab0ed7dd48355353d6054dde1e5a"
+  },
+  {
+    "question": "What is happening in Kenya?",
+    "language": "en",
+    "intent": "deep-analysis",
+    "prior": null,
+    "revision": "accce75917d1077ce6a10641787f6919360c1612597137a2f4c224a9e8c40f0c",
+    "scope": "{\"scopedBy\":\"TYPED_GEOGRAPHY\",\"geography\":[\"TYPED_GEOGRAPHY:KEN\"],\"domains\":[],\"statedPeriod\":null}",
+    "contract": "ask-r2-adapter/1:CURRENT_REPORTING:EXECUTABLE",
+    "executionKey": "ade0253f578a29e774786640a9488c039f8eeea1774f877327a484ae0babe33f",
+    "fingerprint": "87653d764e89a602d64c5f287789f2613ac498f315c1bca5cc97f0b4bec3f07e",
+    "requestHash": "705a83e677c47764c5f1a399a1b74be67db46fcd94577335f304d1648f8faece"
+  },
+  {
+    "question": "Why did this happen?",
+    "language": "en",
+    "intent": "ask",
+    "prior": "What is happening in Kenya?",
+    "revision": "b1dc4fb1bcf2a45531278551e246c89ce51c47c84fd0804f9a4ed91eb964e2d7",
+    "scope": "{\"scopedBy\":\"FOLLOW_UP_RELATION\",\"geography\":[],\"domains\":[],\"statedPeriod\":null}",
+    "contract": "ask-r2-adapter/1:CURRENT_REPORTING:EXECUTABLE",
+    "executionKey": "7d8a075c1946eee24090bd7f48947250e1fb5ecd2da1a4d8e9d6e947072836cf",
+    "fingerprint": "4fa2f995866be9154a157a7e747a4ceca38b20080dd9b66da2a44e3b9afc54f8",
+    "requestHash": "80488f278f02b13d64c8653abfe13da2942e5f3994f8c1590e244772f03f6651"
+  }
+]

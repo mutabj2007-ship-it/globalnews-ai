@@ -377,7 +377,9 @@ const EN: EnergyStrings = {
 
   askTitle: 'ASK AI · SHARED CAPABILITY',
   askZeroCost: '0 SAND',
-  askContextTitle: 'Context envelope passed with this request:',
+  /* UNIFIED INTELLIGENCE BINDING R2F — Energy has no governed Ask contributor (NOT_BINDABLE_YET):
+     nothing from this view is passed to Ask, and the copy must not claim otherwise. */
+  askContextTitle: "Not yet bound — none of this view's context is passed to Ask yet:",
   askContextFields: ['subject', 'geography', 'evidence refs', 'assessment', 'uncertainty', 'time window', 'cross-domain refs', 'watch context'],
   askNothingStored: 'Nothing is stored for this view yet, so there is nothing to answer from. Ask does not synthesise.',
   askReturnNote: 'Closing Ask returns to the exact substrate, subject, geography, window and Watch context you left.',
@@ -664,7 +666,7 @@ const PL: EnergyStrings = {
 
   askTitle: 'ZAPYTAJ AI · WSPÓLNA FUNKCJA',
   askZeroCost: '0 SAND',
-  askContextTitle: 'Koperta kontekstu przekazana z tym zapytaniem:',
+  askContextTitle: 'Jeszcze niepowiązane — żaden kontekst tego widoku nie jest jeszcze przekazywany do Zapytaj:',
   askContextFields: ['temat', 'geografia', 'odniesienia do dowodów', 'ocena', 'niepewność', 'zakres czasu', 'odniesienia międzydziedzinowe', 'kontekst obserwacji'],
   askNothingStored: 'Dla tego widoku nie zapisano jeszcze niczego, więc nie ma z czego odpowiadać. Zapytaj AI nie tworzy syntezy.',
   askReturnNote: 'Zamknięcie przywraca dokładnie to podłoże, temat, geografię, zakres i kontekst obserwacji, które opuszczono.',

@@ -213,38 +213,51 @@ describe('zero-compute matrix', () => {
   });
 });
 
+/*
+  UNIFIED INTELLIGENCE BINDING R2D — the explicit Run is ONE canonical Ask V2 turn: the caller's
+  conversation submit, carrying a SELECTION reference (action + SelectedStoryRefs only). The
+  legacy analysis client is never called.
+*/
 describe('the explicit Run — the only compute boundary', () => {
+  const submit = jest.fn<Promise<'sent'>, [string, unknown, unknown]>(async () => 'sent');
+  beforeEach(() => submit.mockClear());
+
   it('refuses locally, with no request, outside the bounds', async () => {
-    await expect(runSelectionAction('COMPARE', [story(1)], 'en')).rejects.toEqual(new SelectionActionError('too-few'));
+    await expect(runSelectionAction('COMPARE', [story(1)], 'en', undefined, submit)).rejects.toEqual(
+      new SelectionActionError('too-few'),
+    );
     const nine = Array.from({ length: 9 }, (_, i) => story(i + 1));
-    await expect(runSelectionAction('SUMMARIZE', nine, 'en')).rejects.toEqual(new SelectionActionError('too-many'));
-    await expect(runSelectionAction('ASK_SELECTED', [story(1)], 'en', ' ')).rejects.toEqual(
+    await expect(runSelectionAction('SUMMARIZE', nine, 'en', undefined, submit)).rejects.toEqual(
+      new SelectionActionError('too-many'),
+    );
+    await expect(runSelectionAction('ASK_SELECTED', [story(1)], 'en', ' ', submit)).rejects.toEqual(
       new SelectionActionError('question-required'),
     );
+    expect(submit).not.toHaveBeenCalled();
     expect(analyzeMock).not.toHaveBeenCalled();
   });
 
-  it('one Run = exactly one analyzeNews call carrying the selection', async () => {
-    analyzeMock.mockResolvedValue({} as never);
-    await runSelectionAction('COMPARE', [story(1), story(2)], 'en');
-    expect(analyzeMock).toHaveBeenCalledTimes(1);
-    expect(analyzeMock).toHaveBeenCalledWith('Compare the selected stories', 'en', undefined, undefined, {
+  it('one Run = exactly one canonical turn carrying the selection (and no legacy call)', async () => {
+    await runSelectionAction('COMPARE', [story(1), story(2)], 'en', undefined, submit);
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(submit.mock.calls[0][0]).toBe('Compare the selected stories');
+    expect(submit.mock.calls[0][1]).toEqual({
+      kind: 'SELECTION',
       action: 'COMPARE',
       stories: [story(1), story(2)],
     });
+    expect(analyzeMock).not.toHaveBeenCalled();
   });
 
   it('Ask about selected keeps the reader’s own question as the question', async () => {
-    analyzeMock.mockResolvedValue({} as never);
-    await runSelectionAction('ASK_SELECTED', [story(3)], 'en', 'Who is affected?');
-    expect(analyzeMock.mock.calls[0][0]).toBe('Who is affected?');
+    await runSelectionAction('ASK_SELECTED', [story(3)], 'en', 'Who is affected?', submit);
+    expect(submit.mock.calls[0][0]).toBe('Who is affected?');
   });
 
   it('EN and PL action wording', async () => {
-    analyzeMock.mockResolvedValue({} as never);
-    await runSelectionAction('CREATE_BRIEFING', [story(1), story(2)], 'pl');
-    expect(analyzeMock.mock.calls[0][0]).toBe(SELECTION_ACTION_QUESTIONS.pl.CREATE_BRIEFING);
-    expect(analyzeMock.mock.calls[0][1]).toBe('pl');
+    const run = await runSelectionAction('CREATE_BRIEFING', [story(1), story(2)], 'pl', undefined, submit);
+    expect(submit.mock.calls[0][0]).toBe(SELECTION_ACTION_QUESTIONS.pl.CREATE_BRIEFING);
+    expect(run.question).toBe(SELECTION_ACTION_QUESTIONS.pl.CREATE_BRIEFING);
     expect(Object.keys(SELECTION_ACTION_QUESTIONS.en)).toEqual(Object.keys(SELECTION_ACTION_QUESTIONS.pl));
   });
 });

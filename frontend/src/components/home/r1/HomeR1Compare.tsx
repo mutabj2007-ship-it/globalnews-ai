@@ -1,19 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState, type JSX } from 'react';
-import { ArrowLeft, ExternalLink, Layers, MessagesSquare, Sparkles, X } from 'lucide-react';
-import { safeExternalHref, type LanguageCode, type MultiStoryAction } from '@globalnews-ai/shared';
+import { ArrowLeft, ExternalLink, Layers, MessagesSquare, X } from 'lucide-react';
+import { safeExternalHref, type LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { clearHeldStories, releaseHeldStory, useHeldStories, type HeldStory } from '@/lib/home/heldStoriesStore';
 import { resolveStoriesForCompare, type CompareStoryView } from '@/lib/api/compareApi';
 import { relationSentences, type CompareIdentity, type RelationCopy } from '@/lib/home/compareRelation';
-import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
-import { publishAskSelection } from '@/lib/ask/selectionContextStore';
-import { requestDeeperAsk } from '@/lib/ask/requestDeeperAsk';
-import { selectionContextRef } from '@/lib/ask/askContextRef';
-import { SELECTION_ACTION_QUESTIONS } from '@/lib/myIntelligence/selection';
+import { askCompareHref } from '@/lib/ask/askSelectionRef';
 import { fill } from '@/components/home/reva/homeRevaModel';
 
 /**
@@ -33,20 +29,18 @@ import { fill } from '@/components/home/reva/homeRevaModel';
  * The phone tray sits ABOVE the bottom navigation (never over it) and a spacer keeps the
  * page's last content reachable beneath it.
  *
- * Leaving Compare for Ask: "Ask GlobalNewsAI about these stories" attaches the selection
- * (identities only) and OPENS the conversation — nothing runs until Send. Deeper actions ask
- * the server for a QUOTE (intent deep-analysis) that runs only after Accept.
+ * Leaving Compare for Ask (CONVERGENCE — Unified Intelligence Binding R2 is canonical): "Ask
+ * GlobalNewsAI about these stories" is R2H's own launcher (askCompareHref): it opens the ONE
+ * Ask (/ask) with the held stories staged as a canonical SELECTION (action COMPARE) — URLs only,
+ * nothing runs on arrival. The reader's Send there is ONE Ask V2 turn; deeper work is quoted
+ * there by R2's runDeeper and runs only after Accept. No second context protocol exists here.
  */
 export function HomeR1Compare({
   language,
   compareView,
-  askEmbedded,
-  askContextRefs,
 }: {
   readonly language: LanguageCode;
   readonly compareView: boolean;
-  readonly askEmbedded: boolean;
-  readonly askContextRefs: boolean;
 }): JSX.Element | null {
   const t = getDictionary(language).homeR1;
   const held = useHeldStories();
@@ -107,8 +101,6 @@ export function HomeR1Compare({
         <CompareWorkspace
           stories={held}
           language={language}
-          askEmbedded={askEmbedded}
-          askContextRefs={askContextRefs}
           onClose={() => setOpen(false)}
         />
       )}
@@ -146,14 +138,10 @@ function RelationCell({
 function CompareWorkspace({
   stories,
   language,
-  askEmbedded,
-  askContextRefs,
   onClose,
 }: {
   readonly stories: readonly HeldStory[];
   readonly language: LanguageCode;
-  readonly askEmbedded: boolean;
-  readonly askContextRefs: boolean;
   readonly onClose: () => void;
 }): JSX.Element {
   const dict = getDictionary(language);
@@ -215,29 +203,8 @@ function CompareWorkspace({
     { label: t.rows.gaps, value: () => (read.kind === 'ready' ? t.notAvailable : '') },
   ];
 
-  const identities = opened.map((s) => ({ articleRef: s.articleRef, url: s.url }));
-  const askAboutThese = (): void => {
-    publishAskSelection(
-      opened.map((s) => ({ articleRef: s.articleRef, url: s.url, label: s.card.title })),
-      { entry: 'compare' },
-    );
-    onClose();
-    /* Opens the conversation with the stories attached. Nothing runs until Send. */
-    openGlobalAsk();
-  };
-  const deeper = (action: MultiStoryAction): void => {
-    publishAskSelection(
-      opened.map((s) => ({ articleRef: s.articleRef, url: s.url, label: s.card.title })),
-      /* The held selection itself carries no deeper action: a later ordinary Send is ASK_SELECTED. */
-      { entry: 'compare' },
-    );
-    onClose();
-    requestDeeperAsk({
-      question: SELECTION_ACTION_QUESTIONS[language === 'pl' ? 'pl' : 'en'][action],
-      context: selectionContextRef(action, identities, 'compare'),
-    });
-  };
-  const DEEPER: readonly MultiStoryAction[] = ['COMPARE', 'WHAT_CHANGED', 'EXPLAIN_DISAGREEMENTS'];
+  /* R2H — the canonical SELECTION launcher; undefined (no link) outside 2..8 usable stories. */
+  const askHref = askCompareHref(opened.map((story) => story.url), '/');
 
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="home-r1-compare-title" data-home-r1-compare="" className="fixed inset-0 z-[60] overflow-y-auto bg-[var(--gt-bg)] lg:bg-[var(--gt-scrim)] lg:p-8">
@@ -326,31 +293,7 @@ function CompareWorkspace({
           </table>
         </div>
 
-        {askEmbedded && askContextRefs && (
-          <section aria-labelledby="home-r1-deeper" className="mt-4 rounded-[12px] border border-[var(--gt-violet)] bg-[var(--gt-card)] p-4">
-            <h3 id="home-r1-deeper" className="flex items-center gap-2 text-[15px] font-bold text-[var(--gt-ink)]">
-              <Sparkles aria-hidden="true" className="h-4 w-4 text-[var(--gt-violet)]" />
-              {t.deeperTitle}
-            </h3>
-            <p className="mt-1 text-[12.5px] text-[var(--gt-ink2)]">{t.deeperNote}</p>
-            <ul className="mt-3 grid gap-2 sm:grid-cols-3">
-              {DEEPER.map((action) => (
-                <li key={action}>
-                  <button
-                    type="button"
-                    data-home-r1-deeper={action}
-                    onClick={() => deeper(action)}
-                    className="flex min-h-[44px] w-full items-center rounded-[10px] border border-[var(--gt-line)] px-3 text-left text-[13px] font-semibold text-[var(--gt-ink)] hover:border-[var(--gt-violet)]"
-                  >
-                    {SELECTION_ACTION_QUESTIONS[language === 'pl' ? 'pl' : 'en'][action]}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {askEmbedded && (
+        {askHref !== undefined && (
           <section className="mt-4 flex flex-col gap-3 rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="flex items-center gap-2 text-[14px] font-bold text-[var(--gt-ink)]">
@@ -358,15 +301,15 @@ function CompareWorkspace({
                 {t.askThese}
               </p>
               <p className="mt-1 text-[12.5px] text-[var(--gt-ink2)]">{t.askTheseSub}</p>
+              <p className="mt-1 text-[12px] text-[var(--gt-ink3)]">{t.deeperNote}</p>
             </div>
-            <button
-              type="button"
+            <a
+              href={askHref}
               data-home-r1-ask-these=""
-              onClick={askAboutThese}
               className="inline-flex min-h-[44px] shrink-0 items-center rounded-full border border-[var(--gt-act)] px-5 text-[14px] font-semibold text-[var(--gt-link)] hover:bg-[var(--gt-actSoft)]"
             >
               {t.askThese}
-            </button>
+            </a>
           </section>
         )}
         <p className="mt-3 text-[12px] text-[var(--gt-ink2)]">{t.freeNote}</p>

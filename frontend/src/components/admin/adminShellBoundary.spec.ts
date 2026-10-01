@@ -41,9 +41,27 @@ describe('F1.b — the /admin/me client boundary', () => {
     expect(layout).toMatch(/robots:\s*\{\s*index:\s*false/);
   });
 
-  it('no middleware.ts is introduced — it could not read the backend-origin session cookie anyway', () => {
-    expect(existsSync(join(FRONTEND_SRC, 'middleware.ts'))).toBe(false);
+  /*
+    RESTATED BY PRODUCTION PLATFORM ROUTE SEPARATION R2I (CTO §2 mandates src/middleware.ts as
+    the ONE server-side route gate). The property this guard protects is unchanged: middleware
+    can never be an Admin AUTHORIZATION boundary — it cannot read the backend-origin session
+    cookie — so it must make no identity/session decision and must leave /admin and /admin/*
+    to AdminShell's /admin/me boundary. Asserted directly against the shipped middleware.
+  */
+  it('middleware is never an Admin authorization boundary (route gate only; /admin passes)', () => {
     expect(existsSync(join(FRONTEND_SRC, '..', 'middleware.ts'))).toBe(false);
+    const middleware = readFileSync(join(FRONTEND_SRC, 'middleware.ts'), 'utf-8');
+    const gate = readFileSync(
+      join(FRONTEND_SRC, 'lib', 'routing', 'standaloneRouteGate.ts'),
+      'utf-8',
+    );
+    for (const source of [middleware, gate]) {
+      expect(source).not.toMatch(
+        /\.cookies\b|cookies\(\)|headers\.get\(|authorization|session|useAdminMe|\/users\/me|\/admin\/me/i,
+      );
+    }
+    expect(gate).toContain('ADMIN_ROUTES.overview');
+    expect(gate).toMatch(/STANDALONE_SUBTREES[^\n]*\$\{ADMIN_ROOT\}\//);
   });
 
   it('AdminShell is the only client boundary that reads identity', () => {
