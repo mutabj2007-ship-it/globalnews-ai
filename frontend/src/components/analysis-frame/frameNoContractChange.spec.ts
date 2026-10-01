@@ -97,7 +97,12 @@ describe('PAF-25 — no route, contract, pipeline or evidence-grounding change',
 
     // Exactly one analysis request on this surface, and it is the
     // pre-existing one: the frame is handed `response`, never a query.
-    expect((client.match(/analyzeNews\(/g) ?? []).length).toBe(1);
+    /* UNIFIED INTELLIGENCE BINDING R2C — the one request is now the canonical Ask V2 turn
+       (the legacy analysis client is gone); the frame is still only HANDED \`response\`. */
+    expect((client.match(/analyzeNews\(/g) ?? []).length).toBe(0);
+    expect(
+      (client.match(/\.current\(query, askContextRefOf\(storyContext, undefined\)/g) ?? []).length,
+    ).toBe(1);
     expect(client).toMatch(/<AnalysisFrameSurface[\s\S]*?response=\{response\}/);
 
     // The retired route stays retired (R4 §1, §8).

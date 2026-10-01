@@ -177,12 +177,19 @@ describe('the reader sees a sign-in requirement — never a reporting failure', 
   });
 });
 
-describe('the governed rollback is kept: Ask V2 disabled (404) still uses the existing Ask', () => {
-  it('404 → the question goes down the existing path, and no sign-in state is shown', async () => {
+/*
+  INVERTED IN UNIFIED INTELLIGENCE BINDING R2C (master contract §7 "LEGACY FALLBACK"): Ask V2
+  disabled no longer routes the question to a second engine. It fails closed — a truthful
+  "Ask is unavailable" state, the question kept in the composer, and ZERO calls to
+  POST /analysis/news.
+*/
+describe('Ask V2 disabled (404) fails closed — no second engine', () => {
+  it('404 → nothing goes to /analysis/news; an "unavailable" state is shown and no sign-in state', async () => {
     threadsStatus = 404;
     const r = await renderAndAsk('What is happening in Kenya?', 'en');
     expect(askCalls()[0]).toEqual({ method: 'POST', path: '/api/ask-v2/threads' });
-    expect(calls.some((c) => c.path.endsWith('/analysis/news'))).toBe(true);
+    expect(calls.some((c) => c.path.endsWith('/analysis/news'))).toBe(false);
+    expect(byAsk(r, 'ask-unavailable')).toHaveLength(1);
     expect(byAsk(r, 'sign-in-required')).toHaveLength(0);
   });
 });

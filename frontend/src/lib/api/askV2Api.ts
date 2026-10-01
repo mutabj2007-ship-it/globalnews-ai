@@ -21,6 +21,22 @@ import { accountFetch } from './accountFetch';
 export type AskV2Language = 'en' | 'pl';
 export type AskV2Intent = 'ask' | 'deep-analysis' | 'research-report';
 
+/**
+ * UNIFIED INTELLIGENCE BINDING R2B/R2C — the ONE optional context reference an Ask V2 turn may
+ * carry. REFERENCES ONLY: a story by its persisted article id (or its {articleRef, url}), or a
+ * governed country code. The server resolves every fact (title, source, country, display name);
+ * nothing the browser holds about the story is sent as evidence. One kind per turn.
+ */
+export type AskV2ContextRef =
+  | { readonly kind: 'STORY'; readonly articleId: string }
+  | { readonly kind: 'STORY'; readonly articleRef: string; readonly url: string }
+  | { readonly kind: 'GEOGRAPHY'; readonly countryCode: string };
+
+/** A server refusal of the context itself (unresolvable / unknown) — never a generic Ask. */
+export function isAskContextRefusal(code: string | undefined): boolean {
+  return typeof code === 'string' && code.startsWith('ASK_CONTEXT_');
+}
+
 export type AskAnswerState =
   | 'REFERENCE_BACKGROUND'
   | 'CURRENTLY_VERIFIED'
@@ -399,12 +415,14 @@ export const askV2Api = {
     language: AskV2Language,
     intent: AskV2Intent,
     key = newIdempotencyKey(),
+    context?: AskV2ContextRef,
   ) {
     return call<AskV2Operation>(`/ask-v2/threads/${encodeURIComponent(threadId)}/turns`, 'POST', {
       idempotencyKey: key,
       question,
       language,
       intent,
+      ...(context === undefined ? {} : { context }),
     });
   },
   /**
@@ -469,11 +487,18 @@ export const askV2Api = {
     question: string,
     language: AskV2Language,
     key = newIdempotencyKey(),
+    context?: AskV2ContextRef,
   ) {
     return call<AskV2Operation>(
       `/ask-v2/guest/threads/${encodeURIComponent(threadId)}/turns`,
       'POST',
-      { idempotencyKey: key, question, language, intent: 'ask' },
+      {
+        idempotencyKey: key,
+        question,
+        language,
+        intent: 'ask',
+        ...(context === undefined ? {} : { context }),
+      },
       GUEST_FIRST_WRITE,
     );
   },

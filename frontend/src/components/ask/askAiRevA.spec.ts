@@ -460,10 +460,16 @@ describe('ASK-AI-TRUTHFULNESS-1 §6 — four states, none collapsed', () => {
     expect(code).toMatch(/href=\{fullAnalysisHref\(question, context\)\}/);
   });
 
+  /*
+    R2C — each answer is rendered from ITS OWN canonical operation (r2.turns), whose context the
+    server persisted with that turn's plan. The dock never re-reads the live context to render a
+    past answer, and the transition is "Open full analysis" to that operation (display-only).
+  */
   it('§6.5 — it transitions with the context the QUESTION was asked with', () => {
     const dock = codeOf(DOCK);
-    expect(dock).toMatch(/setPhase\(\{ kind: 'answered', question: asked, response, context: sent \}\)/);
-    expect(dock).toMatch(/context=\{phase\.context\}/);
+    expect(dock).toMatch(/visibleTurns\.map\(\(turn, index\) =>/);
+    expect(dock).toMatch(/<AskR2TurnView\s+turn=\{turn\}/);
+    expect(dock).toMatch(/context=\{undefined\}/);
   });
 });
 

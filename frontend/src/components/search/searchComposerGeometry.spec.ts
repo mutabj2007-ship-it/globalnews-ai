@@ -2,7 +2,6 @@ import { createElement } from 'react';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { analyzeNews } from '@/lib/api/analysisApi';
 import { resetAnalysisConsentForTests } from '@/lib/analysis/analysisComputeConsent';
 import {
   computeComposerGeometry,
@@ -184,6 +183,19 @@ jest.mock('@/lib/api/analysisApi', () => {
   return { analyzeNews: jest.fn(), AnalysisApiError };
 });
 
+/* UNIFIED INTELLIGENCE BINDING R2C — /search executes through the canonical Ask V2 conversation;
+   its one transport is that conversation's submit, counted here. */
+const mockAskTransport = jest.fn();
+jest.mock('@/lib/ask/useAskR2Conversation', () => ({
+  ...jest.requireActual('@/lib/ask/useAskR2Conversation'),
+  useAskR2Conversation: (language: string) => ({
+    submit: (question: string, context: unknown) => mockAskTransport(question, language, context),
+    turns: [],
+    pending: null,
+    guestMode: false,
+  }),
+}));
+
 let currentParams = new URLSearchParams();
 const router = { push: jest.fn(), replace: jest.fn(), refresh: jest.fn(), back: jest.fn() };
 jest.mock('next/navigation', () => ({
@@ -201,7 +213,7 @@ jest.mock('@/components/analysis-frame/analysisFrameState', () => ({
   resolveFrameEvidence: () => ({ evidenceSurvives: true, state: 'ok' }),
 }));
 
-const transport = jest.mocked(analyzeNews);
+const transport = mockAskTransport;
 let renderer: ReactTestRenderer;
 
 const render = (search: string, mount = false) => {

@@ -19,8 +19,17 @@ const SRC = readFileSync(join(__dirname, 'AskAiDock.tsx'), 'utf8');
 const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
 
 describe('it consumes the existing Analysis engine and nothing else', () => {
-  it('the only request path is the existing analysis client', () => {
-    expect(CODE).toMatch(/import \{ analyzeNews \} from '@\/lib\/api\/analysisApi'/);
+  /*
+    RETARGETED IN UNIFIED INTELLIGENCE BINDING R2C. Old assertion: the dock imports the legacy
+    `analyzeNews` client (POST /analysis/news). The invariant — ONE request path, no second
+    transport/endpoint/client — now names the canonical Ask V2 conversation, and the legacy
+    client is asserted ABSENT.
+  */
+  it('the only request path is the canonical Ask V2 conversation', () => {
+    expect(CODE).toMatch(
+      /import \{\s*sanitizeReturnPath,\s*useAskR2Conversation,[\s\S]*?\} from '@\/lib\/ask\/useAskR2Conversation'/,
+    );
+    expect(CODE).not.toMatch(/analyzeNews|analysisApi/);
     /*
      * No second transport, no second endpoint, no second client.
      *
@@ -31,7 +40,10 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
      * request paths in executable code; a module path is not one. The
      * imports are asserted on their own terms above and in §7.6/§7.7.
      */
-    const executable = CODE.split('\n').filter((line) => !/^\s*import\s/.test(line)).join('\n');
+    /* R2C — a multi-line import's closing \`} from '…'\` line is a module specifier too. */
+    const executable = CODE.split('\n')
+      .filter((line) => !/^\s*import\s/.test(line) && !/^\s*\} from '/.test(line))
+      .join('\n');
     expect(executable).not.toMatch(/fetch\(|XMLHttpRequest|axios|new Request|\/analysis\/|\/ask\b/);
   });
 
@@ -43,8 +55,11 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     }
   });
 
+  /* R2C — the chip and the request derive from ONE bounded reference (askContextRefOf); the dock
+     reads published context, never performs retrieval. */
   it('reads routing metadata without performing retrieval', () => {
-    expect(CODE).toContain('phase.response.retrievalContext.storyContextUsed');
+    expect(CODE).toContain('const contextRef = askContextRefOf(storyContext, geographyContext);');
+    expect(CODE).toContain("const showStoryLabel = contextRef?.kind === 'STORY';");
     expect(CODE).not.toMatch(/retrieve\w*\s*\(|newsService|countryNewsService/);
   });
 
@@ -52,9 +67,8 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     /* the submitted value is the trimmed input and nothing else: no synonym
        expansion, no template, no appended keywords, no site: operators */
     expect(CODE).toMatch(/const asked = question\.trim\(\);/);
-    /* MAP MOBILE R1 CONVERGENCE — the call gained the optional geography scope as
-       its sixth argument; the question is still passed verbatim, first. */
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion, undefined, sentGeography\)/);
+    /* R2C — the canonical turn: the question verbatim, first; the context as a reference. */
+    expect(CODE).toMatch(/void r2\s*\.submit\(asked, contextRef,/);
     expect(CODE).not.toMatch(/asked \+|`\$\{asked\}[^`]/);
   });
 
@@ -63,10 +77,10 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     expect(CODE).toMatch(/<LoadingStages stages=\{\[\.\.\.dictionary\.loadingStages\]\}/);
   });
 
+  /* R2C — failures and refusals render through the CANONICAL turn view (the same as /ask). */
   it('reuses the EXISTING error mapping, imported rather than copied', () => {
-    expect(CODE).toMatch(
-      /import \{ resolveAnalysisErrorMessage \} from '@\/components\/search\/SearchPageClient'/,
-    );
+    expect(CODE).toMatch(/import \{ AskR2TurnView \} from '@\/components\/ask-frame\/AskR2TurnView'/);
+    expect(CODE).toMatch(/<AskR2TurnView/);
     /* a second copy of the code->copy table is exactly the drift to prevent */
     expect(CODE).not.toMatch(/analysisErrorTimeout|analysisErrorRateLimited|'rate-limited'/);
   });
@@ -97,8 +111,9 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
 
 describe('the dock is a real scrollable conversation on phones', () => {
   it('keeps settled turns locally without feeding prior AI output back into retrieval', () => {
-    expect(CODE).toMatch(/const \[history, setHistory\] = useState<SettledAskTurn\[\]>\(\[\]\)/);
-    expect(CODE).toMatch(/data-ask="history-turn"/);
+    /* R2C — the turns are the canonical conversation's own (display state, server-owned). */
+    expect(CODE).toMatch(/visibleTurns\.map\(\(turn, index\) =>/);
+    expect(CODE).toMatch(/'history-turn'/);
     expect(CODE).toMatch(/data-ask="user-message"/);
     const submitStart = CODE.indexOf('const submit = useCallback');
     const submit = CODE.slice(submitStart, CODE.indexOf('\n  return (', submitStart));
@@ -113,9 +128,9 @@ describe('the dock is a real scrollable conversation on phones', () => {
   });
 
   it('submitting clears the composer so the second question is immediately typeable', () => {
-    expect(CODE).toMatch(/setPhase\(\{ kind: 'loading', question: asked \}\);\s*setQuestion\(''\);/);
+    expect(CODE).toMatch(/if \(isPending\) return;\s*setQuestion\(''\);/);
     expect(CODE).toContain('<AdaptiveTextarea');
-    expect(CODE).toContain("minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}");
+    expect(CODE).toContain('minHeight={isIdle ? 58 : 44}');
     expect(CODE).toContain('maxViewportFraction={0.46}');
   });
 
@@ -160,10 +175,12 @@ describe('relational answers lead with the backend-authoritative conclusion', ()
 });
 
 describe('opening the panel is not a question', () => {
+  /* R2C — the ONLY execution call (the canonical turn) sits inside the submit handler. */
   it('the ONLY call to the analysis client sits inside the submit handler', () => {
-    expect((CODE.match(/analyzeNews\(/g) ?? []).length).toBe(1);
+    expect((CODE.match(/analyzeNews\(/g) ?? []).length).toBe(0);
+    expect((CODE.match(/\.submit\(asked/g) ?? []).length).toBe(1);
     const submitAt = CODE.indexOf('const submit = useCallback');
-    const callAt = CODE.indexOf('analyzeNews(asked');
+    const callAt = CODE.indexOf('.submit(asked');
     expect(submitAt).toBeGreaterThan(-1);
     expect(callAt).toBeGreaterThan(submitAt);
   });
@@ -171,13 +188,13 @@ describe('opening the panel is not a question', () => {
   it('no effect in this file can issue the request', () => {
     /* every useEffect body is focus or key handling; none may reach the client */
     for (const body of CODE.match(/useEffect\(\(\) => \{[\s\S]*?\}, \[/g) ?? []) {
-      expect(body).not.toMatch(/analyzeNews/);
+      expect(body).not.toMatch(/analyzeNews|r2\.submit|askV2Api/);
     }
   });
 
   it('an empty question cannot be submitted', () => {
     expect(CODE).toMatch(/if \(asked\.length === 0\) return;/);
-    expect(CODE).toMatch(/disabled=\{question\.trim\(\)\.length === 0 \|\| phase\.kind === 'loading'\}/);
+    expect(CODE).toMatch(/disabled=\{question\.trim\(\)\.length === 0 \|\| isPending\}/);
   });
 });
 
@@ -192,21 +209,23 @@ describe('opening the panel is not a question', () => {
  * into inputs. This describe block is amended, not deleted.
  */
 describe('ASK RULE A — only bounded context crosses the boundary', () => {
-  it('§7.1/§7.2 — a third argument is passed, and its keys are a subset of {title, articleId, countryCode}', () => {
-    expect(CODE).toMatch(/analyzeNews\(asked, language, sent, priorQuestion, undefined, sentGeography\)/);
-    /* MAP MOBILE R1 CONVERGENCE — the geography is sent ONLY when no story context is: never both. */
-    expect(CODE).toMatch(/const sentGeography = sent === undefined \? geographyContext : undefined;/);
-    /* the narrowing lives in ONE place, so no call site can widen it */
-    expect(CODE).toMatch(/const sent = transportableContext\(storyContext\);/);
+  /*
+    TIGHTENED IN UNIFIED INTELLIGENCE BINDING R2C. Old bound: {title, articleId, countryCode}.
+    The canonical engine accepts REFERENCES ONLY (R2B): a story by its persisted id, or a governed
+    country code — no title at all. The bound lives in ONE builder (askContextRefOf), story first,
+    never both.
+  */
+  it('§7.1/§7.2 — only a bounded REFERENCE crosses: {kind:STORY, articleId} or {kind:GEOGRAPHY, countryCode}', () => {
+    expect(CODE).toMatch(/void r2\s*\.submit\(asked, contextRef,/);
+    expect(CODE).toMatch(/const contextRef = askContextRefOf\(storyContext, geographyContext\);/);
 
-    const store = readFileSync(join(__dirname, '..', '..', 'lib', 'ask', 'storyContextStore.ts'), 'utf8');
-    const fn = store.slice(store.indexOf('export function transportableContext'));
+    const builder = readFileSync(join(__dirname, '..', '..', 'lib', 'ask', 'askContextRef.ts'), 'utf8');
+    const fn = builder.slice(builder.indexOf('export function askContextRefOf'));
     const body = fn.slice(0, fn.indexOf('\n}'));
-    expect(body).toMatch(/title: context\.title/);
-    expect(body).toMatch(/articleId: context\.articleId/);
-    expect(body).toMatch(/countryCode: context\.countryCode/);
-    /* nothing else is copied across */
-    expect(body).not.toMatch(/url|sourceName|sources|articles|evidence|cluster|report|dimension/i);
+    expect(body).toMatch(/return \{ kind: 'STORY', articleId: story\.articleId \};/);
+    expect(body).toMatch(/return \{ kind: 'GEOGRAPHY', countryCode: (story|geography)\.countryCode \};/);
+    /* nothing else is copied across — not even the title */
+    expect(body).not.toMatch(/title|url|sourceName|sources|articles|evidence|cluster|report|dimension/i);
   });
 
   it('§7.3 — no evidence/report/cluster identity and no response field is used as an INPUT', () => {
@@ -219,12 +238,13 @@ describe('ASK RULE A — only bounded context crosses the boundary', () => {
     }
   });
 
+  /* R2C — continuity is the Ask THREAD's: the server derives the prior USER question from the
+     thread's own turns. The dock sends no prior question and no AI output at all. */
   it('conversation context contains only a prior USER question, never prior AI output', () => {
     const submitStart = CODE.indexOf('const submit = useCallback');
     const submit = CODE.slice(submitStart, CODE.indexOf('\n  return (', submitStart));
-    expect(submit).toMatch(/const priorQuestion =/);
-    expect(submit).toMatch(/phase\.question/);
-    expect(submit).not.toMatch(/phase\.response|analysis\.sources|keyFacts|retrievalContext/);
+    expect(submit).not.toMatch(/priorQuestion/);
+    expect(submit).not.toMatch(/phase\.response|analysis\.sources|keyFacts|retrievalContext|payload/);
   });
 
   it('§7.4 — `title` comes from the published context, never from the input box', () => {
@@ -471,7 +491,9 @@ describe('HOME ASK DOCK LAUNCH R1 — Home opens Ask in place with zero spend', 
     const openHandlerEnd = dock.indexOf('}, []);', openHandlerStart);
     const openHandler = dock.slice(openHandlerStart, openHandlerEnd);
     expect(openHandler).not.toContain('analyzeNews(');
-    expect(dock).toContain('analyzeNews(asked, language, sent, priorQuestion, undefined, sentGeography)');
+    expect(openHandler).not.toContain('.submit(');
+    /* R2C — the explicit Send is the canonical Ask V2 turn */
+    expect(dock).toMatch(/void r2\s*\.submit\(asked, contextRef,/);
   });
 });
 

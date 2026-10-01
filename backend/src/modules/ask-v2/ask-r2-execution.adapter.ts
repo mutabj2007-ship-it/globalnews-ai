@@ -34,7 +34,7 @@ import {
 } from '../ask-router/answer-state';
 import { readContinuationEllipsis } from '../analysis/anchor/continuation-ellipsis.util';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
-import { planChips } from '../ask-router/plan-chips';
+import { planChips, type PlanChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
 import type { RoutingPlan, VerificationOutcome } from '../ask-router/frozen-c/src/ports';
 import {
@@ -287,6 +287,39 @@ function routeSignature(route: AskR2Route): unknown[] {
     p.refusals,
     p.disclosures,
   ];
+}
+
+/**
+ * UNIFIED INTELLIGENCE BINDING R2C — an INHERITED context chip (the Map country, the story
+ * anchor's country) states "applied" only when the reporting analysis actually used that context
+ * (AnalysisService stamps `geographyContextUsed` / `storyContextUsed`). A background, computed,
+ * governed-record or early-terminal answer ran no retrieval at all, so an inherited place it
+ * carried was available but NOT applied — and is shown so, never credited as the scope.
+ * DOWNGRADE ONLY: a chip never gains "applied" here, and typed / declared / entity geography
+ * is untouched. A context-free answer has no inherited chip, so its chips are byte-identical.
+ */
+export function truthfulInheritedChips(
+  chips: PlanChips,
+  analysis: AnalysisApiResponse | null,
+): PlanChips {
+  if (chips.kind !== 'SCOPED') return chips;
+  const used = analysis?.retrievalContext;
+  const inherited = (source: string): boolean | null =>
+    source === 'MAP_GEOGRAPHY_CONTEXT'
+      ? used?.geographyContextUsed === true
+      : source === 'STORY_ANCHOR'
+        ? used?.storyContextUsed === true
+        : null;
+  if (!chips.chips.some((c) => c.kind === 'GEOGRAPHY' && inherited(c.source) !== null)) {
+    return chips;
+  }
+  return {
+    kind: 'SCOPED',
+    chips: chips.chips.map((c) => {
+      const usedIt = c.kind === 'GEOGRAPHY' ? inherited(c.source) : null;
+      return usedIt === false && c.applied ? { ...c, applied: false } : c;
+    }),
+  };
 }
 
 /** ISO3 → the reader's own words for the place, from the qualified reading. */
@@ -1171,7 +1204,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               : null,
         },
         /* D25 05: chips from the effective server plan only, in the order asked. */
-        chips: planChips(route.envelope, route.plan, placeSpansOf(route), route.reportingWindow),
+        chips: truthfulInheritedChips(
+          planChips(route.envelope, route.plan, placeSpansOf(route), route.reportingWindow),
+          analysis,
+        ),
         answer,
         /* When the answer was decided — the freshness line's time when no analysis ran. */
         checkedAt: new Date().toISOString(),

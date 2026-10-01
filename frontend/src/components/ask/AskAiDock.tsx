@@ -3,24 +3,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import { usePathname } from 'next/navigation';
-import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
-import { analyzeNews } from '@/lib/api/analysisApi';
+import type { LanguageCode } from '@globalnews-ai/shared';
 import { LoadingStages } from '@/components/search/LoadingStages';
-import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClient';
-import { AskCompactResult } from '@/components/ask/AskCompactResult';
+import { AskR2TurnView } from '@/components/ask-frame/AskR2TurnView';
 import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
 import { mapAskLayoutFor, mapAskPanelStyle, type MapAskLayout } from '@/lib/ask/mapAskGeometry';
 import { dashboardHref } from '@/lib/ask/dashboardContext';
 import { ASK_CANONICAL_ROUTE } from '@/lib/ask/askFrame';
 import { ADMIN_ROUTES } from '@/lib/admin/adminRoutes';
 import { useLauncherAnchor } from '@/components/ask/useLauncherAnchor';
-import { usesStoryContextLabel } from '@/lib/ask/turnContext';
-import { transportableContext, useAskStoryContext } from '@/lib/ask/storyContextStore';
+import { useAskStoryContext } from '@/lib/ask/storyContextStore';
 import { useAskGeographyContext } from '@/lib/ask/geographyContextStore';
+import {
+  sanitizeReturnPath,
+  useAskR2Conversation,
+  type AskR2Turn,
+} from '@/lib/ask/useAskR2Conversation';
+import { askContextKey, askContextRefOf } from '@/lib/ask/askContextRef';
+import { askR2Strings } from '@/lib/ask/askR2Strings';
+import { ASK_SIGN_IN_HREF, keepQuestion } from '@/lib/ask/askKeptQuestion';
+import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openGlobalAsk';
-import { mapGeographyChipShown, readEffectiveContext } from '@/lib/ask/effectiveContext';
 
 /**
  * ═══ ASK AI — PHASE 1 ════════════════════════════════════════════════════
@@ -29,9 +34,11 @@ import { mapGeographyChipShown, readEffectiveContext } from '@/lib/ask/effective
  *
  * ── WHAT THIS DELIBERATELY DOES NOT DO ─────────────────────────────────
  *
- * NO SECOND AI ENGINE. Every answer on this surface comes from
- * `analyzeNews()` -> `POST /analysis/news`, the same client, the same route
- * and the same service that `/search` has always used. This file contains no
+ * NO SECOND AI ENGINE. UNIFIED INTELLIGENCE BINDING R2C — every answer on this
+ * surface is a CANONICAL Ask V2 operation (`useAskR2Conversation` → /ask-v2), in
+ * an Ask thread: the same idempotency, switches, breaker, meter, guest allowance,
+ * StoredResult, Recent/Saved and continuity as /ask. The legacy anonymous
+ * `POST /analysis/news` transport is gone from the dock. This file contains no
  * provider, no model name, no prompt, no retrieval strategy and no ranking.
  *
  * NO SECOND ANALYSIS PRESENTATION — AND, SINCE REV A, NO NESTED FRAME.
@@ -81,29 +88,6 @@ import { mapGeographyChipShown, readEffectiveContext } from '@/lib/ask/effective
  * no call site able to widen it, and `askAiDock.spec.ts` asserts the bound
  * rather than the old absence (§7).
  */
-
-type AskPhase =
-  | { kind: 'idle' }
-  | { kind: 'loading'; question: string }
-  | {
-      kind: 'answered';
-      question: string;
-      response: AnalysisApiResponse;
-      context: StoryContext | undefined;
-    }
-  | { kind: 'failed'; question: string; message: string };
-
-type SettledAskTurn = Extract<AskPhase, { kind: 'answered' | 'failed' }>;
-
-/**
- * TOPIC CONTINUITY R1 — kept OUTSIDE the submit path on purpose: the only
- * thing read from a response is whether the backend continued a subject, and
- * the only thing returned is a question the READER typed (the one sent as
- * priorQuestion). No answer text, source or evidence identity crosses here.
- */
-function subjectOriginOf(response: AnalysisApiResponse, sentPrior: string | undefined): string | undefined {
-  return response.retrievalContext.conversationSubject !== undefined ? sentPrior : undefined;
-}
 
 interface AskAiDockProps {
   language?: LanguageCode;
@@ -219,6 +203,7 @@ export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   return (
     <GlobalAskAiDock
       language={props.language}
+      returnPath={pathname}
       showLauncher={!LAUNCHER_SUPPRESSED_ROUTES.has(pathname ?? '')}
       mapSurface={pathname === MAP_ROUTE}
     />
@@ -229,7 +214,12 @@ function GlobalAskAiDock({
   language = 'en',
   showLauncher = true,
   mapSurface = false,
-}: AskAiDockProps & { showLauncher?: boolean; mapSurface?: boolean }): JSX.Element {
+  returnPath = null,
+}: AskAiDockProps & {
+  showLauncher?: boolean;
+  mapSurface?: boolean;
+  returnPath?: string | null;
+}): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   /* ASK R2 INTEGRATION R1 · D25 11 — the bottom navigation is hidden while Ask is active. */
   useEffect(() => {
@@ -270,27 +260,34 @@ function GlobalAskAiDock({
     return () => window.removeEventListener('popstate', onPop);
   }, [isOpen]);
   const [question, setQuestion] = useState('');
-  const [phase, setPhase] = useState<AskPhase>({ kind: 'idle' });
-  const [history, setHistory] = useState<SettledAskTurn[]>([]);
-  /* TOPIC CONTINUITY R1 — the reader dropped the continued subject; the next Send carries no prior question. */
-  const [topicReset, setTopicReset] = useState(false);
-  /*
-    TOPIC CONTINUITY R1 — USER TEXT ONLY: the reader's own earlier question
-    that established the subject the LAST settled answer continued. Undefined
-    when it continued nothing, so the next follow-up refers to that question.
-  */
-  const [subjectOrigin, setSubjectOrigin] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const conversationRef = useRef<HTMLDivElement | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
   /* MAP R2 — the Spatial Ask geometry, measured only on /map (see MAP_ROUTE). */
   const [mapLayout, setMapLayout] = useState<MapAskLayout | null>(null);
   const [mapViewport, setMapViewport] = useState<{ height: number; navInset: number }>({ height: 0, navInset: 0 });
-  /* guards a response arriving after the reader asked something else */
-  const requestSeq = useRef(0);
 
   const dictionary = getDictionary(language);
   const t = dictionary.askAi;
+  /* Ask V2 serves the two ACTIVE languages; any other locale reads and renders as English. */
+  const r2Locale: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  const r2s = askR2Strings(r2Locale);
+
+  /*
+    UNIFIED INTELLIGENCE BINDING R2C — THE CANONICAL CONVERSATION.
+
+    ZERO-REQUEST OPEN. The dock is mounted on every route, so the conversation reads nothing on
+    mount (readOnOpen: false); opening, typing and staging send nothing. Only the explicit Send below creates an
+    Ask V2 operation — signed-in through the account routes, signed-out through the existing
+    guest trial — and nothing is ever sent to POST /analysis/news.
+  */
+  const r2 = useAskR2Conversation(r2Locale, sanitizeReturnPath(returnPath), {
+    guestTrial: true,
+    readOnOpen: false,
+  });
+  const { startNewTopic } = r2;
+  /** Ask V2 answered "unavailable": nothing ran anywhere; the question is kept. */
+  const [askUnavailable, setAskUnavailable] = useState(false);
 
   /*
    * §5.2.5 — THE DOCK READS, NEVER WRITES, AND KEEPS NO COPY.
@@ -303,79 +300,74 @@ function GlobalAskAiDock({
    */
   const storyContext = useAskStoryContext();
   /*
-   * MAP R1 item 7 — THE SCOPE, WHICH IS NOT AN ANCHOR.
-   *
-   * Published by the Map from its own bounded store while a country is
-   * selected: an ISO code and a label, nothing else. Read live here for the
-   * same reason the story context is — the dock keeps no copy, so what the
-   * reader is shown is always what is published at that moment.
-   *
-   * PRECEDENCE IS STATED, NOT EMERGENT. A story anchor is the more specific
-   * fact, so when one exists it wins and the geography line is not shown. The
-   * two are never merged and never silently combined into one claim.
+   * MAP R1 item 7 — THE SCOPE, WHICH IS NOT AN ANCHOR. Published by the Map while a country is
+   * selected: an ISO code and a label. PRECEDENCE IS STATED, NOT EMERGENT: a story anchor is
+   * the more specific fact and wins; the two are never merged (askContextRefOf).
    */
   const geographyContext = useAskGeographyContext();
   /*
-    ASK R2 INTEGRATION R1 · GATE H (G F3-C1 / F3-C3) — the Map country is the thread's
-    context, as the story anchor is on /ask (useAskConversation). When it changes — A→B,
-    and A→B→A — an answer still in flight for the old country is discarded, and the next
-    question starts a new topic (shown), so no prior question crosses a geography change.
-    Earlier settled turns stay visible as history.
+    R2C — what the NEXT Send carries, as the bounded reference the server resolves. The chip
+    below is derived from this same value, so the label and the request cannot disagree.
   */
-  const geographyIdentity = geographyContext?.countryCode;
-  const geographySeen = useRef(false);
+  const contextRef = askContextRefOf(storyContext, geographyContext);
+  const contextKey = askContextKey(contextRef);
+  /*
+    ASK R2 INTEGRATION R1 · GATE H (G F3-C1 / F3-C3), now on the canonical thread — when the
+    context changes (A→B, and A→B→A) the next question starts a NEW topic, so no earlier
+    question continues across a story or country change. Earlier turns stay visible.
+  */
+  const contextSeen = useRef<string | null>(null);
+  /* the reader is SHOWN that the thread ended (G F3-C2) — set on a context change or "New topic" */
+  const [topicStarted, setTopicStarted] = useState(false);
+  const hasTurns = r2.turns.length > 0;
   useEffect(() => {
-    if (!geographySeen.current) {
-      geographySeen.current = true;
-      return;
+    if (contextSeen.current !== null && contextSeen.current !== contextKey) {
+      startNewTopic();
+      if (hasTurns) setTopicStarted(true);
     }
-    requestSeq.current += 1;
-    setSubjectOrigin(undefined);
-    setTopicReset(true);
-    setPhase((current) => (current.kind === 'loading' ? { kind: 'idle' } : current));
-  }, [geographyIdentity]);
+    contextSeen.current = contextKey;
+  }, [contextKey, startNewTopic, hasTurns]);
   /*
-   * ASK R2 INTEGRATION R1 · G SEAM D — the chip reads WHAT SCOPED THE ANSWER, not
-   * which store is occupied. While drafting, the country on offer is shown; once
-   * answered, only a Map country the server says it USED is named. "What is NATO?"
-   * with Poland selected is answered without Poland, and the chip no longer says
-   * otherwise.
-   */
-  const showGeographyLabel = mapGeographyChipShown(
-    question.trim() || phase.kind !== 'answered' ? 'draft' : 'answered',
-    phase.kind === 'answered' ? phase.response.retrievalContext : {},
-    {
-      storyContextPresent: storyContext !== undefined,
-      geographyContextPresent: geographyContext !== undefined,
-    },
-  );
-  const showStoryLabel = storyContext !== undefined && usesStoryContextLabel(
-    question.trim() || (phase.kind !== 'idle' ? phase.question : ''),
-    question.trim() ? undefined : phase.kind === 'answered'
-      ? phase.response.retrievalContext.storyContextUsed : undefined,
-  );
-  /*
-    ASK R2 INTEGRATION R1 · GATE H (G V5-C2 / V6-C1) — three facts, three renderings. After
-    an answer, a selected Map country the server did not use stays VISIBLE as available and
-    not used — outranked (stamped false) or not applied (never eligible, stamp absent) —
-    and is never credited as the scope. Nothing is cleared: it applies to the next question.
+    G F3-C3 on the canonical thread — an answer whose context changed while it was in flight
+    (A→B, and A→B→A) is not shown in this dock: it answered a question asked under a context the
+    reader has since left. It is still a real, stored operation (Recent/Saved), never re-run.
   */
-  const mapGeographyUnused: 'PRESENT_UNUSED' | 'NOT_ELIGIBLE' | null = (() => {
-    if (question.trim() || phase.kind !== 'answered') return null;
-    if (storyContext !== undefined || geographyContext === undefined) return null;
-    const effect = readEffectiveContext(phase.response.retrievalContext, {
-      storyContextPresent: false,
-      geographyContextPresent: true,
-    }).mapGeography;
-    return effect === 'PRESENT_UNUSED' || effect === 'NOT_ELIGIBLE' ? effect : null;
-  })();
-  const mapGeographyUnusedText =
-    mapGeographyUnused === null
-      ? null
-      : (mapGeographyUnused === 'PRESENT_UNUSED'
-          ? t.geographyOutranked
-          : t.geographyNotApplied
-        ).replace('{place}', geographyContext?.displayName ?? '');
+  const contextChanges = useRef(0);
+  const lastKey = useRef(contextKey);
+  if (lastKey.current !== contextKey) {
+    lastKey.current = contextKey;
+    contextChanges.current += 1;
+  }
+  const [staleTurns, setStaleTurns] = useState<ReadonlySet<AskR2Turn>>(() => new Set());
+  const visibleTurns = r2.turns.filter((turn) => !staleTurns.has(turn));
+  const showStoryLabel = contextRef?.kind === 'STORY';
+  const showGeographyLabel = contextRef?.kind === 'GEOGRAPHY';
+  const geographyPlace =
+    contextRef?.kind === 'GEOGRAPHY'
+      ? geographyContext !== undefined &&
+        geographyContext.countryCode.toUpperCase() === contextRef.countryCode.toUpperCase()
+        ? geographyContext.displayName
+        : (localisedCountryName(contextRef.countryCode.toUpperCase(), r2Locale) ??
+          contextRef.countryCode.toUpperCase())
+      : '';
+  const isPending = r2.pending !== null;
+  const isIdle = visibleTurns.length === 0 && !isPending;
+  const guestText: Partial<Record<string, string>> = {
+    IN_PROGRESS: r2s.guest.inProgress,
+    COOLDOWN: r2s.guest.cooldown,
+    LIMITED: r2s.guest.limited,
+    ATTEMPTS_EXHAUSTED: r2s.guest.attemptsExhausted,
+    UNAVAILABLE: r2s.guest.unavailable,
+    DEEPER: r2s.guest.signInForDeeper,
+    EXHAUSTED: r2s.guest.exhaustedBody,
+  };
+  const notice: string | null = askUnavailable
+    ? r2s.unified.askUnavailable
+    : r2.contextRefused !== null
+      ? r2s.unified.contextUnavailable
+      : r2.guestNotice !== null
+        ? (guestText[r2.guestNotice] ?? null)
+        : null;
 
   /*
    * R2 FINDING 2 — WHERE THE LAUNCHER SITS IS A SURFACE QUESTION.
@@ -424,7 +416,7 @@ function GlobalAskAiDock({
     if (!isOpen) return;
     const node = conversationRef.current;
     if (node) node.scrollTop = node.scrollHeight;
-  }, [isOpen, history, phase]);
+  }, [isOpen, r2.turns, r2.pending]);
 
   /*
    * MOBILE KEYBOARD — VisualViewport is the geometry the reader can
@@ -528,83 +520,34 @@ function GlobalAskAiDock({
       event.preventDefault();
       const asked = question.trim();
       if (asked.length === 0) return;
-      /* ASK/SEARCH R1 — one Send is one execution: a second submit while a
-         turn is in flight (Enter/requestSubmit bypass the disabled button)
-         must not issue a second request. */
-      if (phase.kind === 'loading') return;
-
-      const seq = requestSeq.current + 1;
-      requestSeq.current = seq;
-
-      /*
-       * Preserve the previous settled exchange as conversation history before
-       * beginning the next turn. Only DISPLAY state is retained: no prior
-       * response/evidence is sent back to AnalysisService, so Ask Rule A and
-       * the single retrieval architecture remain intact.
-       */
-      setHistory((turns) =>
-        phase.kind === 'answered' || phase.kind === 'failed' ? [...turns, phase] : turns,
-      );
-      setPhase({ kind: 'loading', question: asked });
+      /* ASK/SEARCH R1 — one Send is one execution: a second submit while a turn is in flight
+         (Enter/requestSubmit bypass the disabled button) must not issue a second request. */
+      if (isPending) return;
       setQuestion('');
-
+      setAskUnavailable(false);
+      setTopicStarted(false);
+      const askedUnder = contextChanges.current;
       /*
-        THE ONE TRANSPORT SITE.
- 
-        `transportableContext` narrows to `{title, articleId?, countryCode?}`
-        (§1.1) — `url` and `sourceName` are display-only and retrieval
-        ignores them. A conversational follow-up may additionally carry the
-        immediately preceding USER question. It never carries the preceding
-        AI answer, sources, evidence identities or retrieval output.
- 
-        `title` is the SUBJECT and comes from the published context — never
-        from the input box (§1.3, §7.4). Passing the follow-up as the title
-        is exactly the inversion Rev A's change log owns.
+        THE ONE TRANSPORT SITE — the canonical Ask V2 turn, carrying THIS moment's context as a
+        bounded reference (story by its persisted id, else the Map country; never both). The
+        server resolves every fact; no title, answer, source or evidence is sent. Continuity is
+        the Ask thread's own server-derived prior question.
       */
-      const sent = transportableContext(storyContext);
-      /*
-        TOPIC CONTINUITY R1 — still ONE prior USER question, never an answer.
-        When the last answer continued a subject, the question that ESTABLISHED
-        that subject is sent again, so a chain ("…this…" → "What about
-        businesses?") keeps its subject. "Start a new topic" sends none.
-      */
-      const lastQuestion =
-        phase.kind === 'answered' || phase.kind === 'failed'
-          ? phase.question
-          : history.length > 0
-            ? history[history.length - 1].question
-            : undefined;
-      const priorQuestion = topicReset || lastQuestion === undefined ? undefined : (subjectOrigin ?? lastQuestion);
-      setTopicReset(false);
-
-      /*
-        MAP MOBILE R1 CONVERGENCE — SUBMISSION PRECEDENCE, STATED:
-          1. story context, when one is published (the more specific anchor);
-          2. otherwise the map geography context, when one is published;
-          3. otherwise a generic Ask.
-        Never both. analyzeNews() narrows the geography to exactly
-        { countryCode, displayName }; the chip's label is presentation only.
-      */
-      const sentGeography = sent === undefined ? geographyContext : undefined;
-
-      analyzeNews(asked, language, sent, priorQuestion, undefined, sentGeography)
-        .then((response) => {
-          if (requestSeq.current !== seq) return;
-          setSubjectOrigin(subjectOriginOf(response, priorQuestion));
-          setPhase({ kind: 'answered', question: asked, response, context: sent });
+      void r2
+        .submit(asked, contextRef, (turn) => {
+          if (contextChanges.current !== askedUnder) {
+            setStaleTurns((stale) => new Set(stale).add(turn));
+          }
         })
-        .catch((error: unknown) => {
-          if (requestSeq.current !== seq) return;
-          setSubjectOrigin(undefined);
-          /* the SAME error mapping /search uses, imported rather than copied */
-          setPhase({
-            kind: 'failed',
-            question: asked,
-            message: resolveAnalysisErrorMessage(error, dictionary),
-          });
+        .then((outcome) => {
+        if (outcome === 'sent' || outcome === 'failed') return;
+        /* Nothing ran (sign-in, a guest refusal, an unresolvable context, Ask unavailable,
+           busy): the reader's question returns to the composer — never re-sent elsewhere. */
+        if (outcome === 'legacy') setAskUnavailable(true);
+        setQuestion((current) => (current.trim().length === 0 ? asked : current));
         });
     },
-    [question, language, dictionary, storyContext, geographyContext, phase, history, topicReset, subjectOrigin],
+    [question, isPending, r2, contextRef],
   );
 
   /*
@@ -686,7 +629,7 @@ function GlobalAskAiDock({
           id="ask-ai-panel"
           data-ask="panel"
           data-ask-surface=""
-          data-ask-phase={phase.kind}
+          data-ask-phase={isPending ? 'loading' : isIdle ? 'idle' : 'answered'}
           aria-label={t.panelLabel}
           data-ask-geometry={mapLayout === null ? 'dock' : `map-${mapLayout}`}
           style={mapPanelStyle ?? { bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
@@ -710,7 +653,7 @@ function GlobalAskAiDock({
           >
             <h2 className={onMap ? 'flex items-center gap-2 text-[15px] font-semibold text-[#ece8ff]' : 'font-display text-base font-medium text-ink-primary'}>
               {onMap ? <span aria-hidden="true" className="font-mono text-[11px] text-[#a78bfa]">◆</span> : null}
-              <a data-ask="dashboard-entry" href={dashboardHref(question || (phase.kind !== 'idle' ? phase.question : ''), storyContext)}>{t.title} ↗</a>
+              <a data-ask="dashboard-entry" href={dashboardHref(question, storyContext)}>{t.title} ↗</a>
             </h2>
             <button
               type="button"
@@ -726,41 +669,48 @@ function GlobalAskAiDock({
             ref={conversationRef}
             className={
               onMap
-                ? `min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 ${phase.kind === 'idle' && history.length === 0 ? 'py-2' : 'py-4'}`
+                ? `min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 ${isIdle ? 'py-2' : 'py-4'}`
                 : 'min-h-0 flex-1 overflow-y-auto overscroll-contain bg-surface px-4 py-4 sm:px-5 sm:py-5'
             }
             data-ask="body"
             data-ask-scroll="conversation"
           >
-            {history.map((turn, index) => (
-              <div key={`${index}-${turn.question}`} data-ask="history-turn" className="mb-6 flex flex-col gap-3 sm:gap-4">
-                <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm">
-                  {turn.question}
-                </div>
-                {turn.kind === 'answered' ? (
-                  <AskCompactResult
-                    response={turn.response}
-                    question={turn.question}
-                    language={language}
-                    context={turn.context}
-                  />
-                ) : (
-                  <div role="alert" className="rounded-2xl border border-border bg-void p-4 text-sm text-ink-secondary">
-                    {turn.message}
-                  </div>
-                )}
+            {/*
+              UNIFIED INTELLIGENCE BINDING R2C — the canonical turn view, the SAME component /ask
+              renders: answer state, provenance, sources, Save, and "Open full analysis" (a
+              display-only read of the stored operation, 0 AI). No legacy "Run full analysis".
+            */}
+            {visibleTurns.map((turn, index) => (
+              <div
+                key={turn.operation?.operationId ?? `${index}-${turn.question}`}
+                data-ask={index === visibleTurns.length - 1 && !isPending ? 'current-turn' : 'history-turn'}
+                className="mb-6 flex flex-col gap-3 sm:gap-4"
+              >
+                <AskR2TurnView
+                  turn={turn}
+                  locale={r2Locale}
+                  context={undefined}
+                  canSave={!r2.guestMode}
+                  storyBookmarks
+                  onUseQuestion={(draft) => {
+                    setQuestion(draft);
+                    requestAnimationFrame(() => inputRef.current?.focus());
+                  }}
+                />
               </div>
             ))}
 
-            {phase.kind === 'loading' || phase.kind === 'answered' || phase.kind === 'failed' ? (
+            {isPending ? (
               <div data-ask="current-turn" className="flex flex-col gap-3">
                 <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm">
-                  {phase.question}
+                  {r2.pending}
                 </div>
+                {/* the SAME loading presentation /search uses, same stages */}
+                <LoadingStages stages={[...dictionary.loadingStages]} />
               </div>
             ) : null}
 
-            {phase.kind === 'idle' ? (
+            {isIdle ? (
               /* No request has been made and none will be until a question is
                  submitted. This is the honest empty state, not a failure. */
               <p data-ask="idle" className="text-sm text-ink-tertiary">
@@ -768,35 +718,46 @@ function GlobalAskAiDock({
               </p>
             ) : null}
 
-            {phase.kind === 'loading' ? (
-              /* the SAME loading presentation /search uses, same stages */
-              <LoadingStages stages={[...dictionary.loadingStages]} />
-            ) : null}
-
-            {phase.kind === 'failed' ? (
-              <div data-ask="error" role="alert" className="rounded-2xl border border-border bg-void p-6 text-center">
-                <p className="text-sm text-ink-secondary">{phase.message}</p>
+            {r2.signInRequired !== null ? (
+              /* SIGNED OUT, NO GUEST TRIAL: the question is kept in the composer; nothing ran. */
+              <div data-ask="sign-in-required" role="status" className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-void p-4 text-sm text-ink-secondary">
+                <p className="font-semibold text-ink-primary">{r2s.signInRequired.title}</p>
+                <p>{r2s.signInRequired.body}</p>
+                <a
+                  data-ask="sign-in"
+                  href={ASK_SIGN_IN_HREF}
+                  onClick={() => keepQuestion(question.trim() ? question : (r2.signInRequired ?? ''))}
+                  className="inline-flex min-h-[44px] items-center font-semibold text-signal-bright underline"
+                >
+                  {r2s.signInRequired.action}
+                </a>
               </div>
             ) : null}
 
-            {phase.kind === 'answered' ? (
-              /*
-                §6 — A PROJECTION OF THE RESPONSE, NOT A SECOND WORKSPACE.
+            {notice !== null ? (
+              <p data-ask="notice" role="status" className="text-[13px] leading-[1.45] text-[#c9b27a]">
+                {notice}
+              </p>
+            ) : null}
 
-                `phase.context` is the context the question was ASKED with,
-                not a fresh read: the transition must reproduce the request
-                that produced THIS response, and by the time the reader
-                presses it the live context may already be a different
-                story.
-              */
-              <AskCompactResult
-                response={phase.response}
-                question={phase.question}
-                language={language}
-                context={phase.context}
-                newTopicStarted={topicReset}
-                onStartNewTopic={() => setTopicReset(true)}
-              />
+            {topicStarted ? (
+              <p data-ask="new-topic-started" role="status" className="text-[13px] text-ink-secondary">
+                {r2s.unified.newTopicStarted}
+              </p>
+            ) : null}
+
+            {visibleTurns.length > 0 && !isPending && !topicStarted ? (
+              <button
+                type="button"
+                data-ask="new-topic"
+                onClick={() => {
+                  startNewTopic();
+                  setTopicStarted(true);
+                }}
+                className="mt-2 min-h-[44px] rounded-xl px-2 text-[13px] text-ink-secondary underline hover:text-ink-primary"
+              >
+                {r2s.unified.newTopic}
+              </button>
             ) : null}
           </div>
 
@@ -822,21 +783,12 @@ function GlobalAskAiDock({
                     {showStoryLabel
                       ? t.contextChipAnchored
                       : showGeographyLabel
-                        ? t.askingAboutGeography.replace('{place}', geographyContext?.displayName ?? '')
+                        ? t.askingAboutGeography.replace('{place}', geographyPlace)
                         : t.contextChipGeneric}
                   </span>
                   {showGeographyLabel && (
                     <span data-ask="context-basis" className="text-[12px] text-[#8fa6c0]">
                       {t.geographyBasis}
-                    </span>
-                  )}
-                  {mapGeographyUnusedText !== null && (
-                    <span
-                      data-ask="context-unused"
-                      data-ask-context-effect={mapGeographyUnused ?? undefined}
-                      className="text-[12px] text-[#8fa6c0]"
-                    >
-                      {mapGeographyUnusedText}
                     </span>
                   )}
                 </div>
@@ -850,7 +802,7 @@ function GlobalAskAiDock({
                   onChange={(event) => setQuestion(event.target.value)}
                   placeholder={t.inputPlaceholder}
                   maxLength={1000}
-                  minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}
+                  minHeight={isIdle ? 58 : 44}
                   maxHeight={220}
                   maxViewportFraction={0.3}
                   keepVisible={false}
@@ -864,7 +816,7 @@ function GlobalAskAiDock({
                   <button
                     type="submit"
                     data-ask="submit"
-                    disabled={question.trim().length === 0 || phase.kind === 'loading'}
+                    disabled={question.trim().length === 0 || isPending}
                     className="min-h-[44px] min-w-[96px] shrink-0 rounded-[10px] border border-[#d9b98a] bg-[linear-gradient(105deg,#412d9f,#1f328a)] px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t.submit}
@@ -885,7 +837,7 @@ function GlobalAskAiDock({
               onChange={(event) => setQuestion(event.target.value)}
               placeholder={t.inputPlaceholder}
               maxLength={1000}
-              minHeight={phase.kind === 'idle' && history.length === 0 ? 58 : 44}
+              minHeight={isIdle ? 58 : 44}
               maxHeight={420}
               maxViewportFraction={0.46}
               keepVisible={false}
@@ -924,26 +876,14 @@ function GlobalAskAiDock({
                     {showStoryLabel
                       ? t.contextChipAnchored
                       : showGeographyLabel
-                        ? t.askingAboutGeography.replace(
-                            '{place}',
-                            geographyContext?.displayName ?? '',
-                          )
+                        ? t.askingAboutGeography.replace('{place}', geographyPlace)
                         : t.contextChipGeneric}
                   </span>
-                  {mapGeographyUnusedText !== null && (
-                    <span
-                      data-ask="context-unused"
-                      data-ask-context-effect={mapGeographyUnused ?? undefined}
-                      className="text-[11px] text-ink-secondary"
-                    >
-                      {mapGeographyUnusedText}
-                    </span>
-                  )}
 
               <button
                 type="submit"
                 data-ask="submit"
-                disabled={question.trim().length === 0 || phase.kind === 'loading'}
+                disabled={question.trim().length === 0 || isPending}
                 className="min-h-[44px] rounded-2xl bg-signal px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(61,111,255,0.22)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50"
               >
                 {t.submit}

@@ -60,9 +60,10 @@ describe('DESTINATIONS — INTELLIGENCE_MODULES is the one registry', () => {
 });
 
 describe('AI COST — no browsing, filtering, navigation or follow control spends', () => {
+  /* R2C — "Open full analysis" is now a display-only read: only the explicit Send spends. */
   it('only the dock Send and the dock deeper-analysis transition carry AI cost', () => {
     const spending = HOME_CLICK_CONTRACT.filter((row) => row.aiCost !== 'none').map((row) => row.id);
-    expect(spending.sort()).toEqual(['dock.open-full', 'dock.submit']);
+    expect(spending.sort()).toEqual(['dock.submit']);
   });
 
   it.each(HOME_MOUNTED_FILES.map((file) => [file] as const))('%s imports no analysis transport', (file) => {

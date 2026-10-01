@@ -8,7 +8,11 @@ import {
 } from '@globalnews-ai/shared';
 import { NewsService } from '../../news/news.service';
 import { computeArticleRef } from '../../news/identity/article-ref.util';
-import { ASK_CONTEXT_KEYS, ASK_CONTEXT_URL_MAX } from './ask-turn-context.dto';
+import {
+  ASK_CONTEXT_ARTICLE_ID_PATTERN,
+  ASK_CONTEXT_KEY_SETS,
+  ASK_CONTEXT_URL_MAX,
+} from './ask-turn-context.dto';
 import { RESOLVED_STORY_BOUNDS, type ResolvedAskContext } from './resolved-ask-context';
 
 /**
@@ -47,7 +51,7 @@ export class AskContextRefused extends HttpException {
 }
 
 /** The ONE read this resolver may perform: retained reporting, by URL, database only. */
-export type RetainedStoryReader = Pick<NewsService, 'findRetainedArticleByUrl'>;
+export type RetainedStoryReader = Pick<NewsService, 'findRetainedArticleByUrl' | 'findArticleById'>;
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -71,14 +75,37 @@ export class AskContextResolver {
     if (!isObject(raw) || (raw.kind !== 'STORY' && raw.kind !== 'GEOGRAPHY')) {
       throw new AskContextRefused('ASK_CONTEXT_INVALID');
     }
-    const allowed = ASK_CONTEXT_KEYS[raw.kind];
     const keys = Object.keys(raw).filter((k) => raw[k] !== undefined);
-    if (!keys.every((k) => allowed.includes(k)) || !allowed.every((k) => keys.includes(k))) {
+    const exact = ASK_CONTEXT_KEY_SETS[raw.kind].find(
+      (set) => set.length === keys.length && set.every((k) => keys.includes(k)),
+    );
+    if (exact === undefined) throw new AskContextRefused('ASK_CONTEXT_INVALID');
+    if (raw.kind === 'GEOGRAPHY') return this.resolveGeography(raw.countryCode);
+    return keys.includes('articleId')
+      ? this.resolveStoryById(raw.articleId)
+      : this.resolveStory(raw.articleRef, raw.url);
+  }
+
+  /**
+   * R2C — STORY by the persisted Article id: ONE database read (NewsService.findArticleById →
+   * ArticlePersistenceService.findById, the read AnalysisService's own anchor path uses). The
+   * canonical identity is computed from the STORED row's URL, so the same story named by id or
+   * by {articleRef, url} is one identity.
+   */
+  private async resolveStoryById(articleId: unknown): Promise<ResolvedAskContext> {
+    if (typeof articleId !== 'string' || !ASK_CONTEXT_ARTICLE_ID_PATTERN.test(articleId)) {
       throw new AskContextRefused('ASK_CONTEXT_INVALID');
     }
-    return raw.kind === 'STORY'
-      ? this.resolveStory(raw.articleRef, raw.url)
-      : this.resolveGeography(raw.countryCode);
+    let article: NewsArticle | null;
+    try {
+      article = await this.stories.findArticleById(articleId);
+    } catch {
+      article = null;
+    }
+    if (article === null || article.id !== articleId || typeof article.url !== 'string') {
+      throw new AskContextRefused('ASK_CONTEXT_STORY_NOT_FOUND');
+    }
+    return this.fromStoredArticle(article, computeArticleRef(article.url));
   }
 
   private async resolveStory(articleRef: unknown, url: unknown): Promise<ResolvedAskContext> {
@@ -105,6 +132,11 @@ export class AskContextResolver {
     if (article === null || computeArticleRef(article.url) !== articleRef) {
       throw new AskContextRefused('ASK_CONTEXT_STORY_NOT_FOUND');
     }
+    return this.fromStoredArticle(article, articleRef);
+  }
+
+  /** The StoryContext from the STORED row only (both STORY forms). */
+  private fromStoredArticle(article: NewsArticle, articleRef: string): ResolvedAskContext {
     const title = (article.title ?? '').trim();
     const articleId = (article.id ?? '').trim();
     const sourceName = (article.sourceName ?? '').trim();

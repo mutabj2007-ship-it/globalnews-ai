@@ -50,6 +50,7 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
   const analyzeNews = jest.fn();
   const answerBackground = jest.fn();
   const findRetainedArticleByUrl = jest.fn();
+  const findArticleById = jest.fn();
   const config = { get: (key: string) => values[key] } as unknown as ConfigService;
   let userId: string;
   let threadId: string;
@@ -137,6 +138,8 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
       },
     );
     const persistence = new ArticlePersistenceService(db as unknown as PrismaService);
+    findArticleById.mockReset();
+    findArticleById.mockImplementation(async (id: string) => persistence.findById(id));
     findRetainedArticleByUrl.mockReset();
     findRetainedArticleByUrl.mockImplementation(
       async (u: string) => (await persistence.findRetainedByUrl(u))?.article ?? null,
@@ -170,7 +173,7 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
       guests,
       switches,
       meter,
-      new AskContextResolver({ findRetainedArticleByUrl }),
+      new AskContextResolver({ findRetainedArticleByUrl, findArticleById }),
     );
     for (const name of [
       'ASK_R2_ENABLED',
@@ -278,6 +281,25 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
     expect(analyzeNews.mock.calls[1][2]).toMatchObject({ articleId: ID_B, countryCode: 'KEN' });
     /* The persisted context carries no retained summary / evidence text. */
     expect(JSON.stringify(pa.context)).not.toContain('Retained summary');
+  });
+
+  /* ── R2C · STORY by persisted id is the SAME identity as STORY by {articleRef, url} ── */
+  it('R2C · the same story named by id or by {articleRef, url} is ONE identity (same key → same operation)', async () => {
+    const key = randomUUID();
+    const byRef = await send(Q, STORY(URL_A), key);
+    const byId = await send(Q, { kind: 'STORY', articleId: ID_A }, key);
+    expect(byId.operationId).toBe(byRef.operationId);
+    expect(analyzeNews).toHaveBeenCalledTimes(1);
+    /* and a different stored story by id is a different identity (conflict on the same key) */
+    expect(await refusal(send(Q, { kind: 'STORY', articleId: ID_B }, key))).toMatch(
+      /^ConflictException/,
+    );
+    /* an unknown id fails closed before any operation */
+    const before = await counts();
+    expect(await refusal(send(Q, { kind: 'STORY', articleId: `r2b-${RUN}-missing` }))).toBe(
+      'ASK_CONTEXT_STORY_NOT_FOUND',
+    );
+    expect(await counts()).toEqual(before);
   });
 
   /* ── B · GEOGRAPHY POL vs KEN, on the REUSABLE (background) class ─── */

@@ -37,9 +37,15 @@ function resolverWith(article: NewsArticle | null | Error) {
     if (article instanceof Error) throw article;
     return article;
   });
+  /* R2C — the persisted-id read (findArticleById); same fake row. */
+  const findArticleById = jest.fn(async (id: string) => {
+    if (article instanceof Error) throw article;
+    return article !== null && article.id === id ? article : null;
+  });
   return {
-    resolver: new AskContextResolver({ findRetainedArticleByUrl }),
+    resolver: new AskContextResolver({ findRetainedArticleByUrl, findArticleById }),
     findRetainedArticleByUrl,
+    findArticleById,
   };
 }
 
@@ -314,5 +320,54 @@ describe('R2B resolver — GEOGRAPHY from the governed registry', () => {
         code: 'ASK_CONTEXT_GEOGRAPHY_UNKNOWN',
       });
     }
+  });
+});
+
+describe('R2C resolver — STORY by persisted articleId (the id the product surfaces hold)', () => {
+  it('resolves by id to the SAME resolved context as the {articleRef, url} form', async () => {
+    const { resolver, findArticleById, findRetainedArticleByUrl } = resolverWith(retained());
+    const byId = await resolver.resolve({ kind: 'STORY', articleId: 'art-pl-1' });
+    const byRef = await resolver.resolve({ kind: 'STORY', articleRef: STORY_REF, url: STORY_URL });
+    expect(byId).toEqual(byRef);
+    expect(isResolvedAskContext(byId)).toBe(true);
+    /* one database read by id; the URL read is not used for this form */
+    expect(findArticleById).toHaveBeenCalledTimes(1);
+    expect(findArticleById).toHaveBeenCalledWith('art-pl-1');
+    expect(findRetainedArticleByUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('an unknown id → ASK_CONTEXT_STORY_NOT_FOUND; a store failure too', async () => {
+    expect(
+      await refusal(
+        resolverWith(retained()).resolver.resolve({ kind: 'STORY', articleId: 'other' }),
+      ),
+    ).toBe('ASK_CONTEXT_STORY_NOT_FOUND');
+    expect(
+      await refusal(
+        resolverWith(new Error('db down')).resolver.resolve({
+          kind: 'STORY',
+          articleId: 'art-pl-1',
+        }),
+      ),
+    ).toBe('ASK_CONTEXT_STORY_NOT_FOUND');
+  });
+
+  it.each([
+    ['a malformed id', { kind: 'STORY', articleId: 'bad id with spaces' }],
+    ['an over-long id', { kind: 'STORY', articleId: `a${'b'.repeat(200)}` }],
+    ['id + articleRef together', { kind: 'STORY', articleId: 'art-pl-1', articleRef: STORY_REF }],
+    ['id + url together', { kind: 'STORY', articleId: 'art-pl-1', url: STORY_URL }],
+    ['id + title', { kind: 'STORY', articleId: 'art-pl-1', title: 'Injected' }],
+    ['id on a GEOGRAPHY', { kind: 'GEOGRAPHY', countryCode: 'POL', articleId: 'art-pl-1' }],
+  ])('%s → ASK_CONTEXT_INVALID (no read)', async (_n, context) => {
+    const { resolver, findArticleById } = resolverWith(retained());
+    expect(await refusal(resolver.resolve(context))).toBe('ASK_CONTEXT_INVALID');
+    expect(findArticleById).not.toHaveBeenCalled();
+  });
+
+  it('the pipe accepts {kind:STORY, articleId} and rejects it with extra fields', async () => {
+    expect(await piped(turn({ kind: 'STORY', articleId: 'gnews-123456' }))).toBe('OK');
+    expect(await piped(turn({ kind: 'STORY', articleId: 'gnews-1', title: 'x' }))).toBe('REJECTED');
+    expect(await piped(turn({ kind: 'STORY', articleId: 'bad id' }))).toBe('REJECTED');
   });
 });

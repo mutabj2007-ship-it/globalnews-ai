@@ -1,6 +1,5 @@
 import { StrictMode, createElement } from 'react';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
-import { analyzeNews } from '@/lib/api/analysisApi';
 import {
   analysisConsentKey,
   consumeAnalysisConsent,
@@ -16,9 +15,11 @@ import { SearchPageClient } from './SearchPageClient';
  * ASK/SEARCH ENGINEERING R1 — REQUEST COUNTS ON THE MOUNTED /search CLIENT
  * ════════════════════════════════════════════════════════════════════════════
  *
- * Counted, not inferred: `analyzeNews` is the single browser transport for
- * `POST /analysis/news`, so every assertion below is the number of analysis
- * requests a real arrival or interaction causes.
+ * Counted, not inferred. UNIFIED INTELLIGENCE BINDING R2C — /search no longer has its own
+ * engine: its single transport is the canonical Ask V2 conversation's `submit` (one Ask V2
+ * turn = one operation; the analysis client is no longer imported for execution). The mock
+ * below records each submit as (question, the hook's language, the context reference), so
+ * every assertion is the number of Ask executions a real arrival or interaction causes.
  *
  * Contract: navigation to /search = 0 unless an explicit accepted compute event
  * occurred through the governed mechanism; one explicit Send / Run = exactly 1.
@@ -28,6 +29,17 @@ jest.mock('@/lib/api/analysisApi', () => {
   class AnalysisApiError extends Error {}
   return { analyzeNews: jest.fn(), AnalysisApiError };
 });
+
+const mockAskTransport = jest.fn();
+jest.mock('@/lib/ask/useAskR2Conversation', () => ({
+  ...jest.requireActual('@/lib/ask/useAskR2Conversation'),
+  useAskR2Conversation: (language: string) => ({
+    submit: (question: string, context: unknown) => mockAskTransport(question, language, context),
+    turns: [],
+    pending: null,
+    guestMode: false,
+  }),
+}));
 
 let currentParams = new URLSearchParams();
 const router = { push: jest.fn(), replace: jest.fn(), refresh: jest.fn(), back: jest.fn() };
@@ -55,7 +67,7 @@ jest.mock('@/components/ui/AdaptiveTextarea', () => {
   return { AdaptiveTextarea: (props: Record<string, unknown>) => react.createElement('textarea', props) };
 });
 
-const transport = jest.mocked(analyzeNews);
+const transport = mockAskTransport;
 let renderer: ReactTestRenderer;
 
 function arrive(search: string, strict = false): void {
@@ -153,7 +165,8 @@ describe('EXPLICIT COMPUTE — exactly one execution', () => {
     arrive(href.slice('/search?'.length));
     expect(transport).toHaveBeenCalledTimes(1);
     expect(transport.mock.calls[0][0]).toBe('What happens next?');
-    expect(transport.mock.calls[0][2]).toEqual({ title: 'Rwanda budget', articleId: 'a1', countryCode: 'RW' });
+    /* R2C — the anchor travels as a bounded REFERENCE the server resolves (never the title). */
+    expect(transport.mock.calls[0][2]).toEqual({ kind: 'STORY', articleId: 'a1' });
   });
 
   it('React Strict Mode double effects still produce exactly 1 request for one grant', () => {

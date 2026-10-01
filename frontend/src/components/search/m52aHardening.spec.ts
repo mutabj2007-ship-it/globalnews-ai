@@ -83,7 +83,10 @@ describe('A. storyContext is stable across renders (real lint defect found and f
     expect(effectEnd).toBeGreaterThan(effectStart);
 
     const effectBody = searchClientSource.slice(effectStart, effectEnd);
-    expect(effectBody).toMatch(/analyzeNews\(query, language, storyContext\)/);
+    /* R2C — the effect's one transport is the canonical Ask V2 turn; it still reads ONLY the
+       memoized storyContext (as a bounded reference), never the raw params. */
+    expect(effectBody).toMatch(/\.current\(query, askContextRefOf\(storyContext, undefined\)/);
+    expect(effectBody).not.toMatch(/analyzeNews\(/);
 
     // The memoized storyContext is the single source of truth for the request,
     // so the effect must not read the raw params directly. This test's title

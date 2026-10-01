@@ -113,9 +113,15 @@ describe('no Saved STORIES read in the standalone Ask journey', () => {
     expect(code(sourcesColumn)).not.toMatch(/StoryBookmark/);
   });
 
+  /*
+    R2C — the frame now has ONE path (the canonical turn view; the legacy path is retired). The turn
+    view forwards a \`storyBookmarks\` prop that defaults OFF, and the frame never turns it on.
+  */
   it('the standalone frame turns the compact result story bookmarks off, on both paths', () => {
-    expect(code(turnView)).toMatch(/<AskCompactResult[^>]*storyBookmarks=\{false\}/);
-    expect(code(frameScreen)).toMatch(/<AskCompactResult[^>]*storyBookmarks=\{false\}/);
+    expect(code(turnView)).toMatch(/storyBookmarks = false,/);
+    expect(code(turnView)).toMatch(/<AskCompactResult[^>]*storyBookmarks=\{storyBookmarks\}/);
+    expect(code(frameScreen)).not.toMatch(/<AskCompactResult/);
+    expect(code(frameScreen)).not.toMatch(/storyBookmarks/);
   });
 
   it('the platform dock keeps them — the prop defaults on and gates the only render', () => {

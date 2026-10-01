@@ -275,18 +275,23 @@ export const HOME_CLICK_CONTRACT: readonly HomeClickRow[] = [
   },
   {
     id: 'dock.submit', label: 'Ask (dock Send)', breakpoints: ALL, element: 'button',
-    destination: 'POST /api/analysis/news', behavior: 'in-place-dock', signedIn: 'signed-in rate ceiling',
-    signedOut: 'anonymous rate ceiling', back: 'none', unavailable: 'disabled when empty or a turn is in flight',
-    external: false, aiCost: 'explicit-send', network: 'exactly 1 analysis POST per Send',
-    evidence: { file: 'components/ask/AskAiDock.tsx', contains: "if (phase.kind === 'loading') return;" },
+    /* UNIFIED INTELLIGENCE BINDING R2C — the dock Send is ONE canonical Ask V2 turn. */
+    destination: 'POST /api/ask-v2/threads/:id/turns (guest: /api/ask-v2/guest/threads/:id/turns)', behavior: 'in-place-dock',
+    signedIn: 'Ask V2 account controls (switches, breaker, meter)',
+    signedOut: 'the existing guest trial (sign-in when unavailable); never an anonymous engine', back: 'none',
+    unavailable: 'disabled when empty or a turn is in flight',
+    external: false, aiCost: 'explicit-send', network: 'exactly 1 Ask V2 turn per Send (+1 thread create on a new topic)',
+    evidence: { file: 'components/ask/AskAiDock.tsx', contains: 'if (isPending) return;' },
   },
   {
-    id: 'dock.open-full', label: 'Run full analysis (Starts a new source-backed analysis.)', breakpoints: ALL, element: 'a',
-    destination: '/search?q=…[&storyTitle&articleId&countryCode]', behavior: 'navigate', signedIn: same,
-    signedOut: 'same-tab click runs the full analysis once; new tab / copied link lands staged', back: 'document-navigation',
-    unavailable: 'shown only when the turn produced analysis or articles', external: false,
-    aiCost: 'explicit-deeper-analysis', network: '1 analysis POST on same-tab activation; 0 otherwise',
-    evidence: { file: 'components/ask/AskCompactResult.tsx', contains: 'grantAnalysisConsent(fullAnalysisHref(question, context));' },
+    /* R2C — the dock renders the canonical turn view: "Open full analysis" is a display-only read
+       of the stored operation (GET /ask-v2/operations/:id), never a second analysis. */
+    id: 'dock.open-full', label: 'Open full analysis', breakpoints: ALL, element: 'a',
+    destination: '/ask?operation=<id>', behavior: 'navigate', signedIn: same,
+    signedOut: 'a guest reopens its own operation through the guest surface', back: 'document-navigation',
+    unavailable: 'shown only for a stored, reopenable answer', external: false,
+    aiCost: 'none', network: '1 display-only read (0 AI, 0 provider)',
+    evidence: { file: 'components/ask-frame/AskR2TurnView.tsx', contains: 'data-ask="open-full-analysis"' },
   },
   {
     id: 'dock.dashboard-entry', label: 'Ask GlobalNews AI ↗ (dashboard)', breakpoints: ALL, element: 'a',

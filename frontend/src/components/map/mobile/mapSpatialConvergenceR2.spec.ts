@@ -109,7 +109,9 @@ describe('ASK ON THE MAP — the dock keeps every contract', () => {
   });
 
   it('there is still exactly ONE transport site, and it is the submit handler', () => {
-    expect(DOCK.match(/analyzeNews\(asked/g)).toHaveLength(1);
+    /* R2C — the one transport site is the canonical Ask V2 turn in the submit handler. */
+    expect(DOCK.match(/\.submit\(asked/g)).toHaveLength(1);
+    expect(DOCK).not.toContain('analyzeNews(asked');
     expect(DOCK.match(/onSubmit=\{submit\}/g)).toHaveLength(2);
   });
 
@@ -123,7 +125,7 @@ describe('ASK ON THE MAP — the dock keeps every contract', () => {
     expect(mapComposer).toContain('id="ask-ai-question"');
     expect(mapComposer).toContain('data-ask="context-affordance"');
     expect(mapComposer).toContain("showStoryLabel\n                      ? t.contextChipAnchored");
-    expect(mapComposer).toContain("disabled={question.trim().length === 0 || phase.kind === 'loading'}");
+    expect(mapComposer).toContain('disabled={question.trim().length === 0 || isPending}');
     /* 16px so iOS does not zoom the page when the composer takes focus. */
     expect(mapComposer).toContain('text-[16px]');
   });

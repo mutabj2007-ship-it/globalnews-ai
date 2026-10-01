@@ -16,13 +16,19 @@ import { ARTICLE_REF_PATTERN, GEOGRAPHY_COUNTRY_CODE_PATTERN } from '@globalnews
  *     LOOKUP DATA ONLY — it is matched against RETAINED articles in the local database and is
  *     never fetched. `articleRef` must be exactly the identity of `url` (checked server-side).
  *
+ *   { kind: 'STORY', articleId }                                   (R2C)
+ *     The persisted Article row's primary key — what the product's surfaces already hold (Map
+ *     source cards, /search?articleId, /ask?articleId) and what AnalysisService's own anchor
+ *     path resolves (findArticleById). A database key, resolved server-side; the canonical
+ *     identity is still the stored row's articleRef, so both forms of one story are ONE identity.
+ *
  *   { kind: 'GEOGRAPHY', countryCode }
  *     An ISO 3166 alpha-2 or alpha-3 code of a GOVERNED country. A name ("Poland"), an alias or
  *     an unknown code is rejected by the server resolver; the display name always comes from
  *     the shared registry.
  *
  * Cross-kind fields are refused: a STORY carrying `countryCode`, or a GEOGRAPHY carrying
- * `articleRef`/`url`, is rejected by the resolver's exact key-set check (ASK_CONTEXT_KEYS),
+ * `articleRef`/`url`, is rejected by the resolver's exact key-set check (ASK_CONTEXT_KEY_SETS),
  * which runs before any read, operation, slot or meter.
  */
 export const ASK_CONTEXT_KINDS = ['STORY', 'GEOGRAPHY'] as const;
@@ -31,20 +37,32 @@ export type AskContextKind = (typeof ASK_CONTEXT_KINDS)[number];
 /** Bound on the story URL used as lookup data (the legacy StoryContextDto bound). */
 export const ASK_CONTEXT_URL_MAX = 500;
 
+/** R2C — the persisted Article id shape (e.g. `gnews-123`), bounded like the legacy DTO (≤200). */
+export const ASK_CONTEXT_ARTICLE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/;
+
+const storyByRef = (o: AskTurnContextDto): boolean =>
+  o.kind === 'STORY' && o.articleId === undefined;
+
 export class AskTurnContextDto {
   @IsIn(ASK_CONTEXT_KINDS as unknown as string[]) kind!: AskContextKind;
 
   /* STORY — present and well-formed for STORY; absent (undefined) for GEOGRAPHY. */
-  @ValidateIf((o: AskTurnContextDto) => o.kind === 'STORY' || o.articleRef !== undefined)
+  @ValidateIf((o: AskTurnContextDto) => storyByRef(o) || o.articleRef !== undefined)
   @IsString()
   @Matches(ARTICLE_REF_PATTERN)
   articleRef?: string;
 
-  @ValidateIf((o: AskTurnContextDto) => o.kind === 'STORY' || o.url !== undefined)
+  @ValidateIf((o: AskTurnContextDto) => storyByRef(o) || o.url !== undefined)
   @IsString()
   @Length(8, ASK_CONTEXT_URL_MAX)
   @Matches(/^https?:\/\/\S+$/i)
   url?: string;
+
+  /* R2C — STORY by persisted Article id (instead of articleRef + url). */
+  @ValidateIf((o: AskTurnContextDto) => o.articleId !== undefined)
+  @IsString()
+  @Matches(ASK_CONTEXT_ARTICLE_ID_PATTERN)
+  articleId?: string;
 
   /* GEOGRAPHY — present and code-shaped for GEOGRAPHY; absent for STORY. */
   @ValidateIf((o: AskTurnContextDto) => o.kind === 'GEOGRAPHY' || o.countryCode !== undefined)
@@ -58,7 +76,13 @@ export class AskTurnContextDto {
  * the resolver's own defence in depth (it is also called directly, without the pipe) and the
  * place the cross-kind rule is enforced.
  */
-export const ASK_CONTEXT_KEYS: Readonly<Record<AskContextKind, readonly string[]>> = {
-  STORY: ['kind', 'articleRef', 'url'],
-  GEOGRAPHY: ['kind', 'countryCode'],
+export const ASK_CONTEXT_KEY_SETS: Readonly<
+  Record<AskContextKind, readonly (readonly string[])[]>
+> = {
+  STORY: [
+    ['kind', 'articleRef', 'url'],
+    /* R2C */
+    ['kind', 'articleId'],
+  ],
+  GEOGRAPHY: [['kind', 'countryCode']],
 };

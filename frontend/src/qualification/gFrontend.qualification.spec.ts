@@ -2,8 +2,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { createElement } from 'react';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
-import type { AnalysisApiResponse } from '@globalnews-ai/shared';
-import { analyzeNews } from '@/lib/api/analysisApi';
+import { askV2Api } from '@/lib/api/askV2Api';
 import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
 import {
   ASK_GEOGRAPHY_KEYS,
@@ -44,9 +43,19 @@ import { openFullAnalysisHref, sanitizeReturnPath } from '@/lib/ask/useAskR2Conv
  * network, no model, no provider.
  */
 
+/*
+  UNIFIED INTELLIGENCE BINDING R2C — RETARGETED. The dock no longer calls POST /analysis/news; it
+  runs canonical Ask V2 turns. The G cases keep their ids and their protected property, now read
+  from the CANONICAL rendering: the answer's scope facts are the server's plan chips on the turn
+  (`data-ask-chip` / `data-ask-chip-kept` — applied vs available-and-not-used; the server marks an
+  inherited Map/story chip applied only when the analysis used it), and the transport is
+  `askV2Api.submit` (one POST /ask-v2/threads/:id/turns = one operation). The composer chip states
+  what the NEXT Send carries. Deterministic: no network, no model, no provider.
+*/
 jest.mock('@/lib/api/analysisApi', () => ({ analyzeNews: jest.fn() }));
-jest.mock('@/components/search/SearchPageClient', () => ({
-  resolveAnalysisErrorMessage: () => 'Request failed',
+jest.mock('@/lib/api/askV2Api', () => ({
+  ...jest.requireActual('@/lib/api/askV2Api'),
+  askV2Api: { createThread: jest.fn(), submit: jest.fn(), guestStatus: jest.fn() },
 }));
 jest.mock('next/navigation', () => ({ usePathname: () => '/map' }));
 jest.mock('@/components/ask/useLauncherAnchor', () => ({
@@ -88,8 +97,11 @@ Object.assign(globalThis, {
 const { AskAiDock } =
   require('@/components/ask/AskAiDock') as typeof import('@/components/ask/AskAiDock');
 
-const transport = jest.mocked(analyzeNews);
+const transport = jest.mocked(askV2Api.submit);
+const createThread = jest.mocked(askV2Api.createThread);
 let renderer: ReactTestRenderer;
+let threadSeq = 0;
+let opSeq = 0;
 
 type Verdict = 'PASS' | 'FAIL' | 'EXPLAINED' | 'HELD';
 const results: { id: string; verdict: Verdict; path: string; observed: string; note?: string }[] =
@@ -114,8 +126,8 @@ const type = (value: string): void => {
     field().props.onChange({ target: { value } });
   });
 };
-const send = (): void => {
-  act(() => {
+const send = async (): Promise<void> => {
+  await act(async () => {
     byAsk('form')[0].props.onSubmit({ preventDefault() {} });
   });
 };
@@ -126,8 +138,16 @@ const settle = async (): Promise<void> => {
   });
 };
 const chipState = (): string => String(byAsk('context-affordance')[0]?.props['data-ask-context']);
-const unusedEffect = (): string | null =>
-  (byAsk('context-unused')[0]?.props['data-ask-context-effect'] as string | undefined) ?? null;
+/** The latest rendered turn's GEOGRAPHY chip: 'applied' | 'kept' (available, not used) | 'absent'. */
+const turnGeography = (): string => {
+  const turns = byAsk('current-turn');
+  const latest = turns[turns.length - 1];
+  const chip = latest?.findAll(
+    (n) => n.props['data-ask-chip'] === 'GEOGRAPHY' && typeof n.type === 'string',
+  )[0];
+  if (chip === undefined) return 'absent';
+  return chip.props['data-ask-chip-kept'] === 'true' ? 'kept' : 'applied';
+};
 
 function mount(language: 'en' | 'pl' = 'en'): void {
   act(() => {
@@ -137,26 +157,71 @@ function mount(language: 'en' | 'pl' = 'en'): void {
   });
   act(() => openGlobalAsk());
 }
-function fixture(retrievalContext: Record<string, unknown>): AnalysisApiResponse {
+type Chip = { kind: 'GEOGRAPHY'; value: string; source: string; applied: boolean };
+/** A completed canonical operation whose server plan chips are `chips`. */
+function operation(chips: Chip[]): never {
+  opSeq += 1;
   return {
-    query: 'q',
-    analysis: { summary: 's', generatedAt: '2026-09-28T04:40:00Z' },
-    articles: [],
-    retrievalContext: { dataMode: 'live', providers: ['gnews'], ...retrievalContext },
-  } as unknown as AnalysisApiResponse;
+    ok: true,
+    value: {
+      operationId: `op-${opSeq}`,
+      status: 'COMPLETED',
+      result: {
+        id: `res-${opSeq}`,
+        expired: false,
+        displayOnly: true,
+        payload: {
+          schema: 'ask-r2-result/1',
+          route: {
+            questionClass: 'REFERENCE',
+            terminalState: 'REFERENCE_BACKGROUND_ONLY',
+            scopedBy: 'CLASSIFIED_SHAPE',
+            refusals: [],
+            disclosures: [],
+            clarification: [],
+            normalization: 'QUALIFIED',
+            questionLanguage: 'en',
+          },
+          chips: chips.length === 0 ? { kind: 'NONE' } : { kind: 'SCOPED', chips },
+          answer: {
+            state: 'REFERENCE_BACKGROUND',
+            basis: 'PLAN_NO_REQUIRED_EVIDENCE',
+            missingRoles: [],
+          },
+          aiExecuted: true,
+          modelPriorCitable: false,
+          analysis: null,
+          background: { text: 'b' },
+        },
+      },
+    },
+  } as never;
 }
-async function askWith(q: string, response: AnalysisApiResponse): Promise<void> {
-  transport.mockResolvedValueOnce(response);
+async function askWith(q: string, answer: never): Promise<void> {
+  transport.mockResolvedValueOnce(answer);
   type(q);
-  send();
+  await send();
   await settle();
 }
+const mapChip = (value: string, applied: boolean): Chip => ({
+  kind: 'GEOGRAPHY',
+  value,
+  source: 'MAP_GEOGRAPHY_CONTEXT',
+  applied,
+});
+/** [threadId, question, language, intent, idempotencyKey, context] */
+const sentContext = (call: number): unknown => transport.mock.calls[call]?.[5];
 const POLAND = { countryCode: 'POL', displayName: 'Poland' };
 const RWANDA = { countryCode: 'RWA', displayName: 'Rwanda' };
 const KENYA = { countryCode: 'KEN', displayName: 'Kenya' };
 
 beforeEach(() => {
   transport.mockReset();
+  createThread.mockReset();
+  threadSeq = 0;
+  createThread.mockImplementation(
+    async () => ({ ok: true, value: { id: `thread-${(threadSeq += 1)}` } }) as never,
+  );
   resetGeographyContextStoreForTest();
   resetStoryContextStoreForTest();
 });
@@ -171,30 +236,30 @@ afterAll(() => {
 });
 
 describe('G markup cases — what the Map dock draws after an answer', () => {
-  it('V5-C1: the server says the Map country was NOT used → the chip does not credit it', async () => {
+  it('V5-C1: the server says the Map country was NOT used → the answer does not credit it', async () => {
     mount();
     act(() => publishGeographyContext(Symbol('map'), POLAND));
-    await askWith('What is NATO?', fixture({ geographyContextUsed: false }));
-    const v = record('V5-C1', chipState() !== 'geography', 'dock markup', {
-      chip: chipState(),
-      unused: unusedEffect(),
+    await askWith('What is NATO?', operation([mapChip('POL', false)]));
+    const v = record('V5-C1', turnGeography() !== 'applied', 'dock markup (canonical turn chips)', {
+      turnGeography: turnGeography(),
+      composer: chipState(),
     });
     expect(v).toBe('PASS');
   });
 
   it('V5-C2: used / eligible-but-outranked / never-eligible render as three different facts', async () => {
     const drawn: string[] = [];
-    for (const stamp of [{ geographyContextUsed: true }, { geographyContextUsed: false }, {}]) {
+    for (const chips of [[mapChip('POL', true)], [mapChip('POL', false)], []]) {
       mount();
       act(() => publishGeographyContext(Symbol('map'), POLAND));
-      await askWith('What is happening?', fixture(stamp));
-      drawn.push(`${chipState()}|${unusedEffect() ?? '-'}`);
+      await askWith('What is happening?', operation(chips));
+      drawn.push(turnGeography());
       act(() => renderer.unmount());
       resetGeographyContextStoreForTest();
     }
     const distinct = new Set(drawn).size === 3;
-    const absentIsNotEligible = drawn[2] === 'generic|NOT_ELIGIBLE';
-    const v = record('V5-C2', distinct && absentIsNotEligible, 'dock markup, three stamps', {
+    const absentIsNotEligible = drawn[2] === 'absent';
+    const v = record('V5-C2', distinct && absentIsNotEligible, 'dock markup, three server facts', {
       drawn,
     });
     expect(v).toBe('PASS');
@@ -214,18 +279,12 @@ describe('G markup cases — what the Map dock draws after an answer', () => {
   it('V6-C1: an outranked Map country is shown as available-and-not-used; the selection is kept', async () => {
     mount();
     act(() => publishGeographyContext(Symbol('map'), POLAND));
-    await askWith('Security developments in Kenya', fixture({ geographyContextUsed: false }));
+    await askWith('Security developments in Kenya', operation([mapChip('POL', false)]));
     const kept = peekGeographyContextForTest()?.countryCode === 'POL';
-    const v = record(
-      'V6-C1',
-      chipState() !== 'geography' && unusedEffect() === 'PRESENT_UNUSED' && kept,
-      'dock markup',
-      {
-        chip: chipState(),
-        unused: unusedEffect(),
-        selectionKept: kept,
-      },
-    );
+    const v = record('V6-C1', turnGeography() === 'kept' && kept, 'dock markup', {
+      turnGeography: turnGeography(),
+      selectionKept: kept,
+    });
     expect(v).toBe('PASS');
   });
 
@@ -234,42 +293,51 @@ describe('G markup cases — what the Map dock draws after an answer', () => {
     act(() => publishGeographyContext(Symbol('map'), RWANDA));
     await askWith(
       'What happened at the convention centre yesterday?',
-      fixture({ geographyContextUsed: true, countryCode: 'RWA' }),
+      operation([mapChip('RWA', true)]),
     );
     const v = record(
       'V6-C2:markup',
-      chipState() === 'geography' && unusedEffect() === null,
+      turnGeography() === 'applied' && chipState() === 'geography',
       'dock markup',
-      { chip: chipState() },
+      { turnGeography: turnGeography(), composer: chipState() },
     );
     expect(v).toBe('PASS');
   });
 
   it('V6-C3 (markup half): nothing selected, nothing typed → a generic (global) state, and only here', async () => {
     mount();
-    await askWith('What happened at the convention centre yesterday?', fixture({}));
+    await askWith('What happened at the convention centre yesterday?', operation([]));
     const v = record(
       'V6-C3:markup',
-      chipState() === 'generic' && unusedEffect() === null,
+      chipState() === 'generic' && turnGeography() === 'absent' && sentContext(0) === undefined,
       'dock markup',
-      { chip: chipState() },
+      { composer: chipState(), turnGeography: turnGeography() },
     );
     expect(v).toBe('PASS');
   });
 
-  it('F4-C2: the server says the story was not used → the chip does not name the story', async () => {
+  it('F4-C2: the server says the story was not used → the answer does not name the story', async () => {
     mount();
     act(() =>
-      publishStoryContext(Symbol('story'), { title: 'Warsaw budget vote', countryCode: 'POL' }),
+      publishStoryContext(Symbol('story'), {
+        title: 'Warsaw budget vote',
+        articleId: 'gnews-7',
+        countryCode: 'POL',
+      }),
     );
-    await askWith('Security developments in Kenya', fixture({ storyContextUsed: false }));
-    const v = record('F4-C2', chipState() !== 'anchored', 'dock markup', { chip: chipState() });
+    await askWith(
+      'Security developments in Kenya',
+      operation([{ kind: 'GEOGRAPHY', value: 'POL', source: 'STORY_ANCHOR', applied: false }]),
+    );
+    const v = record('F4-C2', turnGeography() !== 'applied', 'dock markup', {
+      turnGeography: turnGeography(),
+    });
     expect(v).toBe('PASS');
   });
 });
 
-describe('G flow cases — the Map selection travels as two fields, and a thread ends with its context', () => {
-  it('F1-C1: an over-supplied publish is narrowed on write; the wire carries two fields', async () => {
+describe('G flow cases — the Map selection travels as one bounded reference, and a thread ends with its context', () => {
+  it('F1-C1: an over-supplied publish is narrowed on write; the wire carries only {kind, countryCode}', async () => {
     mount();
     act(() =>
       publishGeographyContext(Symbol('map'), {
@@ -282,39 +350,43 @@ describe('G flow cases — the Map selection travels as two fields, and a thread
       } as never),
     );
     const storedKeys = Object.keys(peekGeographyContextForTest() ?? {});
-    await askWith('What is happening?', fixture({ geographyContextUsed: true }));
+    await askWith('What is happening?', operation([mapChip('RWA', true)]));
     const wire = JSON.stringify(transport.mock.calls[0]);
-    const sentKeys = Object.keys((transport.mock.calls[0]?.[5] as object | undefined) ?? {});
+    const sentKeys = Object.keys((sentContext(0) as object | undefined) ?? {}).sort();
     const v = record(
       'F1-C1',
       storedKeys.join() === ASK_GEOGRAPHY_KEYS.join() &&
-        sentKeys.join() === ASK_GEOGRAPHY_KEYS.join() &&
-        !/leak/.test(wire),
-      'store + dock transport',
+        sentKeys.join() === 'countryCode,kind' &&
+        !/leak|Rwanda/.test(wire),
+      'store + dock transport (references only)',
       { storedKeys, sentKeys },
     );
     expect(v).toBe('PASS');
   });
 
-  it('F3-C1: a follow-up under a NEW Map country does not inherit the old question', async () => {
+  it('F3-C1: a follow-up under a NEW Map country does not inherit the old question (a new thread)', async () => {
     mount();
     act(() => publishGeographyContext(Symbol('map'), KENYA));
-    await askWith('Security developments in Kenya', fixture({ geographyContextUsed: true }));
+    await askWith('Security developments in Kenya', operation([mapChip('KEN', true)]));
     act(() => publishGeographyContext(Symbol('map'), RWANDA));
-    await askWith('why?', fixture({ geographyContextUsed: true }));
-    const prior = transport.mock.calls[1]?.[3];
-    const v = record('F3-C1', prior === undefined, 'dock transport, 2nd call priorQuestion', {
-      priorQuestion: prior ?? null,
-    });
+    await askWith('why?', operation([mapChip('RWA', true)]));
+    const first = transport.mock.calls[0]?.[0];
+    const second = transport.mock.calls[1]?.[0];
+    const v = record(
+      'F3-C1',
+      first !== undefined && second !== undefined && first !== second,
+      'dock transport, thread per context',
+      { firstThread: first ?? null, secondThread: second ?? null },
+    );
     expect(v).toBe('PASS');
   });
 
   it('F3-C2 (pin on first run): the reader sees that the thread ended when the Map country changed', async () => {
     mount();
     act(() => publishGeographyContext(Symbol('map'), KENYA));
-    await askWith('Security developments in Kenya', fixture({ geographyContextUsed: true }));
+    await askWith('Security developments in Kenya', operation([mapChip('KEN', true)]));
     act(() => publishGeographyContext(Symbol('map'), RWANDA));
-    const marked = renderer.root.findAll((n) => n.props.newTopicStarted === true).length > 0;
+    const marked = byAsk('new-topic-started').length > 0;
     const v = record('F3-C2', marked, 'dock markup (recorded first run)', {
       newTopicMarkerShown: marked,
     });
@@ -325,15 +397,14 @@ describe('G flow cases — the Map selection travels as two fields, and a thread
     for (const path of [[RWANDA], [RWANDA, KENYA]]) {
       mount();
       act(() => publishGeographyContext(Symbol('map'), KENYA));
-      let resolve: (r: AnalysisApiResponse) => void = () => undefined;
-      transport.mockReturnValueOnce(new Promise((r) => (resolve = r)));
+      let resolve: (r: never) => void = () => undefined;
+      transport.mockReturnValueOnce(new Promise((r) => (resolve = r)) as never);
       type('Security developments in Kenya');
-      send();
+      await send();
       for (const next of path) act(() => publishGeographyContext(Symbol('map'), next));
-      const stale = fixture({ geographyContextUsed: true, countryCode: 'KEN' });
-      resolve(stale);
+      resolve(operation([mapChip('KEN', true)]));
       await settle();
-      const rendered = renderer.root.findAll((n) => n.props.response === stale).length;
+      const rendered = byAsk('current-turn').length + byAsk('history-turn').length;
       record(
         `F3-C3:${path.length === 1 ? 'A-B' : 'A-B-A'}`,
         rendered === 0,

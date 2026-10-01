@@ -136,6 +136,10 @@ describe('No fabricated backend contract fields were introduced', () => {
     // 3-argument call: storyContext is a real, deliberate addition
     // from M51 Phase B (see StoryContext in shared/src/analysis.ts),
     // not an untracked contract drift.
-    expect(searchClientSource).toMatch(/analyzeNews\(query, language, storyContext\)/);
+    /* UNIFIED INTELLIGENCE BINDING R2C — the request is now the canonical Ask V2 turn: the
+       question plus ONE bounded reference built from the same memoized storyContext (never an
+       arbitrary serialized object — and no longer even the story's title). */
+    expect(searchClientSource).toMatch(/\.current\(query, askContextRefOf\(storyContext, undefined\)/);
+    expect(searchClientSource).not.toMatch(/analyzeNews\(/);
   });
 });
