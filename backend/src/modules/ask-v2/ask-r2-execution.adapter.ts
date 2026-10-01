@@ -1,6 +1,10 @@
 import { solveComputation, type ComputationResult } from './computation/deterministic-computation';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import type { AnalysisApiResponse } from '@globalnews-ai/shared';
+import type {
+  AnalysisApiResponse,
+  MultiStoryAction,
+  SelectedStoryRef,
+} from '@globalnews-ai/shared';
 import { AnalysisService } from '../analysis/service/analysis.service';
 import { AnalysisConfigService } from '../analysis/config/analysis-config.service';
 import { ANALYSIS_PROVIDER } from '../analysis/providers/provider.tokens';
@@ -173,8 +177,15 @@ function routeFor(request: Readonly<AskRequest>, baseDeps: PlannerDeps): AskR2Ro
  */
 export function routeContextOf(
   context: ResolvedAskContext | undefined,
-): Pick<AskRouteContext, 'hasResolvedArticleAnchor' | 'storyAnchorCountry' | 'mapContextCountry'> {
+): Pick<
+  AskRouteContext,
+  'hasResolvedArticleAnchor' | 'storyAnchorCountry' | 'mapContextCountry' | 'articleRefs'
+> {
   if (context === undefined) return {};
+  /* R2D — a SELECTION is frozen C's own multi-story transport (the SELECTION rank). */
+  if (context.kind === 'SELECTION') {
+    return { articleRefs: context.stories.map((story) => story.articleRef) };
+  }
   if (context.kind === 'STORY') {
     return {
       hasResolvedArticleAnchor: true,
@@ -436,6 +447,17 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     };
   }
 
+  /**
+   * THE ONE CALL SITE of the approved analysis path. Every execution (Reporting, and the R2D
+   * Selection) makes at most ONE call, through here; its output is stored as a display payload
+   * and nothing it returns is executed, fetched or used as an identity.
+   */
+  private analyze(
+    ...args: Parameters<AnalysisService['analyzeNews']>
+  ): ReturnType<AnalysisService['analyzeNews']> {
+    return this.analysis.analyzeNews(...args);
+  }
+
   /** The governed reads for this route — local, bounded, isolated; never rejects. */
   private readIntelligence(route: AskR2Route): Promise<AskContributionSet> {
     return this.intelligence.read(route).catch((error: unknown) => {
@@ -541,6 +563,18 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const priorQuestion = askRequestContext.getStore()?.priorQuestion ?? null;
     if (planRevision(request, route, priorQuestion) !== plan.revision) {
       throw new AskExecutionRefused('ASK_PLAN_REVISION_MISMATCH');
+    }
+
+    /* UNIFIED INTELLIGENCE BINDING R2D — a SELECTION is executed as the selection (see
+       executeSelection), never re-classified from its product-generated action label. */
+    if (request.context?.kind === 'SELECTION') {
+      return this.executeSelection(request, plan, route, operationId, draft, {
+        action: request.context.action,
+        stories: request.context.stories.map((story) => ({
+          articleRef: story.articleRef,
+          url: story.url,
+        })),
+      });
     }
 
     /* 2 · a terminal that needs no model answers with ZERO AI. */
@@ -694,7 +728,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       /* One call to the approved path. Counted before it is made, so a call that throws
          is still a call that happened — the number an operator needs is attempts. */
       draft.providerCallCount = 1;
-      response = await this.analysis.analyzeNews(
+      response = await this.analyze(
         request.question,
         request.language,
         /* R2B — the SERVER-RESOLVED story (built from the retained row), never client text. */
@@ -921,6 +955,148 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
    * `evidenceRolesObtained` stays [] and `reportingItemCount` is 0 (not null: Reporting was
    * decided against, not unreached). No background text reaches the draft.
    */
+  /**
+   * UNIFIED INTELLIGENCE BINDING R2D — the My Intelligence SELECTION, executed by the canonical
+   * engine through AnalysisService's EXISTING selection branch (its evidence is exactly the
+   * server-verified selected stories; no provider retrieval). The action label ("Compare the
+   * selected stories") is product-generated text, not a reader-typed question: it is NOT
+   * re-classified by the general router (which reads "compare …" without named members as a
+   * clarification and "explain …" as background — both would answer something other than the
+   * selection). frozen C is untouched; its plan still pins the identity (revision, fingerprint).
+   *
+   * Every control is the reporting path's, in the same order: switches, server-held request
+   * context, breaker permit, the guest resource scope (R2A.1), the meter reservation, ONE model
+   * attempt, settlement on actual units and the breaker record. Stored reuse stays governed by the
+   * answer state (CURRENT_REPORTING is never replayed).
+   */
+  private async executeSelection(
+    request: Readonly<AskRequest>,
+    plan: Readonly<AskPlan>,
+    route: AskR2Route,
+    operationId: string,
+    draft: AskObservationDraft,
+    selection: { readonly action: MultiStoryAction; readonly stories: readonly SelectedStoryRef[] },
+  ): Promise<ExecutionResult> {
+    draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
+    if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
+    draft.askPublicComputeEnabled = await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+    if (!draft.askPublicComputeEnabled) {
+      throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
+    }
+    const who = askRequestContext.getStore();
+    if (who === undefined) throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
+
+    const provider = this.provider.id;
+    draft.providerId = provider;
+    const permit = await this.breaker.permit(provider);
+    if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
+
+    const guest = await this.resolveGuestComputeScope(who);
+    const reservation = await this.meter.reserve({
+      accountId: who.accountId,
+      ipScope: who.ipScope,
+      ...(guest === undefined ? {} : { guest }),
+      provider,
+      estimatedUnits: estimateUnits(
+        request.question.length,
+        this.analysisConfig.get(),
+        this.meter.config.outputWeight,
+      ),
+    });
+    if (!reservation.admitted) {
+      await this.breaker.record(provider, 'REFUSAL', permit.trial);
+      throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
+    }
+
+    let usage: { promptTokens: number; completionTokens: number } | null = null;
+    let outcome: BreakerOutcome = 'FAILURE';
+    let response: AnalysisApiResponse | null = null;
+    let noEvidence = false;
+    try {
+      draft.providerCallCount = 1;
+      response = await this.analyze(
+        request.question,
+        request.language,
+        undefined,
+        /* A selection replaces the conversation context (the landed selection branch). */
+        undefined,
+        { action: selection.action, stories: [...selection.stories] },
+        undefined,
+        {
+          maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
+          usageSink: (u) => {
+            usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
+          },
+        },
+      );
+      noEvidence = response.analysis === null && response.articles.length === 0;
+      outcome = noEvidence
+        ? 'REFUSAL'
+        : response.analysis === null && response.analysisError !== undefined
+          ? 'FAILURE'
+          : 'SUCCESS';
+    } catch (error) {
+      outcome = /timeout|deadline/i.test((error as Error)?.message ?? '') ? 'TIMEOUT' : 'FAILURE';
+    } finally {
+      const used = usage as { promptTokens: number; completionTokens: number } | null;
+      const actual =
+        used !== null
+          ? used.promptTokens + this.meter.config.outputWeight * used.completionTokens
+          : noEvidence
+            ? 0
+            : null;
+      await this.meter.settle(
+        reservation.reservationId,
+        actual,
+        noEvidence ? 'NO_EVIDENCE' : outcome,
+      );
+      await this.breaker.record(provider, outcome, permit.trial);
+      draft.breakerOutcome = noEvidence ? 'REFUSAL' : outcome;
+    }
+    if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {
+      throw new AskExecutionRefused(`MODEL_${outcome}`);
+    }
+
+    const produced = response.analysis !== null;
+    const answer: AnswerDecision = produced
+      ? { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] }
+      : {
+          state: 'INSUFFICIENT',
+          basis: 'NO_REQUIRED_EVIDENCE_OBTAINED',
+          missingRoles: ['REPORTING'],
+        };
+    draft.aiExecuted = produced;
+    draft.modelInvocationCount = produced ? 1 : 0;
+    draft.reportingItemCount = response.articles.length;
+    draft.evidenceRolesObtained = response.articles.length > 0 ? ['REPORTING'] : [];
+    const usedNow = usage as { promptTokens: number; completionTokens: number } | null;
+    if (usedNow !== null) {
+      draft.promptTokens = usedNow.promptTokens;
+      draft.completionTokens = usedNow.completionTokens;
+    }
+    /* The displayed route is the selection the reader ran — never the general classifier's
+       reading of the action label. Chips still come from the plan's own constraints. */
+    const selectionRoute: AskR2Route = {
+      ...route,
+      plan: {
+        ...route.plan,
+        questionClass: 'CURRENT_REPORTING',
+        terminalState: 'EXECUTABLE',
+        scopedBy: 'SELECTION',
+        refusals: [],
+        clarification: [],
+      },
+    };
+    return this.result(
+      plan,
+      selectionRoute,
+      operationId,
+      this.observeAnswer(answer, draft),
+      response,
+      produced,
+    );
+  }
+
   private async executeBackground(
     request: Readonly<AskRequest>,
     plan: Readonly<AskPlan>,

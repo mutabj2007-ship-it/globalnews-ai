@@ -1,7 +1,6 @@
 import { createElement } from 'react';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
-import { analyzeNews } from '@/lib/api/analysisApi';
 import type { MyIntelligenceData } from './useMyIntelligenceData';
 import type { FixtureStory } from './devFixtures';
 
@@ -10,15 +9,52 @@ import type { FixtureStory } from './devFixtures';
  * MY INTELLIGENCE — COMPUTE-ACTION CLOSURE R1
  * ════════════════════════════════════════════════════════════════════════════
  *
- * The REAL client and the REAL runSelectionAction(). Only the transport
- * (analyzeNews) is replaced, so every count below is a count of the requests
- * the product would actually send to POST /analysis/news.
+ * The REAL client and the REAL runSelectionAction(). Only the transport is replaced, so every
+ * count below is a count of the requests the product would actually send.
+ *
+ * UNIFIED INTELLIGENCE BINDING R2D — the transport is now the canonical Ask V2 conversation's
+ * submit (one Confirm = one Ask V2 turn carrying a SELECTION reference). The conversation is
+ * mocked AT ITS BOUNDARY and each submit is recorded in the old argument layout — (question,
+ * language, -, -, {action, stories}) — taken from the SELECTION reference, so "exactly one
+ * request with exactly these stories" still means what it meant.
  *
  *   enter mode · select · choose action · open sheet · cancel · Clear · Done  → 0
  *   final explicit Run / Send                                               → exactly 1
  */
 
 jest.mock('@/lib/api/analysisApi', () => ({ analyzeNews: jest.fn() }));
+const mockTransport = jest.fn();
+jest.mock('@/lib/ask/useAskR2Conversation', () => ({
+  ...jest.requireActual('@/lib/ask/useAskR2Conversation'),
+  useAskR2Conversation: (language: string) => ({
+    startNewTopic: () => undefined,
+    submit: async (
+      question: string,
+      context: { action: string; stories: unknown },
+      onTurn: (turn: unknown) => void,
+    ) => {
+      try {
+        const response = await mockTransport(question, language, undefined, undefined, {
+          action: context.action,
+          stories: context.stories,
+        });
+        onTurn({
+          question,
+          operation: { operationId: 'op-1' },
+          payload: {
+            schema: 'ask-r2-result/1',
+            answer: { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] },
+            analysis: response,
+          },
+        });
+        return 'sent';
+      } catch {
+        onTurn({ question, failure: 'NETWORK' });
+        return 'failed';
+      }
+    },
+  }),
+}));
 jest.mock('@/components/search/SearchPageClient', () => ({
   resolveAnalysisErrorMessage: () => 'GOVERNED ANALYSIS ERROR COPY',
 }));
@@ -99,7 +135,7 @@ Object.assign(globalThis, { window: Object.assign(target, { innerHeight: 844, in
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { MyIntelligenceClient } = require('./MyIntelligenceClient') as typeof import('./MyIntelligenceClient');
 
-const transport = jest.mocked(analyzeNews);
+const transport = mockTransport;
 let renderer: ReactTestRenderer;
 
 const all = (predicate: (node: ReactTestInstance) => boolean): ReactTestInstance[] =>
@@ -323,7 +359,8 @@ describe('result presentation — the existing reader, plus the selection facts'
     });
     expect(transport).toHaveBeenCalledTimes(1);
     expect(one('data-mi-compute-sheet', 'failed')).toBeDefined();
-    expect(text(one('data-mi-run-failed')!)).toContain('GOVERNED ANALYSIS ERROR COPY');
+    /* R2D — a failed canonical turn shows the governed "did not complete" copy. */
+    expect(text(one('data-mi-run-failed')!)).toContain('The analysis did not complete. Your selection is kept.');
     expect(text(runButton()!)).toContain('Try again');
     expect(selectedCount()).toBe(2);
     /* No automatic retry: nothing more is sent until the reader presses again. */

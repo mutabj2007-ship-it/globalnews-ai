@@ -540,4 +540,71 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
     /* The existing server-derived priorQuestion continuity still applies. */
     expect(analyzeNews.mock.calls[1][3]).toBe('What is happening in Poland?');
   });
+
+  /* ── R2D · My Intelligence SELECTION through the canonical engine ───── */
+  const SEL = (action: string, ...urls: string[]) => ({
+    kind: 'SELECTION' as const,
+    action,
+    stories: urls.map((u) => ({ articleRef: REF(u), url: u })),
+  });
+
+  it('R2D · Compare(A,B) vs Compare(A,NC): different identity, each run receives ITS selection; no reuse', async () => {
+    const one = await send('Compare the selected stories', SEL('COMPARE', URL_A, URL_B));
+    const two = await send('Compare the selected stories', SEL('COMPARE', URL_A, URL_NC));
+    expect(one.status).toBe('COMPLETED');
+    expect(two.status).toBe('COMPLETED');
+    const [o1, o2] = [await op(one.operationId), await op(two.operationId)];
+    expect(o1.requestHash).not.toBe(o2.requestHash);
+    expect(o1.fingerprint).not.toBe(o2.fingerprint);
+    expect(o2.storedResultReused).toBe(false);
+    expect(analyzeNews).toHaveBeenCalledTimes(2);
+    expect(analyzeNews.mock.calls[0][4]).toEqual({
+      action: 'COMPARE',
+      stories: [
+        { articleRef: REF(URL_A), url: URL_A },
+        { articleRef: REF(URL_B), url: URL_B },
+      ],
+    });
+    expect(analyzeNews.mock.calls[1][4].stories[1].url).toBe(URL_NC);
+    /* never answered as background, never re-classified as a clarification */
+    expect(answerBackground).not.toHaveBeenCalled();
+    const payload = (await db.storedResult.findUniqueOrThrow({ where: { id: o1.storedResultId! } }))
+      .payload as { answer: { state: string }; route: { scopedBy: string } };
+    expect(payload.answer.state).toBe('CURRENT_REPORTING');
+    expect(payload.route.scopedBy).toBe('SELECTION');
+  });
+
+  it('R2D · the same set in another order is the SAME identity (same key → same operation)', async () => {
+    const key = randomUUID();
+    const first = await send('Summarize the selected stories', SEL('SUMMARIZE', URL_A, URL_B), key);
+    const again = await send('Summarize the selected stories', SEL('SUMMARIZE', URL_B, URL_A), key);
+    expect(again.operationId).toBe(first.operationId);
+    expect(analyzeNews).toHaveBeenCalledTimes(1);
+  });
+
+  it('R2D · one unretained story refuses the whole selection before any operation, model or meter', async () => {
+    const before = await counts();
+    expect(
+      await refusal(
+        send(
+          'Compare the selected stories',
+          SEL('COMPARE', URL_A, `https://r2b-${RUN}.example/missing`),
+        ),
+      ),
+    ).toBe('ASK_CONTEXT_STORY_NOT_FOUND');
+    expect(await counts()).toEqual(before);
+    expect(analyzeNews).not.toHaveBeenCalled();
+  });
+
+  it('R2D · reopen is display-only; the next question in the thread does not inherit the selection', async () => {
+    const res = await send('Compare the selected stories', SEL('COMPARE', URL_A, URL_B));
+    const reopened = await askRequestContext.run(who(), () =>
+      service.getOperation(accountPrincipal(userId), res.operationId),
+    );
+    expect(reopened.result?.displayOnly).toBe(true);
+    expect(analyzeNews).toHaveBeenCalledTimes(1);
+    const follow = await send('Why did this happen?');
+    expect(await planOf(follow.operationId)).not.toHaveProperty('context');
+    expect(analyzeNews.mock.calls[1][4]).toBeUndefined();
+  });
 });

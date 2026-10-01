@@ -2,7 +2,11 @@ import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import {
   ARTICLE_REF_PATTERN,
   GEOGRAPHY_COUNTRY_CODE_PATTERN,
+  MAX_SELECTED_STORIES,
+  MULTI_STORY_ACTIONS,
+  MULTI_STORY_MIN_STORIES,
   resolveGovernedCountryCode,
+  type MultiStoryAction,
   type NewsArticle,
   type StoryContext,
 } from '@globalnews-ai/shared';
@@ -13,7 +17,11 @@ import {
   ASK_CONTEXT_KEY_SETS,
   ASK_CONTEXT_URL_MAX,
 } from './ask-turn-context.dto';
-import { RESOLVED_STORY_BOUNDS, type ResolvedAskContext } from './resolved-ask-context';
+import {
+  RESOLVED_STORY_BOUNDS,
+  type ResolvedAskContext,
+  type ResolvedSelectedStory,
+} from './resolved-ask-context';
 
 /**
  * UNIFIED INTELLIGENCE BINDING R2B — the named, deterministic context refusals. Each is raised
@@ -72,7 +80,10 @@ export class AskContextResolver {
   constructor(@Inject(NewsService) private readonly stories: RetainedStoryReader) {}
 
   async resolve(raw: unknown): Promise<ResolvedAskContext> {
-    if (!isObject(raw) || (raw.kind !== 'STORY' && raw.kind !== 'GEOGRAPHY')) {
+    if (
+      !isObject(raw) ||
+      (raw.kind !== 'STORY' && raw.kind !== 'GEOGRAPHY' && raw.kind !== 'SELECTION')
+    ) {
       throw new AskContextRefused('ASK_CONTEXT_INVALID');
     }
     const keys = Object.keys(raw).filter((k) => raw[k] !== undefined);
@@ -81,6 +92,7 @@ export class AskContextResolver {
     );
     if (exact === undefined) throw new AskContextRefused('ASK_CONTEXT_INVALID');
     if (raw.kind === 'GEOGRAPHY') return this.resolveGeography(raw.countryCode);
+    if (raw.kind === 'SELECTION') return this.resolveSelection(raw.action, raw.stories);
     return keys.includes('articleId')
       ? this.resolveStoryById(raw.articleId)
       : this.resolveStory(raw.articleRef, raw.url);
@@ -167,6 +179,67 @@ export class AskContextResolver {
       ...(country !== undefined ? { countryIso3: country.iso3 } : {}),
       storyContext,
     };
+  }
+
+  /**
+   * R2D — a My Intelligence SELECTION. Bounded (1..8, the action's own minimum, unique refs), every
+   * reference must be the identity of its URL, and EVERY story must resolve from retained
+   * reporting (one database read each, by URL; never fetched). One unresolvable story refuses the
+   * whole turn — a selection is never silently shrunk into a different selection.
+   */
+  private async resolveSelection(action: unknown, stories: unknown): Promise<ResolvedAskContext> {
+    if (
+      typeof action !== 'string' ||
+      !(MULTI_STORY_ACTIONS as readonly string[]).includes(action) ||
+      !Array.isArray(stories) ||
+      stories.length === 0 ||
+      stories.length > MAX_SELECTED_STORIES ||
+      stories.length < MULTI_STORY_MIN_STORIES[action as MultiStoryAction]
+    ) {
+      throw new AskContextRefused('ASK_CONTEXT_INVALID');
+    }
+    const seen = new Set<string>();
+    for (const story of stories) {
+      if (
+        !isObject(story) ||
+        Object.keys(story).some((k) => k !== 'articleRef' && k !== 'url') ||
+        typeof story.articleRef !== 'string' ||
+        !ARTICLE_REF_PATTERN.test(story.articleRef) ||
+        typeof story.url !== 'string' ||
+        story.url.length < 8 ||
+        story.url.length > ASK_CONTEXT_URL_MAX ||
+        !/^https?:\/\/\S+$/i.test(story.url) ||
+        seen.has(story.articleRef)
+      ) {
+        throw new AskContextRefused('ASK_CONTEXT_INVALID');
+      }
+      seen.add(story.articleRef);
+      if (computeArticleRef(story.url) !== story.articleRef) {
+        throw new AskContextRefused('ASK_CONTEXT_STORY_REF_MISMATCH');
+      }
+    }
+    const resolved: ResolvedSelectedStory[] = [];
+    for (const story of stories as { articleRef: string; url: string }[]) {
+      let article: NewsArticle | null;
+      try {
+        article = await this.stories.findRetainedArticleByUrl(story.url);
+      } catch {
+        article = null;
+      }
+      if (article === null || computeArticleRef(article.url) !== story.articleRef) {
+        throw new AskContextRefused('ASK_CONTEXT_STORY_NOT_FOUND');
+      }
+      const articleId = (article.id ?? '').trim();
+      if (
+        articleId.length === 0 ||
+        articleId.length > RESOLVED_STORY_BOUNDS.articleId ||
+        article.url.length > RESOLVED_STORY_BOUNDS.url
+      ) {
+        throw new AskContextRefused('ASK_CONTEXT_STORY_OUT_OF_BOUNDS');
+      }
+      resolved.push({ articleRef: story.articleRef, articleId, url: article.url });
+    }
+    return { kind: 'SELECTION', action: action as MultiStoryAction, stories: resolved };
   }
 
   private resolveGeography(countryCode: unknown): ResolvedAskContext {

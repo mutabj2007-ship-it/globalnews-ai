@@ -53,5 +53,8 @@ export function askContextRefOf(
 export function askContextKey(ref: AskV2ContextRef | undefined): string {
   if (ref === undefined) return 'none';
   if (ref.kind === 'GEOGRAPHY') return `GEOGRAPHY:${ref.countryCode.toUpperCase()}`;
+  if (ref.kind === 'SELECTION') {
+    return `SELECTION:${ref.action}:${ref.stories.map((story) => story.articleRef).sort().join(',')}`;
+  }
   return 'articleId' in ref ? `STORY:id:${ref.articleId}` : `STORY:ref:${ref.articleRef}`;
 }

@@ -1,4 +1,4 @@
-import type { AnalysisApiResponse } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, MultiStoryAction } from '@globalnews-ai/shared';
 import { accountFetch } from './accountFetch';
 
 /**
@@ -30,7 +30,13 @@ export type AskV2Intent = 'ask' | 'deep-analysis' | 'research-report';
 export type AskV2ContextRef =
   | { readonly kind: 'STORY'; readonly articleId: string }
   | { readonly kind: 'STORY'; readonly articleRef: string; readonly url: string }
-  | { readonly kind: 'GEOGRAPHY'; readonly countryCode: string };
+  | { readonly kind: 'GEOGRAPHY'; readonly countryCode: string }
+  /* R2D — a My Intelligence selection: the action and its SelectedStoryRefs (references only). */
+  | {
+      readonly kind: 'SELECTION';
+      readonly action: MultiStoryAction;
+      readonly stories: readonly { readonly articleRef: string; readonly url: string }[];
+    };
 
 /** A server refusal of the context itself (unresolvable / unknown) — never a generic Ask. */
 export function isAskContextRefusal(code: string | undefined): boolean {

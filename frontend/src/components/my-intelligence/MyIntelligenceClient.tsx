@@ -5,11 +5,9 @@ import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
 import { ARTICLE_REF_PATTERN, MAX_SELECTED_STORIES, SEARCH_HISTORY_LIST_LIMIT, findCountryByIso3 } from '@globalnews-ai/shared';
 import { FollowingControl } from './MiFollowing';
 import { resolveAnalysisErrorMessage } from '@/components/search/SearchPageClient';
-import {
-  SELECTION_ACTION_QUESTIONS,
-  SelectionActionError,
-  runSelectionAction,
-} from '@/lib/myIntelligence/selection';
+import { SelectionActionError, runSelectionAction } from '@/lib/myIntelligence/selection';
+import { sanitizeReturnPath, useAskR2Conversation } from '@/lib/ask/useAskR2Conversation';
+import { askR2Strings } from '@/lib/ask/askR2Strings';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { MI_CARD, MI_EYEBROW, MI_GREETING, MI_PAGE } from './miPresentation';
 import { FixtureBanner, StatusBanner, fill } from './MiPrimitives';
@@ -134,6 +132,8 @@ export function MyIntelligenceClient({
     response: AnalysisApiResponse;
     question: string;
     titlesByRef: Readonly<Record<string, string>>;
+    /** R2D — the canonical Ask operation this result is (reopen = display-only). */
+    operationId?: string;
   } | null>(null);
   const inFlight = useRef(false);
 
@@ -231,6 +231,15 @@ export function MyIntelligenceClient({
   }, []);
 
   const dictionary = getDictionary(language);
+  /*
+    UNIFIED INTELLIGENCE BINDING R2D — Compare / Summarize / … run through the ONE canonical
+    conversation (an account surface: no guest trial). Nothing is read on mount; selection stays
+    local state. Each explicit Confirm opens its OWN Ask thread, so a selection never continues
+    into an unrelated question and the result appears in Recent like every Ask answer.
+  */
+  const r2Locale: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  const r2 = useAskR2Conversation(r2Locale, sanitizeReturnPath('/my-intelligence'));
+  const r2s = askR2Strings(r2Locale);
 
   const onConfirm = useCallback(
     (question: string) => {
@@ -245,17 +254,37 @@ export function MyIntelligenceClient({
       setRunStatus('running');
       setRunError(undefined);
 
-      /* THE ONE COMPUTE CALL: the governed boundary, then the existing client, then POST /analysis/news. */
-      runSelectionAction(multiStory, stories, language, typed)
-        .then((response) => {
-          setResult({
-            action,
-            response,
-            question: typed ?? SELECTION_ACTION_QUESTIONS[language === 'pl' ? 'pl' : 'en'][multiStory],
-            titlesByRef,
-          });
-          setSheetAction(null);
-          setRunStatus('idle');
+      /* THE ONE COMPUTE CALL: the governed boundary, then ONE canonical Ask V2 turn. */
+      r2.startNewTopic();
+      runSelectionAction(multiStory, stories, language, typed, r2.submit)
+        .then(({ outcome, turn, question: asked }) => {
+          const analysis = turn?.payload?.analysis ?? null;
+          if (outcome === 'sent' && turn !== null && analysis !== null) {
+            setResult({
+              action,
+              response: analysis,
+              question: asked,
+              titlesByRef,
+              ...(turn.operation?.operationId ? { operationId: turn.operation.operationId } : {}),
+            });
+            setSheetAction(null);
+            setRunStatus('idle');
+            return;
+          }
+          /* Nothing usable ran (or the stories could not be analysed): the selection is kept and
+             the reader is told why, truthfully — never a silent generic answer. */
+          setRunStatus('failed');
+          setRunError(
+            outcome === 'context-unavailable'
+              ? r2s.unified.contextUnavailable
+              : outcome === 'signed-out'
+                ? r2s.signInRequired.body
+                : outcome === 'legacy'
+                  ? r2s.unified.askUnavailable
+                  : outcome === 'kept' || outcome === 'busy'
+                    ? r2s.guest.limited
+                    : t.compute.failedTitle,
+          );
         })
         .catch((error: unknown) => {
           /* The selection is untouched; the sheet stays open with an explicit retry. */
@@ -278,7 +307,7 @@ export function MyIntelligenceClient({
           inFlight.current = false;
         });
     },
-    [dictionary, language, sheetAction, t.compute.questionRequired, t.compute.tooFewVerified, t.selection.maxReached, verifiedStories],
+    [dictionary, language, r2, r2s, sheetAction, t.compute.failedTitle, t.compute.questionRequired, t.compute.tooFewVerified, t.selection.maxReached, verifiedStories],
   );
 
   /*
@@ -614,6 +643,7 @@ export function MyIntelligenceClient({
           response={result.response}
           question={result.question}
           titlesByRef={result.titlesByRef}
+          {...(result.operationId === undefined ? {} : { operationId: result.operationId })}
           onClose={() => setResult(null)}
         />
       )}

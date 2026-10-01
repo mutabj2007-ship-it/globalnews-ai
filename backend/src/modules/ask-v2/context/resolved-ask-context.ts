@@ -1,7 +1,11 @@
 import {
   ARTICLE_REF_PATTERN,
   findCountryByIso3,
+  MAX_SELECTED_STORIES,
+  MULTI_STORY_ACTIONS,
+  MULTI_STORY_MIN_STORIES,
   type GeographyContext,
+  type MultiStoryAction,
   type StoryContext,
 } from '@globalnews-ai/shared';
 import { computeArticleRef } from '../../news/identity/article-ref.util';
@@ -30,7 +34,20 @@ export type ResolvedAskContext =
       readonly kind: 'GEOGRAPHY';
       readonly countryIso3: string;
       readonly geographyContext: GeographyContext;
+    }
+  | {
+      /** R2D — a My Intelligence selection, every story resolved from retained reporting. */
+      readonly kind: 'SELECTION';
+      readonly action: MultiStoryAction;
+      readonly stories: readonly ResolvedSelectedStory[];
     };
+
+/** R2D — one selected story as RESOLVED: its identity, its stored row id and stored URL. */
+export interface ResolvedSelectedStory {
+  readonly articleRef: string;
+  readonly articleId: string;
+  readonly url: string;
+}
 
 /** Bounds on server-sourced story fields carried in a persisted plan. */
 export const RESOLVED_STORY_BOUNDS = {
@@ -44,14 +61,18 @@ export const RESOLVED_STORY_BOUNDS = {
  * The canonical identity of a resolved context — what requestHash, planRevision and the
  * stored-result fingerprint pin. STORY is keyed by articleRef (the URL-derived story identity
  * the product uses everywhere; the provider article id is a weak 32-bit hash and never
- * identity). GEOGRAPHY is keyed by ISO3.
+ * identity). GEOGRAPHY is keyed by ISO3. SELECTION (R2D) is keyed by the action and the SORTED
+ * set of articleRefs, so the same stories in any order are one selection, and Story Set A can
+ * never be Story Set B.
  */
-export type AskContextIdentity = readonly ['STORY', string] | readonly ['GEOGRAPHY', string];
+export type AskContextIdentity =
+  readonly ['STORY', string] | readonly ['GEOGRAPHY', string] | readonly ['SELECTION', string];
 
 export function contextIdentity(context: ResolvedAskContext): AskContextIdentity {
-  return context.kind === 'STORY'
-    ? (['STORY', context.articleRef] as const)
-    : (['GEOGRAPHY', context.countryIso3] as const);
+  if (context.kind === 'STORY') return ['STORY', context.articleRef] as const;
+  if (context.kind === 'GEOGRAPHY') return ['GEOGRAPHY', context.countryIso3] as const;
+  const refs = context.stories.map((story) => story.articleRef).sort();
+  return ['SELECTION', `${context.action}:${refs.join(',')}`] as const;
 }
 
 /** A flat, deterministic token of the identity (used inside string tuples such as planRevision). */
@@ -123,6 +144,30 @@ export function isResolvedAskContext(v: unknown): v is ResolvedAskContext {
     if (!isObject(g) || !hasExactlyKeys(g, ['countryCode', 'displayName'])) return false;
     if (g.countryCode !== v.countryIso3) return false;
     if (g.displayName !== findCountryByIso3(v.countryIso3)?.name) return false;
+    return true;
+  }
+  if (v.kind === 'SELECTION') {
+    if (!hasExactlyKeys(v, ['kind', 'action', 'stories'])) return false;
+    if (
+      typeof v.action !== 'string' ||
+      !(MULTI_STORY_ACTIONS as readonly string[]).includes(v.action)
+    )
+      return false;
+    const stories = v.stories;
+    if (!Array.isArray(stories) || stories.length > MAX_SELECTED_STORIES) return false;
+    if (stories.length < MULTI_STORY_MIN_STORIES[v.action as MultiStoryAction]) return false;
+    const refs = new Set<string>();
+    for (const story of stories) {
+      if (!isObject(story) || !hasExactlyKeys(story, ['articleRef', 'articleId', 'url']))
+        return false;
+      if (typeof story.articleRef !== 'string' || !ARTICLE_REF_PATTERN.test(story.articleRef))
+        return false;
+      if (!boundedString(story.articleId, RESOLVED_STORY_BOUNDS.articleId)) return false;
+      if (!boundedString(story.url, RESOLVED_STORY_BOUNDS.url)) return false;
+      if (computeArticleRef(story.url) !== story.articleRef) return false;
+      if (refs.has(story.articleRef)) return false;
+      refs.add(story.articleRef);
+    }
     return true;
   }
   return false;

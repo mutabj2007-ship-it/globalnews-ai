@@ -1,5 +1,22 @@
-import { IsIn, IsString, Length, Matches, ValidateIf } from 'class-validator';
-import { ARTICLE_REF_PATTERN, GEOGRAPHY_COUNTRY_CODE_PATTERN } from '@globalnews-ai/shared';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsIn,
+  IsString,
+  Length,
+  Matches,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ARTICLE_REF_PATTERN,
+  GEOGRAPHY_COUNTRY_CODE_PATTERN,
+  MAX_SELECTED_STORIES,
+  MULTI_STORY_ACTIONS,
+  type MultiStoryAction,
+} from '@globalnews-ai/shared';
 
 /**
  * UNIFIED INTELLIGENCE BINDING R2B — the ONE optional context a client may attach to an Ask V2
@@ -27,11 +44,16 @@ import { ARTICLE_REF_PATTERN, GEOGRAPHY_COUNTRY_CODE_PATTERN } from '@globalnews
  *     an unknown code is rejected by the server resolver; the display name always comes from
  *     the shared registry.
  *
+ *   { kind: 'SELECTION', action, stories: [{ articleRef, url }, …] }   (R2D)
+ *     A My Intelligence selection: one of the existing MultiStoryAction values and 1..8 unique
+ *     story references in the SelectedStoryRef format. Every story is resolved server-side from
+ *     retained reporting; one unresolvable story refuses the whole turn (never a silent drop).
+ *
  * Cross-kind fields are refused: a STORY carrying `countryCode`, or a GEOGRAPHY carrying
  * `articleRef`/`url`, is rejected by the resolver's exact key-set check (ASK_CONTEXT_KEY_SETS),
  * which runs before any read, operation, slot or meter.
  */
-export const ASK_CONTEXT_KINDS = ['STORY', 'GEOGRAPHY'] as const;
+export const ASK_CONTEXT_KINDS = ['STORY', 'GEOGRAPHY', 'SELECTION'] as const;
 export type AskContextKind = (typeof ASK_CONTEXT_KINDS)[number];
 
 /** Bound on the story URL used as lookup data (the legacy StoryContextDto bound). */
@@ -42,6 +64,12 @@ export const ASK_CONTEXT_ARTICLE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,199
 
 const storyByRef = (o: AskTurnContextDto): boolean =>
   o.kind === 'STORY' && o.articleId === undefined;
+
+/** R2D — one selected story: the existing SelectedStoryRef format (references only). */
+export class AskSelectedStoryRefDto {
+  @IsString() @Matches(ARTICLE_REF_PATTERN) articleRef!: string;
+  @IsString() @Length(8, ASK_CONTEXT_URL_MAX) @Matches(/^https?:\/\/\S+$/i) url!: string;
+}
 
 export class AskTurnContextDto {
   @IsIn(ASK_CONTEXT_KINDS as unknown as string[]) kind!: AskContextKind;
@@ -69,6 +97,19 @@ export class AskTurnContextDto {
   @IsString()
   @Matches(GEOGRAPHY_COUNTRY_CODE_PATTERN)
   countryCode?: string;
+
+  /* R2D — SELECTION: the action and its bounded story references. */
+  @ValidateIf((o: AskTurnContextDto) => o.kind === 'SELECTION' || o.action !== undefined)
+  @IsIn(MULTI_STORY_ACTIONS as unknown as string[])
+  action?: MultiStoryAction;
+
+  @ValidateIf((o: AskTurnContextDto) => o.kind === 'SELECTION' || o.stories !== undefined)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_SELECTED_STORIES)
+  @ValidateNested({ each: true })
+  @Type(() => AskSelectedStoryRefDto)
+  stories?: AskSelectedStoryRefDto[];
 }
 
 /**
@@ -85,4 +126,6 @@ export const ASK_CONTEXT_KEY_SETS: Readonly<
     ['kind', 'articleId'],
   ],
   GEOGRAPHY: [['kind', 'countryCode']],
+  /* R2D */
+  SELECTION: [['kind', 'action', 'stories']],
 };

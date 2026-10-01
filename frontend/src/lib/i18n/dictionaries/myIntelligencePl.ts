@@ -182,8 +182,10 @@ export const myIntelligencePl = {
     resultLabel: 'Wynik',
     resultResolved: 'Odnalezione artykuły: {resolved} z {requested}',
     resultUnresolved: 'Nie znaleziono w zachowanych doniesieniach:',
+    /* UNIFIED INTELLIGENCE BINDING R2D — the result is a canonical Ask answer: reopenable, never rerun. */
     resultFullNote:
-      'To pełny wynik dla zaznaczonych artykułów. Obszar analizy otwiera pojedyncze pytania, więc nie może ponownie otworzyć tego zaznaczenia bez uruchomienia innej analizy.',
+      'Zapisano w Twoich rozmowach Zapytaj. Ponowne otwarcie pokazuje ten wynik — nic nie jest uruchamiane ponownie.',
+    openInAsk: 'Otwórz w Zapytaj',
     close: 'Zamknij',
   },
 

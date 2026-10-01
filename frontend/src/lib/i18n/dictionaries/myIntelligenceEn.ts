@@ -187,8 +187,9 @@ export const myIntelligenceEn = {
     resultLabel: 'Result',
     resultResolved: 'Resolved {resolved} of {requested} selected stories',
     resultUnresolved: 'Not found in retained reporting:',
-    resultFullNote:
-      'This is the full result for your selected stories. The Analysis Workspace opens single questions, so it can’t reopen this selection without running a different analysis.',
+    /* UNIFIED INTELLIGENCE BINDING R2D — the result is a canonical Ask answer: reopenable, never rerun. */
+    resultFullNote: 'Saved to your Ask conversations. Opening it again shows this result — nothing is rerun.',
+    openInAsk: 'Open in Ask',
     close: 'Close',
   },
 
