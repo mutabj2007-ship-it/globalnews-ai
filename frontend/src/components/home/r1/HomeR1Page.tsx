@@ -14,6 +14,7 @@ import { HomeR1World60 } from './HomeR1World60';
 import { HomeR1Stories } from './HomeR1Stories';
 import { HomeR1Bridge, HomeR1Explore } from './HomeR1Sections';
 import { HomeR1Compare } from './HomeR1Compare';
+import { StageBHost } from './stageb/StageBHost';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -56,7 +57,7 @@ export function HomeR1Page({
       <SiteStructuredData />
       <HomeSessionProvider>
         <HomeR1Canvas theme={theme}>
-          <HomeR1Header language={language} theme={theme} />
+          <HomeR1Header language={language} theme={theme} alerts={gates.alertsInApp ? { replies: gates.discussionRead } : null} />
           <div className="lg:flex">
             <HomeR1Rail language={language} />
             <div data-home-content="" className="min-w-0 flex-1 [container-name:home-content] [container-type:inline-size]">
@@ -80,6 +81,8 @@ export function HomeR1Page({
                         language={language}
                         cardActions={gates.cardActions}
                         compareTray={gates.compareTray}
+                        discussionRead={gates.discussionRead}
+                        alertsInApp={gates.alertsInApp}
                       />
                     </div>
                   </div>
@@ -93,6 +96,15 @@ export function HomeR1Page({
           </div>
           <Footer language={language} />
           <HomeR1PhoneNav language={language} />
+          {(gates.discussionRead || gates.alertsInApp) && (
+            <StageBHost
+              language={language}
+              articleRefs={stories.slice(0, 12).map((s) => s.articleRef)}
+              discussionRead={gates.discussionRead}
+              discussionWrite={gates.discussionWrite}
+              alertsInApp={gates.alertsInApp}
+            />
+          )}
           {gates.compareTray && (
             <HomeR1Compare
               language={language}

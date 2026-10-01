@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { RequireAuthGuard } from '../auth/require-auth.guard';
@@ -59,7 +59,8 @@ export class DiscussionController {
   }
 
   @UseGuards(DiscussionWriteGate, RequireAuthGuard, CsrfGuard)
-  @Patch('comments/:id')
+  @Post('comments/:id/edit')
+  @HttpCode(200)
   async edit(@CurrentUser() user: { id: string }, @Param('id', ParseUUIDPipe) id: string, @Body() dto: EditCommentDto): Promise<CommentView> {
     return this.discussion.edit(user.id, id, dto.body);
   }

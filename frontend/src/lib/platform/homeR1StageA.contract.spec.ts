@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { MAX_SELECTED_STORIES, normalizeArticleUrl } from '@globalnews-ai/shared';
 import {
   HOME_R1_GATES_OFF,
-  STAGE_A_UNAVAILABLE,
+  DECLARED_OFF,
   homeR1Gates,
   parseReleaseGatesMeta,
   releaseGatesMeta,
@@ -67,7 +67,8 @@ describe('§3 gate mapping — release gates are default OFF, literal, dependent
         GNA_ASK_EMBEDDED: 'true',
         GNA_ASK_CONTEXT_REFS: 'true',
       }),
-    ).toEqual({ homeR1: true, cardActions: true, compareTray: true, compareView: true, askEmbedded: true, askContextRefs: true });
+      /* Stage B added three gates; each stays OFF unless its own variable is set. */
+    ).toEqual({ homeR1: true, cardActions: true, compareTray: true, compareView: true, askEmbedded: true, askContextRefs: true, discussionRead: false, discussionWrite: false, alertsInApp: false });
   });
 
   it('the client meta is absent when every gate is OFF, round-trips, and re-applies dependencies', () => {
@@ -85,14 +86,10 @@ describe('§3 gate mapping — release gates are default OFF, literal, dependent
     expect(read('lib', 'ask', 'standaloneRoot.ts')).toContain("return (env.GNA_PUBLIC_ROOT ?? '').trim().toLowerCase() !== 'platform';");
   });
 
-  it('Discussion / Alerts / delivery / checkout are declared OFF in Stage A', () => {
-    expect(STAGE_A_UNAVAILABLE).toEqual({
-      discussionRead: false,
-      discussionWrite: false,
-      alertsInApp: false,
-      alertsDelivery: false,
-      billingCheckout: false,
-    });
+  /* Stage B: Discussion and in-app Alerts became real, default-OFF gates (see stageB.contract.spec.ts);
+     delivery and checkout remain declared OFF. */
+  it('delivery / checkout remain declared OFF after Stage B', () => {
+    expect(DECLARED_OFF).toEqual({ alertsDelivery: false, billingCheckout: false });
   });
 });
 
@@ -197,6 +194,8 @@ describe('§4 Compare — ONE zero-AI read of held reporting by identity', () =>
   it('nothing is fabricated: claims, gaps and the event relation say Not available', () => {
     expect(homeR1En.compare.noBrief).toMatch(/^Not available/);
     expect(homeR1En.compare.relationUnavailable).toMatch(/^Not available/);
+    /* Stage B: absent proof reads 'Not established', never 'separate'. */
+    expect(homeR1En.compare.relationNotEstablished).toMatch(/^Not established/);
   });
 });
 
@@ -306,10 +305,11 @@ describe('§2/§10 Home R1 — publisher links unchanged, actions are siblings, 
     expect(stories).toMatch(/\{cardActions \? \([\s\S]*data-home-r1-rail="static"[\s\S]*\) : \([\s\S]*<StoryRailMotion/);
   });
 
-  it('no Discuss / Alert control is rendered in Stage A', () => {
+  /* Stage B made Discuss / Alert real; each is drawn ONLY under its own gate (stageB.contract.spec.ts). */
+  it('Discuss / Alert controls are drawn only under their Stage B gates', () => {
     const actions = code(read('components', 'home', 'r1', 'StoryCardActions.tsx'));
-    expect(actions).not.toMatch(/data-story-action="(discuss|alert)"/);
-    expect(actions).not.toMatch(/t\.stories\.(discuss|alert)\b/);
+    expect(actions).toMatch(/\{discuss && \(\s*<button[\s\S]*?data-story-action="discuss"/);
+    expect(actions).toMatch(/\{alert && \(\s*<button[\s\S]*?data-story-action="alert"/);
   });
 
   it('the visible Analysis Workspace label is retired from the R1 rail; /search itself stays', () => {
@@ -385,7 +385,8 @@ describe('Follow ≠ Alert, and dormant Watch stays dormant', () => {
     };
     walk(join(SRC, 'components', 'home', 'r1'));
     for (const file of files) {
-      expect(code(readFileSync(file, 'utf8'))).not.toMatch(/\/follows|watchRuntime|WATCH_RUNTIME|alertsInApp\s*\?/);
+      /* Stage B legitimately branches on alerts.inApp (its own gate); Follow and Watch stay out. */
+      expect(code(readFileSync(file, 'utf8'))).not.toMatch(/\/follows|watchRuntime|WATCH_RUNTIME/);
     }
     /* The two source constants that keep Watch dormant (Claude H D-3) are unchanged. */
     expect(read('lib', 'map', 'monetization', 'watchRuntimeGate.ts')).toContain('export const WATCH_RUNTIME_ACTIVE = false;');

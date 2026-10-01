@@ -42,12 +42,17 @@ export function HomeR1Stories({
   language,
   cardActions,
   compareTray,
+  discussionRead = false,
+  alertsInApp = false,
 }: {
   readonly stories: readonly HomeR1Story[];
   readonly dataMode: NewsDataMode | null;
   readonly language: LanguageCode;
   readonly cardActions: boolean;
   readonly compareTray: boolean;
+  /** Stage B — discussion.read / alerts.inApp (both already require card actions). */
+  readonly discussionRead?: boolean;
+  readonly alertsInApp?: boolean;
 }): JSX.Element {
   const dict = getDictionary(language);
   const t = dict.homeR1;
@@ -82,6 +87,8 @@ export function HomeR1Stories({
         language={language}
         cardActions={cardActions}
         compareTray={compareTray}
+        discussionRead={discussionRead}
+        alertsInApp={alertsInApp}
       />
     </li>
   ));
@@ -165,12 +172,16 @@ function RailCard({
   language,
   cardActions,
   compareTray,
+  discussionRead,
+  alertsInApp,
 }: {
   readonly article: NewsArticle;
   readonly articleRef: string;
   readonly language: LanguageCode;
   readonly cardActions: boolean;
   readonly compareTray: boolean;
+  readonly discussionRead: boolean;
+  readonly alertsInApp: boolean;
 }): JSX.Element {
   const dict = getDictionary(language);
   const t = dict.homeR1;
@@ -226,6 +237,8 @@ function RailCard({
           }}
           language={language}
           compare={compareTray}
+          discuss={discussionRead}
+          alert={alertsInApp}
         />
       )}
     </article>

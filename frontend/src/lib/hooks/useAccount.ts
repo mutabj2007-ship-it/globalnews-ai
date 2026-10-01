@@ -3,6 +3,7 @@
 import { invalidateSavedStories } from '@/lib/myIntelligence/savedStoriesStore';
 import { useEffect, useState } from 'react';
 import { accountFetch } from '@/lib/api/accountFetch';
+import { clearStoryTask } from '@/lib/stories/storyTask';
 
 export interface AccountUser {
   id: string;
@@ -55,12 +56,15 @@ export function useAccount(): {
     await accountFetch('/auth/signout', { method: 'POST' });
     /* UNIVERSAL BOOKMARK R1 — the shared saved-story state belongs to the reader who just left. */
     invalidateSavedStories();
+    /* HOME R1 STAGE B — a pending Discuss / Alert continuation belongs to the reader who left. */
+    clearStoryTask();
     setUser(null);
   }
 
   async function deleteAccount(): Promise<void> {
     await accountFetch('/users/me', { method: 'DELETE' });
     invalidateSavedStories();
+    clearStoryTask();
     setUser(null);
   }
 

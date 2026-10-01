@@ -142,6 +142,14 @@ const nextConfig = {
         the product even with ASK_V2_ENABLED on. Counted, not slipped in: seven → eight.
       */
       { source: '/api/ask-v2/:path*', destination: `${backendOrigin}/ask-v2/:path*` },
+      /*
+        HOME R1 STAGE B — THE NINTH AND TENTH AUTHENTICATED FAMILIES, counted. /alerts is
+        RequireAuthGuard + CsrfGuard throughout; /discussion carries the signed-in + CSRF
+        writes (its public reads also pass through here so the reader's own comments can be
+        marked from the first-party session cookie). Both are gated server-side (404 OFF).
+      */
+      { source: '/api/discussion/:path*', destination: `${backendOrigin}/discussion/:path*` },
+      { source: '/api/alerts/:path*', destination: `${backendOrigin}/alerts/:path*` },
 
       /*
         PUBLIC NEWS — THE EIGHTH FAMILY THAT IS DELIBERATELY NOT AN /api FAMILY.

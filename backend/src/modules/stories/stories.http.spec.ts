@@ -107,7 +107,7 @@ describe('Stage B routes — gates, authentication, CSRF, moderation authorizati
       await http().post('/discussion/counts').send({ articleRefs: [REF_A] }).expect(404);
       await http().post('/discussion/comments').send(post).expect(404);
       await asReader(http().post('/discussion/comments')).send(post).expect(404);
-      await asReader(http().patch(`/discussion/comments/${COMMENT}`)).send({ body: 'x' }).expect(404);
+      await asReader(http().post(`/discussion/comments/${COMMENT}/edit`)).send({ body: 'x' }).expect(404);
       await asReader(http().delete(`/discussion/comments/${COMMENT}`)).expect(404);
       await http().get('/alerts').expect(404);
       await asReader(http().get('/alerts')).expect(404);
@@ -169,7 +169,7 @@ describe('Stage B routes — gates, authentication, CSRF, moderation authorizati
     });
 
     it('edit / delete / report pass the session user (ownership is enforced in the service query)', async () => {
-      await asReader(http().patch(`/discussion/comments/${COMMENT}`), 'reader-2').send({ body: 'edited' }).expect(200);
+      await asReader(http().post(`/discussion/comments/${COMMENT}/edit`), 'reader-2').send({ body: 'edited' }).expect(200);
       expect(discussion.edit).toHaveBeenCalledWith('reader-2', COMMENT, 'edited');
       await asReader(http().delete(`/discussion/comments/${COMMENT}`), 'reader-2').expect(204);
       expect(discussion.remove).toHaveBeenCalledWith('reader-2', COMMENT);

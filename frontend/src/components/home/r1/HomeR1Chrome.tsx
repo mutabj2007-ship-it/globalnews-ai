@@ -31,6 +31,7 @@ import { Logo } from '@/components/ui/Logo';
 import { useHomeSession } from '@/components/home/reva/HomeSession';
 import { RESOLVED_DOMAINS, SPECIALIST_LINKS, type ExploreDomainKey } from '@/components/home/reva/homeRevaModel';
 import { ThemeControl, ThemeScope } from '@/components/platform/ThemeControl';
+import { AlertsBell } from './stageb/AlertsCentre';
 import type { ThemePreference } from '@/lib/theme/theme';
 
 /**
@@ -60,9 +61,12 @@ const DOMAIN_ICONS: Record<ExploreDomainKey, LucideIcon> = {
 export function HomeR1Header({
   language,
   theme,
+  alerts = null,
 }: {
   readonly language: LanguageCode;
   readonly theme: ThemePreference;
+  /** Stage B — alerts.inApp: the Alerts centre entry (signed-in readers only). */
+  readonly alerts?: { readonly replies: boolean } | null;
 }): JSX.Element {
   const dict = getDictionary(language);
   const nav = dict.navBar;
@@ -79,6 +83,7 @@ export function HomeR1Header({
         <div className="min-w-0 flex-1" />
         {/* Light · Dark · System — desktop and phone alike (44 px, keyboard operable). */}
         <ThemeControl language={language} initial={theme} />
+        {alerts !== null && <AlertsBell language={language} replies={alerts.replies} />}
         <div id="home-r1-language" className="hidden sm:block">
           <HomeLanguageControl language={language} label={nav.languageSelectorLabel} actionLabel={nav.languageSelectorAction} />
         </div>

@@ -1,5 +1,6 @@
 import type { SelectedStoryRef } from '@globalnews-ai/shared';
 import { resolveApiBaseUrl } from './apiBase';
+import type { CompareIdentity } from '@/lib/home/compareRelation';
 
 /**
  * HOME R1 · STAGE A — the zero-AI Compare read (POST /news/stories/resolve).
@@ -31,7 +32,8 @@ export interface CompareStoryView {
 }
 
 export type CompareReadOutcome =
-  | { readonly ok: true; readonly stories: readonly CompareStoryView[] }
+  /* Stage B: `identity` is the stored same-story relation; absent when it could not be read. */
+  | { readonly ok: true; readonly stories: readonly CompareStoryView[]; readonly identity?: CompareIdentity }
   | { readonly ok: false; readonly reason: 'UNAVAILABLE' | 'FAILED' };
 
 const TIMEOUT_MS = 10000;
@@ -52,8 +54,11 @@ export async function resolveStoriesForCompare(
     });
     if (response.status === 404) return { ok: false, reason: 'UNAVAILABLE' };
     if (!response.ok) return { ok: false, reason: 'FAILED' };
-    const body = (await response.json()) as { stories?: CompareStoryView[] };
-    return Array.isArray(body.stories) ? { ok: true, stories: body.stories } : { ok: false, reason: 'FAILED' };
+    const body = (await response.json()) as { stories?: CompareStoryView[]; identity?: CompareIdentity };
+    if (!Array.isArray(body.stories)) return { ok: false, reason: 'FAILED' };
+    return body.identity !== undefined && Array.isArray(body.identity.relations)
+      ? { ok: true, stories: body.stories, identity: body.identity }
+      : { ok: true, stories: body.stories };
   } catch {
     return { ok: false, reason: 'FAILED' };
   } finally {

@@ -30,10 +30,20 @@
  *                           governed references; requires GNA_ASK_EMBEDDED. The backend
  *                           applies them only under ASK_CONTEXT_REFS_ENABLED.
  *
- * NOT CREATED IN STAGE A, and stated so the absence stays visible: discussion.read,
- * discussion.write, alerts.inApp (schema-dependent — Stage B), alerts.delivery (no delivery
- * capability exists; declared off), deep.entitlement (reads NEXT_PUBLIC_GN_ENTITLEMENT — no
- * new switch), billing.checkout (not authorised; declared off).
+ *
+ * STAGE B — the capabilities that now exist (each needs its backend twin, which answers 404
+ * while OFF, so a frontend gate alone can never expose anything):
+ *
+ *   GNA_DISCUSSION_READ     discussion.read — the Discuss action, real counts, the public
+ *                           thread; requires card actions. Backend: DISCUSSION_READ_ENABLED
+ *   GNA_DISCUSSION_WRITE    discussion.write — the composer, edit, delete, report; requires
+ *                           discussion.read. Backend: DISCUSSION_WRITE_ENABLED
+ *   GNA_ALERTS_IN_APP       alerts.inApp — the Alert action, the setup sheet and the Alerts
+ *                           centre; requires card actions. Backend: ALERTS_IN_APP_ENABLED
+ *
+ * STILL DECLARED OFF, and stated so the absence stays visible: alerts.delivery (no delivery
+ * capability exists — no email, no push), deep.entitlement (reads NEXT_PUBLIC_GN_ENTITLEMENT
+ * — no new switch), billing.checkout (not authorised). The dormant Watch is not a gate here.
  */
 
 export interface HomeR1Gates {
@@ -43,13 +53,13 @@ export interface HomeR1Gates {
   readonly compareView: boolean;
   readonly askEmbedded: boolean;
   readonly askContextRefs: boolean;
+  readonly discussionRead: boolean;
+  readonly discussionWrite: boolean;
+  readonly alertsInApp: boolean;
 }
 
-/** The gates that exist only as declared-OFF facts in Stage A. Never read from the environment. */
-export const STAGE_A_UNAVAILABLE = {
-  discussionRead: false,
-  discussionWrite: false,
-  alertsInApp: false,
+/** The gates that exist only as declared-OFF facts. Never read from the environment. */
+export const DECLARED_OFF = {
   alertsDelivery: false,
   billingCheckout: false,
 } as const;
@@ -61,6 +71,9 @@ export const HOME_R1_GATES_OFF: HomeR1Gates = Object.freeze({
   compareView: false,
   askEmbedded: false,
   askContextRefs: false,
+  discussionRead: false,
+  discussionWrite: false,
+  alertsInApp: false,
 });
 
 /**
@@ -76,6 +89,9 @@ const GATE_NAMES: readonly (keyof HomeR1Gates)[] = [
   'compareView',
   'askEmbedded',
   'askContextRefs',
+  'discussionRead',
+  'discussionWrite',
+  'alertsInApp',
 ];
 
 export function releaseGatesMeta(gates: HomeR1Gates): Record<string, string> | null {
@@ -92,6 +108,7 @@ export function parseReleaseGatesMeta(content: string | null): HomeR1Gates {
   const cardActions = homeR1 && flag('cardActions');
   const compareTray = cardActions && flag('compareTray');
   const askEmbedded = flag('askEmbedded');
+  const discussionRead = cardActions && flag('discussionRead');
   return {
     homeR1,
     cardActions,
@@ -99,6 +116,9 @@ export function parseReleaseGatesMeta(content: string | null): HomeR1Gates {
     compareView: compareTray && flag('compareView'),
     askEmbedded,
     askContextRefs: askEmbedded && flag('askContextRefs'),
+    discussionRead,
+    discussionWrite: discussionRead && flag('discussionWrite'),
+    alertsInApp: cardActions && flag('alertsInApp'),
   };
 }
 
@@ -112,5 +132,8 @@ export function homeR1Gates(
   const compareView = compareTray && on('GNA_COMPARE_VIEW');
   const askEmbedded = on('GNA_ASK_EMBEDDED');
   const askContextRefs = askEmbedded && on('GNA_ASK_CONTEXT_REFS');
-  return { homeR1, cardActions, compareTray, compareView, askEmbedded, askContextRefs };
+  const discussionRead = cardActions && on('GNA_DISCUSSION_READ');
+  const discussionWrite = discussionRead && on('GNA_DISCUSSION_WRITE');
+  const alertsInApp = cardActions && on('GNA_ALERTS_IN_APP');
+  return { homeR1, cardActions, compareTray, compareView, askEmbedded, askContextRefs, discussionRead, discussionWrite, alertsInApp };
 }

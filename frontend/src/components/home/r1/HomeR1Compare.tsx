@@ -8,6 +8,7 @@ import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { clearHeldStories, releaseHeldStory, useHeldStories, type HeldStory } from '@/lib/home/heldStoriesStore';
 import { resolveStoriesForCompare, type CompareStoryView } from '@/lib/api/compareApi';
+import { relationSentences, type CompareIdentity, type RelationCopy } from '@/lib/home/compareRelation';
 import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
 import { publishAskSelection } from '@/lib/ask/selectionContextStore';
 import { requestDeeperAsk } from '@/lib/ask/requestDeeperAsk';
@@ -24,9 +25,10 @@ import { fill } from '@/components/home/reva/homeRevaModel';
  * Compare call no model and no analysis path. The tray is pure local state. Compare makes
  * ONE read — POST /news/stories/resolve, retained reporting by governed identity — and
  * shows what is held: place, reporting date, subject, publisher and sources. Where nothing
- * is held it says "Not available" (key claims and known gaps need a held brief; the same /
- * separate-event relation needs canonical story identity — neither exists yet, and nothing
- * is fabricated in their place).
+ * is held it says "Not available" (key claims and known gaps need a held brief, which does not
+ * exist; nothing is fabricated in their place). STAGE B: the same / separate row states only
+ * what stored canonical story identity PROVES (lib/home/compareRelation.ts) — one story, or
+ * separated by an editor — and otherwise says the link is not established.
  *
  * The phone tray sits ABOVE the bottom navigation (never over it) and a spacer keeps the
  * page's last content reachable beneath it.
@@ -114,7 +116,32 @@ export function HomeR1Compare({
   );
 }
 
-type ReadState = { kind: 'loading' } | { kind: 'failed' } | { kind: 'ready'; byRef: ReadonlyMap<string, CompareStoryView> };
+type ReadState =
+  | { kind: 'loading' }
+  | { kind: 'failed' }
+  | { kind: 'ready'; byRef: ReadonlyMap<string, CompareStoryView>; identity?: CompareIdentity };
+
+/** Stage B — the same / separate row: only what stored story identity proves. */
+function RelationCell({
+  colSpan,
+  refs,
+  identity,
+  copy,
+}: {
+  readonly colSpan: number;
+  readonly refs: readonly string[];
+  readonly identity: CompareIdentity | undefined;
+  readonly copy: RelationCopy;
+}): JSX.Element {
+  const relation = relationSentences(refs, identity, copy);
+  return (
+    <td colSpan={colSpan} data-compare-relation={relation.kind} className={`p-3 ${relation.kind === 'proven' ? 'text-[var(--gt-ink)]' : 'text-[var(--gt-ink3)]'}`}>
+      {relation.lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
+    </td>
+  );
+}
 
 function CompareWorkspace({
   stories,
@@ -143,7 +170,7 @@ function CompareWorkspace({
       if (!live) return;
       setRead(
         outcome.ok
-          ? { kind: 'ready', byRef: new Map(outcome.stories.map((s) => [s.articleRef, s])) }
+          ? { kind: 'ready', byRef: new Map(outcome.stories.map((s) => [s.articleRef, s])), identity: outcome.identity }
           : { kind: 'failed' },
       );
     });
@@ -292,9 +319,7 @@ function CompareWorkspace({
                   <th scope="row" className="p-3 align-top text-[12px] font-semibold text-[var(--gt-ink2)]">
                     {t.relationLabel}
                   </th>
-                  <td colSpan={opened.length} className="p-3 text-[var(--gt-ink3)]">
-                    {t.relationUnavailable}
-                  </td>
+                  <RelationCell colSpan={opened.length} refs={opened.map((s) => s.articleRef)} identity={read.identity} copy={t} />
                 </tr>
               )}
             </tbody>
