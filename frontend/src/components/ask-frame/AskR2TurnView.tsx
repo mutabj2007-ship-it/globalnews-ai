@@ -119,6 +119,9 @@ export function AskR2TurnView({
     status and provenance; the evidence stays below. Null for every other turn (unchanged).
   */
   const governed = askGovernedConversation(payload, locale, turn.question);
+  /* PUBLIC BETA HARDENING R1A — a deterministic computation's calculation card IS its answer:
+     no second, empty Answer container is drawn beneath it. */
+  const computedAnswer = view.badge === 'calc' && payload.computation != null;
 
   return (
     <article data-ask-turn data-ask="turn" data-ask-state={view.badge} className={TURN}>
@@ -390,7 +393,7 @@ export function AskR2TurnView({
         >
           {view.unavailableText}
         </p>
-      ) : (
+      ) : computedAnswer ? null : (
         <section
           data-ask="answer"
           className={`flex flex-col gap-3.5 ${CARD} ${CARD_CLASS[view.tone]}`}
