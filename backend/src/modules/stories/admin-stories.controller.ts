@@ -22,7 +22,6 @@ import { BackfillDto, LockDiscussionDto, MergeStoriesDto, ModerateCommentDto, Sp
  */
 @Controller('admin/stories')
 @UseGuards(AdminPlatformEnabledGuard, RequireAuthGuard, AdminGuard)
-@RequireCapability(CAPABILITIES.NewsManage)
 export class AdminStoriesController {
   constructor(
     private readonly identity: StoryIdentityService,
@@ -30,45 +29,52 @@ export class AdminStoriesController {
   ) {}
 
   @Get('by-article/:articleRef')
+  @RequireCapability(CAPABILITIES.NewsManage)
   async byArticle(@Param('articleRef', ParseArticleRefPipe) articleRef: string) {
     return { story: await this.identity.resolveByArticleRef(articleRef) };
   }
 
-  @UseGuards(CsrfGuard)
   @Post('merge')
+  @RequireCapability(CAPABILITIES.NewsManage)
+  @UseGuards(CsrfGuard)
   @HttpCode(200)
   async merge(@CurrentAdmin() admin: AdminContext, @Body() dto: MergeStoriesDto) {
     return { story: await this.identity.merge({ survivorId: dto.survivorId, mergedId: dto.mergedId, actorId: admin.id, reason: dto.reason }) };
   }
 
-  @UseGuards(CsrfGuard)
   @Post(':id/split')
+  @RequireCapability(CAPABILITIES.NewsManage)
+  @UseGuards(CsrfGuard)
   @HttpCode(200)
   async split(@CurrentAdmin() admin: AdminContext, @Param('id', ParseUUIDPipe) id: string, @Body() dto: SplitStoryDto) {
     return this.identity.split({ storyId: id, articleRefs: dto.articleRefs, actorId: admin.id, reason: dto.reason });
   }
 
-  @UseGuards(CsrfGuard)
   @Post('backfill')
+  @RequireCapability(CAPABILITIES.NewsManage)
+  @UseGuards(CsrfGuard)
   @HttpCode(200)
   async backfill(@Body() dto: BackfillDto) {
     return this.identity.backfill({ limit: dto.limit, cursor: dto.cursor ?? null });
   }
 
   @Get('discussion/reports')
+  @RequireCapability(CAPABILITIES.NewsManage)
   async reports() {
     return { reports: await this.discussion.reportQueue() };
   }
 
-  @UseGuards(CsrfGuard)
   @Post('discussion/comments/:id/moderate')
+  @RequireCapability(CAPABILITIES.NewsManage)
+  @UseGuards(CsrfGuard)
   @HttpCode(200)
   async moderate(@CurrentAdmin() admin: AdminContext, @Param('id', ParseUUIDPipe) id: string, @Body() dto: ModerateCommentDto) {
     return this.discussion.moderate(admin.id, id, dto.action, dto.reason);
   }
 
-  @UseGuards(CsrfGuard)
   @Post(':id/discussion/lock')
+  @RequireCapability(CAPABILITIES.NewsManage)
+  @UseGuards(CsrfGuard)
   @HttpCode(200)
   async lock(@CurrentAdmin() admin: AdminContext, @Param('id', ParseUUIDPipe) id: string, @Body() dto: LockDiscussionDto) {
     return this.discussion.setLock(admin.id, id, dto.locked, dto.reason);

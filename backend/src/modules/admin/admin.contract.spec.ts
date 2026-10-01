@@ -142,6 +142,17 @@ describe('F1.a admin module — source contracts', () => {
         the two have genuinely different holder sets.
       */
       ['admin-operations.controller.ts', "@Post('switches/:name')"],
+      /*
+        HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE B — five operator acts on canonical stories
+        and their discussion, each named here deliberately. All are news.manage (SUPER_ADMIN,
+        ADMIN), CSRF-guarded, and audited with the operator id and a stated reason
+        (StoryIdentityEvent / StoryModerationAction). None deletes a row.
+      */
+      ['admin-stories.controller.ts', "@Post('merge')"],
+      ['admin-stories.controller.ts', "@Post(':id/split')"],
+      ['admin-stories.controller.ts', "@Post('backfill')"],
+      ['admin-stories.controller.ts', "@Post('discussion/comments/:id/moderate')"],
+      ['admin-stories.controller.ts', "@Post(':id/discussion/lock')"],
     ];
 
     it('exposes no PUT, PATCH or DELETE anywhere on the admin surface', () => {

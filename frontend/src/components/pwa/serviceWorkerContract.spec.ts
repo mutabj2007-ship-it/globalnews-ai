@@ -496,10 +496,13 @@ describe('D-ALPHA §6 — /api/ is structurally outside the worker', () => {
       `sw.js` is D-owned and is NOT modified by MAIN-C2. Only this enumeration
       moves, which is the decision this guard was built to demand.
     */
+    /* Home R1 Stage B: /alerts and /discussion — reviewed: still outside the worker by the '/api/' prefix rule; sw.js unchanged. */
     expect(REWRITTEN_ACCOUNT_FAMILIES.sort()).toEqual([
       'admin',
+      'alerts',
       'analysis',
       'auth',
+      'discussion',
       'follows',
       'history',
       'support',

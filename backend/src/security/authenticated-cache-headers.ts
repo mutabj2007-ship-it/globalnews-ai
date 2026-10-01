@@ -60,6 +60,12 @@ export const AUTHENTICATED_API_FAMILIES: readonly string[] = Object.freeze([
   '/follows',
   '/support',
   '/admin',
+  /*
+    HOME R1 STAGE B — Discussion (a thread marks the viewer's own comments) and in-app Alerts
+    (account-owned). Both are proxied under /api and must never be stored by a shared cache.
+  */
+  '/discussion',
+  '/alerts',
 ]);
 
 /** The single cache directive. Declared once so the spec asserts this string. */
