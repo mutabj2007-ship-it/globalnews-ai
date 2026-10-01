@@ -1,0 +1,77 @@
+{
+  "note": "[FIXTURE] Representative headline-sized sets constructed for the R1D/R1E benchmark. NOT real articles; titles describe the KINDS of items GNews top-headlines returns. 'auditKind' is a human audit label only and is never read by any option.",
+  "nowIso": "2026-10-01T08:00:00Z",
+  "datasets": [
+    {
+      "id": "EN-F1",
+      "language": "en",
+      "label": "R1D representative corpus, provider order interleaved (12 items)",
+      "items": [
+        ["n1", "TECHNOLOGY_PRODUCT", "Apple unveils new iPhone camera features at autumn event", "The company showed upgraded lenses and a new chip for its smartphone line.", "TechWire", "https://techwire.example/apple-iphone-camera", "2026-10-01T07:45:00Z"],
+        ["n2", "SPORTS", "Arsenal beat Chelsea 2-1 in Premier League derby", "A late goal decided the London football derby on Sunday.", "Sports Daily", "https://sportsdaily.example/arsenal-chelsea", "2026-10-01T07:30:00Z"],
+        ["n3", "GEOPOLITICAL_SECURITY", "UN Security Council meets as Sudan ceasefire collapses in Darfur", "Diplomats said fighting resumed near El Fasher after talks failed, displacing thousands.", "Reuters", "https://www.reuters.com/world/africa/sudan-ceasefire-darfur", "2026-10-01T07:15:00Z"],
+        ["n4", "ENTERTAINMENT", "Pop star announces world tour after surprise album release", "Tickets for the 40-date tour go on sale next week.", "Showbiz Now", "https://showbiznow.example/world-tour", "2026-10-01T07:00:00Z"],
+        ["n5", "LOCAL_CRIME", "Man arrested after stabbing outside nightclub in Leeds", "Police said a 24-year-old was taken to hospital with injuries.", "Local Courier", "https://localcourier.example/leeds-stabbing", "2026-10-01T06:45:00Z"],
+        ["n6", "ECONOMIC_MARKET", "Oil prices jump 4% as OPEC+ agrees deeper production cuts", "Brent crude rose above $90 a barrel and stock markets fell on inflation fears.", "Markets Desk", "https://marketsdesk.example/oil-opec-cuts", "2026-10-01T06:30:00Z"],
+        ["n7", "SENSATIONAL_NOVELTY", "Woman finds 3-metre python hiding in her kitchen cupboard", "Firefighters needed an hour to remove the snake.", "Viral Today", "https://viraltoday.example/python-kitchen", "2026-10-01T06:15:00Z"],
+        ["n8", "HUMANITARIAN", "Cholera outbreak spreads in flood-hit camps, WHO warns", "Aid agencies said 200,000 displaced people lack clean water after monsoon floods.", "Health Report", "https://healthreport.example/cholera-camps", "2026-10-01T06:00:00Z"],
+        ["n9", "INFRASTRUCTURE_ENERGY", "Nigeria refinery restarts output after two-year shutdown", "The state oil company said the plant will cut fuel imports.", "Energy Journal", "https://energyjournal.example/nigeria-refinery", "2026-10-01T05:45:00Z"],
+        ["n10", "GOVERNANCE_FRAUD", "Former minister charged in procurement fraud case", "Prosecutors allege inflated contracts worth $40 million.", "Courts Desk", "https://courtsdesk.example/minister-fraud", "2026-10-01T05:30:00Z"],
+        ["n11", "SPORTS", "Tennis: top seed knocked out in Tokyo quarter-final", "The world number one lost in straight sets.", "Sports Daily", "https://sportsdaily.example/tokyo-tennis", "2026-10-01T05:15:00Z"],
+        ["n12", "GEOPOLITICAL_SECURITY", "NATO allies agree new air-defence package for Ukraine", "Defence ministers met in Brussels after overnight missile strikes on Kyiv.", "AP News", "https://apnews.com/article/nato-ukraine-air-defence", "2026-10-01T05:00:00Z"]
+      ]
+    },
+    {
+      "id": "EN-F2",
+      "language": "en",
+      "label": "Same 12 items, intelligence-type items LAST in provider order",
+      "reorderOf": "EN-F1",
+      "order": ["n1", "n2", "n4", "n5", "n7", "n10", "n11", "n3", "n6", "n8", "n9", "n12"]
+    },
+    {
+      "id": "EN-F3",
+      "language": "en",
+      "label": "Shape of the observed Production broad-headlines sample (CTO description), 10 stories + 1 near-duplicate",
+      "items": [
+        ["e1", "ENERGY_INVESTMENT", "Saudi Aramco signs $25bn investment deal to develop new gas field", "The agreement with international partners is the largest energy investment this year.", "Reuters", "https://www.reuters.com/business/energy/aramco-gas-deal", "2026-10-01T07:50:00Z"],
+        ["e2", "TECHNOLOGY_PRODUCT", "Samsung launches foldable phone with longer battery life", "The new device goes on sale next month at a lower price.", "Gadget Review", "https://gadgetreview.example/samsung-foldable", "2026-10-01T07:40:00Z"],
+        ["e3", "SPORTS", "Real Madrid sign striker in record transfer", "The forward joins on a five-year contract after a medical.", "Football Live", "https://footballlive.example/real-madrid-transfer", "2026-10-01T07:30:00Z"],
+        ["e4", "ENTERTAINMENT_LABOUR", "Hollywood actors' union reaches tentative deal with studios to end strike", "The agreement covers pay and the use of artificial intelligence in film production.", "Screen Daily", "https://screendaily.example/actors-union-deal", "2026-10-01T07:20:00Z"],
+        ["e5", "LOCAL_PUBLIC_ORDER", "Police disperse protesters outside parliament in Nairobi", "Officers used tear gas as demonstrators opposed a new finance bill.", "Nairobi Times", "https://nairobitimes.example/parliament-protest", "2026-10-01T07:10:00Z"],
+        ["e6", "SENSATIONAL_LOCAL_CRIME", "Man jailed for killing neighbour in row over parking space", "The court heard the dispute had lasted months.", "County Herald", "https://countyherald.example/parking-killing", "2026-10-01T07:00:00Z"],
+        ["e7", "GOVERNANCE_FRAUD", "Anti-graft agency probes $12m road contract awarded without tender", "Investigators raided the transport ministry's procurement office.", "Daily Ledger", "https://dailyledger.example/road-contract-probe", "2026-10-01T06:50:00Z"],
+        ["e8", "INFRASTRUCTURE_REFINERY", "Dangote refinery begins petrol exports to West African markets", "The plant's first export cargo left Lagos on Tuesday.", "Energy Journal", "https://energyjournal.example/dangote-exports", "2026-10-01T06:40:00Z"],
+        ["e9", "ECONOMIC_MARKET", "IMF cuts global growth forecast as trade tensions weigh on outlook", "The fund now expects the world economy to grow 2.9% next year.", "AP News", "https://apnews.com/article/imf-growth-forecast", "2026-10-01T06:30:00Z"],
+        ["e10", "HUMANITARIAN_SECURITY", "Aid convoys reach Gaza as ceasefire talks resume in Cairo", "The UN said trucks carrying food and medicine crossed at Rafah.", "World Wire", "https://worldwire.example/gaza-aid-convoys", "2026-10-01T06:20:00Z"],
+        ["e11", "INFRASTRUCTURE_REFINERY_DUPLICATE", "Dangote refinery begins petrol exports to West African markets, company says", "The first export cargo left Lagos, the company said.", "Business Wire Africa", "https://bizwireafrica.example/dangote-petrol-exports", "2026-10-01T06:35:00Z"]
+      ]
+    },
+    {
+      "id": "PL-F1",
+      "language": "pl",
+      "label": "Polish mirror of the R1D corpus, provider order interleaved (12 stories + 1 near-duplicate)",
+      "items": [
+        ["p1", "TECHNOLOGY_PRODUCT", "Apple pokazał nowe funkcje aparatu w iPhonie", "Firma zaprezentowała ulepszone obiektywy i nowy procesor.", "TechNews PL", "https://technews-pl.example/apple-iphone", "2026-10-01T07:45:00Z"],
+        ["p2", "SPORTS", "Legia pokonała Lecha 2:1 w hicie Ekstraklasy", "Zwycięskiego gola zdobyto w doliczonym czasie gry.", "Sport PL", "https://sport-pl.example/legia-lech", "2026-10-01T07:30:00Z"],
+        ["p3", "GEOPOLITICAL_SECURITY", "Rada Bezpieczeństwa ONZ zbiera się po załamaniu rozejmu w Sudanie", "Dyplomaci przekazali, że walki w Darfurze wznowiono, a tysiące ludzi uciekają.", "PAP", "https://pap-pl.example/sudan-onz", "2026-10-01T07:15:00Z"],
+        ["p4", "ENTERTAINMENT", "Popularna piosenkarka ogłosiła światową trasę koncertową", "Bilety na 40 koncertów trafią do sprzedaży w przyszłym tygodniu.", "Show PL", "https://show-pl.example/trasa-koncertowa", "2026-10-01T07:00:00Z"],
+        ["p5", "LOCAL_CRIME", "Mężczyzna zatrzymany po bójce przed klubem w Krakowie", "Policja poinformowała, że ranny trafił do szpitala.", "Kurier Lokalny", "https://kurier-pl.example/krakow-bojka", "2026-10-01T06:45:00Z"],
+        ["p6", "ECONOMIC_MARKET", "Ceny ropy rosną o 4% po decyzji OPEC+ o cięciu wydobycia", "Baryłka Brent podrożała powyżej 90 dolarów, giełdy spadały.", "Rynki PL", "https://rynki-pl.example/ropa-opec", "2026-10-01T06:30:00Z"],
+        ["p7", "SENSATIONAL_NOVELTY", "Kobieta znalazła trzymetrowego pytona w kuchennej szafce", "Strażacy przez godzinę wyciągali węża.", "Viral PL", "https://viral-pl.example/pyton", "2026-10-01T06:15:00Z"],
+        ["p8", "HUMANITARIAN", "WHO ostrzega przed epidemią cholery w obozach po powodziach", "Organizacje pomocowe podają, że 200 tys. przesiedlonych nie ma czystej wody.", "Zdrowie PL", "https://zdrowie-pl.example/cholera", "2026-10-01T06:00:00Z"],
+        ["p9", "INFRASTRUCTURE_ENERGY", "Rafineria w Nigerii wznawia produkcję po dwóch latach przestoju", "Państwowy koncern naftowy zapowiada ograniczenie importu paliw.", "Energia PL", "https://energia-pl.example/nigeria-rafineria", "2026-10-01T05:45:00Z"],
+        ["p10", "GOVERNANCE_FRAUD", "Były minister oskarżony o oszustwo przy przetargach", "Prokuratura zarzuca zawyżenie kontraktów o 40 mln dolarów.", "Sądy PL", "https://sady-pl.example/minister", "2026-10-01T05:30:00Z"],
+        ["p11", "GEOPOLITICAL_SECURITY", "NATO uzgodniło nowy pakiet obrony powietrznej dla Ukrainy", "Ministrowie obrony spotkali się w Brukseli po nocnych atakach rakietowych na Kijów.", "PAP", "https://pap-pl.example/nato-ukraina", "2026-10-01T05:15:00Z"],
+        ["p12", "SPORTS", "Tenis: rozstawiona z numerem jeden odpada w Tokio", "Liderka rankingu przegrała w dwóch setach.", "Sport PL", "https://sport-pl.example/tokio-tenis", "2026-10-01T05:00:00Z"],
+        ["p13", "ECONOMIC_MARKET_DUPLICATE", "Ceny ropy rosną o 4% po decyzji OPEC+ o cięciu wydobycia, podają rynki", "Baryłka Brent podrożała po decyzji kartelu.", "Biznes PL", "https://biznes-pl.example/ropa-opec-ciecia", "2026-10-01T06:25:00Z"]
+      ]
+    },
+    {
+      "id": "PL-F2",
+      "language": "pl",
+      "label": "Same Polish items, intelligence-type items LAST in provider order",
+      "reorderOf": "PL-F1",
+      "order": ["p1", "p2", "p4", "p5", "p7", "p10", "p12", "p3", "p6", "p13", "p8", "p9", "p11"]
+    }
+  ]
+}
