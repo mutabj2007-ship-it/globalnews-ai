@@ -636,6 +636,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
                   to: route.reportingWindow.to,
                 },
               }),
+          /* PUBLIC BETA HARDENING R1B — an open-ended world-headlines request is retrieved as
+             headlines. A plain Ask only: deep / report work keeps its own path. */
+          ...(route.broadHeadlines && request.intent === 'ask' ? { broadHeadlines: true } : {}),
         },
       );
       /* The landed path's no-evidence answer (0 articles, "no AI call was made") is not a

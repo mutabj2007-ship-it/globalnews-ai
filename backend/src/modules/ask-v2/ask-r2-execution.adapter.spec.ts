@@ -2430,3 +2430,101 @@ describe('ASK TECHNICAL / SCIENTIFIC REASONING R1 — the PO corpus, routed and 
     expect(alone.calls.analysis).toEqual([]);
   });
 });
+
+/*
+  ════════════════════════════════════════════════════════════════════════════
+  PUBLIC BETA HARDENING R1B — BROAD GLOBAL NEWS / HEADLINES, routed.
+  "Any global news can you share?" must reach the headlines path; "What is happening around the
+  world?" (and the Polish mirrors) used to be refused before retrieval because "world" was bound
+  as a topic constraint frozen C could not transport. Every other question keeps its path and
+  never carries the flag.
+  ════════════════════════════════════════════════════════════════════════════
+*/
+describe('PUBLIC BETA HARDENING R1B — broad global headlines are routed as headlines', () => {
+  async function run(
+    q: string,
+    lg: 'en' | 'pl' = 'en',
+    intent: AskRequest['intent'] = 'ask',
+    prior?: string,
+  ) {
+    const h = harness({});
+    const request = { ...req(q, lg), intent };
+    const context = {
+      accountId: 'user-1',
+      ipScope: 'ip:v4:203.0.113.7',
+      ...(prior === undefined ? {} : { priorQuestion: prior }),
+    };
+    const plan = await askRequestContext.run(context, () => h.adapter.prepare(request));
+    const payload = JSON.parse(
+      (await askRequestContext.run(context, () => h.adapter.execute(request, plan, 'op-broad')))
+        .payloadJson,
+    );
+    const policy = (h.calls.analysis[0]?.[6] ?? {}) as { broadHeadlines?: boolean };
+    return { payload, h, broad: policy.broadHeadlines === true };
+  }
+
+  it.each([
+    ['Any global news can you share?', 'en'],
+    ['What is happening around the world?', 'en'],
+    ["What are today's top world stories?", 'en'],
+    ['Give me the latest global headlines.', 'en'],
+    ['What are the main news stories today?', 'en'],
+    ['Co się dzieje na świecie?', 'pl'],
+    ['Jakie są najważniejsze wiadomości ze świata?', 'pl'],
+    ['Podaj najnowsze wiadomości ze świata.', 'pl'],
+    ['Jakie są dziś najważniejsze wiadomości?', 'pl'],
+  ] as const)(
+    '1 / 13 · "%s" (%s) → EXECUTABLE current reporting on the headlines path',
+    async (q, lg) => {
+      const { payload, h, broad } = await run(q, lg);
+      expect(payload.route.terminalState).toBe('EXECUTABLE');
+      expect(payload.route.refusals).toEqual([]);
+      expect(h.calls.analysis).toHaveLength(1);
+      expect(broad).toBe(true);
+    },
+  );
+
+  it.each([
+    ["What's happening with NATO?", 'en'],
+    ['Latest news about Kenya', 'en'],
+    ['Latest ECB interest-rate news', 'en'],
+    [
+      'tell me in details what happened today in the Air from Dubai to Israel in a passenger plane. How did it happen?, Indicate if there were some casualties in that incidence',
+      'en',
+    ],
+    ['What are the latest developments in eastern DRC?', 'en'],
+    [
+      'What has changed in eastern Democratic Republic of the Congo over the last 7 days? Identify any verified security or territorial changes, effects on civilians or displacement, and any important claims that remain disputed.',
+      'en',
+    ],
+    ['What are the main news stories in the last 7 days?', 'en'],
+    ['Co się dzieje w Kenii?', 'pl'],
+  ] as const)('7–10 · "%s" keeps its own path (no headlines flag)', async (q, lg) => {
+    const { broad } = await run(q, lg);
+    expect(broad).toBe(false);
+  });
+
+  it.each([
+    ['What is GDP?'],
+    ['Explain TCP vs UDP.'],
+    ['Calculate the energy stored in a 48 V 100 Ah battery.'],
+  ])('11 · "%s" stays reference / computation: no news call at all', async (q) => {
+    const { h } = await run(q);
+    expect(h.calls.analysis).toEqual([]);
+  });
+
+  it('deep analysis of the same words is not the plain headlines path', async () => {
+    const { broad } = await run('Any global news can you share?', 'en', 'deep-analysis');
+    expect(broad).toBe(false);
+  });
+
+  it('a follow-up in a conversation is never re-read as a world-headlines request', async () => {
+    const { broad } = await run(
+      'Any global news can you share?',
+      'en',
+      'ask',
+      "What has changed in Kenya's economy?",
+    );
+    expect(broad).toBe(false);
+  });
+});

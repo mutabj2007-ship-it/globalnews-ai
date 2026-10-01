@@ -78,6 +78,9 @@ import {
 
 const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
 
+/** PUBLIC BETA HARDENING R1B — a retained publication time this far ahead is not trusted. */
+const RETAINED_HEADLINE_CLOCK_SKEW_MS = 5 * 60 * 1000;
+
 /**
  * NAVIGATION-LIVE-RETRIEVAL-CORRECTION (Option 1) — the freshness window for
  * the shared Home evidence snapshot.
@@ -628,6 +631,42 @@ export class NewsService {
       maxAgeMinutes,
     });
     return retained.map((article) => withDerivedEvidenceFields(article));
+  }
+
+  /**
+   * PUBLIC BETA HARDENING R1B — bounded retained reporting for an OPEN-ENDED headlines request
+   * ("Any global news can you share?") after the live headline providers were refused. LOCAL
+   * database work only; it never calls a provider. The reader asked for recent news in general,
+   * so no topic is invented: the newest retained reports inside the age bound are the candidates.
+   *
+   * Admitted only when the publication time is the PUBLISHER's own (`publishedAtBasis` =
+   * 'publisher'; an aggregator-observed time is never treated as a publication time), not in
+   * the future, and the row is real reporting (never a mock/synthetic fixture). Everything in
+   * the store arrived from a live provider response (persistMany is called for live responses
+   * only). Over-fetched once so the filter does not starve the bound; the 100-row ceiling of
+   * `findRecent` is unchanged.
+   */
+  async findRetainedHeadlines(limit: number, maxAgeMinutes: number): Promise<NewsArticle[]> {
+    const now = Date.now();
+    const candidates = await this.articlePersistence.findRecent({
+      limit: Math.min(limit * 2, 100),
+      maxAgeMinutes,
+    });
+    return candidates
+      .filter(
+        (article) =>
+          article.publishedAtBasis === 'publisher' &&
+          Date.parse(article.publishedAt) <= now + RETAINED_HEADLINE_CLOCK_SKEW_MS &&
+          !article.id.startsWith('mock-') &&
+          !(article.sourceId ?? '').startsWith('mock-'),
+      )
+      .slice(0, limit)
+      .map((article) => withDerivedEvidenceFields(article));
+  }
+
+  /** PUBLIC BETA HARDENING R1B — whether a provider id belongs to the configured FALLBACK tier. */
+  isFallbackTierProvider(providerId: string): boolean {
+    return this.fallbackProviders.some((provider) => provider.id === providerId);
   }
 
   async findRetainedByCountry(

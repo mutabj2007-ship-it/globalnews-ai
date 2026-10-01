@@ -252,6 +252,13 @@ export interface AnalysisExecutionPolicy {
     readonly from: string;
     readonly to: string;
   };
+  /**
+   * PUBLIC BETA HARDENING R1B — the Ask router read an open-ended request for the current world
+   * headlines (broad-global-headlines.util.ts). Retrieved through the top-headlines tier ladder
+   * and, when that is refused or empty, ONE bounded local retained read — never a free-text
+   * search for the words "global news". Part of the cache key.
+   */
+  readonly broadHeadlines?: boolean;
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import {
@@ -358,6 +365,18 @@ interface CacheEntry {
 
 /** Number of articles requested before deduping/bounding. */
 const SEARCH_POOL_SIZE = 20;
+
+/**
+ * PUBLIC BETA HARDENING R1B — how old retained reporting may be to stand in for a refused live
+ * headlines request: 24 hours, the SAME bound the existing top-headlines database fallback uses
+ * (news.service.ts DATABASE_FALLBACK_MAX_AGE_MINUTES) and the smallest retained bound already in
+ * the product. A reader asking for "any global news" asked for the news of the day; the 48-hour
+ * topic rescue (RETAINED_MAX_AGE_MINUTES) exists to survive outages for a NAMED subject.
+ */
+const BROAD_HEADLINES_RETAINED_MAX_AGE_MINUTES = 24 * 60;
+
+/** PUBLIC BETA HARDENING R1B — what a broad headlines evidence set may claim to cover. */
+type BroadHeadlinesCoverage = 'LIVE' | 'LIMITED' | 'RETAINED';
 
 function buildCoverageContext(
   query: string,
@@ -780,7 +799,9 @@ export class AnalysisService {
             .update(`${executionPolicy.governed.rules}\u0000${executionPolicy.governed.data}`)
             .digest('hex')
             .slice(0, 16)}`;
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}`;
+    /* PUBLIC BETA HARDENING R1B — a headlines answer is never served to, or from, a topic search. */
+    const broadKeySegment = executionPolicy?.broadHeadlines === true ? ':broad-headlines' : '';
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -1418,6 +1439,8 @@ export class AnalysisService {
         /* ASK TRUTHFUL RETRIEVAL R2A — set by a branch that ran planned searches. */
         let plannedTrace: PlannedSearchTrace | undefined;
         let activeCompoundPlan: CompoundRetrievalPlan | undefined;
+        /* PUBLIC BETA HARDENING R1B — set only by the broad-headlines branch. */
+        let broadCoverage: BroadHeadlinesCoverage | undefined;
         /* BETA-ASK-005 — candidates excluded by window BEFORE dedup, so the disclosure is honest. */
         const upstreamWindowExcluded = new Set<string>();
         // Milestone #40 (authoritative-context correction): set ONLY when
@@ -2439,6 +2462,20 @@ export class AnalysisService {
             if (institutionalOutcome !== undefined) {
               retrievalContext = { ...retrievalContext, outcome: institutionalOutcome };
             }
+          } else if (executionPolicy?.broadHeadlines === true) {
+            /*
+              PUBLIC BETA HARDENING R1B — an open-ended request for the current world headlines
+              (decided by the Ask router from a closed vocabulary: no place, organisation, topic,
+              source, comparison or period can be in it, and nothing above claimed it). Retrieved
+              as HEADLINES through the existing top-headlines tier ladder, then — only if that was
+              refused — ONE bounded local retained read. Never a free-text search for the words
+              "global news", which is what made it fragile.
+            */
+            const broad = await this.retrieveBroadHeadlines(requestedLanguage);
+            articles = broad.articles;
+            retrievalContext = broad.retrievalContext;
+            plannedTrace = broad.trace;
+            broadCoverage = broad.coverage;
           } else if (requestedLanguage === 'pl') {
             // Milestone #47 — staged Polish retrieval architecture.
             // Reached only when detectLocation() AND
@@ -3474,9 +3511,13 @@ export class AnalysisService {
               ? {}
               : { reportingWindow: executionPolicy.reportingWindow }),
             /* BETA-ASK-004 R1B — multi-facet evidence is never linked by co-occurrence. */
-            ...(activeCompoundPlan !== undefined || eventFrame !== undefined
+            ...(activeCompoundPlan !== undefined ||
+            eventFrame !== undefined ||
+            broadCoverage !== undefined
               ? { evidenceLinkageGuard: true }
               : {}),
+            /* PUBLIC BETA HARDENING R1B — a headline selection is never "the world". */
+            ...(broadCoverage === undefined ? {} : { broadHeadlinesCoverage: broadCoverage }),
           });
 
           const latencyMs = Date.now() - providerCallStartedAt;
@@ -4139,6 +4180,99 @@ export class AnalysisService {
         failures,
       ),
       trace,
+    };
+  }
+
+  /**
+   * PUBLIC BETA HARDENING R1B — BROAD GLOBAL HEADLINES, LIVE FIRST.
+   *
+   * CALL BUDGET. ONE `NewsService.topHeadlines()` call: the existing top-headlines tier ladder
+   * (primary GNews; the configured Publisher Feeds fallback only when the primaries returned
+   * nothing; a provider without the top-headlines capability — GDELT DOC — is never asked; no
+   * retry; cooldowns and the 300 s shared headline cache are NewsService's own). Then, ONLY when
+   * a live provider was refused AND nothing usable came back, ONE local retained read (zero
+   * provider calls). Nothing else.
+   *
+   * COVERAGE IS NEVER OVERSTATED. LIVE only when no provider failed and the fallback tier was
+   * not needed. The ladder consults the fallback tier ONLY when every primary returned nothing,
+   * so a fallback-tier id among the answering providers means the evidence came from the
+   * fallback tier alone (a few regional publisher feeds). That, or any refused source, is
+   * LIMITED and keeps the existing 'provider-error' disclosure; retained reports are RETAINED
+   * ('cached', RETAINED_ONLY). The prompt is told which.
+   */
+  private async retrieveBroadHeadlines(language: LanguageCode): Promise<{
+    articles: NewsArticle[];
+    retrievalContext: AnalysisRetrievalContext;
+    trace: PlannedSearchTrace;
+    coverage: BroadHeadlinesCoverage | undefined;
+  }> {
+    const live = await this.newsService.topHeadlines(SEARCH_POOL_SIZE, { lang: language });
+    const failures = readProviderFailures(live);
+    const failureKinds = new Set(failures.map((failure) => failure.kind));
+    const lanesUnavailable = failures.map((failure) => ({
+      lane: failure.providerId,
+      reason: failure.kind,
+    }));
+    const lanesAttempted = [
+      ...new Set([...live.providers, ...failures.map((failure) => failure.providerId)]),
+    ];
+    const fallbackTierAnswered = live.providers.some((id) =>
+      this.newsService.isFallbackTierProvider(id),
+    );
+
+    let articles = live.articles;
+    let response: NewsResponse = live;
+    let coverage: BroadHeadlinesCoverage | undefined;
+    let outcome: RetrievalOutcome | undefined;
+    let retainedUsed = 0;
+
+    if (articles.length > 0) {
+      coverage = !fallbackTierAnswered && failures.length === 0 ? 'LIVE' : 'LIMITED';
+      if (coverage === 'LIMITED') response = { ...live, fallbackReason: 'provider-error' };
+    } else if (failures.length > 0) {
+      outcome = retrievalOutcome(0, failureKinds);
+      const retained = await this.newsService.findRetainedHeadlines(
+        SEARCH_POOL_SIZE,
+        BROAD_HEADLINES_RETAINED_MAX_AGE_MINUTES,
+      );
+      if (retained.length > 0) {
+        articles = retained;
+        retainedUsed = retained.length;
+        response = {
+          ...live,
+          articles: retained,
+          dataMode: 'cached',
+          fallbackReason: 'provider-error',
+        };
+        coverage = 'RETAINED';
+        outcome = 'RETAINED_ONLY';
+      }
+    }
+
+    /* OBSERVABILITY — ids, kinds and counts only: never the question, never a credential. */
+    const failed = failures.map((failure) => `${failure.providerId}:${failure.kind}`).join(',');
+    this.logger.log(
+      `broad-headlines path=BROAD_GLOBAL_HEADLINES live=[${live.providers.join(',')}] ` +
+        `failed=[${failed}] retained=${retainedUsed > 0 ? `used:${retainedUsed}` : 'not-used'} ` +
+        `admitted=${articles.length} coverage=${coverage ?? 'NONE'}`,
+    );
+
+    let retrievalContext = this.toRetrievalContext(response);
+    if (outcome !== undefined) retrievalContext = { ...retrievalContext, outcome };
+    return {
+      articles,
+      retrievalContext,
+      trace: {
+        queryVariants: ['top-headlines'],
+        languages: [language],
+        lanesAttempted,
+        lanesSucceeded: [...live.providers],
+        lanesUnavailable,
+        candidatesSeen: live.articles.length + retainedUsed,
+        candidatesAdmitted: articles.length,
+        windowExcludedIds: [],
+      },
+      coverage,
     };
   }
 

@@ -174,6 +174,13 @@ export interface AnalysisProviderInput {
   evidenceLinkageGuard?: boolean;
 
   /**
+   * PUBLIC BETA HARDENING R1B — an open-ended headlines request: what the evidence set can claim
+   * to cover. LIVE = the live headline providers answered; LIMITED = a live source was refused
+   * or only regional publisher feeds answered; RETAINED = previously retrieved reports only.
+   */
+  broadHeadlinesCoverage?: 'LIVE' | 'LIMITED' | 'RETAINED';
+
+  /**
    * Optional caller cancellation. AnalysisService uses this only for the
    * authoritative response deadline: when the reader can no longer receive a
    * result, an in-flight model request must not keep spending tokens merely to

@@ -678,6 +678,37 @@ export function buildEvidenceLinkageInstruction(guard?: boolean): string {
   );
 }
 
+/**
+ * PUBLIC BETA HARDENING R1B — an open-ended headlines request ("Any global news can you
+ * share?"). Whatever was retrieved is a selection, never a survey of the world: a handful of
+ * headlines (and, when a live source is down, a few regional publisher feeds or retained
+ * reports) must not be presented as complete global coverage. Empty for every other question.
+ */
+export function buildBroadHeadlinesInstruction(coverage?: 'LIVE' | 'LIMITED' | 'RETAINED'): string {
+  if (coverage === undefined) return '';
+  const base =
+    '\n\nBROAD HEADLINES (authoritative): the reader asked for current news in general. The ' +
+    'reports below are the headlines that could be retrieved — a selection, not a complete or ' +
+    'ranked survey of world news. Summarise what these reports say and cite them. Do NOT call ' +
+    'them "all", "the top" or "the most important" stories in the world, and do NOT present ' +
+    'them as complete global coverage.';
+  if (coverage === 'LIMITED')
+    return (
+      base +
+      ' Live coverage was LIMITED: a news source was unavailable or only a few regional ' +
+      'publisher feeds answered. Say plainly that coverage is limited, and do not generalise ' +
+      'what these few outlets report to the world.'
+    );
+  if (coverage === 'RETAINED')
+    return (
+      base +
+      ' Live retrieval was UNAVAILABLE: these are previously retrieved reports from the last ' +
+      '24 hours, not a live check. Say plainly that live coverage could not be reached; each ' +
+      "report's own publication time is its evidence time."
+    );
+  return base;
+}
+
 export function buildSingleSourceBasisSection(breadth: AnalysisDevelopmentBreadth): string {
   if (breadth.clusters !== 1) return '';
   return (
@@ -753,6 +784,7 @@ export function buildAnalysisMessages(
   governed?: { readonly rules: string; readonly data: string },
   reportingWindow?: { readonly statedPeriod: string; readonly from: string; readonly to: string },
   evidenceLinkageGuard?: boolean,
+  broadHeadlinesCoverage?: 'LIVE' | 'LIMITED' | 'RETAINED',
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
@@ -762,6 +794,7 @@ export function buildAnalysisMessages(
       buildEvidenceStateInstruction(evidenceState, newestEvidence) +
       buildReportingWindowInstruction(reportingWindow) +
       buildEvidenceLinkageInstruction(evidenceLinkageGuard) +
+      buildBroadHeadlinesInstruction(broadHeadlinesCoverage) +
       buildEventAnchorInstruction(eventAnchor) +
       buildConversationSubjectInstruction(conversationSubject) +
       buildSelectionInstruction(selection) +

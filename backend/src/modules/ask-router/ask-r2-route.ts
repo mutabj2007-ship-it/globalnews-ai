@@ -63,6 +63,7 @@ import { readCapabilityRequests, type CapabilityRequestKind } from './capability
 import { detectAmbiguousCountryMention } from '../analysis/anchor/event-anchor.util';
 import { readInstitutionalStatusQuestion } from '../news/relevance/governed-institutions';
 import { retainedCycleCovers } from '../ask-intelligence/contributor-selection';
+import { isBroadGlobalHeadlinesQuestion } from '../analysis/query/broad-global-headlines.util';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -121,6 +122,11 @@ export interface AskR2Route {
    * question needs (knowledge-requirement.ts), orthogonal to its analytical domain.
    */
   readonly knowledgeRequirement: KnowledgeRequirement | null;
+  /**
+   * PUBLIC BETA HARDENING R1B — an open-ended request for the current world headlines
+   * (broad-global-headlines.util.ts): retrieved as headlines, never as a topic search.
+   */
+  readonly broadHeadlines: boolean;
   /**
    * BETA-ASK-005 — the bounded publication window the executor applies for a supported relative
    * period ("last 7 days"), anchored on the server request instant. Null otherwise.
@@ -300,6 +306,13 @@ export function statedPeriodIsConstraint(
   return true;
 }
 
+/** PUBLIC BETA HARDENING R1B — the composed source without its topic axis. */
+function withoutTopic(source: EnvelopeSource): EnvelopeSource {
+  const { topicTerms: _topic, ...rest } = source;
+  void _topic;
+  return rest;
+}
+
 export function topicCarriedByDomain(reading: QualifiedReading): boolean {
   const category = reading.readerCategory?.value;
   const domain = category === undefined ? undefined : CATEGORY_DOMAIN[category];
@@ -413,6 +426,7 @@ export function routeAskR2(
     const routed = frozenRoute(source, deps);
     return {
       knowledgeRequirement: null,
+      broadHeadlines: false,
       reportingWindow: null,
       readerStatedPeriod: null,
       outcome,
@@ -543,6 +557,24 @@ export function routeAskR2(
        subject. The service supplies `priorQuestion` only for subject / anaphoric follow-ups. */
     ctx.priorQuestion === undefined &&
     capability.source.personalRequested !== true;
+  /*
+    PUBLIC BETA HARDENING R1B — an open-ended request for the current world headlines ("Any
+    global news can you share?", "What is happening around the world?", "Co się dzieje na
+    świecie?"). Its whole vocabulary is closed (no place, organisation, topic, source or period
+    can occur in it), so the reader category it may carry ("world") is the breadth of the request,
+    not a topic constraint frozen C would have to transport: it is not bound. Never for a
+    follow-up, a named place, an inherited Map / story scope or a personal request.
+  */
+  const broadHeadlines =
+    !stableOrComputed &&
+    isBroadGlobalHeadlinesQuestion(reading.originalQuestion, reading.sourceLanguage) &&
+    ctx.priorQuestion === undefined &&
+    !namedPlace &&
+    !(
+      eligibility.decision === 'ELIGIBLE' &&
+      (ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined)
+    ) &&
+    capability.source.personalRequested !== true;
   const {
     temporalRequirement: _time,
     topicTerms: _topic,
@@ -558,7 +590,9 @@ export function routeAskR2(
         reading: { ...composedSource.reading, queryIntent: 'EXPLANATION', analyticalDomains: [] },
         ...(knowledge.requirement === 'COMPUTATION' ? { computationRequested: true } : {}),
       }
-    : composedSource;
+    : broadHeadlines
+      ? withoutTopic(composedSource)
+      : composedSource;
 
   /* Axes derived in the normalization vocabulary; language axis restored to the truth. */
   const derived = buildEnvelope({ ...source, questionLanguage: NORMALIZATION_VOCABULARY });
@@ -575,6 +609,7 @@ export function routeAskR2(
 
   return {
     knowledgeRequirement: knowledge.requirement,
+    broadHeadlines,
     reportingWindow: reportingWindowFor(
       reading.statedTime?.statedPeriod,
       reading.statedTime?.anchor,
