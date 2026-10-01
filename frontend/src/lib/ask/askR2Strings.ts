@@ -32,7 +32,7 @@ export interface AskR2Strings {
   readonly notNow: string;
   readonly runConfirm: string;
   readonly badges: Readonly<
-    Record<'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec', string>
+    Record<'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec' | 'calc', string>
   >;
   readonly referenceNoteTitle: string;
   readonly referenceNoteBody: string;
@@ -40,6 +40,8 @@ export interface AskR2Strings {
     readonly reference: string;
     /** LIVE ACCEPTANCE REPAIR R1 — a retained-record answer: not current, no AI. */
     readonly retainedRecord: string;
+    /** R1 — a deterministic computation from the reader's own values. */
+    readonly computed: string;
     /**
      * A reference answer that DID draw on retrieved sources — D25's mixed case (mapref,
      * "Background: reference · current role: checked …"), adapted by the integration: the
@@ -217,6 +219,7 @@ const EN: AskR2Strings = {
     insuf: 'INSUFFICIENT EVIDENCE',
     unavail: 'CAPABILITY UNAVAILABLE',
     rec: 'RETAINED RECORD',
+    calc: 'CALCULATION',
   },
   referenceNoteTitle: 'Model background · no citations',
   referenceNoteBody:
@@ -224,6 +227,8 @@ const EN: AskR2Strings = {
   freshness: {
     reference: 'Stable general knowledge · not checked against current sources',
     retainedRecord: 'Retained record · not current · no AI used',
+    computed:
+      'Calculated deterministically from the values in your question · no sources needed · no AI used',
     referenceWithSources: 'Background: reference · checked {when} · {sources}',
     nothingRan: 'One question before searching · nothing has run',
     checked: 'Checked {when} · {sources}',
@@ -433,6 +438,7 @@ const PL: AskR2Strings = {
     insuf: 'ZBYT MAŁO DOWODÓW',
     unavail: 'FUNKCJA NIEDOSTĘPNA',
     rec: 'ZACHOWANY ZAPIS',
+    calc: 'OBLICZENIE',
   },
   referenceNoteTitle: 'Wiedza modelu · bez przypisów',
   referenceNoteBody:
@@ -440,6 +446,7 @@ const PL: AskR2Strings = {
   freshness: {
     reference: 'Stała wiedza ogólna · niesprawdzana w bieżących źródłach',
     retainedRecord: 'Zachowany zapis · nieaktualny · bez użycia AI',
+    computed: 'Obliczone deterministycznie z wartości w pytaniu · bez źródeł · bez użycia AI',
     referenceWithSources: 'Tło: wiedza ogólna · sprawdzono {when} · {sources}',
     nothingRan: 'Jedno pytanie przed wyszukiwaniem · nic nie uruchomiono',
     checked: 'Sprawdzono {when} · {sources}',

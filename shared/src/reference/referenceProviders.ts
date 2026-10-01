@@ -64,6 +64,9 @@ export const ASK_ANSWER_STATES = [
   /* ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — a governed retained record (or its
      stated absence) answered with zero model calls. Never current, never verified. */
   'RETAINED_RECORD',
+  /* ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — a deterministic computation over the
+     reader's own stated values: zero model calls, zero sources, never current, never verified. */
+  'COMPUTED_RESULT',
 ] as const;
 export type AskAnswerState = (typeof ASK_ANSWER_STATES)[number];
 

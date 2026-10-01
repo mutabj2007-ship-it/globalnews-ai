@@ -37,6 +37,7 @@
  */
 
 import { reportingWindowFor, type ReportingWindow } from './reporting-window';
+import { deriveKnowledgeRequirement, type KnowledgeRequirement } from './knowledge-requirement';
 import { buildEnvelope, type EnvelopeSource } from './frozen-c/src/envelope';
 import { plan as frozenPlan, type PlannerDeps } from './frozen-c/src/planner';
 import { route as frozenRoute } from './frozen-c/src/index';
@@ -105,9 +106,21 @@ export interface SeamTrace {
    * a comparison whose members are the reader's own library is not member-less.
    */
   readonly landedOverride?: 'PERSONAL_MEMBER_SET' | null;
+  /**
+   * ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the DECLARED decoupling: for a
+   * STABLE_REFERENCE / COMPUTATION question the read domains are deliberately NOT handed to
+   * frozen C (a domain is not freshness). The wiring guard accepts empty frozen domains ONLY
+   * when this says so; any undeclared loss of domains is still a missing seam.
+   */
+  readonly knowledgeDecoupling?: 'STABLE_REFERENCE' | 'COMPUTATION' | null;
 }
 
 export interface AskR2Route {
+  /**
+   * ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — what kind of evidence / execution the
+   * question needs (knowledge-requirement.ts), orthogonal to its analytical domain.
+   */
+  readonly knowledgeRequirement: KnowledgeRequirement | null;
   /**
    * BETA-ASK-005 — the bounded publication window the executor applies for a supported relative
    * period ("last 7 days"), anchored on the server request instant. Null otherwise.
@@ -150,7 +163,7 @@ export function missingSeams(route: AskR2Route): readonly string[] {
     const readDomains: string[] = route.outcome.reading.domains.map((d) => d.value);
     for (const d of route.source.explicitSpecialistDomains ?? [])
       if (!readDomains.includes(d)) readDomains.push(d);
-    const read = readDomains.join(',');
+    const read = s.knowledgeDecoupling ? '' : readDomains.join(',');
     if (route.source.reading.analyticalDomains.join(',') !== read)
       missing.push('READING_TO_LANDED_DOMAINS');
     if (route.envelope.domains.domains.join(',') !== read)
@@ -399,6 +412,7 @@ export function routeAskR2(
     };
     const routed = frozenRoute(source, deps);
     return {
+      knowledgeRequirement: null,
       reportingWindow: null,
       readerStatedPeriod: null,
       outcome,
@@ -466,7 +480,80 @@ export function routeAskR2(
       : { analyticalDomains: [...landed.reading.analyticalDomains, ...namedDomains] }),
     ...(personalMemberSet ? { queryIntent: 'COMPARISON_RESEARCH' as const } : {}),
   };
-  const source = composeEnvelopeSource(reading, landedReading, eligibility, ctx, capability.source);
+  const composedSource = composeEnvelopeSource(
+    reading,
+    landedReading,
+    eligibility,
+    ctx,
+    capability.source,
+  );
+  /*
+    ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the knowledge requirement, derived
+    BEFORE frozen C (knowledge-requirement.ts). A DOMAIN says what a question is about, never
+    that it needs today's news, and a stable concept with two names is not a comparison of
+    members. For a STABLE_REFERENCE or COMPUTATION question (no stated period, not personal),
+    frozen C is handed a stable, non-present-tense reading with no domain / topic / time
+    constraint — so it plans REFERENCE_BACKGROUND_ONLY (or COMPUTATION) instead of requiring
+    NEWS_REPORTING. Frozen C's bytes are untouched; every other question is composed exactly as
+    before. The domains stay on the seam trace.
+  */
+  /* A place the reader NAMED (its words appear in the question) makes it a place question. A
+     resolver match the reader never wrote — "used together in TLS" resolved via the ISO code to
+     "timor leste" — is an acronym collision in a technical question, not a country. */
+  const fold = (value: string): string =>
+    ` ${value
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()} `;
+  const questionFolded = fold(reading.originalQuestion);
+  const namedPlace = reading.geography.some(
+    (g) =>
+      g.provenance !== 'SUPPLIED_BY_SURFACE' &&
+      g.value !== 'CONTESTED' &&
+      /* no matched text: conservatively a place the reader named */
+      (g.matchedText === undefined || questionFolded.includes(fold(g.matchedText))),
+  );
+  const knowledge = deriveKnowledgeRequirement(
+    reading.originalQuestion,
+    reading.sourceLanguage,
+    namedPlace,
+  );
+  /* The landed classifier stays authoritative: a place-bearing or anchored reading (one country,
+     several, a comparison with members, an article anchor) and an ELIGIBLE inherited context are
+     never re-read as stable reference. */
+  const placeFreeIntent = [
+    'CURRENT_EVENT',
+    'EXPLANATION',
+    'ENTITY_BACKGROUND',
+    'CLARIFICATION_REQUIRED',
+  ].includes(landedReading.queryIntent);
+  const stableOrComputed =
+    (knowledge.requirement === 'STABLE_REFERENCE' || knowledge.requirement === 'COMPUTATION') &&
+    reading.statedTime === undefined &&
+    !namedPlace &&
+    placeFreeIntent &&
+    /* an inherited Map / story context that the landed reading made ELIGIBLE scopes the answer */
+    !(
+      eligibility.decision === 'ELIGIBLE' &&
+      (ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined)
+    ) &&
+    capability.source.personalRequested !== true;
+  const {
+    temporalRequirement: _time,
+    topicTerms: _topic,
+    typedGeography: _code,
+    ...unconstrained
+  } = composedSource;
+  void _time;
+  void _topic;
+  void _code;
+  const source: EnvelopeSource = stableOrComputed
+    ? {
+        ...unconstrained,
+        reading: { ...composedSource.reading, queryIntent: 'EXPLANATION', analyticalDomains: [] },
+        ...(knowledge.requirement === 'COMPUTATION' ? { computationRequested: true } : {}),
+      }
+    : composedSource;
 
   /* Axes derived in the normalization vocabulary; language axis restored to the truth. */
   const derived = buildEnvelope({ ...source, questionLanguage: NORMALIZATION_VOCABULARY });
@@ -482,6 +569,7 @@ export function routeAskR2(
   };
 
   return {
+    knowledgeRequirement: knowledge.requirement,
     reportingWindow: reportingWindowFor(
       reading.statedTime?.statedPeriod,
       reading.statedTime?.anchor,
@@ -509,6 +597,9 @@ export function routeAskR2(
         capability: [...new Set(capability.trace.map((t) => t.kind))],
       },
       landedOverride: personalMemberSet ? 'PERSONAL_MEMBER_SET' : null,
+      knowledgeDecoupling: stableOrComputed
+        ? (knowledge.requirement as 'STABLE_REFERENCE' | 'COMPUTATION')
+        : null,
     },
   };
 }

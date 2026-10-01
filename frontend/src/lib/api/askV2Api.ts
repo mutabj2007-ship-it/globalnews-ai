@@ -31,7 +31,29 @@ export type AskAnswerState =
   | 'CAPABILITY_UNAVAILABLE'
   /* ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — a governed retained record (or its
      stated absence), answered with zero AI. Never current, never verified. */
-  | 'RETAINED_RECORD';
+  | 'RETAINED_RECORD'
+  /* ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — a deterministic computation over the
+     reader's own values: zero AI, zero sources. */
+  | 'COMPUTED_RESULT';
+
+/** ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — a computation the server owns. */
+export interface AskComputation {
+  readonly kind: string;
+  readonly inputs: readonly {
+    readonly name: string;
+    readonly value: number;
+    readonly unit: string;
+    readonly quoted: string;
+  }[];
+  readonly steps: readonly {
+    readonly label: string;
+    readonly expression: string;
+    readonly value: number;
+    readonly unit: string;
+  }[];
+  readonly result: { readonly name: string; readonly value: number; readonly unit: string };
+  readonly conventions: readonly string[];
+}
 
 export interface AskPlanChip {
   readonly kind: 'GEOGRAPHY' | 'TOPIC' | 'DOMAIN' | 'TIME' | 'SELECTION' | 'SOURCE';
@@ -81,6 +103,8 @@ export interface AskR2Payload {
    * with `analysis`: exactly one of the two carries body text for a given payload.
    */
   readonly background?: { readonly text: string } | null;
+  /** ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the deterministic computation. */
+  readonly computation?: AskComputation;
   /**
    * CURRENT STATUS CORROBORATION R1 — present only for a current-status plan: the executor's
    * frozen verification outcome, decided by DETERMINISTIC corroboration (never a model's
