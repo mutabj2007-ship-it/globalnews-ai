@@ -1,3 +1,8 @@
+import {
+  EvidenceDiscoveryService,
+  SOCIAL_SEARCH_PROVIDERS,
+} from './evidence/evidence-discovery.service';
+import { XRecentSearchProvider, YouTubeSearchProvider } from './social/social-search.providers';
 import { Module } from '@nestjs/common';
 import { ProviderExecutionRegistry } from './telemetry/provider-execution.registry';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -255,6 +260,27 @@ function buildProviderSelectionInput(
         ),
       inject: [ConfigService, MockNewsProvider, GNewsProvider, GdeltDocProvider, RssFeedProvider],
     },
+    /*
+      ASK MULTI-SOURCE DISCOVERY R2B — approved public social search lanes. Each one is OFF
+      until its explicit switch AND its credential exist (social-search.providers.ts); with
+      neither, they make no network call and report not-configured.
+    */
+    {
+      provide: XRecentSearchProvider,
+      useFactory: (config: ConfigService) => new XRecentSearchProvider(config),
+      inject: [ConfigService],
+    },
+    {
+      provide: YouTubeSearchProvider,
+      useFactory: (config: ConfigService) => new YouTubeSearchProvider(config),
+      inject: [ConfigService],
+    },
+    {
+      provide: SOCIAL_SEARCH_PROVIDERS,
+      useFactory: (x: XRecentSearchProvider, youtube: YouTubeSearchProvider) => [x, youtube],
+      inject: [XRecentSearchProvider, YouTubeSearchProvider],
+    },
+    EvidenceDiscoveryService,
   ],
   // MVP-G4 (G4-3), CTO-authorized cross-lane wiring, export-only.
   // AdminNewsService injects both token sets so it can report which
@@ -263,6 +289,12 @@ function buildProviderSelectionInput(
   // two entries make the existing factories' results visible to a
   // consuming module, and nothing else in this file was touched.
   exports: [
-    ProviderExecutionRegistry,NewsService, CountryNewsService, NEWS_PROVIDERS, ALL_NEWS_PROVIDERS],
+    ProviderExecutionRegistry,
+    NewsService,
+    CountryNewsService,
+    NEWS_PROVIDERS,
+    ALL_NEWS_PROVIDERS,
+    EvidenceDiscoveryService,
+  ],
 })
 export class NewsModule {}

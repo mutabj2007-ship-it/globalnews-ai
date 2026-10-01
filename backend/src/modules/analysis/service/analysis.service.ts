@@ -6,6 +6,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import {
   normalizeQuery,
@@ -76,6 +77,12 @@ import {
 import { flightIdentifiersIn } from '../../news/relevance/event-frame-relevance.util';
 import { publishedInsideWindow } from '../../news/relevance/publication-window.util';
 import { deriveEventFrame, type EventFrame } from '../query/event-frame.util';
+import {
+  EvidenceDiscoveryService,
+  type DiscoveryLaneStatus,
+} from '../../news/evidence/evidence-discovery.service';
+import { articleFromCandidate } from '../../news/evidence/evidence-candidate';
+import { scoreEventFrameRelevance } from '../../news/relevance/event-frame-relevance.util';
 import { scoreCompoundPlanRelevance } from '../../news/relevance/compound-plan-relevance.util';
 import { assessClaims, facetClaims } from '../validation/claim-graph.util';
 import {
@@ -267,6 +274,41 @@ import { readContinuationEllipsis } from '../anchor/continuation-ellipsis.util';
  */
 /* BETA-ASK-005 — the strict publication-window predicate lives with the news layer. */
 export { publishedInsideWindow };
+
+/**
+ * ASK MULTI-SOURCE DISCOVERY R2B — a planned news retrieval with the non-news lanes merged in:
+ * admitted social evidence appended (URL-deduplicated), each lane named in the trace. A lane
+ * that is not configured is shown as unavailable, never treated as having searched.
+ */
+/** R2B — the publisher-feed lane (RssFeedProvider), the transport for governed local feeds. */
+const GOVERNED_FEED_LANE = 'rss-feeds';
+
+function withDiscovery(
+  news: { response: NewsResponse; trace: PlannedSearchTrace },
+  social: { articles: NewsArticle[]; lanes: readonly DiscoveryLaneStatus[] },
+): { response: NewsResponse; trace: PlannedSearchTrace } {
+  if (social.lanes.length === 0) return news;
+  const articles = deduplicateArticles([...news.response.articles, ...social.articles]);
+  const ok = social.lanes.filter((l) => l.status === 'ok').map((l) => l.lane);
+  const attempted = social.lanes.filter((l) => l.status !== 'not-configured').map((l) => l.lane);
+  const unavailable = social.lanes
+    .filter((l) => l.status !== 'ok')
+    .map((l) => ({ lane: l.lane, reason: l.status }));
+  return {
+    response: attachProviderFailures(
+      { ...news.response, articles, totalResults: articles.length },
+      readProviderFailures(news.response),
+    ),
+    trace: {
+      ...news.trace,
+      lanesAttempted: [...news.trace.lanesAttempted, ...attempted],
+      lanesSucceeded: [...news.trace.lanesSucceeded, ...ok],
+      lanesUnavailable: [...news.trace.lanesUnavailable, ...unavailable],
+      candidatesSeen: news.trace.candidatesSeen + social.articles.length,
+      candidatesAdmitted: articles.length,
+    },
+  };
+}
 
 const NON_RETRIEVABLE_QUERY_CONTEXT: AnalysisRetrievalContext = {
   dataMode: 'unavailable',
@@ -571,6 +613,11 @@ export class AnalysisService {
     private readonly provider: AnalysisProvider,
 
     private readonly analysisConfig: AnalysisConfigService,
+
+    /* ASK MULTI-SOURCE DISCOVERY R2B — the non-news lanes (social), each OFF until configured.
+       Optional so every existing construction is unchanged. */
+    @Optional()
+    private readonly evidenceDiscovery?: EvidenceDiscoveryService,
   ) {}
 
   /**
@@ -1846,8 +1893,13 @@ export class AnalysisService {
 
           /* BETA-ASK-005 — the window reaches the country feed before its duplicate collapse. */
           const countryWindow = executionPolicy?.reportingWindow;
+          /* R2B — an ACTIVE governed local feed for this country is asked alongside the primary. */
+          const localLane =
+            this.evidenceDiscovery?.hasGovernedLocalFeeds([country.iso2]) === true
+              ? [GOVERNED_FEED_LANE]
+              : undefined;
           const countryResponse =
-            countryWindow === undefined
+            countryWindow === undefined && localLane === undefined
               ? await this.countryNewsService.getCountryNews(
                   country.iso3,
                   undefined,
@@ -1860,7 +1912,10 @@ export class AnalysisService {
                   SEARCH_POOL_SIZE,
                   city,
                   undefined,
-                  { from: countryWindow.from, to: countryWindow.to },
+                  countryWindow === undefined
+                    ? undefined
+                    : { from: countryWindow.from, to: countryWindow.to },
+                  localLane,
                 );
 
           articles = countryResponse.articles;
@@ -3011,7 +3066,8 @@ export class AnalysisService {
             independentClusters: clusterDuplicateArticles([...articles]).length,
           };
           const coverageIncomplete =
-            trace.lanesUnavailable.length > 0 ||
+            /* R2B — a lane that is merely not configured is shown, not "incomplete coverage". */
+            trace.lanesUnavailable.some((u) => u.reason !== 'not-configured') ||
             retrievalContext.fallbackReason === 'provider-error' ||
             (retrievalContext.outcome ?? '').startsWith('PROVIDER_');
           const claims =
@@ -3599,7 +3655,9 @@ export class AnalysisService {
             const coverage = {
               incomplete:
                 retrievalContext.fallbackReason === 'provider-error' ||
-                (retrievalContext.retrievalTrace?.lanesUnavailable.length ?? 0) > 0 ||
+                (retrievalContext.retrievalTrace?.lanesUnavailable ?? []).some(
+                  (u) => u.reason !== 'not-configured',
+                ) ||
                 (retrievalContext.outcome ?? '').startsWith('PROVIDER_'),
             };
             const guard = (text: string | undefined) =>
@@ -3971,6 +4029,8 @@ export class AnalysisService {
       readonly q: string;
       readonly lang?: string;
       readonly allowFallback: boolean;
+      /** R2B — governed local feed lanes asked alongside the primaries for this search. */
+      readonly alsoProviderIds?: readonly string[];
     }[],
     mode: Exclude<RelevanceMode, { type: 'none' }>,
     window?: { readonly from: string; readonly to: string },
@@ -3995,6 +4055,9 @@ export class AnalysisService {
         ...(window === undefined ? {} : { from: window.from, to: window.to }),
         allowFallback,
         ...(refused.size === 0 ? {} : { excludeProviderIds: [...refused] }),
+        ...(search.alsoProviderIds === undefined
+          ? {}
+          : { alsoProviderIds: search.alsoProviderIds }),
       });
       responses.push(response);
       sent.push(search.lang === undefined ? q : `${q} [${search.lang}]`);
@@ -4080,12 +4143,49 @@ export class AnalysisService {
     plan: CompoundRetrievalPlan,
     window?: { readonly from: string; readonly to: string },
   ): Promise<{ response: NewsResponse; trace: PlannedSearchTrace }> {
-    return this.runPlannedSearches(
-      `compound ${plan.iso3}${plan.scope ? `/${plan.scope.qualifier}` : ''}`,
-      plan.queries,
-      { type: 'compoundPlan', plan: { iso3: plan.iso3, scope: plan.scope, facets: plan.facets } },
-      window,
+    const admission = { iso3: plan.iso3, scope: plan.scope, facets: plan.facets };
+    const [news, social] = await Promise.all([
+      this.runPlannedSearches(
+        `compound ${plan.iso3}${plan.scope ? `/${plan.scope.qualifier}` : ''}`,
+        plan.queries.map((query, i) =>
+          i === 0 && this.evidenceDiscovery?.hasGovernedLocalFeeds([plan.country.iso2]) === true
+            ? { ...query, alsoProviderIds: [GOVERNED_FEED_LANE] }
+            : query,
+        ),
+        { type: 'compoundPlan', plan: admission },
+        window,
+      ),
+      this.discoverBeyondNews(
+        plan.queries[0]?.q,
+        window,
+        (article) => scoreCompoundPlanRelevance(article, admission).isRelevant,
+      ),
+    ]);
+    return withDiscovery(news, social);
+  }
+
+  /**
+   * ASK MULTI-SOURCE DISCOVERY R2B — the configured non-news lanes for ONE query, admitted by
+   * the caller's SAME relevance gate. A discovery lead is never admitted as evidence. Lanes that
+   * are not configured make no call and are reported as such.
+   */
+  private async discoverBeyondNews(
+    query: string | undefined,
+    window: { readonly from: string; readonly to: string } | undefined,
+    admits: (article: NewsArticle) => boolean,
+  ): Promise<{ articles: NewsArticle[]; lanes: readonly DiscoveryLaneStatus[] }> {
+    if (this.evidenceDiscovery === undefined || query === undefined) {
+      return { articles: [], lanes: [] };
+    }
+    const found = await this.evidenceDiscovery.discover(
+      query,
+      window === undefined ? {} : { from: window.from, to: window.to },
     );
+    const articles = found.candidates
+      .filter((candidate) => candidate.sourceRole !== 'DISCOVERY_LEAD')
+      .map(articleFromCandidate)
+      .filter(admits);
+    return { articles, lanes: found.lanes };
   }
 
   /**
@@ -4107,12 +4207,32 @@ export class AnalysisService {
           notBefore: frame.notBefore,
         },
       }) as const;
-    const first = await this.runPlannedSearches(
-      `event ${frame.eventType} ${frame.endpoints.map((e) => e.iso3).join('>')}`,
-      frame.queries.map((q, i) => ({ q, allowFallback: i === 0 })),
-      admission(frame.identifiers),
-      window,
-    );
+    const [news, social] = await Promise.all([
+      this.runPlannedSearches(
+        `event ${frame.eventType} ${frame.endpoints.map((e) => e.iso3).join('>')}`,
+        frame.queries.map((q, i) => ({
+          q,
+          allowFallback: i === 0,
+          ...(i === 0 &&
+          this.evidenceDiscovery?.hasGovernedLocalFeeds(
+            frame.endpoints
+              .map((e) => resolveCountryByAnyIdentifier(e.iso3)?.iso2)
+              .filter((iso2): iso2 is string => iso2 !== undefined),
+          ) === true
+            ? { alsoProviderIds: [GOVERNED_FEED_LANE] }
+            : {}),
+        })),
+        admission(frame.identifiers),
+        window,
+      ),
+      this.discoverBeyondNews(
+        frame.queries[0],
+        window,
+        (article) =>
+          scoreEventFrameRelevance(article, admission(frame.identifiers).frame).isRelevant,
+      ),
+    ]);
+    const first = withDiscovery(news, social);
     const discovered = [
       ...new Set(
         first.response.articles.flatMap((a) =>

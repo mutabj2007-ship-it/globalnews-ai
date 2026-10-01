@@ -6,6 +6,7 @@ import type {
 import { canonicalPublisherHost } from '@globalnews-ai/shared';
 import { clusterArticlesWithMembership } from '../duplicates/cluster-articles.util';
 import { FEED_SOURCES } from '../../news/providers/feed-source-registry';
+import { familyOfHost } from '../../news/evidence/evidence-candidate';
 import {
   articleSpeaksToFacet,
   foldForPlan,
@@ -78,7 +79,13 @@ function hostOf(article: Pick<NewsArticle, 'url'>): string | null {
 }
 
 /** A verified official publisher: a registry OFFICIAL_SOURCE whose link is on its own host. */
-export function isOfficialSource(article: Pick<NewsArticle, 'sourceId' | 'url'>): boolean {
+export function isOfficialSource(
+  article: Pick<NewsArticle, 'sourceId' | 'url' | 'evidenceRole'>,
+): boolean {
+  /* R2B — an official role from governed / platform-verified identity. */
+  if (article.evidenceRole === 'OFFICIAL_WEB' || article.evidenceRole === 'OFFICIAL_SOCIAL') {
+    return true;
+  }
   const entry = FEED_SOURCES.find((feed) => feed.sourceId === article.sourceId);
   const host = hostOf(article);
   return (
@@ -105,7 +112,9 @@ export function independentFamilies(articles: readonly NewsArticle[]): NewsArtic
   }
   const byHost = new Map<string, number>();
   articles.forEach((a, i) => {
-    const key = hostOf(a) ?? `source:${a.sourceId}`;
+    /* R2B — a declared family (a shared report, an organisation's own account) or the host's
+       family (a wire's copies are the wire). */
+    const key = a.sourceFamily ?? familyOfHost(hostOf(a)) ?? `source:${a.sourceId}`;
     const seen = byHost.get(key);
     if (seen === undefined) byHost.set(key, i);
     else union(seen, i);
@@ -116,6 +125,20 @@ export function independentFamilies(articles: readonly NewsArticle[]): NewsArtic
     groups.set(root, [...(groups.get(root) ?? []), a]);
   });
   return [...groups.values()];
+}
+
+/** Journalism — a news-channel report or a governed newsroom account; never a witness post. */
+const REPORTING_ROLES: ReadonlySet<string> = new Set([
+  'LOCAL_REPORTING',
+  'REGIONAL_REPORTING',
+  'INTERNATIONAL_REPORTING',
+  'WIRE_REPORTING',
+  'AGGREGATOR',
+  'SOCIAL_REPORT',
+]);
+
+function isReporting(article: NewsArticle): boolean {
+  return article.evidenceRole === undefined || REPORTING_ROLES.has(article.evidenceRole);
 }
 
 function supports(claim: ClaimInput, article: NewsArticle, ctx: ClaimContext): boolean {
@@ -156,12 +179,16 @@ export function assessClaims(
   ctx: ClaimContext,
 ): AnalysisClaimAssessment[] {
   return claims.map((claim) => {
-    const contradicting = evidence.filter((a) => contradicts(claim, a));
-    const supporting = evidence.filter(
-      (a) => !contradicting.includes(a) && supports(claim, a, ctx),
-    );
+    /* R2B — a discovery lead (repost / unknown origin) is never evidence for or against. */
+    const usable = evidence.filter((a) => a.evidenceRole !== 'DISCOVERY_LEAD');
+    const contradicting = usable.filter((a) => contradicts(claim, a));
+    const supporting = usable.filter((a) => !contradicting.includes(a) && supports(claim, a, ctx));
     const families = independentFamilies(supporting);
     const officialFamily = families.some((family) => family.some(isOfficialSource));
+    /* Independent JOURNALISM families: never a witness post, never the official source itself. */
+    const reportingFamilies = families.filter((family) =>
+      family.some((a) => isReporting(a) && !isOfficialSource(a)),
+    ).length;
     const state: ClaimVerificationState =
       supporting.length > 0 && contradicting.length > 0
         ? 'DISPUTED'
@@ -171,9 +198,9 @@ export function assessClaims(
             : ctx.coverageIncomplete
               ? 'COVERAGE_INCOMPLETE'
               : 'NOT_VERIFIED'
-          : families.length >= 2 && officialFamily
+          : officialFamily && reportingFamilies >= 1
             ? 'CONFIRMED'
-            : families.length >= 2
+            : reportingFamilies >= 2
               ? 'CORROBORATED_REPORTING'
               : 'REPORTED';
     return {

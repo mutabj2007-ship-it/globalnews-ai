@@ -710,6 +710,12 @@ export class NewsService {
        * hammered; every other lane still runs. Absent = every eligible provider.
        */
       excludeProviderIds?: readonly string[];
+      /**
+       * ASK MULTI-SOURCE DISCOVERY R2B — fallback-tier providers to ask ALONGSIDE the primaries
+       * for this one search (governed local publisher feeds for the asked country), instead of
+       * only after the primaries return nothing. Bounded: named providers only.
+       */
+      alsoProviderIds?: readonly string[];
     },
   ): Promise<NewsResponse> {
     const requestedSource = options?.requestedSource;
@@ -831,6 +837,7 @@ export class NewsService {
       peerTailPolicy,
       allowFallback,
       excluded,
+      new Set(options?.alsoProviderIds ?? []),
     );
 
     /*
@@ -1760,13 +1767,17 @@ export class NewsService {
     allowFallback = true,
     /** ASK TRUTHFUL RETRIEVAL R2A — providers not to ask again in this request (see search()). */
     excluded: ReadonlySet<string> = new Set(),
+    /** ASK MULTI-SOURCE DISCOVERY R2B — fallback providers promoted for this request. */
+    also: ReadonlySet<string> = new Set(),
   ): Promise<ProviderCallResult> {
-    const primaries = this.eligibleProvidersForTier(capability, 'primary').filter(
+    const tierFallbacks = this.eligibleProvidersForTier(capability, 'fallback').filter(
       (provider) => !excluded.has(provider.id),
     );
-    const fallbacks = this.eligibleProvidersForTier(capability, 'fallback').filter(
-      (provider) => !excluded.has(provider.id),
-    );
+    const primaries = [
+      ...this.eligibleProvidersForTier(capability, 'primary'),
+      ...tierFallbacks.filter((provider) => also.has(provider.id)),
+    ].filter((provider) => !excluded.has(provider.id));
+    const fallbacks = tierFallbacks.filter((provider) => !also.has(provider.id));
 
     /*
      * R1 — THE PRIMARY FAN-OUT IS NOT IN SCOPE AND IS NOT PASSED A POLICY.

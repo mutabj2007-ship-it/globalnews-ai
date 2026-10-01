@@ -44,6 +44,21 @@ export type NewsTag = 'breaking' | 'trending';
  */
 export type PublishedAtBasis = 'publisher' | 'observed';
 
+/** ASK MULTI-SOURCE DISCOVERY R2B — the evidence source roles (shared vocabulary). */
+export type SourceRole =
+  | 'OFFICIAL_WEB'
+  | 'OFFICIAL_SOCIAL'
+  | 'LOCAL_REPORTING'
+  | 'REGIONAL_REPORTING'
+  | 'INTERNATIONAL_REPORTING'
+  | 'WIRE_REPORTING'
+  | 'AGGREGATOR'
+  | 'SOCIAL_REPORT'
+  | 'WITNESS_SOCIAL'
+  | 'RETAINED_SPECIALIST'
+  /** A repost / unknown-origin item: it may lead retrieval to a source; never evidence. */
+  | 'DISCOVERY_LEAD';
+
 export interface NewsArticle {
   id: string;
   title: string;
@@ -118,6 +133,21 @@ export interface NewsArticle {
    * consume this field.
    */
   sourceLanguage?: string;
+
+  /**
+   * ASK MULTI-SOURCE DISCOVERY R2B — what KIND of source this is, from verified identity only
+   * (registry / platform verification), never from its display name. Absent on ordinary news
+   * articles, whose role is derived from their verified identity when needed. A role never says
+   * the content is true.
+   */
+  evidenceRole?: SourceRole;
+
+  /**
+   * ASK MULTI-SOURCE DISCOVERY R2B — the independence family (a shared report's publisher, an
+   * organisation's web host for its own social account). Copies within one family are never
+   * independent confirmation. Absent = the publisher host's family.
+   */
+  sourceFamily?: string;
 
   confidence?: number;
 

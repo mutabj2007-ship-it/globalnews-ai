@@ -445,7 +445,7 @@ function verificationOf(
           ...trace.lanesUnavailable.map((u) => ({
             label: label(u.lane),
             ok: false,
-            status: `${s.verification.unavailable} (${u.reason})`,
+            status: `${s.verification.unavailable} (${s.verification.reasons[u.reason] ?? u.reason})`,
           })),
         ];
   const claims = (retrieval.claimAssessments ?? []).map((c) => ({

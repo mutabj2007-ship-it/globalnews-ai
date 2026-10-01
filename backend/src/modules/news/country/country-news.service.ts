@@ -136,6 +136,11 @@ export class CountryNewsService {
      * copy of a story can never displace its in-window copy. Part of the cache key.
      */
     window?: { readonly from: string; readonly to: string },
+    /**
+     * ASK MULTI-SOURCE DISCOVERY R2B — governed local publisher-feed lanes to ask alongside the
+     * primary provider for this country (only when the caller found an ACTIVE feed for it).
+     */
+    alsoProviderIds?: readonly string[],
   ): Promise<CountryNewsResponse> {
     const resolvedLimit = this.clampLimit(limit);
     const country = resolveCountryByAnyIdentifier(countryIdentifier);
@@ -152,7 +157,7 @@ export class CountryNewsService {
     // its key segment, matching the de facto behavior every existing
     // caller already had — this does not change caching behavior for
     // any caller that never passes `lang`.
-    const cacheKey = `${country.iso3}:${category ?? 'all'}:${resolvedLimit}:${city ?? 'all'}:${lang ?? 'en'}${window === undefined ? '' : `:w${window.from.slice(0, 13)}..${window.to.slice(0, 13)}`}`;
+    const cacheKey = `${country.iso3}:${category ?? 'all'}:${resolvedLimit}:${city ?? 'all'}:${lang ?? 'en'}${window === undefined ? '' : `:w${window.from.slice(0, 13)}..${window.to.slice(0, 13)}`}${alsoProviderIds === undefined ? '' : `:also:${alsoProviderIds.join(',')}`}`;
     const cached = this.getCached(cacheKey);
 
     if (cached) {
@@ -188,8 +193,12 @@ export class CountryNewsService {
         this.buildSearchTerm(country, city),
         fetchLimit,
         undefined,
-        window !== undefined
-          ? { ...(lang ? { lang } : {}), from: window.from, to: window.to }
+        window !== undefined || alsoProviderIds !== undefined
+          ? {
+              ...(lang ? { lang } : {}),
+              ...(window === undefined ? {} : { from: window.from, to: window.to }),
+              ...(alsoProviderIds === undefined ? {} : { alsoProviderIds }),
+            }
           : lang
             ? { lang }
             : undefined,

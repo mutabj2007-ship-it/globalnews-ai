@@ -76,6 +76,7 @@ export interface AskR2Strings {
     readonly unavailable: string;
     readonly claims: string;
     readonly lanes: Readonly<Record<string, string>>;
+    readonly reasons: Readonly<Record<string, string>>;
     readonly states: Readonly<Record<string, string>>;
   };
   /** R3 — the title when the empty result came from a refused search, not an answered one. */
@@ -248,6 +249,15 @@ const EN: AskR2Strings = {
       'gdelt-doc': 'GDELT',
       'rss-feeds': 'Publisher feeds',
       'news-providers': 'News providers',
+      x: 'X',
+      youtube: 'YouTube',
+    },
+    reasons: {
+      'not-configured': 'not configured',
+      'rate-limited': 'rate limited',
+      auth: 'access refused',
+      timeout: 'timed out',
+      unavailable: 'unavailable',
     },
     states: {
       CONFIRMED: 'Confirmed',
@@ -458,6 +468,15 @@ const PL: AskR2Strings = {
       'gdelt-doc': 'GDELT',
       'rss-feeds': 'Kanały wydawców',
       'news-providers': 'Dostawcy wiadomości',
+      x: 'X',
+      youtube: 'YouTube',
+    },
+    reasons: {
+      'not-configured': 'nieskonfigurowane',
+      'rate-limited': 'limit zapytań',
+      auth: 'odmowa dostępu',
+      timeout: 'przekroczony czas',
+      unavailable: 'niedostępne',
     },
     states: {
       CONFIRMED: 'Potwierdzone',

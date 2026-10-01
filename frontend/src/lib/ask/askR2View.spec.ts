@@ -527,7 +527,7 @@ describe('ASK TRUTHFUL RETRIEVAL R2A — what was checked is shown, never a deni
     );
     expect(v.verification?.lanes).toEqual([
       { label: 'Publisher feeds', ok: true, status: 'checked' },
-      { label: 'GNews', ok: false, status: 'unavailable (rate-limited)' },
+      { label: 'GNews', ok: false, status: 'unavailable (rate limited)' },
     ]);
     expect(v.verification?.claims).toEqual([
       {
