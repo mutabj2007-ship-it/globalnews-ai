@@ -33,6 +33,9 @@ const SUBSTANTIVE_STATES: ReadonlySet<string> = new Set([
   'CURRENTLY_VERIFIED',
   'PARTIAL',
   'REFERENCE_BACKGROUND',
+  /* ASK TECHNICAL / SCIENTIFIC REASONING R1 — a deterministic computed answer IS an answer
+     (same rule as a governed record: substantive, even with zero AI). CTO decision point. */
+  'COMPUTED_RESULT',
 ]);
 
 /**

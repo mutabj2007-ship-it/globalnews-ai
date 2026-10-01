@@ -1,3 +1,4 @@
+import { solveComputation, type ComputationResult } from './computation/deterministic-computation';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { AnalysisService } from '../analysis/service/analysis.service';
@@ -117,8 +118,18 @@ const PLAN_VALIDITY_MS = 15 * 60 * 1000;
  * verified account identity (frozen B7: a personal question is IDENTITY_REQUIRED without
  * one) are server-held facts of THIS request, never read from the question or the client.
  */
-function routeFor(request: Readonly<AskRequest>, deps: PlannerDeps): AskR2Route {
+function routeFor(request: Readonly<AskRequest>, baseDeps: PlannerDeps): AskR2Route {
   const who = askRequestContext.getStore();
+  /*
+    ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — COMPUTATION is a bound capability for
+    THIS request only when the deterministic engine can solve it from the reader's own values
+    (frozen C's injectable capability map; the frozen default stays NO_EXECUTOR otherwise). A
+    recognised formula with missing inputs is bound too, so the reader is asked for exactly them.
+  */
+  const deps: PlannerDeps =
+    solveComputation(request.question) !== undefined
+      ? { ...baseDeps, capabilities: { ...baseDeps.capabilities, COMPUTATION: 'BOUND' } }
+      : baseDeps;
   return routeAskR2(
     {
       originalQuestion: request.question,
@@ -507,6 +518,12 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     */
     if (early !== null && early.state === 'REFERENCE_BACKGROUND') {
       return this.executeBackground(request, plan, route, operationId, draft);
+    }
+
+    /* ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — a computation is answered by the
+       deterministic engine: zero model calls, zero provider calls, no meter. */
+    if (requiredRolesOf(route.plan).includes('COMPUTED')) {
+      return this.executeComputation(request, plan, route, operationId, draft);
     }
 
     const unsupplied = requiredRolesOf(route.plan).filter((r) => !EXECUTOR_SUPPLIES.has(r));
@@ -990,6 +1007,54 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     );
   }
 
+  /**
+   * ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the deterministic result, or (when a
+   * required input is missing) a clarification naming exactly what is missing. Nothing is
+   * assumed, no model or provider is called, and nothing is metered.
+   */
+  private executeComputation(
+    request: Readonly<AskRequest>,
+    plan: Readonly<AskPlan>,
+    route: AskR2Route,
+    operationId: string,
+    draft: AskObservationDraft,
+  ): ExecutionResult {
+    const outcome = solveComputation(request.question);
+    if (outcome?.status === 'SOLVED') {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer(
+          { state: 'COMPUTED_RESULT', basis: 'DETERMINISTIC_COMPUTATION', missingRoles: [] },
+          draft,
+        ),
+        null,
+        false,
+        null,
+        null,
+        NO_CONTRIBUTIONS,
+        outcome.result,
+      );
+    }
+    return this.result(
+      plan,
+      route,
+      operationId,
+      this.observeAnswer(
+        {
+          state: 'CLARIFICATION_REQUIRED',
+          basis: 'COMPUTATION_INPUTS_MISSING',
+          missingRoles: [],
+          candidates: outcome?.status === 'MISSING_INPUTS' ? [...outcome.missing] : [],
+        },
+        draft,
+      ),
+      null,
+      false,
+    );
+  }
+
   private result(
     plan: Readonly<AskPlan>,
     route: AskR2Route,
@@ -1016,6 +1081,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
      * with its status, provenance and time basis. Absent (null) when none applied.
      */
     intelligence: AskContributionSet = NO_CONTRIBUTIONS,
+    /** ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the deterministic computation. */
+    computation: ComputationResult | null = null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -1053,6 +1120,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         /* ASK GENERAL BACKGROUND EXECUTION R1 — additive. Non-citable, non-sourced model
            background text (never present alongside a non-null `analysis`). */
         background: backgroundText === null ? null : { text: backgroundText },
+        ...(computation === null ? {} : { computation }),
         verification,
         intelligence:
           intelligence.considered.length === 0

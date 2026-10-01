@@ -61,6 +61,7 @@ describe('ASK GUEST TRIAL R3 — D3 counting rule: exhaustive over every answer 
       'CLARIFICATION_REQUIRED',
       'CAPABILITY_UNAVAILABLE',
       'RETAINED_RECORD',
+      'COMPUTED_RESULT',
     ]);
     expect([...ASK_ANSWER_STATES].sort()).toEqual([...decided].sort());
   });

@@ -40,7 +40,7 @@ describe('§7 — the answer states', () => {
     derivation (`deriveAnswerState`) never produces RETAINED_RECORD — only the adapter's
     deterministic governed-record executor does.
   */
-  it('exactly the seven the contract names, plus the additive RETAINED_RECORD', () => {
+  it('exactly the seven the contract names, plus the additive RETAINED_RECORD and COMPUTED_RESULT', () => {
     expect([...ASK_ANSWER_STATES]).toEqual([
       'REFERENCE_BACKGROUND',
       'CURRENTLY_VERIFIED',
@@ -50,6 +50,8 @@ describe('§7 — the answer states', () => {
       'CLARIFICATION_REQUIRED',
       'CAPABILITY_UNAVAILABLE',
       'RETAINED_RECORD',
+      /* ASK TECHNICAL / SCIENTIFIC REASONING R1 — deterministic computation, zero AI. */
+      'COMPUTED_RESULT',
     ]);
   });
 });

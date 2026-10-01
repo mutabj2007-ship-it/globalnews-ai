@@ -21,7 +21,8 @@ import type { AnalysisRetrievalContext } from '@globalnews-ai/shared';
  *   chips                     from `payload.chips` only (D25 05) — never UI or Map state
  */
 
-export type AskR2Badge = 'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec';
+export type AskR2Badge =
+  'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec' | 'calc';
 
 export interface AskR2ChipView {
   readonly kind: AskPlanChip['kind'];
@@ -110,6 +111,8 @@ const BADGE_OF: Readonly<Record<AskAnswerState, AskR2Badge>> = {
   CAPABILITY_UNAVAILABLE: 'unavail',
   /* LIVE ACCEPTANCE REPAIR R1 — a governed retained record, zero AI; no hand-offs. */
   RETAINED_RECORD: 'rec',
+  /* R1 — a deterministic computation, zero AI; no hand-offs. */
+  COMPUTED_RESULT: 'calc',
 };
 
 const TONE_OF: Readonly<Record<AskR2Badge, AskR2View['tone']>> = {
@@ -121,6 +124,7 @@ const TONE_OF: Readonly<Record<AskR2Badge, AskR2View['tone']>> = {
   insuf: 'insufficient',
   unavail: 'unavailable',
   rec: 'retained',
+  calc: 'reference',
 };
 
 /** D25 02: handoffs exist for states 2, 3, 5 (and 7, 8 — not produced by this candidate). */
@@ -305,6 +309,7 @@ export function askR2View(
   else if (badge === 'insuf')
     freshness = fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
   else if (badge === 'rec') freshness = s.freshness.retainedRecord;
+  else if (badge === 'calc') freshness = s.freshness.computed;
   else if (badge === 'part' && payload.verification?.asOf != null)
     /* CURRENT STATUS CORROBORATION R1 — as of the freshest corroborating report, never the
        model's generation time. */

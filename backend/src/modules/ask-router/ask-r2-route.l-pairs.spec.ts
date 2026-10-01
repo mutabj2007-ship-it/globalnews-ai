@@ -188,8 +188,13 @@ describe('contract §4 — residual EN corrections, without turning every "What 
    * landed reading. Reported with the proposed minimal frozen change in the delivery doc.
    * If frozen C is amended, this assertion flips and must be updated deliberately.
    */
-  it('FS-3 held: RF1 "What is GDP?" routes SPECIALIST_DOMAIN in both languages (frozen planner)', () => {
-    expect(byId('RF1').ek.questionClass).toBe('SPECIALIST_DOMAIN');
+  /*
+    FS-3 SUPERSEDED by ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 (CTO ruling: a DOMAIN
+    is not FRESHNESS). "What is GDP?" is stable reference; it routes REFERENCE in BOTH languages,
+    so the EN/PL twin invariant this row protects still holds.
+  */
+  it('RF1 "What is GDP?" routes REFERENCE in both languages (domain is not freshness)', () => {
+    expect(byId('RF1').ek.questionClass).toBe('REFERENCE');
     expect(byId('RF1').pk).toEqual(byId('RF1').ek);
   });
 });
