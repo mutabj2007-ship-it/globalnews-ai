@@ -19,7 +19,7 @@ import {
   type HumanitarianAnalysisWorkspace,
   type HumanitarianRetainedRead,
 } from '@globalnews-ai/shared';
-import { humanitarianReadLabel, humanitarianReadExplanation } from '@/lib/humanitarian/humanitarianReadLabel';
+import { humanitarianReadLabel, humanitarianReadExplanation, humanitarianReadState } from '@/lib/humanitarian/humanitarianReadLabel';
 import { useReducer, type JSX } from 'react';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { HUM_CANVAS, HUM_INK, HUM_LICENSED, HUM_LINE, HUM_NAV, HUM_SURFACE, HUM_TYPE, humTracking } from '@/lib/humanitarian/humTokens';
@@ -45,7 +45,7 @@ export function HumanitarianScreen({ locale, retainedRead = humanitarianReadAbse
   return (
     <main
       data-hum="screen"
-      data-hum-read={retainedRead.absence}
+      data-hum-read={humanitarianReadState(retainedRead)}
       data-hum-frame={state.frame}
       data-hum-drawer={state.drawer ?? 'none'}
       className={`relative ${HUM_CANVAS.base}`}

@@ -12,7 +12,7 @@ describe('Humanitarian frontend read binding', () => {
       kind: 'UNAVAILABLE', absence: 'NOT_ASSESSED', observations: [],
     })));
     const read = await readHumanitarianObservations();
-    expect(read.absence).toBe('NOT_ASSESSED');
+    expect(read.kind === 'UNAVAILABLE' && read.absence).toBe('NOT_ASSESSED');
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy.mock.calls[0]?.[0]).toMatch(/\/humanitarian\/observations$/);
     expect(spy.mock.calls[0]?.[1]).toMatchObject({cache:'no-store',redirect:'error'});
