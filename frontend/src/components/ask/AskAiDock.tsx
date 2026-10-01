@@ -689,11 +689,19 @@ function GlobalAskAiDock({
     window.addEventListener(GLOBAL_ASK_SUBMIT_EVENT, onSubmit);
     return () => window.removeEventListener(GLOBAL_ASK_SUBMIT_EVENT, onSubmit);
   }, [embeddedAsk]);
+  const guestKnown = r2.guest !== null;
+  const [guestWaitOver, setGuestWaitOver] = useState(false);
   useEffect(() => {
-    if (queuedSend === null || !everOpened) return;
+    if (queuedSend === null || guestKnown) return undefined;
+    const timer = window.setTimeout(() => setGuestWaitOver(true), 2500);
+    return () => window.clearTimeout(timer);
+  }, [queuedSend, guestKnown]);
+  useEffect(() => {
+    if (queuedSend === null || !everOpened || !(guestKnown || guestWaitOver)) return;
     setQueuedSend(null);
+    setGuestWaitOver(false);
     void sendEmbedded(queuedSend);
-  }, [queuedSend, everOpened, sendEmbedded]);
+  }, [queuedSend, everOpened, guestKnown, guestWaitOver, sendEmbedded]);
 
   /*
     HOME R1 · STAGE A — a deeper request from My Intelligence (requestDeeperAsk): the dock

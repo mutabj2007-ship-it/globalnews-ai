@@ -25,12 +25,15 @@ interface HomeLanguageControlProps {
   language: LanguageCode;
   label: string;
   actionLabel: string;
+  /** HOME R1 · STAGE A — the phone top bar uses the compact (mobile) selector. Default unchanged. */
+  variant?: 'desktop' | 'mobile';
 }
 
 export function HomeLanguageControl({
   language,
   label,
   actionLabel,
+  variant = 'desktop',
 }: HomeLanguageControlProps): JSX.Element {
   const router = useRouter();
 
@@ -46,7 +49,7 @@ export function HomeLanguageControl({
       onChange={handleLanguageChange}
       label={label}
       actionLabel={actionLabel}
-      variant="desktop"
+      variant={variant}
     />
   );
 }

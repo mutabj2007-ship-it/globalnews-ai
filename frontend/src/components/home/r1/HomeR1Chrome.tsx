@@ -60,22 +60,27 @@ export function HomeR1Header({ language }: { readonly language: LanguageCode }):
   const nav = dict.navBar;
   return (
     <header data-home-r1-header="" className="sticky top-0 z-50 h-[56px] bg-[#0B1F3A] lg:h-[60px]">
-      <div className="flex h-full items-center gap-2 px-4 lg:px-5">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label={nav.homeAriaLabel}>
-          <Logo size={28} gapPx={10} />
-          <span className="rounded-[5px] border border-cyan-400/35 bg-cyan-400/10 px-1.5 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-cyan-200">
+      <div className="flex h-full min-w-0 items-center gap-2 px-3 sm:px-4 lg:px-5">
+        <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label={nav.homeAriaLabel}>
+          <Logo size={24} gapPx={8} />
+          {/* The BETA chip from 400 px: at 360 the top bar keeps brand, language and Sign in on one line. */}
+          <span className="hidden rounded-[5px] border border-cyan-400/35 bg-cyan-400/10 px-1.5 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-cyan-200 min-[400px]:inline">
             {dict.homeR1.nav.brandBeta}
           </span>
         </Link>
-        <div className="flex-1" />
-        <div id="home-r1-language">
+        <div className="min-w-0 flex-1" />
+        <div id="home-r1-language" className="hidden sm:block">
           <HomeLanguageControl language={language} label={nav.languageSelectorLabel} actionLabel={nav.languageSelectorAction} />
+        </div>
+        {/* Phone: the compact selector (globe + code), so the top bar never overflows at 360. */}
+        <div className="sm:hidden">
+          <HomeLanguageControl language={language} label={nav.languageSelectorLabel} actionLabel={nav.languageSelectorAction} variant="mobile" />
         </div>
         <AccountControl
           myIntelligenceLabel={dict.myIntelligence.accountMenuItem}
           myIntelligenceTag={dict.myIntelligence.accountMenuItemTag}
           signInLabel={nav.signIn}
-          signInClassName="inline-flex min-h-[40px] items-center rounded-full border border-white/40 px-4 text-[14px] font-semibold text-white hover:bg-white/[0.06]"
+          signInClassName="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-full border border-white/40 px-3 text-[14px] font-semibold text-white hover:bg-white/[0.06] sm:px-4"
           accountLabel={nav.account}
           accountMenuAriaLabel={nav.accountMenuAriaLabel}
           signedInAsLabel={nav.signedInAs}

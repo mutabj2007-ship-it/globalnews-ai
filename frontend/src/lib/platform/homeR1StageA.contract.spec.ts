@@ -387,8 +387,8 @@ describe('Follow ≠ Alert, and dormant Watch stays dormant', () => {
     for (const file of files) {
       expect(code(readFileSync(file, 'utf8'))).not.toMatch(/\/follows|watchRuntime|WATCH_RUNTIME|alertsInApp\s*\?/);
     }
-    const gate = execSync('git grep -n "WATCH_RUNTIME_ACTIVE = " -- "*.ts"', { cwd: SRC, encoding: 'utf8' });
-    expect(gate).toMatch(/WATCH_RUNTIME_ACTIVE = false/);
-    expect(gate).not.toMatch(/WATCH_RUNTIME_ACTIVE = true/);
+    /* The two source constants that keep Watch dormant (Claude H D-3) are unchanged. */
+    expect(read('lib', 'map', 'monetization', 'watchRuntimeGate.ts')).toContain('export const WATCH_RUNTIME_ACTIVE = false;');
+    expect(readFileSync(join(SRC, '..', '..', 'backend', 'src', 'modules', 'watch', 'watch-runtime.policy.ts'), 'utf8')).toMatch(/WATCH_RUNTIME_ACTIVE = false/);
   });
 });
