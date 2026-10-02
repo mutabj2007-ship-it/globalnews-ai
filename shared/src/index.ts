@@ -113,6 +113,8 @@ export * from './humanitarian/language';
 /* HUMANITARIAN DATA AUTHORITY R1 (Main) — exported now that it has a consumer (the EN/PL
    vocabulary labels). Types and validators only: nothing here acquires or persists. */
 export * from './humanitarian/observation';
+/* HUMANITARIAN RETAINED EVIDENCE (lane A behaviour, converged onto Main's record) — pure: no I/O, no clock, no provider. */
+export * from './humanitarian/retained-evidence';
 
 /*
   SECURITY — THE ACCEPTED PART IX CONTRACT, CONVERGED ONTO THIS LINEAGE.
