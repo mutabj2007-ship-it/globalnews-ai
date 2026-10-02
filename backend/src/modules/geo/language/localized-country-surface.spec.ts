@@ -1,4 +1,4 @@
-import { COUNTRIES, getLocalizedCountryName } from '@globalnews-ai/shared';
+import { COUNTRIES, SOVEREIGN_COUNTRIES, getLocalizedCountryName } from '@globalnews-ai/shared';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { detectLocationV2, resolveArticleGeography } from '../geo-location-adapter';
@@ -57,7 +57,9 @@ function coverage(language: string, withLanguage: boolean): Coverage {
   let wrongCountry = 0;
   let unresolved = 0;
 
-  for (const country of COUNTRIES) {
+  /* TRUST R1 — measured over the SOVEREIGN catalogue these baselines were taken on; Greenland (a
+    registered territory) is asserted on its own, so its row never silently moves a baseline. */
+  for (const country of SOVEREIGN_COUNTRIES) {
     const name = realLocalizedName(country.iso2, language);
     if (!name) continue;
 

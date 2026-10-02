@@ -1,6 +1,7 @@
 import { COUNTRIES } from '@globalnews-ai/shared';
 import { allCities, allRegions, countryExtent } from './geo-gazetteer';
 import { allSupranationalRegions } from './supranational-membership';
+import { resolveGeography } from './geo-resolver';
 
 /**
  * THE REGISTRY-COMPLETENESS GATE.
@@ -59,7 +60,6 @@ const NON_SOVEREIGN_TERRITORIES: Readonly<Record<string, string>> = {
   FO: 'Faroe Islands — autonomous territory of Denmark',
   GF: 'French Guiana — overseas department of France',
   GG: 'Guernsey — British Crown dependency',
-  GL: 'Greenland — autonomous territory of Denmark',
   GP: 'Guadeloupe — overseas department of France',
   GU: 'Guam — unincorporated US territory',
   HK: 'Hong Kong — Special Administrative Region of China',
@@ -199,5 +199,32 @@ describe('2 · M49 completeness is checked against the gazetteer, not against it
     expect(gazetteerCountryCodes().has('MG')).toBe(true);
     expect(allRegions().filter((region) => region.cc === 'MG')).toHaveLength(22);
     expect(allCities().filter((city) => city.cc === 'MG').length).toBeGreaterThan(0);
+  });
+});
+
+describe('TRUST R1 — Greenland is a first-class place, typed as a territory', () => {
+  it('is registered with GL / GRL / 304, its own names, and its relationship to Denmark', () => {
+    const greenland = COUNTRIES.find((country) => country.iso2 === 'GL');
+    expect(greenland).toEqual({
+      iso2: 'GL',
+      iso3: 'GRL',
+      isoNumeric: '304',
+      name: 'Greenland',
+      region: 'Americas',
+      status: 'AUTONOMOUS_TERRITORY',
+      partOf: 'DNK',
+    });
+  });
+
+  it.each(['Greenland', 'Grønland', 'Kalaallit Nunaat', 'Nuuk'])(
+    '"%s" resolves to Greenland itself — never to Denmark',
+    (name) => {
+      const resolved = resolveGeography(`What is happening in ${name}?`);
+      expect(resolved.place?.country.iso3).toBe('GRL');
+    },
+  );
+
+  it('Denmark stays Denmark', () => {
+    expect(resolveGeography('What is happening in Denmark?').place?.country.iso3).toBe('DNK');
   });
 });

@@ -248,6 +248,10 @@ export function countryLabelAnchor(feature: CountryFeature): [number, number] | 
    what to call them is exactly the kind of judgement this programme keeps out
    of utility functions. Greenland is added because it was measured and
    reported. The rest wait for a ruling.
+
+   TRUST R1 UPDATE: Greenland is now a REGISTRY place (typed AUTONOMOUS_TERRITORY, partOf DNK,
+   shared/src/countries.ts), so feature 304 carries metadata, labels through the registry and is
+   clickable; this table stays as the label-only fallback for any shape the registry omits.
    ══════════════════════════════════════════════════════════════════════════ */
 
 export interface NamedTerritory {

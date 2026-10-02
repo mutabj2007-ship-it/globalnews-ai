@@ -1,4 +1,6 @@
-import { COUNTRIES, getLocalizedCountryName } from '@globalnews-ai/shared';
+import { SOVEREIGN_COUNTRIES as COUNTRIES, getLocalizedCountryName } from '@globalnews-ai/shared';
+/* TRUST R1 — these acceptance counts were measured over the sovereign catalogue (196); a
+   registered territory (Greenland) does not move them. */
 import { resolveGeography } from '../geo-resolver';
 import { resolveArticleGeography } from '../geo-location-adapter';
 import { mapGeographyForArticle } from '../map-feed.contract';

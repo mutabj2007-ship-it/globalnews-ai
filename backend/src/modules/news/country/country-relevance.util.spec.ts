@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import type { CountryMeta, LanguageCode, NewsArticle } from '@globalnews-ai/shared';
-import { COUNTRIES } from '@globalnews-ai/shared';
+import { COUNTRIES, SOVEREIGN_COUNTRIES, TERRITORIES } from '@globalnews-ai/shared';
 import {
   articleMentionsCity,
   resolvePrimaryCountry,
@@ -576,7 +576,8 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
 
     for (const language of ['en', 'pl', undefined, 'de'] as Array<LanguageCode | undefined>) {
       CORPUS.forEach((article, index) => {
-        for (const country of COUNTRIES) {
+        /* TRUST R1 — the golden digest is over the sovereign catalogue it was minted on. */
+        for (const country of SOVEREIGN_COUNTRIES) {
           const result = scoreCountryRelevance(article, country, language);
           hash.update(
             `${language}|${index}|${country.iso2}|${result.score}|${result.isRelevant}|${result.reasons.join(';')}\n`,
@@ -586,7 +587,7 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
       });
     }
 
-    expect(comparisons).toBe(CORPUS.length * COUNTRIES.length * 4);
+    expect(comparisons).toBe(CORPUS.length * SOVEREIGN_COUNTRIES.length * 4);
     expect(hash.digest('hex')).toBe(
       // Re-baselined per authorized correction; every prior value kept here so
       // no re-baseline can ever be silent.
@@ -622,7 +623,7 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
 
     for (const language of ['en', 'pl', undefined, 'de'] as Array<LanguageCode | undefined>) {
       CORPUS.forEach((article, index) => {
-        for (const country of COUNTRIES.filter((candidate) => candidate.iso3 !== 'MDG')) {
+        for (const country of SOVEREIGN_COUNTRIES.filter((candidate) => candidate.iso3 !== 'MDG')) {
           const result = scoreCountryRelevance(article, country, language);
           hash.update(
             `${language}|${index}|${country.iso2}|${result.score}|${result.isRelevant}|${result.reasons.join(';')}\n`,
@@ -632,7 +633,7 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
       });
     }
 
-    expect(comparisons).toBe(CORPUS.length * (COUNTRIES.length - 1) * 4);
+    expect(comparisons).toBe(CORPUS.length * (SOVEREIGN_COUNTRIES.length - 1) * 4);
     expect(hash.digest('hex')).toBe(
       '630690c80472f5f3f939fe3787966ab9b2a198619d2f3eae9db5da64b723b3d4',
     );
@@ -648,7 +649,12 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
       always exactly one country, which is what mattered, but the absolute
       numbers I first reported were inflated by the interface line.
     */
-    expect(COUNTRIES).toHaveLength(196);
+    expect(SOVEREIGN_COUNTRIES).toHaveLength(196);
+    /* TRUST R1 — plus the explicitly included territories, each typed and attached to its state. */
+    expect(TERRITORIES.map((t) => [t.iso3, t.status, t.partOf])).toEqual([
+      ['GRL', 'AUTONOMOUS_TERRITORY', 'DNK'],
+    ]);
+    expect(COUNTRIES).toHaveLength(197);
   });
 
   /*

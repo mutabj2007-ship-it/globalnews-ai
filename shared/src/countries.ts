@@ -22,6 +22,13 @@ export interface CountryMeta {
   isoNumeric: string;
   name: string;
   region: string;
+  /**
+   * TRUST R1 — present only for a NON-SOVEREIGN place included in the registry (e.g. Greenland).
+   * Absent means a sovereign state (or the UN observers already listed).
+   */
+  status?: 'AUTONOMOUS_TERRITORY';
+  /** TRUST R1 — the ISO3 of the state a territory belongs to. Never a substitute scope. */
+  partOf?: string;
 }
 
 export const COUNTRIES: CountryMeta[] = [
@@ -243,7 +250,35 @@ export const COUNTRIES: CountryMeta[] = [
   { iso2: 'PW', iso3: 'PLW', isoNumeric: '585', name: 'Palau', region: 'Oceania' },
   { iso2: 'NR', iso3: 'NRU', isoNumeric: '520', name: 'Nauru', region: 'Oceania' },
   { iso2: 'TV', iso3: 'TUV', isoNumeric: '798', name: 'Tuvalu', region: 'Oceania' },
+
+  /*
+   * TRUST & CONVERSATIONAL EXPERIENCE R1 — GREENLAND, A FIRST-CLASS PLACE (NOT A STATE).
+   *
+   * The 196 entries above are the sovereign-state catalogue (UN members plus Palestine, Taiwan
+   * and the Vatican). Greenland was absent, so the map drew it (world-atlas feature 304) but every
+   * click handler dropped it, Ask could not resolve it, and it could not be followed. It is added
+   * as a TYPED place: `status` says it is an autonomous territory, `partOf` names the state it
+   * belongs to (the Kingdom of Denmark), so no consumer may present it as a sovereign state and
+   * none may silently substitute Denmark-wide reporting for it. The registry is now
+   * SOVEREIGN_COUNTRIES (196) + TERRITORIES (explicit inclusion list, below).
+   */
+  {
+    iso2: 'GL',
+    iso3: 'GRL',
+    isoNumeric: '304',
+    name: 'Greenland',
+    region: 'Americas',
+    status: 'AUTONOMOUS_TERRITORY',
+    partOf: 'DNK',
+  },
 ];
+
+/** TRUST R1 — the sovereign-state catalogue (196): every entry without a territory status. */
+export const SOVEREIGN_COUNTRIES: readonly CountryMeta[] = COUNTRIES.filter(
+  (c) => c.status === undefined,
+);
+/** TRUST R1 — the explicitly included non-sovereign places (inclusion policy: one row each). */
+export const TERRITORIES: readonly CountryMeta[] = COUNTRIES.filter((c) => c.status !== undefined);
 
 /**
  * Common names, abbreviations, and colloquialisms that don't match a
@@ -312,6 +347,10 @@ const COUNTRY_ALIASES: Record<string, string> = {
   'east timor': 'TLS',
   bosnia: 'BIH',
   'congo brazzaville': 'COG',
+  /* TRUST R1 — Greenland's own names (Danish, Greenlandic). */
+  grønland: 'GRL',
+  gronland: 'GRL',
+  'kalaallit nunaat': 'GRL',
   'republic of the congo': 'COG',
   /* ASK PUBLIC BETA RETRIEVAL REPAIR R1 — the French form, so French COG reporting names COG. */
   'république du congo': 'COG',
@@ -337,6 +376,7 @@ const BY_NUMERIC = new Map(COUNTRIES.map((c) => [c.isoNumeric, c]));
  */
 const CITY_TO_ISO3: Record<string, string> = {
   kigali: 'RWA',
+  nuuk: 'GRL',
   nairobi: 'KEN',
   warsaw: 'POL',
   madrid: 'ESP',
