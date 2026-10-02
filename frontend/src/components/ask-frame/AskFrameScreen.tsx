@@ -114,6 +114,13 @@ export function AskFrameScreen({
     "unavailable" state with the question kept, never a second engine (POST /analysis/news).
   */
   const [askUnavailable, setAskUnavailable] = useState(false);
+  /* TRUST R1 — a failed Send keeps the question in the box (retry = press Ask again). */
+  const [retryKept, setRetryKept] = useState(false);
+  /* TRUST R1 — follow the conversation only while the reader is at its end; otherwise announce
+     a new answer below instead of yanking them away from what they are reading. */
+  const atEnd = useRef(true);
+  const followNext = useRef(false);
+  const [newBelow, setNewBelow] = useState(false);
   const returnPath = sanitizeReturnPath(params.get('return'));
   const r2 = useAskR2Conversation(r2Locale, returnPath, { guestTrial: true });
   const { continueThread, setGuestNotice } = r2;
@@ -233,7 +240,14 @@ export function AskFrameScreen({
       opening lines off under the pane title (seen at 1024×768 under the 53 px site header).
     */
     const empty = r2.turns.length === 0 && r2.pending === null;
-    if (reader.current && !empty) reader.current.scrollTop = reader.current.scrollHeight;
+    if (!reader.current || empty) return;
+    if (atEnd.current || followNext.current) {
+      reader.current.scrollTop = reader.current.scrollHeight;
+      setNewBelow(false);
+    } else {
+      setNewBelow(true);
+    }
+    if (r2.pending === null) followNext.current = false;
   }, [r2.turns, r2.pending]);
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -261,6 +275,9 @@ export function AskFrameScreen({
     if (isPending || !question.trim()) return;
     const draft = question;
     setQuestion('');
+    setRetryKept(false);
+    /* The reader just asked: take them to their question and its answer. */
+    followNext.current = true;
     /*
       Ask R2 first; the existing Ask is the rollback path ONLY when Ask V2 is disabled. A
       signed-out reader is asked to sign in: the question goes back into the composer and
@@ -285,6 +302,10 @@ export function AskFrameScreen({
     else if (outcome === 'signed-out') setQuestion(draft);
     /* ASK GUEST TRIAL R3 — a guest refusal (exhausted, cooldown, busy) keeps the draft too; nothing ran. */
     else if (outcome === 'kept') setQuestion(draft);
+    else if (outcome === 'failed') {
+      setQuestion(draft);
+      setRetryKept(true);
+    }
   }
   /* Back / Close: the captured return destination, else the previous page, else Home. */
   /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — a clarification's draft goes to the composer; nothing is sent. */
@@ -384,7 +405,17 @@ export function AskFrameScreen({
         </div>
       )}
 
-      <div ref={reader} data-ask="reader" className={styles.reader} aria-live="polite">
+      <div
+        ref={reader}
+        data-ask="reader"
+        className={styles.reader}
+        aria-live="polite"
+        onScroll={(event) => {
+          const node = event.currentTarget;
+          atEnd.current = node.scrollHeight - node.scrollTop - node.clientHeight < 120;
+          if (atEnd.current) setNewBelow(false);
+        }}
+      >
         <div className={styles.grid}>
           <div data-ask="thread" className={styles.thread}>
             {compareContext && (
@@ -574,6 +605,30 @@ export function AskFrameScreen({
       </div>
 
       <div data-ask="composer-footer" className={styles.composerBar}>
+        {newBelow && (
+          <div className="mx-auto mb-2 flex max-w-[760px] justify-center px-4 md:px-1">
+            <button
+              type="button"
+              data-ask="new-answer"
+              onClick={() => {
+                if (reader.current) reader.current.scrollTop = reader.current.scrollHeight;
+                setNewBelow(false);
+              }}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#1d4a73] bg-[#06223d] px-4 text-[13px] font-semibold text-[#cfe2f2]"
+            >
+              {r2s.newAnswerBelow} <span aria-hidden="true">↓</span>
+            </button>
+          </div>
+        )}
+        {retryKept && (
+          <p
+            data-ask="retry-kept"
+            role="status"
+            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
+          >
+            {r2s.retryKept}
+          </p>
+        )}
         {askUnavailable && (
           <p
             data-ask="ask-unavailable"

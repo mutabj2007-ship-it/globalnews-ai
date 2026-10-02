@@ -88,6 +88,10 @@ export interface AskR2Strings {
   readonly unavailable: string;
   /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
   readonly budgetRefused: string;
+  /** TRUST R1 — a failed Send keeps the draft; the reader retries by pressing Ask. */
+  readonly retryKept: string;
+  /** TRUST R1 — a new answer arrived while the reader was reading earlier turns. */
+  readonly newAnswerBelow: string;
   /** LIVE ACCEPTANCE REPAIR R1 — the lead line of a retained-record answer. */
   readonly retainedAnswer: string;
   /** GOVERNED ANSWER CONVERSATIONAL UX R1 — the label over suggested follow-up drafts. */
@@ -288,6 +292,8 @@ const EN: AskR2Strings = {
   limitedNote:
     'A news source was temporarily unavailable. This answer uses the reporting that could be reached.',
   unavailable: 'Ask is unavailable right now. Nothing was run.',
+  retryKept: 'Not answered — your question is still in the box. Press Ask to try again.',
+  newAnswerBelow: 'New answer below',
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
   retainedAnswer: 'Answered from a retained governed record — no AI was used.',
@@ -516,6 +522,8 @@ const PL: AskR2Strings = {
   limitedNote:
     'Źródło wiadomości było chwilowo niedostępne. Ta odpowiedź opiera się na doniesieniach, do których udało się dotrzeć.',
   unavailable: 'Zapytaj AI jest teraz niedostępne. Nic nie zostało uruchomione.',
+  retryKept: 'Brak odpowiedzi — Twoje pytanie nadal jest w polu. Naciśnij Zapytaj, aby spróbować ponownie.',
+  newAnswerBelow: 'Nowa odpowiedź poniżej',
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
   retainedAnswer: 'Odpowiedź z zachowanego, zweryfikowanego zapisu — bez użycia AI.',

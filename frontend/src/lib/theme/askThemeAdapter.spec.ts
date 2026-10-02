@@ -35,6 +35,7 @@ export const EMBEDDED_ASK_SOURCES = [
   'components/ask-frame/AskFrameScreen.tsx',
   'components/ask-frame/AskParts.tsx',
   'components/ask-frame/AskSourcesColumn.tsx',
+  'components/ask-frame/AskTurnCopy.tsx',
   'components/ask-nav/AskNavShell.tsx',
   'components/ask-nav/AskContinuityHeader.tsx',
   'components/ask-nav/AskClearedBoundary.tsx',

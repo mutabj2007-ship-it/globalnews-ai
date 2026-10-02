@@ -9,6 +9,7 @@ import { askR2View, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { AskTurnSave } from './AskTurnSave';
+import { AskTurnCopy } from './AskTurnCopy';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -187,6 +188,8 @@ export function AskR2TurnView({
         )}
         {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
         {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
+        {/* TRUST R1 — copy this answer (local clipboard only; nothing is shared or sent). */}
+        <AskTurnCopy locale={locale} />
       </div>
 
       {/* ASK TECHNICAL / SCIENTIFIC REASONING R1 — the server's deterministic computation. */}

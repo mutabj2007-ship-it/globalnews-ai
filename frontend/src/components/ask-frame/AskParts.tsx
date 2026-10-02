@@ -48,6 +48,11 @@ export function QuestionsWorthAsking({
  * 140 px phone) and then scrolls inside itself; Ask stays at its right. The cost line
  * sits under the row, never as a caption on the button.
  */
+/** TRUST R1 — a fine pointer (mouse / trackpad) means a physical keyboard: Enter sends. */
+export function enterSends(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches === true;
+}
+
 export function Composer({
   value,
   onChange,
@@ -93,6 +98,15 @@ export function Composer({
           data-ask="composer-input"
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            /* TRUST R1 — Enter sends on a desktop keyboard (Shift+Enter = new line); on a touch
+               keyboard Enter stays a new line and the Ask button sends. Never mid-composition
+               (IME), never while a question is in flight or the box is empty. */
+            if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+            if (!enterSends()) return;
+            event.preventDefault();
+            if (ready) event.currentTarget.form?.requestSubmit();
+          }}
           placeholder={placeholder}
           maxLength={1000}
           minHeight={32}
