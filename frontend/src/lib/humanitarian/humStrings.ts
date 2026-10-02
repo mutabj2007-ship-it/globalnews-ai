@@ -294,7 +294,7 @@ const en: HumStrings = {
       NO_QUALIFYING_EVIDENCE: 'Examined — nothing met the evidentiary floor.',
     },
     storeState: {
-      NO_RETAINED_EVIDENCE: 'Our retained store holds no record for this scope.',
+      NO_RETAINED_EVIDENCE: 'The retained evidence store holds no records for this scope.',
     },
     recordsFrom: 'From records',
     statedBy: 'Stated by the publisher',
@@ -560,7 +560,7 @@ export const HUM_PL_DRAFT_AWAITING_COMPLETION = {
       NO_QUALIFYING_EVIDENCE: "Zbadane — nic nie spełniło progu dowodowego.",
     },
     storeState: {
-      NO_RETAINED_EVIDENCE: "Nasz magazyn zapisów nie ma rekordu dla tego zakresu.",
+      NO_RETAINED_EVIDENCE: "Magazyn zachowanych dowodów nie zawiera rekordów dla tego zakresu.",
     },
     recordsFrom: "Z zapisów",
     statedBy: "Podane przez wydawcę",
