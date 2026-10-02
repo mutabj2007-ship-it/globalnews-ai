@@ -16,6 +16,7 @@ import {
 } from '../humanitarian/source-activation.ruling';
 import {
   GDACS_ATTRIBUTION_VERBATIM,
+  HUMANITARIAN_REQUIRED_DISCLOSURES,
   assertDisclosuresRecognised,
   assertGdacsAttributionCarried,
   readerAdmissionFromRuling,
@@ -135,25 +136,15 @@ function observationOf(row: HumanitarianRetainedRecord): AskContributionObservat
   };
 }
 
-/** A publisher date with no time-zone designator (measured: GDACS, 100/100). */
-const NO_TIME_ZONE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/;
-
-/** E1 R2 · the Humanitarian disclosure set for a USED contribution, derived from the rows. */
-function usedDisclosures(rows: readonly HumanitarianRetainedRecord[]): readonly string[] {
-  const codes = new Set<string>([
-    'IMPACT_NOT_ASSESSED',
-    'RETAINED_NOT_CURRENT',
-    'SEVERITY_NOT_ASSESSED',
-  ]);
-  for (const row of rows) {
-    const o = row.observation;
-    if (o.claim.countryIso3.length === 0) codes.add('COUNTRY_SCOPE_NOT_STATED_BY_SOURCE');
-    const vintage = o.temporal.publisherVintage;
-    if (vintage !== undefined && NO_TIME_ZONE.test(vintage))
-      codes.add('PUBLISHER_TIME_ZONE_NOT_STATED');
-    if (o.identity.upstreamAuthority === 'GDACS') codes.add('GEOMETRY_WITHHELD_SOURCE_CENTROID');
-  }
-  return [...codes];
+/**
+ * E1 R2 · D-1 — a USED contribution carries ALL of E1's required codes, read from E1's own list
+ * (no copy). Lane C R2's invariant caught the earlier row-derived set: an answer whose rows all
+ * stated a country dropped COUNTRY_SCOPE_NOT_STATED_BY_SOURCE, so a display hop bound to D-1 (G R2)
+ * would refuse it. The three formerly-conditional rules are worded conditionally in the governed
+ * prompt, so carrying them on every answer is true and discloses nothing about any one place.
+ */
+function usedDisclosures(): readonly string[] {
+  return [...HUMANITARIAN_REQUIRED_DISCLOSURES];
 }
 
 /**
@@ -236,7 +227,7 @@ export function humanitarianContribution(
           status: 'USED',
           temporalBasis: 'RETAINED_EVENT_RECORD',
           observations: read.observations.map(observationOf),
-          disclosures: usedDisclosures(read.observations),
+          disclosures: usedDisclosures(),
         }),
       );
     }

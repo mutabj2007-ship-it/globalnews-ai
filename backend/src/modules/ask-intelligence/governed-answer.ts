@@ -173,11 +173,11 @@ export const HUMANITARIAN_DISCLOSURE_RULES: Readonly<Record<string, string>> = O
   SEVERITY_NOT_ASSESSED:
     "No severity has been assessed for the retained humanitarian records, and the publisher's own alert level is not restated: do not rank, grade or characterise severity from them.",
   COUNTRY_SCOPE_NOT_STATED_BY_SOURCE:
-    'Some humanitarian records carry no country scope from their source: never infer or assign a country for them.',
+    'Where a humanitarian record carries no country scope from its source, never infer or assign a country for it.',
   PUBLISHER_TIME_ZONE_NOT_STATED:
-    'Humanitarian publisher dates carry no time zone: give them as stated, without converting them or asserting a time zone.',
+    'Where a humanitarian publisher date carries no time zone, give it as stated, without converting it or asserting a time zone.',
   GEOMETRY_WITHHELD_SOURCE_CENTROID:
-    'Humanitarian record locations are withheld (the source states only a centroid): never state coordinates or any location more precise than a stated country.',
+    'Humanitarian record locations are withheld (a source may state only a centroid): never state coordinates or any location more precise than a stated country.',
   HUMANITARIAN_NOT_ASSESSED:
     'Humanitarian Intelligence was not assessed for this answer: never state or imply that humanitarian evidence supports, confirms or assessed anything.',
   HUMANITARIAN_NO_RETAINED_EVIDENCE:
