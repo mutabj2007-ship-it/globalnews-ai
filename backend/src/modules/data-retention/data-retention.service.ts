@@ -62,6 +62,19 @@ export class DataRetentionService implements OnApplicationBootstrap, OnApplicati
 
   async sweep(now: Date = new Date()): Promise<RetentionSweepResult> {
     const p = this.policy;
+    /* Fail-closed: a disabled policy deletes nothing, however the sweep is reached. */
+    if (!p.enabled) {
+      return {
+        accountThreads: 0,
+        supportTickets: 0,
+        productEvents: 0,
+        analysisRuns: 0,
+        usageMeters: 0,
+        networkMeters: 0,
+        networkConcurrency: 0,
+        reservations: 0,
+      };
+    }
     const take = p.batch;
 
     const accountThreads = await this.step('account-conversations', async () => {

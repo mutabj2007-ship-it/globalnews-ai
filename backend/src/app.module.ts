@@ -66,7 +66,7 @@ import {
       },
     ]),
     PrismaModule,
-    DataRetentionModule, // TRUST R1 — Beta retention policy (bounded, kill switch RETENTION_SWEEP_ENABLED=false).
+    DataRetentionModule, // TRUST R1 — Beta retention policy (bounded; OFF unless RETENTION_SWEEP_ENABLED=true).
     HealthModule,
     PoliticsReadModule, // Retained-only; no acquisition or schedule activation.
     NewsModule,

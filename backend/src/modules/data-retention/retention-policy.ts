@@ -20,7 +20,11 @@ export interface RetentionPolicy {
   readonly batch: number;
   /** How often a process sweeps. */
   readonly intervalMs: number;
-  /** Operator kill switch: RETENTION_SWEEP_ENABLED=false stops all deletion. */
+  /**
+   * FAIL-CLOSED (CTO checkpoint 2): deletion runs ONLY when RETENTION_SWEEP_ENABLED is exactly
+   * "true". Unset, "false" or anything else = OFF. Enabling destructive retention is a separate
+   * operational decision, never a consequence of deploying the implementation.
+   */
   readonly enabled: boolean;
 }
 
@@ -76,7 +80,7 @@ export function resolveRetentionPolicy(env: NodeJS.ProcessEnv = process.env): Re
     rateLimitGraceDays: days(env, 'RETENTION_RATE_LIMIT_GRACE_DAYS', 7),
     batch: days(env, 'RETENTION_SWEEP_BATCH', 500),
     intervalMs: days(env, 'RETENTION_SWEEP_INTERVAL_HOURS', 6) * 3_600_000,
-    enabled: env.RETENTION_SWEEP_ENABLED !== 'false',
+    enabled: env.RETENTION_SWEEP_ENABLED === 'true',
   };
 }
 

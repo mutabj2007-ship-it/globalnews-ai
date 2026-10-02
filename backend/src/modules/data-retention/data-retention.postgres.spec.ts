@@ -30,7 +30,10 @@ live('Beta retention policy — live PostgreSQL', () => {
   });
 
   const service = () =>
-    new DataRetentionService(db as unknown as PrismaService, resolveRetentionPolicy({}));
+    new DataRetentionService(
+      db as unknown as PrismaService,
+      resolveRetentionPolicy({ RETENTION_SWEEP_ENABLED: 'true' }),
+    );
 
   async function thread(userId: string, lastActivity: Date, bookmarked = false) {
     const t = await db.askThread.create({
