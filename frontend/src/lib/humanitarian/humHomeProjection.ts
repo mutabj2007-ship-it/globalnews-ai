@@ -8,6 +8,9 @@ import {
 import { humanitarianEn } from '@/lib/i18n/dictionaries/humanitarianEn';
 import { humanitarianPl } from '@/lib/i18n/dictionaries/humanitarianPl';
 import { humReaderDisplayGate, type HumRowAttribution } from './humReadPresentation';
+import type { HumanitarianReaderRuling } from './humReaderRuling';
+
+export type { HumanitarianReaderRuling } from './humReaderRuling';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -32,15 +35,6 @@ import { humReaderDisplayGate, type HumRowAttribution } from './humReadPresentat
  * CARRIED DISCLOSURES are the E1 codes this hop can actually render: a code counts only when the
  * canonical catalogue labels it in BOTH languages. E1's list is never copied here.
  */
-
-/** E1's reader-display constants as `GET /humanitarian/reader-ruling` publishes them. */
-export interface HumanitarianReaderRuling {
-  readonly requiredDisclosures: readonly string[];
-  readonly readerClearedSourceIds: readonly string[];
-  readonly relayAttributionVerbatim: string;
-  /** The sources E1 D-3 binds to two names (relay acknowledgement + originating agency). */
-  readonly relayAttributedSourceIds: readonly string[];
-}
 
 export interface HumanitarianHomeAttribution {
   readonly publisher: string;
@@ -121,21 +115,4 @@ export function humanitarianHomeProjection(
   } catch {
     return null;
   }
-}
-
-/** Parses the published ruling strictly; anything else is no ruling (and so no display). */
-export function parseHumanitarianReaderRuling(value: unknown): HumanitarianReaderRuling | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const v = value as Record<string, unknown>;
-  const strings = (x: unknown): x is string[] =>
-    Array.isArray(x) && x.every((s) => typeof s === 'string');
-  if (!strings(v.requiredDisclosures) || !strings(v.readerClearedSourceIds)) return null;
-  if (!strings(v.relayAttributedSourceIds)) return null;
-  if (typeof v.relayAttributionVerbatim !== 'string') return null;
-  return {
-    requiredDisclosures: v.requiredDisclosures,
-    readerClearedSourceIds: v.readerClearedSourceIds,
-    relayAttributionVerbatim: v.relayAttributionVerbatim,
-    relayAttributedSourceIds: v.relayAttributedSourceIds,
-  };
 }

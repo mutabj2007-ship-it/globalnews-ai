@@ -19,9 +19,9 @@ import { humanitarianPl } from '@/lib/i18n/dictionaries/humanitarianPl';
 import {
   homeCarriableDisclosures,
   humanitarianHomeProjection,
-  parseHumanitarianReaderRuling,
   type HumanitarianReaderRuling,
 } from './humHomeProjection';
+import { parseHumanitarianReaderRuling } from './humReaderRuling';
 
 /**
  * HOME CONSUMER — one retained corpus → reader read → G gate (E1's ruling) → H brief → Home.

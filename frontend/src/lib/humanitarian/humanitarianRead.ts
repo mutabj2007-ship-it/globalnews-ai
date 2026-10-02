@@ -3,10 +3,7 @@ import {
   type HumanitarianRetainedRead,
 } from '@globalnews-ai/shared';
 import { resolveApiBaseUrl } from '@/lib/api/apiBase';
-import {
-  humanitarianHomeProjection, parseHumanitarianReaderRuling,
-  type HumanitarianHomeProjection, type HumanitarianReaderRuling,
-} from './humHomeProjection';
+import { parseHumanitarianReaderRuling, type HumanitarianReaderRuling } from './humReaderRuling';
 
 /**
  * Bound on a reader read. The backend's one retained corpus is capacity-bounded
@@ -63,15 +60,4 @@ export async function readHumanitarianObservations(): Promise<HumanitarianRetain
 export async function readHumanitarianReaderRuling(): Promise<HumanitarianReaderRuling | null> {
   if (typeof window !== 'undefined') return null;
   return parseHumanitarianReaderRuling(await readBoundedJson('/humanitarian/reader-ruling', 8192));
-}
-
-/**
- * Home's Humanitarian projection, or null (Home then renders nothing Humanitarian). The ruling is
- * read only when the read actually carries retained rows, so an absence costs one small GET.
- */
-export async function readHumanitarianHome(projectedAt: string): Promise<HumanitarianHomeProjection | null> {
-  const read = await readHumanitarianObservations();
-  if (read.kind !== 'RETAINED') return null;
-  const ruling = await readHumanitarianReaderRuling();
-  return ruling === null ? null : humanitarianHomeProjection(read, ruling, projectedAt);
 }

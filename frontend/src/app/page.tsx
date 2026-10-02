@@ -17,7 +17,7 @@ import { DeepIntelligenceRow } from '@/components/home/reva/DeepIntelligenceRow'
 import { HomeBridge } from '@/components/home/reva/HomeBridge';
 import { HomeBuiltOnTrust, HomeHowItWorks } from '@/components/home/reva/HomeHowAndTrust';
 import { HomeHumanitarian } from '@/components/home/reva/HomeHumanitarian';
-import { readHumanitarianHome } from '@/lib/humanitarian/humanitarianRead';
+import { readHumanitarianHome } from '@/lib/humanitarian/humHomeRead';
 import { Footer } from '@/components/layout/Footer';
 import { getHomeFeed } from '@/lib/homeFeed';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
