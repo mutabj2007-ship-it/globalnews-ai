@@ -130,6 +130,40 @@ export interface MyIntelligenceFeedResponse {
   readonly newSinceCount: number;
   /** Always 'retained': this feed never calls a live provider. */
   readonly source: 'retained';
+  /**
+   * HUMANITARIAN CONVERGENCE — retained Humanitarian records NEW or REVISED since the previous
+   * visit in a followed country, from lane A's delta feed over the ONE retained corpus, after E1's
+   * reader admission. Absent when the server has no corpus wired.
+   */
+  readonly humanitarian?: MyIntelligenceHumanitarianNewSince;
+}
+
+/** One reader-admitted Humanitarian change. Every field is the source's own or ours, labelled. */
+export interface MyIntelligenceHumanitarianChange {
+  readonly observationKey: string;
+  /** Lane A's revision semantics: a new key, or a HIGHER revision of a held one. */
+  readonly change: 'NEW' | 'REVISED';
+  /** When GLOBALNEWS AI wrote this record (or revision) down — the new-since clock. Never a publisher time. */
+  readonly firstSeenAt: string;
+  /** The followed countries this record's own source-stated scope names. */
+  readonly countryIso3: readonly string[];
+  readonly title: string | null;
+  /** A source-stated figure, verbatim — null when the record states none (never a zero). */
+  readonly figure: {
+    readonly measure: string;
+    readonly value: number | string;
+    readonly unit: string | null;
+    readonly basis: 'SOURCE_STATED' | 'SOURCE_ESTIMATED';
+  } | null;
+  readonly publisher: string;
+  readonly publisherStatedAt: string | null;
+  readonly sourceUrl: string | null;
+}
+
+export interface MyIntelligenceHumanitarianNewSince {
+  readonly items: readonly MyIntelligenceHumanitarianChange[];
+  /** A change may have been evicted from the bounded corpus before it was read: the list may be incomplete. */
+  readonly gapPossible: boolean;
 }
 
 /* ── MULTI-STORY INTELLIGENCE ─────────────────────────────────────────── */

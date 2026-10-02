@@ -318,8 +318,10 @@ describe('C2 · bounded changed-since feed (lane A R2, on Main)', () => {
   it('MAIN: a higher revision is a REVISED change; a same-revision re-put is not a change', () => {
     const cache = new RetainedEvidenceCache(8);
     cache.put(n({ id: '1', revision: 0 }), T1);
-    cache.put(n({ id: '1', revision: 0 }), T1);
+    cache.put(n({ id: '1', revision: 0 }), '2026-12-01T00:00:00Z');
     expect(cache.latestSequence).toBe(1);
+    /* first-seen is kept: a same-revision re-put must not look newly observed */
+    expect(cache.get(n({ id: '1' }).observationKey)!.cachedAt).toBe(T1);
     expect(keys(cache, 1)).toEqual([]);
     cache.put(n({ id: '1', revision: 1 }), T1);
     const page = retainedChangeFeedSince(cache, 1);

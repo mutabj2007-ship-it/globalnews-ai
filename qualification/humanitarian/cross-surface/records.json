@@ -1,0 +1,112 @@
+{
+  "firstSeenAt": "2026-09-22T00:00:00.000Z",
+  "previousVisit": "2026-09-21T12:00:00.000Z",
+  "followed": [
+    "SDN"
+  ],
+  "records": [
+    {
+      "captureKey": "cap-FL-1100",
+      "publisherReleasedAt": "2026-09-20T00:00:00",
+      "observation": {
+        "observationKey": "obs:1:12:HUMANITARIAN:5:GDACS:7:FL-1100",
+        "identity": {
+          "domainId": "HUMANITARIAN",
+          "upstreamAuthority": "GDACS",
+          "upstreamId": "FL-1100"
+        },
+        "observationKind": "HUMANITARIAN_EVENT",
+        "subjectType": "SOURCE_EVENT",
+        "subjectId": "FL-1100",
+        "claim": {
+          "claimType": "HUMANITARIAN_EVENT",
+          "hazardType": "FLOOD",
+          "sourceNativeType": "FL",
+          "sourceTitle": "Flood in the lower basin",
+          "eventStatus": "ONGOING",
+          "countryIso3": [
+            "SDN"
+          ],
+          "originatingAgency": "GLOFAS"
+        },
+        "temporal": {
+          "publisherVintage": "2026-09-20T00:00:00",
+          "retrievedAt": "2026-09-21T00:00:00.000Z",
+          "temporalBasis": "PUBLISHER_VINTAGE"
+        },
+        "provenance": {
+          "sourceType": "PUBLIC_DATA",
+          "providerId": "GDACS",
+          "institution": "Global Disaster Alert and Coordination System, GDACS",
+          "retrievedAt": "2026-09-21T00:00:00.000Z"
+        },
+        "sourceReference": {
+          "sourceUrl": "https://example.invalid/FL-1100"
+        },
+        "attributeAuthorship": [
+          {
+            "attribute": "sourceTitle",
+            "authorship": "PUBLISHER_STATED"
+          }
+        ],
+        "revision": {
+          "revisionOrdinal": 0,
+          "supersedesRevisionOrdinal": null,
+          "recordedAt": "2026-09-21T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "captureKey": "cap-RW-2200",
+      "publisherReleasedAt": "2026-09-20T00:00:00",
+      "observation": {
+        "observationKey": "obs:1:12:HUMANITARIAN:9:RELIEFWEB:7:RW-2200",
+        "identity": {
+          "domainId": "HUMANITARIAN",
+          "upstreamAuthority": "RELIEFWEB",
+          "upstreamId": "RW-2200"
+        },
+        "observationKind": "HUMANITARIAN_IMPACT_ASSERTION",
+        "subjectType": "SOURCE_EVENT",
+        "subjectId": "RW-2200",
+        "claim": {
+          "claimType": "HUMANITARIAN_IMPACT_ASSERTION",
+          "measure": "PEOPLE_DISPLACED",
+          "value": 1200,
+          "unit": "PERSONS",
+          "basis": "SOURCE_STATED",
+          "sourceBasisStatement": "The report states this figure.",
+          "aboutEventKey": "obs:1:12:HUMANITARIAN:5:GDACS:7:FL-1100",
+          "countryIso3": [
+            "SDN"
+          ]
+        },
+        "temporal": {
+          "publisherVintage": "2026-09-20T00:00:00",
+          "retrievedAt": "2026-09-21T00:00:00.000Z",
+          "temporalBasis": "PUBLISHER_VINTAGE"
+        },
+        "provenance": {
+          "sourceType": "PUBLIC_DATA",
+          "providerId": "RELIEFWEB",
+          "institution": "ReliefWeb",
+          "retrievedAt": "2026-09-21T00:00:00.000Z"
+        },
+        "sourceReference": {
+          "sourceUrl": "https://example.invalid/RW-2200"
+        },
+        "attributeAuthorship": [
+          {
+            "attribute": "value",
+            "authorship": "PUBLISHER_STATED"
+          }
+        ],
+        "revision": {
+          "revisionOrdinal": 0,
+          "supersedesRevisionOrdinal": null,
+          "recordedAt": "2026-09-21T00:00:00.000Z"
+        }
+      }
+    }
+  ]
+}

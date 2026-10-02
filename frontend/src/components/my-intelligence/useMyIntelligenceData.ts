@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import {
   normalizeArticleUrl,
+  type MyIntelligenceHumanitarianNewSince,
   type MyIntelligenceInterest,
   type MyIntelligenceStory,
   type SavedStoryView,
@@ -57,6 +58,12 @@ export interface MyIntelligenceData {
 
   readonly newSince: readonly FixtureStory[];
   readonly newSinceCount: number;
+  /**
+   * HUMANITARIAN CONVERGENCE — retained Humanitarian records new/revised since the previous visit
+   * in followed countries, decided once by the server (lane A delta feed, E1 reader admission).
+   * Null when the server sent none (fixtures, signed out, emptied, or no corpus wired).
+   */
+  readonly humanitarianNewSince: MyIntelligenceHumanitarianNewSince | null;
   readonly newSinceSource: SectionSource;
 
   readonly saved: readonly FixtureStory[];
@@ -158,10 +165,7 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
   const isSignedIn = user !== null || fixtureAccount;
   const emptied = options.forceEmpty === true;
 
-  const liveFeedStories = useMemo(
-    () => (feed.data?.stories ?? []).map(feedStoryToUi),
-    [feed.data],
-  );
+  const liveFeedStories = useMemo(() => (feed.data?.stories ?? []).map(feedStoryToUi), [feed.data]);
   const liveSavedStories = useMemo(
     () => (savedState.data ?? []).map(savedStoryToUi),
     [savedState.data],
@@ -180,7 +184,8 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
     options.forceFirstVisit === true || (!boundaryFailed && previousSeenAt === null);
 
   const allFeedStories = useMemo(
-    () => (emptied ? [] : fixtureAccount ? [...FIXTURE_NEW_SINCE, ...FIXTURE_FOR_YOU] : liveFeedStories),
+    () =>
+      emptied ? [] : fixtureAccount ? [...FIXTURE_NEW_SINCE, ...FIXTURE_FOR_YOU] : liveFeedStories,
     [emptied, fixtureAccount, liveFeedStories],
   );
 
@@ -250,7 +255,7 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
   }, [emptied, feed.data, fixtureAccount]);
 
   const recent = useMemo<readonly RecentQuestion[]>(
-    () => (emptied || fixtureAccount ? [] : history.data ?? []),
+    () => (emptied || fixtureAccount ? [] : (history.data ?? [])),
     [emptied, fixtureAccount, history.data],
   );
 
@@ -278,9 +283,7 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
   }, [feed, history, savedState]);
 
   const liveFailure =
-    !fixtureAccount &&
-    user !== null &&
-    (feed.failed || savedState.failed || history.failed);
+    !fixtureAccount && user !== null && (feed.failed || savedState.failed || history.failed);
 
   const source: SectionSource = fixtureAccount ? 'fixture' : 'live';
   const usesFixtures = fixtureAccount && !emptied;
@@ -295,6 +298,7 @@ export function useMyIntelligenceData(options: Options = {}): MyIntelligenceData
 
     previousSeenAt,
     isFirstVisit,
+    humanitarianNewSince: emptied || fixtureAccount ? null : (feed.data?.humanitarian ?? null),
     boundarySource: source,
     boundaryFailed,
 

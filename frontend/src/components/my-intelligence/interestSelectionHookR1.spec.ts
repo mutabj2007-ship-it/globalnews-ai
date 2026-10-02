@@ -184,6 +184,7 @@ const data: MyIntelligenceData = {
   boundaryFailed: false,
   newSince: [],
   newSinceCount: 0,
+  humanitarianNewSince: null,
   newSinceSource: 'live',
   saved: SAVED,
   savedSource: 'live',

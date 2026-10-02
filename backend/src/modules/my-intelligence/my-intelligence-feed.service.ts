@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import {
   interestsForStory,
   isNewSince,
@@ -10,6 +10,8 @@ import { PrismaService } from '../../database/prisma.service';
 import { ArticlePersistenceService } from '../news/persistence/article-persistence.service';
 import { computeArticleRef } from '../news/identity/article-ref.util';
 import { detectArticleDomains } from '../analysis/query/detect-analytical-domains.util';
+import { HumanitarianRetainedCorpus } from '../humanitarian/humanitarian-retained-corpus';
+import { humanitarianNewSince } from './my-intelligence-humanitarian';
 
 /** Retained reporting per followed country, newest first. */
 export const FEED_STORIES_PER_COUNTRY = 10;
@@ -40,6 +42,8 @@ export class MyIntelligenceFeedService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly articles: ArticlePersistenceService,
+    /* HUMANITARIAN CONVERGENCE — the ONE in-memory retained corpus (no provider, no Prisma). */
+    @Optional() private readonly humanitarianCorpus?: HumanitarianRetainedCorpus,
   ) {}
 
   async feed(userId: string): Promise<MyIntelligenceFeedResponse> {
@@ -51,7 +55,9 @@ export class MyIntelligenceFeedService {
         select: { countryCode: true },
       }),
     ]);
-    const previousSeenAt: string | null = user?.visitBoundaryAt ? user.visitBoundaryAt.toISOString() : null;
+    const previousSeenAt: string | null = user?.visitBoundaryAt
+      ? user.visitBoundaryAt.toISOString()
+      : null;
 
     const perCountry = await Promise.all(
       follows.map(async ({ countryCode }: { countryCode: string }) => ({
@@ -116,6 +122,20 @@ export class MyIntelligenceFeedService {
       /* Counted over distinct stories, so a story in two followed countries counts once. */
       newSinceCount: stories.filter((story) => story.newSince).length,
       source: 'retained',
+      /*
+        Lane A's delta feed from cursor 0 — the bounded corpus's full change history — filtered by
+        the SAME follows and the SAME new-since boundary as stories. No per-reader cursor is stored
+        (no new store); a capacity eviction surfaces as gapPossible.
+      */
+      ...(this.humanitarianCorpus === undefined
+        ? {}
+        : {
+            humanitarian: humanitarianNewSince(
+              this.humanitarianCorpus.changesSince(0),
+              follows.map((f: { countryCode: string }) => f.countryCode),
+              previousSeenAt,
+            ),
+          }),
     };
   }
 }

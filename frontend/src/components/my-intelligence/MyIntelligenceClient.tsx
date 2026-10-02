@@ -31,6 +31,7 @@ import {
 } from './MiSelection';
 import { useMyIntelligenceData } from './useMyIntelligenceData';
 import { isNewSince } from './newSince';
+import { MiHumanitarianNewSince } from './MiHumanitarianNewSince';
 import type { WorkspaceView } from './workspace/miWorkspaceModel';
 import { WorkspaceDrawer, WorkspaceRail } from './workspace/WorkspaceNav';
 import { InterestEditor } from './workspace/InterestEditor';
@@ -550,6 +551,8 @@ export function MyIntelligenceClient({
                     failed={data.boundaryFailed}
                     handlers={handlers}
                   />
+                  {/* Humanitarian convergence — the server-decided retained delta, same boundary. */}
+                  <MiHumanitarianNewSince data={data.humanitarianNewSince} language={language} />
                 </div>
               )}
 

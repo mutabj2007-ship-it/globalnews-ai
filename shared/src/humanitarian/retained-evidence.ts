@@ -261,7 +261,8 @@ export class RetainedEvidenceCache {
             sequence: ++this.lastSequence,
             change: held === undefined ? 'NEW' : 'REVISED',
           }
-        : { ...held, record, cachedAt },
+        : /* same revision: refresh LRU, keep WHEN we first wrote it down (no false "new") */
+          { ...held, record },
     );
     while (this.entries.size > this.capacity) {
       const oldestKey = this.entries.keys().next().value as string;

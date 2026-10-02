@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { HumanitarianRetainedCorpusModule } from '../humanitarian/humanitarian-retained-corpus';
 import { ArticlePersistenceService } from '../news/persistence/article-persistence.service';
 import { MyIntelligenceController } from './my-intelligence.controller';
 import { MyIntelligenceFeedService } from './my-intelligence-feed.service';
@@ -17,8 +18,13 @@ import { SavedStoriesService } from './saved-stories.service';
  * "opening My Intelligence = 0 provider calls, 0 AI calls".
  */
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, HumanitarianRetainedCorpusModule],
   controllers: [SavedStoriesController, MyIntelligenceController],
-  providers: [ArticlePersistenceService, SavedStoriesService, MyIntelligenceFeedService, MyIntelligenceInterestsService],
+  providers: [
+    ArticlePersistenceService,
+    SavedStoriesService,
+    MyIntelligenceFeedService,
+    MyIntelligenceInterestsService,
+  ],
 })
 export class MyIntelligenceModule {}
