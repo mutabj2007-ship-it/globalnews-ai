@@ -40,6 +40,12 @@ export interface GeneralBackgroundInput {
    * Absent on every other call, which keeps those prompts byte-identical.
    */
   readonly governed?: { readonly rules: string; readonly data: string };
+  /**
+   * TRUST & CONVERSATIONAL EXPERIENCE R1 — the reader's OWN previous question in this thread,
+   * present only for a follow-up ("Compare it with Kenya" after a Tanzania safari question).
+   * Untrusted reader text: it travels as delimited data in the USER message, never as rules.
+   */
+  readonly priorQuestion?: string;
 }
 
 export interface GeneralBackgroundOutput {

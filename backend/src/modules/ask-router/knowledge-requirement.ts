@@ -42,7 +42,15 @@ export type KnowledgeRequirement =
   | 'CURRENT_REPORTING'
   | 'EVENT_DISCOVERY'
   | 'OFFICIAL_REFERENCE'
-  | 'MIXED_REFERENCE_CURRENT';
+  | 'MIXED_REFERENCE_CURRENT'
+  /**
+   * TRUST & CONVERSATIONAL EXPERIENCE R1 — a NAMED PLACE asked about for its history, its
+   * background, or travel preparation, with no freshness marker ("What caused the Rwandan
+   * genocide?", "When did Poland join the EU?", "I want to visit Tanzania … before going there").
+   * Answered as background SCOPED to the place, never as an empty news search; current details
+   * (requirements, safety, prices) are named as needing current sources, never supplied from memory.
+   */
+  | 'PLACE_REFERENCE';
 
 export interface KnowledgeRequirementReading {
   readonly requirement: KnowledgeRequirement | null;
@@ -112,6 +120,25 @@ const OFFICIAL_REFERENCE =
 const COMPUTE_CUE =
   /\b(?:estimate|determine|find|derive|calculate|compute|work\s+out|show\s+the\s+calculation|what\s+(?:is|are)\s+the\s+(?:output|input|power|current|voltage|efficiency|energy|resistance))\b/i;
 
+/*
+  TRUST & CONVERSATIONAL EXPERIENCE R1 — PLACE_REFERENCE frames. These are question FRAMES (how a
+  past event or a journey is asked about), not topic nouns, tested together with a named place.
+
+  HISTORY  a completed past: "when did / when was / who was / who founded / what caused / what led
+           to / why did / how did", or "history of", "historical", "independence", "colonial".
+  TRAVEL   the reader preparing a journey: visiting, travelling to, a trip/holiday/safari, packing,
+           "before going". A travel question that ALSO asserts freshness ("Is it safe to travel to
+           Kenya now?") stays current reporting.
+*/
+const HISTORY_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /^(?:when\s+(?:did|was|were)|who\s+(?:was|were|founded|ruled|colonized|colonised)|what\s+(?:caused|led\s+to|was\s+the\s+cause)|why\s+did|how\s+did)\b|\b(?:history\s+of|historical(?:ly)?|independence|colonial|pre-?colonial|ancient)\b/i,
+  pl: /^(?:kiedy\s+(?:\p{L}+\s+)?(?:by[łl]\p{L}*|wst[ąa]pi\p{L}*|uzyska\p{L}*)|kto\s+(?:by[łl]\p{L}*|za[łl]o[żz]y[łl]\p{L}*)|co\s+spowodowa[łl]\p{L}*|dlaczego\s+dosz[łl]o)|(?:histori\p{L}*|niepodleg[łl]o[śs]\p{L}*|kolonial\p{L}*|staro[żz]ytn\p{L}*)/iu,
+};
+const TRAVEL_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /\b(?:visit(?:ing)?|travel(?:l?ing)?\s+(?:to|in|around)|trip\s+to|holiday\s+in|vacation\s+in|safari|itinerary|pack\s+for|before\s+(?:going|travelling|traveling|my\s+trip)|tourist(?:s)?\s+(?:attractions|sites)|things\s+to\s+(?:do|see))\b/i,
+  pl: /(?:odwiedzi\p{L}*|podr[óo][żz]\p{L}*\s+do|wycieczk\p{L}*|wakacj\p{L}*\s+w|zwiedz\p{L}*|safari|spakowa\p{L}*|przed\s+wyjazdem|atrakcj\p{L}*\s+turystyczn\p{L}*)/iu,
+};
+
 function firstClause(text: string): string {
   const first = text.split(/(?<=[.?!])\s+/)[0] ?? text;
   return first.trim();
@@ -164,6 +191,22 @@ export function deriveKnowledgeRequirement(
      freshness is mixed; "What is the current price of …" is simply current. */
   const explanatory = STABLE_SHAPES[lang].slice(1).some((shape) => shape.test(firstClause(text)));
 
+  /* TRUST & CONVERSATIONAL EXPERIENCE R1 — a named place asked about for its past or for a
+     journey, with no freshness marker, is place background (not an empty news search). */
+  if (
+    place &&
+    !fresh &&
+    (HISTORY_FRAME[lang].test(firstClause(text)) ||
+      HISTORY_FRAME[lang].test(text) ||
+      TRAVEL_FRAME[lang].test(text))
+  ) {
+    return {
+      requirement: 'PLACE_REFERENCE',
+      reason: TRAVEL_FRAME[lang].test(text)
+        ? 'travel preparation for a named place'
+        : 'history of a named place',
+    };
+  }
   if (explanatory && fresh) {
     return {
       requirement: 'MIXED_REFERENCE_CURRENT',

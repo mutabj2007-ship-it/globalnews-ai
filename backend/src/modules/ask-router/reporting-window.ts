@@ -58,8 +58,27 @@ const NUMBER_WORDS: Readonly<Record<string, number>> = {
 const RELATIVE_WINDOW =
   /^(?:(?:over|in|during|within|for)\s+)?(?:the\s+)?(?:last|past|previous)\s+(\d{1,3}|[a-z]+)\s+(days?|hours?)$/i;
 
+/*
+  TRUST & CONVERSATIONAL EXPERIENCE R1 — named relative days and weeks. "What about yesterday?"
+  was refused as an untransportable constraint. The reader's local calendar day is not known to
+  the server (no timezone, no geolocation), so "yesterday" is honoured as the 48 hours before the
+  request: it always contains the reader's yesterday, in every timezone, and the applied chip
+  still shows the reader's own words. "Past week" is the 7 days before the request; a calendar
+  "this week" stays a constraint (its start is ambiguous).
+*/
+const NAMED_WINDOWS: Readonly<Record<string, number>> = {
+  yesterday: 48,
+  'since yesterday': 48,
+  wczoraj: 48,
+  'od wczoraj': 48,
+  'past week': 168,
+  'the past week': 168,
+};
+
 /** Hours of a supported relative window, or null when the phrase is not one. */
 export function supportedWindowHours(statedPeriod: string): number | null {
+  const named = NAMED_WINDOWS[statedPeriod.trim().replace(/\s+/g, ' ').toLowerCase()];
+  if (named !== undefined) return named;
   const match = statedPeriod.trim().replace(/\s+/g, ' ').match(RELATIVE_WINDOW);
   if (!match?.[1] || !match[2]) return null;
   const raw = match[1].toLowerCase();

@@ -119,7 +119,7 @@ export interface SeamTrace {
    * frozen C (a domain is not freshness). The wiring guard accepts empty frozen domains ONLY
    * when this says so; any undeclared loss of domains is still a missing seam.
    */
-  readonly knowledgeDecoupling?: 'STABLE_REFERENCE' | 'COMPUTATION' | null;
+  readonly knowledgeDecoupling?: 'STABLE_REFERENCE' | 'COMPUTATION' | 'PLACE_REFERENCE' | null;
 }
 
 export interface AskR2Route {
@@ -316,6 +316,13 @@ export function statedPeriodIsConstraint(
 function withoutTopic(source: EnvelopeSource): EnvelopeSource {
   const { topicTerms: _topic, ...rest } = source;
   void _topic;
+  return rest;
+}
+
+/** TRUST & CONVERSATIONAL EXPERIENCE R1 — the composed source without its time requirement. */
+function withoutTime(source: EnvelopeSource): EnvelopeSource {
+  const { temporalRequirement: _time, ...rest } = source;
+  void _time;
   return rest;
 }
 
@@ -543,11 +550,25 @@ export function routeAskR2(
       /* no matched text: conservatively a place the reader named */
       (g.matchedText === undefined || questionFolded.includes(fold(g.matchedText))),
   );
-  const knowledge = deriveKnowledgeRequirement(
+  const ownKnowledge = deriveKnowledgeRequirement(
     reading.originalQuestion,
     reading.sourceLanguage,
     namedPlace,
   );
+  /* TRUST & CONVERSATIONAL EXPERIENCE R1 — a follow-up continues the KIND of question it follows:
+     "Compare it with Kenya" after a Tanzania safari question is still travel preparation. Only
+     when the service supplied a prior (a recognised follow-up) and this turn asserts no freshness
+     of its own (a CURRENT_REPORTING reading by place alone is not freshness). */
+  const priorKnowledge =
+    ctx.priorQuestion === undefined
+      ? null
+      : deriveKnowledgeRequirement(ctx.priorQuestion, reading.sourceLanguage).requirement;
+  const knowledge =
+    priorKnowledge === 'PLACE_REFERENCE' &&
+    (ownKnowledge.requirement === null ||
+      (ownKnowledge.requirement === 'CURRENT_REPORTING' && ownKnowledge.reason === 'a named place'))
+      ? { requirement: 'PLACE_REFERENCE' as const, reason: 'continues a place-reference question' }
+      : ownKnowledge;
   /* The landed classifier stays authoritative: a place-bearing or anchored reading (one country,
      several, a comparison with members, an article anchor) and an ELIGIBLE inherited context are
      never re-read as stable reference. */
@@ -581,8 +602,22 @@ export function routeAskR2(
     not a topic constraint frozen C would have to transport: it is not bound. Never for a
     follow-up, a named place, an inherited Map / story scope or a personal request.
   */
+  /*
+    TRUST & CONVERSATIONAL EXPERIENCE R1 — PLACE_REFERENCE (knowledge-requirement.ts): a named
+    place asked about for its history or a journey, with no stated period, no article anchor and
+    no personal request. Frozen C is handed a background reading (no domain, no time requirement)
+    that KEEPS the place, so it plans REFERENCE_BACKGROUND_ONLY scoped to it — exactly the plan
+    "Tell me about Madagascar" already receives. Frozen bytes untouched; recorded on the seam.
+  */
+  const placeReference =
+    !stableOrComputed &&
+    knowledge.requirement === 'PLACE_REFERENCE' &&
+    reading.statedTime === undefined &&
+    ctx.hasResolvedArticleAnchor !== true &&
+    capability.source.personalRequested !== true;
   const broadHeadlines =
     !stableOrComputed &&
+    !placeReference &&
     isBroadGlobalHeadlinesQuestion(reading.originalQuestion, reading.sourceLanguage) &&
     ctx.priorQuestion === undefined &&
     !namedPlace &&
@@ -606,9 +641,18 @@ export function routeAskR2(
         reading: { ...composedSource.reading, queryIntent: 'EXPLANATION', analyticalDomains: [] },
         ...(knowledge.requirement === 'COMPUTATION' ? { computationRequested: true } : {}),
       }
-    : broadHeadlines
-      ? withoutTopic(composedSource)
-      : composedSource;
+    : placeReference
+      ? {
+          ...withoutTopic(withoutTime(composedSource)),
+          reading: {
+            ...composedSource.reading,
+            queryIntent: 'ENTITY_BACKGROUND',
+            analyticalDomains: [],
+          },
+        }
+      : broadHeadlines
+        ? withoutTopic(composedSource)
+        : composedSource;
 
   /* Axes derived in the normalization vocabulary; language axis restored to the truth. */
   const derived = buildEnvelope({ ...source, questionLanguage: NORMALIZATION_VOCABULARY });
@@ -655,7 +699,9 @@ export function routeAskR2(
       landedOverride: personalMemberSet ? 'PERSONAL_MEMBER_SET' : null,
       knowledgeDecoupling: stableOrComputed
         ? (knowledge.requirement as 'STABLE_REFERENCE' | 'COMPUTATION')
-        : null,
+        : placeReference
+          ? 'PLACE_REFERENCE'
+          : null,
     },
   };
 }

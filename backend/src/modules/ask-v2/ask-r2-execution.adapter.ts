@@ -1212,6 +1212,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
         },
         ...(governed.rules === '' ? {} : { governed }),
+        /* TRUST & CONVERSATIONAL EXPERIENCE R1 — a follow-up keeps the reader's own prior question. */
+        ...(who.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
       });
       text = out.text;
       declined = text === null;

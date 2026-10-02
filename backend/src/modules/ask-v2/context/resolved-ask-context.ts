@@ -34,6 +34,12 @@ export type ResolvedAskContext =
       readonly kind: 'GEOGRAPHY';
       readonly countryIso3: string;
       readonly geographyContext: GeographyContext;
+      /**
+       * TRUST & CONVERSATIONAL EXPERIENCE R1 — set when the place was not supplied by a surface
+       * but continued from the reader's own earlier question in this thread
+       * (conversation/conversation-place.ts). Same retrieval rung; a distinct identity.
+       */
+      readonly inheritedFrom?: 'CONVERSATION';
     }
   | {
       /** R2F — a dashboard record, resolved by its module's own governed read seam. */
@@ -81,7 +87,11 @@ export type AskContextIdentity =
 
 export function contextIdentity(context: ResolvedAskContext): AskContextIdentity {
   if (context.kind === 'STORY') return ['STORY', context.articleRef] as const;
-  if (context.kind === 'GEOGRAPHY') return ['GEOGRAPHY', context.countryIso3] as const;
+  if (context.kind === 'GEOGRAPHY') {
+    return context.inheritedFrom === undefined
+      ? (['GEOGRAPHY', context.countryIso3] as const)
+      : (['GEOGRAPHY', `${context.countryIso3}@${context.inheritedFrom}`] as const);
+  }
   if (context.kind === 'MODULE') {
     return ['MODULE', `${context.module}:${context.observationKey}`] as const;
   }
@@ -152,7 +162,9 @@ export function isResolvedAskContext(v: unknown): v is ResolvedAskContext {
     return true;
   }
   if (v.kind === 'GEOGRAPHY') {
-    if (!hasExactlyKeys(v, ['kind', 'countryIso3', 'geographyContext'])) return false;
+    if (!hasExactlyKeys(v, ['kind', 'countryIso3', 'geographyContext', 'inheritedFrom']))
+      return false;
+    if (v.inheritedFrom !== undefined && v.inheritedFrom !== 'CONVERSATION') return false;
     if (!isGovernedIso3(v.countryIso3)) return false;
     const g = v.geographyContext;
     if (!isObject(g) || !hasExactlyKeys(g, ['countryCode', 'displayName'])) return false;

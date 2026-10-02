@@ -319,7 +319,7 @@ const EN: AskR2Strings = {
   noCitable: 'No citable sources',
   unavailableBecause: {
     REFERENCE_UNAVAILABLE:
-      'Reference knowledge is not connected for this question, so it is not answered as fact. No news reporting was used in its place.',
+      'This needs up-to-date information that general background cannot reliably give, so it was not answered from memory. Try asking for the latest news on it, or name a place or period.',
     EXECUTOR_NOT_WIRED:
       'This question needs a source Ask cannot read yet — such as your saved stories, an official release or a specialist assessment. Nothing was answered from news in its place.',
     PLAN_IDENTITY_REQUIRED: 'Sign in to use your saved information.',
@@ -547,7 +547,7 @@ const PL: AskR2Strings = {
   noCitable: 'Brak źródeł do przytoczenia',
   unavailableBecause: {
     REFERENCE_UNAVAILABLE:
-      'Wiedza referencyjna nie jest podłączona dla tego pytania, więc nie odpowiadamy na nie jako na fakt. Nie użyto zamiast niej doniesień prasowych.',
+      'To pytanie wymaga aktualnych informacji, których ogólna wiedza nie zapewnia wiarygodnie, więc nie odpowiedziano z pamięci. Zapytaj o najnowsze wiadomości na ten temat albo podaj miejsce lub okres.',
     EXECUTOR_NOT_WIRED:
       'To pytanie wymaga źródła, którego Zapytaj AI jeszcze nie czyta — np. Twoich zapisanych materiałów, oficjalnej publikacji lub oceny specjalisty. Nie odpowiedziano zamiast tego na podstawie wiadomości.',
     PLAN_IDENTITY_REQUIRED: 'Zaloguj się, aby korzystać z zapisanych informacji.',

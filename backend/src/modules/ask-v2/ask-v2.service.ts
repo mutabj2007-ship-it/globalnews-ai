@@ -45,6 +45,8 @@ import {
 import { GuestSessionService } from './guest/guest-session.service';
 import { askRequestContext } from './ask-request-context';
 import { isReusableStoredPayload } from './stored-result-reuse';
+import { resolveGovernedCountryCode } from '@globalnews-ai/shared';
+import { inheritedConversationCountry, PLACE_LOOKBACK } from './conversation/conversation-place';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
@@ -124,6 +126,40 @@ export class AskV2Service {
     if (raw === undefined) return undefined;
     if (this.contexts === undefined) throw new AskContextRefused('ASK_CONTEXT_UNAVAILABLE');
     return this.contexts.resolve(raw);
+  }
+
+  /**
+   * TRUST & CONVERSATIONAL EXPERIENCE R1 — a context-free turn that names no place continues the
+   * place the reader named earlier in THIS owner-verified thread (conversation-place.ts), as the
+   * existing inherited GEOGRAPHY rung. Reads only the reader's own questions; never an answer.
+   */
+  private async conversationPlace(
+    p: AskPrincipal,
+    threadId: string,
+    question: string,
+    language: string,
+  ): Promise<ResolvedAskContext | undefined> {
+    const earlier = await this.atomic(async (tx) => {
+      await this.thread(tx, p, threadId);
+      return tx.askTurn.findMany({
+        where: { threadId },
+        orderBy: { sequence: 'desc' },
+        take: PLACE_LOOKBACK + 1,
+        select: { question: true, language: true },
+      });
+    });
+    /* A retried submission already has its own turn: it is not an earlier one. */
+    const others = (earlier ?? []).filter((t, i) => !(i === 0 && t.question === question));
+    const iso3 = inheritedConversationCountry(question, language, others);
+    if (iso3 === null) return undefined;
+    const country = resolveGovernedCountryCode(iso3);
+    if (country === undefined) return undefined;
+    return {
+      kind: 'GEOGRAPHY',
+      countryIso3: country.iso3,
+      geographyContext: { countryCode: country.iso3, displayName: country.name },
+      inheritedFrom: 'CONVERSATION',
+    };
   }
 
   private guestDeps(): {
@@ -585,7 +621,9 @@ export class AskV2Service {
     const question = input.question.trim();
     if (question.length < 2) throw new BadRequestException('Question is too short');
     /* R2B — resolved FIRST: before guest preflight, slot, operation, meter and planner. */
-    const context = await this.resolveContext(input.context);
+    const context =
+      (await this.resolveContext(input.context)) ??
+      (await this.conversationPlace(p, threadId, question, input.language));
     const request: AskRequest = {
       question,
       language: input.language,

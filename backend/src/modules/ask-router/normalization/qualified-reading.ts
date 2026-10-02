@@ -320,6 +320,24 @@ const EN_CHANGE = [
 const EN_STANCE = ['position', 'stance', 'view', 'views', 'policy', 'response', 'reaction', 'line'];
 
 /** G producer C's normalization, so a PL span is a span of the same normalized text. */
+/*
+  TRUST & CONVERSATIONAL EXPERIENCE R1 — "Who was Napoleon?" was read as Napoleon, Ohio (USA): a
+  person frame ("who was / who is / who were <Name>") names a PERSON. Only a sub-country match
+  (a town or province, never a country) that sits exactly in the name slot of that frame is
+  dropped; "Who is the president of Kenya?" (a country, not the name slot) is untouched.
+*/
+const PERSON_FRAME = /^\s*(?:who\s+(?:was|is|were|are)|kim\s+(?:by[łl]|jest|s[ąa]))\s+(.+?)\s*[?.!]*\s*$/iu;
+function isPersonFrameTown(
+  text: string,
+  geo: { readonly precision: string; readonly matchedText?: string },
+): boolean {
+  if (geo.precision === 'COUNTRY' || geo.matchedText === undefined) return false;
+  const slot = PERSON_FRAME.exec(text)?.[1];
+  if (slot === undefined) return false;
+  const name = slot.replace(/^(?:the|a|an)\s+/i, '').toLowerCase();
+  return name.startsWith(geo.matchedText.toLowerCase());
+}
+
 function normalizeForPeriod(query: string): string {
   return query
     .toLowerCase()
@@ -451,7 +469,7 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
         el('CONTESTED', geo.matchedText, 'CANONICAL_RESOLVER', 'resolveGeography:CONTESTED'),
       );
     }
-  } else if (geo.precision !== 'UNKNOWN') {
+  } else if (geo.precision !== 'UNKNOWN' && !isPersonFrameTown(text, geo)) {
     const chosen = geo.place ? [geo.place] : geo.candidates;
     /* GATE H (G V4-C1/V4-C4) — a demonym ("Rwandan") is ENTITY geography, provenance-
        distinct from a typed place; the landed demonym resolver is the producer. */

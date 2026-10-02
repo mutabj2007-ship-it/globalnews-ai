@@ -185,7 +185,7 @@ describe('payload narrowing', () => {
 
 describe('GATE H — typed refusals say what is missing; executor clarifications offer the choices', () => {
   it.each([
-    ['REFERENCE_UNAVAILABLE', /Reference knowledge is not connected/],
+    ['REFERENCE_UNAVAILABLE', /not answered from memory/],
     ['EXECUTOR_NOT_WIRED', /needs a source Ask cannot read yet/],
     ['PLAN_IDENTITY_REQUIRED', /^Sign in to use your saved information\.$/],
     ['PLAN_CAPABILITY_UNAVAILABLE', /needs a capability Ask does not have/],
