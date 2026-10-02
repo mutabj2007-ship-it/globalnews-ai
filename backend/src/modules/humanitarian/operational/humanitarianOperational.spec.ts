@@ -11,6 +11,7 @@ import { resolveAuthCookieNames } from '../../auth/cookie.util';
 import { hashSessionToken } from '../../auth/session-token.util';
 import { ADMIN_PLATFORM_ENABLED_ENV } from '../../admin/admin-platform.config';
 import { HumanitarianOperationalModule } from './humanitarian-operational.module';
+import { operationalMountDecision } from './humanitarian-operational.mount';
 import { HumanitarianOperationalService } from './humanitarian-operational.service';
 import {
   HUMANITARIAN_ALERT_IDS,
@@ -466,14 +467,53 @@ describe('ALERT CONDITIONS — declared, and honest about whether they can fire'
 });
 
 describe('RUNTIME BOUNDARY', () => {
-  it('APP.MODULE DOES NOT REGISTER THIS MODULE — the route is not on the application', () => {
+  /*
+    THIS ASSERTION REVERSED AT R2, AND THE OLD ONE IS OBSOLETE RATHER THAN
+    INCONVENIENT. R1 asserted the module was NOT registered, because R1 judged
+    that putting a route on the admin surface was a step it had not been
+    authorised to take. R2's contract authorises it under a stated condition —
+    "mount/register the operational read module only if it cannot activate
+    acquisition" — so the fact R1 measured is no longer the fact the programme
+    wants held true. The condition itself is what is now asserted, here and in
+    `humanitarianOperationalMount.spec.ts`; it is not asserted more weakly.
+  */
+  it('APP.MODULE REGISTERS THIS MODULE THROUGH THE CHECKED MOUNT (R2), not directly', () => {
     const app = readFileSync(join(DIR, '../../../app.module.ts'), 'utf8');
-    expect(app).not.toMatch(/HumanitarianOperationalModule/);
+    expect(app).toMatch(/humanitarianOperationalImports\(\)/);
+    expect(app).toMatch(/\.\.\.humanitarianOperationalImports\(\)/);
+    /* The class itself is never named in the imports array — only the guarded helper. */
+    expect(app).not.toMatch(/^\s*HumanitarianOperationalModule,\s*$/m);
+    expect(operationalMountDecision()).toEqual({ mounted: true, refusedBecause: null });
   });
 
   it('positive control: the sweep DOES see a module that is registered', () => {
     const app = readFileSync(join(DIR, '../../../app.module.ts'), 'utf8');
     expect(app).toMatch(/HumanitarianReadModule/);
+  });
+
+  /*
+    MOUNTING ADDED NO WRITE PATH — measured on a live application rather than read
+    off the source. An unrouted verb 404s before any guard runs, while the routed
+    GET reaches the guard chain and 401s. So 404-for-every-mutation and
+    401-for-GET on the SAME path is the distinction: it separates "no such route"
+    from "a route that merely refused me today", which a source scan cannot.
+  */
+  it('MOUNTING ADDED NO WRITE PATH — every mutation verb is unrouted on the live app', async () => {
+    const live = await createApp('true');
+    try {
+      const server = live.getHttpServer();
+      const statuses = {
+        post: (await request(server).post(ROUTE)).status,
+        put: (await request(server).put(ROUTE)).status,
+        patch: (await request(server).patch(ROUTE)).status,
+        delete: (await request(server).delete(ROUTE)).status,
+        /* positive control: the GET IS routed, and refuses on authentication. */
+        get: (await request(server).get(ROUTE)).status,
+      };
+      expect(statuses).toEqual({ post: 404, put: 404, patch: 404, delete: 404, get: 401 });
+    } finally {
+      await live.close();
+    }
   });
 
   it('the status is deterministic for a fixed clock', () => {

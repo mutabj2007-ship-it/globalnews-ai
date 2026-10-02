@@ -111,6 +111,21 @@ import type { SourceActivationVerdict } from '../source-activation.ruling';
 export { HUMANITARIAN_SOURCE_IDS, type HumanitarianSourceId } from '../source-activation.ruling';
 import type { HumanitarianSourceId } from '../source-activation.ruling';
 
+/*
+  READINESS IS DERIVED FROM THAT SAME VERDICT, in its own file, by a mapping that
+  is total over E1's vocabulary. Re-exported here so a renderer has one import.
+*/
+export {
+  SOURCE_READINESS_STATES,
+  READINESS_FOR_VERDICT,
+  READINESS_REQUIREMENT,
+  deriveSourceReadiness,
+  readinessRequirement,
+  assertReadinessMappingIsTotalAndInjective,
+  type SourceReadiness,
+} from './humanitarian-operational.readiness';
+import type { SourceReadiness } from './humanitarian-operational.readiness';
+
 /**
  * Four distinguishable implementation states. The brief asks for "configured /
  * not configured", which is a two-state answer — and two states cannot separate
@@ -155,6 +170,23 @@ export interface HumanitarianSourceStatus {
   readonly e1Verdict: SourceActivationVerdict;
   /** When E1 ruled. */
   readonly e1RuledAt: string;
+  /**
+   * WHAT IS BLOCKING THIS SOURCE, as one value an operator can act on — derived
+   * from `e1Verdict` by a total mapping, never decided here. R2 names three of
+   * these (dev-capture-only, credential missing, protection authority missing);
+   * all six of E1's verdicts are mapped, because a default would read as a
+   * claim about a source nobody assessed.
+   */
+  readonly readiness: SourceReadiness;
+  /** The next action and whose authority it is. Two of the six are not the operator's. */
+  readonly readinessRequires: string;
+  /**
+   * E1's own blocking conditions, READ VERBATIM from the ruling. Operator-only,
+   * behind the admin guard chain. These name variables, hosts and instruments —
+   * never a credential value; `CredentialPresence` is the only credential shape
+   * on this surface and it is boolean by type.
+   */
+  readonly blockingConditions: readonly string[];
   /** Why this source is in that state, in one operator-readable sentence. */
   readonly basis: string;
 
@@ -165,6 +197,15 @@ export interface HumanitarianSourceStatus {
   readonly recordsWithheld: MeasuredFact<number>;
   /** AGGREGATE counts per reason. Never per record, per place or per activation. */
   readonly withholdReasons: MeasuredFact<ReadonlyArray<{ code: string; count: number }>>;
+  /**
+   * PARSER REFUSALS — a distinct axis from both of its neighbours, because
+   * collapsing them loses the diagnosis. A WITHHELD record was admitted and is
+   * not shown; a SOURCE ERROR means the call itself failed; a PARSER REFUSAL
+   * means bytes arrived and the transform refused them, which is the signature
+   * of an upstream shape change rather than an outage. An operator shown one
+   * number for all three cannot tell which happened.
+   */
+  readonly parserRefusals: MeasuredFact<ReadonlyArray<{ code: string; count: number }>>;
   readonly sourceErrors: MeasuredFact<ReadonlyArray<{ code: string; count: number }>>;
   readonly coverage: MeasuredFact<HumanitarianModuleStatus>;
   readonly languageCounts: MeasuredFact<ReadonlyArray<{ language: string; count: number }>>;

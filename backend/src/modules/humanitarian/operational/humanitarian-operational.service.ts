@@ -15,8 +15,10 @@ import {
   COVERAGE_GRANULARITY,
   HUMANITARIAN_ALERT_IDS,
   WITHHOLD_REPORTING,
+  deriveSourceReadiness,
   measured,
   notInstrumented,
+  readinessRequirement,
   type HumanitarianAlertCondition,
   type HumanitarianModuleStatus,
   type HumanitarianOperationalStatus,
@@ -61,6 +63,8 @@ const NO_LANGUAGE =
 const NO_CACHE = 'No humanitarian cache exists, so there is no age to report.';
 const NO_ERROR_LOG =
   'No error or attempt table exists. A failed authority load throws and writes nothing.';
+const NO_PARSER_LOG =
+  'Nothing counts parser refusals. The geometry refusal sink emits to observability and stores no row, and no transform refusal is persisted or aggregated.';
 
 /** Every quantity is unmeasured today; this keeps the reason attached to each. */
 const unmeasured = <T>(because: string): MeasuredFact<T> => notInstrumented<T>(because);
@@ -102,10 +106,21 @@ export class HumanitarianOperationalService {
   /** E1's ruling for one source: the verdict, verbatim, and the activation it permits. */
   private e1(sourceId: HumanitarianSourceId) {
     const ruling = HUMANITARIAN_SOURCE_RULINGS[sourceId];
+    /*
+      READINESS IS DERIVED, NOT CHOSEN. One expression over E1's verdict, so the
+      three situations R2 names (dev capture only, credential missing, protection
+      authority missing) are three outputs of one rule rather than three branches
+      that could each be written to disagree with E1.
+    */
+    const readiness = deriveSourceReadiness(ruling.verdict);
     return {
       activation: deriveSourceActivation(ruling.verdict),
       e1Verdict: ruling.verdict,
       e1RuledAt: ruling.ruledAt,
+      readiness,
+      readinessRequires: readinessRequirement(readiness),
+      /* Verbatim. A restated blocking condition is a second opinion on E1's gate. */
+      blockingConditions: ruling.blockingConditions,
     };
   }
 
@@ -133,6 +148,7 @@ export class HumanitarianOperationalService {
       recordsAdmitted: unmeasured(NO_COUNTERS),
       recordsWithheld: unmeasured(NO_COUNTERS),
       withholdReasons: unmeasured(NO_COUNTERS),
+      parserRefusals: unmeasured(NO_PARSER_LOG),
       sourceErrors: unmeasured(NO_ERROR_LOG),
       coverage: unmeasured(NO_STORE),
       languageCounts: unmeasured(NO_LANGUAGE),
@@ -188,6 +204,7 @@ export class HumanitarianOperationalService {
       recordsAdmitted: unmeasured(NO_COUNTERS),
       recordsWithheld: unmeasured(NO_COUNTERS),
       withholdReasons: unmeasured(NO_COUNTERS),
+      parserRefusals: unmeasured(NO_PARSER_LOG),
       sourceErrors: unmeasured(NO_ERROR_LOG),
       /*
         COVERAGE IS NOT REPORTED PER SOURCE FOR COPERNICUS, and would not be even

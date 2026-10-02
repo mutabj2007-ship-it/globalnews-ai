@@ -5,15 +5,23 @@ import { HumanitarianOperationalController } from './humanitarian-operational.co
 import { HumanitarianOperationalService } from './humanitarian-operational.service';
 
 /**
- * HUMANITARIAN OPERATIONAL STATUS — REGISTERED IN `app.module.ts`: NO.
+ * HUMANITARIAN OPERATIONAL STATUS — REGISTERED IN `app.module.ts`: YES, UNDER A
+ * CHECKED CONDITION (R2).
  *
- * The module compiles and is wired nowhere, following the precedent this
- * repository already sets for work awaiting review. Registering it would put a
- * new route on the deployed admin surface, which is activation, and the brief's
- * final marker asks for a REVIEW rather than a release.
+ * R1 left this module wired nowhere, because R1's own reasoning was that putting
+ * a route on the admin surface was a step it had not been authorised to take.
+ * R2 authorises it and states the condition: *"Mount/register the operational
+ * read module only if it cannot activate acquisition."*
  *
- * `humanitarianOperational.spec.ts` asserts the absence against `app.module.ts`
- * with a positive control that the same sweep sees a module that IS registered.
+ * So the mount is not an entry added to an array. `humanitarianOperationalImports()`
+ * in `humanitarian-operational.mount.ts` inspects this module's own Nest metadata
+ * — imports, providers, controllers, exports and the HTTP verb of every route —
+ * and yields nothing at all if the shape is not the reviewed read-only one. The
+ * absence of this status page is safe; a status page with a write path is not.
+ *
+ * `humanitarianOperational.spec.ts` asserts the registration, and
+ * `humanitarianOperationalMount.spec.ts` asserts that a tampered module is
+ * refused, with the real module as the positive control.
  *
  * IT IMPORTS NO DATA MODULE. No Prisma, no HTTP, no humanitarian intake or
  * producer module. `AuthModule` supplies `RequireAuthGuard`, and `AdminModule`

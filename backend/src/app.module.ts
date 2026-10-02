@@ -43,6 +43,7 @@ import {
   humanitarianModuleImports,
   HUMANITARIAN_PROVISIONING,
 } from './modules/humanitarian/humanitarian.registration';
+import { humanitarianOperationalImports } from './modules/humanitarian/operational/humanitarian-operational.mount';
 
 @Module({
   imports: [
@@ -228,6 +229,16 @@ import {
       ever is not.
     */
     ...humanitarianModuleImports(HUMANITARIAN_PROVISIONING),
+    /*
+      HUMANITARIAN OPERATIONAL STATUS (F R2) — one admin-guarded GET, SPREAD under
+      a checked condition. `humanitarianOperationalImports()` yields the module
+      only while it remains the reviewed read-only shape: no data or producer
+      import, one provider, one controller, no exports, and every route a GET. A
+      module that drifts from that is not registered and the route does not exist.
+      It carries no acquisition path and no activation control; E1 remains the only
+      source authority.
+    */
+    ...humanitarianOperationalImports(),
     HumanitarianReadModule,
   ],
   controllers: [AppController],
