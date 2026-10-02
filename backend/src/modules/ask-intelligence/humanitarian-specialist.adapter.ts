@@ -1,7 +1,6 @@
 import {
   assertHumanitarianRetainedRecord,
   type HumanitarianObservation,
-  type HumanitarianReaderAdmission,
   type HumanitarianRetainedRead,
   type HumanitarianRetainedRecord,
 } from '@globalnews-ai/shared';
@@ -15,6 +14,13 @@ import {
   verdictPermitsRuntimeAcquisition,
   type SourceActivationVerdict,
 } from '../humanitarian/source-activation.ruling';
+import {
+  GDACS_ATTRIBUTION_VERBATIM,
+  assertDisclosuresRecognised,
+  assertGdacsAttributionCarried,
+  readerAdmissionFromRuling,
+} from '../humanitarian/reader-clearance.ruling';
+import { GOVERNED_PROMPT_DISCLOSURE_CODES } from './governed-answer';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -91,6 +97,11 @@ function claimKindOf(o: HumanitarianObservation): string {
   }
 }
 
+/** E1 R2 · B4 — the relay acknowledgement GDACS requests, verbatim, or null for other sources. */
+function acknowledgementOf(o: HumanitarianObservation): string | null {
+  return o.identity.upstreamAuthority === 'GDACS' ? GDACS_ATTRIBUTION_VERBATIM : null;
+}
+
 function observationOf(row: HumanitarianRetainedRecord): AskContributionObservation {
   const o = row.observation;
   const claim = o.claim;
@@ -104,6 +115,8 @@ function observationOf(row: HumanitarianRetainedRecord): AskContributionObservat
     claim.claimType === 'HUMANITARIAN_IMPACT_ASSERTION' && 'unit' in claim
       ? ((claim.unit as string | undefined) ?? null)
       : null;
+  const originatingAgency =
+    claim.claimType === 'HUMANITARIAN_EVENT' ? claim.originatingAgency : undefined;
   return {
     reference: o.observationKey,
     kind: claimKindOf(o),
@@ -115,43 +128,82 @@ function observationOf(row: HumanitarianRetainedRecord): AskContributionObservat
     source: {
       name: o.provenance.institution ?? o.provenance.providerId ?? o.identity.upstreamAuthority,
       url: o.sourceReference.sourceUrl ?? null,
-      licence: null,
+      licence: acknowledgementOf(o),
+      ...(originatingAgency === undefined ? {} : { originatingAgency }),
     },
     retainedAt: o.temporal.retrievedAt,
   };
 }
 
+/** A publisher date with no time-zone designator (measured: GDACS, 100/100). */
+const NO_TIME_ZONE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/;
+
+/** E1 R2 · the Humanitarian disclosure set for a USED contribution, derived from the rows. */
+function usedDisclosures(rows: readonly HumanitarianRetainedRecord[]): readonly string[] {
+  const codes = new Set<string>([
+    'IMPACT_NOT_ASSESSED',
+    'RETAINED_NOT_CURRENT',
+    'SEVERITY_NOT_ASSESSED',
+  ]);
+  for (const row of rows) {
+    const o = row.observation;
+    if (o.claim.countryIso3.length === 0) codes.add('COUNTRY_SCOPE_NOT_STATED_BY_SOURCE');
+    const vintage = o.temporal.publisherVintage;
+    if (vintage !== undefined && NO_TIME_ZONE.test(vintage))
+      codes.add('PUBLISHER_TIME_ZONE_NOT_STATED');
+    if (o.identity.upstreamAuthority === 'GDACS') codes.add('GEOMETRY_WITHHELD_SOURCE_CENTROID');
+  }
+  return [...codes];
+}
+
 /**
- * The ONLY Humanitarian → Ask mapping. `isReaderAdmissible` is the same predicate the read was
- * built with (E1 source rights for reader use + protection authority), applied again here.
+ * E1 R2 · B2 — every code this adapter emits must be one the governed prompt turns into a rule.
+ * An unrecognised code would vanish between producer and prompt with every test still green.
+ */
+function withRecognisedDisclosures(c: AskContribution): AskContribution {
+  assertDisclosuresRecognised(c.disclosures, GOVERNED_PROMPT_DISCLOSURE_CODES);
+  return c;
+}
+
+/**
+ * The ONLY Humanitarian → Ask mapping.
+ *
+ * E1 R2 · C1 — reader admission is NOT a parameter. It is bound here to the ruling-derived
+ * predicate (`readerAdmissionFromRuling()`: E1's reader-cleared sources), so no caller can pass
+ * `() => true`. Today no source is reader-cleared, so every retained row is refused.
+ * E1 R2 · B4 — IMPACT_NOT_ASSESSED is carried on EVERY contribution.
  */
 export function humanitarianContribution(
   read: HumanitarianRetainedRead,
   s: AskContributorSelection,
-  isReaderAdmissible: HumanitarianReaderAdmission,
 ): AskContribution {
+  const isReaderAdmissible = readerAdmissionFromRuling();
   switch (read.kind) {
     case 'UNAVAILABLE':
-      return read.absence === 'NOT_ASSESSED'
-        ? base(s, {
-            status: 'NOT_ASSESSED',
-            temporalBasis: 'NONE',
-            disclosures: ['HUMANITARIAN_NOT_ASSESSED'],
-            degradationReason: 'NO_GOVERNED_OBSERVATION_READER',
-          })
-        : /* lossy: the reader-facing COVERAGE_GAP, never the source topology behind it */
-          base(s, {
-            status: 'DEGRADED',
-            temporalBasis: 'NONE',
-            disclosures: ['HUMANITARIAN_READ_UNAVAILABLE'],
-            degradationReason: 'READ_UNAVAILABLE',
-          });
+      return withRecognisedDisclosures(
+        read.absence === 'NOT_ASSESSED'
+          ? base(s, {
+              status: 'NOT_ASSESSED',
+              temporalBasis: 'NONE',
+              disclosures: ['HUMANITARIAN_NOT_ASSESSED', 'IMPACT_NOT_ASSESSED'],
+              degradationReason: 'NO_GOVERNED_OBSERVATION_READER',
+            })
+          : /* lossy: the reader-facing COVERAGE_GAP, never the source topology behind it */
+            base(s, {
+              status: 'DEGRADED',
+              temporalBasis: 'NONE',
+              disclosures: ['HUMANITARIAN_READ_UNAVAILABLE', 'IMPACT_NOT_ASSESSED'],
+              degradationReason: 'READ_UNAVAILABLE',
+            }),
+      );
     case 'NO_RETAINED_EVIDENCE':
-      return base(s, {
-        status: 'NO_DATA',
-        temporalBasis: 'NONE',
-        disclosures: ['HUMANITARIAN_NO_RETAINED_EVIDENCE'],
-      });
+      return withRecognisedDisclosures(
+        base(s, {
+          status: 'NO_DATA',
+          temporalBasis: 'NONE',
+          disclosures: ['HUMANITARIAN_NO_RETAINED_EVIDENCE', 'IMPACT_NOT_ASSESSED'],
+        }),
+      );
     case 'RETAINED': {
       try {
         for (const row of read.observations) {
@@ -159,22 +211,34 @@ export function humanitarianContribution(
           if (isReaderAdmissible(row) !== true) {
             throw new HumanitarianSpecialistRefused('HUM-ASK-1: a row is not reader-admissible.');
           }
+          if (row.observation.identity.upstreamAuthority === 'GDACS') {
+            const o = observationOf(row);
+            /* E1 R2: a GDACS row reaching a model carries both names, or it does not travel. */
+            assertGdacsAttributionCarried({
+              relayAttribution: o.source.licence,
+              originatingAgency: o.source.originatingAgency,
+            });
+          }
         }
       } catch {
         /* Refuse the whole contribution; name no record (the refusal must not leak one). */
-        return base(s, {
-          status: 'REFUSED',
-          temporalBasis: 'NONE',
-          disclosures: ['HUMANITARIAN_REFUSED_NOT_READER_ADMISSIBLE'],
-          degradationReason: 'NOT_READER_ADMISSIBLE',
-        });
+        return withRecognisedDisclosures(
+          base(s, {
+            status: 'REFUSED',
+            temporalBasis: 'NONE',
+            disclosures: ['HUMANITARIAN_REFUSED_NOT_READER_ADMISSIBLE', 'IMPACT_NOT_ASSESSED'],
+            degradationReason: 'NOT_READER_ADMISSIBLE',
+          }),
+        );
       }
-      return base(s, {
-        status: 'USED',
-        temporalBasis: 'RETAINED_EVENT_RECORD',
-        observations: read.observations.map(observationOf),
-        disclosures: ['RETAINED_NOT_CURRENT', 'SEVERITY_NOT_ASSESSED'],
-      });
+      return withRecognisedDisclosures(
+        base(s, {
+          status: 'USED',
+          temporalBasis: 'RETAINED_EVENT_RECORD',
+          observations: read.observations.map(observationOf),
+          disclosures: usedDisclosures(read.observations),
+        }),
+      );
     }
   }
 }

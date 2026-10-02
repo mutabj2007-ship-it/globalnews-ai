@@ -158,6 +158,13 @@ export interface HumanitarianEventClaim {
    * declares no coordinates: `SourceEvidenceRecord` owns geometry and its protection rules.
    */
   readonly geometryRecordKey?: string;
+  /**
+   * CONVERGENCE (E1 R2, CTO disclosure-chain ruling): the agency that MEASURED the event when the
+   * publisher RELAYS it — GDACS's `source` field (NOAA, NEIC, JTWC, GLOFAS, GWIS), VERBATIM.
+   * Attributing NEIC's magnitude to GDACS is a provenance error, so this name travels with the
+   * record into model context, citations and stored results. Absent when the publisher names none.
+   */
+  readonly originatingAgency?: string;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -291,6 +298,11 @@ export function assertHumanitarianClaimIsWellFormed(
     }
     if (claim.sourceTitle.trim().length === 0) {
       throw new HumanitarianRecordRefused('HUM-E-2: an event carries the source\'s own title.');
+    }
+    if (claim.originatingAgency !== undefined && claim.originatingAgency.trim().length === 0) {
+      throw new HumanitarianRecordRefused(
+        'HUM-E-3: an originating agency is named verbatim or absent — never an empty string.',
+      );
     }
   }
   if (claim.claimType === 'HUMANITARIAN_IMPACT_ASSERTION') {

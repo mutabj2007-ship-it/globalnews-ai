@@ -160,6 +160,66 @@ const CONTRIBUTOR_NAME: Readonly<Record<AskContribution['contributorId'], string
   HUMANITARIAN: 'Humanitarian Intelligence',
 };
 
+/**
+ * HUMANITARIAN DISCLOSURE RULES (E1 R2 · B1). Humanitarian wording for every code the
+ * Humanitarian contributor may emit — including SEVERITY_NOT_ASSESSED, which elsewhere is worded
+ * for conflict records. Applied ONLY to the HUMANITARIAN contributor.
+ */
+export const HUMANITARIAN_DISCLOSURE_RULES: Readonly<Record<string, string>> = Object.freeze({
+  IMPACT_NOT_ASSESSED:
+    'Humanitarian records state hazard occurrence only; their impact on people was NOT assessed: never state or imply impact, casualties, displacement or needs — or their absence — from them.',
+  RETAINED_NOT_CURRENT:
+    "Humanitarian records are retained records, not current observations: say so, and give each record's stated date when you use it.",
+  SEVERITY_NOT_ASSESSED:
+    "No severity has been assessed for the retained humanitarian records, and the publisher's own alert level is not restated: do not rank, grade or characterise severity from them.",
+  COUNTRY_SCOPE_NOT_STATED_BY_SOURCE:
+    'Some humanitarian records carry no country scope from their source: never infer or assign a country for them.',
+  PUBLISHER_TIME_ZONE_NOT_STATED:
+    'Humanitarian publisher dates carry no time zone: give them as stated, without converting them or asserting a time zone.',
+  GEOMETRY_WITHHELD_SOURCE_CENTROID:
+    'Humanitarian record locations are withheld (the source states only a centroid): never state coordinates or any location more precise than a stated country.',
+  HUMANITARIAN_NOT_ASSESSED:
+    'Humanitarian Intelligence was not assessed for this answer: never state or imply that humanitarian evidence supports, confirms or assessed anything.',
+  HUMANITARIAN_NO_RETAINED_EVIDENCE:
+    'The retained humanitarian store holds no record for this: that is a fact about our store, not evidence that nothing happened — never say or imply nothing happened.',
+  HUMANITARIAN_READ_UNAVAILABLE:
+    'The humanitarian evidence could not be read for this answer: say it could not be consulted; never imply it was checked.',
+  HUMANITARIAN_REFUSED_NOT_READER_ADMISSIBLE:
+    'Humanitarian records were withheld from this answer: never mention, infer or speculate about withheld records.',
+});
+
+/** The conflict/market/imihigo codes this prompt has always recognised (unchanged). */
+const LEGACY_DISCLOSURE_CODES = [
+  'SEVERITY_NOT_ASSESSED',
+  'NO_RECENT_RETAINED_RECORD',
+  'SUBNATIONAL_SCOPE_NOT_APPLIED',
+  'SNAPSHOT_NOT_CHANGE_SERIES',
+  'AGGREGATE_NOT_ASSIGNED_TO_DISTRICT',
+] as const;
+
+/**
+ * E1 R2 · B2 — the CLOSED set of disclosure codes this consumer turns into model rules. A producer
+ * asserts its codes against it (assertDisclosuresRecognised), so a new code fails a build instead
+ * of vanishing between producer and prompt.
+ */
+export const GOVERNED_PROMPT_DISCLOSURE_CODES: readonly string[] = Object.freeze([
+  ...new Set([...LEGACY_DISCLOSURE_CODES, ...Object.keys(HUMANITARIAN_DISCLOSURE_RULES)]),
+]);
+
+/** E1 R2 · B3 — a Humanitarian record carries its attribution and retention time into context. */
+function humanitarianRecordData(o: AskContributionObservation): Record<string, unknown> {
+  return {
+    ...recordData(o),
+    source: {
+      name: clean(o.source.name),
+      url: clean(o.source.url),
+      acknowledgement: clean(o.source.licence),
+      originatingAgency: clean(o.source.originatingAgency),
+    },
+    retainedAt: clean(o.retainedAt),
+  };
+}
+
 function recordData(o: AskContributionObservation): Record<string, unknown> {
   return {
     period: clean(o.period),
@@ -216,8 +276,46 @@ export function governedPrompt(set: AskContributionSet): GovernedPrompt {
       timeBasis: c.temporalBasis,
       scope: clean(c.geographyBasis),
       recordCount: c.observations.length,
-      records: used ? c.observations.slice(0, MAX_PROMPT_RECORDS).map(recordData) : [],
+      records: used
+        ? c.observations
+            .slice(0, MAX_PROMPT_RECORDS)
+            .map((o) =>
+              c.contributorId === 'HUMANITARIAN' ? humanitarianRecordData(o) : recordData(o),
+            )
+        : [],
     });
+    if (c.contributorId === 'HUMANITARIAN') {
+      /* E1 R2 · B1/B3 — Humanitarian wording, attribution, and the DEGRADED/REFUSED cases. */
+      if (used) {
+        rules.add(
+          "When you use a humanitarian record, attribute it to its publisher using the exact acknowledgement given in its source, and to its originatingAgency when one is given — never attribute an agency's measurement to the relaying publisher alone.",
+        );
+      }
+      if (c.status === 'DEGRADED') {
+        rules.add(
+          'Humanitarian evidence was unavailable for this answer: say it could not be consulted; never imply it was checked.',
+        );
+      }
+      if (c.status === 'REFUSED') {
+        rules.add(
+          'Humanitarian evidence was withheld from this answer: never mention, infer or speculate about it.',
+        );
+      }
+      for (const code of c.disclosures) {
+        const rule = HUMANITARIAN_DISCLOSURE_RULES[code];
+        if (rule !== undefined) rules.add(rule);
+      }
+      if (c.status === 'NOT_ASSESSED') {
+        rules.add(
+          `${name} was not assessed: never state or imply that ${name} supports, confirms or assessed anything in this answer.`,
+        );
+      } else if (c.status === 'NO_MATCH' || c.status === 'NO_DATA') {
+        rules.add(
+          `${name} found no governed record for this scope: that is not evidence that nothing happened — do not say so.`,
+        );
+      }
+      continue;
+    }
     if (c.status === 'NOT_ASSESSED') {
       rules.add(
         `${name} was not assessed: never state or imply that ${name} supports, confirms or assessed anything in this answer.`,

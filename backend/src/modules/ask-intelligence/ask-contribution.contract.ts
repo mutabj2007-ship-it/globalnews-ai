@@ -72,6 +72,11 @@ export interface AskContributionObservation {
     readonly url: string | null;
     /** Licence or rights note when the governed record carries one. */
     readonly licence: string | null;
+    /**
+     * CONVERGENCE (E1 R2): when the publisher RELAYS another agency's measurement, that agency,
+     * verbatim (e.g. GDACS relaying NEIC). Absent for every non-relaying contributor.
+     */
+    readonly originatingAgency?: string;
   };
   /** When GlobalNewsAI retained the record (capture/ingest time), if known. */
   readonly retainedAt: string | null;
