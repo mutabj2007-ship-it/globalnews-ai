@@ -16,6 +16,7 @@ import { AskAiDock } from '@/components/ask/AskAiDock';
 import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
 import { homeR1Gates, releaseGatesMeta } from '@/lib/platform/homeR1Gates';
 import { ReturnDepthTracker } from '@/components/navigation/ReturnDepthTracker';
+import { SCHEDULE_BOOT_SCRIPT } from '@/lib/theme/themeSchedule';
 import './globals.css';
 
 /**
@@ -270,6 +271,15 @@ export default function RootLayout({
 
   return (
     <html lang={language} className={fontVariables}>
+      <head>
+        {/*
+          TRUST & CONVERSATIONAL EXPERIENCE R1 — Scheduled day/night theme. A self-contained,
+          pre-paint script: it reads the one first-party theme cookie and, only when it says
+          Scheduled, sets <html data-gna-schedule> from the device clock. It requests nothing.
+          Every other theme preference is resolved by CSS alone (lib/theme/themeSchedule.ts).
+        */}
+        <script dangerouslySetInnerHTML={{ __html: SCHEDULE_BOOT_SCRIPT }} />
+      </head>
       <body className="bg-void font-body text-ink-primary antialiased">
         {/*
           PWA — ServiceWorkerRegistrar returns null, so it contributes no

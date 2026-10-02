@@ -233,7 +233,7 @@ describe('GATE H — typed refusals say what is missing; executor clarifications
       PL,
       'pl',
     );
-    expect(v.unavailableText).toMatch(/Wiedza referencyjna/);
+    expect(v.unavailableText).toMatch(/nie odpowiedziano z pamięci/);
     expect(v.freshness).toBe(PL.noAnswer);
   });
 

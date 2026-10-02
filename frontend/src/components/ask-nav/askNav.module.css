@@ -47,8 +47,8 @@
     gap: 8px;
     height: 56px;
     padding: 0 8px;
-    border-bottom: 1px solid #0a2744;
-    background: rgba(2, 15, 32, 0.96);
+    border-bottom: 1px solid var(--ask-line, #0a2744);
+    background: var(--ask-bar, rgba(2, 15, 32, 0.96));
   }
 }
 
@@ -75,9 +75,9 @@
     reason for ANY of it to show through, so the alpha is gone. It also makes the
     capture check in the runtime harness exact rather than tolerance-based.
   */
-  background: #020f20;
+  background: var(--ask-drawer-bg, #020f20);
   font-family: var(--font-cd-body), system-ui, sans-serif;
-  color: #e6eef6;
+  color: var(--ask-ink, #e6eef6);
 }
 
 .drawerHead {
@@ -90,14 +90,14 @@
   height: 56px;
   margin: 0 -18px;
   padding: 0 10px 0 18px;
-  border-bottom: 1px solid #0a2744;
+  border-bottom: 1px solid var(--ask-line, #0a2744);
 }
 
 .drawerGroup {
   display: flex;
   flex-direction: column;
   padding: 6px 0;
-  border-bottom: 1px solid rgba(10, 39, 68, 0.7);
+  border-bottom: 1px solid var(--ask-line-soft, rgba(10, 39, 68, 0.7));
 }
 
 .drawerGroup:last-of-type {

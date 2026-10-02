@@ -217,6 +217,10 @@ export const homeR1Pl: HomeR1Dictionary = {
     dark: 'Ciemny',
     system: 'Systemowy',
     systemNote: 'Zgodnie z ustawieniem urządzenia',
+    scheduled: 'Według harmonogramu',
+    scheduledNote: 'Jasny w dzień, ciemny w nocy, według zegara tego urządzenia',
+    lightFrom: 'Jasny od',
+    darkFrom: 'Ciemny od',
   },
   dock: {
     openInAsk: 'Otwórz w Zapytaj',

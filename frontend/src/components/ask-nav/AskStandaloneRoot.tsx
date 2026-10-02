@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
-import styles from '@/components/ask-frame/askDashboard.module.css';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
 import { AskShellFrame } from '@/components/ask-nav/AskShellFrame';
+import { AskThemedPage } from '@/components/ask-nav/AskThemedPage';
+import type { ThemePreference } from '@/lib/theme/theme';
 import { SiteStructuredData } from '@/components/seo/SiteStructuredData';
 import type { AskR2Locale } from '@/lib/ask/askR2Strings';
 
@@ -14,16 +15,23 @@ import type { AskR2Locale } from '@/lib/ask/askR2Strings';
  * indexable Ask canonical. /ask stays the operational route for ?operation= reopen and
  * governed returns, and stays noindex.
  */
-export function AskStandaloneRoot({ locale }: { readonly locale: AskR2Locale }): JSX.Element {
+export function AskStandaloneRoot({
+  locale,
+  theme,
+}: {
+  readonly locale: AskR2Locale;
+  /** TRUST R1 — the reader's theme cookie, read by the root page (no flash). */
+  readonly theme: ThemePreference;
+}): JSX.Element {
   return (
-    <div className={styles.page} data-ask-root="standalone">
+    <AskThemedPage theme={theme} root="standalone">
       <SiteStructuredData />
       <AskNavProvider>
-        <AskNavShell language={locale} />
+        <AskNavShell language={locale} theme={theme} />
         <Suspense fallback={<main className="min-h-0 flex-1 bg-void" />}>
           <AskShellFrame locale={locale} />
         </Suspense>
       </AskNavProvider>
-    </div>
+    </AskThemedPage>
   );
 }

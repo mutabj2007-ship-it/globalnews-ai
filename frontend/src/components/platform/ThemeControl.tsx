@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type JSX, type ReactNode } from 'react';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Clock, Monitor, Moon, Sun } from 'lucide-react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { THEME_PREFERENCES, type ThemePreference } from '@/lib/theme/theme';
-import { setThemePreference, useThemePreference } from '@/lib/theme/themeStore';
+import { THEME_PREFERENCES, isValidClockTime, type ThemePreference } from '@/lib/theme/theme';
+import { setThemePreference, useThemePreference, useThemeSchedule } from '@/lib/theme/themeStore';
 
 /**
  * HOME R1 · DUAL THEME — the theme SCOPE. Server-rendered with the cookie's preference so
@@ -30,7 +30,7 @@ export function ThemeScope({
   );
 }
 
-const ICONS: Record<ThemePreference, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
+const ICONS: Record<ThemePreference, typeof Sun> = { light: Sun, dark: Moon, system: Monitor, scheduled: Clock };
 
 /**
  * Light · Dark · System. A 44 px button opens a small radio group (native radios: arrow
@@ -41,12 +41,16 @@ const ICONS: Record<ThemePreference, typeof Sun> = { light: Sun, dark: Moon, sys
 export function ThemeControl({
   language,
   initial,
+  tone = 'chrome',
 }: {
   readonly language: LanguageCode;
   readonly initial: ThemePreference;
+  /** TRUST R1 — `chrome` on the dark Home header; `surface` on a themed header (standalone Ask). */
+  readonly tone?: 'chrome' | 'surface';
 }): JSX.Element {
   const t = getDictionary(language).homeR1.theme;
   const preference = useThemePreference(initial);
+  const schedule = useThemeSchedule();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const firstRef = useRef<HTMLInputElement | null>(null);
@@ -81,7 +85,11 @@ export function ThemeControl({
         title={`${t.label}: ${t[preference]}`}
         onClick={() => setOpen((was) => !was)}
         data-theme-toggle=""
-        className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-white/30 text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-navOn)]"
+        className={
+          tone === 'chrome'
+            ? 'flex h-[44px] w-[44px] items-center justify-center rounded-full border border-white/30 text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-navOn)]'
+            : 'flex h-[44px] w-[44px] items-center justify-center rounded-full border border-[var(--gt-line)] text-[var(--gt-ink)] hover:bg-[var(--gt-sunk)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]'
+        }
       >
         <Icon aria-hidden="true" className="h-[18px] w-[18px]" />
       </button>
@@ -113,10 +121,34 @@ export function ThemeControl({
                 <span className="flex flex-col">
                   <span>{t[option]}</span>
                   {option === 'system' && <span className="text-[11.5px] font-normal text-[var(--gt-ink2)]">{t.systemNote}</span>}
+                  {option === 'scheduled' && <span className="text-[11.5px] font-normal text-[var(--gt-ink2)]">{t.scheduledNote}</span>}
                 </span>
               </label>
             );
           })}
+          {preference === 'scheduled' && (
+            <div className="mt-1 grid grid-cols-2 gap-2 px-2 pb-1" data-theme-schedule="">
+              {(['lightFrom', 'darkFrom'] as const).map((edge) => (
+                <label key={edge} className="flex flex-col gap-1 text-[11.5px] font-semibold text-[var(--gt-ink2)]">
+                  {t[edge]}
+                  <input
+                    type="time"
+                    step={300}
+                    value={schedule[edge]}
+                    data-theme-schedule-edge={edge}
+                    onChange={(event) => {
+                      const value = event.target.value.slice(0, 5);
+                      if (!isValidClockTime(value)) return;
+                      const next = { ...schedule, [edge]: value };
+                      if (next.lightFrom === next.darkFrom) return;
+                      setThemePreference('scheduled', next);
+                    }}
+                    className="min-h-[44px] rounded-[8px] border border-[var(--gt-line)] bg-[var(--gt-card)] px-2 text-[14px] text-[var(--gt-ink)]"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
         </fieldset>
       )}
     </div>

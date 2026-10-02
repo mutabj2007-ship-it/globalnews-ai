@@ -1,9 +1,10 @@
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
-import styles from '@/components/ask-frame/askDashboard.module.css';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
 import { AskShellFrame } from '@/components/ask-nav/AskShellFrame';
+import { AskThemedPage } from '@/components/ask-nav/AskThemedPage';
+import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { LANGUAGE_COOKIE_NAME } from '@/lib/i18n/languages';
 export const metadata: Metadata = {
   title: 'Ask AI — GlobalNews AI',
@@ -32,14 +33,16 @@ export const metadata: Metadata = {
  */
 export default function AskPage(): JSX.Element {
   const locale = cookies().get(LANGUAGE_COOKIE_NAME)?.value === 'pl' ? 'pl' : 'en';
+  /* TRUST R1 — the column is also the theme scope (AskThemedPage), rendered from the cookie. */
+  const theme = parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
   return (
-    <div className={styles.page}>
+    <AskThemedPage theme={theme}>
       <AskNavProvider>
-        <AskNavShell language={locale} />
+        <AskNavShell language={locale} theme={theme} />
         <Suspense fallback={<main className="min-h-0 flex-1 bg-void" />}>
           <AskShellFrame locale={locale} />
         </Suspense>
       </AskNavProvider>
-    </div>
+    </AskThemedPage>
   );
 }

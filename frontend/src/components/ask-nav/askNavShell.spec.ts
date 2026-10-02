@@ -60,7 +60,8 @@ describe('ASK SHELL — the D25 geometry it must not disturb', () => {
     expect(frameCss).toContain('.page > :global(header)');
     expect(frameCss).toMatch(/\.page > :global\(header\) \{\s*flex-shrink: 0;/);
     expect(frameCss).toMatch(/\.frame \{[\s\S]*?flex: 1 1 0;[\s\S]*?min-height: 0;/);
-    expect(askPage).toContain('className={styles.page}');
+    /* TRUST R1 — the column element is rendered by AskThemedPage (also the theme scope). */
+    expect(askPage).toContain('<AskThemedPage theme={theme}>');
     expect(askPage).toContain('min-h-0 flex-1');
   });
 
@@ -77,7 +78,12 @@ describe('ASK SHELL — the D25 geometry it must not disturb', () => {
     expect(shell).toContain('h-[62px]');
     /* Nothing may wrap it: a provider element or a div here would break the rule. */
     const rendered = askPage.slice(askPage.indexOf('return ('));
-    expect(rendered).toMatch(/<div className=\{styles\.page\}>\s*<AskNavProvider>\s*<AskNavShell/);
+    /* TRUST R1 — the column is rendered by AskThemedPage (the same styles.page element, now also
+       the theme scope); the header is still its direct child. */
+    expect(rendered).toMatch(/<AskThemedPage theme=\{theme\}>\s*<AskNavProvider>\s*<AskNavShell/);
+    expect(readFileSync(join(__dirname, 'AskThemedPage.tsx'), 'utf-8')).toMatch(
+      /className=\{styles\.page\}/,
+    );
     expect(wrapper).not.toMatch(/return \(\s*<div/);
   });
 

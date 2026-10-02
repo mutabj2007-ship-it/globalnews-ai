@@ -31,13 +31,30 @@ export const EMBEDDED_ASK_SOURCES = [
   'components/search/LoadingStages.tsx',
   'components/my-intelligence/MiPrimitives.tsx',
   'components/bookmark/StoryBookmark.tsx',
+  /* TRUST R1 — the Standalone Ask surface, now themed through the same adapter. */
+  'components/ask-frame/AskFrameScreen.tsx',
+  'components/ask-frame/AskParts.tsx',
+  'components/ask-frame/AskSourcesColumn.tsx',
+  'components/ask-nav/AskNavShell.tsx',
+  'components/ask-nav/AskContinuityHeader.tsx',
+  'components/ask-nav/AskClearedBoundary.tsx',
+  'components/ui/AdaptiveTextarea.tsx',
+  'components/search/LanguageSelector.tsx',
 ];
 
 const colours = flattenColours(
-  (resolveConfig(tailwindConfig as never) as unknown as { theme: { colors: Record<string, unknown> } }).theme.colors,
+  (
+    resolveConfig(tailwindConfig as never) as unknown as {
+      theme: { colors: Record<string, unknown> };
+    }
+  ).theme.colors,
 );
-const utilities = EMBEDDED_ASK_SOURCES.flatMap((file) => extractColourUtilities(readFileSync(join(SRC, file), 'utf8'), colours));
-const unique = [...new Map(utilities.map((u) => [u.cls, u])).values()].sort((a, b) => a.cls.localeCompare(b.cls));
+const utilities = EMBEDDED_ASK_SOURCES.flatMap((file) =>
+  extractColourUtilities(readFileSync(join(SRC, file), 'utf8'), colours),
+);
+const unique = [...new Map(utilities.map((u) => [u.cls, u])).values()].sort((a, b) =>
+  a.cls.localeCompare(b.cls),
+);
 const generated = buildAskThemeAdapterCss(unique);
 
 describe('embedded-Ask theme adapter', () => {
@@ -47,7 +64,9 @@ describe('embedded-Ask theme adapter', () => {
     const end = css.indexOf(ADAPTER_END);
     if (process.env.UPDATE_ASK_THEME_ADAPTER === '1') {
       const next =
-        start >= 0 ? css.slice(0, start) + generated + css.slice(end + ADAPTER_END.length) : `${css.trimEnd()}\n\n${generated}\n`;
+        start >= 0
+          ? css.slice(0, start) + generated + css.slice(end + ADAPTER_END.length)
+          : `${css.trimEnd()}\n\n${generated}\n`;
       writeFileSync(GLOBALS, next);
       return;
     }
@@ -61,10 +80,26 @@ describe('embedded-Ask theme adapter', () => {
     expect(uncovered).toEqual([]);
   });
 
-  it('applies ONLY inside an embedded-Ask theme scope — never to the Standalone /ask', () => {
-    const rules = generated.split('\n').filter((line) => line.includes('{') && !line.startsWith('@media') && !line.startsWith('/*'));
-    for (const line of rules) expect(line).toMatch(/\[data-ask-transport='r2'\]\[data-gna-theme='(light|system)'\]/);
+  /* TRUST R1 — the Standalone Ask is now a themed Ask scope too (data-ask-standalone), and
+     Scheduled resolves through the <html data-gna-schedule> attribute. */
+  it('applies ONLY inside an Ask theme scope (embedded dock or Standalone) resolving to Light', () => {
+    const rules = generated
+      .split('\n')
+      .filter(
+        (line) => line.includes('{') && !line.trim().startsWith('@media') && !line.startsWith('/*'),
+      );
+    const scope =
+      /(?:html(?:\[data-gna-schedule='light'\]|:not\(\[data-gna-schedule\]\)) )?\[data-ask-(?:transport='r2'|standalone)\]\[data-gna-theme='(?:light|system|scheduled)'\]/;
+    for (const line of rules) {
+      const selectorList = line.trim().replace(/^@media[^{]*\{\s*/, '');
+      expect(selectorList.startsWith('[data-ask-') || selectorList.startsWith('html')).toBe(true);
+      expect(selectorList).toMatch(scope);
+      /* every comma-separated selector in the list starts at an Ask scope */
+      for (const part of selectorList.slice(0, selectorList.indexOf(' {')).split(/, (?=\[|html)/))
+        expect(part).toMatch(new RegExp(`^${scope.source}`));
+    }
     expect(generated).not.toMatch(/data-gna-theme='dark'/);
+    expect(generated).not.toMatch(/data-gna-schedule='dark'/);
   });
 
   it('keeps semantic meaning: green → mint, amber → sand, red → danger, blue action → act', () => {

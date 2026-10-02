@@ -223,6 +223,10 @@ export const homeR1En = {
     dark: 'Dark',
     system: 'System',
     systemNote: 'Follows your device setting',
+    scheduled: 'Scheduled',
+    scheduledNote: 'Light by day, dark by night, on this device’s clock',
+    lightFrom: 'Light from',
+    darkFrom: 'Dark from',
   },
   dock: {
     openInAsk: 'Open in Ask',

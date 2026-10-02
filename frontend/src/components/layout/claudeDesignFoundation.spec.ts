@@ -660,6 +660,9 @@ describe('M66.1 — GN-CD-306 focus-visible foundation', () => {
     // /history, /workspace, /privacy and /terms all rely on the global rule.
     const claudeDesignFocusRules = globalsCss.match(/^\s*[^@\s][^{]*:focus-visible[^{]*\{/gm) ?? [];
     for (const rule of claudeDesignFocusRules) {
+      /* TRUST R1 — the GENERATED Ask theme adapter retargets a `focus-visible:border-cd-edge-focus`
+         utility only inside an Ask theme scope resolving to Light: scoped, never global. */
+      if (/^\s*(?:html\S* )?\[data-ask-(?:transport='r2'|standalone)\]\[data-gna-theme=/.test(rule)) continue;
       if (rule.includes('34, 211, 238') || rule.includes('cd-edge-focus') || rule.includes('cd-canvas')) {
         expect(rule).toContain('.cd-canvas');
       }

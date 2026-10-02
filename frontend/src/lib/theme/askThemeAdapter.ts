@@ -21,7 +21,17 @@
  * reader's eyes.
  */
 
-export type ColourProp = 'bg' | 'text' | 'border' | 'ring' | 'divide' | 'outline' | 'placeholder' | 'decoration' | 'fill' | 'stroke';
+export type ColourProp =
+  | 'bg'
+  | 'text'
+  | 'border'
+  | 'ring'
+  | 'divide'
+  | 'outline'
+  | 'placeholder'
+  | 'decoration'
+  | 'fill'
+  | 'stroke';
 
 export interface ColourUtility {
   /** The full class as written, e.g. `hover:bg-[#07304f]`, `!text-white`, `bg-signal/15`. */
@@ -34,8 +44,28 @@ export interface ColourUtility {
   readonly alpha: number | null;
 }
 
-const PROPS: readonly ColourProp[] = ['bg', 'text', 'border', 'ring', 'divide', 'outline', 'placeholder', 'decoration', 'fill', 'stroke'];
-const STATE_VARIANTS = new Set(['hover', 'focus', 'focus-visible', 'focus-within', 'active', 'disabled', 'group-hover', 'placeholder']);
+const PROPS: readonly ColourProp[] = [
+  'bg',
+  'text',
+  'border',
+  'ring',
+  'divide',
+  'outline',
+  'placeholder',
+  'decoration',
+  'fill',
+  'stroke',
+];
+const STATE_VARIANTS = new Set([
+  'hover',
+  'focus',
+  'focus-visible',
+  'focus-within',
+  'active',
+  'disabled',
+  'group-hover',
+  'placeholder',
+]);
 const BORDER_SIDES = /^border-(?:[xytrblse]|t|r|b|l)-/;
 
 /** Flatten a resolved Tailwind colour tree to `{ 'ink-primary': '#…' }`. */
@@ -44,15 +74,20 @@ export function flattenColours(tree: Record<string, unknown>, prefix = ''): Reco
   for (const [key, value] of Object.entries(tree)) {
     const name = key === 'DEFAULT' ? prefix.replace(/-$/, '') : `${prefix}${key}`;
     if (typeof value === 'string') out[name] = value;
-    else if (value !== null && typeof value === 'object') Object.assign(out, flattenColours(value as Record<string, unknown>, `${name}-`));
+    else if (value !== null && typeof value === 'object')
+      Object.assign(out, flattenColours(value as Record<string, unknown>, `${name}-`));
   }
   return out;
 }
 
 /** Every colour utility written in `source` (class strings and template text alike). */
-export function extractColourUtilities(source: string, colours: Readonly<Record<string, string>>): ColourUtility[] {
+export function extractColourUtilities(
+  source: string,
+  colours: Readonly<Record<string, string>>,
+): ColourUtility[] {
   const found = new Map<string, ColourUtility>();
-  const token = /(?:^|[\s'"`{(])(!?(?:[a-z0-9-]+:)*!?(?:bg|text|border(?:-[xytrbl])?|ring|divide|outline|placeholder|decoration|fill|stroke)-(?:\[[^\]\s'"`]+\]|[a-z]+(?:-[a-z0-9]+)*)(?:\/\d{1,3})?)(?=$|[\s'"`})])/g;
+  const token =
+    /(?:^|[\s'"`{(])(!?(?:[a-z0-9-]+:)*!?(?:bg|text|border(?:-[xytrbl])?|ring|divide|outline|placeholder|decoration|fill|stroke)-(?:\[[^\]\s'"`]+\]|[a-z]+(?:-[a-z0-9]+)*)(?:\/\d{1,3})?)(?=$|[\s'"`})])/g;
   let m: RegExpExecArray | null;
   while ((m = token.exec(source)) !== null) {
     const cls = m[1];
@@ -67,17 +102,27 @@ export function extractColourUtilities(source: string, colours: Readonly<Record<
       alpha = Number(slash[1]) / 100;
       core = core.slice(0, -slash[0].length);
     }
-    const propMatch = /^(bg|text|border(?:-[xytrbl])?|ring|divide|outline|placeholder|decoration|fill|stroke)-(.+)$/.exec(core);
+    const propMatch =
+      /^(bg|text|border(?:-[xytrbl])?|ring|divide|outline|placeholder|decoration|fill|stroke)-(.+)$/.exec(
+        core,
+      );
     if (!propMatch) continue;
     const prop = (propMatch[1].startsWith('border') ? 'border' : propMatch[1]) as ColourProp;
     const arg = propMatch[2];
     let value: string | null = null;
     if (arg.startsWith('[')) {
       const inner = arg.slice(1, -1).replace(/_/g, ' ');
-      if (/^#[0-9a-f]{3,8}$/i.test(inner) || /^(rgba?|hsla?)\(/i.test(inner) || /gradient\(/i.test(inner)) value = inner;
+      if (
+        /^#[0-9a-f]{3,8}$/i.test(inner) ||
+        /^(rgba?|hsla?)\(/i.test(inner) ||
+        /gradient\(/i.test(inner)
+      )
+        value = inner;
       else if (inner.startsWith('color:')) value = inner.slice(6);
       else continue;
     } else if (colours[arg] !== undefined) {
+      /* TRUST R1 — transparent / currentColor / inherit are theme-neutral: no rule needed. */
+      if (/^(?:transparent|currentcolor|inherit)$/i.test(colours[arg])) continue;
       value = colours[arg];
     } else {
       continue;
@@ -96,21 +141,37 @@ function parseColour(value: string): { r: number; g: number; b: number } | null 
   const hex = /#([0-9a-f]{3,8})/i.exec(value);
   if (hex) {
     let h = hex[1];
-    if (h.length <= 4) h = h.split('').map((c) => c + c).join('');
-    return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+    if (h.length <= 4)
+      h = h
+        .split('')
+        .map((c) => c + c)
+        .join('');
+    return {
+      r: parseInt(h.slice(0, 2), 16),
+      g: parseInt(h.slice(2, 4), 16),
+      b: parseInt(h.slice(4, 6), 16),
+    };
   }
   const rgb = /rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)/i.exec(value);
   return rgb ? { r: Number(rgb[1]), g: Number(rgb[2]), b: Number(rgb[3]) } : null;
 }
 
 function hsl(c: { r: number; g: number; b: number }): { h: number; s: number; l: number } {
-  const r = c.r / 255, g = c.g / 255, b = c.b / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const r = c.r / 255,
+    g = c.g / 255,
+    b = c.b / 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
   const l = (max + min) / 2;
   if (max === min) return { h: 0, s: 0, l };
   const d = max - min;
   const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  const h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) * 60 : max === g ? ((b - r) / d + 2) * 60 : ((r - g) / d + 4) * 60;
+  const h =
+    max === r
+      ? ((g - b) / d + (g < b ? 6 : 0)) * 60
+      : max === g
+        ? ((b - r) / d + 2) * 60
+        : ((r - g) / d + 4) * 60;
   return { h, s, l };
 }
 
@@ -179,7 +240,13 @@ export function escapeClass(cls: string): string {
   return cls.replace(/[^a-zA-Z0-9_-]/g, (ch) => `\\${ch}`);
 }
 
-const SCREENS: Readonly<Record<string, string>> = { sm: '640px', md: '768px', lg: '1024px', xl: '1280px', '2xl': '1536px' };
+const SCREENS: Readonly<Record<string, string>> = {
+  sm: '640px',
+  md: '768px',
+  lg: '1024px',
+  xl: '1280px',
+  '2xl': '1536px',
+};
 const PSEUDO: Readonly<Record<string, string>> = {
   hover: ':hover',
   focus: ':focus',
@@ -190,11 +257,16 @@ const PSEUDO: Readonly<Record<string, string>> = {
 };
 
 function declaration(u: ColourUtility, token: string): string {
-  const value = u.alpha === null || u.alpha >= 1 ? token : `color-mix(in srgb, ${token} ${Math.round(u.alpha * 100)}%, transparent)`;
+  const value =
+    u.alpha === null || u.alpha >= 1
+      ? token
+      : `color-mix(in srgb, ${token} ${Math.round(u.alpha * 100)}%, transparent)`;
   const imp = u.important ? ' !important' : '';
   switch (u.prop) {
     case 'bg':
-      return /gradient\(/i.test(u.value ?? '') ? `background-image: none${imp}; background-color: ${value}${imp};` : `background-color: ${value}${imp};`;
+      return /gradient\(/i.test(u.value ?? '')
+        ? `background-image: none${imp}; background-color: ${value}${imp};`
+        : `background-color: ${value}${imp};`;
     case 'text':
       return `color: ${value}${imp};`;
     case 'placeholder':
@@ -217,12 +289,28 @@ function declaration(u: ColourUtility, token: string): string {
   }
 }
 
+/*
+  TRUST & CONVERSATIONAL EXPERIENCE R1 — the adapter now also serves the STANDALONE Ask scope
+  (`[data-ask-standalone]`, set by AskThemedPage) and the Scheduled preference (light half from the
+  <html data-gna-schedule> attribute; with no attribute Scheduled follows System).
+*/
+const ASK_SCOPES = ["[data-ask-transport='r2']", '[data-ask-standalone]'] as const;
 const SCOPES = {
-  light: "[data-ask-transport='r2'][data-gna-theme='light']",
-  system: "[data-ask-transport='r2'][data-gna-theme='system']",
+  light: ASK_SCOPES.flatMap((a) => [
+    `${a}[data-gna-theme='light']`,
+    `html[data-gna-schedule='light'] ${a}[data-gna-theme='scheduled']`,
+  ]),
+  system: ASK_SCOPES.flatMap((a) => [
+    `${a}[data-gna-theme='system']`,
+    `html:not([data-gna-schedule]) ${a}[data-gna-theme='scheduled']`,
+  ]),
 };
 
-function rule(u: ColourUtility, scope: string, keepWhiteOn: readonly string[]): string | null {
+function rule(
+  u: ColourUtility,
+  scopes: readonly string[],
+  keepWhiteOn: readonly string[],
+): string | null {
   const token = lightTokenFor(u);
   if (token === null) return null;
   let target = `.${escapeClass(u.cls)}`;
@@ -231,21 +319,31 @@ function rule(u: ColourUtility, scope: string, keepWhiteOn: readonly string[]): 
   if (u.prop === 'placeholder' || u.variants.includes('placeholder')) target += '::placeholder';
   if (u.prop === 'divide') target += ' > :not([hidden]) ~ :not([hidden])';
   /* White text on an action fill stays white: the fill becomes the light action colour. */
-  if (u.prop === 'text' && token === 'var(--gt-ink)') target += keepWhiteOn.map((c) => `:not(.${escapeClass(c)})`).join('');
-  const selector = `${scope} ${target}, ${scope}${target}`;
+  if (u.prop === 'text' && token === 'var(--gt-ink)')
+    target += keepWhiteOn.map((c) => `:not(.${escapeClass(c)})`).join('');
+  const selector = scopes.map((scope) => `${scope} ${target}, ${scope}${target}`).join(', ');
   let css = `${selector} { ${declaration(u, token)} }`;
   const screen = u.variants.find((v) => SCREENS[v] !== undefined);
   if (screen !== undefined) css = `@media (min-width: ${SCREENS[screen]}) { ${css} }`;
   return css;
 }
 
-export const ADAPTER_BEGIN = '/* @generated ask-theme-adapter:begin — do not edit; regenerate with UPDATE_ASK_THEME_ADAPTER=1 */';
+export const ADAPTER_BEGIN =
+  '/* @generated ask-theme-adapter:begin — do not edit; regenerate with UPDATE_ASK_THEME_ADAPTER=1 */';
 export const ADAPTER_END = '/* @generated ask-theme-adapter:end */';
 
 export function buildAskThemeAdapterCss(utilities: readonly ColourUtility[]): string {
-  const keepWhiteOn = utilities.filter((u) => u.prop === 'bg' && lightTokenFor(u) === 'var(--gt-act)' && u.variants.length === 0).map((u) => u.cls);
-  const light = utilities.map((u) => rule(u, SCOPES.light, keepWhiteOn)).filter((r): r is string => r !== null);
-  const system = utilities.map((u) => rule(u, SCOPES.system, keepWhiteOn)).filter((r): r is string => r !== null);
+  const keepWhiteOn = utilities
+    .filter(
+      (u) => u.prop === 'bg' && lightTokenFor(u) === 'var(--gt-act)' && u.variants.length === 0,
+    )
+    .map((u) => u.cls);
+  const light = utilities
+    .map((u) => rule(u, SCOPES.light, keepWhiteOn))
+    .filter((r): r is string => r !== null);
+  const system = utilities
+    .map((u) => rule(u, SCOPES.system, keepWhiteOn))
+    .filter((r): r is string => r !== null);
   return [
     ADAPTER_BEGIN,
     '/* Light resolution of the embedded-Ask theme scope. Dark = the components’ native palette. */',

@@ -110,9 +110,10 @@ export default async function HomePage(): Promise<JSX.Element> {
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
   /* STANDALONE PUBLIC BETA CONVERGENCE R1 — `/` is the standalone Ask entry surface; the
      Home composition below is served only when GNA_PUBLIC_ROOT=platform. No Home feed is
-     fetched for the Ask root. Ask serves EN/PL, like /ask. */
+     fetched for the Ask root. Ask serves EN/PL, like /ask. TRUST R1 — themed from the cookie. */
+  const askTheme = parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
   if (standaloneAskRoot()) {
-    return <AskStandaloneRoot locale={languageCookie === 'pl' ? 'pl' : 'en'} />;
+    return <AskStandaloneRoot locale={languageCookie === 'pl' ? 'pl' : 'en'} theme={askTheme} />;
   }
   const dict = getDictionary(language);
   const t = dict.homeReva;

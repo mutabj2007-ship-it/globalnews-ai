@@ -22,6 +22,8 @@ import {
 import { useAccount } from '@/lib/hooks/useAccount';
 import { persistLanguageSelection } from '@/lib/i18n/languages';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
+import { ThemeControl } from '@/components/platform/ThemeControl';
+import type { ThemePreference } from '@/lib/theme/theme';
 import {
   askNavStringsFor,
   askProductName,
@@ -201,7 +203,18 @@ function labelOf(entry: AskMenuEntry, strings: AskNavStrings): string {
 
 const FOCUSABLE = 'a[href], button:not([disabled]), select, input, [tabindex]:not([tabindex="-1"])';
 
-export function AskNavShell({ language }: { readonly language: AskNavLocale }): JSX.Element {
+export function AskNavShell({
+  language,
+  theme,
+}: {
+  readonly language: AskNavLocale;
+  /**
+   * TRUST & CONVERSATIONAL EXPERIENCE R1 — present only on a themed page (AskThemedPage): the
+   * server-read preference, so the control's first frame matches. Absent → no theme control (a
+   * page with no theme scope offers no switch that would change nothing).
+   */
+  readonly theme?: ThemePreference;
+}): JSX.Element {
   const { open, setOpen, clearAndGo, clear } = useAskNav();
   const pathname = usePathname();
   const router = useRouter();
@@ -421,6 +434,9 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
                 variant="desktop"
               />
             )}
+            {theme !== undefined && (
+              <ThemeControl language={language as LanguageCode} initial={theme} tone="surface" />
+            )}
             {accountSlot}
             {/*
               SIGN OUT IS DISCLOSED, NOT INLINE. It is the only entry the model
@@ -521,6 +537,11 @@ export function AskNavShell({ language }: { readonly language: AskNavLocale }): 
                   variant="mobile"
                   anchor="self"
                 />
+              </div>
+            )}
+            {theme !== undefined && (
+              <div className="flex min-h-[52px] items-center" data-ask-nav="theme">
+                <ThemeControl language={language as LanguageCode} initial={theme} tone="surface" />
               </div>
             )}
             {!isLoading && signInEntry !== undefined && (

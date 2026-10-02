@@ -11,6 +11,7 @@ import { join } from 'node:path';
 const read = (p: string) => readFileSync(join(__dirname, '..', '..', p), 'utf8');
 const css = read('components/ask-frame/askDashboard.module.css');
 const page = read('app/ask/page.tsx');
+const themedPage = read('components/ask-nav/AskThemedPage.tsx');
 const frame = read('components/ask-frame/AskFrameScreen.tsx');
 const rule = (selector: string) => {
   const at = css.indexOf(`${selector} {`);
@@ -19,7 +20,9 @@ const rule = (selector: string) => {
 
 describe('D25 /ask — the composer stays inside the visible frame', () => {
   it('the route is one viewport-high column that never scrolls as a page', () => {
-    expect(page).toContain('<div className={styles.page}>');
+    /* TRUST R1 — the column element is rendered by AskThemedPage (also the theme scope). */
+    expect(page).toContain('<AskThemedPage theme={theme}>');
+    expect(themedPage).toContain('className={styles.page}');
     expect(rule('.page')).toMatch(/height: 100dvh;/);
     expect(rule('.page')).toMatch(/overflow: hidden;/);
     expect(rule('.page')).toMatch(/flex-direction: column;/);
