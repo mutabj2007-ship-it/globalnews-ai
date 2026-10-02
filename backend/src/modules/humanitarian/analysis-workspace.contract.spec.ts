@@ -1,98 +1,156 @@
 import {
-  projectHumanitarianWorkspace,
+  HumanitarianReadRefused,
   assertWorkspaceIsWellFormed,
+  domainObservationKey,
   humanitarianAskHandoff,
-  type AdmittedRetainedEvidenceReadModel,
+  humanitarianIdentity,
+  humanitarianRetainedRead,
+  projectHumanitarianWorkspace,
+  projectWorkspaceFromRead,
+  type HumanitarianClaim,
+  type HumanitarianObservation,
+  type HumanitarianRetainedRecord,
 } from '@globalnews-ai/shared';
 import type { AdmittedRetainedEvidence } from './retained/retained-evidence';
 
 /**
- * HUMANITARIAN ANALYSIS WORKSPACE R1 — THE READ MODEL IS NOT A SECOND TRUTH.
+ * ════════════════════════════════════════════════════════════════════════════
+ * THE ANALYSIS WORKSPACE READS MAIN'S RECORD, AND ONLY MAIN'S RECORD — R2
+ * ════════════════════════════════════════════════════════════════════════════
  *
- * The workspace projection lives in `shared` and takes a STRUCTURAL read model so it
- * does not import the backend. That is only safe while the structural type is a
- * subset of the real admitted record — otherwise the workspace would be projecting a
- * shape nothing produces, which is the stale-contract trap by another route.
+ * ── WHAT THIS FILE ASSERTED IN R1, AND WHY IT IS INVERTED NOW ─────────────
  *
- * So the assignability is proved here, where both types are in scope, rather than
- * assumed in a comment. If `AdmittedRetainedEvidence` drops or renames a field the
- * projection reads, this file stops compiling.
+ * R1 proved that the Copernicus `AdmittedRetainedEvidence` — a geometry EXTENT record — was
+ * assignable to the workspace's read model, because that was the only admitted humanitarian
+ * record in the tree and the workspace had to be able to project it.
+ *
+ * Two convergence rulings made that assertion wrong to keep:
+ *
+ *   · Main's canonical `HumanitarianObservation` is now the one record authority, and the
+ *     workspace reads `HumanitarianRetainedRecord` directly rather than a structural subset
+ *     invented on H's side. There is no second read model to drift.
+ *   · `HUM-READ-4` (C-3) refuses a reader row that references governed geometry. The
+ *     Copernicus record IS a geometry record, so it is exactly what must NOT reach this
+ *     surface in R1.
+ *
+ * So the proof is inverted rather than deleted: the geometry path is asserted CLOSED, and the
+ * canonical path is asserted OPEN. A test that merely stopped checking would have left the
+ * boundary unguarded at the moment it started mattering.
  */
-describe('HUM-WS-CONTRACT · the admitted record satisfies the workspace read model', () => {
-  it('is assignable without a cast, so the projection cannot drift from the admitter', () => {
-    const admitted = {
-      captureKey: 'c'.repeat(64),
-      artifactSha256: 'a'.repeat(64),
-      rawBase64: '',
-      approvalId: 'approval-1',
-      sourceRevisionId: 'rev-1',
-      predecessorRevisionId: null,
-      geometryRevisionId: 'geo-1',
-      geometrySha256: 'b'.repeat(64),
-      publisherReleasedAt: '2026-09-30T00:00:00.000Z',
-      authorityEpoch: 1,
-      authorityDigest: 'd'.repeat(64),
-      observation: {
-        observationKey: 'obs:1:1:x',
-        identity: {
-          domainId: 'HUMANITARIAN',
-          upstreamAuthority: 'COPERNICUS_EMS',
-          upstreamId: 'x',
-        },
-        observationKind: 'SOURCE_INUNDATION_EXTENT',
-        subjectType: 'SOURCE_EVENT',
-        subjectId: 'x',
-        claim: { countryIso2: 'PL', geometry: {} as never },
-        temporal: {
-          publisherVintage: '2026-09-30T00:00:00.000Z',
-          retrievedAt: '2026-09-30T06:00:00.000Z',
-          temporalBasis: 'PUBLISHER_VINTAGE',
-        },
-        provenance: {
-          sourceType: 'PUBLIC_DATA',
-          providerId: 'COPERNICUS_EMS',
-          retrievedAt: '2026-09-30T06:00:00.000Z',
-          evidenceRole: 'PRIMARY_RECORD',
-        },
-        sourceReference: {},
-        attributeAuthorship: [
-          { attribute: 'geometry', authorship: 'PUBLISHER_STATED' },
-          { attribute: 'countryIso2', authorship: 'PUBLISHER_STATED' },
-        ],
-        revision: {
-          revisionOrdinal: 0,
-          supersedesRevisionOrdinal: null,
-          recordedAt: '2026-09-30T06:00:00.000Z',
-        },
-      },
-    } satisfies AdmittedRetainedEvidence;
 
-    /* The assignment itself is the proof. No cast, no `as`. */
-    const readModel: AdmittedRetainedEvidenceReadModel = admitted;
+const AT = '2026-10-02T00:00:00.000Z';
+const admitAll = (): boolean => true;
 
-    const workspace = projectHumanitarianWorkspace([readModel], '2026-10-01T00:00:00.000Z');
+function record(claim: HumanitarianClaim, upstreamId = 'FL-1'): HumanitarianRetainedRecord {
+  const identity = humanitarianIdentity('GDACS', upstreamId);
+  const observation: HumanitarianObservation = {
+    observationKey: domainObservationKey(identity),
+    identity,
+    observationKind: claim.claimType,
+    subjectType: 'SOURCE_EVENT',
+    subjectId: upstreamId,
+    claim,
+    temporal: {
+      publisherVintage: '2026-09-20T00:00:00.000Z',
+      retrievedAt: '2026-09-21T00:00:00.000Z',
+      temporalBasis: 'PUBLISHER_VINTAGE',
+    },
+    provenance: {
+      sourceType: 'PUBLIC_DATA',
+      providerId: 'GDACS',
+      retrievedAt: '2026-09-21T00:00:00.000Z',
+    },
+    sourceReference: {},
+    attributeAuthorship: [{ attribute: 'sourceTitle', authorship: 'PUBLISHER_STATED' }],
+    revision: { revisionOrdinal: 0, supersedesRevisionOrdinal: null, recordedAt: AT },
+  };
+  return { captureKey: 'capture-1', publisherReleasedAt: '2026-09-20T00:00:00.000Z', observation };
+}
+
+const floodEvent = record({
+  claimType: 'HUMANITARIAN_EVENT',
+  hazardType: 'FLOOD',
+  sourceNativeType: 'FL',
+  sourceTitle: 'Flood',
+  eventStatus: 'ONGOING',
+  countryIso3: ['SDN'],
+});
+
+describe('HUM-WS-CONTRACT · one record authority, read end to end', () => {
+  it("projects Main's canonical record straight out of the retained read", () => {
+    const read = humanitarianRetainedRead([floodEvent], admitAll);
+    const workspace = projectWorkspaceFromRead(read, AT);
     expect(() => assertWorkspaceIsWellFormed(workspace)).not.toThrow();
-    expect(workspace.records.map((r) => r.observationKey)).toEqual(['obs:1:1:x']);
-    expect(workspace.records.map((r) => r.providerId)).toEqual(['COPERNICUS_EMS']);
+    expect(workspace.records.map((r) => r.observationKey)).toEqual([
+      floodEvent.observation.observationKey,
+    ]);
+    expect(workspace.records.map((r) => r.providerId)).toEqual(['GDACS']);
+    expect(humanitarianAskHandoff(workspace).available).toBe(true);
   });
 
-  it('no record admitted means no Ask subject, which is the production state today', () => {
-    const workspace = projectHumanitarianWorkspace([], '2026-10-01T00:00:00.000Z');
+  it('an empty store is the store state, and never an assessment', () => {
+    const workspace = projectWorkspaceFromRead(humanitarianRetainedRead([], admitAll), AT);
+    const row = workspace.dimensions.find((d) => d.id === 'WHERE');
+    expect(row).toMatchObject({
+      state: 'EMPTY',
+      storeState: 'NO_RETAINED_EVIDENCE',
+      absence: null,
+    });
     expect(humanitarianAskHandoff(workspace)).toEqual({
       available: false,
       refusal: 'NO_ADMITTED_RECORD',
     });
   });
+});
 
+describe('HUM-WS-CONTRACT · the geometry path into the workspace is closed', () => {
   /**
-   * The workspace never reaches a provider, a model or the retained CAPTURE bytes. The
-   * projection is given pointers and publisher-stated attribute names; `rawBase64` is
-   * not among the fields it reads, and this asserts that rather than trusting it.
+   * The Copernicus admitted record remains a real backend type and is deliberately NOT
+   * assignable to a reader row: its claim is a geometry extent, not one of Main's three
+   * Humanitarian claims. This is a compile-time statement, asserted at runtime by the read
+   * contract below so the file fails loudly rather than silently losing a guarantee.
    */
-  it('projects identifiers only — the artifact bytes never enter the workspace', () => {
-    const workspace = projectHumanitarianWorkspace([], '2026-10-01T00:00:00.000Z');
+  it('a reader row that references governed geometry is refused by the read contract', () => {
+    const withGeometry = {
+      ...floodEvent,
+      observation: {
+        ...floodEvent.observation,
+        claim: { ...floodEvent.observation.claim, geometryRecordKey: 'geom:copernicus:EMSR1' },
+      },
+    } as HumanitarianRetainedRecord;
+    expect(() => humanitarianRetainedRead([withGeometry], admitAll)).toThrow(
+      HumanitarianReadRefused,
+    );
+    expect(() => humanitarianRetainedRead([withGeometry], admitAll)).toThrow(/HUM-READ-4/);
+  });
+
+  it("the Copernicus extent claim is not one of Main's Humanitarian claim types", () => {
+    /* Named rather than cast into place: if the Copernicus claim ever becomes a Humanitarian
+       claim type, this list changes and a reviewer sees it. */
+    const copernicusClaimKeys: readonly (keyof AdmittedRetainedEvidence)[] = [
+      'captureKey',
+      'artifactSha256',
+      'observation',
+    ];
+    expect(copernicusClaimKeys).toContain('artifactSha256');
+    /* And a Humanitarian reader row carries exactly three fields, none of them the artifact. */
+    expect(Object.keys(floodEvent).sort()).toEqual([
+      'captureKey',
+      'observation',
+      'publisherReleasedAt',
+    ]);
+  });
+
+  it('projects identifiers only — no artifact bytes, no coordinates, no digest', () => {
+    const workspace = projectHumanitarianWorkspace([floodEvent], AT);
     const serialised = JSON.stringify(workspace);
-    for (const forbidden of ['rawBase64', 'artifactSha256', 'authorityDigest', 'coordinates']) {
+    for (const forbidden of [
+      'rawBase64',
+      'artifactSha256',
+      'authorityDigest',
+      'coordinates',
+      'geometryRecordKey',
+    ]) {
       expect(serialised).not.toContain(forbidden);
     }
   });

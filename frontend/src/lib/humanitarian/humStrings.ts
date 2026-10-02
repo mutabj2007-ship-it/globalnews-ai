@@ -102,6 +102,15 @@ export interface HumStrings {
     readonly subtitle: string;
     readonly dimensions: Readonly<Record<HumanitarianWorkspaceDimensionId, string>>;
     readonly absence: Readonly<Record<Exclude<ObservationAbsenceState, 'ASSESSED_NOTHING_QUALIFIED'>, string>>;
+    /**
+     * R2 · THE STORE STATE IS NOT AN ABSENCE AND HAS ITS OWN SLOT.
+     *
+     * `NO_RETAINED_EVIDENCE` says our retained store was queried and holds nothing. It is
+     * deliberately not a member of the absence authority, so it is not authored into
+     * `absence` — a reader who is told "not assessed" when the truth is "we hold nothing"
+     * has been told something larger than what happened.
+     */
+    readonly storeState: Readonly<Record<'NO_RETAINED_EVIDENCE', string>>;
     /** Prefix for the record pointers under a carried claim. Identifiers, not prose. */
     readonly recordsFrom: string;
     readonly statedBy: string;
@@ -283,6 +292,9 @@ const en: HumStrings = {
       COVERAGE_GAP: 'Coverage gap — this scope cannot be seen.',
       EVIDENCE_WITHHELD: 'Not shown here.',
       NO_QUALIFYING_EVIDENCE: 'Examined — nothing met the evidentiary floor.',
+    },
+    storeState: {
+      NO_RETAINED_EVIDENCE: 'Our retained store holds no record for this scope.',
     },
     recordsFrom: 'From records',
     statedBy: 'Stated by the publisher',
@@ -546,6 +558,9 @@ export const HUM_PL_DRAFT_AWAITING_COMPLETION = {
       COVERAGE_GAP: "Luka w pokryciu — tego zakresu nie da się zobaczyć.",
       EVIDENCE_WITHHELD: "Nie pokazywane w tym miejscu.",
       NO_QUALIFYING_EVIDENCE: "Zbadane — nic nie spełniło progu dowodowego.",
+    },
+    storeState: {
+      NO_RETAINED_EVIDENCE: "Nasz magazyn zapisów nie ma rekordu dla tego zakresu.",
     },
     recordsFrom: "Z zapisów",
     statedBy: "Podane przez wydawcę",

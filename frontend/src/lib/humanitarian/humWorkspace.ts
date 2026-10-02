@@ -6,6 +6,7 @@ import {
   type HumanitarianWorkspaceDimension,
   type HumanitarianWorkspaceDimensionId,
   type ObservationAbsenceState,
+  type WorkspaceStoreState,
 } from '@globalnews-ai/shared';
 import type { HumLocale, HumStrings } from './humStrings';
 
@@ -64,6 +65,47 @@ export function humAbsenceLabel(t: HumStrings, absence: ObservationAbsenceState 
   return label;
 }
 
+/**
+ * R2 · THE STORE STATE, IN THE READER'S WORDS.
+ *
+ * Separate from `humAbsenceLabel` because the two say different things and a single
+ * accessor would invite one default to cover both. A dimension names exactly one of them,
+ * and `humEmptyReasonLabel` is the only place that choice is made.
+ */
+export function humStoreStateLabel(t: HumStrings, storeState: WorkspaceStoreState | null): string {
+  if (storeState === null) {
+    throw new HumWorkspaceCopyMissing(
+      'HUM_WORKSPACE_STORE_STATE_MISSING: an empty dimension named no store state.',
+    );
+  }
+  const label = t.workspace.storeState[storeState];
+  if (label === undefined || label.length === 0) {
+    throw new HumWorkspaceCopyMissing(`HUM_WORKSPACE_STORE_STATE_LABEL_MISSING: '${storeState}'.`);
+  }
+  return label;
+}
+
+/**
+ * The one reader of an empty dimension's reason. It refuses a dimension that names both or
+ * neither, rather than preferring one — a preference here is how NO_RETAINED_EVIDENCE would
+ * start being shown as NOT_ASSESSED.
+ */
+export function humEmptyReasonLabel(
+  t: HumStrings,
+  dimension: HumanitarianWorkspaceDimension,
+): string {
+  const hasAbsence = dimension.absence !== null;
+  const hasStore = dimension.storeState !== null;
+  if (hasAbsence === hasStore) {
+    throw new HumWorkspaceCopyMissing(
+      `HUM_WORKSPACE_EMPTY_REASON_AMBIGUOUS: '${dimension.id}' names ${hasAbsence ? 'both' : 'neither'}.`,
+    );
+  }
+  return hasAbsence
+    ? humAbsenceLabel(t, dimension.absence)
+    : humStoreStateLabel(t, dimension.storeState);
+}
+
 /** Reading order comes from the projection, never from the component tree. */
 export function humWorkspaceRows(
   workspace: HumanitarianAnalysisWorkspace,
@@ -76,13 +118,39 @@ export function humWorkspaceRows(
    ──────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Authored per locale, and DELIBERATELY NOT EXHAUSTIVE. The substrate admits exactly
- * one kind today. A second kind arriving must be authored here before it can appear in
- * a question, which is a translation decision rather than a rendering accident.
+ * R2 · THE HAZARD TYPES, AUTHORED PER LOCALE.
+ *
+ * The Ask subject is now Main's hazard registry rather than R1's single Copernicus
+ * observation kind. All eight members are authored, because an unauthored one REFUSES the
+ * handoff and a reader would simply lose the control — and because `ARMED_CONFLICT_DISPLACEMENT`
+ * is the member the cross-domain seam turns on, so leaving it unauthored would silently
+ * disable the one link the evidence can state itself.
+ *
+ * These are reader words, so L's language lane may later move them into its own catalogue;
+ * the dependency is recorded in the handoff. Until then they live beside the only code that
+ * reads them, and an unauthored member still refuses rather than printing its token.
  */
-const OBSERVATION_KIND_LABELS: Readonly<Record<'en' | 'pl', Readonly<Record<string, string>>>> = {
-  en: { SOURCE_INUNDATION_EXTENT: 'the recorded flood extent' },
-  pl: { SOURCE_INUNDATION_EXTENT: 'zapisany zasięg zalania' },
+const HAZARD_LABELS: Readonly<Record<'en' | 'pl', Readonly<Record<string, string>>>> = {
+  en: {
+    EARTHQUAKE: 'the reported earthquake',
+    TROPICAL_CYCLONE: 'the reported tropical cyclone',
+    FLOOD: 'the reported flooding',
+    DROUGHT: 'the reported drought',
+    WILDFIRE: 'the reported wildfire',
+    VOLCANIC_ACTIVITY: 'the reported volcanic activity',
+    ARMED_CONFLICT_DISPLACEMENT: 'the reported conflict displacement',
+    EPIDEMIC: 'the reported epidemic',
+  },
+  pl: {
+    EARTHQUAKE: 'zgłoszone trzęsienie ziemi',
+    TROPICAL_CYCLONE: 'zgłoszony cyklon tropikalny',
+    FLOOD: 'zgłoszone powodzie',
+    DROUGHT: 'zgłoszoną suszę',
+    WILDFIRE: 'zgłoszony pożar',
+    VOLCANIC_ACTIVITY: 'zgłoszoną aktywność wulkaniczną',
+    ARMED_CONFLICT_DISPLACEMENT: 'zgłoszone przesiedlenia w wyniku konfliktu',
+    EPIDEMIC: 'zgłoszoną epidemię',
+  },
 };
 
 export type HumAskCompositionRefusal = AskHandoffRefusal | 'KIND_NOT_AUTHORED';
@@ -104,7 +172,7 @@ export function humAskQuestion(
   locale: HumLocale,
 ): HumAskComposition {
   if (!handoff.available) return { available: false, refusal: handoff.refusal };
-  const table = locale === 'pl' ? OBSERVATION_KIND_LABELS.pl : OBSERVATION_KIND_LABELS.en;
+  const table = locale === 'pl' ? HAZARD_LABELS.pl : HAZARD_LABELS.en;
   const phrases: string[] = [];
   for (const kind of handoff.observationKinds) {
     const phrase = table[kind];
@@ -161,4 +229,7 @@ export function assertWorkspaceCopyDoesNotReassure(t: HumStrings, where: string)
   assertNoNarrativeFiller(t.workspace.subtitle, `${where} subtitle`);
   assertNoNarrativeFiller(t.workspace.unknownRoster, `${where} unknownRoster`);
   assertNoNarrativeFiller(t.workspace.askUnavailableKind, `${where} askUnavailableKind`);
+  for (const [state, text] of Object.entries(t.workspace.storeState)) {
+    assertNoNarrativeFiller(text, `${where} storeState.${state}`);
+  }
 }

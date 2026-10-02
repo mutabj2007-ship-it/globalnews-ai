@@ -1,9 +1,18 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import {
-  humanitarianAskHandoff,
-  projectHumanitarianWorkspace,
+  HUMANITARIAN_HAZARD_TYPES,
   HUMANITARIAN_WORKSPACE_DIMENSIONS,
+  domainObservationKey,
+  humanitarianAskHandoff,
+  humanitarianIdentity,
+  humanitarianReadAbsence,
+  humanitarianRetainedRead,
+  projectHumanitarianWorkspace,
+  projectWorkspaceFromRead,
+  type HumanitarianClaim,
+  type HumanitarianObservation,
+  type HumanitarianRetainedRecord,
 } from '@globalnews-ai/shared';
 import {
   HumWorkspaceCopyMissing,
@@ -12,18 +21,21 @@ import {
   humAskQuestion,
   humAskUnavailableLabel,
   humDimensionLabel,
+  humEmptyReasonLabel,
+  humStoreStateLabel,
   humStoredAnalysisHref,
   humWorkspaceRows,
 } from './humWorkspace';
 import { HUM_PL_DRAFT_AWAITING_COMPLETION, humStrings } from './humStrings';
 import type { HumStrings } from './humStrings';
 
-const AT = '2026-10-01T00:00:00.000Z';
+const AT = '2026-10-02T00:00:00.000Z';
 const EN = humStrings('en');
-/* PL is the authored draft rather than a catalogue entry — the locale fallback is
-   DISCLOSED on screen rather than silently substituted, and that posture is not changed
-   by this round. The draft is still held to every rule the catalogue entry is. */
+/* PL remains the authored DRAFT rather than a catalogue entry, so the locale fallback stays
+   disclosed on screen. That accepted posture is unchanged by R2; the draft is still held to
+   every rule the catalogue entry is. */
 const PL = HUM_PL_DRAFT_AWAITING_COMPLETION as unknown as HumStrings;
+const admitAll = (): boolean => true;
 
 function source(relative: string): string {
   return readFileSync(join(__dirname, relative), 'utf8');
@@ -32,6 +44,51 @@ function source(relative: string): string {
 /** Source with comments stripped, so prose explaining a prohibition cannot satisfy it. */
 function code(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
+function humRecord(
+  authority: string,
+  upstreamId: string,
+  claim: HumanitarianClaim,
+): HumanitarianRetainedRecord {
+  const identity = humanitarianIdentity(authority, upstreamId);
+  const observation: HumanitarianObservation = {
+    observationKey: domainObservationKey(identity),
+    identity,
+    observationKind: claim.claimType,
+    subjectType: 'SOURCE_EVENT',
+    subjectId: upstreamId,
+    claim,
+    temporal: {
+      publisherVintage: '2026-09-20T00:00:00.000Z',
+      retrievedAt: '2026-09-21T00:00:00.000Z',
+      temporalBasis: 'PUBLISHER_VINTAGE',
+    },
+    provenance: {
+      sourceType: 'PUBLIC_DATA',
+      providerId: authority,
+      retrievedAt: '2026-09-21T00:00:00.000Z',
+    },
+    sourceReference: {},
+    attributeAuthorship: [{ attribute: 'sourceTitle', authorship: 'PUBLISHER_STATED' }],
+    revision: { revisionOrdinal: 0, supersedesRevisionOrdinal: null, recordedAt: AT },
+  };
+  return {
+    captureKey: `cap-${upstreamId}`,
+    publisherReleasedAt: '2026-09-20T00:00:00.000Z',
+    observation,
+  };
+}
+
+function hazardEvent(hazardType: string, id = 'E-1'): HumanitarianRetainedRecord {
+  return humRecord('GDACS', id, {
+    claimType: 'HUMANITARIAN_EVENT',
+    hazardType: hazardType as never,
+    sourceNativeType: 'XX',
+    sourceTitle: 'Event',
+    eventStatus: 'ONGOING',
+    countryIso3: ['SDN'],
+  });
 }
 
 describe('HUM-WS-9 · EN and PL labels', () => {
@@ -45,44 +102,39 @@ describe('HUM-WS-9 · EN and PL labels', () => {
     }
   });
 
-  it('authors every absence reason the projection can produce, in both locales', () => {
-    const produced = new Set<string>();
-    for (const records of [
-      [],
-      [
-        {
-          captureKey: 'c',
-          publisherReleasedAt: AT,
-          observation: {
-            observationKey: 'k',
-            identity: {
-              domainId: 'HUMANITARIAN',
-              upstreamAuthority: 'COPERNICUS_EMS',
-              upstreamId: 'k',
-            },
-            observationKind: 'SOURCE_INUNDATION_EXTENT',
-            subjectType: 'SOURCE_EVENT',
-            subjectId: 'k',
-            claim: {},
-            temporal: { retrievedAt: AT, temporalBasis: 'PUBLISHER_VINTAGE' as const },
-            provenance: { sourceType: 'PUBLIC_DATA' as const, providerId: 'COPERNICUS_EMS' },
-            sourceReference: {},
-            attributeAuthorship: [
-              { attribute: 'countryIso2', authorship: 'PUBLISHER_STATED' as const },
-            ],
-            revision: { revisionOrdinal: 0, supersedesRevisionOrdinal: null, recordedAt: AT },
-          },
-        },
-      ],
-    ]) {
-      for (const row of humWorkspaceRows(projectHumanitarianWorkspace(records, AT))) {
-        if (row.absence !== null) produced.add(row.absence);
+  it('authors every absence reason and the store state the projection can produce', () => {
+    const produced = { absence: new Set<string>(), store: new Set<string>() };
+    const inputs = [
+      projectWorkspaceFromRead(humanitarianReadAbsence('NOT_ASSESSED'), AT),
+      projectWorkspaceFromRead(humanitarianReadAbsence('SOURCE_NOT_CONNECTED'), AT),
+      projectWorkspaceFromRead(humanitarianRetainedRead([], admitAll), AT),
+      projectHumanitarianWorkspace([hazardEvent('FLOOD')], AT),
+    ];
+    for (const workspace of inputs) {
+      for (const row of humWorkspaceRows(workspace)) {
+        if (row.absence !== null) produced.absence.add(row.absence);
+        if (row.storeState !== null) produced.store.add(row.storeState);
       }
     }
-    expect(produced.size).toBeGreaterThan(0);
-    for (const absence of produced) {
+    expect(produced.absence.size).toBeGreaterThan(0);
+    expect(produced.store.has('NO_RETAINED_EVIDENCE')).toBe(true);
+    for (const absence of produced.absence) {
       expect(() => humAbsenceLabel(EN, absence as never)).not.toThrow();
       expect(() => humAbsenceLabel(PL, absence as never)).not.toThrow();
+    }
+    for (const store of produced.store) {
+      expect(() => humStoreStateLabel(EN, store as never)).not.toThrow();
+      expect(() => humStoreStateLabel(PL, store as never)).not.toThrow();
+    }
+  });
+
+  it('authors every hazard type in both locales so none can silently disable the handoff', () => {
+    for (const hazard of HUMANITARIAN_HAZARD_TYPES) {
+      const workspace = projectHumanitarianWorkspace([hazardEvent(hazard)], AT);
+      for (const locale of ['en', 'pl'] as const) {
+        const composition = humAskQuestion(humanitarianAskHandoff(workspace), locale);
+        expect(composition.available).toBe(true);
+      }
     }
   });
 
@@ -94,40 +146,44 @@ describe('HUM-WS-9 · EN and PL labels', () => {
     );
   });
 
-  it('refuses a missing reason rather than rendering nothing', () => {
-    expect(() => humAbsenceLabel(EN, null)).toThrow(/ABSENCE_WITHOUT_STATE/);
-  });
-
-  it('never turns an absence into reassurance, in either authored locale', () => {
+  it('never turns an absence or the store state into reassurance, in either locale', () => {
     expect(() => assertWorkspaceCopyDoesNotReassure(EN, 'en')).not.toThrow();
     expect(() => assertWorkspaceCopyDoesNotReassure(PL, 'pl')).not.toThrow();
   });
 });
 
+describe('HUM-WS-R2 · the reader never sees the store state as an absence', () => {
+  it('reads the reason through one accessor, and the two texts differ', () => {
+    const storeEmpty = projectWorkspaceFromRead(humanitarianRetainedRead([], admitAll), AT);
+    const notAssessed = projectWorkspaceFromRead(humanitarianReadAbsence('NOT_ASSESSED'), AT);
+    const storeRow = humWorkspaceRows(storeEmpty).find((r) => r.id === 'WHERE')!;
+    const absenceRow = humWorkspaceRows(notAssessed).find((r) => r.id === 'WHERE')!;
+    const storeText = humEmptyReasonLabel(EN, storeRow);
+    const absenceText = humEmptyReasonLabel(EN, absenceRow);
+    expect(storeText).not.toBe(absenceText);
+    expect(storeText).toBe(EN.workspace.storeState.NO_RETAINED_EVIDENCE);
+    expect(absenceText).toBe(EN.workspace.absence.NOT_ASSESSED);
+  });
+
+  it('refuses a dimension that names both reasons or neither', () => {
+    const workspace = projectWorkspaceFromRead(humanitarianRetainedRead([], admitAll), AT);
+    const row = humWorkspaceRows(workspace)[0]!;
+    expect(() => humEmptyReasonLabel(EN, { ...row, absence: 'NOT_ASSESSED' })).toThrow(
+      /EMPTY_REASON_AMBIGUOUS/,
+    );
+    expect(() => humEmptyReasonLabel(EN, { ...row, storeState: null })).toThrow(
+      /EMPTY_REASON_AMBIGUOUS/,
+    );
+  });
+
+  it('refuses a missing reason rather than rendering nothing', () => {
+    expect(() => humAbsenceLabel(EN, null)).toThrow(/ABSENCE_WITHOUT_STATE/);
+    expect(() => humStoreStateLabel(EN, null)).toThrow(/STORE_STATE_MISSING/);
+  });
+});
+
 describe('HUM-WS · the Ask handoff composes a question, never a prompt', () => {
-  const admitted = [
-    {
-      captureKey: 'c',
-      publisherReleasedAt: AT,
-      observation: {
-        observationKey: 'k',
-        identity: {
-          domainId: 'HUMANITARIAN',
-          upstreamAuthority: 'COPERNICUS_EMS',
-          upstreamId: 'k',
-        },
-        observationKind: 'SOURCE_INUNDATION_EXTENT',
-        subjectType: 'SOURCE_EVENT',
-        subjectId: 'k',
-        claim: {},
-        temporal: { retrievedAt: AT, temporalBasis: 'PUBLISHER_VINTAGE' as const },
-        provenance: { sourceType: 'PUBLIC_DATA' as const, providerId: 'COPERNICUS_EMS' },
-        sourceReference: {},
-        attributeAuthorship: [{ attribute: 'geometry', authorship: 'PUBLISHER_STATED' as const }],
-        revision: { revisionOrdinal: 0, supersedesRevisionOrdinal: null, recordedAt: AT },
-      },
-    },
-  ];
+  const admitted = [hazardEvent('FLOOD')];
 
   it('is unavailable with a reader-facing reason when nothing is admitted', () => {
     const composition = humAskQuestion(
@@ -140,14 +196,14 @@ describe('HUM-WS · the Ask handoff composes a question, never a prompt', () => 
     expect(humAskUnavailableLabel(PL, composition.refusal).length).toBeGreaterThan(0);
   });
 
-  it('composes a plain question in the reader language, with no machine token in it', () => {
+  it('composes a plain question in the reader language with no machine token in it', () => {
     for (const locale of ['en', 'pl'] as const) {
       const composition = humAskQuestion(
         humanitarianAskHandoff(projectHumanitarianWorkspace(admitted, AT)),
         locale,
       );
       if (!composition.available) throw new Error(`expected a question for ${locale}`);
-      expect(composition.question).not.toContain('SOURCE_INUNDATION_EXTENT');
+      expect(composition.question).not.toContain('FLOOD');
       expect(composition.question).not.toContain('_');
       expect(composition.question.endsWith('?')).toBe(true);
     }
@@ -166,19 +222,27 @@ describe('HUM-WS · the Ask handoff composes a question, never a prompt', () => 
     expect(pl.question).not.toBe(en.question);
   });
 
-  it('refuses rather than printing an unauthored record kind', () => {
-    const unknownKind = [
-      {
-        ...admitted[0]!,
-        observation: { ...admitted[0]!.observation, observationKind: 'SOURCE_SOMETHING_NEW' },
-      },
-    ];
+  it('refuses rather than printing an unauthored hazard type', () => {
     const composition = humAskQuestion(
-      humanitarianAskHandoff(projectHumanitarianWorkspace(unknownKind, AT)),
+      humanitarianAskHandoff(projectHumanitarianWorkspace([hazardEvent('NOT_A_HAZARD')], AT)),
       'en',
     );
     expect(composition).toEqual({ available: false, refusal: 'KIND_NOT_AUTHORED' });
     expect(humAskUnavailableLabel(EN, 'KIND_NOT_AUTHORED').length).toBeGreaterThan(0);
+  });
+
+  it('a report with no admitted event refuses with NO_STATED_SUBJECT', () => {
+    const report = humRecord('RELIEFWEB', 'R-1', {
+      claimType: 'HUMANITARIAN_REPORT',
+      sourceTitle: 'Situation Report',
+      countryIso3: ['SDN'],
+      aboutEventKeys: [],
+    });
+    const composition = humAskQuestion(
+      humanitarianAskHandoff(projectHumanitarianWorkspace([report], AT)),
+      'en',
+    );
+    expect(composition).toEqual({ available: false, refusal: 'NO_STATED_SUBJECT' });
   });
 });
 
@@ -208,6 +272,7 @@ describe('HUM-WS · opening a stored analysis is navigation, never a run', () =>
 describe('HUM-WS · the workspace cannot compute', () => {
   const lib = code(source('humWorkspace.ts'));
   const view = code(source('../../components/humanitarian/drawers/AnalysisWorkspace.tsx'));
+  const page = code(source('../../app/humanitarian/page.tsx'));
 
   it.each([
     ['analyzeNews', /analyzeNews/],
@@ -228,8 +293,14 @@ describe('HUM-WS · the workspace cannot compute', () => {
   it('reaches Ask only by keeping a draft and linking to /ask', () => {
     expect(view).toMatch(/keepQuestion\(/);
     expect(view).toMatch(/href="\/ask"/);
-    /* No programmatic submit, and no router push that could fire without a reader. */
     expect(view).not.toMatch(/onSubmit|requestSubmit|router\.push/);
+  });
+
+  it('the page resolves the read arm once, through the read-aware entry point', () => {
+    expect(page).toMatch(/projectWorkspaceFromRead\(retainedRead,/);
+    /* R1 passed `.observations`, which compiled against all three arms and reported the
+       store-empty case as NOT_ASSESSED. That call must not come back. */
+    expect(page).not.toMatch(/projectHumanitarianWorkspace\(retainedRead\.observations/);
   });
 
   it('states that opening a stored result runs nothing, in both locales', () => {

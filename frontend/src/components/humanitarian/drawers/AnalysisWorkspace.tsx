@@ -23,10 +23,10 @@ import { humanitarianAskHandoff } from '@globalnews-ai/shared';
 import { HUM_INK, HUM_LICENSED, HUM_LINE, HUM_MONO, HUM_TYPE } from '@/lib/humanitarian/humTokens';
 import { HUM_HIT_TARGET_PX } from '@/lib/humanitarian/humConfig';
 import {
-  humAbsenceLabel,
   humAskQuestion,
   humAskUnavailableLabel,
   humDimensionLabel,
+  humEmptyReasonLabel,
   humStoredAnalysisHref,
   humWorkspaceRows,
 } from '@/lib/humanitarian/humWorkspace';
@@ -88,8 +88,12 @@ export function AnalysisWorkspace({
             </span>
 
             {row.state === 'EMPTY' && (
-              <span data-hum="workspace-absence" style={{ ...microLabel, color: HUM_INK.tertiary }}>
-                {humAbsenceLabel(t, row.absence)}
+              <span
+                data-hum="workspace-absence"
+                data-hum-store={row.storeState ?? ''}
+                style={{ ...microLabel, color: HUM_INK.tertiary }}
+              >
+                {humEmptyReasonLabel(t, row)}
               </span>
             )}
 
@@ -115,8 +119,10 @@ export function AnalysisWorkspace({
                   data-hum-claim-class={claim.claimClass}
                   style={{ ...microLabel, color: HUM_INK.secondary, fontFamily: HUM_MONO }}
                 >
-                  {claim.attribute} · {t.workspace.statedBy} · {t.workspace.recordsFrom}{' '}
-                  {claim.records.length}
+                  {claim.attribute}
+                  {claim.value === null ? '' : ` · ${String(claim.value)}`}
+                  {claim.unit === null ? '' : ` ${claim.unit}`} · {t.workspace.statedBy} ·{' '}
+                  {t.workspace.recordsFrom} {claim.records.length}
                 </span>
               ))}
           </li>

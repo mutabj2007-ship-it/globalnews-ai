@@ -242,6 +242,10 @@ export * from './humanitarian/retained-read';
 /* HUMANITARIAN ANALYSIS WORKSPACE R1 — the dimension and claim semantics over ADMITTED
    retained evidence. A pure projection: no fetch, no acquisition, no model, no prompt. */
 export * from './humanitarian/analysis-workspace';
+/* HUMANITARIAN ANALYSIS WORKSPACE COMPLETION R2 — the cross-domain seam (Conflict facts and
+   Humanitarian assertions stay two lists) and the bounded Home/My Intelligence brief. */
+export * from './humanitarian/analysis-cross-domain';
+export * from './humanitarian/analysis-brief';
 
 export * from './global-reach';
 export * from './global-reach-regions';
