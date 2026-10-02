@@ -10,6 +10,11 @@ import type {
   AskContributionObservation,
   AskContributorSelection,
 } from './ask-contribution.contract';
+import {
+  HUMANITARIAN_SOURCE_RULINGS,
+  verdictPermitsRuntimeAcquisition,
+  type SourceActivationVerdict,
+} from '../humanitarian/source-activation.ruling';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -38,6 +43,21 @@ import type {
  * the capture bytes.
  */
 export const HUMANITARIAN_SPECIALIST_BINDING = 'SPECIALIST_NOT_BOUND' as const;
+
+/**
+ * THE BINDING GATE, derived from E1's ruling table (no second source registry). Lane C's rule,
+ * accepted by the CTO: CLEARED_FOR_DEV_CAPTURE must NEVER make the Humanitarian specialist
+ * bindable — a reviewed offline capture is engineering evidence, not a reader source. Only a
+ * verdict that permits runtime acquisition (E1's RUNTIME_PERMITTING_VERDICT) can, and even then
+ * binding remains a separate, reviewed change to the live coordinator.
+ */
+export function humanitarianSpecialistMayBind(
+  rulings: Readonly<
+    Record<string, { readonly verdict: SourceActivationVerdict }>
+  > = HUMANITARIAN_SOURCE_RULINGS,
+): boolean {
+  return Object.values(rulings).some((r) => verdictPermitsRuntimeAcquisition(r.verdict));
+}
 
 export class HumanitarianSpecialistRefused extends Error {
   readonly name = 'HumanitarianSpecialistRefused';

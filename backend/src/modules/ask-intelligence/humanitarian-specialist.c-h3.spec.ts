@@ -14,6 +14,7 @@ import { governedPrompt } from './governed-answer';
 import {
   HUMANITARIAN_SPECIALIST_BINDING,
   humanitarianContribution,
+  humanitarianSpecialistMayBind,
 } from './humanitarian-specialist.adapter';
 
 /**
@@ -197,5 +198,30 @@ describe('LIVE: Humanitarian stays SPECIALIST_NOT_BOUND / CAPABILITY_UNAVAILABLE
       .join('\n');
     expect(all).toContain('CAPABILITY_UNAVAILABLE');
     expect(all).not.toContain('PLAN_NOT_SATISFIABLE');
+  });
+});
+
+describe('BINDING GATE — CLEARED_FOR_DEV_CAPTURE never binds the Humanitarian specialist (lane C rule)', () => {
+  it('E1 R1 as ruled today: the specialist may not bind', () => {
+    expect(humanitarianSpecialistMayBind()).toBe(false);
+  });
+
+  it('dev-capture alone never binds, whatever else is not cleared', () => {
+    expect(
+      humanitarianSpecialistMayBind({
+        GDACS: { verdict: 'CLEARED_FOR_DEV_CAPTURE' },
+        RELIEFWEB: { verdict: 'CREDENTIAL_REQUIRED' },
+        COPERNICUS_EMS: { verdict: 'PROTECTION_AUTHORITY_REQUIRED' },
+      }),
+    ).toBe(false);
+  });
+
+  it('POSITIVE COUNTERFACTUAL: a runtime-cleared source does make it bindable (the gate is not a constant false)', () => {
+    expect(
+      humanitarianSpecialistMayBind({
+        GDACS: { verdict: 'CLEARED_FOR_ALPHA_RUNTIME' },
+        RELIEFWEB: { verdict: 'CREDENTIAL_REQUIRED' },
+      }),
+    ).toBe(true);
   });
 });
