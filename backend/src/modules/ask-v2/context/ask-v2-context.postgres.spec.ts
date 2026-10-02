@@ -562,6 +562,26 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
     expect(analyzeNews.mock.calls[1][3]).toBe('What is happening in Poland?');
   });
 
+  it('TRUST R1 · an elliptical follow-up continues the place the reader TYPED earlier (conversation rung)', async () => {
+    await send('What is going on in Madagascar?');
+    const follow = await send('And the economy?');
+    const plan = await planOf(follow.operationId);
+    expect(plan.context).toEqual({
+      kind: 'GEOGRAPHY',
+      countryIso3: 'MDG',
+      geographyContext: { countryCode: 'MDG', displayName: 'Madagascar' },
+      inheritedFrom: 'CONVERSATION',
+    });
+    /* It reaches retrieval as the inherited geography, exactly like a Map country. */
+    expect(analyzeNews.mock.calls[1][5]).toEqual({ countryCode: 'MDG', displayName: 'Madagascar' });
+  });
+
+  it('TRUST R1 · a newly typed place switches the conversation (Iran → Madagascar)', async () => {
+    await send('Which news are in Iran?');
+    const next = await send('What about Madagascar?');
+    expect(await planOf(next.operationId)).not.toHaveProperty('context');
+  });
+
   /* ── R2D · My Intelligence SELECTION through the canonical engine ───── */
   const SEL = (action: string, ...urls: string[]) => ({
     kind: 'SELECTION' as const,

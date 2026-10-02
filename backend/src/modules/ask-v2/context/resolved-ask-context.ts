@@ -105,6 +105,21 @@ export function contextIdentityToken(context: ResolvedAskContext): string {
   return `context:${kind}:${value}`;
 }
 
+/**
+ * TRUST & CONVERSATIONAL EXPERIENCE R1 — the GEOGRAPHY context a turn inherits from the reader's
+ * own earlier question (conversation-place.ts), resolved through the governed registry only.
+ */
+export function conversationGeography(iso3: string): ResolvedAskContext | undefined {
+  const country = findCountryByIso3(iso3);
+  if (country === undefined) return undefined;
+  return {
+    kind: 'GEOGRAPHY',
+    countryIso3: country.iso3,
+    geographyContext: { countryCode: country.iso3, displayName: country.name },
+    inheritedFrom: 'CONVERSATION',
+  };
+}
+
 /** Same identity, or both absent. */
 export function sameContextIdentity(
   a: ResolvedAskContext | undefined,

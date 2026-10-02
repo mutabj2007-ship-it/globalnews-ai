@@ -32,7 +32,11 @@ import {
 } from './ask-compute.contract';
 import { CreateThreadDto, QuoteTurnDto } from './ask-v2.dto';
 import { AskContextRefused, AskContextResolver } from './context/ask-context.resolver';
-import { contextIdentity, type ResolvedAskContext } from './context/resolved-ask-context';
+import {
+  contextIdentity,
+  conversationGeography,
+  type ResolvedAskContext,
+} from './context/resolved-ask-context';
 import { type AskPrincipal, guestRefusal, ownerOf } from './guest/ask-principal';
 import {
   assertMayStart,
@@ -45,7 +49,6 @@ import {
 import { GuestSessionService } from './guest/guest-session.service';
 import { askRequestContext } from './ask-request-context';
 import { isReusableStoredPayload } from './stored-result-reuse';
-import { resolveGovernedCountryCode } from '@globalnews-ai/shared';
 import { inheritedConversationCountry, PLACE_LOOKBACK } from './conversation/conversation-place';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
@@ -139,6 +142,10 @@ export class AskV2Service {
     question: string,
     language: string,
   ): Promise<ResolvedAskContext | undefined> {
+    /* A RECOGNISED follow-up ("Why did this happen?", "How does this affect X?") already
+       continues the prior SUBJECT through the anchor question (ASK R3 CONTINUITY) — a richer
+       continuation than a country. Only the turns those detectors miss inherit the place. */
+    if (isSubjectFollowUp(question) || isAnaphoricFollowUp(question)) return undefined;
     const earlier = await this.atomic(async (tx) => {
       await this.thread(tx, p, threadId);
       return tx.askTurn.findMany({
@@ -151,15 +158,7 @@ export class AskV2Service {
     /* A retried submission already has its own turn: it is not an earlier one. */
     const others = (earlier ?? []).filter((t, i) => !(i === 0 && t.question === question));
     const iso3 = inheritedConversationCountry(question, language, others);
-    if (iso3 === null) return undefined;
-    const country = resolveGovernedCountryCode(iso3);
-    if (country === undefined) return undefined;
-    return {
-      kind: 'GEOGRAPHY',
-      countryIso3: country.iso3,
-      geographyContext: { countryCode: country.iso3, displayName: country.name },
-      inheritedFrom: 'CONVERSATION',
-    };
+    return iso3 === null ? undefined : conversationGeography(iso3);
   }
 
   private guestDeps(): {
