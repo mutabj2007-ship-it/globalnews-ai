@@ -20,6 +20,12 @@ import {
   type HumanitarianRetainedRead,
 } from '@globalnews-ai/shared';
 import { humanitarianReadLabel, humanitarianReadExplanation, humanitarianReadState } from '@/lib/humanitarian/humanitarianReadLabel';
+/* LANE G · R1 — the real-data read presentation contract (view state, freshness, revision). */
+import {
+  humMaxRevisionOrdinal,
+  humNewestRelease,
+  humReadView,
+} from '@/lib/humanitarian/humReadPresentation';
 import { useReducer, type JSX } from 'react';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { HUM_CANVAS, HUM_INK, HUM_LICENSED, HUM_LINE, HUM_NAV, HUM_SURFACE, HUM_TYPE, humTracking } from '@/lib/humanitarian/humTokens';
@@ -37,6 +43,15 @@ import { Absence, AreaLabel, Chip, Dependency, SectionTitle, Zone, microLabel, p
 const FRAMES: readonly HumFrameState[] = ['ENTRY', 'SELECTED', 'GAP', 'QUIET'];
 
 export function HumanitarianScreen({ locale, retainedRead = humanitarianReadAbsence('NOT_ASSESSED'), workspace }: { locale: HumLocale; retainedRead?: HumanitarianRetainedRead; workspace: HumanitarianAnalysisWorkspace }): JSX.Element {
+  /*
+    LANE G · R1. Derived once. `humReadView` is pure and does no I/O, so deriving it during render
+    costs nothing and cannot trigger an acquisition — the Ask launcher is the only compute, and it
+    is explicit.
+  */
+  const readView = humReadView(retainedRead);
+  const newestRelease = humNewestRelease(retainedRead);
+  const maxRevision = humMaxRevisionOrdinal(retainedRead);
+
   const resolution = resolveHumStrings(locale);
   const t = resolution.strings;
   const [state, dispatch] = useReducer(humViewReducer, undefined, () => initialViewState('ENTRY'));
@@ -46,6 +61,14 @@ export function HumanitarianScreen({ locale, retainedRead = humanitarianReadAbse
     <main
       data-hum="screen"
       data-hum-read={humanitarianReadState(retainedRead)}
+      /*
+        LANE G · R1. `data-hum-read` is the read KIND (or its reader absence). `data-hum-view` is
+        the finer presentation state, which additionally separates RETAINED from PARTIAL — a row
+        the publisher left incomplete must not be displayed as a complete one. Both are present
+        because they answer different questions and neither subsumes the other.
+      */
+      data-hum-view={readView.state}
+      data-hum-partial={readView.partialReasons.length === 0 ? undefined : readView.partialReasons.join(' ')}
       data-hum-frame={state.frame}
       data-hum-drawer={state.drawer ?? 'none'}
       className={`relative ${HUM_CANVAS.base}`}
@@ -131,8 +154,18 @@ export function HumanitarianScreen({ locale, retainedRead = humanitarianReadAbse
             */}
             <Chip label={t.zoneA.coverage} value={humanitarianReadLabel(retainedRead, locale)}
               accent={view.coverage.health === 'COVERAGE_GAP' ? 'amber' : undefined} />
-            <Chip label={t.zoneA.updated} value={t.common.noData} />
-            <Chip label={t.zoneA.revision} value={t.common.noData} />
+            {/*
+              LANE G · R1 — THESE TWO WERE HARD-CODED TO "no data" AND THAT BECAME FALSE.
+              With retained rows present we DO know when the publisher released and which revision
+              we hold, and printing "no data" over a record we are holding is the same class of
+              untruth as printing a figure nobody stated. Values come from the record only: the
+              newest publisher release (never `retrievedAt`, which is our clock) and the highest
+              revision ordinal. With no rows, the honest fallback is unchanged.
+            */}
+            <Chip label={t.zoneA.updated}
+              value={newestRelease === null ? t.common.noData : newestRelease.slice(0, 10)} />
+            <Chip label={t.zoneA.revision}
+              value={maxRevision === null ? t.common.noData : String(maxRevision)} />
           </div>
         </div>
         {view.coverage.assertedFromAbsence && (
