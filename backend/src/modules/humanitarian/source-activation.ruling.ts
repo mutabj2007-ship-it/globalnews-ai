@@ -324,8 +324,16 @@ const GDACS: SourceActivationRuling = {
     express act. "Free to retrieve" and "licensed to redistribute" are different
     facts, and the second one is the one a reader-facing surface needs.
   */
-  verdict: 'CLEARED_FOR_DEV_CAPTURE',
-  ruledAt: '2026-10-01',
+  /*
+    E1 R2 (HUMANITARIAN-E1-READER-CLEARANCE-R2, 2026-10-02, applied by convergence so the one
+    verdict table F and the binding gate read carries it): the dev capture was exercised once and
+    added a rights fact pointing AWAY from runtime — GDACS relays NOAA / NEIC / JTWC / GLOFAS /
+    GWIS observations under terms that grant no express act. The binding gate is now named for
+    rights. The R1 dev-capture allowance is RETAINED as a standing permission (reader-clearance
+    ruling); it is not the operative verdict and never binds the specialist.
+  */
+  verdict: 'RIGHTS_CONFIRMATION_REQUIRED',
+  ruledAt: '2026-10-02',
   rightsBasis:
     'GDACS Terms of use (March 2025), read with the GDACS MHEWS API quickstart v1. The ' +
     'quickstart states the acknowledgement GDACS requests; the Terms of use state no licence ' +

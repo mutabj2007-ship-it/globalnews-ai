@@ -39,9 +39,10 @@ describe('F derives its source registry and activation from E1', () => {
     }
   });
 
-  it('E1 R1 as ruled: GDACS dev-capture only, ReliefWeb credential, Copernicus protection — none active', () => {
+  it('E1 R2 as ruled: GDACS rights-blocked, ReliefWeb credential, Copernicus protection — none active', () => {
     const byId = Object.fromEntries(status.sources.map((s) => [s.sourceId, s]));
-    expect(byId.GDACS.e1Verdict).toBe('CLEARED_FOR_DEV_CAPTURE');
+    /* E1 R2: the dev capture was exercised; the operative GDACS verdict is now rights-blocked. */
+    expect(byId.GDACS.e1Verdict).toBe('RIGHTS_CONFIRMATION_REQUIRED');
     expect(byId.RELIEFWEB.e1Verdict).toBe('CREDENTIAL_REQUIRED');
     expect(byId.COPERNICUS_EMS.e1Verdict).toBe('PROTECTION_AUTHORITY_REQUIRED');
     for (const row of status.sources) expect(row.activation).toBe('NOT_CLEARED');
