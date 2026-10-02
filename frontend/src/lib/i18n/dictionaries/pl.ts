@@ -2033,7 +2033,7 @@ export const pl: Dictionary = {
       },
       {
         heading: 'Korzystanie z Zapytaj bez konta',
-        body: 'Jako gość możesz zadać kilka pytań. Gdy wysyłasz pierwsze pytanie jako gość, ustawiamy plik cookie gościa i przechowujemy Twoje pytania oraz odpowiedzi na naszych serwerach jako jedną rozmowę gościa. Trwa ona do 7 dni, a następnie jest usuwana w ciągu około 24 godzin. Aby ograniczyć nadużycia bezpłatnych pytań, używamy Twojego adresu IP do liczenia pytań gości w danej sieci.',
+        body: 'Jako gość możesz zadać kilka pytań. Gdy wysyłasz pierwsze pytanie jako gość, ustawiamy plik cookie gościa i przechowujemy Twoje pytania oraz odpowiedzi na naszych serwerach jako jedną rozmowę gościa. Trwa ona do 7 dni, a następnie jest usuwana w ciągu około 24 godzin. Aby ograniczyć nadużycia bezpłatnych pytań, liczymy pytania gości w danej sieci za pomocą pseudonimowego identyfikatora, który zmienia się codziennie i jest wyliczany z adresu sieciowego przy użyciu tajnego klucza. Sam adres nie jest zapisywany w naszych rekordach limitów, a identyfikatory są usuwane w ciągu około tygodnia.',
       },
       {
         heading: 'Logowanie przez Google',
@@ -2053,7 +2053,7 @@ export const pl: Dictionary = {
       },
       {
         heading: 'Zapisy techniczne',
-        body: 'Prowadzimy zapisy techniczne potrzebne do działania usługi: dzienniki żądań bez treści pytań, diagnostykę Zapytaj zawierającą wyłącznie kategorie i kody krajów (bez treści pytania i bez konta) przez 30 dni oraz liczniki użycia. Nie stosujemy reklam, śledzenia między witrynami ani zewnętrznej analityki.',
+        body: 'Prowadzimy zapisy techniczne potrzebne do działania usługi: dzienniki żądań bez treści pytań, diagnostykę Zapytaj zawierającą wyłącznie kategorie i kody krajów (bez treści pytania i bez konta) przez 30 dni oraz liczniki użycia. Nie stosujemy reklam, śledzenia między witrynami ani zewnętrznej analityki. Niezależnie od naszej aplikacji dostawcy hostingu i sieci przetwarzają adresy IP w swoich dziennikach infrastruktury i bezpieczeństwa na własnych zasadach.',
       },
       {
         heading: 'Pliki cookie i podobne technologie',
@@ -2065,7 +2065,7 @@ export const pl: Dictionary = {
       },
       {
         heading: 'Jak długo przechowujemy dane',
-        body: 'Rozmowy gości: do 7 dni plus około 24 godziny. Diagnostyka Zapytaj: 30 dni. Sesje logowania: 30 dni. Dla rozmów na koncie, wiadomości do pomocy technicznej, liczników użycia i liczników limitów nie ustalono jeszcze stałego okresu przechowywania; są przechowywane do usunięcia konta albo do opublikowania tu okresu przechowywania.',
+        body: 'To nasze okresy przechowywania na czas wersji Beta (własna polityka, a nie wymogi prawne). Rozmowy gości: do 7 dni plus około 24 godziny. Rozmowy na koncie: 12 miesięcy od ostatniej aktywności, chyba że usuniesz je wcześniej lub zapisano z nich odpowiedź. Wiadomości do pomocy technicznej: 24 miesiące od rozwiązania sprawy. Szczegółowe zapisy użycia i obliczeń: 90 dni. Identyfikatory limitów gości: około tygodnia. Diagnostyka Zapytaj: 30 dni. Sesje logowania: 30 dni.',
       },
       {
         heading: 'Zmiany tej informacji',

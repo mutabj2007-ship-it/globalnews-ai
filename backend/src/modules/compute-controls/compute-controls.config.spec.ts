@@ -4,7 +4,13 @@ import {
   pendingProductOwnerKnobs,
   resolveComputeControlsConfig,
 } from './compute-controls.config';
-import { clientIpScope, dayBucket, hourBucket, withDeadline } from './compute-scopes';
+import {
+  canonicalNetworkKey,
+  clientIpScope,
+  dayBucket,
+  hourBucket,
+  withDeadline,
+} from './compute-scopes';
 
 /** Gate B knobs and scope keys — pure, no database (F 06, F 01 L-3/L-4, F 02 R-1, T-5). */
 describe('F 06 knobs', () => {
@@ -49,9 +55,13 @@ describe('F 06 knobs', () => {
 
 describe('F 01 L-3/L-4 — server-resolved IP scope', () => {
   it('IPv4 by address; IPv4-mapped IPv6 as its IPv4; IPv6 by /64 prefix', () => {
-    expect(clientIpScope('203.0.113.7')).toBe('ip:v4:203.0.113.7');
-    expect(clientIpScope('::ffff:203.0.113.7')).toBe('ip:v4:203.0.113.7');
-    expect(clientIpScope('2001:db8:1:2:aaaa:bbbb:cccc:dddd')).toBe('ip:v6:2001:db8:1:2::/64');
+    /* TRUST R1 (CTO §6) — the canonical network key is unchanged; the SCOPE is its keyed pseudonym. */
+    expect(canonicalNetworkKey('203.0.113.7')).toBe('v4:203.0.113.7');
+    expect(canonicalNetworkKey('::ffff:203.0.113.7')).toBe('v4:203.0.113.7');
+    expect(canonicalNetworkKey('2001:db8:1:2:aaaa:bbbb:cccc:dddd')).toBe('v6:2001:db8:1:2::/64');
+    expect(clientIpScope('::ffff:203.0.113.7')).toBe(clientIpScope('203.0.113.7'));
+    expect(clientIpScope('203.0.113.7')).toMatch(/^ip:h:[0-9a-f]{32}$/);
+    expect(clientIpScope('203.0.113.7')).not.toContain('203');
     expect(clientIpScope('2001:db8:1:2::1')).toBe(clientIpScope('2001:db8:1:2:ffff::9')); // same /64
     expect(clientIpScope('2001:db8:1:3::1')).not.toBe(clientIpScope('2001:db8:1:2::1'));
   });

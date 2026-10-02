@@ -2683,7 +2683,7 @@ export const en = {
       },
       {
         heading: 'Using Ask without an account',
-        body: 'You can ask a few questions as a guest. When you send your first guest question we set a guest cookie and store your questions and the answers on our servers as one guest conversation. It lasts up to 7 days and is then deleted within about 24 hours. To limit abuse of the free questions we use your IP address to count guest questions per network.',
+        body: 'You can ask a few questions as a guest. When you send your first guest question we set a guest cookie and store your questions and the answers on our servers as one guest conversation. It lasts up to 7 days and is then deleted within about 24 hours. To limit abuse of the free questions we count guest questions per network using a pseudonymous identifier that changes every day and is derived from your network address with a secret key. The address itself is not stored in our limit records, and the identifiers are deleted within about a week.',
       },
       {
         heading: 'Signing in with Google',
@@ -2703,7 +2703,7 @@ export const en = {
       },
       {
         heading: 'Service records',
-        body: 'We keep technical records to run the service: request logs without your question text, Ask diagnostics that store only categories and country codes (no question text, no account) for 30 days, and usage counts. We do not use advertising, cross-site tracking or third-party analytics.',
+        body: 'We keep technical records to run the service: request logs without your question text, Ask diagnostics that store only categories and country codes (no question text, no account) for 30 days, and usage counts. We do not use advertising, cross-site tracking or third-party analytics. Separately from our application, our hosting and network providers process IP addresses in their own infrastructure and security logs under their own terms.',
       },
       {
         heading: 'Cookies and similar technologies',
@@ -2715,7 +2715,7 @@ export const en = {
       },
       {
         heading: 'How long information is kept',
-        body: 'Guest conversations: up to 7 days plus about 24 hours. Ask diagnostics: 30 days. Sign-in sessions: 30 days. For account conversations, support messages, usage counts and abuse-limit counters a fixed retention period has not been set yet; they are kept until your account is deleted or until a retention period is published here.',
+        body: 'These are our Beta retention periods (our own policy, not legal minimums). Guest conversations: up to 7 days plus about 24 hours. Account conversations: 12 months after their last activity, unless you delete them sooner or saved an answer from them. Support messages: 24 months after the case is resolved. Detailed usage and compute records: 90 days. Guest limit identifiers: about a week. Ask diagnostics: 30 days. Sign-in sessions: 30 days.',
       },
       {
         heading: 'Changes to this notice',

@@ -9,6 +9,7 @@ import { PoliticsReadModule } from './modules/politics/politics.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './database/prisma.module';
+import { DataRetentionModule } from './modules/data-retention/data-retention.module';
 import { HealthModule } from './health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { NewsModule } from './modules/news/news.module';
@@ -65,6 +66,7 @@ import {
       },
     ]),
     PrismaModule,
+    DataRetentionModule, // TRUST R1 — Beta retention policy (bounded, kill switch RETENTION_SWEEP_ENABLED=false).
     HealthModule,
     PoliticsReadModule, // Retained-only; no acquisition or schedule activation.
     NewsModule,

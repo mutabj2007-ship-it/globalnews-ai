@@ -1,4 +1,5 @@
 import { isIP } from 'node:net';
+import { rateLimitIdentifier } from './rate-limit-identifier';
 
 /**
  * Meter scope keys and buckets (F 01 L-3, L-4, L-8).
@@ -40,14 +41,21 @@ export const breakerScope = (kind: 'fail' | 'ok', provider: string): string =>
  * address. An IPv4-mapped IPv6 address is keyed as the IPv4 it carries. Anything unparseable
  * shares ONE `ip:unknown` bucket — the safe direction (it can only be refused sooner).
  */
-export function clientIpScope(ip: string | undefined | null): string {
+export function clientIpScope(ip: string | undefined | null, now: Date = new Date()): string {
+  const canonical = canonicalNetworkKey(ip);
+  /* TRUST R1 (CTO §6) — the scope carries a keyed, daily-rotating pseudonym, never the address. */
+  return canonical === null ? 'ip:unknown' : `ip:h:${rateLimitIdentifier(canonical, now)}`;
+}
+
+/** The canonical network key the pseudonym is derived from. Never persisted. */
+export function canonicalNetworkKey(ip: string | undefined | null): string | null {
   const raw = (ip ?? '').trim();
   const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(raw);
   const candidate = mapped ? mapped[1]! : raw;
   const family = isIP(candidate);
-  if (family === 4) return `ip:v4:${candidate}`;
-  if (family === 6) return `ip:v6:${ipv6Prefix64(candidate)}::/64`;
-  return 'ip:unknown';
+  if (family === 4) return `v4:${candidate}`;
+  if (family === 6) return `v6:${ipv6Prefix64(candidate)}::/64`;
+  return null;
 }
 
 function ipv6Prefix64(address: string): string {
