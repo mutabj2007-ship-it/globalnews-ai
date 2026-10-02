@@ -2,7 +2,7 @@ import { feature } from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import worldAtlas110m from 'world-atlas/countries-110m.json';
-import { findCountryByNumeric, type CountryMeta } from '@globalnews-ai/shared';
+import { geometryJoinKey, findCountryByNumeric, type CountryMeta } from '@globalnews-ai/shared';
 
 export interface CountryFeatureProperties {
   /** ISO 3166-1 numeric code, as provided by world-atlas (world feature id). */
@@ -32,7 +32,8 @@ export function getCountryFeatureCollection(): CountryFeatureCollection {
   const converted = feature(topology, countriesObject) as unknown as FeatureCollection<Geometry>;
 
   const features: CountryFeature[] = converted.features.map((f) => {
-    const numericId = String(f.id ?? '').padStart(3, '0');
+    /* TRUST R1 — unique join key; id-less polygons no longer collapse to "000". */
+    const numericId = geometryJoinKey(f.id, (f.properties as { name?: unknown } | null)?.name);
     return {
       ...f,
       id: numericId,
@@ -88,11 +89,7 @@ export function computeFeatureBounds(
   let maxLat = -Infinity;
 
   function visit(coords: unknown): void {
-    if (
-      Array.isArray(coords) &&
-      typeof coords[0] === 'number' &&
-      typeof coords[1] === 'number'
-    ) {
+    if (Array.isArray(coords) && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
       const [lng, lat] = coords as [number, number];
 
       if (lng < minLng) minLng = lng;

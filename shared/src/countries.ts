@@ -26,9 +26,32 @@ export interface CountryMeta {
    * TRUST R1 — present only for a NON-SOVEREIGN place included in the registry (e.g. Greenland).
    * Absent means a sovereign state (or the UN observers already listed).
    */
-  status?: 'AUTONOMOUS_TERRITORY';
+  status?: 'AUTONOMOUS_TERRITORY' | 'DISPUTED_TERRITORY' | 'CONTESTED_STATUS';
   /** TRUST R1 — the ISO3 of the state a territory belongs to. Never a substitute scope. */
   partOf?: string;
+  /**
+   * TRUST R1 (CTO map ruling) — where the codes come from. Absent = ISO 3166-1. USER_ASSIGNED
+   * means the codes are internal identifiers that ISO 3166-1 does not assign (e.g. Kosovo XK /
+   * XKX); `isoNumeric` is then a non-ISO geometry join key and must never be shown as an ISO code.
+   */
+  codeSource?: 'USER_ASSIGNED';
+}
+
+/**
+ * TRUST R1 — world-atlas polygons that carry NO numeric id. Each gets a UNIQUE, explicitly
+ * non-ISO join key (they previously all collapsed to "000"). Only a key listed here can join a
+ * registry entry; the others remain unclickable until the registry rules on them.
+ */
+export const UNNUMBERED_GEOMETRY_KEYS: Readonly<Record<string, string>> = {
+  Kosovo: 'X-XK',
+  'N. Cyprus': 'X-NCYP',
+  Somaliland: 'X-SOML',
+};
+
+/** The join key of a world-atlas country feature: its ISO numeric id, or a listed name key. */
+export function geometryJoinKey(id: unknown, name: unknown): string {
+  if (id !== undefined && id !== null && String(id) !== '') return String(id).padStart(3, '0');
+  return (typeof name === 'string' && UNNUMBERED_GEOMETRY_KEYS[name]) || 'X-UNKNOWN';
 }
 
 export const COUNTRIES: CountryMeta[] = [
@@ -57,7 +80,13 @@ export const COUNTRIES: CountryMeta[] = [
   { iso2: 'BB', iso3: 'BRB', isoNumeric: '052', name: 'Barbados', region: 'Americas' },
   { iso2: 'GD', iso3: 'GRD', isoNumeric: '308', name: 'Grenada', region: 'Americas' },
   { iso2: 'LC', iso3: 'LCA', isoNumeric: '662', name: 'Saint Lucia', region: 'Americas' },
-  { iso2: 'VC', iso3: 'VCT', isoNumeric: '670', name: 'Saint Vincent and the Grenadines', region: 'Americas' },
+  {
+    iso2: 'VC',
+    iso3: 'VCT',
+    isoNumeric: '670',
+    name: 'Saint Vincent and the Grenadines',
+    region: 'Americas',
+  },
   { iso2: 'AG', iso3: 'ATG', isoNumeric: '028', name: 'Antigua and Barbuda', region: 'Americas' },
   { iso2: 'KN', iso3: 'KNA', isoNumeric: '659', name: 'Saint Kitts and Nevis', region: 'Americas' },
   { iso2: 'DM', iso3: 'DMA', isoNumeric: '212', name: 'Dominica', region: 'Americas' },
@@ -203,7 +232,13 @@ export const COUNTRIES: CountryMeta[] = [
   { iso2: 'BJ', iso3: 'BEN', isoNumeric: '204', name: 'Benin', region: 'Africa' },
   { iso2: 'GA', iso3: 'GAB', isoNumeric: '266', name: 'Gabon', region: 'Africa' },
   { iso2: 'CG', iso3: 'COG', isoNumeric: '178', name: 'Congo', region: 'Africa' },
-  { iso2: 'CF', iso3: 'CAF', isoNumeric: '140', name: 'Central African Republic', region: 'Africa' },
+  {
+    iso2: 'CF',
+    iso3: 'CAF',
+    isoNumeric: '140',
+    name: 'Central African Republic',
+    region: 'Africa',
+  },
   { iso2: 'GQ', iso3: 'GNQ', isoNumeric: '226', name: 'Equatorial Guinea', region: 'Africa' },
   { iso2: 'ST', iso3: 'STP', isoNumeric: '678', name: 'Sao Tome and Principe', region: 'Africa' },
   { iso2: 'CV', iso3: 'CPV', isoNumeric: '132', name: 'Cape Verde', region: 'Africa' },
@@ -270,6 +305,29 @@ export const COUNTRIES: CountryMeta[] = [
     region: 'Americas',
     status: 'AUTONOMOUS_TERRITORY',
     partOf: 'DNK',
+  },
+  /*
+   * TRUST R1 — CTO map ruling. Neutral status, no sovereignty inferred from polygon ownership, and
+   * a selection never silently becomes a neighbouring state.
+   *   Western Sahara — ISO 3166-1 EH / ESH / 732; status DISPUTED_TERRITORY; never Morocco.
+   *   Kosovo         — XK / XKX are USER-ASSIGNED (not ISO 3166-1); geometry joins by name key.
+   */
+  {
+    iso2: 'EH',
+    iso3: 'ESH',
+    isoNumeric: '732',
+    name: 'Western Sahara',
+    region: 'Africa',
+    status: 'DISPUTED_TERRITORY',
+  },
+  {
+    iso2: 'XK',
+    iso3: 'XKX',
+    isoNumeric: 'X-XK',
+    name: 'Kosovo',
+    region: 'Europe',
+    status: 'CONTESTED_STATUS',
+    codeSource: 'USER_ASSIGNED',
   },
 ];
 
@@ -462,15 +520,15 @@ const CITY_TO_ISO3: Record<string, string> = {
     failed would be the half written correctly.
   */
   krakow: 'POL',
-  'kraków': 'POL',
+  kraków: 'POL',
   gdansk: 'POL',
-  'gdańsk': 'POL',
+  gdańsk: 'POL',
   wroclaw: 'POL',
-  'wrocław': 'POL',
+  wrocław: 'POL',
   poznan: 'POL',
-  'poznań': 'POL',
+  poznań: 'POL',
   lodz: 'POL',
-  'łódź': 'POL',
+  łódź: 'POL',
   katowice: 'POL',
 
   mombasa: 'KEN',
@@ -563,7 +621,8 @@ export function searchCountriesByName(query: string, limit = 8): CountryMeta[] {
 
   for (const country of COUNTRIES) {
     const nameMatch = country.name.toLowerCase().includes(normalized);
-    const codeMatch = country.iso2.toLowerCase() === normalized || country.iso3.toLowerCase() === normalized;
+    const codeMatch =
+      country.iso2.toLowerCase() === normalized || country.iso3.toLowerCase() === normalized;
     if (nameMatch || codeMatch) matches.set(country.iso3, country);
   }
 
@@ -695,7 +754,5 @@ export function resolveLocationContext(input: string): LocationContext | undefin
    * term, the retrieval context, and the city printed on the geographic
    * card. The matched curated key is the only correct value here.
    */
-  return cityMatch
-    ? { country: cityMatch, city: normalizeGeographicLookupKey(input) }
-    : undefined;
+  return cityMatch ? { country: cityMatch, city: normalizeGeographicLookupKey(input) } : undefined;
 }

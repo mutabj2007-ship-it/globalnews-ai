@@ -56,7 +56,6 @@ const NON_SOVEREIGN_TERRITORIES: Readonly<Record<string, string>> = {
   BM: 'Bermuda — British Overseas Territory',
   BQ: 'Bonaire, Sint Eustatius and Saba — special municipalities of the Netherlands',
   CW: 'Curaçao — constituent country of the Kingdom of the Netherlands',
-  EH: 'Western Sahara — disputed, no seated government',
   FO: 'Faroe Islands — autonomous territory of Denmark',
   GF: 'French Guiana — overseas department of France',
   GG: 'Guernsey — British Crown dependency',
@@ -79,7 +78,6 @@ const NON_SOVEREIGN_TERRITORIES: Readonly<Record<string, string>> = {
   UM: 'United States Minor Outlying Islands — US insular areas',
   VI: 'United States Virgin Islands — unincorporated US territory',
   WF: 'Wallis and Futuna — French overseas collectivity',
-  XK: 'Kosovo — partially recognised; not a UN member; XK is a user-assigned code',
   YT: 'Mayotte — overseas department of France',
 };
 
@@ -226,5 +224,33 @@ describe('TRUST R1 — Greenland is a first-class place, typed as a territory', 
 
   it('Denmark stays Denmark', () => {
     expect(resolveGeography('What is happening in Denmark?').place?.country.iso3).toBe('DNK');
+  });
+});
+
+describe('TRUST R1 — CTO map ruling: Western Sahara and Kosovo, neutral and selectable', () => {
+  it('Western Sahara is ESH (ISO), disputed status, never Morocco', () => {
+    expect(COUNTRIES.find((c) => c.iso3 === 'ESH')).toMatchObject({
+      iso2: 'EH',
+      isoNumeric: '732',
+      status: 'DISPUTED_TERRITORY',
+    });
+    expect(COUNTRIES.find((c) => c.iso3 === 'ESH')?.partOf).toBeUndefined();
+    expect(resolveGeography('What is happening in Western Sahara?').place?.country.iso3).toBe(
+      'ESH',
+    );
+    expect(resolveGeography('What is happening in Morocco?').place?.country.iso3).toBe('MAR');
+  });
+
+  it('Kosovo resolves to itself with codes marked user-assigned (not ISO 3166-1)', () => {
+    const kosovo = COUNTRIES.find((c) => c.name === 'Kosovo');
+    expect(kosovo).toMatchObject({
+      iso2: 'XK',
+      iso3: 'XKX',
+      codeSource: 'USER_ASSIGNED',
+      status: 'CONTESTED_STATUS',
+    });
+    expect(kosovo?.partOf).toBeUndefined();
+    expect(resolveGeography('What is happening in Kosovo?').place?.country.iso3).toBe('XKX');
+    expect(resolveGeography('What is happening in Serbia?').place?.country.iso3).toBe('SRB');
   });
 });

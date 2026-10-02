@@ -2,7 +2,7 @@ import { feature } from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import type { FeatureCollection, Geometry } from 'geojson';
 import worldAtlas50m from 'world-atlas/countries-50m.json';
-import { findCountryByNumeric } from '@globalnews-ai/shared';
+import { geometryJoinKey, findCountryByNumeric } from '@globalnews-ai/shared';
 import type { CountryFeature, CountryFeatureCollection } from '@/lib/map/countryGeometry';
 
 /**
@@ -86,7 +86,8 @@ export function getSpatialCountryFeatureCollection(): CountryFeatureCollection {
   const converted = feature(topology, countriesObject) as unknown as FeatureCollection<Geometry>;
 
   const features: CountryFeature[] = converted.features.map((f) => {
-    const numericId = String(f.id ?? '').padStart(3, '0');
+    /* TRUST R1 — unique join key; id-less polygons no longer collapse to "000". */
+    const numericId = geometryJoinKey(f.id, (f.properties as { name?: unknown } | null)?.name);
 
     return {
       ...f,

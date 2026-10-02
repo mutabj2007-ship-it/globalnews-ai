@@ -119,7 +119,9 @@ export interface SupranationalRegion {
  */
 const M49 = 'UN Statistics Division, Standard Country or Area Codes for Statistical Use (M49)';
 
-const AFRICA_NORTH = ['DZA', 'EGY', 'LBY', 'MAR', 'SDN', 'TUN'];
+/* TRUST R1 — Western Sahara (M49 732) is listed by UN M49 in Northern Africa; a separate member,
+   never folded into Morocco. */
+const AFRICA_NORTH = ['DZA', 'EGY', 'LBY', 'MAR', 'SDN', 'TUN', 'ESH'];
 const AFRICA_EAST = [
   'BDI',
   'COM',
@@ -178,6 +180,9 @@ const EUROPE_SOUTH = [
   'PRT',
   'SMR',
   'SRB',
+  /* TRUST R1 — Kosovo (user-assigned XKX) has no M49 code; it is placed here GEOGRAPHICALLY so
+     Europe-scoped questions reach it. This is not an M49 assignment and implies no status. */
+  'XKX',
   'SVN',
   'ESP',
   'VAT',
