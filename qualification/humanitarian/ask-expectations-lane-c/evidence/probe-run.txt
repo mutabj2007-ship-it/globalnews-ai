@@ -1,0 +1,75 @@
+PASS  A-1    no non-AVAILABLE result carries a claim
+PASS  A-2    CONTROL: permitsValue is true for AVAILABLE only
+PASS  A-3    every served claim cites at least one source
+PASS  A-4    no served claim carries a coordinate, geometry or role field
+PASS  B-1    ungoverned port is neither registered nor bound nor plannable
+PASS  B-2    CONTROL: a governed port is registered and bound
+PASS  B-3    an ungoverned port that ANSWERS WITH DATA is still refused as unbound
+PASS  C-1    all eight contract tests from §G have a row
+PASS  C-2    corpus holds both a counterfactual AVAILABLE and a measured refusal
+PASS  C-3    every corpus row names its provenance
+PASS  I-1    Sudan and Kenya identity material are not equal
+PASS  I-2    a different stated window is a different identity
+PASS  I-3    the module computes no hash of its own
+PASS  I-4    CONTROL: the identity detector sees the fields it claims to
+PASS  I-5    observation key order and duplicates do not change identity
+PASS  I-9    buildIdentity is the single normalisation point for observation keys
+PASS  I-6    identity fields are separated by U+001F, never concatenated
+PASS  I-7    the reader revision is part of identity, so planRevision can invalidate
+PASS  I-8    the port cannot influence the identity its own answer is cached under
+PASS  S-1    no surface, role, entitlement or tier symbol appears in src/
+PASS  S-2    the same request yields a byte-identical result regardless of caller
+PASS  S-3    CONTROL: the surface detector catches the ordinary form
+PASS  N-1    src/ holds no network, provider, model or AI symbol
+PASS  N-2    no legacy /analysis/news path appears in src/
+PASS  N-3    CONTROL: the network and legacy detectors catch the ordinary forms
+PASS  N-4    src/ reads no clock, no randomness and no environment variable
+PASS  P-1    reopening an identical read returns a byte-identical result
+PASS  L-1    src/ holds no language, locale or question-text symbol
+PASS  L-2    a non-English window phrase survives verbatim into identity
+PASS  L-3    CONTROL: the language detector catches the ordinary form
+PASS  V-1    an unsourced claim from the port is refused, not served and not trimmed
+PASS  V-2    a scope finer than the producible ceiling is refused
+PASS  V-3    AVAILABLE with no claims becomes NO_DATA_FOR_GEOGRAPHY, never a bare AVAILABLE
+PASS  V-4    an observation key is accepted AND reaches identity, never silently dropped
+PASS  V-5    CONTROL: the same governed store serves when no observation key is supplied
+PASS  AS-1   the five accepted absence states plus AVAILABLE, and nothing else
+PASS  AS-2   NOT_ASSESSED is on the assessment axis only, never an availability state
+PASS  AS-3   today the measured state is NOT_CONNECTED, not NOT_BUILT
+PASS  AX-1   every result carries an assessment, and it is the single mapping
+PASS  AX-2   an unreachable store is SOURCE_UNAVAILABLE, never NOT_ASSESSED
+PASS  AX-3   CURRENT_PROVIDER_OBSERVATION is unreachable from this adapter
+PASS  AX-4   NOT_ASSESSED never accompanies a claim
+PASS  AX-5   CONTROL: the assessment mapping is total over the availability states
+PASS  DG-1   the canary in withheld evidence reaches NONE of the five sinks
+PASS  DG-2   CONTROL: the canary IS present upstream, so DG-1 is not vacuous
+PASS  DG-3   only READER_SAFE is admissible, and the rule is not per-sink
+PASS  DG-4   the audit count never appears inside a sink payload
+PASS  DG-5   every refusal hands every sink nothing
+PASS  DG-6   STATED LIMIT: classification is trusted, so a MISLABELLED claim is served
+PASS  DG-7   the adapter attempts no content-based re-classification
+PASS  OK-1   no key, one key and two keys are three distinct identities
+PASS  OK-2   no key-parsing construct exists in src/ — the key is opaque
+PASS  OK-3   the retired R1 refusal code is emitted by no code path
+PASS  BP-1   today's measured inputs fail all three conjuncts and bind nothing
+PASS  BP-2   ONLY CLEARED_FOR_ALPHA_RUNTIME reader-clears a source
+PASS  BP-3   each conjunct alone blocks binding
+PASS  BP-4   CONTROL: all three conjuncts satisfied binds the tool
+PASS  BP-5   CAPABILITY_UNAVAILABLE is the only Ask terminal this lane emits
+PASS  BP-6   E1's measured R2 matrix contains no reader-cleared source
+PASS  BP-7   today's inputs name the GATE, not a generic NOT_CLEARED
+PASS  XD-1   leg ORDER does not change composite identity
+PASS  XD-2   leg MEMBERSHIP always changes composite identity
+PASS  XD-3   Conflict + Humanitarian differs from Conflict alone
+PASS  XD-4   geography + Humanitarian separates by geography leg
+PASS  XD-5   retained story + Humanitarian differs from Humanitarian alone
+PASS  XD-6   a REQUIRED humanitarian leg forbids reporting substitution
+PASS  XD-7   the contributing domain set is sorted and deduplicated
+PASS  XD-8   the OUTER composite encoding is separated, not concatenated
+PASS  SA-1   Standalone and Alpha produce byte-identical results INCLUDING sink payloads
+PASS  SA-2   the guard cannot be laxer on one surface — there is no surface input at all
+PASS  NS-1   no second chat, history, conversation or quota system in src/
+PASS  NS-2   CONTROL: the second-system detector catches the ordinary form
+PASS  M-1    every absence probe family carries a control
+
+PROBES 73  PASS 73  FAIL 0

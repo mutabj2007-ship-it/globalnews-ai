@@ -1,0 +1,4 @@
+LANE C EXPECTATIONS   globalnewsai.humanitarian.ask-expectations/3
+BINDING               ./expectations/binding.reference.mjs
+ROWS                  22  PASS 22  FAIL 0  SKIP 0
+  NOTE  disclosures not reported by the binding — E1's six required codes (D-1) and the IMPACT_NOT_ASSESSED mandate (D-4) are UNVERIFIED against your adapter

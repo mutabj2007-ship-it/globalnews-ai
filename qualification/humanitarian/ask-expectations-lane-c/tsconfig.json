@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "declaration": true,
+    "outDir": "build",
+    "rootDir": ".",
+    "types": []
+  },
+  "include": [
+    "expectations/**/*.ts","src/**/*.ts", "corpus/**/*.ts", "fixtures/**/*.ts", "probes/**/*.ts", "probes/**/*.d.ts"]
+}

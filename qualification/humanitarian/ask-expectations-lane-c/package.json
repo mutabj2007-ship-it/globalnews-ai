@@ -1,0 +1,12 @@
+{
+  "name": "humanitarian-ask-tool-candidate",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0-contract",
+  "description": "Humanitarian canonical Ask tool / router binding R1. Contract and corpus. Not authorized for merge or deploy.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "corpus": "node build/probes/run-corpus.js",
+    "probe": "node probes/probe.mjs"
+  }
+}

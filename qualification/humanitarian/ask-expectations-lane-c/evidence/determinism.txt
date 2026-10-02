@@ -1,0 +1,6 @@
+DETERMINISM CHECK (R2 materialization)
+corpus run twice in separate processes: byte-identical
+probe  run twice in separate processes: byte-identical
+
+tsc Version 6.0.3
+node v22.22.2

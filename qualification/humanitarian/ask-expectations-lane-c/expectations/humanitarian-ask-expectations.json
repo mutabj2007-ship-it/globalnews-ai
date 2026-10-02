@@ -1,0 +1,1064 @@
+{
+  "schema": "globalnewsai.humanitarian.ask-expectations/3",
+  "lane": "C",
+  "contract": "CONTRACT 4 — HUMANITARIAN CANONICAL ASK TOOL / ROUTER BINDING R1",
+  "readerRevision": "hum-reader-r1",
+  "purpose": "Regression expectations for the canonical Humanitarian Ask specialist adapter. These strengthen an existing adapter’s proof; they do not define canonical Ask semantics.",
+  "requiredDisclosures": {
+    "codes": [
+      "IMPACT_NOT_ASSESSED",
+      "RETAINED_NOT_CURRENT",
+      "SEVERITY_NOT_ASSESSED",
+      "COUNTRY_SCOPE_NOT_STATED_BY_SOURCE",
+      "PUBLISHER_TIME_ZONE_NOT_STATED",
+      "GEOMETRY_WITHHELD_SOURCE_CENTROID"
+    ],
+    "mandatoryOnEveryAnswer": [
+      "IMPACT_NOT_ASSESSED"
+    ],
+    "assertionClass": "SEMANTIC_INVARIANT",
+    "rule": "D-1: every hop that displays or persists a Humanitarian answer carries all six codes; a hop that cannot carry them may not display Humanitarian evidence. D-4: IMPACT_NOT_ASSESSED is mandatory on EVERY Humanitarian answer, including ones that successfully use retained rows, because silence about impact reads as \"no impact reported\".",
+    "consumerRecognitionRule": "D-2: a code no consumer recognises is a defect at the EMITTING lane. Cross your emitted set against the consumer vocabulary before shipping — E1 measured governedPrompt as a closed if-chain of five codes against an open producer, which is how RETAINED_NOT_CURRENT was being dropped on the USED path."
+  },
+  "disclosure": {
+    "classes": [
+      "READER_SAFE",
+      "INTERNAL_ONLY",
+      "PROTECTED_LOCATION",
+      "WITHHELD"
+    ],
+    "sinks": [
+      "MODEL_CONTEXT",
+      "SOURCES_RAIL",
+      "DURABLE_CONTRIBUTION",
+      "STORED_RESULT",
+      "SAVED_RECENT"
+    ],
+    "rule": "Only READER_SAFE may reach any sink. The rule is not per-sink.",
+    "note": "The five sinks are not independent: a StoredResult is reopened into Saved/Recent and quoted back into model context, so admitting a class to one sink admits it to all."
+  },
+  "askTerminal": {
+    "value": "CAPABILITY_UNAVAILABLE",
+    "note": "FROZEN. When Humanitarian is unavailable the Ask terminal stays CAPABILITY_UNAVAILABLE. Lane C emits no competing terminal and does not reopen that question."
+  },
+  "axes": {
+    "availability": {
+      "values": [
+        "AVAILABLE",
+        "NOT_BUILT",
+        "NOT_CONNECTED",
+        "NO_DATA_FOR_GEOGRAPHY",
+        "TIER_RESTRICTED",
+        "TEMPORARILY_UNAVAILABLE"
+      ],
+      "note": "The five accepted absence states plus AVAILABLE. They must not collapse."
+    },
+    "assessment": {
+      "values": [
+        "CURRENT_PROVIDER_OBSERVATION",
+        "RETAINED_REPORTING",
+        "NOT_ASSESSED",
+        "SOURCE_UNAVAILABLE"
+      ],
+      "note": "Contract 2 §E. Orthogonal to availability. NOT_ASSESSED must never stand in for an unreachable store, and CURRENT_PROVIDER_OBSERVATION is unreachable from any Ask read that performs no provider fetch."
+    }
+  },
+  "rowCount": 22,
+  "rows": [
+    {
+      "id": "G1a-retained-read-governed-store",
+      "name": "Governed bound store holding SDN rows serves a specialist read",
+      "contractTest": "G1",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "The conditional case. Proves the reader is capable of serving when a governed store exists, so the refusals below are rules and not an unconditional dead end."
+    },
+    {
+      "id": "G1b-retained-read-today",
+      "name": "Today: no governed binding, so the read is refused as unbound",
+      "contractTest": "G1",
+      "provenance": "MEASURED_STATE_TODAY",
+      "store": "UNBOUND_NO_GOVERNED_BINDING",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "NOT_CONNECTED",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "SOURCE_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": "CAPABILITY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": "SPECIALIST_NOT_BOUND",
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "NOT_CONNECTED, not NOT_BUILT: Main measured that humanitarian HAS a shared contract, so the contract exists and the rows do not. Collapsing the two would lose that."
+    },
+    {
+      "id": "G1c-claims-cite-sources",
+      "name": "Every served claim carries at least one source reference",
+      "contractTest": "G1",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": "the last 30 days",
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "A claim carries its sources or it is not a claim. Enforced structurally by probe A-3, which rejects any served claim with an empty sources array."
+    },
+    {
+      "id": "G2a-governed-but-empty-geography",
+      "name": "Governed store with nothing for this geography refuses truthfully",
+      "contractTest": "G2",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_EMPTY_FOR_GEOGRAPHY",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "KEN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "NO_DATA_FOR_GEOGRAPHY",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "NOT_ASSESSED",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": "CAPABILITY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": "NO_DATA_FOR_GEOGRAPHY",
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Distinct from NOT_CONNECTED. A bound store that holds nothing for Kenya is a different fact from no store at all, and the accepted five states exist to keep them apart."
+    },
+    {
+      "id": "G2b-read-failing-is-not-no-data",
+      "name": "A failing read is TEMPORARILY_UNAVAILABLE, never silently no-data",
+      "contractTest": "G2",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_READ_FAILING",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "TEMPORARILY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "SOURCE_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": "CAPABILITY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": "TEMPORARILY_UNAVAILABLE",
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "The failure mode that produces a confident wrong answer: a broken read reported as \"no humanitarian emergencies in Sudan\". Absence of evidence is not evidence of absence."
+    },
+    {
+      "id": "G2c-no-fabrication-on-refusal",
+      "name": "No refusal carries a severity, count or location",
+      "contractTest": "G2",
+      "provenance": "MEASURED_STATE_TODAY",
+      "store": "UNBOUND_NO_GOVERNED_BINDING",
+      "surface": "ALPHA_DASHBOARD_CONTEXT",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "NOT_CONNECTED",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "SOURCE_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": "CAPABILITY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": "SPECIALIST_NOT_BOUND",
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "E1's accepted humanitarian rule: no fabricated severity, count or location. Probe A-1 asserts claims is empty for every non-AVAILABLE state, so the rule is structural."
+    },
+    {
+      "id": "G2d-observation-key-accepted-opaquely",
+      "name": "Main's observationKey is accepted opaquely, never parsed",
+      "contractTest": "G2",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": [
+          "hum:sdn:flood:2026-09"
+        ],
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "CHANGED IN R2 — recorded in docs/05-CHANGED-PROBES.md §4. In R1 this row expected OBSERVATION_KEY_CONSTRUCT_ABSENT, because Main had not landed the identity and the ruling forbade inventing one. Main has landed it, so the key is ACCEPTED and treated as an opaque byte string: never parsed, split, normalised or validated. Opacity is what lets lane C use an identity whose format is Main's without re-deriving it."
+    },
+    {
+      "id": "G3a-sdn-identity",
+      "name": "Sudan identity material carries SDN",
+      "contractTest": "G3",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Paired with G3b. Probe I-1 asserts the two identity materials are not equal."
+    },
+    {
+      "id": "G3b-ken-identity",
+      "name": "Kenya identity material differs from Sudan even when both refuse",
+      "contractTest": "G3",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_EMPTY_FOR_GEOGRAPHY",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "KEN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "NO_DATA_FOR_GEOGRAPHY",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "NOT_ASSESSED",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": "CAPABILITY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": "NO_DATA_FOR_GEOGRAPHY",
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "The dangerous reuse is between two REFUSALS: if identity omitted the country while the tool was unbound, a cached Sudan refusal could serve a Kenya question, and later a cached Sudan ANSWER could too. Identity must separate before the store is bound."
+    },
+    {
+      "id": "G3c-window-participates",
+      "name": "A different stated window is a different identity",
+      "contractTest": "G3",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": "the last 30 days",
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Same country, different window. Probe I-2 asserts G3a and G3c differ, so a bounded time window cannot be dropped from the durable plan identity."
+    },
+    {
+      "id": "G4a-standalone-reaches-the-same-tool",
+      "name": "Standalone Ask reaches Humanitarian without the dashboard being public",
+      "contractTest": "G4",
+      "provenance": "MEASURED_STATE_TODAY",
+      "store": "UNBOUND_NO_GOVERNED_BINDING",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "NOT_CONNECTED",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "SOURCE_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": "CAPABILITY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": "SPECIALIST_NOT_BOUND",
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Contract 4 §C. The reader takes no surface, no role and no entitlement as input, so reachability is a property of canonical Ask V2 and not of dashboard visibility. Probe S-1 asserts no surface or role symbol appears in src/."
+    },
+    {
+      "id": "G5a-dashboard-context-same-result",
+      "name": "Alpha dashboard context yields a byte-identical result to standalone",
+      "contractTest": "G5",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "ALPHA_DASHBOARD_CONTEXT",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Contract 4 §D: one tool, no second engine. Probe S-2 asserts G4-shaped and G5-shaped reads with the same request are byte-identical — the same device as the accepted protected-aggregation byte-identity proof, applied to the surface axis."
+    },
+    {
+      "id": "G5b-role-precision-invariance",
+      "name": "Result does not vary with role or admin precision",
+      "contractTest": "G5",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "ALPHA_DASHBOARD_CONTEXT",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": "the last 30 days",
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Carries E1's accepted role/admin precision invariance onto the Ask path. The reader has no role parameter at all, which is the strongest available form of the guarantee."
+    },
+    {
+      "id": "G6a-no-legacy-endpoint",
+      "name": "No legacy /analysis/news path appears anywhere in the module",
+      "contractTest": "G6",
+      "provenance": "MEASURED_STATE_TODAY",
+      "store": "UNBOUND_NO_GOVERNED_BINDING",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "NOT_CONNECTED",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "SOURCE_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": "CAPABILITY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": "SPECIALIST_NOT_BOUND",
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Asserted as a source-text property by probe N-2 with a negative control, not by this row alone. The row exists so the test list stays complete and visibly covered."
+    },
+    {
+      "id": "G7a-reopen-is-pure",
+      "name": "Repeating the identical read changes nothing and calls nothing",
+      "contractTest": "G7",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "ALPHA_DASHBOARD_CONTEXT",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Probe P-1 calls the read twice and compares byte-for-byte; probe N-1 asserts src/ holds no fetch, http, provider, openai or model symbol, so \"zero new provider and zero new AI on reopen\" is a property of the code rather than of a counter."
+    },
+    {
+      "id": "G7b-acquisition-refused-from-ask",
+      "name": "A read that would require acquisition is refused, not queued",
+      "contractTest": "G7",
+      "provenance": "MEASURED_STATE_TODAY",
+      "store": "GOVERNED_EMPTY_FOR_GEOGRAPHY",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "KEN",
+        "observationKeys": null,
+        "statedWindow": "today",
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "NO_DATA_FOR_GEOGRAPHY",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "NOT_ASSESSED",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": "CAPABILITY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": "NO_DATA_FOR_GEOGRAPHY",
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Contract 4 §F: acquisition and Ask execution are separate. Asking for today where the store has nothing must refuse with no data, NOT trigger a fetch to go and get it. This is the row that would fail if someone later \"helpfully\" wired a provider in."
+    },
+    {
+      "id": "G8a-pl-same-identity-as-en",
+      "name": "A Polish-language question for SDN reads identically to an English one",
+      "contractTest": "G8",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "The reader takes ISO3 and a declared questionKind, never question text, so it is language-neutral BY CONSTRUCTION — probe L-1 asserts no language or locale symbol in src/. This is the only honest form of EN/PL parity available at this layer; see C-H4 for what it does NOT cover, which is L's measured English-only upstream vocabulary."
+    },
+    {
+      "id": "G8b-window-text-not-normalised",
+      "name": "A Polish window phrase is carried verbatim, never parsed",
+      "contractTest": "G8",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": "ostatnie 30 dni",
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "L measured that 'region' matches in Polish while 'région' fails on a diacritic. A window parser here would reproduce that class of defect, so statedWindow is stored as the reader's own text and probe L-2 asserts it survives unmodified into identity."
+    },
+    {
+      "id": "R2-DG1-mixed-disclosure-serves-only-safe",
+      "name": "A mixed store serves reader-safe claims only; blocked classes are withheld",
+      "contractTest": "G1",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_MIXED_DISCLOSURE",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 3,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "One INTERNAL_ONLY, one PROTECTED_LOCATION and one WITHHELD claim are removed; the two reader-safe claims are served. Probe DG-1 proves the canary token carried by the withheld three reaches none of the five sinks."
+    },
+    {
+      "id": "R2-DG2-everything-withheld-fails-closed",
+      "name": "Present but not disclosable fails closed; the reason lives only on the audit count",
+      "contractTest": "G2",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_ALL_WITHHELD",
+      "surface": "ALPHA_DASHBOARD_CONTEXT",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "NO_DATA_FOR_GEOGRAPHY",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "NOT_ASSESSED",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": false,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 2,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": "CAPABILITY_UNAVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": "NO_DATA_FOR_GEOGRAPHY",
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "THE ONE DELIBERATE TRADE, and it needs E1 ratification. A protected-only situation is indistinguishable to a reader from an empty one, which preserves E1's byte-identity rule but makes the reader-facing output less informative than the data. The five accepted absence states contain no member meaning \"present but not disclosable\". DISCLOSURE-GUARD.md §4."
+    },
+    {
+      "id": "R2-OK1-two-keys-separate-identity",
+      "name": "Two observation keys produce a different identity from one",
+      "contractTest": "G3",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_WITH_SDN_ROWS",
+      "surface": "STANDALONE_ASK",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": [
+          "hum:sdn:flood:2026-09",
+          "hum:sdn:displacement:2026-09"
+        ],
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 0,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "§E \"no cross-observation reuse\" is testable now that Main landed the key. Probe OK-1 asserts this identity differs from the single-key and the no-key identities."
+    },
+    {
+      "id": "R2-SA1-standalone-and-alpha-identical",
+      "name": "Standalone Ask and the Alpha dashboard reach the same specialist, byte-identically",
+      "contractTest": "G5",
+      "provenance": "COUNTERFACTUAL",
+      "store": "GOVERNED_MIXED_DISCLOSURE",
+      "surface": "ALPHA_DASHBOARD_CONTEXT",
+      "request": {
+        "countryIso3": "SDN",
+        "observationKeys": null,
+        "statedWindow": null,
+        "questionKind": "CURRENT_STATUS"
+      },
+      "expect": {
+        "availability": {
+          "value": "AVAILABLE",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "assessment": {
+          "value": "RETAINED_REPORTING",
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "claimsNonEmpty": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "executionPlannable": {
+          "value": true,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "withheldTotal": {
+          "value": 3,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "askTerminal": {
+          "value": null,
+          "assertionClass": "SEMANTIC_INVARIANT"
+        },
+        "refusalCode": {
+          "value": null,
+          "assertionClass": "PACKAGE_CONVENTION"
+        }
+      },
+      "note": "Paired with R2-DG1, the same request from STANDALONE_ASK. Probe SA-1 asserts the two results are byte-identical INCLUDING their sink payloads, so the disclosure guard cannot be laxer on the Alpha surface than on the public one."
+    }
+  ]
+}

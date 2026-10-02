@@ -1,0 +1,44 @@
+BIT                MU-1   -> OK-3    OK-3 failed
+BIT                MU-2   -> B-3     B-3 failed
+BIT                MU-3   -> B-1     B-1 failed
+BIT                MU-4   -> I-1     I-1 failed
+BIT                MU-5   -> I-2     I-2 failed
+BIT                MU-6   -> I-7     I-7 failed
+BIT                MU-7   -> I-6     I-6 failed
+BIT                MU-8   -> I-5     I-5 failed
+BIT                MU-9   -> V-1     V-1 failed
+BIT                MU-10  -> V-2     V-2 failed
+BIT                MU-11  -> V-3     V-3 failed
+BIT                MU-12  -> A-1     rejected by tsc
+BIT                MU-13  -> I-8     I-8 failed
+BIT                MU-14  -> AS-1    rejected by tsc
+BIT                MU-15  -> CORPUS  corpus failed
+BIT                MU-16  -> N-1     rejected by tsc
+BIT                MU-17  -> N-2     rejected by tsc
+BIT                MU-18  -> L-1     rejected by tsc
+BIT                MU-19  -> L-2     L-2 failed
+BIT                MU-20  -> C-1     C-1 failed
+BIT                MU-40  -> BP-6    BP-6 failed
+BIT                MU-41  -> BP-7    BP-7 failed
+BIT                MU-42  -> BP-6    BP-6 failed
+BIT                MU-27  -> DG-1    DG-1 failed
+BIT                MU-28  -> DG-1    DG-1 failed
+BIT                MU-29  -> CORPUS  corpus failed
+BIT                MU-30  -> DG-4    DG-4 failed
+BIT                MU-31  -> BP-2    BP-2 failed
+BIT                MU-32  -> BP-1    BP-1 failed
+BIT                MU-33  -> BP-3    BP-3 failed
+BIT                MU-34  -> XD-1    XD-1 failed
+BIT                MU-35  -> XD-8    XD-8 failed
+BIT                MU-36  -> XD-6    XD-6 failed
+BIT                MU-37  -> XD-7    XD-7 failed
+BIT                MU-38  -> OK-1    OK-1 failed
+BIT                MU-39  -> DG-5    rejected by tsc
+BIT                MU-24  -> CORPUS  corpus failed
+BIT                MU-25  -> AX-2    AX-2 failed
+BIT                MU-26  -> AX-3    AX-3 failed
+BIT                MU-21  -> M-1     M-1 failed
+BIT                MU-22  -> B-3     B-3 failed
+BIT                MU-23  -> AS-3    AS-3 failed
+
+MUTATIONS 42  BIT 42  NOT-CLEANLY-BIT 0
