@@ -4,8 +4,10 @@ import { domainObservationKey } from '../observation/domain-observation';
 import { humanitarianIdentity, type HumanitarianObservation } from './observation';
 import type { HumanitarianRetainedRecord } from './retained-read';
 import {
+  MAX_RETAINED_CHANGE_FEED_PAGE,
   RETAINED_FACT_STATUSES,
   RetainedEvidenceCache,
+  retainedChangeFeedSince,
   assertRetainedFactStatusIsKnown,
   dedupeRetainedEvidence,
   deriveRetainedFactStatus,
@@ -287,6 +289,88 @@ describe('C · bounded retained cache', () => {
   it('refuses a non-positive-integer capacity', () => {
     for (const c of [0, -1, 1.5])
       expect(() => new RetainedEvidenceCache(c)).toThrow(/HUM-RET-CACHE-1/);
+  });
+});
+
+describe('C2 · bounded changed-since feed (lane A R2, on Main)', () => {
+  const keys = (cache: RetainedEvidenceCache, since: number) =>
+    retainedChangeFeedSince(cache, since).changes.map((e) => e.record.observationKey);
+
+  it('an empty cache yields an empty, clean page that keeps the cursor', () => {
+    const page = retainedChangeFeedSince(new RetainedEvidenceCache(4), 0);
+    expect(page).toEqual({
+      changes: [],
+      nextSinceSequence: 0,
+      truncated: false,
+      gapPossible: false,
+    });
+  });
+  it('returns only changes after the cursor, ascending, and advances the cursor', () => {
+    const cache = new RetainedEvidenceCache(8);
+    for (const id of ['1', '2', '3']) cache.put(n({ id }), T1);
+    const first = retainedChangeFeedSince(cache, 0);
+    expect(first.changes.map((e) => e.sequence)).toEqual([1, 2, 3]);
+    expect(first.changes.every((e) => e.change === 'NEW')).toBe(true);
+    expect(first.nextSinceSequence).toBe(3);
+    cache.put(n({ id: '4' }), T1);
+    expect(keys(cache, first.nextSinceSequence)).toEqual([n({ id: '4' }).observationKey]);
+  });
+  it('MAIN: a higher revision is a REVISED change; a same-revision re-put is not a change', () => {
+    const cache = new RetainedEvidenceCache(8);
+    cache.put(n({ id: '1', revision: 0 }), T1);
+    cache.put(n({ id: '1', revision: 0 }), T1);
+    expect(cache.latestSequence).toBe(1);
+    expect(keys(cache, 1)).toEqual([]);
+    cache.put(n({ id: '1', revision: 1 }), T1);
+    const page = retainedChangeFeedSince(cache, 1);
+    expect(page.changes).toHaveLength(1);
+    expect(page.changes[0]!.change).toBe('REVISED');
+    expect(page.changes[0]!.record.revisionOrdinal).toBe(1);
+  });
+  it('MAIN: a refused older revision stamps nothing', () => {
+    const cache = new RetainedEvidenceCache(8);
+    cache.put(n({ id: '1', revision: 2 }), T1);
+    cache.put(n({ id: '1', revision: 1 }), T1);
+    expect(cache.latestSequence).toBe(1);
+    expect(keys(cache, 1)).toEqual([]);
+  });
+  it('is page-bounded: truncated, then paged to completion with no loss or repeat', () => {
+    const cache = new RetainedEvidenceCache(16);
+    for (let i = 0; i < 5; i++) cache.put(n({ id: String(i) }), T1);
+    const seen: number[] = [];
+    let since = 0;
+    for (;;) {
+      const page = retainedChangeFeedSince(cache, since, 2);
+      seen.push(...page.changes.map((e) => e.sequence));
+      since = page.nextSinceSequence;
+      if (!page.truncated) break;
+    }
+    expect(seen).toEqual([1, 2, 3, 4, 5]);
+  });
+  it('MISSING STAYS MISSING: a change evicted before it was read raises gapPossible', () => {
+    const cache = new RetainedEvidenceCache(2);
+    for (const id of ['1', '2', '3']) cache.put(n({ id }), T1);
+    expect(cache.evictedThroughSequence).toBe(1);
+    const behind = retainedChangeFeedSince(cache, 0);
+    expect(behind.gapPossible).toBe(true);
+    expect(behind.changes.map((e) => e.sequence)).toEqual([2, 3]);
+    expect(retainedChangeFeedSince(cache, 1).gapPossible).toBe(false);
+  });
+  it('refuses a malformed cursor or an out-of-range limit', () => {
+    const cache = new RetainedEvidenceCache(2);
+    for (const s of [-1, 1.5, Number.NaN])
+      expect(() => retainedChangeFeedSince(cache, s)).toThrow(/HUM-RET-FEED-1/);
+    for (const l of [0, MAX_RETAINED_CHANGE_FEED_PAGE + 1, 2.5])
+      expect(() => retainedChangeFeedSince(cache, 0, l)).toThrow(/HUM-RET-FEED-2/);
+  });
+  it('reopen is synchronous and local; the page is internal, not a reader projection', () => {
+    expect(retainedChangeFeedSince.constructor.name).not.toBe('AsyncFunction');
+    const cache = new RetainedEvidenceCache(2);
+    cache.put(n({ id: '1' }), T1);
+    const entry = retainedChangeFeedSince(cache, 0).changes[0]!;
+    expect(entry.record).toEqual(cache.get(entry.record.observationKey)!.record);
+    const src = readFileSync(join(__dirname, 'retained-evidence.ts'), 'utf8');
+    expect(src).not.toMatch(/projectRetainedReaderFact|async\s+function|await\s/);
   });
 });
 

@@ -211,7 +211,18 @@ export interface RetainedCacheEntry {
   readonly record: NormalizedRetainedEvidence;
   /** Caller-supplied; never the system clock. */
   readonly cachedAt: string;
+  /**
+   * Change cursor (lane A R2, transplanted): strictly increasing, never reused. Stamped when a key
+   * is first held (`NEW`) or a HIGHER revision replaces it (`REVISED`). A same-revision re-put only
+   * refreshes LRU position — Main's chain gives new content a new revision, so an identical re-put
+   * is not a change and must not wake a Watch/Alert.
+   */
+  readonly sequence: number;
+  readonly change: RetainedChangeKind;
 }
+
+export const RETAINED_CHANGE_KINDS = ['NEW', 'REVISED'] as const;
+export type RetainedChangeKind = (typeof RETAINED_CHANGE_KINDS)[number];
 
 /** The best time this record states about itself: occurrence, then publisher vintage, then retrieval. */
 function bestStatedTime(r: NormalizedRetainedEvidence): string {
@@ -220,6 +231,9 @@ function bestStatedTime(r: NormalizedRetainedEvidence): string {
 
 export class RetainedEvidenceCache {
   private readonly entries = new Map<string, RetainedCacheEntry>();
+  private lastSequence = 0;
+  /** Highest sequence ever evicted for capacity; 0 when nothing has been evicted. */
+  private evictedThrough = 0;
 
   constructor(private readonly capacity: number) {
     if (!Number.isInteger(capacity) || capacity < 1) {
@@ -236,11 +250,42 @@ export class RetainedEvidenceCache {
   put(record: NormalizedRetainedEvidence, cachedAt: string): void {
     const held = this.entries.get(record.observationKey);
     if (held !== undefined && held.record.revisionOrdinal > record.revisionOrdinal) return;
+    const changed = held === undefined || record.revisionOrdinal > held.record.revisionOrdinal;
     this.entries.delete(record.observationKey);
-    this.entries.set(record.observationKey, { record, cachedAt });
+    this.entries.set(
+      record.observationKey,
+      changed
+        ? {
+            record,
+            cachedAt,
+            sequence: ++this.lastSequence,
+            change: held === undefined ? 'NEW' : 'REVISED',
+          }
+        : { ...held, record, cachedAt },
+    );
     while (this.entries.size > this.capacity) {
-      this.entries.delete(this.entries.keys().next().value as string);
+      const oldestKey = this.entries.keys().next().value as string;
+      const evicted = this.entries.get(oldestKey)!;
+      if (evicted.sequence > this.evictedThrough) this.evictedThrough = evicted.sequence;
+      this.entries.delete(oldestKey);
     }
+  }
+
+  /** Held entries changed after `sinceSequence`, ascending by sequence. Synchronous, local. */
+  entriesSince(sinceSequence: number): readonly RetainedCacheEntry[] {
+    return [...this.entries.values()]
+      .filter((e) => e.sequence > sinceSequence)
+      .sort((a, b) => a.sequence - b.sequence);
+  }
+
+  /** The newest sequence ever stamped (0 when nothing was ever held). */
+  get latestSequence(): number {
+    return this.lastSequence;
+  }
+
+  /** The highest sequence ever evicted for capacity (0 when nothing was evicted). */
+  get evictedThroughSequence(): number {
+    return this.evictedThrough;
   }
 
   /** Display-only reopen: reads this in-memory map and nothing else (no provider, no network). */
@@ -274,6 +319,57 @@ export class RetainedEvidenceCache {
     if (entry === undefined) return true;
     return Date.parse(nowIso) - Date.parse(bestStatedTime(entry.record)) > maxAgeMs;
   }
+}
+
+/* ═══ C2 · BOUNDED CHANGED-SINCE FEED — MY INTELLIGENCE AND FUTURE WATCH/ALERTS ═══
+ * Lane A's HUMANITARIAN-RETAINED-CORPUS-CHANGE-FEED-R2 (`de714b7`), TRANSPLANTED onto Main's
+ * record by Claude Code convergence. Kept: the cache-sequence cursor, the page bound (500), refusal
+ * of a malformed cursor/limit, a synchronous reopen with no provider or model path. Changed:
+ *   - a page carries INTERNAL retained entries, not A's own reader projection. Whether a row may
+ *     reach a reader is decided only by `humanitarianRetainedRead` under E1's reader admission —
+ *     one reader authority, and no second projection that could bypass it;
+ *   - only a new key or a higher revision is a change (see `RetainedCacheEntry.sequence`);
+ *   - A's documented limit ("cannot tell 'nothing changed' from 'changed and evicted'") becomes an
+ *     explicit `gapPossible`: a consumer whose cursor predates an evicted change is told it may have
+ *     missed something instead of seeing a clean page. Missing stays explicitly missing.
+ * In memory and bounded: NOT a durable append log (storage substrate selection remains open).
+ */
+
+export const MAX_RETAINED_CHANGE_FEED_PAGE = 500;
+
+export interface RetainedChangeFeedPage {
+  readonly changes: readonly RetainedCacheEntry[];
+  /** Pass back as `sinceSequence`. Equal to the input when the page is empty. */
+  readonly nextSinceSequence: number;
+  /** More held changes exist beyond this page. */
+  readonly truncated: boolean;
+  /** A change after `sinceSequence` was evicted before it could be read: this feed is incomplete. */
+  readonly gapPossible: boolean;
+}
+
+export function retainedChangeFeedSince(
+  cache: RetainedEvidenceCache,
+  sinceSequence: number,
+  limit: number = MAX_RETAINED_CHANGE_FEED_PAGE,
+): RetainedChangeFeedPage {
+  if (!Number.isInteger(sinceSequence) || sinceSequence < 0) {
+    throw new HumanitarianRetainedEvidenceRefused(
+      'HUM-RET-FEED-1: sinceSequence must be a non-negative integer.',
+    );
+  }
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_RETAINED_CHANGE_FEED_PAGE) {
+    throw new HumanitarianRetainedEvidenceRefused(
+      `HUM-RET-FEED-2: limit must be an integer between 1 and ${MAX_RETAINED_CHANGE_FEED_PAGE}.`,
+    );
+  }
+  const all = cache.entriesSince(sinceSequence);
+  const page = all.slice(0, limit);
+  return {
+    changes: page,
+    nextSinceSequence: page.length > 0 ? page[page.length - 1]!.sequence : sinceSequence,
+    truncated: all.length > limit,
+    gapPossible: cache.evictedThroughSequence > sinceSequence,
+  };
 }
 
 /* ═══ D · CITATION PROJECTION — ONE SHAPE FOR EVERY CONSUMER ═════════════════
