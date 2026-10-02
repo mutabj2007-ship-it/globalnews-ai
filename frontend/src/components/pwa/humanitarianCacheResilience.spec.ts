@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
 
 import {
   humanitarianReadAbsence,
@@ -136,11 +136,20 @@ describe('HUM-PWA-R1 · A · why a Humanitarian response cannot reach a cache', 
       observations: [],
     });
 
-    /* THE RULING TRIGGER. The endpoint still answers with an absence and still forbids storing it,
-       so there is nothing cacheable today regardless of what the type can now express. */
+    /* THE RULING TRIGGER (re-grounded by convergence, CTO "close the final two gaps"). The endpoint
+       now reads the ONE retained corpus, which answers an absence while E1 reader-clears no source
+       — so nothing retained is servable today — and EVERY read route still forbids storing what it
+       answers, so the no-cache ruling holds on A1–A4 alone once E1 does clear a source. */
     const controller = readFileSync(backendReadPath, 'utf-8');
-    expect(controller).toMatch(/return humanitarianReadAbsence\('NOT_ASSESSED'\)/);
-    expect(controller).toMatch(/@Header\('Cache-Control',\s*'no-store'\)/);
+    expect(controller).toMatch(/return this\.corpus\.readerRead\(\)/);
+    expect(controller.match(/@Get\(/g)).toHaveLength(2);
+    expect(controller.match(/@Header\('Cache-Control',\s*'no-store'\)/g)).toHaveLength(2);
+    const corpus = readFileSync(join(dirname(backendReadPath), 'humanitarian-retained-corpus.ts'), 'utf-8');
+    expect(corpus).toMatch(
+      /if \(!anySourceReaderCleared\(\)\) return humanitarianReadAbsence\('NOT_ASSESSED'\)/,
+    );
+    const e1 = readFileSync(join(dirname(backendReadPath), 'reader-clearance.ruling.ts'), 'utf-8');
+    expect(e1).toMatch(/READER_CLEARED_SOURCE_IDS: readonly string\[\] = Object\.freeze\(\[\]\)/);
   });
 });
 

@@ -16,6 +16,8 @@ import { ExploreIntelligence } from '@/components/home/reva/ExploreIntelligence'
 import { DeepIntelligenceRow } from '@/components/home/reva/DeepIntelligenceRow';
 import { HomeBridge } from '@/components/home/reva/HomeBridge';
 import { HomeBuiltOnTrust, HomeHowItWorks } from '@/components/home/reva/HomeHowAndTrust';
+import { HomeHumanitarian } from '@/components/home/reva/HomeHumanitarian';
+import { readHumanitarianHome } from '@/lib/humanitarian/humanitarianRead';
 import { Footer } from '@/components/layout/Footer';
 import { getHomeFeed } from '@/lib/homeFeed';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
@@ -113,7 +115,16 @@ export default async function HomePage(): Promise<JSX.Element> {
   }
   const dict = getDictionary(language);
   const t = dict.homeReva;
-  const feed = await getHomeFeed(language);
+  /*
+    HUMANITARIAN CONVERGENCE — Home's one Humanitarian read runs BESIDE the one Home feed request
+    (never in series, never inside it). It reads OUR backend's E1-scoped reader read of the one
+    retained Humanitarian corpus — no provider, no model — and yields a projection only when G's
+    display gate admits it and H's brief carries something; otherwise null and nothing renders.
+  */
+  const [feed, humanitarianHome] = await Promise.all([
+    getHomeFeed(language),
+    readHumanitarianHome(new Date().toISOString()),
+  ]);
   /*
     Every module reads a role of the ONE Home response. For you (signed in, below
     the fold) reads the whole loaded pool, de-duplicated by id.
@@ -212,6 +223,7 @@ export default async function HomePage(): Promise<JSX.Element> {
                 <div className="mt-10 flex flex-col gap-10 pb-12 md:mt-12 md:gap-12">
                   <HomeForYou articles={homeArticles} language={language} />
                   <ExploreIntelligence language={language} />
+                  <HomeHumanitarian projection={humanitarianHome} language={language} />
                   <DeepIntelligenceRow language={language} />
                   <HomeBridge language={language} />
                   <HomeHowItWorks language={language} />

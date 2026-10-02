@@ -60,7 +60,8 @@ const NO_COUNTERS =
   'Nothing counts admitted or withheld records. The write receipt is a returned value, not a stored row, and nothing aggregates it.';
 const NO_LANGUAGE =
   'The humanitarian domain declares no language field, column or type, so a language count cannot be derived.';
-const NO_CACHE = 'No humanitarian cache exists, so there is no age to report.';
+const NO_CACHE =
+  'The retained corpus is in process memory and records no age: nothing measures how old its newest record is.';
 const NO_ERROR_LOG =
   'No error or attempt table exists. A failed authority load throws and writes nothing.';
 const NO_PARSER_LOG =

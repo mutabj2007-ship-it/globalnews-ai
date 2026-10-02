@@ -200,6 +200,13 @@ export function assertReaderAdmissible(sourceId: string, field: string): void {
 export const GDACS_ATTRIBUTION_VERBATIM =
   'Global Disaster Alert and Coordination System, GDACS' as const;
 
+/**
+ * The sources D-3 binds: rows that RELAY another agency's record and so travel with two names
+ * (this acknowledgement verbatim plus the originating agency). A source outside this list is
+ * attributed by its own publisher name. Published to display hops (convergence).
+ */
+export const RELAY_ATTRIBUTED_SOURCE_IDS: readonly string[] = Object.freeze(['GDACS']);
+
 /** The originating agencies measured in the capture. Not a closed world — a label set. */
 export const GDACS_ORIGINATING_AGENCIES_SEEN: readonly string[] = Object.freeze([
   'GLOFAS',

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { readHumanitarianObservations } from './humanitarianRead';
+import { MAX_HUMANITARIAN_READ_BYTES, readHumanitarianObservations } from './humanitarianRead';
 import { humanitarianReadLabel, humanitarianReadExplanation } from './humanitarianReadLabel';
 import { humanitarianUnassessedView } from '@/components/humanitarian/HumanitarianModel';
 import { HUM_FRAME_STATES } from './humState';
@@ -23,7 +23,7 @@ describe('Humanitarian frontend read binding', () => {
       const spy = jest.spyOn(global, 'fetch');
       if (failure === 'error') spy.mockRejectedValue(new Error('offline'));
       else spy.mockResolvedValue(failure === 'http' ? new Response('', {status:503}) :
-        new Response(failure === 'json' ? '<html>' : failure === 'oversized' ? ' '.repeat(4097) :
+        new Response(failure === 'json' ? '<html>' : failure === 'oversized' ? ' '.repeat(MAX_HUMANITARIAN_READ_BYTES + 1) :
           JSON.stringify({ kind: failure === 'no-results' ? 'NO_RESULTS' : 'OBSERVATIONS',
             observations: [{occurredAt:'2026-01-01', revisionOrdinal:1, coordinates:[1,2]}] })));
       expect(await readHumanitarianObservations()).toEqual({

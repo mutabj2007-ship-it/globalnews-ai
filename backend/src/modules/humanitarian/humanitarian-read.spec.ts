@@ -41,7 +41,14 @@ describe('public Humanitarian retained read', () => {
   });
   it('has no acquisition or store dependency in the read module', () => {
     const source = readFileSync(join(__dirname, 'humanitarian-read.module.ts'), 'utf8');
-    expect(source.match(/^import .*from .*$/gm)).toHaveLength(2);
+    /* Convergence: the module reads the ONE in-memory retained corpus and publishes E1's reader
+       constants by reference — still no acquisition, producer, Prisma or authority dependency. */
+    const specifiers = [...source.matchAll(/from '([^']+)'/g)].map((m) => m[1]).sort();
+    expect(specifiers).toEqual(
+      ['./humanitarian-retained-corpus', './reader-clearance.ruling', '@globalnews-ai/shared', '@nestjs/common'],
+    );
     expect(source).not.toMatch(/fetch\(|HttpService|Prisma|copernicus-ems|authority\.loader/);
+    const corpus = readFileSync(join(__dirname, 'humanitarian-retained-corpus.ts'), 'utf8');
+    expect(corpus).not.toMatch(/fetch\(|HttpService|Prisma|copernicus-ems|authority\.loader|producers\//);
   });
 });

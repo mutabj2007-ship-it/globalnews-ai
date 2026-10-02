@@ -79,6 +79,11 @@ export interface HumanitarianLanguageStrings {
     readonly cardBlurb: string;
     readonly noRetainedDataYet: string;
     readonly sourceLanguagesSeen: string;
+    /* Convergence · the Home consumer (H brief behind G's display gate). */
+    readonly retainedRecordCount: string;
+    readonly newestRetainedAt: string;
+    readonly areasWithoutEvidence: string;
+    readonly openHumanitarian: string;
   };
 
   /* ── 3 · MAP ───────────────────────────────────────────────────────────── */
@@ -97,6 +102,11 @@ export interface HumanitarianLanguageStrings {
     readonly reopenedAsStored: string;
     readonly storedAnswerLanguage: string;
     readonly storedSourceLanguageDiffers: string;
+    /* Convergence · the "new since your previous visit" consumer of lane A's delta feed. */
+    readonly newSinceTitle: string;
+    readonly changeNew: string;
+    readonly changeRevised: string;
+    readonly changesMayBeMissing: string;
   };
 
   /* ── 5 · ADMIN · SOURCE HEALTH ─────────────────────────────────────────── */
@@ -122,6 +132,14 @@ export interface HumanitarianLanguageStrings {
     readonly answerUsesTranslatedReporting: string;
     readonly someSourcesWithheldForLanguage: string;
   };
+
+  /**
+   * CONVERGENCE · READER LABELS FOR E1's REQUIRED DISCLOSURE CODES (E1 R2 · D-1). Keyed by E1's
+   * code; E1's list itself is NOT copied here — a display hop binds the list from the backend and
+   * may display only when every required code has a label below (G R2 gate). A code E1 adds
+   * without a label here therefore makes every display refuse, never display unlabelled.
+   */
+  readonly readerDisclosure: Readonly<Record<string, string>>;
 
   /**
    * CONVERGENCE (Claude Code, final semantic authority) — reader labels for Main's canonical
@@ -218,6 +236,11 @@ export const humanitarianEn: HumanitarianLanguageStrings = {
     cardBlurb: 'People, needs and response',
     noRetainedDataYet: 'No humanitarian reporting has been retained yet.',
     sourceLanguagesSeen: 'Sources so far: {languages}',
+    retainedRecordCount: 'Retained records: {count}',
+    newestRetainedAt: 'Newest record retained {date}',
+    areasWithoutEvidence:
+      'No retained evidence for {count} of {total} areas. That is not a statement that nothing happened.',
+    openHumanitarian: 'Open Humanitarian',
   },
 
   map: {
@@ -235,6 +258,11 @@ export const humanitarianEn: HumanitarianLanguageStrings = {
     storedAnswerLanguage: 'This result was written in {language}.',
     storedSourceLanguageDiffers:
       'It cites sources published in {sourceLanguages}, which it did not translate away.',
+    newSinceTitle: 'Humanitarian records new since your previous visit',
+    changeNew: 'New record',
+    changeRevised: 'Revised by the source',
+    changesMayBeMissing:
+      'Some changes may be missing: older records left our retained store before you looked.',
   },
 
   admin: {
@@ -260,6 +288,16 @@ export const humanitarianEn: HumanitarianLanguageStrings = {
       'This answer draws on reporting that was machine-translated. The originals are linked.',
     someSourcesWithheldForLanguage:
       '{count} retained records were left out because their language could not be qualified.',
+  },
+
+  readerDisclosure: {
+    IMPACT_NOT_ASSESSED: 'Impact on people was not assessed from these records.',
+    RETAINED_NOT_CURRENT: 'These are retained records, not current observations.',
+    SEVERITY_NOT_ASSESSED: 'Severity was not assessed.',
+    COUNTRY_SCOPE_NOT_STATED_BY_SOURCE:
+      'Where a source states no country, none is assigned for it.',
+    PUBLISHER_TIME_ZONE_NOT_STATED: 'Publisher times are shown as stated; no time zone is assumed.',
+    GEOMETRY_WITHHELD_SOURCE_CENTROID: 'Locations are withheld; only countries are shown.',
   },
 
   vocabulary: {

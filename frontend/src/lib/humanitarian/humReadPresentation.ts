@@ -559,6 +559,14 @@ export interface HumReaderDisplayInput {
   readonly readerClearedSourceIds: readonly string[];
   /** E1's `GDACS_ATTRIBUTION_VERBATIM`, bound by the caller. Reworded is not attribution. */
   readonly relayAttributionVerbatim?: string;
+  /**
+   * CONVERGENCE — the sources E1's D-3 binds (a relay acknowledgement plus an originating agency:
+   * today GDACS only), as the backend publishes them. Absent ⇒ every row is bound (G R2's original,
+   * strictest reading). A source outside this list is attributed by its own publisher name, which
+   * the record's provenance always carries; without the list a non-relay source could never
+   * display at all.
+   */
+  readonly relayAttributedSourceIds?: readonly string[];
   readonly rowAttribution?: Readonly<Record<string, HumRowAttribution>>;
 }
 
@@ -614,6 +622,12 @@ export function humReaderDisplayGate(input: HumReaderDisplayInput): HumReaderDis
   const unattributed: string[] = [];
   for (const record of read.observations) {
     const key = record.observation.observationKey;
+    if (
+      input.relayAttributedSourceIds !== undefined &&
+      input.relayAttributedSourceIds.indexOf(record.observation.identity.upstreamAuthority) === -1
+    ) {
+      continue;
+    }
     const attribution = input.rowAttribution?.[key];
     const relayOk =
       input.relayAttributionVerbatim !== undefined &&

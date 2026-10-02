@@ -115,6 +115,11 @@ export const humanitarianPl: HumanitarianLanguageStrings = {
     cardBlurb: 'Ludzie, potrzeby i reagowanie',
     noRetainedDataYet: 'Nie zachowaliśmy jeszcze żadnych doniesień humanitarnych.',
     sourceLanguagesSeen: 'Dotychczasowe źródła: {languages}',
+    retainedRecordCount: 'Zachowane rekordy: {count}',
+    newestRetainedAt: 'Najnowszy rekord zachowano {date}',
+    areasWithoutEvidence:
+      'Brak zachowanych dowodów dla {count} z {total} obszarów. To nie znaczy, że nic się nie stało.',
+    openHumanitarian: 'Otwórz moduł humanitarny',
   },
 
   map: {
@@ -132,6 +137,11 @@ export const humanitarianPl: HumanitarianLanguageStrings = {
     storedAnswerLanguage: 'Ten wynik napisano w języku: {language}.',
     storedSourceLanguageDiffers:
       'Cytuje źródła opublikowane w: {sourceLanguages}, i nie zastąpił ich tłumaczeniem.',
+    newSinceTitle: 'Nowe rekordy humanitarne od Twojej poprzedniej wizyty',
+    changeNew: 'Nowy rekord',
+    changeRevised: 'Zmieniony przez źródło',
+    changesMayBeMissing:
+      'Części zmian może brakować: starsze rekordy opuściły nasz magazyn, zanim zostały wyświetlone.',
   },
 
   admin: {
@@ -158,6 +168,17 @@ export const humanitarianPl: HumanitarianLanguageStrings = {
       'Ta odpowiedź opiera się na doniesieniach przetłumaczonych maszynowo. Oryginały są podlinkowane.',
     someSourcesWithheldForLanguage:
       'Pominęliśmy {count} zachowanych rekordów, bo nie dało się zakwalifikować ich języka.',
+  },
+
+  readerDisclosure: {
+    IMPACT_NOT_ASSESSED: 'Na podstawie tych rekordów nie oceniono wpływu na ludzi.',
+    RETAINED_NOT_CURRENT: 'To są zachowane rekordy, a nie bieżące obserwacje.',
+    SEVERITY_NOT_ASSESSED: 'Nie oceniono dotkliwości.',
+    COUNTRY_SCOPE_NOT_STATED_BY_SOURCE:
+      'Jeśli źródło nie podaje kraju, żaden kraj nie jest mu przypisywany.',
+    PUBLISHER_TIME_ZONE_NOT_STATED:
+      'Czasy wydawcy podajemy tak, jak je podano; nie zakładamy strefy czasowej.',
+    GEOMETRY_WITHHELD_SOURCE_CENTROID: 'Lokalizacje są wstrzymane; pokazujemy tylko kraje.',
   },
 
   vocabulary: {
