@@ -3,7 +3,10 @@ import { join } from 'path';
 
 import {
   humanitarianReadAbsence,
+  humanitarianRetainedRead,
   parseHumanitarianRetainedRead,
+  HUMANITARIAN_RETAINED_READ_KINDS,
+  HUMANITARIAN_READ_MAX_ROWS,
   OBSERVATION_ABSENCE_STATES,
   ONLY_REASSURING_ABSENCE_STATE,
   ABSENCE_MUST_NOT_IMPLY,
@@ -107,16 +110,37 @@ describe('HUM-PWA-R1 · A · why a Humanitarian response cannot reach a cache', 
     expect(swCode).toMatch(/url\.origin !== self\.location\.origin\)\s*return/);
   });
 
-  it('A5 · the read contract is structurally incapable of carrying reporting', () => {
-    const contract = readFileSync(
-      join(repoRoot, 'shared', 'src', 'humanitarian', 'retained-read.ts'), 'utf-8',
-    );
-    expect(contract).toContain('readonly observations: readonly never[]');
-    expect(contract).toContain("readonly kind: 'UNAVAILABLE'");
-    /* Behavioural, not textual. */
-    expect(humanitarianReadAbsence('NOT_ASSESSED')).toEqual({
-      kind: 'UNAVAILABLE', absence: 'NOT_ASSESSED', observations: [],
+  /*
+    R2 CORRECTION. In R1 this assertion was titled "the read contract is structurally incapable of
+    carrying reporting" and checked that `observations` was `readonly never[]`. **That is no longer
+    true.** Main+A's convergence landed a three-kind union in which `RETAINED` carries
+    `readonly HumanitarianRetainedRecord[]`, and the old text still matched because two of the three
+    members retain `never[]` — so the assertion went on passing while its justification expired.
+
+    A green test asserting something false is worse than a failing one, so the claim is restated to
+    what is actually true, and the no-cache ruling is re-grounded on the ENDPOINT rather than on the
+    type. The contract-level properties of the new union belong to A/Main and are covered by
+    `shared/src/humanitarian/retained-read.convergence.spec.ts`; they are deliberately not restated
+    here.
+  */
+  it('A5 · the contract CAN now carry retained records, so the ruling rests on the endpoint', () => {
+    expect([...HUMANITARIAN_RETAINED_READ_KINDS]).toEqual([
+      'UNAVAILABLE',
+      'NO_RETAINED_EVIDENCE',
+      'RETAINED',
+    ]);
+
+    /* An empty store is a fact about our store, not a finding — and not an absence. */
+    expect(humanitarianRetainedRead([], () => true)).toEqual({
+      kind: 'NO_RETAINED_EVIDENCE',
+      observations: [],
     });
+
+    /* THE RULING TRIGGER. The endpoint still answers with an absence and still forbids storing it,
+       so there is nothing cacheable today regardless of what the type can now express. */
+    const controller = readFileSync(backendReadPath, 'utf-8');
+    expect(controller).toMatch(/return humanitarianReadAbsence\('NOT_ASSESSED'\)/);
+    expect(controller).toMatch(/@Header\('Cache-Control',\s*'no-store'\)/);
   });
 });
 
@@ -272,5 +296,60 @@ describe('HUM-PWA-R1 · C · a degradation may only claim less', () => {
     expect(ABSENCE_MUST_NOT_IMPLY).toEqual(
       expect.arrayContaining(['normal', 'safe', 'stable', 'no outage', 'no event']),
     );
+  });
+});
+
+/* ══ D · R2 · WHAT ANY FUTURE CACHE MUST OBEY ═════════════════════════════ */
+
+describe('HUM-PWA-R2 · D · cache-side obligations created by the new contract', () => {
+  /*
+    These are the obligations the convergence contract places on a CACHE specifically. The contract's
+    own properties are A/Main's and are tested in their convergence spec; what is asserted here is
+    that this lane has introduced no mechanism that could violate them, and that the primitives a
+    future policy must use exist.
+  */
+
+  it('D1 · no row-level Humanitarian store exists, so a read cannot be thinned by a cache', () => {
+    /*
+      HUM-READ-5 refuses a WHOLE read rather than dropping a non-admissible row — "a read is never
+      silently thinned". A cache that stored or evicted individual rows would re-introduce exactly
+      the thinning the contract forbids, and an offline gap shaped like the protected set is the
+      disclosure E1 named. The worker's eviction operates on whole cache entries, never on rows.
+    */
+    expect(swCode).not.toMatch(/humanitarian/i);
+    expect(swCode).toMatch(/keys\.length - RUNTIME_MAX_ENTRIES/);
+    /* FIFO over cache.keys() — whole responses, in insertion order. No per-row structure exists. */
+    expect(swCode).toMatch(/const RUNTIME_MAX_ENTRIES = \d+;/);
+  });
+
+  it('D2 · a stored payload would be untrusted input, and the fail-closed parser exists for it', () => {
+    /*
+      The contract re-validates a RETAINED payload because it crossed a network boundary. Device
+      storage is also a boundary — and a weaker one. Any future cache must re-parse on read-back and
+      must never trust stored bytes. Asserted here: the gate exists and fails closed.
+    */
+    expect(parseHumanitarianRetainedRead({ kind: 'RETAINED', observations: [] })).toBeNull();
+    expect(parseHumanitarianRetainedRead({ kind: 'RETAINED' })).toBeNull();
+    expect(parseHumanitarianRetainedRead({ kind: 'NO_RETAINED_EVIDENCE', observations: [{}] })).toBeNull();
+    expect(parseHumanitarianRetainedRead({ kind: 'SOMETHING_NEW', observations: [] })).toBeNull();
+  });
+
+  it('D3 · the payload row bound exists and is the input to any storage bound', () => {
+    expect(HUMANITARIAN_READ_MAX_ROWS).toBe(200);
+    expect(typeof HUMANITARIAN_READ_MAX_ROWS).toBe('number');
+  });
+
+  it('D4 · neither NO_RETAINED_EVIDENCE nor RETAINED can be reached by a cached absence', () => {
+    /*
+      The dangerous offline replay is not a stale record — it is a stale EMPTINESS.
+      `NO_RETAINED_EVIDENCE` reads like a definitive "nothing is happening" answer, which is exactly
+      what the contract's own comment forbids. An absence read can never be promoted into it.
+    */
+    const absence = humanitarianReadAbsence('NOT_ASSESSED');
+    expect(absence.kind).toBe('UNAVAILABLE');
+    expect(absence.kind).not.toBe('NO_RETAINED_EVIDENCE');
+    expect(absence.kind).not.toBe('RETAINED');
+    /* And the reassuring absence state remains unreachable from the Humanitarian helper. */
+    expect(() => humanitarianReadAbsence('ASSESSED_NOTHING_QUALIFIED' as never)).toThrow();
   });
 });
