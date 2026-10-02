@@ -498,3 +498,158 @@ export function humDensityFor(width: number): HumDensityContract {
 
 /** Re-exported so a caller reads the token set from one place. */
 export const HUM_MAP_TOKENS: readonly ReaderAbsenceToken[] = READER_ABSENCE_TOKENS;
+
+/* ══ 8 · R2 · THE READER DISPLAY GATE — E1's ASK DISCLOSURE RULING AT THIS HOP ══
+ *
+ * E1's R2 ruling binds every hop that displays Humanitarian evidence:
+ *
+ *   D-1  a hop carries the six required disclosures, or MAY NOT DISPLAY the evidence;
+ *   D-2  no hop assumes a previous hop's disclosure — each re-derives from what it was given,
+ *        or refuses;
+ *   D-3  attribution travels with the data or the data does not travel: a GDACS row carries BOTH
+ *        the verbatim relay acknowledgement and the originating agency;
+ *   D-4  IMPACT_NOT_ASSESSED is mandatory on every Humanitarian answer;
+ *   D-5  the withheld centroid is disclosed, not silently omitted.
+ *
+ * ── EVERY AUTHORITY IS INJECTED, NOT RESTATED ───────────────────────────────
+ *
+ * The required-disclosure set, the reader-cleared source list and the verbatim acknowledgement
+ * all live in E1's ruling module, which is backend and which a frontend surface cannot import.
+ * The answer is NOT to copy the vocabulary here — a second copy is a second authority, and E1's
+ * own finding is that an open producer against a closed consumer drops things silently. They are
+ * parameters. The caller binds E1's constants; this hop verifies and refuses.
+ *
+ * ── THE GUARD THAT MAKES THE GATE NON-VACUOUS ───────────────────────────────
+ *
+ * A gate given an EMPTY required-disclosure set would pass everything, and it would pass most
+ * easily exactly when the caller had wired nothing. That is the vacuous-predicate defect this
+ * programme has paid for three times now, so an empty required set is itself a refusal
+ * (`REQUIRED_DISCLOSURE_SET_EMPTY`). The same reasoning applies to the reader-cleared list, but
+ * with the opposite sign: empty is the RULING today — `READER_CLEARED_SOURCE_IDS` is `[]` — so an
+ * empty list must refuse every row rather than be treated as "no restriction".
+ */
+
+export const HUM_READER_DISPLAY_REFUSALS = [
+  /** The read carries no evidence rows; there is nothing to gate. Not a defect. */
+  'NO_EVIDENCE_ROWS',
+  /** The caller wired no required-disclosure set. A gate that cannot refuse is not a gate. */
+  'REQUIRED_DISCLOSURE_SET_EMPTY',
+  /** D-1 — a required code is not carried, so this hop may not display the evidence. */
+  'REQUIRED_DISCLOSURE_MISSING',
+  /** The row's upstream authority is not reader-cleared. Today that is every source. */
+  'SOURCE_NOT_READER_CLEARED',
+  /** D-3 — the row cannot evidence both attribution names, so the data does not travel. */
+  'ROW_ATTRIBUTION_NOT_CARRIED',
+] as const;
+export type HumReaderDisplayRefusal = (typeof HUM_READER_DISPLAY_REFUSALS)[number];
+
+/** Attribution a caller supplies per row, keyed by `observationKey`. */
+export interface HumRowAttribution {
+  readonly relayAttribution?: string;
+  readonly originatingAgency?: string;
+}
+
+export interface HumReaderDisplayInput {
+  readonly read: HumanitarianRetainedRead;
+  /** Codes this hop was actually given. D-2: not assumed from an earlier hop. */
+  readonly carriedDisclosures: readonly string[];
+  /** E1's `HUMANITARIAN_REQUIRED_DISCLOSURES`, bound by the caller. */
+  readonly requiredDisclosures: readonly string[];
+  /** E1's `READER_CLEARED_SOURCE_IDS`, bound by the caller. Empty today, by ruling. */
+  readonly readerClearedSourceIds: readonly string[];
+  /** E1's `GDACS_ATTRIBUTION_VERBATIM`, bound by the caller. Reworded is not attribution. */
+  readonly relayAttributionVerbatim?: string;
+  readonly rowAttribution?: Readonly<Record<string, HumRowAttribution>>;
+}
+
+export type HumReaderDisplay =
+  | { readonly display: true; readonly rowCount: number }
+  | {
+      readonly display: false;
+      readonly refusal: HumReaderDisplayRefusal;
+      /** What was missing, by name — a refusal an operator cannot act on is half a refusal. */
+      readonly detail: readonly string[];
+    };
+
+/**
+ * May this hop display the read's evidence rows?
+ *
+ * Checks are ordered so the most structural failure is reported first: a gate that was never
+ * wired, then a missing disclosure, then clearance, then attribution. Refusing the WHOLE read
+ * rather than dropping rows follows the retained contract's own rule — a read is never silently
+ * thinned, and a reader shown four of five rows has been told something untrue about coverage.
+ */
+export function humReaderDisplayGate(input: HumReaderDisplayInput): HumReaderDisplay {
+  const { read } = input;
+  if (read.kind !== 'RETAINED' || read.observations.length === 0) {
+    return { display: false, refusal: 'NO_EVIDENCE_ROWS', detail: [humReadView(read).state] };
+  }
+  if (input.requiredDisclosures.length === 0) {
+    return { display: false, refusal: 'REQUIRED_DISCLOSURE_SET_EMPTY', detail: [] };
+  }
+  const missing = input.requiredDisclosures.filter(
+    (code) => input.carriedDisclosures.indexOf(code) === -1,
+  );
+  if (missing.length > 0) {
+    return {
+      display: false,
+      refusal: 'REQUIRED_DISCLOSURE_MISSING',
+      detail: Object.freeze(missing),
+    };
+  }
+  const uncleared: string[] = [];
+  for (const record of read.observations) {
+    const authority = record.observation.identity.upstreamAuthority;
+    if (input.readerClearedSourceIds.indexOf(authority) === -1 && !uncleared.includes(authority)) {
+      uncleared.push(authority);
+    }
+  }
+  if (uncleared.length > 0) {
+    return {
+      display: false,
+      refusal: 'SOURCE_NOT_READER_CLEARED',
+      detail: Object.freeze(uncleared.sort()),
+    };
+  }
+  const unattributed: string[] = [];
+  for (const record of read.observations) {
+    const key = record.observation.observationKey;
+    const attribution = input.rowAttribution?.[key];
+    const relayOk =
+      input.relayAttributionVerbatim !== undefined &&
+      attribution?.relayAttribution === input.relayAttributionVerbatim;
+    const agencyOk =
+      typeof attribution?.originatingAgency === 'string' &&
+      attribution.originatingAgency.trim().length > 0;
+    if (!relayOk || !agencyOk) unattributed.push(key);
+  }
+  if (unattributed.length > 0) {
+    return {
+      display: false,
+      refusal: 'ROW_ATTRIBUTION_NOT_CARRIED',
+      detail: Object.freeze(unattributed),
+    };
+  }
+  return { display: true, rowCount: read.observations.length };
+}
+
+/**
+ * The Ask launcher under the ruling: offered only when this hop may actually display the
+ * evidence. D-1 reaches the launcher too — offering "ask about this" over evidence the hop is
+ * refusing to show would invite a question about something the reader cannot see.
+ */
+export function humAskLaunchUnderRuling(
+  input: HumReaderDisplayInput,
+): HumAskLaunch & { readonly gate: HumReaderDisplay } {
+  const gate = humReaderDisplayGate(input);
+  const base = humAskLaunch(input.read);
+  if (gate.display === true) return { ...base, gate };
+  return {
+    offered: false,
+    state: base.state,
+    rowCount: 0,
+    observationKeys: Object.freeze([]),
+    countryIso3: Object.freeze([]),
+    gate,
+  };
+}

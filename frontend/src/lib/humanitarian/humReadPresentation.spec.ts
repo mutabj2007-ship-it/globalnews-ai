@@ -20,6 +20,7 @@ import {
   humDensityFor,
   humFigureViews,
   humFreshnessView,
+  humAskLaunchUnderRuling,
   humMapOutcome,
   humMaxRevisionOrdinal,
   humNewestRelease,
@@ -27,6 +28,8 @@ import {
   humReadIsAssessment,
   humReadLoadingView,
   humReadView,
+  humReaderDisplayGate,
+  HUM_READER_DISPLAY_REFUSALS,
   humRowGeography,
   humSurfaceAdmitsPolygon,
 } from './humReadPresentation';
@@ -475,5 +478,177 @@ describe('the skeleton slots that were simply wrong once rows exist', () => {
       expect(humNewestRelease(read)).toBeNull();
       expect(humMaxRevisionOrdinal(read)).toBeNull();
     }
+  });
+});
+
+/* ══ R2 · E1'S ASK DISCLOSURE RULING AT THE READER HOP ════════════════════ */
+
+describe("R2 · the reader display gate — E1's ruling, injected not restated", () => {
+  /* E1's constants, bound by the caller exactly as a server hop would bind them. */
+  const REQUIRED = Object.freeze([
+    'IMPACT_NOT_ASSESSED',
+    'RETAINED_NOT_CURRENT',
+    'SEVERITY_NOT_ASSESSED',
+    'COUNTRY_SCOPE_NOT_STATED_BY_SOURCE',
+    'PUBLISHER_TIME_ZONE_NOT_STATED',
+    'GEOMETRY_WITHHELD_SOURCE_CENTROID',
+  ]);
+  const VERBATIM = 'Global Disaster Alert and Coordination System, GDACS';
+  const oneRow = retained([row('GDACS', 'X1', { sourceUrl: 'https://x/x1' })]);
+  const keyOf = (read: HumanitarianRetainedRead): string =>
+    (read as Extract<HumanitarianRetainedRead, { kind: 'RETAINED' }>).observations[0]!.observation
+      .observationKey;
+  const fullyAttributed = (read: HumanitarianRetainedRead) => ({
+    [keyOf(read)]: { relayAttribution: VERBATIM, originatingAgency: 'NEIC' },
+  });
+
+  it('an empty required-disclosure set is itself a refusal — the gate cannot be vacuous', () => {
+    const gate = humReaderDisplayGate({
+      read: oneRow,
+      carriedDisclosures: REQUIRED,
+      requiredDisclosures: [],
+      readerClearedSourceIds: ['GDACS'],
+      relayAttributionVerbatim: VERBATIM,
+      rowAttribution: fullyAttributed(oneRow),
+    });
+    expect(gate.display).toBe(false);
+    expect(gate.display === false && gate.refusal).toBe('REQUIRED_DISCLOSURE_SET_EMPTY');
+  });
+
+  it('D-1 · a missing required disclosure refuses the display, and names it', () => {
+    for (const dropped of REQUIRED) {
+      const gate = humReaderDisplayGate({
+        read: oneRow,
+        carriedDisclosures: REQUIRED.filter((c) => c !== dropped),
+        requiredDisclosures: REQUIRED,
+        readerClearedSourceIds: ['GDACS'],
+        relayAttributionVerbatim: VERBATIM,
+        rowAttribution: fullyAttributed(oneRow),
+      });
+      expect(gate.display).toBe(false);
+      expect(gate.display === false && gate.refusal).toBe('REQUIRED_DISCLOSURE_MISSING');
+      expect(gate.display === false && gate.detail).toEqual([dropped]);
+    }
+  });
+
+  it('D-4 · dropping IMPACT_NOT_ASSESSED specifically refuses — silence is not permitted', () => {
+    const gate = humReaderDisplayGate({
+      read: oneRow,
+      carriedDisclosures: REQUIRED.filter((c) => c !== 'IMPACT_NOT_ASSESSED'),
+      requiredDisclosures: REQUIRED,
+      readerClearedSourceIds: ['GDACS'],
+      relayAttributionVerbatim: VERBATIM,
+      rowAttribution: fullyAttributed(oneRow),
+    });
+    expect(gate.display === false && gate.detail).toEqual(['IMPACT_NOT_ASSESSED']);
+  });
+
+  it("E1's ruling today: an empty reader-cleared list refuses every row", () => {
+    /* READER_CLEARED_SOURCE_IDS is `[]` — no source is reader-cleared. An empty list must
+       refuse, never read as "no restriction". */
+    const gate = humReaderDisplayGate({
+      read: oneRow,
+      carriedDisclosures: REQUIRED,
+      requiredDisclosures: REQUIRED,
+      readerClearedSourceIds: [],
+      relayAttributionVerbatim: VERBATIM,
+      rowAttribution: fullyAttributed(oneRow),
+    });
+    expect(gate.display).toBe(false);
+    expect(gate.display === false && gate.refusal).toBe('SOURCE_NOT_READER_CLEARED');
+    expect(gate.display === false && gate.detail).toEqual(['GDACS']);
+  });
+
+  it('D-3 · a row that cannot evidence BOTH attribution names does not travel', () => {
+    const base = {
+      read: oneRow,
+      carriedDisclosures: REQUIRED,
+      requiredDisclosures: REQUIRED,
+      readerClearedSourceIds: ['GDACS'],
+      relayAttributionVerbatim: VERBATIM,
+    };
+    /* no attribution supplied at all — which is the state of a canonical reader row today,
+       because the observation carries no originating-agency field */
+    const none = humReaderDisplayGate(base);
+    expect(none.display === false && none.refusal).toBe('ROW_ATTRIBUTION_NOT_CARRIED');
+    /* relay only */
+    const relayOnly = humReaderDisplayGate({
+      ...base,
+      rowAttribution: { [keyOf(oneRow)]: { relayAttribution: VERBATIM } },
+    });
+    expect(relayOnly.display === false && relayOnly.refusal).toBe('ROW_ATTRIBUTION_NOT_CARRIED');
+    /* agency only */
+    const agencyOnly = humReaderDisplayGate({
+      ...base,
+      rowAttribution: { [keyOf(oneRow)]: { originatingAgency: 'NEIC' } },
+    });
+    expect(agencyOnly.display === false && agencyOnly.refusal).toBe('ROW_ATTRIBUTION_NOT_CARRIED');
+    /* reworded attribution is not attribution */
+    const reworded = humReaderDisplayGate({
+      ...base,
+      rowAttribution: {
+        [keyOf(oneRow)]: { relayAttribution: 'GDACS (JRC)', originatingAgency: 'NEIC' },
+      },
+    });
+    expect(reworded.display === false && reworded.refusal).toBe('ROW_ATTRIBUTION_NOT_CARRIED');
+  });
+
+  it('POSITIVE CONTROL · with every authority satisfied the gate admits the display', () => {
+    const gate = humReaderDisplayGate({
+      read: oneRow,
+      carriedDisclosures: REQUIRED,
+      requiredDisclosures: REQUIRED,
+      readerClearedSourceIds: ['GDACS'],
+      relayAttributionVerbatim: VERBATIM,
+      rowAttribution: fullyAttributed(oneRow),
+    });
+    expect(gate).toEqual({ display: true, rowCount: 1 });
+  });
+
+  it('a read with no evidence rows is not a gate failure', () => {
+    for (const read of [humanitarianReadAbsence('NOT_ASSESSED'), retained([])]) {
+      const gate = humReaderDisplayGate({
+        read,
+        carriedDisclosures: REQUIRED,
+        requiredDisclosures: REQUIRED,
+        readerClearedSourceIds: [],
+      });
+      expect(gate.display === false && gate.refusal).toBe('NO_EVIDENCE_ROWS');
+    }
+  });
+
+  it('the refusal registry is closed', () => {
+    expect([...HUM_READER_DISPLAY_REFUSALS]).toEqual([
+      'NO_EVIDENCE_ROWS',
+      'REQUIRED_DISCLOSURE_SET_EMPTY',
+      'REQUIRED_DISCLOSURE_MISSING',
+      'SOURCE_NOT_READER_CLEARED',
+      'ROW_ATTRIBUTION_NOT_CARRIED',
+    ]);
+  });
+
+  it('D-1 reaches the Ask launcher — not offered over evidence this hop refuses to show', () => {
+    const refused = humAskLaunchUnderRuling({
+      read: oneRow,
+      carriedDisclosures: REQUIRED,
+      requiredDisclosures: REQUIRED,
+      readerClearedSourceIds: [],
+      relayAttributionVerbatim: VERBATIM,
+      rowAttribution: fullyAttributed(oneRow),
+    });
+    expect(refused.offered).toBe(false);
+    expect(refused.observationKeys).toEqual([]);
+    expect(refused.gate.display).toBe(false);
+    /* POSITIVE CONTROL — cleared and attributed, the launcher is offered again */
+    const offered = humAskLaunchUnderRuling({
+      read: oneRow,
+      carriedDisclosures: REQUIRED,
+      requiredDisclosures: REQUIRED,
+      readerClearedSourceIds: ['GDACS'],
+      relayAttributionVerbatim: VERBATIM,
+      rowAttribution: fullyAttributed(oneRow),
+    });
+    expect(offered.offered).toBe(true);
+    expect(offered.rowCount).toBe(1);
   });
 });
