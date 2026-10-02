@@ -6,8 +6,8 @@ import { Footer } from '@/components/layout/Footer';
 import { PreferenceStorageControl } from '@/components/privacy/PreferenceStorageControl';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { COOKIES_PAGE } from '@/lib/privacy/cookiesPageStrings';
-import { STORAGE_INVENTORY, type StorageCategory } from '@/lib/privacy/storageInventory';
 import { buildPageMetadata } from '@/lib/seo/metadata';
+import { STORAGE_INVENTORY, type StorageCategory } from '@/lib/privacy/storageInventory';
 
 /**
  * TRUST & CONVERSATIONAL EXPERIENCE R1 §12 + CTO addendum — the detailed "Cookies and similar
@@ -22,6 +22,7 @@ function localeOf(): 'en' | 'pl' {
 export async function generateMetadata(): Promise<Metadata> {
   const language = localeOf();
   const t = COOKIES_PAGE[language];
+  /* The registry (lib/seo/routes.ts) decides robots: noindex until the notice is reviewed. */
   return buildPageMetadata({
     path: '/cookies',
     title: `${t.title} — GlobalNews AI`,

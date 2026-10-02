@@ -642,7 +642,8 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
     */
     /* ADMIN OPERATIONS R1 — fifty-five: /admin/operations. Admin pages are noindex,
        so no indexability classification changes. */
-    expect(pages).toHaveLength(55);
+    /* TRUST R1 §12 — fifty-six: /cookies, the public Cookies & similar technologies notice. */
+    expect(pages).toHaveLength(56);
     expect(pages).toContain('/conflict');
     expect(classify('/conflict').indexability).toBe('noindex');
     expect(pages).toContain('/ask');

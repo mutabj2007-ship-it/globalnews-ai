@@ -129,7 +129,8 @@ describe('CONVERGENCE — Unified Intelligence Binding R2 is the ONLY Ask contex
       'components/my-intelligence/MyIntelligenceClient.tsx',
       'lib/myIntelligence/selection.ts',
       'components/home/HomeCompare.tsx',
-      'components/ask-frame/AskFrameScreen.tsx',
+      /* TRUST R1 — AskFrameScreen is deliberately changed (chat UX, privacy links); its R2 context
+         path (askContextRefOf / compare / module refs) is unchanged and pinned by askChatUx.spec. */
     ]) {
       expect({ path, same: read(...path.split('/')) === r2(path) }).toEqual({ path, same: true });
     }
