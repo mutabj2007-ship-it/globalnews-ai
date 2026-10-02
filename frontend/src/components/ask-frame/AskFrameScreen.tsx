@@ -686,6 +686,19 @@ export function AskFrameScreen({
             maxHeight={compact ? 140 : 220}
           />
         </div>
+        {/* TRUST R1 §12 — the Privacy Notice and Cookies notice, reachable before sign-in and
+            before the first question, without interrupting the conversation. */}
+        <p
+          data-ask="privacy-links"
+          className="mx-auto mt-1 flex max-w-[760px] gap-3 px-4 md:px-1 font-mono text-[11px] text-[#6f89a8]"
+        >
+          <a href="/privacy" className="underline-offset-2 hover:underline">
+            {r2s.privacyLink}
+          </a>
+          <a href="/cookies" className="underline-offset-2 hover:underline">
+            {r2s.cookiesLink}
+          </a>
+        </p>
       </div>
       {r2.deepQuote !== null && (
         <AskDeepConfirm

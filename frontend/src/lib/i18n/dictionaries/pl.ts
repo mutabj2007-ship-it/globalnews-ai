@@ -2019,39 +2019,57 @@ export const pl: Dictionary = {
     },
   },
   privacyPage: {
-    title: 'Polityka prywatności',
+    /* TRUST & CONVERSATIONAL EXPERIENCE R1 §12 — rewritten from the code inventory
+       (Claude_Output/TRUST-CONVERSATIONAL-EXPERIENCE-R1/privacy). Unknown facts are named, never invented. */
+    title: 'Informacja o prywatności',
     lastUpdatedLabel: 'Ostatnia aktualizacja',
-    lastUpdatedDate: '17 sierpnia 2026',
+    lastUpdatedDate: '3 października 2026',
     intro:
-      'Ta strona wyjaśnia, w prosty sposób, jakie informacje zbiera GlobalNews AI i jak są one wykorzystywane. Opisuje produkt dokładnie w takiej formie, w jakiej działa on obecnie.',
+      'Ta informacja wyjaśnia, jakie dane przetwarzają Ask GlobalNewsAI i GlobalNews AI, w jakim celu, kto je otrzymuje i co możesz z tym zrobić. Opisuje produkt tak, jak faktycznie działa dzisiaj. Jeśli jakaś kwestia nie została jeszcze ustalona, piszemy o tym wprost zamiast zgadywać.',
     sections: [
       {
-        heading: 'Konto i logowanie',
-        body: 'Możesz korzystać z GlobalNews AI, wyszukiwać i czytać analizy bez logowania. Jeśli zdecydujesz się zalogować przy użyciu konta Google, otrzymujemy od Google podstawowe informacje identyfikacyjne (takie jak imię i nazwisko, adres e-mail oraz zdjęcie profilowe), aby utworzyć i utrzymać Twoje konto oraz zachować Twoje zalogowanie między sesjami.',
+        heading: 'Kto odpowiada za dane',
+        body: 'Podmiot odpowiedzialny za usługę i jego adres kontaktowy w sprawach prywatności są jeszcze ustalane. Zostaną opublikowane na tej stronie przed udostępnieniem usługi wszystkim użytkownikom. Do tego czasu pytania o prywatność można przesłać przez Pomoc i opinie w produkcie.',
       },
       {
-        heading: 'Aktywność wyszukiwania i historia',
-        body: 'Gdy jesteś zalogowany, zadawane przez Ciebie pytania mogą być zapisywane na Twoim koncie, abyś mógł do nich wrócić później. W dowolnym momencie możesz przeglądać i usuwać poszczególne wpisy lub wyczyścić całą historię wyszukiwania na swoim koncie. Usunięcie konta powoduje również usunięcie zapisanej historii wyszukiwania.',
+        heading: 'Korzystanie z Zapytaj bez konta',
+        body: 'Jako gość możesz zadać kilka pytań. Gdy wysyłasz pierwsze pytanie jako gość, ustawiamy plik cookie gościa i przechowujemy Twoje pytania oraz odpowiedzi na naszych serwerach jako jedną rozmowę gościa. Trwa ona do 7 dni, a następnie jest usuwana w ciągu około 24 godzin. Aby ograniczyć nadużycia bezpłatnych pytań, używamy Twojego adresu IP do liczenia pytań gości w danej sieci.',
       },
       {
-        heading: 'Preferencje językowe',
-        body: 'Wybrany przez Ciebie język wyświetlania jest zapisywany w Twojej przeglądarce (za pomocą pamięci lokalnej oraz niewielkiego pliku cookie), aby strona zapamiętała Twoją preferencję przy kolejnej wizycie. Jest to wyłącznie techniczne ustawienie preferencji \u2014 nie jest ono powiązane z profilowaniem ani działaniami reklamowymi.',
+        heading: 'Logowanie przez Google',
+        body: 'Logowanie odbywa się przez Google i prosi wyłącznie o Twój adres e-mail (zakres „openid email”). Nie otrzymujemy Twoich kontaktów Google, wiadomości e-mail ani zdjęcia profilowego. Przechowujemy adres e-mail i identyfikator konta Google, aby utrzymać Twoje konto.',
       },
       {
-        heading: 'Jak przetwarzane jest Twoje pytanie',
-        body: 'Aby odpowiedzieć na pytanie, GlobalNews AI pobiera odpowiednie doniesienia prasowe od zewnętrznych dostawców wiadomości i wykorzystuje model językowy AI do analizy i podsumowania tych doniesień. Treść Twojego pytania oraz pobrane artykuły są przesyłane do tych zewnętrznych usług w ramach generowania odpowiedzi.',
+        heading: 'Twoje pytania i odpowiedzi',
+        body: 'Pytania zadane po zalogowaniu są przechowywane na Twoim koncie, abyś mógł kontynuować rozmowę i do niej wrócić. Odpowiedzi przechowujemy krótko, aby to samo pytanie można było pokazać ponownie bez nowej pracy. Usunięcie konta usuwa rozmowy, zapisane elementy, obserwowane tematy, alerty, komentarze, wiadomości do pomocy technicznej i historię wyszukiwania.',
       },
       {
-        heading: 'Czego nie zbieramy',
-        body: 'GlobalNews AI nie żąda ani nie zbiera Twojej dokładnej lokalizacji fizycznej. Obecnie nie prowadzimy systemów analitycznych, reklamowych ani śledzenia administracyjnego wykraczających poza zakres opisany na tej stronie.',
+        heading: 'Kto przetwarza Twoje pytanie',
+        body: 'Aby odpowiedzieć, treść pytania (a przy pytaniu uzupełniającym także poprzednie pytanie) jest wysyłana do dostawcy modelu AI (OpenAI). Słowa wyszukiwania z Twojego pytania są wysyłane do serwisów wyszukiwania wiadomości (GNews, GDELT i używane przez nas kanały informacyjne; X i YouTube tylko tam, gdzie są włączone). Otrzymują one pytanie lub słowa wyszukiwania, a nie Twój adres e-mail. Ich zasady przechowywania i przetwarzania określają ci dostawcy i nie są tu jeszcze streszczone.',
       },
       {
-        heading: 'Bezpieczeństwo',
-        body: 'Stosujemy standardowe zabezpieczenia techniczne odpowiednie dla usługi tego rodzaju, aby pomóc chronić Twoje informacje. Żadna usługa online nie może zagwarantować pełnego bezpieczeństwa, dlatego zachęcamy do używania silnego, unikalnego hasła do konta powiązanego z tą usługą.',
+        heading: 'Obrazy od wydawców',
+        body: 'Gdy odpowiedź lub artykuł pokazuje zdjęcie, Twoja przeglądarka pobiera je bezpośrednio od wydawcy lub serwisu, który je udostępnia. Ten serwer widzi Twój adres IP i dane przeglądarki, jak przy każdym obrazie w internecie.',
       },
       {
-        heading: 'Zmiany w niniejszej polityce',
-        body: 'W miarę rozwoju GlobalNews AI ta strona będzie aktualizowana, aby odzwierciedlać rzeczywisty sposób działania produktu. Zachęcamy do regularnego odwiedzania tej strony.',
+        heading: 'Zapisy techniczne',
+        body: 'Prowadzimy zapisy techniczne potrzebne do działania usługi: dzienniki żądań bez treści pytań, diagnostykę Zapytaj zawierającą wyłącznie kategorie i kody krajów (bez treści pytania i bez konta) przez 30 dni oraz liczniki użycia. Nie stosujemy reklam, śledzenia między witrynami ani zewnętrznej analityki.',
+      },
+      {
+        heading: 'Pliki cookie i podobne technologie',
+        body: 'Używamy plików cookie i pamięci przeglądarki niezbędnych do działania usługi (logowanie, bezpieczeństwo, rozmowy gości) oraz dwóch wybranych przez Ciebie ustawień (język i wygląd). Nie używamy analitycznych, reklamowych ani śledzących plików cookie. Pełna lista, zawartość i czas przechowywania znajdują się na stronie Pliki cookie, gdzie możesz też usunąć swoje ustawienia.',
+      },
+      {
+        heading: 'Twoje wybory',
+        body: 'Możesz usunąć konto w ustawieniach konta, co usuwa dane wymienione powyżej. Możesz wyczyścić historię wyszukiwania. W każdej chwili możesz zmienić lub usunąć ustawienia języka i wyglądu. Funkcja pobrania kopii danych jeszcze nie istnieje; sposób zgłaszania takich wniosków zostanie opublikowany razem z adresem kontaktowym.',
+      },
+      {
+        heading: 'Jak długo przechowujemy dane',
+        body: 'Rozmowy gości: do 7 dni plus około 24 godziny. Diagnostyka Zapytaj: 30 dni. Sesje logowania: 30 dni. Dla rozmów na koncie, wiadomości do pomocy technicznej, liczników użycia i liczników limitów nie ustalono jeszcze stałego okresu przechowywania; są przechowywane do usunięcia konta albo do opublikowania tu okresu przechowywania.',
+      },
+      {
+        heading: 'Zmiany tej informacji',
+        body: 'Gdy produkt zmienia sposób przetwarzania danych, ta strona jest aktualizowana, a data powyżej się zmienia.',
       },
     ],
   },

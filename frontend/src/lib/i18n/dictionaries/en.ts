@@ -2669,39 +2669,57 @@ export const en = {
     },
   },
   privacyPage: {
-    title: 'Privacy Policy',
+    /* TRUST & CONVERSATIONAL EXPERIENCE R1 §12 — rewritten from the code inventory
+       (Claude_Output/TRUST-CONVERSATIONAL-EXPERIENCE-R1/privacy). Unknown facts are named, never invented. */
+    title: 'Privacy Notice',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '17 August 2026',
+    lastUpdatedDate: '3 October 2026',
     intro:
-      'This page explains, in plain language, what information GlobalNews AI collects and how it is used. It describes the product as it actually works today.',
+      'This notice explains what information Ask GlobalNewsAI and GlobalNews AI handle, why, who receives it and what you can do about it. It describes the product as the code actually works today. Where a fact has not been decided yet, this page says so instead of guessing.',
     sections: [
       {
-        heading: 'Account and sign-in',
-        body: 'You can use GlobalNews AI to search and read analysis without signing in. If you choose to sign in with Google, we receive basic identity information from your Google account (such as your name, email address, and profile image) to create and maintain your account and keep you signed in across sessions.',
+        heading: 'Who is responsible',
+        body: 'The organisation responsible for this service and its contact address for privacy requests are still being finalised. They will be published on this page before general release. Until then, privacy questions can be sent through Help & feedback in the product.',
       },
       {
-        heading: 'Search activity and history',
-        body: 'When you are signed in, the questions you ask may be saved to your account so you can revisit them later. You can view and delete individual entries, or clear your entire search history, at any time from your account. Deleting your account removes your saved search history along with it.',
+        heading: 'Using Ask without an account',
+        body: 'You can ask a few questions as a guest. When you send your first guest question we set a guest cookie and store your questions and the answers on our servers as one guest conversation. It lasts up to 7 days and is then deleted within about 24 hours. To limit abuse of the free questions we use your IP address to count guest questions per network.',
       },
       {
-        heading: 'Language preference',
-        body: 'Your chosen display language is stored in your browser (via local storage and a small cookie) so the site remembers your preference on your next visit. This is a technical preference setting only \u2014 it is not linked to any profiling or advertising activity.',
+        heading: 'Signing in with Google',
+        body: 'Sign-in uses Google and asks only for your email address (the "openid email" scope). We do not receive your Google contacts, your email messages or your profile photo. We store your email address and Google’s account identifier to keep your account.',
       },
       {
-        heading: 'How your question is processed',
-        body: 'To answer a question, GlobalNews AI retrieves relevant news reporting from third-party news providers and uses an AI language model to analyze and summarize that reporting. The text of your question and the retrieved articles are sent to these third-party services as part of generating your answer.',
+        heading: 'Your questions and answers',
+        body: 'Questions you ask while signed in are stored with your account so you can continue the conversation and find it again. Answers are kept for a short time so the same question can be shown again without new work. Deleting your account deletes your conversations, saved items, follows, alerts, comments, support messages and search history.',
       },
       {
-        heading: 'What we do not collect',
-        body: 'GlobalNews AI does not request or collect your precise physical location. We do not currently operate analytics, advertising, or administrative tracking systems beyond what is described on this page.',
+        heading: 'Who processes your question',
+        body: 'To answer, the text of your question (and, for a follow-up, your previous question) is sent to an AI model provider (OpenAI). Search words taken from your question are sent to news search services (GNews, GDELT and the news feeds we use; X and YouTube only where enabled). They receive the question or search words, not your email address. Their own retention and processing terms are set by those providers and are not yet summarised here.',
       },
       {
-        heading: 'Security',
-        body: 'We use standard technical safeguards appropriate for a service of this kind to help protect your information. No online service can guarantee complete security, and we encourage you to use a strong, unique password with any account you connect to this service.',
+        heading: 'Images from news publishers',
+        body: 'When an answer or story shows an article image, your browser loads it directly from the publisher or news service that hosts it. That host can see your IP address and browser details, as with any web image.',
       },
       {
-        heading: 'Changes to this policy',
-        body: 'As GlobalNews AI develops, this page will be updated to reflect how the product actually works. We encourage you to revisit this page from time to time.',
+        heading: 'Service records',
+        body: 'We keep technical records to run the service: request logs without your question text, Ask diagnostics that store only categories and country codes (no question text, no account) for 30 days, and usage counts. We do not use advertising, cross-site tracking or third-party analytics.',
+      },
+      {
+        heading: 'Cookies and similar technologies',
+        body: 'We use cookies and browser storage that the service needs (sign-in, security, guest conversations) and two preference settings you choose (language and appearance). We use no analytics, advertising or tracking cookies. The full list, what each item stores and how long it lasts is on the Cookies page, which also lets you remove your preference settings.',
+      },
+      {
+        heading: 'Your choices',
+        body: 'You can delete your account in account settings, which removes the data listed above. You can clear your search history. You can change or remove your language and appearance settings at any time. A copy-of-your-data (export) feature does not exist yet; a request path will be published together with the contact address above.',
+      },
+      {
+        heading: 'How long information is kept',
+        body: 'Guest conversations: up to 7 days plus about 24 hours. Ask diagnostics: 30 days. Sign-in sessions: 30 days. For account conversations, support messages, usage counts and abuse-limit counters a fixed retention period has not been set yet; they are kept until your account is deleted or until a retention period is published here.',
+      },
+      {
+        heading: 'Changes to this notice',
+        body: 'When the product changes how it handles information, this page is updated and the date above changes.',
       },
     ],
   },

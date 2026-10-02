@@ -89,6 +89,9 @@ export interface AskR2Strings {
   /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
   readonly budgetRefused: string;
   /** TRUST R1 — a failed Send keeps the draft; the reader retries by pressing Ask. */
+  /** TRUST R1 §12 — pre-login links under the composer. */
+  readonly privacyLink: string;
+  readonly cookiesLink: string;
   readonly retryKept: string;
   /** TRUST R1 — a new answer arrived while the reader was reading earlier turns. */
   readonly newAnswerBelow: string;
@@ -292,6 +295,8 @@ const EN: AskR2Strings = {
   limitedNote:
     'A news source was temporarily unavailable. This answer uses the reporting that could be reached.',
   unavailable: 'Ask is unavailable right now. Nothing was run.',
+  privacyLink: 'Privacy',
+  cookiesLink: 'Cookies',
   retryKept: 'Not answered — your question is still in the box. Press Ask to try again.',
   newAnswerBelow: 'New answer below',
   budgetRefused:
@@ -391,7 +396,7 @@ const EN: AskR2Strings = {
     unavailable: 'Guest questions are unavailable right now. Sign in to ask.',
     signInForDeeper: 'Deeper analysis is available after you sign in.',
     privacy:
-      'Guest conversations stay on this browser for up to 7 days. A private window or clearing cookies ends them.',
+      'Guest questions and answers are kept on our servers for up to 7 days. To answer, your question goes to an AI provider (OpenAI) and search words go to news services. Signing in shares only your email address.',
     cancelled: 'Sign-in was cancelled. Your conversation is still here.',
     failed: 'Sign-in did not complete. Your conversation is still here.',
     resumed: 'Signed in. Your conversation continues here — nothing was run again.',
@@ -522,6 +527,8 @@ const PL: AskR2Strings = {
   limitedNote:
     'Źródło wiadomości było chwilowo niedostępne. Ta odpowiedź opiera się na doniesieniach, do których udało się dotrzeć.',
   unavailable: 'Zapytaj AI jest teraz niedostępne. Nic nie zostało uruchomione.',
+  privacyLink: 'Prywatność',
+  cookiesLink: 'Pliki cookie',
   retryKept: 'Brak odpowiedzi — Twoje pytanie nadal jest w polu. Naciśnij Zapytaj, aby spróbować ponownie.',
   newAnswerBelow: 'Nowa odpowiedź poniżej',
   budgetRefused:
@@ -629,7 +636,7 @@ const PL: AskR2Strings = {
     unavailable: 'Pytania gościa są teraz niedostępne. Zaloguj się, aby zapytać.',
     signInForDeeper: 'Pogłębiona analiza jest dostępna po zalogowaniu.',
     privacy:
-      'Rozmowy gościa są przechowywane w tej przeglądarce do 7 dni. Okno prywatne lub usunięcie plików cookie je kończy.',
+      'Pytania i odpowiedzi gościa przechowujemy na naszych serwerach do 7 dni. Aby odpowiedzieć, pytanie trafia do dostawcy AI (OpenAI), a słowa wyszukiwania do serwisów informacyjnych. Logowanie udostępnia tylko Twój adres e-mail.',
     cancelled: 'Logowanie zostało anulowane. Twoja rozmowa jest nadal tutaj.',
     failed: 'Logowanie nie zostało ukończone. Twoja rozmowa jest nadal tutaj.',
     resumed: 'Zalogowano. Rozmowa trwa dalej tutaj — nic nie zostało uruchomione ponownie.',

@@ -31,6 +31,8 @@ const STANDALONE_PAGES: ReadonlySet<string> = new Set([
   '/account/settings',
   '/support',
   '/privacy',
+  /* TRUST R1 §12 — the Cookies & similar technologies notice, public before sign-in. */
+  '/cookies',
   '/terms',
   '/source-policy',
   '/third-party-notices',

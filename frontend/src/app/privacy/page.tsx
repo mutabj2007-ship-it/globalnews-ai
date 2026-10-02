@@ -5,6 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { buildPageMetadata } from '@/lib/seo/metadata';
+import { COOKIES_PAGE } from '@/lib/privacy/cookiesPageStrings';
 
 /**
  * B2 — Public Legal Surfaces. Mirrors the homepage's own server-side
@@ -62,6 +63,16 @@ export default async function PrivacyPage(): Promise<JSX.Element> {
             </section>
           ))}
         </div>
+        {/* TRUST R1 §12 — the detailed Cookies & similar technologies notice and settings. */}
+        <p className="mt-8 text-sm">
+          <a
+            href="/cookies"
+            data-privacy="cookies-link"
+            className="text-signal underline-offset-2 hover:underline"
+          >
+            {COOKIES_PAGE[language === 'pl' ? 'pl' : 'en'].title}
+          </a>
+        </p>
       </main>
       <Footer language={language} />
     </div>

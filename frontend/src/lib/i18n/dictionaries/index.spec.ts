@@ -608,10 +608,14 @@ describe('B2 — Public Legal Surfaces dictionary sections', () => {
     // publication date, and the Source Policy has its OWN approved date (CTO
     // M66.10B: "Do not reuse the Privacy/Terms publication date"). Extending
     // this tuple would have forced a false shared date onto the new page.
-    for (const page of ['privacyPage', 'termsPage'] as const) {
+    for (const page of ['termsPage'] as const) {
       expect(en[page].lastUpdatedDate).toBe('17 August 2026');
       expect(pl[page].lastUpdatedDate).toBe('17 sierpnia 2026');
     }
+    /* TRUST R1 §12 — the Privacy Notice was rewritten from the code inventory and carries its own
+       revision date (a CANDIDATE: the controller-specific review is still pending). */
+    expect(en.privacyPage.lastUpdatedDate).toBe('3 October 2026');
+    expect(pl.privacyPage.lastUpdatedDate).toBe('3 października 2026');
   });
 
   it('M66.10B — the Source Policy carries its OWN approved publication date: "20 August 2026" (EN) and "20 sierpnia 2026" (PL)', () => {
